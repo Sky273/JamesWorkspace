@@ -270,7 +270,7 @@ const ResumeAnalysis = ({ resume }: ResumeAnalysisProps): JSX.Element | null => 
         })
       });
       
-      const response = await fetch('/api/resumes/ai-modify', authOptions as RequestInit);
+      const response = await fetch(`/api/resumes/${resume.id}/ai-modify`, authOptions as RequestInit);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Failed to modify resume' }));
