@@ -25,21 +25,41 @@ function handleLLMError(error, res, operation) {
 
 /**
  * Generate trigram from candidate name
- * @param {string} name - Full name of the candidate
+ * Format: 1st letter of first name + 2 first letters of last name
+ * Example: "Jean Dupont" -> "JDU"
+ * @param {string} name - Full name of the candidate (first name + last name)
  * @returns {string} - 3-letter trigram in uppercase
  */
 function generateTrigram(name) {
-    if (!name || name.length < 3) {
+    if (!name || name.trim().length === 0) {
         return 'XXX';
     }
     
-    const cleanName = name.replace(/[^a-zA-Z]/g, '').toUpperCase();
+    // Split name into parts (handle multiple spaces)
+    const parts = name.trim().split(/\s+/).filter(part => part.length > 0);
     
-    if (cleanName.length < 3) {
-        return (cleanName + 'XXX').substring(0, 3);
+    if (parts.length === 0) {
+        return 'XXX';
     }
     
-    return cleanName.substring(0, 3);
+    // Clean each part (keep only letters)
+    const cleanParts = parts.map(part => part.replace(/[^a-zA-Z]/g, '').toUpperCase());
+    
+    if (parts.length === 1) {
+        // Only one name part: take first 3 letters
+        const singleName = cleanParts[0];
+        return (singleName + 'XXX').substring(0, 3);
+    }
+    
+    // First name is the first part, last name is the last part
+    const firstName = cleanParts[0];
+    const lastName = cleanParts[cleanParts.length - 1];
+    
+    // 1st letter of first name + 2 first letters of last name
+    const firstInitial = firstName.length > 0 ? firstName.charAt(0) : 'X';
+    const lastInitials = lastName.length >= 2 ? lastName.substring(0, 2) : (lastName + 'XX').substring(0, 2);
+    
+    return firstInitial + lastInitials;
 }
 
 /**
