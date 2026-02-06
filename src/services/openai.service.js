@@ -271,16 +271,14 @@ function normalizeAnalysisResponse(analysis) {
  * @param {string} model - OpenAI model to use
  * @param {string} analysisPrompt - Analysis prompt template
  * @param {Object} userMetadata - User metadata for logging
- * @param {boolean} isImprovedCV - Whether this is an improved CV (for more favorable scoring)
+ * @param {boolean} isImprovedCV - Whether this is an improved CV (for logging purposes only)
  * @returns {Promise<Object>} - Parsed analysis result
  */
 export async function analyzeResume(resumeText, model, analysisPrompt, userMetadata = null, isImprovedCV = false) {
     const prompt = analysisPrompt.replace('{TEXT}', resumeText);
     
-    // Add context for improved CV to encourage better scores
-    const systemMessage = isImprovedCV 
-        ? 'You are a JSON-only resume analysis API. Respond with valid JSON only. IMPORTANT: This is a professionally improved CV that has been optimized for ATS and clarity. Your scoring should reflect the high quality of this improved version - be generous with scores for well-structured sections.'
-        : 'You are a JSON-only resume analysis API. Respond with valid JSON only.';
+    // Agnostic system message - same for all CVs
+    const systemMessage = 'You are a JSON-only resume analysis API. Respond with valid JSON only.';
 
     const response = await callOpenAI({
         model,
