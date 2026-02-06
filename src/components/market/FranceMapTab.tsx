@@ -11,7 +11,7 @@ import Map, { Marker, Popup, NavigationControl, MapRef } from 'react-map-gl/mapl
 import { useRef } from 'react';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { Map as MaplibreMap } from 'maplibre-gl';
-import { getFacts, MarketFact, MarketTrend, getAllTrends, getAllFacts, getTrendMetadata } from '../../services/marketRadarService';
+import { MarketTrend, getAllTrends, getTrendMetadata } from '../../services/marketRadarService';
 import { getStoredMetiers, Metier } from '../../services/romeService';
 import TrendMetadataDisplay from './TrendMetadataDisplay';
 
@@ -169,7 +169,7 @@ export default function FranceMapTab({ className = '' }: FranceMapTabProps) {
   const { t } = useTranslation();
   const mapRef = useRef<MapRef>(null);
   const [dataSource, setDataSource] = useState<DataSourceType>('offres');
-  const [facts, setFacts] = useState<MarketFact[]>([]);
+  // Facts state removed - now using trends for all data including job offers
   const [trends, setTrends] = useState<MarketTrend[]>([]);
   const [metiers, setMetiers] = useState<Metier[]>([]);
   const [loading, setLoading] = useState(true);
@@ -303,26 +303,21 @@ export default function FranceMapTab({ className = '' }: FranceMapTabProps) {
       
       try {
         if (dataSource === 'all') {
-          // Load all data in optimized single calls
-          const [allTrendsResponse, allFactsResponse, metiersData] = await Promise.all([
+          // Load all trends data in single optimized call
+          const [allTrendsResponse, metiersData] = await Promise.all([
             getAllTrends(), // Single optimized call for all trends
-            getAllFacts(),  // Single optimized call for all facts
             getStoredMetiers()
           ]);
-          setFacts(allFactsResponse.facts);
           setTrends(allTrendsResponse.trends);
           setMetiers(metiersData || []);
         } else if (dataSource === 'offres') {
-          // Load job offers from facts
-          const [allFactsResponse, metiersData] = await Promise.all([
-            getAllFacts(), // Use optimized endpoint
+          // Load job offers from trends (type='offre')
+          const [trendsResponse, metiersData] = await Promise.all([
+            getAllTrends('offre'), // Filter for offre type
             getStoredMetiers()
           ]);
-          // Filter for rome_region type client-side
-          const filteredFacts = allFactsResponse.facts.filter(f => f.Type === 'rome_region');
-          setFacts(filteredFacts);
+          setTrends(trendsResponse.trends);
           setMetiers(metiersData || []);
-          setTrends([]);
         } else {
           // Load specific trend type - use getAllTrends with type filter (NO metadata, optimized)
           const [trendsResponse, metiersData] = await Promise.all([
@@ -331,7 +326,6 @@ export default function FranceMapTab({ className = '' }: FranceMapTabProps) {
           ]);
           setTrends(trendsResponse.trends);
           setMetiers(metiersData || []);
-          setFacts([]);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load data');
@@ -362,8 +356,8 @@ export default function FranceMapTab({ className = '' }: FranceMapTabProps) {
     return romeLabelsMap[codeRome] || codeRome;
   };
 
-  // Aggregate job offers data by region
-  // Each fact represents one métier in one region - avoid counting duplicates
+  // Aggregate job offers data by region (from trends with type='offre')
+  // Each trend represents one métier in one region - avoid counting duplicates
   const jobRegionData = useMemo(() => {
     if (dataSource !== 'offres' && dataSource !== 'all') return [];
     
@@ -371,16 +365,18 @@ export default function FranceMapTab({ className = '' }: FranceMapTabProps) {
     // Track unique region+rome combinations to avoid duplicates
     const seenCombinations = new Set<string>();
     
-    const filteredFacts = selectedMetier 
-      ? facts.filter(f => f.RomeCode === selectedMetier)
-      : facts;
+    // Filter trends for 'offre' type
+    const offreTrends = trends.filter(t => t.Type === 'offre');
+    const filteredTrends = selectedMetier 
+      ? offreTrends.filter(t => t.CodeRome === selectedMetier)
+      : offreTrends;
 
-    filteredFacts.forEach(fact => {
-      const regionCode = fact.RegionCode;
+    filteredTrends.forEach(trend => {
+      const regionCode = trend.RegionCode;
       if (!regionCode || !REGIONS_INFO[regionCode]) return;
 
-      // Create unique key for this region+rome+type combination
-      const comboKey = `${regionCode}-${fact.RomeCode || 'unknown'}-${fact.Type || 'unknown'}`;
+      // Create unique key for this region+rome combination
+      const comboKey = `${regionCode}-${trend.CodeRome || 'unknown'}`;
       
       // Skip if we've already processed this combination (take the first/most recent)
       if (seenCombinations.has(comboKey)) return;
@@ -397,18 +393,21 @@ export default function FranceMapTab({ className = '' }: FranceMapTabProps) {
         };
       }
 
-      const jobCount = fact.JobCount || 0;
-      aggregated[regionCode].totalJobs += jobCount;
-      aggregated[regionCode].value = aggregated[regionCode].totalJobs;
-      
-      if (fact.RomeCode) {
-        // Each rome code should only appear once per region now
-        aggregated[regionCode].romeBreakdown[fact.RomeCode] = jobCount;
+      // Value contains the job count for 'offre' type
+      const jobCount = typeof trend.Value === 'string' ? parseFloat(trend.Value) : (trend.Value || 0);
+      if (!isNaN(jobCount)) {
+        aggregated[regionCode].totalJobs += jobCount;
+        aggregated[regionCode].value = aggregated[regionCode].totalJobs;
+        
+        if (trend.CodeRome) {
+          // Each rome code should only appear once per region now
+          aggregated[regionCode].romeBreakdown[trend.CodeRome] = jobCount;
+        }
       }
     });
 
     return Object.values(aggregated);
-  }, [facts, selectedMetier, dataSource]);
+  }, [trends, selectedMetier, dataSource]);
 
   // Aggregate trend data by region
   // Filter by selected dataSource type and avoid duplicates
@@ -510,19 +509,7 @@ export default function FranceMapTab({ className = '' }: FranceMapTabProps) {
       aggregated[regionCode] = {};
     });
     
-    // Add facts data (job offers)
-    facts.forEach(fact => {
-      const regionCode = fact.RegionCode;
-      if (!regionCode || !REGIONS_INFO[regionCode]) return;
-      
-      if (!aggregated[regionCode]['offres']) {
-        aggregated[regionCode]['offres'] = { value: 0, count: 0 };
-      }
-      aggregated[regionCode]['offres'].value += fact.JobCount || 0;
-      aggregated[regionCode]['offres'].count += 1;
-    });
-    
-    // Add trends data by type
+    // Add all trends data by type (including 'offre' for job offers)
     trends.forEach(trend => {
       const regionCode = trend.RegionCode;
       const trendType = trend.Type;
@@ -571,7 +558,7 @@ export default function FranceMapTab({ className = '' }: FranceMapTabProps) {
         };
       })
       .filter(r => r.typeData.length > 0);
-  }, [facts, trends, dataSource]);
+  }, [trends, dataSource]);
 
   // Legacy combined data for stats (keep for compatibility)
   const combinedRegionData = useMemo(() => {
@@ -653,18 +640,10 @@ export default function FranceMapTab({ className = '' }: FranceMapTabProps) {
     return null;
   }, [jobRegionData, trendRegionData, combinedRegionData, dataSource]);
 
-  // Get unique métiers count
+  // Get unique métiers count (all data now comes from trends)
   const uniqueMetiersCount = useMemo(() => {
-    if (dataSource === 'all') {
-      const factsMetiers = new Set(facts.map(f => f.RomeCode).filter(Boolean));
-      const trendsMetiers = new Set(trends.map(t => t.CodeRome).filter(Boolean));
-      return new Set([...factsMetiers, ...trendsMetiers]).size;
-    }
-    if (dataSource === 'offres') {
-      return new Set(facts.map(f => f.RomeCode).filter(Boolean)).size;
-    }
     return new Set(trends.map(t => t.CodeRome).filter(Boolean)).size;
-  }, [facts, trends, dataSource]);
+  }, [trends]);
 
   // Get current source option for styling
   const currentSourceOption = DATA_SOURCE_OPTIONS.find(o => o.value === dataSource);
@@ -805,20 +784,18 @@ export default function FranceMapTab({ className = '' }: FranceMapTabProps) {
               setSelectedRegion(null);
               try {
                 if (dataSource === 'all') {
-                  const [factsResponse, trendsResponse, metiersData] = await Promise.all([
-                    getAllFacts(),
+                  const [trendsResponse, metiersData] = await Promise.all([
                     getAllTrends(),
                     getStoredMetiers()
                   ]);
-                  setFacts(factsResponse.facts);
                   setTrends(trendsResponse.trends);
                   setMetiers(metiersData);
                 } else if (dataSource === 'offres') {
-                  const [factsResponse, metiersData] = await Promise.all([
-                    getAllFacts(),
+                  const [trendsResponse, metiersData] = await Promise.all([
+                    getAllTrends('offre'),
                     getStoredMetiers()
                   ]);
-                  setFacts(factsResponse.facts);
+                  setTrends(trendsResponse.trends);
                   setMetiers(metiersData);
                 } else {
                   const [trendsData, metiersData] = await Promise.all([
@@ -1099,62 +1076,62 @@ export default function FranceMapTab({ className = '' }: FranceMapTabProps) {
 
                   <div className="space-y-2 max-h-48 overflow-y-auto">
                     {dataSource === 'offres' && 'totalJobs' in selectedRegion ? (
-                      // Job offers breakdown - no metadata available for facts
-                      Object.entries((selectedRegion as RegionData).romeBreakdown)
-                        .filter(([rome]) => {
-                          if (!metierFilter) return true;
-                          const label = getMetierLabel(rome);
-                          return label.toLowerCase().includes(metierFilter.toLowerCase()) || 
-                                 rome.toLowerCase().includes(metierFilter.toLowerCase());
-                        })
-                        .sort(([, a], [, b]) => (b as number) - (a as number))
-                        .map(([rome, count]) => {
-                          const metierLabel = getMetierLabel(rome);
-                          const totalRegion = (selectedRegion as RegionData).totalJobs;
-                          const percentage = totalRegion > 0 ? ((count as number) / totalRegion * 100).toFixed(1) : '0';
-                          return (
-                            <div key={rome} className="relative group">
-                              <button
-                                onClick={() => setSelectedMetier(selectedMetier === rome ? null : rome)}
-                                className={`w-full flex items-center justify-between rounded p-2 text-sm transition-colors ${
-                                  selectedMetier === rome 
-                                    ? 'bg-indigo-100 dark:bg-indigo-900/50 border border-indigo-300 dark:border-indigo-600' 
-                                    : 'bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700'
-                                }`}
-                              >
-                                <span className={`truncate flex-1 mr-2 text-left ${
-                                  selectedMetier === rome 
-                                    ? 'text-indigo-700 dark:text-indigo-300 font-medium' 
-                                    : 'text-gray-700 dark:text-gray-300'
-                                }`} title={metierLabel}>
-                                  {metierLabel}
-                                </span>
-                                <span className={`font-semibold whitespace-nowrap ${
-                                  selectedMetier === rome 
-                                    ? 'text-indigo-700 dark:text-indigo-300' 
-                                    : 'text-gray-900 dark:text-white'
-                                }`}>
-                                  {(count as number).toLocaleString()}
-                                </span>
-                              </button>
-                              {/* Simple tooltip for job offers */}
-                              <div className="absolute right-full top-0 mr-2 z-50 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-3 hidden group-hover:block">
-                                <div className="text-xs space-y-1">
-                                  <div className="font-medium text-gray-900 dark:text-white truncate">{metierLabel}</div>
-                                  <div className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
-                                    {(count as number).toLocaleString()} offres
-                                  </div>
-                                  <div className="text-gray-500 dark:text-gray-400">
-                                    {percentage}% de la région
-                                  </div>
-                                  <div className="text-gray-400 dark:text-gray-500 text-[10px]">
-                                    Code ROME: {rome}
-                                  </div>
-                                </div>
+                      // Job offers breakdown - now with metadata support via trends
+                      (() => {
+                        // Get the offre trends for this region to access metadata
+                        const offreTrendsForRegion = trends.filter(t => 
+                          t.Type === 'offre' && t.RegionCode === selectedRegion.code
+                        );
+                        // Create a map of rome code to trend for quick lookup
+                        const trendByRome: Record<string, MarketTrend> = {};
+                        offreTrendsForRegion.forEach(t => {
+                          if (t.CodeRome && !trendByRome[t.CodeRome]) {
+                            trendByRome[t.CodeRome] = t;
+                          }
+                        });
+
+                        return Object.entries((selectedRegion as RegionData).romeBreakdown)
+                          .filter(([rome]) => {
+                            if (!metierFilter) return true;
+                            const label = getMetierLabel(rome, trendByRome[rome]?.RomeLabel);
+                            return label.toLowerCase().includes(metierFilter.toLowerCase()) || 
+                                   rome.toLowerCase().includes(metierFilter.toLowerCase());
+                          })
+                          .sort(([, a], [, b]) => (b as number) - (a as number))
+                          .map(([rome, count]) => {
+                            const trend = trendByRome[rome];
+                            const metierLabel = getMetierLabel(rome, trend?.RomeLabel);
+                            const totalRegion = (selectedRegion as RegionData).totalJobs;
+                            const percentage = totalRegion > 0 ? ((count as number) / totalRegion * 100).toFixed(1) : '0';
+                            return (
+                              <div key={rome} className="relative group">
+                                <button
+                                  onClick={() => trend ? handleMetierSelect(trend.id, rome) : setSelectedMetier(selectedMetier === rome ? null : rome)}
+                                  className={`w-full flex items-center justify-between rounded p-2 text-sm transition-colors ${
+                                    selectedMetier === rome 
+                                      ? 'bg-indigo-100 dark:bg-indigo-900/50 border border-indigo-300 dark:border-indigo-600' 
+                                      : 'bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700'
+                                  }`}
+                                >
+                                  <span className={`truncate flex-1 mr-2 text-left ${
+                                    selectedMetier === rome 
+                                      ? 'text-indigo-700 dark:text-indigo-300 font-medium' 
+                                      : 'text-gray-700 dark:text-gray-300'
+                                  }`} title={metierLabel}>
+                                    {metierLabel}
+                                  </span>
+                                  <span className={`font-semibold whitespace-nowrap ${
+                                    selectedMetier === rome 
+                                      ? 'text-indigo-700 dark:text-indigo-300' 
+                                      : 'text-gray-900 dark:text-white'
+                                  }`}>
+                                    {(count as number).toLocaleString()}
+                                  </span>
+                                </button>
                               </div>
-                            </div>
-                          );
-                        })
+                            );
+                          });
+                      })()
                     ) : (
                       // Trend breakdown - filter trends directly by Type and RegionCode
                       // Deduplicate by CodeRome, keeping only the first (most recent) entry
@@ -1217,8 +1194,8 @@ export default function FranceMapTab({ className = '' }: FranceMapTabProps) {
                     )}
                   </div>
                   
-                  {/* Metadata details panel - shown only when a trend is selected */}
-                  {selectedMetier && dataSource !== 'offres' && (
+                  {/* Metadata details panel - shown when a métier is selected */}
+                  {selectedMetier && (
                     <div className="mt-3 p-3 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg border border-indigo-200 dark:border-indigo-700">
                       {metadataLoading ? (
                         <div className="flex items-center justify-center py-2">
