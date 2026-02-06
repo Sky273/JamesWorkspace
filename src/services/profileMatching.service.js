@@ -331,12 +331,13 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
     const missionKeywords = await getMissionKeywords(missionId, missionRecord, userMetadata);
     
     // 3. Build query for resumes
-    const conditions = ["(status = 'Analyzed' OR status = 'Improved')"];
+    // Use LOWER() for case-insensitive status comparison (PostgreSQL stores lowercase)
+    const conditions = ["(LOWER(status) = 'analyzed' OR LOWER(status) = 'improved')"];
     const params = [];
     let paramIndex = 1;
     
     if (status) {
-        conditions.push(`status = $${paramIndex}`);
+        conditions.push(`LOWER(status) = LOWER($${paramIndex})`);
         params.push(status);
         paramIndex++;
     }
@@ -350,9 +351,12 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
     const whereClause = conditions.join(' AND ');
     
     // 4. Fetch all resumes
+    // Use cleaned tags (skills_cleaned, etc.) for better matching accuracy
+    // Fall back to raw tags if cleaned are not available
     const query = `
         SELECT id, name, title, status, global_rating, 
                skills, tools, industries, soft_skills,
+               skills_cleaned, tools_cleaned, industries_cleaned, soft_skills_cleaned,
                customer_name, created_at
         FROM resumes
         WHERE ${whereClause}
@@ -365,13 +369,30 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
     
     safeLog('info', 'Fetched resumes for matching', { count: resumeRecords.length });
     
+    // Debug: Log first few resumes to check tags
+    if (resumeRecords.length > 0) {
+        const sampleResume = resumeRecords[0];
+        safeLog('debug', 'Sample resume tags check', {
+            id: sampleResume.id,
+            name: sampleResume.name,
+            status: sampleResume.status,
+            hasSkills: !!sampleResume.skills,
+            skillsType: typeof sampleResume.skills,
+            skillsPreview: JSON.stringify(sampleResume.skills)?.substring(0, 200),
+            hasTools: !!sampleResume.tools,
+            hasIndustries: !!sampleResume.industries,
+            hasSoftSkills: !!sampleResume.soft_skills
+        });
+    }
+    
     // 5. Score each resume
+    // Prioritize cleaned tags over raw tags for better matching accuracy
     const scoredProfiles = resumeRecords.map(record => {
         const resumeTags = {
-            skills: parseJsonField(record.skills),
-            tools: parseJsonField(record.tools),
-            industries: parseJsonField(record.industries),
-            softSkills: parseJsonField(record.soft_skills)
+            skills: parseJsonField(record.skills_cleaned) || parseJsonField(record.skills),
+            tools: parseJsonField(record.tools_cleaned) || parseJsonField(record.tools),
+            industries: parseJsonField(record.industries_cleaned) || parseJsonField(record.industries),
+            softSkills: parseJsonField(record.soft_skills_cleaned) || parseJsonField(record.soft_skills)
         };
         
         const matchResult = calculateMatchScore(resumeTags, missionKeywords, weights);
@@ -392,7 +413,17 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
         };
     });
     
+    // Debug: Log scoring distribution
+    safeLog('debug', 'Scoring distribution', {
+        totalScored: scoredProfiles.length,
+        withScore0: scoredProfiles.filter(p => p.matchScore === 0).length,
+        withScoreAbove0: scoredProfiles.filter(p => p.matchScore > 0).length,
+        withScoreAbove50: scoredProfiles.filter(p => p.matchScore >= 50).length,
+        topScores: scoredProfiles.slice(0, 5).map(p => ({ name: p.name, score: p.matchScore }))
+    });
+    
     // 6. Filter by minimum score and sort
+    // Include all profiles with score >= 0 to show results even with low matches
     const preliminaryProfiles = scoredProfiles
         .filter(p => p.matchScore >= Math.max(0, minScore - 15))
         .sort((a, b) => b.matchScore - a.matchScore)
@@ -424,8 +455,10 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
     });
     
     // 9. Final filter and sort
+    // Always include profiles even with score 0 when minScore is 0
+    // This ensures we show all CVs sorted by relevance
     const filteredProfiles = refinedProfiles
-        .filter(p => p.matchScore >= minScore)
+        .filter(p => minScore === 0 ? true : p.matchScore >= minScore)
         .sort((a, b) => b.matchScore - a.matchScore)
         .slice(0, limit);
     
