@@ -31,7 +31,7 @@ interface Mission {
   Title?: string;
   Content?: string;
   Customer?: string;
-  CreatedAt?: string;
+  'Created At'?: string;
   Status?: 'Active' | 'Closed' | 'Draft';
 }
 

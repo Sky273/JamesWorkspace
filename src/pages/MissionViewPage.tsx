@@ -27,7 +27,7 @@ interface Mission {
   Title?: string;
   Content?: string;
   Customer?: string;
-  CreatedAt?: string;
+  'Created At'?: string;
   Status?: 'Active' | 'Closed' | 'Draft';
   Keywords?: string;
 }
@@ -191,10 +191,10 @@ const MissionViewPage = (): JSX.Element => {
                       {mission.Customer}
                     </span>
                   )}
-                  {mission.CreatedAt && (
+                  {mission['Created At'] && (
                     <span className="flex items-center gap-1">
                       <CalendarIcon className="w-4 h-4" />
-                      {formatMissionDate(mission.CreatedAt)}
+                      {formatMissionDate(mission['Created At'])}
                     </span>
                   )}
                   {mission.Status && (

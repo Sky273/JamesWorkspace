@@ -6,6 +6,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
+import { formatDateTime } from '../utils/dateFormatter';
 
 interface HealthCheck {
   status: string;
@@ -471,7 +472,7 @@ const HealthIndicator = ({ showAlways = false }: HealthIndicatorProps): JSX.Elem
             {/* Last check timestamp */}
             {health.timestamp && (
               <div className="mt-3 pt-2 border-t border-gray-200 dark:border-gray-700 text-[10px] text-gray-400">
-                {t('health.lastCheck', 'Dernière vérification')}: {new Date(health.timestamp).toLocaleTimeString()}
+                {t('health.lastCheck', 'Dernière vérification')}: {formatDateTime(health.timestamp)}
               </div>
             )}
           </div>

@@ -17,8 +17,7 @@ import ExportModal from './AdaptationsPage_ExportModal';
 import AdaptationAnalysisView from '../components/AdaptationAnalysisView';
 import { createAuthOptionsWithCsrf } from '../utils/apiInterceptor';
 import logger from '../utils/logger.frontend';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { formatDateTime } from '../utils/dateFormatter';
 
 import { StatsCards, SearchAndFilters } from '../components/AdaptationsPage';
 import Pagination from '../components/Pagination';
@@ -470,7 +469,7 @@ const AdaptationsPage = (): JSX.Element => {
                 <div className="mb-4">
                   <h3 className="font-semibold text-gray-900 dark:text-white mb-2 line-clamp-1">{getResumeName(adaptation)}</h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-1"><span className="font-medium">{t('adaptations.mission')}:</span> {getMissionTitle(adaptation)}</p>
-                  {adaptation['Created At'] && <p className="text-xs text-gray-500 dark:text-gray-500">{format(new Date(adaptation['Created At']), 'dd MMM yyyy à HH:mm', { locale: fr })}</p>}
+                  {adaptation['Created At'] && <p className="text-xs text-gray-500 dark:text-gray-500">{formatDateTime(adaptation['Created At'])}</p>}
                 </div>
                 <div className="flex items-center gap-2">
                   <button onClick={() => navigate(`/adaptations/${adaptation.id}`)} className="flex-1 px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-1"><EyeIcon className="w-4 h-4" />{t('adaptations.viewAdaptation')}</button>

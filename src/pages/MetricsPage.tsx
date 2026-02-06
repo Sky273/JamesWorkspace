@@ -21,6 +21,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { fetchWithAuth, createAuthOptions } from '../utils/apiInterceptor';
 import logger from '../utils/logger.frontend';
+import { formatDateTime } from '../utils/dateFormatter';
 
 type HeroIcon = ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, 'ref'> & { title?: string; titleId?: string } & RefAttributes<SVGSVGElement>>;
 
@@ -294,13 +295,13 @@ const MetricsPage = (): JSX.Element => {
             </div>
           </div>
         </div>
-        {lastUpdated && <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">{t('metrics.lastUpdate')}: {lastUpdated.toLocaleTimeString()}</p>}
+        {lastUpdated && <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">{t('metrics.lastUpdate')}: {formatDateTime(lastUpdated)}</p>}
       </div>
 
       {metrics ? (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <StatCard title={t('metrics.uptime')} value={formatUptime(safeNumber(metrics.server?.uptimeSeconds))} subtitle={`${t('metrics.startedAt')}: ${metrics.server?.startTime ? new Date(metrics.server.startTime).toLocaleString() : 'N/A'}`} icon={ServerIcon} color="green" />
+            <StatCard title={t('metrics.uptime')} value={formatUptime(safeNumber(metrics.server?.uptimeSeconds))} subtitle={`${t('metrics.startedAt')}: ${metrics.server?.startTime ? formatDateTime(metrics.server.startTime) : 'N/A'}`} icon={ServerIcon} color="green" />
             <StatCard title={t('metrics.totalRequests')} value={formatNumber(safeNumber(metrics.requests?.total))} subtitle={`${t('metrics.last24h')}: ${formatNumber(safeNumber(metrics.requests?.last24h))}`} icon={ChartBarIcon} color="blue" />
             <StatCard title={t('metrics.avgResponseTime')} value={`${safeNumber(metrics.performance?.avgResponseTime).toFixed(0)}ms`} subtitle={`Min: ${safeNumber(metrics.performance?.minResponseTime)}ms / Max: ${safeNumber(metrics.performance?.maxResponseTime)}ms`} icon={ClockIcon} color="purple" />
             <StatCard title={t('metrics.errorRate')} value={`${(safeNumber(metrics.errors?.rate) * 100).toFixed(2)}%`} subtitle={`${t('metrics.totalErrors')}: ${safeNumber(metrics.errors?.total)}`} icon={ExclamationTriangleIcon} color={safeNumber(metrics.errors?.rate) > 0.05 ? 'red' : 'green'} />

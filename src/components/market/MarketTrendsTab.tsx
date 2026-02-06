@@ -24,6 +24,7 @@ import {
   SparklesIcon
 } from '@heroicons/react/24/outline';
 import Pagination from '../Pagination';
+import { formatDate } from '../../utils/dateFormatter';
 import {
   getTrends,
   getTrendsSummary,
@@ -771,7 +772,7 @@ export default function MarketTrendsTab({ className = '' }: MarketTrendsTabProps
                     getTrendsSummary(),
                     getTrendFilters()
                   ]);
-                  setTrends(trendsResponse.trends);
+                  setTrends(trendsResponse.trends || []);
                   setTotalCount(trendsResponse.totalCount);
                   if (trendsResponse.pagination) {
                     setTotalPages(trendsResponse.pagination.totalPages);
@@ -1270,11 +1271,7 @@ function TrendCard({ trend, type, parsed, romeLabel }: TrendCardProps) {
                 {/* Date de mise à jour */}
                 {(dynDetails.dateMaj || dynDetails.dateMajGlobale) && (
                   <div className="text-xs text-gray-400 dark:text-gray-500 pt-1">
-                    Mis à jour : {new Date(dynDetails.dateMaj || dynDetails.dateMajGlobale || '').toLocaleDateString('fr-FR', {
-                      day: 'numeric',
-                      month: 'long',
-                      year: 'numeric'
-                    })}
+                    Mis à jour : {formatDate(dynDetails.dateMaj || dynDetails.dateMajGlobale, 'long')}
                   </div>
                 )}
               </div>

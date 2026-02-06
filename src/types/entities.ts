@@ -87,7 +87,6 @@ export interface Resume {
   'Updated At'?: string;
   'Analysis Date'?: string;
   'Last Improved'?: string;
-  '_createdTime'?: string;
   // Index signature for dynamic field access
   [key: string]: unknown;
 }

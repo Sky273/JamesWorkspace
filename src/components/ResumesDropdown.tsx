@@ -7,7 +7,7 @@ import { Fragment, useEffect } from 'react';
 import { Menu, Transition } from '@headlessui/react';
 import { ChevronDownIcon, ChartBarIcon, CalendarIcon } from '@heroicons/react/24/outline';
 import { useResume } from '../context/ResumeContext';
-import { format } from 'date-fns';
+import { formatDate } from '../utils/dateFormatter';
 
 // Using any for Resume to maintain compatibility with ResumeContext
 type Resume = any;
@@ -55,7 +55,7 @@ export default function ResumesDropdown(): JSX.Element {
                           <p className="text-sm font-medium truncate">{resume['Resume File']?.[0]?.filename || 'Unnamed Resume'}</p>
                           <div className="mt-1 flex items-center text-sm text-gray-500 dark:text-gray-400">
                             <CalendarIcon className="flex-shrink-0 mr-1.5 h-4 w-4" />
-                            {format(new Date(resume._createdTime || Date.now()), 'MMM d, yyyy')}
+                            {formatDate(resume['Created At'], 'medium') || '-'}
                           </div>
                         </div>
                         <div className="ml-3 flex items-center">

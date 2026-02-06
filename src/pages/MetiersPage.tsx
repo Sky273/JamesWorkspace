@@ -28,6 +28,7 @@ import {
   CheckCircleIcon,
   XMarkIcon
 } from '@heroicons/react/24/outline';
+import { formatDateTime } from '../utils/dateFormatter';
 
 export default function MetiersPage() {
   const { user } = useAuth();
@@ -262,7 +263,7 @@ export default function MetiersPage() {
               <div>
                 <p className="text-sm text-gray-500 dark:text-gray-400">Dernière MAJ</p>
                 <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {metiers[0]?.LastUpdated || '-'}
+                  {formatDateTime(metiers[0]?.LastUpdated) || '-'}
                 </p>
               </div>
             </div>
@@ -458,7 +459,7 @@ export default function MetiersPage() {
                           </span>
                         )}
                         {metier.LastUpdated && (
-                          <span>Mis à jour: {metier.LastUpdated}</span>
+                          <span>Mis à jour: {formatDateTime(metier.LastUpdated)}</span>
                         )}
                       </div>
                     </div>

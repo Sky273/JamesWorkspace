@@ -518,7 +518,7 @@ const ResumesPage = (): JSX.Element => {
 
                 <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-3">
                   <CalendarIcon className="w-4 h-4" />
-                  {formatResumeDate(resume._createdTime)}
+                  {formatResumeDate(resume['Created At'])}
                 </div>
 
                 <div className="flex flex-wrap gap-1">

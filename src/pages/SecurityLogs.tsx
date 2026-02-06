@@ -11,6 +11,7 @@ import { ShieldCheckIcon, ExclamationTriangleIcon, InformationCircleIcon, XCircl
 import { fetchWithAuth, createAuthOptions } from '../utils/apiInterceptor';
 import Pagination from '../components/Pagination';
 import logger from '../utils/logger.frontend';
+import { formatDateTime } from '../utils/dateFormatter';
 
 interface Log {
   timestamp: string;
@@ -155,7 +156,7 @@ const SecurityLogs = (): JSX.Element => {
   };
 
   const formatTimestamp = (timestamp: string): string => {
-    return new Date(timestamp).toLocaleString('fr-FR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    return formatDateTime(timestamp, true);
   };
 
   if (loading) {
