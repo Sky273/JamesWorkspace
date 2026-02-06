@@ -8,7 +8,7 @@ import { extractResumeText } from '../utils/resumeProcessing';
 import { useAuth } from './AuthContext';
 import { createAuthOptionsWithCsrf } from '../utils/apiInterceptor';
 import logger from '../utils/logger.frontend';
-import { showCaughtError } from '../components/ErrorToast';
+import { showCaughtError, getUserFriendlyMessage } from '../components/ErrorToast';
 
 // Import centralized types
 import { Resume } from '../types/entities';
@@ -278,8 +278,9 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
       return newResume;
     } catch (error) {
       if (!controller.signal.aborted) {
-        const errorMessage = error instanceof Error ? error.message : 'Échec du traitement du CV';
-        setProcessingError(errorMessage);
+        // Convert technical error to user-friendly message
+        const { message: userFriendlyMessage } = getUserFriendlyMessage(error);
+        setProcessingError(userFriendlyMessage);
         logger.error('[ResumeContext] ERROR during upload:', error);
         showCaughtError(error);
 
@@ -467,8 +468,8 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
     } catch (error) {
       if (!controller.signal.aborted) {
         logger.error('Error deleting resume:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Failed to delete resume.';
-        setProcessingError(errorMessage);
+        const { message: userFriendlyMessage } = getUserFriendlyMessage(error);
+        setProcessingError(userFriendlyMessage);
       }
     } finally {
       if (!controller.signal.aborted) {

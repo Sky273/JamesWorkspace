@@ -65,15 +65,23 @@ interface TensionIndicator {
   color: string;
 }
 
+interface AgeBreakdown {
+  label: string;
+  value: number;
+}
+
 interface EmbaucheDetails {
-  genre?: { hommes: number; femmes: number };
+  genre?: { hommes: number; femmes: number; hommesNombre?: number; femmesNombre?: number };
   contrats?: { cdi: number; cdd: number; autres: number };
-  qualification?: { cadres: number; techniciens: number; employes: number };
+  qualification?: { cadres: number; techniciens: number; employes: number; ouvriers?: number };
   experience?: { debutant: number; experimente: number };
   age?: { jeunes: number; adultes: number; seniors: number };
+  ageDetaille?: AgeBreakdown[];
   formation?: { sansQualif: number; bac: number; bacPlus: number };
+  formationDetaille?: AgeBreakdown[];
   periode?: string;
   territoire?: string;
+  pourcentageTotal?: number;
 }
 
 export interface ParsedMetadata {
@@ -151,6 +159,7 @@ export function parseMetadata(metadata: Record<string, unknown> | string | null,
     result.activite = p.libActivite;
     result.nomenclature = p.libNomenclature;
     
+    // Metadata value is the primary source of truth
     if (p.valeurPrincipaleNombre !== undefined) {
       result.valeurPrincipale = p.valeurPrincipaleNombre;
       result.valeurPrincipaleType = 'nombre';
@@ -162,6 +171,7 @@ export function parseMetadata(metadata: Record<string, unknown> | string | null,
       result.valeurPrincipaleType = 'taux';
     }
     
+    // Secondary value from metadata
     if (p.valeurSecondairePourcentage !== undefined) {
       result.valeurSecondaire = p.valeurSecondairePourcentage;
       result.valeurSecondarieType = 'pourcentage';
@@ -173,8 +183,9 @@ export function parseMetadata(metadata: Record<string, unknown> | string | null,
       result.valeurSecondarieType = 'montant';
     }
     
+    // Characteristics from metadata
     if (p.listeValeurParCaract?.length) {
-      result.caracteristiques = p.listeValeurParCaract.map(c => ({
+      result.caracteristiques = p.listeValeurParCaract.map((c: CaracteristiqueData) => ({
         label: c.libCaract || '',
         nombre: c.nombre,
         montant: c.montant,
@@ -182,6 +193,12 @@ export function parseMetadata(metadata: Record<string, unknown> | string | null,
         pourcentage: c.pourcentage
       }));
     }
+  }
+  
+  // Fallback to trendValue only if metadata didn't provide a value
+  if (result.valeurPrincipale === undefined && trendValue !== undefined && trendValue !== null) {
+    result.valeurPrincipale = typeof trendValue === 'string' ? parseFloat(trendValue) : trendValue;
+    result.valeurPrincipaleType = 'nombre';
   }
   
   // Type-specific parsing
@@ -213,10 +230,10 @@ export function parseMetadata(metadata: Record<string, unknown> | string | null,
         });
       }
       
-      let tensionValue = mainTensionValue ?? result.valeurPrincipale;
-      if (tensionValue === undefined && trendValue !== undefined && trendValue !== null) {
-        tensionValue = typeof trendValue === 'string' ? parseFloat(trendValue) : trendValue;
-      }
+      // Metadata value (from listeValeursParPeriode) is primary
+      // mainTensionValue from PERSPECTIVE indicator is secondary
+      // trendValue is fallback (already applied to result.valeurPrincipale if metadata was empty)
+      const tensionValue = result.valeurPrincipale ?? mainTensionValue;
       
       if (tensionValue !== undefined && !isNaN(tensionValue)) {
         result.valeurPrincipale = tensionValue;
@@ -305,11 +322,8 @@ export function parseMetadata(metadata: Record<string, unknown> | string | null,
         result.typeSpecific!.dynamiqueDetails.dateMajGlobale = parsedMeta.datMaj as string;
       }
       
-      let dynamiqueValue = result.valeurPrincipale;
-      if (dynamiqueValue === undefined && trendValue !== undefined && trendValue !== null) {
-        dynamiqueValue = typeof trendValue === 'string' ? parseFloat(trendValue) : trendValue;
-        result.valeurPrincipale = dynamiqueValue;
-      }
+      // valeurPrincipale is set from metadata (primary) or trendValue (fallback)
+      const dynamiqueValue = result.valeurPrincipale;
       
       if (dynamiqueValue !== undefined && !isNaN(dynamiqueValue)) {
         if (dynamiqueValue >= 1) {
@@ -332,12 +346,8 @@ export function parseMetadata(metadata: Record<string, unknown> | string | null,
     case 'offre':
     case 'demandeur':
     case 'demandeur_entrant':
-      let countValue = result.valeurPrincipale;
-      if (countValue === undefined && trendValue !== undefined && trendValue !== null) {
-        countValue = typeof trendValue === 'string' ? parseFloat(trendValue) : trendValue;
-        result.valeurPrincipale = countValue;
-      }
-      result.typeSpecific!.totalCount = countValue;
+      // valeurPrincipale is set from metadata (primary) or trendValue (fallback)
+      result.typeSpecific!.totalCount = result.valeurPrincipale;
       if (result.valeurSecondaire !== undefined && result.valeurSecondarieType === 'pourcentage') {
         result.typeSpecific!.evolutionPercent = result.valeurSecondaire;
       }
@@ -357,7 +367,9 @@ export function parseMetadata(metadata: Record<string, unknown> | string | null,
           if (hommes || femmes) {
             embaucheDetails.genre = {
               hommes: hommes?.pourcentage || 0,
-              femmes: femmes?.pourcentage || 0
+              femmes: femmes?.pourcentage || 0,
+              hommesNombre: hommes?.nombre,
+              femmesNombre: femmes?.nombre
             };
           }
           
@@ -378,11 +390,14 @@ export function parseMetadata(metadata: Record<string, unknown> | string | null,
           const tech = caracts.find((c: CaracteristiqueData) => c.codeCaract === 'TECH');
           const eq = caracts.find((c: CaracteristiqueData) => c.codeCaract === 'EQ');
           const enq = caracts.find((c: CaracteristiqueData) => c.codeCaract === 'ENQ');
-          if (cadres || tech || eq || enq) {
+          const oq = caracts.find((c: CaracteristiqueData) => c.codeCaract === 'OQ');
+          const onq = caracts.find((c: CaracteristiqueData) => c.codeCaract === 'ONQ');
+          if (cadres || tech || eq || enq || oq || onq) {
             embaucheDetails.qualification = {
               cadres: cadres?.pourcentage || 0,
               techniciens: tech?.pourcentage || 0,
-              employes: (eq?.pourcentage || 0) + (enq?.pourcentage || 0)
+              employes: (eq?.pourcentage || 0) + (enq?.pourcentage || 0),
+              ouvriers: (oq?.pourcentage || 0) + (onq?.pourcentage || 0)
             };
           }
           
@@ -408,6 +423,28 @@ export function parseMetadata(metadata: Record<string, unknown> | string | null,
             };
           }
           
+          // Tranches d'âge détaillées
+          const ageDetails: AgeBreakdown[] = [];
+          const ageMapping: Record<string, string> = {
+            'AGE1524': '15-24 ans',
+            'AGE2549': '25-49 ans',
+            'AGE50P': '50 ans et +',
+            'AGE2534': '25-34 ans',
+            'AGE3549': '35-49 ans',
+            'AGE1': '< 25 ans',
+            'AGE2': '25-49 ans',
+            'AGE3': '50 ans et +'
+          };
+          Object.entries(ageMapping).forEach(([code, label]) => {
+            const ageCaract = caracts.find((c: CaracteristiqueData) => c.codeCaract === code);
+            if (ageCaract?.pourcentage !== undefined) {
+              ageDetails.push({ label, value: ageCaract.pourcentage });
+            }
+          });
+          if (ageDetails.length > 0) {
+            embaucheDetails.ageDetaille = ageDetails;
+          }
+          
           const sans = caracts.find((c: CaracteristiqueData) => c.codeCaract === 'SANS');
           const capbep = caracts.find((c: CaracteristiqueData) => c.codeCaract === 'CAPBEP');
           const bac = caracts.find((c: CaracteristiqueData) => c.codeCaract === 'BAC');
@@ -420,6 +457,31 @@ export function parseMetadata(metadata: Record<string, unknown> | string | null,
               bac: bac?.pourcentage || 0,
               bacPlus: (bac2?.pourcentage || 0) + (bac3?.pourcentage || 0) + (bac5?.pourcentage || 0)
             };
+            
+            // Formation détaillée
+            const formationDetails: AgeBreakdown[] = [];
+            const formMapping: Record<string, string> = {
+              'SANS': 'Sans diplôme',
+              'CAPBEP': 'CAP/BEP',
+              'BAC': 'Bac',
+              'BAC2': 'Bac+2',
+              'BAC3EP': 'Bac+3/4',
+              'BAC5EP': 'Bac+5 et +'
+            };
+            Object.entries(formMapping).forEach(([code, label]) => {
+              const formCaract = caracts.find((c: CaracteristiqueData) => c.codeCaract === code);
+              if (formCaract?.pourcentage !== undefined) {
+                formationDetails.push({ label, value: formCaract.pourcentage });
+              }
+            });
+            if (formationDetails.length > 0) {
+              embaucheDetails.formationDetaille = formationDetails;
+            }
+          }
+          
+          // Pourcentage du total (valeur secondaire)
+          if (firstPeriode.valeurSecondairePourcentage !== undefined) {
+            embaucheDetails.pourcentageTotal = firstPeriode.valeurSecondairePourcentage;
           }
           
           result.typeSpecific!.embaucheDetails = embaucheDetails;
@@ -485,23 +547,37 @@ export default function TrendMetadataDisplay({ metadata, type, value, compact = 
   
   // Compact mode for tooltips
   if (compact) {
+    const embauche = parsed.typeSpecific?.embaucheDetails;
+    
     return (
-      <div className={`text-xs space-y-1 ${className}`}>
+      <div className={`text-xs space-y-2 ${className}`}>
         {parsed.indicateur && (
           <div className="font-medium text-gray-900 dark:text-white truncate">{parsed.indicateur}</div>
         )}
+        
+        {/* Valeur principale et pourcentage du total */}
         {parsed.valeurPrincipale !== undefined && (
-          <div className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
-            {formatNumber(parsed.valeurPrincipale, parsed.valeurPrincipaleType)}
+          <div>
+            <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+              {formatNumber(parsed.valeurPrincipale, parsed.valeurPrincipaleType)}
+            </div>
+            {embauche?.pourcentageTotal !== undefined && (
+              <div className="text-gray-500 dark:text-gray-400">
+                {embauche.pourcentageTotal.toFixed(1)}% du total
+              </div>
+            )}
           </div>
         )}
+        
+        {/* Évolution */}
         {parsed.valeurSecondaire !== undefined && parsed.valeurSecondarieType === 'pourcentage' && (
-          <div className={`text-xs ${parsed.valeurSecondaire >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {parsed.valeurSecondaire >= 0 ? '↑' : '↓'} {Math.abs(parsed.valeurSecondaire).toFixed(1)}% évolution
+          <div className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
+            parsed.valeurSecondaire >= 0 
+              ? 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300' 
+              : 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300'
+          }`}>
+            {parsed.valeurSecondaire >= 0 ? '+' : ''}{parsed.valeurSecondaire.toFixed(1)}% évolution
           </div>
-        )}
-        {parsed.periode && (
-          <div className="text-gray-500 dark:text-gray-400">{parsed.periode}</div>
         )}
         
         {/* Type-specific compact display */}
@@ -527,27 +603,101 @@ export default function TrendMetadataDisplay({ metadata, type, value, compact = 
           </div>
         )}
         
-        {/* Contrats breakdown */}
-        {parsed.typeSpecific?.embaucheDetails?.contrats && (
-          <div className="space-y-0.5 mt-1">
-            <ProgressBar value={parsed.typeSpecific.embaucheDetails.contrats.cdi} color="green" label="CDI" />
-            <ProgressBar value={parsed.typeSpecific.embaucheDetails.contrats.cdd} color="orange" label="CDD" />
+        {/* Genre breakdown with visual bars */}
+        {embauche?.genre && (embauche.genre.hommes > 0 || embauche.genre.femmes > 0) && (
+          <div className="mt-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded">
+            <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">GENRE</div>
+            <div className="flex items-center gap-2">
+              <span className="text-blue-600 dark:text-blue-400 font-medium">Hommes</span>
+              <span className="font-bold">{embauche.genre.hommes.toFixed(0)}%</span>
+              <span className="text-pink-600 dark:text-pink-400 font-medium ml-2">Femmes</span>
+              <span className="font-bold">{embauche.genre.femmes.toFixed(0)}%</span>
+            </div>
+            <div className="flex h-2 mt-1 rounded overflow-hidden">
+              <div className="bg-blue-500" style={{ width: `${embauche.genre.hommes}%` }} />
+              <div className="bg-pink-500" style={{ width: `${embauche.genre.femmes}%` }} />
+            </div>
+            {(embauche.genre.hommesNombre || embauche.genre.femmesNombre) && (
+              <div className="flex justify-between text-[10px] text-gray-500 mt-0.5">
+                <span>{embauche.genre.hommesNombre?.toLocaleString('fr-FR')} pers.</span>
+                <span>{embauche.genre.femmesNombre?.toLocaleString('fr-FR')} pers.</span>
+              </div>
+            )}
+          </div>
+        )}
+        
+        {/* Tranches d'âge détaillées */}
+        {embauche?.ageDetaille && embauche.ageDetaille.length > 0 && (
+          <div className="mt-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded">
+            <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">TRANCHES D'ÂGE</div>
+            <div className="space-y-1">
+              {embauche.ageDetaille.map((age, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <span className="w-20 text-gray-600 dark:text-gray-400 truncate">{age.label}</span>
+                  <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded overflow-hidden">
+                    <div className="h-full bg-orange-500 rounded" style={{ width: `${Math.min(100, age.value)}%` }} />
+                  </div>
+                  <span className="w-10 text-right font-medium">{age.value.toFixed(0)}%</span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
         
         {/* Qualification breakdown */}
-        {parsed.typeSpecific?.embaucheDetails?.qualification && (
-          <div className="space-y-0.5 mt-1">
-            <ProgressBar value={parsed.typeSpecific.embaucheDetails.qualification.cadres} color="purple" label="Cadres" />
-            <ProgressBar value={parsed.typeSpecific.embaucheDetails.qualification.techniciens} color="blue" label="Tech." />
+        {embauche?.qualification && (
+          <div className="mt-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded">
+            <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">QUALIFICATION</div>
+            <div className="space-y-1">
+              {embauche.qualification.cadres > 0 && (
+                <ProgressBar value={embauche.qualification.cadres} color="purple" label="Cadres" />
+              )}
+              {embauche.qualification.techniciens > 0 && (
+                <ProgressBar value={embauche.qualification.techniciens} color="blue" label="Tech." />
+              )}
+              {embauche.qualification.employes > 0 && (
+                <ProgressBar value={embauche.qualification.employes} color="teal" label="Employés" />
+              )}
+              {embauche.qualification.ouvriers && embauche.qualification.ouvriers > 0 && (
+                <ProgressBar value={embauche.qualification.ouvriers} color="orange" label="Ouvriers" />
+              )}
+            </div>
           </div>
         )}
         
         {/* Experience breakdown */}
-        {parsed.typeSpecific?.embaucheDetails?.experience && (
-          <div className="space-y-0.5 mt-1">
-            <ProgressBar value={parsed.typeSpecific.embaucheDetails.experience.debutant} color="teal" label="Déb." />
-            <ProgressBar value={parsed.typeSpecific.embaucheDetails.experience.experimente} color="indigo" label="Exp." />
+        {embauche?.experience && (
+          <div className="mt-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded">
+            <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">EXPÉRIENCE</div>
+            <div className="space-y-1">
+              <ProgressBar value={embauche.experience.debutant} color="teal" label="Débutant" />
+              <ProgressBar value={embauche.experience.experimente} color="indigo" label="Expérimenté" />
+            </div>
+          </div>
+        )}
+        
+        {/* Formation détaillée */}
+        {embauche?.formationDetaille && embauche.formationDetaille.length > 0 && (
+          <div className="mt-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded">
+            <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">FORMATION</div>
+            <div className="space-y-1">
+              {embauche.formationDetaille.map((form, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <span className="w-20 text-gray-600 dark:text-gray-400 truncate">{form.label}</span>
+                  <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded overflow-hidden">
+                    <div className="h-full bg-purple-500 rounded" style={{ width: `${Math.min(100, form.value)}%` }} />
+                  </div>
+                  <span className="w-10 text-right font-medium">{form.value.toFixed(0)}%</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        {/* Période */}
+        {parsed.periode && (
+          <div className="text-gray-500 dark:text-gray-400 mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+            {parsed.periode}
           </div>
         )}
       </div>

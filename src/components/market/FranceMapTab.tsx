@@ -13,7 +13,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import type { Map as MaplibreMap } from 'maplibre-gl';
 import { MarketTrend, getAllTrends, getTrendMetadata } from '../../services/marketRadarService';
 import { getStoredMetiers, Metier } from '../../services/romeService';
-import TrendMetadataDisplay from './TrendMetadataDisplay';
+import TrendMetadataDisplay, { parseMetadata } from './TrendMetadataDisplay';
 
 // Data source types
 type DataSourceType = 'all' | 'offres' | 'tension' | 'salaire' | 'dynamique_emploi' | 'embauche' | 'demandeur' | 'demandeur_entrant';
@@ -1164,6 +1164,16 @@ export default function FranceMapTab({ className = '' }: FranceMapTabProps) {
                           .map(trend => {
                             const metierLabel = trend.RomeLabel || trend.CodeRome || 'Inconnu';
                             const rome = trend.CodeRome || trend.id;
+                            
+                            // Use metadata value when available for selected métier
+                            let displayValue = trend.Value || 0;
+                            if (selectedMetier === rome && selectedTrendMetadata?.Metadata) {
+                              const parsed = parseMetadata(selectedTrendMetadata.Metadata, selectedTrendMetadata.Type, selectedTrendMetadata.Value);
+                              if (parsed?.valeurPrincipale !== undefined) {
+                                displayValue = parsed.valeurPrincipale;
+                              }
+                            }
+                            
                             return (
                               <button
                                 key={trend.id}
@@ -1186,7 +1196,7 @@ export default function FranceMapTab({ className = '' }: FranceMapTabProps) {
                                     ? 'text-indigo-700 dark:text-indigo-300' 
                                     : 'text-gray-900 dark:text-white'
                                 }`}>
-                                  {formatValue(trend.Value || 0)}
+                                  {formatValue(displayValue)}
                                 </span>
                               </button>
                             );
