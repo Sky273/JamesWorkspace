@@ -39,6 +39,7 @@ export async function getLLMSettings() {
 
         const dbSettings = settingsRecords[0];
 
+        
         // Map PostgreSQL columns to frontend format
         const settings = {
             llmModel: dbSettings.llm_model,
@@ -61,10 +62,9 @@ export async function getLLMSettings() {
         settingsCache = settings;
         cacheTimestamp = now;
 
-        safeLog('info', 'LLM settings loaded from PostgreSQL', {
+        safeLog('debug', 'LLM settings loaded from PostgreSQL', {
             model: settings.llmModel || 'NOT SET',
-            provider: settings.llmProvider || 'NOT SET',
-            cached: true
+            provider: settings.llmProvider || 'NOT SET'
         });
 
         return settings;
