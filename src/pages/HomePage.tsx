@@ -422,7 +422,7 @@ function HomePage(): JSX.Element {
 
         <motion.section 
           id="how-it-works"
-          className="py-24 mt-32 bg-white dark:bg-gray-800 scroll-mt-20"
+          className="py-24 mt-64 bg-white dark:bg-gray-800 scroll-mt-20"
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
