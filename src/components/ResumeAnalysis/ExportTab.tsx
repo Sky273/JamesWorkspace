@@ -84,10 +84,12 @@ const ExportTab = ({ resume, templates, selectedTemplate, onTemplateChange, load
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             {t('resume.analysis.exportOptions.preview')}
           </h3>
-          <div className="prose max-w-none dark:prose-invert">
-            <div className="whitespace-pre-wrap font-mono text-sm max-h-96 overflow-y-auto">
-              {resume['Improved Text'] || resume['Original Text']}
-            </div>
+          <div className="prose prose-sm max-w-none dark:prose-invert max-h-96 overflow-y-auto">
+            <div 
+              dangerouslySetInnerHTML={{ 
+                __html: resume['Improved Text'] || resume['Original Text'] || '' 
+              }} 
+            />
           </div>
         </div>
       </div>
