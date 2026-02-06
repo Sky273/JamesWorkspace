@@ -263,10 +263,74 @@ export default function FranceMapTab({ className = '' }: FranceMapTabProps) {
     }
   }, []);
 
-  // Clear metadata state when region changes
+  // Track previous region code to detect region changes
+  const selectedRegionCode = selectedRegion?.code;
+  const prevRegionCodeRef = useRef<string | null>(null);
+  
+  // When region changes (not métier), reload metadata for the selected métier in the new region
   useEffect(() => {
-    setSelectedTrendMetadata(null);
-  }, [selectedRegion]);
+    const prevRegionCode = prevRegionCodeRef.current;
+    
+    // Update ref AFTER checking for change
+    // Skip if this is the same region (no change)
+    if (prevRegionCode === selectedRegionCode) {
+      return;
+    }
+    
+    // Update the ref to current region
+    prevRegionCodeRef.current = selectedRegionCode ?? null;
+    
+    // Skip if this is initial selection (no previous region)
+    if (prevRegionCode === null) {
+      return;
+    }
+    
+    // Region changed - reload metadata for selected métier in new region
+    if (!selectedRegionCode || !selectedMetier) {
+      setSelectedTrendMetadata(null);
+      return;
+    }
+    
+    // Find the trend for the selected métier in the new region
+    // Note: dataSource 'offres' maps to trend Type 'offre'
+    const trendType = dataSource === 'offres' ? 'offre' : dataSource;
+    const trendForMetier = trends.find(t => 
+      t.CodeRome === selectedMetier && 
+      t.RegionCode === selectedRegionCode &&
+      (dataSource === 'all' || t.Type === trendType)
+    );
+    
+    if (trendForMetier) {
+      // Check cache first
+      const cachedTrend = getFromMetadataCache(trendForMetier.id);
+      if (cachedTrend) {
+        setSelectedTrendMetadata(cachedTrend);
+        return;
+      }
+      
+      // Load metadata for this trend
+      setMetadataLoading(true);
+      getTrendMetadata(trendForMetier.id)
+        .then(response => {
+          if (response.success && response.trend) {
+            addToMetadataCache(trendForMetier.id, response.trend);
+            setSelectedTrendMetadata(response.trend);
+          } else {
+            setSelectedTrendMetadata(null);
+          }
+        })
+        .catch(err => {
+          console.error('Failed to load trend metadata for new region:', err);
+          setSelectedTrendMetadata(null);
+        })
+        .finally(() => {
+          setMetadataLoading(false);
+        });
+    } else {
+      // No data for this métier in the new region
+      setSelectedTrendMetadata(null);
+    }
+  }, [selectedRegionCode, selectedMetier, trends, dataSource, getFromMetadataCache, addToMetadataCache]);
   
   // Clear metadata state when data source changes
   useEffect(() => {
@@ -1012,7 +1076,7 @@ export default function FranceMapTab({ className = '' }: FranceMapTabProps) {
 
           {/* Region Detail Panel */}
           {selectedRegion && (
-            <div className="lg:w-80 border-t lg:border-t-0 lg:border-l border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-4">
+            <div className="lg:w-80 border-t lg:border-t-0 lg:border-l border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-4 overflow-y-auto max-h-[600px]">
               <div className="flex items-center justify-between mb-4">
                 <h4 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                   <MapPinIcon className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
@@ -1054,16 +1118,6 @@ export default function FranceMapTab({ className = '' }: FranceMapTabProps) {
                     )}
                   </div>
 
-                  {/* Selected métier indicator */}
-                  {selectedMetier && (
-                    <div className="mb-3 p-2 bg-indigo-50 dark:bg-indigo-900/30 rounded-md border border-indigo-200 dark:border-indigo-700">
-                      <div className="text-xs text-indigo-600 dark:text-indigo-400 mb-1">{t('marketRadar.map.activeFilter')} :</div>
-                      <div className="text-sm font-medium text-indigo-800 dark:text-indigo-300">
-                        {romeLabelsMap[selectedMetier] || selectedMetier}
-                      </div>
-                    </div>
-                  )}
-                  
                   {/* Métier filter */}
                   <div className="mb-3">
                     <input
@@ -1205,25 +1259,36 @@ export default function FranceMapTab({ className = '' }: FranceMapTabProps) {
                     )}
                   </div>
                   
-                  {/* Metadata details panel - shown when a métier is selected */}
-                  {selectedMetier && (
+                  {/* Metadata details panel - shown when a métier is selected AND metadata is available or loading */}
+                  {selectedMetier && (metadataLoading || selectedTrendMetadata) && (
                     <div className="mt-3 p-3 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg border border-indigo-200 dark:border-indigo-700">
+                      {/* Métier name header */}
+                      <div className="mb-3 pb-2 border-b border-indigo-200 dark:border-indigo-600">
+                        <div className="text-xs text-indigo-600 dark:text-indigo-400 uppercase tracking-wide mb-1">
+                          Métier sélectionné
+                        </div>
+                        <div className="text-sm font-semibold text-indigo-800 dark:text-indigo-200">
+                          {selectedTrendMetadata?.RomeLabel || romeLabelsMap[selectedMetier] || selectedMetier}
+                        </div>
+                        {selectedMetier && selectedMetier !== (selectedTrendMetadata?.RomeLabel || romeLabelsMap[selectedMetier]) && (
+                          <div className="text-xs text-indigo-500 dark:text-indigo-400 mt-0.5">
+                            {selectedMetier}
+                          </div>
+                        )}
+                      </div>
+                      
                       {metadataLoading ? (
                         <div className="flex items-center justify-center py-2">
                           <ArrowPathIcon className="h-4 w-4 animate-spin text-indigo-500" />
                           <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">Chargement des détails...</span>
                         </div>
-                      ) : selectedTrendMetadata ? (
+                      ) : (
                         <TrendMetadataDisplay
-                          metadata={selectedTrendMetadata.Metadata || null}
-                          type={selectedTrendMetadata.Type}
-                          value={selectedTrendMetadata.Value}
+                          metadata={selectedTrendMetadata?.Metadata || null}
+                          type={selectedTrendMetadata?.Type || dataSource}
+                          value={selectedTrendMetadata?.Value}
                           compact={true}
                         />
-                      ) : (
-                        <div className="text-xs text-gray-500 dark:text-gray-400">
-                          Sélectionnez un métier pour voir les détails
-                        </div>
                       )}
                     </div>
                   )}
