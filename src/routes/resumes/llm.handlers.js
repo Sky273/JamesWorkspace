@@ -5,7 +5,7 @@
 
 import { selectWithTimeout, findWithTimeout, createWithTimeout } from '../../utils/postgresHelpers.js';
 import { safeLog } from '../../utils/logger.backend.js';
-import { analyzeResume, improveResume, matchResumeWithMission, adaptResumeToMission } from '../../services/openai.service.js';
+import { analyzeResume, improveResume, matchResumeWithMission, adaptResumeToMission, cleanupText } from '../../services/openai.service.js';
 import { getRequestMetadata } from '../../services/security.service.js';
 import { getLLMSettings } from '../../services/settings.service.js';
 import { getAcceptedIndustriesString } from '../../services/industry.service.js';
@@ -83,7 +83,14 @@ export async function analyzeHandler(req, res) {
             industriesPreview: acceptedIndustries.substring(0, 100) + '...'
         });
 
-        const analysis = await analyzeResume(resumeText, model, analysisPrompt, userMetadata);
+        // Clean up text before analysis (removes HTML entities and tags for cleaner LLM processing)
+        const cleanedText = cleanupText(resumeText);
+        safeLog('debug', 'Text cleaned before analysis', { 
+            originalLength: resumeText.length, 
+            cleanedLength: cleanedText.length 
+        });
+
+        const analysis = await analyzeResume(cleanedText, model, analysisPrompt, userMetadata);
         
         // In anonymous mode, replace name with trigram
         if (cvMode === 'anonymous' && analysis.name) {
@@ -125,7 +132,14 @@ export async function analyzeTextHandler(req, res) {
         const acceptedIndustries = await getAcceptedIndustriesString();
         analysisPrompt = analysisPrompt.replace('{ACCEPTED_INDUSTRIES}', acceptedIndustries);
 
-        const analysis = await analyzeResume(text, model, analysisPrompt, userMetadata);
+        // Clean up text before analysis (removes HTML entities and tags for cleaner LLM processing)
+        const cleanedText = cleanupText(text);
+        safeLog('debug', 'Text cleaned before analysis', { 
+            originalLength: text.length, 
+            cleanedLength: cleanedText.length 
+        });
+
+        const analysis = await analyzeResume(cleanedText, model, analysisPrompt, userMetadata);
         
         // In anonymous mode, replace name with trigram
         if (cvMode === 'anonymous' && analysis.name) {
@@ -179,14 +193,12 @@ export async function improveHandler(req, res) {
         
         // Step 2: Analyze the improved text to get post-improvement suggestions
         
-        // Strip HTML tags for analysis
-        const improvedTextForAnalysis = (improved.text || '')
-            .replace(/<[^>]*>/g, ' ')
-            .replace(/\s+/g, ' ')
-            .trim();
+        // Clean up improved text for analysis (removes HTML entities and tags)
+        const improvedTextForAnalysis = cleanupText(improved.text || '');
         
         safeLog('debug', 'Analyzing improved CV for post-improvement suggestions', {
-            improvedTextLength: improvedTextForAnalysis.length
+            originalLength: (improved.text || '').length,
+            cleanedLength: improvedTextForAnalysis.length
         });
         
         // Analyze with isImprovedCV=true for more favorable scoring
