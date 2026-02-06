@@ -554,6 +554,12 @@ export function buildWhereClause(filters, startIndex = 1) {
     const params = [];
     let paramIndex = startIndex;
 
+    // SECURITY: Validate column names to prevent SQL injection
+    const columns = Object.keys(filters);
+    if (columns.length > 0) {
+        validateColumnNames(columns);
+    }
+
     for (const [column, value] of Object.entries(filters)) {
         if (value !== undefined && value !== null) {
             conditions.push(`${column} = $${paramIndex}`);

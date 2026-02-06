@@ -223,11 +223,15 @@ export const authService = {
 
   async createUser(userData: CreateUserData): Promise<User> {
     try {
+      const csrfToken = await this.getCsrfToken();
+
       const response = await fetch('/api/auth/users', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken
         },
+        credentials: 'include',
         body: JSON.stringify(userData)
       });
 
@@ -245,11 +249,15 @@ export const authService = {
 
   async updateUser(userId: string, updateData: UpdateUserData): Promise<User> {
     try {
+      const csrfToken = await this.getCsrfToken();
+
       const response = await fetch(`/api/auth/users/${userId}`, {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken
         },
+        credentials: 'include',
         body: JSON.stringify(updateData)
       });
 
@@ -267,8 +275,14 @@ export const authService = {
 
   async deleteUser(userId: string): Promise<{ message: string }> {
     try {
+      const csrfToken = await this.getCsrfToken();
+
       const response = await fetch(`/api/auth/users/${userId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: {
+          'X-CSRF-Token': csrfToken
+        },
+        credentials: 'include'
       });
 
       if (!response.ok) {

@@ -284,6 +284,17 @@ router.post('/signout', authenticateToken, (req, res) => {
     try {
         const metadata = getRequestMetadata(req);
         
+        // SECURITY: Revoke tokens to prevent reuse if captured
+        const accessToken = req.cookies.accessToken;
+        const refreshToken = req.cookies.refreshToken;
+        
+        if (accessToken) {
+            revokeToken(accessToken);
+        }
+        if (refreshToken) {
+            revokeToken(refreshToken);
+        }
+        
         securityLog(LOG_LEVELS.INFO, SECURITY_EVENTS.AUTH_LOGOUT, {
             ...metadata,
             userId: req.user?.id,
