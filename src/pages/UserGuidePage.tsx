@@ -22,7 +22,8 @@ import {
   BookmarkIcon,
   PhoneIcon,
   UserGroupIcon,
-  RocketLaunchIcon
+  RocketLaunchIcon,
+  ChartBarIcon
 } from '@heroicons/react/24/outline';
 import userGuideContentFR from '../../USER_GUIDE.md?raw';
 import userGuideContentEN from '../../USER_GUIDE_EN.md?raw';
@@ -50,6 +51,7 @@ const UserGuidePage = (): JSX.Element => {
     { id: 'missions', title: 'Missions', icon: BriefcaseIcon },
     { id: 'profile-matching', title: 'Profile Matching', icon: UserGroupIcon },
     { id: 'resume-adaptations', title: 'Adaptations', icon: SparklesIcon },
+    { id: 'market-radar', title: 'Market Radar', icon: ChartBarIcon },
     { id: 'ai-assistant', title: 'AI Assistant', icon: ChatBubbleLeftRightIcon },
     { id: 'administration', title: 'Administration', icon: Cog6ToothIcon },
     { id: 'interface-and-navigation', title: 'Interface', icon: ComputerDesktopIcon },
@@ -66,6 +68,7 @@ const UserGuidePage = (): JSX.Element => {
     { id: 'missions', title: 'Missions', icon: BriefcaseIcon },
     { id: 'matching-profils', title: 'Matching Profils', icon: UserGroupIcon },
     { id: 'adaptations-de-cv', title: 'Adaptations', icon: SparklesIcon },
+    { id: 'radar-marche', title: 'Radar Marché', icon: ChartBarIcon },
     { id: 'assistant-ia', title: 'Assistant IA', icon: ChatBubbleLeftRightIcon },
     { id: 'administration', title: 'Administration', icon: Cog6ToothIcon },
     { id: 'interface-et-navigation', title: 'Interface', icon: ComputerDesktopIcon },
@@ -87,6 +90,7 @@ const UserGuidePage = (): JSX.Element => {
       'missions': 'Missions',
       'profile-matching': 'Profile Matching',
       'resume-adaptations': 'Resume Adaptations',
+      'market-radar': 'Market Radar',
       'ai-assistant': 'AI Assistant',
       'administration': 'Administration',
       'interface-and-navigation': 'Interface and Navigation',
@@ -105,6 +109,7 @@ const UserGuidePage = (): JSX.Element => {
       'missions': 'Missions',
       'matching-profils': 'Matching Profils',
       'adaptations-de-cv': 'Adaptations de CV',
+      'radar-marche': 'Radar Marché',
       'assistant-ia': 'Assistant IA',
       'administration': 'Administration',
       'interface-et-navigation': 'Interface et Navigation',

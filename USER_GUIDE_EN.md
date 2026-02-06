@@ -8,15 +8,16 @@
 4. [Missions](#missions)
 5. [Profile Matching](#profile-matching)
 6. [Resume Adaptations](#resume-adaptations)
-7. [AI Assistant](#ai-assistant)
-8. [Administration](#administration)
-9. [Interface and Navigation](#interface-and-navigation)
-10. [Best Practices](#best-practices)
-11. [Troubleshooting](#troubleshooting)
-12. [FAQ](#faq)
-13. [Roadmap](#roadmap)
-14. [Glossary](#glossary)
-15. [Support](#support)
+7. [Market Radar](#market-radar)
+8. [AI Assistant](#ai-assistant)
+9. [Administration](#administration)
+10. [Interface and Navigation](#interface-and-navigation)
+11. [Best Practices](#best-practices)
+12. [Troubleshooting](#troubleshooting)
+13. [FAQ](#faq)
+14. [Roadmap](#roadmap)
+15. [Glossary](#glossary)
+16. [Support](#support)
 
 ---
 
@@ -374,6 +375,85 @@ The AI performs a multi-step analysis:
 
 - **Adapted Resume**: Customized version with reformulated summary, reorganized experiences, aligned skills
 - **Analysis Report**: Detailed score, strengths, areas for improvement
+
+---
+
+## Market Radar
+
+### What is Market Radar?
+
+**Market Radar** is a market intelligence and analysis tool for the IT job market in France. It allows you to visualize trends, salaries, job offers, and tensions by region and profession.
+
+### Accessing Market Radar
+
+1. Go to **"Market Radar"** in the sidebar menu
+2. Choose the desired tab: Map, Data, Trends, or Professions
+
+### Market Radar Tabs
+
+#### France Map Tab
+
+Interactive data visualization by region:
+
+- **Data type selection**: Tension, Salary, Offers, Employment dynamics, Job seekers
+- **Interactive map**: Click on a region to see details
+- **Breakdown by profession**: List of professions with their indicators for the selected region
+- **On-demand details**: Click on a profession to see detailed metadata
+
+**Available data types**:
+
+| Type | Description |
+|------|-------------|
+| **Tension** | Ratio of offers to job seekers (higher = more in-demand profession) |
+| **Salary** | Median or average salary by profession and region |
+| **Offers** | Number of available job offers |
+| **Employment dynamics** | Evolution of employment numbers |
+| **Job seekers** | Number of job seekers |
+
+#### Data Tab
+
+Detailed table of collected market data:
+
+- **Filters**: Source, Region, Keyword/Profession
+- **Pagination**: Navigate through results
+- **Export**: View raw data
+
+#### Trends Tab
+
+Market trends analysis:
+
+- **Time evolution**: Trend charts
+- **Regional comparison**: Differences between regions
+- **Key indicators**: Summary of important metrics
+
+#### Professions Tab
+
+List of referenced IT professions:
+
+- **ROME 4.0 Reference**: Official France Travail professions
+- **Associated skills**: Know-how and soft skills
+- **Challenges**: Profession challenges and opportunities
+
+### Data Collection (Admin)
+
+Administrators can trigger data collection:
+
+1. Click the **"Collect"** button
+2. Select sources to query
+3. Wait for collection to complete
+4. New data appears in the tabs
+
+**Data sources**:
+- France Travail (offers, job seekers, tensions)
+- IT market studies
+- Salary data
+
+### Best Practices
+
+- **Check regularly**: Data is updated periodically
+- **Compare regions**: Identify geographical opportunities
+- **Analyze tensions**: In-demand professions offer more opportunities
+- **Cross-reference with your resumes**: Use these insights for profile matching
 
 ---
 

@@ -8,15 +8,16 @@
 4. [Missions](#missions)
 5. [Matching Profils](#matching-profils)
 6. [Adaptations de CV](#adaptations-de-cv)
-7. [Assistant IA](#assistant-ia)
-8. [Administration](#administration)
-9. [Interface et Navigation](#interface-et-navigation)
-10. [Bonnes Pratiques](#bonnes-pratiques)
-11. [Dépannage](#dépannage)
-12. [FAQ](#faq)
-13. [Prochaines Étapes](#prochaines-étapes)
-14. [Glossaire](#glossaire)
-15. [Support](#support)
+7. [Radar Marché](#radar-marché)
+8. [Assistant IA](#assistant-ia)
+9. [Administration](#administration)
+10. [Interface et Navigation](#interface-et-navigation)
+11. [Bonnes Pratiques](#bonnes-pratiques)
+12. [Dépannage](#dépannage)
+13. [FAQ](#faq)
+14. [Prochaines Étapes](#prochaines-étapes)
+15. [Glossaire](#glossaire)
+16. [Support](#support)
 
 ---
 
@@ -146,7 +147,9 @@ Cliquez sur un CV dans la liste **"CVthèque"** pour accéder à sa fiche détai
 
 #### Onglet Amélioré
 - Version optimisée générée par l'IA
-- Édition possible avec éditeur riche
+- **Éditeur riche** avec suggestions IA intégrées
+- **Panneau de suggestions** : Recommandations d'amélioration par section
+- Possibilité de ré-améliorer le CV avec l'IA
 - Export en PDF avec choix du modèle
 
 ### Améliorer un CV
@@ -160,6 +163,51 @@ Cliquez sur un CV dans la liste **"CVthèque"** pour accéder à sa fiche détai
    - Structure professionnelle
 
 **Note** : En mode anonyme, le CV amélioré ne contiendra pas d'informations personnelles identifiantes.
+
+### Éditer et Affiner un CV Amélioré
+
+Une fois le CV amélioré généré, vous pouvez le personnaliser davantage :
+
+#### Éditeur Riche
+
+L'onglet Amélioré propose un **éditeur WYSIWYG** complet :
+- Mise en forme du texte (gras, italique, listes)
+- Modification du contenu directement
+- Sauvegarde automatique des modifications
+
+#### Suggestions IA Intégrées au Texte
+
+Les suggestions d'amélioration sont affichées **directement au fil du texte** dans l'éditeur :
+
+- **Indicateurs visuels** : Des marqueurs colorés signalent les passages à améliorer
+- **Suggestions contextuelles** : En survolant ou cliquant sur un marqueur, la suggestion s'affiche
+- **Application facile** : Cliquez pour appliquer la suggestion ou ignorez-la
+
+Cette intégration permet de voir immédiatement où et comment améliorer le CV sans quitter le contexte du texte.
+
+#### Panneau de Suggestions par Section
+
+En complément, un panneau latéral regroupe les **suggestions par section** :
+
+| Section | Type de suggestions |
+|---------|---------------------|
+| **Résumé** | Reformulations pour plus d'impact |
+| **Compétences** | Mots-clés manquants, organisation |
+| **Expérience** | Quantification des résultats, verbes d'action |
+| **Formation** | Mise en valeur des certifications |
+| **ATS** | Optimisations pour les filtres automatiques |
+
+**Utiliser les suggestions** :
+1. Consultez les suggestions dans le panneau latéral ou directement dans le texte
+2. Cliquez sur une suggestion pour l'appliquer ou vous en inspirer
+3. Modifiez manuellement le texte dans l'éditeur si nécessaire
+
+#### Ré-améliorer avec l'IA
+
+Si vous souhaitez une nouvelle version améliorée :
+1. Cliquez sur **"Améliorer avec l'IA"** dans l'onglet Amélioré
+2. L'IA génère une nouvelle version en tenant compte du contenu actuel
+3. Les scores sont recalculés automatiquement
 
 ### Exporter un CV
 
@@ -377,6 +425,85 @@ L'IA effectue une analyse en plusieurs étapes :
 
 ---
 
+## Radar Marché
+
+### Qu'est-ce que le Radar Marché ?
+
+Le **Radar Marché** est un outil de veille et d'analyse du marché de l'emploi IT en France. Il permet de visualiser les tendances, les salaires, les offres d'emploi et les tensions par région et par métier.
+
+### Accéder au Radar Marché
+
+1. Accédez à **"Radar Marché"** dans le menu latéral
+2. Choisissez l'onglet souhaité : Carte, Données, Tendances ou Métiers
+
+### Les Onglets du Radar Marché
+
+#### Onglet Carte France
+
+Visualisation interactive des données par région :
+
+- **Sélection du type de données** : Tension, Salaire, Offres, Dynamique emploi, Demandeurs
+- **Carte interactive** : Cliquez sur une région pour voir les détails
+- **Répartition par métier** : Liste des métiers avec leurs indicateurs pour la région sélectionnée
+- **Détails on-demand** : Cliquez sur un métier pour voir les métadonnées détaillées
+
+**Types de données disponibles** :
+
+| Type | Description |
+|------|-------------|
+| **Tension** | Ratio offres/demandeurs (plus c'est élevé, plus le métier est en tension) |
+| **Salaire** | Salaire médian ou moyen par métier et région |
+| **Offres** | Nombre d'offres d'emploi disponibles |
+| **Dynamique emploi** | Évolution du nombre d'emplois |
+| **Demandeurs** | Nombre de demandeurs d'emploi |
+
+#### Onglet Données
+
+Tableau détaillé des données marché collectées :
+
+- **Filtres** : Source, Région, Mot-clé/Métier
+- **Pagination** : Navigation dans les résultats
+- **Export** : Possibilité de consulter les données brutes
+
+#### Onglet Tendances
+
+Analyse des tendances du marché :
+
+- **Évolution temporelle** : Graphiques de tendances
+- **Comparaison régionale** : Différences entre régions
+- **Indicateurs clés** : Synthèse des métriques importantes
+
+#### Onglet Métiers
+
+Liste des métiers IT référencés :
+
+- **Référentiel ROME 4.0** : Métiers officiels France Travail
+- **Compétences associées** : Savoir-faire et savoir-être
+- **Enjeux** : Défis et opportunités du métier
+
+### Collecte des Données (Admin)
+
+Les administrateurs peuvent déclencher une collecte de données :
+
+1. Cliquez sur le bouton **"Collecter"**
+2. Sélectionnez les sources à interroger
+3. Attendez la fin de la collecte
+4. Les nouvelles données apparaissent dans les onglets
+
+**Sources de données** :
+- France Travail (offres, demandeurs, tensions)
+- Études de marché IT
+- Données salariales
+
+### Bonnes Pratiques
+
+- **Consultez régulièrement** : Les données sont mises à jour périodiquement
+- **Comparez les régions** : Identifiez les opportunités géographiques
+- **Analysez les tensions** : Les métiers en tension offrent plus d'opportunités
+- **Croisez avec vos CV** : Utilisez ces insights pour le matching profils
+
+---
+
 ## Assistant IA
 
 ### Accéder à l'Assistant
@@ -501,6 +628,76 @@ Visualisez les statistiques d'utilisation :
 - Adaptations créées
 - Utilisation des tokens LLM
 
+### Gestion des Tags
+
+La gestion des tags permet de nettoyer et standardiser les compétences extraites des CV.
+
+#### Accéder à la Gestion des Tags
+
+1. Accédez à **"Tags"** dans le menu admin (Dashboard > Tags)
+2. Visualisez les tags par catégorie
+
+#### Catégories de Tags
+
+| Catégorie | Description | Exemples |
+|-----------|-------------|----------|
+| **Compétences** | Savoir-faire techniques | API REST, Tests automatisés |
+| **Outils** | Technologies et logiciels | Java, React, Docker |
+| **Industries** | Secteurs d'activité | Banque, Santé, E-commerce |
+| **Soft Skills** | Compétences comportementales | Communication, Leadership |
+
+#### Nettoyage des Tags
+
+Le nettoyage permet de standardiser les tags extraits :
+
+1. Sélectionnez les CV à traiter
+2. Cliquez sur **"Nettoyer les tags"**
+3. L'IA normalise les tags (suppression des doublons, correction orthographique, standardisation)
+
+**Exemple** :
+- "java" → "Java"
+- "React.js", "ReactJS", "React JS" → "React"
+
+#### Mapping ESCO
+
+L'intégration ESCO (European Skills, Competences, Qualifications and Occupations) permet d'aligner les tags sur le référentiel européen :
+
+1. Sélectionnez les CV à traiter
+2. Cliquez sur **"Mapper vers ESCO"**
+3. Les tags sont associés aux compétences ESCO officielles
+
+**Avantages** :
+- Compatibilité avec France Travail
+- Standardisation européenne
+- Meilleure interopérabilité
+
+### Gestion des Métiers (ROME 4.0)
+
+Le référentiel ROME 4.0 contient les métiers officiels de France Travail.
+
+#### Accéder aux Métiers
+
+1. Accédez à **"Métiers"** dans le menu admin
+2. Parcourez ou recherchez les métiers IT
+
+#### Fonctionnalités
+
+- **Recherche** : Trouvez un métier par nom ou code ROME
+- **Détails** : Consultez les compétences, savoir-faire et enjeux de chaque métier
+- **Collecte** : Actualisez le référentiel depuis l'API France Travail
+
+#### Structure d'un Métier
+
+Chaque métier contient :
+
+| Élément | Description |
+|---------|-------------|
+| **Code ROME** | Identifiant unique (ex: M1805) |
+| **Libellé** | Nom du métier |
+| **Compétences** | Savoir-faire requis |
+| **Savoirs** | Connaissances théoriques |
+| **Enjeux** | Défis et évolutions du métier |
+
 ---
 
 ## Interface et Navigation
@@ -529,10 +726,14 @@ Utilisez le sélecteur de langue dans la barre supérieure.
 - CVthèque
 - Missions
 - Adaptations
+- Matching Profils
+- Radar Marché
 - Modèles de CV
 
 **Section Admin** (si autorisé) :
 - Utilisateurs
+- Tags (nettoyage et ESCO)
+- Métiers (ROME 4.0)
 - Logs de Sécurité
 - Métriques
 - Paramètres
@@ -771,6 +972,16 @@ N'hésitez pas à contacter votre administrateur ou à utiliser l'assistant IA p
 
 **Hard Skills** : Compétences techniques mesurables (programmation, langues, etc.).
 
+**ESCO** : European Skills, Competences, Qualifications and Occupations - Référentiel européen des compétences et métiers.
+
+**ROME** : Répertoire Opérationnel des Métiers et des Emplois - Classification française des métiers (France Travail).
+
+**Tags Cleaned** : Tags nettoyés et standardisés par l'IA pour améliorer la précision du matching.
+
+**Radar Marché** : Outil de veille du marché de l'emploi IT avec visualisation par région et métier.
+
+**Tension** : Ratio entre offres d'emploi et demandeurs - indicateur de difficulté de recrutement.
+
 ---
 
 ## Support
@@ -788,16 +999,18 @@ N'hésitez pas à contacter votre administrateur ou à utiliser l'assistant IA p
 
 ---
 
-**Dernière mise à jour** : Version 1.5.0 - Février 2026
+**Dernière mise à jour** : Version 1.5.5 - Février 2026
 
 **Nouveautés récentes** :
-- **Migration PostgreSQL** : Performance et fiabilité améliorées
-- **Sécurité renforcée** : Protection SQL injection, logging structuré
-- **Logs de sécurité** : Interface d'administration pour surveiller l'activité
-- **Statuts traduits** : Affichage des statuts de CV en français (Amélioré, En cours, etc.)
-- **Radar Marché** : Visualisation des tendances IT par région et métier
+- **Matching Profils amélioré** : Utilisation des tags nettoyés, affichage de tous les profils triés par pertinence
+- **Analyse CV objective** : Suppression du biais favorisant les CV améliorés
+- **Affichage HTML** : CV améliorés affichés en HTML dans les onglets Export et Comparer
+- **Radar Marché complet** : Carte France interactive, tendances, métiers, données on-demand
+- **Gestion des Tags** : Nettoyage IA et mapping ESCO pour standardisation
+- **Référentiel ROME 4.0** : Intégration des métiers France Travail
 
 **Versions précédentes** :
+- v1.5.x : Migration PostgreSQL, sécurité renforcée, logs de sécurité, statuts traduits
 - v1.3.0 : Mode CV anonyme avec trigramme, overlay de progression
 - v1.2.x : Matching profils, Radar Marché France, navigation par URL
 
