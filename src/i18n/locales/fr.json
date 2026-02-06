@@ -1,0 +1,1415 @@
+{
+  "userProfile": {
+    "anonymous": "Utilisateur",
+    "noCompany": "Sans entreprise",
+    "roles": {
+      "admin": "Administrateur",
+      "user": "Utilisateur"
+    }
+  },
+  "common": {
+    "about": "À propos",
+    "signOut": "Se déconnecter",
+    "signIn": "Se connecter",
+    "register": "S'inscrire",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "loading": "Chargement...",
+    "error": "Erreur",
+    "success": "Succès",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "view": "Voir",
+    "close": "Fermer",
+    "back": "Retour",
+    "next": "Suivant",
+    "submit": "Soumettre",
+    "export": "Exporter",
+    "appName": "Convertisseur de CV",
+    "pleaseWait": "Veuillez patienter...",
+    "showing": "Affichage",
+    "of": "sur",
+    "first": "Premier",
+    "previous": "Précédent",
+    "last": "Dernier",
+    "resetFilters": "Réinitialiser"
+  },
+  "header": {
+    "theme": {
+      "light": "Mode clair",
+      "dark": "Mode sombre"
+    },
+    "language": {
+      "en": "Anglais",
+      "fr": "Français"
+    }
+  },
+  "footer": {
+    "rights": "Tous droits réservés"
+  },
+  "auth": {
+    "signIn": {
+      "title": "Connectez-vous à votre compte",
+      "emailLabel": "Adresse email",
+      "emailPlaceholder": "Adresse email",
+      "passwordLabel": "Mot de passe",
+      "passwordPlaceholder": "Mot de passe",
+      "rememberMe": "Se souvenir de moi",
+      "forgotPassword": "Mot de passe oublié ?",
+      "signInButton": "Se connecter",
+      "noAccount": "Vous n'avez pas de compte ?"
+    },
+    "register": {
+      "title": "Créez votre compte",
+      "nameLabel": "Nom complet",
+      "namePlaceholder": "Nom complet",
+      "emailLabel": "Adresse email",
+      "emailPlaceholder": "Adresse email",
+      "passwordLabel": "Mot de passe",
+      "passwordPlaceholder": "Mot de passe",
+      "confirmPasswordLabel": "Confirmez le mot de passe",
+      "confirmPasswordPlaceholder": "Confirmez le mot de passe",
+      "registerButton": "Créer un compte",
+      "hasAccount": "Vous avez déjà un compte ?"
+    }
+  },
+  "about": {
+    "title": "À propos de ResumeConverter",
+    "description": "ResumeConverter est une solution développée par Aptea pour répondre à ses besoins d'analyse et d'amélioration des CV, et d'export vers différents modèles.",
+    "changelog": "Journal des modifications",
+    "loadingChangelog": "chargement du journal des modifications...",
+    "errorLoadingChangelog": "Impossible de charger le journal des modifications.",
+    "allRightsReserved": "Tous droits réservés"
+  },
+  "resume": {
+    "analysis": {
+      "title": "Analyse du CV",
+      "contentQuality": "Qualité du contenu",
+      "impactResults": "Impact et résultats",
+      "clarityStructure": "Clarté et structure",
+      "skillsKeywords": "Compétences et mots-clés",
+      "original": "Original",
+      "improved": "Amélioré",
+      "suggestions": "Suggestions",
+      "suggestionsFromOriginal": "Ces suggestions ont été formulées sur le CV original, avant son amélioration automatique par l'IA.",
+      "overview": "Aperçu",
+      "details": "Détails",
+      "export": "Exporter",
+      "globalRating": "Note globale",
+      "originalScore": "Note originale",
+      "improvedScore": "Note améliorée",
+      "improvement": "Amélioration",
+      "sectionScores": "Notes par section",
+      "criticalImprovements": "Améliorations critiques nécessaires",
+      "recommendedImprovements": "Améliorations recommandées",
+      "optionalEnhancements": "Améliorations optionnelles",
+      "improvedText": "Contenu Amélioré",
+      "improvedTextDescription": "Voici la version améliorée par l'IA de votre CV",
+      "scoreImprovedBy": "Votre score CV a été amélioré de",
+      "scoreDegradedBy": "Votre score CV a été dégradé de",
+      "clickImproveHint": "Cliquez sur \"Améliorer avec l'IA\" pour optimiser votre CV",
+      "candidateName": "Nom du candidat",
+      "candidateNamePlaceholder": "Entrez le nom du candidat",
+      "professionalTitle": "Titre professionnel",
+      "professionalTitlePlaceholder": "Entrez le titre professionnel",
+      "originalResume": "CV Original",
+      "improvedResume": "CV Amélioré",
+      "score": "Score : ",
+      "tabs": {
+        "overview": "Aperçu",
+        "skillsTags": "Compétences & Tags",
+        "original": "Original",
+        "improved": "Amélioré",
+        "compare": "Comparer",
+        "export": "Exporter",
+        "initialAnalysis": "Analyse initiale",
+        "postImprovementAnalysis": "Analyse post-amélioration"
+      },
+      "categories": {
+        "technicalskills": "Compétences techniques",
+        "tools": "Outils",
+        "industries": "Industries",
+        "softskills": "Compétences générales"
+      },
+      "sections": {
+        "executiveBrief": "Résumé exécutif",
+        "skillsKeywords": "Compétences & Mots-clés",
+        "experience": "Expérience",
+        "education": "Formation",
+        "atsOptimization": "Optimisation ATS",
+        "hobbiesLanguages": "Loisirs & Langues"
+      },
+      "noSkills": "Aucun {{category}} trouvé",
+      "exportOptions": {
+        "title": "Options d'exportation",
+        "template": "Modèle",
+        "selectTemplate": "Sélectionner un modèle",
+        "loadingTemplates": "Chargement des modèles...",
+        "noTemplates": "Aucun modèle disponible",
+        "preview": "Aperçu",
+        "noPreview": "Aucun aperçu disponible pour ce modèle",
+        "exportPDF": "Exporter en PDF",
+        "exporting": "Exportation..."
+      },
+      "exportInstructions": "Sélectionnez un modèle et cliquez sur Exporter pour télécharger votre CV amélioré en PDF",
+      "selectTemplateFirst": "Veuillez d'abord sélectionner un modèle"
+    },
+    "actions": {
+      "improveWithAI": "Améliorer avec l'IA",
+      "improving": "Amélioration en cours...",
+      "exportAsPDF": "Exporter en PDF",
+      "exporting": "Exportation...",
+      "saveChanges": "Enregistrer les modifications",
+      "saving": "Enregistrement...",
+      "uploadNew": "Télécharger un nouveau CV",
+      "analyze": "Analyser le CV"
+    },
+    "list": {
+      "title": "Mes CV",
+      "noResumes": "Aucun CV trouvé",
+      "uploadPrompt": "Téléchargez votre premier CV",
+      "lastModified": "Dernière modification",
+      "status": "Statut"
+    }
+  },
+  "users": {
+    "management": {
+      "title": "Gestion des utilisateurs",
+      "subtitle": "Gérez les utilisateurs et les entreprises de l'application",
+      "addUser": "Ajouter un utilisateur",
+      "addCustomer": "Ajouter une entreprise",
+      "noUsers": "Aucun utilisateur trouvé",
+      "noCustomers": "Aucune entreprise trouvée",
+      "results": "utilisateurs",
+      "customersResults": "entreprises",
+      "searchUsers": "Rechercher un utilisateur...",
+      "searchCustomers": "Rechercher une entreprise...",
+      "refresh": "Actualiser",
+      "columns": {
+        "name": "Nom",
+        "email": "E-mail",
+        "role": "Rôle",
+        "status": "Statut",
+        "customer": "Entreprise",
+        "createdAt": "Créé le",
+        "actions": "Actions"
+      },
+      "status": {
+        "active": "Actif",
+        "inactive": "Inactif",
+        "pending": "En attente"
+      },
+      "roles": {
+        "admin": "Administrateur",
+        "user": "Utilisateur",
+        "customer": "Entreprise"
+      },
+      "tabs": {
+        "users": "Utilisateurs",
+        "customers": "Entreprises"
+      },
+      "actions": {
+        "edit": "Modifier",
+        "delete": "Supprimer",
+        "changePassword": "Changer le mot de passe",
+        "view": "Voir les détails"
+      },
+      "modal": {
+        "addUser": "Ajouter un utilisateur",
+        "editUser": "Modifier l'utilisateur",
+        "addCustomer": "Ajouter une entreprise",
+        "editCustomer": "Modifier l'entreprise",
+        "changePassword": "Changer le mot de passe",
+        "deleteUser": "Supprimer l'utilisateur",
+        "deleteCustomer": "Supprimer l'entreprise",
+        "name": "Nom",
+        "email": "E-mail",
+        "password": "Mot de passe",
+        "newPassword": "Nouveau mot de passe",
+        "confirmPassword": "Confirmer le mot de passe",
+        "role": "Rôle",
+        "status": "Statut",
+        "customer": "Entreprise",
+        "selectCustomer": "Sélectionner une entreprise",
+        "selectRole": "Sélectionner un rôle",
+        "selectStatus": "Sélectionner un statut",
+        "save": "Enregistrer",
+        "cancel": "Annuler",
+        "confirm": "Confirmer",
+        "close": "Fermer"
+      },
+      "messages": {
+        "userCreated": "Utilisateur créé avec succès",
+        "userUpdated": "Utilisateur mis à jour avec succès",
+        "userDeleted": "Utilisateur supprimé avec succès",
+        "customerCreated": "Entreprise créée avec succès",
+        "customerUpdated": "Entreprise mise à jour avec succès",
+        "customerDeleted": "Entreprise supprimée avec succès",
+        "passwordChanged": "Mot de passe modifié avec succès",
+        "errorCreatingUser": "Erreur lors de la création de l'utilisateur",
+        "errorUpdatingUser": "Erreur lors de la mise à jour de l'utilisateur",
+        "errorDeletingUser": "Erreur lors de la suppression de l'utilisateur",
+        "errorCreatingCustomer": "Erreur lors de la création de l'entreprise",
+        "errorUpdatingCustomer": "Erreur lors de la mise à jour de l'entreprise",
+        "errorDeletingCustomer": "Erreur lors de la suppression de l'entreprise",
+        "errorChangingPassword": "Erreur lors du changement de mot de passe",
+        "cannotDeleteCustomerWithUsers": "Impossible de supprimer cette entreprise car des utilisateurs y sont associés",
+        "confirmDeleteUser": "Êtes-vous sûr de vouloir supprimer l'utilisateur \"{{name}}\" ?",
+        "confirmDeleteCustomer": "Êtes-vous sûr de vouloir supprimer l'entreprise \"{{name}}\" ?",
+        "passwordMinLength": "Le mot de passe doit contenir au moins 8 caractères",
+        "passwordMismatch": "Les mots de passe ne correspondent pas"
+      },
+      "stats": {
+        "totalUsers": "Total utilisateurs",
+        "totalCustomers": "Total entreprises",
+        "activeUsers": "Utilisateurs actifs",
+        "admins": "Administrateurs"
+      }
+    }
+  },
+  "errors": {
+    "required": "Ce champ est obligatoire",
+    "invalidEmail": "Veuillez entrer une adresse email valide",
+    "passwordLength": "Le mot de passe doit contenir au moins 8 caractères",
+    "passwordMismatch": "Les mots de passe ne correspondent pas",
+    "unauthorized": "Email ou mot de passe invalide",
+    "serverError": "Une erreur s'est produite. Veuillez réessayer plus tard.",
+    "networkError": "Une erreur réseau est survenue",
+    "loadResume": "Erreur lors du chargement du CV",
+    "resumeNotFound": "CV non trouvé",
+    "resumeNotFoundDescription": "Le CV demandé n'existe pas ou a été supprimé.",
+    "loadMission": "Erreur lors du chargement de la mission",
+    "missionNotFound": "Mission non trouvée",
+    "missionNotFoundDescription": "La mission demandée n'existe pas ou a été supprimée.",
+    "loadAdaptation": "Erreur lors du chargement de l'adaptation",
+    "adaptationNotFound": "Adaptation non trouvée",
+    "adaptationNotFoundDescription": "L'adaptation demandée n'existe pas ou a été supprimée."
+  },
+  "home": {
+    "hero": {
+      "title1": "Votre CVthèque.",
+      "title2": "Optimisée. Activée.",
+      "description": "Standardisez, améliorez et déclinez vos CV par client ou mission. Des profils cohérents, prêts à envoyer, en quelques minutes.",
+      "startButton": "Importer un CV",
+      "viewResumesButton": "Voir mes CV",
+      "badges": {
+        "atsFriendly": "Traitement automatisé",
+        "fastAnalysis": "Analyse rapide",
+        "secure": "100% Sécurisé"
+      }
+    },
+    "nav": {
+      "hero": "Accueil",
+      "dashboard": "Tableau de bord",
+      "quickActions": "Actions rapides",
+      "howItWorks": "Comment ça marche",
+      "features": "Fonctionnalités clés"
+    },
+    "dashboard": {
+      "title": "Tableau de bord",
+      "kpis": {
+        "totalResumes": "CV dans la CVthèque",
+        "analyzed": "CV analysés",
+        "averageScore": "Score moyen",
+        "activeMissions": "Missions actives",
+        "thisMonth": "+{{count}} ce mois",
+        "totalMissions": "{{count}} missions au total",
+        "afterImprovement": "après amélioration"
+      },
+      "recentActivity": "Activité récente",
+      "today": "Aujourd'hui",
+      "thisWeek": "Cette semaine",
+      "thisMonth": "Ce mois",
+      "improvements": "Améliorations",
+      "improved": "CV améliorés",
+      "avgBefore": "Score moyen avant",
+      "avgAfter": "Score moyen après",
+      "adaptations": "Adaptations",
+      "totalAdaptations": "Total adaptations",
+      "missions": "Missions",
+      "active": "Actives",
+      "quickActions": "Actions rapides",
+      "actions": {
+        "importResume": "Importer un CV",
+        "importResumeDesc": "Ajouter un nouveau profil à la CVthèque",
+        "viewLibrary": "Voir la CVthèque",
+        "viewLibraryDesc": "Consulter et gérer les profils",
+        "createMission": "Voir les missions",
+        "createMissionDesc": "Consulter les offres de mission",
+        "viewAdaptations": "Voir les adaptations",
+        "viewAdaptationsDesc": "Gérer les CV adaptés"
+      }
+    },
+    "howItWorks": {
+      "title": "Comment ça marche",
+      "step1": {
+        "title": "Importez vos profils",
+        "description": "Importez les CV de vos consultants au format PDF, DOC ou DOCX. Notre système les analyse et les standardise automatiquement."
+      },
+      "step2": {
+        "title": "Optimisez avec l'IA",
+        "description": "Notre IA analyse chaque profil, fournit un score détaillé et propose des améliorations ciblées pour maximiser l'impact."
+      },
+      "step3": {
+        "title": "Adaptez et exportez",
+        "description": "Personnalisez chaque profil selon vos missions et exportez-les selon divers modèles, prêts à envoyer."
+      }
+    },
+    "features": {
+      "title": "Fonctionnalités clés",
+      "subtitle": "Tout ce dont vous avez besoin pour créer un CV parfait",
+      "ai": {
+        "title": "Analyse & Suggestions IA",
+        "description": "Notre IA analyse chaque profil, identifie les points d'amélioration et propose des suggestions ciblées."
+      },
+      "improvement": {
+        "title": "Amélioration automatique",
+        "description": "Optimisez vos CV en un clic grâce à notre IA qui reformule et enrichit automatiquement chaque section."
+      },
+      "scoring": {
+        "title": "Notation détaillée",
+        "description": "Recevez des scores complets dans plusieurs catégories pour comprendre les points forts de chaque profil."
+      },
+      "ocr": {
+        "title": "Extraction intelligente",
+        "description": "Technologie OCR avancée pour extraire automatiquement le texte des CV scannés ou en format image."
+      },
+      "adaptation": {
+        "title": "Adaptation aux missions",
+        "description": "Personnalisez chaque profil en fonction d'une offre de mission spécifique pour maximiser vos chances."
+      },
+      "templates": {
+        "title": "Modèles professionnels",
+        "description": "Choisissez parmi une variété de modèles de CV conçus professionnellement."
+      }
+    },
+    "preview": {
+      "title": "Résultats élégants",
+      "description": "Créez des CV professionnels et compatibles ATS qui se démarquent"
+    }
+  },
+  "resumes": {
+    "title": "CVthèque",
+    "subtitle": "Gérez et analysez les profils de vos consultants",
+    "uploadButton": "Télécharger un nouveau CV",
+    "searchPlaceholder": "Rechercher des CV...",
+    "filterButton": "Filtrer",
+    "loading": "Chargement des CV...",
+    "noResults": "Aucun CV trouvé",
+    "results": "résultats",
+    "noResultsFiltered": "Essayez de modifier vos filtres de recherche",
+    "uploadFirst": "Téléchargez votre premier CV pour commencer",
+    "uploadedOn": "Téléchargé le {{date}}",
+    "score": "Note : {{score}}%",
+    "score_label": "Score",
+    "score_detailed": "Score : {{originalScore}}% → {{improvedScore}}%",
+    "keyImprovements": "Améliorations clés",
+    "deleteResume": "Supprimer le CV",
+    "downloadResume": "Télécharger le CV",
+    "confirmDeleteTitle": "Confirmer la suppression",
+    "confirmDeleteMessage": "Êtes-vous sûr de vouloir supprimer \"{{filename}}\" ? Cette action ne peut pas être annulée.",
+    "view": "Voir",
+    "refresh": "Actualiser",
+    "untitled": "CV sans titre",
+    "activeFilters": "Filtres actifs",
+    "clearFilters": "Effacer les filtres",
+    "more": "de plus",
+    "showLess": "Voir moins",
+    "stats": {
+      "total": "Total CVs",
+      "improved": "Améliorés",
+      "processing": "En cours",
+      "avgScore": "Score moyen"
+    },
+    "filters": {
+      "skills": "Compétences",
+      "industries": "Industries",
+      "tools": "Outils",
+      "softskills": "Compétences relationnelles"
+    },
+    "status": {
+      "new": "Nouveau",
+      "pending": "En attente",
+      "processing": "En cours",
+      "analyzed": "Analysé",
+      "improved": "Amélioré",
+      "error": "Erreur",
+      "failed": "Échec",
+      "active": "Actif",
+      "inactive": "Inactif",
+      "archived": "Archivé"
+    }
+  },
+  "upload": {
+    "title": "Analyseur de CV",
+    "subtitle": "Téléchargez votre CV pour une analyse instantanée par IA",
+    "dragDrop": "Glissez et déposez votre CV ici",
+    "or": "ou",
+    "browse": "parcourir les fichiers",
+    "formats": "Formats supportés : PDF, DOC, DOCX",
+    "analyzing": "Analyse de votre CV...",
+    "success": "CV téléchargé avec succès !",
+    "error": "Erreur lors du téléchargement du CV. Veuillez réessayer."
+  },
+  "templates": {
+    "title": "Modèles de CV",
+    "results": "modèles",
+    "subtitle": "Choisissez parmi notre collection de modèles de CV professionnels",
+    "newTemplate": "Nouveau modèle",
+    "searchPlaceholder": "Rechercher un modèle...",
+    "refresh": "Actualiser",
+    "noResults": "Aucun modèle ne correspond à votre recherche",
+    "createFirst": "Créez votre premier modèle pour commencer",
+    "stats": {
+      "total": "Total des modèles",
+      "popular": "Modèles populaires",
+      "active": "Modèles actifs"
+    },
+    "sort": {
+      "label": "Trier par",
+      "popular": "Plus populaires",
+      "name": "Nom",
+      "recent": "Plus récents"
+    },
+    "card": {
+      "popular": "Populaire",
+      "editTemplate": "Modifier le modèle",
+      "preview": "Aperçu",
+      "useTemplate": "Utiliser ce modèle",
+      "description": "Description du modèle",
+      "noDescription": "Aucune description"
+    },
+    "status": {
+      "loading": "Chargement des modèles...",
+      "error": "Échec du chargement des modèles",
+      "empty": "Aucun modèle disponible",
+      "success": "Modèle créé avec succès",
+      "deleteSuccess": "Modèle supprimé avec succès",
+      "updateSuccess": "Modèle mis à jour avec succès",
+      "deleting": "Suppression en cours...",
+      "deleteError": "Échec de la suppression du modèle"
+    },
+    "filters": {
+      "title": "Filtrer les modèles",
+      "all": "Tous les modèles",
+      "category": "Catégorie",
+      "style": "Style",
+      "industry": "Secteur"
+    },
+    "actions": {
+      "create": "Créer un modèle",
+      "edit": "Modifier le modèle",
+      "delete": "Supprimer le modèle",
+      "preview": "Aperçu",
+      "use": "Utiliser ce modèle",
+      "save": "Enregistrer le modèle",
+      "cancel": "Annuler"
+    },
+    "delete": {
+      "title": "Supprimer le modèle",
+      "message": "Êtes-vous sûr de vouloir supprimer le modèle \"{{templateName}}\" ? Cette action est irréversible."
+    },
+    "editor": {
+      "title": {
+        "new": "Créer un nouveau modèle",
+        "edit": "Modifier le modèle"
+      },
+      "name": {
+        "label": "Nom du modèle",
+        "placeholder": "Entrez le nom du modèle"
+      },
+      "description": {
+        "label": "Description",
+        "placeholder": "Entrez la description du modèle"
+      },
+      "header": {
+        "label": "En-tête",
+        "hint": "Optionnel - apparaît en haut de chaque page"
+      },
+      "content": {
+        "label": "Corps du modèle"
+      },
+      "footer": {
+        "label": "Pied de page",
+        "hint": "Optionnel - apparaît en bas de chaque page"
+      },
+      "stylesheet": {
+        "label": "Feuille de style",
+        "placeholder": "Ajoutez des styles CSS personnalisés ici"
+      },
+      "popular": {
+        "label": "Marquer comme populaire"
+      },
+      "statusField": {
+        "label": "Statut",
+        "active": "Actif",
+        "inactive": "Inactif"
+      },
+      "validation": {
+        "nameRequired": "Le nom du modèle est requis",
+        "contentRequired": "Le contenu du modèle est requis"
+      },
+      "success": {
+        "create": "Modèle créé avec succès",
+        "update": "Modèle mis à jour avec succès"
+      },
+      "error": {
+        "create": "Échec de la création du modèle",
+        "update": "Échec de la mise à jour du modèle",
+        "load": "Échec du chargement du modèle"
+      },
+      "status": {
+        "loading": "Chargement des modèles...",
+        "error": "Échec du chargement des modèles",
+        "empty": "Aucun modèle disponible",
+        "success": "Modèle créé avec succès",
+        "deleting": "Suppression du modèle...",
+        "deleteSuccess": "Modèle supprimé avec succès.",
+        "deleteError": "Erreur lors de la suppression du modèle."
+      }
+    }
+  },
+  "processing": {
+    "steps": {
+      "upload": {
+        "title": "Téléchargement du CV",
+        "description": "Traitement de votre fichier...",
+        "steps": [
+          "Lecture du contenu du fichier",
+          "Validation du format",
+          "Vérification de l'intégrité",
+          "Préparation pour l'extraction"
+        ]
+      },
+      "extract": {
+        "title": "Extraction du Contenu",
+        "description": "Lecture du contenu du CV...",
+        "steps": [
+          "Analyse de la structure du document",
+          "Extraction du texte brut",
+          "Détection des sections principales",
+          "Traitement de la mise en forme",
+          "Nettoyage des données extraites"
+        ]
+      },
+      "analyze": {
+        "title": "Analyse IA",
+        "description": "Analyse avec l'IA avancée...",
+        "steps": [
+          "Initialisation du modèle IA",
+          "Identification du profil candidat",
+          "Analyse du résumé exécutif",
+          "Évaluation des compétences techniques",
+          "Analyse de l'expérience professionnelle",
+          "Évaluation du parcours académique",
+          "Détection des mots-clés ATS",
+          "Analyse des langues et centres d'intérêt",
+          "Calcul du score global",
+          "Génération des suggestions d'amélioration",
+          "Finalisation de l'analyse"
+        ]
+      }
+    }
+  },
+  "improvementAnimation": {
+    "steps": {
+      "improving": {
+        "label": "Amélioration du CV",
+        "description": "L'IA améliore votre CV en fonction des suggestions d'amélioration..."
+      },
+      "analyzing": {
+        "label": "Analyse des Améliorations",
+        "description": "Évaluation des changements et calcul des nouveaux scores..."
+      }
+    }
+  },
+  "navigation": {
+    "home": "Accueil",
+    "resumes": "CVthèque",
+    "templates": "Modèles de CVs",
+    "dashboard": "Tableau de bord",
+    "tags": "Étiquettes",
+    "users": "Utilisateurs",
+    "settings": "Paramètres",
+    "missions": "Missions",
+    "profileMatching": "Matching Profils",
+    "adaptations": "Adaptations",
+    "security": "Logs de Sécurité",
+    "metrics": "Métriques",
+    "marketRadar": "Radar du Marché",
+    "metiers": "Métiers & Compétences",
+    "userGuide": "Guide Utilisateur",
+    "sectionGestion": "Gestion",
+    "sectionAdmin": "Admin"
+  },
+  "fileUpload": {
+    "dragAndDropYourResumeHere": "Glissez et déposez votre CV ici",
+    "dropYourResumeHere": "Déposez votre CV ici",
+    "or" : "ou cliquez pour choisir un fichier",
+    "supportedFormats": "Formats supportés : PDF, DOC, DOCX (<2 Mo)"
+  },
+  "metrics": {
+    "title": "Métriques d'utilisation",
+    "subtitle": "Surveillance des performances et de l'utilisation du serveur",
+    "lastUpdate": "Dernière mise à jour",
+    "autoRefresh": "Auto-refresh (30s)",
+    "refresh": "Actualiser",
+    "loading": "Chargement des métriques...",
+    "error": "Impossible de charger les métriques",
+    "retry": "Réessayer",
+    "accessDenied": "Accès refusé. Vous devez être administrateur pour voir les métriques.",
+    "sessionExpired": "Session expirée. Veuillez vous reconnecter.",
+    "uptime": "Temps de fonctionnement",
+    "startedAt": "Démarré",
+    "totalRequests": "Requêtes API totales",
+    "last24h": "Dernières 24h",
+    "avgResponseTime": "Temps de réponse moyen",
+    "minMax": "Min: {{min}}ms / Max: {{max}}ms",
+    "errorRate": "Taux d'erreur serveur",
+    "totalErrors": "Total erreurs",
+    "serverMemory": "Mémoire du serveur",
+    "heapUsed": "Heap utilisé sur {{total}}",
+    "rss": "RSS (mémoire totale)",
+    "external": "Externe (C++ bindings)",
+    "cachePerformance": "Performance du cache",
+    "cacheHitRate": "Taux de succès du cache",
+    "cacheHits": "Hits (données en cache)",
+    "cacheMisses": "Misses (appels API)",
+    "httpMethods": "Requêtes HTTP par méthode",
+    "totalApiRequests": "Total des requêtes API",
+    "httpStatus": "Codes de réponse HTTP",
+    "successfulRequests": "Requêtes réussies (2xx)",
+    "llmUsage": "Utilisation des modèles IA",
+    "llmCalls": "Appels API (OpenAI + Anthropic)",
+    "tokensConsumed": "Tokens consommés",
+    "estimatedCost": "Coût estimé (USD)",
+    "byProvider": "Par fournisseur",
+    "topEndpoints": "Routes API les plus utilisées",
+    "activeEndpoints": "Endpoints actifs",
+    "route": "Route",
+    "calls": "Appels",
+    "model": "Modèle"
+  },
+  "security": {
+    "title": "Logs de Sécurité",
+    "subtitle": "Surveillance en temps réel des événements de sécurité",
+    "loading": "Chargement des logs de sécurité...",
+    "accessDenied": "Accès refusé. Vous devez être administrateur pour voir les logs de sécurité.",
+    "sessionExpired": "Session expirée. Veuillez vous reconnecter.",
+    "refresh": "Actualiser",
+    "autoRefresh": "Auto-actualisation (30s)",
+    "totalLogs": "Total Logs",
+    "lastHour": "Dernière Heure",
+    "last24h": "Dernières 24h",
+    "warnings": "Avertissements",
+    "errors": "Erreurs",
+    "filters": {
+      "level": "Niveau",
+      "event": "Événement",
+      "source": "Source",
+      "limit": "Limite",
+      "all": "Tous",
+      "allSources": "Toutes",
+      "allLevels": "Tous les niveaux",
+      "allEvents": "Tous les événements"
+    },
+    "levels": {
+      "security": "Sécurité",
+      "error": "Erreur",
+      "warning": "Avertissement",
+      "info": "Info",
+      "debug": "Debug"
+    },
+    "events": {
+      "authSuccess": "Connexion Réussie",
+      "authFailure": "Échec Connexion",
+      "authBlocked": "Compte Bloqué",
+      "fileUpload": "Upload Fichier",
+      "fileUploadRejected": "Upload Rejeté",
+      "llmRequest": "Requête LLM"
+    },
+    "sources": {
+      "security": "Sécurité",
+      "proxy": "Proxy"
+    },
+    "table": {
+      "timestamp": "Date/Heure",
+      "source": "Source",
+      "level": "Niveau",
+      "event": "Événement",
+      "user": "Utilisateur",
+      "customer": "Client",
+      "ip": "IP",
+      "action": "Action",
+      "status": "Statut",
+      "message": "Message",
+      "duration": "Durée"
+    },
+    "badges": {
+      "security": "🔒 Sécurité",
+      "proxy": "🌐 Proxy"
+    },
+    "noLogs": "Aucun log de sécurité trouvé"
+  },
+  "settings": {
+    "title": "Paramètres de l'Application",
+    "subtitle": "Configuration du modèle LLM, des prompts et des poids d'analyse",
+    "loading": "Chargement des paramètres...",
+    "loadError": "Erreur lors du chargement des paramètres",
+    "saveSuccess": "Paramètres enregistrés avec succès",
+    "saveError": "Erreur lors de l'enregistrement des paramètres",
+    "resetConfirm": "Êtes-vous sûr de vouloir réinitialiser tous les paramètres par défaut ?",
+    "resetSuccess": "Paramètres réinitialisés (non enregistrés)",
+    "saving": "Enregistrement...",
+    "save": "Enregistrer les paramètres",
+    "reset": "Réinitialiser par défaut",
+    "currentModel": "Modèle actuel",
+    "tabs": {
+      "llm": "Modèle LLM",
+      "prompts": "Prompts",
+      "weights": "Poids des Catégories",
+      "chatbot": "Chatbot",
+      "apiDocs": "Documentation API"
+    },
+    "apiDocs": {
+      "title": "Documentation de l'API",
+      "description": "Accédez à la documentation interactive de l'API propulsée par Swagger/OpenAPI.",
+      "swaggerUi": "Interface Swagger",
+      "swaggerUiDescription": "Explorateur d'API interactif avec tous les endpoints documentés",
+      "openSwagger": "Ouvrir Swagger",
+      "openApiJson": "Spécification OpenAPI",
+      "openApiJsonDescription": "Spécification OpenAPI 3.0 au format JSON brut",
+      "viewJson": "Voir le JSON"
+    },
+    "llm": {
+      "title": "Configuration du Modèle LLM",
+      "model": "Modèle OpenAI",
+      "description": "Sélectionnez le modèle OpenAI à utiliser pour l'analyse et l'amélioration des CV. Si non renseigné, le modèle par défaut (gpt-4o) sera utilisé.",
+      "cvMode": "Mode de génération du CV",
+      "cvModeNominative": "Nominatif (informations personnelles incluses)",
+      "cvModeAnonymous": "Anonyme (trigramme uniquement)",
+      "cvModeNominativeDescription": "Le CV amélioré contiendra toutes les informations personnelles du candidat (nom complet, coordonnées, etc.).",
+      "cvModeAnonymousDescription": "Le CV amélioré sera anonymisé : seul le trigramme du candidat sera affiché, sans informations personnelles identifiantes."
+    },
+    "prompts": {
+      "title": "Configuration des Prompts",
+      "description": "Personnalisez les prompts utilisés pour l'analyse et l'amélioration des CV. Laissez vide pour utiliser les prompts par défaut.",
+      "analysis": "Prompt d'Analyse",
+      "analysisHelp": "Ce prompt est utilisé pour analyser le CV et générer les scores.",
+      "improvement": "Prompt d'Amélioration",
+      "improvementHelp": "Ce prompt est utilisé pour améliorer le CV en fonction de l'analyse.",
+      "adaptationSection": "Prompts d'Adaptation CV-Mission",
+      "matchAnalysis": "Prompt d'Analyse d'Adéquation",
+      "matchAnalysisHelp": "Ce prompt analyse la correspondance entre un CV et une mission.",
+      "adaptation": "Prompt d'Adaptation de CV",
+      "adaptationHelp": "Ce prompt adapte le CV pour maximiser la correspondance avec la mission.",
+      "placeholder": "Prompt par défaut chargé depuis le serveur..."
+    },
+    "weights": {
+      "title": "Poids des Catégories d'Analyse",
+      "description": "Définissez l'importance de chaque catégorie dans le score global. La somme doit être égale à 100%.",
+      "total": "Total des poids",
+      "totalError": "La somme des poids doit être égale à 100%",
+      "mustEqual100": "La somme des poids doit être égale à 100%",
+      "executiveSummary": "Résumé Exécutif",
+      "skills": "Compétences (Skills)",
+      "experience": "Expérience Professionnelle",
+      "education": "Formation (Education)",
+      "ats": "Optimisation ATS",
+      "hobbiesLanguages": "Hobbies & Langues"
+    },
+    "chatbot": {
+      "title": "Configuration du Chatbot",
+      "description": "Gérez la disponibilité de l'assistant IA pour les utilisateurs de l'application.",
+      "enableTitle": "Activer l'assistant IA",
+      "enableDescription": "Permet aux utilisateurs d'accéder au chatbot d'assistance pour obtenir de l'aide sur l'utilisation de l'application.",
+      "statusEnabled": "Activé",
+      "statusDisabled": "Désactivé",
+      "statusEnabledInfo": "Les utilisateurs peuvent accéder au chatbot via le bouton en bas à droite",
+      "statusDisabledInfo": "Le chatbot est masqué pour tous les utilisateurs",
+      "infoTitle": "À propos du chatbot",
+      "info1": "Le chatbot utilise le modèle LLM configuré dans l'onglet 'Modèle LLM'",
+      "info2": "Il a accès au guide utilisateur complet pour fournir une assistance contextuelle",
+      "info3": "Les conversations ne sont pas sauvegardées et restent privées"
+    }
+  },
+  "tags": {
+    "title": "Gestion des Tags",
+    "subtitle": "Visualisez et gérez les tags extraits de la CVthèque",
+    "loading": "Chargement des tags...",
+    "loadError": "Échec du chargement des tags",
+    "renameSuccess": "Tag renommé de {{oldName}} à {{newName}}",
+    "renameError": "Échec du renommage du tag",
+    "edit": "Modifier",
+    "editTag": "Modifier le tag",
+    "editingIn": "Modification dans la catégorie",
+    "tagName": "Nom du tag",
+    "newName": "Nouveau nom",
+    "cancel": "Annuler",
+    "save": "Enregistrer",
+    "refresh": "Actualiser",
+    "searchPlaceholder": "Rechercher un tag...",
+    "tagsCount": "tags",
+    "noTags": "Aucun tag dans cette catégorie",
+    "categories": {
+      "Skills": "Compétences",
+      "Industries": "Secteurs",
+      "Tools": "Outils",
+      "Soft Skills": "Compétences Comportementales"
+    },
+    "stats": {
+      "totalTags": "Total des tags"
+    }
+  },
+  "missions": {
+    "title": "Offres de Mission",
+    "subtitle": "Gérez vos offres de mission pour l'adaptation des CV",
+    "loading": "Chargement des missions...",
+    "noMissions": "Aucune mission trouvée",
+    "noResults": "Aucune mission ne correspond à votre recherche",
+    "createFirst": "Créez votre première mission pour commencer",
+    "noDescription": "Aucune description",
+    "searchPlaceholder": "Rechercher une mission...",
+    "addMission": "Ajouter une mission",
+    "editMission": "Modifier la mission",
+    "deleteMission": "Supprimer la mission",
+    "deleteConfirm": "Êtes-vous sûr de vouloir supprimer cette mission ?",
+    "missionTitle": "Titre",
+    "missionContent": "Description",
+    "missionStatus": "Statut",
+    "titlePlaceholder": "Ex: Développeur Full Stack",
+    "editorHelp": "Utilisez l'éditeur pour formater votre texte",
+    "create": "Créer",
+    "update": "Mettre à jour",
+    "createdAt": "Créée le",
+    "actions": "Actions",
+    "view": "Voir",
+    "refresh": "Actualiser",
+    "status": {
+      "Active": "Active",
+      "Closed": "Clôturée",
+      "Draft": "Brouillon"
+    },
+    "stats": {
+      "total": "Total missions",
+      "customers": "Entreprises",
+      "active": "Missions actives"
+    },
+    "description": "Description",
+    "extractedKeywords": "Mots-clés extraits",
+    "noTitle": "Sans titre",
+    "results": "missions"
+  },
+  "adaptations": {
+    "title": "Adaptations de CV",
+    "results": "adaptations de CV",
+    "subtitle": "Historique des CVs adaptés aux missions",
+    "loading": "Chargement des adaptations...",
+    "noAdaptations": "Aucune adaptation trouvée",
+    "noAdaptationsFiltered": "Essayez de modifier vos filtres de recherche",
+    "noAdaptationsPrompt": "Commencez par adapter un CV à une mission",
+    "matchScore": "Score de correspondance",
+    "adaptedOn": "Adapté le",
+    "viewAdaptation": "Voir l'adaptation",
+    "delete": "Supprimer",
+    "exportAdaptation": "Exporter",
+    "exportPDF": "Exporter PDF",
+    "resume": "CV",
+    "mission": "Mission",
+    "searchPlaceholder": "Rechercher par CV ou mission...",
+    "filterStatus": "Tous les statuts",
+    "refresh": "Actualiser",
+    "stats": {
+      "total": "Total adaptations",
+      "completed": "Terminées",
+      "processing": "En cours",
+      "failed": "Échouées",
+      "avgScore": "Score moyen"
+    },
+    "status": {
+      "completed": "Terminé",
+      "final": "Finalisé",
+      "processing": "En cours",
+      "draft": "Brouillon",
+      "sent": "Envoyé",
+      "archived": "Archivé",
+      "failed": "Échoué",
+      "unknown": "Inconnu"
+    },
+    "adaptationDetails": "Détails de l'adaptation",
+    "tabs": {
+      "adaptedCV": "CV Adapté",
+      "analysis": "Analyse",
+      "mission": "Mission"
+    },
+    "noAdaptedText": "Aucun texte adapté disponible",
+    "noAnalysis": "Aucune analyse disponible",
+    "modal": {
+      "title": "Adaptation de CV",
+      "close": "Fermer",
+      "tabs": {
+        "mission": "Mission",
+        "analysis": "Analyse d'Adéquation",
+        "adapted": "CV Adapté"
+      },
+      "mission": {
+        "title": "Mission",
+        "client": "Entreprise",
+        "location": "Localisation",
+        "description": "Description",
+        "noDescription": "Aucune description disponible pour cette mission",
+        "notFound": "Mission non trouvée",
+        "noTitle": "Mission sans titre"
+      },
+      "save": "Enregistrer",
+      "saving": "Enregistrement..."
+    },
+    "messages": {
+      "saveSuccess": "CV adapté enregistré avec succès",
+      "saveError": "Erreur lors de l'enregistrement du CV adapté",
+      "deleteSuccess": "Adaptation supprimée avec succès",
+      "deleteError": "Erreur lors de la suppression",
+      "exportSuccess": "Export réussi",
+      "exportError": "Erreur lors de l'export"
+    },
+    "card": {
+      "noName": "CV sans nom",
+      "unknownMission": "Mission inconnue"
+    },
+    "exportModal": {
+      "description": "Le CV adapté sera exporté avec le template sélectionné"
+    }
+  },
+  "dashboard": {
+    "title": "Tableau de bord",
+    "welcome": "Bienvenue",
+    "stats": {
+      "totalResumes": "Total des CV",
+      "analyzedToday": "Analysés aujourd'hui",
+      "avgScore": "Score moyen",
+      "improvements": "Améliorations"
+    },
+    "recentActivity": "Activité récente",
+    "quickActions": "Actions rapides"
+  },
+  "chatbot": {
+    "title": "Assistant IA",
+    "subtitle": "Je suis là pour vous aider",
+    "openChat": "Ouvrir le chat",
+    "closeChat": "Fermer le chat",
+    "placeholder": "Posez votre question...",
+    "send": "Envoyer",
+    "clear": "Effacer",
+    "clearChat": "Effacer la conversation",
+    "resetSize": "Réinitialiser la taille",
+    "needHelp": "Besoin d'aide ?",
+    "welcomeMessage": "👋 **Bonjour !** Je suis votre assistant IA.\n\nJe peux vous aider à :\n- 📄 **Gérer la CVthèque** (import, analyse, amélioration)\n- 🎯 **Créer des missions** et adapter les profils\n- ⚙️ **Utiliser les fonctionnalités** de l'application\n- ❓ **Répondre à vos questions**\n\nComment puis-je vous aider ?",
+    "errorMessage": "Désolé, je n'ai pas pu traiter votre demande. Veuillez réessayer."
+  },
+  "userGuide": {
+    "title": "Guide Utilisateur",
+    "subtitle": "Documentation complète pour utiliser ResumeConverter",
+    "sections": {
+      "introduction": "Introduction",
+      "resumes": "Gestion des CV",
+      "missions": "Missions",
+      "adaptations": "Adaptations",
+      "admin": "Administration",
+      "interface": "Interface",
+      "tips": "Conseils"
+    },
+    "introduction": {
+      "title": "Bienvenue dans ResumeConverter",
+      "description": "ResumeConverter est une plateforme intelligente de gestion et d'optimisation de CV, propulsée par l'intelligence artificielle. L'application a été conçue afin de répondre aux besoins spécifiques des ESN.",
+      "features": "Fonctionnalités principales",
+      "feature1": "Gérer une cvthèque de façon simple et efficace",
+      "feature2": "Améliorer les CV afin d'optimiser leur valorisation",
+      "feature3": "Adapter les CV pour des missions ou postes spécifiques",
+      "feature4": "Suivre les performances avec des scores détaillés",
+      "feature5": "Bénéficier d'un assistant IA pour vous guider"
+    },
+    "resumes": {
+      "title": "Gestion des CV",
+      "import": {
+        "title": "Importer un CV",
+        "step1": "Cliquez sur \"Mes CV\" dans le menu latéral",
+        "step2": "Cliquez sur le bouton \"Importer un nouveau CV\"",
+        "step3": "Sélectionnez votre fichier CV (PDF, DOCX, DOC)",
+        "step4": "Le CV sera automatiquement analysé par l'IA"
+      },
+      "view": {
+        "title": "Consulter un CV",
+        "overview": "Aperçu",
+        "overviewDesc": "Résumé avec les scores globaux",
+        "skills": "Compétences & Tags",
+        "skillsDesc": "Compétences détectées automatiquement",
+        "original": "Original",
+        "originalDesc": "Version originale du CV",
+        "improved": "Amélioré",
+        "improvedDesc": "Version améliorée par l'IA"
+      },
+      "scores": {
+        "title": "Critères d'évaluation",
+        "executive": "Résumé Exécutif",
+        "executiveDesc": "Qualité de l'accroche et du résumé",
+        "skills": "Compétences",
+        "skillsDesc": "Pertinence et présentation des compétences",
+        "experience": "Expérience",
+        "experienceDesc": "Clarté et impact des expériences",
+        "education": "Formation",
+        "educationDesc": "Présentation du parcours académique",
+        "ats": "ATS",
+        "atsDesc": "Compatibilité avec les systèmes de suivi",
+        "hobbies": "Loisirs & Langues",
+        "hobbiesDesc": "Informations complémentaires"
+      }
+    },
+    "missions": {
+      "title": "Gestion des Missions",
+      "create": {
+        "title": "Créer une mission",
+        "step1": "Cliquez sur \"Missions\" dans le menu",
+        "step2": "Cliquez sur \"Nouvelle mission\"",
+        "step3": "Remplissez le titre, l'entreprise, la description et les compétences requises"
+      },
+      "tip": {
+        "title": "Conseil",
+        "content": "Plus la description de mission est détaillée, meilleure sera l'analyse d'adéquation avec les CV."
+      }
+    },
+    "adaptations": {
+      "title": "Adaptations de CV",
+      "description": "L'adaptation permet de personnaliser un CV pour une mission spécifique, en mettant en avant les compétences et expériences les plus pertinentes.",
+      "create": {
+        "title": "Créer une adaptation",
+        "step1": "Depuis la page \"Mes CV\", sélectionnez un CV",
+        "step2": "Cliquez sur \"Adapter à une mission\"",
+        "step3": "Sélectionnez la mission cible",
+        "step4": "L'IA analysera l'adéquation et proposera des améliorations"
+      },
+      "view": {
+        "title": "Consulter une adaptation",
+        "score": "Score d'adéquation avec la mission",
+        "analysis": "Analyse détaillée des points forts et axes d'amélioration",
+        "adapted": "CV adapté et optimisé pour la mission"
+      }
+    },
+    "admin": {
+      "title": "Fonctionnalités Administrateur",
+      "notice": "Ces fonctionnalités sont réservées aux utilisateurs avec le rôle \"Admin\".",
+      "templates": {
+        "title": "Modèles de CV",
+        "description": "Créez et gérez les modèles qui définissent la structure des CV améliorés."
+      },
+      "users": {
+        "title": "Gestion des Utilisateurs",
+        "description": "Créez des comptes, modifiez les rôles et gérez les accès."
+      },
+      "security": {
+        "title": "Logs de Sécurité",
+        "description": "Surveillez les connexions, tentatives d'accès et actions administratives."
+      },
+      "metrics": {
+        "title": "Métriques",
+        "description": "Analysez les performances, l'utilisation des modèles LLM et les statistiques."
+      }
+    },
+    "interface": {
+      "title": "Interface Utilisateur",
+      "theme": {
+        "title": "Thèmes",
+        "light": "Mode clair",
+        "dark": "Mode sombre",
+        "description": "Cliquez sur l'icône soleil/lune dans la barre supérieure pour changer de thème."
+      },
+      "language": {
+        "title": "Langues",
+        "description": "Utilisez le sélecteur de langue dans la barre supérieure pour changer entre Français et English."
+      }
+    },
+    "tips": {
+      "title": "Conseils d'Utilisation",
+      "analysis": {
+        "title": "Pour de meilleurs résultats d'analyse",
+        "tip1": "Utilisez un format de CV clair et structuré",
+        "tip2": "Incluez des informations complètes sur vos expériences",
+        "tip3": "Utilisez des termes pertinents pour votre secteur"
+      },
+      "adaptation": {
+        "title": "Pour les adaptations",
+        "tip1": "Fournissez une description de mission détaillée",
+        "tip2": "Listez toutes les compétences recherchées",
+        "tip3": "Incluez des informations sur l'entreprise et le secteur"
+      },
+      "support": {
+        "title": "Besoin d'aide ?",
+        "content": "Consultez la section \"À propos\" pour voir le changelog et les informations de version."
+      }
+    }
+  },
+  "marketRadar": {
+    "title": "Radar du Marché IS/IT",
+    "subtitle": "Collecte et analyse des offres d'emploi IT en France",
+    "tabs": {
+      "map": "Carte France",
+      "trends": "Tendances Marché",
+      "facts": "Offres",
+      "metiers": "Métiers & Compétences"
+    },
+    "dataTypes": {
+      "all": "Tous les types",
+      "offres": "Offres d'emploi",
+      "tension": "Tensions recrutement",
+      "salaire": "Salaires",
+      "dynamique_emploi": "Dynamique emploi",
+      "embauche": "Embauches",
+      "demandeur": "Demandeurs d'emploi",
+      "demandeur_entrant": "Nouveaux demandeurs"
+    },
+    "map": {
+      "title": "Données par région",
+      "subtitle": "Cliquez sur une région pour voir le détail des métiers",
+      "loading": "Chargement de la carte...",
+      "noData": "Aucune donnée régionale",
+      "noDataOffres": "Lancez une collecte France Travail pour voir les données sur la carte.",
+      "noDataTrends": "Lancez une collecte des tendances marché pour voir les données sur la carte.",
+      "selectDataType": "Type de données",
+      "regionsCovered": "Régions couvertes",
+      "topRegion": "Région #1",
+      "itJobs": "Métiers IS/IT",
+      "totalOffers": "Offres IT totales",
+      "total": "Total",
+      "average": "Moyenne",
+      "metierBreakdown": "Répartition par métier",
+      "viewAllMetiers": "Voir tous les métiers",
+      "activeFilter": "Filtre actif sur la carte",
+      "searchMetier": "Rechercher un métier...",
+      "legend": "Légende",
+      "low": "Faible",
+      "medium": "Moyen",
+      "high": "Élevé",
+      "clickToFilter": "Cliquez sur une bulle pour filtrer par type",
+      "bubbleSizeInfo": "Taille des bulles proportionnelle à la valeur"
+    },
+    "trends": {
+      "title": "Tendances du Marché",
+      "subtitle": "Données issues de l'API Marché du Travail de France Travail",
+      "loading": "Chargement des tendances...",
+      "noData": "Aucune donnée disponible",
+      "results": "tendances",
+      "filters": {
+        "type": "Type",
+        "allTypes": "Tous les types",
+        "rome": "Code ROME",
+        "allRome": "Tous les codes ROME",
+        "region": "Région",
+        "allRegions": "Toutes les régions"
+      },
+      "stats": {
+        "totalTrends": "Total tendances",
+        "avgValue": "Valeur moyenne",
+        "regions": "Régions",
+        "metiers": "Métiers"
+      },
+      "card": {
+        "region": "Région",
+        "value": "Valeur",
+        "date": "Date",
+        "metadata": "Métadonnées"
+      },
+      "collection": {
+        "title": "Collecte en cours",
+        "description": "Récupération des données du marché du travail depuis l'API France Travail...",
+        "warning": "Cette opération peut prendre jusqu'à 1 heure. Vous pouvez fermer cette page.",
+        "button": "Collecter les tendances",
+        "started": "Collecte lancée en arrière-plan. Durée estimée : 30-60 minutes.",
+        "success": "Collecte terminée en",
+        "seconds": "s",
+        "created": "créées",
+        "updated": "mises à jour",
+        "total": "Total",
+        "error": "Erreur de collecte"
+      }
+    },
+    "facts": {
+      "title": "Offres d'emploi",
+      "subtitle": "Données collectées sur les offres d'emploi IT",
+      "loading": "Chargement des offres...",
+      "noData": "Aucune offre trouvée",
+      "results": "faits",
+      "filters": {
+        "source": "Source",
+        "allSources": "Toutes les sources",
+        "metier": "Métier",
+        "allMetiers": "Tous les métiers",
+        "region": "Région",
+        "allRegions": "Toutes les régions",
+        "keyword": "Métier",
+        "keywordPlaceholder": "Rechercher par métier...",
+        "searchMetier": "Recherche métier",
+        "searchPlaceholder": "Rechercher par libellé..."
+      },
+      "stats": {
+        "totalFacts": "Faits total",
+        "totalJobs": "Total offres",
+        "sources": "Sources",
+        "regions": "Régions",
+        "keywords": "Mots-clés"
+      },
+      "table": {
+        "date": "Date",
+        "source": "Source",
+        "codeRome": "Code ROME",
+        "metier": "Métier",
+        "region": "Région",
+        "offers": "Offres",
+        "category": "Catégorie",
+        "city": "Ville",
+        "avgSalary": "Salaire moyen"
+      },
+      "collection": {
+        "title": "Collecte de données",
+        "overlayTitle": "Collecte en cours",
+        "overlayDescription": "Récupération des données du marché IS/IT depuis les APIs.",
+        "overlayWarning": "Cette opération peut prendre plusieurs minutes. Ne fermez pas cette page.",
+        "lastCollection": "Dernière collecte",
+        "startCollection": "Lancer la collecte",
+        "collecting": "Collecte en cours...",
+        "success": "Collecte terminée",
+        "factsCollected": "Facts collectés",
+        "stored": "Stockés",
+        "failed": "Échecs",
+        "duration": "Durée",
+        "noData": "Aucun fact collecté",
+        "noDataDescription": "Lancez une collecte pour récupérer les données du marché IS/IT.",
+        "error": "Erreur lors de la collecte",
+        "collectFranceTravail": "Collecter France Travail",
+        "collectAdzuna": "Collecter Adzuna"
+      },
+      "sections": {
+        "allFacts": "Toutes les offres",
+        "offersByMetierRegion": "Offres par métier et région (France Travail)",
+        "offersByKeyword": "Offres par mot-clé (National)",
+        "offersByCity": "Offres par ville (Adzuna)"
+      }
+    },
+    "metiers": {
+      "title": "Métiers & Compétences",
+      "subtitle": "Référentiel ROME 4.0 - Informatique et Télécommunications",
+      "loading": "Chargement des métiers...",
+      "noData": "Aucun métier trouvé",
+      "results": "métiers",
+      "noDataSearch": "Aucun résultat pour cette recherche.",
+      "noDataEmpty": "Lancez une collecte pour récupérer les métiers IS/IT.",
+      "searchPlaceholder": "Rechercher un métier...",
+      "stats": {
+        "totalMetiers": "Métiers IS/IT",
+        "totalCompetences": "Compétences totales",
+        "lastUpdate": "Dernière MAJ"
+      },
+      "card": {
+        "codeRome": "Code ROME",
+        "competences": "compétences",
+        "noCompetences": "Aucune compétence associée",
+        "viewDetails": "Voir les détails",
+        "enjeuxDomaines": "Enjeux / Domaines",
+        "competencesDetaillees": "Compétences Détaillées",
+        "macroSavoirFaire": "Macro Savoir-Faire",
+        "savoirs": "Savoirs",
+        "updatedAt": "Mis à jour"
+      },
+      "collection": {
+        "title": "Collecte en cours",
+        "description": "Récupération des métiers IS/IT depuis l'API Rome 4.0.",
+        "warning": "Cette opération peut prendre jusqu'à 20 minutes. Ne fermez pas cette page.",
+        "button": "Collecter les métiers",
+        "success": "Collecte terminée",
+        "processed": "métiers traités",
+        "created": "créés",
+        "updated": "mis à jour",
+        "errors": "erreurs",
+        "error": "Erreur de collecte"
+      }
+    },
+    "pagination": {
+      "page": "Page",
+      "of": "sur",
+      "previous": "Précédent",
+      "next": "Suivant",
+      "showing": "Affichage de",
+      "to": "à",
+      "results": "résultats"
+    },
+    "errors": {
+      "loadFailed": "Échec du chargement des données",
+      "noConnection": "Impossible de se connecter au serveur",
+      "retry": "Réessayer"
+    }
+  },
+  "profileMatching": {
+    "title": "Matching Profils",
+    "subtitle": "Trouvez les meilleurs CVs correspondant à une mission",
+    "selectMission": "Sélectionnez une mission",
+    "loadingMissions": "Chargement des missions...",
+    "noMissions": "Aucune mission disponible",
+    "advancedOptions": "Options avancées",
+    "maxResults": "Nombre max de résultats",
+    "minScore": "Score minimum (%)",
+    "weights": "Pondération des critères",
+    "weightsTotal": "Total",
+    "resetWeights": "Réinitialiser les pondérations",
+    "search": "Rechercher les profils",
+    "searching": "Recherche en cours...",
+    "noResults": "Aucun profil ne correspond aux critères",
+    "resultsFound": "{{count}} profil(s) trouvé(s)",
+    "results": "Profils correspondants",
+    "matchScore": "Score",
+    "extractedKeywords": "Mots-clés extraits de la mission",
+    "scannedResumes": "{{count}} CVs analysés",
+    "matchedTags": "Compétences correspondantes",
+    "missingTags": "Compétences manquantes",
+    "noMatchedTags": "Aucune correspondance",
+    "noMissingTags": "Toutes les compétences requises sont présentes",
+    "viewResume": "Voir le CV",
+    "noTitle": "Sans titre",
+    "noProfilesFound": "Aucun profil trouvé avec ces critères",
+    "keywordsRefreshed": "Mots-clés de la mission actualisés",
+    "refreshKeywordsTooltip": "Actualiser les mots-clés de la mission",
+    "categories": {
+      "skills": "Compétences",
+      "tools": "Outils",
+      "industries": "Secteurs",
+      "softSkills": "Soft Skills"
+    },
+    "emptyState": {
+      "title": "Recherchez des profils",
+      "description": "Sélectionnez une mission et lancez la recherche pour trouver les CVs les plus adaptés."
+    },
+    "errors": {
+      "loadMissions": "Erreur lors du chargement des missions",
+      "selectMission": "Veuillez sélectionner une mission",
+      "search": "Erreur lors de la recherche de profils",
+      "refreshKeywords": "Erreur lors de l'actualisation des mots-clés",
+      "resumeNotFound": "CV non trouvé dans la liste",
+      "analysis": "Erreur lors de l'analyse détaillée du profil"
+    },
+    "analyzeProfile": "Analyser le profil",
+    "viewAnalysis": "Voir l'analyse",
+    "analyzing": "Analyse en cours...",
+    "analysisComplete": "Analyse détaillée terminée",
+    "searchingProfiles": "Recherche de profils en cours...",
+    "searchingProfilesDescription": "L'IA analyse les CVs de votre base pour trouver les meilleurs candidats pour cette mission.",
+    "analyzingProfile": "Analyse du profil en cours...",
+    "analyzingProfileDescription": "L'IA génère une analyse détaillée de l'adéquation entre ce profil et la mission.",
+    "titleAdjustment": "Ajustement titre",
+    "detailedAnalysis": {
+      "title": "Analyse détaillée IA",
+      "verdict": "Verdict",
+      "strengths": "Points forts",
+      "gaps": "Lacunes identifiées",
+      "recommendations": "Recommandations",
+      "interviewQuestions": "Questions d'entretien suggérées",
+      "riskLevel": "Niveau de risque"
+    }
+  }
+}

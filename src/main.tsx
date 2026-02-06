@@ -1,0 +1,124 @@
+/**
+ * Main Entry Point
+ * TypeScript version
+ */
+
+import { StrictMode } from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App';
+import './styles/main.css';
+import { AuthProvider } from './context/AuthContext';
+import './i18n';
+
+// ============================================
+// GLOBAL ERROR HANDLING
+// ============================================
+
+// Suppress browser extension errors and non-critical warnings that pollute the console
+// These errors come from extensions like ad blockers, not from our code
+const originalConsoleError = console.error;
+console.error = (...args: unknown[]) => {
+  const message = String(args[0] || '');
+  
+  // List of patterns to suppress (extension-related errors and non-critical warnings)
+  const suppressPatterns = [
+    'message channel closed',
+    'A listener indicated an asynchronous response',
+    'Uncaught (in promise) Error: A listener indicated an asynchronous response',
+    'Extension context invalidated',
+    'Could not establish connection',
+    'ResizeObserver loop',
+    'HydrateFallback'
+  ];
+  
+  // Check if message should be suppressed
+  if (suppressPatterns.some(pattern => message.includes(pattern))) {
+    return;
+  }
+  
+  originalConsoleError.apply(console, args);
+};
+
+// Suppress console warnings for non-critical issues
+const originalConsoleWarn = console.warn;
+console.warn = (...args: unknown[]) => {
+  const message = String(args[0] || '');
+  
+  const suppressPatterns = [
+    'HydrateFallback',
+    'ResizeObserver loop'
+  ];
+  
+  if (suppressPatterns.some(pattern => message.includes(pattern))) {
+    return;
+  }
+  
+  originalConsoleWarn.apply(console, args);
+};
+
+// Global handler for unhandled promise rejections
+window.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => {
+  const reason = String(event.reason?.message || event.reason || '');
+  
+  // List of patterns to suppress
+  const suppressPatterns = [
+    'message channel closed',
+    'A listener indicated an asynchronous response',
+    'Extension context invalidated',
+    'Could not establish connection',
+    'Failed to fetch', // Network errors from extensions
+    'NetworkError' // Network errors
+  ];
+  
+  // Check if this is an extension-related error
+  const isExtensionError = suppressPatterns.some(pattern => reason.includes(pattern));
+  
+  if (isExtensionError) {
+    event.preventDefault(); // Prevent console error
+    return;
+  }
+  
+  // Log legitimate application errors to console for debugging
+  console.warn('[Unhandled Promise Rejection]', event.reason);
+  
+  // Prevent the default browser error display
+  event.preventDefault();
+});
+
+// Global error handler for runtime errors
+window.addEventListener('error', (event: ErrorEvent) => {
+  const message = String(event.message || '');
+  
+  // Suppress extension-related errors and non-critical warnings
+  const suppressPatterns = [
+    'message channel closed',
+    'Extension context invalidated',
+    'Could not establish connection',
+    'ResizeObserver loop completed with undelivered notifications',
+    'ResizeObserver loop limit exceeded'
+  ];
+  
+  if (suppressPatterns.some(pattern => message.includes(pattern))) {
+    event.preventDefault();
+    return;
+  }
+  
+  // Log legitimate errors
+  console.warn('[Runtime Error]', {
+    message: event.message,
+    filename: event.filename,
+    lineno: event.lineno,
+    colno: event.colno
+  });
+});
+
+const rootElement = document.getElementById('root');
+if (!rootElement) throw new Error('Root element not found');
+
+ReactDOM.createRoot(rootElement).render(
+  <StrictMode>
+    <AuthProvider>
+      <App />
+    </AuthProvider>
+  </StrictMode>
+);

@@ -1,0 +1,233 @@
+import express from 'express';
+import { metrics } from '../services/metrics.service.js';
+import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
+import { safeLog } from '../utils/logger.backend.js';
+import { query as dbQuery } from '../config/database.js';
+
+const router = express.Router();
+
+// ============================================
+// METRICS ENDPOINTS
+// ============================================
+
+/**
+ * GET /api/metrics
+ * Get comprehensive server metrics (admin only)
+ */
+router.get('/', authenticateToken, requireAdmin, (req, res) => {
+    try {
+        const metricsData = metrics.getMetrics();
+        res.json(metricsData);
+    } catch (error) {
+        safeLog('error', 'Error fetching metrics', { error: error.message });
+        res.status(500).json({ 
+            error: 'Failed to fetch metrics',
+            message: error.message 
+        });
+    }
+});
+
+/**
+ * GET /api/metrics/summary
+ * Get simplified metrics summary (admin only)
+ */
+router.get('/summary', authenticateToken, requireAdmin, (req, res) => {
+    try {
+        const fullMetrics = metrics.getMetrics();
+        
+        const summary = {
+            uptime: fullMetrics.server.uptime,
+            requests: {
+                total: fullMetrics.requests.total,
+                last24h: fullMetrics.requests.last24h,
+                avgResponseTime: fullMetrics.performance.avgResponseTime
+            },
+            cache: {
+                hitRate: fullMetrics.cache.hitRate
+            },
+            errors: {
+                total: fullMetrics.errors.total,
+                rate: fullMetrics.errors.rate
+            },
+            memory: fullMetrics.memory
+        };
+        
+        res.json(summary);
+    } catch (error) {
+        safeLog('error', 'Error fetching metrics summary', { error: error.message });
+        res.status(500).json({ 
+            error: 'Failed to fetch metrics summary',
+            message: error.message 
+        });
+    }
+});
+
+/**
+ * GET /api/metrics/performance
+ * Get performance metrics (admin only)
+ */
+router.get('/performance', authenticateToken, requireAdmin, (req, res) => {
+    try {
+        const fullMetrics = metrics.getMetrics();
+        
+        const performance = {
+            responseTime: fullMetrics.performance,
+            requests: {
+                total: fullMetrics.requests.total,
+                byMethod: fullMetrics.requests.byMethod,
+                byStatus: fullMetrics.requests.byStatus
+            },
+            topEndpoints: fullMetrics.requests.topEndpoints
+        };
+        
+        res.json(performance);
+    } catch (error) {
+        safeLog('error', 'Error fetching performance metrics', { error: error.message });
+        res.status(500).json({ 
+            error: 'Failed to fetch performance metrics',
+            message: error.message 
+        });
+    }
+});
+
+/**
+ * GET /api/metrics/errors
+ * Get error metrics (admin only)
+ */
+router.get('/errors', authenticateToken, requireAdmin, (req, res) => {
+    try {
+        const fullMetrics = metrics.getMetrics();
+        res.json(fullMetrics.errors);
+    } catch (error) {
+        safeLog('error', 'Error fetching error metrics', { error: error.message });
+        res.status(500).json({ 
+            error: 'Failed to fetch error metrics',
+            message: error.message 
+        });
+    }
+});
+
+/**
+ * GET /api/metrics/cache
+ * Get cache metrics (admin only)
+ */
+router.get('/cache', authenticateToken, requireAdmin, (req, res) => {
+    try {
+        const fullMetrics = metrics.getMetrics();
+        res.json(fullMetrics.cache);
+    } catch (error) {
+        safeLog('error', 'Error fetching cache metrics', { error: error.message });
+        res.status(500).json({ 
+            error: 'Failed to fetch cache metrics',
+            message: error.message 
+        });
+    }
+});
+
+/**
+ * GET /api/metrics/llm
+ * Get LLM usage metrics (admin only)
+ */
+router.get('/llm', authenticateToken, requireAdmin, (req, res) => {
+    try {
+        const fullMetrics = metrics.getMetrics();
+        res.json(fullMetrics.llm);
+    } catch (error) {
+        safeLog('error', 'Error fetching LLM metrics', { error: error.message });
+        res.status(500).json({ 
+            error: 'Failed to fetch LLM metrics',
+            message: error.message 
+        });
+    }
+});
+
+/**
+ * POST /api/metrics/reset
+ * Reset all metrics (admin only, use with caution)
+ */
+router.post('/reset', authenticateToken, requireAdmin, (req, res) => {
+    try {
+        metrics.reset();
+        res.json({ 
+            message: 'Metrics reset successfully',
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        safeLog('error', 'Error resetting metrics', { error: error.message });
+        res.status(500).json({ 
+            error: 'Failed to reset metrics',
+            message: error.message 
+        });
+    }
+});
+
+/**
+ * GET /api/metrics/database
+ * Get database performance metrics (admin only)
+ */
+router.get('/database', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const startTime = Date.now();
+        
+        // Get database size and table stats
+        const [sizeResult, tableStatsResult, connectionStatsResult] = await Promise.all([
+            dbQuery(`
+                SELECT 
+                    pg_database_size(current_database()) as db_size,
+                    pg_size_pretty(pg_database_size(current_database())) as db_size_pretty
+            `),
+            dbQuery(`
+                SELECT 
+                    relname as table_name,
+                    n_live_tup as row_count,
+                    n_dead_tup as dead_rows,
+                    last_vacuum,
+                    last_autovacuum,
+                    last_analyze
+                FROM pg_stat_user_tables
+                ORDER BY n_live_tup DESC
+                LIMIT 10
+            `),
+            dbQuery(`
+                SELECT 
+                    count(*) as total_connections,
+                    count(*) FILTER (WHERE state = 'active') as active_connections,
+                    count(*) FILTER (WHERE state = 'idle') as idle_connections
+                FROM pg_stat_activity
+                WHERE datname = current_database()
+            `)
+        ]);
+        
+        const queryTime = Date.now() - startTime;
+        
+        res.json({
+            database: {
+                size: parseInt(sizeResult.rows[0]?.db_size || 0),
+                sizePretty: sizeResult.rows[0]?.db_size_pretty || 'Unknown'
+            },
+            tables: tableStatsResult.rows.map(row => ({
+                name: row.table_name,
+                rowCount: parseInt(row.row_count || 0),
+                deadRows: parseInt(row.dead_rows || 0),
+                lastVacuum: row.last_vacuum,
+                lastAutovacuum: row.last_autovacuum,
+                lastAnalyze: row.last_analyze
+            })),
+            connections: {
+                total: parseInt(connectionStatsResult.rows[0]?.total_connections || 0),
+                active: parseInt(connectionStatsResult.rows[0]?.active_connections || 0),
+                idle: parseInt(connectionStatsResult.rows[0]?.idle_connections || 0)
+            },
+            queryTime: `${queryTime}ms`,
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        safeLog('error', 'Error fetching database metrics', { error: error.message });
+        res.status(500).json({ 
+            error: 'Failed to fetch database metrics',
+            message: error.message 
+        });
+    }
+});
+
+export default router;

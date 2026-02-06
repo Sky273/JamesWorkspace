@@ -1,0 +1,50 @@
+/**
+ * Resume Service - PostgreSQL Compatible
+ * Provides API methods for resume operations via the backend proxy
+ */
+
+import { authGet, authPut } from './apiInterceptor';
+
+export const resumeService = {
+    /**
+     * Update a resume field
+     * @param resumeId - The resume ID
+     * @param fields - Object with fields to update
+     */
+    async updateResume(resumeId: string, fields: Record<string, any>): Promise<any> {
+        const response = await authPut(`/api/resumes/${resumeId}`, fields);
+        if (!response.ok) {
+            throw new Error('Failed to update resume');
+        }
+        return response.json();
+    },
+
+    /**
+     * Get a resume by ID
+     * @param resumeId - The resume ID
+     */
+    async getResume(resumeId: string): Promise<any> {
+        const response = await authGet(`/api/resumes/${resumeId}`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch resume');
+        }
+        return response.json();
+    },
+
+    /**
+     * Get all resumes
+     */
+    async getResumes(): Promise<any[]> {
+        const response = await authGet('/api/resumes');
+        if (!response.ok) {
+            throw new Error('Failed to fetch resumes');
+        }
+        const data = await response.json();
+        return data.data || data;
+    }
+};
+
+// Backward compatibility alias
+export const airtableService = resumeService;
+
+export default resumeService;

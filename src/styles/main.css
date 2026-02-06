@@ -1,0 +1,42 @@
+/* ============================================
+   MAIN STYLESHEET
+   Resume Converter Application
+   ============================================ */
+
+/* 
+ * This file imports all CSS modules in the correct order.
+ * Import this file in your main entry point (main.jsx).
+ * 
+ * IMPORTANT: Tailwind must be imported AFTER custom styles
+ * to ensure dark: variants work correctly.
+ */
+
+/* --- Design Tokens & Variables --- */
+@import './_variables.css';
+
+/* --- Base Styles & Resets --- */
+@import './_base.css';
+
+/* --- Component Styles --- */
+@import './components/_layout.css';
+@import './components/_buttons.css';
+@import './components/_cards.css';
+@import './components/_forms.css';
+@import './components/_tables.css';
+@import './components/_badges.css';
+@import './components/_modals.css';
+@import './components/_tabs.css';
+@import './components/_alerts.css';
+@import './components/_utilities.css';
+
+/* --- CircularProgressbar Fix --- */
+.CircularProgressbar .CircularProgressbar-text {
+  dominant-baseline: middle;
+  text-anchor: middle;
+  font-weight: 600;
+}
+
+/* --- Tailwind (MUST be last to ensure dark: variants work) --- */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

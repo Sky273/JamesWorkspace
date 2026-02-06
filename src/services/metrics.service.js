@@ -1,0 +1,621 @@
+// ============================================
+// METRICS AND MONITORING SERVICE
+// ============================================
+
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { createModuleLogger } from '../utils/logger.backend.js';
+
+// Module logger
+const log = createModuleLogger('metrics');
+
+// Get __dirname equivalent for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Metrics file configuration
+const METRICS_DIR = path.join(__dirname, '../../logs');
+const METRICS_FILE = path.join(METRICS_DIR, 'metrics.json');
+const METRICS_HISTORY_FILE = path.join(METRICS_DIR, 'metrics-history.jsonl');
+const SAVE_INTERVAL_MS = 5 * 60 * 1000; // Save every 5 minutes
+const HISTORY_INTERVAL_MS = 60 * 60 * 1000; // Append to history every hour
+
+// Ensure metrics directory exists
+try {
+    if (!fs.existsSync(METRICS_DIR)) {
+        fs.mkdirSync(METRICS_DIR, { recursive: true });
+    }
+} catch (err) {
+    log.error('Failed to create metrics directory', { error: err.message });
+}
+
+class MetricsCollector {
+    constructor() {
+        this.startTime = Date.now();
+        this.requests = {
+            total: 0,
+            byMethod: {},
+            byEndpoint: {},
+            byStatus: {},
+            responseTimes: []
+        };
+        this.errors = {
+            total: 0,
+            byType: {},
+            byEndpoint: {},
+            recent: []
+        };
+        this.cache = {
+            hits: 0,
+            misses: 0
+        };
+        this.llm = {
+            requests: 0,
+            byProvider: {},
+            totalTokens: 0,
+            errors: 0
+        };
+        
+        // Persistence intervals
+        this.saveInterval = null;
+        this.historyInterval = null;
+        
+        // Load persisted metrics on startup
+        this.loadMetrics();
+        
+        // Start periodic saving
+        this.startPeriodicSave();
+    }
+    
+    // Load metrics from file on startup
+    loadMetrics() {
+        try {
+            if (fs.existsSync(METRICS_FILE)) {
+                const data = JSON.parse(fs.readFileSync(METRICS_FILE, 'utf8'));
+                
+                // Restore cumulative metrics (not response times or recent errors)
+                if (data.requests) {
+                    this.requests.total = data.requests.total || 0;
+                    this.requests.byMethod = data.requests.byMethod || {};
+                    this.requests.byEndpoint = data.requests.byEndpoint || {};
+                    this.requests.byStatus = data.requests.byStatus || {};
+                }
+                if (data.errors) {
+                    this.errors.total = data.errors.total || 0;
+                    this.errors.byType = data.errors.byType || {};
+                    this.errors.byEndpoint = data.errors.byEndpoint || {};
+                }
+                if (data.cache) {
+                    this.cache.hits = data.cache.hits || 0;
+                    this.cache.misses = data.cache.misses || 0;
+                }
+                if (data.llm) {
+                    this.llm.requests = data.llm.requests || 0;
+                    this.llm.byProvider = data.llm.byProvider || {};
+                    this.llm.totalTokens = data.llm.totalTokens || 0;
+                    this.llm.errors = data.llm.errors || 0;
+                }
+                
+                log.debug('Metrics loaded from file');
+            }
+        } catch (err) {
+            log.error('Failed to load metrics', { error: err.message });
+        }
+    }
+    
+    // Save metrics to file
+    saveMetrics() {
+        try {
+            const data = {
+                savedAt: new Date().toISOString(),
+                startTime: this.startTime,
+                requests: {
+                    total: this.requests.total,
+                    byMethod: this.requests.byMethod,
+                    byEndpoint: this.requests.byEndpoint,
+                    byStatus: this.requests.byStatus
+                },
+                errors: {
+                    total: this.errors.total,
+                    byType: this.errors.byType,
+                    byEndpoint: this.errors.byEndpoint
+                },
+                cache: this.cache,
+                llm: {
+                    requests: this.llm.requests,
+                    byProvider: this.llm.byProvider,
+                    totalTokens: this.llm.totalTokens,
+                    errors: this.llm.errors
+                }
+            };
+            
+            fs.writeFileSync(METRICS_FILE, JSON.stringify(data, null, 2), 'utf8');
+        } catch (err) {
+            log.error('Failed to save metrics', { error: err.message });
+        }
+    }
+    
+    // Append snapshot to history file (for long-term analysis)
+    appendToHistory() {
+        try {
+            const snapshot = {
+                timestamp: new Date().toISOString(),
+                uptime: this.getUptime().seconds,
+                requests: this.requests.total,
+                errors: this.errors.total,
+                cacheHitRate: this.getCacheHitRate(),
+                llmRequests: this.llm.requests,
+                llmTokens: this.llm.totalTokens,
+                llmCost: this.calculateLLMCost(),
+                avgResponseTime: this.getAverageResponseTime(),
+                memoryUsed: process.memoryUsage().heapUsed
+            };
+            
+            fs.appendFileSync(METRICS_HISTORY_FILE, JSON.stringify(snapshot) + '\n', 'utf8');
+        } catch (err) {
+            log.error('Failed to append metrics history', { error: err.message });
+        }
+    }
+    
+    // Start periodic save intervals
+    startPeriodicSave() {
+        // Save current metrics every 5 minutes
+        this.saveInterval = setInterval(() => {
+            this.saveMetrics();
+        }, SAVE_INTERVAL_MS);
+        
+        // Append to history every hour
+        this.historyInterval = setInterval(() => {
+            this.appendToHistory();
+        }, HISTORY_INTERVAL_MS);
+        
+        log.info('Metrics persistence started');
+    }
+    
+    // Stop periodic saves (for graceful shutdown)
+    stopPeriodicSave() {
+        if (this.saveInterval) {
+            clearInterval(this.saveInterval);
+            this.saveInterval = null;
+        }
+        if (this.historyInterval) {
+            clearInterval(this.historyInterval);
+            this.historyInterval = null;
+        }
+        
+        // Final save before shutdown
+        this.saveMetrics();
+        this.appendToHistory();
+        
+        log.info('Metrics persistence stopped');
+    }
+
+    // Track incoming request
+    trackRequest(method, endpoint) {
+        this.requests.total++;
+        this.requests.byMethod[method] = (this.requests.byMethod[method] || 0) + 1;
+        
+        // Normalize endpoint (remove IDs)
+        const normalizedEndpoint = endpoint.replace(/\/rec[a-zA-Z0-9]{14}/g, '/:id');
+        this.requests.byEndpoint[normalizedEndpoint] = (this.requests.byEndpoint[normalizedEndpoint] || 0) + 1;
+    }
+
+    // Track response
+    trackResponse(statusCode, responseTime) {
+        const statusCategory = `${Math.floor(statusCode / 100)}xx`;
+        this.requests.byStatus[statusCategory] = (this.requests.byStatus[statusCategory] || 0) + 1;
+        
+        // Keep last 1000 response times for percentile calculations
+        this.requests.responseTimes.push(responseTime);
+        if (this.requests.responseTimes.length > 1000) {
+            // Remove oldest entries to prevent unbounded growth
+            this.requests.responseTimes.splice(0, this.requests.responseTimes.length - 1000);
+        }
+    }
+
+    // Track error
+    trackError(error, endpoint) {
+        this.errors.total++;
+        
+        const errorType = error.name || 'UnknownError';
+        this.errors.byType[errorType] = (this.errors.byType[errorType] || 0) + 1;
+        
+        const normalizedEndpoint = endpoint.replace(/\/rec[a-zA-Z0-9]{14}/g, '/:id');
+        this.errors.byEndpoint[normalizedEndpoint] = (this.errors.byEndpoint[normalizedEndpoint] || 0) + 1;
+        
+        // Keep last 100 errors
+        this.errors.recent.push({
+            timestamp: new Date().toISOString(),
+            type: errorType,
+            message: error.message,
+            endpoint: normalizedEndpoint
+        });
+        if (this.errors.recent.length > 100) {
+            this.errors.recent.shift();
+        }
+    }
+
+    // Track cache hit/miss
+    trackCacheHit() {
+        this.cache.hits++;
+    }
+
+    trackCacheMiss() {
+        this.cache.misses++;
+    }
+
+    // Track LLM request with token breakdown
+    trackLLMRequest(provider, tokens = 0, success = true, inputTokens = 0, outputTokens = 0) {
+        this.llm.requests++;
+        
+        if (!this.llm.byProvider[provider]) {
+            this.llm.byProvider[provider] = {
+                requests: 0,
+                totalTokens: 0,
+                inputTokens: 0,
+                outputTokens: 0
+            };
+        }
+        
+        this.llm.byProvider[provider].requests++;
+        this.llm.byProvider[provider].totalTokens += tokens;
+        this.llm.byProvider[provider].inputTokens += inputTokens;
+        this.llm.byProvider[provider].outputTokens += outputTokens;
+        
+        this.llm.totalTokens += tokens;
+        
+        if (!success) {
+            this.llm.errors++;
+        }
+    }
+
+    // Calculate percentiles
+    calculatePercentile(percentile) {
+        if (this.requests.responseTimes.length === 0) return 0;
+        
+        const sorted = [...this.requests.responseTimes].sort((a, b) => a - b);
+        const index = Math.ceil((percentile / 100) * sorted.length) - 1;
+        return sorted[Math.max(0, index)];
+    }
+
+    // Get average response time
+    getAverageResponseTime() {
+        if (this.requests.responseTimes.length === 0) return 0;
+        const sum = this.requests.responseTimes.reduce((a, b) => a + b, 0);
+        return Math.round(sum / this.requests.responseTimes.length);
+    }
+
+    // Get cache hit rate
+    getCacheHitRate() {
+        const total = this.cache.hits + this.cache.misses;
+        if (total === 0) return 0;
+        return Math.round((this.cache.hits / total) * 100);
+    }
+
+    // Get error rate
+    getErrorRate() {
+        if (this.requests.total === 0) return 0;
+        return ((this.errors.total / this.requests.total) * 100).toFixed(2);
+    }
+
+    // Get uptime
+    getUptime() {
+        const uptimeMs = Date.now() - this.startTime;
+        const uptimeSeconds = Math.floor(uptimeMs / 1000);
+        const hours = Math.floor(uptimeSeconds / 3600);
+        const minutes = Math.floor((uptimeSeconds % 3600) / 60);
+        const seconds = uptimeSeconds % 60;
+        
+        return {
+            ms: uptimeMs,
+            seconds: uptimeSeconds,
+            formatted: `${hours}h ${minutes}m ${seconds}s`
+        };
+    }
+
+    // Get requests in time window
+    getRequestsInWindow(windowMs) {
+        // This is a simplified version - in production you'd want a time-series database
+        // For now, we estimate based on total requests and uptime
+        const uptimeMs = Date.now() - this.startTime;
+        if (uptimeMs === 0) return 0;
+        
+        const requestsPerMs = this.requests.total / uptimeMs;
+        return Math.round(requestsPerMs * windowMs);
+    }
+
+    // Get top endpoints by request count
+    getTopEndpoints(limit = 10) {
+        return Object.entries(this.requests.byEndpoint)
+            .sort(([, a], [, b]) => b - a)
+            .slice(0, limit)
+            .map(([endpoint, count]) => ({ endpoint, count }));
+    }
+
+    // Get top errors
+    getTopErrors(limit = 10) {
+        return Object.entries(this.errors.byType)
+            .sort(([, a], [, b]) => b - a)
+            .slice(0, limit)
+            .map(([type, count]) => ({ type, count }));
+    }
+
+    // Calculate LLM cost with accurate per-model pricing
+    calculateLLMCost() {
+        let totalCost = 0;
+        
+        for (const [provider, stats] of Object.entries(this.llm.byProvider)) {
+            const pricing = this.getModelPricing(provider);
+            
+            // If we have input/output breakdown, use it
+            if (stats.inputTokens > 0 || stats.outputTokens > 0) {
+                const inputCost = (stats.inputTokens / 1_000_000) * pricing.input;
+                const outputCost = (stats.outputTokens / 1_000_000) * pricing.output;
+                totalCost += inputCost + outputCost;
+            } else if (stats.totalTokens > 0) {
+                // Fallback: estimate 70% input, 30% output when breakdown not available
+                const estimatedInput = stats.totalTokens * 0.7;
+                const estimatedOutput = stats.totalTokens * 0.3;
+                const inputCost = (estimatedInput / 1_000_000) * pricing.input;
+                const outputCost = (estimatedOutput / 1_000_000) * pricing.output;
+                totalCost += inputCost + outputCost;
+            }
+        }
+        
+        return totalCost.toFixed(4);
+    }
+
+    // Calculate cost breakdown by provider
+    calculateCostByProvider() {
+        const costs = {};
+        
+        for (const [provider, stats] of Object.entries(this.llm.byProvider)) {
+            const pricing = this.getModelPricing(provider);
+            
+            let inputTokens = stats.inputTokens;
+            let outputTokens = stats.outputTokens;
+            let isEstimated = false;
+            
+            // If no breakdown available, estimate from total
+            if (inputTokens === 0 && outputTokens === 0 && stats.totalTokens > 0) {
+                inputTokens = Math.round(stats.totalTokens * 0.7);
+                outputTokens = Math.round(stats.totalTokens * 0.3);
+                isEstimated = true;
+            }
+            
+            const inputCost = (inputTokens / 1_000_000) * pricing.input;
+            const outputCost = (outputTokens / 1_000_000) * pricing.output;
+            
+            costs[provider] = {
+                inputCost: inputCost.toFixed(4),
+                outputCost: outputCost.toFixed(4),
+                totalCost: (inputCost + outputCost).toFixed(4),
+                inputTokens: inputTokens,
+                outputTokens: outputTokens,
+                isEstimated: isEstimated
+            };
+        }
+        
+        return costs;
+    }
+
+    // Get pricing for a specific model (prices per 1M tokens)
+    getModelPricing(model) {
+        const modelLower = model.toLowerCase();
+        
+        // OpenAI pricing (as of 2026)
+        // GPT-5.2 models
+        if (modelLower.includes('gpt-5.2-pro')) {
+            return { input: 10.00, output: 30.00 }; // GPT-5.2 Pro (reasoning model)
+        }
+        if (modelLower.includes('gpt-5.2')) {
+            return { input: 5.00, output: 15.00 }; // GPT-5.2
+        }
+        // GPT-5.1 models
+        if (modelLower.includes('gpt-5.1')) {
+            return { input: 4.00, output: 12.00 }; // GPT-5.1
+        }
+        // GPT-5 base models
+        if (modelLower.includes('gpt-5-pro')) {
+            return { input: 8.00, output: 24.00 }; // GPT-5 Pro
+        }
+        if (modelLower.includes('gpt-5-codex')) {
+            return { input: 6.00, output: 18.00 }; // GPT-5 Codex
+        }
+        if (modelLower.includes('gpt-5')) {
+            return { input: 3.00, output: 10.00 }; // GPT-5 base
+        }
+        
+        // GPT-4.1 models (2025)
+        if (modelLower.includes('gpt-4.1-nano')) {
+            return { input: 0.10, output: 0.40 }; // GPT-4.1 Nano
+        }
+        if (modelLower.includes('gpt-4.1-mini')) {
+            return { input: 0.40, output: 1.60 }; // GPT-4.1 Mini
+        }
+        if (modelLower.includes('gpt-4.1')) {
+            return { input: 2.00, output: 8.00 }; // GPT-4.1
+        }
+        
+        // GPT-4o models
+        if (modelLower.includes('gpt-4o-mini')) {
+            return { input: 0.15, output: 0.60 }; // GPT-4o Mini
+        }
+        if (modelLower.includes('gpt-4o')) {
+            return { input: 2.50, output: 10.00 }; // GPT-4o
+        }
+        
+        // GPT-4 models
+        if (modelLower.includes('gpt-4-turbo')) {
+            return { input: 10.00, output: 30.00 }; // GPT-4 Turbo
+        }
+        if (modelLower.includes('gpt-4')) {
+            return { input: 30.00, output: 60.00 }; // GPT-4
+        }
+        
+        // GPT-3.5
+        if (modelLower.includes('gpt-3.5-turbo')) {
+            return { input: 0.50, output: 1.50 }; // GPT-3.5 Turbo
+        }
+        
+        // o1/o3 reasoning models
+        if (modelLower.includes('o3-pro')) {
+            return { input: 20.00, output: 80.00 }; // o3-pro
+        }
+        if (modelLower.includes('o3-mini')) {
+            return { input: 1.10, output: 4.40 }; // o3-mini
+        }
+        if (modelLower.includes('o3')) {
+            return { input: 10.00, output: 40.00 }; // o3
+        }
+        if (modelLower.includes('o1-pro')) {
+            return { input: 150.00, output: 600.00 }; // o1-pro
+        }
+        if (modelLower.includes('o1-preview')) {
+            return { input: 15.00, output: 60.00 }; // o1-preview
+        }
+        if (modelLower.includes('o1-mini')) {
+            return { input: 3.00, output: 12.00 }; // o1-mini
+        }
+        if (modelLower.includes('o1')) {
+            return { input: 15.00, output: 60.00 }; // o1
+        }
+        
+        // Anthropic pricing
+        if (modelLower.includes('claude-3-opus')) {
+            return { input: 15.00, output: 75.00 }; // Claude 3 Opus
+        }
+        if (modelLower.includes('claude-3-5-sonnet') || modelLower.includes('claude-3.5-sonnet')) {
+            return { input: 3.00, output: 15.00 }; // Claude 3.5 Sonnet
+        }
+        if (modelLower.includes('claude-3-sonnet')) {
+            return { input: 3.00, output: 15.00 }; // Claude 3 Sonnet
+        }
+        if (modelLower.includes('claude-3-haiku')) {
+            return { input: 0.25, output: 1.25 }; // Claude 3 Haiku
+        }
+        
+        // Default fallback (conservative estimate)
+        return { input: 2.00, output: 6.00 };
+    }
+
+    // Get comprehensive metrics
+    getMetrics() {
+        const uptime = this.getUptime();
+        
+        return {
+            server: {
+                uptime: uptime.formatted,
+                uptimeSeconds: uptime.seconds,
+                startTime: new Date(this.startTime).toISOString()
+            },
+            requests: {
+                total: this.requests.total,
+                last24h: this.getRequestsInWindow(24 * 60 * 60 * 1000),
+                lastHour: this.getRequestsInWindow(60 * 60 * 1000),
+                byMethod: this.requests.byMethod,
+                byStatus: this.requests.byStatus,
+                topEndpoints: this.getTopEndpoints(10)
+            },
+            performance: {
+                avgResponseTime: this.getAverageResponseTime(),
+                minResponseTime: this.requests.responseTimes.length > 0 ? Math.min(...this.requests.responseTimes) : 0,
+                maxResponseTime: this.requests.responseTimes.length > 0 ? Math.max(...this.requests.responseTimes) : 0,
+                p50: this.calculatePercentile(50),
+                p95: this.calculatePercentile(95),
+                p99: this.calculatePercentile(99)
+            },
+            cache: {
+                hits: this.cache.hits,
+                misses: this.cache.misses,
+                hitRate: this.getCacheHitRate() / 100,
+                total: this.cache.hits + this.cache.misses
+            },
+            errors: {
+                total: this.errors.total,
+                rate: parseFloat(this.getErrorRate()) / 100,
+                byType: this.errors.byType,
+                topErrors: this.getTopErrors(5),
+                recent: this.errors.recent.slice(-10)
+            },
+            llm: {
+                requests: this.llm.requests,
+                byProvider: this.llm.byProvider,
+                totalTokens: this.llm.totalTokens,
+                errors: this.llm.errors,
+                estimatedCost: this.calculateLLMCost(),
+                costByProvider: this.calculateCostByProvider(),
+                successRate: this.llm.requests > 0 
+                    ? `${(((this.llm.requests - this.llm.errors) / this.llm.requests) * 100).toFixed(2)}%`
+                    : '0%'
+            },
+            memory: {
+                heapUsed: process.memoryUsage().heapUsed,
+                heapTotal: process.memoryUsage().heapTotal,
+                rss: process.memoryUsage().rss,
+                external: process.memoryUsage().external
+            }
+        };
+    }
+
+    // Reset metrics (for testing or periodic reset)
+    reset() {
+        this.startTime = Date.now();
+        this.requests = {
+            total: 0,
+            byMethod: {},
+            byEndpoint: {},
+            byStatus: {},
+            responseTimes: []
+        };
+        this.errors = {
+            total: 0,
+            byType: {},
+            byEndpoint: {},
+            recent: []
+        };
+        this.cache = {
+            hits: 0,
+            misses: 0
+        };
+        this.llm = {
+            requests: 0,
+            byProvider: {},
+            totalTokens: 0,
+            errors: 0
+        };
+        
+        // Save reset state
+        this.saveMetrics();
+    }
+    
+    // Get metrics history (last N entries)
+    getHistory(limit = 24) {
+        try {
+            if (!fs.existsSync(METRICS_HISTORY_FILE)) {
+                return [];
+            }
+            
+            const content = fs.readFileSync(METRICS_HISTORY_FILE, 'utf8');
+            const lines = content.trim().split('\n').filter(Boolean);
+            const entries = lines.slice(-limit).map(line => {
+                try {
+                    return JSON.parse(line);
+                } catch {
+                    return null;
+                }
+            }).filter(Boolean);
+            
+            return entries;
+        } catch (err) {
+            log.error('Failed to read metrics history', { error: err.message });
+            return [];
+        }
+    }
+}
+
+// Create singleton instance
+export const metrics = new MetricsCollector();
+
+export default metrics;

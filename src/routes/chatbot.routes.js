@@ -1,0 +1,181 @@
+/**
+ * Chatbot Routes
+ * Handles AI assistant using LLM with user guide context
+ */
+
+import express from 'express';
+import { safeLog } from '../utils/logger.backend.js';
+import { callLLM } from '../services/llm.service.js';
+import { authenticateToken } from '../middleware/auth.middleware.js';
+import { asyncHandler } from '../middleware/asyncHandler.middleware.js';
+import { validateBody, chatbotRequestSchema } from '../utils/validation.js';
+import { metrics } from '../services/metrics.service.js';
+import fs from 'fs/promises';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const router = express.Router();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load user guide markdown
+let userGuideContent = '';
+const loadUserGuide = async () => {
+    try {
+        const guidePath = path.join(__dirname, '../../USER_GUIDE.md');
+        userGuideContent = await fs.readFile(guidePath, 'utf-8');
+        safeLog('info', 'User guide loaded for chatbot', { 
+            length: userGuideContent.length 
+        });
+    } catch (error) {
+        safeLog('error', 'Failed to load user guide', { 
+            error: error.message 
+        });
+        userGuideContent = 'Guide utilisateur non disponible.';
+    }
+};
+
+// Load user guide on startup
+loadUserGuide();
+
+/**
+ * POST /api/chatbot/message
+ * Send a message to the chatbot and get a response
+ */
+router.post('/message', authenticateToken, validateBody(chatbotRequestSchema), asyncHandler(async (req, res) => {
+    const startTime = Date.now();
+    
+    // Track request metrics
+    metrics.trackRequest('POST', '/api/chatbot/message');
+
+    const { message, conversationHistory } = req.body;
+    const userId = req.user?.id;
+    const userName = req.user?.name;
+
+    safeLog('info', 'Processing chatbot message with LLM', { 
+        userId, 
+        userName,
+        messageLength: message.length,
+        historyLength: conversationHistory?.length || 0
+    });
+
+    // Build conversation context
+    const systemPrompt = `Tu es un assistant IA pour l'application ResumeConverter, une plateforme de gestion et d'amélioration de CV assistée par intelligence artificielle.
+
+Ton rôle est d'aider les utilisateurs à :
+- Comprendre comment utiliser l'application
+- Résoudre leurs problèmes
+- Répondre à leurs questions sur les fonctionnalités
+- Les guider dans l'utilisation des différentes sections
+
+Tu dois être :
+- Courtois et professionnel
+- Concis mais complet dans tes réponses
+- Capable de référencer le guide utilisateur ci-dessous
+- Proactif pour suggérer des fonctionnalités pertinentes
+
+FORMAT DE RÉPONSE :
+- Utilise le format **Markdown** pour structurer tes réponses
+- Utilise **gras** pour les termes importants et les noms de fonctionnalités
+- Utilise des listes à puces (-) pour énumérer des étapes ou options
+- Utilise des listes numérotées (1. 2. 3.) pour les procédures étape par étape
+- Utilise \`code\` pour les noms de boutons, menus ou raccourcis clavier
+- Utilise > pour les citations ou notes importantes
+- Garde tes réponses bien structurées et faciles à lire
+- Évite les blocs de texte trop longs, préfère des paragraphes courts
+
+RÈGLES IMPORTANTES :
+- Tu DOIS UNIQUEMENT répondre aux questions concernant ResumeConverter et son utilisation
+- Si l'utilisateur pose une question hors sujet (politique, actualités, autres applications, conseils généraux non liés à l'app, etc.), tu dois poliment refuser et rediriger vers des questions sur ResumeConverter
+- Ne réponds PAS aux questions de programmation générale, de rédaction de CV hors contexte de l'application, ou tout autre sujet non lié
+- Reste strictement dans le cadre de l'assistance à l'utilisation de ResumeConverter
+
+GUIDE UTILISATEUR :
+${userGuideContent}
+
+Réponds toujours en français, sauf si l'utilisateur pose sa question en anglais.`;
+
+    // Build messages array for LLM
+    const messages = [
+        { role: 'system', content: systemPrompt }
+    ];
+
+    // Add conversation history
+    if (conversationHistory && Array.isArray(conversationHistory)) {
+        conversationHistory.forEach(msg => {
+            if (msg.role === 'user' || msg.role === 'assistant') {
+                messages.push({
+                    role: msg.role,
+                    content: msg.content
+                });
+            }
+        });
+    }
+
+    // Add current user message
+    messages.push({
+        role: 'user',
+        content: message
+    });
+
+    // Call LLM
+    const llmResponse = await callLLM(messages, {
+        temperature: 0.7,
+        max_tokens: 1000
+    });
+
+    if (!llmResponse || !llmResponse.content) {
+        safeLog('error', 'LLM returned empty response');
+        metrics.trackError('/api/chatbot/message', 'EmptyLLMResponse');
+        return res.status(500).json({
+            error: 'Empty LLM response',
+            response: 'Désolé, je n\'ai pas pu générer de réponse. Veuillez réessayer.'
+        });
+    }
+
+    // Track LLM usage metrics
+    if (llmResponse.usage) {
+        metrics.trackLLMRequest(
+            llmResponse.model,
+            llmResponse.usage.total_tokens || 0,
+            true,
+            llmResponse.usage.prompt_tokens || 0,
+            llmResponse.usage.completion_tokens || 0
+        );
+    }
+
+    // Track response time
+    const responseTime = Date.now() - startTime;
+    metrics.trackResponse(200, responseTime);
+
+    safeLog('info', 'Chatbot LLM response generated', { 
+        userId,
+        responseLength: llmResponse.content.length,
+        model: llmResponse.model,
+        responseTime
+    });
+
+    res.json({
+        response: llmResponse.content,
+        metadata: {
+            model: llmResponse.model,
+            tokensUsed: llmResponse.usage
+        }
+    });
+}));
+
+/**
+ * GET /api/chatbot/status
+ * Check if chatbot service is configured and available
+ */
+router.get('/status', (req, res) => {
+    const isConfigured = userGuideContent.length > 0;
+    res.json({
+        configured: isConfigured,
+        status: isConfigured ? 'available' : 'not_configured',
+        userGuideLoaded: userGuideContent.length > 0,
+        userGuideLength: userGuideContent.length
+    });
+});
+
+export default router;
