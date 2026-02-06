@@ -60,10 +60,12 @@ const CompareTab = ({ resume }: CompareTabProps): JSX.Element => {
               Score : {parseScoreValue(resume['Improved Global Rating'])}%
             </span>
           </div>
-          <div className="prose max-w-none dark:prose-invert">
-            <div className="whitespace-pre-wrap font-mono text-sm">
-              {resume['Improved Text']}
-            </div>
+          <div className="prose prose-sm max-w-none dark:prose-invert max-h-[600px] overflow-y-auto">
+            <div 
+              dangerouslySetInnerHTML={{ 
+                __html: resume['Improved Text'] || '' 
+              }} 
+            />
           </div>
         </div>
       </div>
