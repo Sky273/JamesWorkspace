@@ -1,3 +1,25 @@
+## v1.5.5 - 2026-02-06
+### 🎯 Améliorations Matching Profils & UX
+
+#### Matching Profils - Corrections majeures
+- **Fix casse status** : Correction de la comparaison case-insensitive pour les status `analyzed`/`improved` dans PostgreSQL
+- **Tags cleaned prioritaires** : Le matching utilise maintenant les tags nettoyés (`skills_cleaned`, etc.) en priorité avec fallback sur les tags bruts
+- **Affichage tous profils** : Les CVs sont maintenant tous affichés triés par pertinence, même avec un score de 0
+- **Debug logging** : Ajout de logs pour diagnostiquer les problèmes de matching
+
+#### Analyse CV - Objectivité
+- **Analyse agnostique** : Suppression du biais qui favorisait les scores des CV améliorés
+- **Même traitement** : L'analyse LLM traite maintenant tous les CVs de manière identique (original ou amélioré)
+
+#### Affichage CV amélioré
+- **Export HTML** : L'aperçu dans l'onglet Exporter affiche maintenant le CV en HTML rendu
+- **Comparaison HTML** : L'onglet Comparer affiche le CV amélioré en HTML formaté
+
+#### UX Page d'accueil
+- **Espacement sections** : Augmentation de l'espace avant "Comment ça marche" pour un affichage bloc par bloc
+
+---
+
 ## v1.5.4 - 2026-02-06
 ### 🗺️ Améliorations UX Carte France
 
