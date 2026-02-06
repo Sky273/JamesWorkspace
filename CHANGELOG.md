@@ -1,3 +1,23 @@
+## v1.5.4 - 2026-02-06
+### 🗺️ Améliorations UX Carte France
+
+#### Conservation du métier lors du changement de région
+- **Persistance de la sélection** : Le métier sélectionné reste actif lors du changement de région
+- **Rechargement automatique** : Les métadonnées sont rechargées pour la nouvelle région
+- **Mapping type corrigé** : Correction du mapping `offres` → `offre` pour la recherche de trends
+
+#### Affichage des métadonnées amélioré
+- **En-tête métier** : Ajout du nom du métier sélectionné en haut du panneau de métadonnées
+- **Affichage conditionnel** : Le panneau ne s'affiche que si les métadonnées sont disponibles ou en chargement
+- **Suppression message inutile** : Retrait du message "Sélectionnez un métier pour voir les détails"
+
+#### Corrections de bugs
+- **Fix layout shift** : Suppression de l'indicateur de métier qui causait un décalage de layout
+- **Fix hauteur panneau** : Ajout d'une hauteur maximale fixe au panneau latéral pour éviter les re-layouts
+- **Fix effet région** : Utilisation d'un ref pour détecter uniquement les vrais changements de région
+
+---
+
 ## v1.5.3 - 2026-02-06
 ### 🗺️ Metadata on-demand sur la Carte France
 

@@ -1,7 +1,7 @@
 {
   "name": "resume-converter",
   "private": true,
-  "version": "1.5.3",
+  "version": "1.5.4",
   "type": "module",
   "scripts": {
     "postinstall": "node ./scripts/copy-tinymce.js",
