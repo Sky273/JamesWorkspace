@@ -143,6 +143,7 @@ const setFrenchLabels = (map: MaplibreMap) => {
   const style = map.getStyle();
   if (!style || !style.layers) return;
   
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   style.layers.forEach((layer: any) => {
     // Find text layers that use 'name' property
     if (layer.layout && layer.layout['text-field']) {

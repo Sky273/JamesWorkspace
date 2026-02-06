@@ -153,6 +153,9 @@ router.get('/facts/all', authenticateToken, async (req, res) => {
             totalCount: result.facts.length 
         });
 
+        // Set cache headers for client-side caching (5 minutes)
+        res.set('Cache-Control', 'private, max-age=300');
+        
         res.json({
             success: true,
             facts: result.facts,
@@ -877,6 +880,9 @@ router.get('/trends/all', authenticateToken, async (req, res) => {
             heapUsedMB: Math.round(memUsage.heapUsed / 1024 / 1024)
         });
 
+        // Set cache headers for client-side caching (5 minutes)
+        res.set('Cache-Control', 'private, max-age=300');
+        
         res.json({
             success: true,
             trends: result.trends,

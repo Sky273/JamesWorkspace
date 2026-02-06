@@ -228,86 +228,86 @@ router.get('/cleaned', authenticateToken, async (req, res) => {
     }
 });
 
-// POST /api/tags/cleaned/recalculate - Recalculate cleaned tags for all resumes
+// POST /api/tags/cleaned/recalculate - Recalculate cleaned tags for all resumes (batch processing)
 router.post('/cleaned/recalculate', authenticateToken, async (req, res) => {
     try {
         const { processAnalysisTags } = await import('../utils/tagCleaner.js');
         
-        // Load all resumes
-        const records = await selectWithTimeout('resumes', {
-            columns: ['id', 'skills', 'industries', 'tools', 'soft_skills']
-        });
-        
+        const BATCH_SIZE = 100;
+        let offset = 0;
+        let totalProcessed = 0;
         let updatedCount = 0;
         const errors = [];
         
-        safeLog('info', 'Starting cleaned tags recalculation', { totalResumes: records.length });
+        safeLog('info', 'Starting cleaned tags recalculation (batch mode)');
         
-        // Process each resume individually
-        for (const record of records) {
-            try {
-                const rawTags = {
-                    skills: parseJsonField(record.skills),
-                    industries: parseJsonField(record.industries),
-                    tools: parseJsonField(record.tools),
-                    softSkills: parseJsonField(record.soft_skills)
-                };
-                
-                // Log raw tags for first few records
-                if (updatedCount < 3) {
-                    safeLog('debug', 'Raw tags for resume', { 
-                        recordId: record.id,
-                        skillsCount: rawTags.skills.length,
-                        industriesCount: rawTags.industries.length,
-                        toolsCount: rawTags.tools.length,
-                        softSkillsCount: rawTags.softSkills.length
+        // Process in batches to avoid memory issues
+        while (true) {
+            // Fetch batch of resumes
+            const records = await selectWithTimeout('resumes', {
+                columns: ['id', 'skills', 'industries', 'tools', 'soft_skills'],
+                orderBy: 'id ASC',
+                limit: BATCH_SIZE,
+                offset: offset
+            });
+            
+            if (records.length === 0) break;
+            
+            safeLog('debug', `Processing batch ${Math.floor(offset / BATCH_SIZE) + 1}`, { 
+                batchSize: records.length,
+                offset 
+            });
+            
+            // Process each resume in the batch
+            for (const record of records) {
+                try {
+                    const rawTags = {
+                        skills: parseJsonField(record.skills),
+                        industries: parseJsonField(record.industries),
+                        tools: parseJsonField(record.tools),
+                        softSkills: parseJsonField(record.soft_skills)
+                    };
+                    
+                    // Calculate cleaned tags
+                    const { cleanedTags } = processAnalysisTags({ tags: rawTags });
+                    
+                    // Update the resume with cleaned tags (stringify for JSONB columns)
+                    await updateWithTimeout('resumes', record.id, {
+                        skills_cleaned: cleanedTags.skills.length > 0 ? JSON.stringify(cleanedTags.skills) : null,
+                        industries_cleaned: cleanedTags.industries.length > 0 ? JSON.stringify(cleanedTags.industries) : null,
+                        tools_cleaned: cleanedTags.tools.length > 0 ? JSON.stringify(cleanedTags.tools) : null,
+                        soft_skills_cleaned: cleanedTags.softSkills.length > 0 ? JSON.stringify(cleanedTags.softSkills) : null
                     });
-                }
-                
-                // Calculate cleaned tags
-                const { cleanedTags } = processAnalysisTags({ tags: rawTags });
-                
-                // Log cleaned tags for first few records
-                if (updatedCount < 3) {
-                    safeLog('debug', 'Cleaned tags for resume', { 
-                        recordId: record.id,
-                        skillsCount: cleanedTags.skills.length,
-                        industriesCount: cleanedTags.industries.length,
-                        toolsCount: cleanedTags.tools.length,
-                        softSkillsCount: cleanedTags.softSkills.length
+                    updatedCount++;
+                    
+                } catch (recordError) {
+                    safeLog('error', 'Error recalculating cleaned tags for resume', { 
+                        recordId: record.id, 
+                        error: recordError.message 
                     });
+                    errors.push({ recordId: record.id, error: recordError.message });
                 }
-                
-                // Update the resume with cleaned tags (stringify for JSONB columns)
-                await updateWithTimeout('resumes', record.id, {
-                    skills_cleaned: cleanedTags.skills.length > 0 ? JSON.stringify(cleanedTags.skills) : null,
-                    industries_cleaned: cleanedTags.industries.length > 0 ? JSON.stringify(cleanedTags.industries) : null,
-                    tools_cleaned: cleanedTags.tools.length > 0 ? JSON.stringify(cleanedTags.tools) : null,
-                    soft_skills_cleaned: cleanedTags.softSkills.length > 0 ? JSON.stringify(cleanedTags.softSkills) : null
-                });
-                updatedCount++;
-                
-            } catch (recordError) {
-                safeLog('error', 'Error recalculating cleaned tags for resume', { 
-                    recordId: record.id, 
-                    error: recordError.message 
-                });
-                errors.push({ recordId: record.id, error: recordError.message });
             }
+            
+            totalProcessed += records.length;
+            offset += BATCH_SIZE;
+            
+            // Break if we got less than batch size (last batch)
+            if (records.length < BATCH_SIZE) break;
         }
         
         // Clear cache to force refresh
         cleanedTagsCache = null;
         
         safeLog('info', 'Cleaned tags recalculated', { 
-            totalResumes: records.length,
+            totalResumes: totalProcessed,
             updatedCount,
             errorCount: errors.length
         });
         
         res.json({ 
             message: 'Cleaned tags recalculated successfully',
-            totalResumes: records.length,
+            totalResumes: totalProcessed,
             updatedCount,
             errorCount: errors.length,
             errors: errors.length > 0 ? errors : undefined
@@ -394,62 +394,86 @@ router.get('/esco', authenticateToken, async (req, res) => {
     }
 });
 
-// POST /api/tags/esco/recalculate - Recalculate ESCO tags for all resumes from cleaned tags
+// POST /api/tags/esco/recalculate - Recalculate ESCO tags for all resumes from cleaned tags (batch processing)
 router.post('/esco/recalculate', authenticateToken, async (req, res) => {
     try {
         const { language = 'fr' } = req.body;
         
-        // Load all resumes
-        const records = await selectWithTimeout('resumes', {
-            columns: ['id', 'skills_cleaned', 'industries_cleaned', 'tools_cleaned', 'soft_skills_cleaned']
-        });
-        
+        const BATCH_SIZE = 50; // Smaller batch for ESCO (API calls)
+        let offset = 0;
+        let totalProcessed = 0;
         let updatedCount = 0;
         const errors = [];
         
-        // Process each resume individually
-        for (const record of records) {
-            try {
-                const cleanedTags = {
-                    skills: parseJsonField(record.skills_cleaned),
-                    industries: parseJsonField(record.industries_cleaned),
-                    tools: parseJsonField(record.tools_cleaned),
-                    softSkills: parseJsonField(record.soft_skills_cleaned)
-                };
-                
-                // Convert cleaned tags to ESCO for this resume
-                const escoTags = await processCleanedTagsToEsco(cleanedTags, language);
-                
-                // Update the resume with ESCO tags (stringify for JSONB columns)
-                await updateWithTimeout('resumes', record.id, {
-                    skills_esco: escoTags.skills.length > 0 ? JSON.stringify(escoTags.skills) : null,
-                    industries_esco: escoTags.industries.length > 0 ? JSON.stringify(escoTags.industries) : null,
-                    tools_esco: escoTags.tools.length > 0 ? JSON.stringify(escoTags.tools) : null,
-                    soft_skills_esco: escoTags.softSkills.length > 0 ? JSON.stringify(escoTags.softSkills) : null
-                });
-                updatedCount++;
-                
-            } catch (recordError) {
-                safeLog('error', 'Error recalculating ESCO tags for resume', { 
-                    recordId: record.id, 
-                    error: recordError.message 
-                });
-                errors.push({ recordId: record.id, error: recordError.message });
+        safeLog('info', 'Starting ESCO tags recalculation (batch mode)', { language });
+        
+        // Process in batches to avoid memory issues
+        while (true) {
+            // Fetch batch of resumes
+            const records = await selectWithTimeout('resumes', {
+                columns: ['id', 'skills_cleaned', 'industries_cleaned', 'tools_cleaned', 'soft_skills_cleaned'],
+                orderBy: 'id ASC',
+                limit: BATCH_SIZE,
+                offset: offset
+            });
+            
+            if (records.length === 0) break;
+            
+            safeLog('debug', `Processing ESCO batch ${Math.floor(offset / BATCH_SIZE) + 1}`, { 
+                batchSize: records.length,
+                offset 
+            });
+            
+            // Process each resume in the batch
+            for (const record of records) {
+                try {
+                    const cleanedTags = {
+                        skills: parseJsonField(record.skills_cleaned),
+                        industries: parseJsonField(record.industries_cleaned),
+                        tools: parseJsonField(record.tools_cleaned),
+                        softSkills: parseJsonField(record.soft_skills_cleaned)
+                    };
+                    
+                    // Convert cleaned tags to ESCO for this resume
+                    const escoTags = await processCleanedTagsToEsco(cleanedTags, language);
+                    
+                    // Update the resume with ESCO tags (stringify for JSONB columns)
+                    await updateWithTimeout('resumes', record.id, {
+                        skills_esco: escoTags.skills.length > 0 ? JSON.stringify(escoTags.skills) : null,
+                        industries_esco: escoTags.industries.length > 0 ? JSON.stringify(escoTags.industries) : null,
+                        tools_esco: escoTags.tools.length > 0 ? JSON.stringify(escoTags.tools) : null,
+                        soft_skills_esco: escoTags.softSkills.length > 0 ? JSON.stringify(escoTags.softSkills) : null
+                    });
+                    updatedCount++;
+                    
+                } catch (recordError) {
+                    safeLog('error', 'Error recalculating ESCO tags for resume', { 
+                        recordId: record.id, 
+                        error: recordError.message 
+                    });
+                    errors.push({ recordId: record.id, error: recordError.message });
+                }
             }
+            
+            totalProcessed += records.length;
+            offset += BATCH_SIZE;
+            
+            // Break if we got less than batch size (last batch)
+            if (records.length < BATCH_SIZE) break;
         }
         
         // Clear cache to force refresh
         escoTagsCache = null;
         
         safeLog('info', 'ESCO tags recalculated', { 
-            totalResumes: records.length,
+            totalResumes: totalProcessed,
             updatedCount,
             errorCount: errors.length
         });
         
         res.json({ 
             message: 'ESCO tags recalculated successfully',
-            totalResumes: records.length,
+            totalResumes: totalProcessed,
             updatedCount,
             errorCount: errors.length,
             errors: errors.length > 0 ? errors : undefined
@@ -460,7 +484,7 @@ router.post('/esco/recalculate', authenticateToken, async (req, res) => {
     }
 });
 
-// PUT /api/tags/rename - Rename tag across all resumes
+// PUT /api/tags/rename - Rename tag across all resumes (optimized SQL)
 router.put('/rename', authenticateToken, async (req, res) => {
     try {
         const { category, oldName, newName } = req.body;
@@ -482,36 +506,45 @@ router.put('/rename', authenticateToken, async (req, res) => {
             return res.status(400).json({ error: 'Invalid category' });
         }
 
-        // Fetch all resumes with the specific field
-        const records = await selectWithTimeout('resumes', {
-            columns: ['id', dbField]
+        // Use PostgreSQL to update tags directly in the database
+        // This replaces the old tag with the new tag in the JSONB array
+        // Much more efficient than loading all records into memory
+        const updateQuery = `
+            UPDATE resumes 
+            SET ${dbField} = (
+                SELECT jsonb_agg(
+                    CASE 
+                        WHEN elem = $1::text THEN $2::text 
+                        ELSE elem 
+                    END
+                )
+                FROM jsonb_array_elements_text(COALESCE(${dbField}, '[]'::jsonb)) AS elem
+            ),
+            updated_at = CURRENT_TIMESTAMP
+            WHERE ${dbField} @> $3::jsonb
+            RETURNING id
+        `;
+        
+        const result = await selectWithTimeout('resumes', {
+            rawQuery: updateQuery,
+            rawParams: [oldName, newName, JSON.stringify([oldName])]
         });
-
-        let updatedCount = 0;
-
-        // Update resumes with the old tag name
-        for (const record of records) {
-            try {
-                const tags = parseJsonField(record[dbField]);
-                if (!tags.includes(oldName)) continue;
-                
-                const updatedTags = tags.map(tag => tag === oldName ? newName : tag);
-                
-                await updateWithTimeout('resumes', record.id, {
-                    [dbField]: updatedTags
-                });
-                updatedCount++;
-            } catch (recordError) {
-                safeLog('error', 'Failed to update tags for record', { recordId: record.id, error: recordError.message });
-            }
-        }
+        
+        const updatedCount = result.length;
 
         // Clear caches
         cleanedTagsCache = null;
         escoTagsCache = null;
 
+        safeLog('info', 'Tag renamed via SQL', { 
+            category, 
+            oldName, 
+            newName, 
+            updatedCount 
+        });
+
         res.json({ 
-            message: `Successfully renamed tag from ${oldName} to ${newName}`,
+            message: `Successfully renamed tag from "${oldName}" to "${newName}"`,
             updatedCount
         });
     } catch (error) {

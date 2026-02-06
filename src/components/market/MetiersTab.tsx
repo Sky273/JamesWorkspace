@@ -76,8 +76,8 @@ export default function MetiersTab({ className = '' }: MetiersTabProps) {
     try {
       const stats = await getMetiersStats();
       setGlobalStats(stats);
-    } catch (err: any) {
-      log.warn('Failed to load global stats', { error: err.message });
+    } catch (err) {
+      log.warn('Failed to load global stats', { error: err instanceof Error ? err.message : String(err) });
     }
   };
 
@@ -95,8 +95,8 @@ export default function MetiersTab({ className = '' }: MetiersTabProps) {
       if (response.pagination) {
         setTotalPages(response.pagination.totalPages);
       }
-    } catch (err: any) {
-      setError(err.message || t('marketRadar.errors.loadFailed'));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('marketRadar.errors.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -120,8 +120,8 @@ export default function MetiersTab({ className = '' }: MetiersTabProps) {
       
       // Reload métiers and global stats after collection
       await Promise.all([loadMetiers(), loadGlobalStats()]);
-    } catch (err: any) {
-      setError(err.message || t('marketRadar.facts.collection.error'));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('marketRadar.facts.collection.error'));
     } finally {
       setCollecting(false);
     }

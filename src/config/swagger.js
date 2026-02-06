@@ -7,7 +7,7 @@ export const swaggerDocument = {
     openapi: '3.0.3',
     info: {
         title: 'ResumeConverter API',
-        version: '1.5.1',
+        version: '1.5.3',
         description: 'API for managing resumes, templates, missions, and adaptations with AI-powered analysis and improvement. Includes AI chatbot assistant, market radar, and comprehensive metrics. Supports anonymous CV mode with trigram-based anonymization.',
         contact: {
             name: 'API Support'
@@ -37,6 +37,7 @@ export const swaggerDocument = {
         { name: 'Customers', description: 'Customer management' },
         { name: 'Users', description: 'User management' },
         { name: 'Market Radar', description: 'Labor market data and trends' },
+        { name: 'ROME', description: 'ROME métiers and competences management' },
         { name: 'Admin', description: 'Administrative endpoints' }
     ],
     components: {
@@ -58,67 +59,114 @@ export const swaggerDocument = {
             User: {
                 type: 'object',
                 properties: {
-                    id: { type: 'string', example: 'recABCDEF123456' },
-                    Name: { type: 'string', example: 'John Doe' },
-                    Email: { type: 'string', format: 'email', example: 'john@example.com' },
-                    Role: { type: 'string', enum: ['admin', 'user', 'viewer'] },
-                    Status: { type: 'string', enum: ['Active', 'Inactive', 'Pending'] },
-                    CustomerName: { type: 'string', example: 'Acme Corp' }
+                    id: { type: 'string', format: 'uuid' },
+                    name: { type: 'string', example: 'John Doe' },
+                    email: { type: 'string', format: 'email', example: 'john@example.com' },
+                    role: { type: 'string', enum: ['admin', 'user', 'viewer'], default: 'user' },
+                    status: { type: 'string', enum: ['active', 'inactive', 'pending'], default: 'active' },
+                    customer: { type: 'string', example: 'Acme Corp' },
+                    customerId: { type: 'string', format: 'uuid', nullable: true },
+                    Name: { type: 'string', description: 'Alias for name (legacy)' },
+                    Email: { type: 'string', description: 'Alias for email (legacy)' },
+                    Role: { type: 'string', description: 'Alias for role (legacy)' },
+                    Status: { type: 'string', description: 'Alias for status (legacy)' },
+                    CustomerName: { type: 'string', description: 'Alias for customer (legacy)' },
+                    createdAt: { type: 'string', format: 'date-time' },
+                    lastLogin: { type: 'string', format: 'date-time', nullable: true }
                 }
             },
             Resume: {
                 type: 'object',
                 properties: {
-                    id: { type: 'string', example: 'recABCDEF123456' },
+                    id: { type: 'string', format: 'uuid' },
                     Name: { type: 'string', example: 'John Doe', description: 'Candidate name (or trigram in anonymous mode)' },
-                    'Original Name': { type: 'string', example: 'John Doe', description: 'Original candidate name before anonymization' },
+                    'Original Name': { type: 'string', description: 'Original candidate name before anonymization' },
                     Title: { type: 'string', example: 'Senior Developer' },
-                    Status: { type: 'string', enum: ['New', 'Pending', 'Processing', 'Analyzed', 'Improved', 'Error', 'Failed'] },
+                    'File Name': { type: 'string' },
+                    'Resume File': { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, filename: { type: 'string' }, size: { type: 'integer' }, type: { type: 'string' }, url: { type: 'string' } } } },
+                    Status: { type: 'string', enum: ['new', 'pending', 'processing', 'analyzed', 'improved', 'error', 'failed'] },
+                    CustomerName: { type: 'string' },
                     'Original Text': { type: 'string' },
                     'Improved Text': { type: 'string' },
                     'Global Rating': { type: 'string', example: '85%' },
-                    'Executive Summary Score': { type: 'string', example: '90%' },
                     'Skills Score': { type: 'string', example: '80%' },
                     'Experience Score': { type: 'string', example: '85%' },
                     'Education Score': { type: 'string', example: '75%' },
                     'ATS Score': { type: 'string', example: '88%' },
+                    'Executive Summary Score': { type: 'string', example: '90%' },
                     'Hobbies Languages Score': { type: 'string', example: '70%' },
-                    CustomerName: { type: 'string' },
+                    'Improved Global Rating': { type: 'string' },
+                    'Improved Skills Score': { type: 'string' },
+                    'Improved Experience Score': { type: 'string' },
+                    'Improved Education Score': { type: 'string' },
+                    'Improved ATS Score': { type: 'string' },
+                    'Improved Executive Summary Score': { type: 'string' },
+                    'Improved Hobbies Languages Score': { type: 'string' },
+                    Skills: { type: 'array', items: { type: 'string' } },
+                    Industries: { type: 'array', items: { type: 'string' } },
+                    Tools: { type: 'array', items: { type: 'string' } },
+                    'Soft Skills': { type: 'array', items: { type: 'string' } },
+                    'Key Improvements': { type: 'array', items: { type: 'string' } },
+                    Summary: { type: 'string' },
+                    'Experience Years': { type: 'string' },
+                    'Education Level': { type: 'string' },
+                    Certifications: { type: 'array', items: { type: 'string' } },
+                    Languages: { type: 'array', items: { type: 'string' } },
                     'Created At': { type: 'string', format: 'date-time' },
-                    'Analysis Date': { type: 'string', format: 'date-time' },
-                    'Last Improved': { type: 'string', format: 'date-time' }
+                    'Analyzed At': { type: 'string', format: 'date-time' },
+                    'Updated At': { type: 'string', format: 'date-time' }
                 }
             },
             Template: {
                 type: 'object',
                 properties: {
-                    id: { type: 'string', example: 'recABCDEF123456' },
-                    Name: { type: 'string', example: 'Professional Template' },
-                    Content: { type: 'string' },
-                    Description: { type: 'string' },
-                    Category: { type: 'string' },
-                    'Is Default': { type: 'boolean' }
+                    id: { type: 'string', format: 'uuid' },
+                    name: { type: 'string', example: 'Professional Template' },
+                    description: { type: 'string' },
+                    popular: { type: 'boolean', default: false },
+                    status: { type: 'string', enum: ['active', 'inactive'], default: 'active' },
+                    tags: { type: 'array', items: { type: 'string' } },
+                    previewImage: { type: 'string', nullable: true },
+                    headerContent: { type: 'string' },
+                    templateContent: { type: 'string' },
+                    footerContent: { type: 'string' },
+                    footerHeight: { type: 'integer', default: 25 },
+                    stylesheet: { type: 'string' },
+                    lastUpdated: { type: 'string', format: 'date-time' }
                 }
             },
             Mission: {
                 type: 'object',
                 properties: {
-                    id: { type: 'string', example: 'recABCDEF123456' },
+                    id: { type: 'string', format: 'uuid' },
                     Title: { type: 'string', example: 'Senior React Developer' },
-                    Content: { type: 'string' },
+                    Content: { type: 'string', description: 'HTML content of the mission description' },
                     Customer: { type: 'string' },
-                    Status: { type: 'string', enum: ['Active', 'Completed', 'Archived'] }
+                    'Customer ID': { type: 'string', format: 'uuid' },
+                    Status: { type: 'string', enum: ['active', 'completed', 'archived'], default: 'active' },
+                    Keywords: { type: 'array', items: { type: 'string' }, description: 'AI-extracted keywords for matching' },
+                    'Required Skills': { type: 'array', items: { type: 'string' } },
+                    'Preferred Skills': { type: 'array', items: { type: 'string' } },
+                    'Created At': { type: 'string', format: 'date-time' },
+                    'Updated At': { type: 'string', format: 'date-time' }
                 }
             },
             Adaptation: {
                 type: 'object',
                 properties: {
-                    id: { type: 'string', example: 'recABCDEF123456' },
-                    Resume: { type: 'array', items: { type: 'string' } },
-                    Mission: { type: 'array', items: { type: 'string' } },
-                    'Adapted Text': { type: 'string' },
+                    id: { type: 'string', format: 'uuid' },
+                    'Resume ID': { type: 'string', format: 'uuid' },
+                    'Mission ID': { type: 'string', format: 'uuid' },
+                    'Resume Name': { type: 'string' },
+                    'Mission Title': { type: 'string' },
+                    'Mission Content': { type: 'string' },
+                    'Adapted Text': { type: 'string', description: 'HTML content of the adapted resume' },
                     'Match Score': { type: 'number', example: 85 },
-                    Status: { type: 'string', enum: ['Processing', 'Completed', 'Failed'] }
+                    'Match Analysis': { type: 'object', description: 'AI analysis of the match' },
+                    Status: { type: 'string', enum: ['processing', 'completed', 'failed'] },
+                    Customer: { type: 'string' },
+                    'Created At': { type: 'string', format: 'date-time' },
+                    'Updated At': { type: 'string', format: 'date-time' }
                 }
             },
             PaginatedResponse: {
@@ -208,6 +256,57 @@ export const swaggerDocument = {
                             total_tokens: { type: 'integer' }
                         }
                     }
+                }
+            },
+            MarketTrend: {
+                type: 'object',
+                description: 'Market trend data point',
+                properties: {
+                    id: { type: 'string' },
+                    Type: { type: 'string', enum: ['embauche', 'demandeur', 'demandeur_entrant', 'offre', 'tension', 'salaire', 'dynamique'] },
+                    CodeRome: { type: 'string', example: 'M1805' },
+                    RomeLabel: { type: 'string', example: 'Études et développement informatique' },
+                    Region: { type: 'string', example: 'Île-de-France' },
+                    RegionCode: { type: 'string', example: '11' },
+                    Date: { type: 'string', format: 'date' },
+                    Value: { type: 'number' },
+                    ValueLabel: { type: 'string' },
+                    Metadata: { type: 'object', nullable: true }
+                }
+            },
+            MarketFact: {
+                type: 'object',
+                description: 'Market fact data point',
+                properties: {
+                    id: { type: 'string' },
+                    Date: { type: 'string', format: 'date' },
+                    Source: { type: 'string', enum: ['france_travail', 'adzuna'] },
+                    Keyword: { type: 'string' },
+                    Location: { type: 'string' },
+                    JobCount: { type: 'integer' },
+                    MeanSalary: { type: 'number', nullable: true },
+                    Metadata: { type: 'object' }
+                }
+            },
+            RomeMetier: {
+                type: 'object',
+                description: 'ROME métier (job category)',
+                properties: {
+                    codeRome: { type: 'string', example: 'M1805' },
+                    libelleRome: { type: 'string', example: 'Études et développement informatique' },
+                    grandDomaine: { type: 'string', example: 'M - Support à l\'entreprise' },
+                    domaineProfessionnel: { type: 'string' },
+                    appellations: { type: 'array', items: { type: 'object' } },
+                    competences: { type: 'array', items: { type: 'object' } }
+                }
+            },
+            Customer: {
+                type: 'object',
+                properties: {
+                    id: { type: 'string' },
+                    Name: { type: 'string', example: 'Acme Corp' },
+                    Status: { type: 'string', enum: ['Active', 'Inactive'] },
+                    'Created At': { type: 'string', format: 'date-time' }
                 }
             },
             ResumeAnalysis: {
@@ -318,13 +417,42 @@ export const swaggerDocument = {
                 }
             }
         },
-        '/auth/logout': {
+        '/auth/signout': {
             post: {
                 tags: ['Authentication'],
                 summary: 'Sign out user',
+                description: 'Logs out the user by clearing cookies and revoking tokens',
                 security: [{ cookieAuth: [] }],
                 responses: {
                     200: { description: 'Logout successful' }
+                }
+            }
+        },
+        '/auth/register': {
+            post: {
+                tags: ['Authentication'],
+                summary: 'Register new user',
+                description: 'Creates a new user account (rate limited)',
+                requestBody: {
+                    required: true,
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                required: ['email', 'password', 'name'],
+                                properties: {
+                                    email: { type: 'string', format: 'email' },
+                                    password: { type: 'string', minLength: 6 },
+                                    name: { type: 'string' }
+                                }
+                            }
+                        }
+                    }
+                },
+                responses: {
+                    201: { description: 'User created successfully' },
+                    400: { $ref: '#/components/responses/ValidationError' },
+                    409: { description: 'Email already exists' }
                 }
             }
         },
@@ -465,6 +593,54 @@ export const swaggerDocument = {
                 }
             }
         },
+        '/resumes/stats': {
+            get: {
+                tags: ['Resumes'],
+                summary: 'Get resume statistics',
+                description: 'Returns dashboard KPIs including total count, status breakdown, and recent activity',
+                security: [{ cookieAuth: [] }],
+                responses: {
+                    200: {
+                        description: 'Resume statistics',
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        total: { type: 'integer' },
+                                        byStatus: { type: 'object' },
+                                        recentlyAnalyzed: { type: 'integer' },
+                                        recentlyImproved: { type: 'integer' }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        '/resumes/{id}/download': {
+            get: {
+                tags: ['Resumes'],
+                summary: 'Download original CV file',
+                description: 'Downloads the original uploaded CV file',
+                security: [{ cookieAuth: [] }],
+                parameters: [
+                    { name: 'id', in: 'path', required: true, schema: { type: 'string' } }
+                ],
+                responses: {
+                    200: {
+                        description: 'File download',
+                        content: {
+                            'application/octet-stream': {
+                                schema: { type: 'string', format: 'binary' }
+                            }
+                        }
+                    },
+                    404: { $ref: '#/components/responses/NotFound' }
+                }
+            }
+        },
         '/resumes/{id}/analyze': {
             post: {
                 tags: ['Resumes'],
@@ -574,6 +750,126 @@ export const swaggerDocument = {
                 }
             }
         },
+        '/resumes/{id}/improve': {
+            post: {
+                tags: ['Resumes'],
+                summary: 'Improve resume by ID',
+                description: 'Improves an existing resume using AI',
+                security: [{ cookieAuth: [], csrfToken: [] }],
+                parameters: [
+                    { name: 'id', in: 'path', required: true, schema: { type: 'string' } }
+                ],
+                responses: {
+                    200: { description: 'Resume improved successfully' },
+                    404: { $ref: '#/components/responses/NotFound' }
+                }
+            }
+        },
+        '/resumes/{id}/match': {
+            post: {
+                tags: ['Resumes'],
+                summary: 'Match resume with mission',
+                description: 'Analyzes how well a resume matches a specific mission',
+                security: [{ cookieAuth: [], csrfToken: [] }],
+                parameters: [
+                    { name: 'id', in: 'path', required: true, schema: { type: 'string' } }
+                ],
+                requestBody: {
+                    required: true,
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                required: ['missionId'],
+                                properties: {
+                                    missionId: { type: 'string' }
+                                }
+                            }
+                        }
+                    }
+                },
+                responses: {
+                    200: {
+                        description: 'Match analysis results',
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        matchScore: { type: 'number' },
+                                        analysis: { type: 'object' }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        '/resumes/{id}/adapt': {
+            post: {
+                tags: ['Resumes'],
+                summary: 'Adapt resume for mission',
+                description: 'Creates an adapted version of the resume tailored for a specific mission',
+                security: [{ cookieAuth: [], csrfToken: [] }],
+                parameters: [
+                    { name: 'id', in: 'path', required: true, schema: { type: 'string' } }
+                ],
+                requestBody: {
+                    required: true,
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                required: ['missionId'],
+                                properties: {
+                                    missionId: { type: 'string' }
+                                }
+                            }
+                        }
+                    }
+                },
+                responses: {
+                    200: {
+                        description: 'Adaptation created',
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/Adaptation' }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        '/resumes/{id}/ai-modify': {
+            post: {
+                tags: ['Resumes'],
+                summary: 'AI-powered resume modification',
+                description: 'Modifies specific sections of a resume using AI based on user instructions',
+                security: [{ cookieAuth: [], csrfToken: [] }],
+                parameters: [
+                    { name: 'id', in: 'path', required: true, schema: { type: 'string' } }
+                ],
+                requestBody: {
+                    required: true,
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                required: ['instruction'],
+                                properties: {
+                                    instruction: { type: 'string', description: 'User instruction for modification' },
+                                    section: { type: 'string', description: 'Section to modify (optional)' }
+                                }
+                            }
+                        }
+                    }
+                },
+                responses: {
+                    200: { description: 'Modified resume content' }
+                }
+            }
+        },
 
         // ============================================
         // TEMPLATES
@@ -598,8 +894,8 @@ export const swaggerDocument = {
                 }
             },
             post: {
-                tags: ['Templates'],
-                summary: 'Create template',
+                tags: ['Templates', 'Admin'],
+                summary: 'Create template (admin only)',
                 security: [{ cookieAuth: [], csrfToken: [] }],
                 requestBody: {
                     content: {
@@ -609,7 +905,62 @@ export const swaggerDocument = {
                     }
                 },
                 responses: {
-                    201: { description: 'Template created' }
+                    201: { description: 'Template created' },
+                    403: { $ref: '#/components/responses/Forbidden' }
+                }
+            }
+        },
+        '/templates/{id}': {
+            get: {
+                tags: ['Templates'],
+                summary: 'Get template by ID',
+                security: [{ cookieAuth: [] }],
+                parameters: [
+                    { name: 'id', in: 'path', required: true, schema: { type: 'string' } }
+                ],
+                responses: {
+                    200: {
+                        description: 'Template data',
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/Template' }
+                            }
+                        }
+                    },
+                    404: { $ref: '#/components/responses/NotFound' }
+                }
+            },
+            put: {
+                tags: ['Templates', 'Admin'],
+                summary: 'Update template (admin only)',
+                security: [{ cookieAuth: [], csrfToken: [] }],
+                parameters: [
+                    { name: 'id', in: 'path', required: true, schema: { type: 'string' } }
+                ],
+                requestBody: {
+                    content: {
+                        'application/json': {
+                            schema: { $ref: '#/components/schemas/Template' }
+                        }
+                    }
+                },
+                responses: {
+                    200: { description: 'Template updated' },
+                    403: { $ref: '#/components/responses/Forbidden' },
+                    404: { $ref: '#/components/responses/NotFound' }
+                }
+            },
+            delete: {
+                tags: ['Templates', 'Admin'],
+                summary: 'Delete template (admin only)',
+                security: [{ cookieAuth: [], csrfToken: [] }],
+                parameters: [
+                    { name: 'id', in: 'path', required: true, schema: { type: 'string' } }
+                ],
+                responses: {
+                    200: { description: 'Template deleted' },
+                    403: { $ref: '#/components/responses/Forbidden' },
+                    404: { $ref: '#/components/responses/NotFound' }
                 }
             }
         },
@@ -1177,6 +1528,121 @@ export const swaggerDocument = {
                 }
             }
         },
+        '/tags/cleaned/recalculate': {
+            post: {
+                tags: ['Tags', 'Admin'],
+                summary: 'Recalculate cleaned tags for all resumes',
+                description: 'Batch processes all resumes to recalculate cleaned/normalized tags',
+                security: [{ cookieAuth: [], csrfToken: [] }],
+                responses: {
+                    200: {
+                        description: 'Recalculation results',
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        message: { type: 'string' },
+                                        totalResumes: { type: 'integer' },
+                                        updatedCount: { type: 'integer' },
+                                        errorCount: { type: 'integer' }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        '/tags/esco': {
+            get: {
+                tags: ['Tags'],
+                summary: 'Get ESCO normalized tags',
+                description: 'Returns tags mapped to ESCO (European Skills/Competences) taxonomy',
+                security: [{ cookieAuth: [] }],
+                responses: {
+                    200: {
+                        description: 'ESCO tags by category',
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        skills: { type: 'array', items: { type: 'object', properties: { label: { type: 'string' }, uri: { type: 'string' } } } },
+                                        industries: { type: 'array', items: { type: 'object' } },
+                                        tools: { type: 'array', items: { type: 'object' } },
+                                        softSkills: { type: 'array', items: { type: 'object' } }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        '/tags/esco/recalculate': {
+            post: {
+                tags: ['Tags', 'Admin'],
+                summary: 'Recalculate ESCO tags for all resumes',
+                description: 'Batch processes all resumes to map cleaned tags to ESCO taxonomy',
+                security: [{ cookieAuth: [], csrfToken: [] }],
+                requestBody: {
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    language: { type: 'string', enum: ['fr', 'en'], default: 'fr' }
+                                }
+                            }
+                        }
+                    }
+                },
+                responses: {
+                    200: { description: 'Recalculation results' }
+                }
+            }
+        },
+        '/tags/rename': {
+            put: {
+                tags: ['Tags'],
+                summary: 'Rename a tag across all resumes',
+                description: 'Renames a tag in a specific category across all resumes using optimized SQL',
+                security: [{ cookieAuth: [], csrfToken: [] }],
+                requestBody: {
+                    required: true,
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                required: ['category', 'oldName', 'newName'],
+                                properties: {
+                                    category: { type: 'string', enum: ['Skills', 'Industries', 'Tools', 'Soft Skills'] },
+                                    oldName: { type: 'string' },
+                                    newName: { type: 'string' }
+                                }
+                            }
+                        }
+                    }
+                },
+                responses: {
+                    200: {
+                        description: 'Rename results',
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        message: { type: 'string' },
+                                        updatedCount: { type: 'integer' }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
 
         // ============================================
         // CUSTOMERS
@@ -1203,12 +1669,73 @@ export const swaggerDocument = {
                 }
             },
             post: {
-                tags: ['Customers'],
+                tags: ['Customers', 'Admin'],
                 summary: 'Create customer (admin only)',
                 security: [{ cookieAuth: [], csrfToken: [] }],
+                requestBody: {
+                    content: {
+                        'application/json': {
+                            schema: { $ref: '#/components/schemas/Customer' }
+                        }
+                    }
+                },
                 responses: {
                     201: { description: 'Customer created' },
                     403: { $ref: '#/components/responses/Forbidden' }
+                }
+            }
+        },
+        '/customers/{id}': {
+            get: {
+                tags: ['Customers'],
+                summary: 'Get customer by ID',
+                security: [{ cookieAuth: [] }],
+                parameters: [
+                    { name: 'id', in: 'path', required: true, schema: { type: 'string' } }
+                ],
+                responses: {
+                    200: {
+                        description: 'Customer data',
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/Customer' }
+                            }
+                        }
+                    },
+                    404: { $ref: '#/components/responses/NotFound' }
+                }
+            },
+            put: {
+                tags: ['Customers', 'Admin'],
+                summary: 'Update customer (admin only)',
+                security: [{ cookieAuth: [], csrfToken: [] }],
+                parameters: [
+                    { name: 'id', in: 'path', required: true, schema: { type: 'string' } }
+                ],
+                requestBody: {
+                    content: {
+                        'application/json': {
+                            schema: { $ref: '#/components/schemas/Customer' }
+                        }
+                    }
+                },
+                responses: {
+                    200: { description: 'Customer updated' },
+                    403: { $ref: '#/components/responses/Forbidden' },
+                    404: { $ref: '#/components/responses/NotFound' }
+                }
+            },
+            delete: {
+                tags: ['Customers', 'Admin'],
+                summary: 'Delete customer (admin only)',
+                security: [{ cookieAuth: [], csrfToken: [] }],
+                parameters: [
+                    { name: 'id', in: 'path', required: true, schema: { type: 'string' } }
+                ],
+                responses: {
+                    200: { description: 'Customer deleted' },
+                    403: { $ref: '#/components/responses/Forbidden' },
+                    404: { $ref: '#/components/responses/NotFound' }
                 }
             }
         },
@@ -1297,6 +1824,452 @@ export const swaggerDocument = {
                 security: [{ cookieAuth: [] }],
                 responses: {
                     200: { description: 'Aggregated trends summary' }
+                }
+            }
+        },
+        '/market-radar/trends/all': {
+            get: {
+                tags: ['Market Radar'],
+                summary: 'Get all trends for map view',
+                description: 'Returns all trends without metadata for efficient map rendering. Uses server-side cache.',
+                security: [{ cookieAuth: [] }],
+                parameters: [
+                    { name: 'type', in: 'query', schema: { type: 'string' }, description: 'Filter by trend type' }
+                ],
+                responses: {
+                    200: {
+                        description: 'All trends grouped by type',
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        success: { type: 'boolean' },
+                                        trends: { type: 'array', items: { $ref: '#/components/schemas/MarketTrend' } },
+                                        byType: { type: 'object' },
+                                        totalCount: { type: 'integer' },
+                                        duration: { type: 'integer' }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        '/market-radar/trends/{id}/metadata': {
+            get: {
+                tags: ['Market Radar'],
+                summary: 'Get trend metadata',
+                description: 'Returns detailed metadata for a specific trend (on-demand loading)',
+                security: [{ cookieAuth: [] }],
+                parameters: [
+                    { name: 'id', in: 'path', required: true, schema: { type: 'string' } }
+                ],
+                responses: {
+                    200: {
+                        description: 'Trend with metadata',
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/MarketTrend' }
+                            }
+                        }
+                    },
+                    404: { $ref: '#/components/responses/NotFound' }
+                }
+            }
+        },
+        '/market-radar/trends/filters': {
+            get: {
+                tags: ['Market Radar'],
+                summary: 'Get trend filter options',
+                description: 'Returns available filter values (types, regions, ROME codes)',
+                security: [{ cookieAuth: [] }],
+                responses: {
+                    200: {
+                        description: 'Filter options',
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        types: { type: 'array', items: { type: 'string' } },
+                                        regions: { type: 'array', items: { type: 'object', properties: { code: { type: 'string' }, name: { type: 'string' } } } },
+                                        romeCodes: { type: 'array', items: { type: 'string' } }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        '/market-radar/trends/collect': {
+            post: {
+                tags: ['Market Radar', 'Admin'],
+                summary: 'Trigger trends collection (admin only)',
+                description: 'Starts background collection of market trends from France Travail API',
+                security: [{ cookieAuth: [], csrfToken: [] }],
+                responses: {
+                    202: { description: 'Collection started in background' },
+                    403: { $ref: '#/components/responses/Forbidden' }
+                }
+            }
+        },
+        '/market-radar/facts/all': {
+            get: {
+                tags: ['Market Radar'],
+                summary: 'Get all facts',
+                description: 'Returns all market facts for frontend processing. Uses server-side cache.',
+                security: [{ cookieAuth: [] }],
+                responses: {
+                    200: {
+                        description: 'All facts',
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        success: { type: 'boolean' },
+                                        facts: { type: 'array', items: { $ref: '#/components/schemas/MarketFact' } },
+                                        totalCount: { type: 'integer' },
+                                        duration: { type: 'integer' }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        '/market-radar/facts/filters': {
+            get: {
+                tags: ['Market Radar'],
+                summary: 'Get fact filter options',
+                security: [{ cookieAuth: [] }],
+                responses: {
+                    200: { description: 'Available filter options' }
+                }
+            }
+        },
+        '/market-radar/facts/summary': {
+            get: {
+                tags: ['Market Radar'],
+                summary: 'Get facts summary',
+                security: [{ cookieAuth: [] }],
+                responses: {
+                    200: { description: 'Aggregated facts summary' }
+                }
+            }
+        },
+        '/market-radar/collect': {
+            post: {
+                tags: ['Market Radar', 'Admin'],
+                summary: 'Trigger full data collection (admin only)',
+                description: 'Starts collection from all sources (France Travail, Adzuna)',
+                security: [{ cookieAuth: [], csrfToken: [] }],
+                responses: {
+                    200: { description: 'Collection results' },
+                    403: { $ref: '#/components/responses/Forbidden' }
+                }
+            }
+        },
+        '/market-radar/search/france-travail': {
+            get: {
+                tags: ['Market Radar'],
+                summary: 'Live search on France Travail',
+                description: 'Real-time job search on France Travail API',
+                security: [{ cookieAuth: [] }],
+                parameters: [
+                    { name: 'motsCles', in: 'query', schema: { type: 'string' } },
+                    { name: 'codeROME', in: 'query', schema: { type: 'string' } },
+                    { name: 'departement', in: 'query', schema: { type: 'string' } },
+                    { name: 'region', in: 'query', schema: { type: 'string' } },
+                    { name: 'typeContrat', in: 'query', schema: { type: 'string' } }
+                ],
+                responses: {
+                    200: { description: 'Search results' }
+                }
+            }
+        },
+        '/market-radar/search/adzuna': {
+            get: {
+                tags: ['Market Radar'],
+                summary: 'Live search on Adzuna',
+                description: 'Real-time job search on Adzuna API',
+                security: [{ cookieAuth: [] }],
+                parameters: [
+                    { name: 'what', in: 'query', schema: { type: 'string' } },
+                    { name: 'where', in: 'query', schema: { type: 'string' } },
+                    { name: 'category', in: 'query', schema: { type: 'string' } }
+                ],
+                responses: {
+                    200: { description: 'Search results' }
+                }
+            }
+        },
+
+        // ============================================
+        // ROME MÉTIERS
+        // ============================================
+        '/rome/metiers': {
+            get: {
+                tags: ['ROME'],
+                summary: 'Get stored métiers',
+                description: 'Returns ROME métiers stored in PostgreSQL with pagination',
+                security: [{ cookieAuth: [] }],
+                parameters: [
+                    { name: 'codeRome', in: 'query', schema: { type: 'string' } },
+                    { name: 'grandDomaine', in: 'query', schema: { type: 'string' } },
+                    { name: 'search', in: 'query', schema: { type: 'string' } },
+                    { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
+                    { name: 'pageSize', in: 'query', schema: { type: 'integer', default: 20 } }
+                ],
+                responses: {
+                    200: {
+                        description: 'List of métiers',
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        success: { type: 'boolean' },
+                                        metiers: { type: 'array', items: { $ref: '#/components/schemas/RomeMetier' } },
+                                        totalCount: { type: 'integer' },
+                                        pagination: { type: 'object' }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        '/rome/metiers/stats': {
+            get: {
+                tags: ['ROME'],
+                summary: 'Get métiers statistics',
+                security: [{ cookieAuth: [] }],
+                responses: {
+                    200: {
+                        description: 'Global statistics',
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        totalMetiers: { type: 'integer' },
+                                        totalCompetences: { type: 'integer' },
+                                        lastUpdate: { type: 'string', format: 'date-time' }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        '/rome/metiers/{codeRome}': {
+            get: {
+                tags: ['ROME'],
+                summary: 'Get métier by ROME code',
+                security: [{ cookieAuth: [] }],
+                parameters: [
+                    { name: 'codeRome', in: 'path', required: true, schema: { type: 'string' }, example: 'M1805' }
+                ],
+                responses: {
+                    200: {
+                        description: 'Métier details',
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/RomeMetier' }
+                            }
+                        }
+                    },
+                    404: { $ref: '#/components/responses/NotFound' }
+                }
+            }
+        },
+        '/rome/collect': {
+            post: {
+                tags: ['ROME', 'Admin'],
+                summary: 'Collect IT métiers (admin only)',
+                description: 'Fetches IT métiers from France Travail ROME API and stores them',
+                security: [{ cookieAuth: [], csrfToken: [] }],
+                responses: {
+                    200: {
+                        description: 'Collection results',
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        success: { type: 'boolean' },
+                                        message: { type: 'string' },
+                                        metiersCollected: { type: 'integer' },
+                                        competencesCollected: { type: 'integer' }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    403: { $ref: '#/components/responses/Forbidden' }
+                }
+            }
+        },
+        '/rome/api/grands-domaines': {
+            get: {
+                tags: ['ROME'],
+                summary: 'Get grands domaines (live API)',
+                description: 'Fetches grands domaines directly from France Travail ROME API',
+                security: [{ cookieAuth: [] }],
+                responses: {
+                    200: { description: 'List of grands domaines' }
+                }
+            }
+        },
+        '/rome/api/search': {
+            get: {
+                tags: ['ROME'],
+                summary: 'Search métiers (live API)',
+                description: 'Searches métiers by keyword on France Travail ROME API',
+                security: [{ cookieAuth: [] }],
+                parameters: [
+                    { name: 'q', in: 'query', required: true, schema: { type: 'string' } }
+                ],
+                responses: {
+                    200: { description: 'Search results' }
+                }
+            }
+        },
+
+        // ============================================
+        // MISSIONS (additional endpoints)
+        // ============================================
+        '/missions/{id}': {
+            get: {
+                tags: ['Missions'],
+                summary: 'Get mission by ID',
+                security: [{ cookieAuth: [] }],
+                parameters: [
+                    { name: 'id', in: 'path', required: true, schema: { type: 'string' } }
+                ],
+                responses: {
+                    200: {
+                        description: 'Mission data',
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/Mission' }
+                            }
+                        }
+                    },
+                    404: { $ref: '#/components/responses/NotFound' }
+                }
+            },
+            put: {
+                tags: ['Missions'],
+                summary: 'Update mission',
+                security: [{ cookieAuth: [], csrfToken: [] }],
+                parameters: [
+                    { name: 'id', in: 'path', required: true, schema: { type: 'string' } }
+                ],
+                responses: {
+                    200: { description: 'Mission updated' },
+                    404: { $ref: '#/components/responses/NotFound' }
+                }
+            },
+            delete: {
+                tags: ['Missions'],
+                summary: 'Delete mission',
+                security: [{ cookieAuth: [], csrfToken: [] }],
+                parameters: [
+                    { name: 'id', in: 'path', required: true, schema: { type: 'string' } }
+                ],
+                responses: {
+                    200: { description: 'Mission deleted' },
+                    404: { $ref: '#/components/responses/NotFound' }
+                }
+            }
+        },
+        '/missions/{missionId}/adaptations': {
+            get: {
+                tags: ['Missions', 'Adaptations'],
+                summary: 'Get adaptations for a mission',
+                security: [{ cookieAuth: [] }],
+                parameters: [
+                    { name: 'missionId', in: 'path', required: true, schema: { type: 'string' } }
+                ],
+                responses: {
+                    200: {
+                        description: 'List of adaptations',
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'array',
+                                    items: { $ref: '#/components/schemas/Adaptation' }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        '/missions/{missionId}/find-profiles': {
+            post: {
+                tags: ['Missions'],
+                summary: 'Find matching profiles for a mission',
+                description: 'Uses AI to extract keywords from mission and find best matching resumes',
+                security: [{ cookieAuth: [], csrfToken: [] }],
+                parameters: [
+                    { name: 'missionId', in: 'path', required: true, schema: { type: 'string' } }
+                ],
+                requestBody: {
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    limit: { type: 'integer', default: 10 },
+                                    minScore: { type: 'number', default: 0 },
+                                    status: { type: 'string' },
+                                    weights: { type: 'object' }
+                                }
+                            }
+                        }
+                    }
+                },
+                responses: {
+                    200: {
+                        description: 'Matching profiles with scores',
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        success: { type: 'boolean' },
+                                        keywords: { type: 'object' },
+                                        profiles: { type: 'array', items: { type: 'object' } },
+                                        totalMatched: { type: 'integer' }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        '/missions/{missionId}/analyze-profile/{resumeId}': {
+            post: {
+                tags: ['Missions'],
+                summary: 'Detailed profile analysis for a mission',
+                description: 'Uses LLM to provide detailed analysis of how well a profile matches a mission',
+                security: [{ cookieAuth: [], csrfToken: [] }],
+                parameters: [
+                    { name: 'missionId', in: 'path', required: true, schema: { type: 'string' } },
+                    { name: 'resumeId', in: 'path', required: true, schema: { type: 'string' } }
+                ],
+                responses: {
+                    200: { description: 'Detailed analysis results' }
                 }
             }
         },

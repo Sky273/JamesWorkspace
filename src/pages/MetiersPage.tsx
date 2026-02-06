@@ -56,8 +56,8 @@ export default function MetiersPage() {
       setError(null);
       const data = await getStoredMetiers(search ? { search } : undefined);
       setMetiers(data);
-    } catch (err: any) {
-      setError(err.message || 'Erreur lors du chargement des métiers');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur lors du chargement des métiers');
     } finally {
       setLoading(false);
     }
@@ -81,8 +81,8 @@ export default function MetiersPage() {
       
       // Reload métiers after collection
       await loadMetiers();
-    } catch (err: any) {
-      setError(err.message || 'Erreur lors de la collecte');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur lors de la collecte');
     } finally {
       setCollecting(false);
     }
