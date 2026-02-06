@@ -33,7 +33,10 @@ export const createUserSchema = z.object({
   email: emailSchema,
   password: passwordSchema,
   name: nameSchema,
-  status: z.enum(['Active', 'Inactive', 'Pending']).optional()
+  role: z.enum(['admin', 'Admin', 'user', 'User']).optional(),
+  status: z.enum(['Active', 'Inactive', 'Pending', 'active', 'inactive', 'pending']).optional(),
+  customer: z.string().optional(),
+  CustomerName: z.string().optional()
 });
 
 // Mission schemas

@@ -344,7 +344,7 @@ router.get('/me', authenticateToken, async (req, res) => {
 // POST /api/auth/users - Create user (admin only)
 router.post('/users', authenticateToken, requireAdmin, validateBody(createUserSchema), async (req, res) => {
     try {
-        const { email, password, name, status, customer, CustomerName } = req.body;
+        const { email, password, name, status, customer, CustomerName, role } = req.body;
         const normalizedEmail = email.toLowerCase();
         const metadata = getRequestMetadata(req);
 
@@ -361,11 +361,15 @@ router.post('/users', authenticateToken, requireAdmin, validateBody(createUserSc
 
         const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
+        // Normalize role: accept 'admin' or 'Admin', default to 'user'
+        const normalizedRole = (role || 'user').toLowerCase();
+        const validRole = ['admin', 'user'].includes(normalizedRole) ? normalizedRole : 'user';
+
         const userData = {
             email: normalizedEmail,
             password: hashedPassword,
             name: name,
-            role: 'user',
+            role: validRole,
             status: (status || 'active').toLowerCase()
         };
 
@@ -424,10 +428,16 @@ router.put('/users/:id', authenticateToken, requireAdmin, validateParams('id'), 
         const { id } = req.params;
         const updateData = {};
 
-        if (req.body.name) updateData.name = req.body.name;
-        if (req.body.email) updateData.email = req.body.email.toLowerCase();
-        if (req.body.status) updateData.status = req.body.status.toLowerCase();
-        if (req.body.role) updateData.role = req.body.role.toLowerCase();
+        // Handle both lowercase and capitalized field names from frontend
+        const name = req.body.name || req.body.Name;
+        const email = req.body.email || req.body.Email;
+        const status = req.body.status || req.body.Status;
+        const role = req.body.role || req.body.Role;
+
+        if (name) updateData.name = name;
+        if (email) updateData.email = email.toLowerCase();
+        if (status) updateData.status = status.toLowerCase();
+        if (role) updateData.role = role.toLowerCase();
         if (req.body.password) {
             updateData.password = await bcrypt.hash(req.body.password, SALT_ROUNDS);
         }

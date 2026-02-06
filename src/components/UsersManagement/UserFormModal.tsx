@@ -50,13 +50,17 @@ const UserFormModal = ({ isOpen, onClose, onSubmit, user, customers, t }: UserFo
 
   useEffect(() => {
     if (user) {
+      // Capitalize first letter of status for form display (DB stores lowercase)
+      const capitalizedStatus = user.status 
+        ? user.status.charAt(0).toUpperCase() + user.status.slice(1).toLowerCase()
+        : 'Active';
       setFormData({
         name: user.name || '',
         email: user.email || '',
         password: '',
         customer: user.customer || '',
         role: user.role?.toLowerCase() || 'user',
-        status: user.status || 'Active'
+        status: capitalizedStatus
       });
     } else {
       setFormData({ name: '', email: '', password: '', customer: '', role: 'user', status: 'Active' });

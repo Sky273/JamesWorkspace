@@ -181,7 +181,8 @@ const UsersManagement = (): JSX.Element => {
           email: formData.email,
           password: formData.password,
           customer: formData.customer,
-          role: capitalizedRole
+          role: capitalizedRole,
+          status: formData.status
         });
         toast.success(t('users.management.messages.userCreated'));
       }
@@ -264,7 +265,7 @@ const UsersManagement = (): JSX.Element => {
   const stats: Stats = {
     totalUsers: usersTotalCount,
     totalCustomers: customersTotalCount,
-    activeUsers: users.filter(u => u.status === 'Active').length,
+    activeUsers: users.filter(u => u.status?.toLowerCase() === 'active').length,
     admins: users.filter(u => u.role?.toLowerCase() === 'admin').length
   };
 
@@ -283,14 +284,16 @@ const UsersManagement = (): JSX.Element => {
   };
 
   const getStatusBadge = (status?: string): JSX.Element => {
+    // Normalize status to handle both lowercase (from DB) and capitalized versions
+    const normalizedStatus = status?.toLowerCase();
     const colors: Record<string, string> = {
-      'Active': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-      'Inactive': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
-      'Pending': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
+      'active': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+      'inactive': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+      'pending': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
     };
     return (
-      <span className={`px-2 py-1 text-xs font-medium rounded-full ${colors[status || ''] || colors['Pending']}`}>
-        {t(`users.management.status.${status?.toLowerCase()}`) || status}
+      <span className={`px-2 py-1 text-xs font-medium rounded-full ${colors[normalizedStatus || ''] || colors['pending']}`}>
+        {t(`users.management.status.${normalizedStatus}`) || status}
       </span>
     );
   };
