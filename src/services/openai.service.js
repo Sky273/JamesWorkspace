@@ -465,6 +465,62 @@ function cleanupHtml(html) {
     
     let cleaned = html;
     
+    // Convert HTML entities to their corresponding characters
+    const htmlEntities = {
+        '&nbsp;': ' ',
+        '&amp;': '&',
+        '&lt;': '<',
+        '&gt;': '>',
+        '&quot;': '"',
+        '&#39;': "'",
+        '&apos;': "'",
+        '&laquo;': '«',
+        '&raquo;': '»',
+        '&ldquo;': '\u201C',
+        '&rdquo;': '\u201D',
+        '&lsquo;': '\u2018',
+        '&rsquo;': '\u2019',
+        '&ndash;': '–',
+        '&mdash;': '—',
+        '&hellip;': '…',
+        '&bull;': '•',
+        '&middot;': '·',
+        '&copy;': '©',
+        '&reg;': '®',
+        '&trade;': '™',
+        '&euro;': '€',
+        '&pound;': '£',
+        '&yen;': '¥',
+        '&cent;': '¢',
+        '&deg;': '°',
+        '&plusmn;': '±',
+        '&times;': '×',
+        '&divide;': '÷',
+        '&frac12;': '½',
+        '&frac14;': '¼',
+        '&frac34;': '¾',
+        '&sup2;': '²',
+        '&sup3;': '³',
+        '&acute;': '´',
+        '&cedil;': '¸',
+        '&iexcl;': '¡',
+        '&iquest;': '¿',
+        '&sect;': '§',
+        '&para;': '¶',
+        '&dagger;': '†',
+        '&Dagger;': '‡',
+        '&permil;': '‰'
+    };
+    
+    // Replace named HTML entities
+    for (const [entity, char] of Object.entries(htmlEntities)) {
+        cleaned = cleaned.replace(new RegExp(entity, 'gi'), char);
+    }
+    
+    // Replace numeric HTML entities (decimal: &#123; and hex: &#x7B;)
+    cleaned = cleaned.replace(/&#(\d+);/g, (match, dec) => String.fromCharCode(parseInt(dec, 10)));
+    cleaned = cleaned.replace(/&#x([0-9a-fA-F]+);/g, (match, hex) => String.fromCharCode(parseInt(hex, 16)));
+    
     // Remove nested <p> tags inside <li> elements
     cleaned = cleaned.replace(/<li>\s*<p>(.*?)<\/p>\s*<\/li>/gi, '<li>$1</li>');
     
