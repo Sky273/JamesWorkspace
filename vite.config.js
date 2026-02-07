@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import commonjs from '@rollup/plugin-commonjs';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
+import compression from 'vite-plugin-compression';
 
 // Plugin to configure HTTP server timeouts and diagnose 400 errors
 const httpConfigPlugin = () => ({
@@ -54,6 +55,20 @@ export default defineConfig({
       protocolImports: true,
     }),
     httpConfigPlugin(),
+    // Gzip compression for production builds
+    compression({
+      algorithm: 'gzip',
+      ext: '.gz',
+      threshold: 1024, // Only compress files > 1KB
+      deleteOriginFile: false,
+    }),
+    // Brotli compression (better compression ratio)
+    compression({
+      algorithm: 'brotliCompress',
+      ext: '.br',
+      threshold: 1024,
+      deleteOriginFile: false,
+    }),
   ],
   server: {
     host: '0.0.0.0',
@@ -145,6 +160,28 @@ export default defineConfig({
     ]
   },
   build: {
+    // Enable minification with terser for better compression
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,      // Remove console.log in production
+        drop_debugger: true,     // Remove debugger statements
+        pure_funcs: ['console.log', 'console.info', 'console.debug'],
+        passes: 2,               // Multiple compression passes
+      },
+      mangle: {
+        safari10: true,          // Safari 10 compatibility
+      },
+      format: {
+        comments: false,         // Remove all comments
+      },
+    },
+    // Enable source maps for debugging (optional, can be disabled for smaller builds)
+    sourcemap: false,
+    // Chunk size warning limit (in kB)
+    chunkSizeWarningLimit: 500,
+    // Target modern browsers for smaller output
+    target: 'es2020',
     commonjsOptions: {
       include: [/tinymce/, /node_modules/],
       transformMixedEsModules: true,
@@ -156,13 +193,57 @@ export default defineConfig({
           transformMixedEsModules: true,
         }),
       ],
+      output: {
+        // Manual chunk splitting for better caching
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            // React core
+            if (id.includes('react-dom') || id.includes('react-router') || id.includes('/react/')) {
+              return 'vendor-react';
+            }
+            // UI libraries
+            if (id.includes('framer-motion') || id.includes('@headlessui') || id.includes('@heroicons')) {
+              return 'vendor-ui';
+            }
+            // Charts
+            if (id.includes('recharts') || id.includes('d3-')) {
+              return 'vendor-charts';
+            }
+            // Map libraries
+            if (id.includes('maplibre') || id.includes('react-map-gl') || id.includes('mapbox')) {
+              return 'vendor-map';
+            }
+            // PDF libraries
+            if (id.includes('pdfjs-dist') || id.includes('html2pdf') || id.includes('jspdf')) {
+              return 'vendor-pdf';
+            }
+            // TinyMCE
+            if (id.includes('tinymce')) {
+              return 'vendor-tinymce';
+            }
+            // i18n
+            if (id.includes('i18next')) {
+              return 'vendor-i18n';
+            }
+          }
+        },
+        // Optimize chunk file names
+        chunkFileNames: 'assets/js/[name]-[hash].js',
+        entryFileNames: 'assets/js/[name]-[hash].js',
+        assetFileNames: 'assets/[ext]/[name]-[hash].[ext]',
+      },
       onwarn(warning, warn) {
         // Suppress warnings about vite-plugin-node-polyfills
         if (warning.message?.includes('vite-plugin-node-polyfills')) {
           return;
         }
         warn(warning);
-      }
+      },
+      // Tree-shaking optimization
+      treeshake: {
+        moduleSideEffects: 'no-external',
+        propertyReadSideEffects: false,
+      },
     }
   }
 });
