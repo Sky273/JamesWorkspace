@@ -80,10 +80,10 @@ export default function WebGLBackground({ className = '' }: WebGLBackgroundProps
       positions[i3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
       positions[i3 + 2] = radius * Math.cos(phi);
 
-      // Random velocities for floating effect
-      velocities[i3] = (Math.random() - 0.5) * 0.002;
-      velocities[i3 + 1] = (Math.random() - 0.5) * 0.002;
-      velocities[i3 + 2] = (Math.random() - 0.5) * 0.002;
+      // Random velocities for floating effect - increased speed for visible movement
+      velocities[i3] = (Math.random() - 0.5) * 0.015;
+      velocities[i3 + 1] = (Math.random() - 0.5) * 0.015;
+      velocities[i3 + 2] = (Math.random() - 0.5) * 0.015;
     }
 
     particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
@@ -115,7 +115,7 @@ export default function WebGLBackground({ className = '' }: WebGLBackgroundProps
         icosahedronRef.current.rotation.y += 0.002;
       }
 
-      // Animate particles floating
+      // Animate particles floating with more visible movement
       if (particlesRef.current) {
         const positions = particlesRef.current.geometry.attributes.position.array as Float32Array;
         const vels = (particlesRef.current as any).velocities as Float32Array;
@@ -123,10 +123,10 @@ export default function WebGLBackground({ className = '' }: WebGLBackgroundProps
         for (let i = 0; i < particleCount; i++) {
           const i3 = i * 3;
           
-          // Add floating motion
-          positions[i3] += vels[i3] + Math.sin(time + i) * 0.0005;
-          positions[i3 + 1] += vels[i3 + 1] + Math.cos(time + i * 0.5) * 0.0005;
-          positions[i3 + 2] += vels[i3 + 2];
+          // Add floating motion with stronger wave effect
+          positions[i3] += vels[i3] + Math.sin(time * 2 + i * 0.1) * 0.003;
+          positions[i3 + 1] += vels[i3 + 1] + Math.cos(time * 1.5 + i * 0.15) * 0.003;
+          positions[i3 + 2] += vels[i3 + 2] + Math.sin(time + i * 0.2) * 0.002;
 
           // Keep particles within bounds
           const distance = Math.sqrt(
@@ -135,7 +135,7 @@ export default function WebGLBackground({ className = '' }: WebGLBackgroundProps
             positions[i3 + 2] ** 2
           );
 
-          if (distance > 10 || distance < 4) {
+          if (distance > 12 || distance < 3) {
             // Reverse velocity when out of bounds
             vels[i3] *= -1;
             vels[i3 + 1] *= -1;
