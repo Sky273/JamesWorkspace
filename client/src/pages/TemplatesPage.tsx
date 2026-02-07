@@ -71,6 +71,7 @@ const TemplateCard = ({ template, onDeleteClick, onPreviewClick, index }: Templa
     >
       <div className="relative group cursor-pointer" onClick={() => onPreviewClick(template)}>
         <div className="h-48 bg-gray-50 dark:bg-gray-900 overflow-hidden">
+          {template.stylesheet && <style dangerouslySetInnerHTML={{ __html: template.stylesheet }} />}
           <div className="p-3 text-xs transform scale-75 origin-top-left space-y-1" style={{ width: '133%' }}>
             {template.headerContent && <div dangerouslySetInnerHTML={createSafeHtml(template.headerContent)} />}
             <div dangerouslySetInnerHTML={createSafeHtml(template.templateContent || '')} />
@@ -366,6 +367,7 @@ const TemplatesPage = (): JSX.Element => {
               <button onClick={() => setPreviewTemplate(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"><XMarkIcon className="w-6 h-6" /></button>
             </div>
             <div className="p-6 overflow-auto max-h-[70vh] bg-gray-50 dark:bg-gray-900">
+              {previewTemplate.stylesheet && <style dangerouslySetInnerHTML={{ __html: previewTemplate.stylesheet }} />}
               <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow space-y-4">
                 {previewTemplate.headerContent && (
                   <div className="border-b border-gray-200 dark:border-gray-700 pb-4">
