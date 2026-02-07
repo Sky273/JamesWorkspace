@@ -23,7 +23,6 @@ body {
   line-height: var(--line-height-normal);
   background-color: #f3f4f6; /* gray-100 */
   color: #111827; /* gray-900 */
-  transition: background-color var(--transition-normal), color var(--transition-normal);
 }
 
 .dark body,
