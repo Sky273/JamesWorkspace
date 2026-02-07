@@ -3,11 +3,14 @@
  * TypeScript version with full type safety
  */
 
-import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from 'react';
 import { authService, User, RegisterData, RegisterResponse } from '../services/authService';
 import { setSessionExpiredHandler, resetSessionState } from '../utils/apiInterceptor';
 import toast from 'react-hot-toast';
 import logger from '../utils/logger.frontend';
+
+// Prevent duplicate auth calls in StrictMode
+let authCheckInProgress = false;
 
 // ============================================
 // TYPES
@@ -54,6 +57,12 @@ export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
   // Fetch current user from server on mount (session restored via httpOnly cookies)
   useEffect(() => {
     const fetchCurrentUser = async () => {
+      // Prevent duplicate calls in React StrictMode
+      if (authCheckInProgress) {
+        return;
+      }
+      authCheckInProgress = true;
+
       // Skip fetching user if we're on the signin page with expired flag
       // This prevents infinite loops when session has expired
       if (window.location.pathname === '/signin' && window.location.search.includes('expired=true')) {
@@ -137,6 +146,7 @@ export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
         authService.setCurrentUser(null);
       } finally {
         setLoading(false);
+        authCheckInProgress = false;
         setInitialized(true);
       }
     };

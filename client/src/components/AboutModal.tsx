@@ -9,7 +9,6 @@ import { XMarkIcon, SparklesIcon, DocumentTextIcon } from '@heroicons/react/24/o
 import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import changelogContentFromFile from '@root/CHANGELOG.md?raw';
 import packageJson from '@root/package.json';
 
 interface AboutModalProps {
@@ -19,13 +18,22 @@ interface AboutModalProps {
 
 const AboutModal = ({ isOpen, onClose }: AboutModalProps): JSX.Element => {
   const { t } = useTranslation();
-  const [changelogText, setChangelogText] = useState<string>(changelogContentFromFile || t('about.errorLoadingChangelog'));
+  const [changelogText, setChangelogText] = useState<string>('');
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
+  // Lazy load CHANGELOG.md only when modal is opened
   useEffect(() => {
-    if (changelogContentFromFile !== changelogText && changelogContentFromFile) {
-      setChangelogText(changelogContentFromFile);
-    } else if (!changelogContentFromFile && changelogText !== t('about.errorLoadingChangelog')) {
-      setChangelogText(t('about.errorLoadingChangelog'));
+    if (isOpen && !changelogText) {
+      setIsLoading(true);
+      import('@root/CHANGELOG.md?raw')
+        .then((module) => {
+          setChangelogText(module.default);
+          setIsLoading(false);
+        })
+        .catch(() => {
+          setChangelogText(t('about.errorLoadingChangelog'));
+          setIsLoading(false);
+        });
     }
   }, [isOpen, changelogText, t]);
 
@@ -97,6 +105,12 @@ const AboutModal = ({ isOpen, onClose }: AboutModalProps): JSX.Element => {
                   </div>
                   <div className="max-h-80 overflow-y-auto rounded-lg bg-gray-50 dark:bg-gray-900/50 p-4 border border-gray-200 dark:border-gray-700">
                     <div className="changelog-markdown text-sm">
+                      {isLoading ? (
+                        <div className="flex items-center justify-center py-8">
+                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-500"></div>
+                          <span className="ml-2 text-gray-500">{t('common.loading') || 'Loading...'}</span>
+                        </div>
+                      ) : (
                       <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
                         components={{
@@ -156,6 +170,7 @@ const AboutModal = ({ isOpen, onClose }: AboutModalProps): JSX.Element => {
                       >
                         {changelogText}
                       </ReactMarkdown>
+                      )}
                     </div>
                   </div>
                 </div>
