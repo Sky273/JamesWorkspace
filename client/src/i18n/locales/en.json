@@ -183,6 +183,13 @@
     "activeFilters": "Active filters",
     "more": "more",
     "showLess": "Show less",
+    "status": {
+      "new": "New",
+      "improved": "Improved",
+      "processing": "Processing",
+      "analyzed": "Analyzed",
+      "error": "Error"
+    },
     "stats": {
       "total": "Total Resumes",
       "improved": "Improved",

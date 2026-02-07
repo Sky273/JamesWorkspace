@@ -6,6 +6,8 @@ import compression from 'compression';
 import { doubleCsrf } from 'csrf-csrf';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import https from 'https';
+import fs from 'fs';
 import 'dotenv/config';
 
 // Global error handlers to catch crashes
@@ -665,7 +667,34 @@ app.use((err, req, res, next) => {
 // SERVER STARTUP
 // ============================================
 
-const server = app.listen(PORT, async () => {
+// HTTPS Configuration
+const HTTPS_ENABLED = process.env.HTTPS_ENABLED === 'true';
+const HTTPS_PORT = process.env.HTTPS_PORT || 3443;
+
+let server;
+
+if (HTTPS_ENABLED) {
+    // Load SSL certificates
+    const certsPath = path.join(__dirname, '..', 'certificates');
+    const privateKey = fs.readFileSync(path.join(certsPath, 'private.key'), 'utf8');
+    const certificate = fs.readFileSync(path.join(certsPath, 'certificate.crt'), 'utf8');
+    
+    const httpsOptions = {
+        key: privateKey,
+        cert: certificate
+    };
+    
+    server = https.createServer(httpsOptions, app);
+    server.listen(HTTPS_PORT, async () => {
+        await onServerStart('HTTPS', HTTPS_PORT);
+    });
+} else {
+    server = app.listen(PORT, async () => {
+        await onServerStart('HTTP', PORT);
+    });
+}
+
+async function onServerStart(protocol, port) {
     // Clean all caches on startup
     console.log('\n🧹 Cleaning all caches on startup...');
     try {
@@ -688,7 +717,7 @@ const server = app.listen(PORT, async () => {
     console.log('\n=================================');
     console.log('🚀 PROXY SERVER STARTED');
     console.log('=================================');
-    console.log(`📡 Port: ${PORT}`);
+    console.log(`📡 Port: ${port}`);
     console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`🔒 CORS Origins: ${ALLOWED_ORIGINS.join(', ')}`);
     console.log('=================================');
@@ -731,7 +760,9 @@ const server = app.listen(PORT, async () => {
     
     // Start periodic cleanup of Market Radar caches (every 15 minutes)
     startMarketRadarCacheCleanup();
-});
+    
+    console.log(`🔐 Protocol: ${protocol}`);
+}
 
 // Graceful shutdown with proper cleanup
 const gracefulShutdown = async (signal) => {

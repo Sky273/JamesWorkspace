@@ -337,6 +337,13 @@
     "activeFilters": "Filtres actifs",
     "more": "de plus",
     "showLess": "Voir moins",
+    "status": {
+      "new": "Nouveau",
+      "improved": "Amélioré",
+      "processing": "En cours",
+      "analyzed": "Analysé",
+      "error": "Erreur"
+    },
     "stats": {
       "total": "Total CVs",
       "improved": "Améliorés",
