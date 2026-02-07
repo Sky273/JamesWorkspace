@@ -3,7 +3,7 @@
  * TypeScript version
  */
 
-import { ForwardRefExoticComponent, RefAttributes, SVGProps, useState, useEffect, useCallback } from 'react';
+import { ForwardRefExoticComponent, RefAttributes, SVGProps, useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useInView } from 'react-intersection-observer';
@@ -19,6 +19,9 @@ import {
   DocumentMagnifyingGlassIcon
 } from '@heroicons/react/24/outline';
 import HomeDashboard from '../components/HomeDashboard';
+
+// Lazy load WebGL background to avoid blocking initial render
+const WebGLBackground = lazy(() => import('../components/WebGLBackground'));
 
 type HeroIcon = ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, 'ref'> & { title?: string; titleId?: string } & RefAttributes<SVGSVGElement>>;
 
@@ -350,7 +353,11 @@ function HomePage(): JSX.Element {
           </div>
         </motion.nav>
 
-        <section className="min-h-[80vh] flex items-center py-8">
+        <section className="min-h-[80vh] flex items-center py-8 relative overflow-hidden">
+          {/* WebGL Background Animation */}
+          <Suspense fallback={null}>
+            <WebGLBackground />
+          </Suspense>
           <div className="container mx-auto px-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
               <motion.div variants={fadeInUp}>

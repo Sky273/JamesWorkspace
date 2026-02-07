@@ -225,6 +225,10 @@ export default defineConfig({
             if (id.includes('i18next')) {
               return 'vendor-i18n';
             }
+            // Three.js (WebGL)
+            if (id.includes('three')) {
+              return 'vendor-three';
+            }
           }
         },
         // Optimize chunk file names
