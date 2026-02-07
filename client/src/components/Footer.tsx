@@ -3,9 +3,12 @@
  * TypeScript version
  */
 
+import { useTranslation } from 'react-i18next';
 import ApteaLogo from './ApteaLogo';
 
 const Footer = (): JSX.Element => {
+  const { t } = useTranslation();
+  
   return (
     <footer className="footer">
       <div className="container mx-auto px-4">
@@ -13,7 +16,7 @@ const Footer = (): JSX.Element => {
           <a href="https://www.aptea.net/" target="_blank" rel="noopener noreferrer">
             <ApteaLogo className="h-12" />
           </a>
-          <p className="text-sm text-gray-600 dark:text-gray-400">© {new Date().getFullYear()} Aptea. All rights reserved.</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">© {new Date().getFullYear()} Aptea. {t('footer.allRightsReserved')}</p>
         </div>
       </div>
     </footer>

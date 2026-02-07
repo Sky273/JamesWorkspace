@@ -34,6 +34,7 @@
     "saving": "Saving..."
   },
   "header": {
+    "changeLanguage": "Change language",
     "theme": {
       "light": "Light Mode",
       "dark": "Dark Mode"
@@ -42,6 +43,9 @@
       "en": "English",
       "fr": "French"
     }
+  },
+  "footer": {
+    "allRightsReserved": "All rights reserved."
   },
   "auth": {
     "signIn": {

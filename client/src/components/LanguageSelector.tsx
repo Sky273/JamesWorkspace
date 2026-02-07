@@ -39,7 +39,7 @@ const LanguageSelector = (): JSX.Element => {
   return (
     <Menu as="div" className="relative inline-block text-left">
       <Menu.Button className="p-2 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300">
-        <span className="sr-only">Change language</span>
+        <span className="sr-only">{t('header.changeLanguage')}</span>
         <div className="flex items-center">
           <GlobeAltIcon className="h-6 w-6" aria-hidden="true" />
         </div>

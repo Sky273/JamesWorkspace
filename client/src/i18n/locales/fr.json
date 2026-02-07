@@ -34,6 +34,7 @@
     "saving": "Enregistrement..."
   },
   "header": {
+    "changeLanguage": "Changer de langue",
     "theme": {
       "light": "Mode clair",
       "dark": "Mode sombre"
@@ -42,6 +43,9 @@
       "en": "Anglais",
       "fr": "Français"
     }
+  },
+  "footer": {
+    "allRightsReserved": "Tous droits réservés."
   },
   "auth": {
     "signIn": {
