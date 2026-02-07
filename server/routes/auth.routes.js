@@ -322,17 +322,19 @@ router.get('/me', authenticateToken, async (req, res) => {
         }
 
         res.json({
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            role: user.role,
-            status: user.status,
-            customer: user.customer_name,
-            CustomerName: user.customer_name,
-            Name: user.name,
-            Email: user.email,
-            Status: user.status === 'active' ? 'Active' : 'Inactive',
-            Role: user.role
+            user: {
+                id: user.id,
+                email: user.email,
+                name: user.name,
+                role: user.role,
+                status: user.status,
+                customer: user.customer_name,
+                CustomerName: user.customer_name,
+                Name: user.name,
+                Email: user.email,
+                Status: user.status === 'active' ? 'Active' : 'Inactive',
+                Role: user.role
+            }
         });
     } catch (error) {
         safeLog('error', 'Get current user error', { error: error.message });
