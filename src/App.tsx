@@ -1,9 +1,9 @@
 /**
  * App Component
- * TypeScript version
+ * TypeScript version with lazy loading for better performance
  */
 
-import { useEffect, ReactNode } from 'react';
+import { useEffect, ReactNode, lazy, Suspense } from 'react';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { ResumeProvider } from './context/ResumeContext';
@@ -11,30 +11,39 @@ import { ChatbotProvider } from './context/ChatbotContext';
 import { Toaster } from 'react-hot-toast';
 import ErrorBoundary from './components/ErrorBoundary';
 import Layout from './components/Layout';
-import HomePage from './pages/HomePage';
-import ResumesPage from './pages/ResumesPage';
-import TemplatesPage from './pages/TemplatesPage';
-import UploadPage from './pages/UploadPage';
-import NewTemplatePage from './pages/NewTemplatePage';
-import DashboardPage from './pages/DashboardPage';
-import TagsManagement from './pages/TagsManagement';
-import UsersManagement from './pages/UsersManagement';
-import SecurityLogs from './pages/SecurityLogs';
-import MetricsPage from './pages/MetricsPage';
-import SettingsPage from './pages/SettingsPage';
-import MissionsPage from './pages/MissionsPage';
-import AdaptationsPage from './pages/AdaptationsPage';
-import ProfileMatchingPage from './pages/ProfileMatchingPage';
-import ResumeViewPage from './pages/ResumeViewPage';
-import MissionViewPage from './pages/MissionViewPage';
-import AdaptationViewPage from './pages/AdaptationViewPage';
-import UserGuidePage from './pages/UserGuidePage';
-import FactsPage from './pages/FactsPage';
-import MetiersPage from './pages/MetiersPage';
-import SignIn from './components/SignIn';
-import Register from './components/Register';
 import { useAuth } from './context/AuthContext';
 import logger from './utils/logger.frontend';
+
+// Lazy load pages for code splitting
+const HomePage = lazy(() => import('./pages/HomePage'));
+const ResumesPage = lazy(() => import('./pages/ResumesPage'));
+const TemplatesPage = lazy(() => import('./pages/TemplatesPage'));
+const UploadPage = lazy(() => import('./pages/UploadPage'));
+const NewTemplatePage = lazy(() => import('./pages/NewTemplatePage'));
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const TagsManagement = lazy(() => import('./pages/TagsManagement'));
+const UsersManagement = lazy(() => import('./pages/UsersManagement'));
+const SecurityLogs = lazy(() => import('./pages/SecurityLogs'));
+const MetricsPage = lazy(() => import('./pages/MetricsPage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const MissionsPage = lazy(() => import('./pages/MissionsPage'));
+const AdaptationsPage = lazy(() => import('./pages/AdaptationsPage'));
+const ProfileMatchingPage = lazy(() => import('./pages/ProfileMatchingPage'));
+const ResumeViewPage = lazy(() => import('./pages/ResumeViewPage'));
+const MissionViewPage = lazy(() => import('./pages/MissionViewPage'));
+const AdaptationViewPage = lazy(() => import('./pages/AdaptationViewPage'));
+const UserGuidePage = lazy(() => import('./pages/UserGuidePage'));
+const FactsPage = lazy(() => import('./pages/FactsPage'));
+const MetiersPage = lazy(() => import('./pages/MetiersPage'));
+const SignIn = lazy(() => import('./components/SignIn'));
+const Register = lazy(() => import('./components/Register'));
+
+// Loading fallback component
+const PageLoader = () => (
+  <div className="flex items-center justify-center min-h-screen">
+    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+  </div>
+);
 
 interface RouteProps {
   children: ReactNode;
@@ -87,45 +96,47 @@ const App = (): JSX.Element => {
       <ResumeProvider>
         <ChatbotProvider>
           <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-            <Routes>
-          <Route path="/signin" element={<SignIn />} />
-          <Route path="/register" element={<Register />} />
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <Layout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<HomePage />} />
-            <Route path="resumes" element={<ResumesPage />} />
-            <Route path="resumes/:id" element={<ResumeViewPage />} />
-            <Route path="upload" element={<UploadPage />} />
-            <Route path="dashboard" element={<DashboardPage />} />
-            <Route path="missions" element={<MissionsPage />} />
-            <Route path="missions/:id" element={<MissionViewPage />} />
-            <Route path="adaptations" element={<AdaptationsPage />} />
-            <Route path="adaptations/:id" element={<AdaptationViewPage />} />
-            <Route path="profile-matching" element={<ProfileMatchingPage />} />
-            <Route path="guide" element={<UserGuidePage />} />
-            
-            {/* Admin-only routes */}
-            <Route path="templates" element={<AdminRoute><TemplatesPage /></AdminRoute>} />
-            <Route path="templates/new" element={<AdminRoute><NewTemplatePage /></AdminRoute>} />
-            <Route path="templates/edit/:id" element={<AdminRoute><NewTemplatePage /></AdminRoute>} />
-            <Route path="dashboard/tags" element={<AdminRoute><TagsManagement /></AdminRoute>} />
-            <Route path="dashboard/users" element={<AdminRoute><UsersManagement /></AdminRoute>} />
-            <Route path="dashboard/security-logs" element={<AdminRoute><SecurityLogs /></AdminRoute>} />
-            <Route path="dashboard/metrics" element={<AdminRoute><MetricsPage /></AdminRoute>} />
-            <Route path="settings" element={<AdminRoute><SettingsPage /></AdminRoute>} />
-            <Route path="facts" element={<FactsPage />} />
-            <Route path="metiers" element={<AdminRoute><MetiersPage /></AdminRoute>} />
-          </Route>
-          </Routes>
-          <Toaster position="top-right" />
-        </Router>
-      </ChatbotProvider>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                <Route path="/signin" element={<SignIn />} />
+                <Route path="/register" element={<Register />} />
+                <Route
+                  path="/"
+                  element={
+                    <ProtectedRoute>
+                      <Layout />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route index element={<HomePage />} />
+                  <Route path="resumes" element={<ResumesPage />} />
+                  <Route path="resumes/:id" element={<ResumeViewPage />} />
+                  <Route path="upload" element={<UploadPage />} />
+                  <Route path="dashboard" element={<DashboardPage />} />
+                  <Route path="missions" element={<MissionsPage />} />
+                  <Route path="missions/:id" element={<MissionViewPage />} />
+                  <Route path="adaptations" element={<AdaptationsPage />} />
+                  <Route path="adaptations/:id" element={<AdaptationViewPage />} />
+                  <Route path="profile-matching" element={<ProfileMatchingPage />} />
+                  <Route path="guide" element={<UserGuidePage />} />
+                  
+                  {/* Admin-only routes */}
+                  <Route path="templates" element={<AdminRoute><TemplatesPage /></AdminRoute>} />
+                  <Route path="templates/new" element={<AdminRoute><NewTemplatePage /></AdminRoute>} />
+                  <Route path="templates/edit/:id" element={<AdminRoute><NewTemplatePage /></AdminRoute>} />
+                  <Route path="dashboard/tags" element={<AdminRoute><TagsManagement /></AdminRoute>} />
+                  <Route path="dashboard/users" element={<AdminRoute><UsersManagement /></AdminRoute>} />
+                  <Route path="dashboard/security-logs" element={<AdminRoute><SecurityLogs /></AdminRoute>} />
+                  <Route path="dashboard/metrics" element={<AdminRoute><MetricsPage /></AdminRoute>} />
+                  <Route path="settings" element={<AdminRoute><SettingsPage /></AdminRoute>} />
+                  <Route path="facts" element={<FactsPage />} />
+                  <Route path="metiers" element={<AdminRoute><MetiersPage /></AdminRoute>} />
+                </Route>
+              </Routes>
+            </Suspense>
+            <Toaster position="top-right" />
+          </Router>
+        </ChatbotProvider>
       </ResumeProvider>
     </ErrorBoundary>
   );

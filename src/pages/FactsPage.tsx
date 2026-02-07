@@ -4,7 +4,7 @@
  * Features: France Map visualization + Data tables
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { createLogger } from '../utils/logger.frontend';
@@ -35,10 +35,19 @@ import {
   FactsSummary
 } from '../services/marketRadarService';
 import { getStoredMetiers, Metier } from '../services/romeService';
-import FranceMapTab from '../components/market/FranceMapTab';
-import MarketTrendsTab from '../components/market/MarketTrendsTab';
-import MetiersTab from '../components/market/MetiersTab';
 import Pagination from '../components/Pagination';
+
+// Lazy load heavy map component (1MB+ maplibre-gl)
+const FranceMapTab = lazy(() => import('../components/market/FranceMapTab'));
+const MarketTrendsTab = lazy(() => import('../components/market/MarketTrendsTab'));
+const MetiersTab = lazy(() => import('../components/market/MetiersTab'));
+
+// Loading spinner for lazy components
+const TabLoader = () => (
+  <div className="flex items-center justify-center py-12">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+  </div>
+);
 
 // Tab type
 type TabType = 'map' | 'data' | 'trends' | 'metiers';
@@ -306,11 +315,15 @@ export default function FactsPage() {
 
       {/* Tab Content */}
       {activeTab === 'map' && (
-        <FranceMapTab />
+        <Suspense fallback={<TabLoader />}>
+          <FranceMapTab />
+        </Suspense>
       )}
 
       {activeTab === 'trends' && (
-        <MarketTrendsTab />
+        <Suspense fallback={<TabLoader />}>
+          <MarketTrendsTab />
+        </Suspense>
       )}
 
       {activeTab === 'data' && (
@@ -582,7 +595,9 @@ export default function FactsPage() {
       )}
 
       {activeTab === 'metiers' && (
-        <MetiersTab />
+        <Suspense fallback={<TabLoader />}>
+          <MetiersTab />
+        </Suspense>
       )}
       </div>
     </>
