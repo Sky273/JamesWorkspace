@@ -1,3 +1,30 @@
+## v1.5.6 - 2026-02-07
+### 🌐 Audit & Nettoyage des Traductions
+
+#### Script d'audit des traductions
+- **Nouveau script** `scripts/audit-translations.js` : Audit complet des fichiers de traduction
+- **Détection automatique** : Identification des clés manquantes et inutilisées
+- **Mode fix** : Ajout automatique des clés manquantes avec `--fix`
+- **Mode remove-unused** : Suppression des clés inutilisées avec `--remove-unused`
+- **Préservation des clés dynamiques** : Les clés utilisées dynamiquement (ex: `marketRadar.dataTypes.*`, `header.language.*`) sont préservées
+
+#### Filtres dynamiques des logs de sécurité
+- **Filtres dynamiques** : Les options de filtre (level, event, source) sont maintenant chargées depuis les données réelles
+- **Nouvel endpoint** `/api/admin/security-filters` : Retourne les valeurs uniques pour les filtres
+- **Suppression des enums hardcodés** : Plus de validation stricte sur les valeurs de filtre
+
+#### Corrections des traductions
+- **Clés manquantes ajoutées** : 18 clés ajoutées en FR et EN
+- **Synchronisation FR/EN** : Les deux fichiers sont maintenant parfaitement synchronisés
+- **Nettoyage** : 344 clés inutilisées supprimées
+- **Types de données Market Radar** : Ajout des traductions pour `offres`, `tension`, `dynamique_emploi`, `embauche`, `demandeur`, `demandeur_entrant`
+
+#### Tuile Erreurs des logs de sécurité
+- **Comptage corrigé** : La tuile "Erreurs" ne compte maintenant que les logs de niveau ERROR (plus SECURITY)
+- **Normalisation** : Les niveaux de log sont normalisés en majuscules pour un comptage cohérent
+
+---
+
 ## v1.5.5 - 2026-02-06
 ### 🎯 Améliorations Matching Profils & UX
 
