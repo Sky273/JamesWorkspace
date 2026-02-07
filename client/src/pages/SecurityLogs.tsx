@@ -44,12 +44,19 @@ interface Filters {
   source: string;
 }
 
+interface FilterOptions {
+  levels: string[];
+  events: string[];
+  sources: string[];
+}
+
 const SecurityLogs = (): JSX.Element => {
   const { t } = useTranslation();
   const [logs, setLogs] = useState<Log[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [filters, setFilters] = useState<Filters>({ level: '', event: '', source: '' });
+  const [filterOptions, setFilterOptions] = useState<FilterOptions>({ levels: [], events: [], sources: [] });
   const [autoRefresh, setAutoRefresh] = useState<boolean>(true);
   
   // Server-side pagination state
@@ -110,15 +117,26 @@ const SecurityLogs = (): JSX.Element => {
     }
   }, []); // No dependencies - stats are global, not filtered
 
+  const fetchFilterOptions = useCallback(async (): Promise<void> => {
+    try {
+      const response = await fetchWithAuth('/api/admin/security-filters', createAuthOptions());
+      if (!response.ok) throw new Error(`Failed to fetch filter options: ${response.status}`);
+      const data = await response.json();
+      setFilterOptions(data);
+    } catch (error) {
+      logger.error('[SecurityLogs] Error fetching filter options:', error);
+    }
+  }, []);
+
   // Load data on mount and when fetchLogs changes (filters/page change)
   useEffect(() => {
     const loadData = async (): Promise<void> => {
       setLoading(true);
-      await Promise.all([fetchLogs(), fetchStats()]);
+      await Promise.all([fetchLogs(), fetchStats(), fetchFilterOptions()]);
       setLoading(false);
     };
     loadData();
-  }, [fetchLogs, fetchStats]);
+  }, [fetchLogs, fetchStats, fetchFilterOptions]);
 
   // Auto-refresh every 60 seconds
   useEffect(() => {
@@ -172,21 +190,41 @@ const SecurityLogs = (): JSX.Element => {
 
       {stats && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }} 
+            animate={{ opacity: 1, scale: 1 }} 
+            className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 cursor-pointer hover:ring-2 hover:ring-gray-300 dark:hover:ring-gray-600 transition-all"
+            onClick={() => handleFilterChange({ level: '', event: '', source: '' })}
+          >
             <div className="text-sm text-gray-600 dark:text-gray-400">{t('security.totalLogs')}</div>
             <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total}</div>
           </motion.div>
-          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1 }} className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }} 
+            animate={{ opacity: 1, scale: 1 }} 
+            transition={{ delay: 0.1 }} 
+            className="bg-white dark:bg-gray-800 rounded-lg shadow p-4"
+          >
             <div className="text-sm text-gray-600 dark:text-gray-400">{t('security.lastHour')}</div>
             <div className="text-2xl font-bold text-blue-600">{stats.recent.lastHour}</div>
           </motion.div>
-          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }} className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }} 
+            animate={{ opacity: 1, scale: 1 }} 
+            transition={{ delay: 0.2 }} 
+            className="bg-white dark:bg-gray-800 rounded-lg shadow p-4"
+          >
             <div className="text-sm text-gray-600 dark:text-gray-400">{t('security.last24h')}</div>
             <div className="text-2xl font-bold text-green-600">{stats.recent.last24h}</div>
           </motion.div>
-          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3 }} className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }} 
+            animate={{ opacity: 1, scale: 1 }} 
+            transition={{ delay: 0.3 }} 
+            className="bg-white dark:bg-gray-800 rounded-lg shadow p-4"
+          >
             <div className="text-sm text-gray-600 dark:text-gray-400">{t('security.errors')}</div>
-            <div className="text-2xl font-bold text-red-600">{(stats.byLevel.SECURITY || 0) + (stats.byLevel.ERROR || 0)}</div>
+            <div className="text-2xl font-bold text-red-600">{stats.byLevel.ERROR || 0}</div>
           </motion.div>
         </div>
       )}
@@ -196,19 +234,28 @@ const SecurityLogs = (): JSX.Element => {
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('security.filters.level')}</label>
             <select value={filters.level} onChange={(e: ChangeEvent<HTMLSelectElement>) => handleFilterChange({ level: e.target.value })} className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-              <option value="">{t('security.filters.all')}</option><option value="SECURITY">{t('security.levels.security')}</option><option value="ERROR">{t('security.levels.error')}</option><option value="WARNING">{t('security.levels.warning')}</option><option value="INFO">{t('security.levels.info')}</option><option value="DEBUG">{t('security.levels.debug')}</option>
+              <option value="">{t('security.filters.all')}</option>
+              {filterOptions.levels.map(level => (
+                <option key={level} value={level}>{level}</option>
+              ))}
             </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('security.filters.event')}</label>
             <select value={filters.event} onChange={(e: ChangeEvent<HTMLSelectElement>) => handleFilterChange({ event: e.target.value })} className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-              <option value="">{t('security.filters.all')}</option><option value="AUTH_SUCCESS">{t('security.events.authSuccess')}</option><option value="AUTH_FAILURE">{t('security.events.authFailure')}</option><option value="AUTH_BLOCKED">{t('security.events.authBlocked')}</option><option value="FILE_UPLOAD">{t('security.events.fileUpload')}</option><option value="FILE_UPLOAD_REJECTED">{t('security.events.fileUploadRejected')}</option><option value="LLM_REQUEST">{t('security.events.llmRequest')}</option>
+              <option value="">{t('security.filters.all')}</option>
+              {filterOptions.events.map(event => (
+                <option key={event} value={event}>{event}</option>
+              ))}
             </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('security.filters.source')}</label>
             <select value={filters.source} onChange={(e: ChangeEvent<HTMLSelectElement>) => handleFilterChange({ source: e.target.value })} className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-              <option value="">{t('security.filters.allSources')}</option><option value="security">{t('security.sources.security')}</option><option value="proxy">{t('security.sources.proxy')}</option>
+              <option value="">{t('security.filters.allSources')}</option>
+              {filterOptions.sources.map(source => (
+                <option key={source} value={source}>{source}</option>
+              ))}
             </select>
           </div>
           <div className="ml-auto flex items-center gap-4">

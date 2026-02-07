@@ -20,22 +20,26 @@ router.get('/security-logs', authenticateToken, requireAdmin, validateQuery({
         return validators.positiveInteger(val);
     },
     offset: validators.positiveInteger,
-    level: validators.enum(['INFO', 'WARNING', 'ERROR', 'SECURITY', 'DEBUG', 'WARN']),
+    level: validators.maxLength(50),
     event: validators.maxLength(100),
-    source: validators.enum(['security', 'proxy'])
+    source: validators.maxLength(50)
 }), (req, res) => {
     try {
         const { level, event, source, limit = 100, offset = 0 } = req.query;
         const parsedLimit = limit === 'all' ? Infinity : parseInt(limit);
         const parsedOffset = parseInt(offset) || 0;
-        const normalizedLevel = level?.toUpperCase();
         
         // Get logs from appropriate source(s) - already sorted newest first
         let logs;
-        if (source === 'security') {
-            logs = getSecurityLogs().map(log => ({ ...log, source: 'security' }));
-        } else if (source === 'proxy') {
-            logs = getProxyLogs();
+        if (source) {
+            if (source === 'security') {
+                logs = getSecurityLogs().map(log => ({ ...log, source: 'security' }));
+            } else if (source === 'proxy') {
+                logs = getProxyLogs();
+            } else {
+                // Unknown source, return empty
+                logs = [];
+            }
         } else {
             // Merge both sources - they're already sorted, use merge sort approach
             const secLogs = getSecurityLogs().map(log => ({ ...log, source: 'security' }));
@@ -48,8 +52,9 @@ router.get('/security-logs', authenticateToken, requireAdmin, validateQuery({
         let totalMatching = 0;
         
         for (const log of logs) {
-            // Apply filters
-            if (normalizedLevel && log.level?.toUpperCase() !== normalizedLevel) continue;
+            // Apply level filter (case-insensitive)
+            if (level && log.level?.toUpperCase() !== level.toUpperCase()) continue;
+            // Apply event filter
             if (event && log.event !== event) continue;
             
             totalMatching++;
@@ -98,6 +103,35 @@ function mergeSortedArrays(arr1, arr2) {
     return result;
 }
 
+// GET /api/admin/security-filters - Get available filter options dynamically
+router.get('/security-filters', authenticateToken, requireAdmin, (req, res) => {
+    try {
+        const secLogs = getSecurityLogs().map(log => ({ ...log, source: 'security' }));
+        const proxyLogsArr = getProxyLogs();
+        const allLogs = [...secLogs, ...proxyLogsArr];
+        
+        // Extract unique values for each filter
+        const levels = new Set();
+        const events = new Set();
+        const sources = new Set();
+        
+        for (const log of allLogs) {
+            if (log.level) levels.add(log.level);
+            if (log.event) events.add(log.event);
+            if (log.source) sources.add(log.source);
+        }
+        
+        res.json({
+            levels: Array.from(levels).sort(),
+            events: Array.from(events).sort(),
+            sources: Array.from(sources).sort()
+        });
+    } catch (error) {
+        safeLog('error', 'Error fetching security filters', { error: error.message });
+        res.status(500).json({ error: 'Failed to fetch security filters' });
+    }
+});
+
 // GET /api/admin/security-stats - Get combined security and proxy statistics
 router.get('/security-stats', authenticateToken, requireAdmin, (req, res) => {
     try {
@@ -129,7 +163,9 @@ router.get('/security-stats', authenticateToken, requireAdmin, (req, res) => {
         const oneHourAgo = now - 60 * 60 * 1000;
         
         for (const log of getSecurityLogs()) {
-            stats.byLevel[log.level] = (stats.byLevel[log.level] || 0) + 1;
+            // Normalize level to uppercase for consistent counting
+            const normalizedLevel = log.level?.toUpperCase() || 'UNKNOWN';
+            stats.byLevel[normalizedLevel] = (stats.byLevel[normalizedLevel] || 0) + 1;
             if (log.event) {
                 stats.byEvent[log.event] = (stats.byEvent[log.event] || 0) + 1;
             }
@@ -138,6 +174,14 @@ router.get('/security-stats', authenticateToken, requireAdmin, (req, res) => {
             if (logTime > oneDayAgo) stats.recent.last24h++;
             if (logTime > oneHourAgo) stats.recent.lastHour++;
         }
+        
+        // Normalize byLevel keys from proxy stats (may have lowercase)
+        const normalizedByLevel = {};
+        for (const [level, count] of Object.entries(stats.byLevel)) {
+            const upperLevel = level?.toUpperCase() || 'UNKNOWN';
+            normalizedByLevel[upperLevel] = (normalizedByLevel[upperLevel] || 0) + count;
+        }
+        stats.byLevel = normalizedByLevel;
         
         res.json(stats);
     } catch (error) {

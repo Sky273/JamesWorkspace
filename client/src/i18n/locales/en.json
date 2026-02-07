@@ -682,6 +682,7 @@
       "allEvents": "All events"
     },
     "levels": {
+      "errors": "Errors (all)",
       "security": "Security",
       "error": "Error",
       "warning": "Warning",

@@ -714,6 +714,7 @@
       "allEvents": "Tous les événements"
     },
     "levels": {
+      "errors": "Erreurs (tous)",
       "security": "Sécurité",
       "error": "Erreur",
       "warning": "Avertissement",
