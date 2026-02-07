@@ -16,23 +16,22 @@
     "cancel": "Annuler",
     "loading": "Chargement...",
     "error": "Erreur",
-    "success": "Succès",
     "delete": "Supprimer",
     "edit": "Modifier",
-    "view": "Voir",
     "close": "Fermer",
     "back": "Retour",
     "next": "Suivant",
-    "submit": "Soumettre",
     "export": "Exporter",
-    "appName": "Convertisseur de CV",
     "pleaseWait": "Veuillez patienter...",
     "showing": "Affichage",
     "of": "sur",
     "first": "Premier",
     "previous": "Précédent",
     "last": "Dernier",
-    "resetFilters": "Réinitialiser"
+    "resetFilters": "Réinitialiser",
+    "deleting": "Suppression...",
+    "saved": "Enregistré",
+    "saving": "Enregistrement..."
   },
   "header": {
     "theme": {
@@ -43,9 +42,6 @@
       "en": "Anglais",
       "fr": "Français"
     }
-  },
-  "footer": {
-    "rights": "Tous droits réservés"
   },
   "auth": {
     "signIn": {
@@ -77,28 +73,18 @@
     "title": "À propos de ResumeConverter",
     "description": "ResumeConverter est une solution développée par Aptea pour répondre à ses besoins d'analyse et d'amélioration des CV, et d'export vers différents modèles.",
     "changelog": "Journal des modifications",
-    "loadingChangelog": "chargement du journal des modifications...",
     "errorLoadingChangelog": "Impossible de charger le journal des modifications.",
     "allRightsReserved": "Tous droits réservés"
   },
   "resume": {
     "analysis": {
-      "title": "Analyse du CV",
-      "contentQuality": "Qualité du contenu",
-      "impactResults": "Impact et résultats",
-      "clarityStructure": "Clarté et structure",
-      "skillsKeywords": "Compétences et mots-clés",
       "original": "Original",
       "improved": "Amélioré",
       "suggestions": "Suggestions",
       "suggestionsFromOriginal": "Ces suggestions ont été formulées sur le CV original, avant son amélioration automatique par l'IA.",
-      "overview": "Aperçu",
-      "details": "Détails",
-      "export": "Exporter",
       "globalRating": "Note globale",
       "originalScore": "Note originale",
       "improvedScore": "Note améliorée",
-      "improvement": "Amélioration",
       "sectionScores": "Notes par section",
       "criticalImprovements": "Améliorations critiques nécessaires",
       "recommendedImprovements": "Améliorations recommandées",
@@ -114,7 +100,6 @@
       "professionalTitlePlaceholder": "Entrez le titre professionnel",
       "originalResume": "CV Original",
       "improvedResume": "CV Amélioré",
-      "score": "Score : ",
       "tabs": {
         "overview": "Aperçu",
         "skillsTags": "Compétences & Tags",
@@ -125,12 +110,6 @@
         "initialAnalysis": "Analyse initiale",
         "postImprovementAnalysis": "Analyse post-amélioration"
       },
-      "categories": {
-        "technicalskills": "Compétences techniques",
-        "tools": "Outils",
-        "industries": "Industries",
-        "softskills": "Compétences générales"
-      },
       "sections": {
         "executiveBrief": "Résumé exécutif",
         "skillsKeywords": "Compétences & Mots-clés",
@@ -139,7 +118,6 @@
         "atsOptimization": "Optimisation ATS",
         "hobbiesLanguages": "Loisirs & Langues"
       },
-      "noSkills": "Aucun {{category}} trouvé",
       "exportOptions": {
         "title": "Options d'exportation",
         "template": "Modèle",
@@ -147,29 +125,16 @@
         "loadingTemplates": "Chargement des modèles...",
         "noTemplates": "Aucun modèle disponible",
         "preview": "Aperçu",
-        "noPreview": "Aucun aperçu disponible pour ce modèle",
         "exportPDF": "Exporter en PDF",
         "exporting": "Exportation..."
-      },
-      "exportInstructions": "Sélectionnez un modèle et cliquez sur Exporter pour télécharger votre CV amélioré en PDF",
-      "selectTemplateFirst": "Veuillez d'abord sélectionner un modèle"
+      }
     },
     "actions": {
       "improveWithAI": "Améliorer avec l'IA",
       "improving": "Amélioration en cours...",
-      "exportAsPDF": "Exporter en PDF",
       "exporting": "Exportation...",
       "saveChanges": "Enregistrer les modifications",
-      "saving": "Enregistrement...",
-      "uploadNew": "Télécharger un nouveau CV",
-      "analyze": "Analyser le CV"
-    },
-    "list": {
-      "title": "Mes CV",
-      "noResumes": "Aucun CV trouvé",
-      "uploadPrompt": "Téléchargez votre premier CV",
-      "lastModified": "Dernière modification",
-      "status": "Statut"
+      "saving": "Enregistrement..."
     }
   },
   "users": {
@@ -185,15 +150,6 @@
       "searchUsers": "Rechercher un utilisateur...",
       "searchCustomers": "Rechercher une entreprise...",
       "refresh": "Actualiser",
-      "columns": {
-        "name": "Nom",
-        "email": "E-mail",
-        "role": "Rôle",
-        "status": "Statut",
-        "customer": "Entreprise",
-        "createdAt": "Créé le",
-        "actions": "Actions"
-      },
       "status": {
         "active": "Actif",
         "inactive": "Inactif",
@@ -201,18 +157,14 @@
       },
       "roles": {
         "admin": "Administrateur",
-        "user": "Utilisateur",
-        "customer": "Entreprise"
+        "user": "Utilisateur"
       },
       "tabs": {
         "users": "Utilisateurs",
         "customers": "Entreprises"
       },
       "actions": {
-        "edit": "Modifier",
-        "delete": "Supprimer",
-        "changePassword": "Changer le mot de passe",
-        "view": "Voir les détails"
+        "edit": "Modifier"
       },
       "modal": {
         "addUser": "Ajouter un utilisateur",
@@ -220,8 +172,6 @@
         "addCustomer": "Ajouter une entreprise",
         "editCustomer": "Modifier l'entreprise",
         "changePassword": "Changer le mot de passe",
-        "deleteUser": "Supprimer l'utilisateur",
-        "deleteCustomer": "Supprimer l'entreprise",
         "name": "Nom",
         "email": "E-mail",
         "password": "Mot de passe",
@@ -231,12 +181,9 @@
         "status": "Statut",
         "customer": "Entreprise",
         "selectCustomer": "Sélectionner une entreprise",
-        "selectRole": "Sélectionner un rôle",
-        "selectStatus": "Sélectionner un statut",
         "save": "Enregistrer",
         "cancel": "Annuler",
-        "confirm": "Confirmer",
-        "close": "Fermer"
+        "confirm": "Confirmer"
       },
       "messages": {
         "userCreated": "Utilisateur créé avec succès",
@@ -254,8 +201,6 @@
         "errorDeletingCustomer": "Erreur lors de la suppression de l'entreprise",
         "errorChangingPassword": "Erreur lors du changement de mot de passe",
         "cannotDeleteCustomerWithUsers": "Impossible de supprimer cette entreprise car des utilisateurs y sont associés",
-        "confirmDeleteUser": "Êtes-vous sûr de vouloir supprimer l'utilisateur \"{{name}}\" ?",
-        "confirmDeleteCustomer": "Êtes-vous sûr de vouloir supprimer l'entreprise \"{{name}}\" ?",
         "passwordMinLength": "Le mot de passe doit contenir au moins 8 caractères",
         "passwordMismatch": "Les mots de passe ne correspondent pas"
       },
@@ -269,12 +214,10 @@
   },
   "errors": {
     "required": "Ce champ est obligatoire",
-    "invalidEmail": "Veuillez entrer une adresse email valide",
     "passwordLength": "Le mot de passe doit contenir au moins 8 caractères",
     "passwordMismatch": "Les mots de passe ne correspondent pas",
     "unauthorized": "Email ou mot de passe invalide",
     "serverError": "Une erreur s'est produite. Veuillez réessayer plus tard.",
-    "networkError": "Une erreur réseau est survenue",
     "loadResume": "Erreur lors du chargement du CV",
     "resumeNotFound": "CV non trouvé",
     "resumeNotFoundDescription": "Le CV demandé n'existe pas ou a été supprimé.",
@@ -283,27 +226,16 @@
     "missionNotFoundDescription": "La mission demandée n'existe pas ou a été supprimée.",
     "loadAdaptation": "Erreur lors du chargement de l'adaptation",
     "adaptationNotFound": "Adaptation non trouvée",
-    "adaptationNotFoundDescription": "L'adaptation demandée n'existe pas ou a été supprimée."
+    "adaptationNotFoundDescription": "L'adaptation demandée n'existe pas ou a été supprimée.",
+    "exportFailed": "Échec de l'export",
+    "saveFailed": "Échec de l'enregistrement"
   },
   "home": {
     "hero": {
       "title1": "Votre CVthèque.",
       "title2": "Optimisée. Activée.",
       "description": "Standardisez, améliorez et déclinez vos CV par client ou mission. Des profils cohérents, prêts à envoyer, en quelques minutes.",
-      "startButton": "Importer un CV",
-      "viewResumesButton": "Voir mes CV",
-      "badges": {
-        "atsFriendly": "Traitement automatisé",
-        "fastAnalysis": "Analyse rapide",
-        "secure": "100% Sécurisé"
-      }
-    },
-    "nav": {
-      "hero": "Accueil",
-      "dashboard": "Tableau de bord",
-      "quickActions": "Actions rapides",
-      "howItWorks": "Comment ça marche",
-      "features": "Fonctionnalités clés"
+      "startButton": "Importer un CV"
     },
     "dashboard": {
       "title": "Tableau de bord",
@@ -312,8 +244,6 @@
         "analyzed": "CV analysés",
         "averageScore": "Score moyen",
         "activeMissions": "Missions actives",
-        "thisMonth": "+{{count}} ce mois",
-        "totalMissions": "{{count}} missions au total",
         "afterImprovement": "après amélioration"
       },
       "recentActivity": "Activité récente",
@@ -357,7 +287,6 @@
     },
     "features": {
       "title": "Fonctionnalités clés",
-      "subtitle": "Tout ce dont vous avez besoin pour créer un CV parfait",
       "ai": {
         "title": "Analyse & Suggestions IA",
         "description": "Notre IA analyse chaque profil, identifie les points d'amélioration et propose des suggestions ciblées."
@@ -382,10 +311,6 @@
         "title": "Modèles professionnels",
         "description": "Choisissez parmi une variété de modèles de CV conçus professionnellement."
       }
-    },
-    "preview": {
-      "title": "Résultats élégants",
-      "description": "Créez des CV professionnels et compatibles ATS qui se démarquent"
     }
   },
   "resumes": {
@@ -394,25 +319,18 @@
     "uploadButton": "Télécharger un nouveau CV",
     "searchPlaceholder": "Rechercher des CV...",
     "filterButton": "Filtrer",
-    "loading": "Chargement des CV...",
     "noResults": "Aucun CV trouvé",
     "results": "résultats",
     "noResultsFiltered": "Essayez de modifier vos filtres de recherche",
     "uploadFirst": "Téléchargez votre premier CV pour commencer",
-    "uploadedOn": "Téléchargé le {{date}}",
-    "score": "Note : {{score}}%",
     "score_label": "Score",
-    "score_detailed": "Score : {{originalScore}}% → {{improvedScore}}%",
-    "keyImprovements": "Améliorations clés",
     "deleteResume": "Supprimer le CV",
     "downloadResume": "Télécharger le CV",
     "confirmDeleteTitle": "Confirmer la suppression",
-    "confirmDeleteMessage": "Êtes-vous sûr de vouloir supprimer \"{{filename}}\" ? Cette action ne peut pas être annulée.",
     "view": "Voir",
     "refresh": "Actualiser",
     "untitled": "CV sans titre",
     "activeFilters": "Filtres actifs",
-    "clearFilters": "Effacer les filtres",
     "more": "de plus",
     "showLess": "Voir moins",
     "stats": {
@@ -421,35 +339,13 @@
       "processing": "En cours",
       "avgScore": "Score moyen"
     },
-    "filters": {
-      "skills": "Compétences",
-      "industries": "Industries",
-      "tools": "Outils",
-      "softskills": "Compétences relationnelles"
-    },
-    "status": {
-      "new": "Nouveau",
-      "pending": "En attente",
-      "processing": "En cours",
-      "analyzed": "Analysé",
-      "improved": "Amélioré",
-      "error": "Erreur",
-      "failed": "Échec",
-      "active": "Actif",
-      "inactive": "Inactif",
-      "archived": "Archivé"
+    "deleteConfirm": {
+      "title": "Confirmer la suppression"
     }
   },
   "upload": {
     "title": "Analyseur de CV",
-    "subtitle": "Téléchargez votre CV pour une analyse instantanée par IA",
-    "dragDrop": "Glissez et déposez votre CV ici",
-    "or": "ou",
-    "browse": "parcourir les fichiers",
-    "formats": "Formats supportés : PDF, DOC, DOCX",
-    "analyzing": "Analyse de votre CV...",
-    "success": "CV téléchargé avec succès !",
-    "error": "Erreur lors du téléchargement du CV. Veuillez réessayer."
+    "subtitle": "Téléchargez votre CV pour une analyse instantanée par IA"
   },
   "templates": {
     "title": "Modèles de CV",
@@ -466,54 +362,29 @@
       "active": "Modèles actifs"
     },
     "sort": {
-      "label": "Trier par",
       "popular": "Plus populaires",
-      "name": "Nom",
-      "recent": "Plus récents"
+      "name": "Nom"
     },
     "card": {
       "popular": "Populaire",
-      "editTemplate": "Modifier le modèle",
       "preview": "Aperçu",
-      "useTemplate": "Utiliser ce modèle",
-      "description": "Description du modèle",
       "noDescription": "Aucune description"
     },
     "status": {
-      "loading": "Chargement des modèles...",
       "error": "Échec du chargement des modèles",
       "empty": "Aucun modèle disponible",
-      "success": "Modèle créé avec succès",
       "deleteSuccess": "Modèle supprimé avec succès",
-      "updateSuccess": "Modèle mis à jour avec succès",
       "deleting": "Suppression en cours...",
       "deleteError": "Échec de la suppression du modèle"
     },
-    "filters": {
-      "title": "Filtrer les modèles",
-      "all": "Tous les modèles",
-      "category": "Catégorie",
-      "style": "Style",
-      "industry": "Secteur"
-    },
     "actions": {
-      "create": "Créer un modèle",
       "edit": "Modifier le modèle",
-      "delete": "Supprimer le modèle",
-      "preview": "Aperçu",
-      "use": "Utiliser ce modèle",
-      "save": "Enregistrer le modèle",
-      "cancel": "Annuler"
+      "delete": "Supprimer le modèle"
     },
     "delete": {
-      "title": "Supprimer le modèle",
-      "message": "Êtes-vous sûr de vouloir supprimer le modèle \"{{templateName}}\" ? Cette action est irréversible."
+      "title": "Supprimer le modèle"
     },
     "editor": {
-      "title": {
-        "new": "Créer un nouveau modèle",
-        "edit": "Modifier le modèle"
-      },
       "name": {
         "label": "Nom du modèle",
         "placeholder": "Entrez le nom du modèle"
@@ -554,60 +425,24 @@
         "update": "Modèle mis à jour avec succès"
       },
       "error": {
-        "create": "Échec de la création du modèle",
-        "update": "Échec de la mise à jour du modèle",
         "load": "Échec du chargement du modèle"
-      },
-      "status": {
-        "loading": "Chargement des modèles...",
-        "error": "Échec du chargement des modèles",
-        "empty": "Aucun modèle disponible",
-        "success": "Modèle créé avec succès",
-        "deleting": "Suppression du modèle...",
-        "deleteSuccess": "Modèle supprimé avec succès.",
-        "deleteError": "Erreur lors de la suppression du modèle."
       }
-    }
+    },
+    "selectTemplate": "Sélectionner un modèle"
   },
   "processing": {
     "steps": {
       "upload": {
         "title": "Téléchargement du CV",
-        "description": "Traitement de votre fichier...",
-        "steps": [
-          "Lecture du contenu du fichier",
-          "Validation du format",
-          "Vérification de l'intégrité",
-          "Préparation pour l'extraction"
-        ]
+        "description": "Traitement de votre fichier..."
       },
       "extract": {
         "title": "Extraction du Contenu",
-        "description": "Lecture du contenu du CV...",
-        "steps": [
-          "Analyse de la structure du document",
-          "Extraction du texte brut",
-          "Détection des sections principales",
-          "Traitement de la mise en forme",
-          "Nettoyage des données extraites"
-        ]
+        "description": "Lecture du contenu du CV..."
       },
       "analyze": {
         "title": "Analyse IA",
-        "description": "Analyse avec l'IA avancée...",
-        "steps": [
-          "Initialisation du modèle IA",
-          "Identification du profil candidat",
-          "Analyse du résumé exécutif",
-          "Évaluation des compétences techniques",
-          "Analyse de l'expérience professionnelle",
-          "Évaluation du parcours académique",
-          "Détection des mots-clés ATS",
-          "Analyse des langues et centres d'intérêt",
-          "Calcul du score global",
-          "Génération des suggestions d'amélioration",
-          "Finalisation de l'analyse"
-        ]
+        "description": "Analyse avec l'IA avancée..."
       }
     }
   },
@@ -645,7 +480,7 @@
   "fileUpload": {
     "dragAndDropYourResumeHere": "Glissez et déposez votre CV ici",
     "dropYourResumeHere": "Déposez votre CV ici",
-    "or" : "ou cliquez pour choisir un fichier",
+    "or": "ou cliquez pour choisir un fichier",
     "supportedFormats": "Formats supportés : PDF, DOC, DOCX (<2 Mo)"
   },
   "metrics": {
@@ -654,7 +489,6 @@
     "lastUpdate": "Dernière mise à jour",
     "autoRefresh": "Auto-refresh (30s)",
     "refresh": "Actualiser",
-    "loading": "Chargement des métriques...",
     "error": "Impossible de charger les métriques",
     "retry": "Réessayer",
     "accessDenied": "Accès refusé. Vous devez être administrateur pour voir les métriques.",
@@ -664,11 +498,9 @@
     "totalRequests": "Requêtes API totales",
     "last24h": "Dernières 24h",
     "avgResponseTime": "Temps de réponse moyen",
-    "minMax": "Min: {{min}}ms / Max: {{max}}ms",
     "errorRate": "Taux d'erreur serveur",
     "totalErrors": "Total erreurs",
     "serverMemory": "Mémoire du serveur",
-    "heapUsed": "Heap utilisé sur {{total}}",
     "rss": "RSS (mémoire totale)",
     "external": "Externe (C++ bindings)",
     "cachePerformance": "Performance du cache",
@@ -683,7 +515,6 @@
     "llmCalls": "Appels API (OpenAI + Anthropic)",
     "tokensConsumed": "Tokens consommés",
     "estimatedCost": "Coût estimé (USD)",
-    "byProvider": "Par fournisseur",
     "topEndpoints": "Routes API les plus utilisées",
     "activeEndpoints": "Endpoints actifs",
     "route": "Route",
@@ -701,37 +532,13 @@
     "totalLogs": "Total Logs",
     "lastHour": "Dernière Heure",
     "last24h": "Dernières 24h",
-    "warnings": "Avertissements",
     "errors": "Erreurs",
     "filters": {
       "level": "Niveau",
       "event": "Événement",
       "source": "Source",
-      "limit": "Limite",
       "all": "Tous",
-      "allSources": "Toutes",
-      "allLevels": "Tous les niveaux",
-      "allEvents": "Tous les événements"
-    },
-    "levels": {
-      "errors": "Erreurs (tous)",
-      "security": "Sécurité",
-      "error": "Erreur",
-      "warning": "Avertissement",
-      "info": "Info",
-      "debug": "Debug"
-    },
-    "events": {
-      "authSuccess": "Connexion Réussie",
-      "authFailure": "Échec Connexion",
-      "authBlocked": "Compte Bloqué",
-      "fileUpload": "Upload Fichier",
-      "fileUploadRejected": "Upload Rejeté",
-      "llmRequest": "Requête LLM"
-    },
-    "sources": {
-      "security": "Sécurité",
-      "proxy": "Proxy"
+      "allSources": "Toutes"
     },
     "table": {
       "timestamp": "Date/Heure",
@@ -750,7 +557,8 @@
       "security": "🔒 Sécurité",
       "proxy": "🌐 Proxy"
     },
-    "noLogs": "Aucun log de sécurité trouvé"
+    "noLogs": "Aucun log de sécurité trouvé",
+    "logs": "logs de sécurité"
   },
   "settings": {
     "title": "Paramètres de l'Application",
@@ -810,7 +618,6 @@
       "title": "Poids des Catégories d'Analyse",
       "description": "Définissez l'importance de chaque catégorie dans le score global. La somme doit être égale à 100%.",
       "total": "Total des poids",
-      "totalError": "La somme des poids doit être égale à 100%",
       "mustEqual100": "La somme des poids doit être égale à 100%",
       "executiveSummary": "Résumé Exécutif",
       "skills": "Compétences (Skills)",
@@ -837,27 +644,17 @@
   "tags": {
     "title": "Gestion des Tags",
     "subtitle": "Visualisez et gérez les tags extraits de la CVthèque",
-    "loading": "Chargement des tags...",
     "loadError": "Échec du chargement des tags",
-    "renameSuccess": "Tag renommé de {{oldName}} à {{newName}}",
     "renameError": "Échec du renommage du tag",
-    "edit": "Modifier",
     "editTag": "Modifier le tag",
     "editingIn": "Modification dans la catégorie",
     "tagName": "Nom du tag",
-    "newName": "Nouveau nom",
     "cancel": "Annuler",
     "save": "Enregistrer",
     "refresh": "Actualiser",
     "searchPlaceholder": "Rechercher un tag...",
     "tagsCount": "tags",
     "noTags": "Aucun tag dans cette catégorie",
-    "categories": {
-      "Skills": "Compétences",
-      "Industries": "Secteurs",
-      "Tools": "Outils",
-      "Soft Skills": "Compétences Comportementales"
-    },
     "stats": {
       "totalTags": "Total des tags"
     }
@@ -865,7 +662,6 @@
   "missions": {
     "title": "Offres de Mission",
     "subtitle": "Gérez vos offres de mission pour l'adaptation des CV",
-    "loading": "Chargement des missions...",
     "noMissions": "Aucune mission trouvée",
     "noResults": "Aucune mission ne correspond à votre recherche",
     "createFirst": "Créez votre première mission pour commencer",
@@ -873,8 +669,6 @@
     "searchPlaceholder": "Rechercher une mission...",
     "addMission": "Ajouter une mission",
     "editMission": "Modifier la mission",
-    "deleteMission": "Supprimer la mission",
-    "deleteConfirm": "Êtes-vous sûr de vouloir supprimer cette mission ?",
     "missionTitle": "Titre",
     "missionContent": "Description",
     "missionStatus": "Statut",
@@ -882,8 +676,6 @@
     "editorHelp": "Utilisez l'éditeur pour formater votre texte",
     "create": "Créer",
     "update": "Mettre à jour",
-    "createdAt": "Créée le",
-    "actions": "Actions",
     "view": "Voir",
     "refresh": "Actualiser",
     "status": {
@@ -905,17 +697,12 @@
     "title": "Adaptations de CV",
     "results": "adaptations de CV",
     "subtitle": "Historique des CVs adaptés aux missions",
-    "loading": "Chargement des adaptations...",
     "noAdaptations": "Aucune adaptation trouvée",
     "noAdaptationsFiltered": "Essayez de modifier vos filtres de recherche",
     "noAdaptationsPrompt": "Commencez par adapter un CV à une mission",
-    "matchScore": "Score de correspondance",
-    "adaptedOn": "Adapté le",
     "viewAdaptation": "Voir l'adaptation",
     "delete": "Supprimer",
-    "exportAdaptation": "Exporter",
     "exportPDF": "Exporter PDF",
-    "resume": "CV",
     "mission": "Mission",
     "searchPlaceholder": "Rechercher par CV ou mission...",
     "filterStatus": "Tous les statuts",
@@ -929,13 +716,8 @@
     },
     "status": {
       "completed": "Terminé",
-      "final": "Finalisé",
       "processing": "En cours",
-      "draft": "Brouillon",
-      "sent": "Envoyé",
-      "archived": "Archivé",
-      "failed": "Échoué",
-      "unknown": "Inconnu"
+      "failed": "Échoué"
     },
     "adaptationDetails": "Détails de l'adaptation",
     "tabs": {
@@ -954,13 +736,10 @@
         "adapted": "CV Adapté"
       },
       "mission": {
-        "title": "Mission",
         "client": "Entreprise",
         "location": "Localisation",
         "description": "Description",
-        "noDescription": "Aucune description disponible pour cette mission",
-        "notFound": "Mission non trouvée",
-        "noTitle": "Mission sans titre"
+        "noDescription": "Aucune description disponible pour cette mission"
       },
       "save": "Enregistrer",
       "saving": "Enregistrement..."
@@ -968,10 +747,7 @@
     "messages": {
       "saveSuccess": "CV adapté enregistré avec succès",
       "saveError": "Erreur lors de l'enregistrement du CV adapté",
-      "deleteSuccess": "Adaptation supprimée avec succès",
-      "deleteError": "Erreur lors de la suppression",
-      "exportSuccess": "Export réussi",
-      "exportError": "Erreur lors de l'export"
+      "deleteError": "Erreur lors de la suppression"
     },
     "card": {
       "noName": "CV sans nom",
@@ -979,19 +755,13 @@
     },
     "exportModal": {
       "description": "Le CV adapté sera exporté avec le template sélectionné"
-    }
-  },
-  "dashboard": {
-    "title": "Tableau de bord",
-    "welcome": "Bienvenue",
-    "stats": {
-      "totalResumes": "Total des CV",
-      "analyzedToday": "Analysés aujourd'hui",
-      "avgScore": "Score moyen",
-      "improvements": "Améliorations"
     },
-    "recentActivity": "Activité récente",
-    "quickActions": "Actions rapides"
+    "actions": {
+      "delete": "Supprimer",
+      "export": "Exporter",
+      "view": "Voir"
+    },
+    "exportSuccess": "Export réussi"
   },
   "chatbot": {
     "title": "Assistant IA",
@@ -1009,163 +779,24 @@
   },
   "userGuide": {
     "title": "Guide Utilisateur",
-    "subtitle": "Documentation complète pour utiliser ResumeConverter",
-    "sections": {
-      "introduction": "Introduction",
-      "resumes": "Gestion des CV",
-      "missions": "Missions",
-      "adaptations": "Adaptations",
-      "admin": "Administration",
-      "interface": "Interface",
-      "tips": "Conseils"
-    },
-    "introduction": {
-      "title": "Bienvenue dans ResumeConverter",
-      "description": "ResumeConverter est une plateforme intelligente de gestion et d'optimisation de CV, propulsée par l'intelligence artificielle. L'application a été conçue afin de répondre aux besoins spécifiques des ESN.",
-      "features": "Fonctionnalités principales",
-      "feature1": "Gérer une cvthèque de façon simple et efficace",
-      "feature2": "Améliorer les CV afin d'optimiser leur valorisation",
-      "feature3": "Adapter les CV pour des missions ou postes spécifiques",
-      "feature4": "Suivre les performances avec des scores détaillés",
-      "feature5": "Bénéficier d'un assistant IA pour vous guider"
-    },
-    "resumes": {
-      "title": "Gestion des CV",
-      "import": {
-        "title": "Importer un CV",
-        "step1": "Cliquez sur \"Mes CV\" dans le menu latéral",
-        "step2": "Cliquez sur le bouton \"Importer un nouveau CV\"",
-        "step3": "Sélectionnez votre fichier CV (PDF, DOCX, DOC)",
-        "step4": "Le CV sera automatiquement analysé par l'IA"
-      },
-      "view": {
-        "title": "Consulter un CV",
-        "overview": "Aperçu",
-        "overviewDesc": "Résumé avec les scores globaux",
-        "skills": "Compétences & Tags",
-        "skillsDesc": "Compétences détectées automatiquement",
-        "original": "Original",
-        "originalDesc": "Version originale du CV",
-        "improved": "Amélioré",
-        "improvedDesc": "Version améliorée par l'IA"
-      },
-      "scores": {
-        "title": "Critères d'évaluation",
-        "executive": "Résumé Exécutif",
-        "executiveDesc": "Qualité de l'accroche et du résumé",
-        "skills": "Compétences",
-        "skillsDesc": "Pertinence et présentation des compétences",
-        "experience": "Expérience",
-        "experienceDesc": "Clarté et impact des expériences",
-        "education": "Formation",
-        "educationDesc": "Présentation du parcours académique",
-        "ats": "ATS",
-        "atsDesc": "Compatibilité avec les systèmes de suivi",
-        "hobbies": "Loisirs & Langues",
-        "hobbiesDesc": "Informations complémentaires"
-      }
-    },
-    "missions": {
-      "title": "Gestion des Missions",
-      "create": {
-        "title": "Créer une mission",
-        "step1": "Cliquez sur \"Missions\" dans le menu",
-        "step2": "Cliquez sur \"Nouvelle mission\"",
-        "step3": "Remplissez le titre, l'entreprise, la description et les compétences requises"
-      },
-      "tip": {
-        "title": "Conseil",
-        "content": "Plus la description de mission est détaillée, meilleure sera l'analyse d'adéquation avec les CV."
-      }
-    },
-    "adaptations": {
-      "title": "Adaptations de CV",
-      "description": "L'adaptation permet de personnaliser un CV pour une mission spécifique, en mettant en avant les compétences et expériences les plus pertinentes.",
-      "create": {
-        "title": "Créer une adaptation",
-        "step1": "Depuis la page \"Mes CV\", sélectionnez un CV",
-        "step2": "Cliquez sur \"Adapter à une mission\"",
-        "step3": "Sélectionnez la mission cible",
-        "step4": "L'IA analysera l'adéquation et proposera des améliorations"
-      },
-      "view": {
-        "title": "Consulter une adaptation",
-        "score": "Score d'adéquation avec la mission",
-        "analysis": "Analyse détaillée des points forts et axes d'amélioration",
-        "adapted": "CV adapté et optimisé pour la mission"
-      }
-    },
-    "admin": {
-      "title": "Fonctionnalités Administrateur",
-      "notice": "Ces fonctionnalités sont réservées aux utilisateurs avec le rôle \"Admin\".",
-      "templates": {
-        "title": "Modèles de CV",
-        "description": "Créez et gérez les modèles qui définissent la structure des CV améliorés."
-      },
-      "users": {
-        "title": "Gestion des Utilisateurs",
-        "description": "Créez des comptes, modifiez les rôles et gérez les accès."
-      },
-      "security": {
-        "title": "Logs de Sécurité",
-        "description": "Surveillez les connexions, tentatives d'accès et actions administratives."
-      },
-      "metrics": {
-        "title": "Métriques",
-        "description": "Analysez les performances, l'utilisation des modèles LLM et les statistiques."
-      }
-    },
-    "interface": {
-      "title": "Interface Utilisateur",
-      "theme": {
-        "title": "Thèmes",
-        "light": "Mode clair",
-        "dark": "Mode sombre",
-        "description": "Cliquez sur l'icône soleil/lune dans la barre supérieure pour changer de thème."
-      },
-      "language": {
-        "title": "Langues",
-        "description": "Utilisez le sélecteur de langue dans la barre supérieure pour changer entre Français et English."
-      }
-    },
-    "tips": {
-      "title": "Conseils d'Utilisation",
-      "analysis": {
-        "title": "Pour de meilleurs résultats d'analyse",
-        "tip1": "Utilisez un format de CV clair et structuré",
-        "tip2": "Incluez des informations complètes sur vos expériences",
-        "tip3": "Utilisez des termes pertinents pour votre secteur"
-      },
-      "adaptation": {
-        "title": "Pour les adaptations",
-        "tip1": "Fournissez une description de mission détaillée",
-        "tip2": "Listez toutes les compétences recherchées",
-        "tip3": "Incluez des informations sur l'entreprise et le secteur"
-      },
-      "support": {
-        "title": "Besoin d'aide ?",
-        "content": "Consultez la section \"À propos\" pour voir le changelog et les informations de version."
-      }
-    }
+    "subtitle": "Documentation complète pour utiliser ResumeConverter"
   },
   "marketRadar": {
     "title": "Radar du Marché IS/IT",
     "subtitle": "Collecte et analyse des offres d'emploi IT en France",
+    "dataTypes": {
+      "offres": "Offres d'emploi",
+      "tension": "Tensions recrutement",
+      "dynamique_emploi": "Dynamique emploi",
+      "embauche": "Embauches",
+      "demandeur": "Demandeurs d'emploi",
+      "demandeur_entrant": "Nouveaux demandeurs"
+    },
     "tabs": {
       "map": "Carte France",
       "trends": "Tendances Marché",
       "facts": "Offres",
       "metiers": "Métiers & Compétences"
-    },
-    "dataTypes": {
-      "all": "Tous les types",
-      "offres": "Offres d'emploi",
-      "tension": "Tensions recrutement",
-      "salaire": "Salaires",
-      "dynamique_emploi": "Dynamique emploi",
-      "embauche": "Embauches",
-      "demandeur": "Demandeurs d'emploi",
-      "demandeur_entrant": "Nouveaux demandeurs"
     },
     "map": {
       "title": "Données par région",
@@ -1182,100 +813,57 @@
       "total": "Total",
       "average": "Moyenne",
       "metierBreakdown": "Répartition par métier",
-      "viewAllMetiers": "Voir tous les métiers",
-      "activeFilter": "Filtre actif sur la carte",
       "searchMetier": "Rechercher un métier...",
       "legend": "Légende",
       "low": "Faible",
       "medium": "Moyen",
       "high": "Élevé",
       "clickToFilter": "Cliquez sur une bulle pour filtrer par type",
-      "bubbleSizeInfo": "Taille des bulles proportionnelle à la valeur"
+      "bubbleSizeInfo": "Taille des bulles proportionnelle à la valeur",
+      "refresh": "Actualiser"
     },
     "trends": {
       "title": "Tendances du Marché",
-      "subtitle": "Données issues de l'API Marché du Travail de France Travail",
       "loading": "Chargement des tendances...",
       "noData": "Aucune donnée disponible",
       "results": "tendances",
       "filters": {
-        "type": "Type",
         "allTypes": "Tous les types",
-        "rome": "Code ROME",
-        "allRome": "Tous les codes ROME",
-        "region": "Région",
         "allRegions": "Toutes les régions"
       },
-      "stats": {
-        "totalTrends": "Total tendances",
-        "avgValue": "Valeur moyenne",
-        "regions": "Régions",
-        "metiers": "Métiers"
-      },
-      "card": {
-        "region": "Région",
-        "value": "Valeur",
-        "date": "Date",
-        "metadata": "Métadonnées"
-      },
       "collection": {
-        "title": "Collecte en cours",
-        "description": "Récupération des données du marché du travail depuis l'API France Travail...",
-        "warning": "Cette opération peut prendre jusqu'à 1 heure. Vous pouvez fermer cette page.",
         "button": "Collecter les tendances",
-        "started": "Collecte lancée en arrière-plan. Durée estimée : 30-60 minutes.",
-        "success": "Collecte terminée en",
-        "seconds": "s",
-        "created": "créées",
-        "updated": "mises à jour",
-        "total": "Total",
-        "error": "Erreur de collecte"
-      }
+        "started": "Collecte lancée en arrière-plan. Durée estimée : 30-60 minutes."
+      },
+      "refresh": "Actualiser"
     },
     "facts": {
-      "title": "Offres d'emploi",
-      "subtitle": "Données collectées sur les offres d'emploi IT",
-      "loading": "Chargement des offres...",
-      "noData": "Aucune offre trouvée",
       "results": "faits",
       "filters": {
         "source": "Source",
         "allSources": "Toutes les sources",
-        "metier": "Métier",
         "allMetiers": "Tous les métiers",
         "region": "Région",
-        "allRegions": "Toutes les régions",
-        "keyword": "Métier",
-        "keywordPlaceholder": "Rechercher par métier...",
-        "searchMetier": "Recherche métier",
-        "searchPlaceholder": "Rechercher par libellé..."
+        "keyword": "Métier"
       },
       "stats": {
-        "totalFacts": "Faits total",
         "totalJobs": "Total offres",
-        "sources": "Sources",
         "regions": "Régions",
         "keywords": "Mots-clés"
       },
       "table": {
         "date": "Date",
         "source": "Source",
-        "codeRome": "Code ROME",
         "metier": "Métier",
         "region": "Région",
-        "offers": "Offres",
-        "category": "Catégorie",
-        "city": "Ville",
-        "avgSalary": "Salaire moyen"
+        "offers": "Offres"
       },
       "collection": {
         "title": "Collecte de données",
         "overlayTitle": "Collecte en cours",
         "overlayDescription": "Récupération des données du marché IS/IT depuis les APIs.",
         "overlayWarning": "Cette opération peut prendre plusieurs minutes. Ne fermez pas cette page.",
-        "lastCollection": "Dernière collecte",
         "startCollection": "Lancer la collecte",
-        "collecting": "Collecte en cours...",
         "success": "Collecte terminée",
         "factsCollected": "Facts collectés",
         "stored": "Stockés",
@@ -1284,14 +872,10 @@
         "noData": "Aucun fact collecté",
         "noDataDescription": "Lancez une collecte pour récupérer les données du marché IS/IT.",
         "error": "Erreur lors de la collecte",
-        "collectFranceTravail": "Collecter France Travail",
-        "collectAdzuna": "Collecter Adzuna"
+        "collectFranceTravail": "Collecter France Travail"
       },
       "sections": {
-        "allFacts": "Toutes les offres",
-        "offersByMetierRegion": "Offres par métier et région (France Travail)",
-        "offersByKeyword": "Offres par mot-clé (National)",
-        "offersByCity": "Offres par ville (Adzuna)"
+        "allFacts": "Toutes les offres"
       }
     },
     "metiers": {
@@ -1309,10 +893,7 @@
         "lastUpdate": "Dernière MAJ"
       },
       "card": {
-        "codeRome": "Code ROME",
         "competences": "compétences",
-        "noCompetences": "Aucune compétence associée",
-        "viewDetails": "Voir les détails",
         "enjeuxDomaines": "Enjeux / Domaines",
         "competencesDetaillees": "Compétences Détaillées",
         "macroSavoirFaire": "Macro Savoir-Faire",
@@ -1328,23 +909,12 @@
         "processed": "métiers traités",
         "created": "créés",
         "updated": "mis à jour",
-        "errors": "erreurs",
-        "error": "Erreur de collecte"
-      }
-    },
-    "pagination": {
-      "page": "Page",
-      "of": "sur",
-      "previous": "Précédent",
-      "next": "Suivant",
-      "showing": "Affichage de",
-      "to": "à",
-      "results": "résultats"
+        "errors": "erreurs"
+      },
+      "refresh": "Actualiser"
     },
     "errors": {
-      "loadFailed": "Échec du chargement des données",
-      "noConnection": "Impossible de se connecter au serveur",
-      "retry": "Réessayer"
+      "loadFailed": "Échec du chargement des données"
     }
   },
   "profileMatching": {
@@ -1412,5 +982,10 @@
       "interviewQuestions": "Questions d'entretien suggérées",
       "riskLevel": "Niveau de risque"
     }
+  },
+  "export": {
+    "loadingTemplates": "Chargement des modèles...",
+    "noTemplates": "Aucun modèle disponible",
+    "selectTemplate": "Sélectionner un modèle"
   }
 }

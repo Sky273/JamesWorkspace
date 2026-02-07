@@ -16,23 +16,22 @@
     "cancel": "Cancel",
     "loading": "Loading...",
     "error": "Error",
-    "success": "Success",
     "delete": "Delete",
     "edit": "Edit",
-    "view": "View",
     "close": "Close",
     "back": "Back",
     "next": "Next",
-    "submit": "Submit",
     "export": "Export",
-    "appName": "Resume Converter",
     "pleaseWait": "Please wait...",
     "showing": "Showing",
     "of": "of",
     "first": "First",
     "previous": "Previous",
     "last": "Last",
-    "resetFilters": "Reset"
+    "resetFilters": "Reset",
+    "deleting": "Deleting...",
+    "saved": "Saved",
+    "saving": "Saving..."
   },
   "header": {
     "theme": {
@@ -43,9 +42,6 @@
       "en": "English",
       "fr": "French"
     }
-  },
-  "footer": {
-    "rights": "All rights reserved"
   },
   "auth": {
     "signIn": {
@@ -77,7 +73,6 @@
     "title": "About ResumeConverter",
     "description": "ResumeConverter is a solution developed by Aptea in order to support its needs for resume analysis and improvement, and export to various templates.",
     "changelog": "Changelog",
-    "loadingChangelog": "Loading changelog...",
     "errorLoadingChangelog": "Could not load changelog.",
     "allRightsReserved": "All rights reserved"
   },
@@ -86,20 +81,7 @@
       "title1": "Your Resume Library.",
       "title2": "Optimized. Activated.",
       "description": "Standardize, improve and tailor your resumes by client or mission. Consistent profiles, ready to send, in just minutes.",
-      "startButton": "Import a Resume",
-      "viewResumesButton": "View My Resumes",
-      "badges": {
-        "atsFriendly": "ATS Friendly",
-        "fastAnalysis": "Fast Analysis",
-        "secure": "100% Secure"
-      }
-    },
-    "nav": {
-      "hero": "Home",
-      "dashboard": "Dashboard",
-      "quickActions": "Quick Actions",
-      "howItWorks": "How It Works",
-      "features": "Key Features"
+      "startButton": "Import a Resume"
     },
     "dashboard": {
       "title": "Dashboard",
@@ -108,8 +90,6 @@
         "analyzed": "Analyzed Resumes",
         "averageScore": "Average Score",
         "activeMissions": "Active Missions",
-        "thisMonth": "+{{count}} this month",
-        "totalMissions": "{{count}} total missions",
         "afterImprovement": "after improvement"
       },
       "recentActivity": "Recent Activity",
@@ -153,7 +133,6 @@
     },
     "features": {
       "title": "Key Features",
-      "subtitle": "Everything you need to create a perfect resume",
       "ai": {
         "title": "AI Analysis & Suggestions",
         "description": "Our AI analyzes each profile, identifies areas for improvement, and provides targeted suggestions."
@@ -178,10 +157,6 @@
         "title": "Professional Templates",
         "description": "Choose from a variety of professionally designed resume templates."
       }
-    },
-    "preview": {
-      "title": "Beautiful Results",
-      "description": "Create professional, ATS-friendly resumes that stand out"
     }
   },
   "resumes": {
@@ -190,25 +165,18 @@
     "uploadButton": "Upload New Resume",
     "searchPlaceholder": "Search resumes...",
     "filterButton": "Filter",
-    "loading": "Loading resumes...",
     "noResults": "No resumes found",
     "results": "results",
     "noResultsFiltered": "Try modifying your search filters",
     "uploadFirst": "Upload your first resume to get started",
-    "uploadedOn": "Uploaded on {{date}}",
-    "score": "Score: {{score}}%",
     "score_label": "Score",
-    "score_detailed": "Score: {{originalScore}}% → {{improvedScore}}%",
-    "keyImprovements": "Key Improvements",
     "deleteResume": "Delete resume",
     "downloadResume": "Download resume",
     "confirmDeleteTitle": "Confirm Deletion",
-    "confirmDeleteMessage": "Are you sure you want to delete \"{{filename}}\"? This action cannot be undone.",
     "view": "View",
     "refresh": "Refresh",
     "untitled": "Untitled Resume",
     "activeFilters": "Active filters",
-    "clearFilters": "Clear filters",
     "more": "more",
     "showLess": "Show less",
     "stats": {
@@ -217,54 +185,23 @@
       "processing": "Processing",
       "avgScore": "Average Score"
     },
-    "filters": {
-      "skills": "Skills",
-      "industries": "Industries",
-      "tools": "Tools",
-      "softskills": "Soft Skills"
-    },
-    "status": {
-      "new": "New",
-      "pending": "Pending",
-      "processing": "Processing",
-      "analyzed": "Analyzed",
-      "improved": "Improved",
-      "error": "Error",
-      "failed": "Failed",
-      "active": "Active",
-      "inactive": "Inactive",
-      "archived": "Archived"
+    "deleteConfirm": {
+      "title": "[FR] Title"
     }
   },
   "upload": {
     "title": "Resume Analyzer",
-    "subtitle": "Upload your resume for instant AI-powered analysis",
-    "dragDrop": "Drag and drop your resume here",
-    "or": "or",
-    "browse": "browse files",
-    "formats": "Supported formats: PDF, DOC, DOCX",
-    "analyzing": "Analyzing your resume...",
-    "success": "Resume uploaded successfully!",
-    "error": "Error uploading resume. Please try again."
+    "subtitle": "Upload your resume for instant AI-powered analysis"
   },
   "resume": {
     "analysis": {
-      "title": "Resume Analyzer",
-      "contentQuality": "Content quality",
-      "impactResults": "Impact and results",
-      "clarityStructure": "Clarity and structure",
-      "skillsKeywords": "Skills and keywords",
       "original": "Original",
       "improved": "Improved",
       "suggestions": "Suggestions",
       "suggestionsFromOriginal": "These suggestions were made based on the original CV, before its automatic improvement by AI.",
-      "overview": "Overview",
-      "details": "Details",
-      "export": "Export",
       "globalRating": "Global Rating",
       "originalScore": "Original Score",
       "improvedScore": "Improved Score",
-      "improvement": "Improvement",
       "sectionScores": "Section Scores",
       "criticalImprovements": "Critical Improvements Needed",
       "recommendedImprovements": "Recommended Improvements",
@@ -280,7 +217,6 @@
       "professionalTitlePlaceholder": "Enter professional title",
       "originalResume": "Original Resume",
       "improvedResume": "Improved Resume",
-      "score": "Score : ",
       "tabs": {
         "overview": "Overview",
         "skillsTags": "Skills & Tags",
@@ -291,12 +227,6 @@
         "initialAnalysis": "Initial Analysis",
         "postImprovementAnalysis": "Post-Improvement Analysis"
       },
-      "categories": {
-        "technicalskills": "Technical Skills",
-        "tools": "Tools",
-        "industries": "Industries",
-        "softskills": "Soft Skills"
-      },
       "sections": {
         "executiveBrief": "Executive Brief",
         "skillsKeywords": "Skills & Keywords",
@@ -305,9 +235,6 @@
         "atsOptimization": "ATS Optimization",
         "hobbiesLanguages": "Hobbies & Languages"
       },
-      "noSkills": "No {{category}} found",
-      "exportInstructions": "Select a template and click Export to download your improved resume as PDF",
-      "selectTemplateFirst": "Please select a template first",
       "exportOptions": {
         "title": "Export Options",
         "template": "Template",
@@ -315,7 +242,6 @@
         "loadingTemplates": "Loading templates...",
         "noTemplates": "No templates available",
         "preview": "Preview",
-        "noPreview": "No preview available for this template",
         "exportPDF": "Export as PDF",
         "exporting": "Exporting..."
       }
@@ -323,19 +249,9 @@
     "actions": {
       "improveWithAI": "Improve with AI",
       "improving": "Improving...",
-      "exportAsPDF": "Export as PDF",
       "exporting": "Exporting...",
       "saveChanges": "Save Changes",
-      "saving": "Saving...",
-      "uploadNew": "Upload New Resume",
-      "analyze": "Analyze Resume"
-    },
-    "list": {
-      "title": "My Resumes",
-      "noResumes": "No resumes found",
-      "uploadPrompt": "Upload your first resume",
-      "lastModified": "Last modified",
-      "status": "Status"
+      "saving": "Saving..."
     }
   },
   "users": {
@@ -351,15 +267,6 @@
       "searchUsers": "Search users...",
       "searchCustomers": "Search companies...",
       "refresh": "Refresh",
-      "columns": {
-        "name": "Name",
-        "email": "Email",
-        "role": "Role",
-        "status": "Status",
-        "customer": "Company",
-        "createdAt": "Created",
-        "actions": "Actions"
-      },
       "status": {
         "active": "Active",
         "inactive": "Inactive",
@@ -367,18 +274,14 @@
       },
       "roles": {
         "admin": "Admin",
-        "user": "User",
-        "customer": "Company"
+        "user": "User"
       },
       "tabs": {
         "users": "Users",
         "customers": "Companies"
       },
       "actions": {
-        "edit": "Edit",
-        "delete": "Delete",
-        "changePassword": "Change Password",
-        "view": "View Details"
+        "edit": "Edit"
       },
       "modal": {
         "addUser": "Add User",
@@ -386,8 +289,6 @@
         "addCustomer": "Add Company",
         "editCustomer": "Edit Company",
         "changePassword": "Change Password",
-        "deleteUser": "Delete User",
-        "deleteCustomer": "Delete Company",
         "name": "Name",
         "email": "Email",
         "password": "Password",
@@ -397,12 +298,9 @@
         "status": "Status",
         "customer": "Company",
         "selectCustomer": "Select a company",
-        "selectRole": "Select a role",
-        "selectStatus": "Select a status",
         "save": "Save",
         "cancel": "Cancel",
-        "confirm": "Confirm",
-        "close": "Close"
+        "confirm": "Confirm"
       },
       "messages": {
         "userCreated": "User created successfully",
@@ -420,8 +318,6 @@
         "errorDeletingCustomer": "Error deleting company",
         "errorChangingPassword": "Error changing password",
         "cannotDeleteCustomerWithUsers": "Cannot delete this company because users are associated with it",
-        "confirmDeleteUser": "Are you sure you want to delete user \"{{name}}\"?",
-        "confirmDeleteCustomer": "Are you sure you want to delete company \"{{name}}\"?",
         "passwordMinLength": "Password must be at least 8 characters",
         "passwordMismatch": "Passwords do not match"
       },
@@ -435,12 +331,10 @@
   },
   "errors": {
     "required": "This field is required",
-    "invalidEmail": "Please enter a valid email address",
     "passwordLength": "Password must be at least 8 characters long",
     "passwordMismatch": "Passwords do not match",
     "unauthorized": "Invalid email or password",
     "serverError": "An error occurred. Please try again later.",
-    "networkError": "Network error occurred",
     "loadResume": "Error loading resume",
     "resumeNotFound": "Resume not found",
     "resumeNotFoundDescription": "The requested resume does not exist or has been deleted.",
@@ -449,7 +343,9 @@
     "missionNotFoundDescription": "The requested mission does not exist or has been deleted.",
     "loadAdaptation": "Error loading adaptation",
     "adaptationNotFound": "Adaptation not found",
-    "adaptationNotFoundDescription": "The requested adaptation does not exist or has been deleted."
+    "adaptationNotFoundDescription": "The requested adaptation does not exist or has been deleted.",
+    "exportFailed": "[FR] Export Failed",
+    "saveFailed": "[FR] Save Failed"
   },
   "templates": {
     "title": "Resume Templates",
@@ -466,50 +362,26 @@
       "active": "Active Templates"
     },
     "sort": {
-      "label": "Sort by",
       "popular": "Popular First",
-      "name": "Name",
-      "recent": "Most Recent"
+      "name": "Name"
     },
     "card": {
       "popular": "Popular",
-      "editTemplate": "Edit Template",
       "preview": "Preview",
-      "useTemplate": "Use Template",
-      "description": "Template description",
       "noDescription": "No description"
     },
     "status": {
-      "loading": "Loading templates...",
       "error": "Failed to load templates",
       "empty": "No templates available",
-      "success": "Template created successfully",
       "deleteSuccess": "Template deleted successfully",
-      "updateSuccess": "Template updated successfully",
       "deleting": "Deleting...",
       "deleteError": "Failed to delete template"
     },
-    "filters": {
-      "title": "Filter Templates",
-      "all": "All Templates",
-      "category": "Category",
-      "style": "Style",
-      "industry": "Industry"
-    },
     "actions": {
-      "create": "Create Template",
       "edit": "Edit Template",
-      "delete": "Delete Template",
-      "preview": "Preview",
-      "use": "Use Template",
-      "save": "Save Template",
-      "cancel": "Cancel"
+      "delete": "Delete Template"
     },
     "editor": {
-      "title": {
-        "new": "Create New Template",
-        "edit": "Edit Template"
-      },
       "name": {
         "label": "Template Name",
         "placeholder": "Enter template name"
@@ -550,51 +422,27 @@
         "update": "Template updated successfully"
       },
       "error": {
-        "create": "Failed to create template",
-        "update": "Failed to update template",
         "load": "Failed to load template"
       }
-    }
+    },
+    "delete": {
+      "title": "Supprimer le modèle"
+    },
+    "selectTemplate": "[FR] Select Template"
   },
   "processing": {
     "steps": {
       "upload": {
         "title": "Uploading Resume",
-        "description": "Processing your file...",
-        "steps": [
-          "Reading file contents",
-          "Validating format",
-          "Checking file integrity",
-          "Preparing for extraction"
-        ]
+        "description": "Processing your file..."
       },
       "extract": {
         "title": "Extracting Content",
-        "description": "Reading resume content...",
-        "steps": [
-          "Parsing document structure",
-          "Extracting raw text",
-          "Detecting main sections",
-          "Processing formatting",
-          "Cleaning extracted data"
-        ]
+        "description": "Reading resume content..."
       },
       "analyze": {
         "title": "AI Analysis",
-        "description": "Analyzing with advanced AI...",
-        "steps": [
-          "Initializing AI model",
-          "Identifying candidate profile",
-          "Analyzing executive summary",
-          "Evaluating technical skills",
-          "Analyzing work experience",
-          "Evaluating educational background",
-          "Detecting ATS keywords",
-          "Analyzing languages and interests",
-          "Calculating global score",
-          "Generating improvement suggestions",
-          "Finalizing analysis"
-        ]
+        "description": "Analyzing with advanced AI..."
       }
     }
   },
@@ -613,7 +461,7 @@
   "fileUpload": {
     "dragAndDropYourResumeHere": "Drag and drop your resume here",
     "dropYourResumeHere": "Drop your resume here",
-    "or" : "or click to select a file",
+    "or": "or click to select a file",
     "supportedFormats": "Supported formats: PDF, DOC, DOCX (<2 MB)"
   },
   "metrics": {
@@ -622,7 +470,6 @@
     "lastUpdate": "Last update",
     "autoRefresh": "Auto-refresh (30s)",
     "refresh": "Refresh",
-    "loading": "Loading metrics...",
     "error": "Unable to load metrics",
     "retry": "Retry",
     "accessDenied": "Access denied. You must be an administrator to view metrics.",
@@ -632,11 +479,9 @@
     "totalRequests": "Total API Requests",
     "last24h": "Last 24h",
     "avgResponseTime": "Average Response Time",
-    "minMax": "Min: {{min}}ms / Max: {{max}}ms",
     "errorRate": "Server Error Rate",
     "totalErrors": "Total errors",
     "serverMemory": "Server Memory",
-    "heapUsed": "Heap used of {{total}}",
     "rss": "RSS (total memory)",
     "external": "External (C++ bindings)",
     "cachePerformance": "Cache Performance",
@@ -651,7 +496,6 @@
     "llmCalls": "API calls (OpenAI + Anthropic)",
     "tokensConsumed": "Tokens consumed",
     "estimatedCost": "Estimated cost (USD)",
-    "byProvider": "By provider",
     "topEndpoints": "Most Used API Routes",
     "activeEndpoints": "Active endpoints",
     "route": "Route",
@@ -669,37 +513,13 @@
     "totalLogs": "Total Logs",
     "lastHour": "Last Hour",
     "last24h": "Last 24h",
-    "warnings": "Warnings",
     "errors": "Errors",
     "filters": {
       "level": "Level",
       "event": "Event",
       "source": "Source",
-      "limit": "Limit",
       "all": "All",
-      "allSources": "All",
-      "allLevels": "All levels",
-      "allEvents": "All events"
-    },
-    "levels": {
-      "errors": "Errors (all)",
-      "security": "Security",
-      "error": "Error",
-      "warning": "Warning",
-      "info": "Info",
-      "debug": "Debug"
-    },
-    "events": {
-      "authSuccess": "Login Success",
-      "authFailure": "Login Failed",
-      "authBlocked": "Account Blocked",
-      "fileUpload": "File Upload",
-      "fileUploadRejected": "Upload Rejected",
-      "llmRequest": "LLM Request"
-    },
-    "sources": {
-      "security": "Security",
-      "proxy": "Proxy"
+      "allSources": "All"
     },
     "table": {
       "timestamp": "Timestamp",
@@ -718,7 +538,8 @@
       "security": "🔒 Security",
       "proxy": "🌐 Proxy"
     },
-    "noLogs": "No security logs found"
+    "noLogs": "No security logs found",
+    "logs": "[FR] Logs"
   },
   "settings": {
     "title": "Application Settings",
@@ -778,7 +599,6 @@
       "title": "Analysis Category Weights",
       "description": "Define the importance of each category in the overall score. The sum must equal 100%.",
       "total": "Total weights",
-      "totalError": "The sum of weights must equal 100%",
       "mustEqual100": "The sum of weights must equal 100%",
       "executiveSummary": "Executive Summary",
       "skills": "Skills",
@@ -805,27 +625,17 @@
   "tags": {
     "title": "Tags Management",
     "subtitle": "View and manage tags extracted from the resume library",
-    "loading": "Loading tags...",
     "loadError": "Failed to load tags",
-    "renameSuccess": "Tag renamed from {{oldName}} to {{newName}}",
     "renameError": "Failed to rename tag",
-    "edit": "Edit",
     "editTag": "Edit tag",
     "editingIn": "Editing in category",
     "tagName": "Tag name",
-    "newName": "New name",
     "cancel": "Cancel",
     "save": "Save",
     "refresh": "Refresh",
     "searchPlaceholder": "Search for a tag...",
     "tagsCount": "tags",
     "noTags": "No tags in this category",
-    "categories": {
-      "Skills": "Skills",
-      "Industries": "Industries",
-      "Tools": "Tools",
-      "Soft Skills": "Soft Skills"
-    },
     "stats": {
       "totalTags": "Total tags"
     }
@@ -833,7 +643,6 @@
   "missions": {
     "title": "Mission Offers",
     "subtitle": "Manage your mission offers for resume adaptation",
-    "loading": "Loading missions...",
     "noMissions": "No missions found",
     "results": "missions",
     "noResults": "No missions match your search",
@@ -842,8 +651,6 @@
     "searchPlaceholder": "Search for a mission...",
     "addMission": "Add mission",
     "editMission": "Edit mission",
-    "deleteMission": "Delete mission",
-    "deleteConfirm": "Are you sure you want to delete this mission?",
     "missionTitle": "Title",
     "missionContent": "Description",
     "missionStatus": "Status",
@@ -851,8 +658,6 @@
     "editorHelp": "Use the editor to format your text",
     "create": "Create",
     "update": "Update",
-    "createdAt": "Created on",
-    "actions": "Actions",
     "view": "View",
     "refresh": "Refresh",
     "status": {
@@ -872,18 +677,13 @@
   "adaptations": {
     "title": "Resume Adaptations",
     "subtitle": "History of resumes adapted to missions",
-    "loading": "Loading adaptations...",
     "noAdaptations": "No adaptations found",
     "results": "adaptations",
     "noAdaptationsFiltered": "Try modifying your search filters",
     "noAdaptationsPrompt": "Start by adapting a resume to a mission",
-    "matchScore": "Match score",
-    "adaptedOn": "Adapted on",
     "viewAdaptation": "View adaptation",
     "delete": "Delete",
-    "exportAdaptation": "Export",
     "exportPDF": "Export PDF",
-    "resume": "Resume",
     "mission": "Mission",
     "searchPlaceholder": "Search by resume or mission...",
     "filterStatus": "All statuses",
@@ -897,13 +697,8 @@
     },
     "status": {
       "completed": "Completed",
-      "final": "Finalized",
       "processing": "Processing",
-      "draft": "Draft",
-      "sent": "Sent",
-      "archived": "Archived",
-      "failed": "Failed",
-      "unknown": "Unknown"
+      "failed": "Failed"
     },
     "adaptationDetails": "Adaptation Details",
     "tabs": {
@@ -922,13 +717,10 @@
         "adapted": "Adapted Resume"
       },
       "mission": {
-        "title": "Mission",
         "client": "Company",
         "location": "Location",
         "description": "Description",
-        "noDescription": "No description available for this mission",
-        "notFound": "Mission not found",
-        "noTitle": "Mission without title"
+        "noDescription": "No description available for this mission"
       },
       "save": "Save",
       "saving": "Saving..."
@@ -936,10 +728,7 @@
     "messages": {
       "saveSuccess": "Adapted resume saved successfully",
       "saveError": "Error saving adapted resume",
-      "deleteSuccess": "Adaptation deleted successfully",
-      "deleteError": "Error deleting adaptation",
-      "exportSuccess": "Export successful",
-      "exportError": "Error during export"
+      "deleteError": "Error deleting adaptation"
     },
     "card": {
       "noName": "Resume without name",
@@ -947,19 +736,13 @@
     },
     "exportModal": {
       "description": "The adapted resume will be exported with the selected template"
-    }
-  },
-  "dashboard": {
-    "title": "Dashboard",
-    "welcome": "Welcome",
-    "stats": {
-      "totalResumes": "Total Resumes",
-      "analyzedToday": "Analyzed today",
-      "avgScore": "Average score",
-      "improvements": "Improvements"
     },
-    "recentActivity": "Recent activity",
-    "quickActions": "Quick actions"
+    "actions": {
+      "delete": "[FR] Delete",
+      "export": "[FR] Export",
+      "view": "[FR] View"
+    },
+    "exportSuccess": "[FR] Export Success"
   },
   "navigation": {
     "home": "Home",
@@ -996,163 +779,24 @@
   },
   "userGuide": {
     "title": "User Guide",
-    "subtitle": "Complete documentation for using ResumeConverter",
-    "sections": {
-      "introduction": "Introduction",
-      "resumes": "Resume Management",
-      "missions": "Missions",
-      "adaptations": "Adaptations",
-      "admin": "Administration",
-      "interface": "Interface",
-      "tips": "Tips"
-    },
-    "introduction": {
-      "title": "Welcome to ResumeConverter",
-      "description": "ResumeConverter is an intelligent CV management and optimization platform, powered by artificial intelligence. The application was designed to meet the specific needs of IT staffing companies (ESN).",
-      "features": "Main Features",
-      "feature1": "Manage a CV database simply and efficiently",
-      "feature2": "Improve CVs to optimize their value",
-      "feature3": "Adapt CVs for specific missions or positions",
-      "feature4": "Track performance with detailed scores",
-      "feature5": "Benefit from an AI assistant to guide you"
-    },
-    "resumes": {
-      "title": "Resume Management",
-      "import": {
-        "title": "Import a Resume",
-        "step1": "Click on \"My Resumes\" in the sidebar",
-        "step2": "Click the \"Import a new resume\" button",
-        "step3": "Select your resume file (PDF, DOCX, DOC)",
-        "step4": "The resume will be automatically analyzed by AI"
-      },
-      "view": {
-        "title": "View a Resume",
-        "overview": "Overview",
-        "overviewDesc": "Summary with overall scores",
-        "skills": "Skills & Tags",
-        "skillsDesc": "Automatically detected skills",
-        "original": "Original",
-        "originalDesc": "Original version of the resume",
-        "improved": "Improved",
-        "improvedDesc": "AI-improved version"
-      },
-      "scores": {
-        "title": "Evaluation Criteria",
-        "executive": "Executive Summary",
-        "executiveDesc": "Quality of the introduction and summary",
-        "skills": "Skills",
-        "skillsDesc": "Relevance and presentation of skills",
-        "experience": "Experience",
-        "experienceDesc": "Clarity and impact of experiences",
-        "education": "Education",
-        "educationDesc": "Presentation of academic background",
-        "ats": "ATS",
-        "atsDesc": "Compatibility with tracking systems",
-        "hobbies": "Hobbies & Languages",
-        "hobbiesDesc": "Additional information"
-      }
-    },
-    "missions": {
-      "title": "Mission Management",
-      "create": {
-        "title": "Create a Mission",
-        "step1": "Click on \"Missions\" in the menu",
-        "step2": "Click \"New mission\"",
-        "step3": "Fill in the title, company, description, and required skills"
-      },
-      "tip": {
-        "title": "Tip",
-        "content": "The more detailed the mission description, the better the match analysis with resumes will be."
-      }
-    },
-    "adaptations": {
-      "title": "Resume Adaptations",
-      "description": "Adaptation allows you to customize a resume for a specific mission, highlighting the most relevant skills and experiences.",
-      "create": {
-        "title": "Create an Adaptation",
-        "step1": "From the \"My Resumes\" page, select a resume",
-        "step2": "Click \"Adapt to a mission\"",
-        "step3": "Select the target mission",
-        "step4": "AI will analyze the match and suggest improvements"
-      },
-      "view": {
-        "title": "View an Adaptation",
-        "score": "Match score with the mission",
-        "analysis": "Detailed analysis of strengths and areas for improvement",
-        "adapted": "Adapted and optimized resume for the mission"
-      }
-    },
-    "admin": {
-      "title": "Administrator Features",
-      "notice": "These features are reserved for users with the \"Admin\" role.",
-      "templates": {
-        "title": "Resume Templates",
-        "description": "Create and manage templates that define the structure of improved resumes."
-      },
-      "users": {
-        "title": "User Management",
-        "description": "Create accounts, modify roles, and manage access."
-      },
-      "security": {
-        "title": "Security Logs",
-        "description": "Monitor logins, access attempts, and administrative actions."
-      },
-      "metrics": {
-        "title": "Metrics",
-        "description": "Analyze performance, LLM model usage, and statistics."
-      }
-    },
-    "interface": {
-      "title": "User Interface",
-      "theme": {
-        "title": "Themes",
-        "light": "Light mode",
-        "dark": "Dark mode",
-        "description": "Click the sun/moon icon in the top bar to change theme."
-      },
-      "language": {
-        "title": "Languages",
-        "description": "Use the language selector in the top bar to switch between Français and English."
-      }
-    },
-    "tips": {
-      "title": "Usage Tips",
-      "analysis": {
-        "title": "For better analysis results",
-        "tip1": "Use a clear and structured resume format",
-        "tip2": "Include complete information about your experiences",
-        "tip3": "Use relevant terms for your industry"
-      },
-      "adaptation": {
-        "title": "For adaptations",
-        "tip1": "Provide a detailed mission description",
-        "tip2": "List all required skills",
-        "tip3": "Include information about the company and industry"
-      },
-      "support": {
-        "title": "Need help?",
-        "content": "Check the \"About\" section to see the changelog and version information."
-      }
-    }
+    "subtitle": "Complete documentation for using ResumeConverter"
   },
   "marketRadar": {
     "title": "IS/IT Market Radar",
     "subtitle": "IT job offers collection and analysis in France",
+    "dataTypes": {
+      "offres": "Job offers",
+      "tension": "Recruitment tensions",
+      "dynamique_emploi": "Employment dynamics",
+      "embauche": "Hirings",
+      "demandeur": "Job seekers",
+      "demandeur_entrant": "New job seekers"
+    },
     "tabs": {
       "map": "France Map",
       "trends": "Market Trends",
       "facts": "Job Offers",
       "metiers": "Jobs & Skills"
-    },
-    "dataTypes": {
-      "all": "All types",
-      "offres": "Job offers",
-      "tension": "Recruitment tensions",
-      "salaire": "Salaries",
-      "dynamique_emploi": "Employment dynamics",
-      "embauche": "Hirings",
-      "demandeur": "Job seekers",
-      "demandeur_entrant": "New job seekers"
     },
     "map": {
       "title": "Data by region",
@@ -1169,100 +813,57 @@
       "total": "Total",
       "average": "Average",
       "metierBreakdown": "Breakdown by job",
-      "viewAllMetiers": "View all jobs",
-      "activeFilter": "Active filter on map",
       "searchMetier": "Search for a job...",
       "legend": "Legend",
       "low": "Low",
       "medium": "Medium",
       "high": "High",
       "clickToFilter": "Click on a bubble to filter by type",
-      "bubbleSizeInfo": "Bubble size proportional to value"
+      "bubbleSizeInfo": "Bubble size proportional to value",
+      "refresh": "[FR] Refresh"
     },
     "trends": {
       "title": "Market Trends",
-      "subtitle": "Data from France Travail Labor Market API",
       "loading": "Loading trends...",
       "noData": "No data available",
       "results": "trends",
       "filters": {
-        "type": "Type",
         "allTypes": "All types",
-        "rome": "ROME Code",
-        "allRome": "All ROME codes",
-        "region": "Region",
         "allRegions": "All regions"
       },
-      "stats": {
-        "totalTrends": "Total trends",
-        "avgValue": "Average value",
-        "regions": "Regions",
-        "metiers": "Jobs"
-      },
-      "card": {
-        "region": "Region",
-        "value": "Value",
-        "date": "Date",
-        "metadata": "Metadata"
-      },
       "collection": {
-        "title": "Collection in progress",
-        "description": "Retrieving labor market data from France Travail API...",
-        "warning": "This operation can take up to 1 hour. You can close this page.",
         "button": "Collect trends",
-        "started": "Collection started in background. Estimated duration: 30-60 minutes.",
-        "success": "Collection completed in",
-        "seconds": "s",
-        "created": "created",
-        "updated": "updated",
-        "total": "Total",
-        "error": "Collection error"
-      }
+        "started": "Collection started in background. Estimated duration: 30-60 minutes."
+      },
+      "refresh": "[FR] Refresh"
     },
     "facts": {
-      "title": "Job Offers",
-      "subtitle": "Collected IT job offers data",
-      "loading": "Loading offers...",
-      "noData": "No offers found",
       "results": "facts",
       "filters": {
         "source": "Source",
         "allSources": "All sources",
-        "metier": "Job",
         "allMetiers": "All jobs",
         "region": "Region",
-        "allRegions": "All regions",
-        "keyword": "Job",
-        "keywordPlaceholder": "Search by job...",
-        "searchMetier": "Job search",
-        "searchPlaceholder": "Search by label..."
+        "keyword": "Job"
       },
       "stats": {
-        "totalFacts": "Total facts",
         "totalJobs": "Total offers",
-        "sources": "Sources",
         "regions": "Regions",
         "keywords": "Keywords"
       },
       "table": {
         "date": "Date",
         "source": "Source",
-        "codeRome": "ROME Code",
         "metier": "Job",
         "region": "Region",
-        "offers": "Offers",
-        "category": "Category",
-        "city": "City",
-        "avgSalary": "Avg. Salary"
+        "offers": "Offers"
       },
       "collection": {
         "title": "Data collection",
         "overlayTitle": "Collection in progress",
         "overlayDescription": "Retrieving IS/IT market data from APIs.",
         "overlayWarning": "This operation can take several minutes. Do not close this page.",
-        "lastCollection": "Last collection",
         "startCollection": "Start collection",
-        "collecting": "Collecting...",
         "success": "Collection completed",
         "factsCollected": "Facts collected",
         "stored": "Stored",
@@ -1271,14 +872,10 @@
         "noData": "No facts collected",
         "noDataDescription": "Run a collection to retrieve IS/IT market data.",
         "error": "Collection error",
-        "collectFranceTravail": "Collect France Travail",
-        "collectAdzuna": "Collect Adzuna"
+        "collectFranceTravail": "Collect France Travail"
       },
       "sections": {
-        "allFacts": "All offers",
-        "offersByMetierRegion": "Offers by job and region (France Travail)",
-        "offersByKeyword": "Offers by keyword (National)",
-        "offersByCity": "Offers by city (Adzuna)"
+        "allFacts": "All offers"
       }
     },
     "metiers": {
@@ -1296,10 +893,7 @@
         "lastUpdate": "Last update"
       },
       "card": {
-        "codeRome": "ROME Code",
         "competences": "skills",
-        "noCompetences": "No associated skills",
-        "viewDetails": "View details",
         "enjeuxDomaines": "Issues / Domains",
         "competencesDetaillees": "Detailed Skills",
         "macroSavoirFaire": "Macro Know-How",
@@ -1315,23 +909,12 @@
         "processed": "jobs processed",
         "created": "created",
         "updated": "updated",
-        "errors": "errors",
-        "error": "Collection error"
-      }
-    },
-    "pagination": {
-      "page": "Page",
-      "of": "of",
-      "previous": "Previous",
-      "next": "Next",
-      "showing": "Showing",
-      "to": "to",
-      "results": "results"
+        "errors": "errors"
+      },
+      "refresh": "[FR] Refresh"
     },
     "errors": {
-      "loadFailed": "Failed to load data",
-      "noConnection": "Unable to connect to server",
-      "retry": "Retry"
+      "loadFailed": "Failed to load data"
     }
   },
   "profileMatching": {
@@ -1399,5 +982,10 @@
       "interviewQuestions": "Suggested interview questions",
       "riskLevel": "Risk level"
     }
+  },
+  "export": {
+    "loadingTemplates": "[FR] Loading Templates",
+    "noTemplates": "[FR] No Templates",
+    "selectTemplate": "[FR] Select Template"
   }
 }
