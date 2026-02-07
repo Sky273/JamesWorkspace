@@ -18,7 +18,7 @@ import {
   ClockIcon,
   SparklesIcon,
   FolderOpenIcon,
-  PlusCircleIcon
+  ClipboardDocumentListIcon
 } from '@heroicons/react/24/outline';
 import { fetchWithAuth } from '../utils/apiInterceptor';
 import { createLogger } from '../utils/logger.frontend';
@@ -373,7 +373,7 @@ function HomeDashboard(): JSX.Element | null {
               delay={0.9}
             />
             <QuickAction
-              icon={PlusCircleIcon}
+              icon={ClipboardDocumentListIcon}
               label={t('home.dashboard.actions.createMission')}
               description={t('home.dashboard.actions.createMissionDesc')}
               onClick={() => navigate('/missions')}
