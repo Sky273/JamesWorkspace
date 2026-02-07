@@ -102,7 +102,7 @@ export default defineConfig(({ mode }) => {
   ],
   server: {
     host: '0.0.0.0',
-    port: 5173,
+    port: HTTPS_ENABLED ? 443 : 5173,
     strictPort: true,
     https: getHttpsConfig(HTTPS_ENABLED),
     allowedHosts: ['www.resumeconverter.net', 'resumeconverter.net', 'localhost'],
