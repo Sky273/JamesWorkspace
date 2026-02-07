@@ -43,25 +43,6 @@ export async function loadPdfjs() {
 }
 
 /**
- * Dynamically load PDF.js for use with react-pdf
- * Uses CDN worker for better compatibility
- * @returns {Promise<Object>} The pdfjs module
- */
-export async function loadPdfjsForReactPdf() {
-    if (pdfjsModule) {
-        return pdfjsModule;
-    }
-    
-    const pdfjs = await import('pdfjs-dist');
-    
-    // Use CDN worker for react-pdf compatibility
-    pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
-    
-    pdfjsModule = pdfjs;
-    return pdfjsModule;
-}
-
-/**
  * Check if PDF.js is loaded
  * @returns {boolean}
  */

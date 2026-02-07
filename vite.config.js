@@ -61,6 +61,7 @@ export default defineConfig({
       ext: '.gz',
       threshold: 1024, // Only compress files > 1KB
       deleteOriginFile: false,
+      filter: /\.(js|mjs|json|css|html|svg|txt|xml|wasm)$/i,
     }),
     // Brotli compression (better compression ratio)
     compression({
@@ -68,6 +69,7 @@ export default defineConfig({
       ext: '.br',
       threshold: 1024,
       deleteOriginFile: false,
+      filter: /\.(js|mjs|json|css|html|svg|txt|xml|wasm)$/i,
     }),
   ],
   server: {
