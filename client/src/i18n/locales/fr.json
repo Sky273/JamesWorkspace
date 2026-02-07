@@ -385,6 +385,10 @@
       "title": "Supprimer le modèle"
     },
     "editor": {
+      "title": {
+        "new": "Nouveau modèle",
+        "edit": "Modifier le modèle"
+      },
       "name": {
         "label": "Nom du modèle",
         "placeholder": "Entrez le nom du modèle"

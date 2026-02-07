@@ -178,8 +178,7 @@ const TemplatesPage = (): JSX.Element => {
       const data = await templateService.getTemplatesPaginated({
         page: currentPage,
         pageSize,
-        search: debouncedSearch,
-        status: 'Active'
+        search: debouncedSearch
       });
       setTemplates(data.templates);
       setTotalCount(data.pagination.totalCount || data.templates.length);

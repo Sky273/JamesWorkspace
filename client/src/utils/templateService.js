@@ -58,9 +58,10 @@ import { fetchWithAuth, createAuthOptions, createAuthOptionsWithCsrf } from './a
 import logger from './logger.frontend';
 
 export const templateService = {
+  // Get only active templates (for export/selection purposes)
   async getAllTemplates() {
     try {
-      const response = await fetchWithAuth('/api/templates?limit=100', createAuthOptions());
+      const response = await fetchWithAuth('/api/templates?limit=100&status=Active', createAuthOptions());
       if (!response.ok) {
         throw new Error('Failed to fetch templates');
       }

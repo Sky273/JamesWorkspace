@@ -72,7 +72,8 @@ function findUsedKeys(dir, extensions = ['.tsx', '.ts', '.js', '.jsx']) {
         'security.events.',
         'security.sources.',
         'header.language.',
-        'header.theme.'
+        'header.theme.',
+        'templates.editor.title.'
     ];
     
     function scanFile(filePath) {

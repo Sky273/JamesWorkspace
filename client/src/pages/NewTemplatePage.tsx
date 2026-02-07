@@ -81,7 +81,7 @@ const NewTemplatePage = (): JSX.Element => {
           footerContent: template.footerContent || '',
           footerHeight: template.footerHeight || 25,
           stylesheet: template.stylesheet,
-          status: template.status,
+          status: template.status?.charAt(0).toUpperCase() + template.status?.slice(1).toLowerCase() || 'Active',
           popular: template.popular,
           tags: template.tags
         };

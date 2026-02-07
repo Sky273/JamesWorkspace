@@ -382,6 +382,10 @@
       "delete": "Delete Template"
     },
     "editor": {
+      "title": {
+        "new": "New Template",
+        "edit": "Edit Template"
+      },
       "name": {
         "label": "Template Name",
         "placeholder": "Enter template name"
