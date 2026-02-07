@@ -240,6 +240,9 @@ app.use(metricsMiddleware);
 // CSRF PROTECTION
 // ============================================
 
+// Determine if HTTPS is enabled (for secure cookies)
+const useSecureCookies = isProduction || process.env.HTTPS_ENABLED === 'true';
+
 // Configure CSRF protection
 const csrfProtection = doubleCsrf({
     getSecret: () => process.env.CSRF_SECRET || JWT_SECRET || 'default-csrf-secret',
@@ -247,7 +250,7 @@ const csrfProtection = doubleCsrf({
     cookieOptions: {
         httpOnly: true,
         sameSite: isProduction ? 'strict' : 'lax',
-        secure: isProduction,
+        secure: useSecureCookies,
         path: '/',
         // Allow cookie to work with resumeconverter.net domain in development
         domain: process.env.COOKIE_DOMAIN || undefined
@@ -268,6 +271,12 @@ const generateCsrfToken = csrfProtection.generateCsrfToken;
 // CSRF token endpoint - MUST be before CSRF protection middleware
 app.get('/api/csrf-token', (req, res) => {
     try {
+        safeLog('debug', 'CSRF token request', { 
+            useSecureCookies,
+            protocol: req.protocol,
+            secure: req.secure,
+            headers: { host: req.headers.host, origin: req.headers.origin }
+        });
         const csrfToken = generateCsrfToken(req, res);
         res.json({ csrfToken });
     } catch (error) {

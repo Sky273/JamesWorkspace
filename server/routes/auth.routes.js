@@ -12,6 +12,9 @@ import { query } from '../config/database.js';
 
 const router = express.Router();
 
+// Determine if secure cookies should be used (production OR HTTPS enabled)
+const useSecureCookies = process.env.NODE_ENV === 'production' || process.env.HTTPS_ENABLED === 'true';
+
 // ============================================
 // AUTHENTICATION ROUTES (PostgreSQL)
 // ============================================
@@ -118,7 +121,7 @@ router.post('/signin', authLimiter, validateBody(signInSchema), async (req, res)
 
         res.cookie('accessToken', accessToken, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
+            secure: useSecureCookies,
             sameSite: 'lax',
             path: '/',
             maxAge: 60 * 60 * 1000
@@ -126,7 +129,7 @@ router.post('/signin', authLimiter, validateBody(signInSchema), async (req, res)
 
         res.cookie('refreshToken', refreshToken, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
+            secure: useSecureCookies,
             sameSite: 'lax',
             path: '/',
             maxAge: 7 * 24 * 60 * 60 * 1000
@@ -265,7 +268,7 @@ router.post('/refresh', async (req, res) => {
 
         res.cookie('accessToken', newAccessToken, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
+            secure: useSecureCookies,
             sameSite: 'lax',
             path: '/',
             maxAge: 60 * 60 * 1000
