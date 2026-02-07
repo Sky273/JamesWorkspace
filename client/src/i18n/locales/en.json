@@ -85,7 +85,21 @@
       "title1": "Your Resume Library.",
       "title2": "Optimized. Activated.",
       "description": "Standardize, improve and tailor your resumes by client or mission. Consistent profiles, ready to send, in just minutes.",
-      "startButton": "Import a Resume"
+      "startButton": "Import a Resume",
+      "analysisComplete": "Analysis Complete",
+      "aiSuggestion": "AI Suggestion",
+      "suggestionText": "Increase the impact of this section by using stronger action verbs.",
+      "badges": {
+        "atsFriendly": "ATS Friendly",
+        "fastAnalysis": "Fast Analysis",
+        "secure": "100% Secure"
+      }
+    },
+    "tabs": {
+      "all": "Home",
+      "resumes": "All Resumes",
+      "myResumes": "My Resumes",
+      "recommendations": "Recommendations"
     },
     "dashboard": {
       "title": "Dashboard",
@@ -183,6 +197,12 @@
     "activeFilters": "Active filters",
     "more": "more",
     "showLess": "Show less",
+    "filters": {
+      "skills": "Skills",
+      "industries": "Industries",
+      "tools": "Tools",
+      "softskills": "Soft Skills"
+    },
     "status": {
       "new": "New",
       "improved": "Improved",

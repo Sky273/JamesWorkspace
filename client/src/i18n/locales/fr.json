@@ -239,7 +239,21 @@
       "title1": "Votre CVthèque.",
       "title2": "Optimisée. Activée.",
       "description": "Standardisez, améliorez et déclinez vos CV par client ou mission. Des profils cohérents, prêts à envoyer, en quelques minutes.",
-      "startButton": "Importer un CV"
+      "startButton": "Importer un CV",
+      "analysisComplete": "Analyse terminée",
+      "aiSuggestion": "Suggestion IA",
+      "suggestionText": "Augmentez l'impact de cette section en utilisant des verbes d'action plus forts.",
+      "badges": {
+        "atsFriendly": "Compatible ATS",
+        "fastAnalysis": "Analyse rapide",
+        "secure": "100% Sécurisé"
+      }
+    },
+    "tabs": {
+      "all": "Accueil",
+      "resumes": "Tous les CV",
+      "myResumes": "Mes CV",
+      "recommendations": "Recommandations"
     },
     "dashboard": {
       "title": "Tableau de bord",
@@ -337,6 +351,12 @@
     "activeFilters": "Filtres actifs",
     "more": "de plus",
     "showLess": "Voir moins",
+    "filters": {
+      "skills": "Compétences",
+      "industries": "Secteurs",
+      "tools": "Outils",
+      "softskills": "Soft Skills"
+    },
     "status": {
       "new": "Nouveau",
       "improved": "Amélioré",
