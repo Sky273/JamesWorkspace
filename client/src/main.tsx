@@ -16,45 +16,47 @@ import './i18n';
 
 // Suppress browser extension errors and non-critical warnings that pollute the console
 // These errors come from extensions like ad blockers, not from our code
-const originalConsoleError = console.error;
-console.error = (...args: unknown[]) => {
-  const message = String(args[0] || '');
-  
-  // List of patterns to suppress (extension-related errors and non-critical warnings)
-  const suppressPatterns = [
-    'message channel closed',
-    'A listener indicated an asynchronous response',
-    'Uncaught (in promise) Error: A listener indicated an asynchronous response',
-    'Extension context invalidated',
-    'Could not establish connection',
-    'ResizeObserver loop',
-    'HydrateFallback'
-  ];
-  
-  // Check if message should be suppressed
-  if (suppressPatterns.some(pattern => message.includes(pattern))) {
-    return;
-  }
-  
-  originalConsoleError.apply(console, args);
-};
+// Only apply in development mode to avoid production issues
+if (import.meta.env.DEV) {
+  const originalConsoleError = console.error.bind(console);
+  console.error = (...args: unknown[]) => {
+    const message = String(args[0] || '');
+    
+    // List of patterns to suppress (extension-related errors and non-critical warnings)
+    const suppressPatterns = [
+      'message channel closed',
+      'A listener indicated an asynchronous response',
+      'Uncaught (in promise) Error: A listener indicated an asynchronous response',
+      'Extension context invalidated',
+      'Could not establish connection',
+      'ResizeObserver loop',
+      'HydrateFallback'
+    ];
+    
+    // Check if message should be suppressed
+    if (suppressPatterns.some(pattern => message.includes(pattern))) {
+      return;
+    }
+    
+    originalConsoleError(...args);
+  };
 
-// Suppress console warnings for non-critical issues
-const originalConsoleWarn = console.warn;
-console.warn = (...args: unknown[]) => {
-  const message = String(args[0] || '');
-  
-  const suppressPatterns = [
-    'HydrateFallback',
-    'ResizeObserver loop'
-  ];
-  
-  if (suppressPatterns.some(pattern => message.includes(pattern))) {
-    return;
-  }
-  
-  originalConsoleWarn.apply(console, args);
-};
+  const originalConsoleWarn = console.warn.bind(console);
+  console.warn = (...args: unknown[]) => {
+    const message = String(args[0] || '');
+    
+    const suppressPatterns = [
+      'HydrateFallback',
+      'ResizeObserver loop'
+    ];
+    
+    if (suppressPatterns.some(pattern => message.includes(pattern))) {
+      return;
+    }
+    
+    originalConsoleWarn(...args);
+  };
+}
 
 // Global handler for unhandled promise rejections
 window.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => {

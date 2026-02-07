@@ -165,24 +165,10 @@ export default defineConfig({
   build: {
     // Output directory (inside client/)
     outDir: 'dist',
-    // Enable minification with terser for better compression
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true,      // Remove console.log in production
-        drop_debugger: true,     // Remove debugger statements
-        pure_funcs: ['console.log', 'console.info', 'console.debug'],
-        passes: 2,               // Multiple compression passes
-      },
-      mangle: {
-        safari10: true,          // Safari 10 compatibility
-      },
-      format: {
-        comments: false,         // Remove all comments
-      },
-    },
-    // Enable source maps for debugging (optional, can be disabled for smaller builds)
-    sourcemap: false,
+    // Use esbuild for minification (faster and more stable than terser)
+    minify: 'esbuild',
+    // Enable source maps for debugging
+    sourcemap: true,
     // Chunk size warning limit (in kB)
     chunkSizeWarningLimit: 500,
     // Target modern browsers for smaller output
