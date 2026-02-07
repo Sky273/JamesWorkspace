@@ -1,0 +1,28 @@
+{
+  "$schema": "https://unpkg.com/knip@latest/schema.json",
+  "entry": [
+    "client/src/main.tsx",
+    "client/src/App.tsx",
+    "server/proxy-server.js",
+    "pdf-server/server.cjs"
+  ],
+  "project": [
+    "client/src/**/*.{ts,tsx,js,jsx}",
+    "server/**/*.{js,cjs}",
+    "pdf-server/**/*.{js,cjs}"
+  ],
+  "ignore": [
+    "client/src/**/*.test.{ts,tsx,js,jsx}",
+    "tests/**/*",
+    "scripts/**/*",
+    "client/public/**/*"
+  ],
+  "ignoreDependencies": [
+    "@types/*",
+    "autoprefixer",
+    "postcss",
+    "tailwindcss",
+    "terser",
+    "vite-plugin-compression"
+  ]
+}

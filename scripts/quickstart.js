@@ -174,7 +174,7 @@ function startServices() {
     
     // Start proxy server
     log('  🚀 Starting proxy server (port 3001)...', 'cyan');
-    const proxyServer = spawn('node', ['proxy-server.js'], {
+    const proxyServer = spawn('node', ['server/proxy-server.js'], {
         cwd: ROOT_DIR,
         stdio: 'inherit',
         env: { ...process.env, NODE_ENV: isProd ? 'production' : 'development' }
@@ -183,7 +183,7 @@ function startServices() {
     
     // Start PDF server
     log('  🚀 Starting PDF server (port 3002)...', 'cyan');
-    const pdfServer = spawn('node', ['server.cjs'], {
+    const pdfServer = spawn('node', ['pdf-server/server.cjs'], {
         cwd: ROOT_DIR,
         stdio: 'inherit'
     });
