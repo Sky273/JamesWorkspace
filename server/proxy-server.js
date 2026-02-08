@@ -604,13 +604,60 @@ app.use('/api/docs', docsRoutes);
 
 // Serve static files from the dist directory (production build)
 const distPath = path.join(__dirname, '..', 'client', 'dist');
+
+// Serve pre-compressed files (Brotli and Gzip) if available
+// This middleware checks for .br and .gz versions of requested files
+app.use((req, res, next) => {
+    // Only for static assets (JS, CSS, etc.)
+    if (!req.path.startsWith('/api/') && !req.path.startsWith('/health')) {
+        const acceptEncoding = req.headers['accept-encoding'] || '';
+        const filePath = path.join(distPath, req.path);
+        
+        // Try Brotli first (better compression)
+        if (acceptEncoding.includes('br')) {
+            const brPath = filePath + '.br';
+            if (fs.existsSync(brPath)) {
+                res.set('Content-Encoding', 'br');
+                res.set('Vary', 'Accept-Encoding');
+                req.url = req.url + '.br';
+            }
+        }
+        // Fallback to Gzip
+        else if (acceptEncoding.includes('gzip')) {
+            const gzPath = filePath + '.gz';
+            if (fs.existsSync(gzPath)) {
+                res.set('Content-Encoding', 'gzip');
+                res.set('Vary', 'Accept-Encoding');
+                req.url = req.url + '.gz';
+            }
+        }
+    }
+    next();
+});
+
+// Static file serving with aggressive caching for hashed assets
 app.use(express.static(distPath, {
-    // Set cache headers for static assets
-    maxAge: '1d',
     etag: true,
     lastModified: true,
-    // Don't redirect directories to trailing slash
-    redirect: false
+    redirect: false,
+    setHeaders: (res, filePath) => {
+        // Hashed assets (contain hash in filename) - cache for 1 year
+        if (filePath.match(/\.[a-f0-9]{8,}\.(js|css|woff2?|ttf|eot|svg|png|jpg|jpeg|gif|webp|ico)$/i)) {
+            res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        }
+        // Assets directory (Vite build output) - cache for 1 year
+        else if (filePath.includes('/assets/')) {
+            res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        }
+        // HTML files - no cache (always fetch fresh for SPA)
+        else if (filePath.endsWith('.html')) {
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        }
+        // Other static files - cache for 1 day
+        else {
+            res.setHeader('Cache-Control', 'public, max-age=86400');
+        }
+    }
 }));
 
 // SPA fallback - serve index.html for all non-API routes
