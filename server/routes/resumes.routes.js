@@ -64,6 +64,14 @@ router.get('/', authenticateToken, async (req, res) => {
 
         const whereClause = conditions.length > 0 ? conditions.join(' AND ') : '';
 
+        // Get total count for pagination
+        let countSql = 'SELECT COUNT(*) as total FROM resumes';
+        if (whereClause) {
+            countSql += ` WHERE ${whereClause}`;
+        }
+        const countResult = await query(countSql, params);
+        const totalCount = parseInt(countResult.rows[0]?.total || '0', 10);
+
         // Fetch resumes with pagination using raw query to exclude resume_file_data (binary)
         // This avoids loading large binary data when listing resumes
         let rawSql = `SELECT id, name, title, file_name, resume_file_url, resume_file_size, resume_file_type,
@@ -167,6 +175,8 @@ router.get('/', authenticateToken, async (req, res) => {
             pagination: {
                 page,
                 limit,
+                totalCount,
+                totalPages: Math.ceil(totalCount / limit),
                 hasMore,
                 nextPage: hasMore ? page + 1 : null
             }

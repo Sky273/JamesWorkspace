@@ -111,7 +111,7 @@ const ResumesPage = (): JSX.Element => {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [totalCount, setTotalCount] = useState<number>(0);
   const [hasMore, setHasMore] = useState<boolean>(false);
-  const pageSize = 12;
+  const pageSize = 20;
 
   // Filter state
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
