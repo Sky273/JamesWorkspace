@@ -21,6 +21,8 @@ i18n
     interpolation: {
       escapeValue: false,
     },
+    // Synchronous initialization - resources are bundled, no async loading needed
+    initImmediate: false,
   });
 
 export default i18n;
