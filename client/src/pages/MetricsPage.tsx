@@ -174,8 +174,8 @@ const MetricsPage = (): JSX.Element => {
       await Promise.all([fetchMetrics(), fetchDbMetrics()]);
       setLoading(false);
     };
-    const timer = setTimeout(() => loadData(), 500);
-    return () => clearTimeout(timer);
+    // Load immediately without delay for faster initial render
+    loadData();
   }, []);
 
   useEffect(() => {

@@ -6,6 +6,11 @@ import { query as dbQuery } from '../config/database.js';
 
 const router = express.Router();
 
+// Cache for database metrics (refreshed every 30 seconds)
+let dbMetricsCache = null;
+let dbMetricsCacheTime = 0;
+const DB_METRICS_CACHE_TTL = 30 * 1000; // 30 seconds
+
 // ============================================
 // METRICS ENDPOINTS
 // ============================================
@@ -164,9 +169,21 @@ router.post('/reset', authenticateToken, requireAdmin, (req, res) => {
 /**
  * GET /api/metrics/database
  * Get database performance metrics (admin only)
+ * Cached for 30 seconds to reduce database load
  */
 router.get('/database', authenticateToken, requireAdmin, async (req, res) => {
     try {
+        const now = Date.now();
+        
+        // Return cached data if still valid
+        if (dbMetricsCache && (now - dbMetricsCacheTime) < DB_METRICS_CACHE_TTL) {
+            return res.json({
+                ...dbMetricsCache,
+                cached: true,
+                cacheAge: `${Math.round((now - dbMetricsCacheTime) / 1000)}s`
+            });
+        }
+        
         const startTime = Date.now();
         
         // Get database size and table stats
@@ -200,7 +217,7 @@ router.get('/database', authenticateToken, requireAdmin, async (req, res) => {
         
         const queryTime = Date.now() - startTime;
         
-        res.json({
+        const result = {
             database: {
                 size: parseInt(sizeResult.rows[0]?.db_size || 0),
                 sizePretty: sizeResult.rows[0]?.db_size_pretty || 'Unknown'
@@ -220,7 +237,13 @@ router.get('/database', authenticateToken, requireAdmin, async (req, res) => {
             },
             queryTime: `${queryTime}ms`,
             timestamp: new Date().toISOString()
-        });
+        };
+        
+        // Update cache
+        dbMetricsCache = result;
+        dbMetricsCacheTime = now;
+        
+        res.json(result);
     } catch (error) {
         safeLog('error', 'Error fetching database metrics', { error: error.message });
         res.status(500).json({ 
