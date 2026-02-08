@@ -281,8 +281,9 @@ router.post('/refresh', async (req, res) => {
     }
 });
 
-// POST /api/auth/signout - User logout
-router.post('/signout', authenticateToken, (req, res) => {
+// POST /api/auth/signout and /api/auth/logout - User logout
+// Both endpoints are supported for compatibility
+const logoutHandler = (req, res) => {
     try {
         const metadata = getRequestMetadata(req);
         
@@ -313,7 +314,11 @@ router.post('/signout', authenticateToken, (req, res) => {
         safeLog('error', 'Sign out error', { error: error.message });
         res.status(500).json({ error: 'Failed to sign out' });
     }
-});
+};
+
+// Register both /signout and /logout endpoints
+router.post('/signout', authenticateToken, logoutHandler);
+router.post('/logout', authenticateToken, logoutHandler);
 
 // GET /api/auth/me - Get current user
 router.get('/me', authenticateToken, async (req, res) => {
