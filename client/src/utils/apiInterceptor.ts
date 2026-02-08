@@ -214,23 +214,20 @@ export const fetchWithAuth = async (
       if (errorCode === 'TOKEN_MISSING') {
         logger.warn('[API Interceptor] Cookie expired (TOKEN_MISSING), redirecting to signin');
         isSessionExpiring = true;
-        // Use setTimeout to allow current execution to complete before redirect
-        // This prevents Vite from trying to parse the response as JS
-        setTimeout(() => {
-          window.location.href = '/signin?expired=true';
-        }, 0);
-        throw new Error('Session expired - redirecting to signin');
+        // Redirect silently without throwing an error
+        window.location.href = '/signin?expired=true';
+        // Return a never-resolving promise to prevent further processing
+        return new Promise<Response>(() => {});
       }
 
       // If it's a JWT-related error, skip refresh attempt and redirect immediately
       if (isAuthErrorMessage(errorMessage) || errorCode === 'TOKEN_INVALID') {
         logger.warn('[API Interceptor] JWT error detected, redirecting to signin:', errorMessage || errorCode);
         isSessionExpiring = true;
-        // Use setTimeout to allow current execution to complete before redirect
-        setTimeout(() => {
-          window.location.href = '/signin?expired=true';
-        }, 0);
-        throw new Error('Session expired - redirecting to signin');
+        // Redirect silently without throwing an error
+        window.location.href = '/signin?expired=true';
+        // Return a never-resolving promise to prevent further processing
+        return new Promise<Response>(() => {});
       }
 
       logger.warn('[API Interceptor] 401 Unauthorized - attempting token refresh');
@@ -258,12 +255,11 @@ export const fetchWithAuth = async (
       if (onSessionExpired) {
         onSessionExpired();
       } else {
-        logger.error('[API Interceptor] Session expired but no handler registered - redirecting');
-        setTimeout(() => {
-          window.location.href = '/signin?expired=true';
-        }, 0);
+        logger.warn('[API Interceptor] Session expired - redirecting to signin');
+        window.location.href = '/signin?expired=true';
       }
-      throw new Error('Session expired - redirecting to signin');
+      // Return a never-resolving promise to prevent further processing and error overlay
+      return new Promise<Response>(() => {});
     }
 
     if (response.status === 403) {
@@ -298,10 +294,9 @@ export const fetchWithAuth = async (
       if (isSessionError) {
         logger.warn('[API Interceptor] Session/CSRF error detected, redirecting to signin');
         isSessionExpiring = true;
-        setTimeout(() => {
-          window.location.href = '/signin?expired=true';
-        }, 0);
-        throw new Error('Session expired - redirecting to signin');
+        window.location.href = '/signin?expired=true';
+        // Return a never-resolving promise to prevent further processing and error overlay
+        return new Promise<Response>(() => {});
       }
 
       throw new Error(errorMessage);
