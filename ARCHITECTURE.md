@@ -8,11 +8,13 @@
 4. [Backend (Node.js/Express)](#backend-nodejsexpress)
 5. [Base de Données (PostgreSQL)](#base-de-données-postgresql)
 6. [Intégrations LLM](#intégrations-llm)
-7. [Sécurité](#sécurité)
-8. [Optimisations](#optimisations)
-9. [Qualité du Code](#qualité-du-code)
-10. [Points Forts](#-points-forts)
-11. [Points Faibles et Axes d'Amélioration](#-points-faibles-et-axes-damélioration)
+7. [Intégrations Externes](#intégrations-externes)
+8. [Sécurité](#sécurité)
+9. [Optimisations](#optimisations)
+10. [Internationalisation (i18n)](#internationalisation-i18n)
+11. [Qualité du Code](#qualité-du-code)
+12. [Points Forts](#-points-forts)
+13. [Points Faibles et Axes d'Amélioration](#-points-faibles-et-axes-damélioration)
 
 ---
 
@@ -28,6 +30,10 @@
 | **Backend** | Node.js, Express.js |
 | **Base de données** | PostgreSQL 15+ avec pg (node-postgres) |
 | **IA/LLM** | OpenAI (GPT-4/5), Anthropic (Claude) |
+| **APIs Externes** | France Travail, Adzuna, ROME 4.0, ESCO |
+| **Génération PDF** | Puppeteer (html-pdf-node) |
+| **Éditeur WYSIWYG** | TinyMCE 7 |
+| **Cartographie** | MapLibre GL JS |
 | **Authentification** | JWT (Access + Refresh Tokens) |
 | **Sécurité** | Helmet, CSRF (Double Submit), Rate Limiting, SQL Injection Protection |
 
@@ -83,22 +89,32 @@
 
 ```
 src/
-├── components/          # Composants réutilisables (55 fichiers)
+├── components/          # Composants réutilisables (60+ fichiers)
 │   ├── ChatBot.tsx      # Assistant IA avec Markdown
 │   ├── Layout.tsx       # Layout principal avec sidebar
-│   ├── ResumeAnalysis/  # Composants d'analyse de CV
+│   ├── ResumeAnalysis/  # Composants d'analyse de CV (8 sous-composants)
+│   ├── HealthIndicator.tsx # Monitoring santé serveur (admin)
+│   ├── Pagination.tsx   # Pagination réutilisable
+│   ├── WebGLBackground.tsx # Animation 3D page d'accueil
+│   ├── market/          # Composants Market Radar (carte France)
 │   └── ...
-├── pages/               # Pages de l'application (16 fichiers)
-│   ├── ResumesPage.tsx  # Gestion des CV
+├── pages/               # Pages de l'application (21 fichiers)
+│   ├── ResumesPage.tsx  # CVthèque avec pagination serveur
 │   ├── MissionsPage.tsx # Gestion des missions
-│   ├── AdaptationsPage.tsx
+│   ├── AdaptationsPage.tsx # Adaptations CV/Mission
+│   ├── ProfileMatchingPage.tsx # Matching profils/missions
+│   ├── FactsPage.tsx    # Market Radar - Données marché
+│   ├── MetiersPage.tsx  # Référentiel ROME 4.0
+│   ├── SecurityLogs.tsx # Logs de sécurité (admin)
+│   ├── MetricsPage.tsx  # Métriques système (admin)
 │   └── ...
 ├── context/             # Contextes React (3 fichiers)
 │   ├── AuthContext.tsx  # Authentification globale
 │   ├── ResumeContext.tsx # État des CV
 │   └── ChatbotContext.tsx
 ├── hooks/               # Hooks personnalisés
-│   └── useAuthFetch.ts  # Fetch avec auth + CSRF retry
+│   ├── useAuthFetch.ts  # Fetch avec auth + CSRF retry
+│   └── useDebounce.ts   # Debounce pour recherche
 ├── services/            # Services frontend
 │   └── authService.ts   # Gestion authentification
 ├── utils/               # Utilitaires (25 fichiers)
@@ -119,6 +135,9 @@ src/
 | `ChatBot` | Assistant IA avec rendu Markdown, redimensionnable |
 | `Layout` | Structure de page avec sidebar, header, navigation |
 | `apiInterceptor` | Interception des requêtes, gestion CSRF, retry automatique |
+| `Pagination` | Composant de pagination réutilisable avec navigation |
+| `HealthIndicator` | Monitoring mémoire et santé serveur (admin) |
+| `ProcessingScreen` | Animation des étapes d'analyse CV |
 
 ### Gestion de l'État
 
@@ -157,19 +176,24 @@ Le backend est un **serveur proxy** (`proxy-server.js`) qui :
 ### Structure des Routes
 
 ```
-src/routes/
+server/routes/
 ├── auth.routes.js       # Login, logout, refresh, register
-├── resumes.routes.js    # CRUD CV, upload, analyse
+├── resumes.routes.js    # CRUD CV, upload, analyse, pagination
 ├── missions.routes.js   # CRUD missions
 ├── adaptations.routes.js # Adaptations CV/Mission
 ├── llm.routes.js        # Appels LLM (analyse, amélioration)
-├── chatbot.routes.js    # Assistant IA
+├── chatbot.routes.js    # Assistant IA contextuel
 ├── settings.routes.js   # Configuration application
-├── templates.routes.js  # Templates d'export
+├── templates.routes.js  # Templates d'export Word/PDF
 ├── users.routes.js      # Gestion utilisateurs (admin)
-├── tags.routes.js       # Gestion des tags
+├── customers.routes.js  # Gestion clients/entreprises
+├── tags.routes.js       # Gestion des tags avec cache
 ├── metrics.routes.js    # Métriques et monitoring
-└── health.routes.js     # Health check
+├── health.routes.js     # Health check + memory stats
+├── admin.routes.js      # Routes administration (security logs, filters)
+├── marketRadar.routes.js # Données marché France Travail/Adzuna
+├── rome.routes.js       # Référentiel ROME 4.0 métiers
+└── docs.routes.js       # Documentation Swagger
 ```
 
 ### Services Backend
@@ -184,6 +208,16 @@ src/routes/
 | `tokenBlacklist.service.js` | Révocation tokens, blacklist users |
 | `settings.service.js` | Configuration LLM centralisée |
 | `retry.service.js` | Retry automatique avec backoff |
+| `franceTravail.service.js` | API France Travail (offres, stats) |
+| `adzuna.service.js` | API Adzuna (offres emploi) |
+| `marketFacts.service.js` | Agrégation données marché |
+| `marketTrends.service.js` | Tendances salariales par région |
+| `rome.service.js` | Référentiel ROME 4.0 métiers IT |
+| `escoService.js` | Classification ESCO compétences |
+| `profileMatching.service.js` | Matching CV/Mission par tags |
+| `openai.service.js` | Appels OpenAI avec streaming |
+| `database.service.js` | Pool PostgreSQL avec retry |
+| `shutdown.service.js` | Graceful shutdown |
 
 ### Middleware Chain
 
@@ -304,6 +338,61 @@ Le service gère automatiquement les différences entre modèles :
 - `max_tokens` vs `max_completion_tokens` (GPT-5+)
 - Support température (non supporté par GPT-5)
 - Format messages (OpenAI vs Anthropic)
+
+---
+
+## Intégrations Externes
+
+### France Travail API
+
+| Endpoint | Usage |
+|----------|-------|
+| `/offres` | Récupération des offres d'emploi IT |
+| `/stats` | Statistiques marché par région/métier |
+| `/rome` | Référentiel ROME 4.0 des métiers |
+
+### Adzuna API
+
+| Endpoint | Usage |
+|----------|-------|
+| `/jobs` | Offres d'emploi complémentaires |
+| `/salary` | Données salariales par région |
+
+### ESCO (European Skills Classification)
+
+- Classification européenne des compétences
+- Mapping automatique des skills extraits des CV
+- Normalisation des tags pour le matching
+
+### Market Radar
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Market Radar Flow                         │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  1. Sélection région sur carte France (MapLibre)            │
+│  2. Sélection métier (référentiel ROME 4.0)                 │
+│  3. Appel APIs France Travail + Adzuna                      │
+│  4. Agrégation données marché (offres, salaires, tension)   │
+│  5. Affichage tendances et statistiques                     │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Génération PDF
+
+```javascript
+// pdf-server/server.cjs - Serveur dédié Puppeteer
+const htmlPdf = require('html-pdf-node');
+
+// Génération PDF depuis HTML avec templates personnalisables
+app.post('/generate-pdf', async (req, res) => {
+  const { html, options } = req.body;
+  const pdfBuffer = await htmlPdf.generatePdf({ content: html }, options);
+  res.send(pdfBuffer);
+});
+```
 
 ---
 
@@ -478,7 +567,40 @@ export const customersCache = new SimpleCache(15 * 60 * 1000); // 15 min
 ### 📦 Compression
 
 ```javascript
-app.use(compression()); // Gzip automatique des réponses
+// Backend: compression middleware Express
+app.use(compression()); // Gzip automatique des réponses API
+
+// Frontend Dev: compression middleware Vite
+server.middlewares.use((req, res, next) => {
+  // Brotli ou Gzip selon Accept-Encoding
+  const useBrotli = acceptEncoding.includes('br');
+  const compressed = useBrotli ? zlib.brotliCompressSync(body) : zlib.gzipSync(body);
+  res.setHeader('Content-Encoding', useBrotli ? 'br' : 'gzip');
+});
+
+// Frontend Prod: fichiers pré-compressés (.br, .gz) servis par Express
+app.use((req, res, next) => {
+  // Sert automatiquement les fichiers .br ou .gz si disponibles
+  if (acceptEncoding.includes('br') && fs.existsSync(filePath + '.br')) {
+    res.set('Content-Encoding', 'br');
+    req.url = req.url + '.br';
+  }
+});
+```
+
+### 🗂️ Cache Assets Statiques
+
+```javascript
+// Cache agressif pour assets hashés (1 an, immutable)
+app.use(express.static(distPath, {
+  setHeaders: (res, filePath) => {
+    if (filePath.match(/\.[a-f0-9]{8,}\.(js|css|woff2?)$/i)) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    } else if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    }
+  }
+}));
 ```
 
 ### 🔄 Connection Pooling (Axios)
@@ -509,6 +631,67 @@ export async function loadPdfjs() {
 - **Token Blacklist** : Suppression tokens expirés
 - **Cache** : Éviction entrées expirées + limite taille
 - **Fichiers uploadés** : Nettoyage périodique
+
+---
+
+## Internationalisation (i18n)
+
+### Configuration
+
+```javascript
+// client/src/i18n/index.js
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
+import LanguageDetector from 'i18next-browser-languagedetector';
+
+i18n
+  .use(LanguageDetector)
+  .use(initReactI18next)
+  .init({
+    resources: { en: { translation: enTranslations }, fr: { translation: frTranslations } },
+    fallbackLng: 'en',
+    initImmediate: false, // Synchronous initialization
+  });
+```
+
+### Langues Supportées
+
+| Langue | Fichier | Clés |
+|--------|---------|------|
+| **Français** | `locales/fr.json` | ~1000 clés |
+| **Anglais** | `locales/en.json` | ~1000 clés |
+
+### Structure des Traductions
+
+```json
+{
+  "common": { "save": "Enregistrer", "cancel": "Annuler" },
+  "resumes": { "title": "CVthèque", "filters": { "skills": "Compétences" } },
+  "resume": { "analysis": { "categories": { "technicalskills": "Compétences techniques" } } },
+  "navigation": { "home": "Accueil", "resumes": "CVthèque" },
+  "processing": { "steps": { "upload": { "title": "...", "steps": ["..."] } } }
+}
+```
+
+### Utilisation
+
+```typescript
+// Dans les composants React
+import { useTranslation } from 'react-i18next';
+
+const Component = () => {
+  const { t } = useTranslation();
+  return <h1>{t('resumes.title')}</h1>;
+};
+```
+
+### Audit des Traductions
+
+```bash
+# Script d'audit pour détecter les clés manquantes/inutilisées
+node scripts/audit-translations.js
+node scripts/audit-translations.js --fix  # Ajoute les clés manquantes
+```
 
 ---
 
@@ -667,5 +850,5 @@ L'architecture actuelle est **adaptée pour un usage PME/ESN** et peut supporter
 
 ---
 
-*Document mis à jour le 5 février 2026*
-*Version: 1.5.0*
+*Document mis à jour le 8 février 2026*
+*Version: 1.5.7*
