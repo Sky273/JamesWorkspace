@@ -1,3 +1,27 @@
+## v1.5.7 - 2026-02-08
+### 🚀 Optimisations Production & Corrections i18n
+
+#### Optimisation des assets statiques
+- **Fichiers pré-compressés** : Support Brotli (.br) et Gzip (.gz) pour les assets statiques
+- **Cache agressif** : Assets hashés cachés 1 an avec `immutable`, HTML sans cache pour SPA
+- **Headers optimisés** : `Vary: Accept-Encoding` pour compatibilité CDN
+
+#### Pagination CVthèque
+- **Correction pagination** : Ajout du `totalCount` dans la réponse API pour afficher toutes les pages
+- **Cohérence** : Pagination à 20 éléments par page (comme le reste de l'application)
+
+#### Corrections i18n
+- **I18nextProvider** : Enveloppement explicite de l'application pour garantir l'initialisation
+- **Import prioritaire** : i18n importé en premier dans `main.tsx`
+- **Textes de chargement** : Ajout des tableaux `steps` pour les animations d'analyse CV
+
+#### Sécurité API
+- **fetchWithAuth** : Migration de tous les appels API protégés vers `fetchWithAuth()`
+- **HealthIndicator** : Utilisation de `fetchWithAuth` pour les endpoints admin
+- **Génération PDF** : Tous les appels `/generate-pdf` utilisent maintenant `fetchWithAuth`
+
+---
+
 ## v1.5.6 - 2026-02-07
 ### 🌐 Audit & Nettoyage des Traductions
 
