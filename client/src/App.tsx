@@ -95,7 +95,7 @@ const App = (): JSX.Element => {
     <ErrorBoundary>
       <ResumeProvider>
         <ChatbotProvider>
-          <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+          <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }} hydrateFallbackElement={<PageLoader />}>
             <Suspense fallback={<PageLoader />}>
               <Routes>
                 <Route path="/signin" element={<SignIn />} />

@@ -122,6 +122,13 @@
         "atsOptimization": "Optimisation ATS",
         "hobbiesLanguages": "Loisirs & Langues"
       },
+      "categories": {
+        "skills": "Compétences",
+        "technicalskills": "Compétences techniques",
+        "tools": "Outils",
+        "industries": "Secteurs d'activité",
+        "softskills": "Soft Skills"
+      },
       "exportOptions": {
         "title": "Options d'exportation",
         "template": "Modèle",

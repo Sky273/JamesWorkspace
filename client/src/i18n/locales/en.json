@@ -266,6 +266,13 @@
         "atsOptimization": "ATS Optimization",
         "hobbiesLanguages": "Hobbies & Languages"
       },
+      "categories": {
+        "skills": "Skills",
+        "technicalskills": "Technical Skills",
+        "tools": "Tools",
+        "industries": "Industries",
+        "softskills": "Soft Skills"
+      },
       "exportOptions": {
         "title": "Export Options",
         "template": "Template",

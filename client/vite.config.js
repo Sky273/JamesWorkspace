@@ -5,8 +5,9 @@ import fs from 'fs';
 import commonjs from '@rollup/plugin-commonjs';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import compression from 'vite-plugin-compression';
+import zlib from 'zlib';
 
-// Plugin to configure HTTP server timeouts and diagnose 400 errors
+// Plugin to configure HTTP server timeouts, compression, and diagnose 400 errors
 const httpConfigPlugin = () => ({
   name: 'http-config',
   configureServer(server) {
@@ -24,6 +25,61 @@ const httpConfigPlugin = () => ({
       // Request timeout
       httpServer.requestTimeout = 5 * 60 * 1000; // 5 minutes for request processing
       console.log('[Vite] HTTP server timeouts configured: keepAlive=30min, headers=31min');
+      console.log('[Vite] Compression middleware enabled (gzip/brotli)');
+    });
+    
+    // Compression middleware for dev server (same behavior as production)
+    server.middlewares.use((req, res, next) => {
+      const acceptEncoding = req.headers['accept-encoding'] || '';
+      const url = req.url || '';
+      
+      // Only compress text-based assets
+      const compressibleExtensions = /\.(js|mjs|css|html|json|svg|txt|xml)(\?.*)?$/i;
+      const shouldCompress = compressibleExtensions.test(url);
+      
+      if (shouldCompress && (acceptEncoding.includes('br') || acceptEncoding.includes('gzip'))) {
+        const originalWrite = res.write.bind(res);
+        const originalEnd = res.end.bind(res);
+        const chunks = [];
+        
+        res.write = function(chunk, encoding, callback) {
+          if (chunk) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+          if (typeof encoding === 'function') {
+            callback = encoding;
+            encoding = undefined;
+          }
+          if (callback) callback();
+          return true;
+        };
+        
+        res.end = function(chunk, encoding, callback) {
+          if (chunk) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+          
+          const body = Buffer.concat(chunks);
+          
+          // Only compress if body is larger than 1KB
+          if (body.length > 1024) {
+            const useBrotli = acceptEncoding.includes('br');
+            const compressMethod = useBrotli ? zlib.brotliCompressSync : zlib.gzipSync;
+            const encoding = useBrotli ? 'br' : 'gzip';
+            
+            try {
+              const compressed = compressMethod(body);
+              res.setHeader('Content-Encoding', encoding);
+              res.setHeader('Vary', 'Accept-Encoding');
+              res.removeHeader('Content-Length');
+              return originalEnd.call(res, compressed, callback);
+            } catch (e) {
+              // Fallback to uncompressed on error
+              return originalEnd.call(res, body, callback);
+            }
+          }
+          
+          return originalEnd.call(res, body, callback);
+        };
+      }
+      
+      next();
     });
     
     // Log all requests at the earliest possible point
