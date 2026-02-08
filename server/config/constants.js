@@ -91,7 +91,8 @@ export const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
         'http://localhost:5173',  // Vite dev server
         'http://localhost:4173',  // Vite preview server
         'http://localhost:3000',
-        'http://localhost:3001',  // Proxy server (same-origin)
+        'http://localhost:3001',  // Proxy server HTTP
+        'https://localhost:3443', // Proxy server HTTPS (production mode)
         'http://localhost:3002'   // PDF server
     ];
 

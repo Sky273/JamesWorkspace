@@ -1,0 +1,63 @@
+# Dependencies
+node_modules/
+.npm/
+
+# Build outputs (will be rebuilt in container)
+client/dist/
+
+# TinyMCE will be copied during build
+client/public/tinymce/
+
+# Development files
+.git/
+.gitignore
+.vscode/
+.idea/
+*.log
+
+# Environment files (secrets should be passed via docker run -e)
+.env
+.env.local
+.env.development
+.env.production
+*.env
+
+# Test files
+coverage/
+*.test.js
+*.test.ts
+*.spec.js
+*.spec.ts
+__tests__/
+
+# Documentation
+*.md
+!README.md
+!USER_GUIDE.md
+!USER_GUIDE_EN.md
+!CHANGELOG.md
+docs/
+
+# Certificates (should be mounted as volumes)
+certificates/
+
+# Temporary files
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Uploads (should be mounted as volume for persistence)
+uploads/
+
+# Data files
+data/
+*.sqlite
+*.db
+
+# IDE
+.windsurf/

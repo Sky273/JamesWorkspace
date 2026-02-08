@@ -43,6 +43,58 @@ function logStep(step, message) {
     console.log(`\n${colors.cyan}[${step}]${colors.reset} ${colors.bold}${message}${colors.reset}`);
 }
 
+async function stopExistingServers() {
+    logStep('0/6', 'Stopping existing servers...');
+    
+    const isWindows = process.platform === 'win32';
+    
+    try {
+        if (isWindows) {
+            // Kill processes on ports 3001, 3002, 3443 (proxy, pdf, https)
+            const ports = [3001, 3002, 3443];
+            for (const port of ports) {
+                try {
+                    // Find and kill process on port
+                    const { stdout } = await execAsync(`netstat -ano | findstr :${port}`);
+                    const lines = stdout.trim().split('\n');
+                    const pids = new Set();
+                    for (const line of lines) {
+                        const parts = line.trim().split(/\s+/);
+                        const pid = parts[parts.length - 1];
+                        if (pid && pid !== '0') pids.add(pid);
+                    }
+                    for (const pid of pids) {
+                        try {
+                            await execAsync(`taskkill /F /PID ${pid}`);
+                            log(`  🛑 Stopped process on port ${port} (PID: ${pid})`, 'yellow');
+                        } catch {
+                            // Process may have already exited
+                        }
+                    }
+                } catch {
+                    // No process on this port
+                }
+            }
+        } else {
+            // Unix: kill processes on ports
+            const ports = [3001, 3002, 3443];
+            for (const port of ports) {
+                try {
+                    await execAsync(`lsof -ti:${port} | xargs kill -9 2>/dev/null || true`);
+                } catch {
+                    // No process on this port
+                }
+            }
+        }
+        log('  ✅ Existing servers stopped', 'green');
+    } catch (error) {
+        log('  ⚠️  Could not stop existing servers (may not be running)', 'yellow');
+    }
+    
+    // Small delay to ensure ports are released
+    await new Promise(resolve => setTimeout(resolve, 1000));
+}
+
 async function checkPrerequisites() {
     logStep('1/6', 'Checking prerequisites...');
     
@@ -236,13 +288,19 @@ ${colors.green}${colors.bold}═════════════════
 
 // Main execution
 async function main() {
+    // Read version from package.json
+    const packageJsonPath = path.join(ROOT_DIR, 'package.json');
+    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+    const version = packageJson.version || '?.?.?';
+    
     console.log(`
 ${colors.cyan}${colors.bold}╔═══════════════════════════════════════════════════════════╗
-║           ResumeConverter Quick Start v1.5.1              ║
+║           ResumeConverter Quick Start v${version.padEnd(18)}║
 ╚═══════════════════════════════════════════════════════════╝${colors.reset}
 `);
     
     try {
+        await stopExistingServers();
         await checkPrerequisites();
         await installDependencies();
         await setupDatabase();

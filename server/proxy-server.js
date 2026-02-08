@@ -137,7 +137,8 @@ app.use(helmet({
                 "'self'",
                 "https://api.openai.com",
                 "https://api.anthropic.com",
-                "https://basemaps.cartocdn.com", // MapLibre GL tiles and styles
+                "https://basemaps.cartocdn.com",     // MapLibre GL - base domain
+                "https://*.basemaps.cartocdn.com",   // MapLibre GL - all subdomains (tiles, etc.)
                 ...(isProduction ? [] : ["http://localhost:*", "ws://localhost:*"])
             ],
             workerSrc: [
@@ -160,24 +161,25 @@ app.use(helmet({
 // CORS configuration
 const corsOptions = {
     origin: function (origin, callback) {
-        // In production, reject requests without origin for security
-        // (prevents direct API calls from scripts, curl, etc.)
+        // Same-origin requests don't have an Origin header
+        // This is normal browser behavior when frontend and API are on the same domain
+        // Allow these requests (they are inherently same-origin and safe)
         if (!origin) {
-            if (isProduction) {
-                safeLog('warn', 'CORS: Rejected request without origin in production');
-                return callback(new Error('Origin header required'));
-            }
-            // In development, allow requests without origin for testing (Postman, curl)
+            safeLog('debug', 'CORS: Allowing request without origin (same-origin)');
             return callback(null, true);
         }
         
         // Check if origin is in allowed list
         if (ALLOWED_ORIGINS.includes(origin)) {
+            safeLog('debug', 'CORS: Allowing request from allowed origin', { origin });
             return callback(null, true);
         }
         
-        // Reject if not allowed
-        safeLog('warn', 'CORS: Rejected request from unauthorized origin', { origin });
+        // Log all origins for debugging
+        safeLog('warn', 'CORS: Rejected request from unauthorized origin', { 
+            origin, 
+            allowedOrigins: ALLOWED_ORIGINS 
+        });
         callback(new Error('Not allowed by CORS'));
     },
     credentials: true,
@@ -486,7 +488,8 @@ const csrfExemptPaths = [
     '/api/auth/signin',
     '/api/auth/refresh',
     '/api/auth/logout',
-    '/api/auth/register'
+    '/api/auth/register',
+    '/generate-pdf'  // PDF generation proxy - internal server-to-server call
 ];
 
 // Safe HTTP methods that should never require CSRF validation
@@ -501,9 +504,11 @@ app.use((req, res, next) => {
     }
     // Skip CSRF for exempt paths (auth routes)
     if (csrfExemptPaths.includes(req.path)) {
+        safeLog('debug', 'CSRF bypassed for exempt path', { path: req.path, method: req.method });
         return next();
     }
     // Apply CSRF protection for all other routes (POST, PUT, DELETE, PATCH)
+    safeLog('debug', 'Applying CSRF protection', { path: req.path, method: req.method });
     doubleCsrfProtection(req, res, next);
 });
 
@@ -599,11 +604,66 @@ app.use('/api/rome', romeRoutes);
 app.use('/api/docs', docsRoutes);
 
 // ============================================
+// PDF SERVER PROXY
+// ============================================
+// Proxy requests to the PDF server running on port 3002
+const PDF_SERVER_URL = process.env.PDF_SERVER_URL || 'http://localhost:3002';
+
+app.post('/generate-pdf', async (req, res) => {
+    try {
+        safeLog('info', 'Proxying PDF generation request to PDF server');
+        
+        const response = await fetch(`${PDF_SERVER_URL}/generate-pdf`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(req.body)
+        });
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            safeLog('error', 'PDF server error', { status: response.status, error: errorText });
+            return res.status(response.status).json({ error: errorText });
+        }
+        
+        // Stream the PDF response back to the client
+        res.setHeader('Content-Type', 'application/pdf');
+        const contentDisposition = response.headers.get('Content-Disposition');
+        if (contentDisposition) {
+            res.setHeader('Content-Disposition', contentDisposition);
+        }
+        
+        const buffer = await response.arrayBuffer();
+        res.send(Buffer.from(buffer));
+    } catch (error) {
+        safeLog('error', 'PDF proxy error', { error: error.message });
+        res.status(500).json({ error: 'Failed to generate PDF', details: error.message });
+    }
+});
+
+// ============================================
 // STATIC FILES & SPA FALLBACK
 // ============================================
 
 // Serve static files from the dist directory (production build)
 const distPath = path.join(__dirname, '..', 'client', 'dist');
+
+// MIME types for pre-compressed files
+const mimeTypes = {
+    '.js': 'application/javascript',
+    '.mjs': 'application/javascript',
+    '.css': 'text/css',
+    '.html': 'text/html',
+    '.json': 'application/json',
+    '.svg': 'image/svg+xml',
+    '.xml': 'application/xml',
+    '.txt': 'text/plain',
+    '.woff': 'font/woff',
+    '.woff2': 'font/woff2',
+    '.ttf': 'font/ttf',
+    '.eot': 'application/vnd.ms-fontobject'
+};
 
 // Serve pre-compressed files (Brotli and Gzip) if available
 // This middleware checks for .br and .gz versions of requested files
@@ -612,6 +672,8 @@ app.use((req, res, next) => {
     if (!req.path.startsWith('/api/') && !req.path.startsWith('/health')) {
         const acceptEncoding = req.headers['accept-encoding'] || '';
         const filePath = path.join(distPath, req.path);
+        const ext = path.extname(req.path).toLowerCase();
+        const mimeType = mimeTypes[ext];
         
         // Try Brotli first (better compression)
         if (acceptEncoding.includes('br')) {
@@ -619,6 +681,7 @@ app.use((req, res, next) => {
             if (fs.existsSync(brPath)) {
                 res.set('Content-Encoding', 'br');
                 res.set('Vary', 'Accept-Encoding');
+                if (mimeType) res.set('Content-Type', mimeType);
                 req.url = req.url + '.br';
             }
         }
@@ -628,6 +691,7 @@ app.use((req, res, next) => {
             if (fs.existsSync(gzPath)) {
                 res.set('Content-Encoding', 'gzip');
                 res.set('Vary', 'Accept-Encoding');
+                if (mimeType) res.set('Content-Type', mimeType);
                 req.url = req.url + '.gz';
             }
         }
