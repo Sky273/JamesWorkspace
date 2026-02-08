@@ -3,12 +3,15 @@
  * TypeScript version
  */
 
+// IMPORTANT: i18n must be imported FIRST before any React components
+import i18n from './i18n';
+import { I18nextProvider } from 'react-i18next';
+
 import { StrictMode } from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './styles/main.css';
 import { AuthProvider } from './context/AuthContext';
-import './i18n';
 
 // ============================================
 // GLOBAL ERROR HANDLING
@@ -119,8 +122,10 @@ if (!rootElement) throw new Error('Root element not found');
 
 ReactDOM.createRoot(rootElement).render(
   <StrictMode>
-    <AuthProvider>
-      <App />
-    </AuthProvider>
+    <I18nextProvider i18n={i18n}>
+      <AuthProvider>
+        <App />
+      </AuthProvider>
+    </I18nextProvider>
   </StrictMode>
 );
