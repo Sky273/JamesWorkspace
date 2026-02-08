@@ -267,14 +267,41 @@ export const fetchWithAuth = async (
     }
 
     if (response.status === 403) {
-      logger.warn('[API Interceptor] 403 Forbidden - insufficient permissions');
+      logger.warn('[API Interceptor] 403 Forbidden - checking if session related');
       
       let errorMessage = 'Accès refusé';
+      let errorCode = '';
       try {
         const errorData = await response.clone().json();
         errorMessage = errorData.error || errorMessage;
+        errorCode = errorData.code || '';
       } catch {
         // Ignore JSON parse errors
+      }
+
+      // Check if this is a session/CSRF related error - redirect to signin
+      const sessionErrorPatterns = [
+        'csrf',
+        'token',
+        'session',
+        'expired',
+        'invalid_csrf',
+        'CSRF_INVALID',
+        'TOKEN_EXPIRED'
+      ];
+      
+      const isSessionError = sessionErrorPatterns.some(pattern => 
+        errorMessage.toLowerCase().includes(pattern.toLowerCase()) ||
+        errorCode.toLowerCase().includes(pattern.toLowerCase())
+      );
+
+      if (isSessionError) {
+        logger.warn('[API Interceptor] Session/CSRF error detected, redirecting to signin');
+        isSessionExpiring = true;
+        setTimeout(() => {
+          window.location.href = '/signin?expired=true';
+        }, 0);
+        throw new Error('Session expired - redirecting to signin');
       }
 
       throw new Error(errorMessage);

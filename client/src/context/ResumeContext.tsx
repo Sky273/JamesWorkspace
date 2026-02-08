@@ -6,7 +6,7 @@
 import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import { extractResumeText } from '../utils/resumeProcessing';
 import { useAuth } from './AuthContext';
-import { createAuthOptionsWithCsrf } from '../utils/apiInterceptor';
+import { createAuthOptionsWithCsrf, fetchWithAuth } from '../utils/apiInterceptor';
 import logger from '../utils/logger.frontend';
 import { showCaughtError, getUserFriendlyMessage } from '../components/ErrorToast';
 
@@ -82,7 +82,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
         body: JSON.stringify(analysisData)
       });
       
-      const response = await fetch(`/api/resumes/${resumeId}`, updateOptions);
+      const response = await fetchWithAuth(`/api/resumes/${resumeId}`, updateOptions);
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Failed to update resume' }));
         throw new Error(errorData.error || 'Failed to update resume');
@@ -115,7 +115,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
     try {
       setLoading(true);
       const fetchOptions = await createAuthOptionsWithCsrf({ method: 'GET' });
-      const response = await fetch('/api/resumes', fetchOptions);
+      const response = await fetchWithAuth('/api/resumes', fetchOptions);
       if (!response.ok) {
         throw new Error('Failed to fetch resumes');
       }
@@ -127,7 +127,11 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
       }
     } catch (error) {
       if (!controller.signal.aborted) {
-        logger.error('Error fetching resumes:', error);
+        // Don't log session expiration errors - user will be redirected
+        const errorMessage = error instanceof Error ? error.message : '';
+        if (!errorMessage.includes('Session expired')) {
+          logger.error('Error fetching resumes:', error);
+        }
       }
     } finally {
       if (!controller.signal.aborted) {
@@ -177,7 +181,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
         delete uploadOptions.headers['Content-Type'];
       }
       
-      const uploadResponse = await fetch('/api/resumes/upload', {
+      const uploadResponse = await fetchWithAuth('/api/resumes/upload', {
         ...uploadOptions,
         signal: controller.signal
       });
@@ -209,7 +213,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
         body: JSON.stringify({ text })
       });
       
-      const analysisResponse = await fetch('/api/resumes/analyze-text', {
+      const analysisResponse = await fetchWithAuth('/api/resumes/analyze-text', {
         ...analysisOptions,
         signal: controller.signal
       });
@@ -257,7 +261,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
         })
       });
       
-      const updateResponse = await fetch(`/api/resumes/${initialRecord!.id}`, {
+      const updateResponse = await fetchWithAuth(`/api/resumes/${initialRecord!.id}`, {
         ...updateOptions,
         signal: controller.signal
       });
@@ -297,7 +301,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
               })
             });
             
-            await fetch(`/api/resumes/${initialRecord.id}`, errorUpdateOptions);
+            await fetchWithAuth(`/api/resumes/${initialRecord.id}`, errorUpdateOptions);
           } catch (updateError) {
             logger.error('[ResumeContext] Failed to update resume status to Error:', updateError);
           }
@@ -353,10 +357,10 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
             analysis: currentAnalysis
           })
         });
-        response = await fetch('/api/resumes/improve', {
+        response = await fetchWithAuth('/api/resumes/improve', {
           ...authOptions,
           signal: controller.signal
-        } as RequestInit);
+        });
         clearTimeout(timeoutId);
       } catch (fetchError) {
         clearTimeout(timeoutId);
@@ -432,7 +436,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 'Improved Text': content })
       });
-      const response = await fetch(`/api/resumes/${resumeId}`, updateOptions);
+      const response = await fetchWithAuth(`/api/resumes/${resumeId}`, updateOptions);
       if (!response.ok) {
         throw new Error('Failed to update improved content');
       }
@@ -455,7 +459,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
     setDeleting(true);
     try {
       const deleteOptions = await createAuthOptionsWithCsrf({ method: 'DELETE' });
-      const response = await fetch(`/api/resumes/${resumeId}`, deleteOptions);
+      const response = await fetchWithAuth(`/api/resumes/${resumeId}`, deleteOptions);
       if (!response.ok) {
         throw new Error('Failed to delete resume');
       }

@@ -22,7 +22,7 @@ import { templateService } from '../utils/templateService';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import logger from '../utils/logger.frontend';
-import { createAuthOptionsWithCsrf } from '../utils/apiInterceptor';
+import { createAuthOptionsWithCsrf, fetchWithAuth } from '../utils/apiInterceptor';
 
 import type { TinyMCE, TinyMCEEditor } from '../types/tinymce.d';
 import SkillsTagsTab from './ResumeAnalysis/SkillsTagsTab';
@@ -198,7 +198,7 @@ const ResumeAnalysis = ({ resume }: ResumeAnalysisProps): JSX.Element | null => 
         processedFooter = processedFooter.replace(/-title-/g, candidateTitle);
       }
 
-      const response = await fetch('/generate-pdf', {
+      const response = await fetchWithAuth('/generate-pdf', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json; charset=utf-8' },
         body: JSON.stringify({ 
@@ -266,7 +266,7 @@ const ResumeAnalysis = ({ resume }: ResumeAnalysisProps): JSX.Element | null => 
         })
       });
       
-      const response = await fetch(`/api/resumes/${resume.id}/ai-modify`, authOptions as RequestInit);
+      const response = await fetchWithAuth(`/api/resumes/${resume.id}/ai-modify`, authOptions);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Failed to modify resume' }));

@@ -11,6 +11,7 @@ import toast from 'react-hot-toast';
 import logger from '../utils/logger.frontend';
 import { createSafeHtml } from '../utils/sanitizer.frontend';
 import { useTranslation } from 'react-i18next';
+import { fetchWithAuth } from '../utils/apiInterceptor';
 
 interface Template {
   id: string;
@@ -89,7 +90,7 @@ const AdaptationComparison = ({ originalText, adaptedText, matchScore, candidate
         processedFooter = processedFooter.replace(/-title-/g, title);
       }
 
-      const response = await fetch('/generate-pdf', {
+      const response = await fetchWithAuth('/generate-pdf', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json; charset=utf-8' },
         body: JSON.stringify({ 

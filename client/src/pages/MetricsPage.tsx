@@ -91,7 +91,10 @@ const MetricsPage = (): JSX.Element => {
       setMetrics(data);
       setLastUpdated(new Date());
     } catch (error) {
-      logger.error('Error fetching metrics:', error);
+      const errorMessage = error instanceof Error ? error.message : '';
+      if (!errorMessage.includes('Session expired')) {
+        logger.error('Error fetching metrics:', error);
+      }
     }
   };
 
@@ -103,7 +106,10 @@ const MetricsPage = (): JSX.Element => {
         setDbMetrics(data);
       }
     } catch (error) {
-      logger.error('Error fetching database metrics:', error);
+      const errorMessage = error instanceof Error ? error.message : '';
+      if (!errorMessage.includes('Session expired')) {
+        logger.error('Error fetching database metrics:', error);
+      }
     }
   };
 

@@ -15,7 +15,7 @@ import toast from 'react-hot-toast';
 import { createSafeHtml } from '../utils/sanitizer.frontend';
 import ExportModal from './AdaptationsPage_ExportModal';
 import AdaptationAnalysisView from '../components/AdaptationAnalysisView';
-import { createAuthOptionsWithCsrf } from '../utils/apiInterceptor';
+import { createAuthOptionsWithCsrf, fetchWithAuth } from '../utils/apiInterceptor';
 import logger from '../utils/logger.frontend';
 import { formatDateTime } from '../utils/dateFormatter';
 
@@ -133,8 +133,11 @@ const AdaptationsPage = (): JSX.Element => {
       setTemplates(fetchedTemplates.filter((t: Template) => t.status === 'Active'));
       if (fetchedTemplates.length > 0) setSelectedTemplate(fetchedTemplates[0].id);
     } catch (error) {
-      logger.error('Error fetching templates:', error);
-      toast.error('Erreur lors du chargement des templates');
+      const errorMessage = error instanceof Error ? error.message : '';
+      if (!errorMessage.includes('Session expired')) {
+        logger.error('Error fetching templates:', error);
+        toast.error('Erreur lors du chargement des templates');
+      }
     } finally {
       setLoadingTemplates(false);
     }
@@ -181,8 +184,11 @@ const AdaptationsPage = (): JSX.Element => {
         setMissions(missionsData.data || missionsData); 
       }
     } catch (error) {
-      logger.error('Error fetching data:', error);
-      toast.error('Erreur lors du chargement des adaptations');
+      const errorMessage = error instanceof Error ? error.message : '';
+      if (!errorMessage.includes('Session expired')) {
+        logger.error('Error fetching data:', error);
+        toast.error('Erreur lors du chargement des adaptations');
+      }
     } finally {
       setLoading(false);
     }
@@ -272,7 +278,7 @@ const AdaptationsPage = (): JSX.Element => {
         processedFooter = processedFooter.replace(/-title-/g, candidateTitle);
       }
 
-      const response = await fetch('/generate-pdf', {
+      const response = await fetchWithAuth('/generate-pdf', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json; charset=utf-8' },
         body: JSON.stringify({ 
@@ -384,7 +390,7 @@ const AdaptationsPage = (): JSX.Element => {
     try {
       const content = editorRef.current.getContent();
       const authOptions = await createAuthOptionsWithCsrf({ method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ 'Adapted Text': content }) });
-      const response = await fetch(`/api/adaptations/${selectedAdaptation.id}`, authOptions);
+      const response = await fetchWithAuth(`/api/adaptations/${selectedAdaptation.id}`, authOptions);
       if (!response.ok) throw new Error('Failed to save adapted CV');
       setAdaptations(adaptations.map(a => a.id === selectedAdaptation.id ? { ...a, 'Adapted Text': content } : a));
       setSelectedAdaptation({ ...selectedAdaptation, 'Adapted Text': content });

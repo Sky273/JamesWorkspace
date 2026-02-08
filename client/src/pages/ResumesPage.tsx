@@ -158,7 +158,11 @@ const ResumesPage = (): JSX.Element => {
         setHasMore(false);
       }
     } catch (error) {
-      logger.error('Error fetching resumes:', error);
+      // Don't log session expiration errors - user will be redirected
+      const errorMessage = error instanceof Error ? error.message : '';
+      if (!errorMessage.includes('Session expired')) {
+        logger.error('Error fetching resumes:', error);
+      }
     } finally {
       setLoading(false);
     }

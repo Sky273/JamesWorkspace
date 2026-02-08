@@ -115,8 +115,11 @@ const SettingsPage = (): JSX.Element => {
         improvementPromptLength: data.improvementPrompt?.length || 0
       });
     } catch (error) {
-      logger.error('Error fetching settings:', error);
-      toast.error(t('settings.loadError'));
+      const errorMessage = error instanceof Error ? error.message : '';
+      if (!errorMessage.includes('Session expired')) {
+        logger.error('Error fetching settings:', error);
+        toast.error(t('settings.loadError'));
+      }
     } finally {
       setLoading(false);
     }

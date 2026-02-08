@@ -86,7 +86,10 @@ const SecurityLogs = (): JSX.Element => {
       setLogs(data.logs);
       setTotalCount(data.total || data.logs.length);
     } catch (error) {
-      logger.error('[SecurityLogs] Error fetching logs:', error);
+      const errorMessage = error instanceof Error ? error.message : '';
+      if (!errorMessage.includes('Session expired')) {
+        logger.error('[SecurityLogs] Error fetching logs:', error);
+      }
     }
   }, [currentPage, filters, t]);
 
@@ -113,7 +116,10 @@ const SecurityLogs = (): JSX.Element => {
       const data = await response.json();
       setStats(data);
     } catch (error) {
-      logger.error('[SecurityLogs] Error fetching stats:', error);
+      const errorMessage = error instanceof Error ? error.message : '';
+      if (!errorMessage.includes('Session expired')) {
+        logger.error('[SecurityLogs] Error fetching stats:', error);
+      }
     }
   }, []); // No dependencies - stats are global, not filtered
 
@@ -124,7 +130,10 @@ const SecurityLogs = (): JSX.Element => {
       const data = await response.json();
       setFilterOptions(data);
     } catch (error) {
-      logger.error('[SecurityLogs] Error fetching filter options:', error);
+      const errorMessage = error instanceof Error ? error.message : '';
+      if (!errorMessage.includes('Session expired')) {
+        logger.error('[SecurityLogs] Error fetching filter options:', error);
+      }
     }
   }, []);
 

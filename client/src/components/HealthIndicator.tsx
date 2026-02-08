@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { formatDateTime } from '../utils/dateFormatter';
+import { fetchWithAuth, createAuthOptions } from '../utils/apiInterceptor';
 
 interface HealthCheck {
   status: string;
@@ -82,10 +83,7 @@ const HealthIndicator = ({ showAlways = false }: HealthIndicatorProps): JSX.Elem
 
   const fetchMemoryStats = async (): Promise<void> => {
     try {
-      const response = await fetch('/health/memory', { 
-        method: 'GET',
-        credentials: 'include'
-      });
+      const response = await fetchWithAuth('/health/memory', createAuthOptions({ method: 'GET' }));
       if (response.ok) {
         const data = await response.json();
         setMemoryStats(data);
@@ -97,10 +95,7 @@ const HealthIndicator = ({ showAlways = false }: HealthIndicatorProps): JSX.Elem
 
   const fetchHealth = async (): Promise<void> => {
     try {
-      const response = await fetch('/health', { 
-        method: 'GET',
-        credentials: 'include'
-      });
+      const response = await fetchWithAuth('/health', createAuthOptions({ method: 'GET' }));
       if (response.ok) {
         const data = await response.json();
         

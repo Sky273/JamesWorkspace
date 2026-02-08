@@ -120,8 +120,12 @@ const MissionsPage = (): JSX.Element => {
         setHasMore(false);
       }
     } catch (error) {
-      logger.error('Error fetching missions:', error);
-      toast.error('Erreur lors du chargement des missions');
+      // Don't log or show toast for session expiration - user will be redirected
+      const errorMessage = error instanceof Error ? error.message : '';
+      if (!errorMessage.includes('Session expired')) {
+        logger.error('Error fetching missions:', error);
+        toast.error('Erreur lors du chargement des missions');
+      }
     } finally {
       setLoading(false);
     }

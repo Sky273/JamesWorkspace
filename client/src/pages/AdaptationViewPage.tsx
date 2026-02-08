@@ -17,7 +17,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { useAuthFetch } from '../hooks/useAuthFetch';
 import { createSafeHtml } from '../utils/sanitizer.frontend';
-import { createAuthOptionsWithCsrf } from '../utils/apiInterceptor';
+import { createAuthOptionsWithCsrf, fetchWithAuth } from '../utils/apiInterceptor';
 import { templateService } from '../utils/templateService';
 import { loadTinyMCE } from '../utils/lazyTinyMCE';
 import AdaptationAnalysisView from '../components/AdaptationAnalysisView';
@@ -216,7 +216,7 @@ const AdaptationViewPage = (): JSX.Element => {
         body: JSON.stringify({ 'Adapted Text': content }) 
       });
       
-      const response = await fetch(`/api/adaptations/${adaptation.id}`, authOptions);
+      const response = await fetchWithAuth(`/api/adaptations/${adaptation.id}`, authOptions);
       if (!response.ok) throw new Error('Failed to save');
       
       setAdaptation({ ...adaptation, 'Adapted Text': content });
@@ -260,7 +260,7 @@ const AdaptationViewPage = (): JSX.Element => {
         processedFooter = processedFooter.replace(/-title-/g, title);
       }
 
-      const response = await fetch('/generate-pdf', {
+      const response = await fetchWithAuth('/generate-pdf', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json; charset=utf-8' },
         body: JSON.stringify({ 
