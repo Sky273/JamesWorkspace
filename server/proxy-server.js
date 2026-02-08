@@ -111,6 +111,8 @@ app.use(helmet({
                 "'unsafe-eval'",   // Required: TinyMCE and PDF.js dynamic code
                 "https://cdnjs.cloudflare.com", // PDF.js worker
                 "https://unpkg.com",            // PDF.js worker fallback
+                "https://basemaps.cartocdn.com", // MapLibre GL scripts from style
+                "https://*.basemaps.cartocdn.com", // MapLibre GL scripts from tiles
                 "blob:"                          // PDF.js worker blob
             ],
             styleSrc: [
@@ -118,12 +120,14 @@ app.use(helmet({
                 "'unsafe-inline'", // Required: TinyMCE dynamic styles
                 "https://fonts.googleapis.com",
                 "https://unpkg.com",  // Swagger UI styles
-                "https://basemaps.cartocdn.com" // MapLibre GL styles
+                "https://basemaps.cartocdn.com", // MapLibre GL styles
+                "https://*.basemaps.cartocdn.com" // MapLibre GL styles from subdomains
             ],
             fontSrc: [
                 "'self'",
                 "https://fonts.gstatic.com",
                 "https://basemaps.cartocdn.com", // MapLibre GL fonts
+                "https://*.basemaps.cartocdn.com", // MapLibre GL fonts from subdomains
                 "data:"
             ],
             imgSrc: [
@@ -145,7 +149,9 @@ app.use(helmet({
                 "'self'",
                 "blob:",
                 "https://cdnjs.cloudflare.com",
-                "https://unpkg.com"
+                "https://unpkg.com",
+                "https://basemaps.cartocdn.com",     // MapLibre GL workers
+                "https://*.basemaps.cartocdn.com"    // MapLibre GL workers from subdomains
             ],
             frameSrc: ["'self'"],
             objectSrc: ["'none'"],
