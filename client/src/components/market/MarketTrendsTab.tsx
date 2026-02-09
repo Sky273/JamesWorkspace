@@ -346,17 +346,18 @@ function parseMetadata(metadata: Record<string, unknown> | string | null, type: 
       break;
       
     case 'salaire':
-      // Parse salary data from valeursParPeriode structure
-      const salairePeriodes = parsedMeta.valeursParPeriode as SalairePeriodeData[] | undefined;
+      // Parse salary data from valeursParPeriode or listeValeursParPeriode structure
+      const salairePeriodes = (parsedMeta.valeursParPeriode || parsedMeta.listeValeursParPeriode) as SalairePeriodeData[] | undefined;
       if (salairePeriodes?.length) {
         const salairesParActivite: SalaireActivite[] = [];
         const allSalaires: number[] = [];
         
-        salairePeriodes.forEach(sp => {
-          if (sp.libActivite && sp.salaireValeurMontant?.length) {
+        salairePeriodes.forEach((sp, index) => {
+          // Include entries even if libActivite is missing (use fallback label)
+          if (sp.salaireValeurMontant?.length) {
             const activite: SalaireActivite = {
               codeActivite: sp.codeActivite || '',
-              libActivite: sp.libActivite,
+              libActivite: sp.libActivite || sp.libPeriode || `Catégorie ${index + 1}`,
               periode: sp.libPeriode
             };
             
@@ -825,10 +826,37 @@ export default function MarketTrendsTab({ className = '' }: MarketTrendsTabProps
       {/* Summary Stats */}
       {summary && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          {summary.types.map(({ type, count, latestDate }) => {
+          {summary.types.map((typeData) => {
+            const { type, count, latestDate } = typeData;
+            // Get aggregatedValue, isSumType, and valueCount with defaults
+            const aggregatedValue = typeData.aggregatedValue ?? 0;
+            const isSumType = typeData.isSumType ?? ['embauche', 'demandeur', 'demandeur_entrant', 'offre'].includes(type);
+            const valueCount = typeData.valueCount ?? 0;  // Records with valid (non-null) values
+            
             const Icon = TREND_TYPE_ICONS[type] || ChartBarIcon;
             // Card is "selected" if: this type is filtered OR no filter is active (all types shown)
             const isSelected = typeFilter === type || typeFilter === '';
+            
+            // Only show aggregated value if there are records with valid values
+            const hasValidValues = valueCount > 0;
+            
+            // Format aggregated value based on type
+            const formatAggregatedValue = (): string => {
+              if (!hasValidValues) return '-';
+              const val = aggregatedValue ?? 0;
+              if (type === 'salaire') {
+                return `${Math.round(val).toLocaleString('fr-FR')} €`;
+              }
+              if (type === 'tension' || type === 'dynamique_emploi') {
+                return val.toFixed(2);
+              }
+              // For sum types (embauche, demandeur, etc.)
+              return Math.round(val).toLocaleString('fr-FR');
+            };
+            
+            const aggregatedLabel = isSumType ? 'Total' : 'Moyenne';
+            const formattedValue = formatAggregatedValue();
+            
             return (
               <div
                 key={type}
@@ -846,6 +874,9 @@ export default function MarketTrendsTab({ className = '' }: MarketTrendsTabProps
                   </span>
                 </div>
                 <div className="text-2xl font-bold text-gray-900 dark:text-white">{count}</div>
+                <div className="text-sm font-medium text-indigo-600 dark:text-indigo-400 mt-1">
+                  {aggregatedLabel}: {formattedValue}
+                </div>
                 {latestDate && (
                   <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                     Dernière collecte: {latestDate}

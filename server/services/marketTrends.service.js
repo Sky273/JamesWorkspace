@@ -598,33 +598,128 @@ async function collectMarketTrends(options = {}) {
         };
     };
 
+    // Helper to convert value to number (handles strings and numbers)
+    const toNumber = (val) => {
+        if (val === null || val === undefined) return null;
+        if (typeof val === 'number') return val;
+        if (typeof val === 'string') {
+            const parsed = parseFloat(val);
+            return isNaN(parsed) ? null : parsed;
+        }
+        return null;
+    };
+    
     // Helper to extract value from API response
-    const extractValue = (data) => {
+    // For count types (demandeur, offre, embauche): SUM all categories (A, B, C, etc.)
+    // For index types (tension, dynamique): take FIRST value only
+    const extractValue = (data, shouldSum = true) => {
         if (!data) return null;
         
-        // Try listeValeursParPeriode first (most common format)
         if (data.listeValeursParPeriode?.length) {
-            const periode = data.listeValeursParPeriode[0];
-            const value = periode.valeurPrincipaleNombre ?? periode.valeurPrincipaleMontant ?? periode.valeurPrincipaleTaux ?? periode.valeur ?? null;
-            if (value !== null) return value;
+            if (shouldSum) {
+                // SUM all values (for demandeur, offre, embauche - each entry is a category)
+                let total = 0;
+                let hasValue = false;
+                
+                for (const periode of data.listeValeursParPeriode) {
+                    const rawValue = periode.valeurPrincipaleNombre 
+                        ?? periode.valeurPrincipaleMontant 
+                        ?? periode.valeurPrincipaleTaux
+                        ?? periode.valeur 
+                        ?? periode.nombre
+                        ?? null;
+                    const value = toNumber(rawValue);
+                    if (value !== null) {
+                        total += value;
+                        hasValue = true;
+                    }
+                }
+                
+                if (hasValue) return total;
+            } else {
+                // Take FIRST value only (for tension, dynamique_emploi - single indicator)
+                const firstPeriode = data.listeValeursParPeriode[0];
+                const rawValue = firstPeriode.valeurPrincipaleNombre 
+                    ?? firstPeriode.valeurPrincipaleMontant 
+                    ?? firstPeriode.valeurPrincipaleTaux
+                    ?? firstPeriode.valeur 
+                    ?? firstPeriode.nombre
+                    ?? null;
+                const value = toNumber(rawValue);
+                if (value !== null) return value;
+            }
+            
+            // Log first periode structure for debugging
+            safeLog('debug', 'MarketTrends: listeValeursParPeriode found but no numeric values', {
+                firstPeriodeKeys: Object.keys(data.listeValeursParPeriode[0] || {}),
+                firstPeriode: JSON.stringify(data.listeValeursParPeriode[0]).substring(0, 500)
+            });
         }
         
-        // Try direct value fields
-        if (data.valeurPrincipaleNombre !== undefined) return data.valeurPrincipaleNombre;
-        if (data.valeurPrincipaleMontant !== undefined) return data.valeurPrincipaleMontant;
-        if (data.valeurPrincipaleTaux !== undefined) return data.valeurPrincipaleTaux;
-        if (data.valeur !== undefined) return data.valeur;
-        if (data.nombre !== undefined) return data.nombre;
-        if (data.total !== undefined) return data.total;
-        if (data.count !== undefined) return data.count;
+        // Try direct value fields at root level
+        const rootValue = toNumber(data.valeurPrincipaleNombre) 
+            ?? toNumber(data.valeurPrincipaleMontant) 
+            ?? toNumber(data.valeurPrincipaleTaux) 
+            ?? toNumber(data.valeur) 
+            ?? toNumber(data.nombre) 
+            ?? toNumber(data.total) 
+            ?? toNumber(data.count);
+        
+        if (rootValue !== null) return rootValue;
         
         // Log for debugging if no value found
-        safeLog('debug', 'MarketTrends: No value found in API response', { 
+        safeLog('warn', 'MarketTrends: No value found in API response', { 
             keys: Object.keys(data),
-            hasListeValeursParPeriode: !!data.listeValeursParPeriode
+            hasListeValeursParPeriode: !!data.listeValeursParPeriode,
+            sampleData: JSON.stringify(data).substring(0, 500)
         });
         
         return null;
+    };
+    
+    // Wrapper for sum types (demandeur, offre, embauche, demandeur_entrant)
+    const extractSumValue = (data) => extractValue(data, true);
+    
+    // Wrapper for single value types (tension, dynamique_emploi)
+    const extractSingleValue = (data) => extractValue(data, false);
+    
+    // Helper to extract salary value - prioritizes SAL3 (average salary all levels)
+    // Falls back to average of all salary values if SAL3 not found
+    const extractSalaireValue = (data) => {
+        if (!data) return null;
+        
+        // Salary API returns: listeValeursParPeriode[].salaireValeurMontant[]
+        // Each salaireValeurMontant has: codeNomenclature (SAL1/SAL2/SAL3), valeurPrincipaleMontant
+        // SAL1 = débutant, SAL2 = expérimenté, SAL3 = moyen (tous niveaux)
+        
+        const allSalaires = [];
+        let sal3Value = null;
+        
+        if (data.listeValeursParPeriode?.length) {
+            for (const periode of data.listeValeursParPeriode) {
+                if (periode.salaireValeurMontant?.length) {
+                    for (const sv of periode.salaireValeurMontant) {
+                        const montant = toNumber(sv.valeurPrincipaleMontant);
+                        if (montant !== null) {
+                            allSalaires.push(montant);
+                            // Prioritize SAL3 (average salary all levels/experiences)
+                            if (sv.codeNomenclature === 'SAL3') {
+                                sal3Value = montant;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Return SAL3 if found, otherwise return average of all salaries
+        if (sal3Value !== null) return sal3Value;
+        if (allSalaires.length > 0) {
+            return Math.round(allSalaires.reduce((a, b) => a + b, 0) / allSalaires.length);
+        }
+        
+        // Fallback to generic extraction
+        return extractValue(data);
     };
     
     // Helper to extract value label from API response
@@ -673,7 +768,7 @@ async function collectMarketTrends(options = {}) {
                     romeLabel: getRomeLabel(rome),
                     region: region.name,
                     regionCode: region.code,
-                    value: extractValue(data),
+                    value: extractSingleValue(data),
                     valueLabel: extractValueLabel(data),
                     metadata: prepareMetadata(data, rome)
                 };
@@ -711,7 +806,7 @@ async function collectMarketTrends(options = {}) {
                 type: 'salaire',
                 codeRome: rome,
                 romeLabel: getRomeLabel(rome),
-                value: extractValue(data),
+                value: extractSalaireValue(data), // Use SAL3 (average all levels) for salaries
                 valueLabel: extractValueLabel(data),
                 metadata: prepareMetadata(data, rome)
             };
@@ -873,7 +968,7 @@ async function collectMarketTrends(options = {}) {
                     romeLabel: getRomeLabel(rome),
                     region: region.name,
                     regionCode: region.code,
-                    value: extractValue(data),
+                    value: extractSumValue(data),
                     valueLabel: extractValueLabel(data),
                     metadata: prepareMetadata(data, rome)
                 };
@@ -921,7 +1016,7 @@ async function collectMarketTrends(options = {}) {
                     romeLabel: getRomeLabel(rome),
                     region: region.name,
                     regionCode: region.code,
-                    value: extractValue(data),
+                    value: extractSumValue(data),
                     valueLabel: extractValueLabel(data),
                     metadata: prepareMetadata(data, rome)
                 };
@@ -969,7 +1064,7 @@ async function collectMarketTrends(options = {}) {
                     romeLabel: getRomeLabel(rome),
                     region: region.name,
                     regionCode: region.code,
-                    value: extractValue(data),
+                    value: extractSumValue(data),
                     valueLabel: extractValueLabel(data),
                     metadata: prepareMetadata(data, rome)
                 };
@@ -1017,7 +1112,7 @@ async function collectMarketTrends(options = {}) {
                     romeLabel: getRomeLabel(rome),
                     region: region.name,
                     regionCode: region.code,
-                    value: extractValue(data),
+                    value: extractSumValue(data),
                     valueLabel: extractValueLabel(data),
                     metadata: prepareMetadata(data, rome)
                 };
@@ -1372,7 +1467,7 @@ async function loadTrendsCache() {
         
         // Compute derived caches
         computeFilterOptions();
-        computeSummary();
+        await computeSummary();
         
         const duration = Date.now() - startTime;
         const memUsage = process.memoryUsage();
@@ -1384,7 +1479,7 @@ async function loadTrendsCache() {
         trendsLightCache = allTrends.slice(0, TRENDS_CACHE_MAX_SIZE);
         trendsCacheTime = Date.now();
         computeFilterOptions();
-        computeSummary();
+        await computeSummary();
     }
     
     return allTrends;
@@ -1500,13 +1595,15 @@ function computeFilterOptions() {
 /**
  * Compute summary from cache
  * Calculates aggregated statistics (sums and averages) by type
+ * For salaries, fetches metadata to calculate average SAL3 (all experience levels)
  */
-function computeSummary() {
+async function computeSummary() {
     if (!trendsLightCache) return;
     
     const byType = {};
     const regions = new Set();
     const romeCodes = new Set();
+    const salaireIds = [];  // Collect salary record IDs for metadata fetch
     
     // Types that should be summed (counts)
     const sumTypes = ['embauche', 'demandeur', 'demandeur_entrant', 'offre'];
@@ -1526,32 +1623,95 @@ function computeSummary() {
                 byType[t.Type].latestDate = t.Date;
             }
             
-            // Accumulate values for statistics
-            if (t.Value !== null && t.Value !== undefined && !isNaN(t.Value)) {
-                byType[t.Type].totalValue += t.Value;
-                byType[t.Type].valueCount++;
+            // Collect salary IDs for metadata-based calculation
+            if (t.Type === 'salaire') {
+                salaireIds.push(t.id);
+            } else {
+                // Accumulate values for statistics (non-salary types)
+                // Convert to number explicitly (value may be string from database)
+                const numValue = t.Value !== null && t.Value !== undefined ? parseFloat(t.Value) : null;
+                if (numValue !== null && !isNaN(numValue)) {
+                    byType[t.Type].totalValue += numValue;
+                    byType[t.Type].valueCount++;
+                }
             }
         }
         if (t.Region) regions.add(t.Region);
         if (t.CodeRome) romeCodes.add(t.CodeRome);
     });
     
+    // For salaries: fetch metadata and calculate average SAL3 (all experience levels)
+    // Each salary record = 1 ROME code, we take only ONE SAL3 per record (first found)
+    if (salaireIds.length > 0 && byType['salaire']) {
+        try {
+            const metadataMap = await fetchMetadataForIds(salaireIds);
+            let totalSal3 = 0;
+            let sal3Count = 0;
+            
+            for (const id of salaireIds) {
+                const metadata = metadataMap[id];
+                let sal3Found = null;
+                
+                // Find first SAL3 value in this record's metadata
+                // API may use either listeValeursParPeriode or valeursParPeriode
+                const periodes = metadata?.listeValeursParPeriode || metadata?.valeursParPeriode;
+                if (periodes?.length) {
+                    outerLoop:
+                    for (const periode of periodes) {
+                        if (periode.salaireValeurMontant?.length) {
+                            for (const sv of periode.salaireValeurMontant) {
+                                // SAL3 = salaire moyen tous niveaux d'expérience
+                                if (sv.codeNomenclature === 'SAL3' && sv.valeurPrincipaleMontant !== undefined) {
+                                    const montant = parseFloat(sv.valeurPrincipaleMontant);
+                                    if (!isNaN(montant)) {
+                                        sal3Found = montant;
+                                        break outerLoop;  // Take only first SAL3 per record
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // Add this record's SAL3 to total (one per record)
+                if (sal3Found !== null) {
+                    totalSal3 += sal3Found;
+                    sal3Count++;
+                }
+            }
+            
+            if (sal3Count > 0) {
+                byType['salaire'].totalValue = totalSal3;
+                byType['salaire'].valueCount = sal3Count;
+            }
+            
+            safeLog('debug', `MarketTrends: Salary SAL3 calculation - found ${sal3Count} SAL3 values from ${salaireIds.length} records`);
+        } catch (error) {
+            safeLog('warn', 'MarketTrends: Failed to fetch salary metadata for summary', { error: error.message });
+        }
+    }
+    
     summaryCache = {
         totalRecords: trendsLightCache.length,
         types: Object.entries(byType).map(([type, data]) => {
             // For sum types: return total sum
-            // For average types (indices/rates): return average
+            // For average types (indices/rates/salaries): return average
             const isSumType = sumTypes.includes(type);
-            const aggregatedValue = data.valueCount > 0 
-                ? (isSumType ? data.totalValue : data.totalValue / data.valueCount)
-                : 0;
+            let aggregatedValue = 0;
+            if (data.valueCount > 0 && data.totalValue !== null && !isNaN(data.totalValue)) {
+                aggregatedValue = isSumType ? data.totalValue : data.totalValue / data.valueCount;
+            }
+            // Ensure we never return NaN or null
+            const roundedValue = Math.round(aggregatedValue * 100) / 100;
+            const finalValue = isNaN(roundedValue) ? 0 : roundedValue;
             
             return {
                 type,
                 count: data.count,
                 latestDate: data.latestDate,
-                aggregatedValue: Math.round(aggregatedValue * 100) / 100, // Round to 2 decimals
-                isSumType
+                aggregatedValue: finalValue,
+                isSumType,
+                valueCount: data.valueCount  // Number of records with valid (non-null) values
             };
         }),
         regions: Array.from(regions),
@@ -1694,7 +1854,7 @@ async function getTrendsSummary() {
         }
         
         // Fallback: compute from cache
-        computeSummary();
+        await computeSummary();
         return summaryCache;
     } catch (error) {
         safeLog('error', 'MarketTrends: Failed to get summary', { error: error.message });

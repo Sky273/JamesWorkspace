@@ -429,6 +429,7 @@ export interface TrendsSummary {
     latestDate?: string;
     aggregatedValue?: number;
     isSumType?: boolean;
+    valueCount?: number;  // Number of records with valid (non-null) values
   }>;
   regions: string[];
   romeCodes: string[];
