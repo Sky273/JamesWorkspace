@@ -258,6 +258,10 @@ export default defineConfig(({ mode }) => {
     chunkSizeWarningLimit: 500,
     // Target modern browsers for smaller output
     target: 'es2020',
+    // Disable modulePreload polyfill to avoid unused preload warnings in production
+    modulePreload: {
+      polyfill: false
+    },
     commonjsOptions: {
       include: [/tinymce/, /node_modules/],
       transformMixedEsModules: true,

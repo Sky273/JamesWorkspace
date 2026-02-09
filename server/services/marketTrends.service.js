@@ -609,79 +609,83 @@ async function collectMarketTrends(options = {}) {
         return null;
     };
     
-    // Helper to extract value from API response
-    // For count types (demandeur, offre, embauche): SUM all categories (A, B, C, etc.)
-    // For index types (tension, dynamique): take FIRST value only
-    const extractValue = (data, shouldSum = true) => {
-        if (!data) return null;
+    // Extract value for OFFRES: sum of 'nombre' fields in listeValeurParCaract for LAST period only
+    // Structure: listeValeursParPeriode[last].listeValeurParCaract[].nombre
+    const extractOffreValue = (data) => {
+        if (!data?.listeValeursParPeriode?.length) return null;
         
-        if (data.listeValeursParPeriode?.length) {
-            if (shouldSum) {
-                // SUM all values (for demandeur, offre, embauche - each entry is a category)
-                let total = 0;
-                let hasValue = false;
-                
-                for (const periode of data.listeValeursParPeriode) {
-                    const rawValue = periode.valeurPrincipaleNombre 
-                        ?? periode.valeurPrincipaleMontant 
-                        ?? periode.valeurPrincipaleTaux
-                        ?? periode.valeur 
-                        ?? periode.nombre
-                        ?? null;
-                    const value = toNumber(rawValue);
-                    if (value !== null) {
-                        total += value;
+        // Find the period with TOFF-CUMUL12MOIS (Cumul 12 derniers mois toutes offres) - most relevant
+        // Fallback to TOFF, then last period if not found
+        let targetPeriode = data.listeValeursParPeriode.find(p => p.codeNomenclature === 'TOFF-CUMUL12MOIS');
+        if (!targetPeriode) {
+            targetPeriode = data.listeValeursParPeriode.find(p => p.codeNomenclature === 'TOFF');
+        }
+        if (!targetPeriode) {
+            targetPeriode = data.listeValeursParPeriode[data.listeValeursParPeriode.length - 1];
+        }
+        
+        let total = 0;
+        let hasValue = false;
+        
+        if (targetPeriode?.listeValeurParCaract?.length) {
+            // Sum only 'nombre' values from TYPECTR characteristics (CDI, CDD1, CDD2, CDD3, AUTR)
+            // These represent the actual job offer counts without duplication
+            const typeCtrCodes = ['CDI', 'CDD1', 'CDD2', 'CDD3', 'AUTR'];
+            for (const caract of targetPeriode.listeValeurParCaract) {
+                if (caract.codeTypeCaract === 'TYPECTR' || typeCtrCodes.includes(caract.codeCaract)) {
+                    const nombre = toNumber(caract.nombre);
+                    if (nombre !== null && nombre > 0) {
+                        total += nombre;
                         hasValue = true;
                     }
                 }
-                
-                if (hasValue) return total;
-            } else {
-                // Take FIRST value only (for tension, dynamique_emploi - single indicator)
-                const firstPeriode = data.listeValeursParPeriode[0];
-                const rawValue = firstPeriode.valeurPrincipaleNombre 
-                    ?? firstPeriode.valeurPrincipaleMontant 
-                    ?? firstPeriode.valeurPrincipaleTaux
-                    ?? firstPeriode.valeur 
-                    ?? firstPeriode.nombre
-                    ?? null;
-                const value = toNumber(rawValue);
-                if (value !== null) return value;
             }
-            
-            // Log first periode structure for debugging
-            safeLog('debug', 'MarketTrends: listeValeursParPeriode found but no numeric values', {
-                firstPeriodeKeys: Object.keys(data.listeValeursParPeriode[0] || {}),
-                firstPeriode: JSON.stringify(data.listeValeursParPeriode[0]).substring(0, 500)
-            });
         }
         
-        // Try direct value fields at root level
-        const rootValue = toNumber(data.valeurPrincipaleNombre) 
-            ?? toNumber(data.valeurPrincipaleMontant) 
-            ?? toNumber(data.valeurPrincipaleTaux) 
-            ?? toNumber(data.valeur) 
-            ?? toNumber(data.nombre) 
-            ?? toNumber(data.total) 
-            ?? toNumber(data.count);
+        // Fallback to valeurPrincipaleNombre if no TYPECTR characteristics found
+        if (!hasValue) {
+            const val = toNumber(targetPeriode?.valeurPrincipaleNombre);
+            if (val !== null) {
+                total = val;
+                hasValue = true;
+            }
+        }
         
-        if (rootValue !== null) return rootValue;
-        
-        // Log for debugging if no value found
-        safeLog('warn', 'MarketTrends: No value found in API response', { 
-            keys: Object.keys(data),
-            hasListeValeursParPeriode: !!data.listeValeursParPeriode,
-            sampleData: JSON.stringify(data).substring(0, 500)
-        });
-        
-        return null;
+        return hasValue ? total : null;
     };
     
-    // Wrapper for sum types (demandeur, offre, embauche, demandeur_entrant)
-    const extractSumValue = (data) => extractValue(data, true);
+    // Extract value for TENSIONS: valeurPrincipaleDecimale from LAST period only
+    const extractTensionValue = (data) => {
+        if (!data?.listeValeursParPeriode?.length) return null;
+        
+        // Take LAST period (most recent)
+        const lastPeriode = data.listeValeursParPeriode[data.listeValeursParPeriode.length - 1];
+        
+        return toNumber(lastPeriode?.valeurPrincipaleDecimale) 
+            ?? toNumber(lastPeriode?.valeurPrincipaleNombre);
+    };
     
-    // Wrapper for single value types (tension, dynamique_emploi)
-    const extractSingleValue = (data) => extractValue(data, false);
+    // Extract value for DEMANDEURS/EMBAUCHES: sum of valeurPrincipaleNombre across categories
+    // Structure: listeValeursParPeriode[].valeurPrincipaleNombre (each periode is a category A, B, C...)
+    const extractDemandeurValue = (data) => {
+        if (!data?.listeValeursParPeriode?.length) return null;
+        
+        let total = 0;
+        let hasValue = false;
+        
+        for (const periode of data.listeValeursParPeriode) {
+            const value = toNumber(periode.valeurPrincipaleNombre);
+            if (value !== null) {
+                total += value;
+                hasValue = true;
+            }
+        }
+        
+        return hasValue ? total : null;
+    };
+    
+    // Alias for embauche (same structure as demandeur)
+    const extractEmbaucheValue = extractDemandeurValue;
     
     // Helper to extract salary value - prioritizes SAL3 (average salary all levels)
     // Falls back to average of all salary values if SAL3 not found
@@ -718,8 +722,8 @@ async function collectMarketTrends(options = {}) {
             return Math.round(allSalaires.reduce((a, b) => a + b, 0) / allSalaires.length);
         }
         
-        // Fallback to generic extraction
-        return extractValue(data);
+        // No salary data found
+        return null;
     };
     
     // Helper to extract value label from API response
@@ -768,7 +772,7 @@ async function collectMarketTrends(options = {}) {
                     romeLabel: getRomeLabel(rome),
                     region: region.name,
                     regionCode: region.code,
-                    value: extractSingleValue(data),
+                    value: extractTensionValue(data),
                     valueLabel: extractValueLabel(data),
                     metadata: prepareMetadata(data, rome)
                 };
@@ -861,29 +865,29 @@ async function collectMarketTrends(options = {}) {
                 continue;
             }
             
-            // Extract value from dataemploi response format
+            // Extract value from dataemploi response format - LAST period only
             // Response format: { listeValeursParPeriode: [{ valeurPrincipaleNombre: 1, ... }] }
             const extractDynamiqueValue = (apiData) => {
                 if (!apiData) return null;
                 
                 // Primary: listeValeursParPeriode (main format from dataemploi API)
                 if (apiData.listeValeursParPeriode?.length > 0) {
-                    const periode = apiData.listeValeursParPeriode[0];
-                    // Try all possible value fields in order of priority
-                    if (periode.valeurPrincipaleNombre !== undefined) return periode.valeurPrincipaleNombre;
-                    if (periode.valeurPrincipaleMontant !== undefined) return periode.valeurPrincipaleMontant;
-                    if (periode.valeurPrincipaleTaux !== undefined) return periode.valeurPrincipaleTaux;
-                    if (periode.valeur !== undefined) return periode.valeur;
-                    if (periode.indicateur !== undefined) return periode.indicateur;
+                    // Take LAST period (most recent)
+                    const lastPeriode = apiData.listeValeursParPeriode[apiData.listeValeursParPeriode.length - 1];
+                    
+                    const val = toNumber(lastPeriode.valeurPrincipaleNombre) 
+                        ?? toNumber(lastPeriode.valeurPrincipaleMontant) 
+                        ?? toNumber(lastPeriode.valeurPrincipaleTaux)
+                        ?? toNumber(lastPeriode.valeur) 
+                        ?? toNumber(lastPeriode.indicateur);
+                    if (val !== null) return val;
                 }
                 
                 // Fallback: root level fields
-                if (apiData.valeurPrincipaleNombre !== undefined) return apiData.valeurPrincipaleNombre;
-                if (apiData.valeur !== undefined) return apiData.valeur;
-                if (apiData.indicateur !== undefined) return apiData.indicateur;
-                if (apiData.tauxEvolution !== undefined) return apiData.tauxEvolution;
-                
-                return null;
+                return toNumber(apiData.valeurPrincipaleNombre) 
+                    ?? toNumber(apiData.valeur) 
+                    ?? toNumber(apiData.indicateur) 
+                    ?? toNumber(apiData.tauxEvolution);
             };
             
             const extractDynamiqueLabel = (apiData) => {
@@ -968,7 +972,7 @@ async function collectMarketTrends(options = {}) {
                     romeLabel: getRomeLabel(rome),
                     region: region.name,
                     regionCode: region.code,
-                    value: extractSumValue(data),
+                    value: extractEmbaucheValue(data),
                     valueLabel: extractValueLabel(data),
                     metadata: prepareMetadata(data, rome)
                 };
@@ -1016,7 +1020,7 @@ async function collectMarketTrends(options = {}) {
                     romeLabel: getRomeLabel(rome),
                     region: region.name,
                     regionCode: region.code,
-                    value: extractSumValue(data),
+                    value: extractOffreValue(data),
                     valueLabel: extractValueLabel(data),
                     metadata: prepareMetadata(data, rome)
                 };
@@ -1064,7 +1068,7 @@ async function collectMarketTrends(options = {}) {
                     romeLabel: getRomeLabel(rome),
                     region: region.name,
                     regionCode: region.code,
-                    value: extractSumValue(data),
+                    value: extractDemandeurValue(data),
                     valueLabel: extractValueLabel(data),
                     metadata: prepareMetadata(data, rome)
                 };
@@ -1112,7 +1116,7 @@ async function collectMarketTrends(options = {}) {
                     romeLabel: getRomeLabel(rome),
                     region: region.name,
                     regionCode: region.code,
-                    value: extractSumValue(data),
+                    value: extractDemandeurValue(data),
                     valueLabel: extractValueLabel(data),
                     metadata: prepareMetadata(data, rome)
                 };

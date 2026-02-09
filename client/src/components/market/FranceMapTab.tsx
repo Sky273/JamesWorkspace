@@ -189,6 +189,19 @@ export default function FranceMapTab({ className = '' }: FranceMapTabProps) {
   const METADATA_CACHE_MAX_SIZE = 50;
   const metadataCacheRef = useRef<{ data: Record<string, MarketTrend>; keys: string[] }>({ data: {}, keys: [] });
   
+  // Cleanup on unmount to free memory
+  useEffect(() => {
+    return () => {
+      // Clear all state to free memory
+      setTrends([]);
+      setMetiers([]);
+      setSelectedRegion(null);
+      setSelectedTrendMetadata(null);
+      // Clear metadata cache
+      metadataCacheRef.current = { data: {}, keys: [] };
+    };
+  }, []);
+  
   // Helper to add to cache with LRU eviction
   const addToMetadataCache = useCallback((trendId: string, trend: MarketTrend) => {
     const cache = metadataCacheRef.current;
@@ -368,9 +381,9 @@ export default function FranceMapTab({ className = '' }: FranceMapTabProps) {
       
       try {
         if (dataSource === 'all') {
-          // Load all trends data in single optimized call
+          // Load all trends data (value is pre-calculated during collection)
           const [allTrendsResponse, metiersData] = await Promise.all([
-            getAllTrends(), // Single optimized call for all trends
+            getAllTrends(),
             getStoredMetiers()
           ]);
           setTrends(allTrendsResponse.trends);
@@ -378,13 +391,13 @@ export default function FranceMapTab({ className = '' }: FranceMapTabProps) {
         } else if (dataSource === 'offres') {
           // Load job offers from trends (type='offre')
           const [trendsResponse, metiersData] = await Promise.all([
-            getAllTrends('offre'), // Filter for offre type
+            getAllTrends('offre'),
             getStoredMetiers()
           ]);
           setTrends(trendsResponse.trends);
           setMetiers(metiersData || []);
         } else {
-          // Load specific trend type - use getAllTrends with type filter (NO metadata, optimized)
+          // Load specific trend type
           const [trendsResponse, metiersData] = await Promise.all([
             getAllTrends(dataSource),
             getStoredMetiers()
@@ -458,7 +471,7 @@ export default function FranceMapTab({ className = '' }: FranceMapTabProps) {
         };
       }
 
-      // Value contains the job count for 'offre' type
+      // Value is pre-calculated during collection from metadata
       const jobCount = typeof trend.Value === 'string' ? parseFloat(trend.Value) : (trend.Value || 0);
       if (!isNaN(jobCount)) {
         aggregated[regionCode].totalJobs += jobCount;
@@ -645,17 +658,19 @@ export default function FranceMapTab({ className = '' }: FranceMapTabProps) {
   }, [dataSource, jobRegionData, trendRegionData, combinedRegionData]);
 
   // Sync selectedRegion with currentRegionData when data changes
-  // This ensures the romeBreakdown is always up-to-date with current filters
+  // This ensures the value and romeBreakdown are always up-to-date with current filters (including selectedMetier)
+  const currentSelectedRegionCode = selectedRegion?.code;
   useEffect(() => {
-    if (selectedRegion) {
-      const updatedRegion = currentRegionData.find(r => r.code === selectedRegion.code);
-      if (updatedRegion && updatedRegion !== selectedRegion) {
+    if (currentSelectedRegionCode) {
+      const updatedRegion = currentRegionData.find(r => r.code === currentSelectedRegionCode);
+      if (updatedRegion) {
+        // Always update to get the latest value (filtered by selectedMetier if applicable)
         setSelectedRegion(updatedRegion);
-      } else if (!updatedRegion) {
+      } else {
         setSelectedRegion(null);
       }
     }
-  }, [currentRegionData, selectedRegion]);
+  }, [currentRegionData, currentSelectedRegionCode]);
 
   // Calculate max value for scaling
   const maxValue = useMemo(() => {
