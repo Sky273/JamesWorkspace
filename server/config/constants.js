@@ -41,7 +41,7 @@ export const SETTINGS_TABLE = 'LLMSettings';
 export const MISSIONS_TABLE = 'Offers';
 export const ADAPTATIONS_TABLE = 'ResumeAdaptations';
 export const TEMPLATES_TABLE = 'Templates';
-export const CUSTOMERS_TABLE = 'Customers';
+export const FIRMS_TABLE = 'Firms';
 export const MARKET_FACTS_TABLE = 'MarketFacts';
 
 // LLM API Keys
@@ -100,7 +100,7 @@ export const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
 export const CACHE_TTL = {
     SETTINGS: 10 * 60 * 1000,      // 10 minutes
     TEMPLATES: 10 * 60 * 1000,     // 10 minutes
-    CUSTOMERS: 15 * 60 * 1000      // 15 minutes
+    FIRMS: 15 * 60 * 1000          // 15 minutes
 };
 
 // Rate limiting configuration

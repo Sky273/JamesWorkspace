@@ -1,49 +1,57 @@
-// User service for managing users and customers
+// User service for managing users and firms (formerly customers)
 import { fetchWithAuth, createAuthOptions, createAuthOptionsWithCsrf } from './apiInterceptor';
 import logger from './logger.frontend';
 
 const userService = {
-  async getAllCustomers() {
+  // ============================================
+  // FIRMS (formerly Customers)
+  // ============================================
+  async getAllFirms() {
     try {
-      const response = await fetchWithAuth('/api/customers?limit=100', createAuthOptions());
+      const response = await fetchWithAuth('/api/firms?limit=100', createAuthOptions());
       if (!response.ok) {
-        throw new Error('Failed to fetch customers');
+        throw new Error('Failed to fetch firms');
       }
       const data = await response.json();
       // Handle paginated response
-      const customers = data.data || data;
-      logger.log('Fetched customers:', customers);
-      return customers;
+      const firms = data.data || data;
+      logger.log('Fetched firms:', firms);
+      return firms;
     } catch (error) {
-      logger.error('Error fetching customers:', error);
+      logger.error('Error fetching firms:', error);
       throw error;
     }
   },
 
-  async getCustomersPaginated({ page = 1, pageSize = 12, search = '' } = {}) {
+  // Backward compatibility alias
+  async getAllCustomers() {
+    return this.getAllFirms();
+  },
+
+  async getFirmsPaginated({ page = 1, pageSize = 12, search = '' } = {}) {
     try {
       const params = new URLSearchParams();
       params.append('page', page.toString());
       params.append('limit', pageSize.toString());
       if (search) params.append('search', search);
 
-      const response = await fetchWithAuth(`/api/customers?${params.toString()}`, createAuthOptions());
+      const response = await fetchWithAuth(`/api/firms?${params.toString()}`, createAuthOptions());
       if (!response.ok) {
-        throw new Error('Failed to fetch customers');
+        throw new Error('Failed to fetch firms');
       }
       const data = await response.json();
       
       // Handle paginated response
       if (data.data && data.pagination) {
         return {
-          customers: data.data,
+          firms: data.data,
           pagination: data.pagination
         };
       }
       
       // Fallback for non-paginated response
       return {
-        customers: Array.isArray(data) ? data : [],
+        firms: Array.isArray(data) ? data : [],
         pagination: {
           page: 1,
           pageSize: Array.isArray(data) ? data.length : 0,
@@ -52,9 +60,18 @@ const userService = {
         }
       };
     } catch (error) {
-      logger.error('Error fetching paginated customers:', error);
+      logger.error('Error fetching paginated firms:', error);
       throw error;
     }
+  },
+
+  // Backward compatibility alias
+  async getCustomersPaginated(options) {
+    const result = await this.getFirmsPaginated(options);
+    return {
+      customers: result.firms,
+      pagination: result.pagination
+    };
   },
 
   async getAllUsers() {
@@ -172,63 +189,78 @@ const userService = {
     }
   },
 
-  async updateCustomer(customerId, customerData) {
+  async updateFirm(firmId, firmData) {
     try {
       const authOptions = await createAuthOptionsWithCsrf({
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(customerData)
+        body: JSON.stringify(firmData)
       });
-      const response = await fetchWithAuth(`/api/customers/${customerId}`, authOptions);
+      const response = await fetchWithAuth(`/api/firms/${firmId}`, authOptions);
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to update customer');
+        throw new Error(errorData.error || 'Failed to update firm');
       }
       return await response.json();
     } catch (error) {
-      logger.error('Error updating customer:', error);
+      logger.error('Error updating firm:', error);
       throw error;
     }
   },
 
-  async createCustomer(customerData) {
+  // Backward compatibility alias
+  async updateCustomer(customerId, customerData) {
+    return this.updateFirm(customerId, customerData);
+  },
+
+  async createFirm(firmData) {
     try {
       const authOptions = await createAuthOptionsWithCsrf({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(customerData)
+        body: JSON.stringify(firmData)
       });
-      const response = await fetchWithAuth('/api/customers', authOptions);
+      const response = await fetchWithAuth('/api/firms', authOptions);
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create customer');
+        throw new Error(errorData.error || 'Failed to create firm');
       }
       return await response.json();
     } catch (error) {
-      logger.error('Error creating customer:', error);
+      logger.error('Error creating firm:', error);
       throw error;
     }
   },
 
-  async deleteCustomer(customerId) {
+  // Backward compatibility alias
+  async createCustomer(customerData) {
+    return this.createFirm(customerData);
+  },
+
+  async deleteFirm(firmId) {
     try {
       const authOptions = await createAuthOptionsWithCsrf({
         method: 'DELETE'
       });
-      const response = await fetchWithAuth(`/api/customers/${customerId}`, authOptions);
+      const response = await fetchWithAuth(`/api/firms/${firmId}`, authOptions);
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to delete customer');
+        throw new Error(errorData.error || 'Failed to delete firm');
       }
       return await response.json();
     } catch (error) {
-      logger.error('Error deleting customer:', error);
+      logger.error('Error deleting firm:', error);
       throw error;
     }
+  },
+
+  // Backward compatibility alias
+  async deleteCustomer(customerId) {
+    return this.deleteFirm(customerId);
   },
 
   async changeUserPassword(userId, newPassword) {

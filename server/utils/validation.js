@@ -67,11 +67,14 @@ export const createTemplateSchema = z.object({
   Popular: z.boolean().optional()
 });
 
-// Customer schemas
-export const createCustomerSchema = z.object({
+// Firm schemas
+export const createFirmSchema = z.object({
   Name: z.string().min(1).max(255),
-  CustomerName: z.string().min(1).max(255).optional()
+  FirmName: z.string().min(1).max(255).optional()
 });
+
+// Keep alias for backward compatibility during transition
+export const createCustomerSchema = createFirmSchema;
 
 // Resume schemas
 export const updateResumeSchema = z.object({

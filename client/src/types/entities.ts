@@ -279,17 +279,21 @@ export interface Template {
 }
 
 // ============================================
-// CUSTOMER TYPES
+// FIRM TYPES (formerly Customer)
 // ============================================
 
-export interface Customer {
+export interface Firm {
   id: string;
   'Name': string;
-  'Status'?: CustomerStatus;
+  'Status'?: FirmStatus;
   'Created At'?: string;
 }
 
-export type CustomerStatus = 'Active' | 'Inactive';
+export type FirmStatus = 'Active' | 'Inactive';
+
+// Backward compatibility aliases
+export type Customer = Firm;
+export type CustomerStatus = FirmStatus;
 
 // ============================================
 // SETTINGS TYPES

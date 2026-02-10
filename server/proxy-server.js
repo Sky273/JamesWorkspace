@@ -45,7 +45,7 @@ import settingsRoutes from './routes/settings.routes.js';
 import missionsRoutes from './routes/missions.routes.js';
 import resumesRoutes from './routes/resumes.routes.js';
 import templatesRoutes from './routes/templates.routes.js';
-import customersRoutes from './routes/customers.routes.js';
+import firmsRoutes from './routes/firms.routes.js';
 import llmRoutes from './routes/llm.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import adaptationsRoutes from './routes/adaptations.routes.js';
@@ -579,8 +579,10 @@ app.use('/api/resumes', resumesRoutes);
 // Templates routes
 app.use('/api/templates', templatesRoutes);
 
-// Customers routes
-app.use('/api/customers', customersRoutes);
+// Firms routes (formerly customers)
+app.use('/api/firms', firmsRoutes);
+// Backward compatibility - keep /api/customers endpoint
+app.use('/api/customers', firmsRoutes);
 
 // LLM proxy routes
 app.use('/api/llm', llmRoutes);

@@ -121,26 +121,29 @@ export function isUserAdmin(req) {
 }
 
 /**
- * Check if user has access to a customer's data
+ * Check if user has access to a firm's data
  */
-export function hasCustomerAccess(req, resourceCustomer) {
+export function hasFirmAccess(req, resourceFirm) {
     if (isUserAdmin(req)) {
         return true;
     }
     
-    const userCustomer = req.user?.customer;
-    return userCustomer && userCustomer === resourceCustomer;
+    const userFirm = req.user?.firm;
+    return userFirm && userFirm === resourceFirm;
 }
 
+// Backward compatibility alias
+export const hasCustomerAccess = hasFirmAccess;
+
 /**
- * Middleware to require customer access
+ * Middleware to require firm access
  */
-export function requireCustomerAccess(getResourceCustomer) {
+export function requireFirmAccess(getResourceFirm) {
     return async (req, res, next) => {
         try {
-            const resourceCustomer = await getResourceCustomer(req);
+            const resourceFirm = await getResourceFirm(req);
             
-            if (!hasCustomerAccess(req, resourceCustomer)) {
+            if (!hasFirmAccess(req, resourceFirm)) {
                 return res.status(403).json({
                     error: 'Access denied',
                     message: 'You do not have permission to access this resource'
@@ -156,3 +159,6 @@ export function requireCustomerAccess(getResourceCustomer) {
         }
     };
 }
+
+// Backward compatibility alias
+export const requireCustomerAccess = requireFirmAccess;

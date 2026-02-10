@@ -1,6 +1,6 @@
 import express from 'express';
 import { OPENAI_API_KEY, ANTHROPIC_API_KEY } from '../config/constants.js';
-import { settingsCache, templatesCache, customersCache } from '../services/cache.service.js';
+import { settingsCache, templatesCache, firmsCache } from '../services/cache.service.js';
 import { query as dbQuery } from '../config/database.js';
 import { getTrendsCacheStats } from '../services/marketTrends.service.js';
 import { getFactsCacheStats } from '../services/marketFacts.service.js';
@@ -119,7 +119,7 @@ router.get('/', async (req, res) => {
         status: 'ok',
         settings: settingsCache.size(),
         templates: templatesCache.size(),
-        customers: customersCache.size()
+        firms: firmsCache.size()
     };
     
     const responseTime = Date.now() - startTime;
@@ -146,7 +146,7 @@ router.get('/memory', async (req, res) => {
         simpleCache: {
             settings: settingsCache.size(),
             templates: templatesCache.size(),
-            customers: customersCache.size()
+            firms: firmsCache.size()
         },
         trends: getTrendsCacheStats(),
         facts: getFactsCacheStats(),

@@ -198,12 +198,14 @@ router.get('/users', authenticateToken, requireAdmin, async (req, res) => {
             id: record.id,
             name: record.name,
             email: record.email,
-            customer: record.customer_name,
+            firm: record.firm_name,
+            customer: record.firm_name,
             role: record.role || 'user',
             status: record.status || 'Active',
             Name: record.name,
             Email: record.email,
-            CustomerName: record.customer_name,
+            FirmName: record.firm_name,
+            CustomerName: record.firm_name,
             Role: record.role,
             Status: record.status
         }));

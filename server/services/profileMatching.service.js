@@ -314,11 +314,14 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
         limit = 10,
         minScore = 0,
         status = null,
+        firm = null,
+        // Backward compatibility
         customer = null,
         weights = DEFAULT_WEIGHTS
     } = options;
     
-    safeLog('info', 'Finding matching profiles', { missionId, limit, minScore, status, customer });
+    const firmFilter = firm || customer;
+    safeLog('info', 'Finding matching profiles', { missionId, limit, minScore, status, firm: firmFilter });
     
     // 1. Get mission record
     const missionRecord = await findWithTimeout('missions', missionId);
@@ -342,9 +345,9 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
         paramIndex++;
     }
     
-    if (customer) {
-        conditions.push(`customer_name = $${paramIndex}`);
-        params.push(customer);
+    if (firmFilter) {
+        conditions.push(`firm_name = $${paramIndex}`);
+        params.push(firmFilter);
         paramIndex++;
     }
     
@@ -357,7 +360,7 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
         SELECT id, name, title, status, global_rating, 
                skills, tools, industries, soft_skills,
                skills_cleaned, tools_cleaned, industries_cleaned, soft_skills_cleaned,
-               customer_name, created_at
+               firm_name, created_at
         FROM resumes
         WHERE ${whereClause}
     `;
@@ -403,7 +406,8 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
             title: record.title || '',
             status: record.status,
             globalRating: record.global_rating || 0,
-            customerName: record.customer_name,
+            firmName: record.firm_name,
+            customerName: record.firm_name,
             createdAt: record.created_at,
             matchScore: matchResult.totalScore,
             categoryScores: matchResult.categoryScores,

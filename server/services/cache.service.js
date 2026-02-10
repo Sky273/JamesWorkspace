@@ -87,20 +87,20 @@ class SimpleCache {
 // Create cache instances
 export const settingsCache = new SimpleCache(CACHE_TTL.SETTINGS);
 export const templatesCache = new SimpleCache(CACHE_TTL.TEMPLATES);
-export const customersCache = new SimpleCache(CACHE_TTL.CUSTOMERS);
+export const firmsCache = new SimpleCache(CACHE_TTL.FIRMS);
 
 // Initialize cache system
 safeLog('info', 'Cache system initialized', {
     settingsTTL: `${CACHE_TTL.SETTINGS / 1000}s`,
     templatesTTL: `${CACHE_TTL.TEMPLATES / 1000}s`,
-    customersTTL: `${CACHE_TTL.CUSTOMERS / 1000}s`
+    firmsTTL: `${CACHE_TTL.FIRMS / 1000}s`
 });
 
 // Export cleanup function for graceful shutdown
 export const cleanupAllCaches = () => {
     settingsCache.destroy();
     templatesCache.destroy();
-    customersCache.destroy();
+    firmsCache.destroy();
     safeLog('info', 'All caches destroyed');
 };
 

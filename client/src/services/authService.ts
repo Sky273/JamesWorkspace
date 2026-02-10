@@ -16,6 +16,9 @@ export interface User {
   email: string;
   role: 'admin' | 'user' | 'viewer';
   status: 'Active' | 'Inactive' | 'Pending' | 'active' | 'inactive' | 'pending';
+  firm?: string;
+  FirmName?: string;
+  // Backward compatibility
   customer?: string;
   CustomerName?: string;
   // Legacy uppercase properties for backward compatibility
@@ -24,6 +27,7 @@ export interface User {
   Role?: 'admin' | 'user' | 'viewer';
   Status?: 'Active' | 'Inactive' | 'Pending';
   Customer?: string;
+  Firm?: string;
 }
 
 export interface RegisterData {
@@ -43,7 +47,8 @@ export interface CreateUserData {
   name: string;
   role?: string;
   status?: string;
-  customer?: string;
+  firm?: string;
+  customer?: string; // Backward compatibility
 }
 
 export interface UpdateUserData {
@@ -52,7 +57,8 @@ export interface UpdateUserData {
   password?: string;
   role?: string;
   status?: string;
-  customer?: string;
+  firm?: string;
+  customer?: string; // Backward compatibility
 }
 
 // ============================================

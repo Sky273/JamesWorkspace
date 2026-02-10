@@ -23,14 +23,16 @@ export function generateAccessToken(user) {
         name: user.name,
         status: user.status,
         role: user.role || 'user',
-        customer: user.CustomerName || user.customer,
+        firm: user.FirmName || user.firm,
+        // Backward compatibility - keep customer as alias
+        customer: user.FirmName || user.firm || user.CustomerName || user.customer,
         jti // Unique token ID for blacklist support
     };
     
     safeLog('debug', 'Generating JWT', { 
         userId: payload.id, 
         role: payload.role, 
-        customer: payload.customer,
+        firm: payload.firm,
         jti 
     });
     

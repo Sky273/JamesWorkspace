@@ -11,7 +11,7 @@ import { safeLog } from './logger.backend.js';
 // Prevents SQL injection via table name manipulation
 // ============================================
 const ALLOWED_TABLES = new Set([
-    'customers',
+    'firms',
     'users',
     'llm_settings',
     'templates',

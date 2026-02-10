@@ -1,7 +1,7 @@
 import express from 'express';
 import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
-import { validateBody, validateParams, createCustomerSchema } from '../utils/validation.js';
-import { customersCache } from '../services/cache.service.js';
+import { validateBody, validateParams, createFirmSchema } from '../utils/validation.js';
+import { firmsCache } from '../services/cache.service.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { 
     selectWithTimeout, 
@@ -15,10 +15,10 @@ import { query } from '../config/database.js';
 const router = express.Router();
 
 // ============================================
-// CUSTOMERS ROUTES (PostgreSQL)
+// FIRMS ROUTES (PostgreSQL)
 // ============================================
 
-// GET /api/customers - Get all customers (with server-side pagination)
+// GET /api/firms - Get all firms (with server-side pagination)
 router.get('/', authenticateToken, async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
@@ -35,8 +35,8 @@ router.get('/', authenticateToken, async (req, res) => {
             params = [`%${search.toLowerCase()}%`];
         }
 
-        // Fetch customers with pagination
-        const customers = await selectWithTimeout('customers', {
+        // Fetch firms with pagination
+        const firms = await selectWithTimeout('firms', {
             where: whereClause,
             params: params,
             orderBy: 'name ASC',
@@ -45,23 +45,23 @@ router.get('/', authenticateToken, async (req, res) => {
         });
 
         // Check if there are more records
-        const hasMore = customers.length > limit;
+        const hasMore = firms.length > limit;
         if (hasMore) {
-            customers.pop(); // Remove the extra record
+            firms.pop(); // Remove the extra record
         }
 
         // Get total count (only on first page for performance)
         let totalCount = null;
         if (page === 1) {
             const countQuery = search 
-                ? 'SELECT COUNT(*) as count FROM customers WHERE LOWER(name) LIKE $1'
-                : 'SELECT COUNT(*) as count FROM customers';
+                ? 'SELECT COUNT(*) as count FROM firms WHERE LOWER(name) LIKE $1'
+                : 'SELECT COUNT(*) as count FROM firms';
             const countResult = await query(countQuery, search ? [`%${search.toLowerCase()}%`] : []);
             totalCount = parseInt(countResult.rows[0].count);
         }
 
         const response = {
-            data: customers,
+            data: firms,
             pagination: {
                 page,
                 limit,
@@ -73,124 +73,124 @@ router.get('/', authenticateToken, async (req, res) => {
 
         return res.json(response);
     } catch (error) {
-        safeLog('error', 'Error fetching customers', { error: error.message });
+        safeLog('error', 'Error fetching firms', { error: error.message });
         return res.status(500).json({ 
-            error: 'Failed to fetch customers',
+            error: 'Failed to fetch firms',
             message: error.message 
         });
     }
 });
 
-// GET /api/customers/:id - Get customer by ID
+// GET /api/firms/:id - Get firm by ID
 router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => {
     try {
         const { id } = req.params;
-        const customer = await findWithTimeout('customers', id);
-        res.json(customer);
+        const firm = await findWithTimeout('firms', id);
+        res.json(firm);
     } catch (error) {
         if (error.statusCode === 404) {
-            return res.status(404).json({ error: 'Customer not found' });
+            return res.status(404).json({ error: 'Firm not found' });
         }
-        safeLog('error', 'Error fetching customer', { error: error.message, customerId: req.params.id });
+        safeLog('error', 'Error fetching firm', { error: error.message, firmId: req.params.id });
         return res.status(500).json({ 
-            error: 'Failed to fetch customer',
+            error: 'Failed to fetch firm',
             message: error.message 
         });
     }
 });
 
-// POST /api/customers - Create customer
-router.post('/', authenticateToken, requireAdmin, validateBody(createCustomerSchema), async (req, res) => {
+// POST /api/firms - Create firm
+router.post('/', authenticateToken, requireAdmin, validateBody(createFirmSchema), async (req, res) => {
     try {
-        customersCache.invalidate('all_customers');
+        firmsCache.invalidate('all_firms');
         
-        const customerData = {
+        const firmData = {
             name: req.body.name || req.body.Name,
             status: (req.body.status || req.body.Status || 'active').toLowerCase()
         };
 
-        const records = await createWithTimeout('customers', [{ fields: customerData }]);
+        const records = await createWithTimeout('firms', [{ fields: firmData }]);
         
         res.json(records[0]);
     } catch (error) {
         // Check for unique constraint violation
         if (error.code === '23505') {
             return res.status(400).json({ 
-                error: 'Customer with this name already exists' 
+                error: 'Firm with this name already exists' 
             });
         }
-        safeLog('error', 'Error creating customer', { error: error.message });
+        safeLog('error', 'Error creating firm', { error: error.message });
         return res.status(500).json({ 
-            error: 'Failed to create customer',
+            error: 'Failed to create firm',
             message: error.message 
         });
     }
 });
 
-// PUT /api/customers/:id - Update customer
+// PUT /api/firms/:id - Update firm
 router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), async (req, res) => {
     try {
-        customersCache.invalidate('all_customers');
+        firmsCache.invalidate('all_firms');
         
         const { id } = req.params;
-        const customerData = {
+        const firmData = {
             name: req.body.name || req.body.Name,
             status: (req.body.status || req.body.Status || 'active').toLowerCase()
         };
 
-        const records = await updateWithTimeout('customers', [{
+        const records = await updateWithTimeout('firms', [{
             id: id,
-            fields: customerData
+            fields: firmData
         }]);
         
         res.json(records[0]);
     } catch (error) {
         if (error.statusCode === 404) {
-            return res.status(404).json({ error: 'Customer not found' });
+            return res.status(404).json({ error: 'Firm not found' });
         }
         // Check for unique constraint violation
         if (error.code === '23505') {
             return res.status(400).json({ 
-                error: 'Customer with this name already exists' 
+                error: 'Firm with this name already exists' 
             });
         }
-        safeLog('error', 'Error updating customer', { error: error.message, customerId: req.params.id });
+        safeLog('error', 'Error updating firm', { error: error.message, firmId: req.params.id });
         return res.status(500).json({ 
-            error: 'Failed to update customer',
+            error: 'Failed to update firm',
             message: error.message 
         });
     }
 });
 
-// DELETE /api/customers/:id - Delete customer
+// DELETE /api/firms/:id - Delete firm
 router.delete('/:id', authenticateToken, requireAdmin, validateParams('id'), async (req, res) => {
     try {
         const { id } = req.params;
         
-        // Check if any users are associated with this customer
+        // Check if any users are associated with this firm
         const associatedUsers = await selectWithTimeout('users', {
-            where: 'customer_id = $1',
+            where: 'firm_id = $1',
             params: [id]
         });
         
         if (associatedUsers.length > 0) {
             return res.status(400).json({ 
-                error: 'Cannot delete customer with associated users',
+                error: 'Cannot delete firm with associated users',
                 associatedUsers: associatedUsers.length
             });
         }
         
-        customersCache.invalidate('all_customers');
-        await destroyWithTimeout('customers', [id]);
+        firmsCache.invalidate('all_firms');
+        await destroyWithTimeout('firms', [id]);
         
-        res.json({ message: 'Customer deleted successfully' });
+        res.json({ message: 'Firm deleted successfully' });
     } catch (error) {
         if (error.statusCode === 404) {
-            return res.status(404).json({ error: 'Customer not found' });
+            return res.status(404).json({ error: 'Firm not found' });
         }
-        safeLog('error', 'Error deleting customer', { error: error.message, customerId: req.params.id });
+        safeLog('error', 'Error deleting firm', { error: error.message, firmId: req.params.id });
         return res.status(500).json({ 
-            error: 'Failed to delete customer',
+            error: 'Failed to delete firm',
             message: error.message 
         });
     }

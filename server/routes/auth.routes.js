@@ -65,7 +65,7 @@ router.post('/signin', authLimiter, validateBody(signInSchema), async (req, res)
                 ...metadata,
                 email: normalizedEmail,
                 userId: user.id,
-                customer: user.customer_name,
+                firm: user.firm_name,
                 role: user.role,
                 statusCode: 401,
                 action: 'LOGIN_ATTEMPT',
@@ -80,7 +80,7 @@ router.post('/signin', authLimiter, validateBody(signInSchema), async (req, res)
                 ...metadata,
                 email: normalizedEmail,
                 userId: user.id,
-                customer: user.customer_name,
+                firm: user.firm_name,
                 role: user.role,
                 statusCode: 403,
                 action: 'LOGIN_ATTEMPT',
@@ -102,8 +102,11 @@ router.post('/signin', authLimiter, validateBody(signInSchema), async (req, res)
             name: user.name || '',
             status: user.status,
             role: user.role,
-            customer: user.customer_name,
-            CustomerName: user.customer_name,
+            firm: user.firm_name,
+            FirmName: user.firm_name,
+            // Backward compatibility
+            customer: user.firm_name,
+            CustomerName: user.firm_name,
             // Uppercase versions for compatibility
             Name: user.name,
             Email: user.email,
@@ -113,7 +116,7 @@ router.post('/signin', authLimiter, validateBody(signInSchema), async (req, res)
         
         safeLog('debug', 'User data prepared for signin', { 
             userId: userData.id, 
-            customer: userData.customer 
+            firm: userData.firm 
         });
 
         const accessToken = generateAccessToken(userData);
@@ -260,8 +263,11 @@ router.post('/refresh', async (req, res) => {
             name: user.name,
             status: user.status,
             role: user.role,
-            customer: user.customer_name,
-            CustomerName: user.customer_name
+            firm: user.firm_name,
+            FirmName: user.firm_name,
+            // Backward compatibility
+            customer: user.firm_name,
+            CustomerName: user.firm_name
         };
 
         const newAccessToken = generateAccessToken(userData);
@@ -336,8 +342,11 @@ router.get('/me', authenticateToken, async (req, res) => {
                 name: user.name,
                 role: user.role,
                 status: user.status,
-                customer: user.customer_name,
-                CustomerName: user.customer_name,
+                firm: user.firm_name,
+                FirmName: user.firm_name,
+                // Backward compatibility
+                customer: user.firm_name,
+                CustomerName: user.firm_name,
                 Name: user.name,
                 Email: user.email,
                 Status: user.status === 'active' ? 'Active' : 'Inactive',
@@ -353,7 +362,7 @@ router.get('/me', authenticateToken, async (req, res) => {
 // POST /api/auth/users - Create user (admin only)
 router.post('/users', authenticateToken, requireAdmin, validateBody(createUserSchema), async (req, res) => {
     try {
-        const { email, password, name, status, customer, CustomerName, role } = req.body;
+        const { email, password, name, status, firm, FirmName, customer, CustomerName, role } = req.body;
         const normalizedEmail = email.toLowerCase();
         const metadata = getRequestMetadata(req);
 
@@ -382,21 +391,21 @@ router.post('/users', authenticateToken, requireAdmin, validateBody(createUserSc
             status: (status || 'active').toLowerCase()
         };
 
-        // Handle customer assignment via foreign key
-        const customerName = customer || CustomerName;
-        if (customerName) {
-            const customers = await selectWithTimeout('customers', {
+        // Handle firm assignment via foreign key
+        const firmName = firm || FirmName || customer || CustomerName;
+        if (firmName) {
+            const firms = await selectWithTimeout('firms', {
                 where: 'name = $1',
-                params: [customerName],
+                params: [firmName],
                 limit: 1
             });
             
-            if (customers.length > 0) {
-                userData.customer_id = customers[0].id;
-                userData.customer_name = customers[0].name;
+            if (firms.length > 0) {
+                userData.firm_id = firms[0].id;
+                userData.firm_name = firms[0].name;
             } else {
                 return res.status(400).json({ 
-                    error: `Customer '${customerName}' not found` 
+                    error: `Firm '${firmName}' not found` 
                 });
             }
         }
@@ -451,23 +460,23 @@ router.put('/users/:id', authenticateToken, requireAdmin, validateParams('id'), 
             updateData.password = await bcrypt.hash(req.body.password, SALT_ROUNDS);
         }
         
-        // Handle customer assignment via foreign key
-        if (req.body.customer || req.body.CustomerName) {
-            const customerName = req.body.customer || req.body.CustomerName;
+        // Handle firm assignment via foreign key
+        if (req.body.firm || req.body.FirmName || req.body.customer || req.body.CustomerName) {
+            const firmName = req.body.firm || req.body.FirmName || req.body.customer || req.body.CustomerName;
             
-            // Find customer by name to get the ID
-            const customers = await selectWithTimeout('customers', {
+            // Find firm by name to get the ID
+            const firms = await selectWithTimeout('firms', {
                 where: 'name = $1',
-                params: [customerName],
+                params: [firmName],
                 limit: 1
             });
             
-            if (customers.length > 0) {
-                updateData.customer_id = customers[0].id;
-                updateData.customer_name = customers[0].name;
+            if (firms.length > 0) {
+                updateData.firm_id = firms[0].id;
+                updateData.firm_name = firms[0].name;
             } else {
                 return res.status(400).json({ 
-                    error: `Customer '${customerName}' not found` 
+                    error: `Firm '${firmName}' not found` 
                 });
             }
         }

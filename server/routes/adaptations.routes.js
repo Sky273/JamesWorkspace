@@ -21,7 +21,7 @@ router.get('/', authenticateToken, async (req, res) => {
         const { resumeId, missionId, status, search } = req.query;
         const userRole = (req.user?.role || req.user?.Role || '').toLowerCase();
         const isAdmin = userRole === 'admin';
-        const userCustomer = req.user?.customer;
+        const userFirm = req.user?.firm || req.user?.customer;
         
         // Extract pagination parameters
         const page = parseInt(req.query.page) || 1;
@@ -33,10 +33,10 @@ router.get('/', authenticateToken, async (req, res) => {
         const params = [];
         let paramIndex = 1;
 
-        // Customer filter (non-admin users)
-        if (!isAdmin && userCustomer) {
-            conditions.push(`customer = $${paramIndex}`);
-            params.push(userCustomer);
+        // Firm filter (non-admin users)
+        if (!isAdmin && userFirm) {
+            conditions.push(`firm = $${paramIndex}`);
+            params.push(userFirm);
             paramIndex++;
         }
 
@@ -103,7 +103,8 @@ router.get('/', authenticateToken, async (req, res) => {
             'Match Score': record.match_score,
             'Match Analysis': record.match_analysis,
             Status: record.status,
-            Customer: record.customer,
+            Firm: record.firm,
+            Customer: record.firm,
             'Created At': record.created_at,
             'Updated At': record.updated_at
         }));
@@ -135,10 +136,10 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
         
         const userRole = (req.user?.role || req.user?.Role || '').toLowerCase();
         const isAdmin = userRole === 'admin';
-        const userCustomer = req.user?.customer;
+        const userFirm = req.user?.firm || req.user?.customer;
         
-        if (!isAdmin && record.customer !== userCustomer) {
-            return res.status(403).json({ error: 'Access denied: You can only view adaptations from your customer' });
+        if (!isAdmin && record.firm !== userFirm) {
+            return res.status(403).json({ error: 'Access denied: You can only view adaptations from your firm' });
         }
         
         res.json({
@@ -152,7 +153,8 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
             'Match Score': record.match_score,
             'Match Analysis': record.match_analysis,
             Status: record.status,
-            Customer: record.customer,
+            Firm: record.firm,
+            Customer: record.firm,
             'Created At': record.created_at,
             'Updated At': record.updated_at
         });
@@ -171,13 +173,13 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateA
         const { id } = req.params;
         const userRole = (req.user?.role || req.user?.Role || '').toLowerCase();
         const isAdmin = userRole === 'admin';
-        const userCustomer = req.user?.customer;
+        const userFirm = req.user?.firm || req.user?.customer;
 
         // Check permissions
         if (!isAdmin) {
             const existingRecord = await findWithTimeout('resume_adaptations', id);
-            if (existingRecord.customer !== userCustomer) {
-                return res.status(403).json({ error: 'You can only update adaptations from your customer' });
+            if (existingRecord.firm !== userFirm) {
+                return res.status(403).json({ error: 'You can only update adaptations from your firm' });
             }
         }
 
@@ -208,7 +210,8 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateA
             'Match Score': updatedRecord.match_score,
             'Match Analysis': updatedRecord.match_analysis,
             Status: updatedRecord.status,
-            Customer: updatedRecord.customer,
+            Firm: updatedRecord.firm,
+            Customer: updatedRecord.firm,
             'Created At': updatedRecord.created_at,
             'Updated At': updatedRecord.updated_at
         });
@@ -227,13 +230,13 @@ router.delete('/:id', authenticateToken, validateParams('id'), async (req, res) 
         const { id } = req.params;
         const userRole = (req.user?.role || req.user?.Role || '').toLowerCase();
         const isAdmin = userRole === 'admin';
-        const userCustomer = req.user?.customer;
+        const userFirm = req.user?.firm || req.user?.customer;
 
         // Check permissions
         if (!isAdmin) {
             const existingRecord = await findWithTimeout('resume_adaptations', id);
-            if (existingRecord.customer !== userCustomer) {
-                return res.status(403).json({ error: 'You can only delete adaptations from your customer' });
+            if (existingRecord.firm !== userFirm) {
+                return res.status(403).json({ error: 'You can only delete adaptations from your firm' });
             }
         }
 

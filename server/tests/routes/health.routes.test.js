@@ -12,7 +12,7 @@ vi.mock('../../src/config/database.js', () => ({
 vi.mock('../../src/services/cache.service.js', () => ({
     settingsCache: { size: () => 5 },
     templatesCache: { size: () => 3 },
-    customersCache: { size: () => 2 }
+    firmsCache: { size: () => 2 }
 }));
 
 // Mock constants

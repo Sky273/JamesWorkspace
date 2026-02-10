@@ -71,13 +71,13 @@ export async function analyzeHandler(req, res) {
         const userMetadata = getRequestMetadata(req);
         const resumeRecord = await findWithTimeout('resumes', id);
         
-        // Check customer access
+        // Check firm access
         const userRole = (req.user?.role || '').toLowerCase();
         const isAdmin = userRole === 'admin';
-        const userCustomer = req.user?.customer;
+        const userFirm = req.user?.firm || req.user?.customer;
         
-        if (!isAdmin && resumeRecord.customer_name !== userCustomer) {
-            return res.status(403).json({ error: 'Access denied: You can only analyze resumes from your customer' });
+        if (!isAdmin && resumeRecord.firm_name !== userFirm) {
+            return res.status(403).json({ error: 'Access denied: You can only analyze resumes from your firm' });
         }
         
         const resumeText = resumeRecord.original_text || resumeRecord.improved_text;
@@ -263,13 +263,13 @@ export async function improveByIdHandler(req, res) {
         const userMetadata = getRequestMetadata(req);
         const resumeRecord = await findWithTimeout('resumes', id);
         
-        // Check customer access
+        // Check firm access
         const userRole = (req.user?.role || '').toLowerCase();
         const isAdmin = userRole === 'admin';
-        const userCustomer = req.user?.customer;
+        const userFirm = req.user?.firm || req.user?.customer;
         
-        if (!isAdmin && resumeRecord.customer_name !== userCustomer) {
-            return res.status(403).json({ error: 'Access denied: You can only improve resumes from your customer' });
+        if (!isAdmin && resumeRecord.firm_name !== userFirm) {
+            return res.status(403).json({ error: 'Access denied: You can only improve resumes from your firm' });
         }
         
         const resumeText = resumeRecord.original_text;
@@ -324,13 +324,13 @@ export async function matchHandler(req, res) {
         const resumeRecord = await findWithTimeout('resumes', id);
         const missionRecord = await findWithTimeout('missions', missionId);
         
-        // Check customer access
+        // Check firm access
         const userRole = (req.user?.role || '').toLowerCase();
         const isAdmin = userRole === 'admin';
-        const userCustomer = req.user?.customer;
+        const userFirm = req.user?.firm || req.user?.customer;
         
-        if (!isAdmin && resumeRecord.customer_name !== userCustomer) {
-            return res.status(403).json({ error: 'Access denied: You can only match resumes from your customer' });
+        if (!isAdmin && resumeRecord.firm_name !== userFirm) {
+            return res.status(403).json({ error: 'Access denied: You can only match resumes from your firm' });
         }
 
         const resumeText = resumeRecord.improved_text || resumeRecord.original_text;
@@ -369,13 +369,13 @@ export async function adaptHandler(req, res) {
         const resumeRecord = await findWithTimeout('resumes', id);
         const missionRecord = await findWithTimeout('missions', missionId);
         
-        // Check customer access
+        // Check firm access
         const userRole = (req.user?.role || '').toLowerCase();
         const isAdmin = userRole === 'admin';
-        const userCustomer = req.user?.customer;
+        const userFirm = req.user?.firm || req.user?.customer;
         
-        if (!isAdmin && resumeRecord.customer_name !== userCustomer) {
-            return res.status(403).json({ error: 'Access denied: You can only adapt resumes from your customer' });
+        if (!isAdmin && resumeRecord.firm_name !== userFirm) {
+            return res.status(403).json({ error: 'Access denied: You can only adapt resumes from your firm' });
         }
 
         const resumeText = resumeRecord.improved_text || resumeRecord.original_text;
@@ -421,7 +421,7 @@ export async function adaptHandler(req, res) {
             resumeName: resumeRecord.name,
             missionId: missionRecord.id,
             missionTitle: missionTitle,
-            customer: resumeRecord.customer_name
+            firm: resumeRecord.firm_name
         });
 
         const adaptationData = {
@@ -430,7 +430,7 @@ export async function adaptHandler(req, res) {
             resume_name: resumeRecord.name || null,
             mission_title: missionTitle || null,
             mission_content: missionContent || null,
-            customer: resumeRecord.customer_name || null,
+            firm: resumeRecord.firm_name || null,
             adapted_text: adaptedText,
             match_score: matchScoreNum,
             match_analysis: matchAnalysis ? JSON.stringify(matchAnalysis) : null,

@@ -200,24 +200,26 @@ export function getUserContext(req) {
         userId: req.user?.id,
         email: req.user?.email,
         role: req.user?.role,
-        customer: req.user?.customer,
+        firm: req.user?.firm,
+        // Backward compatibility
+        customer: req.user?.firm || req.user?.customer,
         isAdmin: req.user?.role?.toLowerCase() === 'admin'
     };
 }
 
 /**
- * Check if user can access resource based on customer
+ * Check if user can access resource based on firm
  * @param {Request} req - Express request object
- * @param {string} resourceCustomer - Customer of the resource
+ * @param {string} resourceFirm - Firm of the resource
  * @returns {boolean}
  */
-export function canAccessResource(req, resourceCustomer) {
-    const { isAdmin, customer } = getUserContext(req);
+export function canAccessResource(req, resourceFirm) {
+    const { isAdmin, firm } = getUserContext(req);
     
     if (isAdmin) return true;
-    if (!customer) return false;
+    if (!firm) return false;
     
-    return customer === resourceCustomer;
+    return firm === resourceFirm;
 }
 
 /**

@@ -27,7 +27,7 @@ const upload = multer({ dest: UPLOAD_DIR });
 // GET /api/resumes - Get all resumes (with server-side pagination and filters)
 router.get('/', authenticateToken, async (req, res) => {
     try {
-        const userCustomer = req.user.customer;
+        const userFirm = req.user.firm || req.user.customer;
         const isAdmin = req.user.role?.toLowerCase() === 'admin';
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 50;
@@ -41,10 +41,10 @@ router.get('/', authenticateToken, async (req, res) => {
         const params = [];
         let paramIndex = 1;
         
-        // Customer filter (non-admin users)
-        if (!isAdmin && userCustomer) {
-            conditions.push(`customer_name = $${paramIndex}`);
-            params.push(userCustomer);
+        // Firm filter (non-admin users)
+        if (!isAdmin && userFirm) {
+            conditions.push(`firm_name = $${paramIndex}`);
+            params.push(userFirm);
             paramIndex++;
         }
         
@@ -75,7 +75,7 @@ router.get('/', authenticateToken, async (req, res) => {
         // Fetch resumes with pagination using raw query to exclude resume_file_data (binary)
         // This avoids loading large binary data when listing resumes
         let rawSql = `SELECT id, name, title, file_name, resume_file_url, resume_file_size, resume_file_type,
-            status, customer_id, customer_name, skills, industries, tools, soft_skills,
+            status, firm_id, firm_name, skills, industries, tools, soft_skills,
             skills_cleaned, industries_cleaned, tools_cleaned, soft_skills_cleaned,
             skills_esco, industries_esco, tools_esco, soft_skills_esco,
             key_improvements, summary, experience_years, education_level, certifications, languages,
@@ -118,7 +118,8 @@ router.get('/', authenticateToken, async (req, res) => {
                 url: record.resume_file_url
             }] : [],
             Status: record.status,
-            CustomerName: record.customer_name,
+            FirmName: record.firm_name,
+            CustomerName: record.firm_name,
             // Analysis scores
             'Global Rating': record.global_rating,
             'Skills Score': record.skills_score,
@@ -195,15 +196,15 @@ router.get('/', authenticateToken, async (req, res) => {
 // GET /api/resumes/stats - Get statistics for dashboard KPIs
 router.get('/stats', authenticateToken, async (req, res) => {
     try {
-        const userCustomer = req.user.customer;
+        const userFirm = req.user.firm || req.user.customer;
         const isAdmin = req.user.role?.toLowerCase() === 'admin';
 
         // Build WHERE clause based on user role
         let whereClause = '';
         const params = [];
-        if (!isAdmin && userCustomer) {
-            whereClause = 'WHERE r.customer_name = $1';
-            params.push(userCustomer);
+        if (!isAdmin && userFirm) {
+            whereClause = 'WHERE r.firm_name = $1';
+            params.push(userFirm);
         }
 
         // Calculate date ranges
@@ -234,8 +235,8 @@ router.get('/stats', authenticateToken, async (req, res) => {
 
         // Fetch mission stats
         let missionWhereClause = '';
-        if (!isAdmin && userCustomer) {
-            missionWhereClause = 'WHERE customer = $1';
+        if (!isAdmin && userFirm) {
+            missionWhereClause = 'WHERE firm = $1';
         }
         
         const missionStatsQuery = `
@@ -246,13 +247,13 @@ router.get('/stats', authenticateToken, async (req, res) => {
             ${missionWhereClause}
         `;
         
-        const missionStatsResult = await query(missionStatsQuery, !isAdmin && userCustomer ? [userCustomer] : []);
+        const missionStatsResult = await query(missionStatsQuery, !isAdmin && userFirm ? [userFirm] : []);
         const missionStats = missionStatsResult.rows[0];
 
         // Fetch adaptation stats
         let adaptationWhereClause = '';
-        if (!isAdmin && userCustomer) {
-            adaptationWhereClause = 'WHERE customer = $1';
+        if (!isAdmin && userFirm) {
+            adaptationWhereClause = 'WHERE firm = $1';
         }
         
         const adaptationStatsQuery = `
@@ -261,7 +262,7 @@ router.get('/stats', authenticateToken, async (req, res) => {
             ${adaptationWhereClause}
         `;
         
-        const adaptationStatsResult = await query(adaptationStatsQuery, !isAdmin && userCustomer ? [userCustomer] : []);
+        const adaptationStatsResult = await query(adaptationStatsQuery, !isAdmin && userFirm ? [userFirm] : []);
         const adaptationStats = adaptationStatsResult.rows[0];
 
         const avgOriginal = parseFloat(resumeStats.avg_original_score) || 0;
@@ -288,7 +289,7 @@ router.get('/stats', authenticateToken, async (req, res) => {
                 averageImproved: Math.round(avgImproved),
                 improvement: avgOriginal > 0 ? Math.round(((avgImproved - avgOriginal) / avgOriginal) * 100) : 0
             },
-            customer: isAdmin ? null : userCustomer
+            customer: isAdmin ? null : userFirm
         };
 
         res.json(stats);
@@ -306,12 +307,12 @@ router.get('/stats', authenticateToken, async (req, res) => {
 router.get('/:id/download', authenticateToken, validateParams('id'), async (req, res) => {
     try {
         const { id } = req.params;
-        const userCustomer = req.user.customer;
+        const userFirm = req.user.firm || req.user.customer;
         const isAdmin = req.user.role?.toLowerCase() === 'admin';
 
         // Fetch resume with file data
         const result = await query(
-            `SELECT id, file_name, resume_file_data, resume_file_type, resume_file_size, customer_name
+            `SELECT id, file_name, resume_file_data, resume_file_type, resume_file_size, firm_name
              FROM resumes WHERE id = $1`,
             [id]
         );
@@ -323,7 +324,7 @@ router.get('/:id/download', authenticateToken, validateParams('id'), async (req,
         const resume = result.rows[0];
 
         // Check access rights (non-admin can only access their customer's resumes)
-        if (!isAdmin && userCustomer && resume.customer_name !== userCustomer) {
+        if (!isAdmin && userFirm && resume.firm_name !== userFirm) {
             return res.status(403).json({ error: 'Access denied' });
         }
 
@@ -352,7 +353,7 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
         // Use raw query to exclude resume_file_data (binary) - select all other columns
         const result = await query(
             `SELECT id, name, title, file_name, resume_file_url, resume_file_size, resume_file_type,
-                status, customer_id, customer_name, skills, industries, tools, soft_skills,
+                status, firm_id, firm_name, skills, industries, tools, soft_skills,
                 skills_cleaned, industries_cleaned, tools_cleaned, soft_skills_cleaned,
                 skills_esco, industries_esco, tools_esco, soft_skills_esco,
                 key_improvements, summary, experience_years, education_level, certifications, languages,
@@ -375,10 +376,10 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
         
         const userRole = (req.user?.role || '').toLowerCase();
         const isAdmin = userRole === 'admin';
-        const userCustomer = req.user?.customer;
+        const userFirm = req.user?.firm || req.user?.customer;
         
-        if (!isAdmin && resume.customer_name !== userCustomer) {
-            return res.status(403).json({ error: 'Access denied: You can only view resumes from your customer' });
+        if (!isAdmin && resume.firm_name !== userFirm) {
+            return res.status(403).json({ error: 'Access denied: You can only view resumes from your firm' });
         }
         
         // Map to frontend format
@@ -395,7 +396,8 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
                 url: resume.resume_file_url
             }] : [],
             Status: resume.status,
-            CustomerName: resume.customer_name,
+            FirmName: resume.firm_name,
+            CustomerName: resume.firm_name,
             // Analysis scores
             'Global Rating': resume.global_rating,
             'Skills Score': resume.skills_score,
@@ -465,32 +467,32 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
             return res.status(400).json({ error: 'No file uploaded' });
         }
 
-        const userCustomer = req.user.customer;
+        const userFirm = req.user.firm || req.user.customer;
         const { name, title } = req.body;
 
         // Read file content from temp location
         const fileBuffer = await fs.readFile(req.file.path);
 
-        // Find customer by name to get ID
-        let customerId = null;
-        let customerName = userCustomer;
+        // Find firm by name to get ID
+        let firmId = null;
+        let firmName = userFirm;
         
-        if (userCustomer) {
-            const customers = await selectWithTimeout('customers', {
+        if (userFirm) {
+            const firms = await selectWithTimeout('firms', {
                 where: 'name = $1',
-                params: [userCustomer],
+                params: [userFirm],
                 limit: 1
             });
             
-            if (customers.length > 0) {
-                customerId = customers[0].id;
-                customerName = customers[0].name;
+            if (firms.length > 0) {
+                firmId = firms[0].id;
+                firmName = firms[0].name;
             }
         }
 
         // Insert resume with file data stored in database
         const result = await query(
-            `INSERT INTO resumes (name, title, file_name, resume_file_data, resume_file_size, resume_file_type, resume_file_url, status, customer_id, customer_name)
+            `INSERT INTO resumes (name, title, file_name, resume_file_data, resume_file_size, resume_file_type, resume_file_url, status, firm_id, firm_name)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
              RETURNING *`,
             [
@@ -502,8 +504,8 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
                 req.file.mimetype,
                 `/api/resumes/${null}/download`, // Will be updated after insert
                 'active',
-                customerId,
-                customerName
+                firmId,
+                firmName
             ]
         );
 
@@ -536,7 +538,8 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
                 url: newResume.resume_file_url
             }],
             Status: 'Active',
-            CustomerName: newResume.customer_name
+            FirmName: newResume.firm_name,
+            CustomerName: newResume.firm_name
         });
     } catch (error) {
         safeLog('error', 'Error uploading resume', { error: error.message });
@@ -721,7 +724,8 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateR
             Name: updatedResume.name,
             Title: updatedResume.title,
             Status: updatedResume.status,
-            CustomerName: updatedResume.customer_name,
+            FirmName: updatedResume.firm_name,
+            CustomerName: updatedResume.firm_name,
             'Original Text': updatedResume.original_text,
             'Improved Text': updatedResume.improved_text,
             'Original Name': updatedResume.original_name,
