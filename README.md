@@ -1,31 +1,62 @@
 # Resume Converter
 
-[![Version](https://img.shields.io/badge/version-1.5.3-blue.svg)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.5.7-blue.svg)](./CHANGELOG.md)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-green.svg)](https://nodejs.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-blue.svg)](https://www.postgresql.org/)
+[![React](https://img.shields.io/badge/React-18.2-61dafb.svg)](https://reactjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue.svg)](https://www.typescriptlang.org/)
 
-Application professionnelle de gestion et d'analyse de CVs avec radar du marché de l'emploi intégré.
+Application professionnelle de gestion et d'analyse de CVs avec intelligence artificielle, matching de profils et radar du marché de l'emploi intégré.
 
 ## 🚀 Fonctionnalités
 
 ### Gestion des CVs
-- **Upload et parsing** : Support PDF, DOCX, DOC
-- **Analyse IA** : Extraction automatique des compétences, expériences et formations
+- **Upload et parsing** : Support PDF, DOCX, DOC avec OCR (Tesseract.js)
+- **Analyse IA** : Extraction automatique des compétences, expériences et formations via GPT-5/Claude
 - **Tags ESCO** : Classification automatique selon le référentiel européen des compétences
 - **Édition enrichie** : Éditeur TinyMCE intégré pour la mise en forme
-- **Export PDF** : Génération de CVs formatés professionnellement
+- **Export PDF** : Génération de CVs formatés avec templates personnalisables
+- **Amélioration IA** : Suggestions d'amélioration automatiques du contenu
+
+### Matching Profil / Mission
+- **Analyse de compatibilité** : Score de matching entre CV et offre d'emploi
+- **Adaptations de CV** : Génération de versions adaptées à une mission spécifique
+- **Comparaison détaillée** : Visualisation des écarts compétences/expériences
+
+### Gestion des Missions
+- **Création et suivi** : Gestion complète des offres d'emploi
+- **Association CV** : Lien entre missions et candidats
+- **Historique** : Suivi des adaptations et matchings
+
+### Gestion des Cabinets (Firms)
+- **Multi-cabinets** : Support de plusieurs cabinets de recrutement
+- **Association utilisateurs** : Gestion des droits par cabinet
 
 ### Radar du Marché
 - **Tendances du marché** : Visualisation des offres d'emploi, tensions de recrutement, embauches
-- **Carte de France** : Répartition géographique par région avec données détaillées
-- **Metadata on-demand** : Chargement optimisé des détails au clic sur un métier
+- **Carte de France interactive** : Répartition géographique par région avec MapLibre GL
+- **Données France Travail** : Intégration API officielle (offres, tensions, BMO)
+- **Données Adzuna** : Agrégation multi-sources d'offres d'emploi
 - **Filtres avancés** : Par type de données, région, métier (code ROME)
+- **Métiers ROME** : Référentiel complet avec recherche et navigation
+
+### Chatbot IA
+- **Assistant conversationnel** : Aide à la rédaction et conseils carrière
+- **Multi-modèles** : Support OpenAI (GPT-5, GPT-4o) et Anthropic (Claude 4.5/4.6)
+- **Contexte CV** : Réponses personnalisées basées sur le profil
+
+### Administration
+- **Gestion utilisateurs** : CRUD complet avec rôles (admin, user)
+- **Métriques LLM** : Suivi des appels API, tokens consommés, coûts
+- **Logs de sécurité** : Audit des actions sensibles
+- **Paramètres** : Configuration LLM, collecte de données, etc.
 
 ### Sécurité
 - **Authentification JWT** : Tokens sécurisés avec refresh automatique
 - **Protection CSRF** : Double-submit cookie pattern
-- **Rate limiting** : Protection contre les abus
+- **Rate limiting** : Protection contre les abus par endpoint
 - **Helmet** : Headers de sécurité HTTP
+- **Blacklist tokens** : Invalidation des tokens à la déconnexion
 
 ## 📋 Prérequis
 
