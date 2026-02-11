@@ -436,6 +436,7 @@ export default function FranceMapTab({ className = '' }: FranceMapTabProps) {
 
   // Aggregate job offers data by region (from trends with type='offre')
   // Each trend represents one métier in one region - avoid counting duplicates
+  // This version is FILTERED by selectedMetier for map bubbles
   const jobRegionData = useMemo(() => {
     if (dataSource !== 'offres' && dataSource !== 'all') return [];
     
@@ -445,6 +446,7 @@ export default function FranceMapTab({ className = '' }: FranceMapTabProps) {
     
     // Filter trends for 'offre' type
     const offreTrends = trends.filter(t => t.Type === 'offre');
+    // Filter by selectedMetier if set - this affects map bubbles
     const filteredTrends = selectedMetier 
       ? offreTrends.filter(t => t.CodeRome === selectedMetier)
       : offreTrends;
@@ -486,6 +488,47 @@ export default function FranceMapTab({ className = '' }: FranceMapTabProps) {
 
     return Object.values(aggregated);
   }, [trends, selectedMetier, dataSource]);
+
+  // Full job region data (NOT filtered by selectedMetier) - used for panel breakdown
+  const jobRegionDataFull = useMemo(() => {
+    if (dataSource !== 'offres' && dataSource !== 'all') return [];
+    
+    const aggregated: Record<string, RegionData> = {};
+    const seenCombinations = new Set<string>();
+    const offreTrends = trends.filter(t => t.Type === 'offre');
+
+    offreTrends.forEach(trend => {
+      const regionCode = trend.RegionCode;
+      if (!regionCode || !REGIONS_INFO[regionCode]) return;
+
+      const comboKey = `${regionCode}-${trend.CodeRome || 'unknown'}`;
+      if (seenCombinations.has(comboKey)) return;
+      seenCombinations.add(comboKey);
+
+      if (!aggregated[regionCode]) {
+        aggregated[regionCode] = {
+          code: regionCode,
+          name: REGIONS_INFO[regionCode].name,
+          totalJobs: 0,
+          value: 0,
+          romeBreakdown: {},
+          coords: REGIONS_INFO[regionCode].coords
+        };
+      }
+
+      const jobCount = typeof trend.Value === 'string' ? parseFloat(trend.Value) : (trend.Value || 0);
+      if (!isNaN(jobCount)) {
+        aggregated[regionCode].totalJobs += jobCount;
+        aggregated[regionCode].value = aggregated[regionCode].totalJobs;
+        
+        if (trend.CodeRome) {
+          aggregated[regionCode].romeBreakdown[trend.CodeRome] = jobCount;
+        }
+      }
+    });
+
+    return Object.values(aggregated);
+  }, [trends, dataSource]);
 
   // Aggregate trend data by region
   // Filter by selected dataSource type and avoid duplicates
@@ -652,10 +695,11 @@ export default function FranceMapTab({ className = '' }: FranceMapTabProps) {
   }, [multiTypeRegionData, dataSource]);
 
   // Get current region data based on source
+  // Note: jobRegionData and trendRegionData already filter by selectedMetier
   const currentRegionData = useMemo(() => {
     if (dataSource === 'all') return combinedRegionData;
     return dataSource === 'offres' ? jobRegionData : trendRegionData;
-  }, [dataSource, jobRegionData, trendRegionData, combinedRegionData]);
+  }, [dataSource, jobRegionData, trendRegionData, combinedRegionData, selectedMetier]);
 
   // Sync selectedRegion with currentRegionData when data changes
   // This ensures the value and romeBreakdown are always up-to-date with current filters (including selectedMetier)
@@ -672,7 +716,7 @@ export default function FranceMapTab({ className = '' }: FranceMapTabProps) {
     }
   }, [currentRegionData, currentSelectedRegionCode]);
 
-  // Calculate max value for scaling
+  // Calculate max value for scaling (recalculates when selectedMetier changes via jobRegionData/trendRegionData)
   const maxValue = useMemo(() => {
     if (dataSource === 'all') {
       return Math.max(...combinedRegionData.map(r => r.count), 1);
@@ -681,7 +725,7 @@ export default function FranceMapTab({ className = '' }: FranceMapTabProps) {
       return Math.max(...jobRegionData.map(r => r.totalJobs), 1);
     }
     return Math.max(...trendRegionData.map(r => r.value), 1);
-  }, [jobRegionData, trendRegionData, combinedRegionData, dataSource]);
+  }, [jobRegionData, trendRegionData, combinedRegionData, dataSource, selectedMetier]);
 
   // Calculate totals based on data source
   // For embauche, demandeur, demandeur_entrant: sum (these are counts)
@@ -962,7 +1006,7 @@ export default function FranceMapTab({ className = '' }: FranceMapTabProps) {
 
         <div className="flex flex-col lg:flex-row">
           {/* Map with MapLibre */}
-          <div className="relative flex-1 min-h-[500px]">
+          <div className="relative flex-1 min-h-[500px]" key={`map-container-${selectedMetier || 'all'}-${dataSource}`}>
             <Map
               ref={mapRef}
               initialViewState={{
@@ -1035,7 +1079,7 @@ export default function FranceMapTab({ className = '' }: FranceMapTabProps) {
 
                   return (
                     <Marker
-                      key={region.code}
+                      key={`${region.code}-${selectedMetier || 'all'}`}
                       longitude={region.coords[0]}
                       latitude={region.coords[1]}
                       anchor="center"
@@ -1147,6 +1191,7 @@ export default function FranceMapTab({ className = '' }: FranceMapTabProps) {
                   <div className="space-y-2 max-h-48 overflow-y-auto">
                     {dataSource === 'offres' && 'totalJobs' in selectedRegion ? (
                       // Job offers breakdown - now with metadata support via trends
+                      // Use jobRegionDataFull to always show all métiers (not filtered by selectedMetier)
                       (() => {
                         // Get the offre trends for this region to access metadata
                         const offreTrendsForRegion = trends.filter(t => 
@@ -1160,7 +1205,11 @@ export default function FranceMapTab({ className = '' }: FranceMapTabProps) {
                           }
                         });
 
-                        return Object.entries((selectedRegion as RegionData).romeBreakdown)
+                        // Use full data (not filtered by selectedMetier) for the breakdown list
+                        const fullRegionData = jobRegionDataFull.find(r => r.code === selectedRegion.code);
+                        const romeBreakdown = fullRegionData?.romeBreakdown || {};
+
+                        return Object.entries(romeBreakdown)
                           .filter(([rome]) => {
                             if (!metierFilter) return true;
                             const label = getMetierLabel(rome, trendByRome[rome]?.RomeLabel);
@@ -1171,8 +1220,7 @@ export default function FranceMapTab({ className = '' }: FranceMapTabProps) {
                           .map(([rome, count]) => {
                             const trend = trendByRome[rome];
                             const metierLabel = getMetierLabel(rome, trend?.RomeLabel);
-                            const totalRegion = (selectedRegion as RegionData).totalJobs;
-                            const percentage = totalRegion > 0 ? ((count as number) / totalRegion * 100).toFixed(1) : '0';
+                            const totalRegion = fullRegionData?.totalJobs || 0;
                             return (
                               <div key={rome} className="relative group">
                                 <button

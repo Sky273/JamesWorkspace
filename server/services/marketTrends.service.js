@@ -609,122 +609,65 @@ async function collectMarketTrends(options = {}) {
         return null;
     };
     
-    // Extract value for OFFRES: sum of 'nombre' fields in listeValeurParCaract for LAST period only
-    // Structure: listeValeursParPeriode[last].listeValeurParCaract[].nombre
-    const extractOffreValue = (data) => {
-        if (!data?.listeValeursParPeriode?.length) return null;
-        
-        // Find the period with TOFF-CUMUL12MOIS (Cumul 12 derniers mois toutes offres) - most relevant
-        // Fallback to TOFF, then last period if not found
-        let targetPeriode = data.listeValeursParPeriode.find(p => p.codeNomenclature === 'TOFF-CUMUL12MOIS');
-        if (!targetPeriode) {
-            targetPeriode = data.listeValeursParPeriode.find(p => p.codeNomenclature === 'TOFF');
-        }
-        if (!targetPeriode) {
-            targetPeriode = data.listeValeursParPeriode[data.listeValeursParPeriode.length - 1];
-        }
-        
-        let total = 0;
-        let hasValue = false;
-        
-        if (targetPeriode?.listeValeurParCaract?.length) {
-            // Sum only 'nombre' values from TYPECTR characteristics (CDI, CDD1, CDD2, CDD3, AUTR)
-            // These represent the actual job offer counts without duplication
-            const typeCtrCodes = ['CDI', 'CDD1', 'CDD2', 'CDD3', 'AUTR'];
-            for (const caract of targetPeriode.listeValeurParCaract) {
-                if (caract.codeTypeCaract === 'TYPECTR' || typeCtrCodes.includes(caract.codeCaract)) {
-                    const nombre = toNumber(caract.nombre);
-                    if (nombre !== null && nombre > 0) {
-                        total += nombre;
-                        hasValue = true;
-                    }
-                }
-            }
-        }
-        
-        // Fallback to valeurPrincipaleNombre if no TYPECTR characteristics found
-        if (!hasValue) {
-            const val = toNumber(targetPeriode?.valeurPrincipaleNombre);
-            if (val !== null) {
-                total = val;
-                hasValue = true;
-            }
-        }
-        
-        return hasValue ? total : null;
-    };
+    // ============================================
+    // SIMPLIFIED VALUE EXTRACTION - Use raw API value without recalculation
+    // ============================================
     
-    // Extract value for TENSIONS: valeurPrincipaleDecimale from LAST period only
-    const extractTensionValue = (data) => {
-        if (!data?.listeValeursParPeriode?.length) return null;
-        
-        // Take LAST period (most recent)
-        const lastPeriode = data.listeValeursParPeriode[data.listeValeursParPeriode.length - 1];
-        
-        return toNumber(lastPeriode?.valeurPrincipaleDecimale) 
-            ?? toNumber(lastPeriode?.valeurPrincipaleNombre);
-    };
-    
-    // Extract value for DEMANDEURS/EMBAUCHES: sum of valeurPrincipaleNombre across categories
-    // Structure: listeValeursParPeriode[].valeurPrincipaleNombre (each periode is a category A, B, C...)
-    const extractDemandeurValue = (data) => {
-        if (!data?.listeValeursParPeriode?.length) return null;
-        
-        let total = 0;
-        let hasValue = false;
-        
-        for (const periode of data.listeValeursParPeriode) {
-            const value = toNumber(periode.valeurPrincipaleNombre);
-            if (value !== null) {
-                total += value;
-                hasValue = true;
-            }
-        }
-        
-        return hasValue ? total : null;
-    };
-    
-    // Alias for embauche (same structure as demandeur)
-    const extractEmbaucheValue = extractDemandeurValue;
-    
-    // Helper to extract salary value - prioritizes SAL3 (average salary all levels)
-    // Falls back to average of all salary values if SAL3 not found
-    const extractSalaireValue = (data) => {
+    /**
+     * Extract raw value from API response - no recalculation
+     * Tries common API response fields in order of priority
+     * @param {Object} data - API response data
+     * @returns {number|null} - Raw value from API
+     */
+    const extractRawValue = (data) => {
         if (!data) return null;
         
-        // Salary API returns: listeValeursParPeriode[].salaireValeurMontant[]
-        // Each salaireValeurMontant has: codeNomenclature (SAL1/SAL2/SAL3), valeurPrincipaleMontant
-        // SAL1 = débutant, SAL2 = expérimenté, SAL3 = moyen (tous niveaux)
+        // Try root level fields first
+        let value = toNumber(data.valeurPrincipaleNombre)
+            ?? toNumber(data.valeurPrincipaleDecimale)
+            ?? toNumber(data.valeurPrincipaleMontant)
+            ?? toNumber(data.valeurPrincipaleTaux)
+            ?? toNumber(data.valeur)
+            ?? toNumber(data.indicateur);
         
-        const allSalaires = [];
-        let sal3Value = null;
+        if (value !== null) return value;
         
-        if (data.listeValeursParPeriode?.length) {
-            for (const periode of data.listeValeursParPeriode) {
-                if (periode.salaireValeurMontant?.length) {
-                    for (const sv of periode.salaireValeurMontant) {
-                        const montant = toNumber(sv.valeurPrincipaleMontant);
-                        if (montant !== null) {
-                            allSalaires.push(montant);
-                            // Prioritize SAL3 (average salary all levels/experiences)
-                            if (sv.codeNomenclature === 'SAL3') {
-                                sal3Value = montant;
-                            }
-                        }
-                    }
+        // Try listeValeursParPeriode - take LAST period (most recent)
+        if (data.listeValeursParPeriode?.length > 0) {
+            const lastPeriode = data.listeValeursParPeriode[data.listeValeursParPeriode.length - 1];
+            
+            value = toNumber(lastPeriode?.valeurPrincipaleNombre)
+                ?? toNumber(lastPeriode?.valeurPrincipaleDecimale)
+                ?? toNumber(lastPeriode?.valeurPrincipaleMontant)
+                ?? toNumber(lastPeriode?.valeurPrincipaleTaux)
+                ?? toNumber(lastPeriode?.valeur)
+                ?? toNumber(lastPeriode?.indicateur);
+            
+            if (value !== null) return value;
+            
+            // For salary data, try salaireValeurMontant (SAL3 preferred)
+            if (lastPeriode?.salaireValeurMontant?.length > 0) {
+                // Try SAL3 first (average all levels)
+                const sal3 = lastPeriode.salaireValeurMontant.find(s => s.codeNomenclature === 'SAL3');
+                if (sal3) {
+                    value = toNumber(sal3.valeurPrincipaleMontant);
+                    if (value !== null) return value;
                 }
+                // Fallback to first salary value
+                value = toNumber(lastPeriode.salaireValeurMontant[0]?.valeurPrincipaleMontant);
+                if (value !== null) return value;
             }
         }
         
-        // Return SAL3 if found, otherwise return average of all salaries
-        if (sal3Value !== null) return sal3Value;
-        if (allSalaires.length > 0) {
-            return Math.round(allSalaires.reduce((a, b) => a + b, 0) / allSalaires.length);
-        }
-        
-        // No salary data found
         return null;
     };
+    
+    // Use extractRawValue for all trend types
+    const extractOffreValue = extractRawValue;
+    const extractTensionValue = extractRawValue;
+    const extractDemandeurValue = extractRawValue;
+    const extractEmbaucheValue = extractRawValue;
+    const extractSalaireValue = extractRawValue;
     
     // Helper to extract value label from API response
     const extractValueLabel = (data) => {
@@ -810,7 +753,7 @@ async function collectMarketTrends(options = {}) {
                 type: 'salaire',
                 codeRome: rome,
                 romeLabel: getRomeLabel(rome),
-                value: extractSalaireValue(data), // Use SAL3 (average all levels) for salaries
+                value: extractSalaireValue(data),
                 valueLabel: extractValueLabel(data),
                 metadata: prepareMetadata(data, rome)
             };
@@ -865,30 +808,7 @@ async function collectMarketTrends(options = {}) {
                 continue;
             }
             
-            // Extract value from dataemploi response format - LAST period only
-            // Response format: { listeValeursParPeriode: [{ valeurPrincipaleNombre: 1, ... }] }
-            const extractDynamiqueValue = (apiData) => {
-                if (!apiData) return null;
-                
-                // Primary: listeValeursParPeriode (main format from dataemploi API)
-                if (apiData.listeValeursParPeriode?.length > 0) {
-                    // Take LAST period (most recent)
-                    const lastPeriode = apiData.listeValeursParPeriode[apiData.listeValeursParPeriode.length - 1];
-                    
-                    const val = toNumber(lastPeriode.valeurPrincipaleNombre) 
-                        ?? toNumber(lastPeriode.valeurPrincipaleMontant) 
-                        ?? toNumber(lastPeriode.valeurPrincipaleTaux)
-                        ?? toNumber(lastPeriode.valeur) 
-                        ?? toNumber(lastPeriode.indicateur);
-                    if (val !== null) return val;
-                }
-                
-                // Fallback: root level fields
-                return toNumber(apiData.valeurPrincipaleNombre) 
-                    ?? toNumber(apiData.valeur) 
-                    ?? toNumber(apiData.indicateur) 
-                    ?? toNumber(apiData.tauxEvolution);
-            };
+            // Use extractRawValue for dynamique - no recalculation, preserve API value
             
             const extractDynamiqueLabel = (apiData) => {
                 if (!apiData) return null;
@@ -912,7 +832,7 @@ async function collectMarketTrends(options = {}) {
                 type: 'dynamique_emploi',
                 region: region.name,
                 regionCode: region.code,
-                value: extractDynamiqueValue(data),
+                value: extractRawValue(data),
                 valueLabel: extractDynamiqueLabel(data),
                 metadata: prepareMetadata(data, null)
             };
