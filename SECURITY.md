@@ -1,8 +1,51 @@
 # Security Documentation
 
+**Version**: 1.5.7  
+**Last Updated**: February 2026
+
 ## Overview
 
 This document describes the security measures implemented in the ResumeConverter application, including trade-offs made for functionality and their mitigations.
+
+---
+
+## Architecture de Sécurité
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         CLIENT (React)                          │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐  │
+│  │ httpOnly     │  │ CSRF Token   │  │ DOMPurify            │  │
+│  │ Cookies      │  │ (Header)     │  │ Sanitization         │  │
+│  └──────────────┘  └──────────────┘  └──────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      SERVER (Express.js)                        │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐  │
+│  │ Rate Limit   │  │ Helmet       │  │ CORS                 │  │
+│  │ (Multi-layer)│  │ (Headers)    │  │ (Strict Origin)      │  │
+│  └──────────────┘  └──────────────┘  └──────────────────────┘  │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐  │
+│  │ JWT Auth     │  │ Token        │  │ Zod Validation       │  │
+│  │ Middleware   │  │ Blacklist    │  │ (Input)              │  │
+│  └──────────────┘  └──────────────┘  └──────────────────────┘  │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐  │
+│  │ Security     │  │ Firm Access  │  │ sanitize-html        │  │
+│  │ Logging      │  │ Control      │  │ (Output)             │  │
+│  └──────────────┘  └──────────────┘  └──────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      EXTERNAL SERVICES                          │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐  │
+│  │ PostgreSQL   │  │ OpenAI API   │  │ Anthropic API        │  │
+│  │ (Encrypted)  │  │ (Proxy)      │  │ (Proxy)              │  │
+│  └──────────────┘  └──────────────┘  └──────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
@@ -18,7 +61,8 @@ This document describes the security measures implemented in the ResumeConverter
 - **Token Blacklist**: In-memory blacklist for immediate token revocation
   - Tokens are blacklisted on logout
   - All user tokens are invalidated when account is deactivated
-  - Automatic cleanup of expired blacklisted tokens
+  - Automatic cleanup of expired blacklisted tokens (hourly)
+  - User-level blacklisting for security incidents
 
 ### Session Management
 
@@ -26,12 +70,27 @@ This document describes the security measures implemented in the ResumeConverter
 - **Secure Flag**: Enabled in production (HTTPS only)
 - **SameSite**: `lax` to prevent CSRF while allowing normal navigation
 - **CSRF Protection**: Double-submit cookie pattern with `csrf-csrf` library
+- **Token Expiration Headers**: `X-Token-Expires-In` and `X-Token-Expiring-Soon` for frontend handling
 
 ### User Status Verification
 
 - User status is checked on every authenticated request
-- Inactive users are immediately blocked
-- Account deactivation triggers immediate token invalidation
+- Inactive users are immediately blocked with clear error message
+- Account deactivation triggers immediate token invalidation via user blacklist
+
+### Role-Based Access Control (RBAC)
+
+| Role | Permissions |
+|------|-------------|
+| **admin** | Full access, user management, settings, metrics, 3x rate limits |
+| **user** | Own resources, assigned firm resources |
+
+### Firm-Based Access Control
+
+- Users are associated with a **firm** (cabinet de recrutement)
+- Resources (CVs, missions, adaptations) are scoped to firms
+- Admins can access all firms
+- `hasFirmAccess()` middleware enforces firm-level isolation
 
 ---
 
@@ -115,19 +174,36 @@ sanitizeHtmlContent(content)
 
 ### Multi-Layer Protection
 
-| Layer | Limit | Window | Purpose |
-|-------|-------|--------|---------|
-| Global | 1000 req | 15 min | DDoS protection |
-| Auth | 20 req | 15 min | Brute-force prevention |
-| User | 50 req | 15 min | Per-user abuse prevention |
-| LLM | 20 req | 1 hour | API cost protection |
-| Upload | 50 req | 15 min | Storage abuse prevention |
+| Layer | Limit | Window | Purpose | Implementation |
+|-------|-------|--------|---------|----------------|
+| **Global** | 1000 req | 15 min | DDoS protection | `express-rate-limit` |
+| **Auth** | 20 req | 15 min | Brute-force prevention | Skip successful requests |
+| **User** | 50 req | 15 min | Per-user abuse prevention | Custom middleware |
+| **LLM** | 100 req | 1 hour | API cost protection | `express-rate-limit` |
+| **Upload** | 50 req | 15 min | Storage abuse prevention | `express-rate-limit` |
+| **Combined** | 30 req | 1 min | IP+User anti-bypass | Custom middleware |
+
+### Admin Rate Limit Bonus
+
+Administrators receive **3x the standard rate limits** to accommodate administrative tasks.
 
 ### Combined Rate Limiting
 
 IP + User ID combined limiting prevents bypass via:
 - Proxy/VPN rotation
 - Multiple accounts from same IP
+- Session hijacking attempts
+
+### Rate Limit Headers
+
+All rate-limited responses include:
+- `X-RateLimit-Limit`: Maximum requests allowed
+- `X-RateLimit-Remaining`: Requests remaining in window
+- `X-RateLimit-Reset`: Window reset timestamp (ISO 8601)
+
+### Automatic Cleanup
+
+Rate limit stores are automatically cleaned every hour to prevent memory leaks.
 
 ---
 
@@ -172,18 +248,90 @@ IP + User ID combined limiting prevents bypass via:
 
 ### Events Logged
 
-- `AUTH_SUCCESS`: Successful login
-- `AUTH_FAILURE`: Failed login attempt
-- `AUTH_BLOCKED`: Blocked login (inactive account)
-- `RATE_LIMIT_HIT`: Rate limit exceeded
-- `SUSPICIOUS_ACTIVITY`: Potential attack detected
-- `LLM_REQUEST`: AI API usage tracking
+| Event | Level | Description |
+|-------|-------|-------------|
+| `AUTH_SUCCESS` | INFO | Successful login |
+| `AUTH_FAILURE` | SECURITY | Failed login attempt |
+| `AUTH_BLOCKED` | SECURITY | Blocked login (inactive account) |
+| `RATE_LIMIT_HIT` | SECURITY | Rate limit exceeded |
+| `INVALID_TOKEN` | SECURITY | Invalid or expired token |
+| `TOKEN_EXPIRED` | WARNING | Token expiration |
+| `SUSPICIOUS_ACTIVITY` | SECURITY | Potential attack detected |
+| `FILE_UPLOAD` | INFO | File upload event |
+| `FILE_UPLOAD_REJECTED` | SECURITY | Rejected file upload |
+| `LLM_REQUEST` | INFO | AI API usage tracking |
+| `DATA_ACCESS` | INFO | Sensitive data access |
 
 ### Log Storage
 
-- In-memory circular buffer (last 1000 entries)
-- Console output for persistent logging
-- Consider external log aggregation for production
+#### In-Memory (Real-time)
+- Optimized circular buffer (O(1) operations)
+- Pre-allocated fixed-size array (configurable via `MAX_LOGS`)
+- Last 1000 entries by default
+- Accessible via `/api/admin/security-logs` (admin only)
+
+#### File Persistence (Critical Events)
+- Location: `logs/security.log`
+- Format: JSON lines (one entry per line)
+- Rotation: 10MB max file size, 5 rotated files kept
+- Critical events automatically persisted:
+  - `AUTH_FAILURE`, `AUTH_BLOCKED`
+  - `RATE_LIMIT_HIT`, `INVALID_TOKEN`
+  - `SUSPICIOUS_ACTIVITY`, `FILE_UPLOAD_REJECTED`
+  - All `ERROR` and `SECURITY` level events
+
+### Log Entry Structure
+
+```json
+{
+  "timestamp": "2026-02-11T12:00:00.000Z",
+  "level": "SECURITY",
+  "event": "AUTH_FAILURE",
+  "ip": "192.168.1.1",
+  "email": "user@example.com",
+  "endpoint": "/api/auth/login",
+  "method": "POST",
+  "message": "Invalid password"
+}
+```
+
+---
+
+## LLM API Security
+
+### API Key Protection
+
+- **Server-side only**: API keys (OpenAI, Anthropic) are never exposed to the frontend
+- **Proxy endpoints**: All LLM calls go through backend proxy routes
+  - `/api/llm/openai` - OpenAI proxy
+  - `/api/llm/anthropic` - Anthropic proxy
+- **Environment variables**: Keys stored in `.env`, never committed to version control
+
+### LLM Request Validation
+
+```javascript
+// Zod schema for OpenAI requests
+openaiRequestSchema = z.object({
+  messages: z.array(messageSchema).min(1).max(50),
+  model: z.string().optional(),
+  max_tokens: z.number().min(1).max(16000).optional(),
+  temperature: z.number().min(0).max(2).optional()
+});
+```
+
+### Prompt Length Limits
+
+- Maximum prompt length: Configurable via `MAX_PROMPT_LENGTH`
+- Prevents abuse and excessive API costs
+
+### LLM Metrics Tracking
+
+All LLM requests are tracked in `llm_metrics` table:
+- Model used
+- Tokens consumed (input/output)
+- Response time
+- Cost estimation
+- User/endpoint attribution
 
 ---
 
@@ -191,15 +339,21 @@ IP + User ID combined limiting prevents bypass via:
 
 1. **Token Blacklist**: In-memory only, lost on restart
    - Mitigation: Short token expiration (1 hour)
+   - Mitigation: User-level blacklist for account deactivation
    - Future: Redis-based blacklist for multi-instance
 
-2. **Security Logs**: In-memory only
-   - Mitigation: Console logging for persistence
-   - Future: External log aggregation service
+2. **Security Logs**: Partially in-memory
+   - Mitigation: Critical events persisted to file
+   - Mitigation: Log rotation (10MB, 5 files)
+   - Future: External log aggregation service (ELK, Datadog)
 
 3. **CSP Relaxations**: Required for TinyMCE
    - Mitigation: Strict input sanitization
    - Future: Nonce-based CSP when supported
+
+4. **Single Instance**: Rate limits not shared across instances
+   - Mitigation: Sticky sessions in load balancer
+   - Future: Redis-based rate limiting
 
 ---
 
@@ -223,16 +377,47 @@ IP + User ID combined limiting prevents bypass via:
 
 ## Security Checklist
 
-- [x] JWT with explicit algorithm
+### Implemented ✅
+
+- [x] JWT with explicit algorithm (HS256)
 - [x] Separate access/refresh token secrets
-- [x] Token blacklist for revocation
-- [x] CSRF protection
-- [x] Rate limiting (multi-layer)
-- [x] Input validation (Zod)
-- [x] HTML sanitization (DOMPurify)
+- [x] Token blacklist for revocation (token + user level)
+- [x] CSRF protection (double-submit cookie)
+- [x] Rate limiting (6 layers: global, auth, user, LLM, upload, combined)
+- [x] Input validation (Zod schemas)
+- [x] HTML sanitization (DOMPurify frontend, sanitize-html backend)
 - [x] Airtable formula injection prevention
-- [x] Security event logging
+- [x] Security event logging (memory + file persistence)
 - [x] Graceful shutdown with cleanup
-- [ ] Redis-based token blacklist (future)
-- [ ] External log aggregation (future)
+- [x] LLM API key protection (server-side proxy)
+- [x] Firm-based access control (multi-tenant isolation)
+- [x] Role-based access control (admin/user)
+- [x] Token expiration headers for frontend
+- [x] Admin rate limit bonus (3x)
+- [x] Log file rotation (10MB, 5 files)
+- [x] Automatic rate limit store cleanup
+
+### Planned 📋
+
+- [ ] Redis-based token blacklist (multi-instance support)
+- [ ] Redis-based rate limiting (shared across instances)
+- [ ] External log aggregation (ELK, Datadog)
 - [ ] Nonce-based CSP (pending TinyMCE support)
+- [ ] Two-factor authentication (2FA)
+- [ ] Password complexity requirements
+- [ ] Account lockout after failed attempts
+
+---
+
+## Files Reference
+
+| File | Purpose |
+|------|---------|
+| `server/middleware/auth.middleware.js` | JWT authentication, role/firm access |
+| `server/middleware/rateLimit.middleware.js` | All rate limiting logic |
+| `server/middleware/csrf.middleware.js` | CSRF protection |
+| `server/services/tokenBlacklist.service.js` | Token/user blacklisting |
+| `server/services/security.service.js` | Security logging |
+| `server/services/jwt.service.js` | JWT creation/verification |
+| `server/utils/validation.js` | Zod schemas |
+| `server/config/constants.js` | Security constants |
