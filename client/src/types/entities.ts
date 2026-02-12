@@ -87,8 +87,45 @@ export interface Resume {
   'Updated At'?: string;
   'Analysis Date'?: string;
   'Last Improved'?: string;
+  'Current Version'?: number;
   // Index signature for dynamic field access
   [key: string]: unknown;
+}
+
+// ============================================
+// RESUME VERSION TYPES
+// ============================================
+
+export interface ResumeVersion {
+  id: string;
+  resumeId: string;
+  versionNumber: number;
+  improvedText: string;
+  improvedGlobalRating?: number | null;
+  improvedSkillsScore?: number | null;
+  improvedExperienceScore?: number | null;
+  improvedEducationScore?: number | null;
+  improvedAtsScore?: number | null;
+  improvedExecutiveSummaryScore?: number | null;
+  improvedHobbiesLanguagesScore?: number | null;
+  improvedSkills?: string[];
+  improvedIndustries?: string[];
+  improvedTools?: string[];
+  improvedSoftSkills?: string[];
+  improvedKeyImprovements?: string | null;
+  createdAt: string;
+  createdBy?: string | null;
+  createdByName?: string | null;
+  createdByEmail?: string | null;
+  changeReason?: string | null;
+}
+
+export interface ResumeVersionsResponse {
+  versions: ResumeVersion[];
+  total: number;
+  limit: number;
+  offset: number;
+  hasMore: boolean;
 }
 
 export type ResumeStatus = 'New' | 'Pending' | 'Processing' | 'Analyzed' | 'Improved' | 'Error' | 'Failed';

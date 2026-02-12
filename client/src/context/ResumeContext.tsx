@@ -36,7 +36,7 @@ interface ResumeContextType {
   improveCurrentResume: () => Promise<Resume>;
   updateResumeAnalysis: (resumeId: string, analysisData: Partial<Resume>) => Promise<Resume>;
   fetchResumes: () => Promise<void>;
-  updateImprovedContent: (resumeId: string, content: string) => Promise<boolean>;
+  updateImprovedContent: (resumeId: string, content: string) => Promise<{ success: boolean; currentVersion?: number }>;
   deleteResume: (resumeId: string) => Promise<void>;
 }
 
@@ -429,7 +429,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
     }
   }, [currentResume, updateResumeAnalysis, user]);
 
-  const updateImprovedContent = useCallback(async (resumeId: string, content: string): Promise<boolean> => {
+  const updateImprovedContent = useCallback(async (resumeId: string, content: string): Promise<{ success: boolean; currentVersion?: number }> => {
     try {
       const updateOptions = await createAuthOptionsWithCsrf({
         method: 'PUT',
@@ -441,12 +441,16 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
         throw new Error('Failed to update improved content');
       }
 
+      const updatedData = await response.json();
+      const newVersion = updatedData['Current Version'] || 0;
+
       setCurrentResume(prev => prev ? {
         ...prev,
-        'Improved Text': content
+        'Improved Text': content,
+        'Current Version': newVersion
       } : null);
 
-      return true;
+      return { success: true, currentVersion: newVersion };
     } catch (error) {
       logger.error('Error updating improved content:', error);
       throw error;

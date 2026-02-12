@@ -15,6 +15,10 @@ import { aiModifyHandler } from './resumes/aiModify.handler.js';
 import { processAnalysisTags } from '../utils/tagCleaner.js';
 import { invalidateTagsCache } from './tags.routes.js';
 
+// Import version management
+import { createVersion, hasImprovedTextChanged } from '../services/resumeVersions.service.js';
+import versionsRouter from './resumes/versions.routes.js';
+
 const router = express.Router();
 
 // Configure multer for file uploads
@@ -705,12 +709,76 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateR
             globalRatingMapped: updateData.global_rating
         });
 
+        // Check if improved_text is being updated and has changed
+        const isImprovedTextUpdate = updateData.improved_text !== undefined;
+        let shouldCreateVersion = false;
+        let changeReason = 'manual_edit';
+
+        if (isImprovedTextUpdate) {
+            // Determine change reason based on status or other indicators
+            if (req.body.Status === 'Improved' || req.body['Last Improved']) {
+                changeReason = 'initial_improvement';
+            }
+            
+            // Check if the text has actually changed
+            shouldCreateVersion = await hasImprovedTextChanged(id, updateData.improved_text);
+            
+            safeLog('info', 'Improved text update detected', {
+                resumeId: id,
+                shouldCreateVersion,
+                changeReason,
+                textLength: updateData.improved_text?.length || 0
+            });
+        }
+
         const records = await updateWithTimeout('resumes', [{
             id: id,
             fields: updateData
         }]);
 
         const updatedResume = records[0];
+
+        // Create a new version if improved text was changed
+        if (shouldCreateVersion && updateData.improved_text) {
+            try {
+                const versionData = await createVersion({
+                    resumeId: id,
+                    improvedText: updateData.improved_text,
+                    scores: {
+                        improvedGlobalRating: updateData.improved_global_rating,
+                        improvedSkillsScore: updateData.improved_skills_score,
+                        improvedExperienceScore: updateData.improved_experience_score,
+                        improvedEducationScore: updateData.improved_education_score,
+                        improvedAtsScore: updateData.improved_ats_score,
+                        improvedExecutiveSummaryScore: updateData.improved_executive_summary_score,
+                        improvedHobbiesLanguagesScore: updateData.improved_hobbies_languages_score
+                    },
+                    tags: {
+                        improvedSkills: updateData.improved_skills ? JSON.parse(updateData.improved_skills) : [],
+                        improvedIndustries: updateData.improved_industries ? JSON.parse(updateData.improved_industries) : [],
+                        improvedTools: updateData.improved_tools ? JSON.parse(updateData.improved_tools) : [],
+                        improvedSoftSkills: updateData.improved_soft_skills ? JSON.parse(updateData.improved_soft_skills) : []
+                    },
+                    keyImprovements: updateData.improved_key_improvements,
+                    userId: req.user?.id,
+                    changeReason
+                });
+                
+                // Update the current_version in the response
+                updatedResume.current_version = versionData.versionNumber;
+                
+                safeLog('info', 'Resume version created', {
+                    resumeId: id,
+                    versionNumber: versionData.versionNumber
+                });
+            } catch (versionError) {
+                // Log error but don't fail the update
+                safeLog('error', 'Failed to create resume version', {
+                    error: versionError.message,
+                    resumeId: id
+                });
+            }
+        }
         
         // Invalidate tags cache if tags were updated
         if (updateData.skills_cleaned || updateData.industries_cleaned || 
@@ -757,6 +825,7 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateR
             'Key Improvements': updatedResume.key_improvements,
             'Improved Key Improvements': updatedResume.improved_key_improvements,
             'Analyzed At': updatedResume.analyzed_at,
+            'Current Version': updatedResume.current_version || 0,
             'Resume File': updatedResume.resume_file_url ? [{
                 url: updatedResume.resume_file_url,
                 filename: updatedResume.file_name,
@@ -816,5 +885,10 @@ router.post('/:id/adapt', authenticateToken, validateParams('id'), userRateLimit
 
 // POST /api/resumes/:id/ai-modify - AI-powered resume modification
 router.post('/:id/ai-modify', authenticateToken, validateParams('id'), userRateLimit(), aiModifyHandler);
+
+// ============================================
+// VERSION ROUTES
+// ============================================
+router.use('/', versionsRouter);
 
 export default router;

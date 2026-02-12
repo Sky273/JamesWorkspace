@@ -33,6 +33,7 @@ import ExportTab from './ResumeAnalysis/ExportTab';
 import OverviewTab from './ResumeAnalysis/OverviewTab';
 
 import { loadTinyMCE } from '../utils/lazyTinyMCE';
+import { getVersions } from '../services/resumeVersionsService';
 
 // Using any for Resume to maintain compatibility with ResumeContext
 type Resume = any;
@@ -86,6 +87,8 @@ const ResumeAnalysis = ({ resume }: ResumeAnalysisProps): JSX.Element | null => 
   const [currentStep, setCurrentStep] = useState<string>('improving');
   const [showAdaptationModal, setShowAdaptationModal] = useState<boolean>(false);
   const [tinymceLoaded, setTinymceLoaded] = useState<boolean>(false);
+  const [currentVersion, setCurrentVersion] = useState<number>(resume['Current Version'] || 0);
+  const [versionLoaded, setVersionLoaded] = useState<boolean>(false);
 
   const initializationInProgress = useRef<boolean>(false);
   const editorRef = useRef<{ getContent: () => string; setContent: (content: string) => void } | null>(null);
@@ -95,6 +98,45 @@ const ResumeAnalysis = ({ resume }: ResumeAnalysisProps): JSX.Element | null => 
     loadTinyMCE().then(() => { if (mounted) setTinymceLoaded(true); }).catch((err) => { logger.error('Failed to load TinyMCE:', err); });
     return () => { mounted = false; };
   }, []);
+
+  // Load latest version when resume changes
+  useEffect(() => {
+    const loadLatestVersion = async () => {
+      if (!resume?.id || versionLoaded) return;
+      
+      try {
+        const response = await getVersions(resume.id, { limit: 1 });
+        if (response.versions.length > 0) {
+          const latestVersion = response.versions[0];
+          setCurrentVersion(latestVersion.versionNumber);
+          
+          // If the resume's improved text differs from the latest version, update it
+          if (latestVersion.improvedText && latestVersion.improvedText !== resume['Improved Text']) {
+            const updatedResume = {
+              ...localResume,
+              'Improved Text': latestVersion.improvedText,
+              'Current Version': latestVersion.versionNumber,
+              'Improved Global Rating': latestVersion.improvedGlobalRating,
+              'Improved Skills Score': latestVersion.improvedSkillsScore,
+              'Improved Experience Score': latestVersion.improvedExperienceScore,
+              'Improved Education Score': latestVersion.improvedEducationScore,
+              'Improved ATS Score': latestVersion.improvedAtsScore,
+              'Improved Executive Summary Score': latestVersion.improvedExecutiveSummaryScore,
+              'Improved Hobbies Languages Score': latestVersion.improvedHobbiesLanguagesScore
+            };
+            setLocalResume(updatedResume);
+            logger.info('Loaded latest version', { versionNumber: latestVersion.versionNumber });
+          }
+        }
+        setVersionLoaded(true);
+      } catch (error) {
+        logger.error('Failed to load latest version:', error);
+        setVersionLoaded(true);
+      }
+    };
+
+    loadLatestVersion();
+  }, [resume?.id, versionLoaded, localResume]);
 
   const getSkillsAndTags = useCallback((): Record<string, string[]> => {
     if (!resume) return {};
@@ -122,7 +164,10 @@ const ResumeAnalysis = ({ resume }: ResumeAnalysisProps): JSX.Element | null => 
     if (editorRef.current) {
       const content = editorRef.current.getContent();
       try {
-        await updateImprovedContent(resume.id, content);
+        const result = await updateImprovedContent(resume.id, content);
+        if (result.currentVersion && result.currentVersion > 0) {
+          setCurrentVersion(result.currentVersion);
+        }
         toast.success('Content saved successfully');
       } catch (error) {
         logger.error('Failed to save content:', error);
@@ -289,6 +334,36 @@ const ResumeAnalysis = ({ resume }: ResumeAnalysisProps): JSX.Element | null => 
     }
   };
 
+  const handleVersionRestored = useCallback(async (newVersion: number) => {
+    setCurrentVersion(newVersion);
+    // Reload the resume from the API to get the restored content
+    try {
+      // Fetch the updated resume from the backend (which was updated by restoreVersion)
+      const updatedResumeData = await resumeService.getResume(resume.id);
+      
+      if (updatedResumeData) {
+        const updatedResume = {
+          ...localResume,
+          ...updatedResumeData,
+          'Current Version': newVersion
+        };
+        setLocalResume(updatedResume);
+        setCurrentResume(updatedResume);
+        
+        // Update TinyMCE editor content with the restored text
+        const restoredText = updatedResumeData['Improved Text'] || updatedResumeData.improved_text || '';
+        if (editorRef.current && restoredText) {
+          editorRef.current.setContent(restoredText);
+        }
+        
+        toast.success(`Version ${newVersion} chargée`);
+      }
+    } catch (error) {
+      logger.error('Failed to reload after version restore:', error);
+      toast.error('Erreur lors du rechargement du CV');
+    }
+  }, [resume.id, localResume, setCurrentResume]);
+
   const tabsConfig = useMemo((): TabConfig[] => {
     const baseConfig: TabConfig[] = [
       { name: t('resume.analysis.tabs.overview'), icon: ChartBarIcon, content: <OverviewTab resume={resume} t={t} /> },
@@ -297,12 +372,12 @@ const ResumeAnalysis = ({ resume }: ResumeAnalysisProps): JSX.Element | null => 
     ];
 
     if (resume['Improved Text']) {
-      baseConfig.push({ name: t('resume.analysis.tabs.improved'), icon: SparklesIcon, content: <ImprovedTextTab resume={resume} onSave={handleSaveImprovedContent} onUpdateField={updateResumeField} editorReady={editorReady} onAIModify={handleAIModify} /> });
+      baseConfig.push({ name: t('resume.analysis.tabs.improved'), icon: SparklesIcon, content: <ImprovedTextTab resume={{...resume, 'Current Version': currentVersion}} onSave={handleSaveImprovedContent} onUpdateField={updateResumeField} editorReady={editorReady} onAIModify={handleAIModify} onVersionRestored={handleVersionRestored} /> });
       baseConfig.push({ name: t('resume.analysis.tabs.compare'), icon: ArrowsUpDownIcon, content: <CompareTab resume={resume} /> });
       baseConfig.push({ name: t('resume.analysis.tabs.export'), icon: ArrowPathIcon, content: <ExportTab resume={resume} templates={templates} selectedTemplate={selectedTemplate} onTemplateChange={setSelectedTemplate} loadingTemplates={loadingTemplates} exportLoading={exportLoading} onExport={handleExportToPDF} /> });
     }
     return baseConfig;
-  }, [resume, isImproving, t, selectedTemplate, templates, loadingTemplates, exportLoading, handleExportToPDF, handleSaveImprovedContent, updateResumeField, editorReady]);
+  }, [resume, isImproving, t, selectedTemplate, templates, loadingTemplates, exportLoading, handleExportToPDF, handleSaveImprovedContent, updateResumeField, editorReady, currentVersion, handleVersionRestored]);
 
   const tabs = useMemo(() => tabsConfig, [tabsConfig]);
   const improvedTabIndex = useMemo(() => tabs.findIndex(tab => tab.name === t('resume.analysis.tabs.improved')), [tabs, t]);

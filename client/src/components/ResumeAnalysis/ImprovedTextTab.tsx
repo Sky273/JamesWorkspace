@@ -3,15 +3,20 @@
  * TypeScript version
  */
 
-import { useState, useEffect, ChangeEvent } from 'react';
+import { useState, useEffect, ChangeEvent, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CheckIcon, UserIcon, BriefcaseIcon, SparklesIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { CheckIcon, UserIcon, BriefcaseIcon, SparklesIcon, ExclamationTriangleIcon, ClockIcon } from '@heroicons/react/24/outline';
+import VersionsPanel from './VersionsPanel';
+import { ResumeVersion } from '../../types/entities';
+import { getVersions } from '../../services/resumeVersionsService';
 
 interface Resume {
+  id: string;
   'Global Rating'?: string | number;
   'Improved Global Rating'?: string | number;
   'Name'?: string;
   'Title'?: string;
+  'Current Version'?: number;
   [key: string]: unknown;
 }
 
@@ -33,9 +38,10 @@ interface ImprovedTextTabProps {
   onUpdateField?: (field: string, value: string) => Promise<void>;
   editorReady?: boolean;
   onAIModify?: (instructions: string) => Promise<string>;
+  onVersionRestored?: (newVersion: number) => void;
 }
 
-const ImprovedTextTab = ({ resume, onSave, onUpdateField, editorReady = false, onAIModify }: ImprovedTextTabProps): JSX.Element => {
+const ImprovedTextTab = ({ resume, onSave, onUpdateField, editorReady = false, onAIModify, onVersionRestored }: ImprovedTextTabProps): JSX.Element => {
   const { t } = useTranslation();
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [candidateName, setCandidateName] = useState<string>(resume['Name'] || '');
@@ -43,10 +49,38 @@ const ImprovedTextTab = ({ resume, onSave, onUpdateField, editorReady = false, o
   const [aiInstructions, setAiInstructions] = useState<string>('');
   const [isAIModifying, setIsAIModifying] = useState<boolean>(false);
   const [aiResponseMessage, setAiResponseMessage] = useState<string>('');
+  const [isVersionsPanelOpen, setIsVersionsPanelOpen] = useState<boolean>(false);
+  const [currentVersion, setCurrentVersion] = useState<number>(resume['Current Version'] || 0);
+  const [hasVersions, setHasVersions] = useState<boolean>(false);
+  const [versionsLoaded, setVersionsLoaded] = useState<boolean>(false);
+
+  // Load versions count on mount
+  useEffect(() => {
+    const checkVersions = async () => {
+      if (!resume.id || versionsLoaded) return;
+      try {
+        const response = await getVersions(resume.id, { limit: 1 });
+        if (response.total > 0) {
+          setHasVersions(true);
+          if (response.versions.length > 0) {
+            setCurrentVersion(response.versions[0].versionNumber);
+          }
+        }
+        setVersionsLoaded(true);
+      } catch (error) {
+        setVersionsLoaded(true);
+      }
+    };
+    checkVersions();
+  }, [resume.id, versionsLoaded]);
 
   useEffect(() => {
     setCandidateName(resume['Name'] || '');
     setProfessionalTitle(resume['Title'] || '');
+    if (resume['Current Version'] && resume['Current Version'] > 0) {
+      setCurrentVersion(resume['Current Version']);
+      setHasVersions(true);
+    }
   }, [resume]);
 
   const originalRating = parseScoreValue(resume['Global Rating']);
@@ -77,6 +111,29 @@ const ImprovedTextTab = ({ resume, onSave, onUpdateField, editorReady = false, o
     }
   };
 
+  const handleVersionRestored = async (newVersion: number): Promise<void> => {
+    setCurrentVersion(newVersion);
+    setHasVersions(true);
+    setIsVersionsPanelOpen(false);
+    
+    // Reload the latest version content
+    try {
+      const response = await getVersions(resume.id, { limit: 1 });
+      if (response.versions.length > 0) {
+        const latestVersion = response.versions[0];
+        // Notify parent to update editor content
+        if (onVersionRestored) {
+          onVersionRestored(newVersion);
+        }
+      }
+    } catch (error) {
+      // Still notify parent even if reload fails
+      if (onVersionRestored) {
+        onVersionRestored(newVersion);
+      }
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between mb-4">
@@ -89,6 +146,18 @@ const ImprovedTextTab = ({ resume, onSave, onUpdateField, editorReady = false, o
           </p>
         </div>
         <div className="flex items-center space-x-4">
+          {/* Version indicator */}
+          {(hasVersions || currentVersion > 0) && (
+            <button
+              onClick={() => setIsVersionsPanelOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              title={t('versions.openHistory', 'Voir l\'historique des versions')}
+            >
+              <ClockIcon className="w-4 h-4" />
+              {currentVersion > 0 ? `v${currentVersion}` : t('versions.history', 'Historique')}
+            </button>
+          )}
+          
           {/* Original Score */}
           <div className="flex items-center space-x-2">
             <span className="text-sm text-gray-500 dark:text-gray-400">Score :</span>
@@ -261,6 +330,15 @@ const ImprovedTextTab = ({ resume, onSave, onUpdateField, editorReady = false, o
           )}
         </div>
       )}
+
+      {/* Versions Panel */}
+      <VersionsPanel
+        resumeId={resume.id}
+        currentVersion={currentVersion}
+        isOpen={isVersionsPanelOpen}
+        onClose={() => setIsVersionsPanelOpen(false)}
+        onVersionRestored={handleVersionRestored}
+      />
     </div>
   );
 };
