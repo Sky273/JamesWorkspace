@@ -185,7 +185,7 @@ const ResumeAnalysis = ({ resume }: ResumeAnalysisProps): JSX.Element | null => 
       const content = resume['Improved Text'] || resume['Original Text'] || '';
       const candidateName = resume['Name'] || 'Candidate Name';
       const candidateTitle = resume['Title'] || 'Professional Title';
-      const customerName = resume['CustomerName'] || '';
+      const firmName = resume['FirmName'] || '';
       
       // Use trigram if anonymized, otherwise use candidate name
       const isAnonymized = resume['Anonymized'] === true || resume['Anonymized'] === 'true';
@@ -193,9 +193,9 @@ const ResumeAnalysis = ({ resume }: ResumeAnalysisProps): JSX.Element | null => 
         ? (resume['Trigram'] || candidateName.substring(0, 3).toUpperCase())
         : candidateName;
       
-      // Format: CandidateName_CustomerName (no spaces, no dashes)
-      const baseFilename = customerName 
-        ? `${exportName}_${customerName}`
+      // Format: CandidateName_FirmName (no spaces, no dashes)
+      const baseFilename = firmName 
+        ? `${exportName}_${firmName}`
         : exportName;
       
       const simplifiedFilename = baseFilename.replace(/[^a-zA-Z0-9_]/g, '') + '.pdf';

@@ -81,8 +81,7 @@ export interface Resume {
   'Key Improvements'?: string;
   'Improved Key Improvements'?: string;
   'Status'?: ResumeStatus;
-  'CustomerName'?: string;
-  'Customer'?: string;
+  'FirmName'?: string;
   'Created At'?: string;
   'Updated At'?: string;
   'Analysis Date'?: string;
@@ -138,7 +137,7 @@ export interface Mission {
   id: string;
   'Title': string;
   'Content'?: string;
-  'Customer'?: string;
+  'Firm'?: string;
   'Status'?: MissionStatus;
   'Keywords'?: string;
   'Created At'?: string;
@@ -174,7 +173,7 @@ export interface ProfileMatchResult {
   title: string;
   status: string;
   globalRating: string;
-  customerName?: string;
+  firmName?: string;
   createdAt?: string;
   matchScore: number;
   baseScore?: number; // Original score before title adjustment
@@ -291,7 +290,7 @@ export interface Adaptation {
   'Keyword Matches'?: string;
   'Missing Keywords'?: string;
   'Status'?: AdaptationStatus;
-  'Customer'?: string;
+  'Firm'?: string;
   'Created By'?: string;
   'Created At'?: string;
   'Updated At'?: string;
@@ -310,7 +309,7 @@ export interface Template {
   'Description'?: string;
   'Category'?: string;
   'Is Default'?: boolean;
-  'Customer'?: string;
+  'Firm'?: string;
   'Created At'?: string;
   'Updated At'?: string;
 }
@@ -328,9 +327,6 @@ export interface Firm {
 
 export type FirmStatus = 'Active' | 'Inactive';
 
-// Backward compatibility aliases
-export type Customer = Firm;
-export type CustomerStatus = FirmStatus;
 
 // ============================================
 // SETTINGS TYPES

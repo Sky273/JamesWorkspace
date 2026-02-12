@@ -18,15 +18,11 @@ export interface User {
   status: 'Active' | 'Inactive' | 'Pending' | 'active' | 'inactive' | 'pending';
   firm?: string;
   FirmName?: string;
-  // Backward compatibility
-  customer?: string;
-  CustomerName?: string;
   // Legacy uppercase properties for backward compatibility
   Name?: string;
   Email?: string;
   Role?: 'admin' | 'user' | 'viewer';
   Status?: 'Active' | 'Inactive' | 'Pending';
-  Customer?: string;
   Firm?: string;
 }
 
@@ -48,7 +44,6 @@ export interface CreateUserData {
   role?: string;
   status?: string;
   firm?: string;
-  customer?: string; // Backward compatibility
 }
 
 export interface UpdateUserData {
@@ -58,7 +53,6 @@ export interface UpdateUserData {
   role?: string;
   status?: string;
   firm?: string;
-  customer?: string; // Backward compatibility
 }
 
 // ============================================

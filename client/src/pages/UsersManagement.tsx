@@ -25,7 +25,7 @@ import {
 
 import {
   UserFormModal,
-  CustomerFormModal,
+  FirmFormModal,
   PasswordModal,
   ConfirmDeleteModal
 } from '../components/UsersManagement';
@@ -35,12 +35,12 @@ interface User {
   id: string;
   name?: string;
   email?: string;
-  customer?: string;
+  firm?: string;
   role?: string;
   status?: string;
 }
 
-interface Customer {
+interface Firm {
   id: string;
   name: string;
 }
@@ -48,35 +48,35 @@ interface Customer {
 interface DeleteTarget {
   id: string;
   name?: string;
-  type: 'user' | 'customer';
+  type: 'user' | 'firm';
 }
 
 interface UserFormData {
   name: string;
   email: string;
   password: string;
-  customer: string;
+  firm: string;
   role: string;
   status: string;
 }
 
-interface CustomerFormData {
+interface FirmFormData {
   name: string;
 }
 
 interface Stats {
   totalUsers: number;
-  totalCustomers: number;
+  totalFirms: number;
   activeUsers: number;
   admins: number;
 }
 
 const UsersManagement = (): JSX.Element => {
   const { t } = useTranslation();
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [firms, setFirms] = useState<Firm[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [activeTab, setActiveTab] = useState<'users' | 'customers'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'firms'>('users');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [debouncedSearch, setDebouncedSearch] = useState<string>('');
   
@@ -85,20 +85,20 @@ const UsersManagement = (): JSX.Element => {
   const [usersTotalCount, setUsersTotalCount] = useState<number>(0);
   const [usersHasMore, setUsersHasMore] = useState<boolean>(false);
   
-  // Server-side pagination state for customers
-  const [customersPage, setCustomersPage] = useState<number>(1);
-  const [customersTotalCount, setCustomersTotalCount] = useState<number>(0);
-  const [customersHasMore, setCustomersHasMore] = useState<boolean>(false);
+  // Server-side pagination state for firms
+  const [firmsPage, setFirmsPage] = useState<number>(1);
+  const [firmsTotalCount, setFirmsTotalCount] = useState<number>(0);
+  const [firmsHasMore, setFirmsHasMore] = useState<boolean>(false);
   
   const pageSize = 12;
   
   const [userModalOpen, setUserModalOpen] = useState<boolean>(false);
-  const [customerModalOpen, setCustomerModalOpen] = useState<boolean>(false);
+  const [firmModalOpen, setFirmModalOpen] = useState<boolean>(false);
   const [passwordModalOpen, setPasswordModalOpen] = useState<boolean>(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
   
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [selectedFirm, setSelectedFirm] = useState<Firm | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 
   // Debounce search input
@@ -106,7 +106,7 @@ const UsersManagement = (): JSX.Element => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchTerm);
       setUsersPage(1);
-      setCustomersPage(1);
+      setFirmsPage(1);
     }, 300);
     return () => clearTimeout(timer);
   }, [searchTerm]);
@@ -115,18 +115,18 @@ const UsersManagement = (): JSX.Element => {
     try {
       setLoading(true);
       const [customerData, userData] = await Promise.all([
-        userService.getCustomersPaginated({ page: customersPage, pageSize, search: debouncedSearch }),
+        userService.getCustomersPaginated({ page: firmsPage, pageSize, search: debouncedSearch }),
         userService.getUsersPaginated({ page: usersPage, pageSize, search: debouncedSearch })
       ]);
       
       // Handle paginated customers response
       if (customerData.customers) {
-        setCustomers(customerData.customers);
-        setCustomersTotalCount(customerData.pagination?.totalCount || customerData.customers.length);
-        setCustomersHasMore(customerData.pagination?.hasMore || false);
+        setFirms(customerData.customers);
+        setFirmsTotalCount(customerData.pagination?.totalCount || customerData.customers.length);
+        setFirmsHasMore(customerData.pagination?.hasMore || false);
       } else {
-        setCustomers(Array.isArray(customerData) ? customerData : []);
-        setCustomersTotalCount(Array.isArray(customerData) ? customerData.length : 0);
+        setFirms(Array.isArray(customerData) ? customerData : []);
+        setFirmsTotalCount(Array.isArray(customerData) ? customerData.length : 0);
       }
       
       // Handle paginated users response
@@ -148,18 +148,18 @@ const UsersManagement = (): JSX.Element => {
 
   useEffect(() => {
     fetchData();
-  }, [usersPage, customersPage, debouncedSearch]);
+  }, [usersPage, firmsPage, debouncedSearch]);
 
   // Calculate total pages
   const usersTotalPages = Math.ceil(usersTotalCount / pageSize);
-  const customersTotalPages = Math.ceil(customersTotalCount / pageSize);
+  const firmsTotalPages = Math.ceil(firmsTotalCount / pageSize);
 
   // Pagination handlers
   const goToUsersPage = (page: number) => {
     if (page >= 1 && page <= usersTotalPages) setUsersPage(page);
   };
-  const goToCustomersPage = (page: number) => {
-    if (page >= 1 && page <= customersTotalPages) setCustomersPage(page);
+  const goToFirmsPage = (page: number) => {
+    if (page >= 1 && page <= firmsTotalPages) setFirmsPage(page);
   };
 
   const handleUserSubmit = async (formData: UserFormData): Promise<void> => {
@@ -170,7 +170,7 @@ const UsersManagement = (): JSX.Element => {
         await userService.updateUser(selectedUser.id, {
           Name: formData.name,
           Email: formData.email.toLowerCase(),
-          CustomerName: formData.customer || null,
+          FirmName: formData.firm || null,
           Role: capitalizedRole,
           Status: formData.status
         });
@@ -180,7 +180,7 @@ const UsersManagement = (): JSX.Element => {
           name: formData.name,
           email: formData.email,
           password: formData.password,
-          customer: formData.customer,
+          firm: formData.firm,
           role: capitalizedRole,
           status: formData.status
         });
@@ -222,49 +222,49 @@ const UsersManagement = (): JSX.Element => {
     }
   };
 
-  const handleCustomerSubmit = async (formData: CustomerFormData): Promise<void> => {
+  const handleFirmSubmit = async (formData: FirmFormData): Promise<void> => {
     try {
-      if (selectedCustomer) {
-        await userService.updateCustomer(selectedCustomer.id, { Name: formData.name });
-        toast.success(t('users.management.messages.customerUpdated'));
+      if (selectedFirm) {
+        await userService.updateCustomer(selectedFirm.id, { Name: formData.name });
+        toast.success(t('users.management.messages.firmUpdated'));
       } else {
         await userService.createCustomer({ Name: formData.name });
-        toast.success(t('users.management.messages.customerCreated'));
+        toast.success(t('users.management.messages.firmCreated'));
       }
-      setCustomerModalOpen(false);
-      setSelectedCustomer(null);
+      setFirmModalOpen(false);
+      setSelectedFirm(null);
       await fetchData();
     } catch (error) {
       logger.error('Error saving customer:', error);
-      toast.error(selectedCustomer ? t('users.management.messages.errorUpdatingCustomer') : t('users.management.messages.errorCreatingCustomer'));
+      toast.error(selectedFirm ? t('users.management.messages.errorUpdatingFirm') : t('users.management.messages.errorCreatingFirm'));
     }
   };
 
-  const handleDeleteCustomer = async (): Promise<void> => {
+  const handleDeleteFirm = async (): Promise<void> => {
     if (!deleteTarget) return;
     try {
       await userService.deleteCustomer(deleteTarget.id);
-      toast.success(t('users.management.messages.customerDeleted'));
+      toast.success(t('users.management.messages.firmDeleted'));
       setDeleteModalOpen(false);
       setDeleteTarget(null);
       await fetchData();
     } catch (error: unknown) {
       logger.error('Error deleting customer:', error);
       if (error instanceof Error && error.message.includes('associated users')) {
-        toast.error(t('users.management.messages.cannotDeleteCustomerWithUsers'));
+        toast.error(t('users.management.messages.cannotDeleteFirmWithUsers'));
       } else {
-        toast.error(t('users.management.messages.errorDeletingCustomer'));
+        toast.error(t('users.management.messages.errorDeletingFirm'));
       }
     }
   };
 
   // No client-side filtering needed - server handles it
   const filteredUsers = users;
-  const filteredCustomers = customers;
+  const filteredFirms = firms;
 
   const stats: Stats = {
     totalUsers: usersTotalCount,
-    totalCustomers: customersTotalCount,
+    totalFirms: firmsTotalCount,
     activeUsers: users.filter(u => u.status?.toLowerCase() === 'active').length,
     admins: users.filter(u => u.role?.toLowerCase() === 'admin').length
   };
@@ -340,8 +340,8 @@ const UsersManagement = (): JSX.Element => {
               <BuildingOfficeIcon className="w-6 h-6 text-green-600 dark:text-green-400" />
             </div>
             <div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">{t('users.management.stats.totalCustomers')}</div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalCustomers}</div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">{t('users.management.stats.totalFirms')}</div>
+              <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalFirms}</div>
             </div>
           </div>
         </motion.div>
@@ -384,15 +384,15 @@ const UsersManagement = (): JSX.Element => {
               {t('users.management.tabs.users')} ({users.length})
             </button>
             <button
-              onClick={() => setActiveTab('customers')}
+              onClick={() => setActiveTab('firms')}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-                activeTab === 'customers'
+                activeTab === 'firms'
                   ? 'bg-blue-500 text-white'
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
             >
               <BuildingOfficeIcon className="w-5 h-5" />
-              {t('users.management.tabs.customers')} ({customers.length})
+              {t('users.management.tabs.firms')} ({firms.length})
             </button>
           </div>
           <div className="flex gap-2">
@@ -409,14 +409,14 @@ const UsersManagement = (): JSX.Element => {
                   setSelectedUser(null);
                   setUserModalOpen(true);
                 } else {
-                  setSelectedCustomer(null);
-                  setCustomerModalOpen(true);
+                  setSelectedFirm(null);
+                  setFirmModalOpen(true);
                 }
               }}
               className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
             >
               <PlusIcon className="w-5 h-5" />
-              {activeTab === 'users' ? t('users.management.addUser') : t('users.management.addCustomer')}
+              {activeTab === 'users' ? t('users.management.addUser') : t('users.management.addFirm')}
             </button>
           </div>
         </div>
@@ -427,7 +427,7 @@ const UsersManagement = (): JSX.Element => {
               <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
-                placeholder={activeTab === 'users' ? t('users.management.searchUsers') : t('users.management.searchCustomers')}
+                placeholder={activeTab === 'users' ? t('users.management.searchUsers') : t('users.management.searchFirms')}
                 value={searchTerm}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
@@ -461,15 +461,15 @@ const UsersManagement = (): JSX.Element => {
       )}
 
       {/* Top pagination for customers */}
-      {activeTab === 'customers' && (
+      {activeTab === 'firms' && (
         <Pagination
-          currentPage={customersPage}
-          totalPages={customersTotalPages}
-          totalCount={customersTotalCount}
+          currentPage={firmsPage}
+          totalPages={firmsTotalPages}
+          totalCount={firmsTotalCount}
           pageSize={pageSize}
-          onPageChange={goToCustomersPage}
+          onPageChange={goToFirmsPage}
           loading={loading}
-          itemName={t('users.management.customersResults')}
+          itemName={t('users.management.firmsResults')}
         />
       )}
 
@@ -506,9 +506,9 @@ const UsersManagement = (): JSX.Element => {
                   </div>
                   <div className="flex items-center gap-2 mb-3">
                     {getRoleBadge(user.role)}
-                    {user.customer && (
+                    {user.firm && (
                       <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
-                        {user.customer}
+                        {user.firm}
                       </span>
                     )}
                   </div>
@@ -553,16 +553,16 @@ const UsersManagement = (): JSX.Element => {
         />
       )}
 
-      {activeTab === 'customers' && (
+      {activeTab === 'firms' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredCustomers.length === 0 ? (
+          {filteredFirms.length === 0 ? (
             <div className="col-span-full bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">
               <BuildingOfficeIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-              <p className="text-gray-600 dark:text-gray-400">{t('users.management.noCustomers')}</p>
+              <p className="text-gray-600 dark:text-gray-400">{t('users.management.noFirms')}</p>
             </div>
           ) : (
-            filteredCustomers.map((customer, index) => {
-              const associatedUsers = users.filter(u => u.customer === customer.name);
+            filteredFirms.map((customer, index) => {
+              const associatedUsers = users.filter(u => u.firm === customer.name);
               return (
                 <motion.div
                   key={customer.id}
@@ -603,14 +603,14 @@ const UsersManagement = (): JSX.Element => {
                     )}
                     <div className="flex items-center gap-2 pt-3 border-t border-gray-200 dark:border-gray-700">
                       <button
-                        onClick={() => { setSelectedCustomer(customer); setCustomerModalOpen(true); }}
+                        onClick={() => { setSelectedFirm(customer); setFirmModalOpen(true); }}
                         className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                       >
                         <PencilSquareIcon className="w-4 h-4" />
                         {t('users.management.actions.edit')}
                       </button>
                       <button
-                        onClick={() => { setDeleteTarget({ ...customer, type: 'customer' } as DeleteTarget); setDeleteModalOpen(true); }}
+                        onClick={() => { setDeleteTarget({ ...customer, type: 'firm' } as DeleteTarget); setDeleteModalOpen(true); }}
                         className={`p-2 rounded-lg transition-colors ${
                           associatedUsers.length > 0
                             ? 'text-gray-400 cursor-not-allowed'
@@ -630,15 +630,15 @@ const UsersManagement = (): JSX.Element => {
       )}
 
       {/* Customers pagination */}
-      {activeTab === 'customers' && (
+      {activeTab === 'firms' && (
         <Pagination
-          currentPage={customersPage}
-          totalPages={customersTotalPages}
-          totalCount={customersTotalCount}
+          currentPage={firmsPage}
+          totalPages={firmsTotalPages}
+          totalCount={firmsTotalCount}
           pageSize={pageSize}
-          onPageChange={goToCustomersPage}
+          onPageChange={goToFirmsPage}
           loading={loading}
-          itemName={t('users.management.customersResults')}
+          itemName={t('users.management.firmsResults')}
         />
       )}
 
@@ -647,14 +647,14 @@ const UsersManagement = (): JSX.Element => {
         onClose={() => { setUserModalOpen(false); setSelectedUser(null); }}
         onSubmit={handleUserSubmit}
         user={selectedUser}
-        customers={customers}
+        firms={firms}
         t={t}
       />
-      <CustomerFormModal
-        isOpen={customerModalOpen}
-        onClose={() => { setCustomerModalOpen(false); setSelectedCustomer(null); }}
-        onSubmit={handleCustomerSubmit}
-        customer={selectedCustomer}
+      <FirmFormModal
+        isOpen={firmModalOpen}
+        onClose={() => { setFirmModalOpen(false); setSelectedFirm(null); }}
+        onSubmit={handleFirmSubmit}
+        firm={selectedFirm}
         t={t}
       />
       <PasswordModal
@@ -667,10 +667,10 @@ const UsersManagement = (): JSX.Element => {
       <ConfirmDeleteModal
         isOpen={deleteModalOpen}
         onClose={() => { setDeleteModalOpen(false); setDeleteTarget(null); }}
-        onConfirm={deleteTarget?.type === 'user' ? handleDeleteUser : handleDeleteCustomer}
+        onConfirm={deleteTarget?.type === 'user' ? handleDeleteUser : handleDeleteFirm}
         message={deleteTarget?.type === 'user' 
           ? t('users.management.messages.confirmDeleteUser', { name: deleteTarget?.name })
-          : t('users.management.messages.confirmDeleteCustomer', { name: deleteTarget?.name })
+          : t('users.management.messages.confirmDeleteFirm', { name: deleteTarget?.name })
         }
         t={t}
       />

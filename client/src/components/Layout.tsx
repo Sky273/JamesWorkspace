@@ -92,7 +92,7 @@ const Layout = (): JSX.Element => {
               {user?.name || user?.Name || t('userProfile.anonymous')}
             </span>
             <span className="text-xs text-gray-500 dark:text-gray-400 leading-tight">
-              {user?.CustomerName || user?.customer || user?.Customer || t('userProfile.noCompany')} • {getRoleLabel(user?.role || user?.Role)}
+              {user?.FirmName || user?.firm || user?.Firm || t('userProfile.noCompany')} • {getRoleLabel(user?.role || user?.Role)}
             </span>
           </div>
           {/* Sign out button */}

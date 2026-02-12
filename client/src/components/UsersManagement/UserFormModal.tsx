@@ -10,12 +10,12 @@ interface User {
   id?: string;
   name?: string;
   email?: string;
-  customer?: string;
+  firm?: string;
   role?: string;
   status?: string;
 }
 
-interface Customer {
+interface Firm {
   id: string;
   name: string;
 }
@@ -24,7 +24,7 @@ interface FormData {
   name: string;
   email: string;
   password: string;
-  customer: string;
+  firm: string;
   role: string;
   status: string;
 }
@@ -34,16 +34,16 @@ interface UserFormModalProps {
   onClose: () => void;
   onSubmit: (data: FormData) => void;
   user: User | null;
-  customers: Customer[];
+  firms: Firm[];
   t: (key: string) => string;
 }
 
-const UserFormModal = ({ isOpen, onClose, onSubmit, user, customers, t }: UserFormModalProps): JSX.Element => {
+const UserFormModal = ({ isOpen, onClose, onSubmit, user, firms, t }: UserFormModalProps): JSX.Element => {
   const [formData, setFormData] = useState<FormData>({
     name: '',
     email: '',
     password: '',
-    customer: '',
+    firm: '',
     role: 'user',
     status: 'Active'
   });
@@ -58,12 +58,12 @@ const UserFormModal = ({ isOpen, onClose, onSubmit, user, customers, t }: UserFo
         name: user.name || '',
         email: user.email || '',
         password: '',
-        customer: user.customer || '',
+        firm: user.firm || '',
         role: user.role?.toLowerCase() || 'user',
         status: capitalizedStatus
       });
     } else {
-      setFormData({ name: '', email: '', password: '', customer: '', role: 'user', status: 'Active' });
+      setFormData({ name: '', email: '', password: '', firm: '', role: 'user', status: 'Active' });
     }
   }, [user, isOpen]);
 
@@ -122,15 +122,15 @@ const UserFormModal = ({ isOpen, onClose, onSubmit, user, customers, t }: UserFo
         )}
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            {t('users.management.modal.customer')}
+            {t('users.management.modal.firm')}
           </label>
           <select
-            value={formData.customer}
-            onChange={handleInputChange('customer')}
+            value={formData.firm}
+            onChange={handleInputChange('firm')}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
           >
-            <option value="">{t('users.management.modal.selectCustomer')}</option>
-            {customers.map(c => (
+            <option value="">{t('users.management.modal.selectFirm')}</option>
+            {firms.map(c => (
               <option key={c.id} value={c.name}>{c.name}</option>
             ))}
           </select>

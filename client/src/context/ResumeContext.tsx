@@ -257,7 +257,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
           'Title': analysis.title,
           'Status': 'Analyzed',
           'Analysis Date': new Date().toISOString(),
-          'CustomerName': user?.CustomerName || undefined
+          'FirmName': user?.FirmName || undefined
         })
       });
       
@@ -413,7 +413,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
         'Improved Key Improvements': JSON.stringify(improvedSuggestions),
         'Status': 'Improved' as const,
         'Last Improved': new Date().toISOString(),
-        'CustomerName': user?.CustomerName || undefined
+        'FirmName': user?.FirmName || undefined
       };
       
       const updatedResume = await updateResumeAnalysis(currentResume.id, updatePayload);

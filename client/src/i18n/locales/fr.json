@@ -153,13 +153,13 @@
       "title": "Gestion des utilisateurs",
       "subtitle": "Gérez les utilisateurs et les entreprises de l'application",
       "addUser": "Ajouter un utilisateur",
-      "addCustomer": "Ajouter une entreprise",
+      "addFirm": "Ajouter un cabinet",
       "noUsers": "Aucun utilisateur trouvé",
-      "noCustomers": "Aucune entreprise trouvée",
+      "noFirms": "Aucun cabinet trouvé",
       "results": "utilisateurs",
-      "customersResults": "entreprises",
+      "firmsResults": "cabinets",
       "searchUsers": "Rechercher un utilisateur...",
-      "searchCustomers": "Rechercher une entreprise...",
+      "searchFirms": "Rechercher un cabinet...",
       "refresh": "Actualiser",
       "status": {
         "active": "Actif",
@@ -172,7 +172,7 @@
       },
       "tabs": {
         "users": "Utilisateurs",
-        "customers": "Entreprises"
+        "firms": "Cabinets"
       },
       "actions": {
         "edit": "Modifier"
@@ -180,8 +180,8 @@
       "modal": {
         "addUser": "Ajouter un utilisateur",
         "editUser": "Modifier l'utilisateur",
-        "addCustomer": "Ajouter une entreprise",
-        "editCustomer": "Modifier l'entreprise",
+        "addFirm": "Ajouter un cabinet",
+        "editFirm": "Modifier le cabinet",
         "changePassword": "Changer le mot de passe",
         "name": "Nom",
         "email": "E-mail",
@@ -190,8 +190,8 @@
         "confirmPassword": "Confirmer le mot de passe",
         "role": "Rôle",
         "status": "Statut",
-        "customer": "Entreprise",
-        "selectCustomer": "Sélectionner une entreprise",
+        "firm": "Cabinet",
+        "selectFirm": "Sélectionner un cabinet",
         "save": "Enregistrer",
         "cancel": "Annuler",
         "confirm": "Confirmer"
@@ -200,24 +200,24 @@
         "userCreated": "Utilisateur créé avec succès",
         "userUpdated": "Utilisateur mis à jour avec succès",
         "userDeleted": "Utilisateur supprimé avec succès",
-        "customerCreated": "Entreprise créée avec succès",
-        "customerUpdated": "Entreprise mise à jour avec succès",
-        "customerDeleted": "Entreprise supprimée avec succès",
+        "firmCreated": "Cabinet créé avec succès",
+        "firmUpdated": "Cabinet mis à jour avec succès",
+        "firmDeleted": "Cabinet supprimé avec succès",
         "passwordChanged": "Mot de passe modifié avec succès",
         "errorCreatingUser": "Erreur lors de la création de l'utilisateur",
         "errorUpdatingUser": "Erreur lors de la mise à jour de l'utilisateur",
         "errorDeletingUser": "Erreur lors de la suppression de l'utilisateur",
-        "errorCreatingCustomer": "Erreur lors de la création de l'entreprise",
-        "errorUpdatingCustomer": "Erreur lors de la mise à jour de l'entreprise",
-        "errorDeletingCustomer": "Erreur lors de la suppression de l'entreprise",
+        "errorCreatingFirm": "Erreur lors de la création du cabinet",
+        "errorUpdatingFirm": "Erreur lors de la mise à jour du cabinet",
+        "errorDeletingFirm": "Erreur lors de la suppression du cabinet",
         "errorChangingPassword": "Erreur lors du changement de mot de passe",
-        "cannotDeleteCustomerWithUsers": "Impossible de supprimer cette entreprise car des utilisateurs y sont associés",
+        "cannotDeleteFirmWithUsers": "Impossible de supprimer ce cabinet car des utilisateurs y sont associés",
         "passwordMinLength": "Le mot de passe doit contenir au moins 8 caractères",
         "passwordMismatch": "Les mots de passe ne correspondent pas"
       },
       "stats": {
         "totalUsers": "Total utilisateurs",
-        "totalCustomers": "Total entreprises",
+        "totalFirms": "Total cabinets",
         "activeUsers": "Utilisateurs actifs",
         "admins": "Administrateurs"
       }

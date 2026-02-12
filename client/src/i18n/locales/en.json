@@ -297,13 +297,13 @@
       "title": "User Management",
       "subtitle": "Manage application users and companies",
       "addUser": "Add User",
-      "addCustomer": "Add Company",
+      "addFirm": "Add Firm",
       "noUsers": "No users found",
-      "noCustomers": "No companies found",
+      "noFirms": "No firms found",
       "results": "users",
-      "customersResults": "companies",
+      "firmsResults": "firms",
       "searchUsers": "Search users...",
-      "searchCustomers": "Search companies...",
+      "searchFirms": "Search firms...",
       "refresh": "Refresh",
       "status": {
         "active": "Active",
@@ -316,7 +316,7 @@
       },
       "tabs": {
         "users": "Users",
-        "customers": "Companies"
+        "firms": "Firms"
       },
       "actions": {
         "edit": "Edit"
@@ -324,8 +324,8 @@
       "modal": {
         "addUser": "Add User",
         "editUser": "Edit User",
-        "addCustomer": "Add Company",
-        "editCustomer": "Edit Company",
+        "addFirm": "Add Firm",
+        "editFirm": "Edit Firm",
         "changePassword": "Change Password",
         "name": "Name",
         "email": "Email",
@@ -334,8 +334,8 @@
         "confirmPassword": "Confirm Password",
         "role": "Role",
         "status": "Status",
-        "customer": "Company",
-        "selectCustomer": "Select a company",
+        "firm": "Firm",
+        "selectFirm": "Select a firm",
         "save": "Save",
         "cancel": "Cancel",
         "confirm": "Confirm"
@@ -344,24 +344,24 @@
         "userCreated": "User created successfully",
         "userUpdated": "User updated successfully",
         "userDeleted": "User deleted successfully",
-        "customerCreated": "Company created successfully",
-        "customerUpdated": "Company updated successfully",
-        "customerDeleted": "Company deleted successfully",
+        "firmCreated": "Firm created successfully",
+        "firmUpdated": "Firm updated successfully",
+        "firmDeleted": "Firm deleted successfully",
         "passwordChanged": "Password changed successfully",
         "errorCreatingUser": "Error creating user",
         "errorUpdatingUser": "Error updating user",
         "errorDeletingUser": "Error deleting user",
-        "errorCreatingCustomer": "Error creating company",
-        "errorUpdatingCustomer": "Error updating company",
-        "errorDeletingCustomer": "Error deleting company",
+        "errorCreatingFirm": "Error creating firm",
+        "errorUpdatingFirm": "Error updating firm",
+        "errorDeletingFirm": "Error deleting firm",
         "errorChangingPassword": "Error changing password",
-        "cannotDeleteCustomerWithUsers": "Cannot delete this company because users are associated with it",
+        "cannotDeleteFirmWithUsers": "Cannot delete this firm because users are associated with it",
         "passwordMinLength": "Password must be at least 8 characters",
         "passwordMismatch": "Passwords do not match"
       },
       "stats": {
         "totalUsers": "Total Users",
-        "totalCustomers": "Total Companies",
+        "totalFirms": "Total Firms",
         "activeUsers": "Active Users",
         "admins": "Admins"
       }
