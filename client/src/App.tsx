@@ -35,6 +35,7 @@ const AdaptationViewPage = lazy(() => import('./pages/AdaptationViewPage'));
 const UserGuidePage = lazy(() => import('./pages/UserGuidePage'));
 const FactsPage = lazy(() => import('./pages/FactsPage'));
 const MetiersPage = lazy(() => import('./pages/MetiersPage'));
+const ClientsPage = lazy(() => import('./pages/ClientsPage'));
 const SignIn = lazy(() => import('./components/SignIn'));
 const Register = lazy(() => import('./components/Register'));
 
@@ -115,6 +116,7 @@ const App = (): JSX.Element => {
                   <Route path="dashboard" element={<DashboardPage />} />
                   <Route path="missions" element={<MissionsPage />} />
                   <Route path="missions/:id" element={<MissionViewPage />} />
+                  <Route path="clients" element={<ClientsPage />} />
                   <Route path="adaptations" element={<AdaptationsPage />} />
                   <Route path="adaptations/:id" element={<AdaptationViewPage />} />
                   <Route path="profile-matching" element={<ProfileMatchingPage />} />

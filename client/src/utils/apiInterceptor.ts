@@ -424,14 +424,20 @@ export const createAuthOptions = (options: FetchOptions = {}): FetchOptions => {
  * Create auth options with CSRF token for mutating requests
  */
 export const createAuthOptionsWithCsrf = async (options: FetchOptions = {}, forceRefreshCsrf: boolean = false): Promise<FetchOptions> => {
+  // IMPORTANT: Await the CSRF token BEFORE building the options
   const csrfToken = await getCsrfToken(forceRefreshCsrf);
+  
+  logger.log('[CSRF] Building options with token:', csrfToken ? 'present' : 'missing');
+  
+  // Merge headers with x-csrf-token LAST to ensure it's not overwritten
+  const mergedHeaders: Record<string, string> = {
+    ...options.headers,
+    'x-csrf-token': csrfToken || ''
+  };
   
   return {
     ...options,
-    headers: {
-      'x-csrf-token': csrfToken || '',
-      ...options.headers
-    },
+    headers: mergedHeaders,
     credentials: 'include'
   };
 };
@@ -541,15 +547,32 @@ export const authPost = async <T = unknown>(
   body: T, 
   options: FetchOptions = {}
 ): Promise<Response> => {
-  const authOptions = await createAuthOptionsWithCsrf({
+  logger.log('[authPost] Starting request to:', url);
+  
+  // CRITICAL: Get CSRF token FIRST, completely separately
+  logger.log('[authPost] Fetching CSRF token...');
+  const csrfToken = await getCsrfToken(false);
+  logger.log('[authPost] CSRF token obtained:', csrfToken ? 'present' : 'MISSING');
+  
+  if (!csrfToken) {
+    logger.error('[authPost] No CSRF token available!');
+  }
+  
+  // Now build the options with the token we already have
+  const authOptions: FetchOptions = {
     ...options,
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       ...options.headers,
+      'x-csrf-token': csrfToken || ''
     },
     body: JSON.stringify(body),
-  });
+    credentials: 'include'
+  };
+  
+  logger.log('[authPost] Making request with x-csrf-token:', !!(authOptions.headers as Record<string, string>)?.['x-csrf-token']);
+  
   return fetchWithAuth(url, authOptions);
 };
 
@@ -561,15 +584,21 @@ export const authPut = async <T = unknown>(
   body: T, 
   options: FetchOptions = {}
 ): Promise<Response> => {
-  const authOptions = await createAuthOptionsWithCsrf({
+  // CRITICAL: Get CSRF token FIRST
+  const csrfToken = await getCsrfToken(false);
+  
+  const authOptions: FetchOptions = {
     ...options,
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
       ...options.headers,
+      'x-csrf-token': csrfToken || ''
     },
     body: JSON.stringify(body),
-  });
+    credentials: 'include'
+  };
+  
   return fetchWithAuth(url, authOptions);
 };
 
@@ -577,6 +606,18 @@ export const authPut = async <T = unknown>(
  * Convenience method for DELETE requests with auth and CSRF
  */
 export const authDelete = async (url: string, options: FetchOptions = {}): Promise<Response> => {
-  const authOptions = await createAuthOptionsWithCsrf({ ...options, method: 'DELETE' });
+  // CRITICAL: Get CSRF token FIRST
+  const csrfToken = await getCsrfToken(false);
+  
+  const authOptions: FetchOptions = {
+    ...options,
+    method: 'DELETE',
+    headers: {
+      ...options.headers,
+      'x-csrf-token': csrfToken || ''
+    },
+    credentials: 'include'
+  };
+  
   return fetchWithAuth(url, authOptions);
 };

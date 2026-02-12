@@ -55,6 +55,8 @@ import chatbotRoutes from './routes/chatbot.routes.js';
 import marketRadarRoutes from './routes/marketRadar.routes.js';
 import romeRoutes from './routes/rome.routes.js';
 import docsRoutes from './routes/docs.routes.js';
+import clientsRoutes from './routes/clients.routes.js';
+import resumeSubmissionsRoutes from './routes/resumeSubmissions.routes.js';
 
 // Import services
 import { metrics } from './services/metrics.service.js';
@@ -610,6 +612,12 @@ app.use('/api/rome', romeRoutes);
 
 // API Documentation routes
 app.use('/api/docs', docsRoutes);
+
+// Clients routes
+app.use('/api/clients', clientsRoutes);
+
+// Resume Submissions routes
+app.use('/api/submissions', resumeSubmissionsRoutes);
 
 // ============================================
 // PDF SERVER PROXY

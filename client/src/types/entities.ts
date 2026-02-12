@@ -329,6 +329,95 @@ export type FirmStatus = 'Active' | 'Inactive';
 
 
 // ============================================
+// CLIENT TYPES
+// ============================================
+
+export type ClientType = 'client' | 'prospect';
+export type ClientStatus = 'active' | 'inactive';
+export type SubmissionStatus = 'sent' | 'viewed' | 'rejected' | 'accepted' | 'pending';
+
+export interface Client {
+  id: string;
+  firm_id: string;
+  name: string;
+  type: ClientType;
+  status: ClientStatus;
+  address?: string;
+  website?: string;
+  industry?: string;
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
+  created_by?: string;
+  firm_name?: string;
+  contacts_count?: number;
+  submissions_count?: number;
+}
+
+export interface ClientContact {
+  id: string;
+  client_id: string;
+  name: string;
+  role?: string;
+  email?: string;
+  phone?: string;
+  is_primary: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface ResumeSubmission {
+  id: string;
+  resume_id: string;
+  client_id: string;
+  contact_id: string;
+  mission_id?: string;
+  firm_id: string;
+  sent_at: string;
+  sent_by?: string;
+  notes?: string;
+  status: SubmissionStatus;
+  created_at?: string;
+  resume_name?: string;
+  resume_title?: string;
+  client_name?: string;
+  client_type?: ClientType;
+  contact_name?: string;
+  contact_email?: string;
+  mission_title?: string;
+  sent_by_name?: string;
+  firm_name?: string;
+}
+
+export interface ClientFormData {
+  name: string;
+  type: ClientType;
+  status: ClientStatus;
+  address?: string;
+  website?: string;
+  industry?: string;
+  notes?: string;
+}
+
+export interface ContactFormData {
+  name: string;
+  role?: string;
+  email?: string;
+  phone?: string;
+  is_primary: boolean;
+}
+
+export interface SubmissionFormData {
+  resume_id: string;
+  client_id: string;
+  contact_id: string;
+  mission_id?: string;
+  notes?: string;
+  sent_at?: string;
+  status?: SubmissionStatus;
+}
+
+// ============================================
 // SETTINGS TYPES
 // ============================================
 
