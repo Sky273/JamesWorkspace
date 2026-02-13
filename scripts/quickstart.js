@@ -219,51 +219,157 @@ async function buildFrontend() {
     }
 }
 
-function startServices() {
+async function startServices() {
     logStep('5/6', 'Starting services...');
     
     const services = [];
     
-    // Start proxy server
+    // Helper to pipe output from child process
+    const pipeOutput = (childProcess) => {
+        if (childProcess.stdout) {
+            childProcess.stdout.pipe(process.stdout);
+        }
+        if (childProcess.stderr) {
+            childProcess.stderr.pipe(process.stderr);
+        }
+    };
+    
+    // Start proxy server with IPC for graceful shutdown
     log('  🚀 Starting proxy server (port 3001)...', 'cyan');
-    const proxyServer = spawn('node', ['server/proxy-server.js'], {
+    const proxyServer = spawn('node', ['--max-old-space-size=2048', '--expose-gc', 'server/proxy-server.js'], {
         cwd: ROOT_DIR,
-        stdio: 'inherit',
+        stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
         env: { ...process.env, NODE_ENV: isProd ? 'production' : 'development' }
     });
-    services.push({ name: 'Proxy Server', process: proxyServer });
+    pipeOutput(proxyServer);
+    services.push({ name: 'Proxy Server', process: proxyServer, hasIpc: true });
     
     // Start PDF server
     log('  🚀 Starting PDF server (port 3002)...', 'cyan');
     const pdfServer = spawn('node', ['pdf-server/server.cjs'], {
         cwd: ROOT_DIR,
-        stdio: 'inherit'
+        stdio: ['ignore', 'pipe', 'pipe', 'ipc']
     });
-    services.push({ name: 'PDF Server', process: pdfServer });
+    pipeOutput(pdfServer);
+    services.push({ name: 'PDF Server', process: pdfServer, hasIpc: true });
     
     // Start Vite dev server (only in development)
     if (!isProd) {
         log('  🚀 Starting Vite dev server (port 5173)...', 'cyan');
         const viteServer = spawn('npm', ['run', 'dev'], {
             cwd: ROOT_DIR,
-            stdio: 'inherit',
+            stdio: ['ignore', 'pipe', 'pipe'],
             shell: true
         });
-        services.push({ name: 'Vite Dev Server', process: viteServer });
+        pipeOutput(viteServer);
+        services.push({ name: 'Vite Dev Server', process: viteServer, hasIpc: false });
     }
     
-    // Handle process termination
-    const cleanup = () => {
+    // Handle process termination with proper cleanup
+    let isShuttingDown = false;
+    
+    const cleanup = async () => {
+        if (isShuttingDown) return;
+        isShuttingDown = true;
+        
         log('\n\n🛑 Shutting down services...', 'yellow');
-        services.forEach(({ name, process }) => {
-            process.kill();
-            log(`  ✅ ${name} stopped`, 'green');
-        });
+        
+        const isWindows = process.platform === 'win32';
+        
+        for (const { name, process: childProcess, hasIpc } of services) {
+            try {
+                if (hasIpc && childProcess.connected) {
+                    // For processes with IPC, disconnect to trigger graceful shutdown
+                    log(`  ⏳ Sending shutdown signal to ${name}...`, 'cyan');
+                    childProcess.disconnect();
+                    
+                    // Wait for graceful shutdown (up to 5 seconds)
+                    await new Promise((resolve) => {
+                        const timeout = setTimeout(() => {
+                            if (!childProcess.killed) {
+                                log(`  ⚠️  ${name} did not exit gracefully, forcing...`, 'yellow');
+                                if (isWindows) {
+                                    execAsync(`taskkill /F /T /PID ${childProcess.pid}`).catch(() => {});
+                                } else {
+                                    childProcess.kill('SIGKILL');
+                                }
+                            }
+                            resolve();
+                        }, 5000);
+                        
+                        childProcess.on('exit', () => {
+                            clearTimeout(timeout);
+                            resolve();
+                        });
+                    });
+                } else {
+                    // For processes without IPC, use signals
+                    if (isWindows) {
+                        if (childProcess.pid) {
+                            childProcess.kill('SIGINT');
+                            await new Promise(resolve => setTimeout(resolve, 500));
+                            if (!childProcess.killed) {
+                                await execAsync(`taskkill /F /T /PID ${childProcess.pid}`).catch(() => {});
+                            }
+                        }
+                    } else {
+                        childProcess.kill('SIGTERM');
+                    }
+                }
+                log(`  ✅ ${name} stopped`, 'green');
+            } catch (error) {
+                log(`  ⚠️  Error stopping ${name}: ${error.message}`, 'yellow');
+            }
+        }
+        
+        // Wait a moment for cleanup to complete
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        log('\n✅ All services stopped. Goodbye!', 'green');
         process.exit(0);
     };
     
+    // Handle various termination signals
     process.on('SIGINT', cleanup);
     process.on('SIGTERM', cleanup);
+    
+    // Windows CMD specific: capture Ctrl+C using raw stdin
+    if (process.platform === 'win32') {
+        process.on('SIGBREAK', cleanup);
+        
+        // Enable raw mode to capture Ctrl+C directly
+        if (process.stdin.isTTY) {
+            process.stdin.setRawMode(true);
+            process.stdin.resume();
+            process.stdin.setEncoding('utf8');
+            
+            process.stdin.on('data', (key) => {
+                // Ctrl+C = \u0003, Ctrl+Break = \u001b
+                if (key === '\u0003' || key === '\x03') {
+                    cleanup();
+                }
+                // Also handle 'q' key to quit
+                if (key.toLowerCase() === 'q') {
+                    cleanup();
+                }
+            });
+            
+            log('\n  💡 Press Ctrl+C or Q to stop all services\n', 'yellow');
+        }
+    }
+    
+    // Handle child process errors
+    services.forEach(({ name, process: childProcess }) => {
+        childProcess.on('error', (error) => {
+            log(`  ❌ ${name} error: ${error.message}`, 'red');
+        });
+        
+        childProcess.on('exit', (code, signal) => {
+            if (!isShuttingDown && code !== 0) {
+                log(`  ⚠️  ${name} exited unexpectedly (code: ${code}, signal: ${signal})`, 'yellow');
+            }
+        });
+    });
     
     return services;
 }
@@ -305,7 +411,7 @@ ${colors.cyan}${colors.bold}╔════════════════�
         await installDependencies();
         await setupDatabase();
         await buildFrontend();
-        startServices();
+        await startServices();
         showSummary();
     } catch (error) {
         log(`\n❌ Quick start failed: ${error.message}`, 'red');

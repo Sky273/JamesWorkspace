@@ -375,16 +375,25 @@ app.get('*', (req, res) => {
 });
 
 // Graceful shutdown
-process.on('SIGTERM', async () => {
-  log('info', 'SIGTERM received, shutting down gracefully');
+const gracefulShutdown = async (signal) => {
+  log('info', `${signal} received, shutting down gracefully`);
   await closeBrowser();
+  log('info', 'PDF server shutdown complete');
   process.exit(0);
-});
+};
 
-process.on('SIGINT', async () => {
-  log('info', 'SIGINT received, shutting down gracefully');
-  await closeBrowser();
-  process.exit(0);
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// Windows-specific: handle SIGBREAK
+if (process.platform === 'win32') {
+  process.on('SIGBREAK', () => gracefulShutdown('SIGBREAK'));
+}
+
+// Handle when parent process disconnects (IPC channel closed)
+process.on('disconnect', () => {
+  log('info', 'Parent process disconnected');
+  gracefulShutdown('DISCONNECT');
 });
 
 app.listen(PORT, async () => {

@@ -973,6 +973,24 @@ const gracefulShutdown = async (signal) => {
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
+// Windows-specific: handle SIGBREAK (Ctrl+Break) and process exit
+if (process.platform === 'win32') {
+    process.on('SIGBREAK', () => gracefulShutdown('SIGBREAK'));
+}
+
+// Handle uncaught process termination (e.g., parent process killed)
+process.on('exit', (code) => {
+    if (code !== 0) {
+        console.log(`Process exiting with code ${code}`);
+    }
+});
+
+// Handle when parent process disconnects (IPC channel closed)
+process.on('disconnect', () => {
+    console.log('Parent process disconnected, initiating shutdown...');
+    gracefulShutdown('DISCONNECT');
+});
+
 // Memory monitoring with garbage collection hints
 const memoryMonitorInterval = setInterval(() => {
     const memUsage = process.memoryUsage();
