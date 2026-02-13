@@ -57,6 +57,7 @@ import romeRoutes from './routes/rome.routes.js';
 import docsRoutes from './routes/docs.routes.js';
 import clientsRoutes from './routes/clients.routes.js';
 import resumeSubmissionsRoutes from './routes/resumeSubmissions.routes.js';
+import mailRoutes from './routes/mail.routes.js';
 
 // Import services
 import { metrics } from './services/metrics.service.js';
@@ -618,6 +619,9 @@ app.use('/api/clients', clientsRoutes);
 
 // Resume Submissions routes
 app.use('/api/submissions', resumeSubmissionsRoutes);
+
+// Mail routes (Gmail OAuth + draft creation)
+app.use('/api/mail', mailRoutes);
 
 // ============================================
 // PDF SERVER PROXY

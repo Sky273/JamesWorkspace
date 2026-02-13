@@ -282,7 +282,8 @@
         "noTemplates": "No templates available",
         "preview": "Preview",
         "exportPDF": "Export as PDF",
-        "exporting": "Exporting..."
+        "exporting": "Exporting...",
+        "sendEmail": "Send by email"
       }
     },
     "actions": {
@@ -1131,6 +1132,41 @@
       "confirmDeleteClient": "Are you sure you want to delete the client \"{{name}}\"?",
       "confirmDeleteContact": "Are you sure you want to delete the contact \"{{name}}\"?",
       "cannotDeleteWithSubmissions": "Cannot delete: CV submissions are associated"
+    }
+  },
+  "mail": {
+    "modal": {
+      "title": "Send CV by email",
+      "connectTitle": "Connect your email",
+      "connectDescription": "Connect to Gmail to create an email draft with the CV attached.",
+      "connectGmail": "Connect with Gmail",
+      "connectedAs": "Connected as {{email}}",
+      "disconnect": "Disconnect",
+      "selectClient": "Client / Prospect",
+      "chooseClient": "Select a client...",
+      "selectContact": "Contact",
+      "chooseContact": "Select a contact...",
+      "noEmail": "No email",
+      "to": "To",
+      "subject": "Subject",
+      "attachment": "Attachment",
+      "createDraft": "Create draft",
+      "creating": "Creating draft...",
+      "successTitle": "Draft created!",
+      "successDescription": "The draft has been created in your Gmail inbox. Click below to open and send it.",
+      "openDraft": "Open in Gmail",
+      "errorTitle": "Error",
+      "retry": "Retry"
+    },
+    "errors": {
+      "loadClients": "Error loading clients",
+      "connectFailed": "Failed to connect to Gmail",
+      "noEmail": "This contact has no email address",
+      "needsReauth": "Your session has expired. Please reconnect."
+    },
+    "success": {
+      "draftCreated": "Draft created successfully",
+      "disconnected": "Email disconnected"
     }
   }
 }

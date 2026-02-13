@@ -31,6 +31,7 @@ import ImprovedTextTab from './ResumeAnalysis/ImprovedTextTab';
 import CompareTab from './ResumeAnalysis/CompareTab';
 import ExportTab from './ResumeAnalysis/ExportTab';
 import OverviewTab from './ResumeAnalysis/OverviewTab';
+import SendEmailModal from './ResumeAnalysis/SendEmailModal';
 
 import { loadTinyMCE } from '../utils/lazyTinyMCE';
 import { getVersions } from '../services/resumeVersionsService';
@@ -86,6 +87,7 @@ const ResumeAnalysis = ({ resume }: ResumeAnalysisProps): JSX.Element | null => 
   const [showImprovement, setShowImprovement] = useState<boolean>(false);
   const [currentStep, setCurrentStep] = useState<string>('improving');
   const [showAdaptationModal, setShowAdaptationModal] = useState<boolean>(false);
+  const [showEmailModal, setShowEmailModal] = useState<boolean>(false);
   const [tinymceLoaded, setTinymceLoaded] = useState<boolean>(false);
   const [currentVersion, setCurrentVersion] = useState<number>(resume['Current Version'] || 0);
   const [versionLoaded, setVersionLoaded] = useState<boolean>(false);
@@ -176,93 +178,97 @@ const ResumeAnalysis = ({ resume }: ResumeAnalysisProps): JSX.Element | null => 
     }
   }, [resume.id, updateImprovedContent]);
 
+  // Generate PDF blob (shared between export and email)
+  const generatePdfBlob = useCallback(async (): Promise<Blob> => {
+    const template = await templateService.getTemplateById(selectedTemplate);
+    if (!template) throw new Error('Template not found');
+
+    const content = resume['Improved Text'] || resume['Original Text'] || '';
+    const candidateName = resume['Name'] || 'Candidate Name';
+    const candidateTitle = resume['Title'] || 'Professional Title';
+    const firmName = resume['FirmName'] || '';
+    
+    // Use trigram if anonymized, otherwise use candidate name
+    const isAnonymized = resume['Anonymized'] === true || resume['Anonymized'] === 'true';
+    const exportName = isAnonymized 
+      ? (resume['Trigram'] || candidateName.substring(0, 3).toUpperCase())
+      : candidateName;
+    
+    // Format: CandidateName_FirmName (no spaces, no dashes)
+    const baseFilename = firmName 
+      ? `${exportName}_${firmName}`
+      : exportName;
+    
+    const simplifiedFilename = baseFilename.replace(/[^a-zA-Z0-9_]/g, '') + '.pdf';
+
+    const stylesheet = template.stylesheet || '';
+    // Format content - preserve HTML if already formatted, otherwise wrap lines in paragraphs
+    const improvedContent = content.includes('<') ? content : content.split('\n').filter((line: string) => line.trim()).map((line: string) => `<p>${line}</p>`).join('');
+    
+    // Process body content
+    let processedBody = template.templateContent || '';
+    
+    // Handle various encodings of placeholders (TinyMCE may encode them)
+    processedBody = processedBody.replace(/-name-/g, candidateName);
+    processedBody = processedBody.replace(/&lt;name&gt;/g, candidateName);
+    processedBody = processedBody.replace(/-title-/g, candidateTitle);
+    processedBody = processedBody.replace(/&lt;title&gt;/g, candidateTitle);
+    processedBody = processedBody.replace(/-content-/g, improvedContent);
+    processedBody = processedBody.replace(/&lt;content&gt;/g, improvedContent);
+    processedBody = processedBody.replace(/<p>-content-<\/p>/g, improvedContent);
+    processedBody = processedBody.replace(/<p>&lt;content&gt;<\/p>/g, improvedContent);
+    
+    // Process header content (if exists)
+    let processedHeader = template.headerContent || '';
+    if (processedHeader) {
+      processedHeader = processedHeader.replace(/-name-/g, candidateName);
+      processedHeader = processedHeader.replace(/-title-/g, candidateTitle);
+    }
+    
+    // Process footer content (if exists)
+    let processedFooter = template.footerContent || '';
+    if (processedFooter) {
+      processedFooter = processedFooter.replace(/-name-/g, candidateName);
+      processedFooter = processedFooter.replace(/-title-/g, candidateTitle);
+    }
+
+    const response = await fetchWithAuth('/generate-pdf', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json; charset=utf-8' },
+      body: JSON.stringify({ 
+        htmlContent: processedBody, 
+        filename: simplifiedFilename,
+        stylesheet: stylesheet,
+        headerContent: processedHeader || undefined,
+        footerContent: processedFooter || undefined,
+        footerHeight: template.footerHeight || 25
+      })
+    });
+
+    if (!response.ok) throw new Error(`Failed to generate PDF. Status: ${response.status}`);
+
+    return await response.blob();
+  }, [selectedTemplate, resume]);
+
   const handleExportToPDF = useCallback(async (): Promise<void> => {
     try {
       setExportLoading(true);
-      const template = await templateService.getTemplateById(selectedTemplate);
-      if (!template) throw new Error('Template not found');
-
-      const content = resume['Improved Text'] || resume['Original Text'] || '';
-      const candidateName = resume['Name'] || 'Candidate Name';
-      const candidateTitle = resume['Title'] || 'Professional Title';
-      const firmName = resume['FirmName'] || '';
       
-      // Use trigram if anonymized, otherwise use candidate name
+      const blob = await generatePdfBlob();
+      
+      const candidateName = resume['Name'] || 'Candidate Name';
+      const firmName = resume['FirmName'] || '';
       const isAnonymized = resume['Anonymized'] === true || resume['Anonymized'] === 'true';
       const exportName = isAnonymized 
         ? (resume['Trigram'] || candidateName.substring(0, 3).toUpperCase())
         : candidateName;
-      
-      // Format: CandidateName_FirmName (no spaces, no dashes)
       const baseFilename = firmName 
         ? `${exportName}_${firmName}`
         : exportName;
-      
-      const simplifiedFilename = baseFilename.replace(/[^a-zA-Z0-9_]/g, '') + '.pdf';
 
-      const stylesheet = template.stylesheet || '';
-      // Format content - preserve HTML if already formatted, otherwise wrap lines in paragraphs
-      const improvedContent = content.includes('<') ? content : content.split('\n').filter((line: string) => line.trim()).map((line: string) => `<p>${line}</p>`).join('');
-      
-      logger.info('PDF Export Debug:', { 
-        contentLength: content.length, 
-        improvedContentLength: improvedContent.length,
-        templateContentLength: template.templateContent?.length,
-        hasContentPlaceholder: template.templateContent?.includes('-content-')
-      });
-      
-      // Process body content
-      let processedBody = template.templateContent || '';
-      
-      // Handle various encodings of placeholders (TinyMCE may encode them)
-      // Replace -name-, -title-, -content- and their HTML-encoded variants
-      processedBody = processedBody.replace(/-name-/g, candidateName);
-      processedBody = processedBody.replace(/&lt;name&gt;/g, candidateName);
-      processedBody = processedBody.replace(/-title-/g, candidateTitle);
-      processedBody = processedBody.replace(/&lt;title&gt;/g, candidateTitle);
-      processedBody = processedBody.replace(/-content-/g, improvedContent);
-      processedBody = processedBody.replace(/&lt;content&gt;/g, improvedContent);
-      // Also try with HTML paragraph wrapper that TinyMCE might add
-      processedBody = processedBody.replace(/<p>-content-<\/p>/g, improvedContent);
-      processedBody = processedBody.replace(/<p>&lt;content&gt;<\/p>/g, improvedContent);
-      
-      logger.info('PDF Export - Processed body length:', processedBody.length);
-      logger.info('PDF Export - Body preview:', processedBody.substring(0, 500));
-      
-      // Process header content (if exists)
-      let processedHeader = template.headerContent || '';
-      if (processedHeader) {
-        processedHeader = processedHeader.replace(/-name-/g, candidateName);
-        processedHeader = processedHeader.replace(/-title-/g, candidateTitle);
-      }
-      
-      // Process footer content (if exists)
-      let processedFooter = template.footerContent || '';
-      if (processedFooter) {
-        processedFooter = processedFooter.replace(/-name-/g, candidateName);
-        processedFooter = processedFooter.replace(/-title-/g, candidateTitle);
-      }
-
-      const response = await fetchWithAuth('/generate-pdf', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json; charset=utf-8' },
-        body: JSON.stringify({ 
-          htmlContent: processedBody, 
-          filename: simplifiedFilename,
-          stylesheet: stylesheet,
-          headerContent: processedHeader || undefined,
-          footerContent: processedFooter || undefined,
-          footerHeight: template.footerHeight || 25
-        })
-      });
-
-      if (!response.ok) throw new Error(`Failed to generate PDF. Status: ${response.status}`);
-
-      const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      // Clean filename: remove all non-alphanumeric except underscores
       a.download = `${baseFilename.replace(/[^a-zA-Z0-9_]/g, '')}.pdf`;
       document.body.appendChild(a);
       a.click();
@@ -374,7 +380,7 @@ const ResumeAnalysis = ({ resume }: ResumeAnalysisProps): JSX.Element | null => 
     if (resume['Improved Text']) {
       baseConfig.push({ name: t('resume.analysis.tabs.improved'), icon: SparklesIcon, content: <ImprovedTextTab resume={{...resume, 'Current Version': currentVersion}} onSave={handleSaveImprovedContent} onUpdateField={updateResumeField} editorReady={editorReady} onAIModify={handleAIModify} onVersionRestored={handleVersionRestored} /> });
       baseConfig.push({ name: t('resume.analysis.tabs.compare'), icon: ArrowsUpDownIcon, content: <CompareTab resume={resume} /> });
-      baseConfig.push({ name: t('resume.analysis.tabs.export'), icon: ArrowPathIcon, content: <ExportTab resume={resume} templates={templates} selectedTemplate={selectedTemplate} onTemplateChange={setSelectedTemplate} loadingTemplates={loadingTemplates} exportLoading={exportLoading} onExport={handleExportToPDF} /> });
+      baseConfig.push({ name: t('resume.analysis.tabs.export'), icon: ArrowPathIcon, content: <ExportTab resume={resume} templates={templates} selectedTemplate={selectedTemplate} onTemplateChange={setSelectedTemplate} loadingTemplates={loadingTemplates} exportLoading={exportLoading} onExport={handleExportToPDF} onSendEmail={() => setShowEmailModal(true)} /> });
     }
     return baseConfig;
   }, [resume, isImproving, t, selectedTemplate, templates, loadingTemplates, exportLoading, handleExportToPDF, handleSaveImprovedContent, updateResumeField, editorReady, currentVersion, handleVersionRestored]);
@@ -667,6 +673,14 @@ const ResumeAnalysis = ({ resume }: ResumeAnalysisProps): JSX.Element | null => 
       </div>
 
       {showAdaptationModal && <ResumeAdaptation resume={localResume} onClose={() => setShowAdaptationModal(false)} />}
+
+      <SendEmailModal
+        isOpen={showEmailModal}
+        onClose={() => setShowEmailModal(false)}
+        resumeName={resume['Name'] || 'CV'}
+        resumeId={resume.id}
+        onGeneratePdf={generatePdfBlob}
+      />
     </div>
   );
 };

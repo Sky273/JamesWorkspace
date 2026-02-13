@@ -138,7 +138,8 @@
         "noTemplates": "Aucun modèle disponible",
         "preview": "Aperçu",
         "exportPDF": "Exporter en PDF",
-        "exporting": "Exportation..."
+        "exporting": "Exportation...",
+        "sendEmail": "Envoyer par email"
       }
     },
     "actions": {
@@ -1131,6 +1132,41 @@
       "confirmDeleteClient": "Êtes-vous sûr de vouloir supprimer le client \"{{name}}\" ?",
       "confirmDeleteContact": "Êtes-vous sûr de vouloir supprimer le contact \"{{name}}\" ?",
       "cannotDeleteWithSubmissions": "Impossible de supprimer : des envois de CV sont associés"
+    }
+  },
+  "mail": {
+    "modal": {
+      "title": "Envoyer le CV par email",
+      "connectTitle": "Connectez votre messagerie",
+      "connectDescription": "Connectez-vous à Gmail pour créer un brouillon d'email avec le CV en pièce jointe.",
+      "connectGmail": "Se connecter avec Gmail",
+      "connectedAs": "Connecté en tant que {{email}}",
+      "disconnect": "Déconnecter",
+      "selectClient": "Client / Prospect",
+      "chooseClient": "Sélectionner un client...",
+      "selectContact": "Interlocuteur",
+      "chooseContact": "Sélectionner un contact...",
+      "noEmail": "Pas d'email",
+      "to": "À",
+      "subject": "Sujet",
+      "attachment": "Pièce jointe",
+      "createDraft": "Créer le brouillon",
+      "creating": "Création du brouillon...",
+      "successTitle": "Brouillon créé !",
+      "successDescription": "Le brouillon a été créé dans votre boîte Gmail. Cliquez ci-dessous pour l'ouvrir et l'envoyer.",
+      "openDraft": "Ouvrir dans Gmail",
+      "errorTitle": "Erreur",
+      "retry": "Réessayer"
+    },
+    "errors": {
+      "loadClients": "Erreur lors du chargement des clients",
+      "connectFailed": "Échec de la connexion à Gmail",
+      "noEmail": "Ce contact n'a pas d'adresse email",
+      "needsReauth": "Votre session a expiré. Veuillez vous reconnecter."
+    },
+    "success": {
+      "draftCreated": "Brouillon créé avec succès",
+      "disconnected": "Messagerie déconnectée"
     }
   }
 }

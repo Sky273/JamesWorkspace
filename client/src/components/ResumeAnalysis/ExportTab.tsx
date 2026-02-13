@@ -25,9 +25,10 @@ interface ExportTabProps {
   loadingTemplates: boolean;
   exportLoading: boolean;
   onExport: () => void;
+  onSendEmail?: () => void;
 }
 
-const ExportTab = ({ resume, templates, selectedTemplate, onTemplateChange, loadingTemplates, exportLoading, onExport }: ExportTabProps): JSX.Element => {
+const ExportTab = ({ resume, templates, selectedTemplate, onTemplateChange, loadingTemplates, exportLoading, onExport, onSendEmail }: ExportTabProps): JSX.Element => {
   const { t } = useTranslation();
 
   return (
@@ -77,6 +78,19 @@ const ExportTab = ({ resume, templates, selectedTemplate, onTemplateChange, load
                 t('resume.analysis.exportOptions.exportPDF')
               )}
             </button>
+            
+            {onSendEmail && (
+              <button
+                onClick={onSendEmail}
+                disabled={!selectedTemplate}
+                className={`w-full inline-flex justify-center items-center px-4 py-2 text-sm font-medium rounded-lg text-white ${!selectedTemplate ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'} transition-colors duration-200`}
+              >
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                {t('resume.analysis.exportOptions.sendEmail')}
+              </button>
+            )}
           </div>
         </div>
 
