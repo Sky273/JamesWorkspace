@@ -39,8 +39,8 @@ router.get('/', async (req, res) => {
     };
     
     // Memory thresholds in MB (absolute values for better control)
-    const MEMORY_WARNING_THRESHOLD_MB = 60;  // Warning at 60 MB
-    const MEMORY_CRITICAL_THRESHOLD_MB = 100; // Critical at 100 MB
+    const MEMORY_WARNING_THRESHOLD_MB = 120;  // Warning (degraded) at 120 MB
+    const MEMORY_CRITICAL_THRESHOLD_MB = 1024; // Critical (problem) at 1 GB
     
     const memoryStatus = heapUsedMB >= MEMORY_CRITICAL_THRESHOLD_MB ? 'critical' : 
                          heapUsedMB >= MEMORY_WARNING_THRESHOLD_MB ? 'warning' : 'ok';
