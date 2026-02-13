@@ -28,7 +28,18 @@ function cleanupExpiredStates() {
 }
 
 // Cleanup every 5 minutes
-setInterval(cleanupExpiredStates, 5 * 60 * 1000);
+let mailStatesCleanupInterval = setInterval(cleanupExpiredStates, 5 * 60 * 1000);
+
+/**
+ * Destroy mail states cleanup interval (for graceful shutdown)
+ */
+function destroyMailStatesCleanup() {
+    if (mailStatesCleanupInterval) {
+        clearInterval(mailStatesCleanupInterval);
+        mailStatesCleanupInterval = null;
+    }
+    oauthStates.clear();
+}
 
 // ============================================
 // GET /api/mail/status - Get connection status
@@ -189,3 +200,4 @@ router.delete('/disconnect', authenticateToken, async (req, res) => {
 });
 
 export default router;
+export { destroyMailStatesCleanup };

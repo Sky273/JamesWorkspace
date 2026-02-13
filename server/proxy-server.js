@@ -57,7 +57,7 @@ import romeRoutes from './routes/rome.routes.js';
 import docsRoutes from './routes/docs.routes.js';
 import clientsRoutes from './routes/clients.routes.js';
 import resumeSubmissionsRoutes from './routes/resumeSubmissions.routes.js';
-import mailRoutes from './routes/mail.routes.js';
+import mailRoutes, { destroyMailStatesCleanup } from './routes/mail.routes.js';
 
 // Import services
 import { metrics } from './services/metrics.service.js';
@@ -66,11 +66,13 @@ import { startPeriodicCleanup, stopPeriodicCleanup } from './utils/fileCleanup.j
 import { startBlacklistCleanup, destroyBlacklist } from './services/tokenBlacklist.service.js';
 import { swaggerDocument } from './config/swagger.js';
 // Market Radar cache cleanup imports
-import { cleanupFactsCache } from './services/marketFacts.service.js';
-import { cleanupTrendsCache } from './services/marketTrends.service.js';
-import { cleanupMetiersCache } from './services/rome.service.js';
+import { cleanupFactsCache, destroyFactsCache } from './services/marketFacts.service.js';
+import { cleanupTrendsCache, destroyTrendsCache } from './services/marketTrends.service.js';
+import { cleanupMetiersCache, destroyMetiersCache } from './services/rome.service.js';
 // Tags cache cleanup import
-import { invalidateTagsCache } from './routes/tags.routes.js';
+import { invalidateTagsCache, destroyTagsCache } from './routes/tags.routes.js';
+// ESCO cache cleanup import
+import { destroyEscoCache } from './services/escoService.js';
 // PostgreSQL database initialization
 import { initializeDatabase, closePool } from './services/database.service.js';
 
@@ -928,11 +930,14 @@ const gracefulShutdown = async (signal) => {
         stopMarketRadarCacheCleanup();
         metrics.stopPeriodicSave();
         
-        // Cleanup Market Radar caches (large data sets)
-        cleanupFactsCache();
-        cleanupTrendsCache();
-        cleanupMetiersCache();
-        console.log('✅ Market Radar caches cleaned up');
+        // Destroy all caches (clears data AND intervals)
+        destroyFactsCache();
+        destroyTrendsCache();
+        destroyMetiersCache();
+        destroyTagsCache();
+        destroyEscoCache();
+        destroyMailStatesCleanup();
+        console.log('✅ All caches destroyed (data + intervals)');
         
         // Close PostgreSQL connection pool
         try {
