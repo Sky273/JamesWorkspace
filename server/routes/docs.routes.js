@@ -4,13 +4,13 @@
  */
 
 import express from 'express';
-import { openApiSpec } from '../docs/openapi.js';
+import { swaggerDocument } from '../config/swagger.js';
 
 const router = express.Router();
 
 // GET /api/docs - Get OpenAPI specification as JSON
 router.get('/', (req, res) => {
-    res.json(openApiSpec);
+    res.json(swaggerDocument);
 });
 
 // GET /api/docs/ui - Serve Swagger UI HTML

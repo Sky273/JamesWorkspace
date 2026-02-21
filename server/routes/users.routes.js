@@ -62,6 +62,8 @@ router.get('/', authenticateToken, async (req, res) => {
             id: user.id,
             name: user.name,
             email: user.email,
+            jobTitle: user.job_title || '',
+            phone: user.phone || '',
             firm: user.firm_name,
             firmId: user.firm_id,
             // Backward compatibility

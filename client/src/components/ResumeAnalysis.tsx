@@ -304,7 +304,19 @@ const ResumeAnalysis = ({ resume }: ResumeAnalysisProps): JSX.Element | null => 
 
   const handleAIModify = async (instructions: string): Promise<string> => {
     try {
-      const currentContent = editorRef.current?.getContent() || resume['Improved Text'] || '';
+      const tinymce = window.tinymce as TinyMCE | undefined;
+      const editor = tinymce?.get('templateEditor');
+      const currentContent = editor?.getContent() || resume['Improved Text'] || '';
+      
+      // Get selected text from TinyMCE editor (if any)
+      const selectedText = editor?.selection?.getContent({ format: 'html' }) || '';
+      const hasSelection = selectedText.trim().length > 0;
+      
+      logger.debug('AI Modify request', { 
+        hasSelection, 
+        selectedTextLength: selectedText.length,
+        contentLength: currentContent.length 
+      });
       
       const authOptions = await createAuthOptionsWithCsrf({
         method: 'POST',
@@ -313,7 +325,8 @@ const ResumeAnalysis = ({ resume }: ResumeAnalysisProps): JSX.Element | null => 
         },
         body: JSON.stringify({
           content: currentContent,
-          instructions: instructions
+          instructions: instructions,
+          selectedText: hasSelection ? selectedText : undefined
         })
       });
       
@@ -324,15 +337,24 @@ const ResumeAnalysis = ({ resume }: ResumeAnalysisProps): JSX.Element | null => 
         throw new Error(errorData.error || 'Failed to modify resume with AI');
       }
 
-      const { modifiedContent, message } = await response.json();
+      const { modifiedContent, modifiedSelection, message } = await response.json();
       
       // Update TinyMCE editor with new content
-      if (editorRef.current) {
-        editorRef.current.setContent(modifiedContent);
+      if (editor) {
+        if (hasSelection && modifiedSelection) {
+          // Replace only the selected content
+          editor.selection.setContent(modifiedSelection);
+        } else if (modifiedContent) {
+          // Replace entire content
+          editor.setContent(modifiedContent);
+        }
       }
       
       // Return the message to be displayed in the UI
-      return message || 'CV modifié avec succès par l\'IA';
+      const defaultMessage = hasSelection 
+        ? 'Sélection modifiée avec succès par l\'IA'
+        : 'CV modifié avec succès par l\'IA';
+      return message || defaultMessage;
     } catch (error) {
       logger.error('Failed to modify resume with AI:', error);
       toast.error(error instanceof Error ? error.message : 'Échec de la modification par IA');
@@ -378,7 +400,7 @@ const ResumeAnalysis = ({ resume }: ResumeAnalysisProps): JSX.Element | null => 
     ];
 
     if (resume['Improved Text']) {
-      baseConfig.push({ name: t('resume.analysis.tabs.improved'), icon: SparklesIcon, content: <ImprovedTextTab resume={{...resume, 'Current Version': currentVersion}} onSave={handleSaveImprovedContent} onUpdateField={updateResumeField} editorReady={editorReady} onAIModify={handleAIModify} onVersionRestored={handleVersionRestored} /> });
+      baseConfig.push({ name: t('resume.analysis.tabs.improved'), icon: SparklesIcon, content: <ImprovedTextTab resume={{...resume, 'Current Version': currentVersion}} onSave={handleSaveImprovedContent} onUpdateField={updateResumeField} editorReady={editorReady} onAIModify={handleAIModify} onVersionRestored={handleVersionRestored} onAdaptToMission={() => setShowAdaptationModal(true)} /> });
       baseConfig.push({ name: t('resume.analysis.tabs.compare'), icon: ArrowsUpDownIcon, content: <CompareTab resume={resume} /> });
       baseConfig.push({ name: t('resume.analysis.tabs.export'), icon: ArrowPathIcon, content: <ExportTab resume={resume} templates={templates} selectedTemplate={selectedTemplate} onTemplateChange={setSelectedTemplate} loadingTemplates={loadingTemplates} exportLoading={exportLoading} onExport={handleExportToPDF} onSendEmail={() => setShowEmailModal(true)} /> });
     }
@@ -660,18 +682,6 @@ const ResumeAnalysis = ({ resume }: ResumeAnalysisProps): JSX.Element | null => 
         </Tab.Panels>
       </Tab.Group>
 
-      <div className="fixed bottom-6 right-6 z-40 flex items-center gap-4">
-        {!resume['Improved Text'] && (
-          <button onClick={handleImprove} disabled={isImproving} className={`flex items-center gap-2 px-6 py-3 rounded-full shadow-lg hover:shadow-xl transition-all transform hover:scale-105 ${isImproving ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white'}`}>
-            {isImproving ? <ArrowPathIcon className="w-5 h-5 animate-spin" /> : <SparklesIcon className="w-5 h-5" />}
-            <span className="font-medium">{isImproving ? 'Amélioration...' : 'Améliorer avec l\'IA'}</span>
-          </button>
-        )}
-        <button onClick={() => setShowAdaptationModal(true)} className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
-          <SparklesIcon className="w-5 h-5" /><span className="font-medium">Adapter à une Mission</span>
-        </button>
-      </div>
-
       {showAdaptationModal && <ResumeAdaptation resume={localResume} onClose={() => setShowAdaptationModal(false)} />}
 
       <SendEmailModal
@@ -679,6 +689,8 @@ const ResumeAnalysis = ({ resume }: ResumeAnalysisProps): JSX.Element | null => 
         onClose={() => setShowEmailModal(false)}
         resumeName={resume['Name'] || 'CV'}
         resumeId={resume.id}
+        resumeTitle={resume['Title'] || ''}
+        currentVersion={currentVersion}
         onGeneratePdf={generatePdfBlob}
       />
     </div>

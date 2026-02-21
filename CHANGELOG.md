@@ -1,3 +1,88 @@
+## v1.6.0 - 2026-02-21
+### 📧 Templates Email MJML & Profils Utilisateurs Enrichis
+
+#### Éditeur de Templates Email MJML
+- **Éditeur visuel** : Nouveau composant `EmailTemplateEditor.tsx` avec blocs drag-and-drop (Logo, En-tête, Paragraphe, Signature, Pied de page)
+- **Compilation MJML** : Intégration de la bibliothèque MJML pour générer des emails HTML responsifs
+- **Bloc Logo** : Support du logo dynamique du cabinet dans les templates avec `{{firm.logo}}`
+- **Prévisualisation** : Aperçu en temps réel du rendu HTML des templates
+
+#### Gestion des Logos de Cabinet
+- **Upload de logo** : Nouvelle fonctionnalité d'upload de logo pour chaque cabinet (JPEG, PNG, GIF, WebP, SVG)
+- **Stockage** : Logos stockés dans `client/public/logos/` avec noms uniques
+- **URLs absolues** : Conversion automatique des chemins relatifs en URLs absolues pour les emails
+- **Migration BDD** : Ajout de la colonne `logo_url` dans la table `firms`
+
+#### Profils Utilisateurs Enrichis
+- **Nouveaux champs** : Ajout de `job_title` (fonction) et `phone` (téléphone) dans les profils utilisateurs
+- **Formulaire admin** : Champs Fonction et Téléphone dans le modal de gestion des utilisateurs
+- **Migration BDD** : `docker/migrations/add_user_profile_fields.sql`
+
+#### Mots-clés Email Étendus
+- **Nouveaux mots-clés** : `{{user.email}}`, `{{user.jobTitle}}`, `{{user.phone}}`
+- **Enrichissement contexte** : Les données utilisateur sont récupérées depuis la BDD lors de l'envoi pour garantir leur fraîcheur
+- **Documentation** : Liste complète des mots-clés disponibles dans l'éditeur
+
+#### Corrections Techniques
+- **Contrainte email unique** : Correction de l'erreur lors de la mise à jour d'un utilisateur sans changement d'email
+- **TypeScript** : Conversion de `userService.js` en `userService.ts` avec typage complet
+- **CSRF multipart** : Gestion correcte du token CSRF pour les uploads de fichiers
+
+#### Traductions
+- **FR/EN** : Nouvelles clés pour les champs Fonction, Téléphone, et le bloc Logo dans l'éditeur
+
+---
+
+## v1.5.9 - 2026-02-21
+### 🎯 Amélioration des Prompts LLM & Corrections Swagger
+
+#### Refonte des prompts par défaut
+- **Prompt d'analyse** : Nouvelle grille d'évaluation détaillée pour `experiencesRating` (5 critères : Lisibilité, Contexte, Livrables, Responsabilités, Impact)
+- **Prompt d'amélioration** : Structure alignée sur la grille d'analyse avec priorités de qualité explicites
+- **Industries** : Lexique de mapping explicite avec règles de preuve obligatoires
+- **Tags tools** : Ajout du type d'élément entre parenthèses (langage, framework, outil...)
+
+#### Corrections Swagger
+- **Validation OpenAPI** : Correction du schéma `/llm/openai` (ajout `items` pour le tableau `messages`)
+- **Cache désactivé** : Headers `no-cache` pour `/api/docs` et `/api/docs/ui`
+- **Anti-cache frontend** : Boutons avec paramètre `?v=timestamp` dans SettingsPage
+
+#### Corrections techniques
+- **swagger.js** : Import de `swaggerPaths` déplacé en haut du fichier pour éviter les problèmes de timing ES modules
+
+---
+
+## v1.5.8 - 2026-02-21
+### 📚 Refonte Documentation Swagger/OpenAPI & Nettoyage Terminologie
+
+#### Mise à jour complète du Swagger
+- **Nouvelle architecture** : Séparation en `swagger.js` (schémas) et `swagger.paths.js` (62 endpoints)
+- **Terminologie corrigée** : Remplacement de `customers` par `firms` (aligné avec la BDD)
+- **Schémas à jour** : Ajout de `Firm`, `Client`, `ClientContact`, `ResumeSubmission`, `ResumeVersion`, `MailStatus`
+
+#### Routes manquantes documentées
+- **Firms** : CRUD complet `/api/firms/*` pour la gestion des cabinets
+- **Clients** : CRUD `/api/clients/*` avec gestion des contacts
+- **Submissions** : Historique des envois de CV `/api/submissions/*`
+- **Mail** : OAuth et création de brouillons `/api/mail/*`
+- **Resume Versions** : Gestion des versions `/api/resumes/:id/versions/*`
+
+#### Nettoyage terminologie Customer → Firm
+- **proxy-server.js** : Suppression de la route legacy `/api/customers`
+- **missions.routes.js** : Suppression des alias `Customer`/`Customer ID` dans les réponses
+- **health.routes.js** : Correction `customers` → `firms` dans les stats de cache
+- **profileMatching.service.js** : Remplacement `customer` → `firm` dans les paramètres
+- **MissionsPage.tsx** : Interface `Mission.Customer` → `Mission.Firm`
+- **StatsCards.tsx** : Stats `customers` → `firms`
+- **HealthIndicator.tsx** : Type et affichage `customers` → `firms`
+- **Traductions** : Clé `missions.stats.customers` → `missions.stats.firms` (FR/EN)
+
+#### Nettoyage fichiers
+- **Suppression doublon** : Fichier `server/docs/openapi.js` obsolète supprimé
+- **Import corrigé** : `docs.routes.js` utilise maintenant `swagger.js`
+
+---
+
 ## v1.5.7 - 2026-02-08
 ### 🚀 Optimisations Production & Corrections i18n
 

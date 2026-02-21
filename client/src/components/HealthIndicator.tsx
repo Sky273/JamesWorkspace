@@ -38,7 +38,7 @@ interface MemoryStats {
     arrayBuffers: string;
   };
   caches: {
-    simpleCache: { estimated: string; details: { settings: number; templates: number; customers: number } };
+    simpleCache: { estimated: string; details: { settings: number; templates: number; firms: number } };
     trends: { estimated: string; details: CacheDetails };
     facts: { estimated: string; details: CacheDetails };
     metiers: { estimated: string; details: CacheDetails };
@@ -364,9 +364,9 @@ const HealthIndicator = ({ showAlways = false }: HealthIndicatorProps): JSX.Elem
                     
                     {/* SimpleCache */}
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-500 dark:text-gray-400">Settings/Templates/Customers</span>
+                      <span className="text-gray-500 dark:text-gray-400">Settings/Templates/Firms</span>
                       <span className="font-mono text-gray-600 dark:text-gray-300">
-                        {memoryStats.caches.simpleCache.details.settings}/{memoryStats.caches.simpleCache.details.templates}/{memoryStats.caches.simpleCache.details.customers}
+                        {memoryStats.caches.simpleCache.details.settings}/{memoryStats.caches.simpleCache.details.templates}/{memoryStats.caches.simpleCache.details.firms}
                       </span>
                     </div>
                     

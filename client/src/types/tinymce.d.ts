@@ -9,6 +9,13 @@ export interface TinyMCEEditor {
   on: (event: string, callback: () => void) => void;
   id: string;
   getBody: () => HTMLElement;
+  selection: {
+    getContent: (args?: { format?: string }) => string;
+    setContent: (content: string) => void;
+    getNode: () => HTMLElement;
+    getRng: () => Range;
+    collapse: (toStart?: boolean) => void;
+  };
   annotator?: {
     register: (name: string, settings: {
       persistent?: boolean;

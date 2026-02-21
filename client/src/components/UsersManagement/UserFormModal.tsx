@@ -10,6 +10,8 @@ interface User {
   id?: string;
   name?: string;
   email?: string;
+  jobTitle?: string;
+  phone?: string;
   firm?: string;
   role?: string;
   status?: string;
@@ -24,6 +26,8 @@ interface FormData {
   name: string;
   email: string;
   password: string;
+  jobTitle: string;
+  phone: string;
   firm: string;
   role: string;
   status: string;
@@ -43,6 +47,8 @@ const UserFormModal = ({ isOpen, onClose, onSubmit, user, firms, t }: UserFormMo
     name: '',
     email: '',
     password: '',
+    jobTitle: '',
+    phone: '',
     firm: '',
     role: 'user',
     status: 'Active'
@@ -58,12 +64,14 @@ const UserFormModal = ({ isOpen, onClose, onSubmit, user, firms, t }: UserFormMo
         name: user.name || '',
         email: user.email || '',
         password: '',
+        jobTitle: user.jobTitle || '',
+        phone: user.phone || '',
         firm: user.firm || '',
         role: user.role?.toLowerCase() || 'user',
         status: capitalizedStatus
       });
     } else {
-      setFormData({ name: '', email: '', password: '', firm: '', role: 'user', status: 'Active' });
+      setFormData({ name: '', email: '', password: '', jobTitle: '', phone: '', firm: '', role: 'user', status: 'Active' });
     }
   }, [user, isOpen]);
 
@@ -104,6 +112,32 @@ const UserFormModal = ({ isOpen, onClose, onSubmit, user, firms, t }: UserFormMo
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
             required
           />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              {t('users.management.modal.jobTitle')}
+            </label>
+            <input
+              type="text"
+              value={formData.jobTitle}
+              onChange={handleInputChange('jobTitle')}
+              placeholder={t('users.management.modal.jobTitlePlaceholder')}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              {t('users.management.modal.phone')}
+            </label>
+            <input
+              type="tel"
+              value={formData.phone}
+              onChange={handleInputChange('phone')}
+              placeholder={t('users.management.modal.phonePlaceholder')}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
         </div>
         {!isEdit && (
           <div>

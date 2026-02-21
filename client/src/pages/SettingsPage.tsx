@@ -309,15 +309,13 @@ const SettingsPage = (): JSX.Element => {
                     {t('settings.apiDocs.swaggerUiDescription')}
                   </p>
                 </div>
-                <a
-                  href="/api/docs/ui"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  onClick={() => window.open(`/api/docs/ui?v=${Date.now()}`, '_blank')}
                   className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium text-sm"
                 >
                   <DocumentTextIcon className="w-5 h-5 mr-2" />
                   {t('settings.apiDocs.openSwagger')}
-                </a>
+                </button>
               </div>
             </div>
 
@@ -329,14 +327,12 @@ const SettingsPage = (): JSX.Element => {
                     {t('settings.apiDocs.openApiJsonDescription')}
                   </p>
                 </div>
-                <a
-                  href="/api/docs"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  onClick={() => window.open(`/api/docs?v=${Date.now()}`, '_blank')}
                   className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-100 dark:hover:bg-gray-600 font-medium text-sm"
                 >
                   {t('settings.apiDocs.viewJson')}
-                </a>
+                </button>
               </div>
             </div>
           </div>

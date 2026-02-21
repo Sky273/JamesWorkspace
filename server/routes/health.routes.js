@@ -159,7 +159,7 @@ router.get('/memory', async (req, res) => {
     // Calculate estimated memory usage per cache
     const estimatedMemory = {
         simpleCache: {
-            estimated: `${Math.round((cacheStats.simpleCache.settings + cacheStats.simpleCache.templates + cacheStats.simpleCache.customers) * 1)} KB`,
+            estimated: `${Math.round((cacheStats.simpleCache.settings + cacheStats.simpleCache.templates + cacheStats.simpleCache.firms) * 1)} KB`,
             details: cacheStats.simpleCache
         },
         trends: {

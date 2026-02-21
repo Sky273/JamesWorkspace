@@ -30,6 +30,7 @@ CREATE TABLE public.firms (
     id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     name character varying(255) NOT NULL,
     status character varying(50) DEFAULT 'active'::character varying,
+    logo_url TEXT,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT firms_pkey PRIMARY KEY (id),
@@ -45,6 +46,8 @@ CREATE TABLE public.users (
     email character varying(255) NOT NULL,
     password character varying(255) NOT NULL,
     name character varying(255) NOT NULL,
+    job_title character varying(255),
+    phone character varying(50),
     role character varying(50) DEFAULT 'user'::character varying NOT NULL,
     status character varying(50) DEFAULT 'active'::character varying,
     firm_id uuid,
@@ -303,6 +306,9 @@ CREATE TABLE public.resume_submissions (
     sent_by uuid,
     notes text,
     status character varying(50) DEFAULT 'sent'::character varying,
+    version_number integer,
+    email_template_id uuid,
+    email_html_sent text,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT resume_submissions_pkey PRIMARY KEY (id),
     CONSTRAINT resume_submissions_status_check CHECK (((status)::text = ANY ((ARRAY['sent'::character varying, 'viewed'::character varying, 'rejected'::character varying, 'accepted'::character varying, 'pending'::character varying])::text[])))
@@ -327,6 +333,27 @@ CREATE TABLE public.user_mail_tokens (
 );
 
 COMMENT ON TABLE public.user_mail_tokens IS 'Encrypted OAuth tokens for email providers (Gmail, Outlook)';
+
+-- Email Templates
+CREATE TABLE public.email_templates (
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    firm_id uuid,
+    name character varying(255) NOT NULL,
+    description text,
+    subject_template character varying(500) NOT NULL,
+    mjml_content text NOT NULL,
+    html_content text,
+    is_system boolean DEFAULT false,
+    is_default boolean DEFAULT false,
+    status character varying(50) DEFAULT 'active'::character varying,
+    created_by uuid,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT email_templates_pkey PRIMARY KEY (id),
+    CONSTRAINT email_templates_status_check CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'inactive'::character varying])::text[])))
+);
+
+COMMENT ON TABLE public.email_templates IS 'Email templates with MJML content for CV submissions';
 
 -- ROME Metiers
 CREATE TABLE public.rome_metiers (
@@ -663,6 +690,9 @@ SELECT rs.id,
     rs.sent_by,
     rs.notes,
     rs.status,
+    rs.version_number,
+    rs.email_template_id,
+    rs.email_html_sent,
     rs.created_at,
     r.name AS resume_name,
     r.title AS resume_title,
@@ -672,14 +702,16 @@ SELECT rs.id,
     cc.email AS contact_email,
     m.title AS mission_title,
     u.name AS sent_by_name,
-    f.name AS firm_name
+    f.name AS firm_name,
+    et.name AS email_template_name
 FROM public.resume_submissions rs
 LEFT JOIN public.resumes r ON rs.resume_id = r.id
 LEFT JOIN public.clients c ON rs.client_id = c.id
 LEFT JOIN public.client_contacts cc ON rs.contact_id = cc.id
 LEFT JOIN public.missions m ON rs.mission_id = m.id
 LEFT JOIN public.users u ON rs.sent_by = u.id
-LEFT JOIN public.firms f ON rs.firm_id = f.id;
+LEFT JOIN public.firms f ON rs.firm_id = f.id
+LEFT JOIN public.email_templates et ON rs.email_template_id = et.id;
 
 -- =============================================================================
 -- DEFAULT DATA
@@ -704,6 +736,67 @@ ON CONFLICT (email) DO NOTHING;
 INSERT INTO public.llm_settings (name, llm_model, cv_mode, chatbot_enabled, status) VALUES
 ('Default', 'gpt-4', 'nominative', 'on', 'active')
 ON CONFLICT (name) DO NOTHING;
+
+-- Insert default system email template
+INSERT INTO public.email_templates (
+    id,
+    firm_id,
+    name,
+    description,
+    subject_template,
+    mjml_content,
+    is_system,
+    is_default,
+    status
+) VALUES (
+    '00000000-0000-0000-0000-000000000001',
+    NULL,
+    'Template par défaut',
+    'Template système professionnel avec tous les mots-clés disponibles. Utilisez ce modèle comme base pour créer vos propres templates.',
+    'Candidature - {{resume.name}} - {{resume.title}}',
+    '<mjml>
+  <mj-head>
+    <mj-title>Email Template</mj-title>
+    <mj-preview>Candidature</mj-preview>
+    <mj-attributes>
+      <mj-all font-family="Arial, sans-serif" />
+      <mj-text font-size="14px" line-height="1.6" color="#333333" />
+    </mj-attributes>
+    <mj-raw>
+      <meta charset="UTF-8" />
+    </mj-raw>
+  </mj-head>
+  <mj-body background-color="#f4f4f4">
+    <mj-section background-color="#ffffff" padding="20px">
+      <mj-column>
+        <mj-text align="center" font-size="24px" font-weight="bold" color="#1f2937">
+          {{firm.name}}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+    <mj-section background-color="#ffffff" padding="30px 20px">
+      <mj-column>
+        <mj-text>Bonjour {{contact.firstName}},</mj-text>
+        <mj-text padding-top="20px">Je me permets de vous adresser le profil de <strong>{{resume.name}}</strong>, <strong>{{resume.title}}</strong>, qui pourrait correspondre aux besoins de <strong>{{client.name}}</strong>.</mj-text>
+        <mj-text padding-top="20px">Vous trouverez son CV en pièce jointe (version {{resume.version}}).</mj-text>
+        <mj-text padding-top="20px">Je reste à votre entière disposition pour organiser un échange ou vous fournir des informations complémentaires.</mj-text>
+        <mj-text padding-top="30px">Cordialement,</mj-text>
+        <mj-text padding-top="10px" font-weight="bold">{{user.name}}</mj-text>
+        <mj-text color="#6b7280">{{firm.name}}</mj-text>
+      </mj-column>
+    </mj-section>
+    <mj-section background-color="#f9fafb" padding="20px">
+      <mj-column>
+        <mj-text align="center" font-size="12px" color="#9ca3af">{{date.todayLong}}</mj-text>
+        <mj-text align="center" font-size="11px" color="#9ca3af" padding-top="10px">Ce message et ses pièces jointes sont confidentiels et destinés exclusivement à leur destinataire.</mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>',
+    true,
+    true,
+    'active'
+) ON CONFLICT (id) DO NOTHING;
 
 -- =============================================================================
 -- END OF SCHEMA

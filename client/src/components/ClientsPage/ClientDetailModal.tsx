@@ -17,7 +17,8 @@ import {
   MapPinIcon,
   BriefcaseIcon,
   PaperAirplaneIcon,
-  StarIcon
+  StarIcon,
+  DocumentTextIcon
 } from '@heroicons/react/24/outline';
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
 
@@ -251,7 +252,7 @@ const ClientDetailModal = ({
                     key={submission.id} 
                     className="flex items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
                   >
-                    <div>
+                    <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <span className="font-medium text-gray-900 dark:text-white">
                           {submission.resume_name}
@@ -259,6 +260,11 @@ const ClientDetailModal = ({
                         <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${getStatusColor(submission.status)}`}>
                           {t(`clients.submissionStatus.${submission.status}`)}
                         </span>
+                        {submission.version_number && (
+                          <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
+                            v{submission.version_number}
+                          </span>
+                        )}
                       </div>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
                         {t('clients.sentTo')}: {submission.contact_name}
@@ -268,6 +274,16 @@ const ClientDetailModal = ({
                         {new Date(submission.sent_at).toLocaleDateString()} {t('clients.by')} {submission.sent_by_name}
                       </p>
                     </div>
+                    {submission.version_number && (
+                      <a
+                        href={`/resumes/${submission.resume_id}?version=${submission.version_number}`}
+                        className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 bg-purple-50 hover:bg-purple-100 dark:bg-purple-900/20 dark:hover:bg-purple-900/30 rounded-lg transition-colors"
+                        title={t('clients.viewVersion')}
+                      >
+                        <DocumentTextIcon className="w-4 h-4" />
+                        {t('clients.viewVersion')}
+                      </a>
+                    )}
                   </div>
                 ))}
               </div>

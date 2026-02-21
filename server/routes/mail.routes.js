@@ -8,6 +8,7 @@ import crypto from 'crypto';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { safeLog } from '../utils/logger.backend.js';
 import * as mailService from '../services/mail/mailService.js';
+import * as emailTemplatesService from '../services/emailTemplates.service.js';
 import { query } from '../config/database.js';
 
 const router = express.Router();
@@ -135,20 +136,88 @@ router.post('/draft', authenticateToken, async (req, res) => {
         const userId = req.user.id || req.user.userId;
         const userFirm = req.user.firm || req.user.customer;
         
-        // Debug: log raw request body keys
-        safeLog('debug', 'Mail draft request body keys', { keys: Object.keys(req.body) });
+        // Debug: log raw request body keys and template info
+        safeLog('debug', 'Mail draft request body', { 
+            keys: Object.keys(req.body),
+            templateId: req.body.templateId || 'NOT_PROVIDED',
+            hasTemplateContext: !!req.body.templateContext,
+            templateContextKeys: req.body.templateContext ? Object.keys(req.body.templateContext) : []
+        });
         
         const { 
             to, subject, body, pdfBase64, pdfFilename, provider = 'gmail',
             // Submission tracking fields
-            resumeId, clientId, contactId, missionId
+            resumeId, clientId, contactId, missionId, versionNumber,
+            // Template fields
+            templateId, templateContext
         } = req.body;
         
         // Validate required fields
         if (!to) {
             return res.status(400).json({ error: 'Recipient email (to) is required' });
         }
-        if (!subject) {
+        
+        // Process template if provided
+        let finalSubject = subject;
+        let finalBody = body || '';
+        let emailHtmlSent = null;
+        
+        // Debug: log template info
+        safeLog('debug', 'Template processing check', { 
+            hasTemplateId: !!templateId, 
+            templateId: templateId || 'NONE',
+            hasTemplateContext: !!templateContext,
+            templateContextKeys: templateContext ? Object.keys(templateContext) : []
+        });
+        
+        if (templateId && templateContext) {
+            try {
+                // Enrich user context with fresh data from database
+                const userResult = await query(
+                    `SELECT u.*, f.logo_url as firm_logo, f.name as firm_name
+                     FROM users u
+                     LEFT JOIN firms f ON u.firm_id = f.id
+                     WHERE u.id = $1`,
+                    [userId]
+                );
+                
+                if (userResult.rows.length > 0) {
+                    const dbUser = userResult.rows[0];
+                    // Merge database user data into context
+                    templateContext.user = {
+                        ...templateContext.user,
+                        name: dbUser.name || templateContext.user?.name || '',
+                        email: dbUser.email || templateContext.user?.email || '',
+                        jobTitle: dbUser.job_title || templateContext.user?.jobTitle || '',
+                        phone: dbUser.phone || templateContext.user?.phone || ''
+                    };
+                    // Also update firm data
+                    templateContext.firm = {
+                        ...templateContext.firm,
+                        name: dbUser.firm_name || templateContext.firm?.name || '',
+                        logo: dbUser.firm_logo || templateContext.firm?.logo || ''
+                    };
+                    safeLog('debug', 'Enriched template context with DB user data', { 
+                        userName: templateContext.user.name,
+                        userJobTitle: templateContext.user.jobTitle,
+                        userPhone: templateContext.user.phone
+                    });
+                }
+                
+                safeLog('info', 'Rendering email template', { templateId, context: templateContext });
+                const rendered = await emailTemplatesService.renderTemplate(templateId, templateContext);
+                finalSubject = rendered.subject;
+                finalBody = rendered.html;
+                emailHtmlSent = rendered.html;
+                safeLog('info', 'Email template rendered successfully', { templateId, subject: finalSubject, bodyLength: finalBody?.length });
+            } catch (templateError) {
+                safeLog('error', 'Failed to render template', { error: templateError.message, stack: templateError.stack });
+            }
+        } else if (templateId && !templateContext) {
+            safeLog('warn', 'Template ID provided but no context - template will not be rendered');
+        }
+        
+        if (!finalSubject) {
             return res.status(400).json({ error: 'Subject is required' });
         }
         
@@ -163,8 +232,8 @@ router.post('/draft', authenticateToken, async (req, res) => {
         const result = await mailService.createDraft(userId, {
             provider,
             to,
-            subject,
-            body: body || '',
+            subject: finalSubject,
+            body: finalBody,
             attachment,
             attachmentName
         });
@@ -176,31 +245,42 @@ router.post('/draft', authenticateToken, async (req, res) => {
         safeLog('debug', 'Submission tracking check', { 
             resumeId: resumeId || 'MISSING', 
             clientId: clientId || 'MISSING', 
-            contactId: contactId || 'MISSING', 
+            contactId: contactId || 'MISSING',
+            versionNumber: versionNumber || 'MISSING',
             hasAll: !!(resumeId && clientId && contactId) 
         });
         if (resumeId && clientId && contactId) {
             try {
-                // Get firm_id from client
+                // Get firm_id from client and current version from resume if not provided
                 const clientResult = await query(
                     'SELECT firm_id FROM clients WHERE id = $1',
                     [clientId]
                 );
                 
+                // Get current version number if not provided
+                let currentVersion = versionNumber;
+                if (!currentVersion) {
+                    const versionResult = await query(
+                        'SELECT MAX(version_number) as max_version FROM resume_versions WHERE resume_id = $1',
+                        [resumeId]
+                    );
+                    currentVersion = versionResult.rows[0]?.max_version || null;
+                }
+                
                 if (clientResult.rows.length > 0) {
                     const firmId = clientResult.rows[0].firm_id;
                     
-                    // Insert submission record
+                    // Insert submission record with version number, template info and email HTML
                     const submissionResult = await query(
                         `INSERT INTO resume_submissions 
-                         (resume_id, client_id, contact_id, mission_id, firm_id, sent_by, status, notes)
-                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                         (resume_id, client_id, contact_id, mission_id, firm_id, sent_by, status, notes, version_number, email_template_id, email_html_sent)
+                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
                          RETURNING id`,
-                        [resumeId, clientId, contactId, missionId || null, firmId, userId, 'sent', `Email draft created via ${provider}`]
+                        [resumeId, clientId, contactId, missionId || null, firmId, userId, 'sent', `Email draft created via ${provider}`, currentVersion, templateId || null, emailHtmlSent]
                     );
                     
                     submissionId = submissionResult.rows[0]?.id;
-                    safeLog('info', 'Resume submission recorded', { submissionId, resumeId, clientId, contactId });
+                    safeLog('info', 'Resume submission recorded', { submissionId, resumeId, clientId, contactId, versionNumber: currentVersion, templateId: templateId || null });
                 }
             } catch (submissionError) {
                 // Log but don't fail the request - draft was created successfully

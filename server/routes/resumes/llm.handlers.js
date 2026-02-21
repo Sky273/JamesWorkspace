@@ -7,7 +7,7 @@ import { findWithTimeout, createWithTimeout } from '../../utils/postgresHelpers.
 import { safeLog } from '../../utils/logger.backend.js';
 import { analyzeResume, improveResume, matchResumeWithMission, adaptResumeToMission, cleanupText } from '../../services/openai.service.js';
 import { getRequestMetadata } from '../../services/security.service.js';
-import { getLLMSettings } from '../../services/settings.service.js';
+import { getLLMSettings, calculateWeightedGlobalRating } from '../../services/settings.service.js';
 import { getAcceptedIndustriesString } from '../../services/industry.service.js';
 import { DEFAULT_IMPROVEMENT_PROMPT, DEFAULT_ANALYSIS_PROMPT, DEFAULT_MATCH_ANALYSIS_PROMPT, DEFAULT_ADAPTATION_PROMPT } from '../../config/prompts.backend.js';
 
@@ -110,7 +110,10 @@ export async function analyzeHandler(req, res) {
             cleanedLength: cleanedText.length 
         });
 
-        const analysis = await analyzeResume(cleanedText, model, analysisPrompt, userMetadata);
+        let analysis = await analyzeResume(cleanedText, model, analysisPrompt, userMetadata);
+        
+        // Recalculate globalRating based on admin-defined weights
+        analysis = await calculateWeightedGlobalRating(analysis, settings);
         
         // In anonymous mode, replace name with trigram
         if (cvMode === 'anonymous' && analysis.name) {
@@ -159,7 +162,10 @@ export async function analyzeTextHandler(req, res) {
             cleanedLength: cleanedText.length 
         });
 
-        const analysis = await analyzeResume(cleanedText, model, analysisPrompt, userMetadata);
+        let analysis = await analyzeResume(cleanedText, model, analysisPrompt, userMetadata);
+        
+        // Recalculate globalRating based on admin-defined weights
+        analysis = await calculateWeightedGlobalRating(analysis, settings);
         
         // In anonymous mode, replace name with trigram
         if (cvMode === 'anonymous' && analysis.name) {
@@ -222,11 +228,24 @@ export async function improveHandler(req, res) {
         });
         
         // Analyze with isImprovedCV=true for more favorable scoring
-        const postImprovementAnalysis = await analyzeResume(improvedTextForAnalysis, model, analysisPrompt, userMetadata, true);
+        let postImprovementAnalysis = await analyzeResume(improvedTextForAnalysis, model, analysisPrompt, userMetadata, true);
+        
+        // Recalculate globalRating based on admin-defined weights for post-improvement analysis
+        postImprovementAnalysis = await calculateWeightedGlobalRating(postImprovementAnalysis, settings);
         
         // Merge the improvement scores with the post-improvement analysis suggestions
+        // Use the recalculated globalRating from post-improvement analysis
         const mergedAnalysis = {
             ...improved.analysis,
+            // Override with recalculated ratings from post-improvement analysis
+            globalRating: postImprovementAnalysis.globalRating,
+            'Global Rating': postImprovementAnalysis['Global Rating'],
+            executiveSummaryRating: postImprovementAnalysis.executiveSummaryRating,
+            skillsRating: postImprovementAnalysis.skillsRating,
+            experiencesRating: postImprovementAnalysis.experiencesRating,
+            educationRating: postImprovementAnalysis.educationRating,
+            hobbiesLanguagesRating: postImprovementAnalysis.hobbiesLanguagesRating,
+            atsOptimizationRating: postImprovementAnalysis.atsOptimizationRating,
             // Use suggestions from post-improvement analysis
             suggestions: postImprovementAnalysis.suggestions || {},
             // Use tags from post-improvement analysis
@@ -235,14 +254,18 @@ export async function improveHandler(req, res) {
                 industries: [],
                 tools: [],
                 softSkills: []
-            }
+            },
+            // Store weights info for transparency
+            _weightsUsed: postImprovementAnalysis._weightsUsed,
+            _originalLLMGlobalRating: postImprovementAnalysis._originalLLMGlobalRating
         };
         
         safeLog('info', 'Improvement complete with post-analysis', {
             hasImprovedText: !!improved.text,
             hasSuggestions: !!mergedAnalysis.suggestions,
             suggestionsKeys: Object.keys(mergedAnalysis.suggestions || {}),
-            tagsSkillsCount: mergedAnalysis.tags?.skills?.length || 0
+            tagsSkillsCount: mergedAnalysis.tags?.skills?.length || 0,
+            calculatedGlobalRating: mergedAnalysis.globalRating
         });
         
         res.json({
@@ -301,6 +324,11 @@ export async function improveByIdHandler(req, res) {
         }
 
         const improved = await improveResume(resumeText, analysis, model, improvementPrompt, cvMode, userMetadata);
+        
+        // Recalculate globalRating based on admin-defined weights
+        if (improved.analysis) {
+            improved.analysis = await calculateWeightedGlobalRating(improved.analysis, settings);
+        }
         
         res.json(improved);
     } catch (error) {

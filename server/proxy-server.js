@@ -58,6 +58,7 @@ import docsRoutes from './routes/docs.routes.js';
 import clientsRoutes from './routes/clients.routes.js';
 import resumeSubmissionsRoutes from './routes/resumeSubmissions.routes.js';
 import mailRoutes, { destroyMailStatesCleanup } from './routes/mail.routes.js';
+import emailTemplatesRoutes from './routes/emailTemplates.routes.js';
 
 // Import services
 import { metrics } from './services/metrics.service.js';
@@ -307,7 +308,9 @@ app.get('/api/csrf-token', (req, res) => {
 app.get('/api/docs', (req, res) => {
     res.set({
         'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=3600' // Cache for 1 hour
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
     });
     res.json(swaggerDocument);
 });
@@ -316,7 +319,9 @@ app.get('/api/docs', (req, res) => {
 app.get('/api/docs/ui', (req, res) => {
     res.set({
         'Content-Type': 'text/html',
-        'Cache-Control': 'public, max-age=3600' // Cache for 1 hour
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
     });
     res.send(`
 <!DOCTYPE html>
@@ -584,10 +589,8 @@ app.use('/api/resumes', resumesRoutes);
 // Templates routes
 app.use('/api/templates', templatesRoutes);
 
-// Firms routes (formerly customers)
+// Firms routes
 app.use('/api/firms', firmsRoutes);
-// Backward compatibility - keep /api/customers endpoint
-app.use('/api/customers', firmsRoutes);
 
 // LLM proxy routes
 app.use('/api/llm', llmRoutes);
@@ -624,6 +627,9 @@ app.use('/api/submissions', resumeSubmissionsRoutes);
 
 // Mail routes (Gmail OAuth + draft creation)
 app.use('/api/mail', mailRoutes);
+
+// Email templates routes
+app.use('/api/email-templates', emailTemplatesRoutes);
 
 // ============================================
 // PDF SERVER PROXY
@@ -870,7 +876,7 @@ async function onServerStart(protocol, port) {
     console.log('  ✅ Missions');
     console.log('  ✅ Resumes');
     console.log('  ✅ Templates');
-    console.log('  ✅ Customers');
+    console.log('  ✅ Firms');
     console.log('  ✅ LLM Proxy');
     console.log('  ✅ Admin');
     console.log('=================================');

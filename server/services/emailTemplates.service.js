@@ -1,0 +1,402 @@
+/**
+ * Email Templates Service
+ * Manages email templates with MJML compilation and keyword substitution
+ */
+
+import mjml2html from 'mjml';
+import { query } from '../config/database.js';
+import { safeLog } from '../utils/logger.backend.js';
+
+/**
+ * Get the base URL for the application
+ * Used to construct absolute URLs for assets like logos
+ */
+function getBaseUrl() {
+    return process.env.FRONTEND_URL || process.env.VITE_APP_URL || 'http://localhost:5173';
+}
+
+/**
+ * Available keywords for template substitution
+ */
+export const TEMPLATE_KEYWORDS = {
+    client: ['name', 'type', 'industry'],
+    contact: ['name', 'firstName', 'role'],
+    resume: ['name', 'title', 'version'],
+    firm: ['name', 'logo'],
+    user: ['name', 'email', 'jobTitle', 'phone'],
+    date: ['today', 'todayLong']
+};
+
+/**
+ * Get all templates for a firm (including system templates)
+ * @param {string} firmId - Firm ID
+ * @returns {Promise<Array>}
+ */
+export async function getTemplates(firmId) {
+    const result = await query(`
+        SELECT id, firm_id, name, description, subject_template, 
+               is_system, is_default, status, created_at, updated_at
+        FROM email_templates
+        WHERE (firm_id = $1 OR firm_id IS NULL)
+          AND status = 'active'
+        ORDER BY is_system DESC, is_default DESC, name ASC
+    `, [firmId]);
+    
+    return result.rows;
+}
+
+/**
+ * Get a single template by ID
+ * @param {string} id - Template ID
+ * @returns {Promise<Object|null>}
+ */
+export async function getTemplate(id) {
+    const result = await query(`
+        SELECT id, firm_id, name, description, subject_template, 
+               mjml_content, html_content, is_system, is_default, 
+               status, created_by, created_at, updated_at
+        FROM email_templates
+        WHERE id = $1
+    `, [id]);
+    
+    return result.rows[0] || null;
+}
+
+/**
+ * Get the default template for a firm (firm's default or system default)
+ * @param {string} firmId - Firm ID
+ * @returns {Promise<Object|null>}
+ */
+export async function getDefaultTemplate(firmId) {
+    // First try to get firm's default template
+    let result = await query(`
+        SELECT id, firm_id, name, description, subject_template, 
+               mjml_content, html_content, is_system, is_default, status
+        FROM email_templates
+        WHERE firm_id = $1 AND is_default = true AND status = 'active'
+        LIMIT 1
+    `, [firmId]);
+    
+    if (result.rows.length > 0) {
+        return result.rows[0];
+    }
+    
+    // Fall back to system default
+    result = await query(`
+        SELECT id, firm_id, name, description, subject_template, 
+               mjml_content, html_content, is_system, is_default, status
+        FROM email_templates
+        WHERE is_system = true AND is_default = true AND status = 'active'
+        LIMIT 1
+    `);
+    
+    return result.rows[0] || null;
+}
+
+/**
+ * Create a new template
+ * @param {string} firmId - Firm ID
+ * @param {Object} data - Template data
+ * @param {string} userId - Creator user ID
+ * @returns {Promise<Object>}
+ */
+export async function createTemplate(firmId, data, userId) {
+    const { name, description, subjectTemplate, mjmlContent, isDefault } = data;
+    
+    // Compile MJML to HTML
+    const htmlContent = compileMjml(mjmlContent);
+    
+    // If setting as default, unset other defaults for this firm
+    if (isDefault) {
+        await query(`
+            UPDATE email_templates 
+            SET is_default = false 
+            WHERE firm_id = $1 AND is_default = true
+        `, [firmId]);
+    }
+    
+    const result = await query(`
+        INSERT INTO email_templates 
+        (firm_id, name, description, subject_template, mjml_content, html_content, is_default, created_by)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        RETURNING *
+    `, [firmId, name, description, subjectTemplate, mjmlContent, htmlContent, isDefault || false, userId]);
+    
+    safeLog('info', 'Email template created', { templateId: result.rows[0].id, firmId, name });
+    
+    return result.rows[0];
+}
+
+/**
+ * Update a template
+ * @param {string} id - Template ID
+ * @param {Object} data - Template data
+ * @returns {Promise<Object>}
+ */
+export async function updateTemplate(id, data) {
+    // Check if template is system template
+    const existing = await getTemplate(id);
+    if (!existing) {
+        throw new Error('Template not found');
+    }
+    if (existing.is_system) {
+        throw new Error('Cannot modify system template');
+    }
+    
+    const { name, description, subjectTemplate, mjmlContent, isDefault } = data;
+    
+    // Compile MJML to HTML
+    const htmlContent = compileMjml(mjmlContent);
+    
+    // If setting as default, unset other defaults for this firm
+    if (isDefault && existing.firm_id) {
+        await query(`
+            UPDATE email_templates 
+            SET is_default = false 
+            WHERE firm_id = $1 AND is_default = true AND id != $2
+        `, [existing.firm_id, id]);
+    }
+    
+    const result = await query(`
+        UPDATE email_templates 
+        SET name = $1, description = $2, subject_template = $3, 
+            mjml_content = $4, html_content = $5, is_default = $6,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $7
+        RETURNING *
+    `, [name, description, subjectTemplate, mjmlContent, htmlContent, isDefault || false, id]);
+    
+    safeLog('info', 'Email template updated', { templateId: id });
+    
+    return result.rows[0];
+}
+
+/**
+ * Delete a template
+ * @param {string} id - Template ID
+ * @returns {Promise<boolean>}
+ */
+export async function deleteTemplate(id) {
+    // Check if template is system template
+    const existing = await getTemplate(id);
+    if (!existing) {
+        throw new Error('Template not found');
+    }
+    if (existing.is_system) {
+        throw new Error('Cannot delete system template');
+    }
+    
+    await query(`DELETE FROM email_templates WHERE id = $1`, [id]);
+    
+    safeLog('info', 'Email template deleted', { templateId: id });
+    
+    return true;
+}
+
+/**
+ * Duplicate a template
+ * @param {string} id - Template ID to duplicate
+ * @param {string} firmId - Target firm ID
+ * @param {string} userId - User ID
+ * @returns {Promise<Object>}
+ */
+export async function duplicateTemplate(id, firmId, userId) {
+    const original = await getTemplate(id);
+    if (!original) {
+        throw new Error('Template not found');
+    }
+    
+    const result = await query(`
+        INSERT INTO email_templates 
+        (firm_id, name, description, subject_template, mjml_content, html_content, is_default, created_by)
+        VALUES ($1, $2, $3, $4, $5, $6, false, $7)
+        RETURNING *
+    `, [
+        firmId, 
+        `${original.name} (copie)`, 
+        original.description, 
+        original.subject_template, 
+        original.mjml_content, 
+        original.html_content,
+        userId
+    ]);
+    
+    safeLog('info', 'Email template duplicated', { originalId: id, newId: result.rows[0].id, firmId });
+    
+    return result.rows[0];
+}
+
+/**
+ * Compile MJML content to HTML
+ * @param {string} mjmlContent - MJML content
+ * @returns {string} - Compiled HTML
+ */
+export function compileMjml(mjmlContent) {
+    try {
+        const result = mjml2html(mjmlContent, {
+            validationLevel: 'soft',
+            minify: false
+        });
+        
+        if (result.errors && result.errors.length > 0) {
+            safeLog('warn', 'MJML compilation warnings', { errors: result.errors });
+        }
+        
+        let html = result.html;
+        
+        // Ensure UTF-8 charset is present in the HTML head
+        if (html && !html.includes('charset="UTF-8"') && !html.includes("charset='UTF-8'") && !html.includes('charset=UTF-8')) {
+            // Add charset meta tag after <head>
+            html = html.replace(/<head>/i, '<head>\n    <meta charset="UTF-8">');
+        }
+        
+        return html;
+    } catch (error) {
+        safeLog('error', 'MJML compilation failed', { error: error.message });
+        throw new Error(`MJML compilation failed: ${error.message}`);
+    }
+}
+
+/**
+ * Extract first name from full name
+ * @param {string} fullName - Full name
+ * @returns {string}
+ */
+function extractFirstName(fullName) {
+    if (!fullName) return '';
+    const parts = fullName.trim().split(/\s+/);
+    return parts[0] || '';
+}
+
+/**
+ * Format date in French
+ * @param {Date} date - Date object
+ * @returns {Object} - { today, todayLong }
+ */
+function formatDate(date = new Date()) {
+    const months = [
+        'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+        'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'
+    ];
+    
+    const day = date.getDate();
+    const month = date.getMonth();
+    const year = date.getFullYear();
+    
+    return {
+        today: `${day.toString().padStart(2, '0')}/${(month + 1).toString().padStart(2, '0')}/${year}`,
+        todayLong: `${day} ${months[month]} ${year}`
+    };
+}
+
+/**
+ * Substitute keywords in content
+ * @param {string} content - Content with {{keyword}} placeholders
+ * @param {Object} context - Context data for substitution
+ * @returns {string}
+ */
+export function substituteKeywords(content, context) {
+    const { client, contact, resume, firm, user } = context;
+    const dateValues = formatDate();
+    
+    // Build absolute URL for logo if it's a relative path
+    let logoUrl = firm?.logo || '';
+    if (logoUrl && logoUrl.startsWith('/')) {
+        logoUrl = `${getBaseUrl()}${logoUrl}`;
+    }
+    
+    const replacements = {
+        'client.name': client?.name || '',
+        'client.type': client?.type === 'client' ? 'Client' : 'Prospect',
+        'client.industry': client?.industry || '',
+        'contact.name': contact?.name || '',
+        'contact.firstName': extractFirstName(contact?.name),
+        'contact.role': contact?.role || '',
+        'resume.name': resume?.name || '',
+        'resume.title': resume?.title || '',
+        'resume.version': resume?.version?.toString() || '1',
+        'firm.name': firm?.name || '',
+        'firm.logo': logoUrl,
+        'user.name': user?.name || '',
+        'user.email': user?.email || '',
+        'user.jobTitle': user?.jobTitle || '',
+        'user.phone': user?.phone || '',
+        'date.today': dateValues.today,
+        'date.todayLong': dateValues.todayLong
+    };
+    
+    let result = content;
+    for (const [key, value] of Object.entries(replacements)) {
+        const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
+        result = result.replace(regex, value);
+    }
+    
+    return result;
+}
+
+/**
+ * Render a template with context data
+ * @param {string} templateId - Template ID
+ * @param {Object} context - Context data for substitution
+ * @returns {Promise<Object>} - { subject, html }
+ */
+export async function renderTemplate(templateId, context) {
+    const template = await getTemplate(templateId);
+    if (!template) {
+        throw new Error('Template not found');
+    }
+    
+    // Debug: log user context
+    console.log('[EmailTemplates] renderTemplate context.user:', JSON.stringify(context?.user, null, 2));
+    
+    // Get or compile HTML
+    let html = template.html_content;
+    if (!html) {
+        html = compileMjml(template.mjml_content);
+    }
+    
+    // Substitute keywords
+    const subject = substituteKeywords(template.subject_template, context);
+    const body = substituteKeywords(html, context);
+    
+    return { subject, html: body };
+}
+
+/**
+ * Preview a template with sample data
+ * @param {string} mjmlContent - MJML content
+ * @param {string} subjectTemplate - Subject template
+ * @param {Object} context - Context data (optional, uses sample data if not provided)
+ * @returns {Object} - { subject, html }
+ */
+export function previewTemplate(mjmlContent, subjectTemplate, context = null) {
+    // Use sample data if no context provided
+    const sampleContext = context || {
+        client: { name: 'Entreprise ABC', type: 'prospect', industry: 'Technologies' },
+        contact: { name: 'Jean Dupont', role: 'Directeur RH' },
+        resume: { name: 'Marie Martin', title: 'Développeur Full Stack', version: 3 },
+        firm: { name: 'Mon Cabinet' },
+        user: { name: 'Pierre Durand' }
+    };
+    
+    const html = compileMjml(mjmlContent);
+    const subject = substituteKeywords(subjectTemplate, sampleContext);
+    const body = substituteKeywords(html, sampleContext);
+    
+    return { subject, html: body };
+}
+
+export default {
+    TEMPLATE_KEYWORDS,
+    getTemplates,
+    getTemplate,
+    getDefaultTemplate,
+    createTemplate,
+    updateTemplate,
+    deleteTemplate,
+    duplicateTemplate,
+    compileMjml,
+    substituteKeywords,
+    renderTemplate,
+    previewTemplate
+};

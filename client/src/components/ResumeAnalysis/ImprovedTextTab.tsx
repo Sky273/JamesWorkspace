@@ -5,7 +5,7 @@
 
 import { useState, useEffect, ChangeEvent, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CheckIcon, UserIcon, BriefcaseIcon, SparklesIcon, ExclamationTriangleIcon, ClockIcon } from '@heroicons/react/24/outline';
+import { CheckIcon, UserIcon, BriefcaseIcon, SparklesIcon, ExclamationTriangleIcon, ClockIcon, RocketLaunchIcon } from '@heroicons/react/24/outline';
 import VersionsPanel from './VersionsPanel';
 import { ResumeVersion } from '../../types/entities';
 import { getVersions } from '../../services/resumeVersionsService';
@@ -39,9 +39,10 @@ interface ImprovedTextTabProps {
   editorReady?: boolean;
   onAIModify?: (instructions: string) => Promise<string>;
   onVersionRestored?: (newVersion: number) => void;
+  onAdaptToMission?: () => void;
 }
 
-const ImprovedTextTab = ({ resume, onSave, onUpdateField, editorReady = false, onAIModify, onVersionRestored }: ImprovedTextTabProps): JSX.Element => {
+const ImprovedTextTab = ({ resume, onSave, onUpdateField, editorReady = false, onAIModify, onVersionRestored, onAdaptToMission }: ImprovedTextTabProps): JSX.Element => {
   const { t } = useTranslation();
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [candidateName, setCandidateName] = useState<string>(resume['Name'] || '');
@@ -183,6 +184,15 @@ const ImprovedTextTab = ({ resume, onSave, onUpdateField, editorReady = false, o
                 </span>
               )}
             </div>
+          )}
+          {onAdaptToMission && (
+            <button
+              onClick={onAdaptToMission}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 transition-colors"
+            >
+              <RocketLaunchIcon className="h-4 w-4" />
+              {t('resume.actions.adaptToMission')}
+            </button>
           )}
           {onSave && (
             <button

@@ -94,6 +94,8 @@
       "criticalImprovements": "Améliorations critiques nécessaires",
       "recommendedImprovements": "Améliorations recommandées",
       "optionalEnhancements": "Améliorations optionnelles",
+      "originalText": "Texte Original",
+      "originalTextDescription": "Contenu extrait du CV original",
       "improvedText": "Contenu Amélioré",
       "improvedTextDescription": "Voici la version améliorée par l'IA de votre CV",
       "scoreImprovedBy": "Votre score CV a été amélioré de",
@@ -147,7 +149,8 @@
       "improving": "Amélioration en cours...",
       "exporting": "Exportation...",
       "saveChanges": "Enregistrer les modifications",
-      "saving": "Enregistrement..."
+      "saving": "Enregistrement...",
+      "adaptToMission": "Adapter à une mission"
     }
   },
   "users": {
@@ -190,13 +193,22 @@
         "password": "Mot de passe",
         "newPassword": "Nouveau mot de passe",
         "confirmPassword": "Confirmer le mot de passe",
+        "jobTitle": "Fonction",
+        "jobTitlePlaceholder": "Ex: Consultant, Manager...",
+        "phone": "Téléphone",
+        "phonePlaceholder": "Ex: +33 6 12 34 56 78",
         "role": "Rôle",
         "status": "Statut",
         "firm": "Cabinet",
         "selectFirm": "Sélectionner un cabinet",
         "save": "Enregistrer",
         "cancel": "Annuler",
-        "confirm": "Confirmer"
+        "confirm": "Confirmer",
+        "logo": "Logo",
+        "selectLogo": "Choisir un logo",
+        "removeLogo": "Supprimer",
+        "logoHint": "Formats acceptés : JPEG, PNG, GIF, WebP, SVG. Taille max : 2 Mo",
+        "uploading": "Envoi en cours..."
       },
       "messages": {
         "userCreated": "Utilisateur créé avec succès",
@@ -206,6 +218,12 @@
         "firmUpdated": "Cabinet mis à jour avec succès",
         "firmDeleted": "Cabinet supprimé avec succès",
         "passwordChanged": "Mot de passe modifié avec succès",
+        "logoUploaded": "Logo téléchargé avec succès",
+        "logoDeleted": "Logo supprimé avec succès",
+        "logoUploadFailed": "Erreur lors du téléchargement du logo",
+        "logoDeleteFailed": "Erreur lors de la suppression du logo",
+        "invalidFileType": "Type de fichier non valide. Seuls JPEG, PNG, GIF, WebP et SVG sont acceptés",
+        "fileTooLarge": "Le fichier est trop volumineux. Taille max : 2 Mo",
         "errorCreatingUser": "Erreur lors de la création de l'utilisateur",
         "errorUpdatingUser": "Erreur lors de la mise à jour de l'utilisateur",
         "errorDeletingUser": "Erreur lors de la suppression de l'utilisateur",
@@ -521,6 +539,7 @@
     "home": "Accueil",
     "resumes": "CVthèque",
     "templates": "Modèles de CVs",
+    "emailTemplates": "Templates Email",
     "dashboard": "Tableau de bord",
     "tags": "Étiquettes",
     "users": "Utilisateurs",
@@ -745,7 +764,7 @@
     },
     "stats": {
       "total": "Total missions",
-      "customers": "Entreprises",
+      "firms": "Cabinets",
       "active": "Missions actives"
     },
     "description": "Description",
@@ -1064,6 +1083,7 @@
     "submissionsTitle": "Historique des envois",
     "sentTo": "Envoyé à",
     "by": "par",
+    "viewVersion": "Voir la version",
     "primaryContact": "Contact principal",
     "tabs": {
       "all": "Tous",
@@ -1146,6 +1166,14 @@
       "chooseClient": "Sélectionner un client...",
       "selectContact": "Interlocuteur",
       "chooseContact": "Sélectionner un contact...",
+      "selectTemplate": "Template d'email",
+      "noTemplate": "Sans template",
+      "default": "par défaut",
+      "system": "système",
+      "previewTemplate": "Prévisualiser le template",
+      "templatePreview": "Aperçu du template",
+      "loadingPreview": "Chargement de l'aperçu...",
+      "template": "Template",
       "noEmail": "Pas d'email",
       "to": "À",
       "subject": "Sujet",
@@ -1162,11 +1190,57 @@
       "loadClients": "Erreur lors du chargement des clients",
       "connectFailed": "Échec de la connexion à Gmail",
       "noEmail": "Ce contact n'a pas d'adresse email",
-      "needsReauth": "Votre session a expiré. Veuillez vous reconnecter."
+      "needsReauth": "Votre session a expiré. Veuillez vous reconnecter.",
+      "previewFailed": "Erreur lors de la prévisualisation du template"
     },
     "success": {
       "draftCreated": "Brouillon créé avec succès",
       "disconnected": "Messagerie déconnectée"
+    }
+  },
+  "emailTemplates": {
+    "title": "Templates d'Email",
+    "subtitle": "Gérez vos templates d'email pour l'envoi de CVs",
+    "createNew": "Nouveau template",
+    "editTemplate": "Modifier le template",
+    "noTemplates": "Aucun template créé. Créez votre premier template ou dupliquez le template système.",
+    "systemTemplate": "Template système (lecture seule)",
+    "defaultTemplate": "Template par défaut",
+    "duplicate": "Dupliquer",
+    "confirmDelete": "Êtes-vous sûr de vouloir supprimer ce template ?",
+    "setAsDefault": "Définir comme template par défaut",
+    "preview": "Aperçu",
+    "desktopView": "Vue bureau",
+    "mobileView": "Vue mobile",
+    "loadingPreview": "Chargement de l'aperçu...",
+    "noPreview": "Aucun aperçu disponible",
+    "refreshPreview": "Actualiser l'aperçu",
+    "nameLabel": "Nom du template",
+    "namePlaceholder": "Ex: Candidature standard",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "Description du template...",
+    "subjectLabel": "Objet de l'email",
+    "contentLabel": "Contenu de l'email",
+    "blockPlaceholder": "Saisissez le contenu...",
+    "logoPlaceholder": "Logo du cabinet (sera affiché automatiquement)",
+    "insertKeyword": "Insérer un mot-clé",
+    "errors": {
+      "loadFailed": "Erreur lors du chargement des templates",
+      "createFailed": "Erreur lors de la création du template",
+      "updateFailed": "Erreur lors de la mise à jour du template",
+      "deleteFailed": "Erreur lors de la suppression du template",
+      "duplicateFailed": "Erreur lors de la duplication du template",
+      "previewFailed": "Erreur lors de la prévisualisation",
+      "compileFailed": "Erreur de compilation MJML",
+      "requiredFields": "Veuillez remplir tous les champs obligatoires",
+      "cannotEditSystem": "Impossible de modifier un template système",
+      "cannotDeleteSystem": "Impossible de supprimer un template système"
+    },
+    "success": {
+      "created": "Template créé avec succès",
+      "updated": "Template mis à jour avec succès",
+      "deleted": "Template supprimé avec succès",
+      "duplicated": "Template dupliqué avec succès"
     }
   }
 }

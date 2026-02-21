@@ -238,6 +238,8 @@
       "criticalImprovements": "Critical Improvements Needed",
       "recommendedImprovements": "Recommended Improvements",
       "optionalEnhancements": "Optional Enhancements",
+      "originalText": "Original Text",
+      "originalTextDescription": "Content extracted from the original resume",
       "improvedText": "Improved Text",
       "improvedTextDescription": "Here is the improved version of your resume by the AI",
       "scoreImprovedBy": "Your resume score improved by",
@@ -291,7 +293,8 @@
       "improving": "Improving...",
       "exporting": "Exporting...",
       "saveChanges": "Save Changes",
-      "saving": "Saving..."
+      "saving": "Saving...",
+      "adaptToMission": "Adapt to Mission"
     }
   },
   "users": {
@@ -334,13 +337,22 @@
         "password": "Password",
         "newPassword": "New Password",
         "confirmPassword": "Confirm Password",
+        "jobTitle": "Job Title",
+        "jobTitlePlaceholder": "E.g.: Consultant, Manager...",
+        "phone": "Phone",
+        "phonePlaceholder": "E.g.: +33 6 12 34 56 78",
         "role": "Role",
         "status": "Status",
         "firm": "Firm",
         "selectFirm": "Select a firm",
         "save": "Save",
         "cancel": "Cancel",
-        "confirm": "Confirm"
+        "confirm": "Confirm",
+        "logo": "Logo",
+        "selectLogo": "Select logo",
+        "removeLogo": "Remove",
+        "logoHint": "Accepted formats: JPEG, PNG, GIF, WebP, SVG. Max size: 2 MB",
+        "uploading": "Uploading..."
       },
       "messages": {
         "userCreated": "User created successfully",
@@ -350,6 +362,12 @@
         "firmUpdated": "Firm updated successfully",
         "firmDeleted": "Firm deleted successfully",
         "passwordChanged": "Password changed successfully",
+        "logoUploaded": "Logo uploaded successfully",
+        "logoDeleted": "Logo deleted successfully",
+        "logoUploadFailed": "Error uploading logo",
+        "logoDeleteFailed": "Error deleting logo",
+        "invalidFileType": "Invalid file type. Only JPEG, PNG, GIF, WebP and SVG are accepted",
+        "fileTooLarge": "File is too large. Max size: 2 MB",
         "errorCreatingUser": "Error creating user",
         "errorUpdatingUser": "Error updating user",
         "errorDeletingUser": "Error deleting user",
@@ -726,7 +744,7 @@
     },
     "stats": {
       "total": "Total missions",
-      "customers": "Companies",
+      "firms": "Firms",
       "active": "Active missions"
     },
     "description": "Description",
@@ -807,6 +825,7 @@
     "home": "Home",
     "resumes": "Resume Library",
     "templates": "Resume Templates",
+    "emailTemplates": "Email Templates",
     "dashboard": "Dashboard",
     "tags": "Tags",
     "users": "Users",
@@ -1064,6 +1083,7 @@
     "submissionsTitle": "Submission History",
     "sentTo": "Sent to",
     "by": "by",
+    "viewVersion": "View version",
     "primaryContact": "Primary contact",
     "tabs": {
       "all": "All",
@@ -1146,6 +1166,14 @@
       "chooseClient": "Select a client...",
       "selectContact": "Contact",
       "chooseContact": "Select a contact...",
+      "selectTemplate": "Email template",
+      "noTemplate": "No template",
+      "default": "default",
+      "system": "system",
+      "previewTemplate": "Preview template",
+      "templatePreview": "Template preview",
+      "loadingPreview": "Loading preview...",
+      "template": "Template",
       "noEmail": "No email",
       "to": "To",
       "subject": "Subject",
@@ -1162,11 +1190,57 @@
       "loadClients": "Error loading clients",
       "connectFailed": "Failed to connect to Gmail",
       "noEmail": "This contact has no email address",
-      "needsReauth": "Your session has expired. Please reconnect."
+      "needsReauth": "Your session has expired. Please reconnect.",
+      "previewFailed": "Error previewing template"
     },
     "success": {
       "draftCreated": "Draft created successfully",
       "disconnected": "Email disconnected"
+    }
+  },
+  "emailTemplates": {
+    "title": "Email Templates",
+    "subtitle": "Manage your email templates for CV submissions",
+    "createNew": "New template",
+    "editTemplate": "Edit template",
+    "noTemplates": "No templates created. Create your first template or duplicate the system template.",
+    "systemTemplate": "System template (read-only)",
+    "defaultTemplate": "Default template",
+    "duplicate": "Duplicate",
+    "confirmDelete": "Are you sure you want to delete this template?",
+    "setAsDefault": "Set as default template",
+    "preview": "Preview",
+    "desktopView": "Desktop view",
+    "mobileView": "Mobile view",
+    "loadingPreview": "Loading preview...",
+    "noPreview": "No preview available",
+    "refreshPreview": "Refresh preview",
+    "nameLabel": "Template name",
+    "namePlaceholder": "E.g.: Standard application",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "Template description...",
+    "subjectLabel": "Email subject",
+    "contentLabel": "Email content",
+    "blockPlaceholder": "Enter content...",
+    "logoPlaceholder": "Firm logo (will be displayed automatically)",
+    "insertKeyword": "Insert keyword",
+    "errors": {
+      "loadFailed": "Error loading templates",
+      "createFailed": "Error creating template",
+      "updateFailed": "Error updating template",
+      "deleteFailed": "Error deleting template",
+      "duplicateFailed": "Error duplicating template",
+      "previewFailed": "Error previewing template",
+      "compileFailed": "MJML compilation error",
+      "requiredFields": "Please fill in all required fields",
+      "cannotEditSystem": "Cannot edit system template",
+      "cannotDeleteSystem": "Cannot delete system template"
+    },
+    "success": {
+      "created": "Template created successfully",
+      "updated": "Template updated successfully",
+      "deleted": "Template deleted successfully",
+      "duplicated": "Template duplicated successfully"
     }
   }
 }

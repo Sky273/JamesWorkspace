@@ -9,7 +9,7 @@ import { getRequestMetadata } from '../../services/security.service.js';
  */
 export async function aiModifyHandler(req, res) {
     try {
-        const { content, instructions } = req.body;
+        const { content, instructions, selectedText } = req.body;
         
         if (!content || !instructions) {
             return res.status(400).json({ error: 'Content and instructions are required' });
@@ -18,13 +18,45 @@ export async function aiModifyHandler(req, res) {
         const settings = await getLLMSettings();
         const model = settings.llmModel;
         const userMetadata = getRequestMetadata(req);
+        const hasSelection = selectedText && selectedText.trim().length > 0;
 
         if (!model) {
             return res.status(500).json({ error: 'LLM model not configured in Settings.' });
         }
 
-        // Build prompt for AI modification
-        const modificationPrompt = `Tu es un assistant spécialisé dans l'édition de CV professionnels.
+        // Build prompt for AI modification - different prompts for selection vs full content
+        let modificationPrompt;
+        
+        if (hasSelection) {
+            // Selection-based modification: only modify the selected portion
+            modificationPrompt = `Tu es un assistant spécialisé dans l'édition de CV professionnels.
+
+INSTRUCTIONS DE L'UTILISATEUR :
+${instructions}
+
+TEXTE SÉLECTIONNÉ À MODIFIER (HTML) :
+${selectedText}
+
+CONTEXTE - CV COMPLET (pour référence uniquement, NE PAS retourner) :
+${content}
+
+RÈGLES STRICTES :
+1. Applique UNIQUEMENT les modifications demandées sur le TEXTE SÉLECTIONNÉ
+2. Retourne UNIQUEMENT le texte sélectionné modifié, PAS le CV complet
+3. Conserve la structure HTML du texte sélectionné (balises, classes CSS, etc.)
+4. Ne modifie que le contenu textuel selon les instructions
+5. Si les instructions sont ambiguës, fais de ton mieux en restant conservateur
+
+FORMAT DE RÉPONSE OBLIGATOIRE (JSON) :
+{
+  "modifiedSelection": "<html>le texte sélectionné modifié en HTML</html>",
+  "message": "Un message court (1-2 phrases) décrivant les modifications apportées"
+}
+
+IMPORTANT : Retourne UNIQUEMENT ce JSON, sans texte avant ou après.`;
+        } else {
+            // Full content modification
+            modificationPrompt = `Tu es un assistant spécialisé dans l'édition de CV professionnels.
 
 INSTRUCTIONS DE L'UTILISATEUR :
 ${instructions}
@@ -46,10 +78,13 @@ FORMAT DE RÉPONSE OBLIGATOIRE (JSON) :
 }
 
 IMPORTANT : Retourne UNIQUEMENT ce JSON, sans texte avant ou après.`;
+        }
 
         safeLog('info', 'AI Modify request', {
             instructionsLength: instructions.length,
             contentLength: content.length,
+            hasSelection,
+            selectedTextLength: selectedText?.length || 0,
             model
         });
 
@@ -80,8 +115,10 @@ STRICTLY FORBIDDEN:
 - Provide personal opinions on candidates
 
 OUTPUT REQUIREMENTS:
-- Return ONLY a JSON object with two fields: "modifiedContent" (HTML) and "message" (string)
-- The "modifiedContent" field must contain clean HTML without markdown
+- Return ONLY a JSON object with the appropriate fields and "message" (string)
+- For full content modification: use "modifiedContent" field with the complete HTML
+- For selection modification: use "modifiedSelection" field with only the modified selection HTML
+- The content fields must contain clean HTML without markdown
 - The "message" field must be a brief description (1-2 sentences) of what was modified
 - No text before or after the JSON
 - Preserve HTML structure and CSS classes in the content
@@ -109,24 +146,41 @@ If the user's instructions are not related to resume editing, refuse politely an
         } catch (parseError) {
             safeLog('error', 'Failed to parse LLM JSON response', { error: parseError.message, rawResponse: rawResponse.substring(0, 500) });
             // Fallback: treat the entire response as HTML content
-            parsedResponse = {
-                modifiedContent: rawResponse,
-                message: 'Modifications appliquées avec succès. Le CV a été modifié selon vos instructions.'
-            };
+            if (hasSelection) {
+                parsedResponse = {
+                    modifiedSelection: rawResponse,
+                    message: 'Sélection modifiée avec succès.'
+                };
+            } else {
+                parsedResponse = {
+                    modifiedContent: rawResponse,
+                    message: 'Modifications appliquées avec succès. Le CV a été modifié selon vos instructions.'
+                };
+            }
         }
 
-        const { modifiedContent, message: responseMessage } = parsedResponse;
+        const { modifiedContent, modifiedSelection, message: responseMessage } = parsedResponse;
 
         safeLog('info', 'AI Modify completed', {
             originalLength: content.length,
-            modifiedLength: modifiedContent?.length || 0,
+            hasSelection,
+            modifiedContentLength: modifiedContent?.length || 0,
+            modifiedSelectionLength: modifiedSelection?.length || 0,
             message: responseMessage
         });
 
-        res.json({ 
-            modifiedContent,
+        // Return appropriate response based on whether it was a selection or full content modification
+        const responseData = {
             message: responseMessage
-        });
+        };
+        
+        if (hasSelection && modifiedSelection) {
+            responseData.modifiedSelection = modifiedSelection;
+        } else if (modifiedContent) {
+            responseData.modifiedContent = modifiedContent;
+        }
+
+        res.json(responseData);
 
     } catch (error) {
         safeLog('error', 'Error in AI modify', { error: error.message });

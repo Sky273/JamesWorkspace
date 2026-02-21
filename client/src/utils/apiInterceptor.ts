@@ -385,6 +385,14 @@ export const refreshCsrfToken = async (): Promise<string | null> => {
 };
 
 /**
+ * Get CSRF token for use in custom requests (e.g., file uploads)
+ */
+export const fetchCsrfToken = async (): Promise<string> => {
+  const token = await getCsrfToken(false);
+  return token || '';
+};
+
+/**
  * Clear CSRF token cache (call on logout)
  */
 export const clearCsrfToken = (): void => {

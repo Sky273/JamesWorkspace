@@ -1,19 +1,98 @@
-// User service for managing users and firms (formerly customers)
-import { fetchWithAuth, createAuthOptions, createAuthOptionsWithCsrf } from './apiInterceptor';
+/**
+ * User Service
+ * TypeScript service for managing users and firms
+ */
+
+import { fetchWithAuth, createAuthOptions, createAuthOptionsWithCsrf, fetchCsrfToken } from './apiInterceptor';
 import logger from './logger.frontend';
+
+// ============================================
+// TYPES
+// ============================================
+
+interface Firm {
+  id: string;
+  name: string;
+  status?: string;
+  logo_url?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  jobTitle?: string;
+  job_title?: string;
+  phone?: string;
+  role?: string;
+  status?: string;
+  firm?: string;
+  firm_name?: string;
+  FirmName?: string;
+}
+
+interface Pagination {
+  page: number;
+  pageSize?: number;
+  limit?: number;
+  totalCount: number | null;
+  hasMore: boolean;
+  nextPage?: number | null;
+}
+
+interface PaginatedFirmsResponse {
+  firms: Firm[];
+  pagination: Pagination;
+}
+
+interface PaginatedUsersResponse {
+  users: User[];
+  pagination: Pagination;
+}
+
+interface FirmFormData {
+  name?: string;
+  Name?: string;
+  status?: string;
+  Status?: string;
+  logo_url?: string;
+}
+
+interface UserFormData {
+  name?: string;
+  email?: string;
+  password?: string;
+  jobTitle?: string;
+  phone?: string;
+  role?: string;
+  status?: string;
+  firm?: string;
+  FirmName?: string;
+}
+
+interface UploadLogoResponse {
+  success: boolean;
+  logo_url: string;
+  message: string;
+}
+
+// ============================================
+// SERVICE
+// ============================================
 
 const userService = {
   // ============================================
   // FIRMS (formerly Customers)
   // ============================================
-  async getAllFirms() {
+  async getAllFirms(): Promise<Firm[]> {
     try {
       const response = await fetchWithAuth('/api/firms?limit=100', createAuthOptions());
       if (!response.ok) {
         throw new Error('Failed to fetch firms');
       }
       const data = await response.json();
-      // Handle paginated response
       const firms = data.data || data;
       logger.log('Fetched firms:', firms);
       return firms;
@@ -23,12 +102,11 @@ const userService = {
     }
   },
 
-  // Backward compatibility alias
-  async getAllCustomers() {
+  async getAllCustomers(): Promise<Firm[]> {
     return this.getAllFirms();
   },
 
-  async getFirmsPaginated({ page = 1, pageSize = 12, search = '' } = {}) {
+  async getFirmsPaginated({ page = 1, pageSize = 12, search = '' } = {}): Promise<PaginatedFirmsResponse> {
     try {
       const params = new URLSearchParams();
       params.append('page', page.toString());
@@ -41,7 +119,6 @@ const userService = {
       }
       const data = await response.json();
       
-      // Handle paginated response
       if (data.data && data.pagination) {
         return {
           firms: data.data,
@@ -49,7 +126,6 @@ const userService = {
         };
       }
       
-      // Fallback for non-paginated response
       return {
         firms: Array.isArray(data) ? data : [],
         pagination: {
@@ -65,8 +141,7 @@ const userService = {
     }
   },
 
-  // Backward compatibility alias
-  async getCustomersPaginated(options) {
+  async getCustomersPaginated(options?: { page?: number; pageSize?: number; search?: string }): Promise<{ customers: Firm[]; pagination: Pagination }> {
     const result = await this.getFirmsPaginated(options);
     return {
       customers: result.firms,
@@ -74,14 +149,13 @@ const userService = {
     };
   },
 
-  async getAllUsers() {
+  async getAllUsers(): Promise<User[]> {
     try {
       const response = await fetchWithAuth('/api/users?limit=100', createAuthOptions());
       if (!response.ok) {
         throw new Error('Failed to fetch users');
       }
       const data = await response.json();
-      // Handle paginated response
       const users = data.data || data;
       logger.log('Fetched users:', users);
       return users;
@@ -91,7 +165,7 @@ const userService = {
     }
   },
 
-  async getUsersPaginated({ page = 1, pageSize = 12, search = '', role = '', status = '' } = {}) {
+  async getUsersPaginated({ page = 1, pageSize = 12, search = '', role = '', status = '' } = {}): Promise<PaginatedUsersResponse> {
     try {
       const params = new URLSearchParams();
       params.append('page', page.toString());
@@ -106,7 +180,6 @@ const userService = {
       }
       const data = await response.json();
       
-      // Handle paginated response
       if (data.data && data.pagination) {
         return {
           users: data.data,
@@ -114,7 +187,6 @@ const userService = {
         };
       }
       
-      // Fallback for non-paginated response
       return {
         users: Array.isArray(data) ? data : [],
         pagination: {
@@ -130,7 +202,7 @@ const userService = {
     }
   },
 
-  async createUser(userData) {
+  async createUser(userData: UserFormData): Promise<User> {
     try {
       const authOptions = await createAuthOptionsWithCsrf({
         method: 'POST',
@@ -151,7 +223,7 @@ const userService = {
     }
   },
 
-  async updateUser(userId, userData) {
+  async updateUser(userId: string, userData: UserFormData): Promise<User> {
     try {
       const authOptions = await createAuthOptionsWithCsrf({
         method: 'PUT',
@@ -172,7 +244,7 @@ const userService = {
     }
   },
 
-  async deleteUser(userId) {
+  async deleteUser(userId: string): Promise<{ message: string }> {
     try {
       const authOptions = await createAuthOptionsWithCsrf({
         method: 'DELETE'
@@ -189,7 +261,7 @@ const userService = {
     }
   },
 
-  async updateFirm(firmId, firmData) {
+  async updateFirm(firmId: string, firmData: FirmFormData): Promise<Firm> {
     try {
       const authOptions = await createAuthOptionsWithCsrf({
         method: 'PUT',
@@ -210,12 +282,11 @@ const userService = {
     }
   },
 
-  // Backward compatibility alias
-  async updateCustomer(customerId, customerData) {
+  async updateCustomer(customerId: string, customerData: FirmFormData): Promise<Firm> {
     return this.updateFirm(customerId, customerData);
   },
 
-  async createFirm(firmData) {
+  async createFirm(firmData: FirmFormData): Promise<Firm> {
     try {
       const authOptions = await createAuthOptionsWithCsrf({
         method: 'POST',
@@ -236,12 +307,11 @@ const userService = {
     }
   },
 
-  // Backward compatibility alias
-  async createCustomer(customerData) {
+  async createCustomer(customerData: FirmFormData): Promise<Firm> {
     return this.createFirm(customerData);
   },
 
-  async deleteFirm(firmId) {
+  async deleteFirm(firmId: string): Promise<{ message: string }> {
     try {
       const authOptions = await createAuthOptionsWithCsrf({
         method: 'DELETE'
@@ -258,12 +328,56 @@ const userService = {
     }
   },
 
-  // Backward compatibility alias
-  async deleteCustomer(customerId) {
+  async deleteCustomer(customerId: string): Promise<{ message: string }> {
     return this.deleteFirm(customerId);
   },
 
-  async changeUserPassword(userId, newPassword) {
+  async uploadFirmLogo(firmId: string, file: File): Promise<UploadLogoResponse> {
+    try {
+      const formData = new FormData();
+      formData.append('logo', file);
+      
+      // Get CSRF token for multipart request
+      const csrfToken = await fetchCsrfToken();
+      
+      const response = await fetchWithAuth(`/api/firms/${firmId}/logo`, {
+        method: 'POST',
+        headers: {
+          'x-csrf-token': csrfToken
+        },
+        body: formData,
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to upload logo');
+      }
+      return await response.json();
+    } catch (error) {
+      logger.error('Error uploading firm logo:', error);
+      throw error;
+    }
+  },
+
+  async deleteFirmLogo(firmId: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const authOptions = await createAuthOptionsWithCsrf({
+        method: 'DELETE'
+      });
+      const response = await fetchWithAuth(`/api/firms/${firmId}/logo`, authOptions);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete logo');
+      }
+      return await response.json();
+    } catch (error) {
+      logger.error('Error deleting firm logo:', error);
+      throw error;
+    }
+  },
+
+  async changeUserPassword(userId: string, newPassword: string): Promise<{ message: string }> {
     try {
       const authOptions = await createAuthOptionsWithCsrf({
         method: 'PUT',

@@ -22,7 +22,7 @@ router.get('/', authenticateToken, async (req, res) => {
     try {
         const userRole = (req.user?.role || req.user?.Role || '').toLowerCase();
         const isAdmin = userRole === 'admin';
-        const userFirm = req.user?.firm || req.user?.customer;
+        const userFirm = req.user?.firm || req.user?.firm_id;
         
         // Extract pagination and filter parameters
         const page = parseInt(req.query.page) || 1;
@@ -86,9 +86,6 @@ router.get('/', authenticateToken, async (req, res) => {
             Content: record.content,
             Firm: record.firm,
             'Firm ID': record.firm_id,
-            // Backward compatibility
-            Customer: record.firm,
-            'Customer ID': record.firm_id,
             Status: record.status,
             Keywords: record.keywords,
             'Required Skills': record.required_skills,
@@ -124,7 +121,7 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
         
         const userRole = (req.user?.role || req.user?.Role || '').toLowerCase();
         const isAdmin = userRole === 'admin';
-        const userFirm = req.user?.firm || req.user?.customer;
+        const userFirm = req.user?.firm || req.user?.firm_id;
         
         if (!isAdmin && record.firm !== userFirm) {
             return res.status(403).json({ error: 'Access denied: You can only view missions from your firm' });
@@ -136,8 +133,6 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
             Content: record.content,
             Firm: record.firm,
             'Firm ID': record.firm_id,
-            Customer: record.firm,
-            'Customer ID': record.firm_id,
             Status: record.status,
             Keywords: record.keywords,
             'Required Skills': record.required_skills,
@@ -158,7 +153,7 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
 router.post('/', authenticateToken, validateBody(createMissionSchema), async (req, res) => {
     try {
         const missionData = req.body;
-        const userFirm = req.user?.firm || req.user?.customer;
+        const userFirm = req.user?.firm || req.user?.firm_id;
         
         let content = missionData.Content || missionData.content || '';
         if (content) {
@@ -168,8 +163,8 @@ router.post('/', authenticateToken, validateBody(createMissionSchema), async (re
         const newMission = await createWithTimeout('missions', {
             title: missionData.Title || missionData.title,
             content: content,
-            firm: userFirm || missionData.Firm || missionData.firm || missionData.Customer || missionData.customer || null,
-            firm_id: missionData['Firm ID'] || missionData.firm_id || missionData['Customer ID'] || missionData.customer_id || null,
+            firm: userFirm || missionData.Firm || missionData.firm || null,
+            firm_id: missionData['Firm ID'] || missionData.firm_id || null,
             status: missionData.Status || missionData.status || 'active',
             keywords: missionData.Keywords || missionData.keywords || null,
             required_skills: missionData['Required Skills'] || missionData.required_skills || null,
@@ -182,8 +177,6 @@ router.post('/', authenticateToken, validateBody(createMissionSchema), async (re
             Content: newMission.content,
             Firm: newMission.firm,
             'Firm ID': newMission.firm_id,
-            Customer: newMission.firm,
-            'Customer ID': newMission.firm_id,
             Status: newMission.status,
             Keywords: newMission.keywords,
             'Required Skills': newMission.required_skills,
@@ -204,7 +197,7 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateM
         const updateData = req.body;
         const userRole = (req.user?.role || req.user?.Role || '').toLowerCase();
         const isAdmin = userRole === 'admin';
-        const userFirm = req.user?.firm || req.user?.customer;
+        const userFirm = req.user?.firm || req.user?.firm_id;
 
         const existingMission = await findWithTimeout('missions', id);
 
@@ -242,8 +235,6 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateM
             Content: updatedMission.content,
             Firm: updatedMission.firm,
             'Firm ID': updatedMission.firm_id,
-            Customer: updatedMission.firm,
-            'Customer ID': updatedMission.firm_id,
             Status: updatedMission.status,
             Keywords: updatedMission.keywords,
             'Required Skills': updatedMission.required_skills,
@@ -266,7 +257,7 @@ router.delete('/:id', authenticateToken, validateParams('id'), async (req, res) 
         const { id } = req.params;
         const userRole = (req.user?.role || req.user?.Role || '').toLowerCase();
         const isAdmin = userRole === 'admin';
-        const userFirm = req.user?.firm || req.user?.customer;
+        const userFirm = req.user?.firm || req.user?.firm_id;
 
         if (!isAdmin) {
             const existingRecord = await findWithTimeout('missions', id);
@@ -329,7 +320,7 @@ router.post('/:missionId/find-profiles', authenticateToken, validateParams('miss
         
         const userRole = (req.user?.role || req.user?.Role || '').toLowerCase();
         const isAdmin = userRole === 'admin';
-        const userFirm = req.user?.firm || req.user?.customer;
+        const userFirm = req.user?.firm || req.user?.firm_id;
         
         // Verify mission access
         const missionRecord = await findWithTimeout('missions', missionId);
@@ -342,7 +333,7 @@ router.post('/:missionId/find-profiles', authenticateToken, validateParams('miss
         const userMetadata = {
             userId: req.user?.id,
             userName: req.user?.name || req.user?.Name,
-            customer: userFirm
+            firm: userFirm
         };
         
         // Import the service dynamically to avoid circular dependencies
@@ -353,7 +344,7 @@ router.post('/:missionId/find-profiles', authenticateToken, validateParams('miss
             limit: Math.min(limit, 50),
             minScore: Math.max(0, Math.min(100, minScore)),
             status,
-            customer: isAdmin ? null : userFirm,
+            firm: isAdmin ? null : userFirm,
             weights
         }, userMetadata);
         
@@ -371,7 +362,7 @@ router.delete('/:missionId/keywords-cache', authenticateToken, validateParams('m
         
         const userRole = (req.user?.role || req.user?.Role || '').toLowerCase();
         const isAdmin = userRole === 'admin';
-        const userFirm = req.user?.firm || req.user?.customer;
+        const userFirm = req.user?.firm || req.user?.firm_id;
         
         // Verify mission access
         const missionRecord = await findWithTimeout('missions', missionId);
@@ -398,7 +389,7 @@ router.post('/:missionId/analyze-profile/:resumeId', authenticateToken, async (r
         
         const userRole = (req.user?.role || req.user?.Role || '').toLowerCase();
         const isAdmin = userRole === 'admin';
-        const userFirm = req.user?.firm || req.user?.customer;
+        const userFirm = req.user?.firm || req.user?.firm_id;
         
         // Verify mission access
         const missionRecord = await findWithTimeout('missions', missionId);
@@ -411,7 +402,7 @@ router.post('/:missionId/analyze-profile/:resumeId', authenticateToken, async (r
         const userMetadata = {
             userId: req.user?.id,
             userName: req.user?.name || req.user?.Name,
-            customer: userFirm
+            firm: userFirm
         };
         
         // Import the service dynamically

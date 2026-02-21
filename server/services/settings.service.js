@@ -124,3 +124,95 @@ export async function getPrompts() {
         adaptation: settings['Adaptation Prompt'] || null
     };
 }
+
+/**
+ * Parse a rating string (e.g., "85%") to a number (e.g., 85)
+ * @param {string|number} rating - Rating as string or number
+ * @returns {number} - Rating as number (0-100)
+ */
+function parseRating(rating) {
+    if (typeof rating === 'number') return rating;
+    if (typeof rating === 'string') {
+        const parsed = parseFloat(rating.replace('%', ''));
+        return isNaN(parsed) ? 0 : parsed;
+    }
+    return 0;
+}
+
+/**
+ * Calculate globalRating based on section scores and admin-defined weights
+ * This ensures the global rating is always consistent with the weighted average of section scores
+ * @param {Object} analysis - Analysis object with section ratings
+ * @param {Object} settings - Optional settings object (will be fetched if not provided)
+ * @returns {Promise<Object>} - Analysis object with recalculated globalRating
+ */
+export async function calculateWeightedGlobalRating(analysis, settings = null) {
+    try {
+        // Get settings if not provided
+        const llmSettings = settings || await getLLMSettings();
+        
+        // Get weights with defaults
+        const weights = {
+            executiveSummary: llmSettings['Executive Summary Weight'] || 20,
+            skills: llmSettings['Skills Weight'] || 20,
+            experience: llmSettings['Experience Weight'] || 20,
+            education: llmSettings['Education Weight'] || 15,
+            ats: llmSettings['ATS Weight'] || 15,
+            hobbiesLanguages: llmSettings['Hobbies Languages Weight'] || 10
+        };
+        
+        // Normalize weights to ensure they sum to 100
+        const totalWeight = Object.values(weights).reduce((sum, w) => sum + w, 0);
+        const normalizedWeights = {};
+        for (const [key, value] of Object.entries(weights)) {
+            normalizedWeights[key] = totalWeight > 0 ? (value / totalWeight) * 100 : 100 / 6;
+        }
+        
+        // Parse section ratings
+        const scores = {
+            executiveSummary: parseRating(analysis.executiveSummaryRating || analysis['Executive Summary'] || 0),
+            skills: parseRating(analysis.skillsRating || analysis['Skills'] || 0),
+            experience: parseRating(analysis.experiencesRating || analysis['Experience'] || 0),
+            education: parseRating(analysis.educationRating || analysis['Education'] || 0),
+            ats: parseRating(analysis.atsOptimizationRating || analysis['ATS Compatibility'] || analysis['ATS'] || 0),
+            hobbiesLanguages: parseRating(analysis.hobbiesLanguagesRating || analysis['Hobbies Languages'] || 0)
+        };
+        
+        // Calculate weighted average
+        let weightedSum = 0;
+        let appliedWeight = 0;
+        
+        for (const [key, score] of Object.entries(scores)) {
+            const weight = normalizedWeights[key];
+            weightedSum += score * weight;
+            appliedWeight += weight;
+        }
+        
+        const calculatedGlobalRating = appliedWeight > 0 ? Math.round(weightedSum / appliedWeight) : 0;
+        
+        // Format as percentage string
+        const globalRatingStr = `${calculatedGlobalRating}%`;
+        
+        safeLog('debug', 'Calculated weighted global rating', {
+            scores,
+            weights: normalizedWeights,
+            originalGlobalRating: analysis.globalRating || analysis['Global Rating'],
+            calculatedGlobalRating: globalRatingStr
+        });
+        
+        // Update analysis with calculated global rating
+        const updatedAnalysis = { ...analysis };
+        updatedAnalysis.globalRating = globalRatingStr;
+        updatedAnalysis['Global Rating'] = globalRatingStr;
+        
+        // Also store the weights used for transparency
+        updatedAnalysis._weightsUsed = normalizedWeights;
+        updatedAnalysis._originalLLMGlobalRating = analysis.globalRating || analysis['Global Rating'];
+        
+        return updatedAnalysis;
+    } catch (error) {
+        safeLog('error', 'Failed to calculate weighted global rating', { error: error.message });
+        // Return original analysis if calculation fails
+        return analysis;
+    }
+}

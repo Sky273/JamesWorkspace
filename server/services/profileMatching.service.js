@@ -315,12 +315,10 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
         minScore = 0,
         status = null,
         firm = null,
-        // Backward compatibility
-        customer = null,
         weights = DEFAULT_WEIGHTS
     } = options;
     
-    const firmFilter = firm || customer;
+    const firmFilter = firm;
     safeLog('info', 'Finding matching profiles', { missionId, limit, minScore, status, firm: firmFilter });
     
     // 1. Get mission record
@@ -407,7 +405,6 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
             status: record.status,
             globalRating: record.global_rating || 0,
             firmName: record.firm_name,
-            customerName: record.firm_name,
             createdAt: record.created_at,
             matchScore: matchResult.totalScore,
             categoryScores: matchResult.categoryScores,

@@ -30,7 +30,7 @@ interface Mission {
   id: string;
   Title?: string;
   Content?: string;
-  Customer?: string;
+  Firm?: string;
   'Created At'?: string;
   Status?: 'Active' | 'Closed' | 'Draft';
 }
@@ -43,7 +43,7 @@ interface FormData {
 
 interface Stats {
   total: number;
-  customers: number;
+  firms: number;
 }
 
 // TinyMCE types are declared in src/types/tinymce.d.ts
@@ -269,7 +269,7 @@ const MissionsPage = (): JSX.Element => {
 
   const stats: Stats = {
     total: missions.length,
-    customers: [...new Set(missions.map(m => m.Customer).filter(Boolean))].length
+    firms: [...new Set(missions.map(m => m.Firm).filter(Boolean))].length
   };
 
   return (
@@ -351,11 +351,11 @@ const MissionsPage = (): JSX.Element => {
                         {t(`missions.status.${mission.Status || 'Active'}`)}
                       </span>
                     </div>
-                    {mission.Customer && (
+                    {mission.Firm && (
                       <div className="flex items-center gap-1 mt-1">
                         <BuildingOfficeIcon className="w-4 h-4 text-blue-500" />
                         <span className="text-sm text-blue-600 dark:text-blue-400 font-medium truncate">
-                          {mission.Customer}
+                          {mission.Firm}
                         </span>
                       </div>
                     )}
@@ -425,8 +425,8 @@ const MissionsPage = (): JSX.Element => {
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white">
                   {previewMission.Title}
                 </h3>
-                {previewMission.Customer && (
-                  <p className="text-sm text-blue-600 dark:text-blue-400">{previewMission.Customer}</p>
+                {previewMission.Firm && (
+                  <p className="text-sm text-blue-600 dark:text-blue-400">{previewMission.Firm}</p>
                 )}
               </div>
               <button onClick={() => setPreviewMission(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">

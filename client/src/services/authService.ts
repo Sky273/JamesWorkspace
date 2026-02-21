@@ -14,10 +14,13 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  jobTitle?: string;
+  phone?: string;
   role: 'admin' | 'user' | 'viewer';
   status: 'Active' | 'Inactive' | 'Pending' | 'active' | 'inactive' | 'pending';
   firm?: string;
   FirmName?: string;
+  FirmLogo?: string;
   // Legacy uppercase properties for backward compatibility
   Name?: string;
   Email?: string;
@@ -41,6 +44,8 @@ export interface CreateUserData {
   email: string;
   password: string;
   name: string;
+  jobTitle?: string;
+  phone?: string;
   role?: string;
   status?: string;
   firm?: string;
@@ -50,6 +55,8 @@ export interface UpdateUserData {
   name?: string;
   email?: string;
   password?: string;
+  jobTitle?: string;
+  phone?: string;
   role?: string;
   status?: string;
   firm?: string;

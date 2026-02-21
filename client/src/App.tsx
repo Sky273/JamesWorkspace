@@ -36,6 +36,7 @@ const UserGuidePage = lazy(() => import('./pages/UserGuidePage'));
 const FactsPage = lazy(() => import('./pages/FactsPage'));
 const MetiersPage = lazy(() => import('./pages/MetiersPage'));
 const ClientsPage = lazy(() => import('./pages/ClientsPage'));
+const EmailTemplatesPage = lazy(() => import('./pages/admin/EmailTemplatesPage'));
 const SignIn = lazy(() => import('./components/SignIn'));
 const Register = lazy(() => import('./components/Register'));
 
@@ -133,6 +134,7 @@ const App = (): JSX.Element => {
                   <Route path="settings" element={<AdminRoute><SettingsPage /></AdminRoute>} />
                   <Route path="facts" element={<FactsPage />} />
                   <Route path="metiers" element={<AdminRoute><MetiersPage /></AdminRoute>} />
+                  <Route path="email-templates" element={<AdminRoute><EmailTemplatesPage /></AdminRoute>} />
                 </Route>
               </Routes>
             </Suspense>

@@ -24,7 +24,7 @@ interface StatCardProps {
 
 interface Stats {
   total: number;
-  customers: number;
+  firms: number;
 }
 
 interface StatsCardsProps {
@@ -67,8 +67,8 @@ const StatsCards = ({ stats, missionsCount, t }: StatsCardsProps): JSX.Element =
         icon={BuildingOfficeIcon}
         iconBgColor="bg-green-100 dark:bg-green-900/30"
         iconColor="text-green-600 dark:text-green-400"
-        label={t('missions.stats.customers')}
-        value={stats.customers}
+        label={t('missions.stats.firms')}
+        value={stats.firms}
         delay={0.1}
       />
       <StatCard

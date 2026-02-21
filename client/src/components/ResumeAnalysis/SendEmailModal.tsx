@@ -5,10 +5,14 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { XMarkIcon, EnvelopeIcon, CheckCircleIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, EnvelopeIcon, CheckCircleIcon, ExclamationCircleIcon, EyeIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import mailService from '../../utils/mailService';
 import clientService from '../../utils/clientService';
+import emailTemplateService from '../../services/emailTemplateService';
+import { authPost } from '../../utils/apiInterceptor';
+import { EmailTemplate, EmailTemplateContext } from '../../types/entities';
+import { useAuth } from '../../context/AuthContext';
 import logger from '../../utils/logger.frontend';
 
 interface MailStatus {
@@ -45,13 +49,16 @@ interface SendEmailModalProps {
   onClose: () => void;
   resumeName: string;
   resumeId: string;
+  resumeTitle?: string;
+  currentVersion?: number;
   onGeneratePdf: () => Promise<Blob>;
 }
 
 type ModalStep = 'connect' | 'select' | 'sending' | 'success' | 'error';
 
-const SendEmailModal = ({ isOpen, onClose, resumeName, resumeId, onGeneratePdf }: SendEmailModalProps): JSX.Element | null => {
+const SendEmailModal = ({ isOpen, onClose, resumeName, resumeId, resumeTitle, currentVersion, onGeneratePdf }: SendEmailModalProps): JSX.Element | null => {
   const { t } = useTranslation();
+  const { user } = useAuth();
   
   // Connection state
   const [mailStatus, setMailStatus] = useState<MailStatus | null>(null);
@@ -64,6 +71,14 @@ const SendEmailModal = ({ isOpen, onClose, resumeName, resumeId, onGeneratePdf }
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [selectedContactId, setSelectedContactId] = useState<string>('');
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+  
+  // Template state
+  const [templates, setTemplates] = useState<EmailTemplate[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
+  const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplate | null>(null);
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
+  const [previewHtml, setPreviewHtml] = useState<string>('');
+  const [showPreview, setShowPreview] = useState(false);
   
   // UI state
   const [step, setStep] = useState<ModalStep>('connect');
@@ -105,6 +120,25 @@ const SendEmailModal = ({ isOpen, onClose, resumeName, resumeId, onGeneratePdf }
     }
   }, [t]);
 
+  // Load email templates
+  const loadTemplates = useCallback(async () => {
+    setLoadingTemplates(true);
+    try {
+      const templatesData = await emailTemplateService.getTemplates();
+      setTemplates(templatesData);
+      // Auto-select default template
+      const defaultTemplate = templatesData.find(t => t.is_default);
+      if (defaultTemplate) {
+        setSelectedTemplateId(defaultTemplate.id);
+        setSelectedTemplate(defaultTemplate);
+      }
+    } catch (error) {
+      logger.error('Error loading templates:', error);
+    } finally {
+      setLoadingTemplates(false);
+    }
+  }, []);
+
   // Load client details with contacts
   const loadClientDetails = useCallback(async (clientId: string) => {
     try {
@@ -122,8 +156,64 @@ const SendEmailModal = ({ isOpen, onClose, resumeName, resumeId, onGeneratePdf }
     if (isOpen) {
       checkMailStatus();
       loadClients();
+      loadTemplates();
     }
-  }, [isOpen, checkMailStatus, loadClients]);
+  }, [isOpen, checkMailStatus, loadClients, loadTemplates]);
+
+  // Update selected template when template ID changes
+  useEffect(() => {
+    if (selectedTemplateId) {
+      const template = templates.find(t => t.id === selectedTemplateId);
+      setSelectedTemplate(template || null);
+    } else {
+      setSelectedTemplate(null);
+    }
+  }, [selectedTemplateId, templates]);
+
+  // Build template context
+  const buildTemplateContext = useCallback((): EmailTemplateContext => {
+    return {
+      client: selectedClient ? {
+        name: selectedClient.name,
+        type: selectedClient.type,
+        industry: ''
+      } : undefined,
+      contact: selectedContact ? {
+        name: selectedContact.name,
+        role: selectedContact.role
+      } : undefined,
+      resume: {
+        name: resumeName,
+        title: resumeTitle || '',
+        version: currentVersion || 1
+      },
+      firm: {
+        name: user?.FirmName || '',
+        logo: user?.FirmLogo || ''
+      },
+      user: {
+        name: user?.name || '',
+        email: user?.email || '',
+        jobTitle: user?.jobTitle || '',
+        phone: user?.phone || ''
+      }
+    };
+  }, [selectedClient, selectedContact, resumeName, resumeTitle, currentVersion, user]);
+
+  // Preview template
+  const handlePreviewTemplate = async () => {
+    if (!selectedTemplateId) return;
+    
+    try {
+      const context = buildTemplateContext();
+      const result = await emailTemplateService.previewTemplate(selectedTemplateId, context);
+      setPreviewHtml(result.html);
+      setShowPreview(true);
+    } catch (error) {
+      logger.error('Error previewing template:', error);
+      toast.error(t('mail.errors.previewFailed'));
+    }
+  };
 
   // Load client details when selection changes
   useEffect(() => {
@@ -182,23 +272,54 @@ const SendEmailModal = ({ isOpen, onClose, resumeName, resumeId, onGeneratePdf }
         reader.readAsDataURL(pdfBlob);
       });
 
-      // Create draft with submission tracking
-      logger.info('Creating draft with submission tracking', { resumeId, clientId: selectedClientId, contactId: selectedContactId });
+      // Create draft with submission tracking and template
+      logger.info('Creating draft with submission tracking', { resumeId, clientId: selectedClientId, contactId: selectedContactId, currentVersion, templateId: selectedTemplateId });
       
-      // Build draft params with submission tracking
+      // Build template context if template is selected
+      const hasTemplate = selectedTemplateId && selectedTemplateId.length > 0;
+      const templateContext = hasTemplate ? buildTemplateContext() : undefined;
+      
+      // Debug: log template info
+      logger.info('Template info for draft', { 
+        hasTemplate, 
+        selectedTemplateId, 
+        templateContext,
+        selectedTemplate: selectedTemplate ? { id: selectedTemplate.id, name: selectedTemplate.name } : null
+      });
+      
+      // Build draft params with submission tracking and template
       const draftParams: Record<string, unknown> = {
         to: selectedContact.email,
-        subject: resumeName,
+        subject: selectedTemplate?.subject_template || resumeName,
         body: '',
         pdfBase64,
         pdfFilename: `${resumeName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`,
         resumeId,
         clientId: selectedClientId,
-        contactId: selectedContactId
+        contactId: selectedContactId,
+        versionNumber: currentVersion,
+        templateId: hasTemplate ? selectedTemplateId : undefined,
+        templateContext
       };
       
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const result = await mailService.createDraft(draftParams as any) as DraftResult;
+      logger.info('Draft params being sent (direct API call)', { 
+        to: draftParams.to, 
+        subject: draftParams.subject,
+        hasTemplateId: !!draftParams.templateId,
+        hasTemplateContext: !!draftParams.templateContext,
+        templateId: draftParams.templateId
+      });
+      
+      // Direct API call to bypass mailService cache issue
+      const response = await authPost('/api/mail/draft', draftParams);
+      if (!response.ok) {
+        const errorData = await response.json();
+        if (errorData.needsReauth) {
+          throw new Error('NEEDS_REAUTH');
+        }
+        throw new Error(errorData.error || 'Failed to create draft');
+      }
+      const result = await response.json() as DraftResult;
       logger.info('Draft created, result:', result);
 
       setDraftLink(result.webLink);
@@ -342,6 +463,38 @@ const SendEmailModal = ({ isOpen, onClose, resumeName, resumeId, onGeneratePdf }
                   </div>
                 )}
 
+                {/* Template selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {t('mail.modal.selectTemplate')}
+                  </label>
+                  <div className="flex gap-2">
+                    <select
+                      value={selectedTemplateId}
+                      onChange={(e) => setSelectedTemplateId(e.target.value)}
+                      className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                      disabled={loadingTemplates}
+                    >
+                      <option value="">{loadingTemplates ? t('common.loading') : t('mail.modal.noTemplate')}</option>
+                      {templates.map((template) => (
+                        <option key={template.id} value={template.id}>
+                          {template.name} {template.is_default ? `(${t('mail.modal.default')})` : ''} {template.is_system ? `[${t('mail.modal.system')}]` : ''}
+                        </option>
+                      ))}
+                    </select>
+                    {selectedTemplateId && (
+                      <button
+                        type="button"
+                        onClick={handlePreviewTemplate}
+                        className="px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+                        title={t('mail.modal.previewTemplate')}
+                      >
+                        <EyeIcon className="w-5 h-5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
                 {/* Email preview */}
                 {selectedContact?.email && (
                   <div className="p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
@@ -349,11 +502,16 @@ const SendEmailModal = ({ isOpen, onClose, resumeName, resumeId, onGeneratePdf }
                       <strong>{t('mail.modal.to')}:</strong> {selectedContact.email}
                     </p>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      <strong>{t('mail.modal.subject')}:</strong> {resumeName}
+                      <strong>{t('mail.modal.subject')}:</strong> {selectedTemplate?.subject_template || resumeName}
                     </p>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
                       <strong>{t('mail.modal.attachment')}:</strong> {resumeName}.pdf
                     </p>
+                    {selectedTemplate && (
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <strong>{t('mail.modal.template')}:</strong> {selectedTemplate.name}
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
@@ -442,6 +600,42 @@ const SendEmailModal = ({ isOpen, onClose, resumeName, resumeId, onGeneratePdf }
           )}
         </div>
       </div>
+
+      {/* Template Preview Modal */}
+      {showPreview && (
+        <div className="fixed inset-0 z-[60] overflow-y-auto">
+          <div className="flex min-h-screen items-center justify-center p-4">
+            <div className="fixed inset-0 bg-black/50" onClick={() => setShowPreview(false)} />
+            <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-3xl max-h-[80vh] overflow-hidden">
+              <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {t('mail.modal.templatePreview')}
+                </h3>
+                <button
+                  onClick={() => setShowPreview(false)}
+                  className="p-1 text-gray-400 hover:text-gray-600 rounded-lg"
+                >
+                  <XMarkIcon className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="overflow-y-auto max-h-[calc(80vh-80px)]">
+                {previewHtml ? (
+                  <iframe
+                    srcDoc={previewHtml}
+                    title="Email Preview"
+                    className="w-full h-[500px] border-0"
+                    sandbox="allow-same-origin"
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-64 text-gray-400">
+                    {t('mail.modal.loadingPreview')}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

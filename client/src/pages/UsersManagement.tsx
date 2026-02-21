@@ -55,6 +55,8 @@ interface UserFormData {
   name: string;
   email: string;
   password: string;
+  jobTitle: string;
+  phone: string;
   firm: string;
   role: string;
   status: string;
@@ -168,11 +170,13 @@ const UsersManagement = (): JSX.Element => {
       
       if (selectedUser) {
         await userService.updateUser(selectedUser.id, {
-          Name: formData.name,
-          Email: formData.email.toLowerCase(),
-          FirmName: formData.firm || null,
-          Role: capitalizedRole,
-          Status: formData.status
+          name: formData.name,
+          email: formData.email.toLowerCase(),
+          jobTitle: formData.jobTitle || '',
+          phone: formData.phone || '',
+          firm: formData.firm || undefined,
+          role: capitalizedRole,
+          status: formData.status
         });
         toast.success(t('users.management.messages.userUpdated'));
       } else {
@@ -180,6 +184,8 @@ const UsersManagement = (): JSX.Element => {
           name: formData.name,
           email: formData.email,
           password: formData.password,
+          jobTitle: formData.jobTitle || '',
+          phone: formData.phone || '',
           firm: formData.firm,
           role: capitalizedRole,
           status: formData.status

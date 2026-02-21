@@ -1,6 +1,7 @@
 /**
  * Mail Service
  * Frontend service for email operations (Gmail OAuth, draft creation)
+ * Updated: 2026-02-21 17:20 - Added templateId and templateContext support
  */
 
 import { fetchWithAuth, createAuthOptions, createAuthOptionsWithCsrf } from './apiInterceptor';
@@ -57,15 +58,21 @@ const mailService = {
      * @param {string} [params.clientId] - Client ID for submission tracking
      * @param {string} [params.contactId] - Contact ID for submission tracking
      * @param {string} [params.missionId] - Mission ID for submission tracking (optional)
+     * @param {number} [params.versionNumber] - CV version number for submission tracking
+     * @param {string} [params.templateId] - Email template ID for rendering
+     * @param {Object} [params.templateContext] - Context data for template substitution
      * @returns {Promise<Object>} - { success, draftId, webLink, submissionId }
      */
-    async createDraft({ to, subject, body, pdfBase64, pdfFilename, resumeId, clientId, contactId, missionId }) {
+    async createDraft({ to, subject, body, pdfBase64, pdfFilename, resumeId, clientId, contactId, missionId, versionNumber, templateId, templateContext }) {
         try {
-            // Debug: log submission tracking values
-            logger.info('[mailService] createDraft called with submission tracking', { 
+            // Debug: log all params including template (v2)
+            logger.info('[mailService v2] createDraft called with ALL params', { 
                 resumeId: resumeId || 'MISSING', 
                 clientId: clientId || 'MISSING', 
-                contactId: contactId || 'MISSING' 
+                contactId: contactId || 'MISSING',
+                templateId: templateId || 'NONE',
+                hasTemplateContext: !!templateContext,
+                versionNumber: versionNumber || 'MISSING'
             });
             
             const options = await createAuthOptionsWithCsrf({
@@ -81,7 +88,11 @@ const mailService = {
                     resumeId,
                     clientId,
                     contactId,
-                    missionId
+                    missionId,
+                    versionNumber,
+                    // Template rendering
+                    templateId,
+                    templateContext
                 })
             });
 

@@ -377,6 +377,7 @@ export interface ResumeSubmission {
   sent_by?: string;
   notes?: string;
   status: SubmissionStatus;
+  version_number?: number;
   created_at?: string;
   resume_name?: string;
   resume_title?: string;
@@ -415,6 +416,72 @@ export interface SubmissionFormData {
   notes?: string;
   sent_at?: string;
   status?: SubmissionStatus;
+}
+
+// ============================================
+// EMAIL TEMPLATE TYPES
+// ============================================
+
+export type EmailTemplateStatus = 'active' | 'inactive';
+
+export interface EmailTemplate {
+  id: string;
+  firm_id?: string;
+  name: string;
+  description?: string;
+  subject_template: string;
+  mjml_content: string;
+  html_content?: string;
+  is_system: boolean;
+  is_default: boolean;
+  status: EmailTemplateStatus;
+  created_by?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface EmailTemplateFormData {
+  name: string;
+  description?: string;
+  subjectTemplate: string;
+  mjmlContent: string;
+  isDefault?: boolean;
+}
+
+export interface EmailTemplateContext {
+  client?: {
+    name?: string;
+    type?: string;
+    industry?: string;
+  };
+  contact?: {
+    name?: string;
+    role?: string;
+  };
+  resume?: {
+    name?: string;
+    title?: string;
+    version?: number;
+  };
+  firm?: {
+    name?: string;
+    logo?: string;
+  };
+  user?: {
+    name?: string;
+    email?: string;
+    jobTitle?: string;
+    phone?: string;
+  };
+}
+
+export interface EmailTemplateKeywords {
+  client: string[];
+  contact: string[];
+  resume: string[];
+  firm: string[];
+  user: string[];
+  date: string[];
 }
 
 // ============================================

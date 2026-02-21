@@ -1,4 +1,8 @@
 import express from 'express';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
 import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
 import { validateBody, validateParams, createFirmSchema } from '../utils/validation.js';
 import { firmsCache } from '../services/cache.service.js';
@@ -12,7 +16,42 @@ import {
 } from '../utils/postgresHelpers.js';
 import { query } from '../config/database.js';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const router = express.Router();
+
+// Configure multer for logo uploads
+const LOGOS_DIR = path.join(__dirname, '../../client/public/logos');
+
+// Ensure logos directory exists
+if (!fs.existsSync(LOGOS_DIR)) {
+    fs.mkdirSync(LOGOS_DIR, { recursive: true });
+}
+
+const logoStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, LOGOS_DIR);
+    },
+    filename: (req, file, cb) => {
+        const firmId = req.params.id;
+        const ext = path.extname(file.originalname).toLowerCase();
+        cb(null, `firm-${firmId}${ext}`);
+    }
+});
+
+const logoUpload = multer({
+    storage: logoStorage,
+    limits: { fileSize: 2 * 1024 * 1024 }, // 2MB max
+    fileFilter: (req, file, cb) => {
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+        if (allowedTypes.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Invalid file type. Only JPEG, PNG, GIF, WebP and SVG are allowed.'));
+        }
+    }
+});
 
 // ============================================
 // FIRMS ROUTES (PostgreSQL)
@@ -108,6 +147,11 @@ router.post('/', authenticateToken, requireAdmin, validateBody(createFirmSchema)
             name: req.body.name || req.body.Name,
             status: (req.body.status || req.body.Status || 'active').toLowerCase()
         };
+        
+        // Add logo_url if provided
+        if (req.body.logo_url || req.body.logoUrl) {
+            firmData.logo_url = req.body.logo_url || req.body.logoUrl;
+        }
 
         const records = await createWithTimeout('firms', [{ fields: firmData }]);
         
@@ -137,6 +181,11 @@ router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), async 
             name: req.body.name || req.body.Name,
             status: (req.body.status || req.body.Status || 'active').toLowerCase()
         };
+        
+        // Add logo_url if provided
+        if (req.body.logo_url !== undefined || req.body.logoUrl !== undefined) {
+            firmData.logo_url = req.body.logo_url || req.body.logoUrl || null;
+        }
 
         const records = await updateWithTimeout('firms', [{
             id: id,
@@ -191,6 +240,89 @@ router.delete('/:id', authenticateToken, requireAdmin, validateParams('id'), asy
         safeLog('error', 'Error deleting firm', { error: error.message, firmId: req.params.id });
         return res.status(500).json({ 
             error: 'Failed to delete firm',
+            message: error.message 
+        });
+    }
+});
+
+// POST /api/firms/:id/logo - Upload firm logo
+router.post('/:id/logo', authenticateToken, requireAdmin, validateParams('id'), logoUpload.single('logo'), async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        if (!req.file) {
+            return res.status(400).json({ error: 'No file uploaded' });
+        }
+        
+        // Verify firm exists
+        const firm = await findWithTimeout('firms', id);
+        if (!firm) {
+            // Delete uploaded file if firm doesn't exist
+            fs.unlinkSync(req.file.path);
+            return res.status(404).json({ error: 'Firm not found' });
+        }
+        
+        // Generate the public URL for the logo
+        const logoUrl = `/logos/${req.file.filename}`;
+        
+        // Update firm with logo URL
+        await updateWithTimeout('firms', [{
+            id: id,
+            fields: { logo_url: logoUrl }
+        }]);
+        
+        firmsCache.invalidate('all_firms');
+        
+        safeLog('info', 'Firm logo uploaded', { firmId: id, logoUrl });
+        
+        res.json({ 
+            success: true, 
+            logo_url: logoUrl,
+            message: 'Logo uploaded successfully' 
+        });
+    } catch (error) {
+        safeLog('error', 'Error uploading firm logo', { error: error.message, firmId: req.params.id });
+        return res.status(500).json({ 
+            error: 'Failed to upload logo',
+            message: error.message 
+        });
+    }
+});
+
+// DELETE /api/firms/:id/logo - Delete firm logo
+router.delete('/:id/logo', authenticateToken, requireAdmin, validateParams('id'), async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        // Get firm to find current logo
+        const firm = await findWithTimeout('firms', id);
+        if (!firm) {
+            return res.status(404).json({ error: 'Firm not found' });
+        }
+        
+        // Delete logo file if exists
+        if (firm.logo_url) {
+            const logoPath = path.join(LOGOS_DIR, path.basename(firm.logo_url));
+            if (fs.existsSync(logoPath)) {
+                fs.unlinkSync(logoPath);
+            }
+        }
+        
+        // Update firm to remove logo URL
+        await updateWithTimeout('firms', [{
+            id: id,
+            fields: { logo_url: null }
+        }]);
+        
+        firmsCache.invalidate('all_firms');
+        
+        safeLog('info', 'Firm logo deleted', { firmId: id });
+        
+        res.json({ success: true, message: 'Logo deleted successfully' });
+    } catch (error) {
+        safeLog('error', 'Error deleting firm logo', { error: error.message, firmId: req.params.id });
+        return res.status(500).json({ 
+            error: 'Failed to delete logo',
             message: error.message 
         });
     }

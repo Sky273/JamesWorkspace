@@ -39,10 +39,16 @@ router.post('/signin', authLimiter, validateBody(signInSchema), async (req, res)
         const normalizedEmail = email.toLowerCase();
         const metadata = getRequestMetadata(req);
         
+        // Fetch user with firm logo
         const users = await selectWithTimeout('users', {
-            where: 'LOWER(email) = $1',
-            params: [normalizedEmail],
-            limit: 1
+            rawQuery: `
+                SELECT u.*, f.logo_url as firm_logo
+                FROM users u
+                LEFT JOIN firms f ON u.firm_id = f.id
+                WHERE LOWER(u.email) = $1
+                LIMIT 1
+            `,
+            rawParams: [normalizedEmail]
         });
 
         if (users.length === 0) {
@@ -100,10 +106,13 @@ router.post('/signin', authLimiter, validateBody(signInSchema), async (req, res)
             id: user.id,
             email: user.email,
             name: user.name || '',
+            jobTitle: user.job_title || '',
+            phone: user.phone || '',
             status: user.status,
             role: user.role,
             firm: user.firm_name,
             FirmName: user.firm_name,
+            FirmLogo: user.firm_logo || '',
             // Backward compatibility
             customer: user.firm_name,
             CustomerName: user.firm_name,
@@ -329,21 +338,36 @@ router.post('/logout', authenticateToken, logoutHandler);
 // GET /api/auth/me - Get current user
 router.get('/me', authenticateToken, async (req, res) => {
     try {
-        const user = await findWithTimeout('users', req.user.id);
+        // Fetch user with firm logo
+        const users = await selectWithTimeout('users', {
+            rawQuery: `
+                SELECT u.*, f.logo_url as firm_logo
+                FROM users u
+                LEFT JOIN firms f ON u.firm_id = f.id
+                WHERE u.id = $1
+                LIMIT 1
+            `,
+            rawParams: [req.user.id]
+        });
         
-        if (!user) {
+        if (users.length === 0) {
             return res.status(404).json({ error: 'User not found' });
         }
+
+        const user = users[0];
 
         res.json({
             user: {
                 id: user.id,
                 email: user.email,
                 name: user.name,
+                jobTitle: user.job_title || '',
+                phone: user.phone || '',
                 role: user.role,
                 status: user.status,
                 firm: user.firm_name,
                 FirmName: user.firm_name,
+                FirmLogo: user.firm_logo || '',
                 // Backward compatibility
                 customer: user.firm_name,
                 CustomerName: user.firm_name,
@@ -362,7 +386,7 @@ router.get('/me', authenticateToken, async (req, res) => {
 // POST /api/auth/users - Create user (admin only)
 router.post('/users', authenticateToken, requireAdmin, validateBody(createUserSchema), async (req, res) => {
     try {
-        const { email, password, name, status, firm, FirmName, customer, CustomerName, role } = req.body;
+        const { email, password, name, jobTitle, phone, status, firm, FirmName, customer, CustomerName, role } = req.body;
         const normalizedEmail = email.toLowerCase();
         const metadata = getRequestMetadata(req);
 
@@ -387,6 +411,8 @@ router.post('/users', authenticateToken, requireAdmin, validateBody(createUserSc
             email: normalizedEmail,
             password: hashedPassword,
             name: name,
+            job_title: jobTitle || null,
+            phone: phone || null,
             role: validRole,
             status: (status || 'active').toLowerCase()
         };
@@ -446,16 +472,36 @@ router.put('/users/:id', authenticateToken, requireAdmin, validateParams('id'), 
         const { id } = req.params;
         const updateData = {};
 
+        // Fetch current user to compare values
+        const currentUsers = await selectWithTimeout('users', {
+            where: 'id = $1',
+            params: [id],
+            limit: 1
+        });
+        
+        if (currentUsers.length === 0) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        const currentUser = currentUsers[0];
+
         // Handle both lowercase and capitalized field names from frontend
         const name = req.body.name || req.body.Name;
         const email = req.body.email || req.body.Email;
         const status = req.body.status || req.body.Status;
         const role = req.body.role || req.body.Role;
+        const jobTitle = req.body.jobTitle || req.body.job_title;
+        const phone = req.body.phone;
 
-        if (name) updateData.name = name;
-        if (email) updateData.email = email.toLowerCase();
+        if (name && name !== currentUser.name) updateData.name = name;
+        // Only update email if it actually changed (avoid unique constraint error)
+        if (email && email.toLowerCase() !== currentUser.email.toLowerCase()) {
+            updateData.email = email.toLowerCase();
+        }
         if (status) updateData.status = status.toLowerCase();
         if (role) updateData.role = role.toLowerCase();
+        if (jobTitle !== undefined) updateData.job_title = jobTitle || null;
+        if (phone !== undefined) updateData.phone = phone || null;
         if (req.body.password) {
             updateData.password = await bcrypt.hash(req.body.password, SALT_ROUNDS);
         }
