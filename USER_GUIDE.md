@@ -8,16 +8,18 @@
 4. [Missions](#missions)
 5. [Matching Profils](#matching-profils)
 6. [Adaptations de CV](#adaptations-de-cv)
-7. [Radar Marché](#radar-marché)
-8. [Assistant IA](#assistant-ia)
-9. [Administration](#administration)
-10. [Interface et Navigation](#interface-et-navigation)
-11. [Bonnes Pratiques](#bonnes-pratiques)
-12. [Dépannage](#dépannage)
-13. [FAQ](#faq)
-14. [Prochaines Étapes](#prochaines-étapes)
-15. [Glossaire](#glossaire)
-16. [Support](#support)
+7. [Clients & Prospects](#clients--prospects)
+8. [Envoi de CV par Email](#envoi-de-cv-par-email)
+9. [Radar Marché](#radar-marché)
+10. [Assistant IA](#assistant-ia)
+11. [Administration](#administration)
+12. [Interface et Navigation](#interface-et-navigation)
+13. [Bonnes Pratiques](#bonnes-pratiques)
+14. [Dépannage](#dépannage)
+15. [FAQ](#faq)
+16. [Prochaines Étapes](#prochaines-étapes)
+17. [Glossaire](#glossaire)
+18. [Support](#support)
 
 ---
 
@@ -425,6 +427,245 @@ L'IA effectue une analyse en plusieurs étapes :
 
 ---
 
+## Clients & Prospects
+
+### Qu'est-ce que la Gestion Clients & Prospects ?
+
+La fonctionnalité **Clients & Prospects** permet de gérer votre portefeuille commercial : entreprises clientes, prospects, et leurs contacts. Ces informations sont utilisées pour le suivi des envois de CV et la personnalisation des emails.
+
+### Accéder à la Gestion Clients & Prospects
+
+1. Accédez à **"Clients & Prospects"** dans le menu latéral
+2. Visualisez la liste de vos clients et prospects avec leurs contacts
+
+### Types d'Entreprises
+
+| Type | Description | Icône |
+|------|-------------|-------|
+| **Client** | Entreprise avec laquelle vous avez une relation commerciale établie | Bleu |
+| **Prospect** | Entreprise potentielle, en cours de prospection | Orange |
+
+### Créer un Client ou Prospect
+
+1. Cliquez sur **"Ajouter un client/prospect"**
+2. Remplissez le formulaire :
+
+| Champ | Description | Obligatoire |
+|-------|-------------|-------------|
+| **Nom** | Nom de l'entreprise | Oui |
+| **Type** | Client ou Prospect | Oui |
+| **Secteur** | Secteur d'activité (Banque, Santé, etc.) | Non |
+
+3. Cliquez sur **"Enregistrer"**
+
+### Gérer les Contacts
+
+Chaque client/prospect peut avoir plusieurs contacts (interlocuteurs).
+
+#### Ajouter un Contact
+
+1. Ouvrez la fiche d'un client/prospect
+2. Dans la section **"Contacts"**, cliquez sur **"Ajouter un contact"**
+3. Remplissez les informations :
+
+| Champ | Description | Obligatoire |
+|-------|-------------|-------------|
+| **Nom** | Nom complet du contact | Oui |
+| **Email** | Adresse email professionnelle | Oui |
+| **Fonction** | Poste occupé (DRH, Manager, etc.) | Non |
+| **Téléphone** | Numéro de téléphone | Non |
+
+#### Modifier ou Supprimer un Contact
+
+- Cliquez sur l'icône **crayon** pour modifier
+- Cliquez sur l'icône **corbeille** pour supprimer
+
+### Historique des Envois
+
+Pour chaque client/prospect, vous pouvez consulter l'historique des CV envoyés :
+
+1. Ouvrez la fiche du client/prospect
+2. Consultez la section **"Envois"**
+3. Visualisez les CV envoyés avec la date, le contact destinataire et le statut
+
+### Bonnes Pratiques
+
+- **Qualifiez vos contacts** : Renseignez la fonction pour personnaliser vos emails
+- **Mettez à jour régulièrement** : Supprimez les contacts obsolètes
+- **Convertissez vos prospects** : Changez le type en "Client" après signature
+
+---
+
+## Envoi de CV par Email
+
+### Présentation
+
+La fonctionnalité d'**envoi de CV par email** permet de créer des brouillons d'email professionnels directement depuis l'application, avec le CV en pièce jointe. Les emails sont personnalisés grâce à des templates et des mots-clés dynamiques.
+
+### Prérequis
+
+1. **Connexion Gmail** : Connectez votre compte Gmail pour créer des brouillons
+2. **Client/Prospect** : Créez au moins un client ou prospect avec un contact
+3. **Template email** : Un template par défaut est disponible, ou créez le vôtre
+
+### Connecter Gmail
+
+1. Ouvrez un CV dans la CVthèque
+2. Cliquez sur **"Envoyer par email"**
+3. Cliquez sur **"Connecter Gmail"**
+4. Autorisez l'application à accéder à votre compte Gmail
+5. Une fois connecté, votre adresse email s'affiche
+
+### Envoyer un CV
+
+#### Étape 1 : Ouvrir le Modal d'Envoi
+
+1. Ouvrez un CV (onglet Amélioré)
+2. Cliquez sur le bouton **"Envoyer par email"** (icône enveloppe)
+
+#### Étape 2 : Sélectionner le Destinataire
+
+1. Choisissez un **Client ou Prospect** dans la liste déroulante
+2. Sélectionnez un **Contact** parmi ceux associés au client
+3. L'adresse email du contact s'affiche automatiquement
+
+#### Étape 3 : Choisir le Template
+
+1. Sélectionnez un **template d'email** dans la liste
+2. Cliquez sur **"Prévisualiser"** pour voir le rendu avec vos données
+3. Le sujet et le corps de l'email sont générés automatiquement
+
+#### Étape 4 : Créer le Brouillon
+
+1. Vérifiez les informations
+2. Cliquez sur **"Créer le brouillon"**
+3. Le brouillon est créé dans votre boîte Gmail
+4. Ouvrez Gmail pour relire et envoyer l'email
+
+### Templates Email
+
+#### Qu'est-ce qu'un Template ?
+
+Un **template email** est un modèle de message pré-formaté avec des mots-clés dynamiques qui sont remplacés automatiquement par les vraies valeurs lors de l'envoi.
+
+#### Mots-clés Disponibles
+
+| Catégorie | Mot-clé | Description |
+|-----------|---------|-------------|
+| **Client** | `{{client.name}}` | Nom du client/prospect |
+| **Client** | `{{client.type}}` | Type (Client ou Prospect) |
+| **Contact** | `{{contact.name}}` | Nom complet du contact |
+| **Contact** | `{{contact.firstName}}` | Prénom du contact |
+| **Contact** | `{{contact.role}}` | Fonction du contact |
+| **CV** | `{{resume.name}}` | Nom du candidat |
+| **CV** | `{{resume.title}}` | Titre du poste du candidat |
+| **CV** | `{{resume.version}}` | Numéro de version du CV |
+| **Cabinet** | `{{firm.name}}` | Nom de votre cabinet |
+| **Cabinet** | `{{firm.logo}}` | Logo de votre cabinet |
+| **Utilisateur** | `{{user.name}}` | Votre nom |
+| **Utilisateur** | `{{user.email}}` | Votre email |
+| **Utilisateur** | `{{user.jobTitle}}` | Votre fonction |
+| **Utilisateur** | `{{user.phone}}` | Votre téléphone |
+| **Date** | `{{date.today}}` | Date du jour (format court) |
+| **Date** | `{{date.todayLong}}` | Date du jour (format long) |
+
+#### Exemple de Template
+
+**Sujet** : `Candidature - {{client.name}} - {{resume.title}}`
+
+**Corps** :
+```
+Bonjour {{contact.firstName}},
+
+Je me permets de vous adresser le profil de {{resume.name}}, {{resume.title}}, qui pourrait correspondre aux besoins de {{client.name}}.
+
+Vous trouverez son CV en pièce jointe (version {{resume.version}}).
+
+Je reste à votre entière disposition pour organiser un échange ou vous fournir des informations complémentaires.
+
+Cordialement,
+
+{{user.name}}
+{{user.jobTitle}}
+{{user.email}}
+{{user.phone}}
+
+{{date.todayLong}}
+```
+
+### Gérer les Templates (Admin)
+
+Les administrateurs peuvent créer et gérer les templates email.
+
+#### Accéder à la Gestion des Templates
+
+1. Accédez à **"Templates Email"** dans le menu admin
+2. Visualisez la liste des templates existants
+
+#### Créer un Template
+
+1. Cliquez sur **"Nouveau template"**
+2. Remplissez le formulaire :
+
+| Champ | Description |
+|-------|-------------|
+| **Nom** | Nom du template (ex: "Candidature standard") |
+| **Sujet** | Objet de l'email avec mots-clés |
+| **Contenu** | Corps de l'email avec blocs visuels |
+
+#### Éditeur Visuel de Templates
+
+L'éditeur propose des **blocs** pour structurer votre email :
+
+| Bloc | Description | Utilisation |
+|------|-------------|-------------|
+| **Logo** | Logo de votre cabinet | En-tête de l'email |
+| **En-tête** | Titre ou nom du cabinet | Identification |
+| **Paragraphe** | Texte libre | Corps du message |
+| **Signature** | Bloc de signature | Coordonnées de l'expéditeur |
+| **Pied de page** | Informations complémentaires | Date, mentions légales |
+
+#### Insérer des Mots-clés
+
+1. Placez le curseur dans un bloc de texte
+2. Cliquez sur l'icône **"Tag"** (étiquette)
+3. Sélectionnez la catégorie (Client, Contact, CV, etc.)
+4. Cliquez sur le mot-clé souhaité
+5. Le mot-clé est inséré à la position du curseur
+
+#### Retours à la Ligne
+
+Pour ajouter des retours à la ligne dans un bloc (notamment la signature), appuyez simplement sur **Entrée** dans le textarea. Les sauts de ligne sont automatiquement convertis en `<br>` dans l'email HTML.
+
+#### Prévisualiser un Template
+
+1. Cliquez sur **"Prévisualiser"**
+2. Le rendu HTML s'affiche avec des données d'exemple
+3. Vérifiez la mise en forme et les substitutions
+
+### Suivi des Envois
+
+Chaque envoi de CV est enregistré dans l'historique :
+
+- **CV envoyé** : Référence du CV
+- **Destinataire** : Client/prospect et contact
+- **Date** : Date et heure de l'envoi
+- **Template** : Template utilisé
+- **Statut** : Brouillon créé, envoyé, etc.
+
+Consultez l'historique depuis :
+- La fiche du CV (section "Envois")
+- La fiche du client/prospect (section "Envois")
+
+### Bonnes Pratiques
+
+1. **Personnalisez vos templates** : Adaptez le ton à votre image
+2. **Renseignez votre profil** : Fonction et téléphone pour une signature complète
+3. **Vérifiez avant envoi** : Relisez toujours le brouillon dans Gmail
+4. **Utilisez les bons mots-clés** : Évitez les mots-clés non renseignés (affichage vide)
+
+---
+
 ## Radar Marché
 
 ### Qu'est-ce que le Radar Marché ?
@@ -559,7 +800,20 @@ L'assistant est conçu pour répondre aux questions sur **ResumeConverter** uniq
 
 1. Accédez à **"Utilisateurs"** dans le menu admin
 2. Cliquez sur **"Nouvel utilisateur"**
-3. Remplissez : nom, email, mot de passe, rôle, client
+3. Remplissez le formulaire :
+
+| Champ | Description | Obligatoire |
+|-------|-------------|-------------|
+| **Nom** | Nom complet de l'utilisateur | Oui |
+| **Email** | Adresse email (identifiant de connexion) | Oui |
+| **Mot de passe** | Mot de passe (min. 8 caractères) | Oui |
+| **Fonction** | Poste occupé (ex: Consultant, Manager) | Non |
+| **Téléphone** | Numéro de téléphone professionnel | Non |
+| **Cabinet** | Cabinet de rattachement | Non |
+| **Rôle** | User ou Admin | Oui |
+| **Statut** | Actif, Inactif ou En attente | Oui |
+
+**Note** : Les champs **Fonction** et **Téléphone** sont utilisés dans les templates email pour personnaliser la signature de l'utilisateur.
 
 #### Rôles et Permissions
 
@@ -567,6 +821,53 @@ L'assistant est conçu pour répondre aux questions sur **ResumeConverter** uniq
 |------|-------------|
 | **User** | Gérer ses CV, missions, adaptations |
 | **Admin** | Toutes les permissions + gestion utilisateurs, modèles, paramètres |
+
+### Gestion des Cabinets
+
+Les cabinets représentent les entreprises utilisatrices de l'application.
+
+#### Créer un Cabinet
+
+1. Accédez à **"Utilisateurs"** dans le menu admin
+2. Dans l'onglet **"Cabinets"**, cliquez sur **"Ajouter un cabinet"**
+3. Remplissez le nom du cabinet
+4. Cliquez sur **"Enregistrer"**
+
+#### Ajouter un Logo
+
+Chaque cabinet peut avoir un logo qui sera affiché dans les templates email.
+
+1. Ouvrez la fiche d'un cabinet (icône crayon)
+2. Dans la section **"Logo"**, cliquez sur **"Choisir un logo"**
+3. Sélectionnez une image (JPEG, PNG, GIF, WebP ou SVG, max 2 Mo)
+4. Le logo s'affiche en prévisualisation
+5. Cliquez sur **"Enregistrer"**
+
+**Utilisation** : Le logo est accessible via le mot-clé `{{firm.logo}}` dans les templates email.
+
+### Gestion des Templates Email
+
+Les templates email permettent de standardiser les communications avec les clients.
+
+#### Accéder aux Templates
+
+1. Accédez à **"Templates Email"** dans le menu admin
+2. Visualisez la liste des templates par cabinet
+
+#### Créer un Template
+
+1. Cliquez sur **"Nouveau template"**
+2. Remplissez :
+   - **Nom** : Identifiant du template
+   - **Sujet** : Objet de l'email (avec mots-clés)
+   - **Contenu** : Corps de l'email via l'éditeur visuel
+
+3. Utilisez l'éditeur de blocs pour structurer le contenu
+4. Cliquez sur **"Enregistrer"**
+
+#### Template par Défaut
+
+Un template peut être défini comme **"Par défaut"** pour être pré-sélectionné lors de l'envoi d'emails.
 
 ### Gestion des Modèles de CV
 
@@ -982,6 +1283,18 @@ N'hésitez pas à contacter votre administrateur ou à utiliser l'assistant IA p
 
 **Tension** : Ratio entre offres d'emploi et demandeurs - indicateur de difficulté de recrutement.
 
+**Template Email** : Modèle de message pré-formaté avec mots-clés dynamiques pour l'envoi de CV.
+
+**MJML** : Markup language pour créer des emails HTML responsifs, utilisé par l'éditeur de templates.
+
+**Client** : Entreprise avec laquelle une relation commerciale est établie.
+
+**Prospect** : Entreprise potentielle, en cours de prospection commerciale.
+
+**Cabinet** : Entreprise utilisatrice de l'application (ESN, cabinet de recrutement).
+
+**Brouillon Gmail** : Email pré-rempli créé dans la boîte Gmail de l'utilisateur, prêt à être envoyé.
+
 ---
 
 ## Support
@@ -999,18 +1312,19 @@ N'hésitez pas à contacter votre administrateur ou à utiliser l'assistant IA p
 
 ---
 
-**Dernière mise à jour** : Version 1.5.5 - Février 2026
+**Dernière mise à jour** : Version 1.6.0 - Février 2026
 
 **Nouveautés récentes** :
-- **Matching Profils amélioré** : Utilisation des tags nettoyés, affichage de tous les profils triés par pertinence
-- **Analyse CV objective** : Suppression du biais favorisant les CV améliorés
-- **Affichage HTML** : CV améliorés affichés en HTML dans les onglets Export et Comparer
-- **Radar Marché complet** : Carte France interactive, tendances, métiers, données on-demand
-- **Gestion des Tags** : Nettoyage IA et mapping ESCO pour standardisation
-- **Référentiel ROME 4.0** : Intégration des métiers France Travail
+- **Templates Email MJML** : Éditeur visuel de templates avec blocs (Logo, En-tête, Paragraphe, Signature, Pied de page)
+- **Gestion Clients & Prospects** : Portefeuille commercial avec contacts et historique des envois
+- **Envoi de CV par Email** : Création de brouillons Gmail avec CV en pièce jointe et templates personnalisés
+- **Logo Cabinet** : Upload et affichage du logo dans les templates email
+- **Profils Utilisateurs Enrichis** : Champs Fonction et Téléphone pour personnaliser les signatures
+- **Mots-clés Email Étendus** : `{{user.email}}`, `{{user.jobTitle}}`, `{{user.phone}}`
 
 **Versions précédentes** :
-- v1.5.x : Migration PostgreSQL, sécurité renforcée, logs de sécurité, statuts traduits
+- v1.5.x : Migration PostgreSQL, sécurité renforcée, logs de sécurité, Swagger/OpenAPI, prompts LLM améliorés
+- v1.4.x : Radar Marché complet, gestion des Tags, référentiel ROME 4.0
 - v1.3.0 : Mode CV anonyme avec trigramme, overlay de progression
 - v1.2.x : Matching profils, Radar Marché France, navigation par URL
 

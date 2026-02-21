@@ -4,15 +4,18 @@
  */
 
 import { useState, useEffect } from 'react';
+import type * as PDFJS from 'pdfjs-dist';
 
-let pdfjsModule = null;
-let loadingPromise = null;
+type PDFJSModule = typeof PDFJS;
+
+let pdfjsModule: PDFJSModule | null = null;
+let loadingPromise: Promise<PDFJSModule> | null = null;
 
 /**
  * Dynamically load PDF.js
- * @returns {Promise<Object>} The pdfjs module
+ * @returns The pdfjs module
  */
-export async function loadPdfjs() {
+export async function loadPdfjs(): Promise<PDFJSModule> {
     // Return existing promise if already loading
     if (loadingPromise) {
         return loadingPromise;
@@ -44,28 +47,31 @@ export async function loadPdfjs() {
 
 /**
  * Check if PDF.js is loaded
- * @returns {boolean}
  */
-export function isPdfjsLoaded() {
+export function isPdfjsLoaded(): boolean {
     return pdfjsModule !== null;
 }
 
 /**
  * Get the loaded PDF.js module (returns null if not loaded)
- * @returns {Object|null}
  */
-export function getPdfjs() {
+export function getPdfjs(): PDFJSModule | null {
     return pdfjsModule;
+}
+
+interface UsePdfjsLoaderResult {
+    pdfjs: PDFJSModule | null;
+    isLoaded: boolean;
+    error: Error | null;
 }
 
 /**
  * Hook for React components to use PDF.js with lazy loading
- * @returns {{ pdfjs: Object|null, isLoaded: boolean, error: Error|null }}
  */
-export function usePdfjsLoader() {
-    const [pdfjs, setPdfjs] = useState(null);
+export function usePdfjsLoader(): UsePdfjsLoaderResult {
+    const [pdfjs, setPdfjs] = useState<PDFJSModule | null>(null);
     const [isLoaded, setIsLoaded] = useState(false);
-    const [error, setError] = useState(null);
+    const [error, setError] = useState<Error | null>(null);
     
     useEffect(() => {
         let mounted = true;

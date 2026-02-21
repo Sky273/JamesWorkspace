@@ -4,15 +4,18 @@
  */
 
 import { useState, useEffect } from 'react';
+import type * as Tesseract from 'tesseract.js';
 
-let tesseractModule = null;
-let loadingPromise = null;
+type TesseractModule = typeof Tesseract;
+
+let tesseractModule: TesseractModule | null = null;
+let loadingPromise: Promise<TesseractModule> | null = null;
 
 /**
  * Dynamically load Tesseract.js
- * @returns {Promise<Object>} The tesseract module with createWorker function
+ * @returns The tesseract module with createWorker function
  */
-export async function loadTesseract() {
+export async function loadTesseract(): Promise<TesseractModule> {
     // Return existing promise if already loading
     if (loadingPromise) {
         return loadingPromise;
@@ -39,10 +42,10 @@ export async function loadTesseract() {
 
 /**
  * Create a Tesseract worker with lazy loading
- * @param {string} lang - Language code (default: 'eng')
- * @returns {Promise<Object>} Tesseract worker instance
+ * @param lang - Language code (default: 'eng')
+ * @returns Tesseract worker instance
  */
-export async function createLazyWorker(lang = 'eng') {
+export async function createLazyWorker(lang: string = 'eng'): Promise<Tesseract.Worker> {
     const tesseract = await loadTesseract();
     const worker = await tesseract.createWorker(lang);
     return worker;
@@ -50,20 +53,24 @@ export async function createLazyWorker(lang = 'eng') {
 
 /**
  * Check if Tesseract is loaded
- * @returns {boolean}
  */
-export function isTesseractLoaded() {
+export function isTesseractLoaded(): boolean {
     return tesseractModule !== null;
+}
+
+interface UseTesseractLoaderResult {
+    tesseract: TesseractModule | null;
+    isLoaded: boolean;
+    error: Error | null;
 }
 
 /**
  * Hook for React components to use Tesseract with lazy loading
- * @returns {{ tesseract: Object|null, isLoaded: boolean, error: Error|null }}
  */
-export function useTesseractLoader() {
-    const [tesseract, setTesseract] = useState(null);
+export function useTesseractLoader(): UseTesseractLoaderResult {
+    const [tesseract, setTesseract] = useState<TesseractModule | null>(null);
     const [isLoaded, setIsLoaded] = useState(false);
-    const [error, setError] = useState(null);
+    const [error, setError] = useState<Error | null>(null);
     
     useEffect(() => {
         let mounted = true;

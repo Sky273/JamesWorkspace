@@ -89,7 +89,8 @@ function parseMjmlToBlocks(mjml: string): EditorBlock[] {
   
   while ((match = textRegex.exec(mjml)) !== null) {
     const content = match[1]
-      .replace(/<[^>]+>/g, '') // Remove HTML tags
+      .replace(/<br\s*\/?>/gi, '\n') // Convert <br> to newlines BEFORE removing other tags
+      .replace(/<[^>]+>/g, '') // Remove other HTML tags
       .replace(/&nbsp;/g, ' ')
       .trim();
     

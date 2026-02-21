@@ -7,12 +7,40 @@
 import { fetchWithAuth, createAuthOptions, createAuthOptionsWithCsrf } from './apiInterceptor';
 import logger from './logger.frontend';
 
+export interface MailStatus {
+    connected: boolean;
+    provider?: string;
+    email?: string;
+    needsReauth?: boolean;
+}
+
+export interface CreateDraftParams {
+    to: string;
+    subject: string;
+    body?: string;
+    pdfBase64?: string;
+    pdfFilename?: string;
+    resumeId?: string;
+    clientId?: string;
+    contactId?: string;
+    missionId?: string;
+    versionNumber?: number;
+    templateId?: string;
+    templateContext?: Record<string, unknown>;
+}
+
+export interface CreateDraftResponse {
+    success: boolean;
+    draftId?: string;
+    webLink?: string;
+    submissionId?: string;
+}
+
 const mailService = {
     /**
      * Get mail connection status
-     * @returns {Promise<Object>} - { connected, provider, email, needsReauth }
      */
-    async getStatus() {
+    async getStatus(): Promise<MailStatus> {
         try {
             const response = await fetchWithAuth('/api/mail/status', createAuthOptions());
             if (!response.ok) {
@@ -28,9 +56,8 @@ const mailService = {
     /**
      * Initiate Gmail OAuth flow
      * Opens a new window for OAuth authorization
-     * @returns {Promise<void>}
      */
-    async connectGmail() {
+    async connectGmail(): Promise<void> {
         try {
             const response = await fetchWithAuth('/api/mail/auth/gmail', createAuthOptions());
             if (!response.ok) {
@@ -48,22 +75,21 @@ const mailService = {
 
     /**
      * Create email draft with PDF attachment
-     * @param {Object} params
-     * @param {string} params.to - Recipient email
-     * @param {string} params.subject - Email subject
-     * @param {string} [params.body] - Email body (optional)
-     * @param {string} [params.pdfBase64] - PDF as base64 string
-     * @param {string} [params.pdfFilename] - PDF filename
-     * @param {string} [params.resumeId] - Resume ID for submission tracking
-     * @param {string} [params.clientId] - Client ID for submission tracking
-     * @param {string} [params.contactId] - Contact ID for submission tracking
-     * @param {string} [params.missionId] - Mission ID for submission tracking (optional)
-     * @param {number} [params.versionNumber] - CV version number for submission tracking
-     * @param {string} [params.templateId] - Email template ID for rendering
-     * @param {Object} [params.templateContext] - Context data for template substitution
-     * @returns {Promise<Object>} - { success, draftId, webLink, submissionId }
      */
-    async createDraft({ to, subject, body, pdfBase64, pdfFilename, resumeId, clientId, contactId, missionId, versionNumber, templateId, templateContext }) {
+    async createDraft({
+        to,
+        subject,
+        body,
+        pdfBase64,
+        pdfFilename,
+        resumeId,
+        clientId,
+        contactId,
+        missionId,
+        versionNumber,
+        templateId,
+        templateContext
+    }: CreateDraftParams): Promise<CreateDraftResponse> {
         try {
             // Debug: log all params including template (v2)
             logger.info('[mailService v2] createDraft called with ALL params', { 
@@ -115,10 +141,8 @@ const mailService = {
 
     /**
      * Disconnect mail provider
-     * @param {string} [provider='gmail']
-     * @returns {Promise<void>}
      */
-    async disconnect(provider = 'gmail') {
+    async disconnect(provider: string = 'gmail'): Promise<void> {
         try {
             const options = await createAuthOptionsWithCsrf({
                 method: 'DELETE'

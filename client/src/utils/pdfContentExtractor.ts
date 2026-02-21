@@ -5,18 +5,79 @@
 
 import logger from './logger.frontend';
 
+interface TextItem {
+    str?: string;
+    transform?: number[];
+    fontName?: string;
+    color?: string;
+    type?: string;
+    tag?: string;
+}
+
+interface TextGroup {
+    items: TextItem[];
+    position: { x: number; y: number };
+    style: {
+        fontSize?: string;
+        fontFamily?: string;
+        isBold?: boolean;
+        isItalic?: boolean;
+        color?: string;
+    };
+    isHeader: boolean;
+}
+
+interface HTMLElement {
+    html: string;
+    position: { x?: number; y?: number };
+}
+
+interface Viewport {
+    width: number;
+    height: number;
+}
+
+interface ImageData {
+    data: Uint8ClampedArray | number[];
+    width: number;
+    height: number;
+    kind?: number;
+}
+
+interface PDFPage {
+    objs: {
+        resolve: (id: string) => Promise<void>;
+        get: (id: string) => Promise<unknown>;
+    };
+    getTextContent: (options?: { normalizeWhitespace?: boolean; includeMarkedContent?: boolean }) => Promise<{ items: TextItem[] }>;
+    getOperatorList: () => Promise<{ fnArray: number[]; argsArray: unknown[][] }>;
+    getViewport: (options: { scale: number }) => Viewport;
+}
+
+interface PDFJSLib {
+    OPS: {
+        paintImageXObject: number;
+        setFont: number;
+        setFillRGBColor: number;
+    };
+}
+
 /**
  * Process text content items from PDF and convert to HTML elements
  */
-export function processTextContent(items, viewport, defaultStyle) {
+export function processTextContent(
+    items: TextItem[],
+    viewport: Viewport,
+    defaultStyle: Record<string, unknown>
+): HTMLElement[] {
     if (!Array.isArray(items)) {
         logger.warn('Invalid items array in processTextContent');
         return [];
     }
 
-    const elements = [];
-    let currentGroup = null;
-    let lastY = null;
+    const elements: HTMLElement[] = [];
+    let currentGroup: TextGroup | null = null;
+    let lastY: number | null = null;
     const yThreshold = 3;
     let inArtifact = false;
 
@@ -24,7 +85,7 @@ export function processTextContent(items, viewport, defaultStyle) {
         if (item?.type === 'beginMarkedContentProps') {
             switch (item.tag) {
                 case 'Span':
-                    if (currentGroup?.items?.length > 0) {
+                    if (currentGroup?.items?.length && currentGroup.items.length > 0) {
                         const htmlElement = convertTextGroupToHTML(currentGroup);
                         if (htmlElement) elements.push(htmlElement);
                         currentGroup = null;
@@ -60,7 +121,7 @@ export function processTextContent(items, viewport, defaultStyle) {
                 isHeader || 
                 (item.fontName && item.fontName.toLowerCase().includes('bold'))) {
                 
-                if (currentGroup?.items?.length > 0) {
+                if (currentGroup?.items?.length && currentGroup.items.length > 0) {
                     const htmlElement = convertTextGroupToHTML(currentGroup);
                     if (htmlElement) elements.push(htmlElement);
                 }
@@ -91,7 +152,7 @@ export function processTextContent(items, viewport, defaultStyle) {
         }
     });
 
-    if (currentGroup?.items?.length > 0) {
+    if (currentGroup?.items?.length && currentGroup.items.length > 0) {
         const htmlElement = convertTextGroupToHTML(currentGroup);
         if (htmlElement) elements.push(htmlElement);
     }
@@ -102,9 +163,9 @@ export function processTextContent(items, viewport, defaultStyle) {
 /**
  * Convert a text group to HTML element
  */
-export function convertTextGroupToHTML(group) {
+export function convertTextGroupToHTML(group: TextGroup): HTMLElement | null {
     try {
-        if (!group?.items?.length) return null;
+        if (!group?.items || group.items.length === 0) return null;
 
         const text = group.items
             .map(item => (item.str || '').trim())
@@ -114,7 +175,7 @@ export function convertTextGroupToHTML(group) {
 
         if (!text) return null;
 
-        const styles = [];
+        const styles: string[] = [];
         const position = group.position || { x: 0, y: 0 };
 
         if (group.style?.fontSize) styles.push(`font-size: ${group.style.fontSize}`);
@@ -127,7 +188,7 @@ export function convertTextGroupToHTML(group) {
         let html = '';
 
         if (group.isHeader) {
-            const fontSize = parseInt(group.style?.fontSize) || 16;
+            const fontSize = parseInt(group.style?.fontSize || '16') || 16;
             const level = Math.min(Math.ceil(24 / fontSize), 6);
             html = `<h${level} style="${styleStr}; margin: 0.5em 0;">${text}</h${level}>`;
         } else if (text.match(/^[•\-\d]+[\.\)]/) || text.startsWith('•')) {
@@ -146,15 +207,15 @@ export function convertTextGroupToHTML(group) {
 /**
  * Extract image from PDF page
  */
-export async function extractImage(page, imageId) {
+export async function extractImage(page: PDFPage, imageId: string): Promise<ImageData | null> {
     try {
         await page.objs.resolve(imageId);
 
-        let imageObj = null;
+        let imageObj: unknown = null;
         try {
             imageObj = await page.objs.get(imageId);
         } catch (error) {
-            logger.warn(`Failed to get image object directly: ${error.message}`);
+            logger.warn(`Failed to get image object directly: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
 
         if (!imageObj) {
@@ -175,7 +236,7 @@ export async function extractImage(page, imageId) {
                         imageObj = obj;
                         break;
                     }
-                } catch (e) {
+                } catch {
                     continue;
                 }
             }
@@ -186,34 +247,36 @@ export async function extractImage(page, imageId) {
             return null;
         }
 
-        if (imageObj instanceof ImageData) {
+        const imgObj = imageObj as Record<string, unknown>;
+
+        if (imgObj instanceof ImageData) {
             return {
-                data: imageObj.data,
-                width: imageObj.width,
-                height: imageObj.height
+                data: imgObj.data,
+                width: imgObj.width,
+                height: imgObj.height
             };
         }
 
-        if (imageObj.image) {
-            const image = imageObj.image;
+        if (imgObj.image) {
+            const image = imgObj.image as ImageData;
             return {
-                data: image.data || image.bitmap,
+                data: image.data,
                 width: image.width,
                 height: image.height,
                 kind: image.kind
             };
         }
 
-        if (imageObj.data) {
+        if (imgObj.data) {
             return {
-                data: imageObj.data,
-                width: imageObj.width,
-                height: imageObj.height,
-                kind: imageObj.kind
+                data: imgObj.data as Uint8ClampedArray,
+                width: imgObj.width as number,
+                height: imgObj.height as number,
+                kind: imgObj.kind as number
             };
         }
 
-        logger.warn('Unknown image object format:', Object.keys(imageObj));
+        logger.warn('Unknown image object format:', Object.keys(imgObj));
         return null;
     } catch (error) {
         logger.warn('Error extracting image:', error);
@@ -224,7 +287,7 @@ export async function extractImage(page, imageId) {
 /**
  * Convert image to HTML with base64 encoding
  */
-export async function convertImageToHTML(image, viewport) {
+export async function convertImageToHTML(image: ImageData, viewport: Viewport): Promise<HTMLElement | null> {
     try {
         if (!image || !image.data) return null;
 
@@ -232,32 +295,33 @@ export async function convertImageToHTML(image, viewport) {
         canvas.width = image.width;
         canvas.height = image.height;
         const ctx = canvas.getContext('2d');
+        if (!ctx) return null;
 
-        let imageData;
+        let imageData: globalThis.ImageData;
         if (image.kind === 1) { // Grayscale
             imageData = ctx.createImageData(image.width, image.height);
             for (let i = 0, j = 0; i < image.data.length; i++, j += 4) {
-                imageData.data[j] = image.data[i];
-                imageData.data[j + 1] = image.data[i];
-                imageData.data[j + 2] = image.data[i];
+                imageData.data[j] = image.data[i] as number;
+                imageData.data[j + 1] = image.data[i] as number;
+                imageData.data[j + 2] = image.data[i] as number;
                 imageData.data[j + 3] = 255;
             }
         } else if (image.kind === 2) { // RGB
             imageData = ctx.createImageData(image.width, image.height);
             for (let i = 0, j = 0; i < image.data.length; i += 3, j += 4) {
-                imageData.data[j] = image.data[i];
-                imageData.data[j + 1] = image.data[i + 1];
-                imageData.data[j + 2] = image.data[i + 2];
+                imageData.data[j] = image.data[i] as number;
+                imageData.data[j + 1] = image.data[i + 1] as number;
+                imageData.data[j + 2] = image.data[i + 2] as number;
                 imageData.data[j + 3] = 255;
             }
         } else if (image.kind === 3) { // RGBA
-            imageData = new ImageData(
+            imageData = new globalThis.ImageData(
                 new Uint8ClampedArray(image.data),
                 image.width,
                 image.height
             );
         } else {
-            imageData = new ImageData(
+            imageData = new globalThis.ImageData(
                 new Uint8ClampedArray(image.data),
                 image.width,
                 image.height
@@ -284,7 +348,7 @@ export async function convertImageToHTML(image, viewport) {
 /**
  * Extract structured content from a PDF page
  */
-export async function extractStructuredContent(page, pdfjsLib) {
+export async function extractStructuredContent(page: PDFPage, pdfjsLib: PDFJSLib): Promise<string> {
     try {
         const textContent = await page.getTextContent({
             normalizeWhitespace: true,
@@ -299,8 +363,8 @@ export async function extractStructuredContent(page, pdfjsLib) {
         const operatorList = await page.getOperatorList();
         const viewport = page.getViewport({ scale: 1.0 });
 
-        let elements = [];
-        let currentStyle = {
+        let elements: HTMLElement[] = [];
+        const currentStyle: Record<string, unknown> = {
             fontSize: null,
             fontFamily: null,
             fontWeight: 'normal',
@@ -316,7 +380,7 @@ export async function extractStructuredContent(page, pdfjsLib) {
             switch (fn) {
                 case pdfjsLib.OPS.paintImageXObject:
                     try {
-                        const imageId = args[0];
+                        const imageId = args[0] as string;
                         if (imageId) {
                             await page.objs.resolve(imageId);
                             const image = await extractImage(page, imageId);
@@ -332,19 +396,16 @@ export async function extractStructuredContent(page, pdfjsLib) {
 
                 case pdfjsLib.OPS.setFont:
                     if (args[0]) {
-                        const fontName = args[0].toLowerCase();
-                        currentStyle = {
-                            ...currentStyle,
-                            fontFamily: fontName,
-                            fontWeight: fontName.includes('bold') ? 'bold' : 'normal',
-                            fontStyle: fontName.includes('italic') ? 'italic' : 'normal'
-                        };
+                        const fontName = (args[0] as string).toLowerCase();
+                        currentStyle.fontFamily = fontName;
+                        currentStyle.fontWeight = fontName.includes('bold') ? 'bold' : 'normal';
+                        currentStyle.fontStyle = fontName.includes('italic') ? 'italic' : 'normal';
                     }
                     break;
 
                 case pdfjsLib.OPS.setFillRGBColor:
                     if (args.length >= 3) {
-                        currentStyle.color = `rgb(${Math.round(args[0] * 255)}, ${Math.round(args[1] * 255)}, ${Math.round(args[2] * 255)})`;
+                        currentStyle.color = `rgb(${Math.round((args[0] as number) * 255)}, ${Math.round((args[1] as number) * 255)}, ${Math.round((args[2] as number) * 255)})`;
                     }
                     break;
             }

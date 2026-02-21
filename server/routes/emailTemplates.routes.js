@@ -50,20 +50,27 @@ const router = express.Router();
 
 /**
  * GET /api/email-templates
- * Get all templates for the user's firm (including system templates)
+ * Get all templates for the user's firm
+ * Admin users can see system templates, regular users only see firm templates
  */
 router.get('/', authenticateToken, async (req, res) => {
     try {
         const firmId = await getFirmIdForUser(req.user);
+        const isAdmin = req.user.role === 'admin';
         
         if (!firmId) {
             safeLog('warn', 'Firm ID not found for user', { userId: req.user.id, firm: req.user.firm });
-            // Return system templates only if no firm
-            const templates = await emailTemplatesService.getTemplates(null);
-            return res.json({ templates });
+            // Only admins can see system templates when no firm is set
+            if (isAdmin) {
+                const templates = await emailTemplatesService.getTemplates(null, true);
+                return res.json({ templates });
+            }
+            // Non-admin without firm: return empty list
+            return res.json({ templates: [] });
         }
         
-        const templates = await emailTemplatesService.getTemplates(firmId);
+        // Pass isAdmin to include/exclude system templates
+        const templates = await emailTemplatesService.getTemplates(firmId, isAdmin);
         
         return res.json({ templates });
     } catch (error) {

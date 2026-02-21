@@ -6,14 +6,35 @@
 import { fetchWithAuth, createAuthOptions, createAuthOptionsWithCsrf } from './apiInterceptor';
 import logger from './logger.frontend';
 
+export interface MatchAnalysis {
+    score: number;
+    strengths: string[];
+    gaps: string[];
+    recommendations: string[];
+}
+
+export interface Adaptation {
+    id: string;
+    resumeId: string;
+    missionId: string;
+    adaptedText?: string;
+    analysis?: MatchAnalysis;
+    status?: string;
+    createdAt?: string;
+    updatedAt?: string;
+}
+
+export interface AdaptationFilters {
+    resumeId?: string;
+    missionId?: string;
+    status?: string;
+}
+
 export const resumeAdaptationService = {
     /**
      * Analyze the match between a resume and a mission
-     * @param {string} resumeId - Airtable record ID of the resume
-     * @param {string} missionId - Airtable record ID of the mission
-     * @returns {Promise<Object>} Match analysis with score, strengths, gaps, recommendations
      */
-    async analyzeMatch(resumeId, missionId) {
+    async analyzeMatch(resumeId: string, missionId: string): Promise<MatchAnalysis> {
         try {
             const authOptions = await createAuthOptionsWithCsrf({ 
                 method: 'POST',
@@ -39,11 +60,8 @@ export const resumeAdaptationService = {
 
     /**
      * Create an adaptation of a resume for a specific mission
-     * @param {string} resumeId - Airtable record ID of the resume
-     * @param {string} missionId - Airtable record ID of the mission
-     * @returns {Promise<Object>} Created adaptation with adapted text and analysis
      */
-    async createAdaptation(resumeId, missionId) {
+    async createAdaptation(resumeId: string, missionId: string): Promise<Adaptation> {
         try {
             const authOptions = await createAuthOptionsWithCsrf({ 
                 method: 'POST',
@@ -71,10 +89,8 @@ export const resumeAdaptationService = {
 
     /**
      * Get all adaptations (with optional filters)
-     * @param {Object} filters - Optional filters (resumeId, missionId, status)
-     * @returns {Promise<Array>} List of adaptations
      */
-    async getAllAdaptations(filters = {}) {
+    async getAllAdaptations(filters: AdaptationFilters = {}): Promise<Adaptation[]> {
         try {
             const queryParams = new URLSearchParams();
             if (filters.resumeId) queryParams.append('resumeId', filters.resumeId);
@@ -89,7 +105,7 @@ export const resumeAdaptationService = {
                 try {
                     const errorData = await response.json();
                     errorMessage = errorData.error || errorMessage;
-                } catch (parseError) {
+                } catch {
                     // Response body might be empty or not JSON
                     errorMessage = `HTTP ${response.status}: ${response.statusText || errorMessage}`;
                 }
@@ -105,10 +121,8 @@ export const resumeAdaptationService = {
 
     /**
      * Get a specific adaptation by ID
-     * @param {string} adaptationId - Airtable record ID of the adaptation
-     * @returns {Promise<Object>} Adaptation details
      */
-    async getAdaptation(adaptationId) {
+    async getAdaptation(adaptationId: string): Promise<Adaptation> {
         try {
             const response = await fetchWithAuth(
                 `/api/adaptations/${adaptationId}`,
@@ -120,7 +134,7 @@ export const resumeAdaptationService = {
                 try {
                     const errorData = await response.json();
                     errorMessage = errorData.error || errorMessage;
-                } catch (parseError) {
+                } catch {
                     errorMessage = `HTTP ${response.status}: ${response.statusText || errorMessage}`;
                 }
                 throw new Error(errorMessage);
@@ -135,10 +149,8 @@ export const resumeAdaptationService = {
 
     /**
      * Get all adaptations for a specific resume
-     * @param {string} resumeId - Airtable record ID of the resume
-     * @returns {Promise<Array>} List of adaptations for this resume
      */
-    async getAdaptationsByResume(resumeId) {
+    async getAdaptationsByResume(resumeId: string): Promise<Adaptation[]> {
         try {
             const response = await fetchWithAuth(
                 `/api/resumes/${resumeId}/adaptations`,
@@ -150,7 +162,7 @@ export const resumeAdaptationService = {
                 try {
                     const errorData = await response.json();
                     errorMessage = errorData.error || errorMessage;
-                } catch (parseError) {
+                } catch {
                     errorMessage = `HTTP ${response.status}: ${response.statusText || errorMessage}`;
                 }
                 throw new Error(errorMessage);
@@ -165,10 +177,8 @@ export const resumeAdaptationService = {
 
     /**
      * Get all adaptations for a specific mission
-     * @param {string} missionId - Airtable record ID of the mission
-     * @returns {Promise<Array>} List of adaptations for this mission
      */
-    async getAdaptationsByMission(missionId) {
+    async getAdaptationsByMission(missionId: string): Promise<Adaptation[]> {
         try {
             const response = await fetchWithAuth(
                 `/api/missions/${missionId}/adaptations`,
@@ -189,10 +199,8 @@ export const resumeAdaptationService = {
 
     /**
      * Delete an adaptation
-     * @param {string} adaptationId - Airtable record ID of the adaptation
-     * @returns {Promise<Object>} Deletion confirmation
      */
-    async deleteAdaptation(adaptationId) {
+    async deleteAdaptation(adaptationId: string): Promise<{ success: boolean }> {
         try {
             const authOptions = await createAuthOptionsWithCsrf({ method: 'DELETE' });
             const response = await fetchWithAuth(

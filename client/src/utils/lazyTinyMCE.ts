@@ -6,13 +6,13 @@
 import { useState, useEffect } from 'react';
 
 let tinymceLoaded = false;
-let loadingPromise = null;
+let loadingPromise: Promise<void> | null = null;
 
 /**
  * Dynamically load TinyMCE and all required plugins
- * @returns {Promise<void>} Resolves when TinyMCE is fully loaded
+ * @returns Resolves when TinyMCE is fully loaded
  */
-export async function loadTinyMCE() {
+export async function loadTinyMCE(): Promise<void> {
     // Return existing promise if already loading
     if (loadingPromise) {
         return loadingPromise;
@@ -71,19 +71,23 @@ export async function loadTinyMCE() {
 
 /**
  * Check if TinyMCE is loaded
- * @returns {boolean}
  */
-export function isTinyMCELoaded() {
+export function isTinyMCELoaded(): boolean {
     return tinymceLoaded;
+}
+
+interface UseTinyMCELoaderResult {
+    isLoaded: boolean;
+    error: Error | null;
 }
 
 /**
  * Hook for React components to use TinyMCE with lazy loading
  * Usage: const { isLoaded, error } = useTinyMCE();
  */
-export function useTinyMCELoader() {
+export function useTinyMCELoader(): UseTinyMCELoaderResult {
     const [isLoaded, setIsLoaded] = useState(false);
-    const [error, setError] = useState(null);
+    const [error, setError] = useState<Error | null>(null);
     
     useEffect(() => {
         let mounted = true;
@@ -101,4 +105,3 @@ export function useTinyMCELoader() {
     
     return { isLoaded, error };
 }
-

@@ -28,20 +28,40 @@ export const TEMPLATE_KEYWORDS = {
 };
 
 /**
- * Get all templates for a firm (including system templates)
+ * Get all templates for a firm
  * @param {string} firmId - Firm ID
+ * @param {boolean} includeSystemTemplates - Whether to include system templates (admin only)
  * @returns {Promise<Array>}
  */
-export async function getTemplates(firmId) {
-    const result = await query(`
-        SELECT id, firm_id, name, description, subject_template, 
-               is_system, is_default, status, created_at, updated_at
-        FROM email_templates
-        WHERE (firm_id = $1 OR firm_id IS NULL)
-          AND status = 'active'
-        ORDER BY is_system DESC, is_default DESC, name ASC
-    `, [firmId]);
+export async function getTemplates(firmId, includeSystemTemplates = false) {
+    let sql;
+    let params;
     
+    if (includeSystemTemplates) {
+        // Admin: include firm templates AND system templates (firm_id IS NULL)
+        sql = `
+            SELECT id, firm_id, name, description, subject_template, 
+                   is_system, is_default, status, created_at, updated_at
+            FROM email_templates
+            WHERE (firm_id = $1 OR firm_id IS NULL)
+              AND status = 'active'
+            ORDER BY is_system DESC, is_default DESC, name ASC
+        `;
+        params = [firmId];
+    } else {
+        // Non-admin: only firm templates (exclude system templates without firm_id)
+        sql = `
+            SELECT id, firm_id, name, description, subject_template, 
+                   is_system, is_default, status, created_at, updated_at
+            FROM email_templates
+            WHERE firm_id = $1
+              AND status = 'active'
+            ORDER BY is_default DESC, name ASC
+        `;
+        params = [firmId];
+    }
+    
+    const result = await query(sql, params);
     return result.rows;
 }
 
