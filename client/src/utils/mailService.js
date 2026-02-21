@@ -53,10 +53,21 @@ const mailService = {
      * @param {string} [params.body] - Email body (optional)
      * @param {string} [params.pdfBase64] - PDF as base64 string
      * @param {string} [params.pdfFilename] - PDF filename
-     * @returns {Promise<Object>} - { success, draftId, webLink }
+     * @param {string} [params.resumeId] - Resume ID for submission tracking
+     * @param {string} [params.clientId] - Client ID for submission tracking
+     * @param {string} [params.contactId] - Contact ID for submission tracking
+     * @param {string} [params.missionId] - Mission ID for submission tracking (optional)
+     * @returns {Promise<Object>} - { success, draftId, webLink, submissionId }
      */
-    async createDraft({ to, subject, body, pdfBase64, pdfFilename }) {
+    async createDraft({ to, subject, body, pdfBase64, pdfFilename, resumeId, clientId, contactId, missionId }) {
         try {
+            // Debug: log submission tracking values
+            logger.info('[mailService] createDraft called with submission tracking', { 
+                resumeId: resumeId || 'MISSING', 
+                clientId: clientId || 'MISSING', 
+                contactId: contactId || 'MISSING' 
+            });
+            
             const options = await createAuthOptionsWithCsrf({
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -65,7 +76,12 @@ const mailService = {
                     subject,
                     body: body || '',
                     pdfBase64,
-                    pdfFilename
+                    pdfFilename,
+                    // Submission tracking
+                    resumeId,
+                    clientId,
+                    contactId,
+                    missionId
                 })
             });
 

@@ -182,14 +182,24 @@ const SendEmailModal = ({ isOpen, onClose, resumeName, resumeId, onGeneratePdf }
         reader.readAsDataURL(pdfBlob);
       });
 
-      // Create draft
-      const result = await mailService.createDraft({
+      // Create draft with submission tracking
+      logger.info('Creating draft with submission tracking', { resumeId, clientId: selectedClientId, contactId: selectedContactId });
+      
+      // Build draft params with submission tracking
+      const draftParams: Record<string, unknown> = {
         to: selectedContact.email,
         subject: resumeName,
         body: '',
         pdfBase64,
-        pdfFilename: `${resumeName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`
-      }) as DraftResult;
+        pdfFilename: `${resumeName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`,
+        resumeId,
+        clientId: selectedClientId,
+        contactId: selectedContactId
+      };
+      
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const result = await mailService.createDraft(draftParams as any) as DraftResult;
+      logger.info('Draft created, result:', result);
 
       setDraftLink(result.webLink);
       setStep('success');

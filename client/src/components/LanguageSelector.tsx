@@ -23,8 +23,8 @@ interface Language {
 // ============================================
 
 const languages: Language[] = [
-  { code: 'en', label: 'English', flag: '🇬🇧' },
-  { code: 'fr', label: 'Français', flag: '🇫🇷' },
+  { code: 'fr', label: 'Français', flag: '��' },
+  { code: 'en', label: 'English', flag: '��' },
 ];
 
 // ============================================

@@ -1,580 +1,710 @@
--- ============================================
--- ResumeConverter PostgreSQL Database Schema
--- Migration from Airtable to PostgreSQL
--- ============================================
+-- =============================================================================
+-- ResumeConverter - Database Schema Initialization for Docker
+-- Generated from production schema export
+-- =============================================================================
 
--- NOTE: Create the database manually before running this script:
--- CREATE DATABASE resumeconverter WITH ENCODING = 'UTF8';
--- Then connect to it and run this script.
+-- Extensions
+CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA public;
 
--- Alternatively, if running with superuser privileges:
--- DROP DATABASE IF EXISTS resumeconverter;
--- CREATE DATABASE resumeconverter WITH ENCODING = 'UTF8' LC_COLLATE = 'en_US.UTF-8' LC_CTYPE = 'en_US.UTF-8' TEMPLATE = template0;
--- Then connect: psql -U postgres -d resumeconverter -f init_postgresql.sql
+-- =============================================================================
+-- FUNCTIONS
+-- =============================================================================
 
--- Enable UUID extension for generating unique IDs
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
--- Enable pg_trgm for fuzzy text search
-CREATE EXTENSION IF NOT EXISTS pg_trgm;
-
--- ============================================
--- DROP EXISTING OBJECTS (for idempotent script)
--- ============================================
-
--- Drop views first (depend on tables)
-DROP VIEW IF EXISTS v_adaptations_full CASCADE;
-DROP VIEW IF EXISTS v_active_missions CASCADE;
-DROP VIEW IF EXISTS v_active_resumes CASCADE;
-
--- Drop triggers (depend on function)
-DROP TRIGGER IF EXISTS update_market_trends_updated_at ON market_trends;
-DROP TRIGGER IF EXISTS update_market_facts_updated_at ON market_facts;
-DROP TRIGGER IF EXISTS update_rome_metiers_updated_at ON rome_metiers;
-DROP TRIGGER IF EXISTS update_resume_adaptations_updated_at ON resume_adaptations;
-DROP TRIGGER IF EXISTS update_missions_updated_at ON missions;
-DROP TRIGGER IF EXISTS update_resumes_updated_at ON resumes;
-DROP TRIGGER IF EXISTS update_templates_updated_at ON templates;
-DROP TRIGGER IF EXISTS update_llm_settings_updated_at ON llm_settings;
-DROP TRIGGER IF EXISTS update_users_updated_at ON users;
-DROP TRIGGER IF EXISTS update_customers_updated_at ON customers;
-
--- Drop function
-DROP FUNCTION IF EXISTS update_updated_at_column() CASCADE;
-
--- Drop tables in reverse order of dependencies (child tables first)
-DROP TABLE IF EXISTS resume_adaptations CASCADE;
-DROP TABLE IF EXISTS market_trends CASCADE;
-DROP TABLE IF EXISTS market_facts CASCADE;
-DROP TABLE IF EXISTS industry_aliases CASCADE;
-DROP TABLE IF EXISTS rome_metiers CASCADE;
-DROP TABLE IF EXISTS missions CASCADE;
-DROP TABLE IF EXISTS resumes CASCADE;
-DROP TABLE IF EXISTS templates CASCADE;
-DROP TABLE IF EXISTS llm_settings CASCADE;
-DROP TABLE IF EXISTS users CASCADE;
-DROP TABLE IF EXISTS customers CASCADE;
-
--- ============================================
--- TABLE: customers
--- Stores customer/organization information
--- ============================================
-CREATE TABLE customers (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name VARCHAR(255) NOT NULL UNIQUE,
-    status VARCHAR(50) DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX idx_customers_name ON customers(name);
-CREATE INDEX idx_customers_status ON customers(status);
-
--- ============================================
--- TABLE: users
--- Stores user accounts with authentication
--- ============================================
-CREATE TABLE users (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    email VARCHAR(255) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL,
-    name VARCHAR(255) NOT NULL,
-    role VARCHAR(50) NOT NULL DEFAULT 'user' CHECK (role IN ('admin', 'user')),
-    status VARCHAR(50) DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
-    customer_id UUID REFERENCES customers(id) ON DELETE SET NULL,
-    customer_name VARCHAR(255), -- Denormalized for quick access
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    last_login TIMESTAMP WITH TIME ZONE
-);
-
-CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_users_customer_id ON users(customer_id);
-CREATE INDEX idx_users_role ON users(role);
-CREATE INDEX idx_users_status ON users(status);
-
--- ============================================
--- TABLE: llm_settings
--- Stores LLM configuration and prompts
--- ============================================
-CREATE TABLE llm_settings (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name VARCHAR(255) NOT NULL UNIQUE,
-    provider VARCHAR(50) NOT NULL CHECK (provider IN ('openai', 'anthropic')),
-    model VARCHAR(100) NOT NULL,
-    temperature DECIMAL(3,2) DEFAULT 0.7 CHECK (temperature >= 0 AND temperature <= 2),
-    max_tokens INTEGER DEFAULT 4000,
-    system_prompt TEXT,
-    user_prompt_template TEXT,
-    status VARCHAR(50) DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
-    use_case VARCHAR(100), -- 'analysis', 'improvement', 'adaptation', etc.
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX idx_llm_settings_name ON llm_settings(name);
-CREATE INDEX idx_llm_settings_use_case ON llm_settings(use_case);
-CREATE INDEX idx_llm_settings_status ON llm_settings(status);
-
--- ============================================
--- TABLE: templates
--- Stores resume templates with HTML/CSS
--- ============================================
-CREATE TABLE templates (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name VARCHAR(255) NOT NULL UNIQUE,
-    description TEXT,
-    popular BOOLEAN DEFAULT false,
-    status VARCHAR(50) DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
-    tags TEXT[], -- Array of tags
-    preview_image_url TEXT,
-    header_content TEXT,
-    template_content TEXT NOT NULL,
-    footer_content TEXT,
-    footer_height INTEGER DEFAULT 25,
-    stylesheet TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX idx_templates_name ON templates(name);
-CREATE INDEX idx_templates_status ON templates(status);
-CREATE INDEX idx_templates_popular ON templates(popular);
-CREATE INDEX idx_templates_tags ON templates USING GIN(tags);
-
--- ============================================
--- TABLE: resumes
--- Stores resume documents and analysis data
--- ============================================
-CREATE TABLE resumes (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name VARCHAR(255) NOT NULL,
-    title VARCHAR(255),
-    file_name VARCHAR(255),
-    resume_file_url TEXT,
-    resume_file_size INTEGER,
-    resume_file_type VARCHAR(100),
-    status VARCHAR(50) DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'archived', 'new', 'pending', 'processing', 'analyzed', 'improved', 'error', 'failed')),
-    customer_id UUID REFERENCES customers(id) ON DELETE SET NULL,
-    customer_name VARCHAR(255), -- Denormalized
-    
-    -- Analysis data (JSON fields)
-    skills JSONB,
-    industries JSONB,
-    tools JSONB,
-    soft_skills JSONB,
-    
-    -- Cleaned tags (after LLM processing)
-    skills_cleaned JSONB,
-    industries_cleaned JSONB,
-    tools_cleaned JSONB,
-    soft_skills_cleaned JSONB,
-    
-    -- ESCO mappings
-    skills_esco JSONB,
-    industries_esco JSONB,
-    tools_esco JSONB,
-    soft_skills_esco JSONB,
-    
-    -- Analysis fields
-    key_improvements TEXT,
-    summary TEXT,
-    experience_years INTEGER,
-    education_level VARCHAR(100),
-    certifications JSONB,
-    languages JSONB,
-    
-    -- Metadata
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    analyzed_at TIMESTAMP WITH TIME ZONE,
-    
-    -- Original and improved text content
-    original_text TEXT,
-    improved_text TEXT,
-    original_name VARCHAR(255),
-    
-    -- Analysis scores
-    global_rating INTEGER,
-    skills_score INTEGER,
-    experience_score INTEGER,
-    education_score INTEGER,
-    ats_score INTEGER,
-    executive_summary_score INTEGER,
-    hobbies_languages_score INTEGER,
-    
-    -- Improved scores
-    improved_global_rating INTEGER,
-    improved_skills_score INTEGER,
-    improved_experience_score INTEGER,
-    improved_education_score INTEGER,
-    improved_ats_score INTEGER,
-    improved_executive_summary_score INTEGER,
-    improved_hobbies_languages_score INTEGER,
-    
-    -- Template reference
-    template_id UUID REFERENCES templates(id) ON DELETE SET NULL,
-    template_name VARCHAR(255),
-    
-    -- Improvement details
-    improvement_suggestions TEXT,
-    analysis_details JSONB,
-    improvement_date TIMESTAMP WITH TIME ZONE,
-    trigram VARCHAR(10),
-    improved_key_improvements TEXT,
-    
-    -- Improved tags
-    improved_skills JSONB,
-    improved_industries JSONB,
-    improved_tools JSONB,
-    improved_soft_skills JSONB,
-    
-    -- Binary file storage
-    resume_file_data BYTEA
-);
-
-COMMENT ON TABLE resumes IS 'Resume documents with analysis and extracted data';
-
-CREATE INDEX idx_resumes_name ON resumes(name);
-CREATE INDEX idx_resumes_customer_id ON resumes(customer_id);
-CREATE INDEX idx_resumes_status ON resumes(status);
-CREATE INDEX idx_resumes_title ON resumes(title);
-CREATE INDEX idx_resumes_created_at ON resumes(created_at DESC);
-CREATE INDEX idx_resumes_skills ON resumes USING GIN(skills);
-CREATE INDEX idx_resumes_industries ON resumes USING GIN(industries);
-
--- ============================================
--- TABLE: missions (job offers)
--- Stores job missions/offers
--- ============================================
-CREATE TABLE missions (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    title VARCHAR(500) NOT NULL,
-    content TEXT NOT NULL,
-    customer_id UUID REFERENCES customers(id) ON DELETE SET NULL,
-    customer VARCHAR(255), -- Denormalized
-    status VARCHAR(50) DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'closed')),
-    
-    -- Extracted keywords for matching
-    keywords JSONB,
-    required_skills JSONB,
-    preferred_skills JSONB,
-    
-    -- Metadata
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX idx_missions_title ON missions(title);
-CREATE INDEX idx_missions_customer_id ON missions(customer_id);
-CREATE INDEX idx_missions_status ON missions(status);
-CREATE INDEX idx_missions_created_at ON missions(created_at DESC);
-CREATE INDEX idx_missions_keywords ON missions USING GIN(keywords);
-
--- ============================================
--- TABLE: resume_adaptations
--- Stores adapted resumes for specific missions
--- ============================================
-CREATE TABLE resume_adaptations (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    resume_id UUID REFERENCES resumes(id) ON DELETE CASCADE,
-    mission_id UUID REFERENCES missions(id) ON DELETE CASCADE,
-    
-    -- Linked data (denormalized for performance)
-    resume_name VARCHAR(255),
-    mission_title VARCHAR(500),
-    mission_content TEXT,
-    customer_id UUID REFERENCES customers(id) ON DELETE SET NULL,
-    customer VARCHAR(255),
-    
-    -- Adaptation content
-    adapted_text TEXT NOT NULL,
-    adaptation_notes TEXT,
-    match_score DECIMAL(5,2), -- 0-100
-    match_analysis JSONB, -- Full match analysis object
-    
-    -- Status
-    status VARCHAR(50) DEFAULT 'completed' CHECK (status IN ('draft', 'processing', 'completed', 'final', 'sent', 'archived', 'failed')),
-    
-    -- Metadata
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX idx_adaptations_resume_id ON resume_adaptations(resume_id);
-CREATE INDEX idx_adaptations_mission_id ON resume_adaptations(mission_id);
-CREATE INDEX idx_adaptations_customer_id ON resume_adaptations(customer_id);
-CREATE INDEX idx_adaptations_status ON resume_adaptations(status);
-CREATE INDEX idx_adaptations_created_at ON resume_adaptations(created_at DESC);
-
--- ============================================
--- TABLE: rome_metiers
--- Stores ROME 4.0 job classifications
--- ============================================
-CREATE TABLE rome_metiers (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    code_rome VARCHAR(10) NOT NULL UNIQUE,
-    libelle VARCHAR(500) NOT NULL,
-    obsolete BOOLEAN DEFAULT FALSE,
-    code_ogr VARCHAR(10),
-    libelle_ogr VARCHAR(500),
-    code_domaine_professionnel VARCHAR(10),
-    libelle_domaine_professionnel VARCHAR(500),
-    code_grand_domaine VARCHAR(10),
-    libelle_grand_domaine VARCHAR(500),
-    
-    -- Competences and skills (JSONB for flexibility)
-    competences JSONB,
-    enjeux JSONB,
-    macro_savoir_faire JSONB,
-    savoirs JSONB,
-    savoir_faire JSONB,
-    savoir_etre JSONB,
-    contextes_travail JSONB,
-    
-    -- Full API response for reference
-    raw_data JSONB,
-    
-    -- Metadata
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX idx_rome_code ON rome_metiers(code_rome);
-CREATE INDEX idx_rome_libelle ON rome_metiers(libelle);
-CREATE INDEX idx_rome_domaine ON rome_metiers(code_domaine_professionnel);
-CREATE INDEX idx_rome_grand_domaine ON rome_metiers(code_grand_domaine);
-CREATE INDEX idx_rome_competences ON rome_metiers USING GIN(competences);
-
--- ============================================
--- TABLE: industry_aliases
--- Stores industry name mappings and aliases
--- ============================================
-CREATE TABLE industry_aliases (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    canonical_name VARCHAR(255) NOT NULL,
-    alias VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX idx_industry_aliases_canonical ON industry_aliases(canonical_name);
-CREATE INDEX idx_industry_aliases_alias ON industry_aliases(alias);
-CREATE UNIQUE INDEX idx_industry_aliases_unique ON industry_aliases(canonical_name, alias);
-
--- ============================================
--- TABLE: market_facts
--- Stores market radar data (job market statistics)
--- ============================================
-CREATE TABLE market_facts (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    keyword VARCHAR(255) NOT NULL,
-    location VARCHAR(255),
-    region VARCHAR(100),
-    source VARCHAR(50) NOT NULL CHECK (source IN ('france_travail', 'adzuna')),
-    job_count INTEGER NOT NULL DEFAULT 0,
-    mean_salary NUMERIC(12, 2),
-    date DATE NOT NULL,
-    
-    -- Additional metadata as JSONB for flexibility
-    metadata JSONB,
-    
-    -- Timestamps
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX idx_market_facts_keyword ON market_facts(keyword);
-CREATE INDEX idx_market_facts_location ON market_facts(location);
-CREATE INDEX idx_market_facts_source ON market_facts(source);
-CREATE INDEX idx_market_facts_date ON market_facts(date DESC);
-CREATE INDEX idx_market_facts_job_count ON market_facts(job_count DESC);
-CREATE UNIQUE INDEX idx_market_facts_unique ON market_facts(keyword, location, source, date);
-
--- ============================================
--- TABLE: market_trends
--- Stores market trends data from France Travail API
--- ============================================
-CREATE TABLE market_trends (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    type VARCHAR(50) NOT NULL, -- 'demandeur', 'offre', 'embauche', 'tension', 'salaire', 'dynamique'
-    code_rome VARCHAR(10),
-    rome_label VARCHAR(500),
-    region VARCHAR(100),
-    region_code VARCHAR(10),
-    secteur VARCHAR(255),
-    date DATE NOT NULL,
-    
-    -- Main value
-    value DECIMAL(15,2),
-    value_label VARCHAR(255),
-    
-    -- Metadata (contains detailed breakdown by characteristics, periods, etc.)
-    metadata JSONB,
-    
-    -- Timestamps
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX idx_market_trends_type ON market_trends(type);
-CREATE INDEX idx_market_trends_code_rome ON market_trends(code_rome);
-CREATE INDEX idx_market_trends_region_code ON market_trends(region_code);
-CREATE INDEX idx_market_trends_date ON market_trends(date DESC);
-CREATE INDEX idx_market_trends_metadata ON market_trends USING GIN(metadata);
-CREATE UNIQUE INDEX idx_market_trends_unique ON market_trends(type, code_rome, region_code);
-
--- ============================================
--- TRIGGERS FOR UPDATED_AT
--- Automatically update updated_at timestamp
--- ============================================
-
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
+CREATE FUNCTION public.update_updated_at_column() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
 BEGIN
     NEW.updated_at = CURRENT_TIMESTAMP;
     RETURN NEW;
 END;
-$$ language 'plpgsql';
+$$;
 
--- Apply trigger to all tables with updated_at
-CREATE TRIGGER update_customers_updated_at BEFORE UPDATE ON customers
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+-- =============================================================================
+-- TABLES
+-- =============================================================================
 
-CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+-- Firms (organizations using the platform)
+CREATE TABLE public.firms (
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    name character varying(255) NOT NULL,
+    status character varying(50) DEFAULT 'active'::character varying,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT firms_pkey PRIMARY KEY (id),
+    CONSTRAINT firms_name_key UNIQUE (name),
+    CONSTRAINT firms_status_check CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'inactive'::character varying])::text[])))
+);
 
-CREATE TRIGGER update_llm_settings_updated_at BEFORE UPDATE ON llm_settings
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+COMMENT ON TABLE public.firms IS 'Firm organizations using the platform';
 
-CREATE TRIGGER update_templates_updated_at BEFORE UPDATE ON templates
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+-- Users
+CREATE TABLE public.users (
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    email character varying(255) NOT NULL,
+    password character varying(255) NOT NULL,
+    name character varying(255) NOT NULL,
+    role character varying(50) DEFAULT 'user'::character varying NOT NULL,
+    status character varying(50) DEFAULT 'active'::character varying,
+    firm_id uuid,
+    firm_name character varying(255),
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    last_login timestamp with time zone,
+    CONSTRAINT users_pkey PRIMARY KEY (id),
+    CONSTRAINT users_email_key UNIQUE (email),
+    CONSTRAINT users_role_check CHECK (((role)::text = ANY ((ARRAY['admin'::character varying, 'user'::character varying])::text[]))),
+    CONSTRAINT users_status_check CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'inactive'::character varying, 'pending'::character varying])::text[])))
+);
 
-CREATE TRIGGER update_resumes_updated_at BEFORE UPDATE ON resumes
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+COMMENT ON TABLE public.users IS 'User accounts with authentication and role-based access';
 
-CREATE TRIGGER update_missions_updated_at BEFORE UPDATE ON missions
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+-- Templates
+CREATE TABLE public.templates (
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    name character varying(255) NOT NULL,
+    description text,
+    popular boolean DEFAULT false,
+    status character varying(50) DEFAULT 'active'::character varying,
+    tags text[],
+    preview_image_url text,
+    header_content text,
+    template_content text NOT NULL,
+    footer_content text,
+    footer_height integer DEFAULT 25,
+    stylesheet text,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT templates_pkey PRIMARY KEY (id),
+    CONSTRAINT templates_name_key UNIQUE (name),
+    CONSTRAINT templates_status_check CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'inactive'::character varying])::text[])))
+);
 
-CREATE TRIGGER update_resume_adaptations_updated_at BEFORE UPDATE ON resume_adaptations
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+COMMENT ON TABLE public.templates IS 'Resume templates with HTML/CSS styling';
 
-CREATE TRIGGER update_rome_metiers_updated_at BEFORE UPDATE ON rome_metiers
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+-- LLM Settings
+CREATE TABLE public.llm_settings (
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    name character varying(255) NOT NULL,
+    llm_model character varying(100),
+    analysis_prompt text,
+    improvement_prompt text,
+    match_analysis_prompt text,
+    adaptation_prompt text,
+    cv_mode character varying(50) DEFAULT 'nominative'::character varying,
+    chatbot_enabled character varying(10) DEFAULT 'on'::character varying,
+    executive_summary_weight integer DEFAULT 20,
+    skills_weight integer DEFAULT 20,
+    experience_weight integer DEFAULT 20,
+    education_weight integer DEFAULT 15,
+    ats_weight integer DEFAULT 15,
+    hobbies_languages_weight integer DEFAULT 10,
+    status character varying(50) DEFAULT 'active'::character varying,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT llm_settings_pkey PRIMARY KEY (id),
+    CONSTRAINT llm_settings_name_key UNIQUE (name),
+    CONSTRAINT llm_settings_ats_weight_check CHECK (((ats_weight >= 0) AND (ats_weight <= 100))),
+    CONSTRAINT llm_settings_chatbot_enabled_check CHECK (((chatbot_enabled)::text = ANY ((ARRAY['on'::character varying, 'off'::character varying])::text[]))),
+    CONSTRAINT llm_settings_cv_mode_check CHECK (((cv_mode)::text = ANY ((ARRAY['nominative'::character varying, 'anonymous'::character varying])::text[]))),
+    CONSTRAINT llm_settings_education_weight_check CHECK (((education_weight >= 0) AND (education_weight <= 100))),
+    CONSTRAINT llm_settings_executive_summary_weight_check CHECK (((executive_summary_weight >= 0) AND (executive_summary_weight <= 100))),
+    CONSTRAINT llm_settings_experience_weight_check CHECK (((experience_weight >= 0) AND (experience_weight <= 100))),
+    CONSTRAINT llm_settings_hobbies_languages_weight_check CHECK (((hobbies_languages_weight >= 0) AND (hobbies_languages_weight <= 100))),
+    CONSTRAINT llm_settings_skills_weight_check CHECK (((skills_weight >= 0) AND (skills_weight <= 100))),
+    CONSTRAINT llm_settings_status_check CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'inactive'::character varying])::text[])))
+);
 
-CREATE TRIGGER update_market_facts_updated_at BEFORE UPDATE ON market_facts
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+-- Resumes
+CREATE TABLE public.resumes (
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    name character varying(255) NOT NULL,
+    title character varying(255),
+    file_name character varying(255),
+    resume_file_url text,
+    resume_file_size integer,
+    resume_file_type character varying(100),
+    status character varying(50) DEFAULT 'active'::character varying,
+    firm_id uuid,
+    firm_name character varying(255),
+    skills jsonb,
+    industries jsonb,
+    tools jsonb,
+    soft_skills jsonb,
+    skills_cleaned jsonb,
+    industries_cleaned jsonb,
+    tools_cleaned jsonb,
+    soft_skills_cleaned jsonb,
+    skills_esco jsonb,
+    industries_esco jsonb,
+    tools_esco jsonb,
+    soft_skills_esco jsonb,
+    key_improvements text,
+    summary text,
+    experience_years integer,
+    education_level character varying(100),
+    certifications jsonb,
+    languages jsonb,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    analyzed_at timestamp with time zone,
+    original_text text,
+    improved_text text,
+    original_name character varying(255),
+    global_rating integer,
+    skills_score integer,
+    experience_score integer,
+    education_score integer,
+    ats_score integer,
+    executive_summary_score integer,
+    hobbies_languages_score integer,
+    improved_global_rating integer,
+    improved_skills_score integer,
+    improved_experience_score integer,
+    improved_education_score integer,
+    improved_ats_score integer,
+    improved_executive_summary_score integer,
+    improved_hobbies_languages_score integer,
+    template_id uuid,
+    template_name character varying(255),
+    improvement_suggestions text,
+    analysis_details jsonb,
+    improvement_date timestamp with time zone,
+    trigram character varying(10),
+    improved_key_improvements text,
+    improved_skills jsonb,
+    improved_industries jsonb,
+    improved_tools jsonb,
+    improved_soft_skills jsonb,
+    resume_file_data bytea,
+    current_version integer DEFAULT 0,
+    CONSTRAINT resumes_pkey PRIMARY KEY (id),
+    CONSTRAINT resumes_status_check CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'inactive'::character varying, 'archived'::character varying, 'new'::character varying, 'pending'::character varying, 'processing'::character varying, 'analyzed'::character varying, 'improved'::character varying, 'error'::character varying, 'failed'::character varying])::text[])))
+);
 
-CREATE TRIGGER update_market_trends_updated_at BEFORE UPDATE ON market_trends
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+COMMENT ON TABLE public.resumes IS 'Resume documents with analysis and extracted data';
 
--- ============================================
--- VIEWS FOR COMMON QUERIES
--- ============================================
+-- Resume Versions
+CREATE TABLE public.resume_versions (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    resume_id uuid NOT NULL,
+    version_number integer NOT NULL,
+    improved_text text NOT NULL,
+    improved_global_rating integer,
+    improved_skills_score integer,
+    improved_experience_score integer,
+    improved_education_score integer,
+    improved_ats_score integer,
+    improved_executive_summary_score integer,
+    improved_hobbies_languages_score integer,
+    improved_skills jsonb,
+    improved_industries jsonb,
+    improved_tools jsonb,
+    improved_soft_skills jsonb,
+    improved_key_improvements text,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    created_by uuid,
+    change_reason character varying(255),
+    CONSTRAINT resume_versions_pkey PRIMARY KEY (id),
+    CONSTRAINT unique_resume_version UNIQUE (resume_id, version_number)
+);
 
--- View: Active resumes with customer info
-CREATE VIEW v_active_resumes AS
-SELECT 
-    r.*,
-    c.name as customer_full_name,
-    c.status as customer_status
-FROM resumes r
-LEFT JOIN customers c ON r.customer_id = c.id
+COMMENT ON TABLE public.resume_versions IS 'Historical versions of improved CV text with associated scores and tags';
+
+-- Missions
+CREATE TABLE public.missions (
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    title character varying(500) NOT NULL,
+    content text NOT NULL,
+    firm_id uuid,
+    firm character varying(255),
+    status character varying(50) DEFAULT 'active'::character varying,
+    keywords jsonb,
+    required_skills jsonb,
+    preferred_skills jsonb,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    client_id uuid,
+    CONSTRAINT missions_pkey PRIMARY KEY (id)
+);
+
+COMMENT ON TABLE public.missions IS 'Job missions/offers for resume adaptation';
+
+-- Resume Adaptations
+CREATE TABLE public.resume_adaptations (
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    resume_id uuid,
+    mission_id uuid,
+    resume_name character varying(255),
+    mission_title character varying(500),
+    firm_id uuid,
+    firm character varying(255),
+    adapted_text text NOT NULL,
+    adaptation_notes text,
+    match_score numeric(5,2),
+    status character varying(50) DEFAULT 'draft'::character varying,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    match_analysis jsonb,
+    mission_content text,
+    CONSTRAINT resume_adaptations_pkey PRIMARY KEY (id),
+    CONSTRAINT resume_adaptations_status_check CHECK (((status)::text = ANY ((ARRAY['draft'::character varying, 'processing'::character varying, 'completed'::character varying, 'final'::character varying, 'sent'::character varying, 'archived'::character varying, 'failed'::character varying])::text[])))
+);
+
+COMMENT ON TABLE public.resume_adaptations IS 'Adapted resumes tailored to specific missions';
+
+-- Clients
+CREATE TABLE public.clients (
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    firm_id uuid NOT NULL,
+    name character varying(255) NOT NULL,
+    type character varying(50) DEFAULT 'prospect'::character varying NOT NULL,
+    status character varying(50) DEFAULT 'active'::character varying,
+    address text,
+    website character varying(255),
+    industry character varying(255),
+    notes text,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    created_by uuid,
+    CONSTRAINT clients_pkey PRIMARY KEY (id),
+    CONSTRAINT clients_status_check CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'inactive'::character varying])::text[]))),
+    CONSTRAINT clients_type_check CHECK (((type)::text = ANY ((ARRAY['client'::character varying, 'prospect'::character varying])::text[])))
+);
+
+COMMENT ON TABLE public.clients IS 'Client and prospect organizations for CV submissions';
+
+-- Client Contacts
+CREATE TABLE public.client_contacts (
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    client_id uuid NOT NULL,
+    name character varying(255) NOT NULL,
+    role character varying(255),
+    email character varying(255),
+    phone character varying(50),
+    is_primary boolean DEFAULT false,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT client_contacts_pkey PRIMARY KEY (id)
+);
+
+COMMENT ON TABLE public.client_contacts IS 'Contact persons for clients/prospects';
+
+-- Resume Submissions
+CREATE TABLE public.resume_submissions (
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    resume_id uuid NOT NULL,
+    client_id uuid NOT NULL,
+    contact_id uuid NOT NULL,
+    mission_id uuid,
+    firm_id uuid NOT NULL,
+    sent_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    sent_by uuid,
+    notes text,
+    status character varying(50) DEFAULT 'sent'::character varying,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT resume_submissions_pkey PRIMARY KEY (id),
+    CONSTRAINT resume_submissions_status_check CHECK (((status)::text = ANY ((ARRAY['sent'::character varying, 'viewed'::character varying, 'rejected'::character varying, 'accepted'::character varying, 'pending'::character varying])::text[])))
+);
+
+COMMENT ON TABLE public.resume_submissions IS 'History of CV submissions to clients/prospects';
+
+-- User Mail Tokens
+CREATE TABLE public.user_mail_tokens (
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    user_id uuid NOT NULL,
+    provider character varying(50) DEFAULT 'gmail'::character varying NOT NULL,
+    access_token_encrypted text NOT NULL,
+    refresh_token_encrypted text,
+    token_expiry timestamp with time zone,
+    email character varying(255),
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT user_mail_tokens_pkey PRIMARY KEY (id),
+    CONSTRAINT user_mail_tokens_unique_user_provider UNIQUE (user_id, provider),
+    CONSTRAINT user_mail_tokens_provider_check CHECK (((provider)::text = ANY ((ARRAY['gmail'::character varying, 'outlook'::character varying])::text[])))
+);
+
+COMMENT ON TABLE public.user_mail_tokens IS 'Encrypted OAuth tokens for email providers (Gmail, Outlook)';
+
+-- ROME Metiers
+CREATE TABLE public.rome_metiers (
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    code_rome character varying(10) NOT NULL,
+    libelle character varying(500) NOT NULL,
+    code_ogr character varying(10),
+    libelle_ogr character varying(500),
+    code_domaine_professionnel character varying(10),
+    libelle_domaine_professionnel character varying(500),
+    code_grand_domaine character varying(10),
+    libelle_grand_domaine character varying(500),
+    competences jsonb,
+    savoir_faire jsonb,
+    savoir_etre jsonb,
+    contextes_travail jsonb,
+    raw_data jsonb,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    obsolete boolean DEFAULT false,
+    enjeux jsonb,
+    macro_savoir_faire jsonb,
+    savoirs jsonb,
+    CONSTRAINT rome_metiers_pkey PRIMARY KEY (id),
+    CONSTRAINT rome_metiers_code_rome_key UNIQUE (code_rome)
+);
+
+COMMENT ON TABLE public.rome_metiers IS 'ROME 4.0 French job classification system';
+
+-- Market Facts
+CREATE TABLE public.market_facts (
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    keyword character varying(255) NOT NULL,
+    location character varying(255),
+    region character varying(100),
+    source character varying(50) NOT NULL,
+    job_count integer DEFAULT 0 NOT NULL,
+    date date NOT NULL,
+    metadata jsonb,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    mean_salary numeric(12,2),
+    CONSTRAINT market_facts_pkey PRIMARY KEY (id),
+    CONSTRAINT market_facts_source_check CHECK (((source)::text = ANY ((ARRAY['france_travail'::character varying, 'adzuna'::character varying])::text[])))
+);
+
+COMMENT ON TABLE public.market_facts IS 'Market radar job statistics from various sources';
+
+-- Market Trends
+CREATE TABLE public.market_trends (
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    type character varying(50) NOT NULL,
+    code_rome character varying(10),
+    rome_label character varying(500),
+    region character varying(100),
+    region_code character varying(10),
+    secteur character varying(255),
+    date date NOT NULL,
+    value numeric(15,2),
+    value_label character varying(255),
+    metadata jsonb,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT market_trends_pkey PRIMARY KEY (id)
+);
+
+COMMENT ON TABLE public.market_trends IS 'Detailed market trends from France Travail API';
+
+-- Industry Aliases
+CREATE TABLE public.industry_aliases (
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    canonical_name character varying(255) NOT NULL,
+    alias character varying(255) NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT industry_aliases_pkey PRIMARY KEY (id)
+);
+
+COMMENT ON TABLE public.industry_aliases IS 'Industry name mappings and aliases';
+
+-- =============================================================================
+-- INDEXES
+-- =============================================================================
+
+-- Firms indexes
+CREATE INDEX idx_firms_name ON public.firms USING btree (name);
+CREATE INDEX idx_firms_status ON public.firms USING btree (status);
+
+-- Users indexes
+CREATE INDEX idx_users_email ON public.users USING btree (email);
+CREATE INDEX idx_users_firm_id ON public.users USING btree (firm_id);
+CREATE INDEX idx_users_role ON public.users USING btree (role);
+CREATE INDEX idx_users_status ON public.users USING btree (status);
+
+-- Templates indexes
+CREATE INDEX idx_templates_name ON public.templates USING btree (name);
+CREATE INDEX idx_templates_popular ON public.templates USING btree (popular);
+CREATE INDEX idx_templates_status ON public.templates USING btree (status);
+CREATE INDEX idx_templates_tags ON public.templates USING gin (tags);
+
+-- LLM Settings indexes
+CREATE INDEX idx_llm_settings_cv_mode ON public.llm_settings USING btree (cv_mode);
+CREATE INDEX idx_llm_settings_name ON public.llm_settings USING btree (name);
+CREATE INDEX idx_llm_settings_status ON public.llm_settings USING btree (status);
+
+-- Resumes indexes
+CREATE INDEX idx_resumes_created_at ON public.resumes USING btree (created_at DESC);
+CREATE INDEX idx_resumes_firm_id ON public.resumes USING btree (firm_id);
+CREATE INDEX idx_resumes_industries ON public.resumes USING gin (industries);
+CREATE INDEX idx_resumes_name ON public.resumes USING btree (name);
+CREATE INDEX idx_resumes_skills ON public.resumes USING gin (skills);
+CREATE INDEX idx_resumes_status ON public.resumes USING btree (status);
+CREATE INDEX idx_resumes_title ON public.resumes USING btree (title);
+
+-- Resume Versions indexes
+CREATE INDEX idx_resume_versions_created_at ON public.resume_versions USING btree (created_at DESC);
+CREATE INDEX idx_resume_versions_resume_id ON public.resume_versions USING btree (resume_id);
+CREATE INDEX idx_resume_versions_version_number ON public.resume_versions USING btree (resume_id, version_number DESC);
+
+-- Missions indexes
+CREATE INDEX idx_missions_client_id ON public.missions USING btree (client_id);
+CREATE INDEX idx_missions_created_at ON public.missions USING btree (created_at DESC);
+CREATE INDEX idx_missions_firm_id ON public.missions USING btree (firm_id);
+CREATE INDEX idx_missions_keywords ON public.missions USING gin (keywords);
+CREATE INDEX idx_missions_status ON public.missions USING btree (status);
+CREATE INDEX idx_missions_title ON public.missions USING btree (title);
+
+-- Resume Adaptations indexes
+CREATE INDEX idx_adaptations_created_at ON public.resume_adaptations USING btree (created_at DESC);
+CREATE INDEX idx_adaptations_firm_id ON public.resume_adaptations USING btree (firm_id);
+CREATE INDEX idx_adaptations_mission_id ON public.resume_adaptations USING btree (mission_id);
+CREATE INDEX idx_adaptations_resume_id ON public.resume_adaptations USING btree (resume_id);
+CREATE INDEX idx_adaptations_status ON public.resume_adaptations USING btree (status);
+
+-- Clients indexes
+CREATE INDEX idx_clients_firm_id ON public.clients USING btree (firm_id);
+CREATE INDEX idx_clients_name ON public.clients USING btree (name);
+CREATE INDEX idx_clients_type ON public.clients USING btree (type);
+
+-- Client Contacts indexes
+CREATE INDEX idx_client_contacts_client_id ON public.client_contacts USING btree (client_id);
+
+-- Resume Submissions indexes
+CREATE INDEX idx_resume_submissions_client_id ON public.resume_submissions USING btree (client_id);
+CREATE INDEX idx_resume_submissions_firm_id ON public.resume_submissions USING btree (firm_id);
+CREATE INDEX idx_resume_submissions_mission_id ON public.resume_submissions USING btree (mission_id);
+CREATE INDEX idx_resume_submissions_resume_id ON public.resume_submissions USING btree (resume_id);
+CREATE INDEX idx_resume_submissions_sent_at ON public.resume_submissions USING btree (sent_at DESC);
+
+-- User Mail Tokens indexes
+CREATE INDEX idx_user_mail_tokens_user_id ON public.user_mail_tokens USING btree (user_id);
+
+-- ROME Metiers indexes
+CREATE INDEX idx_rome_code ON public.rome_metiers USING btree (code_rome);
+CREATE INDEX idx_rome_competences ON public.rome_metiers USING gin (competences);
+CREATE INDEX idx_rome_domaine ON public.rome_metiers USING btree (code_domaine_professionnel);
+CREATE INDEX idx_rome_grand_domaine ON public.rome_metiers USING btree (code_grand_domaine);
+CREATE INDEX idx_rome_libelle ON public.rome_metiers USING btree (libelle);
+
+-- Market Facts indexes
+CREATE INDEX idx_market_facts_date ON public.market_facts USING btree (date DESC);
+CREATE INDEX idx_market_facts_job_count ON public.market_facts USING btree (job_count DESC);
+CREATE INDEX idx_market_facts_keyword ON public.market_facts USING btree (keyword);
+CREATE INDEX idx_market_facts_location ON public.market_facts USING btree (location);
+CREATE INDEX idx_market_facts_source ON public.market_facts USING btree (source);
+CREATE UNIQUE INDEX idx_market_facts_unique ON public.market_facts USING btree (keyword, location, source, date);
+
+-- Market Trends indexes
+CREATE INDEX idx_market_trends_code_rome ON public.market_trends USING btree (code_rome);
+CREATE INDEX idx_market_trends_date ON public.market_trends USING btree (date DESC);
+CREATE INDEX idx_market_trends_metadata ON public.market_trends USING gin (metadata);
+CREATE INDEX idx_market_trends_region_code ON public.market_trends USING btree (region_code);
+CREATE INDEX idx_market_trends_type ON public.market_trends USING btree (type);
+CREATE UNIQUE INDEX idx_market_trends_unique ON public.market_trends USING btree (type, code_rome, region_code);
+
+-- Industry Aliases indexes
+CREATE INDEX idx_industry_aliases_alias ON public.industry_aliases USING btree (alias);
+CREATE INDEX idx_industry_aliases_canonical ON public.industry_aliases USING btree (canonical_name);
+CREATE UNIQUE INDEX idx_industry_aliases_unique ON public.industry_aliases USING btree (canonical_name, alias);
+
+-- =============================================================================
+-- TRIGGERS
+-- =============================================================================
+
+CREATE TRIGGER update_customers_updated_at BEFORE UPDATE ON public.firms FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON public.users FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+CREATE TRIGGER update_templates_updated_at BEFORE UPDATE ON public.templates FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+CREATE TRIGGER update_llm_settings_updated_at BEFORE UPDATE ON public.llm_settings FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+CREATE TRIGGER update_resumes_updated_at BEFORE UPDATE ON public.resumes FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+CREATE TRIGGER update_missions_updated_at BEFORE UPDATE ON public.missions FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+CREATE TRIGGER update_resume_adaptations_updated_at BEFORE UPDATE ON public.resume_adaptations FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+CREATE TRIGGER update_clients_updated_at BEFORE UPDATE ON public.clients FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+CREATE TRIGGER update_client_contacts_updated_at BEFORE UPDATE ON public.client_contacts FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+CREATE TRIGGER update_user_mail_tokens_updated_at BEFORE UPDATE ON public.user_mail_tokens FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+CREATE TRIGGER update_rome_metiers_updated_at BEFORE UPDATE ON public.rome_metiers FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+CREATE TRIGGER update_market_facts_updated_at BEFORE UPDATE ON public.market_facts FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+CREATE TRIGGER update_market_trends_updated_at BEFORE UPDATE ON public.market_trends FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+-- =============================================================================
+-- FOREIGN KEYS
+-- =============================================================================
+
+ALTER TABLE ONLY public.users ADD CONSTRAINT users_firm_id_fkey FOREIGN KEY (firm_id) REFERENCES public.firms(id) ON DELETE SET NULL;
+ALTER TABLE ONLY public.resumes ADD CONSTRAINT resumes_firm_id_fkey FOREIGN KEY (firm_id) REFERENCES public.firms(id) ON DELETE SET NULL;
+ALTER TABLE ONLY public.resumes ADD CONSTRAINT resumes_template_id_fkey FOREIGN KEY (template_id) REFERENCES public.templates(id) ON DELETE SET NULL;
+ALTER TABLE ONLY public.resume_versions ADD CONSTRAINT resume_versions_resume_id_fkey FOREIGN KEY (resume_id) REFERENCES public.resumes(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.resume_versions ADD CONSTRAINT resume_versions_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+ALTER TABLE ONLY public.missions ADD CONSTRAINT missions_firm_id_fkey FOREIGN KEY (firm_id) REFERENCES public.firms(id) ON DELETE SET NULL;
+ALTER TABLE ONLY public.missions ADD CONSTRAINT missions_client_id_fkey FOREIGN KEY (client_id) REFERENCES public.clients(id) ON DELETE SET NULL;
+ALTER TABLE ONLY public.resume_adaptations ADD CONSTRAINT resume_adaptations_firm_id_fkey FOREIGN KEY (firm_id) REFERENCES public.firms(id) ON DELETE SET NULL;
+ALTER TABLE ONLY public.resume_adaptations ADD CONSTRAINT resume_adaptations_mission_id_fkey FOREIGN KEY (mission_id) REFERENCES public.missions(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.resume_adaptations ADD CONSTRAINT resume_adaptations_resume_id_fkey FOREIGN KEY (resume_id) REFERENCES public.resumes(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.clients ADD CONSTRAINT clients_firm_id_fkey FOREIGN KEY (firm_id) REFERENCES public.firms(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.clients ADD CONSTRAINT clients_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+ALTER TABLE ONLY public.client_contacts ADD CONSTRAINT client_contacts_client_id_fkey FOREIGN KEY (client_id) REFERENCES public.clients(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.resume_submissions ADD CONSTRAINT resume_submissions_resume_id_fkey FOREIGN KEY (resume_id) REFERENCES public.resumes(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.resume_submissions ADD CONSTRAINT resume_submissions_client_id_fkey FOREIGN KEY (client_id) REFERENCES public.clients(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.resume_submissions ADD CONSTRAINT resume_submissions_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES public.client_contacts(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.resume_submissions ADD CONSTRAINT resume_submissions_mission_id_fkey FOREIGN KEY (mission_id) REFERENCES public.missions(id) ON DELETE SET NULL;
+ALTER TABLE ONLY public.resume_submissions ADD CONSTRAINT resume_submissions_firm_id_fkey FOREIGN KEY (firm_id) REFERENCES public.firms(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.resume_submissions ADD CONSTRAINT resume_submissions_sent_by_fkey FOREIGN KEY (sent_by) REFERENCES public.users(id) ON DELETE SET NULL;
+ALTER TABLE ONLY public.user_mail_tokens ADD CONSTRAINT user_mail_tokens_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+-- =============================================================================
+-- VIEWS
+-- =============================================================================
+
+CREATE VIEW public.v_active_resumes AS
+SELECT r.id,
+    r.name,
+    r.title,
+    r.file_name,
+    r.resume_file_url,
+    r.resume_file_size,
+    r.resume_file_type,
+    r.status,
+    r.firm_id,
+    r.firm_name,
+    r.skills,
+    r.industries,
+    r.tools,
+    r.soft_skills,
+    r.skills_cleaned,
+    r.industries_cleaned,
+    r.tools_cleaned,
+    r.soft_skills_cleaned,
+    r.skills_esco,
+    r.industries_esco,
+    r.tools_esco,
+    r.soft_skills_esco,
+    r.key_improvements,
+    r.summary,
+    r.experience_years,
+    r.education_level,
+    r.certifications,
+    r.languages,
+    r.created_at,
+    r.updated_at,
+    r.analyzed_at,
+    f.name AS firm_full_name,
+    f.status AS firm_status
+FROM public.resumes r
+LEFT JOIN public.firms f ON r.firm_id = f.id
 WHERE r.status = 'active';
 
--- View: Active missions with customer info
-CREATE VIEW v_active_missions AS
-SELECT 
-    m.*,
-    c.name as customer_full_name,
-    c.status as customer_status
-FROM missions m
-LEFT JOIN customers c ON m.customer_id = c.id
+CREATE VIEW public.v_active_missions AS
+SELECT m.id,
+    m.title,
+    m.content,
+    m.firm_id,
+    m.firm,
+    m.status,
+    m.keywords,
+    m.required_skills,
+    m.preferred_skills,
+    m.created_at,
+    m.updated_at,
+    f.name AS firm_full_name,
+    f.status AS firm_status
+FROM public.missions m
+LEFT JOIN public.firms f ON m.firm_id = f.id
 WHERE m.status = 'active';
 
--- View: Resume adaptations with full context
-CREATE VIEW v_adaptations_full AS
-SELECT 
-    ra.*,
-    r.name as resume_full_name,
-    r.title as resume_title,
-    m.title as mission_full_title,
-    m.content as mission_content,
-    c.name as customer_full_name
-FROM resume_adaptations ra
-LEFT JOIN resumes r ON ra.resume_id = r.id
-LEFT JOIN missions m ON ra.mission_id = m.id
-LEFT JOIN customers c ON ra.customer_id = c.id;
+CREATE VIEW public.v_adaptations_full AS
+SELECT ra.id,
+    ra.resume_id,
+    ra.mission_id,
+    ra.resume_name,
+    ra.mission_title,
+    ra.firm_id,
+    ra.firm,
+    ra.adapted_text,
+    ra.adaptation_notes,
+    ra.match_score,
+    ra.status,
+    ra.created_at,
+    ra.updated_at,
+    r.name AS resume_full_name,
+    r.title AS resume_title,
+    m.title AS mission_full_title,
+    m.content AS mission_content,
+    f.name AS firm_full_name
+FROM public.resume_adaptations ra
+LEFT JOIN public.resumes r ON ra.resume_id = r.id
+LEFT JOIN public.missions m ON ra.mission_id = m.id
+LEFT JOIN public.firms f ON ra.firm_id = f.id;
 
--- ============================================
--- INITIAL DATA (Optional)
--- ============================================
+CREATE VIEW public.v_clients_with_contacts AS
+SELECT c.id,
+    c.firm_id,
+    c.name,
+    c.type,
+    c.status,
+    c.address,
+    c.website,
+    c.industry,
+    c.notes,
+    c.created_at,
+    c.updated_at,
+    c.created_by,
+    f.name AS firm_name,
+    (SELECT count(*) FROM public.client_contacts cc WHERE cc.client_id = c.id) AS contacts_count,
+    (SELECT count(*) FROM public.resume_submissions rs WHERE rs.client_id = c.id) AS submissions_count
+FROM public.clients c
+LEFT JOIN public.firms f ON c.firm_id = f.id;
 
--- Insert default customer
-INSERT INTO customers (name, status) VALUES
-('Default', 'active')
-ON CONFLICT (name) DO NOTHING;
+CREATE VIEW public.v_resume_submissions_full AS
+SELECT rs.id,
+    rs.resume_id,
+    rs.client_id,
+    rs.contact_id,
+    rs.mission_id,
+    rs.firm_id,
+    rs.sent_at,
+    rs.sent_by,
+    rs.notes,
+    rs.status,
+    rs.created_at,
+    r.name AS resume_name,
+    r.title AS resume_title,
+    c.name AS client_name,
+    c.type AS client_type,
+    cc.name AS contact_name,
+    cc.email AS contact_email,
+    m.title AS mission_title,
+    u.name AS sent_by_name,
+    f.name AS firm_name
+FROM public.resume_submissions rs
+LEFT JOIN public.resumes r ON rs.resume_id = r.id
+LEFT JOIN public.clients c ON rs.client_id = c.id
+LEFT JOIN public.client_contacts cc ON rs.contact_id = cc.id
+LEFT JOIN public.missions m ON rs.mission_id = m.id
+LEFT JOIN public.users u ON rs.sent_by = u.id
+LEFT JOIN public.firms f ON rs.firm_id = f.id;
 
--- Insert default admin user
--- Password: admin123 (bcrypt hash with 10 rounds)
-INSERT INTO users (email, password, name, role, status, customer_name) VALUES
-('admin@resumeconverter.local', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'Admin', 'admin', 'active', 'Default')
+-- =============================================================================
+-- DEFAULT DATA
+-- =============================================================================
+
+-- Insert default firm
+INSERT INTO public.firms (name, status) VALUES ('Default', 'active') ON CONFLICT (name) DO NOTHING;
+
+-- Insert default admin user (password: admin123)
+INSERT INTO public.users (email, password, name, role, status, firm_id, firm_name)
+SELECT 'admin@resumeconverter.local', 
+       '$2a$10$Tu2BJ9BAaPwAiXD64tIuKO3wM4eyec0oUflaatmSQbxO87L3/r0De', 
+       'Admin', 
+       'admin', 
+       'active',
+       f.id,
+       f.name
+FROM public.firms f WHERE f.name = 'Default'
 ON CONFLICT (email) DO NOTHING;
 
 -- Insert default LLM settings
-INSERT INTO llm_settings (name, provider, model, temperature, max_tokens, use_case, system_prompt, user_prompt_template) VALUES
-('Default Analysis', 'openai', 'gpt-4', 0.7, 4000, 'analysis', 
- 'You are an expert resume analyzer. Extract key information from resumes.',
- 'Analyze this resume and extract skills, experience, and key information: {text}'),
-('Default Improvement', 'anthropic', 'claude-3-5-sonnet-20241022', 0.7, 4000, 'improvement',
- 'You are an expert resume writer. Improve resume text while maintaining accuracy.',
- 'Improve this resume section: {text}'),
-('Default Adaptation', 'openai', 'gpt-4', 0.7, 4000, 'adaptation',
- 'You are an expert at adapting resumes to match job descriptions.',
- 'Adapt this resume for this job: Resume: {resume} Job: {job}')
+INSERT INTO public.llm_settings (name, llm_model, cv_mode, chatbot_enabled, status) VALUES
+('Default', 'gpt-4', 'nominative', 'on', 'active')
 ON CONFLICT (name) DO NOTHING;
 
--- ============================================
--- COMMENTS FOR DOCUMENTATION
--- ============================================
-
-COMMENT ON DATABASE resumeconverter IS 'ResumeConverter application database - migrated from Airtable';
-
-COMMENT ON TABLE customers IS 'Customer organizations using the platform';
-COMMENT ON TABLE users IS 'User accounts with authentication and role-based access';
-COMMENT ON TABLE llm_settings IS 'LLM configuration for AI-powered features';
-COMMENT ON TABLE templates IS 'Resume templates with HTML/CSS styling';
-COMMENT ON TABLE resumes IS 'Resume documents with analysis and extracted data';
-COMMENT ON TABLE missions IS 'Job missions/offers for resume adaptation';
-COMMENT ON TABLE resume_adaptations IS 'Adapted resumes tailored to specific missions';
-COMMENT ON TABLE rome_metiers IS 'ROME 4.0 French job classification system';
-COMMENT ON TABLE industry_aliases IS 'Industry name mappings and aliases';
-COMMENT ON TABLE market_facts IS 'Market radar job statistics from various sources';
-COMMENT ON TABLE market_trends IS 'Detailed market trends from France Travail API';
-
--- ============================================
--- GRANT PERMISSIONS (adjust as needed)
--- ============================================
-
--- Create application user (adjust password in production)
--- CREATE USER resumeconverter_app WITH PASSWORD 'change_this_password';
--- GRANT CONNECT ON DATABASE resumeconverter TO resumeconverter_app;
--- GRANT USAGE ON SCHEMA public TO resumeconverter_app;
--- GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO resumeconverter_app;
--- GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO resumeconverter_app;
-
--- ============================================
--- COMPLETION MESSAGE
--- ============================================
-
--- Script execution completed successfully!
--- Tables created: 11
--- Views created: 3
--- Triggers created: 10
--- Indexes created: 50+
---
--- Next steps:
---   1. Review and adjust permissions
---   2. Create application database user
---   3. Update connection strings in .env
---   4. Migrate data from Airtable
---   5. Update proxy-server.js to use PostgreSQL
+-- =============================================================================
+-- END OF SCHEMA
+-- =============================================================================

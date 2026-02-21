@@ -17,12 +17,18 @@ i18n
         translation: frTranslations,
       },
     },
-    fallbackLng: 'en',
+    lng: 'fr', // Default language is French
+    fallbackLng: 'fr', // Fallback to French if translation is missing
     interpolation: {
       escapeValue: false,
     },
     // Synchronous initialization - resources are bundled, no async loading needed
     initImmediate: false,
+    // Language detector options - prioritize localStorage, then default to French
+    detection: {
+      order: ['localStorage', 'navigator'],
+      caches: ['localStorage'],
+    },
   });
 
 export default i18n;

@@ -97,9 +97,10 @@ RUN /etc/init.d/postgresql start && \
     createdb -O resumeconverter resumeconverter && \
     /etc/init.d/postgresql stop
 
-# Allow connections from localhost
+# Allow connections from localhost and external (for pgAdmin access)
 RUN echo "host all all 127.0.0.1/32 md5" >> /etc/postgresql/14/main/pg_hba.conf && \
-    echo "listen_addresses='127.0.0.1'" >> /etc/postgresql/14/main/postgresql.conf
+    echo "host all all 0.0.0.0/0 md5" >> /etc/postgresql/14/main/pg_hba.conf && \
+    echo "listen_addresses='*'" >> /etc/postgresql/14/main/postgresql.conf
 
 USER root
 

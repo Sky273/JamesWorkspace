@@ -33,6 +33,13 @@ const httpConfigPlugin = () => ({
       const acceptEncoding = req.headers['accept-encoding'] || '';
       const url = req.url || '';
       
+      // Skip SPA routes (paths without file extensions that are not API calls)
+      // These should be handled by Vite's SPA fallback, not as static files
+      const isSpaRoute = !url.includes('.') && !url.startsWith('/api/') && !url.startsWith('/@') && !url.startsWith('/node_modules/');
+      if (isSpaRoute && url !== '/') {
+        return next();
+      }
+      
       // Only compress text-based assets
       const compressibleExtensions = /\.(js|mjs|css|html|json|svg|txt|xml)(\?.*)?$/i;
       const shouldCompress = compressibleExtensions.test(url);
@@ -202,9 +209,11 @@ export default defineConfig(({ mode }) => {
       },
     },
     fs: {
-      strict: false,
-      allow: ['..']
-    }
+      strict: true,
+      allow: ['.', '..', '../node_modules']
+    },
+    // Ensure SPA routing works - all non-file requests should serve index.html
+    middlewareMode: false
   },
   resolve: {
     alias: {

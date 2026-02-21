@@ -220,16 +220,18 @@ router.get('/stats', authenticateToken, async (req, res) => {
         thisMonth.setMonth(thisMonth.getMonth() - 1);
 
         // Fetch resume stats
+        // Note: averageOriginal is calculated only from ANALYZED CVs (those with global_rating > 0)
+        // averageImproved is calculated only from IMPROVED CVs (those with improved_global_rating > 0)
         const resumeStatsQuery = `
             SELECT 
                 COUNT(*) as total,
                 COUNT(CASE WHEN analyzed_at IS NOT NULL THEN 1 END) as analyzed,
-                COUNT(CASE WHEN status = 'Improved' THEN 1 END) as improved,
+                COUNT(CASE WHEN status = 'Improved' OR improved_global_rating > 0 THEN 1 END) as improved,
                 COUNT(CASE WHEN created_at >= $${params.length + 1} THEN 1 END) as today,
                 COUNT(CASE WHEN created_at >= $${params.length + 2} THEN 1 END) as this_week,
                 COUNT(CASE WHEN created_at >= $${params.length + 3} THEN 1 END) as this_month,
-                COALESCE(AVG(NULLIF(global_rating, 0)), 0) as avg_original_score,
-                COALESCE(AVG(NULLIF(improved_global_rating, 0)), 0) as avg_improved_score
+                COALESCE(AVG(CASE WHEN global_rating > 0 THEN global_rating END), 0) as avg_original_score,
+                COALESCE(AVG(CASE WHEN improved_global_rating > 0 THEN improved_global_rating END), 0) as avg_improved_score
             FROM resumes r
             ${whereClause}
         `;

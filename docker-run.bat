@@ -9,9 +9,11 @@ docker stop resumeconverter-app 2>nul
 docker rm resumeconverter-app 2>nul
 
 REM Start new container
+REM Note: Stop local dev server before running Docker to avoid port conflicts
 docker run -d ^
     --name resumeconverter-app ^
     -p 3443:3443 ^
+    -p 5433:5432 ^
     -v "%cd%\uploads:/app/uploads" ^
     -v "%cd%\logs:/app/logs" ^
     --restart unless-stopped ^

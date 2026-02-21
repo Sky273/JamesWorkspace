@@ -22,7 +22,10 @@ const AUTH_ERROR_PATTERNS = [
   'invalid signature',
   'JsonWebTokenError',
   'TokenExpiredError',
-  'NotBeforeError'
+  'NotBeforeError',
+  'URI malformed',
+  'URIError',
+  'malformed URI'
 ];
 
 interface ErrorBoundaryProps {

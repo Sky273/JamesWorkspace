@@ -8,6 +8,7 @@ import crypto from 'crypto';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { safeLog } from '../utils/logger.backend.js';
 import * as mailService from '../services/mail/mailService.js';
+import { query } from '../config/database.js';
 
 const router = express.Router();
 
@@ -132,7 +133,16 @@ router.get('/callback/gmail', async (req, res) => {
 router.post('/draft', authenticateToken, async (req, res) => {
     try {
         const userId = req.user.id || req.user.userId;
-        const { to, subject, body, pdfBase64, pdfFilename, provider = 'gmail' } = req.body;
+        const userFirm = req.user.firm || req.user.customer;
+        
+        // Debug: log raw request body keys
+        safeLog('debug', 'Mail draft request body keys', { keys: Object.keys(req.body) });
+        
+        const { 
+            to, subject, body, pdfBase64, pdfFilename, provider = 'gmail',
+            // Submission tracking fields
+            resumeId, clientId, contactId, missionId
+        } = req.body;
         
         // Validate required fields
         if (!to) {
@@ -159,12 +169,50 @@ router.post('/draft', authenticateToken, async (req, res) => {
             attachmentName
         });
         
-        safeLog('info', 'Email draft created via API', { userId, to, subject });
+        safeLog('info', 'Email draft created via API', { userId, to, subject, resumeId, clientId, contactId });
+        
+        // Record submission if client/contact info provided
+        let submissionId = null;
+        safeLog('debug', 'Submission tracking check', { 
+            resumeId: resumeId || 'MISSING', 
+            clientId: clientId || 'MISSING', 
+            contactId: contactId || 'MISSING', 
+            hasAll: !!(resumeId && clientId && contactId) 
+        });
+        if (resumeId && clientId && contactId) {
+            try {
+                // Get firm_id from client
+                const clientResult = await query(
+                    'SELECT firm_id FROM clients WHERE id = $1',
+                    [clientId]
+                );
+                
+                if (clientResult.rows.length > 0) {
+                    const firmId = clientResult.rows[0].firm_id;
+                    
+                    // Insert submission record
+                    const submissionResult = await query(
+                        `INSERT INTO resume_submissions 
+                         (resume_id, client_id, contact_id, mission_id, firm_id, sent_by, status, notes)
+                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                         RETURNING id`,
+                        [resumeId, clientId, contactId, missionId || null, firmId, userId, 'sent', `Email draft created via ${provider}`]
+                    );
+                    
+                    submissionId = submissionResult.rows[0]?.id;
+                    safeLog('info', 'Resume submission recorded', { submissionId, resumeId, clientId, contactId });
+                }
+            } catch (submissionError) {
+                // Log but don't fail the request - draft was created successfully
+                safeLog('warn', 'Failed to record submission', { error: submissionError.message });
+            }
+        }
         
         return res.json({
             success: true,
             draftId: result.draftId,
             webLink: result.webLink,
+            submissionId,
             message: 'Draft created successfully'
         });
     } catch (error) {

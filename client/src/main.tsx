@@ -61,9 +61,48 @@ if (import.meta.env.DEV) {
   };
 }
 
+// Authentication-related error patterns that should trigger redirect to signin
+const AUTH_ERROR_PATTERNS = [
+  'URI malformed',
+  'URIError',
+  'malformed URI',
+  'jwt malformed',
+  'jwt expired',
+  'invalid token',
+  'token expired',
+  'unauthorized',
+  'session expired'
+];
+
+// Check if an error is authentication-related
+const isAuthError = (message: string): boolean => {
+  const lowerMessage = message.toLowerCase();
+  return AUTH_ERROR_PATTERNS.some(pattern => lowerMessage.includes(pattern.toLowerCase()));
+};
+
+// Redirect to signin page silently
+const redirectToSignin = (): void => {
+  // Prevent multiple redirects
+  if (window.location.pathname === '/signin') return;
+  
+  // Clear any stored auth data
+  document.cookie = 'accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+  document.cookie = 'refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+  
+  // Redirect silently
+  window.location.replace('/signin?expired=true');
+};
+
 // Global handler for unhandled promise rejections
 window.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => {
   const reason = String(event.reason?.message || event.reason || '');
+  
+  // Check if this is an auth-related error - redirect silently
+  if (isAuthError(reason)) {
+    event.preventDefault();
+    redirectToSignin();
+    return;
+  }
   
   // List of patterns to suppress
   const suppressPatterns = [
@@ -93,6 +132,13 @@ window.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => 
 // Global error handler for runtime errors
 window.addEventListener('error', (event: ErrorEvent) => {
   const message = String(event.message || '');
+  
+  // Check if this is an auth-related error - redirect silently
+  if (isAuthError(message)) {
+    event.preventDefault();
+    redirectToSignin();
+    return;
+  }
   
   // Suppress extension-related errors and non-critical warnings
   const suppressPatterns = [
