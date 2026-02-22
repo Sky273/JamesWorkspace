@@ -26,6 +26,7 @@ import { createSafeHtml } from '../utils/sanitizer.frontend';
 import { templateService } from '../utils/templateService';
 import Pagination from '../components/Pagination';
 import { SkeletonTemplateList } from '../components/ui/Skeleton';
+import Breadcrumbs from '../components/Breadcrumbs';
 
 interface Template {
   id: string;
@@ -256,6 +257,8 @@ const TemplatesPage = (): JSX.Element => {
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="p-6 max-w-7xl mx-auto">
+      <Breadcrumbs className="mb-4" />
+      
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{t('templates.title')}</h1>
         <p className="text-gray-600 dark:text-gray-400">{t('templates.subtitle')}</p>

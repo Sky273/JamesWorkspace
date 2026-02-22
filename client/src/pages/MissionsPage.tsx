@@ -26,6 +26,7 @@ import { StatsCards, SearchAndActions } from '../components/MissionsPage';
 import Pagination from '../components/Pagination';
 import { loadTinyMCE } from '../utils/lazyTinyMCE';
 import { SkeletonMissionList } from '../components/ui/Skeleton';
+import Breadcrumbs from '../components/Breadcrumbs';
 
 interface Mission {
   id: string;
@@ -280,6 +281,8 @@ const MissionsPage = (): JSX.Element => {
       transition={{ duration: 0.5 }}
       className="p-6 max-w-7xl mx-auto"
     >
+      <Breadcrumbs className="mb-4" />
+      
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
           {t('missions.title')}

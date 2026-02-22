@@ -13,6 +13,7 @@ import { useChatbot } from '../context/ChatbotContext';
 import logger from '../utils/logger.frontend';
 
 import { LLMTab, PromptsTab, WeightsTab, ChatbotTab } from '../components/SettingsPage';
+import Breadcrumbs from '../components/Breadcrumbs';
 
 type HeroIcon = ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, 'ref'> & { title?: string; titleId?: string } & RefAttributes<SVGSVGElement>>;
 
@@ -235,6 +236,8 @@ const SettingsPage = (): JSX.Element => {
       transition={{ duration: 0.5 }}
       className="p-6 max-w-6xl mx-auto"
     >
+      <Breadcrumbs className="mb-4" />
+      
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
           {t('settings.title')}

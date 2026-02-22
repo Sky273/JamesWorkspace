@@ -37,6 +37,7 @@ import type {
   DetailedProfileAnalysisResponse
 } from '../types/entities';
 import logger from '../utils/logger.frontend';
+import Breadcrumbs from '../components/Breadcrumbs';
 
 const DEFAULT_WEIGHTS: ProfileMatchWeights = {
   skills: 40,
@@ -636,6 +637,8 @@ const ProfileMatchingPage = (): JSX.Element => {
         )}
       </AnimatePresence>
 
+      <Breadcrumbs className="mb-4" />
+      
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">

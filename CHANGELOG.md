@@ -1,3 +1,25 @@
+## v1.6.1 - 2026-02-23
+### 🧭 Breadcrumbs & Refactoring Navigation CV
+
+#### Navigation par Breadcrumbs
+- **Composant Breadcrumbs** : Implémentation sur l'ensemble des pages de l'application
+- **Génération automatique** : Détection intelligente des routes et affichage contextuel
+- **Pages couvertes** : CVthèque, Missions, Clients, Adaptations, Templates, Paramètres, Upload, Profile Matching, Guide Utilisateur, Métriques, Logs de Sécurité, Utilisateurs, Tags, Templates Email
+
+#### Refactoring Workflow CV
+- **URLs distinctes** : Séparation en `/resumes/:id/analysis`, `/resumes/:id/improve`, `/resumes/:id/export`
+- **Redirection automatique** : `/resumes/:id` redirige vers `/resumes/:id/analysis`
+- **Nettoyage code** : Suppression de `ResumeViewPage.tsx` et `ResumeAnalysis.tsx` (ancien composant monolithique de 702 lignes)
+
+#### Corrections UI/UX
+- **Boutons dark mode** : Style outlined subtil pour "Voir l'amélioration" et "Exporter" (meilleure lisibilité)
+- **Animation amélioration** : Correction de l'affichage avec `isVisible={true}` et `setTimeout` pour le rendu React
+
+#### Traductions
+- **Nouvelles clés** : `navigation.securityLogs`, `navigation.upload`, `resume.analysis.title`, `resume.analysis.tabs.skills`
+
+---
+
 ## v1.6.0 - 2026-02-21
 ### 📧 Templates Email MJML & Profils Utilisateurs Enrichis
 

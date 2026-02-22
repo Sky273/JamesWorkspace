@@ -36,6 +36,7 @@ import {
 import Pagination from '../components/Pagination';
 import { Client, ClientContact, ClientType } from '../types/entities';
 import { SkeletonClientList } from '../components/ui/Skeleton';
+import Breadcrumbs from '../components/Breadcrumbs';
 
 interface Stats {
   totalClients: number;
@@ -214,6 +215,8 @@ const ClientsPage = (): JSX.Element => {
       animate={{ opacity: 1 }}
       className="p-6 max-w-7xl mx-auto"
     >
+      <Breadcrumbs className="mb-4" />
+      
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">

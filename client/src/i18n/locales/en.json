@@ -15,6 +15,7 @@
     "save": "Save",
     "cancel": "Cancel",
     "loading": "Loading...",
+    "backToList": "Back to list",
     "error": "Error",
     "delete": "Delete",
     "edit": "Edit",
@@ -237,6 +238,7 @@
   },
   "resume": {
     "analysis": {
+      "title": "Resume Analysis",
       "original": "Original",
       "improved": "Improved",
       "suggestions": "Suggestions",
@@ -263,6 +265,7 @@
       "improvedResume": "Improved Resume",
       "tabs": {
         "overview": "Overview",
+        "skills": "Skills & Tags",
         "skillsTags": "Skills & Tags",
         "original": "Original",
         "improved": "Improved",
@@ -304,8 +307,33 @@
       "exporting": "Exporting...",
       "saveChanges": "Save Changes",
       "saving": "Saving...",
-      "adaptToMission": "Adapt to Mission"
-    }
+      "adaptToMission": "Adapt to Mission",
+      "improve": "Improve",
+      "improveNow": "Improve Now",
+      "export": "Export",
+      "viewImproved": "View Improved"
+    },
+    "steps": {
+      "analysis": "Analysis",
+      "improve": "Improvement",
+      "export": "Export"
+    },
+    "improve": {
+      "title": "Resume Improvement",
+      "notYetImproved": "Resume not yet improved",
+      "description": "Use AI to automatically improve this resume by optimizing its structure, content and ATS score."
+    },
+    "export": {
+      "title": "Resume Export",
+      "needsImprovement": "Improvement Required",
+      "needsImprovementDescription": "Please improve the resume first before exporting."
+    },
+    "improveSuccess": "Resume improved successfully",
+    "improveError": "Error improving resume",
+    "exportSuccess": "Resume exported successfully",
+    "exportError": "Error exporting resume",
+    "saveSuccess": "Changes saved",
+    "saveError": "Error saving changes"
   },
   "users": {
     "management": {
@@ -844,11 +872,12 @@
     "marketRadar": "Market Radar",
     "metiers": "Jobs & Skills",
     "security": "Security Logs",
-    "missions": "Missions",
+    "securityLogs": "Security Logs",
     "clients": "Clients & Prospects",
     "profileMatching": "Profile Matching",
     "adaptations": "Adaptations",
     "userGuide": "User Guide",
+    "upload": "Upload Resume",
     "sectionGestion": "Management",
     "sectionAdmin": "Admin"
   },

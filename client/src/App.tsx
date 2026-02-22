@@ -29,7 +29,9 @@ const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const MissionsPage = lazy(() => import('./pages/MissionsPage'));
 const AdaptationsPage = lazy(() => import('./pages/AdaptationsPage'));
 const ProfileMatchingPage = lazy(() => import('./pages/ProfileMatchingPage'));
-const ResumeViewPage = lazy(() => import('./pages/ResumeViewPage'));
+const ResumeAnalysisPage = lazy(() => import('./pages/ResumeAnalysisPage'));
+const ResumeImprovePage = lazy(() => import('./pages/ResumeImprovePage'));
+const ResumeExportPage = lazy(() => import('./pages/ResumeExportPage'));
 const MissionViewPage = lazy(() => import('./pages/MissionViewPage'));
 const AdaptationViewPage = lazy(() => import('./pages/AdaptationViewPage'));
 const UserGuidePage = lazy(() => import('./pages/UserGuidePage'));
@@ -112,7 +114,10 @@ const App = (): JSX.Element => {
                 >
                   <Route index element={<HomePage />} />
                   <Route path="resumes" element={<ResumesPage />} />
-                  <Route path="resumes/:id" element={<ResumeViewPage />} />
+                  <Route path="resumes/:id" element={<Navigate to="analysis" replace />} />
+                  <Route path="resumes/:id/analysis" element={<ResumeAnalysisPage />} />
+                  <Route path="resumes/:id/improve" element={<ResumeImprovePage />} />
+                  <Route path="resumes/:id/export" element={<ResumeExportPage />} />
                   <Route path="upload" element={<UploadPage />} />
                   <Route path="dashboard" element={<DashboardPage />} />
                   <Route path="missions" element={<MissionsPage />} />

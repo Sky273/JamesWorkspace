@@ -25,6 +25,7 @@ import { formatDate } from '../utils/dateFormatter';
 import { StatsCards, SearchAndActions } from '../components/ResumesPage';
 import Pagination from '../components/Pagination';
 import { SkeletonResumeList, SkeletonDashboardStats } from '../components/ui/Skeleton';
+import Breadcrumbs from '../components/Breadcrumbs';
 
 // Import centralized types
 import { Resume } from '../types/entities';
@@ -244,7 +245,7 @@ const ResumesPage = (): JSX.Element => {
   };
 
   const handleResumeClick = (resume: Resume): void => {
-    navigate(`/resumes/${resume.id}`);
+    navigate(`/resumes/${resume.id}/analysis`);
   };
 
   const openDeleteConfirm = (resume: Resume, event: MouseEvent): void => {
@@ -339,6 +340,8 @@ const ResumesPage = (): JSX.Element => {
       transition={{ duration: 0.5 }}
       className="p-6 max-w-7xl mx-auto"
     >
+      <Breadcrumbs className="mb-4" />
+      
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
           {t('resumes.title')}

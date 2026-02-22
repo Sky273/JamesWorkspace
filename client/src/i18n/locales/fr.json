@@ -15,6 +15,7 @@
     "save": "Enregistrer",
     "cancel": "Annuler",
     "loading": "Chargement...",
+    "backToList": "Retour à la liste",
     "error": "Erreur",
     "delete": "Supprimer",
     "edit": "Modifier",
@@ -93,6 +94,7 @@
   },
   "resume": {
     "analysis": {
+      "title": "Analyse du CV",
       "original": "Original",
       "improved": "Amélioré",
       "suggestions": "Suggestions",
@@ -119,6 +121,7 @@
       "improvedResume": "CV Amélioré",
       "tabs": {
         "overview": "Aperçu",
+        "skills": "Compétences & Tags",
         "skillsTags": "Compétences & Tags",
         "original": "Original",
         "improved": "Amélioré",
@@ -160,8 +163,33 @@
       "exporting": "Exportation...",
       "saveChanges": "Enregistrer les modifications",
       "saving": "Enregistrement...",
-      "adaptToMission": "Adapter à une mission"
-    }
+      "adaptToMission": "Adapter à une mission",
+      "improve": "Améliorer",
+      "improveNow": "Améliorer maintenant",
+      "export": "Exporter",
+      "viewImproved": "Voir l'amélioration"
+    },
+    "steps": {
+      "analysis": "Analyse",
+      "improve": "Amélioration",
+      "export": "Export"
+    },
+    "improve": {
+      "title": "Amélioration du CV",
+      "notYetImproved": "CV non encore amélioré",
+      "description": "Utilisez l'IA pour améliorer automatiquement ce CV en optimisant sa structure, son contenu et son score ATS."
+    },
+    "export": {
+      "title": "Export du CV",
+      "needsImprovement": "Amélioration requise",
+      "needsImprovementDescription": "Veuillez d'abord améliorer le CV avant de l'exporter."
+    },
+    "improveSuccess": "CV amélioré avec succès",
+    "improveError": "Erreur lors de l'amélioration du CV",
+    "exportSuccess": "CV exporté avec succès",
+    "exportError": "Erreur lors de l'export du CV",
+    "saveSuccess": "Modifications enregistrées",
+    "saveError": "Erreur lors de l'enregistrement"
   },
   "users": {
     "management": {
@@ -559,10 +587,12 @@
     "profileMatching": "Matching Profils",
     "adaptations": "Adaptations",
     "security": "Logs de Sécurité",
+    "securityLogs": "Logs de Sécurité",
     "metrics": "Métriques",
     "marketRadar": "Radar du Marché",
     "metiers": "Métiers & Compétences",
     "userGuide": "Guide Utilisateur",
+    "upload": "Télécharger un CV",
     "sectionGestion": "Gestion",
     "sectionAdmin": "Admin"
   },
