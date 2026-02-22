@@ -110,12 +110,12 @@ const ClientsPage = (): JSX.Element => {
     fetchData();
   }, [page, debouncedSearch, activeTab]);
 
-  // Calculate stats
+  // Calculate stats - ensure numeric addition (API may return strings)
   const stats: Stats = {
     totalClients: clients.filter(c => c.type === 'client').length,
     totalProspects: clients.filter(c => c.type === 'prospect').length,
-    totalContacts: clients.reduce((sum, c) => sum + (c.contacts_count || 0), 0),
-    totalSubmissions: clients.reduce((sum, c) => sum + (c.submissions_count || 0), 0)
+    totalContacts: clients.reduce((sum, c) => sum + Number(c.contacts_count || 0), 0),
+    totalSubmissions: clients.reduce((sum, c) => sum + Number(c.submissions_count || 0), 0)
   };
 
   // Pagination
