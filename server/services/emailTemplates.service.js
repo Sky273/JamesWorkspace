@@ -66,8 +66,14 @@ async function getMjml() {
         const mjmlCore = await import('mjml-core');
         const mjmlPreset = await import('mjml-preset-core');
         // Register all preset components
-        mjmlCore.registerComponent(mjmlPreset);
-        mjml2html = mjmlCore.default;
+        const preset = mjmlPreset.default;
+        if (preset && preset.components) {
+            for (const component of preset.components) {
+                mjmlCore.registerComponent(component);
+            }
+        }
+        // mjml-core exports the function at default.default
+        mjml2html = mjmlCore.default.default;
         safeLog('info', 'mjml-core module loaded lazily (~10MB)');
     }
     
