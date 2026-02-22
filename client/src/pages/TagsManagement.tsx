@@ -196,9 +196,9 @@ const TagsManagement = (): JSX.Element => {
         tagService.getCleanedTags().catch(() => ({})),
         tagService.getEscoTags().catch(() => ({ skills: [], industries: [], tools: [], softSkills: [] }))
       ]);
-      setTags(rawData);
-      setCleanedTags(cleanedData);
-      setEscoTags(escoData);
+      setTags(rawData as unknown as Tags);
+      setCleanedTags(cleanedData as unknown as CleanedTags);
+      setEscoTags(escoData as unknown as EscoTags);
     } catch (err) {
       toast.error(t('tags.loadError'));
       logger.error('Error loading tags:', err);
@@ -220,7 +220,7 @@ const TagsManagement = (): JSX.Element => {
       setSavingCleanedTags(true);
       await tagService.recalculateCleanedTags();
       const freshCleanedTags = await tagService.getCleanedTags();
-      setCleanedTags(freshCleanedTags);
+      setCleanedTags(freshCleanedTags as unknown as CleanedTags);
       toast.success(t('tags.cleanedTagsRecalculated', { defaultValue: 'Tags nettoyés recalculés avec succès' }));
     } catch (err) {
       toast.error(t('tags.cleanedTagsRecalculateError', { defaultValue: 'Erreur lors du recalcul des tags nettoyés' }));
@@ -236,7 +236,7 @@ const TagsManagement = (): JSX.Element => {
       setConvertingToEsco(true);
       await tagService.recalculateEscoTags('fr');
       const freshEscoTags = await tagService.getEscoTags();
-      setEscoTags(freshEscoTags);
+      setEscoTags(freshEscoTags as unknown as EscoTags);
       toast.success(t('tags.escoTagsRecalculated', { defaultValue: 'Tags ESCO recalculés avec succès' }));
     } catch (err) {
       toast.error(t('tags.escoTagsRecalculateError', { defaultValue: 'Erreur lors du recalcul des tags ESCO' }));

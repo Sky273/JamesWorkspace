@@ -22,6 +22,7 @@ import { formatDateTime } from '../utils/dateFormatter';
 import { StatsCards, SearchAndFilters } from '../components/AdaptationsPage';
 import Pagination from '../components/Pagination';
 import { loadTinyMCE } from '../utils/lazyTinyMCE';
+import { SkeletonAdaptationList } from '../components/ui/Skeleton';
 
 interface Adaptation {
   id: string;
@@ -58,10 +59,13 @@ interface Mission {
 
 interface Template {
   id: string;
-  name: string;
-  status?: string;
-  templateContent?: string;
-  stylesheet?: string;
+  Name: string;
+  Status?: string;
+  TemplateContent?: string;
+  Stylesheet?: string;
+  HeaderContent?: string;
+  FooterContent?: string;
+  FooterHeight?: number;
 }
 
 interface Stats {
@@ -130,7 +134,7 @@ const AdaptationsPage = (): JSX.Element => {
     try {
       setLoadingTemplates(true);
       const fetchedTemplates = await templateService.getAllTemplates();
-      setTemplates(fetchedTemplates.filter((t: Template) => t.status === 'Active'));
+      setTemplates(fetchedTemplates.filter((t: Template) => t.Status === 'Active'));
       if (fetchedTemplates.length > 0) setSelectedTemplate(fetchedTemplates[0].id);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '';
@@ -256,23 +260,23 @@ const AdaptationsPage = (): JSX.Element => {
       
       const simplifiedFilename = baseFilename.replace(/[^a-zA-Z0-9_]/g, '') + '.pdf';
 
-      const stylesheet = template.stylesheet || '';
+      const stylesheet = template.Stylesheet || '';
       
       // Process body content
-      let processedBody = template.templateContent || '';
+      let processedBody = template.TemplateContent || '';
       processedBody = processedBody.replace(/-name-/g, candidateName);
       processedBody = processedBody.replace(/-title-/g, candidateTitle);
       processedBody = processedBody.replace(/-content-/g, content);
       
       // Process header content (if exists)
-      let processedHeader = template.headerContent || '';
+      let processedHeader = template.HeaderContent || '';
       if (processedHeader) {
         processedHeader = processedHeader.replace(/-name-/g, candidateName);
         processedHeader = processedHeader.replace(/-title-/g, candidateTitle);
       }
       
       // Process footer content (if exists)
-      let processedFooter = template.footerContent || '';
+      let processedFooter = template.FooterContent || '';
       if (processedFooter) {
         processedFooter = processedFooter.replace(/-name-/g, candidateName);
         processedFooter = processedFooter.replace(/-title-/g, candidateTitle);
@@ -287,7 +291,7 @@ const AdaptationsPage = (): JSX.Element => {
           stylesheet: stylesheet,
           headerContent: processedHeader || undefined,
           footerContent: processedFooter || undefined,
-          footerHeight: template.footerHeight || 25
+          footerHeight: template.FooterHeight || 25
         })
       });
 
@@ -448,7 +452,7 @@ const AdaptationsPage = (): JSX.Element => {
       />
 
       {loading ? (
-        <div className="flex items-center justify-center py-20"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div></div>
+        <SkeletonAdaptationList count={6} />
       ) : filteredAdaptations.length === 0 ? (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">
           <SparklesIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />

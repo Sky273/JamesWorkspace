@@ -9,6 +9,7 @@ import { tagService } from '../utils/tagService';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import logger from '../utils/logger.frontend';
+import { SkeletonCard } from '../components/ui/Skeleton';
 
 interface Tags {
   [category: string]: string[];
@@ -24,7 +25,7 @@ const TagsManagement = (): JSX.Element => {
       try {
         setLoading(true);
         const data = await tagService.getAllTags();
-        setTags(data);
+        setTags(data as unknown as Tags);
       } catch (err) {
         setError('Failed to load tags');
         toast.error('Failed to load tags');
@@ -40,7 +41,7 @@ const TagsManagement = (): JSX.Element => {
   const handleRenameTag = async (category: string, oldName: string, newName: string | null): Promise<void> => {
     if (!newName) return;
     try {
-      await tagService.renameTag(oldName, newName);
+      await tagService.renameTag(category, oldName, newName);
       toast.success(`Tag renamed from ${oldName} to ${newName}`);
       setTags(prevTags => ({
         ...prevTags,
@@ -52,7 +53,16 @@ const TagsManagement = (): JSX.Element => {
     }
   };
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-4" />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <SkeletonCard />
+        <SkeletonCard />
+        <SkeletonCard />
+      </div>
+    </div>
+  );
   if (error) return <div>{error}</div>;
 
   return (

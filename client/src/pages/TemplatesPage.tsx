@@ -25,18 +25,19 @@ import { useTranslation } from 'react-i18next';
 import { createSafeHtml } from '../utils/sanitizer.frontend';
 import { templateService } from '../utils/templateService';
 import Pagination from '../components/Pagination';
+import { SkeletonTemplateList } from '../components/ui/Skeleton';
 
 interface Template {
   id: string;
-  name: string;
-  description?: string;
-  headerContent?: string;
-  templateContent?: string;
-  footerContent?: string;
-  stylesheet?: string;
-  status?: string;
-  popular?: boolean;
-  tags?: string[];
+  Name: string;
+  Description?: string;
+  HeaderContent?: string;
+  TemplateContent?: string;
+  FooterContent?: string;
+  Stylesheet?: string;
+  Status?: string;
+  Popular?: boolean;
+  Tags?: string[];
 }
 
 interface TemplateCardProps {
@@ -71,11 +72,11 @@ const TemplateCard = ({ template, onDeleteClick, onPreviewClick, index }: Templa
     >
       <div className="relative group cursor-pointer" onClick={() => onPreviewClick(template)}>
         <div className="h-48 bg-gray-50 dark:bg-gray-900 overflow-hidden">
-          {template.stylesheet && <style dangerouslySetInnerHTML={{ __html: template.stylesheet }} />}
+          {template.Stylesheet && <style dangerouslySetInnerHTML={{ __html: template.Stylesheet }} />}
           <div className="p-3 text-xs transform scale-75 origin-top-left space-y-1" style={{ width: '133%' }}>
-            {template.headerContent && <div dangerouslySetInnerHTML={createSafeHtml(template.headerContent)} />}
-            <div dangerouslySetInnerHTML={createSafeHtml(template.templateContent || '')} />
-            {template.footerContent && <div dangerouslySetInnerHTML={createSafeHtml(template.footerContent)} />}
+            {template.HeaderContent && <div dangerouslySetInnerHTML={createSafeHtml(template.HeaderContent)} />}
+            <div dangerouslySetInnerHTML={createSafeHtml(template.TemplateContent || '')} />
+            {template.FooterContent && <div dangerouslySetInnerHTML={createSafeHtml(template.FooterContent)} />}
           </div>
         </div>
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
@@ -84,7 +85,7 @@ const TemplateCard = ({ template, onDeleteClick, onPreviewClick, index }: Templa
             <span className="font-medium">{t('templates.card.preview')}</span>
           </div>
         </div>
-        {template.popular && (
+        {template.Popular && (
           <div className="absolute top-2 right-2">
             <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/80 dark:text-yellow-300 shadow">
               <StarIcon className="w-3 h-3" />
@@ -97,27 +98,27 @@ const TemplateCard = ({ template, onDeleteClick, onPreviewClick, index }: Templa
       <div className="p-4">
         <div className="mb-3">
           <div className="flex items-center justify-between gap-2">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">{template.name}</h3>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">{template.Name}</h3>
             <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-              template.status?.toLowerCase() === 'active' 
+              template.Status?.toLowerCase() === 'active' 
                 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' 
                 : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
             }`}>
-              {template.status?.toLowerCase() === 'active' 
+              {template.Status?.toLowerCase() === 'active' 
                 ? t('templates.editor.statusField.active') 
                 : t('templates.editor.statusField.inactive')}
             </span>
           </div>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 line-clamp-2">{template.description || t('templates.card.noDescription')}</p>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 line-clamp-2">{template.Description || t('templates.card.noDescription')}</p>
         </div>
 
-        {template.tags && template.tags.length > 0 && (
+        {template.Tags && template.Tags.length > 0 && (
           <div className="flex flex-wrap gap-1 mb-3">
-            {template.tags.slice(0, 3).map((tag, idx) => (
+            {template.Tags.slice(0, 3).map((tag, idx) => (
               <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{tag}</span>
             ))}
-            {template.tags.length > 3 && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400">+{template.tags.length - 3}</span>
+            {template.Tags.length > 3 && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400">+{template.Tags.length - 3}</span>
             )}
           </div>
         )}
@@ -233,21 +234,22 @@ const TemplatesPage = (): JSX.Element => {
 
   // Client-side sorting only (server handles filtering)
   const filteredTemplates = [...templates].sort((a, b) => {
-    if (sortBy === 'popular') return (b.popular ? 1 : 0) - (a.popular ? 1 : 0);
-    return a.name.localeCompare(b.name);
+    if (sortBy === 'popular') return (b.Popular ? 1 : 0) - (a.Popular ? 1 : 0);
+    return a.Name.localeCompare(b.Name);
   });
 
   const stats: Stats = {
     total: totalCount,
-    popular: templates.filter(t => t.popular).length
+    popular: templates.filter(t => t.Popular).length
   };
 
   if (!mounted) return <></>;
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      <div className="p-6 max-w-7xl mx-auto">
+        <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-6" />
+        <SkeletonTemplateList count={8} />
       </div>
     );
   }
@@ -349,7 +351,7 @@ const TemplatesPage = (): JSX.Element => {
               <button onClick={closeDeleteConfirmModal} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"><XMarkIcon className="w-6 h-6" /></button>
             </div>
             <div className="p-4">
-              <p className="text-gray-700 dark:text-gray-300 mb-6">{t('templates.delete.message', { templateName: templateToDelete.name })}</p>
+              <p className="text-gray-700 dark:text-gray-300 mb-6">{t('templates.delete.message', { templateName: templateToDelete.Name })}</p>
               <div className="flex justify-end gap-3">
                 <button onClick={closeDeleteConfirmModal} disabled={isDeleting} className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors disabled:opacity-50">{t('common.cancel')}</button>
                 <button onClick={handleConfirmDelete} disabled={isDeleting} className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50">{isDeleting ? t('templates.status.deleting') : t('common.delete')}</button>
@@ -363,28 +365,28 @@ const TemplatesPage = (): JSX.Element => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
           <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
             <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-              <div><h3 className="text-xl font-bold text-gray-900 dark:text-white">{previewTemplate.name}</h3><p className="text-sm text-gray-500 dark:text-gray-400">{previewTemplate.description}</p></div>
+              <div><h3 className="text-xl font-bold text-gray-900 dark:text-white">{previewTemplate.Name}</h3><p className="text-sm text-gray-500 dark:text-gray-400">{previewTemplate.Description}</p></div>
               <button onClick={() => setPreviewTemplate(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"><XMarkIcon className="w-6 h-6" /></button>
             </div>
             <div className="p-6 overflow-auto max-h-[70vh] bg-gray-50 dark:bg-gray-900">
-              {previewTemplate.stylesheet && <style dangerouslySetInnerHTML={{ __html: previewTemplate.stylesheet }} />}
+              {previewTemplate.Stylesheet && <style dangerouslySetInnerHTML={{ __html: previewTemplate.Stylesheet }} />}
               <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow space-y-4">
-                {previewTemplate.headerContent && (
+                {previewTemplate.HeaderContent && (
                   <div className="border-b border-gray-200 dark:border-gray-700 pb-4">
                     <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">{t('templates.editor.header.label')}</div>
-                    <div dangerouslySetInnerHTML={createSafeHtml(previewTemplate.headerContent)} />
+                    <div dangerouslySetInnerHTML={createSafeHtml(previewTemplate.HeaderContent)} />
                   </div>
                 )}
                 <div>
-                  {(previewTemplate.headerContent || previewTemplate.footerContent) && (
+                  {(previewTemplate.HeaderContent || previewTemplate.FooterContent) && (
                     <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">{t('templates.editor.content.label')}</div>
                   )}
-                  <div dangerouslySetInnerHTML={createSafeHtml(previewTemplate.templateContent || '')} />
+                  <div dangerouslySetInnerHTML={createSafeHtml(previewTemplate.TemplateContent || '')} />
                 </div>
-                {previewTemplate.footerContent && (
+                {previewTemplate.FooterContent && (
                   <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
                     <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">{t('templates.editor.footer.label')}</div>
-                    <div dangerouslySetInnerHTML={createSafeHtml(previewTemplate.footerContent)} />
+                    <div dangerouslySetInnerHTML={createSafeHtml(previewTemplate.FooterContent)} />
                   </div>
                 )}
               </div>

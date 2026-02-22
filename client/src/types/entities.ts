@@ -304,14 +304,29 @@ export type AdaptationStatus = 'Processing' | 'Completed' | 'Failed';
 
 export interface Template {
   id: string;
-  'Name': string;
-  'Content'?: string;
-  'Description'?: string;
-  'Category'?: string;
-  'Is Default'?: boolean;
-  'Firm'?: string;
-  'Created At'?: string;
-  'Updated At'?: string;
+  Name: string;
+  Description?: string;
+  HeaderContent?: string;
+  TemplateContent: string;
+  FooterContent?: string;
+  FooterHeight?: number;
+  Status: string;
+  Tags?: string[];
+  Popular?: boolean;
+  Stylesheet?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  // Aliases for backward compatibility
+  name?: string;
+  description?: string;
+  headerContent?: string;
+  templateContent?: string;
+  footerContent?: string;
+  footerHeight?: number;
+  status?: string;
+  tags?: string[];
+  popular?: boolean;
+  stylesheet?: string;
 }
 
 // ============================================
@@ -338,16 +353,19 @@ export type SubmissionStatus = 'sent' | 'viewed' | 'rejected' | 'accepted' | 'pe
 
 export interface Client {
   id: string;
-  firm_id: string;
   name: string;
   type: ClientType;
-  status: ClientStatus;
+  firm_id?: string;
+  firmId?: string;
+  status?: ClientStatus;
   address?: string;
   website?: string;
   industry?: string;
   notes?: string;
   created_at?: string;
+  createdAt?: string;
   updated_at?: string;
+  updatedAt?: string;
   created_by?: string;
   firm_name?: string;
   contacts_count?: number;

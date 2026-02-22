@@ -28,13 +28,13 @@ import i18n from '../i18n';
 
 interface Template {
   id: string;
-  name: string;
-  status?: string;
-  templateContent?: string;
-  stylesheet?: string;
-  headerContent?: string;
-  footerContent?: string;
-  footerHeight?: number;
+  Name: string;
+  Status?: string;
+  TemplateContent?: string;
+  Stylesheet?: string;
+  HeaderContent?: string;
+  FooterContent?: string;
+  FooterHeight?: number;
 }
 
 interface Adaptation {
@@ -142,7 +142,7 @@ const AdaptationViewPage = (): JSX.Element => {
         const fetchedTemplates = await templateService.getAllTemplates();
         // Filter active templates (case-insensitive)
         const activeTemplates = fetchedTemplates.filter((t: Template) => 
-          t.status?.toLowerCase() === 'active'
+          t.Status?.toLowerCase() === 'active'
         );
         logger.log('Fetched templates', { total: fetchedTemplates.length, active: activeTemplates.length });
         setTemplates(activeTemplates.length > 0 ? activeTemplates : fetchedTemplates);
@@ -243,18 +243,18 @@ const AdaptationViewPage = (): JSX.Element => {
       const name = adaptation['Resume Name'] || 'Candidat';
       const title = adaptation['Mission Title'] || 'CV Adapté';
 
-      let processedBody = template.templateContent || '';
+      let processedBody = template.TemplateContent || '';
       processedBody = processedBody.replace(/-name-/g, name);
       processedBody = processedBody.replace(/-title-/g, title);
       processedBody = processedBody.replace(/-content-/g, content);
 
-      let processedHeader = template.headerContent || '';
+      let processedHeader = template.HeaderContent || '';
       if (processedHeader) {
         processedHeader = processedHeader.replace(/-name-/g, name);
         processedHeader = processedHeader.replace(/-title-/g, title);
       }
 
-      let processedFooter = template.footerContent || '';
+      let processedFooter = template.FooterContent || '';
       if (processedFooter) {
         processedFooter = processedFooter.replace(/-name-/g, name);
         processedFooter = processedFooter.replace(/-title-/g, title);
@@ -266,10 +266,10 @@ const AdaptationViewPage = (): JSX.Element => {
         body: JSON.stringify({ 
           htmlContent: processedBody, 
           filename: `${name.replace(/[^a-zA-Z]/g, '_')}_adapted.pdf`,
-          stylesheet: template.stylesheet || '',
+          stylesheet: template.Stylesheet || '',
           headerContent: processedHeader || undefined,
           footerContent: processedFooter || undefined,
-          footerHeight: template.footerHeight || 25
+          footerHeight: template.FooterHeight || 25
         })
       });
 
@@ -279,7 +279,7 @@ const AdaptationViewPage = (): JSX.Element => {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${name.replace(/\s+/g, '_')}_adapted_${template.name}.pdf`;
+      a.download = `${name.replace(/\s+/g, '_')}_adapted_${template.Name}.pdf`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -582,7 +582,7 @@ const AdaptationViewPage = (): JSX.Element => {
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                 >
                   {templates.map(template => (
-                    <option key={template.id} value={template.id}>{template.name}</option>
+                    <option key={template.id} value={template.id}>{template.Name}</option>
                   ))}
                 </select>
               )}

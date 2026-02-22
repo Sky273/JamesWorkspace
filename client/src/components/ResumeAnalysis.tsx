@@ -41,11 +41,12 @@ type Resume = any;
 
 interface Template {
   id: string;
-  name: string;
-  headerContent?: string;
-  templateContent?: string;
-  footerContent?: string;
-  stylesheet?: string;
+  Name: string;
+  HeaderContent?: string;
+  TemplateContent?: string;
+  FooterContent?: string;
+  FooterHeight?: number;
+  Stylesheet?: string;
 }
 
 interface TabConfig {
@@ -201,12 +202,12 @@ const ResumeAnalysis = ({ resume }: ResumeAnalysisProps): JSX.Element | null => 
     
     const simplifiedFilename = baseFilename.replace(/[^a-zA-Z0-9_]/g, '') + '.pdf';
 
-    const stylesheet = template.stylesheet || '';
+    const stylesheet = template.Stylesheet || '';
     // Format content - preserve HTML if already formatted, otherwise wrap lines in paragraphs
     const improvedContent = content.includes('<') ? content : content.split('\n').filter((line: string) => line.trim()).map((line: string) => `<p>${line}</p>`).join('');
     
     // Process body content
-    let processedBody = template.templateContent || '';
+    let processedBody = template.TemplateContent || '';
     
     // Handle various encodings of placeholders (TinyMCE may encode them)
     processedBody = processedBody.replace(/-name-/g, candidateName);
@@ -219,14 +220,14 @@ const ResumeAnalysis = ({ resume }: ResumeAnalysisProps): JSX.Element | null => 
     processedBody = processedBody.replace(/<p>&lt;content&gt;<\/p>/g, improvedContent);
     
     // Process header content (if exists)
-    let processedHeader = template.headerContent || '';
+    let processedHeader = template.HeaderContent || '';
     if (processedHeader) {
       processedHeader = processedHeader.replace(/-name-/g, candidateName);
       processedHeader = processedHeader.replace(/-title-/g, candidateTitle);
     }
     
     // Process footer content (if exists)
-    let processedFooter = template.footerContent || '';
+    let processedFooter = template.FooterContent || '';
     if (processedFooter) {
       processedFooter = processedFooter.replace(/-name-/g, candidateName);
       processedFooter = processedFooter.replace(/-title-/g, candidateTitle);
@@ -241,7 +242,7 @@ const ResumeAnalysis = ({ resume }: ResumeAnalysisProps): JSX.Element | null => 
         stylesheet: stylesheet,
         headerContent: processedHeader || undefined,
         footerContent: processedFooter || undefined,
-        footerHeight: template.footerHeight || 25
+        footerHeight: template.FooterHeight || 25
       })
     });
 

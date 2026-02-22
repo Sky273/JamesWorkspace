@@ -30,6 +30,7 @@ import {
   ConfirmDeleteModal
 } from '../components/UsersManagement';
 import Pagination from '../components/Pagination';
+import { SkeletonUsersTable } from '../components/ui/Skeleton';
 
 interface User {
   id: string;
@@ -306,8 +307,9 @@ const UsersManagement = (): JSX.Element => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      <div className="container mx-auto px-4 py-8">
+        <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-6" />
+        <SkeletonUsersTable rows={8} />
       </div>
     );
   }

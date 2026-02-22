@@ -15,10 +15,13 @@ import { fetchWithAuth } from '../utils/apiInterceptor';
 
 interface Template {
   id: string;
-  name: string;
-  status?: string;
-  templateContent?: string;
-  stylesheet?: string;
+  Name: string;
+  Status?: string;
+  TemplateContent?: string;
+  Stylesheet?: string;
+  HeaderContent?: string;
+  FooterContent?: string;
+  FooterHeight?: number;
 }
 
 interface AdaptationComparisonProps {
@@ -45,7 +48,7 @@ const AdaptationComparison = ({ originalText, adaptedText, matchScore, candidate
     try {
       setLoadingTemplates(true);
       const fetchedTemplates = await templateService.getAllTemplates();
-      setTemplates(fetchedTemplates.filter((t: Template) => t.status === 'Active'));
+      setTemplates(fetchedTemplates.filter((t: Template) => t.Status === 'Active'));
       if (fetchedTemplates.length > 0) setSelectedTemplate(fetchedTemplates[0].id);
     } catch (error) {
       logger.error('Error fetching templates:', error);
@@ -68,23 +71,23 @@ const AdaptationComparison = ({ originalText, adaptedText, matchScore, candidate
       const title = candidateTitle || 'Titre Professionnel';
       const simplifiedFilename = name.replace(/[^a-zA-Z]/g, '_') + '_adapted.pdf';
 
-      const stylesheet = template.stylesheet || '';
+      const stylesheet = template.Stylesheet || '';
       
       // Process body content
-      let processedBody = template.templateContent || '';
+      let processedBody = template.TemplateContent || '';
       processedBody = processedBody.replace(/-name-/g, name);
       processedBody = processedBody.replace(/-title-/g, title);
       processedBody = processedBody.replace(/-content-/g, content);
       
       // Process header content (if exists)
-      let processedHeader = template.headerContent || '';
+      let processedHeader = template.HeaderContent || '';
       if (processedHeader) {
         processedHeader = processedHeader.replace(/-name-/g, name);
         processedHeader = processedHeader.replace(/-title-/g, title);
       }
       
       // Process footer content (if exists)
-      let processedFooter = template.footerContent || '';
+      let processedFooter = template.FooterContent || '';
       if (processedFooter) {
         processedFooter = processedFooter.replace(/-name-/g, name);
         processedFooter = processedFooter.replace(/-title-/g, title);
@@ -99,7 +102,7 @@ const AdaptationComparison = ({ originalText, adaptedText, matchScore, candidate
           stylesheet: stylesheet,
           headerContent: processedHeader || undefined,
           footerContent: processedFooter || undefined,
-          footerHeight: template.footerHeight || 25
+          footerHeight: template.FooterHeight || 25
         })
       });
 
@@ -109,7 +112,7 @@ const AdaptationComparison = ({ originalText, adaptedText, matchScore, candidate
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${name.replace(/\s+/g, '_')}_adapted_${template.name}.pdf`;
+      a.download = `${name.replace(/\s+/g, '_')}_adapted_${template.Name}.pdf`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -134,7 +137,7 @@ const AdaptationComparison = ({ originalText, adaptedText, matchScore, candidate
             <div className="flex items-center gap-2">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Template:</label>
               <select value={selectedTemplate} onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedTemplate(e.target.value)} disabled={loadingTemplates} className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
-                {templates.map(template => (<option key={template.id} value={template.id}>{template.name}</option>))}
+                {templates.map(template => (<option key={template.id} value={template.id}>{template.Name}</option>))}
               </select>
               <button onClick={handleExportToPDF} disabled={exportLoading || loadingTemplates || !selectedTemplate} className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors">
                 <ArrowDownTrayIcon className="w-4 h-4" />{exportLoading ? t('resume.actions.exporting') : t('adaptations.exportPDF')}
@@ -230,7 +233,7 @@ const AdaptationComparison = ({ originalText, adaptedText, matchScore, candidate
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
               >
                 {templates.map(template => (
-                  <option key={template.id} value={template.id}>{template.name}</option>
+                  <option key={template.id} value={template.id}>{template.Name}</option>
                 ))}
               </select>
               {loadingTemplates && (

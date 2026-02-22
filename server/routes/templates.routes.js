@@ -70,20 +70,20 @@ router.get('/', authenticateToken, async (req, res) => {
 
         const totalPages = Math.ceil(totalCount / limit);
 
-        // Map to frontend format
+        // Map to frontend format (using PascalCase for compatibility)
         const mappedTemplates = templates.map(template => ({
             id: template.id,
-            name: template.name,
-            description: template.description,
-            popular: template.popular || false,
-            status: template.status || 'active',
-            tags: template.tags || [],
+            Name: template.name,
+            Description: template.description,
+            Popular: template.popular || false,
+            Status: template.status || 'active',
+            Tags: template.tags || [],
             previewImage: template.preview_image_url || null,
-            headerContent: template.header_content || '',
-            templateContent: template.template_content,
-            footerContent: template.footer_content || '',
-            footerHeight: template.footer_height || 25,
-            stylesheet: template.stylesheet || '',
+            HeaderContent: template.header_content || '',
+            TemplateContent: template.template_content,
+            FooterContent: template.footer_content || '',
+            FooterHeight: template.footer_height || 25,
+            Stylesheet: template.stylesheet || '',
             lastUpdated: template.updated_at
         }));
 
@@ -115,20 +115,20 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
         const { id } = req.params;
         const template = await findWithTimeout('templates', id);
         
-        // Map to frontend format
+        // Map to frontend format (using PascalCase for compatibility)
         const mappedTemplate = {
             id: template.id,
-            name: template.name,
-            description: template.description,
-            popular: template.popular || false,
-            status: template.status || 'active',
-            tags: template.tags || [],
+            Name: template.name,
+            Description: template.description,
+            Popular: template.popular || false,
+            Status: template.status || 'active',
+            Tags: template.tags || [],
             previewImage: template.preview_image_url || null,
-            headerContent: template.header_content || '',
-            templateContent: template.template_content || '',
-            footerContent: template.footer_content || '',
-            footerHeight: template.footer_height || 25,
-            stylesheet: template.stylesheet || '',
+            HeaderContent: template.header_content || '',
+            TemplateContent: template.template_content || '',
+            FooterContent: template.footer_content || '',
+            FooterHeight: template.footer_height || 25,
+            Stylesheet: template.stylesheet || '',
             lastUpdated: template.updated_at
         };
         

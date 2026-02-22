@@ -17,11 +17,12 @@ interface Recommendations {
 
 interface Analysis {
   matchScore?: string | number;
+  score?: number;
   strengths?: string[];
   gaps?: string[];
   keywordMatches?: string[];
   missingKeywords?: string[];
-  recommendations?: Recommendations;
+  recommendations?: Recommendations | string[];
 }
 
 interface MatchAnalysisDisplayProps {
@@ -105,19 +106,27 @@ const MatchAnalysisDisplay = ({ analysis, onContinue, onCancel, hideActions = fa
         )}
       </div>
 
-      {analysis.recommendations && Object.keys(analysis.recommendations).length > 0 && (
+      {analysis.recommendations && (Array.isArray(analysis.recommendations) ? analysis.recommendations.length > 0 : Object.keys(analysis.recommendations).length > 0) && (
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
           <h4 className="font-semibold text-gray-900 dark:text-white mb-4">💡 Recommandations d'Adaptation</h4>
           <div className="space-y-4">
-            {Object.entries(analysis.recommendations).map(([section, recommendations]) => {
-              if (!recommendations || recommendations.length === 0) return null;
-              return (
-                <div key={section}>
-                  <h5 className="font-medium text-gray-800 dark:text-gray-200 mb-2">{sectionTitles[section] || section}</h5>
-                  <ul className="space-y-1 ml-4">{recommendations.map((rec, index) => (<li key={index} className="text-sm text-gray-600 dark:text-gray-400 list-disc">{rec}</li>))}</ul>
-                </div>
-              );
-            })}
+            {Array.isArray(analysis.recommendations) ? (
+              <ul className="space-y-1 ml-4">
+                {analysis.recommendations.map((rec: string, index: number) => (
+                  <li key={index} className="text-sm text-gray-600 dark:text-gray-400 list-disc">{rec}</li>
+                ))}
+              </ul>
+            ) : (
+              Object.entries(analysis.recommendations).map(([section, recommendations]) => {
+                if (!recommendations || recommendations.length === 0) return null;
+                return (
+                  <div key={section}>
+                    <h5 className="font-medium text-gray-800 dark:text-gray-200 mb-2">{sectionTitles[section] || section}</h5>
+                    <ul className="space-y-1 ml-4">{recommendations.map((rec: string, index: number) => (<li key={index} className="text-sm text-gray-600 dark:text-gray-400 list-disc">{rec}</li>))}</ul>
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
       )}

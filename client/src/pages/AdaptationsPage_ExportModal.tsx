@@ -10,7 +10,7 @@ import { useTranslation } from 'react-i18next';
 
 interface Template {
   id: string;
-  name: string;
+  Name: string;
 }
 
 interface ExportModalProps {
@@ -39,7 +39,7 @@ const ExportModal = ({ show, onClose, templates, selectedTemplate, setSelectedTe
         <div className="p-6">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('resume.analysis.exportOptions.selectTemplate')}</label>
           <select value={selectedTemplate} onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedTemplate(e.target.value)} disabled={loadingTemplates} className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
-            {templates.map(template => (<option key={template.id} value={template.id}>{template.name}</option>))}
+            {templates.map(template => (<option key={template.id} value={template.id}>{template.Name}</option>))}
           </select>
           <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">{t('adaptations.exportModal.description')}</p>
         </div>

@@ -24,6 +24,7 @@ import { formatDate } from '../utils/dateFormatter';
 
 import { StatsCards, SearchAndActions } from '../components/ResumesPage';
 import Pagination from '../components/Pagination';
+import { SkeletonResumeList, SkeletonDashboardStats } from '../components/ui/Skeleton';
 
 // Import centralized types
 import { Resume } from '../types/entities';
@@ -444,9 +445,7 @@ const ResumesPage = (): JSX.Element => {
       />
 
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-        </div>
+        <SkeletonResumeList count={6} />
       ) : filteredResumes.length === 0 ? (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">
           <DocumentTextIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />

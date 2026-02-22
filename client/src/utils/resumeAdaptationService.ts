@@ -6,11 +6,23 @@
 import { fetchWithAuth, createAuthOptions, createAuthOptionsWithCsrf } from './apiInterceptor';
 import logger from './logger.frontend';
 
+export interface Recommendations {
+    executiveSummary?: string[];
+    skills?: string[];
+    experience?: string[];
+    education?: string[];
+    atsOptimization?: string[];
+    [key: string]: string[] | undefined;
+}
+
 export interface MatchAnalysis {
-    score: number;
+    score?: number;
+    matchScore?: string | number;
     strengths: string[];
     gaps: string[];
-    recommendations: string[];
+    keywordMatches?: string[];
+    missingKeywords?: string[];
+    recommendations?: Recommendations | string[];
 }
 
 export interface Adaptation {

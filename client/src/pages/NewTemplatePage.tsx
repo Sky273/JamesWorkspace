@@ -74,16 +74,16 @@ const NewTemplatePage = (): JSX.Element => {
         setLoading(true);
         const template = await templateService.getTemplateById(id);
         const newFormData = {
-          name: template.name,
-          description: template.description,
-          headerContent: template.headerContent || '',
-          templateContent: template.templateContent,
-          footerContent: template.footerContent || '',
-          footerHeight: template.footerHeight || 25,
-          stylesheet: template.stylesheet,
-          status: template.status?.charAt(0).toUpperCase() + template.status?.slice(1).toLowerCase() || 'Active',
-          popular: template.popular,
-          tags: template.tags
+          name: template.Name || '',
+          description: template.Description || '',
+          headerContent: template.HeaderContent || '',
+          templateContent: template.TemplateContent || '',
+          footerContent: template.FooterContent || '',
+          footerHeight: template.FooterHeight || 25,
+          stylesheet: template.Stylesheet || '',
+          status: template.Status?.charAt(0).toUpperCase() + template.Status?.slice(1).toLowerCase() || 'Active',
+          popular: template.Popular || false,
+          tags: template.Tags || []
         };
         setFormData(newFormData);
         // Store initial content for editors

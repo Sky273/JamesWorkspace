@@ -14,7 +14,7 @@ interface Resume {
 
 interface Template {
   id: string;
-  name: string;
+  Name: string;
 }
 
 interface ExportTabProps {
@@ -56,7 +56,7 @@ const ExportTab = ({ resume, templates, selectedTemplate, onTemplateChange, load
                   <option disabled>{t('resume.analysis.exportOptions.noTemplates')}</option>
                 ) : (
                   templates.map((template) => (
-                    <option key={template.id} value={template.id}>{template.name}</option>
+                    <option key={template.id} value={template.id}>{template.Name}</option>
                   ))
                 )}
               </select>

@@ -35,6 +35,7 @@ import {
 } from '../components/ClientsPage';
 import Pagination from '../components/Pagination';
 import { Client, ClientContact, ClientType } from '../types/entities';
+import { SkeletonClientList } from '../components/ui/Skeleton';
 
 interface Stats {
   totalClients: number;
@@ -359,12 +360,11 @@ const ClientsPage = (): JSX.Element => {
       />
 
       {/* Client cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
-        {loading ? (
-          <div className="col-span-full flex justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-          </div>
-        ) : clients.length === 0 ? (
+      {loading ? (
+        <SkeletonClientList count={6} />
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+        {clients.length === 0 ? (
           <div className="col-span-full bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">
             <BuildingOfficeIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />
             <p className="text-gray-600 dark:text-gray-400">{t('clients.noClients')}</p>
@@ -463,6 +463,7 @@ const ClientsPage = (): JSX.Element => {
           ))
         )}
       </div>
+      )}
 
       {/* Pagination bottom */}
       <Pagination

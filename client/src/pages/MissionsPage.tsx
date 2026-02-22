@@ -25,6 +25,7 @@ import { createSafeHtml } from '../utils/sanitizer.frontend';
 import { StatsCards, SearchAndActions } from '../components/MissionsPage';
 import Pagination from '../components/Pagination';
 import { loadTinyMCE } from '../utils/lazyTinyMCE';
+import { SkeletonMissionList } from '../components/ui/Skeleton';
 
 interface Mission {
   id: string;
@@ -311,9 +312,7 @@ const MissionsPage = (): JSX.Element => {
       />
 
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-        </div>
+        <SkeletonMissionList count={6} />
       ) : filteredMissions.length === 0 ? (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">
           <BriefcaseIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />

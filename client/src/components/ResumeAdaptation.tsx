@@ -19,14 +19,7 @@ interface Mission {
   Content?: string;
 }
 
-interface MatchAnalysis {
-  matchScore?: string | number;
-  strengths?: string[];
-  gaps?: string[];
-  keywordMatches?: string[];
-  missingKeywords?: string[];
-  recommendations?: Record<string, string[]>;
-}
+import type { MatchAnalysis } from '../utils/resumeAdaptationService';
 
 interface Adaptation {
   adaptedText?: string;
