@@ -3,7 +3,7 @@
  * TypeScript version
  */
 
-import { useState, useEffect, ChangeEvent, ForwardRefExoticComponent, RefAttributes, SVGProps } from 'react';
+import { useState, useEffect, useCallback, ChangeEvent, ForwardRefExoticComponent, RefAttributes, SVGProps, memo } from 'react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
@@ -24,6 +24,109 @@ import logger from '../utils/logger.frontend';
 import { formatDateTime } from '../utils/dateFormatter';
 
 type HeroIcon = ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, 'ref'> & { title?: string; titleId?: string } & RefAttributes<SVGSVGElement>>;
+
+// ============================================
+// INTERFACES (needed before memoized components)
+// ============================================
+
+interface StatCardProps {
+  title: string;
+  value: string;
+  subtitle?: string;
+  icon: HeroIcon;
+  color?: string;
+}
+
+interface ProgressBarProps {
+  label: string;
+  value: number;
+  max: number;
+  color?: string;
+}
+
+// ============================================
+// UTILITY FUNCTIONS (defined outside component to avoid recreation)
+// ============================================
+
+const formatUptime = (seconds?: number): string => {
+  if (!seconds || isNaN(seconds) || seconds < 0) return '0s';
+  const days = Math.floor(seconds / 86400);
+  const hours = Math.floor((seconds % 86400) / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+  const parts: string[] = [];
+  if (days > 0) parts.push(`${days}j`);
+  if (hours > 0) parts.push(`${hours}h`);
+  if (minutes > 0) parts.push(`${minutes}m`);
+  if (secs > 0 || parts.length === 0) parts.push(`${secs}s`);
+  return parts.join(' ');
+};
+
+const formatBytes = (bytes?: number): string => {
+  if (!bytes || isNaN(bytes) || bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  if (isNaN(i) || i < 0) return '0 B';
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
+const formatNumber = (num?: number): string => {
+  if (!num || isNaN(num)) return '0';
+  if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+  if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+  return num.toString();
+};
+
+const safeNumber = (value: unknown, defaultValue = 0): number => {
+  if (value === null || value === undefined || typeof value !== 'number' || isNaN(value)) return defaultValue;
+  return value;
+};
+
+// ============================================
+// MEMOIZED SUB-COMPONENTS
+// ============================================
+
+const StatCard = memo(({ title, value, subtitle, icon: Icon, color = 'blue' }: StatCardProps): JSX.Element => {
+  const colorClasses: Record<string, string> = {
+    blue: 'bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800',
+    green: 'bg-green-50 text-green-600 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800',
+    yellow: 'bg-yellow-50 text-yellow-600 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-800',
+    red: 'bg-red-50 text-red-600 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800',
+    purple: 'bg-purple-50 text-purple-600 border-purple-200 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-800',
+    indigo: 'bg-indigo-50 text-indigo-600 border-indigo-200 dark:bg-indigo-900/20 dark:text-indigo-400 dark:border-indigo-800'
+  };
+  return (
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className={`rounded-xl border p-6 ${colorClasses[color]}`}>
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium opacity-80">{title}</p>
+          <p className="text-2xl font-bold mt-1">{value}</p>
+          {subtitle && <p className="text-xs mt-1 opacity-60">{subtitle}</p>}
+        </div>
+        <Icon className="w-10 h-10 opacity-50" />
+      </div>
+    </motion.div>
+  );
+});
+StatCard.displayName = 'StatCard';
+
+const ProgressBar = memo(({ label, value, max, color = 'blue' }: ProgressBarProps): JSX.Element => {
+  const percentage = max > 0 ? (value / max) * 100 : 0;
+  const colorClasses: Record<string, string> = { blue: 'bg-blue-500', green: 'bg-green-500', yellow: 'bg-yellow-500', red: 'bg-red-500' };
+  return (
+    <div className="mb-3">
+      <div className="flex justify-between text-sm mb-1">
+        <span className="text-gray-600 dark:text-gray-400">{label}</span>
+        <span className="font-medium">{value} / {max}</span>
+      </div>
+      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+        <div className={`h-2 rounded-full ${colorClasses[color]} transition-all duration-500`} style={{ width: `${Math.min(percentage, 100)}%` }} />
+      </div>
+    </div>
+  );
+});
+ProgressBar.displayName = 'ProgressBar';
 
 interface Metrics {
   server?: { uptimeSeconds?: number; startTime?: string };
@@ -52,21 +155,6 @@ interface DatabaseMetrics {
   connections?: { total?: number; active?: number; idle?: number };
   queryTime?: string;
   timestamp?: string;
-}
-
-interface StatCardProps {
-  title: string;
-  value: string;
-  subtitle?: string;
-  icon: HeroIcon;
-  color?: string;
-}
-
-interface ProgressBarProps {
-  label: string;
-  value: number;
-  max: number;
-  color?: string;
 }
 
 const MetricsPage = (): JSX.Element => {
@@ -185,80 +273,6 @@ const MetricsPage = (): JSX.Element => {
     }, 30000);
     return () => clearInterval(interval);
   }, [autoRefresh]);
-
-  const formatUptime = (seconds?: number): string => {
-    if (!seconds || isNaN(seconds) || seconds < 0) return '0s';
-    const days = Math.floor(seconds / 86400);
-    const hours = Math.floor((seconds % 86400) / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = Math.floor(seconds % 60);
-    const parts: string[] = [];
-    if (days > 0) parts.push(`${days}j`);
-    if (hours > 0) parts.push(`${hours}h`);
-    if (minutes > 0) parts.push(`${minutes}m`);
-    if (secs > 0 || parts.length === 0) parts.push(`${secs}s`);
-    return parts.join(' ');
-  };
-
-  const formatBytes = (bytes?: number): string => {
-    if (!bytes || isNaN(bytes) || bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    if (isNaN(i) || i < 0) return '0 B';
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  const formatNumber = (num?: number): string => {
-    if (!num || isNaN(num)) return '0';
-    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
-    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
-    return num.toString();
-  };
-
-  const safeNumber = (value: unknown, defaultValue = 0): number => {
-    if (value === null || value === undefined || typeof value !== 'number' || isNaN(value)) return defaultValue;
-    return value;
-  };
-
-  const StatCard = ({ title, value, subtitle, icon: Icon, color = 'blue' }: StatCardProps): JSX.Element => {
-    const colorClasses: Record<string, string> = {
-      blue: 'bg-blue-50 text-blue-600 border-blue-200',
-      green: 'bg-green-50 text-green-600 border-green-200',
-      yellow: 'bg-yellow-50 text-yellow-600 border-yellow-200',
-      red: 'bg-red-50 text-red-600 border-red-200',
-      purple: 'bg-purple-50 text-purple-600 border-purple-200',
-      indigo: 'bg-indigo-50 text-indigo-600 border-indigo-200'
-    };
-    return (
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className={`rounded-xl border p-6 ${colorClasses[color]}`}>
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium opacity-80">{title}</p>
-            <p className="text-2xl font-bold mt-1">{value}</p>
-            {subtitle && <p className="text-xs mt-1 opacity-60">{subtitle}</p>}
-          </div>
-          <Icon className="w-10 h-10 opacity-50" />
-        </div>
-      </motion.div>
-    );
-  };
-
-  const ProgressBar = ({ label, value, max, color = 'blue' }: ProgressBarProps): JSX.Element => {
-    const percentage = max > 0 ? (value / max) * 100 : 0;
-    const colorClasses: Record<string, string> = { blue: 'bg-blue-500', green: 'bg-green-500', yellow: 'bg-yellow-500', red: 'bg-red-500' };
-    return (
-      <div className="mb-3">
-        <div className="flex justify-between text-sm mb-1">
-          <span className="text-gray-600">{label}</span>
-          <span className="font-medium">{value} / {max}</span>
-        </div>
-        <div className="w-full bg-gray-200 rounded-full h-2">
-          <div className={`h-2 rounded-full ${colorClasses[color]} transition-all duration-500`} style={{ width: `${Math.min(percentage, 100)}%` }} />
-        </div>
-      </div>
-    );
-  };
 
   if (loading) {
     return (

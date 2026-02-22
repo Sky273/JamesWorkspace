@@ -241,7 +241,7 @@ function HomeDashboard(): JSX.Element | null {
             icon={ChartBarIcon}
             label={t('home.dashboard.kpis.averageScore')}
             value={`${stats.scores.averageOriginal}%`}
-            subValue={stats.scores.improvement > 0 ? `+${stats.scores.improvement}% ${t('home.dashboard.kpis.afterImprovement')}` : undefined}
+            subValue={stats.scores.improvement > 0 ? `+${stats.scores.improvement} pts ${t('home.dashboard.kpis.afterImprovement')}` : undefined}
             color="text-green-600 dark:text-green-400"
             delay={0.2}
             onClick={() => navigate('/resumes')}

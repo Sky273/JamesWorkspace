@@ -293,7 +293,8 @@ router.get('/stats', authenticateToken, async (req, res) => {
             scores: {
                 averageOriginal: Math.round(avgOriginal),
                 averageImproved: Math.round(avgImproved),
-                improvement: avgOriginal > 0 ? Math.round(((avgImproved - avgOriginal) / avgOriginal) * 100) : 0
+                // Improvement is the absolute difference in points (e.g., 62% -> 82% = +20 points)
+                improvement: Math.round(avgImproved - avgOriginal)
             },
             customer: isAdmin ? null : userFirm
         };
