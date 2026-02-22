@@ -170,6 +170,8 @@ export default defineConfig(({ mode }) => {
     https: getHttpsConfig(HTTPS_ENABLED),
     allowedHosts: ['www.resumeconverter.net', 'resumeconverter.net', 'localhost'],
     hmr: false, // Disable HMR for external domain access
+    // Disable error overlay - we handle errors in ErrorBoundary
+    overlay: false,
     proxy: {
       '/api': {
         target: HTTPS_ENABLED ? `https://localhost:${HTTPS_PORT}` : 'http://localhost:3001',

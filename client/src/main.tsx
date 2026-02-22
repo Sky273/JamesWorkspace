@@ -93,13 +93,16 @@ const redirectToSignin = (): void => {
   window.location.replace('/signin?expired=true');
 };
 
-// Global handler for unhandled promise rejections
+// Global handler for unhandled promise rejections - use capture phase
 window.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => {
   const reason = String(event.reason?.message || event.reason || '');
+  const stack = String(event.reason?.stack || '');
+  const combinedReason = `${reason} ${stack}`.toLowerCase();
   
   // Check if this is an auth-related error - redirect silently
-  if (isAuthError(reason)) {
+  if (isAuthError(reason) || isAuthError(stack)) {
     event.preventDefault();
+    event.stopImmediatePropagation();
     redirectToSignin();
     return;
   }
@@ -110,15 +113,16 @@ window.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => 
     'A listener indicated an asynchronous response',
     'Extension context invalidated',
     'Could not establish connection',
-    'Failed to fetch', // Network errors from extensions
-    'NetworkError' // Network errors
+    'Failed to fetch',
+    'NetworkError'
   ];
   
   // Check if this is an extension-related error
-  const isExtensionError = suppressPatterns.some(pattern => reason.includes(pattern));
+  const isExtensionError = suppressPatterns.some(pattern => combinedReason.includes(pattern.toLowerCase()));
   
   if (isExtensionError) {
-    event.preventDefault(); // Prevent console error
+    event.preventDefault();
+    event.stopImmediatePropagation();
     return;
   }
   
@@ -127,15 +131,18 @@ window.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => 
   
   // Prevent the default browser error display
   event.preventDefault();
-});
+}, true); // Use capture phase
 
 // Global error handler for runtime errors
 window.addEventListener('error', (event: ErrorEvent) => {
   const message = String(event.message || '');
+  const errorString = String(event.error || '');
+  const combinedMessage = `${message} ${errorString}`.toLowerCase();
   
   // Check if this is an auth-related error - redirect silently
-  if (isAuthError(message)) {
+  if (isAuthError(message) || isAuthError(errorString)) {
     event.preventDefault();
+    event.stopImmediatePropagation();
     redirectToSignin();
     return;
   }
@@ -149,8 +156,9 @@ window.addEventListener('error', (event: ErrorEvent) => {
     'ResizeObserver loop limit exceeded'
   ];
   
-  if (suppressPatterns.some(pattern => message.includes(pattern))) {
+  if (suppressPatterns.some(pattern => combinedMessage.includes(pattern.toLowerCase()))) {
     event.preventDefault();
+    event.stopImmediatePropagation();
     return;
   }
   
@@ -161,7 +169,7 @@ window.addEventListener('error', (event: ErrorEvent) => {
     lineno: event.lineno,
     colno: event.colno
   });
-});
+}, true); // Use capture phase to intercept before React
 
 const rootElement = document.getElementById('root');
 if (!rootElement) throw new Error('Root element not found');
