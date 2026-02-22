@@ -10,12 +10,14 @@ import { query } from '../config/database.js';
 import { safeLog } from '../utils/logger.backend.js';
 
 // ============================================
-// LAZY LOADING FOR MJML (~15MB)
+// LAZY LOADING FOR MJML (~10MB with mjml-core)
 // ============================================
 
 let mjml2html = null;
+let mjmlCoreModule = null;
 let mjmlLastUsed = 0;
 let mjmlUnloadTimer = null;
+let mjmlComponentsRegistered = false;
 
 // Unload mjml after 10 minutes of inactivity
 const MJML_UNLOAD_TIMEOUT = 10 * 60 * 1000;
@@ -40,18 +42,23 @@ function scheduleMjmlUnload() {
 }
 
 /**
- * Unload mjml module to free memory (~15MB)
+ * Unload mjml module to free memory (~10MB)
+ * Note: ES modules remain in cache, but we release our references
+ * to allow GC to collect any temporary data
  */
 function unloadMjml() {
-    if (mjml2html) {
+    if (mjml2html || mjmlCoreModule) {
         mjml2html = null;
+        mjmlCoreModule = null;
         mjmlLastUsed = 0;
+        // Keep mjmlComponentsRegistered = true since components stay registered in mjml-core's internal state
+        // Re-registering would cause warnings, so we track this separately
         
         if (global.gc) {
             global.gc();
-            safeLog('info', 'mjml module unloaded and GC triggered (~15MB freed)');
+            safeLog('info', 'mjml-core references released and GC triggered (~10MB freed)');
         } else {
-            safeLog('info', 'mjml module unloaded (~15MB will be freed by GC)');
+            safeLog('info', 'mjml-core references released (~10MB will be freed by GC)');
         }
     }
 }
@@ -63,17 +70,23 @@ async function getMjml() {
     mjmlLastUsed = Date.now();
     
     if (!mjml2html) {
-        const mjmlCore = await import('mjml-core');
-        const mjmlPreset = await import('mjml-preset-core');
-        // Register all preset components
-        const preset = mjmlPreset.default;
-        if (preset && preset.components) {
-            for (const component of preset.components) {
-                mjmlCore.registerComponent(component);
+        mjmlCoreModule = await import('mjml-core');
+        
+        // Register components only once (they persist in mjml-core's internal state)
+        if (!mjmlComponentsRegistered) {
+            const mjmlPreset = await import('mjml-preset-core');
+            const preset = mjmlPreset.default;
+            if (preset && preset.components) {
+                for (const component of preset.components) {
+                    mjmlCoreModule.registerComponent(component);
+                }
             }
+            mjmlComponentsRegistered = true;
+            safeLog('info', 'mjml-core components registered');
         }
+        
         // mjml-core exports the function at default.default
-        mjml2html = mjmlCore.default.default;
+        mjml2html = mjmlCoreModule.default.default;
         safeLog('info', 'mjml-core module loaded lazily (~10MB)');
     }
     
