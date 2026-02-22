@@ -19,14 +19,16 @@ export const googleOAuthConfig = {
     ]
 };
 
-// Google OAuth config for Sign-in (authentication)
+// Google OAuth config for Sign-in (authentication + Gmail access)
+// Combines authentication scopes with Gmail compose for seamless email draft creation
 export const googleAuthConfig = {
     clientId: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     redirectUri: process.env.GOOGLE_AUTH_REDIRECT_URI || 'http://localhost:3001/api/auth/google/callback',
     scopes: [
         'https://www.googleapis.com/auth/userinfo.email',
-        'https://www.googleapis.com/auth/userinfo.profile'
+        'https://www.googleapis.com/auth/userinfo.profile',
+        'https://www.googleapis.com/auth/gmail.compose'
     ]
 };
 
@@ -102,7 +104,7 @@ export function decryptToken(encryptedToken) {
 // TOKEN EXPIRY
 // ============================================
 
-// Token validity duration (1 week)
+// Token validity duration - synchronized with JWT refresh token (7 days)
 export const TOKEN_VALIDITY_DAYS = 7;
 
 /**
@@ -116,15 +118,24 @@ export function isTokenExpired(expiryDate) {
 }
 
 /**
- * Calculate token expiry date
- * @param {number} expiresIn - Seconds until expiry (from OAuth response)
+ * Calculate token expiry date for Gmail tokens
+ * Uses JWT refresh token duration (7 days) since we have Google refresh token
+ * to renew access tokens automatically
+ * @param {number} expiresIn - Seconds until expiry (from OAuth response) - ignored when refresh token available
+ * @param {boolean} hasRefreshToken - Whether we have a refresh token
  * @returns {Date}
  */
-export function calculateTokenExpiry(expiresIn) {
+export function calculateTokenExpiry(expiresIn, hasRefreshToken = true) {
     const now = new Date();
-    // Use the shorter of: OAuth expiry or our max validity
-    const maxValidityMs = TOKEN_VALIDITY_DAYS * 24 * 60 * 60 * 1000;
+    
+    if (hasRefreshToken) {
+        // With refresh token, we can renew access tokens
+        // Set expiry to match JWT refresh token (7 days)
+        const sessionValidityMs = TOKEN_VALIDITY_DAYS * 24 * 60 * 60 * 1000;
+        return new Date(now.getTime() + sessionValidityMs);
+    }
+    
+    // Without refresh token, use OAuth expiry (typically 1 hour)
     const oauthExpiryMs = (expiresIn || 3600) * 1000;
-    const expiryMs = Math.min(maxValidityMs, oauthExpiryMs);
-    return new Date(now.getTime() + expiryMs);
+    return new Date(now.getTime() + oauthExpiryMs);
 }

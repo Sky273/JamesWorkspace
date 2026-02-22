@@ -822,13 +822,24 @@ router.get('/google/callback', async (req, res) => {
             maxAge: 7 * 24 * 60 * 60 * 1000
         });
         
+        // Save Gmail tokens for email draft functionality
+        if (googleUser.accessToken) {
+            await googleAuthService.saveGmailTokens(
+                user.id,
+                googleUser.accessToken,
+                googleUser.refreshToken,
+                3600 // Default 1 hour expiry
+            );
+        }
+        
         securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.AUTH_SUCCESS, {
             ...metadata,
             email: userData.email,
             userId: userData.id,
             role: userData.role,
             action: 'GOOGLE_SIGNIN_SUCCESS',
-            message: 'User signed in via Google OAuth'
+            message: 'User signed in via Google OAuth',
+            metadata: { gmailConnected: !!googleUser.accessToken }
         });
         
         // Redirect to return URL or home

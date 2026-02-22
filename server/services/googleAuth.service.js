@@ -1,9 +1,10 @@
 /**
  * Google OAuth2 Authentication Service
  * Handles "Sign in with Google" for MFA/SSO
+ * Also provides Gmail access for email draft creation
  */
 
-import { googleAuthConfig } from '../config/oauth.config.js';
+import { googleAuthConfig, encryptToken, calculateTokenExpiry } from '../config/oauth.config.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { query } from '../config/database.js';
 
@@ -226,6 +227,59 @@ export async function getGoogleLinkStatus(userId) {
     } catch (error) {
         safeLog('error', 'Failed to get Google link status', { error: error.message, userId });
         return { linked: false, email: null };
+    }
+}
+
+/**
+ * Save Gmail tokens for a user (for email draft creation)
+ * @param {string} userId - User ID
+ * @param {string} accessToken - Gmail access token
+ * @param {string} refreshToken - Gmail refresh token (optional)
+ * @param {number} expiresIn - Token expiry in seconds
+ * @returns {Promise<boolean>}
+ */
+export async function saveGmailTokens(userId, accessToken, refreshToken, expiresIn = 3600) {
+    try {
+        const encryptedAccess = encryptToken(accessToken);
+        const encryptedRefresh = refreshToken ? encryptToken(refreshToken) : null;
+        const hasRefreshToken = !!refreshToken;
+        const expiresAt = calculateTokenExpiry(expiresIn, hasRefreshToken);
+        
+        // Check if user already has Gmail connection
+        const existing = await query(
+            'SELECT id FROM user_mail_tokens WHERE user_id = $1 AND provider = $2',
+            [userId, 'gmail']
+        );
+        
+        if (existing.rows.length > 0) {
+            // Update existing connection
+            await query(
+                `UPDATE user_mail_tokens 
+                 SET access_token_encrypted = $1, 
+                     refresh_token_encrypted = COALESCE($2, refresh_token_encrypted),
+                     token_expiry = $3,
+                     updated_at = CURRENT_TIMESTAMP
+                 WHERE user_id = $4 AND provider = $5`,
+                [encryptedAccess, encryptedRefresh, expiresAt, userId, 'gmail']
+            );
+        } else {
+            // Create new connection - get user email first
+            const userResult = await query('SELECT email FROM users WHERE id = $1', [userId]);
+            const userEmail = userResult.rows[0]?.email || '';
+            
+            await query(
+                `INSERT INTO user_mail_tokens 
+                 (user_id, provider, email, access_token_encrypted, refresh_token_encrypted, token_expiry)
+                 VALUES ($1, 'gmail', $2, $3, $4, $5)`,
+                [userId, userEmail, encryptedAccess, encryptedRefresh, expiresAt]
+            );
+        }
+        
+        safeLog('info', 'Gmail tokens saved via Google Sign-In', { userId });
+        return true;
+    } catch (error) {
+        safeLog('error', 'Failed to save Gmail tokens', { error: error.message, userId });
+        return false;
     }
 }
 
