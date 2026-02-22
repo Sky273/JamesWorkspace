@@ -5,7 +5,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // Mock logger before importing cache service
-vi.mock('../../src/utils/logger.backend.js', () => ({
+vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn(),
     createModuleLogger: () => ({
         info: vi.fn(),
@@ -16,11 +16,11 @@ vi.mock('../../src/utils/logger.backend.js', () => ({
 }));
 
 // Mock constants
-vi.mock('../../src/config/constants.js', () => ({
+vi.mock('../../config/constants.js', () => ({
     CACHE_TTL: {
         SETTINGS: 60000,
         TEMPLATES: 60000,
-        CUSTOMERS: 60000
+        FIRMS: 60000
     }
 }));
 
