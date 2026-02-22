@@ -63,9 +63,12 @@ async function getMjml() {
     mjmlLastUsed = Date.now();
     
     if (!mjml2html) {
-        const mjmlModule = await import('mjml');
-        mjml2html = mjmlModule.default;
-        safeLog('info', 'mjml module loaded lazily (~15MB)');
+        const mjmlCore = await import('mjml-core');
+        const mjmlPreset = await import('mjml-preset-core');
+        // Register all preset components
+        mjmlCore.registerComponent(mjmlPreset);
+        mjml2html = mjmlCore.default;
+        safeLog('info', 'mjml-core module loaded lazily (~10MB)');
     }
     
     scheduleMjmlUnload();
