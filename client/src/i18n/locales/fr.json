@@ -58,7 +58,14 @@
       "rememberMe": "Se souvenir de moi",
       "forgotPassword": "Mot de passe oublié ?",
       "signInButton": "Se connecter",
-      "noAccount": "Vous n'avez pas de compte ?"
+      "noAccount": "Vous n'avez pas de compte ?",
+      "orContinueWith": "ou continuer avec",
+      "signInWithGoogle": "Se connecter avec Google",
+      "sessionExpired": "Votre session a expiré. Veuillez vous reconnecter.",
+      "googleNoAccount": "Aucun compte trouvé avec l'email {{email}}. Veuillez d'abord créer un compte.",
+      "accountInactive": "Votre compte est inactif. Contactez l'administrateur.",
+      "googleAuthFailed": "Échec de l'authentification Google. Veuillez réessayer.",
+      "registeredPending": "Inscription réussie ! Votre compte est en attente d'approbation par un administrateur."
     },
     "register": {
       "title": "Créez votre compte",
@@ -71,7 +78,10 @@
       "confirmPasswordLabel": "Confirmez le mot de passe",
       "confirmPasswordPlaceholder": "Confirmez le mot de passe",
       "registerButton": "Créer un compte",
-      "hasAccount": "Vous avez déjà un compte ?"
+      "hasAccount": "Vous avez déjà un compte ?",
+      "orContinueWith": "ou continuer avec",
+      "registerWithGoogle": "S'inscrire avec Google",
+      "googleRegistrationFailed": "Échec de l'inscription via Google. Veuillez réessayer."
     }
   },
   "about": {

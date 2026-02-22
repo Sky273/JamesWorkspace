@@ -19,6 +19,17 @@ export const googleOAuthConfig = {
     ]
 };
 
+// Google OAuth config for Sign-in (authentication)
+export const googleAuthConfig = {
+    clientId: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    redirectUri: process.env.GOOGLE_AUTH_REDIRECT_URI || 'http://localhost:3001/api/auth/google/callback',
+    scopes: [
+        'https://www.googleapis.com/auth/userinfo.email',
+        'https://www.googleapis.com/auth/userinfo.profile'
+    ]
+};
+
 // ============================================
 // TOKEN ENCRYPTION
 // ============================================

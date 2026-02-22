@@ -1,6 +1,6 @@
 /**
  * Token Blacklist Service
- * In-memory blacklist for revoked JWT tokens
+ * PostgreSQL-backed blacklist for revoked JWT tokens
  * 
  * SECURITY: This service allows immediate revocation of JWT tokens
  * without waiting for their natural expiration.
@@ -10,30 +10,75 @@
  * - Account deactivation (revoke all user tokens)
  * - Security incident (revoke compromised tokens)
  * 
- * LIMITATIONS:
- * - In-memory storage: blacklist is lost on server restart
- * - Single instance: not shared across multiple server instances
- * 
- * For production with multiple instances, consider:
- * - Redis for shared blacklist
- * - Database table for persistent blacklist
+ * FEATURES:
+ * - Persistent storage: blacklist survives server restarts
+ * - In-memory cache for fast lookups
+ * - Automatic cleanup of expired tokens
  */
 
 import { safeLog } from '../utils/logger.backend.js';
+import { query } from '../config/database.js';
 
 // ============================================
-// TOKEN BLACKLIST
+// TOKEN BLACKLIST (with in-memory cache)
 // ============================================
 
-// Map of blacklisted tokens: tokenId -> { expiresAt, reason, userId }
-const blacklistedTokens = new Map();
+// In-memory cache for fast lookups (synced with DB)
+const tokenCache = new Map();
+const userCache = new Map();
 
-// Map of blacklisted users: userId -> { blacklistedAt, reason }
-// All tokens for these users are considered invalid
-const blacklistedUsers = new Map();
+// Cache TTL (5 minutes) - entries are refreshed from DB periodically
+const CACHE_TTL = 5 * 60 * 1000;
+let lastCacheRefresh = 0;
 
 // Cleanup interval reference
 let cleanupInterval = null;
+
+/**
+ * Refresh cache from database
+ */
+async function refreshCache() {
+    const now = Date.now();
+    if (now - lastCacheRefresh < CACHE_TTL) return;
+    
+    try {
+        // Load active blacklisted tokens
+        const tokenResult = await query(
+            'SELECT token_jti, user_id, reason, expires_at, created_at FROM token_blacklist WHERE expires_at > NOW()'
+        );
+        
+        tokenCache.clear();
+        for (const row of tokenResult.rows) {
+            tokenCache.set(row.token_jti, {
+                expiresAt: new Date(row.expires_at).getTime(),
+                reason: row.reason,
+                userId: row.user_id,
+                blacklistedAt: new Date(row.created_at).getTime()
+            });
+        }
+        
+        // Load blacklisted users
+        const userResult = await query(
+            'SELECT user_id, reason, created_at FROM user_blacklist'
+        );
+        
+        userCache.clear();
+        for (const row of userResult.rows) {
+            userCache.set(row.user_id, {
+                blacklistedAt: new Date(row.created_at).getTime(),
+                reason: row.reason
+            });
+        }
+        
+        lastCacheRefresh = now;
+        safeLog('debug', 'Token blacklist cache refreshed', { 
+            tokens: tokenCache.size, 
+            users: userCache.size 
+        });
+    } catch (error) {
+        safeLog('error', 'Failed to refresh blacklist cache', { error: error.message });
+    }
+}
 
 /**
  * Add a token to the blacklist
@@ -42,26 +87,40 @@ let cleanupInterval = null;
  * @param {string} reason - Reason for blacklisting
  * @param {string} userId - User ID associated with the token
  */
-export function blacklistToken(tokenId, expiresAt, reason = 'logout', userId = null) {
+export async function blacklistToken(tokenId, expiresAt, reason = 'logout', userId = null) {
     if (!tokenId) {
         safeLog('warn', 'Attempted to blacklist null/undefined token');
         return false;
     }
 
-    blacklistedTokens.set(tokenId, {
-        expiresAt,
-        reason,
-        userId,
-        blacklistedAt: Date.now()
-    });
+    try {
+        // Insert into database
+        await query(
+            `INSERT INTO token_blacklist (token_jti, user_id, reason, expires_at) 
+             VALUES ($1, $2, $3, $4) 
+             ON CONFLICT (token_jti) DO NOTHING`,
+            [tokenId, userId, reason, new Date(expiresAt)]
+        );
+        
+        // Update cache immediately
+        tokenCache.set(tokenId, {
+            expiresAt,
+            reason,
+            userId,
+            blacklistedAt: Date.now()
+        });
 
-    safeLog('info', 'Token blacklisted', { 
-        tokenIdPreview: tokenId.substring(0, 20) + '...', 
-        reason, 
-        userId 
-    });
+        safeLog('info', 'Token blacklisted', { 
+            tokenIdPreview: tokenId.substring(0, 20) + '...', 
+            reason, 
+            userId 
+        });
 
-    return true;
+        return true;
+    } catch (error) {
+        safeLog('error', 'Failed to blacklist token', { error: error.message });
+        return false;
+    }
 }
 
 /**
@@ -70,51 +129,76 @@ export function blacklistToken(tokenId, expiresAt, reason = 'logout', userId = n
  * @param {string} userId - The user ID to blacklist
  * @param {string} reason - Reason for blacklisting
  */
-export function blacklistUser(userId, reason = 'account_deactivated') {
+export async function blacklistUser(userId, reason = 'account_deactivated') {
     if (!userId) {
         safeLog('warn', 'Attempted to blacklist null/undefined user');
         return false;
     }
 
-    blacklistedUsers.set(userId, {
-        blacklistedAt: Date.now(),
-        reason
-    });
+    try {
+        // Insert into database
+        await query(
+            `INSERT INTO user_blacklist (user_id, reason) 
+             VALUES ($1, $2) 
+             ON CONFLICT (user_id) DO UPDATE SET reason = $2, created_at = CURRENT_TIMESTAMP`,
+            [userId, reason]
+        );
+        
+        // Update cache immediately
+        userCache.set(userId, {
+            blacklistedAt: Date.now(),
+            reason
+        });
 
-    safeLog('security', 'User blacklisted - all tokens invalidated', { userId, reason });
+        safeLog('security', 'User blacklisted - all tokens invalidated', { userId, reason });
 
-    return true;
+        return true;
+    } catch (error) {
+        safeLog('error', 'Failed to blacklist user', { error: error.message });
+        return false;
+    }
 }
 
 /**
  * Remove a user from the blacklist (e.g., when reactivating account)
  * @param {string} userId - The user ID to remove from blacklist
  */
-export function unblacklistUser(userId) {
-    if (blacklistedUsers.has(userId)) {
-        blacklistedUsers.delete(userId);
-        safeLog('info', 'User removed from blacklist', { userId });
-        return true;
+export async function unblacklistUser(userId) {
+    try {
+        const result = await query(
+            'DELETE FROM user_blacklist WHERE user_id = $1',
+            [userId]
+        );
+        
+        if (result.rowCount > 0) {
+            userCache.delete(userId);
+            safeLog('info', 'User removed from blacklist', { userId });
+            return true;
+        }
+        return false;
+    } catch (error) {
+        safeLog('error', 'Failed to unblacklist user', { error: error.message });
+        return false;
     }
-    return false;
 }
 
 /**
- * Check if a token is blacklisted
+ * Check if a token is blacklisted (synchronous - uses cache only)
+ * Cache is refreshed periodically by startBlacklistCleanup
  * @param {string} tokenId - The JWT token ID or token to check
  * @param {string} userId - The user ID from the token
  * @param {number} tokenIssuedAt - When the token was issued (iat claim, in seconds)
  * @returns {boolean} - True if token is blacklisted
  */
 export function isTokenBlacklisted(tokenId, userId = null, tokenIssuedAt = null) {
-    // Check if specific token is blacklisted
-    if (tokenId && blacklistedTokens.has(tokenId)) {
+    // Check if specific token is blacklisted (from cache)
+    if (tokenId && tokenCache.has(tokenId)) {
         return true;
     }
 
-    // Check if user is blacklisted
-    if (userId && blacklistedUsers.has(userId)) {
-        const userBlacklist = blacklistedUsers.get(userId);
+    // Check if user is blacklisted (from cache)
+    if (userId && userCache.has(userId)) {
+        const userBlacklist = userCache.get(userId);
         
         // If token was issued before user was blacklisted, it's invalid
         // tokenIssuedAt is in seconds (JWT standard), blacklistedAt is in ms
@@ -133,36 +217,52 @@ export function isTokenBlacklisted(tokenId, userId = null, tokenIssuedAt = null)
 }
 
 /**
+ * Check if a token is blacklisted (async - refreshes cache if needed)
+ * @param {string} tokenId - The JWT token ID or token to check
+ * @param {string} userId - The user ID from the token
+ * @param {number} tokenIssuedAt - When the token was issued (iat claim, in seconds)
+ * @returns {Promise<boolean>} - True if token is blacklisted
+ */
+export async function isTokenBlacklistedAsync(tokenId, userId = null, tokenIssuedAt = null) {
+    // Refresh cache if needed
+    await refreshCache();
+    
+    return isTokenBlacklisted(tokenId, userId, tokenIssuedAt);
+}
+
+/**
  * Get blacklist statistics
  */
 export function getBlacklistStats() {
     return {
-        blacklistedTokens: blacklistedTokens.size,
-        blacklistedUsers: blacklistedUsers.size
+        blacklistedTokens: tokenCache.size,
+        blacklistedUsers: userCache.size
     };
 }
 
 /**
- * Cleanup expired tokens from the blacklist
+ * Cleanup expired tokens from the blacklist (database)
  * Tokens that have naturally expired don't need to stay in the blacklist
  */
-export function cleanupExpiredTokens() {
-    const now = Date.now();
-    let cleaned = 0;
-
-    for (const [tokenId, data] of blacklistedTokens.entries()) {
-        // Remove tokens that have expired (with 1 hour buffer for clock skew)
-        if (data.expiresAt && now > data.expiresAt + 3600000) {
-            blacklistedTokens.delete(tokenId);
-            cleaned++;
+export async function cleanupExpiredTokens() {
+    try {
+        const result = await query(
+            'DELETE FROM token_blacklist WHERE expires_at < NOW() - INTERVAL \'1 hour\''
+        );
+        
+        const cleaned = result.rowCount || 0;
+        
+        if (cleaned > 0) {
+            safeLog('debug', 'Cleaned expired tokens from blacklist', { count: cleaned });
+            // Force cache refresh on next check
+            lastCacheRefresh = 0;
         }
-    }
 
-    if (cleaned > 0) {
-        safeLog('debug', 'Cleaned expired tokens from blacklist', { count: cleaned });
+        return cleaned;
+    } catch (error) {
+        safeLog('error', 'Failed to cleanup expired tokens', { error: error.message });
+        return 0;
     }
-
-    return cleaned;
 }
 
 /**
@@ -178,11 +278,14 @@ export function startBlacklistCleanup(intervalMs = 3600000) {
         cleanupExpiredTokens();
     }, intervalMs);
 
+    // Initial cache load
+    refreshCache();
+
     safeLog('info', 'Token blacklist cleanup started', { intervalMs });
 }
 
 /**
- * Stop cleanup and clear the blacklist (for graceful shutdown)
+ * Stop cleanup and clear the cache (for graceful shutdown)
  */
 export function destroyBlacklist() {
     if (cleanupInterval) {
@@ -191,14 +294,15 @@ export function destroyBlacklist() {
     }
     
     const stats = getBlacklistStats();
-    blacklistedTokens.clear();
-    blacklistedUsers.clear();
+    tokenCache.clear();
+    userCache.clear();
+    lastCacheRefresh = 0;
     
-    safeLog('info', 'Token blacklist destroyed', stats);
+    safeLog('info', 'Token blacklist cache cleared', stats);
 }
 
 // Export for testing
 export const _internals = {
-    blacklistedTokens,
-    blacklistedUsers
+    tokenCache,
+    userCache
 };

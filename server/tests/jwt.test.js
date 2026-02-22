@@ -1,11 +1,21 @@
 /**
  * Unit tests for JWT service
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 // Mock environment variables before importing the module
 process.env.JWT_SECRET = 'test-secret-key-that-is-at-least-32-characters-long';
 process.env.CSRF_SECRET = 'test-csrf-secret-that-is-at-least-32-characters';
+
+// Mock the logger
+vi.mock('../utils/logger.backend.js', () => ({
+    safeLog: vi.fn()
+}));
+
+// Mock the database (required by tokenBlacklist.service.js)
+vi.mock('../config/database.js', () => ({
+    query: vi.fn().mockResolvedValue({ rows: [], rowCount: 0 })
+}));
 
 import {
   generateAccessToken,

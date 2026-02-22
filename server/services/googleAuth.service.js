@@ -1,0 +1,239 @@
+/**
+ * Google OAuth2 Authentication Service
+ * Handles "Sign in with Google" for MFA/SSO
+ */
+
+import { googleAuthConfig } from '../config/oauth.config.js';
+import { safeLog } from '../utils/logger.backend.js';
+import { query } from '../config/database.js';
+
+// Lazy-loaded googleapis module
+let google = null;
+let oauth2Client = null;
+
+/**
+ * Get or initialize Google OAuth2 client
+ */
+async function getOAuth2Client() {
+    if (!oauth2Client) {
+        if (!google) {
+            const googleapis = await import('googleapis');
+            google = googleapis.google;
+            safeLog('info', 'googleapis module loaded for auth');
+        }
+        
+        oauth2Client = new google.auth.OAuth2(
+            googleAuthConfig.clientId,
+            googleAuthConfig.clientSecret,
+            googleAuthConfig.redirectUri
+        );
+    }
+    return oauth2Client;
+}
+
+/**
+ * Generate Google OAuth authorization URL
+ * @param {string} state - State parameter for CSRF protection
+ * @returns {Promise<string>} Authorization URL
+ */
+export async function getAuthUrl(state) {
+    const client = await getOAuth2Client();
+    return client.generateAuthUrl({
+        access_type: 'offline',
+        scope: googleAuthConfig.scopes,
+        state: state,
+        prompt: 'select_account' // Allow user to select account
+    });
+}
+
+/**
+ * Exchange authorization code for tokens and get user info
+ * @param {string} code - Authorization code from Google
+ * @returns {Promise<Object>} User info { email, name, picture, googleId }
+ */
+export async function exchangeCodeForUserInfo(code) {
+    try {
+        const client = await getOAuth2Client();
+        const { tokens } = await client.getToken(code);
+        client.setCredentials(tokens);
+        
+        // Get user info from Google
+        const oauth2 = google.oauth2({ version: 'v2', auth: client });
+        const { data } = await oauth2.userinfo.get();
+        
+        safeLog('info', 'Google user info retrieved', { email: data.email });
+        
+        return {
+            email: data.email,
+            name: data.name || data.email.split('@')[0],
+            picture: data.picture,
+            googleId: data.id,
+            accessToken: tokens.access_token,
+            refreshToken: tokens.refresh_token
+        };
+    } catch (error) {
+        safeLog('error', 'Failed to exchange Google code', { error: error.message });
+        throw new Error('Failed to authenticate with Google');
+    }
+}
+
+/**
+ * Verify Google ID token (for frontend Google Sign-In button)
+ * @param {string} idToken - ID token from Google Sign-In
+ * @returns {Promise<Object>} User info
+ */
+export async function verifyIdToken(idToken) {
+    try {
+        const client = await getOAuth2Client();
+        const ticket = await client.verifyIdToken({
+            idToken: idToken,
+            audience: googleAuthConfig.clientId
+        });
+        
+        const payload = ticket.getPayload();
+        
+        return {
+            email: payload.email,
+            name: payload.name || payload.email.split('@')[0],
+            picture: payload.picture,
+            googleId: payload.sub,
+            emailVerified: payload.email_verified
+        };
+    } catch (error) {
+        safeLog('error', 'Failed to verify Google ID token', { error: error.message });
+        throw new Error('Invalid Google token');
+    }
+}
+
+/**
+ * Link Google account to existing user
+ * @param {string} userId - User ID
+ * @param {string} googleId - Google account ID
+ * @param {string} googleEmail - Google email
+ * @returns {Promise<boolean>}
+ */
+export async function linkGoogleAccount(userId, googleId, googleEmail) {
+    try {
+        await query(
+            `UPDATE users SET 
+                google_id = $1, 
+                google_email = $2,
+                google_linked_at = CURRENT_TIMESTAMP
+            WHERE id = $3`,
+            [googleId, googleEmail, userId]
+        );
+        
+        safeLog('info', 'Google account linked', { userId, googleEmail });
+        return true;
+    } catch (error) {
+        safeLog('error', 'Failed to link Google account', { error: error.message, userId });
+        throw error;
+    }
+}
+
+/**
+ * Unlink Google account from user
+ * @param {string} userId - User ID
+ * @returns {Promise<boolean>}
+ */
+export async function unlinkGoogleAccount(userId) {
+    try {
+        await query(
+            `UPDATE users SET 
+                google_id = NULL, 
+                google_email = NULL,
+                google_linked_at = NULL
+            WHERE id = $1`,
+            [userId]
+        );
+        
+        safeLog('info', 'Google account unlinked', { userId });
+        return true;
+    } catch (error) {
+        safeLog('error', 'Failed to unlink Google account', { error: error.message, userId });
+        throw error;
+    }
+}
+
+/**
+ * Find user by Google ID
+ * @param {string} googleId - Google account ID
+ * @returns {Promise<Object|null>} User or null
+ */
+export async function findUserByGoogleId(googleId) {
+    try {
+        const result = await query(
+            `SELECT u.*, f.logo_url as firm_logo
+            FROM users u
+            LEFT JOIN firms f ON u.firm_id = f.id
+            WHERE u.google_id = $1
+            LIMIT 1`,
+            [googleId]
+        );
+        
+        return result.rows.length > 0 ? result.rows[0] : null;
+    } catch (error) {
+        safeLog('error', 'Failed to find user by Google ID', { error: error.message });
+        return null;
+    }
+}
+
+/**
+ * Find user by email (for linking)
+ * @param {string} email - Email address
+ * @returns {Promise<Object|null>} User or null
+ */
+export async function findUserByEmail(email) {
+    try {
+        const result = await query(
+            `SELECT u.*, f.logo_url as firm_logo
+            FROM users u
+            LEFT JOIN firms f ON u.firm_id = f.id
+            WHERE LOWER(u.email) = LOWER($1)
+            LIMIT 1`,
+            [email]
+        );
+        
+        return result.rows.length > 0 ? result.rows[0] : null;
+    } catch (error) {
+        safeLog('error', 'Failed to find user by email', { error: error.message });
+        return null;
+    }
+}
+
+/**
+ * Check if user has Google linked
+ * @param {string} userId - User ID
+ * @returns {Promise<Object>} { linked: boolean, email: string|null }
+ */
+export async function getGoogleLinkStatus(userId) {
+    try {
+        const result = await query(
+            'SELECT google_id, google_email, google_linked_at FROM users WHERE id = $1',
+            [userId]
+        );
+        
+        if (result.rows.length === 0) {
+            return { linked: false, email: null };
+        }
+        
+        const user = result.rows[0];
+        return {
+            linked: !!user.google_id,
+            email: user.google_email,
+            linkedAt: user.google_linked_at
+        };
+    } catch (error) {
+        safeLog('error', 'Failed to get Google link status', { error: error.message, userId });
+        return { linked: false, email: null };
+    }
+}
+
+/**
+ * Destroy OAuth client (for graceful shutdown)
+ */
+export function destroyGoogleAuth() {
+    oauth2Client = null;
+    google = null;
+    safeLog('info', 'Google auth client destroyed');
+}

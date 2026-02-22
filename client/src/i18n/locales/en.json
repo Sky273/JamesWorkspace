@@ -58,7 +58,14 @@
       "rememberMe": "Remember me",
       "forgotPassword": "Forgot your password?",
       "signInButton": "Sign in",
-      "noAccount": "Don't have an account?"
+      "noAccount": "Don't have an account?",
+      "orContinueWith": "or continue with",
+      "signInWithGoogle": "Sign in with Google",
+      "sessionExpired": "Your session has expired. Please sign in again.",
+      "googleNoAccount": "No account found with email {{email}}. Please create an account first.",
+      "accountInactive": "Your account is inactive. Contact the administrator.",
+      "googleAuthFailed": "Google authentication failed. Please try again.",
+      "registeredPending": "Registration successful! Your account is pending approval by an administrator."
     },
     "register": {
       "title": "Create your account",
@@ -71,7 +78,10 @@
       "confirmPasswordLabel": "Confirm password",
       "confirmPasswordPlaceholder": "Confirm password",
       "registerButton": "Create account",
-      "hasAccount": "Already have an account?"
+      "hasAccount": "Already have an account?",
+      "orContinueWith": "or continue with",
+      "registerWithGoogle": "Sign up with Google",
+      "googleRegistrationFailed": "Google registration failed. Please try again."
     }
   },
   "about": {

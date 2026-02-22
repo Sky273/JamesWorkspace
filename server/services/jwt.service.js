@@ -126,9 +126,9 @@ export function verifyRefreshToken(token) {
 /**
  * Revoke a token by adding it to the blacklist
  * @param {string} token - The JWT token to revoke
- * @returns {boolean} - True if successfully revoked
+ * @returns {Promise<boolean>} - True if successfully revoked
  */
-export function revokeToken(token) {
+export async function revokeToken(token) {
     try {
         // Decode without verification to get the payload
         const decoded = jwt.decode(token);
@@ -140,7 +140,7 @@ export function revokeToken(token) {
         // Calculate expiration time in ms
         const expiresAt = decoded.exp ? decoded.exp * 1000 : Date.now() + 3600000;
         
-        return blacklistToken(decoded.jti || token, expiresAt, 'revoked', decoded.id);
+        return await blacklistToken(decoded.jti || token, expiresAt, 'revoked', decoded.id);
     } catch (error) {
         safeLog('error', 'Error revoking token', { error: error.message });
         return false;

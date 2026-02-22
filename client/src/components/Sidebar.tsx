@@ -73,9 +73,9 @@ const Sidebar = (): JSX.Element => {
     items: [
       { name: t('navigation.resumes'), href: '/resumes', icon: DocumentTextIcon },
       { name: t('navigation.missions'), href: '/missions', icon: BriefcaseIcon },
-      { name: t('navigation.clients'), href: '/clients', icon: BuildingOfficeIcon },
       { name: t('navigation.profileMatching'), href: '/profile-matching', icon: UserGroupIcon },
       { name: t('navigation.adaptations'), href: '/adaptations', icon: SparklesIcon },
+      { name: t('navigation.clients'), href: '/clients', icon: BuildingOfficeIcon },
       { name: t('navigation.marketRadar'), href: '/facts', icon: SignalIcon },
     ]
   };
