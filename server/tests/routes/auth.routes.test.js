@@ -9,7 +9,7 @@ process.env.REFRESH_TOKEN_SECRET = 'test-refresh-secret-that-is-at-least-32-char
 process.env.CSRF_SECRET = 'test-csrf-secret-that-is-at-least-32-characters';
 
 // Mock database
-vi.mock('../../src/config/database.js', () => ({
+vi.mock('../../config/database.js', () => ({
     query: vi.fn()
 }));
 
@@ -22,19 +22,19 @@ vi.mock('bcryptjs', () => ({
 }));
 
 // Mock logger
-vi.mock('../../src/utils/logger.backend.js', () => ({
+vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));
 
 // Mock security service
-vi.mock('../../src/services/security.service.js', () => ({
+vi.mock('../../services/security.service.js', () => ({
     securityLog: vi.fn(),
     getRequestMetadata: vi.fn(() => ({ ip: '127.0.0.1', userAgent: 'test' })),
     LOG_LEVELS: { INFO: 'info', WARN: 'warn', ERROR: 'error' },
     SECURITY_EVENTS: { LOGIN_SUCCESS: 'LOGIN_SUCCESS', LOGIN_FAILED: 'LOGIN_FAILED' }
 }));
 
-import { query as dbQuery } from '../../src/config/database.js';
+import { query as dbQuery } from '../../config/database.js';
 import bcrypt from 'bcryptjs';
 
 describe('Auth Routes - Sign In', () => {
@@ -63,7 +63,7 @@ describe('Auth Routes - Sign In', () => {
             mockReq.body = { password: 'password123' };
 
             // The validation should fail before hitting the route handler
-            const { signInSchema } = await import('../../src/utils/validation.js');
+            const { signInSchema } = await import('../../utils/validation.js');
             
             const result = signInSchema.safeParse(mockReq.body);
             expect(result.success).toBe(false);
@@ -73,7 +73,7 @@ describe('Auth Routes - Sign In', () => {
         it('should reject request without password', async () => {
             mockReq.body = { email: 'test@example.com' };
 
-            const { signInSchema } = await import('../../src/utils/validation.js');
+            const { signInSchema } = await import('../../utils/validation.js');
             
             const result = signInSchema.safeParse(mockReq.body);
             expect(result.success).toBe(false);
@@ -83,7 +83,7 @@ describe('Auth Routes - Sign In', () => {
         it('should reject invalid email format', async () => {
             mockReq.body = { email: 'not-an-email', password: 'password123' };
 
-            const { signInSchema } = await import('../../src/utils/validation.js');
+            const { signInSchema } = await import('../../utils/validation.js');
             
             const result = signInSchema.safeParse(mockReq.body);
             expect(result.success).toBe(false);
@@ -92,7 +92,7 @@ describe('Auth Routes - Sign In', () => {
         it('should accept valid credentials format', async () => {
             mockReq.body = { email: 'test@example.com', password: 'password123' };
 
-            const { signInSchema } = await import('../../src/utils/validation.js');
+            const { signInSchema } = await import('../../utils/validation.js');
             
             const result = signInSchema.safeParse(mockReq.body);
             expect(result.success).toBe(true);
@@ -101,7 +101,7 @@ describe('Auth Routes - Sign In', () => {
         it('should reject password shorter than 8 characters', async () => {
             mockReq.body = { email: 'test@example.com', password: 'short' };
 
-            const { signInSchema } = await import('../../src/utils/validation.js');
+            const { signInSchema } = await import('../../utils/validation.js');
             
             const result = signInSchema.safeParse(mockReq.body);
             expect(result.success).toBe(false);

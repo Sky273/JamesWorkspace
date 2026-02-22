@@ -8,10 +8,10 @@ import {
     anthropicRequestSchema,
     chatbotRequestSchema,
     validateBody
-} from '../../src/utils/validation.js';
+} from '../../utils/validation.js';
 
 // Mock logger
-vi.mock('../../src/utils/logger.backend.js', () => ({
+vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn(),
     createModuleLogger: () => ({
         info: vi.fn(),

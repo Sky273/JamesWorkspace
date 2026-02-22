@@ -126,25 +126,25 @@ describe('Auth Middleware', () => {
     });
   });
 
-  describe('hasCustomerAccess', () => {
-    it('should return true for admin regardless of customer', () => {
-      mockReq.user = { role: 'admin', customer: 'Company A' };
+  describe('hasCustomerAccess (alias for hasFirmAccess)', () => {
+    it('should return true for admin regardless of firm', () => {
+      mockReq.user = { role: 'admin', firm: 'Company A' };
       expect(hasCustomerAccess(mockReq, 'Company B')).toBe(true);
     });
 
-    it('should return true if user customer matches resource customer', () => {
-      mockReq.user = { role: 'user', customer: 'Company A' };
+    it('should return true if user firm matches resource firm', () => {
+      mockReq.user = { role: 'user', firm: 'Company A' };
       expect(hasCustomerAccess(mockReq, 'Company A')).toBe(true);
     });
 
-    it('should return false if user customer does not match', () => {
-      mockReq.user = { role: 'user', customer: 'Company A' };
+    it('should return false if user firm does not match', () => {
+      mockReq.user = { role: 'user', firm: 'Company A' };
       expect(hasCustomerAccess(mockReq, 'Company B')).toBe(false);
     });
 
-    it('should return falsy value if user has no customer', () => {
-      mockReq.user = { role: 'user', customer: null };
-      // Returns null (falsy) when userCustomer is null due to short-circuit evaluation
+    it('should return falsy value if user has no firm', () => {
+      mockReq.user = { role: 'user', firm: null };
+      // Returns falsy when userFirm is null due to short-circuit evaluation
       expect(hasCustomerAccess(mockReq, 'Company A')).toBeFalsy();
     });
   });

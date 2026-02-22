@@ -4,24 +4,24 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock database query
-vi.mock('../../src/config/database.js', () => ({
+vi.mock('../../config/database.js', () => ({
     query: vi.fn()
 }));
 
 // Mock cache service
-vi.mock('../../src/services/cache.service.js', () => ({
+vi.mock('../../services/cache.service.js', () => ({
     settingsCache: { size: () => 5 },
     templatesCache: { size: () => 3 },
     firmsCache: { size: () => 2 }
 }));
 
 // Mock constants
-vi.mock('../../src/config/constants.js', () => ({
+vi.mock('../../config/constants.js', () => ({
     OPENAI_API_KEY: 'test-openai-key',
     ANTHROPIC_API_KEY: 'test-anthropic-key'
 }));
 
-import { query as dbQuery } from '../../src/config/database.js';
+import { query as dbQuery } from '../../config/database.js';
 
 describe('Health Routes', () => {
     let mockReq;
@@ -51,7 +51,7 @@ describe('Health Routes', () => {
             });
 
             // Import the router after mocks are set up
-            const healthRouter = (await import('../../src/routes/health.routes.js')).default;
+            const healthRouter = (await import('../../routes/health.routes.js')).default;
             
             // Get the route handler
             const routeHandler = healthRouter.stack.find(r => r.route?.path === '/').route.stack[0].handle;
@@ -74,7 +74,7 @@ describe('Health Routes', () => {
             // Mock DB failure
             dbQuery.mockRejectedValueOnce(new Error('Connection refused'));
 
-            const healthRouter = (await import('../../src/routes/health.routes.js')).default;
+            const healthRouter = (await import('../../routes/health.routes.js')).default;
             const routeHandler = healthRouter.stack.find(r => r.route?.path === '/').route.stack[0].handle;
             
             await routeHandler(mockReq, mockRes);
@@ -97,7 +97,7 @@ describe('Health Routes', () => {
                 }] 
             });
 
-            const healthRouter = (await import('../../src/routes/health.routes.js')).default;
+            const healthRouter = (await import('../../routes/health.routes.js')).default;
             const routeHandler = healthRouter.stack.find(r => r.route?.path === '/').route.stack[0].handle;
             
             await routeHandler(mockReq, mockRes);
@@ -120,7 +120,7 @@ describe('Health Routes', () => {
                 }] 
             });
 
-            const healthRouter = (await import('../../src/routes/health.routes.js')).default;
+            const healthRouter = (await import('../../routes/health.routes.js')).default;
             const routeHandler = healthRouter.stack.find(r => r.route?.path === '/').route.stack[0].handle;
             
             await routeHandler(mockReq, mockRes);

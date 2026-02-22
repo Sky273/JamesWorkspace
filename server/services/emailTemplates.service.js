@@ -444,7 +444,7 @@ export async function renderTemplate(templateId, context) {
     }
     
     // Debug: log user context
-    console.log('[EmailTemplates] renderTemplate context.user:', JSON.stringify(context?.user, null, 2));
+    safeLog('debug', 'EmailTemplates: renderTemplate context.user', { user: context?.user });
     
     // Get or compile HTML (async due to lazy loading)
     let html = template.html_content;

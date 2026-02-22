@@ -3,10 +3,10 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { asyncHandler, asyncHandlerWithMessage, globalErrorHandler } from '../../src/middleware/asyncHandler.middleware.js';
+import { asyncHandler, asyncHandlerWithMessage, globalErrorHandler } from '../../middleware/asyncHandler.middleware.js';
 
 // Mock logger
-vi.mock('../../src/utils/logger.backend.js', () => ({
+vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn(),
     createModuleLogger: () => ({
         info: vi.fn(),
