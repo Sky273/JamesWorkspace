@@ -1350,8 +1350,8 @@ async function getTrendMetadata(trendId) {
 // Lightweight cache for filtering/pagination (NO metadata - too heavy)
 let trendsLightCache = null;
 let trendsCacheTime = 0;
-const TRENDS_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
-const TRENDS_CACHE_MAX_SIZE = 100000; // Max records (light cache is ~5KB per record)
+const TRENDS_CACHE_TTL = 5 * 60 * 1000; // 5 minutes (reduced for memory)
+const TRENDS_CACHE_MAX_SIZE = 20000; // Max records (reduced from 100K to save ~40MB)
 
 // Derived caches (computed from light cache)
 let filterOptionsCache = null;

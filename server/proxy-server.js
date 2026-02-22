@@ -58,6 +58,8 @@ import docsRoutes from './routes/docs.routes.js';
 import clientsRoutes from './routes/clients.routes.js';
 import resumeSubmissionsRoutes from './routes/resumeSubmissions.routes.js';
 import mailRoutes, { destroyMailStatesCleanup } from './routes/mail.routes.js';
+import { destroyGoogleapis } from './services/mail/gmailProvider.js';
+import { destroyMjml } from './services/emailTemplates.service.js';
 import emailTemplatesRoutes from './routes/emailTemplates.routes.js';
 
 // Import services
@@ -943,6 +945,8 @@ const gracefulShutdown = async (signal) => {
         destroyTagsCache();
         destroyEscoCache();
         destroyMailStatesCleanup();
+        destroyGoogleapis();
+        destroyMjml();
         console.log('✅ All caches destroyed (data + intervals)');
         
         // Close PostgreSQL connection pool

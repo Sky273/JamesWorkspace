@@ -3,7 +3,7 @@
  * Modal for sending CV via email (Gmail OAuth)
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { XMarkIcon, EnvelopeIcon, CheckCircleIcon, ExclamationCircleIcon, EyeIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
@@ -79,6 +79,15 @@ const SendEmailModal = ({ isOpen, onClose, resumeName, resumeId, resumeTitle, cu
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [previewHtml, setPreviewHtml] = useState<string>('');
   const [showPreview, setShowPreview] = useState(false);
+
+  // Sanitize HTML to remove scripts and prevent sandbox errors
+  const sanitizedPreviewHtml = useMemo(() => {
+    if (!previewHtml) return '';
+    return previewHtml
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/\son\w+="[^"]*"/gi, '')
+      .replace(/\son\w+='[^']*'/gi, '');
+  }, [previewHtml]);
   
   // UI state
   const [step, setStep] = useState<ModalStep>('connect');
@@ -621,10 +630,10 @@ const SendEmailModal = ({ isOpen, onClose, resumeName, resumeId, resumeTitle, cu
               <div className="overflow-y-auto max-h-[calc(80vh-80px)]">
                 {previewHtml ? (
                   <iframe
-                    srcDoc={previewHtml}
+                    srcDoc={sanitizedPreviewHtml}
                     title="Email Preview"
                     className="w-full h-[500px] border-0"
-                    sandbox="allow-same-origin"
+                    sandbox="allow-same-origin allow-popups"
                   />
                 ) : (
                   <div className="flex items-center justify-center h-64 text-gray-400">

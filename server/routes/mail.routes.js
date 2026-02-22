@@ -72,8 +72,8 @@ router.get('/auth/gmail', authenticateToken, async (req, res) => {
             createdAt: Date.now()
         });
         
-        // Get authorization URL
-        const authUrl = mailService.getAuthUrl('gmail', state);
+        // Get authorization URL (async due to lazy loading of googleapis)
+        const authUrl = await mailService.getAuthUrl('gmail', state);
         
         safeLog('info', 'Gmail OAuth initiated', { userId });
         

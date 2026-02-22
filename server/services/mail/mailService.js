@@ -32,11 +32,11 @@ export function getProvider(providerName = 'gmail') {
  * Get OAuth authorization URL for a provider
  * @param {string} providerName 
  * @param {string} state - CSRF state
- * @returns {string}
+ * @returns {Promise<string>}
  */
-export function getAuthUrl(providerName, state) {
+export async function getAuthUrl(providerName, state) {
     const provider = getProvider(providerName);
-    return provider.getAuthUrl(state);
+    return await provider.getAuthUrl(state);
 }
 
 /**

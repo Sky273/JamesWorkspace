@@ -196,9 +196,40 @@ class MetricsCollector {
         this.requests.total++;
         this.requests.byMethod[method] = (this.requests.byMethod[method] || 0) + 1;
         
-        // Normalize endpoint (remove IDs)
-        const normalizedEndpoint = endpoint.replace(/\/rec[a-zA-Z0-9]{14}/g, '/:id');
+        // Normalize endpoint (remove various ID formats to prevent unbounded growth)
+        const normalizedEndpoint = this.normalizeEndpoint(endpoint);
         this.requests.byEndpoint[normalizedEndpoint] = (this.requests.byEndpoint[normalizedEndpoint] || 0) + 1;
+        
+        // Limit byEndpoint size to prevent memory leak (keep top 200 endpoints)
+        if (Object.keys(this.requests.byEndpoint).length > 200) {
+            this.pruneEndpointStats();
+        }
+    }
+    
+    // Normalize endpoint path to prevent unbounded growth
+    normalizeEndpoint(endpoint) {
+        return endpoint
+            // Remove UUIDs (8-4-4-4-12 format)
+            .replace(/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '/:id')
+            // Remove Airtable-style IDs (rec + 14 chars)
+            .replace(/\/rec[a-zA-Z0-9]{14}/g, '/:id')
+            // Remove numeric IDs
+            .replace(/\/\d+/g, '/:id')
+            // Remove any remaining long alphanumeric strings (likely IDs)
+            .replace(/\/[a-zA-Z0-9]{20,}/g, '/:id');
+    }
+    
+    // Prune endpoint stats to keep only top endpoints by count
+    pruneEndpointStats() {
+        const entries = Object.entries(this.requests.byEndpoint);
+        entries.sort((a, b) => b[1] - a[1]); // Sort by count descending
+        const top100 = entries.slice(0, 100);
+        this.requests.byEndpoint = Object.fromEntries(top100);
+        
+        // Also prune error endpoints
+        const errorEntries = Object.entries(this.errors.byEndpoint);
+        errorEntries.sort((a, b) => b[1] - a[1]);
+        this.errors.byEndpoint = Object.fromEntries(errorEntries.slice(0, 100));
     }
 
     // Track response
@@ -206,11 +237,11 @@ class MetricsCollector {
         const statusCategory = `${Math.floor(statusCode / 100)}xx`;
         this.requests.byStatus[statusCategory] = (this.requests.byStatus[statusCategory] || 0) + 1;
         
-        // Keep last 1000 response times for percentile calculations
+        // Keep last 500 response times for percentile calculations (reduced for memory)
         this.requests.responseTimes.push(responseTime);
-        if (this.requests.responseTimes.length > 1000) {
+        if (this.requests.responseTimes.length > 500) {
             // Remove oldest entries to prevent unbounded growth
-            this.requests.responseTimes.splice(0, this.requests.responseTimes.length - 1000);
+            this.requests.responseTimes.splice(0, this.requests.responseTimes.length - 500);
         }
     }
 
@@ -221,17 +252,17 @@ class MetricsCollector {
         const errorType = error.name || 'UnknownError';
         this.errors.byType[errorType] = (this.errors.byType[errorType] || 0) + 1;
         
-        const normalizedEndpoint = endpoint.replace(/\/rec[a-zA-Z0-9]{14}/g, '/:id');
+        const normalizedEndpoint = this.normalizeEndpoint(endpoint);
         this.errors.byEndpoint[normalizedEndpoint] = (this.errors.byEndpoint[normalizedEndpoint] || 0) + 1;
         
-        // Keep last 100 errors
+        // Keep last 50 errors (reduced for memory)
         this.errors.recent.push({
             timestamp: new Date().toISOString(),
             type: errorType,
             message: error.message,
             endpoint: normalizedEndpoint
         });
-        if (this.errors.recent.length > 100) {
+        if (this.errors.recent.length > 50) {
             this.errors.recent.shift();
         }
     }

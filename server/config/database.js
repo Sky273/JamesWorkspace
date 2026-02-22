@@ -25,7 +25,7 @@ const dbConfig = {
     password: process.env.POSTGRES_PASSWORD,
     
     // Connection pool settings
-    max: parseInt(process.env.POSTGRES_MAX_CONNECTIONS || '20', 10),
+    max: parseInt(process.env.POSTGRES_MAX_CONNECTIONS || '10', 10),
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 5000,
     

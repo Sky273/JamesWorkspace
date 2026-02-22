@@ -25,7 +25,6 @@
   "dependencies": {
     "@heroicons/react": "^2.0.18",
     "@tailwindcss/typography": "^0.5.19",
-    "@tanstack/react-table": "^8.20.5",
     "@types/three": "^0.182.0",
     "autoprefixer": "^10.4.14",
     "axios": "^1.7.8",
@@ -36,7 +35,6 @@
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "csrf-csrf": "^4.0.3",
-    "date-fns": "^4.1.0",
     "dompurify": "^3.3.1",
     "dotenv": "^16.4.5",
     "express": "^4.18.2",
@@ -74,8 +72,6 @@
     "three": "^0.182.0",
     "tinymce": "^8.3.0",
     "vite-plugin-node-polyfills": "^0.25.0",
-    "winston": "^3.19.0",
-    "winston-daily-rotate-file": "^5.0.0",
     "word-extractor": "^1.0.4",
     "zod": "^4.3.6"
   },

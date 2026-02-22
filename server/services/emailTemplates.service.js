@@ -1,11 +1,87 @@
 /**
  * Email Templates Service
  * Manages email templates with MJML compilation and keyword substitution
+ * 
+ * NOTE: mjml is loaded lazily to save ~15MB of memory at startup
+ * The module is automatically unloaded after 10 minutes of inactivity
  */
 
-import mjml2html from 'mjml';
 import { query } from '../config/database.js';
 import { safeLog } from '../utils/logger.backend.js';
+
+// ============================================
+// LAZY LOADING FOR MJML (~15MB)
+// ============================================
+
+let mjml2html = null;
+let mjmlLastUsed = 0;
+let mjmlUnloadTimer = null;
+
+// Unload mjml after 10 minutes of inactivity
+const MJML_UNLOAD_TIMEOUT = 10 * 60 * 1000;
+
+/**
+ * Schedule unloading of mjml module after inactivity
+ */
+function scheduleMjmlUnload() {
+    if (mjmlUnloadTimer) {
+        clearTimeout(mjmlUnloadTimer);
+    }
+    
+    mjmlUnloadTimer = setTimeout(() => {
+        if (mjml2html && Date.now() - mjmlLastUsed >= MJML_UNLOAD_TIMEOUT) {
+            unloadMjml();
+        }
+    }, MJML_UNLOAD_TIMEOUT + 1000);
+    
+    if (mjmlUnloadTimer.unref) {
+        mjmlUnloadTimer.unref();
+    }
+}
+
+/**
+ * Unload mjml module to free memory (~15MB)
+ */
+function unloadMjml() {
+    if (mjml2html) {
+        mjml2html = null;
+        mjmlLastUsed = 0;
+        
+        if (global.gc) {
+            global.gc();
+            safeLog('info', 'mjml module unloaded and GC triggered (~15MB freed)');
+        } else {
+            safeLog('info', 'mjml module unloaded (~15MB will be freed by GC)');
+        }
+    }
+}
+
+/**
+ * Get mjml module (lazy load)
+ */
+async function getMjml() {
+    mjmlLastUsed = Date.now();
+    
+    if (!mjml2html) {
+        const mjmlModule = await import('mjml');
+        mjml2html = mjmlModule.default;
+        safeLog('info', 'mjml module loaded lazily (~15MB)');
+    }
+    
+    scheduleMjmlUnload();
+    return mjml2html;
+}
+
+/**
+ * Destroy mjml resources (for graceful shutdown)
+ */
+export function destroyMjml() {
+    if (mjmlUnloadTimer) {
+        clearTimeout(mjmlUnloadTimer);
+        mjmlUnloadTimer = null;
+    }
+    unloadMjml();
+}
 
 /**
  * Get the base URL for the application
@@ -123,8 +199,8 @@ export async function getDefaultTemplate(firmId) {
 export async function createTemplate(firmId, data, userId) {
     const { name, description, subjectTemplate, mjmlContent, isDefault } = data;
     
-    // Compile MJML to HTML
-    const htmlContent = compileMjml(mjmlContent);
+    // Compile MJML to HTML (async due to lazy loading)
+    const htmlContent = await compileMjml(mjmlContent);
     
     // If setting as default, unset other defaults for this firm
     if (isDefault) {
@@ -165,8 +241,8 @@ export async function updateTemplate(id, data) {
     
     const { name, description, subjectTemplate, mjmlContent, isDefault } = data;
     
-    // Compile MJML to HTML
-    const htmlContent = compileMjml(mjmlContent);
+    // Compile MJML to HTML (async due to lazy loading)
+    const htmlContent = await compileMjml(mjmlContent);
     
     // If setting as default, unset other defaults for this firm
     if (isDefault && existing.firm_id) {
@@ -249,11 +325,12 @@ export async function duplicateTemplate(id, firmId, userId) {
 /**
  * Compile MJML content to HTML
  * @param {string} mjmlContent - MJML content
- * @returns {string} - Compiled HTML
+ * @returns {Promise<string>} - Compiled HTML
  */
-export function compileMjml(mjmlContent) {
+export async function compileMjml(mjmlContent) {
     try {
-        const result = mjml2html(mjmlContent, {
+        const mjml = await getMjml();
+        const result = mjml(mjmlContent, {
             validationLevel: 'soft',
             minify: false
         });
@@ -369,10 +446,10 @@ export async function renderTemplate(templateId, context) {
     // Debug: log user context
     console.log('[EmailTemplates] renderTemplate context.user:', JSON.stringify(context?.user, null, 2));
     
-    // Get or compile HTML
+    // Get or compile HTML (async due to lazy loading)
     let html = template.html_content;
     if (!html) {
-        html = compileMjml(template.mjml_content);
+        html = await compileMjml(template.mjml_content);
     }
     
     // Substitute keywords
@@ -389,7 +466,7 @@ export async function renderTemplate(templateId, context) {
  * @param {Object} context - Context data (optional, uses sample data if not provided)
  * @returns {Object} - { subject, html }
  */
-export function previewTemplate(mjmlContent, subjectTemplate, context = null) {
+export async function previewTemplate(mjmlContent, subjectTemplate, context = null) {
     // Use sample data if no context provided
     const sampleContext = context || {
         client: { name: 'Entreprise ABC', type: 'prospect', industry: 'Technologies' },
@@ -399,7 +476,7 @@ export function previewTemplate(mjmlContent, subjectTemplate, context = null) {
         user: { name: 'Pierre Durand' }
     };
     
-    const html = compileMjml(mjmlContent);
+    const html = await compileMjml(mjmlContent);
     const subject = substituteKeywords(subjectTemplate, sampleContext);
     const body = substituteKeywords(html, sampleContext);
     

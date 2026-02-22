@@ -3,7 +3,7 @@
  * Displays the rendered HTML preview of an email template
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DevicePhoneMobileIcon, ComputerDesktopIcon } from '@heroicons/react/24/outline';
 
@@ -16,6 +16,16 @@ interface EmailTemplatePreviewProps {
 const EmailTemplatePreview = ({ html, subject, loading }: EmailTemplatePreviewProps): JSX.Element => {
   const { t } = useTranslation();
   const [viewMode, setViewMode] = useState<'desktop' | 'mobile'>('desktop');
+
+  // Remove scripts from HTML to prevent sandbox errors
+  const sanitizedHtml = useMemo(() => {
+    if (!html) return '';
+    // Remove script tags and event handlers to prevent console errors
+    return html
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/\son\w+="[^"]*"/gi, '')
+      .replace(/\son\w+='[^']*'/gi, '');
+  }, [html]);
 
   if (loading) {
     return (
@@ -85,10 +95,10 @@ const EmailTemplatePreview = ({ html, subject, loading }: EmailTemplatePreviewPr
       >
         {html ? (
           <iframe
-            srcDoc={html}
+            srcDoc={sanitizedHtml}
             title="Email Preview"
             className="w-full h-[500px] border-0"
-            sandbox="allow-same-origin"
+            sandbox="allow-same-origin allow-popups"
           />
         ) : (
           <div className="flex items-center justify-center h-96 text-gray-400">

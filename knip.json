@@ -22,7 +22,10 @@
     "autoprefixer",
     "postcss",
     "tailwindcss",
-    "terser",
-    "vite-plugin-compression"
+    "vite-plugin-compression",
+    "buffer",
+    "dompurify",
+    "html2pdf.js",
+    "vite-plugin-node-polyfills"
   ]
 }

@@ -334,8 +334,9 @@ export default defineConfig(({ mode }) => {
       },
       // Tree-shaking optimization
       treeshake: {
-        moduleSideEffects: 'no-external',
+        moduleSideEffects: true,
         propertyReadSideEffects: false,
+        tryCatchDeoptimization: false,
       },
     }
   }

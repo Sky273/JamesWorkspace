@@ -50,34 +50,42 @@ async function stopExistingServers() {
     
     try {
         if (isWindows) {
-            // Kill processes on ports 3001, 3002, 3443 (proxy, pdf, https)
-            const ports = [3001, 3002, 3443];
+            // Kill processes LISTENING on ports 3001, 3002, 3443, 5173, 443 (proxy, pdf, https, vite, vite-https)
+            // Note: We only kill LISTENING processes, not client connections
+            const ports = [3001, 3002, 3443, 5173, 443];
             for (const port of ports) {
                 try {
-                    // Find and kill process on port
-                    const { stdout } = await execAsync(`netstat -ano | findstr :${port}`);
+                    // Find processes LISTENING on this specific port (not client connections)
+                    // Use exact port match with space/colon boundaries to avoid false positives
+                    const { stdout } = await execAsync(`netstat -ano | findstr LISTENING | findstr ":${port} "`);
                     const lines = stdout.trim().split('\n');
                     const pids = new Set();
                     for (const line of lines) {
+                        // Verify it's actually listening on this port (local address)
+                        if (!line.includes('LISTENING')) continue;
                         const parts = line.trim().split(/\s+/);
-                        const pid = parts[parts.length - 1];
-                        if (pid && pid !== '0') pids.add(pid);
+                        // Format: TCP 0.0.0.0:443 0.0.0.0:0 LISTENING PID
+                        const localAddr = parts[1] || '';
+                        if (localAddr.endsWith(`:${port}`)) {
+                            const pid = parts[parts.length - 1];
+                            if (pid && pid !== '0') pids.add(pid);
+                        }
                     }
                     for (const pid of pids) {
                         try {
                             await execAsync(`taskkill /F /PID ${pid}`);
-                            log(`  🛑 Stopped process on port ${port} (PID: ${pid})`, 'yellow');
+                            log(`  🛑 Stopped server on port ${port} (PID: ${pid})`, 'yellow');
                         } catch {
                             // Process may have already exited
                         }
                     }
                 } catch {
-                    // No process on this port
+                    // No process listening on this port
                 }
             }
         } else {
             // Unix: kill processes on ports
-            const ports = [3001, 3002, 3443];
+            const ports = [3001, 3002, 3443, 5173, 443];
             for (const port of ports) {
                 try {
                     await execAsync(`lsof -ti:${port} | xargs kill -9 2>/dev/null || true`);
@@ -91,8 +99,25 @@ async function stopExistingServers() {
         log('  ⚠️  Could not stop existing servers (may not be running)', 'yellow');
     }
     
-    // Small delay to ensure ports are released
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Longer delay to ensure ports are fully released by the OS
+    // Windows can take up to 4 minutes to release TIME_WAIT sockets, but usually 2-3 seconds is enough
+    log('  ⏳ Waiting for ports to be released...', 'cyan');
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    
+    // Verify ports are free
+    if (isWindows) {
+        for (const port of [3001, 3002, 5173, 443]) {
+            try {
+                const { stdout } = await execAsync(`netstat -ano | findstr :${port} | findstr LISTENING`);
+                if (stdout.trim()) {
+                    log(`  ⚠️  Port ${port} still in use, waiting longer...`, 'yellow');
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                }
+            } catch {
+                // Port is free (no output from findstr)
+            }
+        }
+    }
 }
 
 async function checkPrerequisites() {

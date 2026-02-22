@@ -313,7 +313,7 @@ router.post('/compile', authenticateToken, async (req, res) => {
             return res.status(400).json({ error: 'MJML content is required' });
         }
         
-        const result = emailTemplatesService.previewTemplate(
+        const result = await emailTemplatesService.previewTemplate(
             mjmlContent, 
             subjectTemplate || '', 
             context

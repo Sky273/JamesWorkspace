@@ -6,17 +6,17 @@ import https from 'https';
 export const httpAgent = new http.Agent({
     keepAlive: true,
     keepAliveMsecs: 30000,
-    maxSockets: 50,
-    maxFreeSockets: 10,
-    timeout: 600000 // 10 minutes
+    maxSockets: 25,
+    maxFreeSockets: 5,
+    timeout: 300000 // 5 minutes
 });
 
 export const httpsAgent = new https.Agent({
     keepAlive: true,
     keepAliveMsecs: 30000,
-    maxSockets: 50,
-    maxFreeSockets: 10,
-    timeout: 600000 // 10 minutes
+    maxSockets: 25,
+    maxFreeSockets: 5,
+    timeout: 300000 // 5 minutes
 });
 
 // Configure axios defaults to prevent memory leaks

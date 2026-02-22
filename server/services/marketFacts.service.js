@@ -114,8 +114,8 @@ async function storeFacts(facts) {
 // Main cache for all facts data (loaded once, filtered in memory)
 let factsCache = null;
 let factsCacheTime = 0;
-const FACTS_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
-const FACTS_CACHE_MAX_SIZE = 50000; // Max records to cache (safety limit ~25MB)
+const FACTS_CACHE_TTL = 5 * 60 * 1000; // 5 minutes (reduced for memory)
+const FACTS_CACHE_MAX_SIZE = 10000; // Max records to cache (safety limit ~5MB)
 
 // Region name to code mapping for backward compatibility
 const REGION_NAME_TO_CODE = {
