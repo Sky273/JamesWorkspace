@@ -37,6 +37,7 @@ interface ErrorBoundaryState {
   hasError: boolean;
   error: Error | null;
   errorInfo: ErrorInfo | null;
+  isRedirecting: boolean;
 }
 
 /**
@@ -159,18 +160,20 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     this.state = {
       hasError: false,
       error: null,
-      errorInfo: null
+      errorInfo: null,
+      isRedirecting: false
     };
   }
 
   static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
-    // Check if this is an authentication error - redirect immediately
+    // Check if this is an authentication error - mark as redirecting
     if (isAuthError(error)) {
-      log.warn('Auth error detected, redirecting to signin', { error: error.message });
-      redirectToSignin();
-      return { hasError: false, error: null }; // Don't show error UI
+      log.warn('Auth error detected, will redirect to signin', { error: error.message });
+      // Schedule redirect (can't call directly in static method)
+      setTimeout(() => redirectToSignin(), 0);
+      return { hasError: false, error: null, isRedirecting: true }; // Don't show error UI
     }
-    return { hasError: true, error };
+    return { hasError: true, error, isRedirecting: false };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
@@ -186,10 +189,22 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   }
 
   handleRetry = (): void => {
-    this.setState({ hasError: false, error: null, errorInfo: null });
+    this.setState({ hasError: false, error: null, errorInfo: null, isRedirecting: false });
   };
 
   render(): ReactNode {
+    // If redirecting to signin, show a loading spinner instead of error or children
+    if (this.state.isRedirecting) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+            <p className="text-gray-600 dark:text-gray-400">Session expirée, redirection...</p>
+          </div>
+        </div>
+      );
+    }
+
     if (this.state.hasError) {
       if (this.props.fallback) {
         return this.props.fallback;
