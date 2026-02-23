@@ -61,6 +61,8 @@ import mailRoutes, { destroyMailStatesCleanup } from './routes/mail.routes.js';
 import { destroyGoogleapis } from './services/mail/gmailProvider.js';
 import { destroyMjml } from './services/emailTemplates.service.js';
 import emailTemplatesRoutes from './routes/emailTemplates.routes.js';
+import consentRoutes from './routes/consent.routes.js';
+import gdprMailRoutes from './routes/gdprMail.routes.js';
 
 // Import services
 import { metrics } from './services/metrics.service.js';
@@ -78,6 +80,8 @@ import { invalidateTagsCache, destroyTagsCache } from './routes/tags.routes.js';
 import { destroyEscoCache } from './services/escoService.js';
 // PostgreSQL database initialization
 import { initializeDatabase, closePool } from './services/database.service.js';
+// GDPR consent scheduler
+import { startScheduler, stopScheduler } from './services/scheduler.service.js';
 
 const app = express();
 
@@ -510,6 +514,12 @@ const csrfExemptPaths = [
     '/generate-pdf'  // PDF generation proxy - internal server-to-server call
 ];
 
+// Paths that start with these prefixes are exempt from CSRF (public consent response)
+const csrfExemptPrefixes = [
+    '/api/consent/respond/',  // Public consent response page (no auth required)
+    '/api/gdpr/mail/callback'  // OAuth callback for GDPR Gmail
+];
+
 // Safe HTTP methods that should never require CSRF validation
 const csrfSafeMethods = ['GET', 'HEAD', 'OPTIONS'];
 
@@ -523,6 +533,11 @@ app.use((req, res, next) => {
     // Skip CSRF for exempt paths (auth routes)
     if (csrfExemptPaths.includes(req.path)) {
         safeLog('debug', 'CSRF bypassed for exempt path', { path: req.path, method: req.method });
+        return next();
+    }
+    // Skip CSRF for exempt prefixes (public consent routes)
+    if (csrfExemptPrefixes.some(prefix => req.path.startsWith(prefix))) {
+        safeLog('debug', 'CSRF bypassed for exempt prefix', { path: req.path, method: req.method });
         return next();
     }
     // Apply CSRF protection for all other routes (POST, PUT, DELETE, PATCH)
@@ -632,6 +647,12 @@ app.use('/api/mail', mailRoutes);
 
 // Email templates routes
 app.use('/api/email-templates', emailTemplatesRoutes);
+
+// GDPR Consent routes
+app.use('/api/consent', consentRoutes);
+
+// GDPR Mail configuration routes
+app.use('/api/gdpr/mail', gdprMailRoutes);
 
 // ============================================
 // PDF SERVER PROXY
@@ -911,6 +932,10 @@ async function onServerStart(protocol, port) {
     // Start periodic cleanup of Market Radar caches (every 15 minutes)
     startMarketRadarCacheCleanup();
     
+    // Start GDPR consent scheduler (checks for expired consents, sends reminders, purges)
+    startScheduler();
+    console.log('  ✅ GDPR Consent Scheduler');
+    
     console.log(`🔐 Protocol: ${protocol}`);
 }
 
@@ -947,6 +972,7 @@ const gracefulShutdown = async (signal) => {
         destroyMailStatesCleanup();
         destroyGoogleapis();
         destroyMjml();
+        stopScheduler();
         console.log('✅ All caches destroyed (data + intervals)');
         
         // Close PostgreSQL connection pool

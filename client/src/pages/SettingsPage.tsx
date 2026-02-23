@@ -7,12 +7,12 @@ import { useState, useEffect, ForwardRefExoticComponent, RefAttributes, SVGProps
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
-import { Cog6ToothIcon, SparklesIcon, ScaleIcon, DocumentTextIcon, ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline';
+import { Cog6ToothIcon, SparklesIcon, ScaleIcon, DocumentTextIcon, ChatBubbleLeftRightIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
 import { useAuthFetch } from '../hooks/useAuthFetch';
 import { useChatbot } from '../context/ChatbotContext';
 import logger from '../utils/logger.frontend';
 
-import { LLMTab, PromptsTab, WeightsTab, ChatbotTab } from '../components/SettingsPage';
+import { LLMTab, PromptsTab, WeightsTab, ChatbotTab, GdprTab } from '../components/SettingsPage';
 import Breadcrumbs from '../components/Breadcrumbs';
 
 type HeroIcon = ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, 'ref'> & { title?: string; titleId?: string } & RefAttributes<SVGSVGElement>>;
@@ -218,6 +218,7 @@ const SettingsPage = (): JSX.Element => {
     { id: 'prompts', name: t('settings.tabs.prompts'), icon: Cog6ToothIcon },
     { id: 'weights', name: t('settings.tabs.weights'), icon: ScaleIcon },
     { id: 'chatbot', name: t('settings.tabs.chatbot'), icon: ChatBubbleLeftRightIcon },
+    { id: 'gdpr', name: t('settings.tabs.gdpr'), icon: ShieldCheckIcon },
     { id: 'swagger', name: t('settings.tabs.apiDocs'), icon: DocumentTextIcon }
   ];
 
@@ -291,6 +292,10 @@ const SettingsPage = (): JSX.Element => {
 
         {activeTab === 'chatbot' && (
           <ChatbotTab formData={formData} onInputChange={handleInputChange} t={t} />
+        )}
+
+        {activeTab === 'gdpr' && (
+          <GdprTab t={t} />
         )}
 
         {activeTab === 'swagger' && (

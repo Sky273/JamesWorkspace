@@ -87,6 +87,18 @@ export interface Resume {
   'Analysis Date'?: string;
   'Last Improved'?: string;
   'Current Version'?: number;
+  // GDPR Consent fields
+  profile_type?: 'employee' | 'external';
+  candidate_name?: string;
+  candidate_email?: string;
+  consent_status?: 'not_required' | 'pending_consent' | 'active' | 'refused' | 'expired' | 'purged';
+  consent_requested_at?: string | null;
+  consent_responded_at?: string | null;
+  retention_until?: string | null;
+  consent_token?: string | null;
+  consent_token_expires_at?: string | null;
+  consent_reminder_sent_at?: string | null;
+  consent_reminder_count?: number;
   // Index signature for dynamic field access
   [key: string]: unknown;
 }

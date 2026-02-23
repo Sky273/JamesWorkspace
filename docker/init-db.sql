@@ -182,9 +182,28 @@ CREATE TABLE public.resumes (
     improved_soft_skills jsonb,
     resume_file_data bytea,
     current_version integer DEFAULT 0,
+    -- GDPR Consent fields
+    profile_type character varying(20) DEFAULT 'external'::character varying,
+    candidate_name character varying(255),
+    candidate_email character varying(255),
+    consent_status character varying(20) DEFAULT 'pending_consent'::character varying,
+    consent_requested_at timestamp with time zone,
+    consent_responded_at timestamp with time zone,
+    retention_until timestamp with time zone,
+    consent_token character varying(64),
+    consent_token_expires_at timestamp with time zone,
+    consent_reminder_sent_at timestamp with time zone,
+    consent_reminder_count integer DEFAULT 0,
     CONSTRAINT resumes_pkey PRIMARY KEY (id),
-    CONSTRAINT resumes_status_check CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'inactive'::character varying, 'archived'::character varying, 'new'::character varying, 'pending'::character varying, 'processing'::character varying, 'analyzed'::character varying, 'improved'::character varying, 'error'::character varying, 'failed'::character varying])::text[])))
+    CONSTRAINT resumes_status_check CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'inactive'::character varying, 'archived'::character varying, 'new'::character varying, 'pending'::character varying, 'processing'::character varying, 'analyzed'::character varying, 'improved'::character varying, 'error'::character varying, 'failed'::character varying])::text[]))),
+    CONSTRAINT resumes_profile_type_check CHECK (((profile_type)::text = ANY ((ARRAY['employee'::character varying, 'external'::character varying])::text[]))),
+    CONSTRAINT resumes_consent_status_check CHECK (((consent_status)::text = ANY ((ARRAY['not_required'::character varying, 'pending_consent'::character varying, 'active'::character varying, 'refused'::character varying, 'expired'::character varying, 'purged'::character varying])::text[])))
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_resumes_consent_token ON public.resumes(consent_token) WHERE consent_token IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_resumes_consent_status ON public.resumes(consent_status);
+CREATE INDEX IF NOT EXISTS idx_resumes_profile_type ON public.resumes(profile_type);
+CREATE INDEX IF NOT EXISTS idx_resumes_retention_until ON public.resumes(retention_until) WHERE retention_until IS NOT NULL;
 
 COMMENT ON TABLE public.resumes IS 'Resume documents with analysis and extracted data';
 
@@ -333,6 +352,25 @@ CREATE TABLE public.user_mail_tokens (
 );
 
 COMMENT ON TABLE public.user_mail_tokens IS 'Encrypted OAuth tokens for email providers (Gmail, Outlook)';
+
+-- Firm GDPR Mail Tokens (for consent emails)
+CREATE TABLE public.firm_gdpr_mail_tokens (
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    firm_id uuid NOT NULL,
+    provider character varying(50) DEFAULT 'gmail'::character varying NOT NULL,
+    access_token_encrypted text NOT NULL,
+    refresh_token_encrypted text,
+    token_expiry timestamp with time zone,
+    email character varying(255),
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT firm_gdpr_mail_tokens_pkey PRIMARY KEY (id),
+    CONSTRAINT firm_gdpr_mail_tokens_unique_firm UNIQUE (firm_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_firm_gdpr_mail_tokens_firm_id ON public.firm_gdpr_mail_tokens(firm_id);
+
+COMMENT ON TABLE public.firm_gdpr_mail_tokens IS 'Gmail OAuth tokens for GDPR consent email sending at firm level';
 
 -- Email Templates
 CREATE TABLE public.email_templates (
@@ -575,6 +613,7 @@ ALTER TABLE ONLY public.resume_submissions ADD CONSTRAINT resume_submissions_mis
 ALTER TABLE ONLY public.resume_submissions ADD CONSTRAINT resume_submissions_firm_id_fkey FOREIGN KEY (firm_id) REFERENCES public.firms(id) ON DELETE CASCADE;
 ALTER TABLE ONLY public.resume_submissions ADD CONSTRAINT resume_submissions_sent_by_fkey FOREIGN KEY (sent_by) REFERENCES public.users(id) ON DELETE SET NULL;
 ALTER TABLE ONLY public.user_mail_tokens ADD CONSTRAINT user_mail_tokens_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.firm_gdpr_mail_tokens ADD CONSTRAINT firm_gdpr_mail_tokens_firm_id_fkey FOREIGN KEY (firm_id) REFERENCES public.firms(id) ON DELETE CASCADE;
 
 -- =============================================================================
 -- VIEWS

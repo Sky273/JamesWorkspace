@@ -10,6 +10,7 @@ import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { ArrowRightIcon, SparklesIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 import Breadcrumbs from '../components/Breadcrumbs';
+import ConsentBadge, { ConsentStatus } from '../components/ConsentBadge';
 import { Resume } from '../types/entities';
 import { resumeService } from '../utils/resumeService';
 import toast from 'react-hot-toast';
@@ -172,9 +173,20 @@ const ResumeAnalysisPage = (): JSX.Element => {
         >
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate max-w-[250px] sm:max-w-none">
-                {resumeName}
-              </h1>
+              <div className="flex items-center gap-3">
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate max-w-[250px] sm:max-w-none">
+                  {resumeName}
+                </h1>
+                {currentResume?.consent_status && (
+                  <ConsentBadge
+                    status={currentResume.consent_status as ConsentStatus}
+                    candidateName={currentResume.candidate_name as string | undefined}
+                    candidateEmail={currentResume.candidate_email as string | undefined}
+                    retentionUntil={currentResume.retention_until as string | null | undefined}
+                    compact={true}
+                  />
+                )}
+              </div>
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 {t('resume.analysis.title')}
               </p>

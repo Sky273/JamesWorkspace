@@ -7,6 +7,7 @@
 import { Component, ErrorInfo, ReactNode, useState } from 'react';
 import { ExclamationTriangleIcon, ChevronDownIcon, ChevronUpIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { createLogger } from '../utils/logger.frontend';
+import { isSessionRedirectError } from '../utils/apiInterceptor';
 
 const log = createLogger('ErrorBoundary');
 
@@ -25,7 +26,9 @@ const AUTH_ERROR_PATTERNS = [
   'NotBeforeError',
   'URI malformed',
   'URIError',
-  'malformed URI'
+  'malformed URI',
+  'Session expired - redirecting to login',
+  'SessionRedirectError'
 ];
 
 interface ErrorBoundaryProps {
@@ -45,6 +48,12 @@ interface ErrorBoundaryState {
  */
 const isAuthError = (error: Error | null): boolean => {
   if (!error) return false;
+  
+  // Check for SessionRedirectError first
+  if (isSessionRedirectError(error)) {
+    return true;
+  }
+  
   const errorString = error.toString().toLowerCase();
   const errorMessage = (error.message || '').toLowerCase();
   

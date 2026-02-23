@@ -71,13 +71,26 @@ const AUTH_ERROR_PATTERNS = [
   'invalid token',
   'token expired',
   'unauthorized',
-  'session expired'
+  'session expired',
+  'SessionRedirectError',
+  'Session expired - redirecting to login'
 ];
 
-// Check if an error is authentication-related
+// Check if an error is authentication-related or a session redirect
 const isAuthError = (message: string): boolean => {
   const lowerMessage = message.toLowerCase();
   return AUTH_ERROR_PATTERNS.some(pattern => lowerMessage.includes(pattern.toLowerCase()));
+};
+
+// Check if error is a SessionRedirectError (should be silently ignored)
+const isSessionRedirect = (error: unknown): boolean => {
+  if (!error) return false;
+  if (typeof error === 'object' && error !== null) {
+    const err = error as { name?: string; message?: string };
+    return err.name === 'SessionRedirectError' || 
+           err.message?.includes('Session expired - redirecting to login') || false;
+  }
+  return String(error).includes('SessionRedirectError');
 };
 
 // Redirect to signin page silently
@@ -98,6 +111,13 @@ window.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => 
   const reason = String(event.reason?.message || event.reason || '');
   const stack = String(event.reason?.stack || '');
   const combinedReason = `${reason} ${stack}`.toLowerCase();
+  
+  // Check if this is a SessionRedirectError - suppress completely (redirect already in progress)
+  if (isSessionRedirect(event.reason)) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    return; // Don't redirect again, it's already happening
+  }
   
   // Check if this is an auth-related error - redirect silently
   if (isAuthError(reason) || isAuthError(stack)) {
@@ -138,6 +158,13 @@ window.addEventListener('error', (event: ErrorEvent) => {
   const message = String(event.message || '');
   const errorString = String(event.error || '');
   const combinedMessage = `${message} ${errorString}`.toLowerCase();
+  
+  // Check if this is a SessionRedirectError - suppress completely (redirect already in progress)
+  if (isSessionRedirect(event.error)) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    return; // Don't redirect again, it's already happening
+  }
   
   // Check if this is an auth-related error - redirect silently
   if (isAuthError(message) || isAuthError(errorString)) {

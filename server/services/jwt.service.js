@@ -23,6 +23,7 @@ export function generateAccessToken(user) {
         name: user.name,
         status: user.status,
         role: user.role || 'user',
+        firmId: user.firm_id || user.firmId,
         firm: user.FirmName || user.firm,
         // Backward compatibility - keep customer as alias
         customer: user.FirmName || user.firm || user.CustomerName || user.customer,

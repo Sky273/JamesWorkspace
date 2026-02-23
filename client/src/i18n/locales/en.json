@@ -580,7 +580,27 @@
     "dragAndDropYourResumeHere": "Drag and drop your resume here",
     "dropYourResumeHere": "Drop your resume here",
     "or": "or click to select a file",
-    "supportedFormats": "Supported formats: PDF, DOC, DOCX (<2 MB)"
+    "supportedFormats": "Supported formats: PDF, DOC, DOCX (<2 MB)",
+    "gdpr": {
+      "title": "Candidate Information",
+      "profileType": "Profile Type",
+      "employee": "Employee",
+      "external": "External",
+      "candidateName": "Candidate Full Name",
+      "namePlaceholder": "e.g. John Doe",
+      "nameHint": "This name will be used for GDPR consent (separate from the CV display name)",
+      "candidateEmail": "Candidate Email",
+      "emailPlaceholder": "candidate@email.com",
+      "emailHint": "A GDPR consent request email will be sent automatically",
+      "externalInfo": "For external candidates, a GDPR consent request email will be sent automatically after uploading the CV.",
+      "continue": "Continue to upload",
+      "modify": "Modify",
+      "errors": {
+        "nameRequired": "Name is required",
+        "emailRequired": "Email is required for external candidates",
+        "emailInvalid": "Invalid email format"
+      }
+    }
   },
   "metrics": {
     "title": "Usage Metrics",
@@ -677,7 +697,37 @@
       "prompts": "Prompts",
       "weights": "Category Weights",
       "chatbot": "Chatbot",
+      "gdpr": "GDPR",
       "apiDocs": "API Documentation"
+    },
+    "gdpr": {
+      "title": "GDPR Configuration",
+      "description": "Configure automatic consent request emails for CV storage.",
+      "emailConfig": "Email Configuration",
+      "connected": "Gmail connected",
+      "notConnected": "Gmail not connected",
+      "connectGmail": "Connect Gmail",
+      "disconnect": "Disconnect",
+      "testSend": "Test send",
+      "testEmailPrompt": "Enter email address for test:",
+      "testSent": "Test email sent to {{email}}",
+      "disconnected": "Gmail disconnected",
+      "confirmDisconnect": "Are you sure you want to disconnect this Gmail account?",
+      "infoTitle": "How it works",
+      "info1": "This Gmail account will be used to send GDPR consent requests to external candidates",
+      "info2": "Emails are sent automatically when adding an external CV",
+      "info3": "A reminder is sent after 7 days if the candidate hasn't responded",
+      "consentSettings": "Consent settings",
+      "tokenExpiry": "Link expiry",
+      "retention": "Retention period",
+      "reminder": "Reminder after",
+      "days": "days",
+      "years": "years",
+      "errors": {
+        "connectFailed": "Failed to connect Gmail",
+        "disconnectFailed": "Failed to disconnect",
+        "testFailed": "Failed to send test email"
+      }
     },
     "apiDocs": {
       "title": "API Documentation",
@@ -1283,6 +1333,101 @@
       "updated": "Template updated successfully",
       "deleted": "Template deleted successfully",
       "duplicated": "Template duplicated successfully"
+    }
+  },
+  "consent": {
+    "form": {
+      "title": "GDPR Information",
+      "subtitle": "Data protection compliance",
+      "profileType": {
+        "label": "Profile type",
+        "employee": "Employee",
+        "external": "External",
+        "employeeHint": "Internal company profile - no consent required",
+        "externalHint": "External candidate - a consent request will be sent"
+      },
+      "candidateName": {
+        "label": "Candidate full name",
+        "placeholder": "First Last",
+        "hint": "Real name of the candidate (may differ from displayed name if anonymized)"
+      },
+      "candidateEmail": {
+        "label": "Candidate email",
+        "placeholder": "candidate@email.com",
+        "hint": "The consent request email will be sent to this address"
+      },
+      "submit": {
+        "sendRequest": "Send request",
+        "confirm": "Confirm"
+      },
+      "skip": "Skip",
+      "gdprNotice": "Under GDPR, candidate consent is required to store their CV.",
+      "errors": {
+        "nameRequired": "Candidate name is required",
+        "emailRequired": "Candidate email is required for external profiles",
+        "emailInvalid": "Email address is not valid",
+        "submitFailed": "Error sending the request"
+      },
+      "success": {
+        "employee": "Profile saved - no consent required",
+        "external": "Consent request sent",
+        "emailSent": "An email has been sent to {{email}}"
+      }
+    },
+    "status": {
+      "notRequired": "Not required",
+      "pending": "Pending",
+      "active": "Consented",
+      "refused": "Refused",
+      "expired": "Expired",
+      "purged": "Deleted",
+      "unknown": "Unknown"
+    },
+    "badge": {
+      "title": "GDPR Consent",
+      "profileType": "Profile type",
+      "candidateName": "Candidate name",
+      "candidateEmail": "Candidate email",
+      "requestedAt": "Request sent on",
+      "respondedAt": "Response on",
+      "retentionUntil": "Retained until",
+      "resend": "Resend request",
+      "resending": "Sending..."
+    },
+    "response": {
+      "title": "Consent Request",
+      "subtitle": "CV Storage",
+      "greeting": "Hello {{name}},",
+      "message": "{{firm}} would like to keep your CV in their talent pool to offer you relevant professional opportunities.",
+      "whatWeStore": "What we store:",
+      "storeItem1": "Your CV and the information it contains",
+      "storeItem2": "Your contact details to reach you",
+      "storeItem3": "History of opportunities offered",
+      "retentionPeriod": "Retention period: 2 years maximum. You can withdraw your consent at any time.",
+      "rights": "You have the right to access, rectify and delete your data.",
+      "accept": "I accept",
+      "refuse": "I refuse",
+      "footer": "This form complies with the General Data Protection Regulation (GDPR).",
+      "backToHome": "Back to home",
+      "errors": {
+        "noToken": "Invalid consent link",
+        "expired": "This consent request has expired",
+        "alreadyProcessed": "This request has already been processed",
+        "invalid": "Invalid consent link",
+        "generic": "An error occurred",
+        "network": "Server connection error",
+        "submitFailed": "Error recording your response"
+      },
+      "error": {
+        "title": "Unable to process your request"
+      },
+      "success": {
+        "acceptedTitle": "Thank you for your consent!",
+        "acceptedMessage": "Your CV will be kept in our talent pool.",
+        "refusedTitle": "Your choice has been recorded",
+        "refusedMessage": "Your CV will be deleted from our database.",
+        "retentionInfo": "Your data will be kept for a maximum of 2 years."
+      }
     }
   }
 }

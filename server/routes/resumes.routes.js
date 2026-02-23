@@ -1,6 +1,7 @@
 import express from 'express';
 import multer from 'multer';
 import fs from 'fs/promises';
+import crypto from 'crypto';
 import { UPLOAD_DIR } from '../config/constants.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { userRateLimit } from '../middleware/rateLimit.middleware.js';
@@ -89,7 +90,8 @@ router.get('/', authenticateToken, async (req, res) => {
             improved_global_rating, improved_skills_score, improved_experience_score, improved_education_score,
             improved_ats_score, improved_executive_summary_score, improved_hobbies_languages_score,
             template_id, template_name, improvement_suggestions, analysis_details, improvement_date,
-            trigram, improved_key_improvements, improved_skills, improved_industries, improved_tools, improved_soft_skills
+            trigram, improved_key_improvements, improved_skills, improved_industries, improved_tools, improved_soft_skills,
+            profile_type, candidate_name, candidate_email, consent_status, consent_requested_at, consent_responded_at, retention_until
             FROM resumes`;
         
         if (whereClause) {
@@ -172,7 +174,15 @@ router.get('/', authenticateToken, async (req, res) => {
             // Dates
             'Created At': record.created_at,
             'Analyzed At': record.analyzed_at,
-            'Updated At': record.updated_at
+            'Updated At': record.updated_at,
+            // GDPR consent fields
+            profile_type: record.profile_type,
+            candidate_name: record.candidate_name,
+            candidate_email: record.candidate_email,
+            consent_status: record.consent_status,
+            consent_requested_at: record.consent_requested_at,
+            consent_responded_at: record.consent_responded_at,
+            retention_until: record.retention_until
         }));
 
         const response = {
@@ -370,7 +380,8 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
                 improved_global_rating, improved_skills_score, improved_experience_score, improved_education_score,
                 improved_ats_score, improved_executive_summary_score, improved_hobbies_languages_score,
                 template_id, template_name, improvement_suggestions, analysis_details, improvement_date,
-                trigram, improved_key_improvements, improved_skills, improved_industries, improved_tools, improved_soft_skills
+                trigram, improved_key_improvements, improved_skills, improved_industries, improved_tools, improved_soft_skills,
+                profile_type, candidate_name, candidate_email, consent_status, consent_requested_at, consent_responded_at, retention_until
             FROM resumes WHERE id = $1`,
             [id]
         );
@@ -453,7 +464,15 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
             // Dates
             'Created At': resume.created_at,
             'Analyzed At': resume.analyzed_at,
-            'Updated At': resume.updated_at
+            'Updated At': resume.updated_at,
+            // GDPR consent fields
+            profile_type: resume.profile_type,
+            candidate_name: resume.candidate_name,
+            candidate_email: resume.candidate_email,
+            consent_status: resume.consent_status,
+            consent_requested_at: resume.consent_requested_at,
+            consent_responded_at: resume.consent_responded_at,
+            retention_until: resume.retention_until
         });
     } catch (error) {
         if (error.statusCode === 404) {
@@ -475,16 +494,16 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
         }
 
         const userFirm = req.user.firm || req.user.customer;
-        const { name, title } = req.body;
+        const { name, title, profile_type, candidate_name, candidate_email } = req.body;
 
         // Read file content from temp location
         const fileBuffer = await fs.readFile(req.file.path);
 
         // Find firm by name to get ID
-        let firmId = null;
+        let firmId = req.user.firmId || null;
         let firmName = userFirm;
         
-        if (userFirm) {
+        if (!firmId && userFirm) {
             const firms = await selectWithTimeout('firms', {
                 where: 'name = $1',
                 params: [userFirm],
@@ -497,10 +516,26 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
             }
         }
 
-        // Insert resume with file data stored in database
+        // GDPR consent fields
+        const profileType = profile_type || 'external';
+        const consentStatus = profileType === 'employee' ? 'not_required' : 'pending_consent';
+        const consentToken = profileType === 'external' ? crypto.randomBytes(32).toString('hex') : null;
+        const tokenExpiresAt = profileType === 'external' 
+            ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 days
+            : null;
+        const retentionUntil = profileType === 'employee'
+            ? null // No retention limit for employees
+            : new Date(Date.now() + 2 * 365 * 24 * 60 * 60 * 1000); // 2 years for external
+
+        // Insert resume with file data and GDPR fields
         const result = await query(
-            `INSERT INTO resumes (name, title, file_name, resume_file_data, resume_file_size, resume_file_type, resume_file_url, status, firm_id, firm_name)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            `INSERT INTO resumes (
+                name, title, file_name, resume_file_data, resume_file_size, resume_file_type, 
+                resume_file_url, status, firm_id, firm_name,
+                profile_type, candidate_name, candidate_email, consent_status,
+                consent_token, consent_token_expires_at, consent_requested_at, retention_until
+            )
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
              RETURNING *`,
             [
                 name || req.file.originalname,
@@ -512,7 +547,15 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
                 `/api/resumes/${null}/download`, // Will be updated after insert
                 'active',
                 firmId,
-                firmName
+                firmName,
+                profileType,
+                candidate_name || null,
+                candidate_email || null,
+                consentStatus,
+                consentToken,
+                tokenExpiresAt,
+                profileType === 'external' ? new Date() : null,
+                retentionUntil
             ]
         );
 
@@ -532,6 +575,35 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
             safeLog('warn', 'Failed to delete temp file', { path: req.file.path, error: unlinkError.message });
         }
 
+        // Send GDPR consent email automatically for external candidates
+        if (profileType === 'external' && candidate_email && firmId) {
+            safeLog('info', 'Attempting to send GDPR consent email', { 
+                resumeId: newResume.id, 
+                email: candidate_email,
+                firmId 
+            });
+            try {
+                const { sendConsentRequest } = await import('../services/consent.service.js');
+                await sendConsentRequest(newResume.id);
+                safeLog('info', 'GDPR consent email sent automatically', { resumeId: newResume.id, email: candidate_email });
+            } catch (emailError) {
+                safeLog('error', 'Failed to send GDPR consent email', { 
+                    resumeId: newResume.id, 
+                    email: candidate_email,
+                    firmId,
+                    error: emailError.message,
+                    stack: emailError.stack
+                });
+                // Don't fail the upload if email fails
+            }
+        } else {
+            safeLog('debug', 'GDPR email not sent', { 
+                profileType, 
+                hasEmail: !!candidate_email, 
+                hasFirmId: !!firmId 
+            });
+        }
+
         res.status(201).json({
             id: newResume.id,
             Name: newResume.name,
@@ -546,7 +618,11 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
             }],
             Status: 'Active',
             FirmName: newResume.firm_name,
-            CustomerName: newResume.firm_name
+            CustomerName: newResume.firm_name,
+            profile_type: newResume.profile_type,
+            candidate_name: newResume.candidate_name,
+            candidate_email: newResume.candidate_email,
+            consent_status: newResume.consent_status
         });
     } catch (error) {
         safeLog('error', 'Error uploading resume', { error: error.message });

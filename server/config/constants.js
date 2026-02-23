@@ -103,6 +103,25 @@ export const CACHE_TTL = {
     FIRMS: 15 * 60 * 1000          // 15 minutes
 };
 
+// SMTP Configuration for GDPR consent emails
+// Set these environment variables to enable automatic consent email sending
+export const SMTP_CONFIG = {
+    host: process.env.SMTP_HOST,
+    port: parseInt(process.env.SMTP_PORT || '587', 10),
+    secure: process.env.SMTP_SECURE === 'true',
+    user: process.env.SMTP_USER,
+    password: process.env.SMTP_PASSWORD,
+    fromName: process.env.SMTP_FROM_NAME || 'ResumeConverter',
+    fromEmail: process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER
+};
+
+// GDPR Consent Configuration
+export const CONSENT_CONFIG = {
+    tokenExpiryDays: 14,      // Days until consent token expires (2 weeks)
+    retentionDays: 730,       // Days to retain data after consent (2 years)
+    reminderAfterDays: 7      // Days after request to send reminder
+};
+
 // Rate limiting configuration
 export const RATE_LIMIT = {
     GLOBAL: {

@@ -16,6 +16,13 @@ import { Resume } from '../types/entities';
 // Re-export Resume type for backward compatibility
 export type { Resume };
 
+// Candidate info for GDPR
+export interface CandidateInfo {
+  profileType: 'employee' | 'external';
+  candidateName: string;
+  candidateEmail: string;
+}
+
 // ============================================
 // TYPES
 // ============================================
@@ -32,7 +39,7 @@ interface ResumeContextType {
   setProcessingError: (error: string | null) => void;
   setCurrentResume: (resume: Resume | null) => void;
   setResumes: React.Dispatch<React.SetStateAction<Resume[]>>;
-  uploadResume: (file: File) => Promise<Resume | undefined>;
+  uploadResume: (file: File, candidateInfo?: CandidateInfo) => Promise<Resume | undefined>;
   improveCurrentResume: () => Promise<Resume>;
   updateResumeAnalysis: (resumeId: string, analysisData: Partial<Resume>) => Promise<Resume>;
   fetchResumes: () => Promise<void>;
@@ -140,7 +147,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
     }
   }, []);
 
-  const uploadResume = useCallback(async (file: File): Promise<Resume | undefined> => {
+  const uploadResume = useCallback(async (file: File, candidateInfo?: CandidateInfo): Promise<Resume | undefined> => {
     const controller = new AbortController();
     setAbortController(controller);
     
@@ -165,11 +172,20 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
 
       if (controller.signal.aborted) return;
 
-      // Upload file to backend API
+      // Upload file to backend API with GDPR candidate info
       const formData = new FormData();
       formData.append('file', file);
       formData.append('name', file.name);
       formData.append('title', '');
+      
+      // Add GDPR candidate info if provided
+      if (candidateInfo) {
+        formData.append('profile_type', candidateInfo.profileType);
+        formData.append('candidate_name', candidateInfo.candidateName);
+        if (candidateInfo.candidateEmail) {
+          formData.append('candidate_email', candidateInfo.candidateEmail);
+        }
+      }
       
       const uploadOptions = await createAuthOptionsWithCsrf({
         method: 'POST',

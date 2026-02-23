@@ -1,3 +1,24 @@
+## v1.6.2 - 2026-02-23
+### 🔒 RGPD - Badge Compact & Envoi Email Automatique
+
+#### Badge RGPD Compact avec Tooltip
+- **Mode compact** : Badge RGPD minimaliste sur les cartes CV et page d'analyse
+- **Tooltip hover** : Affichage du nom, email et date d'expiration du consentement
+- **React Portal** : Rendu du tooltip hors du DOM parent pour éviter le clipping
+- **Largeur dynamique** : Tooltip auto-dimensionné selon le contenu
+
+#### Envoi Automatique Email RGPD
+- **Email auto à l'upload** : Envoi automatique de la demande de consentement lors de l'upload d'un CV externe
+- **Logging détaillé** : Traces complètes pour le débogage de l'envoi Gmail OAuth
+- **Gestion token OAuth** : Documentation du processus de reconnexion Gmail en cas d'expiration
+
+#### Corrections Techniques
+- **Colonne BDD** : Correction `consent_given_at` → `consent_responded_at` dans les requêtes SQL
+- **Import crypto** : Correction de l'import ES module pour `crypto`
+- **Traduction manquante** : Ajout de la clé `resume.steps.improve` en français
+
+---
+
 ## v1.6.1 - 2026-02-23
 ### 🧭 Breadcrumbs & Refactoring Navigation CV
 

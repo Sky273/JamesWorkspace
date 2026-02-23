@@ -173,6 +173,7 @@
     },
     "steps": {
       "analysis": "Analyse",
+      "improve": "Améliorer",
       "viewImproved": "Voir l'amélioration",
       "view": "Voir",
       "export": "Exporter"
@@ -603,7 +604,27 @@
     "dragAndDropYourResumeHere": "Glissez et déposez votre CV ici",
     "dropYourResumeHere": "Déposez votre CV ici",
     "or": "ou cliquez pour choisir un fichier",
-    "supportedFormats": "Formats supportés : PDF, DOC, DOCX (<2 Mo)"
+    "supportedFormats": "Formats supportés : PDF, DOC, DOCX (<2 Mo)",
+    "gdpr": {
+      "title": "Informations du candidat",
+      "profileType": "Type de profil",
+      "employee": "Collaborateur",
+      "external": "Externe",
+      "candidateName": "Nom complet du candidat",
+      "namePlaceholder": "Ex: Jean Dupont",
+      "nameHint": "Ce nom sera utilisé pour le consentement RGPD (distinct du nom affiché sur le CV)",
+      "candidateEmail": "Email du candidat",
+      "emailPlaceholder": "candidat@email.com",
+      "emailHint": "Un email de demande de consentement RGPD sera envoyé automatiquement",
+      "externalInfo": "Pour les candidats externes, un email de demande de consentement RGPD sera envoyé automatiquement après l'upload du CV.",
+      "continue": "Continuer vers l'upload",
+      "modify": "Modifier",
+      "errors": {
+        "nameRequired": "Le nom est requis",
+        "emailRequired": "L'email est requis pour les externes",
+        "emailInvalid": "Format d'email invalide"
+      }
+    }
   },
   "metrics": {
     "title": "Métriques d'utilisation",
@@ -700,7 +721,37 @@
       "prompts": "Prompts",
       "weights": "Poids des Catégories",
       "chatbot": "Chatbot",
+      "gdpr": "RGPD",
       "apiDocs": "Documentation API"
+    },
+    "gdpr": {
+      "title": "Configuration RGPD",
+      "description": "Configurez l'envoi automatique des emails de demande de consentement pour la conservation des CV.",
+      "emailConfig": "Configuration Email",
+      "connected": "Gmail connecté",
+      "notConnected": "Gmail non connecté",
+      "connectGmail": "Connecter Gmail",
+      "disconnect": "Déconnecter",
+      "testSend": "Tester l'envoi",
+      "testEmailPrompt": "Entrez l'adresse email pour le test :",
+      "testSent": "Email de test envoyé à {{email}}",
+      "disconnected": "Gmail déconnecté",
+      "confirmDisconnect": "Êtes-vous sûr de vouloir déconnecter ce compte Gmail ?",
+      "infoTitle": "Comment ça fonctionne",
+      "info1": "Ce compte Gmail sera utilisé pour envoyer les demandes de consentement RGPD aux candidats externes",
+      "info2": "Les emails sont envoyés automatiquement lors de l'ajout d'un CV externe",
+      "info3": "Un rappel est envoyé après 7 jours si le candidat n'a pas répondu",
+      "consentSettings": "Paramètres de consentement",
+      "tokenExpiry": "Expiration du lien",
+      "retention": "Durée de conservation",
+      "reminder": "Rappel après",
+      "days": "jours",
+      "years": "ans",
+      "errors": {
+        "connectFailed": "Erreur de connexion à Gmail",
+        "disconnectFailed": "Erreur lors de la déconnexion",
+        "testFailed": "Erreur lors de l'envoi du test"
+      }
     },
     "apiDocs": {
       "title": "Documentation de l'API",
@@ -1284,6 +1335,101 @@
       "updated": "Template mis à jour avec succès",
       "deleted": "Template supprimé avec succès",
       "duplicated": "Template dupliqué avec succès"
+    }
+  },
+  "consent": {
+    "form": {
+      "title": "Informations RGPD",
+      "subtitle": "Conformité au règlement sur la protection des données",
+      "profileType": {
+        "label": "Type de profil",
+        "employee": "Salarié",
+        "external": "Externe",
+        "employeeHint": "Profil interne à l'entreprise - pas de consentement requis",
+        "externalHint": "Candidat externe - une demande de consentement sera envoyée"
+      },
+      "candidateName": {
+        "label": "Nom complet du candidat",
+        "placeholder": "Prénom Nom",
+        "hint": "Nom réel du candidat (peut différer du nom affiché si anonymisé)"
+      },
+      "candidateEmail": {
+        "label": "Email du candidat",
+        "placeholder": "candidat@email.com",
+        "hint": "L'email de demande de consentement sera envoyé à cette adresse"
+      },
+      "submit": {
+        "sendRequest": "Envoyer la demande",
+        "confirm": "Confirmer"
+      },
+      "skip": "Ignorer",
+      "gdprNotice": "Conformément au RGPD, le consentement du candidat est requis pour conserver son CV.",
+      "errors": {
+        "nameRequired": "Le nom du candidat est requis",
+        "emailRequired": "L'email du candidat est requis pour les profils externes",
+        "emailInvalid": "L'adresse email n'est pas valide",
+        "submitFailed": "Erreur lors de l'envoi de la demande"
+      },
+      "success": {
+        "employee": "Profil enregistré - pas de consentement requis",
+        "external": "Demande de consentement envoyée",
+        "emailSent": "Un email a été envoyé à {{email}}"
+      }
+    },
+    "status": {
+      "notRequired": "Non requis",
+      "pending": "En attente",
+      "active": "Consenti",
+      "refused": "Refusé",
+      "expired": "Expiré",
+      "purged": "Supprimé",
+      "unknown": "Inconnu"
+    },
+    "badge": {
+      "title": "Consentement RGPD",
+      "profileType": "Type de profil",
+      "candidateName": "Nom du candidat",
+      "candidateEmail": "Email du candidat",
+      "requestedAt": "Demande envoyée le",
+      "respondedAt": "Réponse le",
+      "retentionUntil": "Conservation jusqu'au",
+      "resend": "Renvoyer la demande",
+      "resending": "Envoi en cours..."
+    },
+    "response": {
+      "title": "Demande de consentement",
+      "subtitle": "Conservation de votre CV",
+      "greeting": "Bonjour {{name}},",
+      "message": "Le cabinet {{firm}} souhaite conserver votre CV dans son vivier de talents afin de vous proposer des opportunités professionnelles correspondant à votre profil.",
+      "whatWeStore": "Ce que nous conservons :",
+      "storeItem1": "Votre CV et les informations qu'il contient",
+      "storeItem2": "Vos coordonnées pour vous contacter",
+      "storeItem3": "L'historique des opportunités proposées",
+      "retentionPeriod": "Durée de conservation : 2 ans maximum. Vous pouvez retirer votre consentement à tout moment.",
+      "rights": "Vous disposez d'un droit d'accès, de rectification et de suppression de vos données.",
+      "accept": "J'accepte",
+      "refuse": "Je refuse",
+      "footer": "Ce formulaire est conforme au Règlement Général sur la Protection des Données (RGPD).",
+      "backToHome": "Retour à l'accueil",
+      "errors": {
+        "noToken": "Lien de consentement invalide",
+        "expired": "Cette demande de consentement a expiré",
+        "alreadyProcessed": "Cette demande a déjà été traitée",
+        "invalid": "Lien de consentement invalide",
+        "generic": "Une erreur est survenue",
+        "network": "Erreur de connexion au serveur",
+        "submitFailed": "Erreur lors de l'enregistrement de votre réponse"
+      },
+      "error": {
+        "title": "Impossible de traiter votre demande"
+      },
+      "success": {
+        "acceptedTitle": "Merci pour votre consentement !",
+        "acceptedMessage": "Votre CV sera conservé dans notre vivier de talents.",
+        "refusedTitle": "Votre choix a été enregistré",
+        "refusedMessage": "Votre CV sera supprimé de notre base de données.",
+        "retentionInfo": "Vos données seront conservées pendant 2 ans maximum."
+      }
     }
   }
 }

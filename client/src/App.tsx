@@ -40,6 +40,7 @@ const ClientsPage = lazy(() => import('./pages/ClientsPage'));
 const EmailTemplatesPage = lazy(() => import('./pages/admin/EmailTemplatesPage'));
 const SignIn = lazy(() => import('./components/SignIn'));
 const Register = lazy(() => import('./components/Register'));
+const ConsentResponsePage = lazy(() => import('./pages/ConsentResponsePage'));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -103,6 +104,8 @@ const App = (): JSX.Element => {
               <Routes>
                 <Route path="/signin" element={<SignIn />} />
                 <Route path="/register" element={<Register />} />
+                {/* Public consent response page (no auth required) */}
+                <Route path="/consent/:token" element={<ConsentResponsePage />} />
                 <Route
                   path="/"
                   element={

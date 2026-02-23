@@ -6,6 +6,7 @@
 import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { ExclamationTriangleIcon, ChevronDownIcon, ChevronUpIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { isSessionRedirectError } from '../utils/apiInterceptor';
 
 interface ErrorToastProps {
   message: string;
@@ -197,11 +198,17 @@ export const getUserFriendlyMessage = (error: unknown): { message: string; detai
 
 /**
  * Show error from catch block with user-friendly message and technical details
+ * Silently ignores SessionRedirectError (redirect already in progress)
  */
 export const showCaughtError = (
   error: unknown,
   _contextMessage = 'Une erreur est survenue'
 ): void => {
+  // Don't show toast for session redirect errors - redirect is already happening
+  if (isSessionRedirectError(error)) {
+    return;
+  }
+  
   const { message, details } = getUserFriendlyMessage(error);
   showErrorWithDetails(message, details);
 };

@@ -26,6 +26,7 @@ import { StatsCards, SearchAndActions } from '../components/ResumesPage';
 import Pagination from '../components/Pagination';
 import { SkeletonResumeList, SkeletonDashboardStats } from '../components/ui/Skeleton';
 import Breadcrumbs from '../components/Breadcrumbs';
+import ConsentBadge from '../components/ConsentBadge';
 
 // Import centralized types
 import { Resume } from '../types/entities';
@@ -522,9 +523,20 @@ const ResumesPage = (): JSX.Element => {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-3">
-                  <CalendarIcon className="w-4 h-4" />
-                  {formatResumeDate(resume['Created At'])}
+                <div className="flex items-center justify-between gap-2 text-sm text-gray-500 dark:text-gray-400 mb-3">
+                  <div className="flex items-center gap-2">
+                    <CalendarIcon className="w-4 h-4" />
+                    {formatResumeDate(resume['Created At'])}
+                  </div>
+                  {resume.consent_status && (
+                    <ConsentBadge
+                      status={resume.consent_status}
+                      candidateName={resume.candidate_name}
+                      candidateEmail={resume.candidate_email}
+                      retentionUntil={resume.retention_until}
+                      compact={true}
+                    />
+                  )}
                 </div>
 
                 <div className="flex flex-wrap gap-1">

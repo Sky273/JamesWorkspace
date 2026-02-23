@@ -16,6 +16,29 @@ export interface FetchOptions extends RequestInit {
 }
 
 // ============================================
+// SESSION REDIRECT ERROR
+// ============================================
+
+/**
+ * Special error class for session expiration redirects
+ * This error should be caught and ignored - it indicates a redirect is in progress
+ */
+export class SessionRedirectError extends Error {
+  constructor() {
+    super('Session expired - redirecting to login');
+    this.name = 'SessionRedirectError';
+  }
+}
+
+/**
+ * Check if an error is a SessionRedirectError
+ */
+export const isSessionRedirectError = (error: unknown): boolean => {
+  return error instanceof SessionRedirectError || 
+    (error instanceof Error && error.name === 'SessionRedirectError');
+};
+
+// ============================================
 // STATE
 // ============================================
 
@@ -191,7 +214,7 @@ export const fetchWithAuth = async (
   // If session is expiring, don't make new requests
   if (isSessionExpiring) {
     logger.warn('[API Interceptor] Request blocked - session is expiring');
-    return new Promise<Response>(() => {}); // Never resolves, prevents further processing
+    throw new SessionRedirectError();
   }
   
   try {
@@ -214,20 +237,18 @@ export const fetchWithAuth = async (
       if (errorCode === 'TOKEN_MISSING') {
         logger.warn('[API Interceptor] Cookie expired (TOKEN_MISSING), redirecting to signin');
         isSessionExpiring = true;
-        // Redirect silently without throwing an error
+        // Redirect and throw special error to stop all processing
         window.location.href = '/signin?expired=true';
-        // Return a never-resolving promise to prevent further processing
-        return new Promise<Response>(() => {});
+        throw new SessionRedirectError();
       }
 
       // If it's a JWT-related error, skip refresh attempt and redirect immediately
       if (isAuthErrorMessage(errorMessage) || errorCode === 'TOKEN_INVALID') {
         logger.warn('[API Interceptor] JWT error detected, redirecting to signin:', errorMessage || errorCode);
         isSessionExpiring = true;
-        // Redirect silently without throwing an error
+        // Redirect and throw special error to stop all processing
         window.location.href = '/signin?expired=true';
-        // Return a never-resolving promise to prevent further processing
-        return new Promise<Response>(() => {});
+        throw new SessionRedirectError();
       }
 
       logger.warn('[API Interceptor] 401 Unauthorized - attempting token refresh');
@@ -258,8 +279,8 @@ export const fetchWithAuth = async (
         logger.warn('[API Interceptor] Session expired - redirecting to signin');
         window.location.href = '/signin?expired=true';
       }
-      // Return a never-resolving promise to prevent further processing and error overlay
-      return new Promise<Response>(() => {});
+      // Throw special error to stop all processing
+      throw new SessionRedirectError();
     }
 
     if (response.status === 403) {
@@ -295,8 +316,8 @@ export const fetchWithAuth = async (
         logger.warn('[API Interceptor] Session/CSRF error detected, redirecting to signin');
         isSessionExpiring = true;
         window.location.href = '/signin?expired=true';
-        // Return a never-resolving promise to prevent further processing and error overlay
-        return new Promise<Response>(() => {});
+        // Throw special error to stop all processing
+        throw new SessionRedirectError();
       }
 
       throw new Error(errorMessage);
