@@ -54,17 +54,17 @@ const SearchAndActions = ({
         />
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
         <button
           onClick={onToggleFilter}
-          className={`flex items-center gap-2 px-3 py-2 border rounded-lg transition-colors ${
+          className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 border rounded-lg transition-colors text-sm sm:text-base ${
             isFilterExpanded || selectedTagsCount > 0
               ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
               : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
           }`}
         >
           <FunnelIcon className="w-5 h-5" />
-          {t('resumes.filterButton')}
+          <span className="hidden xs:inline">{t('resumes.filterButton')}</span>
           {selectedTagsCount > 0 && (
             <span className="px-1.5 py-0.5 text-xs bg-blue-500 text-white rounded-full">{selectedTagsCount}</span>
           )}
@@ -80,7 +80,7 @@ const SearchAndActions = ({
         {onReset && hasActiveFilters && (
           <button
             onClick={onReset}
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            className="inline-flex items-center gap-1.5 px-2 sm:px-3 py-2 text-sm font-medium rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
             title={t('common.resetFilters')}
           >
             <XMarkIcon className="w-4 h-4" />
@@ -89,10 +89,10 @@ const SearchAndActions = ({
         )}
         <button
           onClick={onUpload}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+          className="flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm sm:text-base"
         >
           <PlusIcon className="w-5 h-5" />
-          {t('resumes.uploadButton')}
+          <span className="hidden xs:inline">{t('resumes.uploadButton')}</span>
         </button>
       </div>
     </div>

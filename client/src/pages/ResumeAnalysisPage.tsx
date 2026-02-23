@@ -170,9 +170,9 @@ const ResumeAnalysisPage = (): JSX.Element => {
           animate={{ opacity: 1, y: 0 }}
           className="mb-6"
         >
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate max-w-[250px] sm:max-w-none">
                 {resumeName}
               </h1>
               <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -180,20 +180,21 @@ const ResumeAnalysisPage = (): JSX.Element => {
               </p>
             </div>
             
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
               {hasImprovedText ? (
                 <>
                   <Link
                     to={`/resumes/${id}/improve`}
-                    className="inline-flex items-center gap-2 px-4 py-2 border border-green-600 dark:border-green-500 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/50 rounded-lg font-medium transition-colors"
+                    className="inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 border border-green-600 dark:border-green-500 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/50 rounded-lg font-medium transition-colors text-sm sm:text-base"
                   >
-                    <CheckCircleIcon className="w-5 h-5" />
-                    {t('resume.actions.viewImproved')}
+                    <CheckCircleIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <span className="hidden xs:inline">{t('resume.actions.viewImproved')}</span>
+                    <span className="xs:hidden">{t('resume.actions.view')}</span>
                     <ArrowRightIcon className="w-4 h-4" />
                   </Link>
                   <Link
                     to={`/resumes/${id}/export`}
-                    className="inline-flex items-center gap-2 px-4 py-2 border border-purple-600 dark:border-purple-500 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50 rounded-lg font-medium transition-colors"
+                    className="inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 border border-purple-600 dark:border-purple-500 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50 rounded-lg font-medium transition-colors text-sm sm:text-base"
                   >
                     {t('resume.actions.export')}
                     <ArrowRightIcon className="w-4 h-4" />
@@ -202,9 +203,9 @@ const ResumeAnalysisPage = (): JSX.Element => {
               ) : (
                 <button
                   onClick={handleImprove}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                  className="inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors text-sm sm:text-base"
                 >
-                  <SparklesIcon className="w-5 h-5" />
+                  <SparklesIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                   {t('resume.actions.improve')}
                   <ArrowRightIcon className="w-4 h-4" />
                 </button>

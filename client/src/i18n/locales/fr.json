@@ -33,7 +33,8 @@
     "deleting": "Suppression...",
     "saved": "Enregistré",
     "saving": "Enregistrement...",
-    "view": "Voir"
+    "view": "Voir",
+    "openMenu": "Ouvrir le menu"
   },
   "header": {
     "changeLanguage": "Changer de langue",
@@ -167,12 +168,14 @@
       "improve": "Améliorer",
       "improveNow": "Améliorer maintenant",
       "export": "Exporter",
-      "viewImproved": "Voir l'amélioration"
+      "viewImproved": "Voir l'amélioration",
+      "view": "Voir"
     },
     "steps": {
       "analysis": "Analyse",
-      "improve": "Amélioration",
-      "export": "Export"
+      "viewImproved": "Voir l'amélioration",
+      "view": "Voir",
+      "export": "Exporter"
     },
     "improve": {
       "title": "Amélioration du CV",
@@ -768,7 +771,7 @@
     "editTag": "Modifier le tag",
     "editingIn": "Modification dans la catégorie",
     "tagName": "Nom du tag",
-    "cancel": "Annuler",
+    "back": "Retour",
     "save": "Enregistrer",
     "refresh": "Actualiser",
     "searchPlaceholder": "Rechercher un tag...",

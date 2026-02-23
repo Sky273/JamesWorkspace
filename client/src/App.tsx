@@ -20,7 +20,6 @@ const ResumesPage = lazy(() => import('./pages/ResumesPage'));
 const TemplatesPage = lazy(() => import('./pages/TemplatesPage'));
 const UploadPage = lazy(() => import('./pages/UploadPage'));
 const NewTemplatePage = lazy(() => import('./pages/NewTemplatePage'));
-const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const TagsManagement = lazy(() => import('./pages/TagsManagement'));
 const UsersManagement = lazy(() => import('./pages/UsersManagement'));
 const SecurityLogs = lazy(() => import('./pages/SecurityLogs'));
@@ -119,7 +118,6 @@ const App = (): JSX.Element => {
                   <Route path="resumes/:id/improve" element={<ResumeImprovePage />} />
                   <Route path="resumes/:id/export" element={<ResumeExportPage />} />
                   <Route path="upload" element={<UploadPage />} />
-                  <Route path="dashboard" element={<DashboardPage />} />
                   <Route path="missions" element={<MissionsPage />} />
                   <Route path="missions/:id" element={<MissionViewPage />} />
                   <Route path="clients" element={<ClientsPage />} />
@@ -139,7 +137,7 @@ const App = (): JSX.Element => {
                   <Route path="settings" element={<AdminRoute><SettingsPage /></AdminRoute>} />
                   <Route path="facts" element={<FactsPage />} />
                   <Route path="metiers" element={<AdminRoute><MetiersPage /></AdminRoute>} />
-                  <Route path="email-templates" element={<AdminRoute><EmailTemplatesPage /></AdminRoute>} />
+                  <Route path="dashboard/email-templates" element={<AdminRoute><EmailTemplatesPage /></AdminRoute>} />
                 </Route>
               </Routes>
             </Suspense>

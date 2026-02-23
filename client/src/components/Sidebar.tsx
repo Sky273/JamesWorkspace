@@ -20,7 +20,8 @@ import {
   UserGroupIcon,
   SignalIcon,
   BuildingOfficeIcon,
-  EnvelopeIcon
+  EnvelopeIcon,
+  XMarkIcon
 } from '@heroicons/react/24/outline';
 import classNames from 'classnames';
 import { useTranslation } from 'react-i18next';
@@ -43,7 +44,12 @@ interface NavSection {
   adminOnly?: boolean;
 }
 
-const Sidebar = (): JSX.Element => {
+interface SidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
   const location = useLocation();
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -85,7 +91,7 @@ const Sidebar = (): JSX.Element => {
     title: t('navigation.sectionAdmin'),
     items: [
       { name: t('navigation.templates'), href: '/templates', icon: DocumentDuplicateIcon },
-      { name: t('navigation.emailTemplates'), href: '/email-templates', icon: EnvelopeIcon },
+      { name: t('navigation.emailTemplates'), href: '/dashboard/email-templates', icon: EnvelopeIcon },
       { name: t('navigation.tags'), href: '/dashboard/tags', icon: TagIcon },
       { name: t('navigation.users'), href: '/dashboard/users', icon: UsersIcon },
       { name: t('navigation.security'), href: '/dashboard/security-logs', icon: ShieldCheckIcon },
@@ -148,39 +154,72 @@ const Sidebar = (): JSX.Element => {
     );
   };
 
-  return (
-    <div className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0">
-      <div className="flex-1 flex flex-col min-h-0 bg-app border-r border-gray-200 dark:border-gray-700">
-        <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
-          <div className="flex items-center flex-shrink-0 px-2 py-2">
-            <img src={isDarkMode ? resumeConverterLogoDark : resumeConverterLogoLight} alt="Resume Converter" className="max-w-[200px] h-auto object-contain" />
-          </div>
-          
-          <nav className="mt-5 flex-1 px-2 flex flex-col">
-            {/* Home - no section header */}
-            <div className="space-y-1">
-              {renderNavItem(homeItem)}
-            </div>
+  const handleNavClick = () => {
+    if (onClose) onClose();
+  };
 
-            {/* GESTION section */}
-            {renderSection(gestionSection)}
-
-            {/* ADMIN section - only for admins */}
-            {isAdmin && renderSection(adminSection)}
-
-            {/* Spacer to push bottom items down */}
-            <div className="flex-1" />
-
-            {/* Bottom items: Settings and User Guide */}
-            <div className="border-t border-gray-200 dark:border-gray-700 pt-3 mt-3 space-y-0.5">
-              {bottomItems
-                .filter(item => !item.adminOnly || isAdmin)
-                .map(renderNavItem)}
-            </div>
-          </nav>
+  const sidebarContent = (
+    <div className="flex-1 flex flex-col min-h-0 bg-app border-r border-gray-200 dark:border-gray-700">
+      <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
+        <div className="flex items-center justify-between flex-shrink-0 px-2 py-2">
+          <img src={isDarkMode ? resumeConverterLogoDark : resumeConverterLogoLight} alt="Resume Converter" className="max-w-[200px] h-auto object-contain" />
+          {/* Close button - only visible on mobile */}
+          <button
+            onClick={onClose}
+            className="md:hidden p-2 rounded-md text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+          >
+            <XMarkIcon className="h-6 w-6" />
+          </button>
         </div>
+        
+        <nav className="mt-5 flex-1 px-2 flex flex-col" onClick={handleNavClick}>
+          {/* Home - no section header */}
+          <div className="space-y-1">
+            {renderNavItem(homeItem)}
+          </div>
+
+          {/* GESTION section */}
+          {renderSection(gestionSection)}
+
+          {/* ADMIN section - only for admins */}
+          {isAdmin && renderSection(adminSection)}
+
+          {/* Spacer to push bottom items down */}
+          <div className="flex-1" />
+
+          {/* Bottom items: Settings and User Guide */}
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-3 mt-3 space-y-0.5">
+            {bottomItems
+              .filter(item => !item.adminOnly || isAdmin)
+              .map(renderNavItem)}
+          </div>
+        </nav>
       </div>
     </div>
+  );
+
+  return (
+    <>
+      {/* Mobile sidebar overlay */}
+      {isOpen && (
+        <div className="fixed inset-0 z-40 md:hidden">
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-gray-600 bg-opacity-75 transition-opacity"
+            onClick={onClose}
+          />
+          {/* Sidebar panel */}
+          <div className="fixed inset-y-0 left-0 flex w-64 flex-col">
+            {sidebarContent}
+          </div>
+        </div>
+      )}
+
+      {/* Desktop sidebar */}
+      <div className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0">
+        {sidebarContent}
+      </div>
+    </>
   );
 };
 

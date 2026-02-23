@@ -168,7 +168,7 @@ const Breadcrumbs = ({ items, className = '' }: BreadcrumbsProps): JSX.Element |
         case 'email-templates':
           breadcrumbs.push({
             label: t('navigation.emailTemplates'),
-            current: true
+            current: isLast
           });
           break;
 

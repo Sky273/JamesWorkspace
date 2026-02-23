@@ -8,7 +8,7 @@ import { Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Sidebar from './Sidebar';
 import ScrollToTop from './ScrollToTop';
-import { SunIcon, MoonIcon } from '@heroicons/react/24/outline';
+import { SunIcon, MoonIcon, Bars3Icon } from '@heroicons/react/24/outline';
 import { InformationCircleIcon } from '@heroicons/react/24/outline';
 import AboutModal from './AboutModal';
 import { useTranslation } from 'react-i18next';
@@ -48,6 +48,7 @@ const Layout = (): JSX.Element => {
     return 'light';
   });
   const [isAboutOpen, setIsAboutOpen] = useState<boolean>(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const { t } = useTranslation();
 
   useEffect(() => {
@@ -76,29 +77,29 @@ const Layout = (): JSX.Element => {
   return (
     <div className="min-h-screen bg-app">
       <ScrollToTop />
-      <Sidebar />
+      <Sidebar isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
       
       {/* Fixed user profile card - top right, vertically centered with header icons */}
       {user && (
-        <div className="fixed top-0 right-4 z-50 h-16 flex items-center">
-          <div className="flex items-center space-x-3">
+        <div className="fixed top-0 right-2 sm:right-4 z-50 h-16 flex items-center">
+          <div className="flex items-center space-x-2 sm:space-x-3">
           {/* Avatar with initials */}
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm shadow-md">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-semibold text-xs sm:text-sm shadow-md">
             {getInitials(user?.name || user?.Name)}
           </div>
-          {/* User info */}
-          <div className="flex flex-col">
-            <span className="text-sm font-medium text-gray-900 dark:text-white leading-tight">
+          {/* User info - hidden on small mobile */}
+          <div className="hidden xs:flex flex-col">
+            <span className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white leading-tight truncate max-w-[100px] sm:max-w-[150px]">
               {user?.name || user?.Name || t('userProfile.anonymous')}
             </span>
-            <span className="text-xs text-gray-500 dark:text-gray-400 leading-tight">
+            <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 leading-tight truncate max-w-[100px] sm:max-w-[150px]">
               {user?.FirmName || user?.firm || user?.Firm || t('userProfile.noCompany')} • {getRoleLabel(user?.role || user?.Role)}
             </span>
           </div>
           {/* Sign out button */}
           <button 
             onClick={handleSignOut} 
-            className="ml-2 p-1.5 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-600/50 transition-colors"
+            className="ml-1 sm:ml-2 p-1 sm:p-1.5 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-600/50 transition-colors"
             title={t('common.signOut')}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -114,6 +115,15 @@ const Layout = (): JSX.Element => {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
               <div className="flex items-center space-x-4">
+                {/* Mobile menu button */}
+                <button
+                  className="md:hidden p-2 rounded-lg bg-white dark:bg-gray-800 shadow-md border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  onClick={() => setIsMobileMenuOpen(true)}
+                >
+                  <span className="sr-only">{t('common.openMenu')}</span>
+                  <Bars3Icon className="h-6 w-6" aria-hidden="true" />
+                </button>
+
                 <button
                   className="p-2 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
                   onClick={toggleTheme}

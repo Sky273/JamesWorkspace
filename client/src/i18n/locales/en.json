@@ -33,7 +33,8 @@
     "deleting": "Deleting...",
     "saved": "Saved",
     "saving": "Saving...",
-    "view": "View"
+    "view": "View",
+    "openMenu": "Open menu"
   },
   "header": {
     "changeLanguage": "Change language",
@@ -315,8 +316,10 @@
     },
     "steps": {
       "analysis": "Analysis",
-      "improve": "Improvement",
-      "export": "Export"
+      "viewImproved": "View Improved",
+      "view": "View",
+      "export": "Export",
+      "improve": "Improvement"
     },
     "improve": {
       "title": "Resume Improvement",
