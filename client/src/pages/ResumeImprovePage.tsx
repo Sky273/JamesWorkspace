@@ -16,6 +16,7 @@ import toast from 'react-hot-toast';
 import logger from '../utils/logger.frontend';
 import { SkeletonCard } from '../components/ui/Skeleton';
 import ImprovementAnimation from '../components/ImprovementAnimation';
+import ConsentBadge, { ConsentStatus } from '../components/ConsentBadge';
 import ImprovedTextTab from '../components/ResumeAnalysis/ImprovedTextTab';
 import CompareTab from '../components/ResumeAnalysis/CompareTab';
 import { loadTinyMCE } from '../utils/lazyTinyMCE';
@@ -265,9 +266,21 @@ const ResumeImprovePage = (): JSX.Element => {
           className="mb-6"
         >
           <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                {resumeName}
-              </h1>
+              <div className="flex items-center gap-3">
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {resumeName}
+                </h1>
+                {localResume?.consent_status && (
+                  <ConsentBadge
+                    status={localResume.consent_status as ConsentStatus}
+                    candidateName={localResume?.candidate_name as string | undefined}
+                    candidateEmail={localResume?.candidate_email as string | undefined}
+                    consentTokenExpiresAt={localResume?.consent_token_expires_at as string | null | undefined}
+                    retentionUntil={localResume?.retention_until as string | null | undefined}
+                    compact={true}
+                  />
+                )}
+              </div>
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 {t('resume.improve.title')}
               </p>

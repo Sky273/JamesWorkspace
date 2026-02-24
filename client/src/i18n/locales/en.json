@@ -105,7 +105,8 @@
       "badges": {
         "atsFriendly": "ATS Friendly",
         "fastAnalysis": "Fast Analysis",
-        "secure": "100% Secure"
+        "secure": "100% Secure",
+        "gdprCompliant": "GDPR Compliant"
       }
     },
     "tabs": {
@@ -1381,6 +1382,7 @@
       "refused": "Refused",
       "expired": "Expired",
       "purged": "Deleted",
+      "error": "Send Error",
       "unknown": "Unknown"
     },
     "badge": {
@@ -1391,6 +1393,7 @@
       "requestedAt": "Request sent on",
       "respondedAt": "Response on",
       "retentionUntil": "Retained until",
+      "responseDeadline": "Response expected by",
       "resend": "Resend request",
       "resending": "Sending..."
     },

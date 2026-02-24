@@ -91,7 +91,7 @@ export interface Resume {
   profile_type?: 'employee' | 'external';
   candidate_name?: string;
   candidate_email?: string;
-  consent_status?: 'not_required' | 'pending_consent' | 'active' | 'refused' | 'expired' | 'purged';
+  consent_status?: 'not_required' | 'pending_consent' | 'active' | 'refused' | 'expired' | 'purged' | 'error';
   consent_requested_at?: string | null;
   consent_responded_at?: string | null;
   retention_until?: string | null;

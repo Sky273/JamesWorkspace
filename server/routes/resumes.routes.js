@@ -91,7 +91,7 @@ router.get('/', authenticateToken, async (req, res) => {
             improved_ats_score, improved_executive_summary_score, improved_hobbies_languages_score,
             template_id, template_name, improvement_suggestions, analysis_details, improvement_date,
             trigram, improved_key_improvements, improved_skills, improved_industries, improved_tools, improved_soft_skills,
-            profile_type, candidate_name, candidate_email, consent_status, consent_requested_at, consent_responded_at, retention_until
+            profile_type, candidate_name, candidate_email, consent_status, consent_requested_at, consent_responded_at, consent_token_expires_at, retention_until
             FROM resumes`;
         
         if (whereClause) {
@@ -182,6 +182,7 @@ router.get('/', authenticateToken, async (req, res) => {
             consent_status: record.consent_status,
             consent_requested_at: record.consent_requested_at,
             consent_responded_at: record.consent_responded_at,
+            consent_token_expires_at: record.consent_token_expires_at,
             retention_until: record.retention_until
         }));
 
@@ -381,7 +382,7 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
                 improved_ats_score, improved_executive_summary_score, improved_hobbies_languages_score,
                 template_id, template_name, improvement_suggestions, analysis_details, improvement_date,
                 trigram, improved_key_improvements, improved_skills, improved_industries, improved_tools, improved_soft_skills,
-                profile_type, candidate_name, candidate_email, consent_status, consent_requested_at, consent_responded_at, retention_until
+                profile_type, candidate_name, candidate_email, consent_status, consent_requested_at, consent_responded_at, consent_token_expires_at, retention_until
             FROM resumes WHERE id = $1`,
             [id]
         );
@@ -472,6 +473,7 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
             consent_status: resume.consent_status,
             consent_requested_at: resume.consent_requested_at,
             consent_responded_at: resume.consent_responded_at,
+            consent_token_expires_at: resume.consent_token_expires_at,
             retention_until: resume.retention_until
         });
     } catch (error) {
@@ -594,7 +596,18 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
                     error: emailError.message,
                     stack: emailError.stack
                 });
-                // Don't fail the upload if email fails
+                // Update consent_status to 'error' to indicate email sending failed
+                try {
+                    await query(`
+                        UPDATE resumes 
+                        SET consent_status = 'error', updated_at = CURRENT_TIMESTAMP
+                        WHERE id = $1
+                    `, [newResume.id]);
+                    newResume.consent_status = 'error';
+                    safeLog('info', 'Consent status set to error', { resumeId: newResume.id });
+                } catch (updateError) {
+                    safeLog('error', 'Failed to update consent status to error', { error: updateError.message });
+                }
             }
         } else {
             safeLog('debug', 'GDPR email not sent', { 

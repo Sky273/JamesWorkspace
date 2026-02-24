@@ -18,7 +18,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export type ConsentStatus = 'not_required' | 'pending_consent' | 'active' | 'refused' | 'expired' | 'purged';
+export type ConsentStatus = 'not_required' | 'pending_consent' | 'active' | 'refused' | 'expired' | 'purged' | 'error';
 
 interface ConsentBadgeProps {
     status: ConsentStatus;
@@ -27,6 +27,7 @@ interface ConsentBadgeProps {
     candidateEmail?: string;
     consentRequestedAt?: string | null;
     consentRespondedAt?: string | null;
+    consentTokenExpiresAt?: string | null;
     retentionUntil?: string | null;
     onResend?: () => Promise<void>;
     compact?: boolean;
@@ -39,6 +40,7 @@ const ConsentBadge = ({
     candidateEmail,
     consentRequestedAt,
     consentRespondedAt,
+    consentTokenExpiresAt,
     retentionUntil,
     onResend,
     compact = false
@@ -116,6 +118,14 @@ const ConsentBadge = ({
                     borderColor: 'border-gray-200 dark:border-gray-700',
                     label: t('consent.status.purged')
                 };
+            case 'error':
+                return {
+                    icon: ExclamationTriangleIcon,
+                    bgColor: 'bg-red-50 dark:bg-red-900/20',
+                    textColor: 'text-red-700 dark:text-red-400',
+                    borderColor: 'border-red-200 dark:border-red-700',
+                    label: t('consent.status.error')
+                };
             default:
                 return {
                     icon: InformationCircleIcon,
@@ -190,6 +200,16 @@ const ConsentBadge = ({
                             </span>
                             <span className="text-gray-900 dark:text-white font-medium">
                                 {formatDate(retentionUntil)}
+                            </span>
+                        </div>
+                    )}
+                    {consentTokenExpiresAt && status === 'pending_consent' && (
+                        <div className="flex items-center gap-3">
+                            <span className="text-gray-500 dark:text-gray-400">
+                                {t('consent.badge.responseDeadline')}
+                            </span>
+                            <span className="text-amber-600 dark:text-amber-400 font-medium">
+                                {formatDate(consentTokenExpiresAt)}
                             </span>
                         </div>
                     )}

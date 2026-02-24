@@ -189,7 +189,25 @@ async function getAccessToken(firmId) {
         return credentials.access_token;
     } catch (error) {
         safeLog('error', 'GDPR token refresh failed', { firmId, error: error.message });
-        throw new Error('Échec du rafraîchissement du token. Veuillez reconnecter Gmail.');
+        
+        // Mark token as invalid in database to force re-authentication
+        await query(`
+            UPDATE firm_gdpr_mail_tokens
+            SET token_expiry = NOW() - INTERVAL '1 day',
+                updated_at = CURRENT_TIMESTAMP
+            WHERE firm_id = $1
+        `, [firmId]);
+        
+        // Check if it's a revoked token error
+        const isRevokedToken = error.message?.includes('invalid_grant') || 
+                              error.message?.includes('Token has been expired or revoked') ||
+                              error.message?.includes('invalid authentication credentials');
+        
+        if (isRevokedToken) {
+            throw new Error('Le token Gmail RGPD a été révoqué. Veuillez reconnecter Gmail dans les paramètres. Note: Si vous utilisez le même compte Gmail pour l\'authentification SSO, les tokens peuvent entrer en conflit.');
+        }
+        
+        throw new Error('Échec du rafraîchissement du token. Veuillez reconnecter Gmail dans les paramètres.');
     }
 }
 
@@ -204,7 +222,14 @@ async function getAccessToken(firmId) {
  * @returns {Promise<Object>}
  */
 export async function sendEmail(firmId, { to, subject, html, text }) {
-    const accessToken = await getAccessToken(firmId);
+    // Get access token (will refresh if needed)
+    let accessToken;
+    try {
+        accessToken = await getAccessToken(firmId);
+    } catch (tokenError) {
+        safeLog('error', 'Failed to get GDPR access token', { firmId, error: tokenError.message });
+        throw tokenError;
+    }
     
     const oauth2Client = await getOAuth2Client();
     oauth2Client.setCredentials({ access_token: accessToken });
@@ -318,10 +343,41 @@ export async function disconnect(firmId) {
     safeLog('info', 'GDPR Gmail disconnected', { firmId });
 }
 
+/**
+ * Validate token by making a test API call
+ * @param {string} firmId
+ * @returns {Promise<{valid: boolean, error?: string}>}
+ */
+export async function validateToken(firmId) {
+    try {
+        const accessToken = await getAccessToken(firmId);
+        
+        const oauth2Client = await getOAuth2Client();
+        oauth2Client.setCredentials({ access_token: accessToken });
+
+        const google = await getGoogle();
+        const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+        
+        // Try to get user profile - lightweight API call to validate token
+        await gmail.users.getProfile({ userId: 'me' });
+        
+        return { valid: true };
+    } catch (error) {
+        safeLog('warn', 'GDPR token validation failed', { firmId, error: error.message });
+        return { 
+            valid: false, 
+            error: error.message?.includes('invalid authentication credentials') 
+                ? 'Token révoqué - reconnexion requise'
+                : error.message 
+        };
+    }
+}
+
 export const gdprMailService = {
     getAuthUrl,
     handleOAuthCallback,
     getConnectionStatus,
+    validateToken,
     sendEmail,
     sendTestEmail,
     disconnect

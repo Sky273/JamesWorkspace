@@ -180,9 +180,10 @@ const ResumeAnalysisPage = (): JSX.Element => {
                 {currentResume?.consent_status && (
                   <ConsentBadge
                     status={currentResume.consent_status as ConsentStatus}
-                    candidateName={currentResume.candidate_name as string | undefined}
-                    candidateEmail={currentResume.candidate_email as string | undefined}
-                    retentionUntil={currentResume.retention_until as string | null | undefined}
+                    candidateName={currentResume?.candidate_name as string | undefined}
+                    candidateEmail={currentResume?.candidate_email as string | undefined}
+                    consentTokenExpiresAt={currentResume?.consent_token_expires_at as string | null | undefined}
+                    retentionUntil={currentResume?.retention_until as string | null | undefined}
                     compact={true}
                   />
                 )}

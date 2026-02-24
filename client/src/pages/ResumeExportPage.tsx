@@ -17,6 +17,7 @@ import toast from 'react-hot-toast';
 import logger from '../utils/logger.frontend';
 import { SkeletonCard } from '../components/ui/Skeleton';
 import ExportTab from '../components/ResumeAnalysis/ExportTab';
+import ConsentBadge, { ConsentStatus } from '../components/ConsentBadge';
 import SendEmailModal from '../components/ResumeAnalysis/SendEmailModal';
 import { fetchWithAuth } from '../utils/apiInterceptor';
 
@@ -220,9 +221,21 @@ const ResumeExportPage = (): JSX.Element => {
           className="mb-6"
         >
           <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                {resumeName}
-              </h1>
+              <div className="flex items-center gap-3">
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {resumeName}
+                </h1>
+                {currentResume?.consent_status && (
+                  <ConsentBadge
+                    status={currentResume.consent_status as ConsentStatus}
+                    candidateName={currentResume?.candidate_name as string | undefined}
+                    candidateEmail={currentResume?.candidate_email as string | undefined}
+                    consentTokenExpiresAt={currentResume?.consent_token_expires_at as string | null | undefined}
+                    retentionUntil={currentResume?.retention_until as string | null | undefined}
+                    compact={true}
+                  />
+                )}
+              </div>
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 {t('resume.export.title')}
               </p>

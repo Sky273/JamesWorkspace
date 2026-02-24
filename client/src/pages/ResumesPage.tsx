@@ -533,6 +533,7 @@ const ResumesPage = (): JSX.Element => {
                       status={resume.consent_status}
                       candidateName={resume.candidate_name}
                       candidateEmail={resume.candidate_email}
+                      consentTokenExpiresAt={resume.consent_token_expires_at}
                       retentionUntil={resume.retention_until}
                       compact={true}
                     />

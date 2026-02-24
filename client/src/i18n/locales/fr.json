@@ -315,7 +315,8 @@
       "badges": {
         "atsFriendly": "Compatible ATS",
         "fastAnalysis": "Analyse rapide",
-        "secure": "100% Sécurisé"
+        "secure": "100% Sécurisé",
+        "gdprCompliant": "Compatible RGPD"
       }
     },
     "tabs": {
@@ -1383,6 +1384,7 @@
       "refused": "Refusé",
       "expired": "Expiré",
       "purged": "Supprimé",
+      "error": "Erreur d'envoi",
       "unknown": "Inconnu"
     },
     "badge": {
@@ -1393,6 +1395,7 @@
       "requestedAt": "Demande envoyée le",
       "respondedAt": "Réponse le",
       "retentionUntil": "Conservation jusqu'au",
+      "responseDeadline": "Réponse attendue avant le",
       "resend": "Renvoyer la demande",
       "resending": "Envoi en cours..."
     },
