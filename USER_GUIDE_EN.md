@@ -8,16 +8,19 @@
 4. [Missions](#missions)
 5. [Profile Matching](#profile-matching)
 6. [Resume Adaptations](#resume-adaptations)
-7. [Market Radar](#market-radar)
-8. [AI Assistant](#ai-assistant)
-9. [Administration](#administration)
-10. [Interface and Navigation](#interface-and-navigation)
-11. [Best Practices](#best-practices)
-12. [Troubleshooting](#troubleshooting)
-13. [FAQ](#faq)
-14. [Roadmap](#roadmap)
-15. [Glossary](#glossary)
-16. [Support](#support)
+7. [Clients & Prospects](#clients--prospects)
+8. [Email CV Sending](#email-cv-sending)
+9. [Market Radar](#market-radar)
+10. [AI Assistant](#ai-assistant)
+11. [Administration](#administration)
+12. [GDPR Compliance](#gdpr-compliance)
+13. [Interface and Navigation](#interface-and-navigation)
+14. [Best Practices](#best-practices)
+15. [Troubleshooting](#troubleshooting)
+16. [FAQ](#faq)
+17. [Roadmap](#roadmap)
+18. [Glossary](#glossary)
+19. [Support](#support)
 
 ---
 
@@ -75,7 +78,16 @@
 1. Go to **"Resume Library"** in the side menu
 2. Click the **"Upload a new resume"** button
 3. Drag and drop your file or click to select
-4. Analysis starts automatically
+4. **Select the profile type**:
+   - **Employee**: Resume of your company's employee (no consent required)
+   - **External**: Resume of an external candidate (GDPR consent required)
+5. For **external** profiles, fill in the GDPR form:
+   - Candidate name
+   - Candidate email (for sending the consent request)
+6. Analysis starts automatically
+7. For external profiles, a consent request email is sent to the candidate
+
+> **Note**: For more details on GDPR consent management, see the [GDPR Compliance](#gdpr-compliance) section.
 
 #### What Happens After Import?
 
@@ -378,6 +390,176 @@ The AI performs a multi-step analysis:
 
 ---
 
+## Clients & Prospects
+
+### What is Clients & Prospects Management?
+
+The **Clients & Prospects** feature allows you to manage your commercial portfolio: client companies, prospects, and their contacts. This information is used for tracking resume submissions and personalizing emails.
+
+### Accessing Clients & Prospects
+
+1. Go to **"Clients & Prospects"** in the sidebar menu
+2. View the list of your clients and prospects with their contacts
+
+### Company Types
+
+| Type | Description | Icon |
+|------|-------------|------|
+| **Client** | Company with an established business relationship | Blue |
+| **Prospect** | Potential company, in prospecting phase | Orange |
+
+### Creating a Client or Prospect
+
+1. Click **"Add a client/prospect"**
+2. Fill in the form:
+
+| Field | Description | Required |
+|-------|-------------|----------|
+| **Name** | Company name | Yes |
+| **Type** | Client or Prospect | Yes |
+| **Sector** | Industry sector (Banking, Healthcare, etc.) | No |
+
+3. Click **"Save"**
+
+### Managing Contacts
+
+Each client/prospect can have multiple contacts (interlocutors).
+
+#### Adding a Contact
+
+1. Open a client/prospect profile
+2. In the **"Contacts"** section, click **"Add a contact"**
+3. Fill in the information:
+
+| Field | Description | Required |
+|-------|-------------|----------|
+| **Name** | Contact's full name | Yes |
+| **Email** | Professional email address | Yes |
+| **Role** | Position held (HR Director, Manager, etc.) | No |
+| **Phone** | Phone number | No |
+
+#### Editing or Deleting a Contact
+
+- Click the **pencil** icon to edit
+- Click the **trash** icon to delete
+
+### Submission History
+
+For each client/prospect, you can view the history of submitted resumes:
+
+1. Open the client/prospect profile
+2. Check the **"Submissions"** section
+3. View submitted resumes with date, recipient contact, and status
+
+---
+
+## Email CV Sending
+
+### Overview
+
+The **email CV sending** feature allows you to create professional email drafts directly from the application, with the resume attached. Emails are personalized using templates and dynamic keywords.
+
+### Prerequisites
+
+1. **Gmail connection**: Connect your Gmail account to create drafts
+2. **Client/Prospect**: Create at least one client or prospect with a contact
+3. **Email template**: A default template is available, or create your own
+
+### Connecting Gmail
+
+1. Open a resume in the Resume Library
+2. Click **"Send by email"**
+3. Click **"Connect Gmail"**
+4. Authorize the application to access your Gmail account
+5. Once connected, your email address is displayed
+
+### Sending a Resume
+
+#### Step 1: Open the Send Modal
+
+1. Open a resume (Improved tab)
+2. Click the **"Send by email"** button (envelope icon)
+
+#### Step 2: Select the Recipient
+
+1. Choose a **Client or Prospect** from the dropdown
+2. Select a **Contact** from those associated with the client
+3. The contact's email address is displayed automatically
+
+#### Step 3: Choose the Template
+
+1. Select an **email template** from the list
+2. Click **"Preview"** to see the rendering with your data
+3. The subject and body are generated automatically
+
+#### Step 4: Create the Draft
+
+1. Verify the information
+2. Click **"Create draft"**
+3. The draft is created in your Gmail inbox
+4. Open Gmail to review and send the email
+
+### Email Templates
+
+#### What is a Template?
+
+An **email template** is a pre-formatted message model with dynamic keywords that are automatically replaced with actual values when sending.
+
+#### Available Keywords
+
+| Category | Keyword | Description |
+|----------|---------|-------------|
+| **Client** | `{{client.name}}` | Client/prospect name |
+| **Client** | `{{client.type}}` | Type (Client or Prospect) |
+| **Contact** | `{{contact.name}}` | Contact's full name |
+| **Contact** | `{{contact.firstName}}` | Contact's first name |
+| **Contact** | `{{contact.role}}` | Contact's position |
+| **Resume** | `{{resume.name}}` | Candidate name |
+| **Resume** | `{{resume.title}}` | Candidate's job title |
+| **Resume** | `{{resume.version}}` | Resume version number |
+| **Firm** | `{{firm.name}}` | Your firm's name |
+| **Firm** | `{{firm.logo}}` | Your firm's logo |
+| **User** | `{{user.name}}` | Your name |
+| **User** | `{{user.email}}` | Your email |
+| **User** | `{{user.jobTitle}}` | Your job title |
+| **User** | `{{user.phone}}` | Your phone |
+| **Date** | `{{date.today}}` | Today's date (short format) |
+| **Date** | `{{date.todayLong}}` | Today's date (long format) |
+
+### Managing Templates (Admin)
+
+Administrators can create and manage email templates.
+
+#### Accessing Template Management
+
+1. Go to **"Email Templates"** in the admin menu
+2. View the list of existing templates
+
+#### Creating a Template
+
+1. Click **"New template"**
+2. Fill in the form:
+
+| Field | Description |
+|-------|-------------|
+| **Name** | Template name (e.g., "Standard application") |
+| **Subject** | Email subject with keywords |
+| **Content** | Email body with visual blocks |
+
+#### Visual Template Editor
+
+The editor offers **blocks** to structure your email:
+
+| Block | Description | Usage |
+|-------|-------------|-------|
+| **Logo** | Your firm's logo | Email header |
+| **Header** | Title or firm name | Identification |
+| **Paragraph** | Free text | Message body |
+| **Signature** | Signature block | Sender's contact info |
+| **Footer** | Additional information | Date, legal notices |
+
+---
+
 ## Market Radar
 
 ### What is Market Radar?
@@ -567,6 +749,18 @@ Adjust the importance of each criterion in the global score:
 
 Enable or disable the AI assistant for all users.
 
+#### GDPR Tab
+
+Configure GDPR consent email sending:
+
+1. **Connect Gmail**: Authorize the application to send emails via your Gmail account
+2. **Test sending**: Send a test email to verify the configuration
+3. **Connection status**: View the Gmail connection status
+
+> **Recommendation**: Use a dedicated Gmail account for GDPR emails (e.g., `gdpr@yourcompany.com`), different from your SSO login account.
+
+For more details, see the [GDPR Compliance](#gdpr-compliance) section.
+
 ### Security Logs
 
 View security events:
@@ -580,6 +774,161 @@ View usage statistics:
 - Number of analyzed resumes
 - Adaptations created
 - LLM token usage
+
+---
+
+## GDPR Compliance
+
+ResumeConverter includes a comprehensive GDPR consent management system for external candidate resumes, ensuring compliance with the General Data Protection Regulation.
+
+### Fundamental Principles
+
+#### Profile Types
+
+The application distinguishes two profile types when importing a resume:
+
+| Type | Description | Consent Required |
+|------|-------------|------------------|
+| **Employee** | Your company's employee | Not required |
+| **External** | External candidate (freelance, consultant, etc.) | **Required** |
+
+#### Why Consent?
+
+GDPR requires obtaining explicit consent from individuals whose personal data you process. A resume contains many personal data points:
+- Name, contact information
+- Professional history
+- Education
+- Skills
+
+### Importing an External Resume
+
+#### Import Process
+
+1. **File selection**: Drag and drop or select the resume
+2. **GDPR form**: Fill in candidate information
+   - **Candidate name** (required)
+   - **Candidate email** (required for sending the request)
+3. **Automatic sending**: A consent request email is sent to the candidate
+
+#### Consent Email
+
+The email sent to the candidate contains:
+- Your company's identity
+- Purpose of processing (candidate management)
+- A link to **accept** consent
+- A link to **refuse** consent
+- Planned retention period
+
+**Response deadline**: The candidate has **14 days** to respond.
+
+### Consent Statuses
+
+The GDPR badge displayed on each resume indicates its status:
+
+| Badge | Status | Description |
+|-------|--------|-------------|
+| 🟢 **Consented** | `active` | Candidate accepted data processing |
+| 🟡 **Pending** | `pending_consent` | Request sent, awaiting response |
+| 🔴 **Refused** | `refused` | Candidate refused - Resume will be deleted |
+| 🟠 **Expired** | `expired` | Response deadline passed - Resume will be deleted |
+| ⚪ **Not Required** | `not_required` | Internal employee resume |
+| 🔴 **Error** | `error` | Email sending failed |
+
+### GDPR Badge
+
+#### Display
+
+The GDPR badge is visible:
+- In the **resume list** (CV Library)
+- On the resume **analysis** page
+- On the resume **improvement** page
+- On the resume **export** page
+
+#### Detailed Tooltip
+
+Hovering over the badge displays detailed information:
+- **Candidate name**
+- **Candidate email**
+- **Response deadline** (for pending requests)
+- **Retention date** (for active consents)
+
+### Automatic Management
+
+#### Automatic Deletion
+
+The application automatically manages resume lifecycle:
+
+1. **Consent refused**: Resume deleted within 24 hours
+2. **Deadline expired**: If candidate doesn't respond within 14 days, resume is deleted
+3. **Retention end**: At expiration of retention period (2 years by default)
+
+#### Automatic Reminders
+
+A reminder email is automatically sent if the candidate hasn't responded after 7 days.
+
+### Gmail GDPR Configuration
+
+To send consent emails, you must connect a Gmail account.
+
+#### Connection
+
+1. Go to **Settings** → **GDPR**
+2. Click **Connect Gmail**
+3. Authorize the application to send emails on your behalf
+4. Test sending with the **Send test email** button
+
+#### Dedicated Account Recommended
+
+**Important**: We recommend using a dedicated Gmail account for GDPR emails (e.g., `gdpr@yourcompany.com`), different from your SSO login account, to avoid OAuth token conflicts.
+
+#### Troubleshooting
+
+If email sending fails with "Error" status:
+1. Check Gmail connection in **Settings → GDPR**
+2. If status shows "Reconnection required", click **Reconnect Gmail**
+3. Retry sending by clicking **Resend request** in the GDPR badge
+
+### GDPR Best Practices
+
+#### Before Import
+
+- ✅ Verify you have the correct candidate email
+- ✅ Inform the candidate they will receive a consent request
+- ✅ Use a dedicated Gmail account for GDPR emails
+
+#### Consent Tracking
+
+- ✅ Regularly check resumes pending consent
+- ✅ Manually follow up if needed ("Resend" button)
+- ✅ Don't use a resume until consent is obtained
+
+#### Data Retention
+
+- ✅ Respect the defined retention period (2 years by default)
+- ✅ Resumes are automatically deleted at expiration
+- ✅ Candidates can request deletion at any time
+
+### Candidate Rights
+
+Under GDPR, candidates have the following rights:
+
+| Right | Description | Implementation |
+|-------|-------------|----------------|
+| **Access** | View their data | Contact DPO |
+| **Rectification** | Correct their data | Contact DPO |
+| **Erasure** | Delete their data | Link in email or contact DPO |
+| **Objection** | Refuse processing | "Refuse" link in email |
+| **Portability** | Retrieve their data | Contact DPO |
+
+### Processing Register
+
+The application maintains a history of GDPR actions:
+- Consent request send date
+- Candidate response date
+- Consent status
+- Deletion date (if applicable)
+
+This information is accessible to administrators to respond to regulatory requests.
 
 ---
 
@@ -868,10 +1217,22 @@ Don't hesitate to contact your administrator or use the AI assistant to share yo
 
 ---
 
-**Last updated**: Version 1.3.0 - January 2026
+**Last updated**: Version 1.6.2 - February 2026
 
 **Recent updates**:
-- Anonymous CV mode with trigram
+- **Full GDPR Compliance**: Automated consent management for external resumes
+- **GDPR Badge**: Visual consent status indicator on each resume
+- **Automatic Sending**: Consent request email sent on import
+- **Automatic Deletion**: Resumes deleted if consent refused or expired
+- **MJML Email Templates**: Visual template editor with blocks
+- **Clients & Prospects**: Commercial portfolio with contacts and send history
+- **Email CV Sending**: Gmail draft creation with CV attachment and custom templates
+
+**Previous versions**:
+- v1.6.0: Company Logo, Enhanced User Profiles, Extended Email Keywords
+- v1.5.x: PostgreSQL migration, enhanced security, security logs, Swagger/OpenAPI
+- v1.4.x: Complete Market Radar, Tags management, ROME 4.0 reference
+- v1.3.0: Anonymous CV mode with trigram
 - Progress overlay during analysis and improvement
 - LLM prompt debugging (developer mode)
 - Updated Swagger documentation

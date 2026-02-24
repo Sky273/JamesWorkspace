@@ -13,13 +13,14 @@
 9. [Radar Marché](#radar-marché)
 10. [Assistant IA](#assistant-ia)
 11. [Administration](#administration)
-12. [Interface et Navigation](#interface-et-navigation)
-13. [Bonnes Pratiques](#bonnes-pratiques)
-14. [Dépannage](#dépannage)
-15. [FAQ](#faq)
-16. [Prochaines Étapes](#prochaines-étapes)
-17. [Glossaire](#glossaire)
-18. [Support](#support)
+12. [Conformité RGPD](#conformité-rgpd)
+13. [Interface et Navigation](#interface-et-navigation)
+14. [Bonnes Pratiques](#bonnes-pratiques)
+15. [Dépannage](#dépannage)
+16. [FAQ](#faq)
+17. [Prochaines Étapes](#prochaines-étapes)
+18. [Glossaire](#glossaire)
+19. [Support](#support)
 
 ---
 
@@ -77,7 +78,16 @@
 1. Accédez à **"CVthèque"** dans le menu latéral
 2. Cliquez sur le bouton **"Télécharger un nouveau CV"**
 3. Glissez-déposez votre fichier ou cliquez pour sélectionner
-4. L'analyse démarre automatiquement
+4. **Sélectionnez le type de profil** :
+   - **Collaborateur** : CV d'un salarié de votre entreprise (pas de consentement requis)
+   - **Externe** : CV d'un candidat externe (consentement RGPD requis)
+5. Pour les profils **externes**, remplissez le formulaire RGPD :
+   - Nom du candidat
+   - Email du candidat (pour l'envoi de la demande de consentement)
+6. L'analyse démarre automatiquement
+7. Pour les profils externes, un email de demande de consentement est envoyé au candidat
+
+> **Note** : Pour plus de détails sur la gestion du consentement RGPD, consultez la section [Conformité RGPD](#conformité-rgpd).
 
 #### Que se passe-t-il après l'import ?
 
@@ -915,6 +925,18 @@ Ajustez l'importance de chaque critère dans le score global :
 
 Activez ou désactivez l'assistant IA pour tous les utilisateurs.
 
+#### Onglet RGPD
+
+Configurez l'envoi des emails de consentement RGPD :
+
+1. **Connecter Gmail** : Autorisez l'application à envoyer des emails via votre compte Gmail
+2. **Tester l'envoi** : Envoyez un email test pour vérifier la configuration
+3. **Statut de connexion** : Visualisez l'état de la connexion Gmail
+
+> **Recommandation** : Utilisez un compte Gmail dédié pour les emails RGPD (ex: `rgpd@votreentreprise.com`), différent de votre compte de connexion SSO.
+
+Pour plus de détails, consultez la section [Conformité RGPD](#conformité-rgpd).
+
 ### Logs de Sécurité
 
 Consultez les événements de sécurité :
@@ -998,6 +1020,161 @@ Chaque métier contient :
 | **Compétences** | Savoir-faire requis |
 | **Savoirs** | Connaissances théoriques |
 | **Enjeux** | Défis et évolutions du métier |
+
+---
+
+## Conformité RGPD
+
+ResumeConverter intègre un système complet de gestion du consentement RGPD pour les CV de candidats externes, garantissant la conformité avec le Règlement Général sur la Protection des Données.
+
+### Principes Fondamentaux
+
+#### Types de Profils
+
+L'application distingue deux types de profils lors de l'import d'un CV :
+
+| Type | Description | Consentement requis |
+|------|-------------|---------------------|
+| **Collaborateur** | Salarié de votre entreprise | Non requis |
+| **Externe** | Candidat externe (freelance, consultant, etc.) | **Obligatoire** |
+
+#### Pourquoi le Consentement ?
+
+Le RGPD impose d'obtenir le consentement explicite des personnes dont vous traitez les données personnelles. Un CV contient de nombreuses données personnelles :
+- Nom, prénom, coordonnées
+- Parcours professionnel
+- Formation
+- Compétences
+
+### Import d'un CV Externe
+
+#### Processus d'Import
+
+1. **Sélection du fichier** : Glissez-déposez ou sélectionnez le CV
+2. **Formulaire RGPD** : Remplissez les informations du candidat
+   - **Nom du candidat** (obligatoire)
+   - **Email du candidat** (obligatoire pour l'envoi de la demande)
+3. **Envoi automatique** : Un email de demande de consentement est envoyé au candidat
+
+#### Email de Consentement
+
+L'email envoyé au candidat contient :
+- L'identité de votre entreprise
+- La finalité du traitement (gestion de candidature)
+- Un lien pour **accepter** le consentement
+- Un lien pour **refuser** le consentement
+- La durée de conservation prévue
+
+**Délai de réponse** : Le candidat dispose de **14 jours** pour répondre.
+
+### Statuts de Consentement
+
+Le badge RGPD affiché sur chaque CV indique son statut :
+
+| Badge | Statut | Description |
+|-------|--------|-------------|
+| 🟢 **Consenti** | `active` | Le candidat a accepté le traitement de ses données |
+| 🟡 **En attente** | `pending_consent` | Demande envoyée, en attente de réponse |
+| 🔴 **Refusé** | `refused` | Le candidat a refusé - CV sera supprimé |
+| 🟠 **Expiré** | `expired` | Délai de réponse dépassé - CV sera supprimé |
+| ⚪ **Non requis** | `not_required` | CV d'un collaborateur interne |
+| 🔴 **Erreur** | `error` | Échec de l'envoi de l'email |
+
+### Badge RGPD
+
+#### Affichage
+
+Le badge RGPD est visible :
+- Dans la **liste des CV** (CVthèque)
+- Sur la page d'**analyse** du CV
+- Sur la page d'**amélioration** du CV
+- Sur la page d'**export** du CV
+
+#### Tooltip Détaillé
+
+En survolant le badge, vous accédez aux informations détaillées :
+- **Nom du candidat**
+- **Email du candidat**
+- **Date limite de réponse** (pour les demandes en attente)
+- **Date de conservation** (pour les consentements actifs)
+
+### Gestion Automatique
+
+#### Suppression Automatique
+
+L'application gère automatiquement le cycle de vie des CV :
+
+1. **Consentement refusé** : Le CV est supprimé sous 24 heures
+2. **Délai expiré** : Si le candidat ne répond pas dans les 14 jours, le CV est supprimé
+3. **Fin de conservation** : À l'expiration de la période de conservation (2 ans par défaut)
+
+#### Rappels Automatiques
+
+Un email de rappel est envoyé automatiquement si le candidat n'a pas répondu après 7 jours.
+
+### Configuration Gmail RGPD
+
+Pour envoyer les emails de consentement, vous devez connecter un compte Gmail.
+
+#### Connexion
+
+1. Accédez à **Paramètres** → **RGPD**
+2. Cliquez sur **Connecter Gmail**
+3. Autorisez l'application à envoyer des emails en votre nom
+4. Testez l'envoi avec le bouton **Envoyer un email test**
+
+#### Compte Dédié Recommandé
+
+**Important** : Nous recommandons d'utiliser un compte Gmail dédié pour les emails RGPD (ex: `rgpd@votreentreprise.com`), différent de votre compte de connexion SSO, pour éviter les conflits de tokens OAuth.
+
+#### Dépannage
+
+Si l'envoi d'email échoue avec le statut "Erreur" :
+1. Vérifiez la connexion Gmail dans **Paramètres → RGPD**
+2. Si le statut indique "Reconnexion requise", cliquez sur **Reconnecter Gmail**
+3. Réessayez l'envoi en cliquant sur **Renvoyer la demande** dans le badge RGPD
+
+### Bonnes Pratiques RGPD
+
+#### Avant l'Import
+
+- ✅ Vérifiez que vous avez l'email correct du candidat
+- ✅ Informez le candidat qu'il va recevoir une demande de consentement
+- ✅ Utilisez un compte Gmail dédié pour les envois RGPD
+
+#### Suivi des Consentements
+
+- ✅ Consultez régulièrement les CV en attente de consentement
+- ✅ Relancez manuellement si nécessaire (bouton "Renvoyer")
+- ✅ N'utilisez pas un CV tant que le consentement n'est pas obtenu
+
+#### Conservation des Données
+
+- ✅ Respectez la durée de conservation définie (2 ans par défaut)
+- ✅ Les CV sont automatiquement supprimés à expiration
+- ✅ Le candidat peut demander la suppression à tout moment
+
+### Droits des Candidats
+
+Conformément au RGPD, les candidats disposent des droits suivants :
+
+| Droit | Description | Mise en œuvre |
+|-------|-------------|---------------|
+| **Accès** | Consulter ses données | Contacter le DPO |
+| **Rectification** | Corriger ses données | Contacter le DPO |
+| **Effacement** | Supprimer ses données | Lien dans l'email ou contact DPO |
+| **Opposition** | Refuser le traitement | Lien "Refuser" dans l'email |
+| **Portabilité** | Récupérer ses données | Contacter le DPO |
+
+### Registre des Traitements
+
+L'application conserve un historique des actions RGPD :
+- Date d'envoi de la demande de consentement
+- Date de réponse du candidat
+- Statut du consentement
+- Date de suppression (le cas échéant)
+
+Ces informations sont accessibles aux administrateurs pour répondre aux demandes de la CNIL.
 
 ---
 
@@ -1275,6 +1452,12 @@ N'hésitez pas à contacter votre administrateur ou à utiliser l'assistant IA p
 
 **ESCO** : European Skills, Competences, Qualifications and Occupations - Référentiel européen des compétences et métiers.
 
+**RGPD** : Règlement Général sur la Protection des Données - Réglementation européenne encadrant le traitement des données personnelles.
+
+**Consentement RGPD** : Accord explicite d'une personne pour le traitement de ses données personnelles.
+
+**DPO (Data Protection Officer)** : Délégué à la Protection des Données - Responsable de la conformité RGPD dans l'organisation.
+
 **ROME** : Répertoire Opérationnel des Métiers et des Emplois - Classification française des métiers (France Travail).
 
 **Tags Cleaned** : Tags nettoyés et standardisés par l'IA pour améliorer la précision du matching.
@@ -1312,17 +1495,19 @@ N'hésitez pas à contacter votre administrateur ou à utiliser l'assistant IA p
 
 ---
 
-**Dernière mise à jour** : Version 1.6.0 - Février 2026
+**Dernière mise à jour** : Version 1.6.2 - Février 2026
 
 **Nouveautés récentes** :
+- **Conformité RGPD complète** : Gestion automatisée du consentement pour les CV externes
+- **Badge RGPD** : Indicateur visuel du statut de consentement sur chaque CV
+- **Envoi automatique** : Email de demande de consentement envoyé à l'import
+- **Suppression automatique** : CV supprimés si consentement refusé ou expiré
 - **Templates Email MJML** : Éditeur visuel de templates avec blocs (Logo, En-tête, Paragraphe, Signature, Pied de page)
 - **Gestion Clients & Prospects** : Portefeuille commercial avec contacts et historique des envois
 - **Envoi de CV par Email** : Création de brouillons Gmail avec CV en pièce jointe et templates personnalisés
-- **Logo Cabinet** : Upload et affichage du logo dans les templates email
-- **Profils Utilisateurs Enrichis** : Champs Fonction et Téléphone pour personnaliser les signatures
-- **Mots-clés Email Étendus** : `{{user.email}}`, `{{user.jobTitle}}`, `{{user.phone}}`
 
 **Versions précédentes** :
+- v1.6.0 : Logo Cabinet, Profils Utilisateurs Enrichis, Mots-clés Email Étendus
 - v1.5.x : Migration PostgreSQL, sécurité renforcée, logs de sécurité, Swagger/OpenAPI, prompts LLM améliorés
 - v1.4.x : Radar Marché complet, gestion des Tags, référentiel ROME 4.0
 - v1.3.0 : Mode CV anonyme avec trigramme, overlay de progression
