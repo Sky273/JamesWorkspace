@@ -205,11 +205,11 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
         <div className="fixed inset-0 z-40 md:hidden">
           {/* Backdrop */}
           <div 
-            className="fixed inset-0 bg-gray-600 bg-opacity-75 transition-opacity"
+            className="fixed inset-0 bg-gray-600/75 backdrop-blur-sm transition-opacity"
             onClick={onClose}
           />
-          {/* Sidebar panel */}
-          <div className="fixed inset-y-0 left-0 flex w-64 flex-col">
+          {/* Sidebar panel - solid background for readability */}
+          <div className="fixed inset-y-0 left-0 flex w-64 flex-col bg-white dark:bg-gray-800 shadow-xl">
             {sidebarContent}
           </div>
         </div>
