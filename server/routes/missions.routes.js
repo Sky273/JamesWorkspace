@@ -66,11 +66,19 @@ router.get('/', authenticateToken, async (req, res) => {
         const params = [];
         let paramIndex = 1;
 
-        // Firm filter (non-admin users)
-        if (!isAdmin && userFirm) {
-            conditions.push(`firm = $${paramIndex}`);
-            params.push(userFirm);
-            paramIndex++;
+        // Firm filter (non-admin users) - check both firm name and firm_id
+        if (!isAdmin) {
+            const userFirmId = await getUserFirmId(req);
+            if (userFirmId) {
+                conditions.push(`(firm = $${paramIndex} OR firm_id = $${paramIndex + 1})`);
+                params.push(userFirm || '');
+                params.push(userFirmId);
+                paramIndex += 2;
+            } else if (userFirm) {
+                conditions.push(`firm = $${paramIndex}`);
+                params.push(userFirm);
+                paramIndex++;
+            }
         }
 
         // Status filter
@@ -178,9 +186,10 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
         
         const userRole = (req.user?.role || req.user?.Role || '').toLowerCase();
         const isAdmin = userRole === 'admin';
-        const userFirm = req.user?.firm || req.user?.firm_id;
+        const userFirm = req.user?.firm || req.user?.Firm;
+        const userFirmId = await getUserFirmId(req);
         
-        if (!isAdmin && record.firm !== userFirm) {
+        if (!isAdmin && record.firm !== userFirm && record.firm_id !== userFirmId) {
             return res.status(403).json({ error: 'Access denied: You can only view missions from your firm' });
         }
         
@@ -416,11 +425,12 @@ router.delete('/:id', authenticateToken, validateParams('id'), async (req, res) 
         const { id } = req.params;
         const userRole = (req.user?.role || req.user?.Role || '').toLowerCase();
         const isAdmin = userRole === 'admin';
-        const userFirm = req.user?.firm || req.user?.firm_id;
+        const userFirm = req.user?.firm || req.user?.Firm;
+        const userFirmId = await getUserFirmId(req);
 
         if (!isAdmin) {
             const existingRecord = await findWithTimeout('missions', id);
-            if (existingRecord.firm !== userFirm) {
+            if (existingRecord.firm !== userFirm && existingRecord.firm_id !== userFirmId) {
                 return res.status(403).json({ error: 'You can only delete missions from your firm' });
             }
         }
@@ -440,6 +450,18 @@ router.delete('/:id', authenticateToken, validateParams('id'), async (req, res) 
 router.get('/:missionId/adaptations', authenticateToken, validateParams('missionId'), async (req, res) => {
     try {
         const { missionId } = req.params;
+        const userRole = (req.user?.role || req.user?.Role || '').toLowerCase();
+        const isAdmin = userRole === 'admin';
+        const userFirm = req.user?.firm || req.user?.Firm;
+        const userFirmId = await getUserFirmId(req);
+        
+        // Verify mission belongs to user's firm
+        if (!isAdmin) {
+            const mission = await findWithTimeout('missions', missionId);
+            if (mission.firm !== userFirm && mission.firm_id !== userFirmId) {
+                return res.status(403).json({ error: 'Access denied: You can only view adaptations for missions from your firm' });
+            }
+        }
         
         const records = await selectWithTimeout('resume_adaptations', {
             where: { mission_id: missionId },

@@ -427,7 +427,7 @@ const AdaptationViewPage = (): JSX.Element => {
                   {/* Status */}
                   {adaptation.Status && (
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(adaptation.Status)}`}>
-                      {adaptation.Status}
+                      {t(`adaptations.status.${adaptation.Status.toLowerCase()}`, adaptation.Status)}
                     </span>
                   )}
 
