@@ -1,3 +1,32 @@
+## v1.6.5 - 2026-02-28
+### 🔒 Sécurité & Qualité du Code
+
+#### Analyse de Sécurité Complète
+- **Audit global** : Analyse exhaustive de l'application (authentification, autorisation, injection, CORS, rate limiting)
+- **Points positifs confirmés** : Injection SQL protégée, XSS sanitisé, JWT sécurisé, bcrypt pour mots de passe
+
+#### Protection Mémoire - Rate Limiting
+- **Limite de taille** : Ajout de `MAX_RATE_LIMIT_ENTRIES = 10000` pour éviter les fuites mémoire
+- **Pruning automatique** : Suppression de 10% des entrées les plus anciennes quand la limite est atteinte
+- **Fichier** : `server/middleware/rateLimit.middleware.js`
+
+#### Logs Structurés - Proxy Server
+- **Migration console → safeLog** : Remplacement de 45 occurrences de `console.log/error` par `safeLog`
+- **Handlers globaux** : `uncaughtException` et `unhandledRejection` utilisent maintenant `safeLog`
+- **Startup/Shutdown** : Logs structurés avec métadonnées JSON pour `onServerStart()` et `gracefulShutdown()`
+- **Fichier** : `server/proxy-server.js`
+
+#### Métriques LLM
+- **Tarifs Q1 2026** : Mise à jour des prix OpenAI (GPT-5.2) et Anthropic (Claude 4.6)
+- **Tracking unifié** : Correction du double comptage dans `chatbot.routes.js`
+- **Fichiers** : `server/services/metrics.service.js`, `server/services/llm.service.js`
+
+#### Corrections Techniques
+- **Erreurs silencieuses** : Remplacement de `catch { /* ignore */ }` par logging en niveau `debug`
+- **Fichier** : `server/routes/resumes.routes.js`
+
+---
+
 ## v1.6.4 - 2026-02-28
 ### 📧 Envoi Email des CVs Adaptés
 
