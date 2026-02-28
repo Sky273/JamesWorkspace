@@ -48,13 +48,21 @@ export const createMissionSchema = z.object({
   Title: z.string().min(1).max(500),
   Content: z.string().optional(),
   Status: z.enum(['Active', 'Closed', 'Draft']).optional(),
-  Customer: z.string().optional()
+  Customer: z.string().optional(),
+  'Client ID': z.string().uuid().optional().nullable(),
+  client_id: z.string().uuid().optional().nullable(),
+  'Contact ID': z.string().uuid().optional().nullable(),
+  contact_id: z.string().uuid().optional().nullable()
 });
 
 export const updateMissionSchema = z.object({
   Title: z.string().min(1).max(500).optional(),
   Content: z.string().optional(),
-  Status: z.enum(['Active', 'Closed', 'Draft']).optional()
+  Status: z.enum(['Active', 'Closed', 'Draft']).optional(),
+  'Client ID': z.string().uuid().optional().nullable(),
+  client_id: z.string().uuid().optional().nullable(),
+  'Contact ID': z.string().uuid().optional().nullable(),
+  contact_id: z.string().uuid().optional().nullable()
 });
 
 // Template schemas

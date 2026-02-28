@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback, FormEvent, ChangeEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { 
@@ -13,7 +13,8 @@ import {
   BriefcaseIcon,
   BuildingOfficeIcon,
   XMarkIcon,
-  EyeIcon
+  EyeIcon,
+  UserIcon
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../context/AuthContext';
 import { useAuthFetch } from '../hooks/useAuthFetch';
@@ -35,12 +36,34 @@ interface Mission {
   Firm?: string;
   'Created At'?: string;
   Status?: 'Active' | 'Closed' | 'Draft';
+  'Client ID'?: string;
+  'Client Name'?: string;
+  'Client Type'?: string;
+  'Contact ID'?: string;
+  'Contact Name'?: string;
+  'Contact Email'?: string;
+  'Contact Role'?: string;
+}
+
+interface Client {
+  id: string;
+  name: string;
+  type: string;
+}
+
+interface Contact {
+  id: string;
+  name: string;
+  email?: string;
+  role?: string;
 }
 
 interface FormData {
   Title: string;
   Content: string;
   Status: 'Active' | 'Closed' | 'Draft';
+  'Client ID': string;
+  'Contact ID': string;
 }
 
 interface Stats {
@@ -53,6 +76,7 @@ interface Stats {
 const MissionsPage = (): JSX.Element => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const { authGet, authPost, authPut, authDelete } = useAuthFetch();
   const [missions, setMissions] = useState<Mission[]>([]);
@@ -70,12 +94,18 @@ const MissionsPage = (): JSX.Element => {
   const [formData, setFormData] = useState<FormData>({
     Title: '',
     Content: '',
-    Status: 'Active'
+    Status: 'Active',
+    'Client ID': '',
+    'Contact ID': ''
   });
   const editorRef = useRef<{ setContent: (content: string) => void; getContent: () => string } | null>(null);
   const [editorReady, setEditorReady] = useState<boolean>(false);
   const [tinymceLoaded, setTinymceLoaded] = useState<boolean>(false);
   const [previewMission, setPreviewMission] = useState<Mission | null>(null);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [loadingClients, setLoadingClients] = useState<boolean>(false);
+  const [loadingContacts, setLoadingContacts] = useState<boolean>(false);
 
   useEffect(() => {
     let mounted = true;
@@ -88,6 +118,58 @@ const MissionsPage = (): JSX.Element => {
       });
     return () => { mounted = false; };
   }, []);
+
+  // Fetch clients when modal opens
+  const fetchClients = useCallback(async (): Promise<void> => {
+    try {
+      setLoadingClients(true);
+      const response = await authGet('/api/clients?limit=100&status=active');
+      if (response.ok) {
+        const data = await response.json();
+        setClients(data.data || data || []);
+      }
+    } catch (error) {
+      logger.error('Error fetching clients:', error);
+    } finally {
+      setLoadingClients(false);
+    }
+  }, [authGet]);
+
+  // Fetch contacts when client changes
+  const fetchContacts = useCallback(async (clientId: string): Promise<void> => {
+    if (!clientId) {
+      setContacts([]);
+      return;
+    }
+    try {
+      setLoadingContacts(true);
+      const response = await authGet(`/api/clients/${clientId}/contacts`);
+      if (response.ok) {
+        const data = await response.json();
+        setContacts(data || []);
+      }
+    } catch (error) {
+      logger.error('Error fetching contacts:', error);
+    } finally {
+      setLoadingContacts(false);
+    }
+  }, [authGet]);
+
+  // Load clients when modal opens
+  useEffect(() => {
+    if (showModal) {
+      fetchClients();
+    }
+  }, [showModal, fetchClients]);
+
+  // Load contacts when client changes
+  useEffect(() => {
+    if (formData['Client ID']) {
+      fetchContacts(formData['Client ID']);
+    } else {
+      setContacts([]);
+    }
+  }, [formData['Client ID'], fetchContacts]);
 
   // Debounce search input
   useEffect(() => {
@@ -137,6 +219,19 @@ const MissionsPage = (): JSX.Element => {
     fetchMissions();
   }, [fetchMissions]);
 
+  // Handle navigation state for editing a mission from MissionViewPage
+  useEffect(() => {
+    const state = location.state as { editMissionId?: string } | null;
+    if (state?.editMissionId && missions.length > 0) {
+      const missionToEdit = missions.find(m => m.id === state.editMissionId);
+      if (missionToEdit) {
+        handleEdit(missionToEdit);
+        // Clear the state to prevent re-opening on refresh
+        navigate(location.pathname, { replace: true, state: {} });
+      }
+    }
+  }, [location.state, missions, navigate, location.pathname]);
+
   // Calculate total pages
   const totalPages = Math.ceil(totalCount / pageSize);
 
@@ -150,11 +245,23 @@ const MissionsPage = (): JSX.Element => {
   const handleSubmit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
     try {
-      const response = editingMission
-        ? await authPut(`/api/missions/${editingMission.id}`, formData)
-        : await authPost('/api/missions', formData);
+      // Prepare data - convert empty strings to null for optional fields
+      const dataToSend = {
+        Title: formData.Title,
+        Content: formData.Content,
+        Status: formData.Status,
+        'Client ID': formData['Client ID'] || null,
+        'Contact ID': formData['Contact ID'] || null
+      };
 
-      if (!response.ok) throw new Error('Failed to save mission');
+      const response = editingMission
+        ? await authPut(`/api/missions/${editingMission.id}`, dataToSend)
+        : await authPost('/api/missions', dataToSend);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to save mission');
+      }
 
       toast.success(editingMission ? 'Mission mise à jour' : 'Mission créée');
       setShowModal(false);
@@ -162,7 +269,8 @@ const MissionsPage = (): JSX.Element => {
       fetchMissions();
     } catch (error) {
       logger.error('Error saving mission:', error);
-      toast.error('Erreur lors de la sauvegarde');
+      const errorMessage = error instanceof Error ? error.message : 'Erreur lors de la sauvegarde';
+      toast.error(errorMessage);
     }
   };
 
@@ -186,14 +294,17 @@ const MissionsPage = (): JSX.Element => {
     setFormData({
       Title: mission.Title || '',
       Content: mission.Content || '',
-      Status: mission.Status || 'Active'
+      Status: mission.Status || 'Active',
+      'Client ID': mission['Client ID'] || '',
+      'Contact ID': mission['Contact ID'] || ''
     });
     setShowModal(true);
   };
 
   const resetForm = (): void => {
     setEditingMission(null);
-    setFormData({ Title: '', Content: '', Status: 'Active' });
+    setFormData({ Title: '', Content: '', Status: 'Active', 'Client ID': '', 'Contact ID': '' });
+    setContacts([]);
     const tinymce = window.tinymce as unknown as { init: (config: Record<string, unknown>) => void; get: (id: string) => { remove: () => void; getContent: () => string; setContent: (content: string) => void } | null } | undefined;
     if (tinymce && tinymce.get('missionContentEditor')) {
       tinymce.get('missionContentEditor')?.remove();
@@ -353,11 +464,29 @@ const MissionsPage = (): JSX.Element => {
                         {t(`missions.status.${mission.Status || 'Active'}`)}
                       </span>
                     </div>
-                    {mission.Firm && (
+                    {/* Client/Prospect info */}
+                    {mission['Client Name'] && (
                       <div className="flex items-center gap-1 mt-1">
-                        <BuildingOfficeIcon className="w-4 h-4 text-blue-500" />
-                        <span className="text-sm text-blue-600 dark:text-blue-400 font-medium truncate">
-                          {mission.Firm}
+                        <BuildingOfficeIcon className="w-4 h-4 text-purple-500" />
+                        <span className="text-sm text-purple-600 dark:text-purple-400 font-medium truncate">
+                          {mission['Client Name']}
+                        </span>
+                        <span className={`ml-1 px-1.5 py-0.5 text-xs rounded ${
+                          mission['Client Type'] === 'prospect' 
+                            ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
+                            : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                        }`}>
+                          {mission['Client Type'] === 'prospect' ? t('clients.prospect', 'Prospect') : t('clients.client', 'Client')}
+                        </span>
+                      </div>
+                    )}
+                    {/* Contact info */}
+                    {mission['Contact Name'] && (
+                      <div className="flex items-center gap-1 mt-1">
+                        <UserIcon className="w-4 h-4 text-green-500" />
+                        <span className="text-sm text-green-600 dark:text-green-400 truncate">
+                          {mission['Contact Name']}
+                          {mission['Contact Role'] && <span className="text-gray-400 dark:text-gray-500"> - {mission['Contact Role']}</span>}
                         </span>
                       </div>
                     )}
@@ -498,6 +627,54 @@ const MissionsPage = (): JSX.Element => {
                     <option value="Active">{t('missions.status.Active')}</option>
                     <option value="Draft">{t('missions.status.Draft')}</option>
                     <option value="Closed">{t('missions.status.Closed')}</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Client and Contact Selection */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {t('missions.client', 'Client / Prospect')}
+                  </label>
+                  <select
+                    value={formData['Client ID']}
+                    onChange={(e: ChangeEvent<HTMLSelectElement>) => {
+                      setFormData({ ...formData, 'Client ID': e.target.value, 'Contact ID': '' });
+                    }}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                    disabled={loadingClients}
+                  >
+                    <option value="">{loadingClients ? t('common.loading', 'Chargement...') : t('missions.selectClient', 'Sélectionner un client')}</option>
+                    {clients.map((client) => (
+                      <option key={client.id} value={client.id}>
+                        {client.name} ({client.type === 'prospect' ? t('clients.prospect', 'Prospect') : t('clients.client', 'Client')})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {t('missions.contact', 'Interlocuteur')}
+                  </label>
+                  <select
+                    value={formData['Contact ID']}
+                    onChange={(e: ChangeEvent<HTMLSelectElement>) => setFormData({ ...formData, 'Contact ID': e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                    disabled={!formData['Client ID'] || loadingContacts}
+                  >
+                    <option value="">
+                      {!formData['Client ID'] 
+                        ? t('missions.selectClientFirst', 'Sélectionner d\'abord un client') 
+                        : loadingContacts 
+                        ? t('common.loading', 'Chargement...') 
+                        : t('missions.selectContact', 'Sélectionner un interlocuteur')}
+                    </option>
+                    {contacts.map((contact) => (
+                      <option key={contact.id} value={contact.id}>
+                        {contact.name}{contact.role ? ` - ${contact.role}` : ''}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>

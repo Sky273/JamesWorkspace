@@ -1,3 +1,26 @@
+## v1.6.3 - 2026-02-28
+### 🎯 Missions - Association Client/Contact & Adaptation CV
+
+#### Association Client/Contact aux Missions
+- **Nouveaux champs** : Les missions peuvent maintenant être associées à un client/prospect et un interlocuteur
+- **Migration SQL** : Ajout de la colonne `contact_id` à la table `missions` avec clé étrangère vers `client_contacts`
+- **Formulaire enrichi** : Sélecteurs en cascade Client → Contact dans le formulaire de création/édition de mission
+- **Validation backend** : Vérification que le client appartient à la firm de l'utilisateur
+- **Affichage tuiles** : Client (avec badge Prospect/Client) et interlocuteur affichés sur les cartes mission
+
+#### Adaptation CV à une Mission
+- **Nouvelle page** : `ResumeAdaptPage.tsx` avec workflow en 3 étapes (Sélectionner → Analyser → Adapter)
+- **Route ajoutée** : `/resumes/:id/adapt` pour accéder à l'adaptation depuis la page d'amélioration
+- **Indicateur progression** : Affichage visuel des étapes avec icônes de validation
+- **Navigation fluide** : Accès direct à l'adaptation créée après génération
+
+#### Corrections & Améliorations
+- **Bouton Modifier** : Correction du bouton "Modifier" sur la page de consultation de mission
+- **Résolution firm_id** : Utilisation de `getUserFirmId()` pour résoudre correctement le firm_id depuis le nom ou l'UUID
+- **Validation Zod** : Acceptation des valeurs `null` pour `Client ID` et `Contact ID` dans les schémas de mission
+
+---
+
 ## v1.6.2 - 2026-02-23
 ### 🔒 RGPD - Badge Compact & Envoi Email Automatique
 

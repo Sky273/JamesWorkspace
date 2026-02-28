@@ -31,6 +31,7 @@ const ProfileMatchingPage = lazy(() => import('./pages/ProfileMatchingPage'));
 const ResumeAnalysisPage = lazy(() => import('./pages/ResumeAnalysisPage'));
 const ResumeImprovePage = lazy(() => import('./pages/ResumeImprovePage'));
 const ResumeExportPage = lazy(() => import('./pages/ResumeExportPage'));
+const ResumeAdaptPage = lazy(() => import('./pages/ResumeAdaptPage'));
 const MissionViewPage = lazy(() => import('./pages/MissionViewPage'));
 const AdaptationViewPage = lazy(() => import('./pages/AdaptationViewPage'));
 const UserGuidePage = lazy(() => import('./pages/UserGuidePage'));
@@ -120,6 +121,7 @@ const App = (): JSX.Element => {
                   <Route path="resumes/:id/analysis" element={<ResumeAnalysisPage />} />
                   <Route path="resumes/:id/improve" element={<ResumeImprovePage />} />
                   <Route path="resumes/:id/export" element={<ResumeExportPage />} />
+                  <Route path="resumes/:id/adapt" element={<ResumeAdaptPage />} />
                   <Route path="upload" element={<UploadPage />} />
                   <Route path="missions" element={<MissionsPage />} />
                   <Route path="missions/:id" element={<MissionViewPage />} />

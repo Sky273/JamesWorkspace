@@ -10,8 +10,39 @@ import { sanitizeHtmlContent } from '../utils/sanitizer.backend.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { sanitizeErrorMessage } from '../utils/errors.js';
 import { selectWithTimeout, findWithTimeout, createWithTimeout, updateWithTimeout, destroyWithTimeout } from '../utils/postgresHelpers.js';
+import { query } from '../config/database.js';
 
 const router = express.Router();
+
+// Helper to validate UUID format
+const isValidUUID = (str) => {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(str);
+};
+
+// Helper to get user's firm_id (returns UUID)
+const getUserFirmId = async (req) => {
+    // First check if we have a direct UUID
+    const firmId = req.user?.firm_id || req.user?.firmId;
+    if (firmId && isValidUUID(firmId)) {
+        return firmId;
+    }
+    
+    // If we have a firm name, look up the UUID
+    const firmName = req.user?.firm || req.user?.Firm;
+    if (firmName) {
+        try {
+            const result = await query('SELECT id FROM firms WHERE name = $1', [firmName]);
+            if (result.rows.length > 0) {
+                return result.rows[0].id;
+            }
+        } catch (error) {
+            safeLog('error', 'Error looking up firm by name', { firmName, error: error.message });
+        }
+    }
+    
+    return null;
+};
 
 // ============================================
 // MISSIONS ROUTES
@@ -66,19 +97,22 @@ router.get('/', authenticateToken, async (req, res) => {
         });
         const totalCount = parseInt(countResult[0]?.total || 0);
 
-        // Fetch paginated records
+        // Fetch paginated records with client and contact joins
         const dataQuery = `
-            SELECT * FROM missions 
+            SELECT m.*, 
+                   c.name as client_name, c.type as client_type,
+                   cc.name as contact_name, cc.email as contact_email, cc.role as contact_role
+            FROM missions m
+            LEFT JOIN clients c ON m.client_id = c.id
+            LEFT JOIN client_contacts cc ON m.contact_id = cc.id
             ${whereClause}
-            ORDER BY created_at DESC
+            ORDER BY m.created_at DESC
             LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
         `;
         const dataParams = [...params, limit, offset];
         
-        const records = await selectWithTimeout('missions', {
-            rawQuery: dataQuery,
-            rawParams: dataParams
-        });
+        const result = await query(dataQuery, dataParams);
+        const records = result.rows;
 
         const missions = records.map(record => ({
             id: record.id,
@@ -91,7 +125,14 @@ router.get('/', authenticateToken, async (req, res) => {
             'Required Skills': record.required_skills,
             'Preferred Skills': record.preferred_skills,
             'Created At': record.created_at,
-            'Updated At': record.updated_at
+            'Updated At': record.updated_at,
+            'Client ID': record.client_id,
+            'Client Name': record.client_name,
+            'Client Type': record.client_type,
+            'Contact ID': record.contact_id,
+            'Contact Name': record.contact_name,
+            'Contact Email': record.contact_email,
+            'Contact Role': record.contact_role
         }));
 
         const totalPages = Math.ceil(totalCount / limit);
@@ -117,7 +158,23 @@ router.get('/', authenticateToken, async (req, res) => {
 router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => {
     try {
         const { id } = req.params;
-        const record = await findWithTimeout('missions', id);
+        
+        // Fetch mission with client and contact joins
+        const result = await query(`
+            SELECT m.*, 
+                   c.name as client_name, c.type as client_type,
+                   cc.name as contact_name, cc.email as contact_email, cc.role as contact_role
+            FROM missions m
+            LEFT JOIN clients c ON m.client_id = c.id
+            LEFT JOIN client_contacts cc ON m.contact_id = cc.id
+            WHERE m.id = $1
+        `, [id]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Mission not found' });
+        }
+        
+        const record = result.rows[0];
         
         const userRole = (req.user?.role || req.user?.Role || '').toLowerCase();
         const isAdmin = userRole === 'admin';
@@ -138,13 +195,17 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
             'Required Skills': record.required_skills,
             'Preferred Skills': record.preferred_skills,
             'Created At': record.created_at,
-            'Updated At': record.updated_at
+            'Updated At': record.updated_at,
+            'Client ID': record.client_id,
+            'Client Name': record.client_name,
+            'Client Type': record.client_type,
+            'Contact ID': record.contact_id,
+            'Contact Name': record.contact_name,
+            'Contact Email': record.contact_email,
+            'Contact Role': record.contact_role
         });
     } catch (error) {
         safeLog('error', 'Error fetching mission', { error: error.message, missionId: req.params.id });
-        if (error.statusCode === 404) {
-            return res.status(404).json({ error: 'Mission not found' });
-        }
         res.status(500).json({ error: 'Failed to fetch mission' });
     }
 });
@@ -153,36 +214,85 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
 router.post('/', authenticateToken, validateBody(createMissionSchema), async (req, res) => {
     try {
         const missionData = req.body;
-        const userFirm = req.user?.firm || req.user?.firm_id;
+        const userFirm = req.user?.firm || req.user?.Firm;
+        const userFirmId = await getUserFirmId(req);
         
         let content = missionData.Content || missionData.content || '';
         if (content) {
             content = sanitizeHtmlContent(content);
         }
         
+        // Validate client_id if provided
+        const clientId = missionData['Client ID'] || missionData.client_id || null;
+        if (clientId) {
+            const clientResult = await query('SELECT firm_id FROM clients WHERE id = $1', [clientId]);
+            if (clientResult.rows.length === 0) {
+                return res.status(400).json({ error: 'Client not found' });
+            }
+            if (clientResult.rows[0].firm_id !== userFirmId) {
+                safeLog('warn', 'Client firm mismatch', { 
+                    clientFirmId: clientResult.rows[0].firm_id, 
+                    userFirmId,
+                    userId: req.user?.id 
+                });
+                return res.status(403).json({ error: 'Client does not belong to your firm' });
+            }
+        }
+        
+        // Validate contact_id if provided
+        const contactId = missionData['Contact ID'] || missionData.contact_id || null;
+        if (contactId && clientId) {
+            const contactResult = await query('SELECT id FROM client_contacts WHERE id = $1 AND client_id = $2', [contactId, clientId]);
+            if (contactResult.rows.length === 0) {
+                return res.status(400).json({ error: 'Contact not found or does not belong to this client' });
+            }
+        }
+        
         const newMission = await createWithTimeout('missions', {
             title: missionData.Title || missionData.title,
             content: content,
             firm: userFirm || missionData.Firm || missionData.firm || null,
-            firm_id: missionData['Firm ID'] || missionData.firm_id || null,
+            firm_id: userFirmId || missionData['Firm ID'] || missionData.firm_id || null,
             status: missionData.Status || missionData.status || 'active',
             keywords: missionData.Keywords || missionData.keywords || null,
             required_skills: missionData['Required Skills'] || missionData.required_skills || null,
-            preferred_skills: missionData['Preferred Skills'] || missionData.preferred_skills || null
+            preferred_skills: missionData['Preferred Skills'] || missionData.preferred_skills || null,
+            client_id: clientId,
+            contact_id: contactId
         });
 
+        // Fetch with joins to return full data
+        const result = await query(`
+            SELECT m.*, 
+                   c.name as client_name, c.type as client_type,
+                   cc.name as contact_name, cc.email as contact_email, cc.role as contact_role
+            FROM missions m
+            LEFT JOIN clients c ON m.client_id = c.id
+            LEFT JOIN client_contacts cc ON m.contact_id = cc.id
+            WHERE m.id = $1
+        `, [newMission.id]);
+        
+        const record = result.rows[0];
+
         res.json({
-            id: newMission.id,
-            Title: newMission.title,
-            Content: newMission.content,
-            Firm: newMission.firm,
-            'Firm ID': newMission.firm_id,
-            Status: newMission.status,
-            Keywords: newMission.keywords,
-            'Required Skills': newMission.required_skills,
-            'Preferred Skills': newMission.preferred_skills,
-            'Created At': newMission.created_at,
-            'Updated At': newMission.updated_at
+            id: record.id,
+            Title: record.title,
+            Content: record.content,
+            Firm: record.firm,
+            'Firm ID': record.firm_id,
+            Status: record.status,
+            Keywords: record.keywords,
+            'Required Skills': record.required_skills,
+            'Preferred Skills': record.preferred_skills,
+            'Created At': record.created_at,
+            'Updated At': record.updated_at,
+            'Client ID': record.client_id,
+            'Client Name': record.client_name,
+            'Client Type': record.client_type,
+            'Contact ID': record.contact_id,
+            'Contact Name': record.contact_name,
+            'Contact Email': record.contact_email,
+            'Contact Role': record.contact_role
         });
     } catch (error) {
         safeLog('error', 'Error creating mission', { error: error.message });
@@ -197,11 +307,12 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateM
         const updateData = req.body;
         const userRole = (req.user?.role || req.user?.Role || '').toLowerCase();
         const isAdmin = userRole === 'admin';
-        const userFirm = req.user?.firm || req.user?.firm_id;
+        const userFirm = req.user?.firm || req.user?.Firm;
+        const userFirmId = await getUserFirmId(req);
 
         const existingMission = await findWithTimeout('missions', id);
 
-        if (!isAdmin && existingMission.firm !== userFirm) {
+        if (!isAdmin && existingMission.firm !== userFirm && existingMission.firm_id !== userFirmId) {
             return res.status(403).json({ error: 'Not authorized to update this mission' });
         }
 
@@ -226,21 +337,69 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateM
         if (updateData['Preferred Skills'] !== undefined || updateData.preferred_skills !== undefined) {
             updates.preferred_skills = updateData['Preferred Skills'] || updateData.preferred_skills;
         }
+        
+        // Handle client_id update
+        if (updateData['Client ID'] !== undefined || updateData.client_id !== undefined) {
+            const clientId = updateData['Client ID'] || updateData.client_id;
+            if (clientId) {
+                const clientResult = await query('SELECT firm_id FROM clients WHERE id = $1', [clientId]);
+                if (clientResult.rows.length === 0) {
+                    return res.status(400).json({ error: 'Client not found' });
+                }
+                if (clientResult.rows[0].firm_id !== userFirmId) {
+                    return res.status(403).json({ error: 'Client does not belong to your firm' });
+                }
+            }
+            updates.client_id = clientId || null;
+        }
+        
+        // Handle contact_id update
+        if (updateData['Contact ID'] !== undefined || updateData.contact_id !== undefined) {
+            const contactId = updateData['Contact ID'] || updateData.contact_id;
+            const clientId = updates.client_id || existingMission.client_id;
+            if (contactId && clientId) {
+                const contactResult = await query('SELECT id FROM client_contacts WHERE id = $1 AND client_id = $2', [contactId, clientId]);
+                if (contactResult.rows.length === 0) {
+                    return res.status(400).json({ error: 'Contact not found or does not belong to this client' });
+                }
+            }
+            updates.contact_id = contactId || null;
+        }
 
         const updatedMission = await updateWithTimeout('missions', id, updates);
 
+        // Fetch with joins to return full data
+        const result = await query(`
+            SELECT m.*, 
+                   c.name as client_name, c.type as client_type,
+                   cc.name as contact_name, cc.email as contact_email, cc.role as contact_role
+            FROM missions m
+            LEFT JOIN clients c ON m.client_id = c.id
+            LEFT JOIN client_contacts cc ON m.contact_id = cc.id
+            WHERE m.id = $1
+        `, [updatedMission.id]);
+        
+        const record = result.rows[0];
+
         res.json({
-            id: updatedMission.id,
-            Title: updatedMission.title,
-            Content: updatedMission.content,
-            Firm: updatedMission.firm,
-            'Firm ID': updatedMission.firm_id,
-            Status: updatedMission.status,
-            Keywords: updatedMission.keywords,
-            'Required Skills': updatedMission.required_skills,
-            'Preferred Skills': updatedMission.preferred_skills,
-            'Created At': updatedMission.created_at,
-            'Updated At': updatedMission.updated_at
+            id: record.id,
+            Title: record.title,
+            Content: record.content,
+            Firm: record.firm,
+            'Firm ID': record.firm_id,
+            Status: record.status,
+            Keywords: record.keywords,
+            'Required Skills': record.required_skills,
+            'Preferred Skills': record.preferred_skills,
+            'Created At': record.created_at,
+            'Updated At': record.updated_at,
+            'Client ID': record.client_id,
+            'Client Name': record.client_name,
+            'Client Type': record.client_type,
+            'Contact ID': record.contact_id,
+            'Contact Name': record.contact_name,
+            'Contact Email': record.contact_email,
+            'Contact Role': record.contact_role
         });
     } catch (error) {
         safeLog('error', 'Error updating mission', { error: error.message, missionId: req.params.id });
