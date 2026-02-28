@@ -8,7 +8,7 @@ import { selectWithTimeout, findWithTimeout, updateWithTimeout } from '../utils/
 import { safeLog } from '../utils/logger.backend.js';
 import { callOpenAI } from './openai.service.js';
 import { getLLMSettings } from './settings.service.js';
-import { MISSION_KEYWORDS_EXTRACTION_PROMPT, DETAILED_PROFILE_ANALYSIS_PROMPT, TITLE_MATCHING_REFINEMENT_PROMPT } from '../config/prompts.backend.js';
+import { MISSION_KEYWORDS_EXTRACTION_PROMPT, DETAILED_PROFILE_ANALYSIS_PROMPT, TITLE_MATCHING_REFINEMENT_PROMPT, BATCH_PROFILE_SCORING_PROMPT } from '../config/prompts.backend.js';
 
 /**
  * Default weights for scoring categories
@@ -246,7 +246,137 @@ async function getMissionKeywords(missionId, missionRecord, userMetadata = null)
 }
 
 /**
+ * Split array into chunks of specified size
+ */
+function chunkArray(array, size) {
+    const chunks = [];
+    for (let i = 0; i < array.length; i += size) {
+        chunks.push(array.slice(i, i + size));
+    }
+    return chunks;
+}
+
+/**
+ * Score profiles using LLM for intelligent semantic matching
+ * Processes profiles in batches for cost efficiency
+ * @param {Array} profiles - Pre-filtered profiles with resume tags
+ * @param {Object} missionKeywords - Extracted mission keywords
+ * @param {Object} missionRecord - Full mission record
+ * @param {Object} userMetadata - User metadata for LLM calls
+ * @returns {Object} Map of resumeId -> { score, confidence, reason, keyStrengths, keyGaps }
+ */
+async function scoreBatchWithLLM(profiles, missionKeywords, missionRecord, userMetadata = null) {
+    if (!profiles || profiles.length === 0) {
+        return { scores: {}, success: true };
+    }
+
+    const settings = await getLLMSettings();
+    const model = settings.llmModel;
+
+    if (!model) {
+        safeLog('warn', 'LLM model not configured, skipping LLM scoring');
+        return { scores: {}, success: false, error: 'LLM model not configured' };
+    }
+
+    const BATCH_SIZE = 12; // Optimal batch size for token efficiency
+    const batches = chunkArray(profiles, BATCH_SIZE);
+    const allScores = {};
+    let hasErrors = false;
+
+    safeLog('info', 'Starting LLM batch scoring', { 
+        totalProfiles: profiles.length, 
+        batchCount: batches.length,
+        batchSize: BATCH_SIZE 
+    });
+
+    for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+        const batch = batches[batchIndex];
+        
+        // Prepare compact candidate data for the prompt
+        const candidatesData = batch.map(p => ({
+            id: p.resumeId,
+            title: p.title || 'Non spécifié',
+            skills: (p.resumeTags?.skills || []).slice(0, 10),
+            tools: (p.resumeTags?.tools || []).slice(0, 8),
+            industries: (p.resumeTags?.industries || []).slice(0, 3),
+            softSkills: (p.resumeTags?.softSkills || []).slice(0, 5)
+        }));
+
+        const candidatesJson = JSON.stringify(candidatesData, null, 2);
+
+        // Build the prompt
+        const prompt = BATCH_PROFILE_SCORING_PROMPT
+            .replace('{MISSION_TITLE}', missionRecord.title || '')
+            .replace('{MISSION_SKILLS}', (missionKeywords.skills || []).join(', ') || 'Non spécifié')
+            .replace('{MISSION_TOOLS}', (missionKeywords.tools || []).join(', ') || 'Non spécifié')
+            .replace('{MISSION_INDUSTRIES}', (missionKeywords.industries || []).join(', ') || 'Non spécifié')
+            .replace('{MISSION_SOFT_SKILLS}', (missionKeywords.softSkills || []).join(', ') || 'Non spécifié')
+            .replace('{EXPERIENCE_LEVEL}', missionKeywords.experienceLevel || 'Non spécifié')
+            .replace('{CANDIDATES_JSON}', candidatesJson);
+
+        try {
+            const response = await callOpenAI({
+                model,
+                messages: [
+                    { role: 'system', content: 'You are a JSON-only HR analysis API specialized in IT/IS profile matching. Respond with valid JSON only.' },
+                    { role: 'user', content: prompt }
+                ],
+                maxTokens: 2048,
+                temperature: 0.3,
+                responseFormat: { type: "json_object" },
+                userMetadata,
+                operationType: 'Batch Profile Scoring'
+            });
+
+            let result;
+            try {
+                result = JSON.parse(response.choices[0].message.content);
+            } catch (parseError) {
+                safeLog('error', 'Failed to parse LLM scoring response', { 
+                    batchIndex, 
+                    error: parseError.message,
+                    content: response.choices[0].message.content?.substring(0, 200)
+                });
+                hasErrors = true;
+                continue;
+            }
+
+            // Merge batch scores into allScores
+            if (result.scores) {
+                Object.assign(allScores, result.scores);
+            }
+
+            safeLog('debug', 'Batch scoring completed', { 
+                batchIndex: batchIndex + 1, 
+                totalBatches: batches.length,
+                scoresReturned: Object.keys(result.scores || {}).length
+            });
+
+        } catch (error) {
+            safeLog('error', 'LLM scoring batch failed', { 
+                batchIndex, 
+                error: error.message 
+            });
+            hasErrors = true;
+        }
+    }
+
+    safeLog('info', 'LLM batch scoring completed', { 
+        totalScored: Object.keys(allScores).length,
+        totalProfiles: profiles.length,
+        hasErrors
+    });
+
+    return { 
+        scores: allScores, 
+        success: Object.keys(allScores).length > 0,
+        partial: hasErrors && Object.keys(allScores).length > 0
+    };
+}
+
+/**
  * Refine match scores using LLM analysis of candidate titles
+ * @deprecated Use scoreBatchWithLLM instead - kept for fallback compatibility
  */
 async function refineTitleScores(profiles, missionRecord, missionKeywords, userMetadata = null) {
     if (!profiles || profiles.length === 0) {
@@ -386,7 +516,7 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
         });
     }
     
-    // 5. Score each resume
+    // 5. Score each resume with text-based matching first (for pre-filtering)
     // Prioritize cleaned tags over raw tags for better matching accuracy
     const scoredProfiles = resumeRecords.map(record => {
         const resumeTags = {
@@ -415,7 +545,7 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
     });
     
     // Debug: Log scoring distribution
-    safeLog('debug', 'Scoring distribution', {
+    safeLog('debug', 'Text-based scoring distribution', {
         totalScored: scoredProfiles.length,
         withScore0: scoredProfiles.filter(p => p.matchScore === 0).length,
         withScoreAbove0: scoredProfiles.filter(p => p.matchScore > 0).length,
@@ -423,42 +553,100 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
         topScores: scoredProfiles.slice(0, 5).map(p => ({ name: p.name, score: p.matchScore }))
     });
     
-    // 6. Filter by minimum score and sort
-    // Include all profiles with score >= 0 to show results even with low matches
+    // 6. Pre-filter profiles for LLM scoring
+    // Select top candidates based on text matching to limit LLM costs
+    // Include profiles with at least some match OR all profiles if none match
+    const hasAnyMatch = scoredProfiles.some(p => p.matchScore > 0);
     const preliminaryProfiles = scoredProfiles
-        .filter(p => p.matchScore >= Math.max(0, minScore - 15))
+        .filter(p => hasAnyMatch ? p.matchScore > 0 : true)
         .sort((a, b) => b.matchScore - a.matchScore)
-        .slice(0, Math.min(limit * 2, 30));
+        .slice(0, Math.min(limit * 3, 50)); // Take more for LLM to re-rank
     
-    // 7. Refine scores using LLM analysis of titles
-    const titleAdjustments = await refineTitleScores(
-        preliminaryProfiles, 
-        missionRecord, 
-        missionKeywords, 
+    // 7. Score profiles using LLM for intelligent semantic matching
+    let llmScoringApplied = false;
+    let llmScoringFailed = false;
+    
+    const llmResult = await scoreBatchWithLLM(
+        preliminaryProfiles,
+        missionKeywords,
+        missionRecord,
         userMetadata
     );
     
-    // 8. Apply title adjustments
-    const refinedProfiles = preliminaryProfiles.map(profile => {
-        const adjustment = titleAdjustments[profile.resumeId];
-        const titleAdjustment = adjustment?.adjustment || 0;
-        const titleReason = adjustment?.reason || null;
+    // 8. Apply LLM scores or fall back to text-based scores
+    let finalProfiles;
+    
+    if (llmResult.success && Object.keys(llmResult.scores).length > 0) {
+        llmScoringApplied = true;
+        llmScoringFailed = llmResult.partial || false;
         
-        const refinedScore = Math.max(0, Math.min(100, profile.matchScore + titleAdjustment));
+        finalProfiles = preliminaryProfiles.map(profile => {
+            const llmScore = llmResult.scores[profile.resumeId];
+            
+            if (llmScore) {
+                // Use LLM score
+                return {
+                    ...profile,
+                    matchScore: llmScore.score || profile.matchScore,
+                    baseScore: profile.matchScore, // Keep text-based score as reference
+                    llmScored: true,
+                    confidence: llmScore.confidence || 'medium',
+                    reason: llmScore.reason || null,
+                    keyStrengths: llmScore.keyStrengths || [],
+                    keyGaps: llmScore.keyGaps || []
+                };
+            } else {
+                // Fallback to text-based score
+                return {
+                    ...profile,
+                    llmScored: false,
+                    confidence: 'low',
+                    reason: 'Score basé sur correspondance textuelle (LLM non disponible pour ce profil)'
+                };
+            }
+        });
         
-        return {
-            ...profile,
-            matchScore: refinedScore,
-            baseScore: profile.matchScore,
-            titleAdjustment,
-            titleReason
-        };
-    });
+        safeLog('info', 'LLM scoring applied', {
+            totalProfiles: preliminaryProfiles.length,
+            llmScored: Object.keys(llmResult.scores).length,
+            partial: llmResult.partial
+        });
+    } else {
+        // LLM scoring failed completely, use text-based scores with title refinement as fallback
+        llmScoringFailed = true;
+        safeLog('warn', 'LLM scoring failed, falling back to text-based scoring with title refinement');
+        
+        // Fall back to legacy title refinement
+        const titleAdjustments = await refineTitleScores(
+            preliminaryProfiles, 
+            missionRecord, 
+            missionKeywords, 
+            userMetadata
+        );
+        
+        finalProfiles = preliminaryProfiles.map(profile => {
+            const adjustment = titleAdjustments[profile.resumeId];
+            const titleAdjustment = adjustment?.adjustment || 0;
+            const titleReason = adjustment?.reason || null;
+            
+            const refinedScore = Math.max(0, Math.min(100, profile.matchScore + titleAdjustment));
+            
+            return {
+                ...profile,
+                matchScore: refinedScore,
+                baseScore: profile.matchScore,
+                titleAdjustment,
+                titleReason,
+                llmScored: false,
+                confidence: 'low',
+                reason: titleReason || 'Score basé sur correspondance textuelle'
+            };
+        });
+    }
     
     // 9. Final filter and sort
     // Always include profiles even with score 0 when minScore is 0
-    // This ensures we show all CVs sorted by relevance
-    const filteredProfiles = refinedProfiles
+    const filteredProfiles = finalProfiles
         .filter(p => minScore === 0 ? true : p.matchScore >= minScore)
         .sort((a, b) => b.matchScore - a.matchScore)
         .slice(0, limit);
@@ -466,7 +654,9 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
     safeLog('info', 'Profile matching completed', {
         totalResumes: resumeRecords.length,
         matchingProfiles: filteredProfiles.length,
-        topScore: filteredProfiles[0]?.matchScore || 0
+        topScore: filteredProfiles[0]?.matchScore || 0,
+        llmScoringApplied,
+        llmScoringFailed
     });
     
     return {
@@ -476,7 +666,9 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
         totalResumesScanned: resumeRecords.length,
         profiles: filteredProfiles,
         weights,
-        titleRefinementApplied: Object.keys(titleAdjustments).length > 0
+        llmScoringApplied,
+        llmScoringFailed,
+        titleRefinementApplied: !llmScoringApplied && !llmScoringFailed // Legacy field for backward compatibility
     };
 }
 

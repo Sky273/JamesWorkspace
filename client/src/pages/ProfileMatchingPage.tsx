@@ -286,8 +286,45 @@ const ProfileMatchingPage = (): JSX.Element => {
             </span>
           </div>
 
-          {/* Title adjustment indicator */}
-          {profile.titleAdjustment !== undefined && profile.titleAdjustment !== 0 && (
+          {/* LLM Scoring indicator and reason */}
+          {profile.llmScored && (
+            <div className="mt-2 space-y-1">
+              <div className="flex items-center gap-2 text-xs">
+                <span className={`px-2 py-0.5 rounded-full flex items-center gap-1 ${
+                  profile.confidence === 'high' 
+                    ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
+                    : profile.confidence === 'medium'
+                    ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'
+                    : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                }`}>
+                  <SparklesIcon className="w-3 h-3" />
+                  {t('profileMatching.llmScored')}
+                  {profile.confidence && ` (${t(`profileMatching.confidence.${profile.confidence}`)})`}
+                </span>
+              </div>
+              {profile.reason && (
+                <p className="text-xs text-gray-600 dark:text-gray-400 italic">
+                  {profile.reason}
+                </p>
+              )}
+              {/* Key strengths and gaps */}
+              <div className="flex flex-wrap gap-2 mt-1">
+                {profile.keyStrengths?.map((strength, idx) => (
+                  <span key={`strength-${idx}`} className="text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                    ✓ {strength}
+                  </span>
+                ))}
+                {profile.keyGaps?.map((gap, idx) => (
+                  <span key={`gap-${idx}`} className="text-xs px-2 py-0.5 rounded-full bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                    ✗ {gap}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Legacy: Title adjustment indicator (fallback mode) */}
+          {!profile.llmScored && profile.titleAdjustment !== undefined && profile.titleAdjustment !== 0 && (
             <div className="mt-2 flex items-center gap-2 text-xs">
               <span className={`px-2 py-0.5 rounded-full ${
                 profile.titleAdjustment > 0 

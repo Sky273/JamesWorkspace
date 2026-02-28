@@ -1145,6 +1145,14 @@
     "analyzingProfile": "Analyzing profile...",
     "analyzingProfileDescription": "AI is generating a detailed analysis of the match between this profile and the mission.",
     "titleAdjustment": "Title adjustment",
+    "llmScored": "AI Score",
+    "confidence": {
+      "high": "high confidence",
+      "medium": "medium confidence",
+      "low": "low confidence"
+    },
+    "llmScoringApplied": "Intelligent AI scoring applied",
+    "llmScoringFailed": "AI scoring unavailable, fallback mode",
     "detailedAnalysis": {
       "title": "AI Detailed Analysis",
       "verdict": "Verdict",

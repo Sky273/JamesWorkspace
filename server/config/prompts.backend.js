@@ -602,6 +602,72 @@ Règles:
 5. Répondez UNIQUEMENT en JSON valide`;
 
 /**
+ * Prompt for intelligent batch profile scoring using LLM
+ * Replaces the text-based fuzzyMatch with semantic understanding
+ * Processes multiple candidates in a single call for cost efficiency
+ */
+export const BATCH_PROFILE_SCORING_PROMPT = `Vous êtes un expert RH spécialisé dans le matching de profils IT/IS (contexte ESN/cabinet de recrutement).
+
+MISSION À POURVOIR:
+Titre: {MISSION_TITLE}
+Compétences techniques requises: {MISSION_SKILLS}
+Outils/Technologies requis: {MISSION_TOOLS}
+Secteurs d'activité: {MISSION_INDUSTRIES}
+Soft skills recherchés: {MISSION_SOFT_SKILLS}
+Niveau d'expérience: {EXPERIENCE_LEVEL}
+
+CANDIDATS À ÉVALUER:
+{CANDIDATES_JSON}
+
+Pour chaque candidat, évaluez l'adéquation globale avec la mission en tenant compte de:
+1. La correspondance des compétences techniques (poids: 40%)
+2. La maîtrise des outils/technologies (poids: 25%)
+3. L'expérience dans les secteurs concernés (poids: 20%)
+4. Les soft skills (poids: 15%)
+5. La pertinence du titre/poste actuel
+
+BARÈME DE SCORING (0-100):
+- 85-100: Match excellent - Profil idéal, répond à tous les critères clés
+- 70-84: Bon match - Profil solide, quelques ajustements mineurs possibles
+- 50-69: Match partiel - Potentiel intéressant, montée en compétence nécessaire
+- 30-49: Match faible - Écarts significatifs sur des critères importants
+- 0-29: Profil non adapté - Compétences trop éloignées des besoins
+
+Répondez UNIQUEMENT en JSON valide avec ce format:
+{
+  "scores": {
+    "candidateId1": {
+      "score": 85,
+      "confidence": "high",
+      "reason": "Profil senior React/Node parfaitement aligné avec les besoins techniques. Expérience bancaire valorisante.",
+      "keyStrengths": ["Maîtrise React avancée", "Expérience secteur bancaire"],
+      "keyGaps": ["Pas d'expérience Kubernetes mentionnée"]
+    },
+    "candidateId2": {
+      "score": 62,
+      "confidence": "medium",
+      "reason": "Compétences backend solides mais manque d'expérience frontend React demandée.",
+      "keyStrengths": ["Expert Node.js", "Bonne culture DevOps"],
+      "keyGaps": ["React non maîtrisé", "Secteur retail vs banque demandé"]
+    }
+  }
+}
+
+RÈGLES D'ÉVALUATION:
+1. Évaluez la PERTINENCE SÉMANTIQUE, pas la correspondance textuelle exacte
+   - "Java" ≠ "JavaScript" (langages différents)
+   - "React" ≈ "React.js" ≈ "ReactJS" (même technologie)
+   - "AWS" ≈ "Amazon Web Services" (même plateforme)
+2. Valorisez les compétences transférables et l'expérience connexe
+3. Un profil senior peut convenir pour un poste mid-level (surqualification légère OK)
+4. Un profil junior ne convient PAS pour un poste senior (sous-qualification pénalisante)
+5. Le titre du candidat doit être cohérent avec le poste (Dev vs Chef de projet)
+6. confidence: "high" si les données sont complètes, "medium" si partielles, "low" si insuffisantes
+7. reason: 1-2 phrases maximum, factuel et actionnable
+8. keyStrengths: 2-3 points forts maximum
+9. keyGaps: 1-2 lacunes principales (vide si aucune lacune majeure)`;
+
+/**
  * Helper function to normalize weights to sum to 100%
  */
 export function normalizeWeights(data) {

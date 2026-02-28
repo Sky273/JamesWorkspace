@@ -188,9 +188,15 @@ export interface ProfileMatchResult {
   firmName?: string;
   createdAt?: string;
   matchScore: number;
-  baseScore?: number; // Original score before title adjustment
-  titleAdjustment?: number; // Score adjustment from title analysis (-15 to +15)
-  titleReason?: string | null; // Reason for title adjustment
+  baseScore?: number; // Original score before title adjustment (legacy)
+  titleAdjustment?: number; // Score adjustment from title analysis (legacy, -15 to +15)
+  titleReason?: string | null; // Reason for title adjustment (legacy)
+  // New LLM scoring fields
+  llmScored?: boolean; // Whether this score was computed by LLM
+  confidence?: 'high' | 'medium' | 'low'; // LLM confidence in the score
+  reason?: string; // LLM explanation for the score
+  keyStrengths?: string[]; // Main strengths identified by LLM
+  keyGaps?: string[]; // Main gaps identified by LLM
   categoryScores: {
     skills: number;
     tools: number;
@@ -224,7 +230,9 @@ export interface ProfileMatchingResponse {
   totalResumesScanned: number;
   profiles: ProfileMatchResult[];
   weights: ProfileMatchWeights;
-  titleRefinementApplied?: boolean;
+  titleRefinementApplied?: boolean; // Legacy field
+  llmScoringApplied?: boolean; // Whether LLM scoring was used
+  llmScoringFailed?: boolean; // Whether LLM scoring failed and fell back to text matching
 }
 
 // ============================================

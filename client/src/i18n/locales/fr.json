@@ -1147,6 +1147,14 @@
     "analyzingProfile": "Analyse du profil en cours...",
     "analyzingProfileDescription": "L'IA génère une analyse détaillée de l'adéquation entre ce profil et la mission.",
     "titleAdjustment": "Ajustement titre",
+    "llmScored": "Score IA",
+    "confidence": {
+      "high": "confiance élevée",
+      "medium": "confiance moyenne",
+      "low": "confiance faible"
+    },
+    "llmScoringApplied": "Scoring intelligent IA appliqué",
+    "llmScoringFailed": "Scoring IA indisponible, mode dégradé",
     "detailedAnalysis": {
       "title": "Analyse détaillée IA",
       "verdict": "Verdict",
