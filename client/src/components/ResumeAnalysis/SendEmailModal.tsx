@@ -52,11 +52,16 @@ interface SendEmailModalProps {
   resumeTitle?: string;
   currentVersion?: number;
   onGeneratePdf: () => Promise<Blob>;
+  // Pre-fill props for adaptation emails
+  prefilledClientId?: string;
+  prefilledContactId?: string;
+  missionTitle?: string;
+  isAdaptation?: boolean;
 }
 
 type ModalStep = 'connect' | 'select' | 'sending' | 'success' | 'error';
 
-const SendEmailModal = ({ isOpen, onClose, resumeName, resumeId, resumeTitle, currentVersion, onGeneratePdf }: SendEmailModalProps): JSX.Element | null => {
+const SendEmailModal = ({ isOpen, onClose, resumeName, resumeId, resumeTitle, currentVersion, onGeneratePdf, prefilledClientId, prefilledContactId, missionTitle, isAdaptation }: SendEmailModalProps): JSX.Element | null => {
   const { t } = useTranslation();
   const { user } = useAuth();
   
@@ -135,12 +140,9 @@ const SendEmailModal = ({ isOpen, onClose, resumeName, resumeId, resumeTitle, cu
     try {
       const templatesData = await emailTemplateService.getTemplates();
       setTemplates(templatesData);
-      // Auto-select default template
-      const defaultTemplate = templatesData.find(t => t.is_default);
-      if (defaultTemplate) {
-        setSelectedTemplateId(defaultTemplate.id);
-        setSelectedTemplate(defaultTemplate);
-      }
+      // Do not auto-select any template - user must choose
+      setSelectedTemplateId('');
+      setSelectedTemplate(null);
     } catch (error) {
       logger.error('Error loading templates:', error);
     } finally {
@@ -168,6 +170,28 @@ const SendEmailModal = ({ isOpen, onClose, resumeName, resumeId, resumeTitle, cu
       loadTemplates();
     }
   }, [isOpen, checkMailStatus, loadClients, loadTemplates]);
+
+  // Pre-fill client and contact from props (for adaptation emails)
+  useEffect(() => {
+    if (isOpen && prefilledClientId && clients.length > 0) {
+      const client = clients.find(c => c.id === prefilledClientId);
+      if (client) {
+        setSelectedClientId(prefilledClientId);
+        loadClientDetails(prefilledClientId);
+      }
+    }
+  }, [isOpen, prefilledClientId, clients, loadClientDetails]);
+
+  // Pre-fill contact after client is loaded
+  useEffect(() => {
+    if (prefilledContactId && selectedClient?.contacts) {
+      const contact = selectedClient.contacts.find(c => c.id === prefilledContactId);
+      if (contact) {
+        setSelectedContactId(prefilledContactId);
+        setSelectedContact(contact);
+      }
+    }
+  }, [prefilledContactId, selectedClient]);
 
   // Update selected template when template ID changes
   useEffect(() => {
@@ -493,7 +517,7 @@ const SendEmailModal = ({ isOpen, onClose, resumeName, resumeId, resumeTitle, cu
                 {/* Template selection */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('mail.modal.selectTemplate')}
+                    {t('mail.modal.selectTemplate')} *
                   </label>
                   <div className="flex gap-2">
                     <select
@@ -502,10 +526,10 @@ const SendEmailModal = ({ isOpen, onClose, resumeName, resumeId, resumeTitle, cu
                       className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                       disabled={loadingTemplates}
                     >
-                      <option value="">{loadingTemplates ? t('common.loading') : t('mail.modal.noTemplate')}</option>
-                      {templates.map((template) => (
+                      <option value="" disabled>{loadingTemplates ? t('common.loading') : t('mail.modal.chooseTemplate', 'Choisir un template')}</option>
+                      {templates.filter(t => !t.is_system).map((template) => (
                         <option key={template.id} value={template.id}>
-                          {template.name} {template.is_default ? `(${t('mail.modal.default')})` : ''} {template.is_system ? `[${t('mail.modal.system')}]` : ''}
+                          {template.name}
                         </option>
                       ))}
                     </select>
@@ -603,9 +627,9 @@ const SendEmailModal = ({ isOpen, onClose, resumeName, resumeId, resumeTitle, cu
               </button>
               <button
                 onClick={handleSend}
-                disabled={!selectedContact?.email || sending}
+                disabled={!selectedContact?.email || !selectedTemplateId || sending}
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  selectedContact?.email && !sending
+                  selectedContact?.email && selectedTemplateId && !sending
                     ? 'bg-blue-500 hover:bg-blue-600 text-white'
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 }`}

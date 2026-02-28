@@ -142,6 +142,24 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
             return res.status(403).json({ error: 'Access denied: You can only view adaptations from your firm' });
         }
         
+        // Fetch mission client/contact info if mission_id exists
+        let missionClientId = null;
+        let missionContactId = null;
+        if (record.mission_id) {
+            try {
+                const missionResult = await selectWithTimeout('missions', {
+                    rawQuery: 'SELECT client_id, contact_id FROM missions WHERE id = $1',
+                    rawParams: [record.mission_id]
+                });
+                if (missionResult.length > 0) {
+                    missionClientId = missionResult[0].client_id;
+                    missionContactId = missionResult[0].contact_id;
+                }
+            } catch (missionError) {
+                safeLog('warn', 'Could not fetch mission client/contact', { error: missionError.message });
+            }
+        }
+        
         res.json({
             id: record.id,
             'Resume ID': record.resume_id,
@@ -149,6 +167,8 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
             'Resume Name': record.resume_name,
             'Mission Title': record.mission_title,
             'Mission Content': record.mission_content,
+            'Mission Client ID': missionClientId,
+            'Mission Contact ID': missionContactId,
             'Adapted Text': record.adapted_text,
             'Match Score': record.match_score,
             'Match Analysis': record.match_analysis,

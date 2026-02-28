@@ -853,6 +853,7 @@
     "viewAdaptation": "View adaptation",
     "delete": "Delete",
     "exportPDF": "Export PDF",
+    "sendEmail": "Send by email",
     "mission": "Mission",
     "searchPlaceholder": "Search by resume or mission...",
     "filterStatus": "All statuses",

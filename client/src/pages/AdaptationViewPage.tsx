@@ -13,7 +13,8 @@ import {
   BriefcaseIcon,
   CalendarIcon,
   ChartBarIcon,
-  ArrowDownTrayIcon
+  ArrowDownTrayIcon,
+  EnvelopeIcon
 } from '@heroicons/react/24/outline';
 import { useAuthFetch } from '../hooks/useAuthFetch';
 import { createSafeHtml } from '../utils/sanitizer.frontend';
@@ -21,6 +22,7 @@ import { createAuthOptionsWithCsrf, fetchWithAuth } from '../utils/apiIntercepto
 import { templateService } from '../utils/templateService';
 import { loadTinyMCE } from '../utils/lazyTinyMCE';
 import AdaptationAnalysisView from '../components/AdaptationAnalysisView';
+import SendEmailModal from '../components/ResumeAnalysis/SendEmailModal';
 import toast from 'react-hot-toast';
 import logger from '../utils/logger.frontend';
 import { formatDate } from '../utils/dateFormatter';
@@ -49,6 +51,8 @@ interface Adaptation {
   'Match Analysis'?: string;
   'Mission Title'?: string;
   'Mission Content'?: string;
+  'Mission Client ID'?: string;
+  'Mission Contact ID'?: string;
   Status?: string;
   'Created At'?: string;
   ResumeName?: string;
@@ -79,6 +83,9 @@ const AdaptationViewPage = (): JSX.Element => {
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
+  
+  // Email modal state
+  const [showEmailModal, setShowEmailModal] = useState(false);
 
   useEffect(() => {
     const loadAdaptation = async () => {
@@ -481,6 +488,13 @@ const AdaptationViewPage = (): JSX.Element => {
                     {/* Action buttons */}
                     <div className="flex justify-end gap-3">
                       <button 
+                        onClick={() => setShowEmailModal(true)}
+                        className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+                      >
+                        <EnvelopeIcon className="w-4 h-4" />
+                        {t('adaptations.sendEmail', 'Envoyer par email')}
+                      </button>
+                      <button 
                         onClick={() => setShowExportModal(true)}
                         className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 transition-colors"
                       >
@@ -606,6 +620,77 @@ const AdaptationViewPage = (): JSX.Element => {
             </div>
           </motion.div>
         </div>
+      )}
+
+      {/* Email Modal */}
+      {showEmailModal && adaptation && (
+        <SendEmailModal
+          isOpen={showEmailModal}
+          resumeId={adaptation['Resume ID'] || (adaptation.Resume && adaptation.Resume[0]) || ''}
+          resumeName={adaptation['Resume Name'] || adaptation.ResumeName || ''}
+          resumeTitle={adaptation.ResumeTitle || adaptation['Mission Title'] || ''}
+          currentVersion={1}
+          onClose={() => setShowEmailModal(false)}
+          onGeneratePdf={async () => {
+            // Always fetch templates to ensure we have one for PDF generation
+            const allTemplates = await templateService.getAllTemplates();
+            if (!allTemplates || allTemplates.length === 0) {
+              throw new Error('No CV template available');
+            }
+            // Use selectedTemplate if valid, otherwise use first available
+            let template: Template | null = null;
+            if (selectedTemplate) {
+              template = allTemplates.find((t: Template) => t.id === selectedTemplate) || null;
+            }
+            if (!template) {
+              template = allTemplates[0];
+            }
+            
+            const content = editorRef.current?.getContent() || adaptation['Adapted Text'] || '';
+            const name = adaptation['Resume Name'] || adaptation.ResumeName || 'Candidat';
+            const title = adaptation['Mission Title'] || 'CV Adapté';
+
+            let processedBody = template.TemplateContent || '';
+            processedBody = processedBody.replace(/-name-/g, name);
+            processedBody = processedBody.replace(/-title-/g, title);
+            processedBody = processedBody.replace(/-content-/g, content);
+
+            const htmlContent = `
+              <!DOCTYPE html>
+              <html>
+              <head>
+                <meta charset="UTF-8">
+                <style>${template.Stylesheet || ''}</style>
+              </head>
+              <body>
+                ${template.HeaderContent || ''}
+                ${processedBody}
+                ${template.FooterContent || ''}
+              </body>
+              </html>
+            `;
+
+            const pdfFilename = `${name.replace(/[^a-zA-Z0-9]/g, '_')}_${title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+            
+            const options = await createAuthOptionsWithCsrf({
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                htmlContent,
+                filename: pdfFilename,
+                footerHeight: template.FooterHeight || 50
+              })
+            });
+
+            const response = await fetchWithAuth('/generate-pdf', options);
+            if (!response.ok) throw new Error('Failed to generate PDF');
+            return await response.blob();
+          }}
+          prefilledClientId={adaptation['Mission Client ID'] as string | undefined}
+          prefilledContactId={adaptation['Mission Contact ID'] as string | undefined}
+          missionTitle={adaptation['Mission Title']}
+          isAdaptation={true}
+        />
       )}
     </div>
   );
