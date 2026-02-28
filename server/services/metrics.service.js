@@ -432,22 +432,36 @@ class MetricsCollector {
     }
 
     // Get pricing for a specific model (prices per 1M tokens)
+    // Updated Q1 2026 with latest OpenAI and Anthropic pricing
     getModelPricing(model) {
         const modelLower = model.toLowerCase();
         
-        // OpenAI pricing (as of 2026)
-        // GPT-5.2 models
+        // ============================================
+        // OpenAI pricing (Q1 2026)
+        // ============================================
+        
+        // GPT-5.2 models (Feb 2026 - current flagship)
         if (modelLower.includes('gpt-5.2-pro')) {
-            return { input: 10.00, output: 30.00 }; // GPT-5.2 Pro (reasoning model)
+            return { input: 21.00, output: 168.00 }; // GPT-5.2 Pro (premium tier)
         }
         if (modelLower.includes('gpt-5.2')) {
-            return { input: 5.00, output: 15.00 }; // GPT-5.2
+            return { input: 1.75, output: 14.00 }; // GPT-5.2 (flagship)
         }
-        // GPT-5.1 models
+        
+        // GPT-5 mini/nano models
+        if (modelLower.includes('gpt-5-nano') || modelLower.includes('gpt-5.2-nano')) {
+            return { input: 0.05, output: 0.40 }; // GPT-5 Nano (smallest)
+        }
+        if (modelLower.includes('gpt-5-mini') || modelLower.includes('gpt-5.2-mini')) {
+            return { input: 0.25, output: 2.00 }; // GPT-5 Mini
+        }
+        
+        // GPT-5.1 models (deprecated but still supported)
         if (modelLower.includes('gpt-5.1')) {
             return { input: 4.00, output: 12.00 }; // GPT-5.1
         }
-        // GPT-5 base models
+        
+        // GPT-5 base models (deprecated)
         if (modelLower.includes('gpt-5-pro')) {
             return { input: 8.00, output: 24.00 }; // GPT-5 Pro
         }
@@ -455,10 +469,10 @@ class MetricsCollector {
             return { input: 6.00, output: 18.00 }; // GPT-5 Codex
         }
         if (modelLower.includes('gpt-5')) {
-            return { input: 3.00, output: 10.00 }; // GPT-5 base
+            return { input: 3.00, output: 10.00 }; // GPT-5 base (deprecated)
         }
         
-        // GPT-4.1 models (2025)
+        // GPT-4.1 models (deprecated)
         if (modelLower.includes('gpt-4.1-nano')) {
             return { input: 0.10, output: 0.40 }; // GPT-4.1 Nano
         }
@@ -469,7 +483,7 @@ class MetricsCollector {
             return { input: 2.00, output: 8.00 }; // GPT-4.1
         }
         
-        // GPT-4o models
+        // GPT-4o models (deprecated)
         if (modelLower.includes('gpt-4o-mini')) {
             return { input: 0.15, output: 0.60 }; // GPT-4o Mini
         }
@@ -477,7 +491,7 @@ class MetricsCollector {
             return { input: 2.50, output: 10.00 }; // GPT-4o
         }
         
-        // GPT-4 models
+        // GPT-4 models (deprecated)
         if (modelLower.includes('gpt-4-turbo')) {
             return { input: 10.00, output: 30.00 }; // GPT-4 Turbo
         }
@@ -485,7 +499,7 @@ class MetricsCollector {
             return { input: 30.00, output: 60.00 }; // GPT-4
         }
         
-        // GPT-3.5
+        // GPT-3.5 (deprecated)
         if (modelLower.includes('gpt-3.5-turbo')) {
             return { input: 0.50, output: 1.50 }; // GPT-3.5 Turbo
         }
@@ -513,9 +527,24 @@ class MetricsCollector {
             return { input: 15.00, output: 60.00 }; // o1
         }
         
-        // Anthropic pricing
-        if (modelLower.includes('claude-3-opus')) {
-            return { input: 15.00, output: 75.00 }; // Claude 3 Opus
+        // ============================================
+        // Anthropic pricing (Q1 2026)
+        // ============================================
+        
+        // Claude 4.6 models (current generation)
+        if (modelLower.includes('claude-opus-4.6') || modelLower.includes('claude-4-opus')) {
+            return { input: 5.00, output: 25.00 }; // Claude Opus 4.6
+        }
+        if (modelLower.includes('claude-sonnet-4.6') || modelLower.includes('claude-4-sonnet')) {
+            return { input: 3.00, output: 15.00 }; // Claude Sonnet 4.6
+        }
+        if (modelLower.includes('claude-haiku-4.5') || modelLower.includes('claude-4-haiku')) {
+            return { input: 1.00, output: 5.00 }; // Claude Haiku 4.5
+        }
+        
+        // Claude 3.x models (deprecated but still supported)
+        if (modelLower.includes('claude-3-opus') || modelLower.includes('claude-opus-4.1')) {
+            return { input: 15.00, output: 75.00 }; // Claude 3 Opus / Opus 4.1 (deprecated)
         }
         if (modelLower.includes('claude-3-5-sonnet') || modelLower.includes('claude-3.5-sonnet')) {
             return { input: 3.00, output: 15.00 }; // Claude 3.5 Sonnet
@@ -524,11 +553,16 @@ class MetricsCollector {
             return { input: 3.00, output: 15.00 }; // Claude 3 Sonnet
         }
         if (modelLower.includes('claude-3-haiku')) {
-            return { input: 0.25, output: 1.25 }; // Claude 3 Haiku
+            return { input: 0.25, output: 1.25 }; // Claude 3 Haiku (deprecated)
         }
         
-        // Default fallback (conservative estimate)
-        return { input: 2.00, output: 6.00 };
+        // Generic Claude fallback (use Sonnet pricing)
+        if (modelLower.includes('claude')) {
+            return { input: 3.00, output: 15.00 }; // Default Claude pricing
+        }
+        
+        // Default fallback (conservative estimate based on GPT-5.2)
+        return { input: 1.75, output: 14.00 };
     }
 
     // Get comprehensive metrics

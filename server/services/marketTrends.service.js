@@ -440,44 +440,84 @@ function safeSerializeMetadata(metadata) {
 }
 
 /**
+ * Generate MD5 hash of API response for verification
+ */
+function generateResponseHash(data) {
+    if (!data) return null;
+    try {
+        const crypto = require('crypto');
+        const jsonStr = JSON.stringify(data);
+        return crypto.createHash('md5').update(jsonStr).digest('hex');
+    } catch (error) {
+        return null;
+    }
+}
+
+/**
  * Store a market trend record in PostgreSQL (upsert)
  * Ensures uniqueness by Type + RegionCode + CodeRome
+ * Now includes audit/traceability fields
  */
 async function storeTrend(trend) {
     try {
-        // Check if record already exists
+        // Check if record already exists and get previous value for change tracking
         const existing = await dbQuery(
-            `SELECT id FROM ${MARKET_TRENDS_TABLE} 
+            `SELECT id, value FROM ${MARKET_TRENDS_TABLE} 
              WHERE type = $1 AND COALESCE(region_code, '') = $2 AND COALESCE(code_rome, '') = $3`,
             [trend.type, trend.regionCode || '', trend.codeRome || '']
         );
         
         const metadata = safeSerializeMetadata(trend.metadata);
+        const apiResponseHash = generateResponseHash(trend.metadata);
         
         if (existing.rows.length > 0) {
-            // Update existing record
+            const previousValue = existing.rows[0].value;
+            const newValue = trend.value;
+            
+            // Detect significant changes (>50%) and log warning
+            if (previousValue && newValue && previousValue !== 0) {
+                const changePercent = Math.abs((newValue - previousValue) / previousValue) * 100;
+                if (changePercent > 50) {
+                    safeLog('warn', 'MarketTrends: Significant value change detected', {
+                        type: trend.type,
+                        regionCode: trend.regionCode,
+                        codeRome: trend.codeRome,
+                        previousValue,
+                        newValue,
+                        changePercent: changePercent.toFixed(1) + '%'
+                    });
+                }
+            }
+            
+            // Update existing record with audit fields
             const result = await dbQuery(
                 `UPDATE ${MARKET_TRENDS_TABLE} SET
                     date = $1, rome_label = $2, region = $3, secteur = $4,
-                    value = $5, value_label = $6, metadata = $7, updated_at = NOW()
+                    value = $5, value_label = $6, metadata = $7, updated_at = NOW(),
+                    collected_at = NOW(), api_endpoint = $9, quarter_period = $10,
+                    api_response_hash = $11, previous_value = $12
                 WHERE id = $8 RETURNING *`,
                 [trend.date, trend.romeLabel, trend.region, trend.secteur, 
-                 trend.value, trend.valueLabel, metadata, existing.rows[0].id]
+                 trend.value, trend.valueLabel, metadata, existing.rows[0].id,
+                 trend.apiEndpoint || null, trend.quarterPeriod || null,
+                 apiResponseHash, previousValue]
             );
             
             safeLog('debug', 'MarketTrends: Updated existing trend', {
                 type: trend.type, regionCode: trend.regionCode, codeRome: trend.codeRome
             });
             
-            return { record: result.rows[0], action: 'updated' };
+            return { record: result.rows[0], action: 'updated', previousValue };
         } else {
-            // Create new record
+            // Create new record with audit fields
             const result = await dbQuery(
                 `INSERT INTO ${MARKET_TRENDS_TABLE} 
-                    (type, code_rome, rome_label, region, region_code, secteur, date, value, value_label, metadata)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+                    (type, code_rome, rome_label, region, region_code, secteur, date, value, value_label, metadata,
+                     collected_at, api_endpoint, quarter_period, api_response_hash)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), $11, $12, $13) RETURNING *`,
                 [trend.type, trend.codeRome, trend.romeLabel, trend.region, 
-                 trend.regionCode, trend.secteur, trend.date, trend.value, trend.valueLabel, metadata]
+                 trend.regionCode, trend.secteur, trend.date, trend.value, trend.valueLabel, metadata,
+                 trend.apiEndpoint || null, trend.quarterPeriod || null, apiResponseHash]
             );
             
             safeLog('debug', 'MarketTrends: Created new trend', {
@@ -717,7 +757,9 @@ async function collectMarketTrends(options = {}) {
                     regionCode: region.code,
                     value: extractTensionValue(data),
                     valueLabel: extractValueLabel(data),
-                    metadata: prepareMetadata(data, rome)
+                    metadata: prepareMetadata(data, rome),
+                    apiEndpoint: 'stat-perspective-employeur',
+                    quarterPeriod: quarter
                 };
                 
                 if (onTrendCollected) {
@@ -755,7 +797,9 @@ async function collectMarketTrends(options = {}) {
                 romeLabel: getRomeLabel(rome),
                 value: extractSalaireValue(data),
                 valueLabel: extractValueLabel(data),
-                metadata: prepareMetadata(data, rome)
+                metadata: prepareMetadata(data, rome),
+                apiEndpoint: 'salaire-rome-fap',
+                quarterPeriod: quarter
             };
             
             if (onTrendCollected) {
@@ -834,7 +878,9 @@ async function collectMarketTrends(options = {}) {
                 regionCode: region.code,
                 value: extractRawValue(data),
                 valueLabel: extractDynamiqueLabel(data),
-                metadata: prepareMetadata(data, null)
+                metadata: prepareMetadata(data, null),
+                apiEndpoint: 'stat-dynamique-emploi',
+                quarterPeriod: quarter
             };
             
             // Explicit cleanup of API response
@@ -894,7 +940,9 @@ async function collectMarketTrends(options = {}) {
                     regionCode: region.code,
                     value: extractEmbaucheValue(data),
                     valueLabel: extractValueLabel(data),
-                    metadata: prepareMetadata(data, rome)
+                    metadata: prepareMetadata(data, rome),
+                    apiEndpoint: 'stat-embauches',
+                    quarterPeriod: quarter
                 };
                 
                 if (onTrendCollected) {
@@ -942,7 +990,9 @@ async function collectMarketTrends(options = {}) {
                     regionCode: region.code,
                     value: extractOffreValue(data),
                     valueLabel: extractValueLabel(data),
-                    metadata: prepareMetadata(data, rome)
+                    metadata: prepareMetadata(data, rome),
+                    apiEndpoint: 'stat-offres',
+                    quarterPeriod: quarter
                 };
                 
                 if (onTrendCollected) {
@@ -990,7 +1040,9 @@ async function collectMarketTrends(options = {}) {
                     regionCode: region.code,
                     value: extractDemandeurValue(data),
                     valueLabel: extractValueLabel(data),
-                    metadata: prepareMetadata(data, rome)
+                    metadata: prepareMetadata(data, rome),
+                    apiEndpoint: 'stat-demandeurs',
+                    quarterPeriod: quarter
                 };
                 
                 if (onTrendCollected) {
@@ -1038,7 +1090,9 @@ async function collectMarketTrends(options = {}) {
                     regionCode: region.code,
                     value: extractDemandeurValue(data),
                     valueLabel: extractValueLabel(data),
-                    metadata: prepareMetadata(data, rome)
+                    metadata: prepareMetadata(data, rome),
+                    apiEndpoint: 'stat-demandeurs-entrant',
+                    quarterPeriod: quarter
                 };
                 
                 if (onTrendCollected) {
@@ -1065,13 +1119,106 @@ async function collectMarketTrends(options = {}) {
     }
 
     const totalCount = onTrendCollected ? savedCount : trends.length;
+    
+    // Generate collection summary report
+    const collectionReport = await generateCollectionReport(quarter, collectionDate);
+    
     safeLog('info', 'MarketTrends: Collection completed', {
         totalTrends: totalCount,
-        savedImmediately: savedCount
+        savedImmediately: savedCount,
+        report: collectionReport
     });
 
     // Return empty array if using callback (data already saved), otherwise return accumulated trends
     return onTrendCollected ? [] : trends;
+}
+
+/**
+ * Generate a summary report after collection
+ * Compares current data with previous values and identifies anomalies
+ */
+async function generateCollectionReport(quarterPeriod, collectionDate) {
+    try {
+        // Get summary statistics by type
+        const summaryQuery = `
+            SELECT 
+                type,
+                COUNT(*) as total_records,
+                COUNT(CASE WHEN value IS NOT NULL THEN 1 END) as records_with_value,
+                SUM(CASE WHEN value IS NOT NULL THEN value ELSE 0 END) as total_value,
+                AVG(CASE WHEN value IS NOT NULL THEN value ELSE NULL END) as avg_value,
+                COUNT(CASE WHEN previous_value IS NOT NULL THEN 1 END) as updated_records,
+                COUNT(CASE WHEN previous_value IS NOT NULL AND previous_value != 0 
+                      AND ABS((value - previous_value) / previous_value) > 0.5 THEN 1 END) as significant_changes
+            FROM ${MARKET_TRENDS_TABLE}
+            WHERE DATE(collected_at) = $1
+            GROUP BY type
+            ORDER BY type
+        `;
+        
+        const summaryResult = await dbQuery(summaryQuery, [collectionDate]);
+        
+        // Get top significant changes
+        const changesQuery = `
+            SELECT type, region_code, code_rome, rome_label,
+                   previous_value, value,
+                   ROUND(ABS((value - previous_value) / NULLIF(previous_value, 0)) * 100, 1) as change_percent
+            FROM ${MARKET_TRENDS_TABLE}
+            WHERE DATE(collected_at) = $1
+              AND previous_value IS NOT NULL 
+              AND previous_value != 0
+              AND ABS((value - previous_value) / previous_value) > 0.5
+            ORDER BY ABS((value - previous_value) / previous_value) DESC
+            LIMIT 10
+        `;
+        
+        const changesResult = await dbQuery(changesQuery, [collectionDate]);
+        
+        const report = {
+            quarterPeriod,
+            collectionDate,
+            generatedAt: new Date().toISOString(),
+            summary: {
+                byType: summaryResult.rows.map(row => ({
+                    type: row.type,
+                    totalRecords: parseInt(row.total_records),
+                    recordsWithValue: parseInt(row.records_with_value),
+                    totalValue: parseFloat(row.total_value) || 0,
+                    avgValue: parseFloat(row.avg_value) || 0,
+                    updatedRecords: parseInt(row.updated_records),
+                    significantChanges: parseInt(row.significant_changes)
+                })),
+                totalRecordsCollected: summaryResult.rows.reduce((sum, r) => sum + parseInt(r.total_records), 0),
+                totalSignificantChanges: summaryResult.rows.reduce((sum, r) => sum + parseInt(r.significant_changes), 0)
+            },
+            topChanges: changesResult.rows.map(row => ({
+                type: row.type,
+                regionCode: row.region_code,
+                codeRome: row.code_rome,
+                romeLabel: row.rome_label,
+                previousValue: parseFloat(row.previous_value),
+                currentValue: parseFloat(row.value),
+                changePercent: parseFloat(row.change_percent)
+            }))
+        };
+        
+        // Log warnings for significant changes
+        if (report.summary.totalSignificantChanges > 0) {
+            safeLog('warn', 'MarketTrends: Collection report - Significant changes detected', {
+                totalSignificantChanges: report.summary.totalSignificantChanges,
+                topChanges: report.topChanges.slice(0, 5)
+            });
+        }
+        
+        return report;
+    } catch (error) {
+        safeLog('error', 'MarketTrends: Failed to generate collection report', { error: error.message });
+        return {
+            quarterPeriod,
+            collectionDate,
+            error: error.message
+        };
+    }
 }
 
 /**
@@ -1194,9 +1341,10 @@ async function getStoredTrendsLight(options = {}) {
         const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
         
         // Direct PostgreSQL query - NO metadata column (saves memory)
-        // Uses indexes for fast filtering
+        // Includes audit fields for freshness display
         const query = `
-            SELECT id, type, code_rome, rome_label, region, region_code, date, value, value_label
+            SELECT id, type, code_rome, rome_label, region, region_code, date, value, value_label,
+                   collected_at, api_endpoint, quarter_period
             FROM ${MARKET_TRENDS_TABLE}
             ${whereClause}
             ORDER BY date DESC
@@ -1213,8 +1361,11 @@ async function getStoredTrendsLight(options = {}) {
             RegionCode: record.region_code,
             Date: record.date,
             Value: record.value,
-            ValueLabel: record.value_label
-            // NO Metadata - not needed for map
+            ValueLabel: record.value_label,
+            // Audit fields for freshness display
+            CollectedAt: record.collected_at,
+            ApiEndpoint: record.api_endpoint,
+            QuarterPeriod: record.quarter_period
         }));
         
         const duration = Date.now() - startTime;

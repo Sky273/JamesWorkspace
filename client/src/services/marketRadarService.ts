@@ -419,6 +419,12 @@ export interface MarketTrend {
   Value?: number;
   ValueLabel?: string;
   Metadata?: Record<string, unknown>;
+  // Audit fields
+  CollectedAt?: string;
+  ApiEndpoint?: string;
+  QuarterPeriod?: string;
+  ApiResponseHash?: string;
+  PreviousValue?: number;
 }
 
 export interface TrendsSummary {
@@ -632,6 +638,61 @@ export async function getTrendsSummary(): Promise<{
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.message || 'Failed to fetch trends summary');
+  }
+
+  return response.json();
+}
+
+/**
+ * Audit report interface
+ */
+export interface TrendsAuditReport {
+  overall: {
+    total_records: number;
+    total_types: number;
+    total_regions: number;
+    total_rome_codes: number;
+    oldest_data: string;
+    newest_data: string;
+  };
+  byType: Array<{
+    type: string;
+    totalRecords: number;
+    oldestCollection: string;
+    newestCollection: string;
+    freshness: {
+      fresh: number;
+      recent: number;
+      stale: number;
+    };
+    updatedRecords: number;
+    avgChangePercent: string | null;
+  }>;
+  significantChanges: Array<{
+    type: string;
+    regionCode: string;
+    codeRome: string;
+    romeLabel: string;
+    previousValue: number;
+    currentValue: number;
+    changePercent: number;
+    collectedAt: string;
+  }>;
+}
+
+/**
+ * Get trends audit report (admin only)
+ */
+export async function getTrendsAudit(): Promise<{
+  success: boolean;
+  audit: TrendsAuditReport;
+  generatedAt: string;
+}> {
+  const response = await fetchWithAuth(`${API_BASE}/trends/audit`);
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to fetch audit report');
   }
 
   return response.json();

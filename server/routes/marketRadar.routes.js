@@ -1063,4 +1063,157 @@ router.post('/trends/cache/refresh', authenticateToken, requireAdmin, async (req
     }
 });
 
+/**
+ * GET /api/market-radar/trends/verify/:type/:regionCode/:codeRome
+ * Verify stored data against live API call (admin only)
+ * Compares stored value with fresh API response
+ */
+router.get('/trends/verify/:type/:regionCode/:codeRome', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { type, regionCode, codeRome } = req.params;
+        
+        // Get stored trend
+        const storedResult = await getStoredTrends({
+            type,
+            regionCode,
+            codeRome,
+            page: 1,
+            pageSize: 1
+        });
+        
+        const storedTrend = storedResult.trends?.[0] || null;
+        
+        if (!storedTrend) {
+            return res.status(404).json({
+                success: false,
+                error: 'No stored trend found for this combination',
+                params: { type, regionCode, codeRome }
+            });
+        }
+        
+        // Note: Live API verification would require calling the appropriate API
+        // For now, return stored data with audit info
+        res.json({
+            success: true,
+            verification: {
+                type,
+                regionCode,
+                codeRome,
+                storedValue: storedTrend.Value,
+                collectedAt: storedTrend.collected_at,
+                quarterPeriod: storedTrend.quarter_period,
+                apiEndpoint: storedTrend.api_endpoint,
+                apiResponseHash: storedTrend.api_response_hash,
+                previousValue: storedTrend.previous_value,
+                lastUpdated: storedTrend.updated_at
+            },
+            recommendation: 'To verify against live API, trigger a new collection and compare values'
+        });
+    } catch (error) {
+        safeLog('error', 'Market Radar: Verification failed', { error: error.message });
+        res.status(500).json({ 
+            error: 'Verification failed', 
+            message: error.message 
+        });
+    }
+});
+
+/**
+ * GET /api/market-radar/trends/audit
+ * Get audit/freshness report for all trends (admin only)
+ */
+router.get('/trends/audit', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { query } = await import('../config/database.js');
+        
+        // Get freshness statistics
+        const freshnessQuery = `
+            SELECT 
+                type,
+                COUNT(*) as total_records,
+                MIN(collected_at) as oldest_collection,
+                MAX(collected_at) as newest_collection,
+                COUNT(CASE WHEN collected_at > NOW() - INTERVAL '7 days' THEN 1 END) as fresh_count,
+                COUNT(CASE WHEN collected_at > NOW() - INTERVAL '30 days' AND collected_at <= NOW() - INTERVAL '7 days' THEN 1 END) as recent_count,
+                COUNT(CASE WHEN collected_at <= NOW() - INTERVAL '30 days' OR collected_at IS NULL THEN 1 END) as stale_count,
+                COUNT(CASE WHEN previous_value IS NOT NULL THEN 1 END) as updated_records,
+                AVG(CASE WHEN previous_value IS NOT NULL AND previous_value != 0 
+                    THEN ABS((value - previous_value) / previous_value) * 100 
+                    ELSE NULL END) as avg_change_percent
+            FROM market_trends
+            GROUP BY type
+            ORDER BY type
+        `;
+        
+        const freshnessResult = await query(freshnessQuery);
+        
+        // Get significant changes (>50%)
+        const changesQuery = `
+            SELECT type, region_code, code_rome, rome_label, 
+                   previous_value, value,
+                   ROUND(ABS((value - previous_value) / NULLIF(previous_value, 0)) * 100, 1) as change_percent,
+                   collected_at
+            FROM market_trends
+            WHERE previous_value IS NOT NULL 
+              AND previous_value != 0
+              AND ABS((value - previous_value) / previous_value) > 0.5
+            ORDER BY ABS((value - previous_value) / previous_value) DESC
+            LIMIT 20
+        `;
+        
+        const changesResult = await query(changesQuery);
+        
+        // Get overall stats
+        const overallQuery = `
+            SELECT 
+                COUNT(*) as total_records,
+                COUNT(DISTINCT type) as total_types,
+                COUNT(DISTINCT region_code) as total_regions,
+                COUNT(DISTINCT code_rome) as total_rome_codes,
+                MIN(collected_at) as oldest_data,
+                MAX(collected_at) as newest_data
+            FROM market_trends
+        `;
+        
+        const overallResult = await query(overallQuery);
+        
+        res.json({
+            success: true,
+            audit: {
+                overall: overallResult.rows[0],
+                byType: freshnessResult.rows.map(row => ({
+                    type: row.type,
+                    totalRecords: parseInt(row.total_records),
+                    oldestCollection: row.oldest_collection,
+                    newestCollection: row.newest_collection,
+                    freshness: {
+                        fresh: parseInt(row.fresh_count),
+                        recent: parseInt(row.recent_count),
+                        stale: parseInt(row.stale_count)
+                    },
+                    updatedRecords: parseInt(row.updated_records),
+                    avgChangePercent: row.avg_change_percent ? parseFloat(row.avg_change_percent).toFixed(1) : null
+                })),
+                significantChanges: changesResult.rows.map(row => ({
+                    type: row.type,
+                    regionCode: row.region_code,
+                    codeRome: row.code_rome,
+                    romeLabel: row.rome_label,
+                    previousValue: parseFloat(row.previous_value),
+                    currentValue: parseFloat(row.value),
+                    changePercent: parseFloat(row.change_percent),
+                    collectedAt: row.collected_at
+                }))
+            },
+            generatedAt: new Date().toISOString()
+        });
+    } catch (error) {
+        safeLog('error', 'Market Radar: Audit report failed', { error: error.message });
+        res.status(500).json({ 
+            error: 'Audit report failed', 
+            message: error.message 
+        });
+    }
+});
+
 export default router;

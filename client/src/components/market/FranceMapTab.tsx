@@ -769,6 +769,46 @@ export default function FranceMapTab({ className = '' }: FranceMapTabProps) {
     return new Set(trends.map(t => t.CodeRome).filter(Boolean)).size;
   }, [trends]);
 
+  // Calculate data freshness info
+  const dataFreshness = useMemo(() => {
+    if (trends.length === 0) return null;
+    
+    // Get most recent and oldest collection dates
+    const collectedDates = trends
+      .map(t => t.CollectedAt)
+      .filter(Boolean)
+      .map(d => new Date(d as string).getTime());
+    
+    if (collectedDates.length === 0) return null;
+    
+    const newestDate = new Date(Math.max(...collectedDates));
+    const oldestDate = new Date(Math.min(...collectedDates));
+    const now = new Date();
+    const daysSinceNewest = Math.floor((now.getTime() - newestDate.getTime()) / (1000 * 60 * 60 * 24));
+    
+    // Get quarter period from first trend that has it
+    const quarterPeriod = trends.find(t => t.QuarterPeriod)?.QuarterPeriod || null;
+    
+    // Determine freshness status
+    let status: 'fresh' | 'recent' | 'stale';
+    if (daysSinceNewest <= 7) {
+      status = 'fresh';
+    } else if (daysSinceNewest <= 30) {
+      status = 'recent';
+    } else {
+      status = 'stale';
+    }
+    
+    return {
+      newestDate,
+      oldestDate,
+      daysSinceNewest,
+      quarterPeriod,
+      status,
+      totalRecords: trends.length
+    };
+  }, [trends]);
+
   // Get current source option for styling
   const currentSourceOption = DATA_SOURCE_OPTIONS.find(o => o.value === dataSource);
   const SourceIcon = currentSourceOption?.icon || ChartBarIcon;
@@ -983,6 +1023,47 @@ export default function FranceMapTab({ className = '' }: FranceMapTabProps) {
           <div className="text-sm text-gray-500 dark:text-gray-400">{t('marketRadar.map.itJobs')}</div>
         </div>
       </div>
+
+      {/* Data Freshness Indicator */}
+      {dataFreshness && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-3">
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                dataFreshness.status === 'fresh' 
+                  ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' 
+                  : dataFreshness.status === 'recent'
+                    ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+                    : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+              }`}>
+                <span className={`w-2 h-2 rounded-full mr-1.5 ${
+                  dataFreshness.status === 'fresh' ? 'bg-green-500' : 
+                  dataFreshness.status === 'recent' ? 'bg-yellow-500' : 'bg-red-500'
+                }`}></span>
+                {dataFreshness.status === 'fresh' ? t('marketRadar.freshness.fresh', 'Données à jour') :
+                 dataFreshness.status === 'recent' ? t('marketRadar.freshness.recent', 'Données récentes') :
+                 t('marketRadar.freshness.stale', 'Données anciennes')}
+              </span>
+              {dataFreshness.quarterPeriod && (
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  {t('marketRadar.freshness.period', 'Période')}: <strong>{dataFreshness.quarterPeriod}</strong>
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+              <span>
+                {t('marketRadar.freshness.collectedAt', 'Collecté le')}: {dataFreshness.newestDate.toLocaleDateString('fr-FR')}
+              </span>
+              <span>
+                {t('marketRadar.freshness.records', 'Enregistrements')}: {dataFreshness.totalRecords.toLocaleString()}
+              </span>
+              <span className="text-gray-400 dark:text-gray-500">
+                Source: France Travail API
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Map Container */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">

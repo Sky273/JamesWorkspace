@@ -6,6 +6,7 @@ import axios from 'axios';
 import { OPENAI_API_KEY, ANTHROPIC_API_KEY } from '../config/constants.js';
 import { getLLMSettings } from './settings.service.js';
 import { safeLog } from '../utils/logger.backend.js';
+import { metrics } from './metrics.service.js';
 
 /**
  * Helper function to determine the correct token parameter based on model
@@ -126,6 +127,13 @@ async function callOpenAI(messages, model, options) {
         }
     );
 
+    // Track LLM metrics
+    const usage = response.data.usage || {};
+    const inputTokens = usage.prompt_tokens || 0;
+    const outputTokens = usage.completion_tokens || 0;
+    const totalTokens = usage.total_tokens || (inputTokens + outputTokens);
+    metrics.trackLLMRequest(model, totalTokens, true, inputTokens, outputTokens);
+
     return {
         content: response.data.choices[0].message.content,
         model: model, // Use configured model, not the one returned by API (which includes date suffix)
@@ -172,6 +180,13 @@ async function callAnthropic(messages, model, options) {
             timeout: 60000
         }
     );
+
+    // Track LLM metrics
+    const usage = response.data.usage || {};
+    const inputTokens = usage.input_tokens || 0;
+    const outputTokens = usage.output_tokens || 0;
+    const totalTokens = inputTokens + outputTokens;
+    metrics.trackLLMRequest(model, totalTokens, true, inputTokens, outputTokens);
 
     return {
         content: response.data.content[0].text,

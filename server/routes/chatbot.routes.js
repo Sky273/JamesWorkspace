@@ -133,16 +133,8 @@ Réponds toujours en français, sauf si l'utilisateur pose sa question en anglai
         });
     }
 
-    // Track LLM usage metrics
-    if (llmResponse.usage) {
-        metrics.trackLLMRequest(
-            llmResponse.model,
-            llmResponse.usage.total_tokens || 0,
-            true,
-            llmResponse.usage.prompt_tokens || 0,
-            llmResponse.usage.completion_tokens || 0
-        );
-    }
+    // Note: LLM metrics are now tracked inside llm.service.js to avoid double counting
+    // The callLLM function tracks metrics automatically
 
     // Track response time
     const responseTime = Date.now() - startTime;
