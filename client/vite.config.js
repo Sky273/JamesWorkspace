@@ -89,8 +89,22 @@ const httpConfigPlugin = () => ({
       next();
     });
     
+    // Redirect /favicon.ico to /favicon.svg to prevent 404
+    server.middlewares.use((req, res, next) => {
+      if (req.url === '/favicon.ico') {
+        res.writeHead(302, { Location: '/favicon.svg' });
+        res.end();
+        return;
+      }
+      next();
+    });
+    
     // Log all requests at the earliest possible point
     server.middlewares.use((req, res, next) => {
+      // Skip logging favicon requests
+      if (req.url === '/favicon.svg' || req.url === '/favicon.ico') {
+        return next();
+      }
       console.log(`[Vite] ${new Date().toISOString()} ${req.method} ${req.url}`);
       
       // Intercept response to log errors

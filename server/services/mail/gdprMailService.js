@@ -2,19 +2,23 @@
  * GDPR Mail Service
  * Handles Gmail OAuth and direct email sending for GDPR consent requests
  * 
- * IMPORTANT: This service is DEDICATED to GDPR consent emails.
- * It stores tokens at FIRM level (not user level).
+ * IMPORTANT: This service uses a GLOBAL Gmail token for ALL GDPR consent emails.
+ * The token is stored in the global_gdpr_mail_token table (single row).
+ * Email templates remain firm-specific.
  * 
  * SEPARATION OF CONCERNS:
  * - SSO Authentication: googleAuth.service.js (no token storage)
  * - CV Email Sending: mailService.js (user_mail_tokens table)
- * - GDPR Consent Emails: THIS SERVICE (firm_gdpr_mail_tokens table)
+ * - GDPR Consent Emails: THIS SERVICE (global_gdpr_mail_token table - GLOBAL)
  * 
  * Each service has its own:
  * - Redirect URI (GOOGLE_GDPR_REDIRECT_URI)
  * - Scopes (gmail.send for direct sending)
- * - Token storage (firm_gdpr_mail_tokens)
+ * - Token storage (global_gdpr_mail_token - SINGLE GLOBAL TOKEN)
  * - OAuth2 client instance (new instance per call)
+ * 
+ * TOKEN REFRESH: The access token is automatically refreshed using the refresh_token
+ * when it expires. Google refresh tokens are long-lived but can be revoked.
  */
 
 import { query } from '../../config/database.js';
@@ -73,12 +77,11 @@ export async function getAuthUrl(state) {
 }
 
 /**
- * Handle OAuth callback - exchange code and store tokens
+ * Handle OAuth callback - exchange code and store GLOBAL token
  * @param {string} code - Authorization code
- * @param {string} firmId - Firm ID
  * @returns {Promise<Object>}
  */
-export async function handleOAuthCallback(code, firmId) {
+export async function handleOAuthCallback(code) {
     const oauth2Client = await getOAuth2Client();
     const { tokens } = await oauth2Client.getToken(code);
     
@@ -99,36 +102,35 @@ export async function handleOAuthCallback(code, firmId) {
         ? Math.floor((tokens.expiry_date - Date.now()) / 1000) 
         : 3600);
 
-    // Upsert tokens in database (firm level)
+    // Upsert GLOBAL token in database (single row with id='global')
     await query(`
-        INSERT INTO firm_gdpr_mail_tokens (firm_id, provider, access_token_encrypted, refresh_token_encrypted, token_expiry, email)
-        VALUES ($1, $2, $3, $4, $5, $6)
-        ON CONFLICT (firm_id) 
+        INSERT INTO global_gdpr_mail_token (id, provider, access_token_encrypted, refresh_token_encrypted, token_expiry, email)
+        VALUES ('global', $1, $2, $3, $4, $5)
+        ON CONFLICT (id) 
         DO UPDATE SET 
             provider = EXCLUDED.provider,
             access_token_encrypted = EXCLUDED.access_token_encrypted,
-            refresh_token_encrypted = COALESCE(EXCLUDED.refresh_token_encrypted, firm_gdpr_mail_tokens.refresh_token_encrypted),
+            refresh_token_encrypted = COALESCE(EXCLUDED.refresh_token_encrypted, global_gdpr_mail_token.refresh_token_encrypted),
             token_expiry = EXCLUDED.token_expiry,
             email = EXCLUDED.email,
             updated_at = CURRENT_TIMESTAMP
-    `, [firmId, 'gmail', accessTokenEncrypted, refreshTokenEncrypted, tokenExpiry, email]);
+    `, ['gmail', accessTokenEncrypted, refreshTokenEncrypted, tokenExpiry, email]);
 
-    safeLog('info', 'GDPR Gmail tokens stored', { firmId, email });
+    safeLog('info', 'GDPR Gmail GLOBAL token stored', { email });
 
     return { email, provider: 'gmail' };
 }
 
 /**
- * Get connection status for a firm
- * @param {string} firmId
+ * Get GLOBAL connection status
  * @returns {Promise<Object>}
  */
-export async function getConnectionStatus(firmId) {
+export async function getConnectionStatus() {
     const result = await query(`
         SELECT provider, email, token_expiry, updated_at
-        FROM firm_gdpr_mail_tokens
-        WHERE firm_id = $1
-    `, [firmId]);
+        FROM global_gdpr_mail_token
+        WHERE id = 'global'
+    `);
 
     if (result.rows.length === 0) {
         return { connected: false };
@@ -142,36 +144,40 @@ export async function getConnectionStatus(firmId) {
         provider: token.provider,
         email: token.email,
         expiresAt: token.token_expiry,
+        updatedAt: token.updated_at,
         needsReauth: expired
     };
 }
 
 /**
- * Get valid access token for firm (refreshes if needed)
- * @param {string} firmId
+ * Get valid GLOBAL access token (refreshes if needed)
+ * This is the core function that handles token refresh automatically
  * @returns {Promise<string>}
  */
-async function getAccessToken(firmId) {
+async function getAccessToken() {
     const result = await query(`
         SELECT access_token_encrypted, refresh_token_encrypted, token_expiry
-        FROM firm_gdpr_mail_tokens
-        WHERE firm_id = $1
-    `, [firmId]);
+        FROM global_gdpr_mail_token
+        WHERE id = 'global'
+    `);
 
     if (result.rows.length === 0) {
-        throw new Error('Gmail RGPD non configuré. Veuillez connecter un compte Gmail dans les paramètres.');
+        throw new Error('Gmail RGPD non configuré. Un administrateur doit connecter un compte Gmail dans Paramètres → RGPD Mail.');
     }
 
     const tokenData = result.rows[0];
     const expired = isTokenExpired(tokenData.token_expiry);
 
     if (!expired) {
+        safeLog('debug', 'GDPR token still valid, using cached token');
         return decryptToken(tokenData.access_token_encrypted);
     }
 
-    // Token expired - try to refresh
+    // Token expired - try to refresh using refresh_token
+    safeLog('info', 'GDPR access token expired, attempting refresh');
+    
     if (!tokenData.refresh_token_encrypted) {
-        throw new Error('Token expiré et pas de refresh token. Veuillez reconnecter Gmail.');
+        throw new Error('Token expiré et pas de refresh token. Un administrateur doit reconnecter Gmail.');
     }
 
     const refreshToken = decryptToken(tokenData.refresh_token_encrypted);
@@ -181,7 +187,7 @@ async function getAccessToken(firmId) {
     try {
         const { credentials } = await oauth2Client.refreshAccessToken();
         
-        // Update stored tokens
+        // Update stored tokens with new access token (and refresh token if provided)
         const newAccessTokenEncrypted = encryptToken(credentials.access_token);
         const newRefreshTokenEncrypted = credentials.refresh_token 
             ? encryptToken(credentials.refresh_token) 
@@ -191,27 +197,30 @@ async function getAccessToken(firmId) {
             : 3600);
 
         await query(`
-            UPDATE firm_gdpr_mail_tokens
+            UPDATE global_gdpr_mail_token
             SET access_token_encrypted = $1,
                 refresh_token_encrypted = $2,
                 token_expiry = $3,
                 updated_at = CURRENT_TIMESTAMP
-            WHERE firm_id = $4
-        `, [newAccessTokenEncrypted, newRefreshTokenEncrypted, newExpiry, firmId]);
+            WHERE id = 'global'
+        `, [newAccessTokenEncrypted, newRefreshTokenEncrypted, newExpiry]);
 
-        safeLog('info', 'GDPR Gmail token refreshed', { firmId });
+        safeLog('info', 'GDPR Gmail GLOBAL token refreshed successfully', { 
+            newExpiry: newExpiry.toISOString(),
+            hasNewRefreshToken: !!credentials.refresh_token
+        });
 
         return credentials.access_token;
     } catch (error) {
-        safeLog('error', 'GDPR token refresh failed', { firmId, error: error.message });
+        safeLog('error', 'GDPR GLOBAL token refresh failed', { error: error.message });
         
         // Mark token as invalid in database to force re-authentication
         await query(`
-            UPDATE firm_gdpr_mail_tokens
+            UPDATE global_gdpr_mail_token
             SET token_expiry = NOW() - INTERVAL '1 day',
                 updated_at = CURRENT_TIMESTAMP
-            WHERE firm_id = $1
-        `, [firmId]);
+            WHERE id = 'global'
+        `);
         
         // Check if it's a revoked token error
         const isRevokedToken = error.message?.includes('invalid_grant') || 
@@ -219,16 +228,15 @@ async function getAccessToken(firmId) {
                               error.message?.includes('invalid authentication credentials');
         
         if (isRevokedToken) {
-            throw new Error('Le token Gmail RGPD a été révoqué. Veuillez reconnecter Gmail dans les paramètres. Note: Si vous utilisez le même compte Gmail pour l\'authentification SSO, les tokens peuvent entrer en conflit.');
+            throw new Error('Le token Gmail RGPD a été révoqué par Google. Un administrateur doit reconnecter Gmail dans Paramètres → RGPD Mail.');
         }
         
-        throw new Error('Échec du rafraîchissement du token. Veuillez reconnecter Gmail dans les paramètres.');
+        throw new Error('Échec du rafraîchissement du token Gmail RGPD. Un administrateur doit reconnecter Gmail.');
     }
 }
 
 /**
- * Send an email via Gmail
- * @param {string} firmId - Firm ID
+ * Send an email via Gmail using GLOBAL token
  * @param {Object} emailData - Email data
  * @param {string} emailData.to - Recipient email
  * @param {string} emailData.subject - Email subject
@@ -236,13 +244,13 @@ async function getAccessToken(firmId) {
  * @param {string} emailData.text - Plain text body (optional)
  * @returns {Promise<Object>}
  */
-export async function sendEmail(firmId, { to, subject, html, text }) {
-    // Get access token (will refresh if needed)
+export async function sendEmail({ to, subject, html, text }) {
+    // Get GLOBAL access token (will refresh if needed)
     let accessToken;
     try {
-        accessToken = await getAccessToken(firmId);
+        accessToken = await getAccessToken();
     } catch (tokenError) {
-        safeLog('error', 'Failed to get GDPR access token', { firmId, error: tokenError.message });
+        safeLog('error', 'Failed to get GDPR GLOBAL access token', { error: tokenError.message });
         throw tokenError;
     }
     
@@ -252,10 +260,10 @@ export async function sendEmail(firmId, { to, subject, html, text }) {
     const google = await getGoogle();
     const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
 
-    // Get sender email
+    // Get sender email from GLOBAL token
     const statusResult = await query(`
-        SELECT email FROM firm_gdpr_mail_tokens WHERE firm_id = $1
-    `, [firmId]);
+        SELECT email FROM global_gdpr_mail_token WHERE id = 'global'
+    `);
     const fromEmail = statusResult.rows[0]?.email || 'noreply@example.com';
 
     // Build MIME message
@@ -297,7 +305,7 @@ export async function sendEmail(firmId, { to, subject, html, text }) {
         }
     });
 
-    safeLog('info', 'GDPR email sent via Gmail', { firmId, to, messageId: result.data.id });
+    safeLog('info', 'GDPR email sent via Gmail (GLOBAL)', { to, messageId: result.data.id });
 
     return {
         success: true,
@@ -307,36 +315,34 @@ export async function sendEmail(firmId, { to, subject, html, text }) {
 }
 
 /**
- * Send a test email
- * @param {string} firmId
- * @param {string} email
+ * Send a test email using GLOBAL token
+ * @param {string} email - Recipient email address
  */
-export async function sendTestEmail(firmId, email) {
-    return sendEmail(firmId, {
+export async function sendTestEmail(email) {
+    return sendEmail({
         to: email,
         subject: 'Test RGPD - ResumeConverter',
         html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                 <h2 style="color: #2563eb;">Test de configuration RGPD</h2>
-                <p>Ce message confirme que la configuration Gmail pour l'envoi des emails de consentement RGPD fonctionne correctement.</p>
+                <p>Ce message confirme que la configuration Gmail GLOBAL pour l'envoi des emails de consentement RGPD fonctionne correctement.</p>
                 <p style="color: #6b7280; font-size: 14px;">Envoyé depuis ResumeConverter</p>
             </div>
         `,
-        text: 'Test de configuration RGPD - Ce message confirme que la configuration Gmail fonctionne correctement.'
+        text: 'Test de configuration RGPD - Ce message confirme que la configuration Gmail GLOBAL fonctionne correctement.'
     });
 }
 
 /**
- * Disconnect Gmail for a firm
- * @param {string} firmId
+ * Disconnect GLOBAL Gmail token
  */
-export async function disconnect(firmId) {
-    // Get token to revoke
+export async function disconnect() {
+    // Get GLOBAL token to revoke
     const result = await query(`
         SELECT access_token_encrypted
-        FROM firm_gdpr_mail_tokens
-        WHERE firm_id = $1
-    `, [firmId]);
+        FROM global_gdpr_mail_token
+        WHERE id = 'global'
+    `);
 
     if (result.rows.length > 0) {
         try {
@@ -345,27 +351,26 @@ export async function disconnect(firmId) {
             await oauth2Client.revokeToken(accessToken);
         } catch (error) {
             // Ignore revocation errors
-            safeLog('warn', 'Token revocation failed', { firmId, error: error.message });
+            safeLog('warn', 'GLOBAL token revocation failed', { error: error.message });
         }
     }
 
-    // Delete from database
+    // Delete GLOBAL token from database
     await query(`
-        DELETE FROM firm_gdpr_mail_tokens
-        WHERE firm_id = $1
-    `, [firmId]);
+        DELETE FROM global_gdpr_mail_token
+        WHERE id = 'global'
+    `);
 
-    safeLog('info', 'GDPR Gmail disconnected', { firmId });
+    safeLog('info', 'GDPR Gmail GLOBAL token disconnected');
 }
 
 /**
- * Validate token by making a test API call
- * @param {string} firmId
+ * Validate GLOBAL token by making a test API call
  * @returns {Promise<{valid: boolean, error?: string}>}
  */
-export async function validateToken(firmId) {
+export async function validateToken() {
     try {
-        const accessToken = await getAccessToken(firmId);
+        const accessToken = await getAccessToken();
         
         const oauth2Client = await getOAuth2Client();
         oauth2Client.setCredentials({ access_token: accessToken });
@@ -378,7 +383,7 @@ export async function validateToken(firmId) {
         
         return { valid: true };
     } catch (error) {
-        safeLog('warn', 'GDPR token validation failed', { firmId, error: error.message });
+        safeLog('warn', 'GDPR GLOBAL token validation failed', { error: error.message });
         return { 
             valid: false, 
             error: error.message?.includes('invalid authentication credentials') 

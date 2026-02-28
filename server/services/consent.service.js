@@ -328,18 +328,17 @@ export async function sendConsentRequest(resumeId) {
         expiryDays: CONSENT_TOKEN_EXPIRY_DAYS
     });
 
-    // Send email via Gmail
+    // Send email via Gmail (using GLOBAL token)
     try {
-        await gdprMailService.sendEmail(resume.firm_id, {
+        await gdprMailService.sendEmail({
             to: resume.candidate_email,
             subject: `Demande de consentement RGPD - ${firmName}`,
             html: emailHtml
         });
     } catch (emailError) {
-        safeLog('error', 'Failed to send consent email via Gmail', {
+        safeLog('error', 'Failed to send consent email via Gmail (GLOBAL)', {
             resumeId,
-            error: emailError.message,
-            firmId: resume.firm_id
+            error: emailError.message
         });
         throw emailError;
     }
