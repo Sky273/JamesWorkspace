@@ -17,6 +17,11 @@ const LOG_LEVELS = {
 const CONFIGURED_LOG_LEVEL = process.env.LOG_LEVEL || 'info';
 const CONFIGURED_LOG_LEVEL_NUM = LOG_LEVELS[CONFIGURED_LOG_LEVEL] ?? LOG_LEVELS.info;
 
+// JSON structured logging mode (for ELK/Datadog integration)
+// Set LOG_FORMAT=json to enable structured JSON output
+const LOG_FORMAT = process.env.LOG_FORMAT || 'text';
+const JSON_LOGGING_ENABLED = LOG_FORMAT === 'json';
+
 // ============================================
 // OPTIMIZED CIRCULAR BUFFER FOR PROXY LOGS
 // ============================================
@@ -170,6 +175,33 @@ export function safeLog(level, message, data = null, module = null) {
         return;
     }
     
+    // JSON structured logging mode (for ELK/Datadog/CloudWatch)
+    if (JSON_LOGGING_ENABLED) {
+        const structuredLog = {
+            '@timestamp': new Date().toISOString(),
+            level: level.toUpperCase(),
+            message,
+            module: moduleSource || 'app',
+            service: 'resumeconverter',
+            environment: process.env.NODE_ENV || 'development',
+            ...redactedData
+        };
+        
+        // Add trace ID if available (for distributed tracing)
+        if (redactedData?.traceId) {
+            structuredLog.trace_id = redactedData.traceId;
+        }
+        
+        // Output based on level
+        const consoleFn = level === 'error' ? console.error : 
+                          level === 'warn' ? console.warn : 
+                          console.log;
+        
+        consoleFn(JSON.stringify(structuredLog));
+        return;
+    }
+    
+    // Text format (default - human readable)
     // Format timestamp
     const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
     

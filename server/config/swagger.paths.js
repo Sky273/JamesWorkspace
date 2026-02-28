@@ -853,7 +853,25 @@ export const swaggerPaths = {
         get: {
             tags: ['Health'],
             summary: 'Health check endpoint',
-            responses: { 200: { description: 'System healthy', content: { 'application/json': { schema: { type: 'object', properties: { status: { type: 'string', enum: ['healthy', 'degraded', 'unhealthy'] }, timestamp: { type: 'string', format: 'date-time' }, checks: { type: 'object' } } } } } }, 503: { description: 'System unhealthy' } }
+            description: 'Comprehensive health check including database, LLM APIs, memory, and cache status. Use ?deep=true to perform actual connectivity tests to OpenAI and Anthropic APIs.',
+            parameters: [
+                { 
+                    name: 'deep', 
+                    in: 'query', 
+                    schema: { type: 'string', enum: ['true', 'false'] },
+                    description: 'If true, performs actual API connectivity tests to OpenAI and Anthropic (adds latency)'
+                }
+            ],
+            responses: { 
+                200: { 
+                    description: 'System healthy or degraded', 
+                    content: { 'application/json': { schema: { $ref: '#/components/schemas/HealthCheck' } } } 
+                }, 
+                503: { 
+                    description: 'System unhealthy',
+                    content: { 'application/json': { schema: { $ref: '#/components/schemas/HealthCheck' } } }
+                } 
+            }
         }
     },
     '/metrics': {
@@ -876,8 +894,180 @@ export const swaggerPaths = {
         get: {
             tags: ['Metrics', 'Admin'],
             summary: 'Get database metrics (admin only)',
+            description: 'Returns PostgreSQL database statistics including size, table row counts, dead rows, vacuum status, and connection pool stats. Results are cached for 30 seconds.',
             security: [{ cookieAuth: [] }],
-            responses: { 200: { description: 'Database metrics' } }
+            responses: { 
+                200: { 
+                    description: 'Database metrics',
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    database: {
+                                        type: 'object',
+                                        properties: {
+                                            size: { type: 'integer', description: 'Database size in bytes' },
+                                            sizePretty: { type: 'string', example: '150 MB' }
+                                        }
+                                    },
+                                    tables: {
+                                        type: 'array',
+                                        items: {
+                                            type: 'object',
+                                            properties: {
+                                                name: { type: 'string' },
+                                                rowCount: { type: 'integer' },
+                                                deadRows: { type: 'integer' },
+                                                lastVacuum: { type: 'string', format: 'date-time', nullable: true },
+                                                lastAutovacuum: { type: 'string', format: 'date-time', nullable: true }
+                                            }
+                                        }
+                                    },
+                                    connections: {
+                                        type: 'object',
+                                        properties: {
+                                            total: { type: 'integer' },
+                                            active: { type: 'integer' },
+                                            idle: { type: 'integer' }
+                                        }
+                                    },
+                                    queryTime: { type: 'string', example: '15ms' },
+                                    cached: { type: 'boolean' },
+                                    cacheAge: { type: 'string', example: '10s' }
+                                }
+                            }
+                        }
+                    }
+                },
+                403: { $ref: '#/components/responses/Forbidden' }
+            }
+        }
+    },
+
+    // ============================================
+    // APM (Application Performance Monitoring)
+    // ============================================
+    '/metrics/apm': {
+        get: {
+            tags: ['Metrics', 'Admin'],
+            summary: 'Get APM statistics (admin only)',
+            description: 'Returns Application Performance Monitoring statistics including slow request counts, thresholds, and top slow endpoints.',
+            security: [{ cookieAuth: [] }],
+            responses: {
+                200: {
+                    description: 'APM statistics',
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    totalSlowRequests: { type: 'integer', description: 'Total number of slow requests tracked' },
+                                    thresholds: {
+                                        type: 'object',
+                                        properties: {
+                                            slow: { type: 'string', example: '1000ms' },
+                                            verySlow: { type: 'string', example: '5000ms' },
+                                            critical: { type: 'string', example: '30000ms' }
+                                        }
+                                    },
+                                    breakdown: {
+                                        type: 'object',
+                                        properties: {
+                                            slow: { type: 'integer' },
+                                            verySlow: { type: 'integer' },
+                                            critical: { type: 'integer' }
+                                        }
+                                    },
+                                    topSlowEndpoints: {
+                                        type: 'object',
+                                        additionalProperties: {
+                                            type: 'object',
+                                            properties: {
+                                                count: { type: 'integer' },
+                                                avgDuration: { type: 'integer' },
+                                                maxDuration: { type: 'integer' }
+                                            }
+                                        }
+                                    },
+                                    recentSlowRequests: {
+                                        type: 'array',
+                                        items: { $ref: '#/components/schemas/SlowRequest' }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                403: { $ref: '#/components/responses/Forbidden' }
+            }
+        }
+    },
+    '/metrics/apm/slow-requests': {
+        get: {
+            tags: ['Metrics', 'Admin'],
+            summary: 'Get detailed slow requests list (admin only)',
+            description: 'Returns a detailed list of slow requests sorted by duration (slowest first).',
+            security: [{ cookieAuth: [] }],
+            parameters: [
+                { name: 'limit', in: 'query', schema: { type: 'integer', default: 50 }, description: 'Maximum number of requests to return' }
+            ],
+            responses: {
+                200: {
+                    description: 'Slow requests list',
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    count: { type: 'integer' },
+                                    requests: {
+                                        type: 'array',
+                                        items: { $ref: '#/components/schemas/SlowRequest' }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                403: { $ref: '#/components/responses/Forbidden' }
+            }
+        },
+        delete: {
+            tags: ['Metrics', 'Admin'],
+            summary: 'Clear slow requests buffer (admin only)',
+            description: 'Clears all tracked slow requests from the APM buffer.',
+            security: [{ cookieAuth: [], csrfToken: [] }],
+            responses: {
+                200: { description: 'Buffer cleared successfully' },
+                403: { $ref: '#/components/responses/Forbidden' }
+            }
+        }
+    },
+
+    // ============================================
+    // CSRF TOKEN
+    // ============================================
+    '/csrf-token': {
+        get: {
+            tags: ['Authentication'],
+            summary: 'Get CSRF token',
+            description: 'Returns a CSRF token required for state-changing requests (POST, PUT, DELETE). The token must be included in the x-csrf-token header.',
+            responses: {
+                200: {
+                    description: 'CSRF token',
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    csrfToken: { type: 'string', description: 'CSRF token to include in x-csrf-token header' }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 };

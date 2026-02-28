@@ -8,6 +8,7 @@ import { getMetiersCacheStats } from '../services/rome.service.js';
 import { getEscoCacheStats } from '../services/escoService.js';
 import { getTagsCacheStats } from './tags.routes.js';
 import { getBlacklistStats } from '../services/tokenBlacklist.service.js';
+import { safeLog } from '../utils/logger.backend.js';
 
 const router = express.Router();
 
@@ -100,16 +101,98 @@ router.get('/', async (req, res) => {
         overallStatus = 'unhealthy';
     }
     
-    // 3. Check OpenAI API
+    // 3. Check OpenAI API connectivity (with optional deep check)
+    const deepCheck = req.query.deep === 'true';
+    
     if (OPENAI_API_KEY) {
-        checks.openai = { status: 'configured', message: 'API key present' };
+        if (deepCheck) {
+            try {
+                const openaiStart = Date.now();
+                const response = await Promise.race([
+                    fetch('https://api.openai.com/v1/models', {
+                        method: 'GET',
+                        headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}` }
+                    }),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
+                ]);
+                const openaiLatency = Date.now() - openaiStart;
+                
+                if (response.ok) {
+                    checks.openai = { 
+                        status: openaiLatency > 2000 ? 'slow' : 'ok', 
+                        message: 'API connected',
+                        latency: `${openaiLatency}ms`
+                    };
+                } else {
+                    checks.openai = { 
+                        status: 'error', 
+                        message: `API error: ${response.status}`,
+                        latency: `${openaiLatency}ms`
+                    };
+                    overallStatus = overallStatus === 'healthy' ? 'degraded' : overallStatus;
+                }
+            } catch (error) {
+                checks.openai = { 
+                    status: 'error', 
+                    message: error.message === 'Timeout' ? 'Connection timeout' : 'Connection failed'
+                };
+                safeLog('warn', 'OpenAI health check failed', { error: error.message });
+            }
+        } else {
+            checks.openai = { status: 'configured', message: 'API key present (use ?deep=true for connectivity test)' };
+        }
     } else {
         checks.openai = { status: 'not_configured', message: 'API key missing' };
     }
     
-    // 4. Check Anthropic API
+    // 4. Check Anthropic API connectivity (with optional deep check)
     if (ANTHROPIC_API_KEY) {
-        checks.anthropic = { status: 'configured', message: 'API key present' };
+        if (deepCheck) {
+            try {
+                const anthropicStart = Date.now();
+                const response = await Promise.race([
+                    fetch('https://api.anthropic.com/v1/messages', {
+                        method: 'POST',
+                        headers: { 
+                            'x-api-key': ANTHROPIC_API_KEY,
+                            'anthropic-version': '2023-06-01',
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            model: 'claude-3-haiku-20240307',
+                            max_tokens: 1,
+                            messages: [{ role: 'user', content: 'ping' }]
+                        })
+                    }),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
+                ]);
+                const anthropicLatency = Date.now() - anthropicStart;
+                
+                // 200 or 400 (bad request but API is reachable) both indicate connectivity
+                if (response.ok || response.status === 400) {
+                    checks.anthropic = { 
+                        status: anthropicLatency > 2000 ? 'slow' : 'ok', 
+                        message: 'API connected',
+                        latency: `${anthropicLatency}ms`
+                    };
+                } else {
+                    checks.anthropic = { 
+                        status: 'error', 
+                        message: `API error: ${response.status}`,
+                        latency: `${anthropicLatency}ms`
+                    };
+                    overallStatus = overallStatus === 'healthy' ? 'degraded' : overallStatus;
+                }
+            } catch (error) {
+                checks.anthropic = { 
+                    status: 'error', 
+                    message: error.message === 'Timeout' ? 'Connection timeout' : 'Connection failed'
+                };
+                safeLog('warn', 'Anthropic health check failed', { error: error.message });
+            }
+        } else {
+            checks.anthropic = { status: 'configured', message: 'API key present (use ?deep=true for connectivity test)' };
+        }
     } else {
         checks.anthropic = { status: 'not_configured', message: 'API key missing' };
     }

@@ -3,6 +3,7 @@ import { metrics } from '../services/metrics.service.js';
 import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { query as dbQuery } from '../config/database.js';
+import { getAPMStats, getSlowRequests, clearSlowRequests } from '../middleware/apm.middleware.js';
 
 const router = express.Router();
 
@@ -248,6 +249,64 @@ router.get('/database', authenticateToken, requireAdmin, async (req, res) => {
         safeLog('error', 'Error fetching database metrics', { error: error.message });
         res.status(500).json({ 
             error: 'Failed to fetch database metrics',
+            message: error.message 
+        });
+    }
+});
+
+/**
+ * GET /api/metrics/apm
+ * Get APM (Application Performance Monitoring) statistics (admin only)
+ */
+router.get('/apm', authenticateToken, requireAdmin, (req, res) => {
+    try {
+        const apmStats = getAPMStats();
+        res.json(apmStats);
+    } catch (error) {
+        safeLog('error', 'Error fetching APM stats', { error: error.message });
+        res.status(500).json({ 
+            error: 'Failed to fetch APM stats',
+            message: error.message 
+        });
+    }
+});
+
+/**
+ * GET /api/metrics/apm/slow-requests
+ * Get detailed slow requests list (admin only)
+ */
+router.get('/apm/slow-requests', authenticateToken, requireAdmin, (req, res) => {
+    try {
+        const limit = parseInt(req.query.limit) || 50;
+        const slowRequests = getSlowRequests(limit);
+        res.json({
+            count: slowRequests.length,
+            requests: slowRequests
+        });
+    } catch (error) {
+        safeLog('error', 'Error fetching slow requests', { error: error.message });
+        res.status(500).json({ 
+            error: 'Failed to fetch slow requests',
+            message: error.message 
+        });
+    }
+});
+
+/**
+ * DELETE /api/metrics/apm/slow-requests
+ * Clear slow requests buffer (admin only)
+ */
+router.delete('/apm/slow-requests', authenticateToken, requireAdmin, (req, res) => {
+    try {
+        clearSlowRequests();
+        res.json({ 
+            message: 'Slow requests buffer cleared',
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        safeLog('error', 'Error clearing slow requests', { error: error.message });
+        res.status(500).json({ 
+            error: 'Failed to clear slow requests',
             message: error.message 
         });
     }

@@ -17,7 +17,8 @@ import {
   CircleStackIcon,
   SparklesIcon,
   TableCellsIcon,
-  ArrowDownTrayIcon
+  ArrowDownTrayIcon,
+  BoltIcon
 } from '@heroicons/react/24/outline';
 import { fetchWithAuth, createAuthOptions } from '../utils/apiInterceptor';
 import logger from '../utils/logger.frontend';
@@ -158,10 +159,35 @@ interface DatabaseMetrics {
   timestamp?: string;
 }
 
+interface APMMetrics {
+  totalSlowRequests?: number;
+  thresholds?: {
+    slow?: string;
+    verySlow?: string;
+    critical?: string;
+  };
+  breakdown?: {
+    slow?: number;
+    verySlow?: number;
+    critical?: number;
+  };
+  topSlowEndpoints?: Record<string, { count: number; avgDuration: number; maxDuration: number }>;
+  recentSlowRequests?: Array<{
+    timestamp: string;
+    method: string;
+    path: string;
+    endpoint: string;
+    duration: number;
+    severity: 'slow' | 'very_slow' | 'critical';
+    statusCode: number;
+  }>;
+}
+
 const MetricsPage = (): JSX.Element => {
   const { t } = useTranslation();
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [dbMetrics, setDbMetrics] = useState<DatabaseMetrics | null>(null);
+  const [apmMetrics, setApmMetrics] = useState<APMMetrics | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [autoRefresh, setAutoRefresh] = useState<boolean>(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -198,6 +224,21 @@ const MetricsPage = (): JSX.Element => {
       const errorMessage = error instanceof Error ? error.message : '';
       if (!errorMessage.includes('Session expired')) {
         logger.error('Error fetching database metrics:', error);
+      }
+    }
+  };
+
+  const fetchApmMetrics = async (): Promise<void> => {
+    try {
+      const response = await fetchWithAuth('/api/metrics/apm', createAuthOptions());
+      if (response.ok) {
+        const data = await response.json();
+        setApmMetrics(data);
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '';
+      if (!errorMessage.includes('Session expired')) {
+        logger.error('Error fetching APM metrics:', error);
       }
     }
   };
@@ -260,7 +301,7 @@ const MetricsPage = (): JSX.Element => {
   useEffect(() => {
     const loadData = async (): Promise<void> => {
       setLoading(true);
-      await Promise.all([fetchMetrics(), fetchDbMetrics()]);
+      await Promise.all([fetchMetrics(), fetchDbMetrics(), fetchApmMetrics()]);
       setLoading(false);
     };
     // Load immediately without delay for faster initial render
@@ -270,7 +311,7 @@ const MetricsPage = (): JSX.Element => {
   useEffect(() => {
     if (!autoRefresh) return;
     const interval = setInterval(async () => {
-      await Promise.all([fetchMetrics(), fetchDbMetrics()]);
+      await Promise.all([fetchMetrics(), fetchDbMetrics(), fetchApmMetrics()]);
     }, 30000);
     return () => clearInterval(interval);
   }, [autoRefresh]);
@@ -368,7 +409,7 @@ const MetricsPage = (): JSX.Element => {
           {/* Database Metrics Section */}
           {dbMetrics && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="rounded-xl border bg-orange-50 text-orange-600 border-orange-200 p-6">
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="rounded-xl border bg-orange-50 text-orange-600 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800 p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <p className="text-sm font-medium opacity-80">{t('metrics.database', 'Base de données')}</p>
@@ -378,15 +419,15 @@ const MetricsPage = (): JSX.Element => {
                   <TableCellsIcon className="w-10 h-10 opacity-50" />
                 </div>
                 <div className="grid grid-cols-3 gap-3 text-sm mb-4">
-                  <div className="bg-orange-100 rounded-lg p-3">
+                  <div className="bg-orange-100 dark:bg-orange-900/30 rounded-lg p-3">
                     <p className="opacity-70">{t('metrics.connections', 'Connexions')}</p>
                     <p className="font-semibold">{safeNumber(dbMetrics.connections?.total)}</p>
                   </div>
-                  <div className="bg-orange-100 rounded-lg p-3">
+                  <div className="bg-orange-100 dark:bg-orange-900/30 rounded-lg p-3">
                     <p className="opacity-70">{t('metrics.active', 'Actives')}</p>
                     <p className="font-semibold">{safeNumber(dbMetrics.connections?.active)}</p>
                   </div>
-                  <div className="bg-orange-100 rounded-lg p-3">
+                  <div className="bg-orange-100 dark:bg-orange-900/30 rounded-lg p-3">
                     <p className="opacity-70">{t('metrics.idle', 'Inactives')}</p>
                     <p className="font-semibold">{safeNumber(dbMetrics.connections?.idle)}</p>
                   </div>
@@ -394,7 +435,7 @@ const MetricsPage = (): JSX.Element => {
                 <p className="text-xs opacity-60">{t('metrics.queryTime', 'Temps de requête')}: {dbMetrics.queryTime || 'N/A'}</p>
               </motion.div>
 
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }} className="rounded-xl border bg-orange-50 text-orange-600 border-orange-200 p-6">
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }} className="rounded-xl border bg-orange-50 text-orange-600 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800 p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <p className="text-sm font-medium opacity-80">{t('metrics.tables', 'Tables')}</p>
@@ -406,7 +447,7 @@ const MetricsPage = (): JSX.Element => {
                 <div className="overflow-x-auto max-h-48">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b border-orange-200">
+                      <tr className="border-b border-orange-200 dark:border-orange-700">
                         <th className="text-left py-2 px-2 font-medium opacity-70">{t('metrics.tableName', 'Table')}</th>
                         <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.rows', 'Lignes')}</th>
                         <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.deadRows', 'Mortes')}</th>
@@ -414,7 +455,7 @@ const MetricsPage = (): JSX.Element => {
                     </thead>
                     <tbody>
                       {dbMetrics.tables?.slice(0, 8).map((table, index) => (
-                        <tr key={index} className="border-b border-orange-100">
+                        <tr key={index} className="border-b border-orange-100 dark:border-orange-800">
                           <td className="py-2 px-2 font-mono text-xs truncate max-w-[120px]">{table.name}</td>
                           <td className="py-2 px-2 text-right font-semibold">{formatNumber(table.rowCount)}</td>
                           <td className="py-2 px-2 text-right opacity-70">{formatNumber(table.deadRows)}</td>
@@ -423,6 +464,82 @@ const MetricsPage = (): JSX.Element => {
                     </tbody>
                   </table>
                 </div>
+              </motion.div>
+            </div>
+          )}
+
+          {/* APM (Application Performance Monitoring) Section */}
+          {apmMetrics && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.19 }} className="rounded-xl border bg-rose-50 text-rose-600 border-rose-200 dark:bg-rose-900/20 dark:text-rose-400 dark:border-rose-800 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-sm font-medium opacity-80">{t('metrics.apm', 'Performance (APM)')}</p>
+                    <p className="text-2xl font-bold mt-1">{safeNumber(apmMetrics.totalSlowRequests)}</p>
+                    <p className="text-xs mt-1 opacity-60">{t('metrics.slowRequests', 'Requêtes lentes')}</p>
+                  </div>
+                  <BoltIcon className="w-10 h-10 opacity-50" />
+                </div>
+                <div className="grid grid-cols-3 gap-3 text-sm mb-4">
+                  <div className="bg-rose-100 dark:bg-rose-900/30 rounded-lg p-3">
+                    <p className="opacity-70 text-xs">{t('metrics.slow', 'Lentes')}</p>
+                    <p className="font-semibold">{safeNumber(apmMetrics.breakdown?.slow)}</p>
+                    <p className="text-xs opacity-50">&gt; {apmMetrics.thresholds?.slow || '1s'}</p>
+                  </div>
+                  <div className="bg-rose-100 dark:bg-rose-900/30 rounded-lg p-3">
+                    <p className="opacity-70 text-xs">{t('metrics.verySlow', 'Très lentes')}</p>
+                    <p className="font-semibold">{safeNumber(apmMetrics.breakdown?.verySlow)}</p>
+                    <p className="text-xs opacity-50">&gt; {apmMetrics.thresholds?.verySlow || '5s'}</p>
+                  </div>
+                  <div className="bg-rose-100 dark:bg-rose-900/30 rounded-lg p-3">
+                    <p className="opacity-70 text-xs">{t('metrics.critical', 'Critiques')}</p>
+                    <p className="font-semibold text-rose-700 dark:text-rose-300">{safeNumber(apmMetrics.breakdown?.critical)}</p>
+                    <p className="text-xs opacity-50">&gt; {apmMetrics.thresholds?.critical || '30s'}</p>
+                  </div>
+                </div>
+                {apmMetrics.totalSlowRequests === 0 && (
+                  <p className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
+                    <span className="inline-block w-2 h-2 bg-green-500 rounded-full"></span>
+                    {t('metrics.noSlowRequests', 'Aucune requête lente détectée')}
+                  </p>
+                )}
+              </motion.div>
+
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.21 }} className="rounded-xl border bg-rose-50 text-rose-600 border-rose-200 dark:bg-rose-900/20 dark:text-rose-400 dark:border-rose-800 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-sm font-medium opacity-80">{t('metrics.slowEndpoints', 'Endpoints lents')}</p>
+                    <p className="text-2xl font-bold mt-1">{Object.keys(apmMetrics.topSlowEndpoints || {}).length}</p>
+                    <p className="text-xs mt-1 opacity-60">{t('metrics.topSlowEndpoints', 'Endpoints les plus lents')}</p>
+                  </div>
+                  <ClockIcon className="w-10 h-10 opacity-50" />
+                </div>
+                {apmMetrics.topSlowEndpoints && Object.keys(apmMetrics.topSlowEndpoints).length > 0 ? (
+                  <div className="overflow-x-auto max-h-48">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-rose-200 dark:border-rose-700">
+                          <th className="text-left py-2 px-2 font-medium opacity-70">{t('metrics.endpoint', 'Endpoint')}</th>
+                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.count', 'Nb')}</th>
+                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.avgMs', 'Moy.')}</th>
+                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.maxMs', 'Max')}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Object.entries(apmMetrics.topSlowEndpoints).slice(0, 5).map(([endpoint, stats], index) => (
+                          <tr key={index} className="border-b border-rose-100 dark:border-rose-800">
+                            <td className="py-2 px-2 font-mono text-xs truncate max-w-[150px]" title={endpoint}>{endpoint}</td>
+                            <td className="py-2 px-2 text-right font-semibold">{stats.count}</td>
+                            <td className="py-2 px-2 text-right opacity-70">{stats.avgDuration}ms</td>
+                            <td className="py-2 px-2 text-right text-rose-700 dark:text-rose-300">{stats.maxDuration}ms</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="text-sm opacity-60 text-center py-4">{t('metrics.noData', 'Aucune donnée')}</p>
+                )}
               </motion.div>
             </div>
           )}

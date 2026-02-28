@@ -372,6 +372,49 @@ export const swaggerDocument = {
                     user: { $ref: '#/components/schemas/User' },
                     csrfToken: { type: 'string' }
                 }
+            },
+            SlowRequest: {
+                type: 'object',
+                description: 'A slow request tracked by APM',
+                properties: {
+                    timestamp: { type: 'string', format: 'date-time', description: 'When the request started' },
+                    method: { type: 'string', enum: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'], description: 'HTTP method' },
+                    path: { type: 'string', description: 'Original request path' },
+                    endpoint: { type: 'string', description: 'Normalized endpoint (IDs replaced with :id)' },
+                    duration: { type: 'integer', description: 'Request duration in milliseconds' },
+                    severity: { type: 'string', enum: ['slow', 'very_slow', 'critical'], description: 'Severity based on duration thresholds' },
+                    statusCode: { type: 'integer', description: 'HTTP response status code' },
+                    userId: { type: 'string', format: 'uuid', nullable: true, description: 'User ID if authenticated' },
+                    userAgent: { type: 'string', nullable: true, description: 'User agent (truncated to 100 chars)' },
+                    breakdown: { 
+                        type: 'object', 
+                        nullable: true,
+                        description: 'Timing breakdown if trace sampling enabled',
+                        additionalProperties: { type: 'integer' }
+                    }
+                }
+            },
+            HealthCheck: {
+                type: 'object',
+                description: 'Health check response',
+                properties: {
+                    status: { type: 'string', enum: ['healthy', 'degraded', 'unhealthy'] },
+                    timestamp: { type: 'string', format: 'date-time' },
+                    responseTime: { type: 'string', example: '45ms' },
+                    version: { type: 'string' },
+                    environment: { type: 'string', enum: ['development', 'production'] },
+                    checks: {
+                        type: 'object',
+                        properties: {
+                            server: { type: 'object' },
+                            database: { type: 'object' },
+                            openai: { type: 'object' },
+                            anthropic: { type: 'object' },
+                            memory: { type: 'object' },
+                            cache: { type: 'object' }
+                        }
+                    }
+                }
             }
         },
         responses: {

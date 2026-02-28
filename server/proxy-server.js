@@ -35,6 +35,7 @@ validateEnvironmentOrExit(process.env.NODE_ENV === 'production');
 // Import middleware
 import { cleanupRateLimitStore } from './middleware/rateLimit.middleware.js';
 import metricsMiddleware from './middleware/metrics.middleware.js';
+import { apmMiddleware } from './middleware/apm.middleware.js';
 import { cleanupAllCaches } from './services/cache.service.js';
 
 // Import routes
@@ -255,6 +256,9 @@ app.use((req, res, next) => {
 
 // Metrics tracking middleware
 app.use(metricsMiddleware);
+
+// APM (Application Performance Monitoring) middleware
+app.use(apmMiddleware);
 
 // ============================================
 // CSRF PROTECTION
