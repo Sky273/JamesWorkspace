@@ -262,29 +262,31 @@ const ProfileMatchingPage = (): JSX.Element => {
             />
           </div>
 
-          {/* Category scores summary */}
-          <div className="mt-3 flex flex-wrap gap-4 text-xs">
-            <span className="flex items-center gap-1">
-              <AcademicCapIcon className="w-3 h-3 text-blue-500" />
-              <span className="text-gray-600 dark:text-gray-400">{t('profileMatching.categories.skills')}:</span>
-              <span className={getScoreColor(profile.categoryScores.skills)}>{profile.categoryScores.skills}%</span>
-            </span>
-            <span className="flex items-center gap-1">
-              <WrenchScrewdriverIcon className="w-3 h-3 text-green-500" />
-              <span className="text-gray-600 dark:text-gray-400">{t('profileMatching.categories.tools')}:</span>
-              <span className={getScoreColor(profile.categoryScores.tools)}>{profile.categoryScores.tools}%</span>
-            </span>
-            <span className="flex items-center gap-1">
-              <BuildingOfficeIcon className="w-3 h-3 text-purple-500" />
-              <span className="text-gray-600 dark:text-gray-400">{t('profileMatching.categories.industries')}:</span>
-              <span className={getScoreColor(profile.categoryScores.industries)}>{profile.categoryScores.industries}%</span>
-            </span>
-            <span className="flex items-center gap-1">
-              <HeartIcon className="w-3 h-3 text-yellow-500" />
-              <span className="text-gray-600 dark:text-gray-400">{t('profileMatching.categories.softSkills')}:</span>
-              <span className={getScoreColor(profile.categoryScores.softSkills)}>{profile.categoryScores.softSkills}%</span>
-            </span>
-          </div>
+          {/* Category scores summary - only shown if available (legacy text-based mode) */}
+          {profile.categoryScores && (
+            <div className="mt-3 flex flex-wrap gap-4 text-xs">
+              <span className="flex items-center gap-1">
+                <AcademicCapIcon className="w-3 h-3 text-blue-500" />
+                <span className="text-gray-600 dark:text-gray-400">{t('profileMatching.categories.skills')}:</span>
+                <span className={getScoreColor(profile.categoryScores.skills)}>{profile.categoryScores.skills}%</span>
+              </span>
+              <span className="flex items-center gap-1">
+                <WrenchScrewdriverIcon className="w-3 h-3 text-green-500" />
+                <span className="text-gray-600 dark:text-gray-400">{t('profileMatching.categories.tools')}:</span>
+                <span className={getScoreColor(profile.categoryScores.tools)}>{profile.categoryScores.tools}%</span>
+              </span>
+              <span className="flex items-center gap-1">
+                <BuildingOfficeIcon className="w-3 h-3 text-purple-500" />
+                <span className="text-gray-600 dark:text-gray-400">{t('profileMatching.categories.industries')}:</span>
+                <span className={getScoreColor(profile.categoryScores.industries)}>{profile.categoryScores.industries}%</span>
+              </span>
+              <span className="flex items-center gap-1">
+                <HeartIcon className="w-3 h-3 text-yellow-500" />
+                <span className="text-gray-600 dark:text-gray-400">{t('profileMatching.categories.softSkills')}:</span>
+                <span className={getScoreColor(profile.categoryScores.softSkills)}>{profile.categoryScores.softSkills}%</span>
+              </span>
+            </div>
+          )}
 
           {/* LLM Scoring indicator and reason */}
           {profile.llmScored && (
@@ -352,121 +354,125 @@ const ProfileMatchingPage = (): JSX.Element => {
               className="border-t border-gray-200 dark:border-gray-700"
             >
               <div className="p-4 space-y-4">
-                {/* Matched tags by category */}
-                <div>
-                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-                    <CheckCircleIcon className="w-4 h-4 text-green-500" />
-                    {t('profileMatching.matchedTags')}
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {/* Skills */}
-                    <div className="space-y-1">
-                      <span className="text-xs font-medium text-blue-600 dark:text-blue-400 flex items-center gap-1">
-                        <AcademicCapIcon className="w-3 h-3" />
-                        {t('profileMatching.categories.skills')}
-                      </span>
-                      <div className="flex flex-wrap gap-1">
-                        {profile.matchedTags.skills.length > 0 ? profile.matchedTags.skills.map((tag, idx) => (
-                          <span key={idx} className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">{tag}</span>
-                        )) : <span className="text-xs text-gray-400">-</span>}
+                {/* Matched tags by category - only shown in legacy text-based mode */}
+                {profile.matchedTags && (
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                      <CheckCircleIcon className="w-4 h-4 text-green-500" />
+                      {t('profileMatching.matchedTags')}
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {/* Skills */}
+                      <div className="space-y-1">
+                        <span className="text-xs font-medium text-blue-600 dark:text-blue-400 flex items-center gap-1">
+                          <AcademicCapIcon className="w-3 h-3" />
+                          {t('profileMatching.categories.skills')}
+                        </span>
+                        <div className="flex flex-wrap gap-1">
+                          {profile.matchedTags.skills.length > 0 ? profile.matchedTags.skills.map((tag, idx) => (
+                            <span key={idx} className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">{tag}</span>
+                          )) : <span className="text-xs text-gray-400">-</span>}
+                        </div>
                       </div>
-                    </div>
-                    {/* Tools */}
-                    <div className="space-y-1">
-                      <span className="text-xs font-medium text-green-600 dark:text-green-400 flex items-center gap-1">
-                        <WrenchScrewdriverIcon className="w-3 h-3" />
-                        {t('profileMatching.categories.tools')}
-                      </span>
-                      <div className="flex flex-wrap gap-1">
-                        {profile.matchedTags.tools.length > 0 ? profile.matchedTags.tools.map((tag, idx) => (
-                          <span key={idx} className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">{tag}</span>
-                        )) : <span className="text-xs text-gray-400">-</span>}
+                      {/* Tools */}
+                      <div className="space-y-1">
+                        <span className="text-xs font-medium text-green-600 dark:text-green-400 flex items-center gap-1">
+                          <WrenchScrewdriverIcon className="w-3 h-3" />
+                          {t('profileMatching.categories.tools')}
+                        </span>
+                        <div className="flex flex-wrap gap-1">
+                          {profile.matchedTags.tools.length > 0 ? profile.matchedTags.tools.map((tag, idx) => (
+                            <span key={idx} className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">{tag}</span>
+                          )) : <span className="text-xs text-gray-400">-</span>}
+                        </div>
                       </div>
-                    </div>
-                    {/* Industries */}
-                    <div className="space-y-1">
-                      <span className="text-xs font-medium text-purple-600 dark:text-purple-400 flex items-center gap-1">
-                        <BuildingOfficeIcon className="w-3 h-3" />
-                        {t('profileMatching.categories.industries')}
-                      </span>
-                      <div className="flex flex-wrap gap-1">
-                        {profile.matchedTags.industries.length > 0 ? profile.matchedTags.industries.map((tag, idx) => (
-                          <span key={idx} className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">{tag}</span>
-                        )) : <span className="text-xs text-gray-400">-</span>}
+                      {/* Industries */}
+                      <div className="space-y-1">
+                        <span className="text-xs font-medium text-purple-600 dark:text-purple-400 flex items-center gap-1">
+                          <BuildingOfficeIcon className="w-3 h-3" />
+                          {t('profileMatching.categories.industries')}
+                        </span>
+                        <div className="flex flex-wrap gap-1">
+                          {profile.matchedTags.industries.length > 0 ? profile.matchedTags.industries.map((tag, idx) => (
+                            <span key={idx} className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">{tag}</span>
+                          )) : <span className="text-xs text-gray-400">-</span>}
+                        </div>
                       </div>
-                    </div>
-                    {/* Soft Skills */}
-                    <div className="space-y-1">
-                      <span className="text-xs font-medium text-yellow-600 dark:text-yellow-400 flex items-center gap-1">
-                        <HeartIcon className="w-3 h-3" />
-                        {t('profileMatching.categories.softSkills')}
-                      </span>
-                      <div className="flex flex-wrap gap-1">
-                        {profile.matchedTags.softSkills.length > 0 ? profile.matchedTags.softSkills.map((tag, idx) => (
-                          <span key={idx} className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">{tag}</span>
-                        )) : <span className="text-xs text-gray-400">-</span>}
+                      {/* Soft Skills */}
+                      <div className="space-y-1">
+                        <span className="text-xs font-medium text-yellow-600 dark:text-yellow-400 flex items-center gap-1">
+                          <HeartIcon className="w-3 h-3" />
+                          {t('profileMatching.categories.softSkills')}
+                        </span>
+                        <div className="flex flex-wrap gap-1">
+                          {profile.matchedTags.softSkills.length > 0 ? profile.matchedTags.softSkills.map((tag, idx) => (
+                            <span key={idx} className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">{tag}</span>
+                          )) : <span className="text-xs text-gray-400">-</span>}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
+                )}
 
-                {/* Missing tags by category */}
-                <div>
-                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-                    <XCircleIcon className="w-4 h-4 text-red-500" />
-                    {t('profileMatching.missingTags')}
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {/* Skills */}
-                    <div className="space-y-1">
-                      <span className="text-xs font-medium text-blue-600 dark:text-blue-400 flex items-center gap-1">
-                        <AcademicCapIcon className="w-3 h-3" />
-                        {t('profileMatching.categories.skills')}
-                      </span>
-                      <div className="flex flex-wrap gap-1">
-                        {profile.missingTags.skills.length > 0 ? profile.missingTags.skills.map((tag, idx) => (
-                          <span key={idx} className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300">{tag}</span>
-                        )) : <span className="text-xs text-gray-400">-</span>}
+                {/* Missing tags by category - only shown in legacy text-based mode */}
+                {profile.missingTags && (
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                      <XCircleIcon className="w-4 h-4 text-red-500" />
+                      {t('profileMatching.missingTags')}
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {/* Skills */}
+                      <div className="space-y-1">
+                        <span className="text-xs font-medium text-blue-600 dark:text-blue-400 flex items-center gap-1">
+                          <AcademicCapIcon className="w-3 h-3" />
+                          {t('profileMatching.categories.skills')}
+                        </span>
+                        <div className="flex flex-wrap gap-1">
+                          {profile.missingTags.skills.length > 0 ? profile.missingTags.skills.map((tag, idx) => (
+                            <span key={idx} className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300">{tag}</span>
+                          )) : <span className="text-xs text-gray-400">-</span>}
+                        </div>
                       </div>
-                    </div>
-                    {/* Tools */}
-                    <div className="space-y-1">
-                      <span className="text-xs font-medium text-green-600 dark:text-green-400 flex items-center gap-1">
-                        <WrenchScrewdriverIcon className="w-3 h-3" />
-                        {t('profileMatching.categories.tools')}
-                      </span>
-                      <div className="flex flex-wrap gap-1">
-                        {profile.missingTags.tools.length > 0 ? profile.missingTags.tools.map((tag, idx) => (
-                          <span key={idx} className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300">{tag}</span>
-                        )) : <span className="text-xs text-gray-400">-</span>}
+                      {/* Tools */}
+                      <div className="space-y-1">
+                        <span className="text-xs font-medium text-green-600 dark:text-green-400 flex items-center gap-1">
+                          <WrenchScrewdriverIcon className="w-3 h-3" />
+                          {t('profileMatching.categories.tools')}
+                        </span>
+                        <div className="flex flex-wrap gap-1">
+                          {profile.missingTags.tools.length > 0 ? profile.missingTags.tools.map((tag, idx) => (
+                            <span key={idx} className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300">{tag}</span>
+                          )) : <span className="text-xs text-gray-400">-</span>}
+                        </div>
                       </div>
-                    </div>
-                    {/* Industries */}
-                    <div className="space-y-1">
-                      <span className="text-xs font-medium text-purple-600 dark:text-purple-400 flex items-center gap-1">
-                        <BuildingOfficeIcon className="w-3 h-3" />
-                        {t('profileMatching.categories.industries')}
-                      </span>
-                      <div className="flex flex-wrap gap-1">
-                        {profile.missingTags.industries.length > 0 ? profile.missingTags.industries.map((tag, idx) => (
-                          <span key={idx} className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300">{tag}</span>
-                        )) : <span className="text-xs text-gray-400">-</span>}
+                      {/* Industries */}
+                      <div className="space-y-1">
+                        <span className="text-xs font-medium text-purple-600 dark:text-purple-400 flex items-center gap-1">
+                          <BuildingOfficeIcon className="w-3 h-3" />
+                          {t('profileMatching.categories.industries')}
+                        </span>
+                        <div className="flex flex-wrap gap-1">
+                          {profile.missingTags.industries.length > 0 ? profile.missingTags.industries.map((tag, idx) => (
+                            <span key={idx} className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300">{tag}</span>
+                          )) : <span className="text-xs text-gray-400">-</span>}
+                        </div>
                       </div>
-                    </div>
-                    {/* Soft Skills */}
-                    <div className="space-y-1">
-                      <span className="text-xs font-medium text-yellow-600 dark:text-yellow-400 flex items-center gap-1">
-                        <HeartIcon className="w-3 h-3" />
-                        {t('profileMatching.categories.softSkills')}
-                      </span>
-                      <div className="flex flex-wrap gap-1">
-                        {profile.missingTags.softSkills.length > 0 ? profile.missingTags.softSkills.map((tag, idx) => (
-                          <span key={idx} className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300">{tag}</span>
-                        )) : <span className="text-xs text-gray-400">-</span>}
+                      {/* Soft Skills */}
+                      <div className="space-y-1">
+                        <span className="text-xs font-medium text-yellow-600 dark:text-yellow-400 flex items-center gap-1">
+                          <HeartIcon className="w-3 h-3" />
+                          {t('profileMatching.categories.softSkills')}
+                        </span>
+                        <div className="flex flex-wrap gap-1">
+                          {profile.missingTags.softSkills.length > 0 ? profile.missingTags.softSkills.map((tag, idx) => (
+                            <span key={idx} className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300">{tag}</span>
+                          )) : <span className="text-xs text-gray-400">-</span>}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
+                )}
 
                 {/* Detailed Analysis Results */}
                 {detailedAnalysis[profile.resumeId] && (

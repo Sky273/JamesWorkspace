@@ -50,7 +50,7 @@ import { getLLMSettings } from '../../services/settings.service.js';
 import profileMatchingService from '../../services/profileMatching.service.js';
 
 // Extract functions from default export
-const { findMatchingProfiles, calculateMatchScore, DEFAULT_WEIGHTS } = profileMatchingService;
+const { findMatchingProfiles, DEFAULT_WEIGHTS } = profileMatchingService;
 
 // ============================================
 // TEST DATA
@@ -162,137 +162,7 @@ describe('Profile Matching Service', () => {
     });
 
     // ============================================
-    // calculateMatchScore tests
-    // ============================================
-    
-    describe('calculateMatchScore', () => {
-        it('should return 100% when all tags match', () => {
-            const resumeTags = {
-                skills: ['React', 'TypeScript', 'Node.js'],
-                tools: ['Git', 'Docker', 'AWS'],
-                industries: ['Banque', 'Finance'],
-                softSkills: ['Communication', 'Leadership']
-            };
-            
-            const result = calculateMatchScore(resumeTags, mockMissionKeywords);
-            
-            expect(result.totalScore).toBe(100);
-            expect(result.categoryScores.skills).toBe(100);
-            expect(result.categoryScores.tools).toBe(100);
-            expect(result.categoryScores.industries).toBe(100);
-            expect(result.categoryScores.softSkills).toBe(100);
-        });
-
-        it('should return low score when few tags match', () => {
-            const resumeTags = {
-                skills: ['Cobol', 'Fortran'],
-                tools: ['Maven', 'Jenkins'],
-                industries: ['Retail'],
-                softSkills: ['Autonomie']
-            };
-            
-            const result = calculateMatchScore(resumeTags, mockMissionKeywords);
-            
-            // Low score expected due to minimal matches
-            expect(result.totalScore).toBeLessThan(30);
-            // No skill matches expected with completely different technologies
-            expect(result.matches.skills).toHaveLength(0);
-        });
-
-        it('should calculate partial match correctly', () => {
-            const resumeTags = {
-                skills: ['React', 'Python'], // 1/3 exact match (React)
-                tools: ['Git', 'Docker'], // 2/3 match
-                industries: ['Banque'], // 1/2 match
-                softSkills: ['Communication'] // 1/2 match
-            };
-            
-            const result = calculateMatchScore(resumeTags, mockMissionKeywords);
-            
-            // Skills: React matches (1/3), JavaScript may fuzzy match
-            expect(result.categoryScores.skills).toBeGreaterThanOrEqual(33);
-            expect(result.categoryScores.tools).toBe(67); // 2/3 ≈ 67%
-            expect(result.categoryScores.industries).toBe(50); // 1/2 = 50%
-            expect(result.categoryScores.softSkills).toBe(50); // 1/2 = 50%
-            
-            // Total should be reasonable partial match
-            expect(result.totalScore).toBeGreaterThan(40);
-            expect(result.totalScore).toBeLessThan(70);
-        });
-
-        it('should handle empty mission keywords gracefully', () => {
-            const resumeTags = {
-                skills: ['React'],
-                tools: ['Git'],
-                industries: ['Banque'],
-                softSkills: ['Communication']
-            };
-            
-            const emptyMissionKeywords = {
-                skills: [],
-                tools: [],
-                industries: [],
-                softSkills: []
-            };
-            
-            const result = calculateMatchScore(resumeTags, emptyMissionKeywords);
-            
-            // Empty mission keywords = 100% match (nothing required)
-            expect(result.totalScore).toBe(100);
-        });
-
-        it('should handle empty resume tags gracefully', () => {
-            const emptyResumeTags = {
-                skills: [],
-                tools: [],
-                industries: [],
-                softSkills: []
-            };
-            
-            const result = calculateMatchScore(emptyResumeTags, mockMissionKeywords);
-            
-            expect(result.totalScore).toBe(0);
-            expect(result.missing.skills).toEqual(mockMissionKeywords.skills);
-        });
-
-        it('should apply custom weights correctly', () => {
-            const resumeTags = {
-                skills: ['React', 'TypeScript', 'Node.js'], // 100%
-                tools: [], // 0%
-                industries: [], // 0%
-                softSkills: [] // 0%
-            };
-            
-            const customWeights = {
-                skills: 100, // Only skills matter
-                tools: 0,
-                industries: 0,
-                softSkills: 0
-            };
-            
-            const result = calculateMatchScore(resumeTags, mockMissionKeywords, customWeights);
-            
-            expect(result.totalScore).toBe(100); // 100% skills * 100 weight
-        });
-
-        it('should perform fuzzy matching for technology variations', () => {
-            const resumeTags = {
-                skills: ['ReactJS', 'TS', 'NodeJS'], // Variations
-                tools: ['git', 'DOCKER', 'aws'], // Case variations
-                industries: ['banque'], // Lowercase
-                softSkills: ['communication']
-            };
-            
-            const result = calculateMatchScore(resumeTags, mockMissionKeywords);
-            
-            // Should match despite variations
-            expect(result.categoryScores.skills).toBeGreaterThan(0);
-            expect(result.categoryScores.tools).toBeGreaterThan(0);
-        });
-    });
-
-    // ============================================
-    // findMatchingProfiles tests (integration)
+    // findMatchingProfiles tests (LLM-only scoring)
     // ============================================
     
     describe('findMatchingProfiles', () => {
@@ -329,28 +199,25 @@ describe('Profile Matching Service', () => {
             expect(topProfile.keyGaps).toContain('AWS non mentionné');
         });
 
-        it('should fall back to text-based scoring when LLM fails', async () => {
+        it('should return empty profiles when LLM fails', async () => {
             callOpenAI.mockRejectedValue(new Error('LLM API error'));
             
             const result = await findMatchingProfiles('mission-1', { limit: 10 });
             
             expect(result.llmScoringApplied).toBe(false);
             expect(result.llmScoringFailed).toBe(true);
-            expect(result.profiles).toHaveLength(3);
-            
-            // Should still have scores (text-based)
-            result.profiles.forEach(profile => {
-                expect(typeof profile.matchScore).toBe('number');
-            });
+            // No fallback - LLM is the only scoring source
+            expect(result.profiles).toHaveLength(0);
         });
 
-        it('should fall back when LLM model is not configured', async () => {
+        it('should return empty profiles when LLM model is not configured', async () => {
             getLLMSettings.mockResolvedValue({ llmModel: null });
             
             const result = await findMatchingProfiles('mission-1', { limit: 10 });
             
             expect(result.llmScoringApplied).toBe(false);
             expect(result.llmScoringFailed).toBe(true);
+            expect(result.profiles).toHaveLength(0);
         });
 
         it('should respect minScore filter', async () => {
@@ -481,9 +348,9 @@ describe('Profile Matching Service', () => {
             
             const result = await findMatchingProfiles('mission-1', { limit: 10 });
             
-            // Should fall back to text-based scoring
+            // No fallback - LLM is the only scoring source
             expect(result.llmScoringFailed).toBe(true);
-            expect(result.profiles.length).toBeGreaterThan(0);
+            expect(result.profiles).toHaveLength(0);
         });
     });
 

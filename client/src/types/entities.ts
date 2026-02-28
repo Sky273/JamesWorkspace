@@ -191,25 +191,27 @@ export interface ProfileMatchResult {
   baseScore?: number; // Original score before title adjustment (legacy)
   titleAdjustment?: number; // Score adjustment from title analysis (legacy, -15 to +15)
   titleReason?: string | null; // Reason for title adjustment (legacy)
-  // New LLM scoring fields
+  // LLM scoring fields (primary scoring method)
   llmScored?: boolean; // Whether this score was computed by LLM
   confidence?: 'high' | 'medium' | 'low'; // LLM confidence in the score
   reason?: string; // LLM explanation for the score
   keyStrengths?: string[]; // Main strengths identified by LLM
   keyGaps?: string[]; // Main gaps identified by LLM
-  categoryScores: {
+  // Category scores (optional - only present in legacy text-based mode)
+  categoryScores?: {
     skills: number;
     tools: number;
     industries: number;
     softSkills: number;
   };
-  matchedTags: {
+  // Matched/missing tags (optional - only present in legacy text-based mode)
+  matchedTags?: {
     skills: string[];
     tools: string[];
     industries: string[];
     softSkills: string[];
   };
-  missingTags: {
+  missingTags?: {
     skills: string[];
     tools: string[];
     industries: string[];

@@ -8,7 +8,7 @@ import { selectWithTimeout, findWithTimeout, updateWithTimeout } from '../utils/
 import { safeLog } from '../utils/logger.backend.js';
 import { callOpenAI } from './openai.service.js';
 import { getLLMSettings } from './settings.service.js';
-import { MISSION_KEYWORDS_EXTRACTION_PROMPT, DETAILED_PROFILE_ANALYSIS_PROMPT, TITLE_MATCHING_REFINEMENT_PROMPT, BATCH_PROFILE_SCORING_PROMPT } from '../config/prompts.backend.js';
+import { MISSION_KEYWORDS_EXTRACTION_PROMPT, DETAILED_PROFILE_ANALYSIS_PROMPT, BATCH_PROFILE_SCORING_PROMPT } from '../config/prompts.backend.js';
 
 /**
  * Default weights for scoring categories
@@ -20,131 +20,7 @@ const DEFAULT_WEIGHTS = {
     softSkills: 15
 };
 
-/**
- * Normalize a string for comparison (lowercase, trim, remove accents)
- */
-function normalizeString(str) {
-    if (!str || typeof str !== 'string') return '';
-    return str
-        .toLowerCase()
-        .trim()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '');
-}
-
-/**
- * Check if two strings match (with fuzzy matching for common variations)
- */
-function fuzzyMatch(str1, str2) {
-    const norm1 = normalizeString(str1);
-    const norm2 = normalizeString(str2);
-    
-    if (norm1 === norm2) return true;
-    if (norm1.includes(norm2) || norm2.includes(norm1)) return true;
-    
-    const variations = {
-        'reactjs': ['react', 'react.js'],
-        'nodejs': ['node', 'node.js'],
-        'vuejs': ['vue', 'vue.js'],
-        'angularjs': ['angular'],
-        'javascript': ['js'],
-        'typescript': ['ts'],
-        'postgresql': ['postgres'],
-        'mongodb': ['mongo'],
-        'kubernetes': ['k8s'],
-        'amazon web services': ['aws'],
-        'google cloud platform': ['gcp'],
-        'microsoft azure': ['azure'],
-        'ci/cd': ['cicd', 'ci cd'],
-        'devops': ['dev ops'],
-        'machine learning': ['ml'],
-        'artificial intelligence': ['ai'],
-        'natural language processing': ['nlp']
-    };
-    
-    for (const [key, values] of Object.entries(variations)) {
-        const allVariants = [key, ...values];
-        const hasStr1 = allVariants.some(v => norm1.includes(v) || v.includes(norm1));
-        const hasStr2 = allVariants.some(v => norm2.includes(v) || v.includes(norm2));
-        if (hasStr1 && hasStr2) return true;
-    }
-    
-    return false;
-}
-
-/**
- * Calculate match score for a single category
- */
-function calculateCategoryScore(resumeItems, missionItems) {
-    if (!missionItems || missionItems.length === 0) {
-        return { score: 100, matches: [], missing: [] };
-    }
-    
-    const resumeNormalized = (resumeItems || []).map(item => ({
-        original: item,
-        normalized: normalizeString(item)
-    }));
-    
-    const matches = [];
-    const missing = [];
-    
-    for (const missionItem of missionItems) {
-        const found = resumeNormalized.find(r => fuzzyMatch(r.original, missionItem));
-        if (found) {
-            matches.push(missionItem);
-        } else {
-            missing.push(missionItem);
-        }
-    }
-    
-    const score = missionItems.length > 0 
-        ? Math.round((matches.length / missionItems.length) * 100)
-        : 100;
-    
-    return { score, matches, missing };
-}
-
-/**
- * Calculate overall match score for a resume against mission keywords
- */
-function calculateMatchScore(resumeTags, missionKeywords, weights = DEFAULT_WEIGHTS) {
-    const results = {
-        skills: calculateCategoryScore(resumeTags.skills, missionKeywords.skills),
-        tools: calculateCategoryScore(resumeTags.tools, missionKeywords.tools),
-        industries: calculateCategoryScore(resumeTags.industries, missionKeywords.industries),
-        softSkills: calculateCategoryScore(resumeTags.softSkills, missionKeywords.softSkills)
-    };
-    
-    const totalWeight = weights.skills + weights.tools + weights.industries + weights.softSkills;
-    const weightedScore = (
-        results.skills.score * weights.skills +
-        results.tools.score * weights.tools +
-        results.industries.score * weights.industries +
-        results.softSkills.score * weights.softSkills
-    ) / totalWeight;
-    
-    return {
-        totalScore: Math.round(weightedScore),
-        categoryScores: {
-            skills: results.skills.score,
-            tools: results.tools.score,
-            industries: results.industries.score,
-            softSkills: results.softSkills.score
-        },
-        matches: {
-            skills: results.skills.matches,
-            tools: results.tools.matches,
-            industries: results.industries.matches,
-            softSkills: results.softSkills.matches
-        },
-        missing: {
-            skills: results.skills.missing,
-            tools: results.tools.missing,
-            industries: results.industries.missing,
-            softSkills: results.softSkills.missing
-        }
-    };
-}
+// Note: Fuzzy matching functions removed - all scoring is now done by LLM
 
 /**
  * Parse JSON field from resume record
@@ -375,68 +251,6 @@ async function scoreBatchWithLLM(profiles, missionKeywords, missionRecord, userM
 }
 
 /**
- * Refine match scores using LLM analysis of candidate titles
- * @deprecated Use scoreBatchWithLLM instead - kept for fallback compatibility
- */
-async function refineTitleScores(profiles, missionRecord, missionKeywords, userMetadata = null) {
-    if (!profiles || profiles.length === 0) {
-        return {};
-    }
-
-    const settings = await getLLMSettings();
-    const model = settings.llmModel;
-
-    if (!model) {
-        safeLog('warn', 'LLM model not configured, skipping title refinement');
-        return {};
-    }
-
-    const candidatesList = profiles
-        .map(p => `${p.resumeId}: ${p.title || 'Sans titre'}`)
-        .join('\n');
-
-    const missionSummary = (missionRecord.content || '')
-        .substring(0, 500)
-        .replace(/\n/g, ' ')
-        .trim();
-
-    const experienceLevel = missionKeywords.experienceLevel || 'Non spécifié';
-
-    const prompt = TITLE_MATCHING_REFINEMENT_PROMPT
-        .replace('{MISSION_TITLE}', missionRecord.title || '')
-        .replace('{MISSION_SUMMARY}', missionSummary)
-        .replace('{EXPERIENCE_LEVEL}', experienceLevel)
-        .replace('{CANDIDATES_LIST}', candidatesList);
-
-    try {
-        const response = await callOpenAI({
-            model,
-            messages: [
-                { role: 'system', content: 'You are a JSON-only HR analysis API. Respond with valid JSON only.' },
-                { role: 'user', content: prompt }
-            ],
-            maxTokens: 2048,
-            temperature: 0.3,
-            responseFormat: { type: "json_object" },
-            userMetadata,
-            operationType: 'Title Score Refinement'
-        });
-
-        let result;
-        try {
-            result = JSON.parse(response.choices[0].message.content);
-        } catch (parseError) {
-            return {};
-        }
-
-        return result.adjustments || {};
-    } catch (error) {
-        safeLog('error', 'Failed to refine title scores', { error: error.message });
-        return {};
-    }
-}
-
-/**
  * Find best matching profiles for a mission
  */
 export async function findMatchingProfiles(missionId, options = {}, userMetadata = null) {
@@ -516,17 +330,15 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
         });
     }
     
-    // 5. Score each resume with text-based matching first (for pre-filtering)
+    // 5. Prepare all profiles for LLM scoring (no text-based pre-filtering)
     // Prioritize cleaned tags over raw tags for better matching accuracy
-    const scoredProfiles = resumeRecords.map(record => {
+    const allProfiles = resumeRecords.map(record => {
         const resumeTags = {
             skills: parseJsonField(record.skills_cleaned) || parseJsonField(record.skills),
             tools: parseJsonField(record.tools_cleaned) || parseJsonField(record.tools),
             industries: parseJsonField(record.industries_cleaned) || parseJsonField(record.industries),
             softSkills: parseJsonField(record.soft_skills_cleaned) || parseJsonField(record.soft_skills)
         };
-        
-        const matchResult = calculateMatchScore(resumeTags, missionKeywords, weights);
         
         return {
             resumeId: record.id,
@@ -536,112 +348,69 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
             globalRating: record.global_rating || 0,
             firmName: record.firm_name,
             createdAt: record.created_at,
-            matchScore: matchResult.totalScore,
-            categoryScores: matchResult.categoryScores,
-            matchedTags: matchResult.matches,
-            missingTags: matchResult.missing,
             resumeTags
         };
     });
     
-    // Debug: Log scoring distribution
-    safeLog('debug', 'Text-based scoring distribution', {
-        totalScored: scoredProfiles.length,
-        withScore0: scoredProfiles.filter(p => p.matchScore === 0).length,
-        withScoreAbove0: scoredProfiles.filter(p => p.matchScore > 0).length,
-        withScoreAbove50: scoredProfiles.filter(p => p.matchScore >= 50).length,
-        topScores: scoredProfiles.slice(0, 5).map(p => ({ name: p.name, score: p.matchScore }))
-    });
+    // 6. Limit profiles sent to LLM for cost control (take first N profiles)
+    // In production, you may want to add other criteria (e.g., most recent, highest rated)
+    const maxProfilesToScore = Math.min(limit * 5, 60);
+    const profilesToScore = allProfiles.slice(0, maxProfilesToScore);
     
-    // 6. Pre-filter profiles for LLM scoring
-    // Select top candidates based on text matching to limit LLM costs
-    // Include profiles with at least some match OR all profiles if none match
-    const hasAnyMatch = scoredProfiles.some(p => p.matchScore > 0);
-    const preliminaryProfiles = scoredProfiles
-        .filter(p => hasAnyMatch ? p.matchScore > 0 : true)
-        .sort((a, b) => b.matchScore - a.matchScore)
-        .slice(0, Math.min(limit * 3, 50)); // Take more for LLM to re-rank
+    safeLog('info', 'Sending profiles to LLM for scoring', {
+        totalProfiles: allProfiles.length,
+        profilesToScore: profilesToScore.length,
+        maxLimit: maxProfilesToScore
+    });
     
     // 7. Score profiles using LLM for intelligent semantic matching
     let llmScoringApplied = false;
     let llmScoringFailed = false;
     
     const llmResult = await scoreBatchWithLLM(
-        preliminaryProfiles,
+        profilesToScore,
         missionKeywords,
         missionRecord,
         userMetadata
     );
     
-    // 8. Apply LLM scores or fall back to text-based scores
+    // 8. Apply LLM scores - LLM is the only source of scoring
     let finalProfiles;
     
     if (llmResult.success && Object.keys(llmResult.scores).length > 0) {
         llmScoringApplied = true;
         llmScoringFailed = llmResult.partial || false;
         
-        finalProfiles = preliminaryProfiles.map(profile => {
-            const llmScore = llmResult.scores[profile.resumeId];
-            
-            if (llmScore) {
-                // Use LLM score
-                return {
-                    ...profile,
-                    matchScore: llmScore.score || profile.matchScore,
-                    baseScore: profile.matchScore, // Keep text-based score as reference
-                    llmScored: true,
-                    confidence: llmScore.confidence || 'medium',
-                    reason: llmScore.reason || null,
-                    keyStrengths: llmScore.keyStrengths || [],
-                    keyGaps: llmScore.keyGaps || []
-                };
-            } else {
-                // Fallback to text-based score
-                return {
-                    ...profile,
-                    llmScored: false,
-                    confidence: 'low',
-                    reason: 'Score basé sur correspondance textuelle (LLM non disponible pour ce profil)'
-                };
-            }
-        });
+        // Only include profiles that were scored by LLM
+        finalProfiles = profilesToScore
+            .map(profile => {
+                const llmScore = llmResult.scores[profile.resumeId];
+                
+                if (llmScore) {
+                    return {
+                        ...profile,
+                        matchScore: llmScore.score || 0,
+                        llmScored: true,
+                        confidence: llmScore.confidence || 'medium',
+                        reason: llmScore.reason || null,
+                        keyStrengths: llmScore.keyStrengths || [],
+                        keyGaps: llmScore.keyGaps || []
+                    };
+                }
+                return null; // Exclude profiles not scored by LLM
+            })
+            .filter(p => p !== null);
         
         safeLog('info', 'LLM scoring applied', {
-            totalProfiles: preliminaryProfiles.length,
-            llmScored: Object.keys(llmResult.scores).length,
+            totalProfiles: profilesToScore.length,
+            llmScored: finalProfiles.length,
             partial: llmResult.partial
         });
     } else {
-        // LLM scoring failed completely, use text-based scores with title refinement as fallback
+        // LLM scoring failed completely - return empty results
         llmScoringFailed = true;
-        safeLog('warn', 'LLM scoring failed, falling back to text-based scoring with title refinement');
-        
-        // Fall back to legacy title refinement
-        const titleAdjustments = await refineTitleScores(
-            preliminaryProfiles, 
-            missionRecord, 
-            missionKeywords, 
-            userMetadata
-        );
-        
-        finalProfiles = preliminaryProfiles.map(profile => {
-            const adjustment = titleAdjustments[profile.resumeId];
-            const titleAdjustment = adjustment?.adjustment || 0;
-            const titleReason = adjustment?.reason || null;
-            
-            const refinedScore = Math.max(0, Math.min(100, profile.matchScore + titleAdjustment));
-            
-            return {
-                ...profile,
-                matchScore: refinedScore,
-                baseScore: profile.matchScore,
-                titleAdjustment,
-                titleReason,
-                llmScored: false,
-                confidence: 'low',
-                reason: titleReason || 'Score basé sur correspondance textuelle'
-            };
-        });
+        safeLog('error', 'LLM scoring failed completely - no profiles can be scored');
+        finalProfiles = [];
     }
     
     // 9. Final filter and sort
@@ -780,6 +549,5 @@ export default {
     findMatchingProfiles,
     clearMissionKeywordsCache,
     analyzeProfileForMission,
-    calculateMatchScore,
     DEFAULT_WEIGHTS
 };
