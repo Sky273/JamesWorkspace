@@ -300,11 +300,7 @@ const ResumeAnalysisPage = (): JSX.Element => {
             {activeTab === 'overview' && <OverviewTab resume={currentResume} t={t} />}
             {activeTab === 'skills' && <SkillsTagsTab resume={currentResume} />}
             {activeTab === 'original' && (
-              <OriginalTextTab 
-                resume={currentResume} 
-                isImproving={false} 
-                onImprove={() => navigate(`/resumes/${id}/improve`)} 
-              />
+              <OriginalTextTab resume={currentResume} />
             )}
           </div>
         </div>

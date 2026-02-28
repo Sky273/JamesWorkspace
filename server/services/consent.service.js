@@ -310,6 +310,15 @@ export async function sendConsentRequest(resumeId) {
     const frontendUrl = getFrontendUrl();
     const consentUrl = `${frontendUrl}/consent/${resume.consent_token}`;
 
+    // Log token being used (for debugging)
+    safeLog('debug', 'Building consent email', {
+        resumeId,
+        tokenPrefix: resume.consent_token.substring(0, 8),
+        tokenSuffix: resume.consent_token.substring(56),
+        tokenLength: resume.consent_token.length,
+        consentUrl: consentUrl.replace(resume.consent_token, '[TOKEN]')
+    });
+
     // Build email HTML
     const firmName = resume.firm_name || 'Notre cabinet';
     const emailHtml = buildConsentRequestEmailHtml({
@@ -320,11 +329,20 @@ export async function sendConsentRequest(resumeId) {
     });
 
     // Send email via Gmail
-    await gdprMailService.sendEmail(resume.firm_id, {
-        to: resume.candidate_email,
-        subject: `Demande de consentement RGPD - ${firmName}`,
-        html: emailHtml
-    });
+    try {
+        await gdprMailService.sendEmail(resume.firm_id, {
+            to: resume.candidate_email,
+            subject: `Demande de consentement RGPD - ${firmName}`,
+            html: emailHtml
+        });
+    } catch (emailError) {
+        safeLog('error', 'Failed to send consent email via Gmail', {
+            resumeId,
+            error: emailError.message,
+            firmId: resume.firm_id
+        });
+        throw emailError;
+    }
 
     // Update consent_requested_at
     await query(`
@@ -336,7 +354,8 @@ export async function sendConsentRequest(resumeId) {
 
     safeLog('info', 'Consent request email sent', { 
         resumeId, 
-        to: resume.candidate_email 
+        to: resume.candidate_email,
+        tokenPrefix: resume.consent_token.substring(0, 8)
     });
 
     return { success: true, sentTo: resume.candidate_email };
@@ -349,12 +368,22 @@ export async function sendConsentRequest(resumeId) {
  */
 export async function validateConsentToken(token) {
     if (!token || token.length !== 64) {
+        safeLog('warn', 'Invalid consent token format', { 
+            tokenLength: token?.length || 0,
+            expectedLength: 64
+        });
         return null;
     }
 
+    // Log token prefix for debugging (first 8 chars only for security)
+    safeLog('debug', 'Validating consent token', { 
+        tokenPrefix: token.substring(0, 8),
+        tokenSuffix: token.substring(56)
+    });
+
     const result = await query(`
         SELECT r.id, r.candidate_name, r.candidate_email, r.consent_status,
-               r.consent_token_expires_at, r.profile_type,
+               r.consent_token, r.consent_token_expires_at, r.profile_type,
                r.firm_name, f.logo_url as firm_logo
         FROM resumes r
         LEFT JOIN firms f ON r.firm_id = f.id
@@ -362,7 +391,26 @@ export async function validateConsentToken(token) {
     `, [token]);
 
     if (result.rows.length === 0) {
-        safeLog('warn', 'Invalid consent token', { token: token.substring(0, 8) + '...' });
+        // Additional diagnostic: check if any resume has a similar token prefix
+        const diagnosticResult = await query(`
+            SELECT id, consent_token, consent_status, consent_token_expires_at
+            FROM resumes
+            WHERE consent_token IS NOT NULL
+            AND LEFT(consent_token, 8) = $1
+            LIMIT 5
+        `, [token.substring(0, 8)]);
+        
+        safeLog('warn', 'Invalid consent token - not found in database', { 
+            tokenPrefix: token.substring(0, 8),
+            tokenSuffix: token.substring(56),
+            similarTokensFound: diagnosticResult.rows.length,
+            similarTokens: diagnosticResult.rows.map(r => ({
+                id: r.id,
+                status: r.consent_status,
+                tokenPrefix: r.consent_token?.substring(0, 8),
+                expired: r.consent_token_expires_at ? new Date(r.consent_token_expires_at) < new Date() : null
+            }))
+        });
         return null;
     }
 
@@ -465,7 +513,7 @@ export async function resendConsentRequest(resumeId) {
     // Check current status
     const status = await getConsentStatus(resumeId);
     
-    if (status.consent_status !== 'pending_consent') {
+    if (status.consent_status !== 'pending_consent' && status.consent_status !== 'error') {
         throw new Error(`Cannot resend consent request. Current status: ${status.consent_status}`);
     }
 
@@ -473,16 +521,43 @@ export async function resendConsentRequest(resumeId) {
     const newToken = generateToken();
     const tokenExpiresAt = new Date(Date.now() + CONSENT_TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
 
+    // Log token generation for debugging
+    safeLog('debug', 'Generating new consent token for resend', {
+        resumeId,
+        tokenPrefix: newToken.substring(0, 8),
+        tokenLength: newToken.length,
+        expiresAt: tokenExpiresAt.toISOString()
+    });
+
     await query(`
         UPDATE resumes 
         SET consent_token = $1,
             consent_token_expires_at = $2,
+            consent_status = 'pending_consent',
             updated_at = CURRENT_TIMESTAMP
         WHERE id = $3
     `, [newToken, tokenExpiresAt, resumeId]);
 
-    // Send the email
-    return sendConsentRequest(resumeId);
+    // Send the email with error handling
+    try {
+        const result = await sendConsentRequest(resumeId);
+        return result;
+    } catch (emailError) {
+        // Mark consent as error if email sending fails
+        safeLog('error', 'Failed to send consent email during resend, marking as error', {
+            resumeId,
+            error: emailError.message
+        });
+        
+        await query(`
+            UPDATE resumes 
+            SET consent_status = 'error',
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = $1
+        `, [resumeId]);
+        
+        throw emailError;
+    }
 }
 
 /**

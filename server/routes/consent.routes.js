@@ -74,7 +74,21 @@ router.post('/:resumeId/send', authenticateToken, async (req, res) => {
             sentTo: result.sentTo
         });
     } catch (error) {
-        safeLog('error', 'Error sending consent request', { error: error.message });
+        safeLog('error', 'Error sending consent request', { error: error.message, resumeId: req.params.resumeId });
+        
+        // Mark consent as error if email sending fails
+        try {
+            const { query } = await import('../config/database.js');
+            await query(`
+                UPDATE resumes 
+                SET consent_status = 'error', updated_at = CURRENT_TIMESTAMP
+                WHERE id = $1 AND consent_status = 'pending_consent'
+            `, [req.params.resumeId]);
+            safeLog('info', 'Consent status set to error after send failure', { resumeId: req.params.resumeId });
+        } catch (updateError) {
+            safeLog('error', 'Failed to update consent status to error', { error: updateError.message });
+        }
+        
         res.status(400).json({ error: error.message });
     }
 });
@@ -95,7 +109,8 @@ router.post('/:resumeId/resend', authenticateToken, async (req, res) => {
             sentTo: result.sentTo
         });
     } catch (error) {
-        safeLog('error', 'Error resending consent request', { error: error.message });
+        safeLog('error', 'Error resending consent request', { error: error.message, resumeId: req.params.resumeId });
+        // Note: resendConsentRequest already marks consent as 'error' internally
         res.status(400).json({ error: error.message });
     }
 });
