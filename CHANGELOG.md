@@ -1,3 +1,25 @@
+## v1.6.4 - 2026-02-28
+### 📧 Envoi Email des CVs Adaptés
+
+#### Nouvelle Fonctionnalité : Envoi Email pour Adaptations
+- **Bouton email** : Ajout du bouton "Envoyer par email" sur la page de consultation d'une adaptation
+- **Pré-remplissage** : Client et contact pré-remplis automatiquement depuis la mission associée
+- **Modal SendEmailModal** : Nouvelles props `prefilledClientId`, `prefilledContactId`, `missionTitle`, `isAdaptation`
+- **Backend enrichi** : Route GET `/api/adaptations/:id` retourne maintenant `Mission Client ID` et `Mission Contact ID`
+
+#### Améliorations du Modal d'Envoi Email
+- **Template obligatoire** : L'utilisateur doit sélectionner un template email (plus de "Sans template")
+- **Filtrage templates** : Seuls les templates utilisateur sont affichés (templates système masqués)
+- **Bouton désactivé** : Le bouton d'envoi est grisé tant qu'un template n'est pas sélectionné
+
+#### Corrections Techniques
+- **Génération PDF** : Ajout du paramètre `filename` requis par le serveur PDF
+- **Route PDF** : Correction de `/api/generate-pdf` vers `/generate-pdf`
+- **Template CV** : Récupération automatique du premier template CV actif pour la génération PDF
+- **Version adaptation** : Ajout de `currentVersion={1}` pour les adaptations (pas de versioning)
+
+---
+
 ## v1.6.3 - 2026-02-28
 ### 🎯 Missions - Association Client/Contact & Adaptation CV
 
