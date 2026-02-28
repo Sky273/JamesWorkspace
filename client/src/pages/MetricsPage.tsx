@@ -91,12 +91,12 @@ const safeNumber = (value: unknown, defaultValue = 0): number => {
 
 const StatCard = memo(({ title, value, subtitle, icon: Icon, color = 'blue' }: StatCardProps): JSX.Element => {
   const colorClasses: Record<string, string> = {
-    blue: 'bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800',
-    green: 'bg-green-50 text-green-600 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800',
-    yellow: 'bg-yellow-50 text-yellow-600 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-800',
-    red: 'bg-red-50 text-red-600 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800',
-    purple: 'bg-purple-50 text-purple-600 border-purple-200 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-800',
-    indigo: 'bg-indigo-50 text-indigo-600 border-indigo-200 dark:bg-indigo-900/20 dark:text-indigo-400 dark:border-indigo-800'
+    blue: 'bg-blue-50 text-blue-600 border-blue-200 dark:bg-gray-800 dark:text-blue-400 dark:border-blue-700',
+    green: 'bg-green-50 text-green-600 border-green-200 dark:bg-gray-800 dark:text-green-400 dark:border-green-700',
+    yellow: 'bg-yellow-50 text-yellow-600 border-yellow-200 dark:bg-gray-800 dark:text-yellow-400 dark:border-yellow-700',
+    red: 'bg-red-50 text-red-600 border-red-200 dark:bg-gray-800 dark:text-red-400 dark:border-red-700',
+    purple: 'bg-purple-50 text-purple-600 border-purple-200 dark:bg-gray-800 dark:text-purple-400 dark:border-purple-700',
+    indigo: 'bg-indigo-50 text-indigo-600 border-indigo-200 dark:bg-gray-800 dark:text-indigo-400 dark:border-indigo-700'
   };
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className={`rounded-xl border p-6 ${colorClasses[color]}`}>
@@ -372,7 +372,7 @@ const MetricsPage = (): JSX.Element => {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl border bg-indigo-50 text-indigo-600 border-indigo-200 p-6">
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl border bg-indigo-50 text-indigo-600 border-indigo-200 dark:bg-gray-800 dark:text-indigo-400 dark:border-indigo-700 p-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <p className="text-sm font-medium opacity-80">{t('metrics.serverMemory')}</p>
@@ -381,16 +381,16 @@ const MetricsPage = (): JSX.Element => {
                 </div>
                 <CpuChipIcon className="w-10 h-10 opacity-50" />
               </div>
-              <div className="w-full bg-indigo-200 rounded-full h-2 mb-4">
+              <div className="w-full bg-indigo-200 dark:bg-indigo-900/50 rounded-full h-2 mb-4">
                 <div className="h-2 rounded-full bg-indigo-500 transition-all duration-500" style={{ width: `${safeNumber(metrics.memory?.heapTotal) > 0 ? (safeNumber(metrics.memory?.heapUsed) / safeNumber(metrics.memory?.heapTotal)) * 100 : 0}%` }} />
               </div>
               <div className="grid grid-cols-2 gap-4 text-sm">
-                <div className="bg-indigo-100 rounded-lg p-3"><p className="opacity-70">{t('metrics.rss')}</p><p className="font-semibold">{formatBytes(safeNumber(metrics.memory?.rss))}</p></div>
-                <div className="bg-indigo-100 rounded-lg p-3"><p className="opacity-70">{t('metrics.external')}</p><p className="font-semibold">{formatBytes(safeNumber(metrics.memory?.external))}</p></div>
+                <div className="bg-indigo-100 dark:bg-indigo-900/30 rounded-lg p-3"><p className="opacity-70">{t('metrics.rss')}</p><p className="font-semibold">{formatBytes(safeNumber(metrics.memory?.rss))}</p></div>
+                <div className="bg-indigo-100 dark:bg-indigo-900/30 rounded-lg p-3"><p className="opacity-70">{t('metrics.external')}</p><p className="font-semibold">{formatBytes(safeNumber(metrics.memory?.external))}</p></div>
               </div>
             </motion.div>
 
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="rounded-xl border bg-green-50 text-green-600 border-green-200 p-6">
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="rounded-xl border bg-green-50 text-green-600 border-green-200 dark:bg-gray-800 dark:text-green-400 dark:border-green-700 p-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <p className="text-sm font-medium opacity-80">{t('metrics.cachePerformance')}</p>
@@ -400,8 +400,8 @@ const MetricsPage = (): JSX.Element => {
                 <CircleStackIcon className="w-10 h-10 opacity-50" />
               </div>
               <div className="grid grid-cols-2 gap-4 text-sm">
-                <div className="bg-green-100 rounded-lg p-3"><p className="opacity-70">{t('metrics.cacheHits')}</p><p className="font-semibold">{formatNumber(safeNumber(metrics.cache?.hits))}</p></div>
-                <div className="bg-green-100 rounded-lg p-3"><p className="opacity-70">{t('metrics.cacheMisses')}</p><p className="font-semibold">{formatNumber(safeNumber(metrics.cache?.misses))}</p></div>
+                <div className="bg-green-100 dark:bg-green-900/30 rounded-lg p-3"><p className="opacity-70">{t('metrics.cacheHits')}</p><p className="font-semibold">{formatNumber(safeNumber(metrics.cache?.hits))}</p></div>
+                <div className="bg-green-100 dark:bg-green-900/30 rounded-lg p-3"><p className="opacity-70">{t('metrics.cacheMisses')}</p><p className="font-semibold">{formatNumber(safeNumber(metrics.cache?.misses))}</p></div>
               </div>
             </motion.div>
           </div>
@@ -409,7 +409,7 @@ const MetricsPage = (): JSX.Element => {
           {/* Database Metrics Section */}
           {dbMetrics && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="rounded-xl border bg-orange-50 text-orange-600 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800 p-6">
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="rounded-xl border bg-orange-50 text-orange-600 border-orange-200 dark:bg-gray-800 dark:text-orange-400 dark:border-orange-700 p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <p className="text-sm font-medium opacity-80">{t('metrics.database', 'Base de données')}</p>
@@ -435,7 +435,7 @@ const MetricsPage = (): JSX.Element => {
                 <p className="text-xs opacity-60">{t('metrics.queryTime', 'Temps de requête')}: {dbMetrics.queryTime || 'N/A'}</p>
               </motion.div>
 
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }} className="rounded-xl border bg-orange-50 text-orange-600 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800 p-6">
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }} className="rounded-xl border bg-orange-50 text-orange-600 border-orange-200 dark:bg-gray-800 dark:text-orange-400 dark:border-orange-700 p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <p className="text-sm font-medium opacity-80">{t('metrics.tables', 'Tables')}</p>
@@ -471,7 +471,7 @@ const MetricsPage = (): JSX.Element => {
           {/* APM (Application Performance Monitoring) Section */}
           {apmMetrics && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.19 }} className="rounded-xl border bg-rose-50 text-rose-600 border-rose-200 dark:bg-rose-900/20 dark:text-rose-400 dark:border-rose-800 p-6">
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.19 }} className="rounded-xl border bg-rose-50 text-rose-600 border-rose-200 dark:bg-gray-800 dark:text-rose-400 dark:border-rose-700 p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <p className="text-sm font-medium opacity-80">{t('metrics.apm', 'Performance (APM)')}</p>
@@ -505,7 +505,7 @@ const MetricsPage = (): JSX.Element => {
                 )}
               </motion.div>
 
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.21 }} className="rounded-xl border bg-rose-50 text-rose-600 border-rose-200 dark:bg-rose-900/20 dark:text-rose-400 dark:border-rose-800 p-6">
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.21 }} className="rounded-xl border bg-rose-50 text-rose-600 border-rose-200 dark:bg-gray-800 dark:text-rose-400 dark:border-rose-700 p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <p className="text-sm font-medium opacity-80">{t('metrics.slowEndpoints', 'Endpoints lents')}</p>
@@ -545,7 +545,7 @@ const MetricsPage = (): JSX.Element => {
           )}
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="rounded-xl border bg-blue-50 text-blue-600 border-blue-200 p-6">
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="rounded-xl border bg-blue-50 text-blue-600 border-blue-200 dark:bg-gray-800 dark:text-blue-400 dark:border-blue-700 p-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <p className="text-sm font-medium opacity-80">{t('metrics.httpMethods')}</p>
@@ -561,7 +561,7 @@ const MetricsPage = (): JSX.Element => {
               </div>
             </motion.div>
 
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="rounded-xl border bg-yellow-50 text-yellow-600 border-yellow-200 p-6">
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="rounded-xl border bg-yellow-50 text-yellow-600 border-yellow-200 dark:bg-gray-800 dark:text-yellow-400 dark:border-yellow-700 p-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <p className="text-sm font-medium opacity-80">{t('metrics.httpStatus')}</p>
@@ -579,7 +579,7 @@ const MetricsPage = (): JSX.Element => {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="rounded-xl border bg-purple-50 text-purple-600 border-purple-200 p-6">
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="rounded-xl border bg-purple-50 text-purple-600 border-purple-200 dark:bg-gray-800 dark:text-purple-400 dark:border-purple-700 p-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <p className="text-sm font-medium opacity-80">{t('metrics.llmUsage')}</p>
@@ -589,13 +589,13 @@ const MetricsPage = (): JSX.Element => {
                 <SparklesIcon className="w-10 h-10 opacity-50" />
               </div>
               <div className="grid grid-cols-2 gap-4 text-sm mb-4">
-                <div className="bg-purple-100 rounded-lg p-3"><p className="opacity-70">{t('metrics.tokensConsumed')}</p><p className="font-semibold">{formatNumber(safeNumber(metrics.llm?.totalTokens))}</p></div>
-                <div className="bg-purple-100 rounded-lg p-3"><p className="opacity-70">{t('metrics.estimatedCost')}</p><p className="font-semibold">${parseFloat(String(metrics.llm?.estimatedCost || 0)).toFixed(2)}</p></div>
+                <div className="bg-purple-100 dark:bg-purple-900/30 rounded-lg p-3"><p className="opacity-70">{t('metrics.tokensConsumed')}</p><p className="font-semibold">{formatNumber(safeNumber(metrics.llm?.totalTokens))}</p></div>
+                <div className="bg-purple-100 dark:bg-purple-900/30 rounded-lg p-3"><p className="opacity-70">{t('metrics.estimatedCost')}</p><p className="font-semibold">${parseFloat(String(metrics.llm?.estimatedCost || 0)).toFixed(2)}</p></div>
               </div>
               {metrics.llm?.byProvider && Object.keys(metrics.llm.byProvider).length > 0 && (
                 <div className="overflow-x-auto max-h-48">
                   <table className="w-full text-sm">
-                    <thead><tr className="border-b border-purple-200"><th className="text-left py-2 px-2 font-medium opacity-70">{t('metrics.model')}</th><th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.calls')}</th></tr></thead>
+                    <thead><tr className="border-b border-purple-200 dark:border-purple-700"><th className="text-left py-2 px-2 font-medium opacity-70">{t('metrics.model')}</th><th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.calls')}</th></tr></thead>
                     <tbody>
                       {Object.entries(metrics.llm.byProvider)
                         .sort(([, a], [, b]) => {
@@ -606,7 +606,7 @@ const MetricsPage = (): JSX.Element => {
                         .map(([model, stats]) => {
                           const count = typeof stats === 'object' ? (stats.requests || 0) : (stats || 0);
                           return (
-                            <tr key={model} className="border-b border-purple-100">
+                            <tr key={model} className="border-b border-purple-100 dark:border-purple-800">
                               <td className="py-2 px-2 font-mono text-xs truncate max-w-[200px]">{model}</td>
                               <td className="py-2 px-2 text-right font-semibold">{formatNumber(count)}</td>
                             </tr>
@@ -618,7 +618,7 @@ const MetricsPage = (): JSX.Element => {
               )}
             </motion.div>
 
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="rounded-xl border bg-cyan-50 text-cyan-600 border-cyan-200 p-6">
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="rounded-xl border bg-cyan-50 text-cyan-600 border-cyan-200 dark:bg-gray-800 dark:text-cyan-400 dark:border-cyan-700 p-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <p className="text-sm font-medium opacity-80">{t('metrics.topEndpoints')}</p>
@@ -629,10 +629,10 @@ const MetricsPage = (): JSX.Element => {
               </div>
               <div className="overflow-x-auto max-h-48">
                 <table className="w-full text-sm">
-                  <thead><tr className="border-b border-cyan-200"><th className="text-left py-2 px-2 font-medium opacity-70">{t('metrics.route')}</th><th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.calls')}</th></tr></thead>
+                  <thead><tr className="border-b border-cyan-200 dark:border-cyan-700"><th className="text-left py-2 px-2 font-medium opacity-70">{t('metrics.route')}</th><th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.calls')}</th></tr></thead>
                   <tbody>
                     {metrics.requests?.topEndpoints?.slice(0, 5).map((endpoint, index) => (
-                      <tr key={index} className="border-b border-cyan-100">
+                      <tr key={index} className="border-b border-cyan-100 dark:border-cyan-800">
                         <td className="py-2 px-2 font-mono text-xs truncate max-w-[200px]">{endpoint.endpoint || endpoint.path || 'N/A'}</td>
                         <td className="py-2 px-2 text-right font-semibold">{formatNumber(safeNumber(endpoint.count))}</td>
                       </tr>
