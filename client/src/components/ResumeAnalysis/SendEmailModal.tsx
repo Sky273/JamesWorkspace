@@ -403,15 +403,30 @@ const SendEmailModal = ({ isOpen, onClose, resumeName, resumeId, resumeTitle, cu
                 <p className="text-gray-500 dark:text-gray-400 mb-6">
                   {t('mail.modal.connectDescription')}
                 </p>
-                <button
-                  onClick={handleConnectGmail}
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-colors"
-                >
-                  <svg className="w-5 h-5" viewBox="0 0 24 24">
-                    <path fill="currentColor" d="M20.283 10.356h-8.327v3.451h4.792c-.446 2.193-2.313 3.453-4.792 3.453a5.27 5.27 0 0 1-5.279-5.28 5.27 5.27 0 0 1 5.279-5.279c1.259 0 2.397.447 3.29 1.178l2.6-2.599c-1.584-1.381-3.615-2.233-5.89-2.233a8.908 8.908 0 0 0-8.934 8.934 8.907 8.907 0 0 0 8.934 8.934c4.467 0 8.529-3.249 8.529-8.934 0-.528-.081-1.097-.202-1.625z"/>
-                  </svg>
-                  {t('mail.modal.connectGmail')}
-                </button>
+                {/* If user is logged in via Google SSO, show re-login message instead of connect button */}
+                {user?.google_id ? (
+                  <div className="space-y-4">
+                    <p className="text-sm text-amber-600 dark:text-amber-400">
+                      {t('mail.modal.ssoReconnectMessage', { defaultValue: 'Votre session Gmail a expiré. Veuillez vous reconnecter à l\'application pour réactiver l\'envoi d\'emails.' })}
+                    </p>
+                    <button
+                      onClick={() => window.location.href = '/signin'}
+                      className="inline-flex items-center gap-2 px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors"
+                    >
+                      {t('mail.modal.reconnectApp', { defaultValue: 'Se reconnecter' })}
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleConnectGmail}
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-colors"
+                  >
+                    <svg className="w-5 h-5" viewBox="0 0 24 24">
+                      <path fill="currentColor" d="M20.283 10.356h-8.327v3.451h4.792c-.446 2.193-2.313 3.453-4.792 3.453a5.27 5.27 0 0 1-5.279-5.28 5.27 5.27 0 0 1 5.279-5.279c1.259 0 2.397.447 3.29 1.178l2.6-2.599c-1.584-1.381-3.615-2.233-5.89-2.233a8.908 8.908 0 0 0-8.934 8.934 8.907 8.907 0 0 0 8.934 8.934c4.467 0 8.529-3.249 8.529-8.934 0-.528-.081-1.097-.202-1.625z"/>
+                    </svg>
+                    {t('mail.modal.connectGmail')}
+                  </button>
+                )}
               </div>
             ) : step === 'select' ? (
               <div className="space-y-4">
@@ -423,12 +438,15 @@ const SendEmailModal = ({ isOpen, onClose, resumeName, resumeId, resumeTitle, cu
                       {t('mail.modal.connectedAs', { email: mailStatus?.email })}
                     </span>
                   </div>
-                  <button
-                    onClick={handleDisconnect}
-                    className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-                  >
-                    {t('mail.modal.disconnect')}
-                  </button>
+                  {/* Hide disconnect button for SSO users (they use the same token for auth and email) */}
+                  {!user?.google_id && (
+                    <button
+                      onClick={handleDisconnect}
+                      className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                    >
+                      {t('mail.modal.disconnect')}
+                    </button>
+                  )}
                 </div>
 
                 {/* Client selection */}

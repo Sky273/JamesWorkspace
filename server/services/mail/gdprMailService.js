@@ -1,7 +1,20 @@
 /**
  * GDPR Mail Service
  * Handles Gmail OAuth and direct email sending for GDPR consent requests
- * Stores tokens at firm level (not user level)
+ * 
+ * IMPORTANT: This service is DEDICATED to GDPR consent emails.
+ * It stores tokens at FIRM level (not user level).
+ * 
+ * SEPARATION OF CONCERNS:
+ * - SSO Authentication: googleAuth.service.js (no token storage)
+ * - CV Email Sending: mailService.js (user_mail_tokens table)
+ * - GDPR Consent Emails: THIS SERVICE (firm_gdpr_mail_tokens table)
+ * 
+ * Each service has its own:
+ * - Redirect URI (GOOGLE_GDPR_REDIRECT_URI)
+ * - Scopes (gmail.send for direct sending)
+ * - Token storage (firm_gdpr_mail_tokens)
+ * - OAuth2 client instance (new instance per call)
  */
 
 import { query } from '../../config/database.js';
@@ -14,28 +27,30 @@ async function getGoogle() {
     if (!google) {
         const { google: g } = await import('googleapis');
         google = g;
+        safeLog('info', 'googleapis module loaded for GDPR mail');
     }
     return google;
 }
 
-// OAuth2 configuration
+// OAuth2 configuration - DEDICATED to GDPR emails
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const GOOGLE_REDIRECT_URI = process.env.GOOGLE_GDPR_REDIRECT_URI || 
     `${process.env.BACKEND_URL || 'http://localhost:3001'}/api/gdpr/mail/callback`;
 
-// Scopes needed for sending emails
+// Scopes needed for SENDING emails (not just composing drafts)
 const SCOPES = [
     'https://www.googleapis.com/auth/gmail.send',
     'https://www.googleapis.com/auth/userinfo.email'
 ];
 
 /**
- * Get OAuth2 client
+ * Create a NEW OAuth2 client instance for GDPR mail
+ * NOTE: We create a new instance each time to avoid state pollution
  */
 async function getOAuth2Client() {
-    const google = await getGoogle();
-    return new google.auth.OAuth2(
+    const g = await getGoogle();
+    return new g.auth.OAuth2(
         GOOGLE_CLIENT_ID,
         GOOGLE_CLIENT_SECRET,
         GOOGLE_REDIRECT_URI

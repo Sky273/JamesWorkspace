@@ -1,35 +1,51 @@
 /**
  * Google OAuth2 Authentication Service
- * Handles "Sign in with Google" for MFA/SSO
- * Also provides Gmail access for email draft creation
+ * Handles "Sign in with Google" for MFA/SSO ONLY
+ * 
+ * IMPORTANT: This service is DEDICATED to user authentication (SSO).
+ * It does NOT handle Gmail tokens for email sending.
+ * 
+ * For CV email sending: use mailService.js (user_mail_tokens table)
+ * For GDPR consent emails: use gdprMailService.js (firm_gdpr_mail_tokens table)
+ * 
+ * Each OAuth2 use case has its own:
+ * - Redirect URI
+ * - Scopes
+ * - Token storage
+ * - OAuth2 client instance
  */
 
-import { googleAuthConfig, encryptToken, calculateTokenExpiry } from '../config/oauth.config.js';
+import { googleAuthConfig } from '../config/oauth.config.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { query } from '../config/database.js';
 
 // Lazy-loaded googleapis module
 let google = null;
-let oauth2Client = null;
 
 /**
- * Get or initialize Google OAuth2 client
+ * Get googleapis module (lazy loaded)
  */
-async function getOAuth2Client() {
-    if (!oauth2Client) {
-        if (!google) {
-            const googleapis = await import('googleapis');
-            google = googleapis.google;
-            safeLog('info', 'googleapis module loaded for auth');
-        }
-        
-        oauth2Client = new google.auth.OAuth2(
-            googleAuthConfig.clientId,
-            googleAuthConfig.clientSecret,
-            googleAuthConfig.redirectUri
-        );
+async function getGoogle() {
+    if (!google) {
+        const googleapis = await import('googleapis');
+        google = googleapis.google;
+        safeLog('info', 'googleapis module loaded for SSO auth');
     }
-    return oauth2Client;
+    return google;
+}
+
+/**
+ * Create a NEW OAuth2 client instance for SSO
+ * NOTE: We create a new instance each time to avoid state pollution
+ * between different OAuth flows (SSO vs Mail vs GDPR)
+ */
+async function createOAuth2Client() {
+    const g = await getGoogle();
+    return new g.auth.OAuth2(
+        googleAuthConfig.clientId,
+        googleAuthConfig.clientSecret,
+        googleAuthConfig.redirectUri
+    );
 }
 
 /**
@@ -38,7 +54,7 @@ async function getOAuth2Client() {
  * @returns {Promise<string>} Authorization URL
  */
 export async function getAuthUrl(state) {
-    const client = await getOAuth2Client();
+    const client = await createOAuth2Client();
     return client.generateAuthUrl({
         access_type: 'offline',
         scope: googleAuthConfig.scopes,
@@ -54,12 +70,13 @@ export async function getAuthUrl(state) {
  */
 export async function exchangeCodeForUserInfo(code) {
     try {
-        const client = await getOAuth2Client();
+        const client = await createOAuth2Client();
         const { tokens } = await client.getToken(code);
         client.setCredentials(tokens);
         
         // Get user info from Google
-        const oauth2 = google.oauth2({ version: 'v2', auth: client });
+        const g = await getGoogle();
+        const oauth2 = g.oauth2({ version: 'v2', auth: client });
         const { data } = await oauth2.userinfo.get();
         
         safeLog('info', 'Google user info retrieved', { email: data.email });
@@ -85,7 +102,7 @@ export async function exchangeCodeForUserInfo(code) {
  */
 export async function verifyIdToken(idToken) {
     try {
-        const client = await getOAuth2Client();
+        const client = await createOAuth2Client();
         const ticket = await client.verifyIdToken({
             idToken: idToken,
             audience: googleAuthConfig.clientId
@@ -232,6 +249,7 @@ export async function getGoogleLinkStatus(userId) {
 
 /**
  * Save Gmail tokens for a user (for email draft creation)
+ * Called during SSO login to enable seamless CV email sending
  * @param {string} userId - User ID
  * @param {string} accessToken - Gmail access token
  * @param {string} refreshToken - Gmail refresh token (optional)
@@ -239,6 +257,9 @@ export async function getGoogleLinkStatus(userId) {
  * @returns {Promise<boolean>}
  */
 export async function saveGmailTokens(userId, accessToken, refreshToken, expiresIn = 3600) {
+    // Import encryption functions dynamically to avoid circular dependencies
+    const { encryptToken, calculateTokenExpiry } = await import('../config/oauth.config.js');
+    
     try {
         const encryptedAccess = encryptToken(accessToken);
         const encryptedRefresh = refreshToken ? encryptToken(refreshToken) : null;
@@ -275,7 +296,7 @@ export async function saveGmailTokens(userId, accessToken, refreshToken, expires
             );
         }
         
-        safeLog('info', 'Gmail tokens saved via Google Sign-In', { userId });
+        safeLog('info', 'Gmail tokens saved via Google SSO', { userId });
         return true;
     } catch (error) {
         safeLog('error', 'Failed to save Gmail tokens', { error: error.message, userId });
@@ -284,10 +305,9 @@ export async function saveGmailTokens(userId, accessToken, refreshToken, expires
 }
 
 /**
- * Destroy OAuth client (for graceful shutdown)
+ * Destroy googleapis module reference (for graceful shutdown)
  */
 export function destroyGoogleAuth() {
-    oauth2Client = null;
     google = null;
-    safeLog('info', 'Google auth client destroyed');
+    safeLog('info', 'Google SSO auth module destroyed');
 }

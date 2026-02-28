@@ -1279,7 +1279,9 @@
       "successDescription": "Le brouillon a été créé dans votre boîte Gmail. Cliquez ci-dessous pour l'ouvrir et l'envoyer.",
       "openDraft": "Ouvrir dans Gmail",
       "errorTitle": "Erreur",
-      "retry": "Réessayer"
+      "retry": "Réessayer",
+      "ssoReconnectMessage": "Votre session Gmail a expiré. Veuillez vous reconnecter à l'application pour réactiver l'envoi d'emails.",
+      "reconnectApp": "Se reconnecter"
     },
     "errors": {
       "loadClients": "Erreur lors du chargement des clients",

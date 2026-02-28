@@ -1,13 +1,64 @@
 /**
- * OAuth Configuration for Email Providers
- * Supports Gmail (Google) and Outlook (Microsoft) - extensible
+ * OAuth Configuration for Google Services
+ * 
+ * IMPORTANT: This application uses 3 SEPARATE OAuth2 flows:
+ * 
+ * 1. SSO AUTHENTICATION (googleAuthConfig)
+ *    - Purpose: User login via "Sign in with Google"
+ *    - Redirect: /api/auth/google/callback
+ *    - Scopes: userinfo.email, userinfo.profile
+ *    - Token Storage: NONE (only JWT session tokens)
+ *    - Service: googleAuth.service.js
+ * 
+ * 2. CV EMAIL SENDING (googleOAuthConfig)
+ *    - Purpose: Create Gmail drafts with CV attachments
+ *    - Redirect: /api/mail/callback/gmail
+ *    - Scopes: gmail.compose, userinfo.email
+ *    - Token Storage: user_mail_tokens (per user)
+ *    - Service: mailService.js + gmailProvider.js
+ * 
+ * 3. GDPR CONSENT EMAILS (configured in gdprMailService.js)
+ *    - Purpose: Send GDPR consent request emails
+ *    - Redirect: /api/gdpr/mail/callback
+ *    - Scopes: gmail.send, userinfo.email
+ *    - Token Storage: firm_gdpr_mail_tokens (per firm)
+ *    - Service: gdprMailService.js
+ * 
+ * WHY SEPARATE?
+ * - Different redirect URIs prevent token confusion
+ * - Different scopes for different purposes (compose vs send)
+ * - Different storage levels (user vs firm)
+ * - Avoids Google's 50 refresh token limit per account/app
+ * - Allows using different Gmail accounts for each purpose
  */
 
 import crypto from 'crypto';
 
 // ============================================
-// GOOGLE OAUTH CONFIG
+// CONFIG 1: SSO AUTHENTICATION + CV EMAIL
 // ============================================
+// Used by: googleAuth.service.js
+// Purpose: User login via Google SSO + Gmail access for CV email sending
+// Storage: user_mail_tokens table (tokens saved during SSO login)
+// Note: SSO users get Gmail access automatically (no separate connection needed)
+
+export const googleAuthConfig = {
+    clientId: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    redirectUri: process.env.GOOGLE_AUTH_REDIRECT_URI || 'http://localhost:3001/api/auth/google/callback',
+    scopes: [
+        'https://www.googleapis.com/auth/userinfo.email',
+        'https://www.googleapis.com/auth/userinfo.profile',
+        'https://www.googleapis.com/auth/gmail.compose' // For CV email sending when logged in via SSO
+    ]
+};
+
+// ============================================
+// CONFIG 2: CV EMAIL SENDING
+// ============================================
+// Used by: mailService.js, gmailProvider.js
+// Purpose: Create Gmail drafts with CV attachments
+// Storage: user_mail_tokens table (per user)
 
 export const googleOAuthConfig = {
     clientId: process.env.GOOGLE_CLIENT_ID,
@@ -19,18 +70,12 @@ export const googleOAuthConfig = {
     ]
 };
 
-// Google OAuth config for Sign-in (authentication + Gmail access)
-// Combines authentication scopes with Gmail compose for seamless email draft creation
-export const googleAuthConfig = {
-    clientId: process.env.GOOGLE_CLIENT_ID,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    redirectUri: process.env.GOOGLE_AUTH_REDIRECT_URI || 'http://localhost:3001/api/auth/google/callback',
-    scopes: [
-        'https://www.googleapis.com/auth/userinfo.email',
-        'https://www.googleapis.com/auth/userinfo.profile',
-        'https://www.googleapis.com/auth/gmail.compose'
-    ]
-};
+// ============================================
+// CONFIG 3: GDPR CONSENT EMAILS
+// ============================================
+// Configured directly in gdprMailService.js
+// Uses: GOOGLE_GDPR_REDIRECT_URI env variable
+// Storage: firm_gdpr_mail_tokens table (per firm)
 
 // ============================================
 // TOKEN ENCRYPTION

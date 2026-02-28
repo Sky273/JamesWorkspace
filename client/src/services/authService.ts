@@ -21,6 +21,9 @@ export interface User {
   firm?: string;
   FirmName?: string;
   FirmLogo?: string;
+  // Google SSO fields
+  google_id?: string;
+  google_email?: string;
   // Legacy uppercase properties for backward compatibility
   Name?: string;
   Email?: string;

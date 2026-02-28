@@ -1,7 +1,25 @@
 /**
  * Mail Service
- * Orchestrates email operations across different providers
- * Manages OAuth tokens and provider selection
+ * Orchestrates email operations for CV SENDING (draft creation)
+ * 
+ * IMPORTANT: This service is DEDICATED to CV email sending.
+ * It stores tokens at USER level (not firm level).
+ * 
+ * SEPARATION OF CONCERNS:
+ * - SSO Authentication: googleAuth.service.js (no token storage)
+ * - CV Email Sending: THIS SERVICE (user_mail_tokens table)
+ * - GDPR Consent Emails: gdprMailService.js (firm_gdpr_mail_tokens table)
+ * 
+ * Each service has its own:
+ * - Redirect URI (GOOGLE_REDIRECT_URI → /api/mail/callback/gmail)
+ * - Scopes (gmail.compose for draft creation)
+ * - Token storage (user_mail_tokens)
+ * - OAuth2 client instance (via gmailProvider)
+ * 
+ * REFRESH TOKEN HANDLING:
+ * - Tokens are automatically refreshed when expired
+ * - Refresh tokens are stored encrypted in database
+ * - If refresh fails, user is prompted to reconnect
  */
 
 import { query } from '../../config/database.js';
@@ -182,17 +200,40 @@ export async function createDraft(userId, draftData) {
     
     // Get provider and create draft
     const provider = getProvider(providerName);
-    const result = await provider.createDraft(accessToken, {
-        to,
-        subject,
-        body: body || '',
-        attachment,
-        attachmentName
-    });
     
-    safeLog('info', 'Email draft created', { userId, provider: providerName, to, subject });
-    
-    return result;
+    try {
+        const result = await provider.createDraft(accessToken, {
+            to,
+            subject,
+            body: body || '',
+            attachment,
+            attachmentName
+        });
+        
+        safeLog('info', 'Email draft created', { userId, provider: providerName, to, subject });
+        
+        return result;
+    } catch (error) {
+        // Check for insufficient scopes error - invalidate token to force reconnection
+        if (error.message?.includes('insufficient authentication scopes') ||
+            error.message?.includes('Insufficient Permission') ||
+            error.message?.includes('403')) {
+            
+            safeLog('warn', 'Gmail token has insufficient scopes, invalidating', { userId, provider: providerName });
+            
+            // Invalidate the token to force user to reconnect with correct scopes
+            await query(`
+                UPDATE user_mail_tokens
+                SET token_expiry = NOW() - INTERVAL '1 day',
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE user_id = $1 AND provider = $2
+            `, [userId, providerName]);
+            
+            throw new Error('Votre connexion Gmail ne dispose pas des permissions nécessaires. Veuillez reconnecter Gmail pour autoriser la création de brouillons.');
+        }
+        
+        throw error;
+    }
 }
 
 /**

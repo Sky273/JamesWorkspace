@@ -1277,7 +1277,9 @@
       "successDescription": "The draft has been created in your Gmail inbox. Click below to open and send it.",
       "openDraft": "Open in Gmail",
       "errorTitle": "Error",
-      "retry": "Retry"
+      "retry": "Retry",
+      "ssoReconnectMessage": "Your Gmail session has expired. Please log in again to reactivate email sending.",
+      "reconnectApp": "Log in again"
     },
     "errors": {
       "loadClients": "Error loading clients",

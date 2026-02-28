@@ -296,10 +296,25 @@ const ResumeExportPage = (): JSX.Element => {
             const candidateName = currentResume['Name'] || 'Candidat';
             const candidateTitle = currentResume['Title'] || '';
             
+            // Process body with keyword replacements
             let processedBody = template.TemplateContent || '';
             processedBody = processedBody.replace(/-name-/g, candidateName);
             processedBody = processedBody.replace(/-title-/g, candidateTitle);
             processedBody = processedBody.replace(/-content-/g, content);
+            
+            // Process header with keyword replacements
+            let processedHeader = template.HeaderContent || '';
+            if (processedHeader) {
+              processedHeader = processedHeader.replace(/-name-/g, candidateName);
+              processedHeader = processedHeader.replace(/-title-/g, candidateTitle);
+            }
+            
+            // Process footer with keyword replacements
+            let processedFooter = template.FooterContent || '';
+            if (processedFooter) {
+              processedFooter = processedFooter.replace(/-name-/g, candidateName);
+              processedFooter = processedFooter.replace(/-title-/g, candidateTitle);
+            }
             
             const response = await fetchWithAuth('/generate-pdf', {
               method: 'POST',
@@ -308,8 +323,8 @@ const ResumeExportPage = (): JSX.Element => {
                 htmlContent: processedBody,
                 filename: `${candidateName.replace(/\s+/g, '_')}.pdf`,
                 stylesheet: template.Stylesheet || '',
-                headerContent: template.HeaderContent || undefined,
-                footerContent: template.FooterContent || undefined,
+                headerContent: processedHeader || undefined,
+                footerContent: processedFooter || undefined,
                 footerHeight: template.FooterHeight || 25
               })
             });

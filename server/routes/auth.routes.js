@@ -372,6 +372,9 @@ router.get('/me', authenticateToken, async (req, res) => {
                 firm: user.firm_name,
                 FirmName: user.firm_name,
                 FirmLogo: user.firm_logo || '',
+                // Google SSO fields (for UI to detect SSO login)
+                google_id: user.google_id || null,
+                google_email: user.google_email || null,
                 // Backward compatibility
                 customer: user.firm_name,
                 CustomerName: user.firm_name,
@@ -825,13 +828,14 @@ router.get('/google/callback', async (req, res) => {
             maxAge: 7 * 24 * 60 * 60 * 1000
         });
         
-        // Save Gmail tokens for email draft functionality
+        // Save Gmail tokens for CV email sending (seamless experience for SSO users)
+        // This allows users logged in via Google to send CV emails without reconnecting Gmail
         if (googleUser.accessToken) {
             await googleAuthService.saveGmailTokens(
                 user.id,
                 googleUser.accessToken,
                 googleUser.refreshToken,
-                3600 // Default 1 hour expiry
+                3600 // Default 1 hour expiry (will be refreshed automatically)
             );
         }
         
