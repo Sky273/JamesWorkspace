@@ -266,7 +266,9 @@ export default defineConfig(({ mode }) => {
     // Enable source maps for debugging
     sourcemap: true,
     // Chunk size warning limit (in kB)
-    chunkSizeWarningLimit: 500,
+    // Increased to 1500 to suppress warnings for necessary large libs (TinyMCE, maplibre, Three.js)
+    // These libs are already lazy-loaded, so they don't affect initial page load
+    chunkSizeWarningLimit: 1500,
     // Target modern browsers for smaller output
     target: 'es2020',
     // Disable modulePreload polyfill to avoid unused preload warnings in production
