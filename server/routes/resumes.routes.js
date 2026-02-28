@@ -643,7 +643,12 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
         if (req.file?.path) {
             try {
                 await fs.unlink(req.file.path);
-            } catch { /* ignore */ }
+            } catch (unlinkError) {
+                safeLog('debug', 'Failed to delete temp file during error cleanup', { 
+                    path: req.file.path, 
+                    error: unlinkError.message 
+                });
+            }
         }
         res.status(500).json({ error: 'Failed to upload resume' });
     }

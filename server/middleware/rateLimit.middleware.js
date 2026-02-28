@@ -43,6 +43,9 @@ const userRateLimitStore = new Map();
 // Combined IP + User rate limiting store (prevents bypass via proxy/VPN)
 const combinedRateLimitStore = new Map();
 
+// Maximum entries to prevent memory leaks (10,000 users/IPs should be more than enough)
+const MAX_RATE_LIMIT_ENTRIES = 10000;
+
 /**
  * Get client IP address (handles proxies)
  */
@@ -71,6 +74,20 @@ export function userRateLimit(maxRequests = RATE_LIMIT.USER.max, windowMs = RATE
         let userLimit = userRateLimitStore.get(userId);
         
         if (!userLimit || now > userLimit.resetTime) {
+            // Prevent memory leak: if store is too large, clear oldest entries
+            if (userRateLimitStore.size >= MAX_RATE_LIMIT_ENTRIES) {
+                const entriesToDelete = Math.floor(MAX_RATE_LIMIT_ENTRIES * 0.1);
+                const iterator = userRateLimitStore.keys();
+                for (let i = 0; i < entriesToDelete; i++) {
+                    const key = iterator.next().value;
+                    if (key) userRateLimitStore.delete(key);
+                }
+                safeLog('warn', 'Rate limit store pruned due to size limit', { 
+                    store: 'user', 
+                    entriesRemoved: entriesToDelete 
+                });
+            }
+            
             userLimit = {
                 count: 0,
                 resetTime: now + windowMs
@@ -124,6 +141,20 @@ export function combinedRateLimit(maxRequests = 30, windowMs = 60 * 1000) {
         let limit = combinedRateLimitStore.get(combinedKey);
         
         if (!limit || now > limit.resetTime) {
+            // Prevent memory leak: if store is too large, clear oldest entries
+            if (combinedRateLimitStore.size >= MAX_RATE_LIMIT_ENTRIES) {
+                const entriesToDelete = Math.floor(MAX_RATE_LIMIT_ENTRIES * 0.1);
+                const iterator = combinedRateLimitStore.keys();
+                for (let i = 0; i < entriesToDelete; i++) {
+                    const key = iterator.next().value;
+                    if (key) combinedRateLimitStore.delete(key);
+                }
+                safeLog('warn', 'Rate limit store pruned due to size limit', { 
+                    store: 'combined', 
+                    entriesRemoved: entriesToDelete 
+                });
+            }
+            
             limit = {
                 count: 0,
                 resetTime: now + windowMs,

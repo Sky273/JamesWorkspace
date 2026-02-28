@@ -10,14 +10,16 @@ import https from 'https';
 import fs from 'fs';
 import 'dotenv/config';
 
+// Import safeLog early for global error handlers
+import { safeLog } from './utils/logger.backend.js';
+
 // Global error handlers to catch crashes
 process.on('uncaughtException', (error) => {
-    console.error('🔴🔴🔴 UNCAUGHT EXCEPTION:', error.message);
-    console.error(error.stack);
+    safeLog('error', 'UNCAUGHT EXCEPTION', { message: error.message, stack: error.stack });
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-    console.error('🔴🔴🔴 UNHANDLED REJECTION:', reason);
+    safeLog('error', 'UNHANDLED REJECTION', { reason: String(reason) });
 });
 
 // ES module __dirname equivalent
@@ -67,7 +69,7 @@ import gdprMailRoutes from './routes/gdprMail.routes.js';
 
 // Import services
 import { metrics } from './services/metrics.service.js';
-import { safeLog } from './utils/logger.backend.js';
+// safeLog already imported at top of file for global error handlers
 import { startPeriodicCleanup, stopPeriodicCleanup } from './utils/fileCleanup.js';
 import { startBlacklistCleanup, destroyBlacklist } from './services/tokenBlacklist.service.js';
 import { swaggerDocument } from './config/swagger.js';
@@ -871,16 +873,16 @@ if (HTTPS_ENABLED) {
 
 async function onServerStart(protocol, port) {
     // Clean all caches on startup
-    console.log('\n🧹 Cleaning all caches on startup...');
+    safeLog('info', 'Cleaning all caches on startup');
     try {
         await cleanupAllCaches();
         cleanupFactsCache();
         cleanupTrendsCache();
         cleanupMetiersCache();
         invalidateTagsCache();
-        console.log('✅ All caches cleaned successfully\n');
+        safeLog('info', 'All caches cleaned successfully');
     } catch (error) {
-        console.error('⚠️  Error cleaning caches on startup:', error);
+        safeLog('error', 'Error cleaning caches on startup', { error: error.message });
     }
     
     // Set server timeouts to 70 minutes for long-running requests (trends collection can take up to 1 hour)
@@ -889,42 +891,22 @@ async function onServerStart(protocol, port) {
     server.keepAliveTimeout = SEVENTY_MINUTES;
     server.headersTimeout = SEVENTY_MINUTES + 10000; // Slightly higher than keepAliveTimeout
     
-    console.log('\n=================================');
-    console.log('🚀 PROXY SERVER STARTED');
-    console.log('=================================');
-    console.log(`📡 Port: ${port}`);
-    console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`🔒 CORS Origins: ${ALLOWED_ORIGINS.join(', ')}`);
-    console.log('=================================');
-    console.log('📋 Modular Architecture:');
-    console.log('  ✅ Health & Metrics');
-    console.log('  ✅ Authentication');
-    console.log('  ✅ Settings');
-    console.log('  ✅ Missions');
-    console.log('  ✅ Resumes');
-    console.log('  ✅ Templates');
-    console.log('  ✅ Firms');
-    console.log('  ✅ LLM Proxy');
-    console.log('  ✅ Admin');
-    console.log('=================================');
-    console.log('🔧 Features Enabled:');
-    console.log('  ✅ Rate Limiting');
-    console.log('  ✅ CSRF Protection');
-    console.log('  ✅ Metrics Tracking');
-    console.log('  ✅ Request Logging');
-    console.log('  ✅ Compression');
-    console.log('  ✅ Security Headers');
-    console.log('  ✅ File Cleanup (hourly)');
-    console.log('  ✅ Token Blacklist');
-    console.log('=================================\n');
+    safeLog('info', 'PROXY SERVER STARTED', {
+        port,
+        environment: process.env.NODE_ENV || 'development',
+        corsOrigins: ALLOWED_ORIGINS,
+        protocol,
+        modules: ['Health & Metrics', 'Authentication', 'Settings', 'Missions', 'Resumes', 'Templates', 'Firms', 'LLM Proxy', 'Admin'],
+        features: ['Rate Limiting', 'CSRF Protection', 'Metrics Tracking', 'Request Logging', 'Compression', 'Security Headers', 'File Cleanup', 'Token Blacklist']
+    });
     
     // Initialize PostgreSQL database connection
-    console.log('🔌 Initializing PostgreSQL database...');
+    safeLog('info', 'Initializing PostgreSQL database');
     const dbInitialized = await initializeDatabase();
     if (dbInitialized) {
-        console.log('✅ PostgreSQL database initialized successfully\n');
+        safeLog('info', 'PostgreSQL database initialized successfully');
     } else {
-        console.error('❌ PostgreSQL database initialization failed - check logs\n');
+        safeLog('error', 'PostgreSQL database initialization failed');
     }
     
     // Start periodic cleanup of temporary files
@@ -938,14 +920,12 @@ async function onServerStart(protocol, port) {
     
     // Start GDPR consent scheduler (checks for expired consents, sends reminders, purges)
     startScheduler();
-    console.log('  ✅ GDPR Consent Scheduler');
-    
-    console.log(`🔐 Protocol: ${protocol}`);
+    safeLog('info', 'GDPR Consent Scheduler started');
 }
 
 // Graceful shutdown with proper cleanup
 const gracefulShutdown = async (signal) => {
-    console.log(`\n${signal} signal received: initiating graceful shutdown`);
+    safeLog('info', 'Graceful shutdown initiated', { signal });
     
     // Force exit timer - use unref() so it doesn't keep process alive
     const forceExitTimer = setTimeout(() => {
@@ -956,7 +936,7 @@ const gracefulShutdown = async (signal) => {
     
     // Stop accepting new connections
     server.close(async () => {
-        console.log('✅ HTTP server closed');
+        safeLog('info', 'HTTP server closed');
         
         // Cleanup intervals and caches
         cleanupMemoryMonitor();
@@ -977,36 +957,36 @@ const gracefulShutdown = async (signal) => {
         destroyGoogleapis();
         destroyMjml();
         stopScheduler();
-        console.log('✅ All caches destroyed (data + intervals)');
+        safeLog('info', 'All caches destroyed');
         
         // Close PostgreSQL connection pool
         try {
             await closePool();
-            console.log('✅ PostgreSQL connection pool closed');
+            safeLog('info', 'PostgreSQL connection pool closed');
         } catch (error) {
-            console.error('⚠️  Error closing PostgreSQL pool:', error.message);
+            safeLog('error', 'Error closing PostgreSQL pool', { error: error.message });
         }
         
         // Destroy HTTP agents to close all sockets
         if (httpAgent) {
             httpAgent.destroy();
-            console.log('✅ HTTP agent destroyed');
+            safeLog('debug', 'HTTP agent destroyed');
         }
         if (httpsAgent) {
             httpsAgent.destroy();
-            console.log('✅ HTTPS agent destroyed');
+            safeLog('debug', 'HTTPS agent destroyed');
         }
         
         // Force garbage collection if available
         if (global.gc) {
             global.gc();
-            console.log('✅ Garbage collection triggered');
+            safeLog('debug', 'Garbage collection triggered');
         }
         
         // Clear the force exit timer
         clearTimeout(forceExitTimer);
         
-        console.log('✅ Graceful shutdown complete');
+        safeLog('info', 'Graceful shutdown complete');
         
         // Use setImmediate to ensure all cleanup is done before exiting
         setImmediate(() => {
@@ -1026,13 +1006,13 @@ if (process.platform === 'win32') {
 // Handle uncaught process termination (e.g., parent process killed)
 process.on('exit', (code) => {
     if (code !== 0) {
-        console.log(`Process exiting with code ${code}`);
+        safeLog('warn', 'Process exiting with non-zero code', { code });
     }
 });
 
 // Handle when parent process disconnects (IPC channel closed)
 process.on('disconnect', () => {
-    console.log('Parent process disconnected, initiating shutdown...');
+    safeLog('info', 'Parent process disconnected, initiating shutdown');
     gracefulShutdown('DISCONNECT');
 });
 
