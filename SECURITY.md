@@ -1,7 +1,7 @@
 # Security Documentation
 
-**Version**: 1.5.7  
-**Last Updated**: February 2026
+**Version**: 1.7.0  
+**Last Updated**: March 2026
 
 ## Overview
 
@@ -91,6 +91,15 @@ This document describes the security measures implemented in the ResumeConverter
 - Resources (CVs, missions, adaptations) are scoped to firms
 - Admins can access all firms
 - `hasFirmAccess()` middleware enforces firm-level isolation
+
+### Two-Factor Authentication (2FA)
+
+- **TOTP-based**: Time-based One-Time Password using `speakeasy` library
+- **RFC 6238 compliant**: Compatible with Google Authenticator, Authy, and other TOTP apps
+- **Encrypted secrets**: TOTP secrets are encrypted with AES-256-GCM before storage
+- **Backup codes**: 8 single-use backup codes generated and encrypted
+- **Clock drift tolerance**: 60-second window (±2 steps) for code validation
+- **Scope**: Applies to email/password login only (OAuth2/Google login uses Google's security)
 
 ---
 

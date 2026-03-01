@@ -4,23 +4,24 @@
 
 1. [Introduction](#introduction)
 2. [Démarrage Rapide](#démarrage-rapide)
-3. [Gestion des CV](#gestion-des-cv)
-4. [Missions](#missions)
-5. [Matching Profils](#matching-profils)
-6. [Adaptations de CV](#adaptations-de-cv)
-7. [Clients & Prospects](#clients--prospects)
-8. [Envoi de CV par Email](#envoi-de-cv-par-email)
-9. [Radar Marché](#radar-marché)
-10. [Assistant IA](#assistant-ia)
-11. [Administration](#administration)
-12. [Conformité RGPD](#conformité-rgpd)
-13. [Interface et Navigation](#interface-et-navigation)
-14. [Bonnes Pratiques](#bonnes-pratiques)
-15. [Dépannage](#dépannage)
-16. [FAQ](#faq)
-17. [Prochaines Étapes](#prochaines-étapes)
-18. [Glossaire](#glossaire)
-19. [Support](#support)
+3. [Profil Utilisateur](#profil-utilisateur)
+4. [Gestion des CV](#gestion-des-cv)
+5. [Missions](#missions)
+6. [Matching Profils](#matching-profils)
+7. [Adaptations de CV](#adaptations-de-cv)
+8. [Clients & Prospects](#clients--prospects)
+9. [Envoi de CV par Email](#envoi-de-cv-par-email)
+10. [Radar Marché](#radar-marché)
+11. [Assistant IA](#assistant-ia)
+12. [Administration](#administration)
+13. [Conformité RGPD](#conformité-rgpd)
+14. [Interface et Navigation](#interface-et-navigation)
+15. [Bonnes Pratiques](#bonnes-pratiques)
+16. [Dépannage](#dépannage)
+17. [FAQ](#faq)
+18. [Prochaines Étapes](#prochaines-étapes)
+19. [Glossaire](#glossaire)
+20. [Support](#support)
 
 ---
 
@@ -60,6 +61,97 @@
 ```
 1. Importer un CV → 2. Analyser → 3. Améliorer → 4. Créer une mission → 5. Adapter le CV → 6. Exporter
 ```
+
+---
+
+## Profil Utilisateur
+
+Chaque utilisateur dispose d'un espace personnel pour gérer ses informations et paramètres de sécurité.
+
+### Accéder à son Profil
+
+1. Cliquez sur votre **nom** ou **avatar** en haut à droite de l'écran
+2. Sélectionnez **"Mon Profil"** dans le menu déroulant
+
+### Onglet Profil
+
+L'onglet **Profil** permet de consulter et modifier vos informations personnelles :
+
+| Champ | Description |
+|-------|-------------|
+| **Nom** | Votre nom complet |
+| **Email** | Votre adresse email (identifiant de connexion) |
+| **Fonction** | Votre poste (utilisé dans les signatures email) |
+| **Téléphone** | Votre numéro professionnel |
+| **Cabinet** | Votre cabinet de rattachement |
+
+### Onglet Sécurité
+
+L'onglet **Sécurité** permet de configurer l'authentification à deux facteurs (2FA).
+
+#### Qu'est-ce que l'authentification à deux facteurs ?
+
+L'authentification à deux facteurs (2FA) ajoute une couche de sécurité supplémentaire à votre compte. En plus de votre mot de passe, vous devrez saisir un code temporaire généré par une application d'authentification sur votre téléphone.
+
+> **Note importante** : Le 2FA s'applique uniquement à la connexion par email/mot de passe. Si vous vous connectez via Google (OAuth2), la sécurité de votre compte Google s'applique.
+
+#### Applications Compatibles
+
+Vous pouvez utiliser l'une des applications suivantes :
+- **Google Authenticator** (Android / iOS)
+- **Microsoft Authenticator** (Android / iOS)
+- **Authy** (Android / iOS / Desktop)
+- Toute application compatible TOTP (RFC 6238)
+
+#### Activer le 2FA
+
+1. Accédez à **Mon Profil** → onglet **Sécurité**
+2. Cliquez sur **"Activer 2FA"**
+3. Un QR code s'affiche à l'écran
+4. Ouvrez votre application d'authentification
+5. Scannez le QR code avec l'application
+6. Saisissez le code à 6 chiffres affiché par l'application
+7. Cliquez sur **"Vérifier"**
+
+Une fois activé, vous recevrez **8 codes de secours**. **Conservez-les précieusement** dans un endroit sûr (gestionnaire de mots de passe, coffre-fort, etc.). Ces codes vous permettront de vous connecter si vous perdez accès à votre application d'authentification.
+
+#### Se Connecter avec le 2FA
+
+1. Saisissez votre email et mot de passe comme d'habitude
+2. Un écran de vérification 2FA s'affiche
+3. Ouvrez votre application d'authentification
+4. Saisissez le code à 6 chiffres affiché
+5. Cliquez sur **"Vérifier"**
+
+> **Astuce** : Les codes changent toutes les 30 secondes. Si votre code est refusé, attendez le prochain code.
+
+#### Utiliser un Code de Secours
+
+Si vous n'avez plus accès à votre application d'authentification :
+
+1. Sur l'écran de vérification 2FA, saisissez l'un de vos codes de secours (8 caractères)
+2. Cliquez sur **"Vérifier"**
+
+> **Attention** : Chaque code de secours ne peut être utilisé qu'une seule fois.
+
+#### Régénérer les Codes de Secours
+
+Si vous avez utilisé plusieurs codes de secours ou si vous pensez qu'ils ont été compromis :
+
+1. Accédez à **Mon Profil** → onglet **Sécurité**
+2. Cliquez sur **"Régénérer les codes de secours"**
+3. Saisissez un code 2FA valide pour confirmer
+4. De nouveaux codes sont générés (les anciens sont invalidés)
+5. **Sauvegardez immédiatement** les nouveaux codes
+
+#### Désactiver le 2FA
+
+1. Accédez à **Mon Profil** → onglet **Sécurité**
+2. Cliquez sur **"Désactiver 2FA"**
+3. Saisissez un code 2FA valide pour confirmer
+4. Le 2FA est désactivé
+
+> **Recommandation** : Nous vous conseillons de garder le 2FA activé pour une sécurité optimale de votre compte.
 
 ---
 

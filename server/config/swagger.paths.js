@@ -1046,6 +1046,531 @@ export const swaggerPaths = {
     },
 
     // ============================================
+    // EMAIL TEMPLATES
+    // ============================================
+    '/email-templates': {
+        get: {
+            tags: ['Email Templates'],
+            summary: 'Get all email templates',
+            description: 'Returns templates for the user\'s firm. Admins can also see system templates.',
+            security: [{ cookieAuth: [] }],
+            responses: {
+                200: { description: 'List of templates', content: { 'application/json': { schema: { type: 'object', properties: { templates: { type: 'array', items: { $ref: '#/components/schemas/EmailTemplate' } } } } } } }
+            }
+        },
+        post: {
+            tags: ['Email Templates'],
+            summary: 'Create email template',
+            security: [{ cookieAuth: [], csrfToken: [] }],
+            requestBody: {
+                required: true,
+                content: {
+                    'application/json': {
+                        schema: {
+                            type: 'object',
+                            required: ['name', 'subjectTemplate', 'mjmlContent'],
+                            properties: {
+                                name: { type: 'string' },
+                                description: { type: 'string' },
+                                subjectTemplate: { type: 'string' },
+                                mjmlContent: { type: 'string' },
+                                isDefault: { type: 'boolean' }
+                            }
+                        }
+                    }
+                }
+            },
+            responses: { 201: { description: 'Template created', content: { 'application/json': { schema: { type: 'object', properties: { template: { $ref: '#/components/schemas/EmailTemplate' } } } } } } }
+        }
+    },
+    '/email-templates/keywords': {
+        get: {
+            tags: ['Email Templates'],
+            summary: 'Get available template keywords',
+            description: 'Returns list of keywords that can be used in templates for substitution.',
+            security: [{ cookieAuth: [] }],
+            responses: { 200: { description: 'Available keywords', content: { 'application/json': { schema: { type: 'object', properties: { keywords: { type: 'array', items: { type: 'object' } } } } } } } }
+        }
+    },
+    '/email-templates/default': {
+        get: {
+            tags: ['Email Templates'],
+            summary: 'Get default template',
+            description: 'Returns the default email template for the user\'s firm.',
+            security: [{ cookieAuth: [] }],
+            responses: {
+                200: { description: 'Default template', content: { 'application/json': { schema: { type: 'object', properties: { template: { $ref: '#/components/schemas/EmailTemplate' } } } } } },
+                404: { description: 'No default template found' }
+            }
+        }
+    },
+    '/email-templates/compile': {
+        post: {
+            tags: ['Email Templates'],
+            summary: 'Compile MJML to HTML',
+            description: 'Compiles MJML content to HTML for live preview in editor.',
+            security: [{ cookieAuth: [], csrfToken: [] }],
+            requestBody: {
+                required: true,
+                content: {
+                    'application/json': {
+                        schema: {
+                            type: 'object',
+                            required: ['mjmlContent'],
+                            properties: {
+                                mjmlContent: { type: 'string' },
+                                subjectTemplate: { type: 'string' },
+                                context: { type: 'object' }
+                            }
+                        }
+                    }
+                }
+            },
+            responses: { 200: { description: 'Compiled HTML', content: { 'application/json': { schema: { type: 'object', properties: { html: { type: 'string' }, subject: { type: 'string' } } } } } } }
+        }
+    },
+    '/email-templates/{id}': {
+        get: {
+            tags: ['Email Templates'],
+            summary: 'Get template by ID',
+            security: [{ cookieAuth: [] }],
+            parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+            responses: {
+                200: { description: 'Template data', content: { 'application/json': { schema: { type: 'object', properties: { template: { $ref: '#/components/schemas/EmailTemplate' } } } } } },
+                404: { $ref: '#/components/responses/NotFound' }
+            }
+        },
+        put: {
+            tags: ['Email Templates'],
+            summary: 'Update template',
+            security: [{ cookieAuth: [], csrfToken: [] }],
+            parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+            requestBody: {
+                required: true,
+                content: {
+                    'application/json': {
+                        schema: {
+                            type: 'object',
+                            required: ['name', 'subjectTemplate', 'mjmlContent'],
+                            properties: {
+                                name: { type: 'string' },
+                                description: { type: 'string' },
+                                subjectTemplate: { type: 'string' },
+                                mjmlContent: { type: 'string' },
+                                isDefault: { type: 'boolean' }
+                            }
+                        }
+                    }
+                }
+            },
+            responses: { 200: { description: 'Template updated' }, 403: { description: 'Cannot modify system template' } }
+        },
+        delete: {
+            tags: ['Email Templates'],
+            summary: 'Delete template',
+            security: [{ cookieAuth: [], csrfToken: [] }],
+            parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+            responses: { 200: { description: 'Template deleted' }, 403: { description: 'Cannot delete system template' } }
+        }
+    },
+    '/email-templates/{id}/duplicate': {
+        post: {
+            tags: ['Email Templates'],
+            summary: 'Duplicate template',
+            description: 'Creates a copy of the template for the user\'s firm.',
+            security: [{ cookieAuth: [], csrfToken: [] }],
+            parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+            responses: { 201: { description: 'Template duplicated', content: { 'application/json': { schema: { type: 'object', properties: { template: { $ref: '#/components/schemas/EmailTemplate' } } } } } } }
+        }
+    },
+    '/email-templates/{id}/preview': {
+        post: {
+            tags: ['Email Templates'],
+            summary: 'Preview template with context',
+            security: [{ cookieAuth: [], csrfToken: [] }],
+            parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+            requestBody: { content: { 'application/json': { schema: { type: 'object', properties: { context: { type: 'object' } } } } } },
+            responses: { 200: { description: 'Rendered template', content: { 'application/json': { schema: { type: 'object', properties: { html: { type: 'string' }, subject: { type: 'string' } } } } } } }
+        }
+    },
+
+    // ============================================
+    // CONSENT (GDPR)
+    // ============================================
+    '/consent/initialize': {
+        post: {
+            tags: ['Consent'],
+            summary: 'Initialize consent for a resume',
+            description: 'Creates a consent record for a resume and prepares it for sending.',
+            security: [{ cookieAuth: [], csrfToken: [] }],
+            requestBody: {
+                required: true,
+                content: {
+                    'application/json': {
+                        schema: {
+                            type: 'object',
+                            required: ['resumeId', 'profileType', 'candidateName'],
+                            properties: {
+                                resumeId: { type: 'string', format: 'uuid' },
+                                profileType: { type: 'string', enum: ['candidate', 'consultant'] },
+                                candidateName: { type: 'string' },
+                                candidateEmail: { type: 'string', format: 'email' }
+                            }
+                        }
+                    }
+                }
+            },
+            responses: { 200: { description: 'Consent initialized', content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean' }, consent: { $ref: '#/components/schemas/ConsentStatus' } } } } } } }
+        }
+    },
+    '/consent/{resumeId}/send': {
+        post: {
+            tags: ['Consent'],
+            summary: 'Send consent request email',
+            security: [{ cookieAuth: [], csrfToken: [] }],
+            parameters: [{ name: 'resumeId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+            responses: { 200: { description: 'Email sent', content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean' }, sentTo: { type: 'string' } } } } } } }
+        }
+    },
+    '/consent/{resumeId}/resend': {
+        post: {
+            tags: ['Consent'],
+            summary: 'Resend consent request with new token',
+            security: [{ cookieAuth: [], csrfToken: [] }],
+            parameters: [{ name: 'resumeId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+            responses: { 200: { description: 'Email resent' } }
+        }
+    },
+    '/consent/{resumeId}/status': {
+        get: {
+            tags: ['Consent'],
+            summary: 'Get consent status',
+            security: [{ cookieAuth: [] }],
+            parameters: [{ name: 'resumeId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+            responses: { 200: { description: 'Consent status', content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean' }, consent: { $ref: '#/components/schemas/ConsentStatus' } } } } } } }
+        }
+    },
+    '/consent/run-checks': {
+        post: {
+            tags: ['Consent', 'Admin'],
+            summary: 'Run consent checks (admin)',
+            description: 'Manually triggers consent expiration checks and cleanup.',
+            security: [{ cookieAuth: [], csrfToken: [] }],
+            responses: { 200: { description: 'Checks completed' }, 403: { $ref: '#/components/responses/Forbidden' } }
+        }
+    },
+    '/consent/respond/{token}': {
+        get: {
+            tags: ['Consent'],
+            summary: 'Get consent request info (public)',
+            description: 'Public endpoint for consent response page. Returns candidate and firm info.',
+            parameters: [{ name: 'token', in: 'path', required: true, schema: { type: 'string' } }],
+            responses: {
+                200: { description: 'Consent info', content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean' }, candidateName: { type: 'string' }, firmName: { type: 'string' } } } } } },
+                404: { description: 'Invalid token' },
+                410: { description: 'Token expired' }
+            }
+        },
+        post: {
+            tags: ['Consent'],
+            summary: 'Record consent response (public)',
+            description: 'Public endpoint to record candidate consent decision.',
+            parameters: [{ name: 'token', in: 'path', required: true, schema: { type: 'string' } }],
+            requestBody: {
+                required: true,
+                content: { 'application/json': { schema: { type: 'object', required: ['action'], properties: { action: { type: 'string', enum: ['accept', 'refuse'] } } } } }
+            },
+            responses: {
+                200: { description: 'Response recorded', content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean' }, status: { type: 'string' }, retentionUntil: { type: 'string', format: 'date-time' } } } } } },
+                410: { description: 'Token expired' }
+            }
+        }
+    },
+
+    // ============================================
+    // GDPR MAIL (Admin)
+    // ============================================
+    '/gdpr/mail/status': {
+        get: {
+            tags: ['GDPR Mail', 'Admin'],
+            summary: 'Get GDPR mail connection status',
+            description: 'Returns the global GDPR Gmail connection status.',
+            security: [{ cookieAuth: [] }],
+            responses: { 200: { description: 'Connection status', content: { 'application/json': { schema: { type: 'object', properties: { connected: { type: 'boolean' }, email: { type: 'string' } } } } } } }
+        }
+    },
+    '/gdpr/mail/auth-url': {
+        get: {
+            tags: ['GDPR Mail', 'Admin'],
+            summary: 'Get Gmail OAuth URL (admin)',
+            description: 'Returns OAuth URL to connect Gmail for GDPR emails.',
+            security: [{ cookieAuth: [] }],
+            responses: {
+                200: { description: 'Auth URL', content: { 'application/json': { schema: { type: 'object', properties: { authUrl: { type: 'string' } } } } } },
+                403: { $ref: '#/components/responses/Forbidden' }
+            }
+        }
+    },
+    '/gdpr/mail/callback': {
+        get: {
+            tags: ['GDPR Mail'],
+            summary: 'Gmail OAuth callback',
+            description: 'Handles OAuth callback from Google. Returns HTML to close popup.',
+            parameters: [
+                { name: 'code', in: 'query', required: true, schema: { type: 'string' } },
+                { name: 'state', in: 'query', required: true, schema: { type: 'string' } }
+            ],
+            responses: { 200: { description: 'HTML response to close popup' } }
+        }
+    },
+    '/gdpr/mail/disconnect': {
+        post: {
+            tags: ['GDPR Mail', 'Admin'],
+            summary: 'Disconnect GDPR Gmail (admin)',
+            security: [{ cookieAuth: [], csrfToken: [] }],
+            responses: { 200: { description: 'Disconnected' }, 403: { $ref: '#/components/responses/Forbidden' } }
+        }
+    },
+    '/gdpr/mail/test': {
+        post: {
+            tags: ['GDPR Mail', 'Admin'],
+            summary: 'Send test email (admin)',
+            security: [{ cookieAuth: [], csrfToken: [] }],
+            requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['email'], properties: { email: { type: 'string', format: 'email' } } } } } },
+            responses: { 200: { description: 'Test email sent' } }
+        }
+    },
+
+    // ============================================
+    // ADMIN (Security Logs)
+    // ============================================
+    '/admin/security-logs': {
+        get: {
+            tags: ['Admin'],
+            summary: 'Get security and proxy logs (admin)',
+            description: 'Returns combined security and proxy logs with filtering and pagination.',
+            security: [{ cookieAuth: [] }],
+            parameters: [
+                { name: 'limit', in: 'query', schema: { type: 'integer', default: 100 } },
+                { name: 'offset', in: 'query', schema: { type: 'integer', default: 0 } },
+                { name: 'level', in: 'query', schema: { type: 'string', enum: ['INFO', 'WARN', 'ERROR', 'DEBUG'] } },
+                { name: 'event', in: 'query', schema: { type: 'string' } },
+                { name: 'source', in: 'query', schema: { type: 'string', enum: ['security', 'proxy'] } }
+            ],
+            responses: {
+                200: {
+                    description: 'Logs list',
+                    content: { 'application/json': { schema: { type: 'object', properties: { logs: { type: 'array', items: { $ref: '#/components/schemas/SecurityLog' } }, total: { type: 'integer' }, offset: { type: 'integer' }, limit: { type: 'integer' } } } } }
+                },
+                403: { $ref: '#/components/responses/Forbidden' }
+            }
+        }
+    },
+    '/admin/security-filters': {
+        get: {
+            tags: ['Admin'],
+            summary: 'Get available log filters (admin)',
+            description: 'Returns unique values for level, event, and source filters.',
+            security: [{ cookieAuth: [] }],
+            responses: {
+                200: { description: 'Filter options', content: { 'application/json': { schema: { type: 'object', properties: { levels: { type: 'array', items: { type: 'string' } }, events: { type: 'array', items: { type: 'string' } }, sources: { type: 'array', items: { type: 'string' } } } } } } },
+                403: { $ref: '#/components/responses/Forbidden' }
+            }
+        }
+    },
+    '/admin/security-stats': {
+        get: {
+            tags: ['Admin'],
+            summary: 'Get security statistics (admin)',
+            description: 'Returns aggregated statistics for security and proxy logs.',
+            security: [{ cookieAuth: [] }],
+            responses: {
+                200: {
+                    description: 'Security stats',
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    total: { type: 'integer' },
+                                    byLevel: { type: 'object', additionalProperties: { type: 'integer' } },
+                                    byEvent: { type: 'object', additionalProperties: { type: 'integer' } },
+                                    bySource: { type: 'object', properties: { security: { type: 'integer' }, proxy: { type: 'integer' } } },
+                                    recent: { type: 'object', properties: { last24h: { type: 'integer' }, lastHour: { type: 'integer' } } }
+                                }
+                            }
+                        }
+                    }
+                },
+                403: { $ref: '#/components/responses/Forbidden' }
+            }
+        }
+    },
+    '/admin/users': {
+        get: {
+            tags: ['Admin'],
+            summary: 'Get all users (admin)',
+            description: 'Returns all users in the system.',
+            security: [{ cookieAuth: [] }],
+            responses: {
+                200: { description: 'Users list', content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/User' } } } } },
+                403: { $ref: '#/components/responses/Forbidden' }
+            }
+        }
+    },
+
+    // ============================================
+    // TWO-FACTOR AUTHENTICATION (2FA)
+    // ============================================
+    '/2fa/status': {
+        get: {
+            tags: ['Authentication'],
+            summary: 'Get 2FA status for current user',
+            description: 'Returns whether 2FA is enabled, when it was enabled, and how many backup codes remain.',
+            security: [{ cookieAuth: [] }],
+            responses: {
+                200: {
+                    description: '2FA status',
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    enabled: { type: 'boolean', description: 'Whether 2FA is enabled' },
+                                    enabledAt: { type: 'string', format: 'date-time', nullable: true },
+                                    backupCodesRemaining: { type: 'integer', description: 'Number of unused backup codes' }
+                                }
+                            }
+                        }
+                    }
+                },
+                401: { $ref: '#/components/responses/Unauthorized' }
+            }
+        }
+    },
+    '/2fa/setup': {
+        post: {
+            tags: ['Authentication'],
+            summary: 'Generate TOTP secret for 2FA setup',
+            description: 'Generates a new TOTP secret and QR code for setting up 2FA. The secret is stored temporarily until verified.',
+            security: [{ cookieAuth: [], csrfToken: [] }],
+            responses: {
+                200: {
+                    description: 'Setup data with QR code',
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    secret: { type: 'string', description: 'Base32-encoded TOTP secret (for manual entry)' },
+                                    qrCodeDataUrl: { type: 'string', description: 'Data URL of QR code image' },
+                                    backupCodes: { type: 'array', items: { type: 'string' }, description: '8 backup codes for recovery' },
+                                    message: { type: 'string' }
+                                }
+                            }
+                        }
+                    }
+                },
+                401: { $ref: '#/components/responses/Unauthorized' }
+            }
+        }
+    },
+    '/2fa/verify': {
+        post: {
+            tags: ['Authentication'],
+            summary: 'Verify TOTP code and enable 2FA',
+            description: 'Verifies the TOTP code from the authenticator app and enables 2FA if valid.',
+            security: [{ cookieAuth: [], csrfToken: [] }],
+            requestBody: {
+                required: true,
+                content: {
+                    'application/json': {
+                        schema: {
+                            type: 'object',
+                            required: ['code'],
+                            properties: {
+                                code: { type: 'string', minLength: 6, maxLength: 6, description: '6-digit TOTP code' }
+                            }
+                        }
+                    }
+                }
+            },
+            responses: {
+                200: { description: '2FA enabled successfully', content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean' }, message: { type: 'string' } } } } } },
+                400: { description: 'Invalid code', content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean' }, error: { type: 'string' } } } } } },
+                401: { $ref: '#/components/responses/Unauthorized' }
+            }
+        }
+    },
+    '/2fa/disable': {
+        post: {
+            tags: ['Authentication'],
+            summary: 'Disable 2FA',
+            description: 'Disables 2FA for the current user. Requires a valid TOTP code or backup code.',
+            security: [{ cookieAuth: [], csrfToken: [] }],
+            requestBody: {
+                required: true,
+                content: {
+                    'application/json': {
+                        schema: {
+                            type: 'object',
+                            required: ['code'],
+                            properties: {
+                                code: { type: 'string', description: 'TOTP code or backup code' }
+                            }
+                        }
+                    }
+                }
+            },
+            responses: {
+                200: { description: '2FA disabled successfully' },
+                400: { description: 'Invalid code' },
+                401: { $ref: '#/components/responses/Unauthorized' }
+            }
+        }
+    },
+    '/2fa/backup-codes/regenerate': {
+        post: {
+            tags: ['Authentication'],
+            summary: 'Regenerate backup codes',
+            description: 'Generates new backup codes, invalidating all previous ones. Requires a valid TOTP code.',
+            security: [{ cookieAuth: [], csrfToken: [] }],
+            requestBody: {
+                required: true,
+                content: {
+                    'application/json': {
+                        schema: {
+                            type: 'object',
+                            required: ['code'],
+                            properties: {
+                                code: { type: 'string', description: 'Current TOTP code' }
+                            }
+                        }
+                    }
+                }
+            },
+            responses: {
+                200: {
+                    description: 'New backup codes generated',
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    success: { type: 'boolean' },
+                                    backupCodes: { type: 'array', items: { type: 'string' } }
+                                }
+                            }
+                        }
+                    }
+                },
+                400: { description: 'Invalid code' },
+                401: { $ref: '#/components/responses/Unauthorized' }
+            }
+        }
+    },
+
+    // ============================================
     // CSRF TOKEN
     // ============================================
     '/csrf-token': {

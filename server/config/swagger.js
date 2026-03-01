@@ -26,7 +26,7 @@ export const swaggerDocument = {
         }
     ],
     tags: [
-        { name: 'Authentication', description: 'User authentication and session management' },
+        { name: 'Authentication', description: 'User authentication, session management, and 2FA' },
         { name: 'Users', description: 'User management' },
         { name: 'Firms', description: 'Firm/organization management' },
         { name: 'Resumes', description: 'Resume CRUD and AI analysis' },
@@ -37,6 +37,9 @@ export const swaggerDocument = {
         { name: 'Clients', description: 'Client and prospect management' },
         { name: 'Submissions', description: 'Resume submission tracking' },
         { name: 'Mail', description: 'Email OAuth and draft creation' },
+        { name: 'Email Templates', description: 'MJML email template management' },
+        { name: 'Consent', description: 'GDPR consent management for resumes' },
+        { name: 'GDPR Mail', description: 'GDPR email configuration (admin)' },
         { name: 'LLM', description: 'AI/LLM proxy endpoints' },
         { name: 'Chatbot', description: 'AI chatbot assistant' },
         { name: 'Settings', description: 'Application settings management' },
@@ -45,7 +48,7 @@ export const swaggerDocument = {
         { name: 'ROME', description: 'ROME métiers and competences' },
         { name: 'Health', description: 'Health check and system status' },
         { name: 'Metrics', description: 'Application metrics and monitoring' },
-        { name: 'Admin', description: 'Administrative endpoints' }
+        { name: 'Admin', description: 'Administrative endpoints (security logs, stats)' }
     ],
     components: {
         securitySchemes: {
@@ -76,6 +79,8 @@ export const swaggerDocument = {
                     status: { type: 'string', enum: ['active', 'inactive', 'pending'] },
                     firm_id: { type: 'string', format: 'uuid', nullable: true },
                     firm_name: { type: 'string', nullable: true },
+                    totp_enabled: { type: 'boolean', description: 'Whether 2FA is enabled for this user' },
+                    totp_enabled_at: { type: 'string', format: 'date-time', nullable: true, description: 'When 2FA was enabled' },
                     created_at: { type: 'string', format: 'date-time' },
                     updated_at: { type: 'string', format: 'date-time' },
                     last_login: { type: 'string', format: 'date-time', nullable: true }
@@ -362,7 +367,8 @@ export const swaggerDocument = {
                 required: ['email', 'password'],
                 properties: {
                     email: { type: 'string', format: 'email' },
-                    password: { type: 'string', minLength: 6 }
+                    password: { type: 'string', minLength: 6 },
+                    totpCode: { type: 'string', minLength: 6, maxLength: 8, description: '6-digit TOTP code or 8-character backup code (required if 2FA is enabled)' }
                 }
             },
             LoginResponse: {
@@ -370,7 +376,9 @@ export const swaggerDocument = {
                 properties: {
                     success: { type: 'boolean' },
                     user: { $ref: '#/components/schemas/User' },
-                    csrfToken: { type: 'string' }
+                    csrfToken: { type: 'string' },
+                    requires2FA: { type: 'boolean', description: 'If true, user must provide TOTP code to complete login' },
+                    userId: { type: 'string', format: 'uuid', description: 'User ID (only returned when requires2FA is true)' }
                 }
             },
             SlowRequest: {
@@ -392,6 +400,50 @@ export const swaggerDocument = {
                         description: 'Timing breakdown if trace sampling enabled',
                         additionalProperties: { type: 'integer' }
                     }
+                }
+            },
+            EmailTemplate: {
+                type: 'object',
+                description: 'MJML email template',
+                properties: {
+                    id: { type: 'string', format: 'uuid' },
+                    firm_id: { type: 'string', format: 'uuid', nullable: true },
+                    name: { type: 'string', example: 'CV Submission Template' },
+                    description: { type: 'string' },
+                    subject_template: { type: 'string', example: 'CV de {{candidate.name}} pour {{mission.title}}' },
+                    mjml_content: { type: 'string', description: 'MJML markup content' },
+                    html_content: { type: 'string', description: 'Compiled HTML (read-only)' },
+                    is_default: { type: 'boolean' },
+                    is_system: { type: 'boolean', description: 'System templates cannot be modified' },
+                    created_by: { type: 'string', format: 'uuid' },
+                    created_at: { type: 'string', format: 'date-time' },
+                    updated_at: { type: 'string', format: 'date-time' }
+                }
+            },
+            ConsentStatus: {
+                type: 'object',
+                description: 'GDPR consent status for a resume',
+                properties: {
+                    consent_status: { type: 'string', enum: ['none', 'pending_consent', 'consent_sent', 'consented', 'refused', 'expired', 'error'] },
+                    consent_token: { type: 'string', nullable: true },
+                    consent_sent_at: { type: 'string', format: 'date-time', nullable: true },
+                    consent_responded_at: { type: 'string', format: 'date-time', nullable: true },
+                    consent_expires_at: { type: 'string', format: 'date-time', nullable: true },
+                    retention_until: { type: 'string', format: 'date-time', nullable: true },
+                    candidate_email: { type: 'string', format: 'email', nullable: true }
+                }
+            },
+            SecurityLog: {
+                type: 'object',
+                description: 'Security or proxy log entry',
+                properties: {
+                    timestamp: { type: 'string', format: 'date-time' },
+                    level: { type: 'string', enum: ['INFO', 'WARN', 'ERROR', 'DEBUG'] },
+                    message: { type: 'string' },
+                    event: { type: 'string', nullable: true },
+                    source: { type: 'string', enum: ['security', 'proxy'] },
+                    userId: { type: 'string', format: 'uuid', nullable: true },
+                    ip: { type: 'string', nullable: true }
                 }
             },
             HealthCheck: {

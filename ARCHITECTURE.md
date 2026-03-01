@@ -768,6 +768,7 @@ const logger = {
 | **Defense in Depth** | Multiples couches de sécurité (JWT, CSRF, Rate Limit, CSP) |
 | **Tokens httpOnly** | Protection XSS des tokens d'authentification |
 | **Blacklist tokens** | Révocation immédiate possible |
+| **2FA TOTP** | Authentification à deux facteurs avec codes temporels (speakeasy) |
 | **Sanitization** | Double sanitization (frontend + backend) |
 | **Logging sécurité** | Traçabilité des événements critiques |
 
@@ -806,7 +807,6 @@ const logger = {
 | Point Faible | Impact | Amélioration Suggérée |
 |--------------|--------|----------------------|
 | **CSP permissive** | `unsafe-inline/eval` pour TinyMCE | Évaluer alternatives à TinyMCE ou nonce-based CSP |
-| **Pas de 2FA** | Authentification simple | Ajouter TOTP ou WebAuthn |
 | **Secrets en .env** | Gestion manuelle | Vault (HashiCorp) ou AWS Secrets Manager |
 
 ### Performance
@@ -850,5 +850,5 @@ L'architecture actuelle est **adaptée pour un usage PME/ESN** et peut supporter
 
 ---
 
-*Document mis à jour le 8 février 2026*
-*Version: 1.5.7*
+*Document mis à jour le 1 mars 2026*
+*Version: 1.7.0*

@@ -4,7 +4,8 @@
     "client/src/main.tsx",
     "client/src/App.tsx",
     "server/proxy-server.js",
-    "pdf-server/server.cjs"
+    "pdf-server/server.cjs",
+    "server/tests/**/*.test.js"
   ],
   "project": [
     "client/src/**/*.{ts,tsx,js,jsx}",
@@ -12,10 +13,7 @@
     "pdf-server/**/*.{js,cjs}"
   ],
   "ignore": [
-    "client/src/**/*.test.{ts,tsx,js,jsx}",
-    "tests/**/*",
-    "scripts/**/*",
-    "client/public/**/*"
+    "client/src/**/*.test.{ts,tsx,js,jsx}"
   ],
   "ignoreDependencies": [
     "@types/*",
@@ -25,7 +23,6 @@
     "vite-plugin-compression",
     "buffer",
     "dompurify",
-    "html2pdf.js",
     "vite-plugin-node-polyfills"
   ]
 }
