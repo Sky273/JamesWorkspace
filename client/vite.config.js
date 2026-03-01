@@ -152,14 +152,8 @@ export default defineConfig(({ mode }) => {
   return {
   plugins: [
     react(),
-    nodePolyfills({
-      globals: {
-        Buffer: true,
-        global: true,
-        process: true,
-      },
-      protocolImports: true,
-    }),
+    // nodePolyfills disabled for Vite 7 - using manual Buffer polyfill
+    // nodePolyfills({ ... }),
     httpConfigPlugin(),
     // Gzip compression for production builds
     compression({
@@ -239,7 +233,14 @@ export default defineConfig(({ mode }) => {
       '@root': path.resolve(__dirname, '..'),
       // Fix for html-parse-stringify ESM issue in Vite 7 - use UMD version
       'html-parse-stringify': path.resolve(__dirname, '../node_modules/html-parse-stringify/dist/html-parse-stringify.umd.js'),
+      // Buffer polyfill for Vite 7
+      'buffer': 'buffer/',
     }
+  },
+  define: {
+    // Global polyfills for Vite 7
+    'global': 'globalThis',
+    'process.env': '{}',
   },
   optimizeDeps: {
     // Force pre-bundling of problematic ESM packages for Vite 7

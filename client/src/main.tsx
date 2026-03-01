@@ -3,6 +3,10 @@
  * TypeScript version
  */
 
+// Buffer polyfill for Vite 7 compatibility (must be first)
+import { Buffer } from 'buffer';
+(window as unknown as { Buffer: typeof Buffer }).Buffer = Buffer;
+
 // IMPORTANT: i18n must be imported FIRST before any React components
 import i18n from './i18n';
 import { I18nextProvider } from 'react-i18next';

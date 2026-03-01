@@ -6,8 +6,13 @@ import * as LanguageDetectorModule from 'i18next-browser-languagedetector';
 const i18n = (i18nModule.default || i18nModule) as typeof i18nModule.default;
 const LanguageDetector = LanguageDetectorModule.default || LanguageDetectorModule;
 
-import enTranslations from './locales/en.json';
-import frTranslations from './locales/fr.json';
+// Vite 7: Use ?url query to force proper JSON handling
+import enTranslations from './locales/en.json?raw';
+import frTranslations from './locales/fr.json?raw';
+
+// Parse the raw JSON strings
+const en = JSON.parse(enTranslations);
+const fr = JSON.parse(frTranslations);
 
 i18n
   .use(LanguageDetector)
@@ -15,10 +20,10 @@ i18n
   .init({
     resources: {
       en: {
-        translation: enTranslations,
+        translation: en,
       },
       fr: {
-        translation: frTranslations,
+        translation: fr,
       },
     },
     lng: 'fr', // Default language is French
