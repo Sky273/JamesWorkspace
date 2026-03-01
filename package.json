@@ -44,7 +44,6 @@
     "framer-motion": "^10.18.0",
     "googleapis": "^171.4.0",
     "helmet": "^8.1.0",
-    "hi-base32": "^0.5.1",
     "i18next": "^24.2.3",
     "i18next-browser-languagedetector": "^8.2.1",
     "isomorphic-dompurify": "^2.36.0",
