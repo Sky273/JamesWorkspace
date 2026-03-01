@@ -1506,6 +1506,7 @@ const TRENDS_CACHE_MAX_SIZE = 20000; // Max records (reduced from 100K to save ~
 
 // Derived caches (computed from light cache)
 let filterOptionsCache = null;
+let filterOptionsCacheTime = 0;
 let summaryCache = null;
 
 /**

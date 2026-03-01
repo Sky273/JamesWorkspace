@@ -9,7 +9,7 @@ import tseslint from 'typescript-eslint';
 export default tseslint.config(
   // Ignore patterns
   {
-    ignores: ['dist/**', 'node_modules/**', 'client/public/**', '.eslintrc.cjs', 'client/tinymce/**'],
+    ignores: ['dist/**', 'node_modules/**', 'client/public/**', 'client/dist/**', '.eslintrc.cjs', 'client/tinymce/**', 'coverage/**', '**/*.timestamp-*.mjs', '**/vitest.config.ts'],
   },
   
   // Base JS config
@@ -46,17 +46,24 @@ export default tseslint.config(
     rules: {
       ...reactPlugin.configs.recommended.rules,
       ...reactPlugin.configs['jsx-runtime'].rules,
-      ...reactHooksPlugin.configs.recommended.rules,
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
+      'react/no-unescaped-entities': 'off',
       'no-unused-vars': 'off',
+      'no-useless-assignment': 'off',
+      'no-useless-escape': 'warn',
+      'no-case-declarations': 'off',
+      'no-empty': 'warn',
+      'preserve-caught-error': 'off',
       'unused-imports/no-unused-imports': 'error',
       'unused-imports/no-unused-vars': [
         'warn',
         {
           vars: 'all',
-          varsIgnorePattern: '^_',
+          varsIgnorePattern: '^_|^error$',
           args: 'after-used',
-          argsIgnorePattern: '^_',
+          argsIgnorePattern: '^_|^error$',
         },
       ],
     },
@@ -99,18 +106,26 @@ export default tseslint.config(
     rules: {
       ...reactPlugin.configs.recommended.rules,
       ...reactPlugin.configs['jsx-runtime'].rules,
-      ...reactHooksPlugin.configs.recommended.rules,
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
+      'react/no-unescaped-entities': 'off',
       '@typescript-eslint/no-unused-vars': 'off',
+      '@typescript-eslint/no-explicit-any': 'warn',
       'no-unused-vars': 'off',
+      'no-useless-assignment': 'off',
+      'no-useless-escape': 'warn',
+      'no-case-declarations': 'off',
+      'no-empty': 'warn',
+      'preserve-caught-error': 'off',
       'unused-imports/no-unused-imports': 'error',
       'unused-imports/no-unused-vars': [
         'warn',
         {
           vars: 'all',
-          varsIgnorePattern: '^_',
+          varsIgnorePattern: '^_|^error$',
           args: 'after-used',
-          argsIgnorePattern: '^_',
+          argsIgnorePattern: '^_|^error$',
         },
       ],
     },

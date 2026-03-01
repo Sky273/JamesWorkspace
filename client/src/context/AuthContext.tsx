@@ -3,7 +3,7 @@
  * TypeScript version with full type safety
  */
 
-import { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
 import { authService, User, RegisterData, RegisterResponse, SignInResponse } from '../services/authService';
 import { setSessionExpiredHandler, resetSessionState } from '../utils/apiInterceptor';
 import toast from 'react-hot-toast';

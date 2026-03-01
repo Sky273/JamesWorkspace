@@ -3,7 +3,7 @@
  * Tests critical flows: Authentication, File Upload, LLM Operations
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Set environment variables before imports
 process.env.JWT_SECRET = 'test-secret-key-that-is-at-least-32-characters-long';
@@ -80,7 +80,6 @@ vi.mock('../../services/settings.service.js', () => ({
 }));
 
 // Import mocked modules
-import { query as dbQuery } from '../../config/database.js';
 import { selectWithTimeout, findWithTimeout, createWithTimeout } from '../../utils/postgresHelpers.js';
 import bcrypt from 'bcryptjs';
 import { callOpenAI } from '../../services/openai.service.js';

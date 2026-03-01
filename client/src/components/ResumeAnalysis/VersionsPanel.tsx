@@ -9,7 +9,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ClockIcon,
   ArrowPathIcon,
-  EyeIcon,
   XMarkIcon,
   ChevronDownIcon,
   ChevronUpIcon,

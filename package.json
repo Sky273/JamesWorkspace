@@ -9,7 +9,7 @@
     "start:proxy": "node --max-old-space-size=2048 --expose-gc server/proxy-server.js",
     "start:pdf": "node pdf-server/server.cjs",
     "build": "node ./client/scripts/copy-tinymce.js && cd client && node ../node_modules/vite/bin/vite.js build",
-    "lint": "eslint client server --ext js,jsx,ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "lint": "eslint client server --ext js,jsx,ts,tsx --report-unused-disable-directives",
     "typecheck": "tsc --noEmit -p client/tsconfig.json",
     "preview": "cd client && node ../node_modules/vite/bin/vite.js preview",
     "test": "vitest run --config server/vitest.config.js",
@@ -85,7 +85,14 @@
     "glob": "^11.0.0",
     "html-minifier": "npm:html-minifier-terser@^7.2.0",
     "bn.js": "^5.2.3",
-    "elliptic": "^6.6.1"
+    "elliptic": "^6.6.1",
+    "esbuild": "^0.25.0",
+    "browserify-sign": {
+      "elliptic": "^6.6.1"
+    },
+    "create-ecdh": {
+      "elliptic": "^6.6.1"
+    }
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

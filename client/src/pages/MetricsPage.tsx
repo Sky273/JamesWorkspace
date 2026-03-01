@@ -3,7 +3,7 @@
  * TypeScript version
  */
 
-import { useState, useEffect, useCallback, ChangeEvent, ForwardRefExoticComponent, RefAttributes, SVGProps, memo } from 'react';
+import { useState, useEffect, ChangeEvent, ForwardRefExoticComponent, RefAttributes, SVGProps, memo } from 'react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';

@@ -21,7 +21,7 @@ import ImprovedTextTab from '../components/ResumeAnalysis/ImprovedTextTab';
 import CompareTab from '../components/ResumeAnalysis/CompareTab';
 import { loadTinyMCE } from '../utils/lazyTinyMCE';
 import { fetchWithAuth, createAuthOptionsWithCsrf } from '../utils/apiInterceptor';
-import { TinyMCE, TinyMCEEditor } from '../types/tinymce.d';
+import { TinyMCEEditor } from '../types/tinymce.d';
 
 const ResumeImprovePage = (): JSX.Element => {
   const { id } = useParams<{ id: string }>();

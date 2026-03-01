@@ -11,7 +11,6 @@ import {
   PencilSquareIcon,
   TrashIcon,
   DocumentDuplicateIcon,
-  StarIcon,
   LockClosedIcon,
   EyeIcon,
   XMarkIcon

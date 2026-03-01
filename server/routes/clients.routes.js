@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticateToken, hasFirmAccess, isUserAdmin } from '../middleware/auth.middleware.js';
+import { authenticateToken, isUserAdmin } from '../middleware/auth.middleware.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { query } from '../config/database.js';
 

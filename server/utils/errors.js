@@ -156,8 +156,8 @@ export function sanitizeErrorMessage(error, fallbackMessage = 'An error occurred
     /localhost:\d+/i,
     /127\.0\.0\.1:\d+/i,
     /:\d{4,5}/i, // Port numbers
-    /\/[a-zA-Z0-9_\-\/\.]+\.js/i, // File paths
-    /at [a-zA-Z0-9_\.]+\s*\(/i, // Stack trace patterns
+    /\/[a-zA-Z0-9_\-/]+\.js/i, // File paths
+    /at [a-zA-Z0-9_.]+\s*\(/i, // Stack trace patterns
     /node_modules/i,
     /Error: /i
   ];

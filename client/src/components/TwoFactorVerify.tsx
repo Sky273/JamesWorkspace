@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShieldCheckIcon, KeyIcon, ExclamationCircleIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
+import { ShieldCheckIcon, KeyIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 import { authService } from '../services/authService';
 import toast from 'react-hot-toast';
 

@@ -18,8 +18,6 @@ import {
   PlusIcon,
   ArrowPathIcon,
   XMarkIcon,
-  EnvelopeIcon,
-  PhoneIcon,
   GlobeAltIcon,
   MapPinIcon,
   BriefcaseIcon,

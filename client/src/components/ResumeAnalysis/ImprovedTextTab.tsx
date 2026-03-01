@@ -3,11 +3,10 @@
  * TypeScript version
  */
 
-import { useState, useEffect, ChangeEvent, useCallback } from 'react';
+import { useState, useEffect, ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CheckIcon, UserIcon, BriefcaseIcon, SparklesIcon, ExclamationTriangleIcon, ClockIcon, RocketLaunchIcon } from '@heroicons/react/24/outline';
 import VersionsPanel from './VersionsPanel';
-import { ResumeVersion } from '../../types/entities';
 import { getVersions } from '../../services/resumeVersionsService';
 
 interface Resume {

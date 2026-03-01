@@ -4,7 +4,6 @@
  */
 
 import { safeLog, createModuleLogger } from '../utils/logger.backend.js';
-import { metrics } from '../services/metrics.service.js';
 
 const log = createModuleLogger('apm');
 

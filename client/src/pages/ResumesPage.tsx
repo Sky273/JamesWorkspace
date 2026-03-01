@@ -24,7 +24,7 @@ import { formatDate } from '../utils/dateFormatter';
 
 import { StatsCards, SearchAndActions } from '../components/ResumesPage';
 import Pagination from '../components/Pagination';
-import { SkeletonResumeList, SkeletonDashboardStats } from '../components/ui/Skeleton';
+import { SkeletonResumeList } from '../components/ui/Skeleton';
 import Breadcrumbs from '../components/Breadcrumbs';
 import ConsentBadge from '../components/ConsentBadge';
 

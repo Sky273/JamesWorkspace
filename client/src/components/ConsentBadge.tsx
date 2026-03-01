@@ -3,7 +3,7 @@
  * Displays GDPR consent status with relevant information
  */
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { 
@@ -48,6 +48,9 @@ const ConsentBadge = ({
     const { t } = useTranslation();
     const [expanded, setExpanded] = useState(false);
     const [resending, setResending] = useState(false);
+    const [showTooltip, setShowTooltip] = useState(false);
+    const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
+    const badgeRef = useRef<HTMLDivElement>(null);
 
     const handleResend = async () => {
         if (!onResend || resending) return;
@@ -142,10 +145,6 @@ const ConsentBadge = ({
 
     // Compact version (just badge with hover tooltip using portal)
     if (compact) {
-        const [showTooltip, setShowTooltip] = useState(false);
-        const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
-        const badgeRef = useRef<HTMLDivElement>(null);
-        
         const updateTooltipPosition = () => {
             if (badgeRef.current) {
                 const rect = badgeRef.current.getBoundingClientRect();
