@@ -438,12 +438,12 @@ const ChatBot = (): JSX.Element | null => {
                     <div
                       className={`px-4 py-2 rounded-2xl ${
                         message.role === 'user'
-                          ? 'bg-primary-500 text-white rounded-br-md'
+                          ? 'bg-primary-600 dark:bg-primary-500 text-white rounded-br-md shadow-sm'
                           : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-bl-md'
                       }`}
                     >
                       {message.role === 'user' ? (
-                        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                        <p className="text-sm whitespace-pre-wrap font-medium">{message.content}</p>
                       ) : (
                         <div className="text-sm chatbot-markdown">
                           <ReactMarkdown

@@ -20,10 +20,23 @@ const __dirname = path.dirname(__filename);
 
 // Load user guide markdown
 let userGuideContent = '';
+const MAX_GUIDE_LENGTH = 60000; // Limit guide size to avoid token limits
+
 const loadUserGuide = async () => {
     try {
         const guidePath = path.join(__dirname, '../../USER_GUIDE.md');
-        userGuideContent = await fs.readFile(guidePath, 'utf-8');
+        let content = await fs.readFile(guidePath, 'utf-8');
+        
+        // Truncate if too long to avoid token limits
+        if (content.length > MAX_GUIDE_LENGTH) {
+            content = content.substring(0, MAX_GUIDE_LENGTH) + '\n\n[Guide tronqué pour optimisation]';
+            safeLog('warn', 'User guide truncated for chatbot', { 
+                originalLength: content.length,
+                truncatedLength: MAX_GUIDE_LENGTH
+            });
+        }
+        
+        userGuideContent = content;
         safeLog('info', 'User guide loaded for chatbot', { 
             length: userGuideContent.length 
         });
@@ -118,14 +131,38 @@ Réponds toujours en français, sauf si l'utilisateur pose sa question en anglai
         content: message
     });
 
-    // Call LLM
-    const llmResponse = await callLLM(messages, {
-        temperature: 0.7,
-        max_tokens: 1000
-    });
+    // Call LLM with retry logic
+    let llmResponse;
+    let lastError;
+    
+    for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+            llmResponse = await callLLM(messages, {
+                temperature: 0.7,
+                max_tokens: 4000 // Increase max tokens for better responses with larger context
+            });
+            
+            if (llmResponse && llmResponse.content) {
+                break; // Success
+            }
+        } catch (error) {
+            lastError = error;
+            safeLog('warn', `LLM call attempt ${attempt} failed`, {
+                error: error.message,
+                attempt
+            });
+            
+            if (attempt < 2) {
+                // Wait before retry
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+        }
+    }
 
     if (!llmResponse || !llmResponse.content) {
-        safeLog('error', 'LLM returned empty response');
+        safeLog('error', 'LLM returned empty response after retries', {
+            lastError: lastError?.message
+        });
         metrics.trackError('/api/chatbot/message', 'EmptyLLMResponse');
         return res.status(500).json({
             error: 'Empty LLM response',

@@ -123,9 +123,19 @@ async function callOpenAI(messages, model, options) {
                 'Authorization': `Bearer ${OPENAI_API_KEY}`,
                 'Content-Type': 'application/json'
             },
-            timeout: 60000
+            timeout: 120000 // Increase timeout for large context
         }
     );
+
+    // Log raw response for debugging
+    safeLog('debug', 'OpenAI raw response', {
+        hasChoices: !!response.data?.choices,
+        choicesLength: response.data?.choices?.length,
+        finishReason: response.data?.choices?.[0]?.finish_reason,
+        hasContent: !!response.data?.choices?.[0]?.message?.content,
+        contentLength: response.data?.choices?.[0]?.message?.content?.length || 0,
+        model: response.data?.model
+    });
 
     // Track LLM metrics
     const usage = response.data.usage || {};
@@ -134,8 +144,30 @@ async function callOpenAI(messages, model, options) {
     const totalTokens = usage.total_tokens || (inputTokens + outputTokens);
     metrics.trackLLMRequest(model, totalTokens, true, inputTokens, outputTokens);
 
+    // Extract content with better error handling
+    const choices = response.data?.choices;
+    if (!choices || choices.length === 0) {
+        safeLog('error', 'OpenAI returned no choices', { 
+            responseData: JSON.stringify(response.data).substring(0, 500)
+        });
+        throw new Error('OpenAI returned no choices');
+    }
+
+    const content = choices[0]?.message?.content;
+    if (!content) {
+        safeLog('error', 'OpenAI returned empty content', {
+            finishReason: choices[0]?.finish_reason,
+            message: JSON.stringify(choices[0]?.message).substring(0, 200)
+        });
+        // If finish_reason is 'length', the response was truncated
+        if (choices[0]?.finish_reason === 'length') {
+            throw new Error('Response truncated due to token limit');
+        }
+        throw new Error('OpenAI returned empty content');
+    }
+
     return {
-        content: response.data.choices[0].message.content,
+        content,
         model: model, // Use configured model, not the one returned by API (which includes date suffix)
         actualModel: response.data.model, // Keep actual model for debugging
         usage: response.data.usage
