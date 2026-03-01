@@ -213,7 +213,7 @@ const corsOptions = {
 // Apply CORS only to API routes - static files and HTML pages don't need CORS
 // This fixes the 400 error when navigating directly to a URL (no Origin header)
 app.use('/api', cors(corsOptions));
-app.options('/api/*', cors(corsOptions));
+app.options('/api/*path', cors(corsOptions));
 
 // Body parsing middleware
 app.use(express.json({ limit: '50mb' }));

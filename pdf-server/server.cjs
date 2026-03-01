@@ -370,7 +370,7 @@ app.get('/health', (req, res) => {
 app.use(express.static(path.join(__dirname, 'dist')));
 
 // Catch all handler for any requests that don't match the above
-app.get('*', (req, res) => {
+app.get('/*splat', (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 

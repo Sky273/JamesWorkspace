@@ -3,6 +3,7 @@
   "entry": [
     "client/src/main.tsx",
     "client/src/App.tsx",
+    "client/src/test/setup.ts",
     "server/proxy-server.js",
     "pdf-server/server.cjs",
     "server/tests/**/*.test.js"
@@ -16,7 +17,8 @@
     "client/src/**/*.test.{ts,tsx,js,jsx}",
     "client/src/vite-env.d.ts",
     "client/src/types/*.d.ts",
-    "client/src/test/setup.ts"
+    "client/src/test/setup.ts",
+    "client/vitest.config.ts"
   ],
   "ignoreDependencies": [
     "@types/*",

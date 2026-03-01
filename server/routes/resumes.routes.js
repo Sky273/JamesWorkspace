@@ -930,7 +930,16 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateR
                 type: updatedResume.resume_file_type
             }] : [],
             'Created At': updatedResume.created_at,
-            'Updated At': updatedResume.updated_at
+            'Updated At': updatedResume.updated_at,
+            // GDPR consent fields
+            profile_type: updatedResume.profile_type,
+            candidate_name: updatedResume.candidate_name,
+            candidate_email: updatedResume.candidate_email,
+            consent_status: updatedResume.consent_status,
+            consent_requested_at: updatedResume.consent_requested_at,
+            consent_responded_at: updatedResume.consent_responded_at,
+            consent_token_expires_at: updatedResume.consent_token_expires_at,
+            retention_until: updatedResume.retention_until
         });
     } catch (error) {
         if (error.statusCode === 404) {
