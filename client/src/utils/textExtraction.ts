@@ -300,14 +300,15 @@ export async function extractTextFromDOC(file: File): Promise<string> {
         logger.log('Extracting text from DOC file (Word 97-2003)...');
         
         // Try to load word-extractor dynamically
-        const WordExtractorClass = await loadWordExtractor() as { new(): { extract: (buffer: Buffer) => Promise<{ getBody: () => string }> } } | null;
+        const WordExtractorClass = await loadWordExtractor() as { new(): { extract: (buffer: Uint8Array | ArrayBuffer) => Promise<{ getBody: () => string }> } } | null;
         
         if (WordExtractorClass) {
             const extractor = new WordExtractorClass();
             const arrayBuffer = await file.arrayBuffer();
-            const buffer = Buffer.from(arrayBuffer);
+            // Use Uint8Array instead of Buffer for browser compatibility (Vite 7)
+            const uint8Array = new Uint8Array(arrayBuffer);
             
-            const extracted = await extractor.extract(buffer);
+            const extracted = await extractor.extract(uint8Array);
             const text = extracted.getBody().trim();
             logger.log(`Successfully extracted ${text.length} characters from DOC using word-extractor`);
             return text;

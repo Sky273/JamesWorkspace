@@ -1,26 +1,26 @@
 ## v1.7.3 - 2026-03-01
-### 🚀 Migration React 19 + Vite 7
+### 🚀 Migration React 19
 
 #### Migration Majeure
 - **React** : 18.3.1 → 19.1.0
 - **React DOM** : 18.3.1 → 19.1.0
-- **Vite** : 5.4.21 → 7.3.1
-- **@vitejs/plugin-react** : 4.7.0 → 5.1.4
 - **framer-motion** : 10.18.0 → 12.34.3
 - **i18next** : 24.2.3 → 25.8.13
 - **@types/react** : 18.3.28 → 19.2.14
 - **@types/react-dom** : 18.3.7 → 19.2.3
 
-#### Corrections Vite 7
-- **Rollup config** : `shimMissingExports` + `namedExports` pour React
-- **Plugin** : Ajout `@rollup/plugin-node-resolve`
-- **Alias** : `html-parse-stringify` vers version UMD
-- **Compatibilité JSX** : Shim global pour `JSX.Element` (React 19)
+#### Corrections React 19
+- **Compatibilité JSX** : Shim global pour `JSX.Element`
+- **framer-motion** : `as const` pour les valeurs `ease`
 
 #### Sécurité & Configuration
 - **Configuration .env** : Nettoyage des duplications
 - **ALLOWED_ORIGINS** : Correction valeur invalide `3443`
 - **NODE_ENV** : Suppression duplication
+
+#### Note Technique
+- Vite 7 testé mais incompatible (problèmes ESM/CJS avec react-i18next)
+- Vite 5.4.x maintenu pour stabilité
 
 ---
 

@@ -280,14 +280,24 @@ async function startServices() {
     
     // Start Vite dev server (only in development)
     if (!isProd) {
-        log('  🚀 Starting Vite dev server (port 5173)...', 'cyan');
+        // Check if HTTPS is enabled in client/.env
+        const clientEnvPath = path.join(ROOT_DIR, 'client', '.env');
+        let viteHttpsEnabled = false;
+        if (fs.existsSync(clientEnvPath)) {
+            const clientEnv = fs.readFileSync(clientEnvPath, 'utf8');
+            viteHttpsEnabled = clientEnv.includes('VITE_HTTPS_ENABLED=true');
+        }
+        const vitePort = viteHttpsEnabled ? 443 : 5173;
+        const viteProtocol = viteHttpsEnabled ? 'https' : 'http';
+        
+        log(`  🚀 Starting Vite dev server (${viteProtocol}://localhost:${vitePort})...`, 'cyan');
         const viteServer = spawn('npm', ['run', 'dev'], {
             cwd: ROOT_DIR,
             stdio: ['ignore', 'pipe', 'pipe'],
             shell: true
         });
         pipeOutput(viteServer);
-        services.push({ name: 'Vite Dev Server', process: viteServer, hasIpc: false });
+        services.push({ name: 'Vite Dev Server', process: viteServer, hasIpc: false, port: vitePort, protocol: viteProtocol });
     }
     
     // Handle process termination with proper cleanup
@@ -399,6 +409,16 @@ async function startServices() {
     return services;
 }
 
+function getFrontendUrl() {
+    const clientEnvPath = path.join(ROOT_DIR, 'client', '.env');
+    let viteHttpsEnabled = false;
+    if (fs.existsSync(clientEnvPath)) {
+        const clientEnv = fs.readFileSync(clientEnvPath, 'utf8');
+        viteHttpsEnabled = clientEnv.includes('VITE_HTTPS_ENABLED=true');
+    }
+    return viteHttpsEnabled ? 'https://localhost:443' : 'http://localhost:5173';
+}
+
 function showSummary() {
     logStep('6/6', 'Quick Start Complete!');
     
@@ -407,7 +427,7 @@ ${colors.green}${colors.bold}═════════════════
 ${colors.green}${colors.bold}  ResumeConverter is running!${colors.reset}
 ${colors.green}${colors.bold}═══════════════════════════════════════════════════════════${colors.reset}
 
-  ${colors.cyan}Frontend:${colors.reset}     ${isProd ? 'http://localhost:3001' : 'http://localhost:5173'}
+  ${colors.cyan}Frontend:${colors.reset}     ${isProd ? 'http://localhost:3001' : getFrontendUrl()}
   ${colors.cyan}API Server:${colors.reset}   http://localhost:3001/api
   ${colors.cyan}API Docs:${colors.reset}     http://localhost:3001/api/docs/ui
   ${colors.cyan}Health:${colors.reset}       http://localhost:3001/health

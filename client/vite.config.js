@@ -152,8 +152,14 @@ export default defineConfig(({ mode }) => {
   return {
   plugins: [
     react(),
-    // nodePolyfills disabled for Vite 7 - using manual Buffer polyfill
-    // nodePolyfills({ ... }),
+    nodePolyfills({
+      globals: {
+        Buffer: true,
+        global: true,
+        process: true,
+      },
+      protocolImports: true,
+    }),
     httpConfigPlugin(),
     // Gzip compression for production builds
     compression({
@@ -233,22 +239,15 @@ export default defineConfig(({ mode }) => {
       '@root': path.resolve(__dirname, '..'),
       // Fix for html-parse-stringify ESM issue in Vite 7 - use UMD version
       'html-parse-stringify': path.resolve(__dirname, '../node_modules/html-parse-stringify/dist/html-parse-stringify.umd.js'),
-      // Buffer polyfill for Vite 7
-      'buffer': 'buffer/',
-    }
-  },
-  define: {
-    // Global polyfills for Vite 7
-    'global': 'globalThis',
-    'process.env': '{}',
-  },
-  optimizeDeps: {
+    },
+      },
+      optimizeDeps: {
     // Force pre-bundling of problematic ESM packages for Vite 7
     force: true,
     esbuildOptions: {
       // Fix for React exports not being recognized
       mainFields: ['module', 'main'],
-    },
+          },
     // Exclude .env files from optimization
     exclude: ['.env', '.env.local', '.env.development', '.env.production'],
     include: [
@@ -258,6 +257,7 @@ export default defineConfig(({ mode }) => {
       'react-i18next',
       'i18next',
       'i18next-browser-languagedetector',
+      'html-parse-stringify',
       'tinymce/tinymce',
       'tinymce/icons/default',
       'tinymce/themes/silver',
@@ -305,9 +305,7 @@ export default defineConfig(({ mode }) => {
       esmExternals: true,
     },
     rollupOptions: {
-      // Vite 7 fix: ensure proper module resolution
-      shimMissingExports: true,
-      plugins: [
+            plugins: [
         resolve({
           browser: true,
           preferBuiltins: false,

@@ -1,0 +1,1470 @@
+﻿{
+  "userProfile": {
+    "anonymous": "User",
+    "noCompany": "No Company",
+    "roles": {
+      "admin": "Administrator",
+      "user": "User"
+    }
+  },
+  "twoFactor": {
+    "title": "Two-Factor Authentication (2FA)",
+    "enabled": "2FA enabled",
+    "disabled": "2FA not enabled",
+    "enabledAt": "Enabled on {{date}}",
+    "backupCodesRemaining": "{{count}} backup codes remaining",
+    "regenerateWarning": "(Consider regenerating them)",
+    "regenerateButton": "Regenerate backup codes",
+    "disableButton": "Disable 2FA",
+    "enableButton": "Enable 2FA",
+    "description": "Protect your account with two-factor authentication. You will need an app like Google Authenticator or Authy.",
+    "loginOnlyNotice": "This feature only applies to email/password login. Google sign-in (OAuth2) uses your Google account security.",
+    "verifyTitle": "2FA Verification",
+    "verifyDescription": "Enter the code from your authenticator app",
+    "verifyButton": "Verify",
+    "cancelButton": "Cancel",
+    "codePlaceholder": "000000",
+    "backupCodeHint": "Or use a backup code (8 characters)",
+    "invalidCode": "Invalid code",
+    "success": "Login successful!",
+    "connectionError": "Server connection error"
+  },
+  "common": {
+    "about": "About",
+    "signOut": "Sign Out",
+    "signIn": "Sign In",
+    "register": "Register",
+    "save": "Save",
+    "cancel": "Cancel",
+    "loading": "Loading...",
+    "backToList": "Back to list",
+    "error": "Error",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "export": "Export",
+    "pleaseWait": "Please wait...",
+    "showing": "Showing",
+    "of": "of",
+    "first": "First",
+    "previous": "Previous",
+    "last": "Last",
+    "resetFilters": "Reset",
+    "deleting": "Deleting...",
+    "saved": "Saved",
+    "saving": "Saving...",
+    "view": "View",
+    "openMenu": "Open menu"
+  },
+  "header": {
+    "changeLanguage": "Change language",
+    "theme": {
+      "light": "Light Mode",
+      "dark": "Dark Mode"
+    },
+    "language": {
+      "en": "English",
+      "fr": "French"
+    }
+  },
+  "footer": {
+    "allRightsReserved": "All rights reserved."
+  },
+  "auth": {
+    "signIn": {
+      "title": "Sign in to your account",
+      "emailLabel": "Email address",
+      "emailPlaceholder": "Email address",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "Password",
+      "rememberMe": "Remember me",
+      "forgotPassword": "Forgot your password?",
+      "signInButton": "Sign in",
+      "noAccount": "Don't have an account?",
+      "orContinueWith": "or continue with",
+      "signInWithGoogle": "Sign in with Google",
+      "sessionExpired": "Your session has expired. Please sign in again.",
+      "googleNoAccount": "No account found with email {{email}}. Please create an account first.",
+      "accountInactive": "Your account is inactive. Contact the administrator.",
+      "googleAuthFailed": "Google authentication failed. Please try again.",
+      "registeredPending": "Registration successful! Your account is pending approval by an administrator."
+    },
+    "register": {
+      "title": "Create your account",
+      "nameLabel": "Full name",
+      "namePlaceholder": "Full name",
+      "emailLabel": "Email address",
+      "emailPlaceholder": "Email address",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "Password",
+      "confirmPasswordLabel": "Confirm password",
+      "confirmPasswordPlaceholder": "Confirm password",
+      "registerButton": "Create account",
+      "hasAccount": "Already have an account?",
+      "orContinueWith": "or continue with",
+      "registerWithGoogle": "Sign up with Google",
+      "googleRegistrationFailed": "Google registration failed. Please try again."
+    }
+  },
+  "about": {
+    "title": "About ResumeConverter",
+    "description": "ResumeConverter is a solution developed by Aptea in order to support its needs for resume analysis and improvement, and export to various templates.",
+    "changelog": "Changelog",
+    "errorLoadingChangelog": "Could not load changelog.",
+    "allRightsReserved": "All rights reserved"
+  },
+  "home": {
+    "hero": {
+      "title1": "Your Resume Library.",
+      "title2": "Optimized. Activated.",
+      "description": "Standardize, improve and tailor your resumes by client or mission. Consistent profiles, ready to send, in just minutes.",
+      "startButton": "Import a Resume",
+      "analysisComplete": "Analysis Complete",
+      "aiSuggestion": "AI Suggestion",
+      "suggestionText": "Increase the impact of this section by using stronger action verbs.",
+      "badges": {
+        "atsFriendly": "ATS Friendly",
+        "fastAnalysis": "Fast Analysis",
+        "secure": "100% Secure",
+        "gdprCompliant": "GDPR Compliant"
+      }
+    },
+    "tabs": {
+      "all": "Home",
+      "resumes": "All Resumes",
+      "myResumes": "My Resumes",
+      "recommendations": "Recommendations"
+    },
+    "dashboard": {
+      "title": "Dashboard",
+      "kpis": {
+        "totalResumes": "Resumes in Library",
+        "analyzed": "Analyzed Resumes",
+        "averageScore": "Average Score",
+        "activeMissions": "Active Missions",
+        "afterImprovement": "after improvement"
+      },
+      "recentActivity": "Recent Activity",
+      "today": "Today",
+      "thisWeek": "This Week",
+      "thisMonth": "This Month",
+      "improvements": "Improvements",
+      "improved": "Improved Resumes",
+      "avgBefore": "Avg. Score Before",
+      "avgAfter": "Avg. Score After",
+      "adaptations": "Adaptations",
+      "totalAdaptations": "Total Adaptations",
+      "missions": "Missions",
+      "active": "Active",
+      "quickActions": "Quick Actions",
+      "actions": {
+        "importResume": "Import Resume",
+        "importResumeDesc": "Add a new profile to the library",
+        "viewLibrary": "View Library",
+        "viewLibraryDesc": "Browse and manage profiles",
+        "createMission": "View Missions",
+        "createMissionDesc": "Browse job offers",
+        "viewAdaptations": "View Adaptations",
+        "viewAdaptationsDesc": "Manage adapted resumes"
+      }
+    },
+    "howItWorks": {
+      "title": "How It Works",
+      "step1": {
+        "title": "Import Your Profiles",
+        "description": "Import your consultants' resumes in PDF, DOC, or DOCX format. Our system analyzes and standardizes them automatically."
+      },
+      "step2": {
+        "title": "Optimize with AI",
+        "description": "Our AI analyzes each profile, provides a detailed score, and suggests targeted improvements to maximize impact."
+      },
+      "step3": {
+        "title": "Adapt & Export",
+        "description": "Customize each profile for your missions and export them in your preferred format, ready to send."
+      }
+    },
+    "features": {
+      "title": "Key Features",
+      "ai": {
+        "title": "AI Analysis & Suggestions",
+        "description": "Our AI analyzes each profile, identifies areas for improvement, and provides targeted suggestions."
+      },
+      "improvement": {
+        "title": "Auto-Enhancement",
+        "description": "Optimize your resumes in one click with our AI that automatically rewrites and enriches each section."
+      },
+      "scoring": {
+        "title": "Detailed Scoring",
+        "description": "Receive comprehensive scores across multiple categories to understand each profile's strengths."
+      },
+      "ocr": {
+        "title": "Smart Extraction",
+        "description": "Advanced OCR technology to automatically extract text from scanned or image-based resumes."
+      },
+      "adaptation": {
+        "title": "Mission Adaptation",
+        "description": "Customize each profile based on a specific job offer to maximize your chances."
+      },
+      "templates": {
+        "title": "Professional Templates",
+        "description": "Choose from a variety of professionally designed resume templates."
+      }
+    }
+  },
+  "resumes": {
+    "title": "Resume Library",
+    "subtitle": "Manage and analyze your consultants' profiles",
+    "uploadButton": "Upload New Resume",
+    "searchPlaceholder": "Search resumes...",
+    "filterButton": "Filter",
+    "noResults": "No resumes found",
+    "results": "results",
+    "noResultsFiltered": "Try modifying your search filters",
+    "uploadFirst": "Upload your first resume to get started",
+    "score_label": "Score",
+    "deleteResume": "Delete resume",
+    "downloadResume": "Download resume",
+    "confirmDeleteTitle": "Confirm Deletion",
+    "view": "View",
+    "refresh": "Refresh",
+    "untitled": "Untitled Resume",
+    "activeFilters": "Active filters",
+    "more": "more",
+    "showLess": "Show less",
+    "filters": {
+      "skills": "Skills",
+      "industries": "Industries",
+      "tools": "Tools",
+      "softskills": "Soft Skills"
+    },
+    "status": {
+      "new": "New",
+      "improved": "Improved",
+      "processing": "Processing",
+      "analyzed": "Analyzed",
+      "error": "Error"
+    },
+    "stats": {
+      "total": "Total Resumes",
+      "improved": "Improved",
+      "processing": "Processing",
+      "avgScore": "Average Score"
+    },
+    "deleteConfirm": {
+      "title": "[FR] Title"
+    }
+  },
+  "upload": {
+    "title": "Resume Analyzer",
+    "subtitle": "Upload your resume for instant AI-powered analysis"
+  },
+  "resume": {
+    "analysis": {
+      "title": "Resume Analysis",
+      "original": "Original",
+      "improved": "Improved",
+      "suggestions": "Suggestions",
+      "suggestionsFromOriginal": "These suggestions were made based on the original CV, before its automatic improvement by AI.",
+      "globalRating": "Global Rating",
+      "originalScore": "Original Score",
+      "improvedScore": "Improved Score",
+      "sectionScores": "Section Scores",
+      "criticalImprovements": "Critical Improvements Needed",
+      "recommendedImprovements": "Recommended Improvements",
+      "optionalEnhancements": "Optional Enhancements",
+      "originalText": "Original Text",
+      "originalTextDescription": "Content extracted from the original resume",
+      "improvedText": "Improved Text",
+      "improvedTextDescription": "Here is the improved version of your resume by the AI",
+      "scoreImprovedBy": "Your resume score improved by",
+      "scoreDegradedBy": "Your resume score degraded by",
+      "clickImproveHint": "Click \"Improve with AI\" to enhance your resume",
+      "candidateName": "Candidate Name",
+      "candidateNamePlaceholder": "Enter candidate name",
+      "professionalTitle": "Professional Title",
+      "professionalTitlePlaceholder": "Enter professional title",
+      "originalResume": "Original Resume",
+      "improvedResume": "Improved Resume",
+      "tabs": {
+        "overview": "Overview",
+        "skills": "Skills & Tags",
+        "skillsTags": "Skills & Tags",
+        "original": "Original",
+        "improved": "Improved",
+        "compare": "Compare",
+        "export": "Export",
+        "initialAnalysis": "Initial Analysis",
+        "postImprovementAnalysis": "Post-Improvement Analysis"
+      },
+      "sections": {
+        "executiveBrief": "Executive Brief",
+        "skillsKeywords": "Skills & Keywords",
+        "experience": "Experience",
+        "education": "Education",
+        "atsOptimization": "ATS Optimization",
+        "hobbiesLanguages": "Hobbies & Languages"
+      },
+      "categories": {
+        "skills": "Skills",
+        "technicalskills": "Technical Skills",
+        "tools": "Tools",
+        "industries": "Industries",
+        "softskills": "Soft Skills"
+      },
+      "exportOptions": {
+        "title": "Export Options",
+        "template": "Template",
+        "selectTemplate": "Select a template",
+        "loadingTemplates": "Loading templates...",
+        "noTemplates": "No templates available",
+        "preview": "Preview",
+        "exportPDF": "Export as PDF",
+        "exporting": "Exporting...",
+        "sendEmail": "Send by email"
+      }
+    },
+    "actions": {
+      "improveWithAI": "Improve with AI",
+      "improving": "Improving...",
+      "exporting": "Exporting...",
+      "saveChanges": "Save Changes",
+      "saving": "Saving...",
+      "adaptToMission": "Adapt to Mission",
+      "improve": "Improve",
+      "improveNow": "Improve Now",
+      "export": "Export",
+      "viewImproved": "View Improved"
+    },
+    "steps": {
+      "analysis": "Analysis",
+      "viewImproved": "View Improved",
+      "view": "View",
+      "export": "Export",
+      "improve": "Improvement"
+    },
+    "improve": {
+      "title": "Resume Improvement",
+      "notYetImproved": "Resume not yet improved",
+      "description": "Use AI to automatically improve this resume by optimizing its structure, content and ATS score."
+    },
+    "export": {
+      "title": "Resume Export",
+      "needsImprovement": "Improvement Required",
+      "needsImprovementDescription": "Please improve the resume first before exporting."
+    },
+    "improveSuccess": "Resume improved successfully",
+    "improveError": "Error improving resume",
+    "exportSuccess": "Resume exported successfully",
+    "exportError": "Error exporting resume",
+    "saveSuccess": "Changes saved",
+    "saveError": "Error saving changes"
+  },
+  "users": {
+    "management": {
+      "title": "User Management",
+      "subtitle": "Manage application users and companies",
+      "addUser": "Add User",
+      "addFirm": "Add Firm",
+      "noUsers": "No users found",
+      "noFirms": "No firms found",
+      "results": "users",
+      "firmsResults": "firms",
+      "searchUsers": "Search users...",
+      "searchFirms": "Search firms...",
+      "refresh": "Refresh",
+      "status": {
+        "active": "Active",
+        "inactive": "Inactive",
+        "pending": "Pending"
+      },
+      "roles": {
+        "admin": "Admin",
+        "user": "User"
+      },
+      "tabs": {
+        "users": "Users",
+        "firms": "Firms"
+      },
+      "actions": {
+        "edit": "Edit"
+      },
+      "modal": {
+        "addUser": "Add User",
+        "editUser": "Edit User",
+        "addFirm": "Add Firm",
+        "editFirm": "Edit Firm",
+        "changePassword": "Change Password",
+        "name": "Name",
+        "email": "Email",
+        "password": "Password",
+        "newPassword": "New Password",
+        "confirmPassword": "Confirm Password",
+        "jobTitle": "Job Title",
+        "jobTitlePlaceholder": "E.g.: Consultant, Manager...",
+        "phone": "Phone",
+        "phonePlaceholder": "E.g.: +33 6 12 34 56 78",
+        "role": "Role",
+        "status": "Status",
+        "firm": "Firm",
+        "selectFirm": "Select a firm",
+        "save": "Save",
+        "cancel": "Cancel",
+        "confirm": "Confirm",
+        "logo": "Logo",
+        "selectLogo": "Select logo",
+        "removeLogo": "Remove",
+        "logoHint": "Accepted formats: JPEG, PNG, GIF, WebP, SVG. Max size: 2 MB",
+        "uploading": "Uploading..."
+      },
+      "messages": {
+        "userCreated": "User created successfully",
+        "userUpdated": "User updated successfully",
+        "userDeleted": "User deleted successfully",
+        "firmCreated": "Firm created successfully",
+        "firmUpdated": "Firm updated successfully",
+        "firmDeleted": "Firm deleted successfully",
+        "passwordChanged": "Password changed successfully",
+        "logoUploaded": "Logo uploaded successfully",
+        "logoDeleted": "Logo deleted successfully",
+        "logoUploadFailed": "Error uploading logo",
+        "logoDeleteFailed": "Error deleting logo",
+        "invalidFileType": "Invalid file type. Only JPEG, PNG, GIF, WebP and SVG are accepted",
+        "fileTooLarge": "File is too large. Max size: 2 MB",
+        "errorCreatingUser": "Error creating user",
+        "errorUpdatingUser": "Error updating user",
+        "errorDeletingUser": "Error deleting user",
+        "errorCreatingFirm": "Error creating firm",
+        "errorUpdatingFirm": "Error updating firm",
+        "errorDeletingFirm": "Error deleting firm",
+        "errorChangingPassword": "Error changing password",
+        "cannotDeleteFirmWithUsers": "Cannot delete this firm because users are associated with it",
+        "passwordMinLength": "Password must be at least 8 characters",
+        "passwordMismatch": "Passwords do not match"
+      },
+      "stats": {
+        "totalUsers": "Total Users",
+        "totalFirms": "Total Firms",
+        "activeUsers": "Active Users",
+        "admins": "Admins"
+      }
+    }
+  },
+  "errors": {
+    "required": "This field is required",
+    "passwordLength": "Password must be at least 8 characters long",
+    "passwordMismatch": "Passwords do not match",
+    "unauthorized": "Invalid email or password",
+    "serverError": "An error occurred. Please try again later.",
+    "loadResume": "Error loading resume",
+    "resumeNotFound": "Resume not found",
+    "resumeNotFoundDescription": "The requested resume does not exist or has been deleted.",
+    "loadMission": "Error loading mission",
+    "missionNotFound": "Mission not found",
+    "missionNotFoundDescription": "The requested mission does not exist or has been deleted.",
+    "loadAdaptation": "Error loading adaptation",
+    "adaptationNotFound": "Adaptation not found",
+    "adaptationNotFoundDescription": "The requested adaptation does not exist or has been deleted.",
+    "exportFailed": "[FR] Export Failed",
+    "saveFailed": "[FR] Save Failed"
+  },
+  "templates": {
+    "title": "Resume Templates",
+    "subtitle": "Choose from our collection of professional resume templates",
+    "newTemplate": "New Template",
+    "searchPlaceholder": "Search for a template...",
+    "results": "templates",
+    "refresh": "Refresh",
+    "noResults": "No templates match your search",
+    "createFirst": "Create your first template to get started",
+    "stats": {
+      "total": "Total Templates",
+      "popular": "Popular Templates",
+      "active": "Active Templates"
+    },
+    "sort": {
+      "popular": "Popular First",
+      "name": "Name"
+    },
+    "card": {
+      "popular": "Popular",
+      "preview": "Preview",
+      "noDescription": "No description"
+    },
+    "status": {
+      "error": "Failed to load templates",
+      "empty": "No templates available",
+      "deleteSuccess": "Template deleted successfully",
+      "deleting": "Deleting...",
+      "deleteError": "Failed to delete template"
+    },
+    "actions": {
+      "edit": "Edit Template",
+      "delete": "Delete Template"
+    },
+    "editor": {
+      "title": {
+        "new": "New Template",
+        "edit": "Edit Template"
+      },
+      "name": {
+        "label": "Template Name",
+        "placeholder": "Enter template name"
+      },
+      "description": {
+        "label": "Description",
+        "placeholder": "Enter template description"
+      },
+      "header": {
+        "label": "Header",
+        "hint": "Optional - appears at the top of each page"
+      },
+      "content": {
+        "label": "Template Body"
+      },
+      "footer": {
+        "label": "Footer",
+        "hint": "Optional - appears at the bottom of each page"
+      },
+      "stylesheet": {
+        "label": "Stylesheet",
+        "placeholder": "Add custom CSS styles here"
+      },
+      "popular": {
+        "label": "Mark as Popular"
+      },
+      "statusField": {
+        "label": "Status",
+        "active": "Active",
+        "inactive": "Inactive"
+      },
+      "validation": {
+        "nameRequired": "Template name is required",
+        "contentRequired": "Template content is required"
+      },
+      "success": {
+        "create": "Template created successfully",
+        "update": "Template updated successfully"
+      },
+      "error": {
+        "load": "Failed to load template"
+      }
+    },
+    "delete": {
+      "title": "Supprimer le modÃ¨le"
+    },
+    "selectTemplate": "[FR] Select Template"
+  },
+  "processing": {
+    "steps": {
+      "upload": {
+        "title": "Uploading Resume",
+        "description": "Processing your file...",
+        "steps": [
+          "Receiving file",
+          "Validating format",
+          "Preparing for extraction"
+        ]
+      },
+      "extract": {
+        "title": "Extracting Content",
+        "description": "Reading resume content...",
+        "steps": [
+          "Analyzing document structure",
+          "Extracting text",
+          "Identifying sections"
+        ]
+      },
+      "analyze": {
+        "title": "AI Analysis",
+        "description": "Analyzing with advanced AI...",
+        "steps": [
+          "Analyzing skills",
+          "Evaluating experience",
+          "Generating recommendations"
+        ]
+      }
+    }
+  },
+  "improvementAnimation": {
+    "steps": {
+      "improving": {
+        "label": "Improving Resume",
+        "description": "AI is enhancing your resume based on improvement suggestions..."
+      },
+      "analyzing": {
+        "label": "Analyzing Improvements",
+        "description": "Evaluating changes and calculating new scores..."
+      }
+    }
+  },
+  "fileUpload": {
+    "dragAndDropYourResumeHere": "Drag and drop your resume here",
+    "dropYourResumeHere": "Drop your resume here",
+    "or": "or click to select a file",
+    "supportedFormats": "Supported formats: PDF, DOC, DOCX (<2 MB)",
+    "gdpr": {
+      "title": "Candidate Information",
+      "profileType": "Profile Type",
+      "employee": "Employee",
+      "external": "External",
+      "candidateName": "Candidate Full Name",
+      "namePlaceholder": "e.g. John Doe",
+      "nameHint": "This name will be used for GDPR consent (separate from the CV display name)",
+      "candidateEmail": "Candidate Email",
+      "emailPlaceholder": "candidate@email.com",
+      "emailHint": "A GDPR consent request email will be sent automatically",
+      "externalInfo": "For external candidates, a GDPR consent request email will be sent automatically after uploading the CV.",
+      "continue": "Continue to upload",
+      "modify": "Modify",
+      "errors": {
+        "nameRequired": "Name is required",
+        "emailRequired": "Email is required for external candidates",
+        "emailInvalid": "Invalid email format"
+      }
+    }
+  },
+  "metrics": {
+    "title": "Usage Metrics",
+    "subtitle": "Server performance and usage monitoring",
+    "lastUpdate": "Last update",
+    "autoRefresh": "Auto-refresh (30s)",
+    "refresh": "Refresh",
+    "error": "Unable to load metrics",
+    "retry": "Retry",
+    "accessDenied": "Access denied. You must be an administrator to view metrics.",
+    "sessionExpired": "Session expired. Please log in again.",
+    "uptime": "Uptime",
+    "startedAt": "Started",
+    "totalRequests": "Total API Requests",
+    "last24h": "Last 24h",
+    "avgResponseTime": "Average Response Time",
+    "errorRate": "Server Error Rate",
+    "totalErrors": "Total errors",
+    "serverMemory": "Server Memory",
+    "rss": "RSS (total memory)",
+    "external": "External (C++ bindings)",
+    "cachePerformance": "Cache Performance",
+    "cacheHitRate": "Cache hit rate",
+    "cacheHits": "Hits (cached data)",
+    "cacheMisses": "Misses (API calls)",
+    "httpMethods": "HTTP Requests by Method",
+    "totalApiRequests": "Total API requests",
+    "httpStatus": "HTTP Response Codes",
+    "successfulRequests": "Successful requests (2xx)",
+    "llmUsage": "AI Model Usage",
+    "llmCalls": "API calls (OpenAI + Anthropic)",
+    "tokensConsumed": "Tokens consumed",
+    "estimatedCost": "Estimated cost (USD)",
+    "topEndpoints": "Most Used API Routes",
+    "activeEndpoints": "Active endpoints",
+    "route": "Route",
+    "calls": "Calls",
+    "model": "Model"
+  },
+  "security": {
+    "title": "Security Logs",
+    "subtitle": "Real-time security event monitoring",
+    "loading": "Loading security logs...",
+    "accessDenied": "Access denied. You must be an administrator to view security logs.",
+    "sessionExpired": "Session expired. Please log in again.",
+    "refresh": "Refresh",
+    "autoRefresh": "Auto-refresh (30s)",
+    "totalLogs": "Total Logs",
+    "lastHour": "Last Hour",
+    "last24h": "Last 24h",
+    "errors": "Errors",
+    "filters": {
+      "level": "Level",
+      "event": "Event",
+      "source": "Source",
+      "all": "All",
+      "allSources": "All"
+    },
+    "table": {
+      "timestamp": "Timestamp",
+      "source": "Source",
+      "level": "Level",
+      "event": "Event",
+      "user": "User",
+      "customer": "Customer",
+      "ip": "IP",
+      "action": "Action",
+      "status": "Status",
+      "message": "Message",
+      "duration": "Duration"
+    },
+    "badges": {
+      "security": "ðŸ”’ Security",
+      "proxy": "ðŸŒ Proxy"
+    },
+    "noLogs": "No security logs found",
+    "logs": "[FR] Logs"
+  },
+  "settings": {
+    "title": "Application Settings",
+    "subtitle": "LLM model, prompts and analysis weights configuration",
+    "loading": "Loading settings...",
+    "loadError": "Error loading settings",
+    "saveSuccess": "Settings saved successfully",
+    "saveError": "Error saving settings",
+    "resetConfirm": "Are you sure you want to reset all settings to default?",
+    "resetSuccess": "Settings reset (not saved)",
+    "saving": "Saving...",
+    "save": "Save settings",
+    "reset": "Reset to defaults",
+    "currentModel": "Current model",
+    "tabs": {
+      "llm": "LLM Model",
+      "prompts": "Prompts",
+      "weights": "Category Weights",
+      "chatbot": "Chatbot",
+      "gdpr": "GDPR",
+      "apiDocs": "API Documentation"
+    },
+    "gdpr": {
+      "title": "GDPR Configuration",
+      "description": "Configure automatic consent request emails for CV storage.",
+      "emailConfig": "Email Configuration",
+      "connected": "Gmail connected",
+      "notConnected": "Gmail not connected",
+      "connectGmail": "Connect Gmail",
+      "disconnect": "Disconnect",
+      "testSend": "Test send",
+      "testEmailPrompt": "Enter email address for test:",
+      "testSent": "Test email sent to {{email}}",
+      "disconnected": "Gmail disconnected",
+      "confirmDisconnect": "Are you sure you want to disconnect this Gmail account?",
+      "infoTitle": "How it works",
+      "info1": "This Gmail account will be used to send GDPR consent requests to external candidates",
+      "info2": "Emails are sent automatically when adding an external CV",
+      "info3": "A reminder is sent after 7 days if the candidate hasn't responded",
+      "consentSettings": "Consent settings",
+      "tokenExpiry": "Link expiry",
+      "retention": "Retention period",
+      "reminder": "Reminder after",
+      "days": "days",
+      "years": "years",
+      "errors": {
+        "connectFailed": "Failed to connect Gmail",
+        "disconnectFailed": "Failed to disconnect",
+        "testFailed": "Failed to send test email"
+      }
+    },
+    "apiDocs": {
+      "title": "API Documentation",
+      "description": "Access the interactive API documentation powered by Swagger/OpenAPI.",
+      "swaggerUi": "Swagger UI",
+      "swaggerUiDescription": "Interactive API explorer with all endpoints documented",
+      "openSwagger": "Open Swagger UI",
+      "openApiJson": "OpenAPI JSON",
+      "openApiJsonDescription": "Raw OpenAPI 3.0 specification in JSON format",
+      "viewJson": "View JSON"
+    },
+    "llm": {
+      "title": "LLM Model Configuration",
+      "model": "OpenAI Model",
+      "description": "Select the OpenAI model to use for resume analysis and improvement. If not specified, the default model (gpt-4o) will be used.",
+      "cvMode": "CV Generation Mode",
+      "cvModeNominative": "Nominative (personal information included)",
+      "cvModeAnonymous": "Anonymous (trigram only)",
+      "cvModeNominativeDescription": "The improved CV will contain all personal information of the candidate (full name, contact details, etc.).",
+      "cvModeAnonymousDescription": "The improved CV will be anonymized: only the candidate's trigram will be displayed, without identifying personal information."
+    },
+    "prompts": {
+      "title": "Prompts Configuration",
+      "description": "Customize the prompts used for resume analysis and improvement. Leave empty to use default prompts.",
+      "analysis": "Analysis Prompt",
+      "analysisHelp": "This prompt is used to analyze the resume and generate scores.",
+      "improvement": "Improvement Prompt",
+      "improvementHelp": "This prompt is used to improve the resume based on the analysis.",
+      "adaptationSection": "Resume-Mission Adaptation Prompts",
+      "matchAnalysis": "Match Analysis Prompt",
+      "matchAnalysisHelp": "This prompt analyzes the match between a resume and a mission.",
+      "adaptation": "Resume Adaptation Prompt",
+      "adaptationHelp": "This prompt adapts the resume to maximize the match with the mission.",
+      "placeholder": "Default prompt loaded from server..."
+    },
+    "weights": {
+      "title": "Analysis Category Weights",
+      "description": "Define the importance of each category in the overall score. The sum must equal 100%.",
+      "total": "Total weights",
+      "mustEqual100": "The sum of weights must equal 100%",
+      "executiveSummary": "Executive Summary",
+      "skills": "Skills",
+      "experience": "Professional Experience",
+      "education": "Education",
+      "ats": "ATS Optimization",
+      "hobbiesLanguages": "Hobbies & Languages"
+    },
+    "chatbot": {
+      "title": "Chatbot Configuration",
+      "description": "Manage the availability of the AI assistant for application users.",
+      "enableTitle": "Enable AI Assistant",
+      "enableDescription": "Allows users to access the assistance chatbot to get help using the application.",
+      "statusEnabled": "Enabled",
+      "statusDisabled": "Disabled",
+      "statusEnabledInfo": "Users can access the chatbot via the button at the bottom right",
+      "statusDisabledInfo": "The chatbot is hidden for all users",
+      "infoTitle": "About the chatbot",
+      "info1": "The chatbot uses the LLM model configured in the 'LLM Model' tab",
+      "info2": "It has access to the complete user guide to provide contextual assistance",
+      "info3": "Conversations are not saved and remain private"
+    }
+  },
+  "tags": {
+    "title": "Tags Management",
+    "subtitle": "View and manage tags extracted from the resume library",
+    "loadError": "Failed to load tags",
+    "renameError": "Failed to rename tag",
+    "editTag": "Edit tag",
+    "editingIn": "Editing in category",
+    "tagName": "Tag name",
+    "cancel": "Cancel",
+    "save": "Save",
+    "refresh": "Refresh",
+    "searchPlaceholder": "Search for a tag...",
+    "tagsCount": "tags",
+    "noTags": "No tags in this category",
+    "stats": {
+      "totalTags": "Total tags"
+    }
+  },
+  "missions": {
+    "title": "Mission Offers",
+    "subtitle": "Manage your mission offers for resume adaptation",
+    "noMissions": "No missions found",
+    "results": "missions",
+    "noResults": "No missions match your search",
+    "createFirst": "Create your first mission to get started",
+    "noDescription": "No description",
+    "searchPlaceholder": "Search for a mission...",
+    "addMission": "Add mission",
+    "editMission": "Edit mission",
+    "missionTitle": "Title",
+    "missionContent": "Description",
+    "missionStatus": "Status",
+    "titlePlaceholder": "E.g.: Full Stack Developer",
+    "editorHelp": "Use the editor to format your text",
+    "create": "Create",
+    "update": "Update",
+    "view": "View",
+    "refresh": "Refresh",
+    "status": {
+      "Active": "Active",
+      "Closed": "Closed",
+      "Draft": "Draft"
+    },
+    "stats": {
+      "total": "Total missions",
+      "firms": "Firms",
+      "active": "Active missions"
+    },
+    "description": "Description",
+    "extractedKeywords": "Extracted keywords",
+    "noTitle": "No title"
+  },
+  "adaptations": {
+    "title": "Resume Adaptations",
+    "subtitle": "History of resumes adapted to missions",
+    "noAdaptations": "No adaptations found",
+    "results": "adaptations",
+    "noAdaptationsFiltered": "Try modifying your search filters",
+    "noAdaptationsPrompt": "Start by adapting a resume to a mission",
+    "viewAdaptation": "View adaptation",
+    "delete": "Delete",
+    "exportPDF": "Export PDF",
+    "sendEmail": "Send by email",
+    "mission": "Mission",
+    "searchPlaceholder": "Search by resume or mission...",
+    "filterStatus": "All statuses",
+    "refresh": "Refresh",
+    "stats": {
+      "total": "Total adaptations",
+      "completed": "Completed",
+      "processing": "Processing",
+      "failed": "Failed",
+      "avgScore": "Average score"
+    },
+    "status": {
+      "completed": "Completed",
+      "processing": "Processing",
+      "failed": "Failed"
+    },
+    "adaptationDetails": "Adaptation Details",
+    "tabs": {
+      "adaptedCV": "Adapted CV",
+      "analysis": "Analysis",
+      "mission": "Mission"
+    },
+    "noAdaptedText": "No adapted text available",
+    "noAnalysis": "No analysis available",
+    "modal": {
+      "title": "Resume Adaptation",
+      "close": "Close",
+      "tabs": {
+        "mission": "Mission",
+        "analysis": "Match Analysis",
+        "adapted": "Adapted Resume"
+      },
+      "mission": {
+        "client": "Company",
+        "location": "Location",
+        "description": "Description",
+        "noDescription": "No description available for this mission"
+      },
+      "save": "Save",
+      "saving": "Saving..."
+    },
+    "messages": {
+      "saveSuccess": "Adapted resume saved successfully",
+      "saveError": "Error saving adapted resume",
+      "deleteError": "Error deleting adaptation"
+    },
+    "card": {
+      "noName": "Resume without name",
+      "unknownMission": "Unknown mission"
+    },
+    "exportModal": {
+      "description": "The adapted resume will be exported with the selected template"
+    },
+    "actions": {
+      "delete": "[FR] Delete",
+      "export": "[FR] Export",
+      "view": "[FR] View"
+    },
+    "exportSuccess": "[FR] Export Success"
+  },
+  "navigation": {
+    "home": "Home",
+    "resumes": "Resume Library",
+    "templates": "Resume Templates",
+    "emailTemplates": "Email Templates",
+    "dashboard": "Dashboard",
+    "tags": "Tags",
+    "users": "Users",
+    "settings": "Settings",
+    "metrics": "Metrics",
+    "marketRadar": "Market Radar",
+    "metiers": "Jobs & Skills",
+    "security": "Security Logs",
+    "securityLogs": "Security Logs",
+    "clients": "Clients & Prospects",
+    "profileMatching": "Profile Matching",
+    "adaptations": "Adaptations",
+    "userGuide": "User Guide",
+    "upload": "Upload Resume",
+    "sectionGestion": "Management",
+    "sectionAdmin": "Admin"
+  },
+  "chatbot": {
+    "title": "AI Assistant",
+    "subtitle": "I'm here to help you",
+    "openChat": "Open chat",
+    "closeChat": "Close chat",
+    "placeholder": "Ask your question...",
+    "send": "Send",
+    "clear": "Clear",
+    "clearChat": "Clear conversation",
+    "resetSize": "Reset size",
+    "needHelp": "Need help?",
+    "welcomeMessage": "ðŸ‘‹ **Hello!** I'm your AI assistant.\n\nI can help you with:\n- ðŸ“„ **Managing the resume library** (import, analysis, improvement)\n- ðŸŽ¯ **Creating missions** and adapting profiles\n- âš™ï¸ **Using the features** of the application\n- â“ **Answering your questions**\n\nHow can I help you?",
+    "errorMessage": "Sorry, I couldn't process your request. Please try again."
+  },
+  "userGuide": {
+    "title": "User Guide",
+    "subtitle": "Complete documentation for using ResumeConverter"
+  },
+  "marketRadar": {
+    "title": "IS/IT Market Radar",
+    "subtitle": "IT job offers collection and analysis in France",
+    "dataTypes": {
+      "offres": "Job offers",
+      "tension": "Recruitment tensions",
+      "dynamique_emploi": "Employment dynamics",
+      "embauche": "Hirings",
+      "demandeur": "Job seekers",
+      "demandeur_entrant": "New job seekers"
+    },
+    "tabs": {
+      "map": "France Map",
+      "trends": "Market Trends",
+      "facts": "Job Offers",
+      "metiers": "Jobs & Skills"
+    },
+    "map": {
+      "title": "Data by region",
+      "subtitle": "Click on a region to see job details",
+      "loading": "Loading map...",
+      "noData": "No regional data",
+      "noDataOffres": "Run a France Travail collection to see data on the map.",
+      "noDataTrends": "Run a market trends collection to see data on the map.",
+      "selectDataType": "Data type",
+      "regionsCovered": "Regions covered",
+      "topRegion": "Top region",
+      "itJobs": "IS/IT Jobs",
+      "totalOffers": "Total IT offers",
+      "total": "Total",
+      "average": "Average",
+      "metierBreakdown": "Breakdown by job",
+      "searchMetier": "Search for a job...",
+      "legend": "Legend",
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "clickToFilter": "Click on a bubble to filter by type",
+      "bubbleSizeInfo": "Bubble size proportional to value",
+      "refresh": "[FR] Refresh"
+    },
+    "trends": {
+      "title": "Market Trends",
+      "loading": "Loading trends...",
+      "noData": "No data available",
+      "results": "trends",
+      "filters": {
+        "allTypes": "All types",
+        "allRegions": "All regions"
+      },
+      "collection": {
+        "button": "Collect trends",
+        "started": "Collection started in background. Estimated duration: 30-60 minutes."
+      },
+      "refresh": "[FR] Refresh"
+    },
+    "facts": {
+      "results": "facts",
+      "filters": {
+        "source": "Source",
+        "allSources": "All sources",
+        "allMetiers": "All jobs",
+        "region": "Region",
+        "keyword": "Job"
+      },
+      "stats": {
+        "totalJobs": "Total offers",
+        "regions": "Regions",
+        "keywords": "Keywords"
+      },
+      "table": {
+        "date": "Date",
+        "source": "Source",
+        "metier": "Job",
+        "region": "Region",
+        "offers": "Offers"
+      },
+      "collection": {
+        "title": "Data collection",
+        "overlayTitle": "Collection in progress",
+        "overlayDescription": "Retrieving IS/IT market data from APIs.",
+        "overlayWarning": "This operation can take several minutes. Do not close this page.",
+        "startCollection": "Start collection",
+        "success": "Collection completed",
+        "factsCollected": "Facts collected",
+        "stored": "Stored",
+        "failed": "Failed",
+        "duration": "Duration",
+        "noData": "No facts collected",
+        "noDataDescription": "Run a collection to retrieve IS/IT market data.",
+        "error": "Collection error",
+        "collectFranceTravail": "Collect France Travail"
+      },
+      "sections": {
+        "allFacts": "All offers"
+      }
+    },
+    "metiers": {
+      "title": "Jobs & Skills",
+      "subtitle": "ROME 4.0 Reference - IT and Telecommunications",
+      "loading": "Loading jobs...",
+      "noData": "No jobs found",
+      "results": "jobs",
+      "noDataSearch": "No results for this search.",
+      "noDataEmpty": "Run a collection to retrieve IS/IT jobs.",
+      "searchPlaceholder": "Search for a job...",
+      "stats": {
+        "totalMetiers": "IS/IT Jobs",
+        "totalCompetences": "Total skills",
+        "lastUpdate": "Last update"
+      },
+      "card": {
+        "competences": "skills",
+        "enjeuxDomaines": "Issues / Domains",
+        "competencesDetaillees": "Detailed Skills",
+        "macroSavoirFaire": "Macro Know-How",
+        "savoirs": "Knowledge",
+        "updatedAt": "Updated"
+      },
+      "collection": {
+        "title": "Collection in progress",
+        "description": "Retrieving IS/IT jobs from Rome 4.0 API.",
+        "warning": "This operation can take up to 20 minutes. Do not close this page.",
+        "button": "Collect jobs",
+        "success": "Collection completed",
+        "processed": "jobs processed",
+        "created": "created",
+        "updated": "updated",
+        "errors": "errors"
+      },
+      "refresh": "[FR] Refresh"
+    },
+    "errors": {
+      "loadFailed": "Failed to load data"
+    }
+  },
+  "profileMatching": {
+    "title": "Profile Matching",
+    "subtitle": "Find the best CVs matching a mission",
+    "selectMission": "Select a mission",
+    "loadingMissions": "Loading missions...",
+    "noMissions": "No missions available",
+    "advancedOptions": "Advanced options",
+    "maxResults": "Max results",
+    "minScore": "Minimum score (%)",
+    "weights": "Criteria weights",
+    "weightsTotal": "Total",
+    "resetWeights": "Reset weights",
+    "search": "Search profiles",
+    "searching": "Searching...",
+    "noResults": "No profiles match the criteria",
+    "resultsFound": "{{count}} profile(s) found",
+    "results": "Matching profiles",
+    "matchScore": "Score",
+    "extractedKeywords": "Keywords extracted from mission",
+    "scannedResumes": "{{count}} CVs scanned",
+    "matchedTags": "Matching skills",
+    "missingTags": "Missing skills",
+    "noMatchedTags": "No matches",
+    "noMissingTags": "All required skills are present",
+    "viewResume": "View CV",
+    "noTitle": "No title",
+    "noProfilesFound": "No profiles found with these criteria",
+    "keywordsRefreshed": "Mission keywords refreshed",
+    "refreshKeywordsTooltip": "Refresh mission keywords",
+    "categories": {
+      "skills": "Skills",
+      "tools": "Tools",
+      "industries": "Industries",
+      "softSkills": "Soft Skills"
+    },
+    "emptyState": {
+      "title": "Search for profiles",
+      "description": "Select a mission and start the search to find the most suitable CVs."
+    },
+    "errors": {
+      "loadMissions": "Error loading missions",
+      "selectMission": "Please select a mission",
+      "search": "Error searching profiles",
+      "refreshKeywords": "Error refreshing keywords",
+      "resumeNotFound": "CV not found in the list",
+      "analysis": "Error during detailed profile analysis"
+    },
+    "analyzeProfile": "Analyze profile",
+    "viewAnalysis": "View analysis",
+    "analyzing": "Analyzing...",
+    "analysisComplete": "Detailed analysis complete",
+    "searchingProfiles": "Searching profiles...",
+    "searchingProfilesDescription": "AI is analyzing CVs in your database to find the best candidates for this mission.",
+    "analyzingProfile": "Analyzing profile...",
+    "analyzingProfileDescription": "AI is generating a detailed analysis of the match between this profile and the mission.",
+    "titleAdjustment": "Title adjustment",
+    "llmScored": "AI Score",
+    "confidence": {
+      "high": "high confidence",
+      "medium": "medium confidence",
+      "low": "low confidence"
+    },
+    "llmScoringApplied": "Intelligent AI scoring applied",
+    "llmScoringFailed": "AI scoring unavailable, fallback mode",
+    "detailedAnalysis": {
+      "title": "AI Detailed Analysis",
+      "verdict": "Verdict",
+      "strengths": "Strengths",
+      "gaps": "Identified gaps",
+      "recommendations": "Recommendations",
+      "interviewQuestions": "Suggested interview questions",
+      "riskLevel": "Risk level"
+    }
+  },
+  "export": {
+    "loadingTemplates": "Loading templates...",
+    "noTemplates": "No templates available",
+    "selectTemplate": "Select a template"
+  },
+  "clients": {
+    "title": "Clients & Prospects",
+    "subtitle": "Manage your clients and prospects for CV submissions",
+    "addClient": "Add",
+    "addContact": "Add contact",
+    "searchPlaceholder": "Search clients or prospects...",
+    "results": "results",
+    "noClients": "No clients or prospects found",
+    "noContacts": "No contacts for this client",
+    "noSubmissions": "No CV submissions for this client",
+    "contactsLabel": "contacts",
+    "submissionsLabel": "submissions",
+    "contactsTitle": "Contacts",
+    "submissionsTitle": "Submission History",
+    "sentTo": "Sent to",
+    "by": "by",
+    "viewVersion": "View version",
+    "primaryContact": "Primary contact",
+    "tabs": {
+      "all": "All",
+      "clients": "Clients",
+      "prospects": "Prospects",
+      "contacts": "Contacts",
+      "submissions": "Submissions"
+    },
+    "types": {
+      "client": "Client",
+      "prospect": "Prospect"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "submissionStatus": {
+      "sent": "Sent",
+      "viewed": "Viewed",
+      "rejected": "Rejected",
+      "accepted": "Accepted",
+      "pending": "Pending"
+    },
+    "stats": {
+      "clients": "Clients",
+      "prospects": "Prospects",
+      "contacts": "Contacts",
+      "submissions": "Submissions"
+    },
+    "modal": {
+      "addClient": "Add client/prospect",
+      "editClient": "Edit client/prospect",
+      "addContact": "Add contact",
+      "editContact": "Edit contact",
+      "name": "Name",
+      "type": "Type",
+      "status": "Status",
+      "industry": "Industry",
+      "industryPlaceholder": "e.g., Banking, Insurance, IT...",
+      "website": "Website",
+      "address": "Address",
+      "addressPlaceholder": "Full postal address",
+      "notes": "Notes",
+      "notesPlaceholder": "Internal notes about this client...",
+      "contactName": "Contact name",
+      "role": "Role",
+      "rolePlaceholder": "e.g., HR Director, Recruitment Manager...",
+      "email": "Email",
+      "phone": "Phone",
+      "primaryContact": "Primary contact",
+      "selectIndustry": "Select an industry"
+    },
+    "messages": {
+      "clientCreated": "Client created successfully",
+      "clientUpdated": "Client updated successfully",
+      "clientDeleted": "Client deleted successfully",
+      "contactCreated": "Contact created successfully",
+      "contactUpdated": "Contact updated successfully",
+      "contactDeleted": "Contact deleted successfully",
+      "errorFetching": "Error loading clients",
+      "errorCreatingClient": "Error creating client",
+      "errorUpdatingClient": "Error updating client",
+      "errorCreatingContact": "Error creating contact",
+      "errorUpdatingContact": "Error updating contact",
+      "errorDeleting": "Error deleting",
+      "confirmDeleteClient": "Are you sure you want to delete the client \"{{name}}\"?",
+      "confirmDeleteContact": "Are you sure you want to delete the contact \"{{name}}\"?",
+      "cannotDeleteWithSubmissions": "Cannot delete: CV submissions are associated"
+    }
+  },
+  "mail": {
+    "modal": {
+      "title": "Send CV by email",
+      "connectTitle": "Connect your email",
+      "connectDescription": "Connect to Gmail to create an email draft with the CV attached.",
+      "connectGmail": "Connect with Gmail",
+      "connectedAs": "Connected as {{email}}",
+      "disconnect": "Disconnect",
+      "selectClient": "Client / Prospect",
+      "chooseClient": "Select a client...",
+      "selectContact": "Contact",
+      "chooseContact": "Select a contact...",
+      "selectTemplate": "Email template",
+      "noTemplate": "No template",
+      "default": "default",
+      "system": "system",
+      "previewTemplate": "Preview template",
+      "templatePreview": "Template preview",
+      "loadingPreview": "Loading preview...",
+      "template": "Template",
+      "noEmail": "No email",
+      "to": "To",
+      "subject": "Subject",
+      "attachment": "Attachment",
+      "createDraft": "Create draft",
+      "creating": "Creating draft...",
+      "successTitle": "Draft created!",
+      "successDescription": "The draft has been created in your Gmail inbox. Click below to open and send it.",
+      "openDraft": "Open in Gmail",
+      "errorTitle": "Error",
+      "retry": "Retry",
+      "ssoReconnectMessage": "Your Gmail session has expired. Please log in again to reactivate email sending.",
+      "reconnectApp": "Log in again"
+    },
+    "errors": {
+      "loadClients": "Error loading clients",
+      "connectFailed": "Failed to connect to Gmail",
+      "noEmail": "This contact has no email address",
+      "needsReauth": "Your session has expired. Please reconnect.",
+      "previewFailed": "Error previewing template"
+    },
+    "success": {
+      "draftCreated": "Draft created successfully",
+      "disconnected": "Email disconnected"
+    }
+  },
+  "emailTemplates": {
+    "title": "Email Templates",
+    "subtitle": "Manage your email templates for CV submissions",
+    "createNew": "New template",
+    "editTemplate": "Edit template",
+    "noTemplates": "No templates created. Create your first template or duplicate the system template.",
+    "systemTemplate": "System template (read-only)",
+    "defaultTemplate": "Default template",
+    "duplicate": "Duplicate",
+    "confirmDelete": "Are you sure you want to delete this template?",
+    "setAsDefault": "Set as default template",
+    "preview": "Preview",
+    "desktopView": "Desktop view",
+    "mobileView": "Mobile view",
+    "loadingPreview": "Loading preview...",
+    "noPreview": "No preview available",
+    "refreshPreview": "Refresh preview",
+    "nameLabel": "Template name",
+    "namePlaceholder": "E.g.: Standard application",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "Template description...",
+    "subjectLabel": "Email subject",
+    "contentLabel": "Email content",
+    "blockPlaceholder": "Enter content...",
+    "logoPlaceholder": "Firm logo (will be displayed automatically)",
+    "insertKeyword": "Insert keyword",
+    "errors": {
+      "loadFailed": "Error loading templates",
+      "createFailed": "Error creating template",
+      "updateFailed": "Error updating template",
+      "deleteFailed": "Error deleting template",
+      "duplicateFailed": "Error duplicating template",
+      "previewFailed": "Error previewing template",
+      "compileFailed": "MJML compilation error",
+      "requiredFields": "Please fill in all required fields",
+      "cannotEditSystem": "Cannot edit system template",
+      "cannotDeleteSystem": "Cannot delete system template"
+    },
+    "success": {
+      "created": "Template created successfully",
+      "updated": "Template updated successfully",
+      "deleted": "Template deleted successfully",
+      "duplicated": "Template duplicated successfully"
+    }
+  },
+  "consent": {
+    "form": {
+      "title": "GDPR Information",
+      "subtitle": "Data protection compliance",
+      "profileType": {
+        "label": "Profile type",
+        "employee": "Employee",
+        "external": "External",
+        "employeeHint": "Internal company profile - no consent required",
+        "externalHint": "External candidate - a consent request will be sent"
+      },
+      "candidateName": {
+        "label": "Candidate full name",
+        "placeholder": "First Last",
+        "hint": "Real name of the candidate (may differ from displayed name if anonymized)"
+      },
+      "candidateEmail": {
+        "label": "Candidate email",
+        "placeholder": "candidate@email.com",
+        "hint": "The consent request email will be sent to this address"
+      },
+      "submit": {
+        "sendRequest": "Send request",
+        "confirm": "Confirm"
+      },
+      "skip": "Skip",
+      "gdprNotice": "Under GDPR, candidate consent is required to store their CV.",
+      "errors": {
+        "nameRequired": "Candidate name is required",
+        "emailRequired": "Candidate email is required for external profiles",
+        "emailInvalid": "Email address is not valid",
+        "submitFailed": "Error sending the request"
+      },
+      "success": {
+        "employee": "Profile saved - no consent required",
+        "external": "Consent request sent",
+        "emailSent": "An email has been sent to {{email}}"
+      }
+    },
+    "status": {
+      "notRequired": "Not required",
+      "pending": "Pending",
+      "active": "Consented",
+      "refused": "Refused",
+      "expired": "Expired",
+      "purged": "Deleted",
+      "error": "Send Error",
+      "unknown": "Unknown"
+    },
+    "badge": {
+      "title": "GDPR Consent",
+      "profileType": "Profile type",
+      "candidateName": "Candidate name",
+      "candidateEmail": "Candidate email",
+      "requestedAt": "Request sent on",
+      "respondedAt": "Response on",
+      "retentionUntil": "Retained until",
+      "responseDeadline": "Response expected by",
+      "resend": "Resend request",
+      "resending": "Sending..."
+    },
+    "response": {
+      "title": "Consent Request",
+      "subtitle": "CV Storage",
+      "greeting": "Hello {{name}},",
+      "message": "{{firm}} would like to keep your CV in their talent pool to offer you relevant professional opportunities.",
+      "whatWeStore": "What we store:",
+      "storeItem1": "Your CV and the information it contains",
+      "storeItem2": "Your contact details to reach you",
+      "storeItem3": "History of opportunities offered",
+      "retentionPeriod": "Retention period: 2 years maximum. You can withdraw your consent at any time.",
+      "rights": "You have the right to access, rectify and delete your data.",
+      "accept": "I accept",
+      "refuse": "I refuse",
+      "footer": "This form complies with the General Data Protection Regulation (GDPR).",
+      "backToHome": "Back to home",
+      "errors": {
+        "noToken": "Invalid consent link",
+        "expired": "This consent request has expired",
+        "alreadyProcessed": "This request has already been processed",
+        "invalid": "Invalid consent link",
+        "generic": "An error occurred",
+        "network": "Server connection error",
+        "submitFailed": "Error recording your response"
+      },
+      "error": {
+        "title": "Unable to process your request"
+      },
+      "success": {
+        "acceptedTitle": "Thank you for your consent!",
+        "acceptedMessage": "Your CV will be kept in our talent pool.",
+        "refusedTitle": "Your choice has been recorded",
+        "refusedMessage": "Your CV will be deleted from our database.",
+        "retentionInfo": "Your data will be kept for a maximum of 2 years."
+      }
+    }
+  }
+}
+
