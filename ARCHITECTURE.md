@@ -851,4 +851,4 @@ L'architecture actuelle est **adaptée pour un usage PME/ESN** et peut supporter
 ---
 
 *Document mis à jour le 1 mars 2026*
-*Version: 1.7.2*
+*Version: 1.7.3*

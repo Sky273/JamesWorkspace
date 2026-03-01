@@ -1,6 +1,6 @@
 # Security Documentation
 
-**Version**: 1.7.2  
+**Version**: 1.7.3  
 **Last Updated**: March 2026
 
 ## Overview

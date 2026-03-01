@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import fs from 'fs';
 import commonjs from '@rollup/plugin-commonjs';
+import resolve from '@rollup/plugin-node-resolve';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import compression from 'vite-plugin-compression';
 import zlib from 'zlib';
@@ -236,9 +237,13 @@ export default defineConfig(({ mode }) => {
       '@': path.resolve(__dirname, './src'),
       '/tinymce': path.resolve(__dirname, '../node_modules/tinymce'),
       '@root': path.resolve(__dirname, '..'),
+      // Fix for html-parse-stringify ESM issue in Vite 7 - use UMD version
+      'html-parse-stringify': path.resolve(__dirname, '../node_modules/html-parse-stringify/dist/html-parse-stringify.umd.js'),
     }
   },
   optimizeDeps: {
+    // Force pre-bundling of problematic ESM packages for Vite 7
+    force: true,
     esbuildOptions: {
       // Fix for React exports not being recognized
       mainFields: ['module', 'main'],
@@ -249,6 +254,9 @@ export default defineConfig(({ mode }) => {
       'react',
       'react-dom',
       'react-router-dom',
+      'react-i18next',
+      'i18next',
+      'i18next-browser-languagedetector',
       'tinymce/tinymce',
       'tinymce/icons/default',
       'tinymce/themes/silver',
@@ -292,12 +300,29 @@ export default defineConfig(({ mode }) => {
     commonjsOptions: {
       include: [/tinymce/, /node_modules/],
       transformMixedEsModules: true,
+      // Fix for void-elements and html-parse-stringify in Vite 7
+      esmExternals: true,
     },
     rollupOptions: {
+      // Vite 7 fix: ensure proper module resolution
+      shimMissingExports: true,
       plugins: [
+        resolve({
+          browser: true,
+          preferBuiltins: false,
+          // Force ESM resolution for React packages
+          exportConditions: ['import', 'module', 'browser', 'default'],
+        }),
         commonjs({
           include: /node_modules/,
           transformMixedEsModules: true,
+          // Fix for void-elements default export issue in Vite 7
+          requireReturnsDefault: 'auto',
+          // Ensure named exports are properly extracted
+          namedExports: {
+            'react': ['Fragment', 'isValidElement', 'cloneElement', 'createElement', 'Children', 'useState', 'useEffect', 'useContext', 'useRef', 'useMemo', 'useCallback', 'useReducer', 'forwardRef', 'createContext', 'memo', 'lazy', 'Suspense', 'startTransition', 'useTransition', 'useDeferredValue', 'useId', 'useSyncExternalStore', 'useInsertionEffect', 'useLayoutEffect', 'useImperativeHandle', 'useDebugValue', 'Component', 'PureComponent', 'StrictMode', 'Profiler', 'createRef', 'isValidElement'],
+            'react-dom': ['createRoot', 'hydrateRoot', 'flushSync', 'createPortal', 'findDOMNode', 'render', 'unmountComponentAtNode'],
+          },
         }),
       ],
       output: {
