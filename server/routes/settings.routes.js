@@ -71,7 +71,10 @@ router.get('/', authenticateToken, async (req, res) => {
             'Experience Weight': settings.experience_weight || 20,
             'Education Weight': settings.education_weight || 15,
             'ATS Weight': settings.ats_weight || 15,
-            'Hobbies Languages Weight': settings.hobbies_languages_weight || 10
+            'Hobbies Languages Weight': settings.hobbies_languages_weight || 10,
+            'DPO Name': settings.dpo_name || '',
+            'DPO Email': settings.dpo_email || '',
+            'DPO Phone': settings.dpo_phone || ''
         };
         
         settingsCache.set('settings', responseData);
@@ -116,7 +119,10 @@ router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), valida
             experience_weight: updateData['Experience Weight'],
             education_weight: updateData['Education Weight'],
             ats_weight: updateData['ATS Weight'],
-            hobbies_languages_weight: updateData['Hobbies Languages Weight']
+            hobbies_languages_weight: updateData['Hobbies Languages Weight'],
+            dpo_name: updateData['DPO Name'],
+            dpo_email: updateData['DPO Email'],
+            dpo_phone: updateData['DPO Phone']
         };
 
         // Remove undefined values
@@ -179,7 +185,10 @@ router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), valida
             'Experience Weight': result.experience_weight,
             'Education Weight': result.education_weight,
             'ATS Weight': result.ats_weight,
-            'Hobbies Languages Weight': result.hobbies_languages_weight
+            'Hobbies Languages Weight': result.hobbies_languages_weight,
+            'DPO Name': result.dpo_name || '',
+            'DPO Email': result.dpo_email || '',
+            'DPO Phone': result.dpo_phone || ''
         });
     } catch (error) {
         safeLog('error', 'Error updating settings', { error: error.message });
@@ -216,6 +225,9 @@ router.post('/', authenticateToken, requireAdmin, async (req, res) => {
             education_weight: settingsData['Education Weight'] || 15,
             ats_weight: settingsData['ATS Weight'] || 15,
             hobbies_languages_weight: settingsData['Hobbies Languages Weight'] || 10,
+            dpo_name: settingsData['DPO Name'] || '',
+            dpo_email: settingsData['DPO Email'] || '',
+            dpo_phone: settingsData['DPO Phone'] || '',
             status: 'active'
         };
 
@@ -239,7 +251,10 @@ router.post('/', authenticateToken, requireAdmin, async (req, res) => {
             'Experience Weight': result.experience_weight,
             'Education Weight': result.education_weight,
             'ATS Weight': result.ats_weight,
-            'Hobbies Languages Weight': result.hobbies_languages_weight
+            'Hobbies Languages Weight': result.hobbies_languages_weight,
+            'DPO Name': result.dpo_name || '',
+            'DPO Email': result.dpo_email || '',
+            'DPO Phone': result.dpo_phone || ''
         });
     } catch (error) {
         safeLog('error', 'Error creating settings', { error: error.message });

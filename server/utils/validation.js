@@ -203,7 +203,10 @@ export const updateSettingsSchema = z.object({
   'Experience Weight': z.number().min(0).max(100).optional(),
   'Education Weight': z.number().min(0).max(100).optional(),
   'Hobbies Languages Weight': z.number().min(0).max(100).optional(),
-  'ATS Weight': z.number().min(0).max(100).optional()
+  'ATS Weight': z.number().min(0).max(100).optional(),
+  'DPO Name': z.string().optional(),
+  'DPO Email': z.string().optional(),
+  'DPO Phone': z.string().optional()
 }).strict();
 
 // ============================================

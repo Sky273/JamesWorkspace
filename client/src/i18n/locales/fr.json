@@ -70,7 +70,9 @@
     }
   },
   "footer": {
-    "allRightsReserved": "Tous droits réservés."
+    "allRightsReserved": "Tous droits réservés.",
+    "privacy": "Politique de confidentialité",
+    "terms": "Conditions d'utilisation"
   },
   "auth": {
     "signIn": {
@@ -745,7 +747,30 @@
       "weights": "Poids des Catégories",
       "chatbot": "Chatbot",
       "gdpr": "RGPD",
+      "dpo": "Contact DPO",
       "apiDocs": "Documentation API"
+    },
+    "dpo": {
+      "title": "Informations de contact DPO",
+      "description": "Configurez les informations de contact du Délégué à la Protection des Données et du cabinet pour les emails de consentement RGPD.",
+      "dpoSection": "Délégué à la Protection des Données",
+      "firmSection": "Informations du Cabinet",
+      "dpoName": "Nom du DPO",
+      "dpoNamePlaceholder": "Jean Dupont",
+      "dpoEmail": "Email du DPO",
+      "dpoPhone": "Téléphone du DPO",
+      "firmName": "Nom du Cabinet",
+      "firmNamePlaceholder": "Aptea",
+      "firmAddress": "Adresse du Cabinet",
+      "firmAddressPlaceholder": "123 Rue Principale, 75001 Paris",
+      "firmPhone": "Téléphone du Cabinet",
+      "firmWebsite": "Site Web du Cabinet",
+      "privacyPolicyUrl": "URL Politique de Confidentialité",
+      "save": "Enregistrer",
+      "saveSuccess": "Paramètres DPO enregistrés avec succès",
+      "saveError": "Erreur lors de l'enregistrement des paramètres DPO",
+      "infoTitle": "À propos des paramètres DPO",
+      "infoContent": "Ces informations seront utilisées dans les emails de demande de consentement RGPD envoyés aux candidats. L'email du DPO sera fourni comme contact pour l'exercice des droits de protection des données."
     },
     "gdpr": {
       "title": "Configuration RGPD",
@@ -1434,15 +1459,21 @@
     },
     "response": {
       "title": "Demande de consentement",
-      "subtitle": "Conservation de votre CV",
+      "subtitle": "Conservation et traitement de votre CV",
       "greeting": "Bonjour {{name}},",
       "message": "Le cabinet {{firm}} souhaite conserver votre CV dans son vivier de talents afin de vous proposer des opportunités professionnelles correspondant à votre profil.",
-      "whatWeStore": "Ce que nous conservons :",
+      "whyWeProcess": "Pourquoi nous conservons et traitons votre CV",
+      "whyItem1": "Conserver votre CV dans notre vivier et vous recontacter",
+      "whyItem2": "Analyser votre CV (extraction : compétences, expériences, mots-clés)",
+      "whyItem3": "Améliorer / reformuler votre CV et l'adapter à une opportunité",
+      "whyItem4": "Évaluer l'adéquation entre votre profil et une opportunité",
+      "automatedProcessing": "Ces traitements automatisés servent à identifier des opportunités adaptées. Ils ne produisent pas, à eux seuls, une décision automatique vous concernant.",
+      "whatWeStore": "Données concernées",
       "storeItem1": "Votre CV et les informations qu'il contient",
       "storeItem2": "Vos coordonnées pour vous contacter",
-      "storeItem3": "L'historique des opportunités proposées",
+      "storeItem3": "Les analyses et scores générés par nos outils",
       "retentionPeriod": "Durée de conservation : 2 ans maximum. Vous pouvez retirer votre consentement à tout moment.",
-      "rights": "Vous disposez d'un droit d'accès, de rectification et de suppression de vos données.",
+      "rights": "Vous disposez d'un droit d'accès, de rectification, suppression, limitation, opposition et portabilité de vos données. Contactez notre DPO pour exercer vos droits.",
       "accept": "J'accepte",
       "refuse": "Je refuse",
       "footer": "Ce formulaire est conforme au Règlement Général sur la Protection des Données (RGPD).",
@@ -1465,6 +1496,122 @@
         "refusedTitle": "Votre choix a été enregistré",
         "refusedMessage": "Votre CV sera supprimé de notre base de données.",
         "retentionInfo": "Vos données seront conservées pendant 2 ans maximum."
+      }
+    }
+  },
+  "legal": {
+    "privacy": {
+      "title": "Politique de confidentialité",
+      "lastUpdated": "Dernière mise à jour",
+      "sections": {
+        "introduction": {
+          "title": "Introduction",
+          "content": "Aptea (« nous », « notre » ou « nos ») s'engage à protéger votre vie privée. Cette Politique de confidentialité explique comment nous collectons, utilisons, divulguons et protégeons vos informations lorsque vous utilisez notre service Resume Converter."
+        },
+        "dataCollection": {
+          "title": "Informations que nous collectons",
+          "content": "Nous collectons les informations que vous nous fournissez directement :",
+          "items": {
+            "personal": "Informations personnelles (nom, adresse email, entreprise)",
+            "resume": "Données de CV téléchargées pour analyse et amélioration",
+            "usage": "Données d'utilisation et interaction avec nos services",
+            "technical": "Données techniques (adresse IP, type de navigateur, informations sur l'appareil)"
+          }
+        },
+        "dataUse": {
+          "title": "Comment nous utilisons vos informations",
+          "content": "Nous utilisons les informations collectées pour :",
+          "items": {
+            "service": "Fournir, maintenir et améliorer nos services",
+            "improvement": "Analyser et améliorer le contenu des CV grâce à l'IA",
+            "communication": "Communiquer avec vous concernant nos services",
+            "legal": "Respecter nos obligations légales"
+          }
+        },
+        "dataProtection": {
+          "title": "Protection des données",
+          "content": "Nous mettons en œuvre des mesures techniques et organisationnelles appropriées pour protéger vos données personnelles contre tout accès, modification, divulgation ou destruction non autorisés. Toutes les données sont chiffrées en transit et au repos."
+        },
+        "gdpr": {
+          "title": "Vos droits (RGPD)",
+          "content": "En vertu du Règlement Général sur la Protection des Données (RGPD), vous disposez des droits suivants :",
+          "rights": {
+            "access": "Droit d'accès à vos données personnelles",
+            "rectification": "Droit de rectification des données inexactes",
+            "erasure": "Droit à l'effacement (« droit à l'oubli »)",
+            "portability": "Droit à la portabilité des données",
+            "objection": "Droit d'opposition au traitement"
+          }
+        },
+        "cookies": {
+          "title": "Cookies",
+          "content": "Nous utilisons des cookies essentiels pour assurer le bon fonctionnement de notre service. Ces cookies sont nécessaires à l'authentification et à la sécurité."
+        },
+        "contact": {
+          "title": "Nous contacter",
+          "content": "Si vous avez des questions concernant cette Politique de confidentialité ou nos pratiques en matière de données, veuillez nous contacter :"
+        }
+      }
+    },
+    "terms": {
+      "title": "Conditions d'utilisation",
+      "lastUpdated": "Dernière mise à jour",
+      "sections": {
+        "acceptance": {
+          "title": "Acceptation des conditions",
+          "content": "En accédant ou en utilisant le service Resume Converter fourni par Aptea, vous acceptez d'être lié par ces Conditions d'utilisation. Si vous n'acceptez pas ces conditions, veuillez ne pas utiliser notre service."
+        },
+        "description": {
+          "title": "Description du service",
+          "content": "Resume Converter est une plateforme alimentée par l'IA conçue pour les ESN (Entreprises de Services du Numérique) et les cabinets de recrutement. Elle permet de gérer une CVthèque, d'analyser et d'améliorer les CV, d'adapter ces CV à un contexte mission spécifique et de les exporter selon divers modèles."
+        },
+        "account": {
+          "title": "Comptes utilisateurs",
+          "content": "Pour utiliser notre service, vous devez créer un compte. Vous êtes responsable de :",
+          "items": {
+            "accurate": "Fournir des informations exactes et complètes",
+            "security": "Maintenir la sécurité de vos identifiants de compte",
+            "responsibility": "Toutes les activités qui se produisent sous votre compte"
+          }
+        },
+        "usage": {
+          "title": "Utilisation acceptable",
+          "content": "Vous acceptez d'utiliser notre service uniquement à des fins légales. Vous ne devez pas :",
+          "items": {
+            "lawful": "Utiliser le service à des fins illégales",
+            "noHarm": "Télécharger du contenu malveillant ou tenter de nuire au service",
+            "noAbuse": "Abuser, harceler ou discriminer autrui",
+            "noUnauthorized": "Tenter d'accéder de manière non autorisée à nos systèmes"
+          }
+        },
+        "intellectual": {
+          "title": "Propriété intellectuelle",
+          "content": "Le service, y compris son contenu original, ses fonctionnalités et ses fonctions, est la propriété d'Aptea et est protégé par les lois internationales sur le droit d'auteur, les marques et autres droits de propriété intellectuelle."
+        },
+        "userContent": {
+          "title": "Contenu utilisateur",
+          "content": "Vous conservez la propriété des CV et du contenu que vous téléchargez. En utilisant notre service, vous nous accordez une licence limitée pour traiter votre contenu uniquement dans le but de fournir le service."
+        },
+        "disclaimer": {
+          "title": "Exclusion de garanties",
+          "content": "Le service est fourni « tel quel » sans garantie d'aucune sorte. Nous ne garantissons pas que les suggestions générées par l'IA seront exactes ou adaptées à vos besoins spécifiques."
+        },
+        "limitation": {
+          "title": "Limitation de responsabilité",
+          "content": "Aptea ne sera pas responsable des dommages indirects, accessoires, spéciaux, consécutifs ou punitifs résultant de votre utilisation du service."
+        },
+        "termination": {
+          "title": "Résiliation",
+          "content": "Nous pouvons résilier ou suspendre votre compte à tout moment en cas de violation de ces conditions. À la résiliation, votre droit d'utiliser le service cessera immédiatement."
+        },
+        "governing": {
+          "title": "Droit applicable",
+          "content": "Ces conditions seront régies et interprétées conformément aux lois de la France, sans tenir compte de ses dispositions relatives aux conflits de lois."
+        },
+        "contact": {
+          "title": "Nous contacter",
+          "content": "Si vous avez des questions concernant ces Conditions d'utilisation, veuillez nous contacter :"
+        }
       }
     }
   }

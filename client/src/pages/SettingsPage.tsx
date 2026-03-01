@@ -7,12 +7,12 @@ import { useState, useEffect, ForwardRefExoticComponent, RefAttributes, SVGProps
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
-import { Cog6ToothIcon, SparklesIcon, ScaleIcon, DocumentTextIcon, ChatBubbleLeftRightIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
+import { Cog6ToothIcon, SparklesIcon, ScaleIcon, DocumentTextIcon, ChatBubbleLeftRightIcon, ShieldCheckIcon, UserCircleIcon } from '@heroicons/react/24/outline';
 import { useAuthFetch } from '../hooks/useAuthFetch';
 import { useChatbot } from '../context/ChatbotContext';
 import logger from '../utils/logger.frontend';
 
-import { LLMTab, PromptsTab, WeightsTab, ChatbotTab, GdprTab } from '../components/SettingsPage';
+import { LLMTab, PromptsTab, WeightsTab, ChatbotTab, GdprTab, DpoTab } from '../components/SettingsPage';
 import Breadcrumbs from '../components/Breadcrumbs';
 
 type HeroIcon = ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, 'ref'> & { title?: string; titleId?: string } & RefAttributes<SVGSVGElement>>;
@@ -32,6 +32,9 @@ interface Settings {
   'Education Weight'?: number;
   'ATS Weight'?: number;
   'Hobbies Languages Weight'?: number;
+  'DPO Name'?: string;
+  'DPO Email'?: string;
+  'DPO Phone'?: string;
   analysisPrompt?: string;
   improvementPrompt?: string;
 }
@@ -50,6 +53,9 @@ interface SettingsFormData {
   'Education Weight': number;
   'ATS Weight': number;
   'Hobbies Languages Weight': number;
+  'DPO Name': string;
+  'DPO Email': string;
+  'DPO Phone': string;
   [key: string]: string | number | boolean;
 }
 
@@ -81,7 +87,10 @@ const SettingsPage = (): JSX.Element => {
     'Experience Weight': 20,
     'Education Weight': 15,
     'ATS Weight': 15,
-    'Hobbies Languages Weight': 10
+    'Hobbies Languages Weight': 10,
+    'DPO Name': '',
+    'DPO Email': '',
+    'DPO Phone': ''
   });
 
   useEffect(() => {
@@ -108,7 +117,10 @@ const SettingsPage = (): JSX.Element => {
         'Experience Weight': data['Experience Weight'] || 20,
         'Education Weight': data['Education Weight'] || 15,
         'ATS Weight': data['ATS Weight'] || 15,
-        'Hobbies Languages Weight': data['Hobbies Languages Weight'] || 10
+        'Hobbies Languages Weight': data['Hobbies Languages Weight'] || 10,
+        'DPO Name': data['DPO Name'] || '',
+        'DPO Email': data['DPO Email'] || '',
+        'DPO Phone': data['DPO Phone'] || ''
       });
       
       logger.log('[Settings] Prompts loaded:', {
@@ -199,7 +211,10 @@ const SettingsPage = (): JSX.Element => {
         'Experience Weight': 20,
         'Education Weight': 15,
         'ATS Weight': 15,
-        'Hobbies Languages Weight': 10
+        'Hobbies Languages Weight': 10,
+        'DPO Name': '',
+        'DPO Email': '',
+        'DPO Phone': ''
       });
       toast.success(t('settings.resetSuccess'));
     }
@@ -219,6 +234,7 @@ const SettingsPage = (): JSX.Element => {
     { id: 'weights', name: t('settings.tabs.weights'), icon: ScaleIcon },
     { id: 'chatbot', name: t('settings.tabs.chatbot'), icon: ChatBubbleLeftRightIcon },
     { id: 'gdpr', name: t('settings.tabs.gdpr'), icon: ShieldCheckIcon },
+    { id: 'dpo', name: t('settings.tabs.dpo'), icon: UserCircleIcon },
     { id: 'swagger', name: t('settings.tabs.apiDocs'), icon: DocumentTextIcon }
   ];
 
@@ -296,6 +312,10 @@ const SettingsPage = (): JSX.Element => {
 
         {activeTab === 'gdpr' && (
           <GdprTab t={t} />
+        )}
+
+        {activeTab === 'dpo' && (
+          <DpoTab formData={formData} onInputChange={handleInputChange} t={t} />
         )}
 
         {activeTab === 'swagger' && (

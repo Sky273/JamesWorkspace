@@ -1,3 +1,35 @@
+## v1.7.4 - 2026-03-01
+### 🛡️ RGPD & DPO - Conformité Renforcée
+
+#### Onglet DPO dans les Paramètres
+- **Nouveau** : Onglet "DPO" pour configurer les coordonnées du Délégué à la Protection des Données
+- **Champs** : Nom, Email, Téléphone du DPO
+- **Intégration** : Sauvegarde via le bouton global des paramètres
+
+#### Email de Consentement RGPD
+- **Refonte complète** du template email de demande de consentement
+- **Sections détaillées** : Pourquoi nous conservons, données concernées, partage, durée, droits
+- **Email DPO dynamique** : Utilise les coordonnées configurées dans les paramètres
+- **Design professionnel** : Mise en page moderne avec icônes et couleurs
+
+#### Écran de Consentement Candidat
+- **Cohérence** avec l'email de consentement
+- **Nouvelles sections** : Traitements automatisés, données concernées, droits RGPD
+- **Mention DPO** : Contact pour exercer ses droits
+
+#### Pages Légales
+- **Privacy Policy** : Nouvelle page `/privacy` accessible publiquement
+- **Terms of Service** : Nouvelle page `/terms` accessible publiquement
+- **Footer** : Liens ajoutés vers les pages légales
+- **Traductions** : FR/EN complètes
+
+#### Corrections
+- **Validation schema** : Accepte les champs DPO dans les settings
+- **Migration SQL** : Colonnes DPO ajoutées à `llm_settings`
+- **Description service** : Corrigée dans les Conditions d'Utilisation
+
+---
+
 ## v1.7.3 - 2026-03-01
 ### 🚀 Migration React 19 + Express 5
 

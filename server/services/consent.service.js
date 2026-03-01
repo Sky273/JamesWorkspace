@@ -31,11 +31,36 @@ function getFrontendUrl() {
 }
 
 /**
+ * Get DPO settings from llm_settings table
+ * @returns {Promise<Object>} DPO settings
+ */
+async function getDpoSettings() {
+    try {
+        const result = await query(`
+            SELECT dpo_name, dpo_email, dpo_phone
+            FROM llm_settings
+            ORDER BY created_at DESC
+            LIMIT 1
+        `);
+        return result.rows[0] || {};
+    } catch (error) {
+        safeLog('warn', 'Could not fetch DPO settings', { error: error.message });
+        return {};
+    }
+}
+
+/**
  * Build HTML email for consent request
  * @param {Object} params
  * @returns {string} HTML content
  */
-function buildConsentRequestEmailHtml({ candidateName, firmName, consentUrl, expiryDays }) {
+function buildConsentRequestEmailHtml({ candidateName, firmName, consentUrl, expiryDays, dpoSettings = {} }) {
+    const dpoEmail = dpoSettings.dpo_email || 'dpo@aptea.net';
+    const firmAddress = dpoSettings.firm_address || '';
+    const firmPhone = dpoSettings.firm_phone || '';
+    const firmWebsite = dpoSettings.firm_website || 'https://www.aptea.net';
+    const privacyPolicyUrl = dpoSettings.privacy_policy_url || `${getFrontendUrl()}/privacy`;
+    
     return `
 <!DOCTYPE html>
 <html lang="fr">
@@ -44,70 +69,118 @@ function buildConsentRequestEmailHtml({ candidateName, firmName, consentUrl, exp
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f5;">
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 650px; margin: 0 auto; padding: 20px;">
         <tr>
             <td style="background-color: #ffffff; border-radius: 8px; padding: 40px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                 <!-- Header -->
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                     <tr>
-                        <td style="text-align: center; padding-bottom: 30px; border-bottom: 1px solid #e5e7eb;">
-                            <h1 style="color: #1f2937; font-size: 24px; margin: 0;">Demande de consentement</h1>
-                            <p style="color: #6b7280; font-size: 14px; margin: 10px 0 0 0;">Conservation de votre CV</p>
+                        <td style="text-align: center; padding-bottom: 25px; border-bottom: 1px solid #e5e7eb;">
+                            <h1 style="color: #1f2937; font-size: 22px; margin: 0;">Demande de consentement</h1>
+                            <p style="color: #6b7280; font-size: 14px; margin: 8px 0 0 0;">Conservation et traitement de votre CV</p>
                         </td>
                     </tr>
                 </table>
 
                 <!-- Content -->
-                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="padding-top: 30px;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="padding-top: 25px;">
                     <tr>
                         <td>
-                            <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                            <p style="color: #374151; font-size: 15px; line-height: 1.6; margin: 0 0 15px 0;">
                                 Bonjour <strong>${candidateName}</strong>,
                             </p>
-                            <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                            <p style="color: #374151; font-size: 15px; line-height: 1.6; margin: 0 0 15px 0;">
                                 Le cabinet <strong>${firmName}</strong> souhaite conserver votre CV dans son vivier de talents afin de vous proposer des opportunités professionnelles correspondant à votre profil.
                             </p>
+                            <p style="color: #374151; font-size: 15px; line-height: 1.6; margin: 0 0 20px 0;">
+                                Pour cela, nous vous demandons votre consentement à la conservation de votre CV et à certains traitements automatisés (notamment via des outils d'analyse).
+                            </p>
                             
-                            <div style="background-color: #f9fafb; border-radius: 6px; padding: 20px; margin: 20px 0;">
-                                <p style="color: #374151; font-size: 14px; margin: 0 0 10px 0; font-weight: bold;">Ce que nous conservons :</p>
-                                <ul style="color: #6b7280; font-size: 14px; margin: 0; padding-left: 20px;">
-                                    <li style="margin-bottom: 5px;">Votre CV et les informations qu'il contient</li>
-                                    <li style="margin-bottom: 5px;">Vos coordonnées pour vous contacter</li>
-                                    <li>L'historique des opportunités proposées</li>
+                            <!-- Section: Pourquoi nous conservons -->
+                            <div style="background-color: #f0f9ff; border-left: 4px solid #2563eb; padding: 15px 20px; margin: 20px 0;">
+                                <p style="color: #1e40af; font-size: 14px; margin: 0 0 10px 0; font-weight: bold;">📋 Pourquoi nous conservons et traitons votre CV</p>
+                                <p style="color: #374151; font-size: 14px; line-height: 1.5; margin: 0 0 10px 0;">Nous utilisons vos informations pour :</p>
+                                <ul style="color: #4b5563; font-size: 14px; margin: 0; padding-left: 20px; line-height: 1.6;">
+                                    <li style="margin-bottom: 5px;">Conserver votre CV dans notre vivier et vous recontacter</li>
+                                    <li style="margin-bottom: 5px;">Analyser votre CV (extraction d'informations : compétences, expériences, mots-clés)</li>
+                                    <li style="margin-bottom: 5px;">Améliorer / reformuler votre CV et, si besoin, l'adapter à une opportunité</li>
+                                    <li>Évaluer l'adéquation entre votre profil et une opportunité (production d'un score)</li>
+                                </ul>
+                                <p style="color: #6b7280; font-size: 13px; font-style: italic; margin: 12px 0 0 0;">
+                                    <strong>Important :</strong> ces traitements automatisés servent à identifier des opportunités adaptées. Ils ne produisent pas, à eux seuls, une décision automatique vous concernant. Une revue humaine peut intervenir.
+                                </p>
+                            </div>
+
+                            <!-- Section: Données concernées -->
+                            <div style="background-color: #f9fafb; border-radius: 6px; padding: 15px 20px; margin: 20px 0;">
+                                <p style="color: #374151; font-size: 14px; margin: 0 0 10px 0; font-weight: bold;">📁 Quelles données sont concernées</p>
+                                <ul style="color: #4b5563; font-size: 14px; margin: 0; padding-left: 20px; line-height: 1.6;">
+                                    <li style="margin-bottom: 5px;">Votre CV et les informations qu'il contient (parcours, compétences, formations, etc.)</li>
+                                    <li style="margin-bottom: 5px;">Vos coordonnées (email, téléphone) pour vous contacter</li>
+                                    <li style="margin-bottom: 5px;">L'historique des opportunités proposées et des échanges associés</li>
+                                    <li>Le cas échéant, des versions améliorées du CV générées dans le cadre du service</li>
                                 </ul>
                             </div>
 
-                            <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 0 0 30px 0;">
-                                <strong>Durée de conservation :</strong> 2 ans maximum. Vous pouvez retirer votre consentement à tout moment.
-                            </p>
+                            <!-- Section: Partage des données -->
+                            <div style="background-color: #f9fafb; border-radius: 6px; padding: 15px 20px; margin: 20px 0;">
+                                <p style="color: #374151; font-size: 14px; margin: 0 0 10px 0; font-weight: bold;">🔒 Avec qui ces données peuvent être partagées</p>
+                                <p style="color: #4b5563; font-size: 14px; line-height: 1.5; margin: 0;">
+                                    Vos données sont accessibles aux personnes habilitées chez ${firmName} et peuvent être traitées par nos prestataires techniques (hébergement, emailing, outils d'analyse/IA), uniquement pour fournir le service.
+                                </p>
+                                <p style="color: #6b7280; font-size: 13px; margin: 10px 0 0 0;">
+                                    Pour plus de détails, consultez notre <a href="${privacyPolicyUrl}" style="color: #2563eb; text-decoration: underline;">politique de confidentialité</a>.
+                                </p>
+                            </div>
+
+                            <!-- Section: Durée de conservation -->
+                            <div style="background-color: #fef3c7; border-radius: 6px; padding: 15px 20px; margin: 20px 0;">
+                                <p style="color: #92400e; font-size: 14px; margin: 0; font-weight: bold;">⏱️ Durée de conservation</p>
+                                <p style="color: #78350f; font-size: 14px; line-height: 1.5; margin: 8px 0 0 0;">
+                                    <strong>Durée maximale : 2 ans</strong> à compter de la date du recueil du consentement, sauf obligation légale contraire. À l'issue, vos données sont supprimées ou anonymisées.
+                                </p>
+                            </div>
+
+                            <!-- Section: Vos droits -->
+                            <div style="background-color: #f0fdf4; border-left: 4px solid #22c55e; padding: 15px 20px; margin: 20px 0;">
+                                <p style="color: #166534; font-size: 14px; margin: 0 0 10px 0; font-weight: bold;">✅ Vos droits et retrait du consentement</p>
+                                <p style="color: #374151; font-size: 14px; line-height: 1.5; margin: 0;">
+                                    Vous pouvez <strong>retirer votre consentement à tout moment</strong>, et exercer vos droits (accès, rectification, suppression, limitation, opposition, portabilité) en nous contactant : <a href="mailto:${dpoEmail}" style="color: #2563eb; text-decoration: underline;">${dpoEmail}</a>
+                                </p>
+                                <p style="color: #6b7280; font-size: 13px; margin: 10px 0 0 0;">
+                                    Vous pouvez également introduire une réclamation auprès de la <a href="https://www.cnil.fr" style="color: #2563eb; text-decoration: underline;">CNIL</a>.
+                                </p>
+                            </div>
 
                             <!-- CTA Button -->
-                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin: 30px 0;">
                                 <tr>
                                     <td style="text-align: center;">
-                                        <a href="${consentUrl}" style="display: inline-block; background-color: #2563eb; color: #ffffff; text-decoration: none; font-size: 16px; font-weight: bold; padding: 14px 32px; border-radius: 6px;">
+                                        <p style="color: #22c55e; font-size: 16px; font-weight: bold; margin: 0 0 15px 0;">✅ Pour répondre à cette demande, cliquez ci-dessous :</p>
+                                        <a href="${consentUrl}" style="display: inline-block; background-color: #2563eb; color: #ffffff; text-decoration: none; font-size: 16px; font-weight: bold; padding: 16px 40px; border-radius: 8px; box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);">
                                             Répondre à la demande
                                         </a>
                                     </td>
                                 </tr>
                             </table>
 
-                            <p style="color: #9ca3af; font-size: 12px; text-align: center; margin: 30px 0 0 0;">
-                                Ce lien expire dans ${expiryDays} jours.
+                            <p style="color: #f59e0b; font-size: 13px; text-align: center; margin: 0; font-weight: 500;">
+                                ⏰ Ce lien expire dans ${expiryDays} jours.
                             </p>
                         </td>
                     </tr>
                 </table>
 
-                <!-- Footer -->
+                <!-- Footer / Signature -->
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="padding-top: 30px; border-top: 1px solid #e5e7eb; margin-top: 30px;">
                     <tr>
-                        <td style="text-align: center;">
-                            <p style="color: #9ca3af; font-size: 12px; margin: 0;">
-                                Ce message est conforme au Règlement Général sur la Protection des Données (RGPD).
-                            </p>
-                            <p style="color: #9ca3af; font-size: 12px; margin: 10px 0 0 0;">
-                                Vous disposez d'un droit d'accès, de rectification et de suppression de vos données.
+                        <td>
+                            <p style="color: #374151; font-size: 14px; margin: 0 0 5px 0;">Cordialement,</p>
+                            <p style="color: #374151; font-size: 14px; margin: 0 0 15px 0; font-weight: bold;">Cabinet ${firmName}</p>
+                            <p style="color: #6b7280; font-size: 13px; margin: 0; line-height: 1.6;">
+                                ${firmAddress ? `${firmAddress}<br>` : ''}
+                                ${firmPhone ? `${firmPhone}<br>` : ''}
+                                ${firmWebsite ? `<a href="${firmWebsite}" style="color: #2563eb; text-decoration: none;">${firmWebsite}</a>` : ''}
                             </p>
                         </td>
                     </tr>
@@ -319,20 +392,22 @@ export async function sendConsentRequest(resumeId) {
         consentUrl: consentUrl.replace(resume.consent_token, '[TOKEN]')
     });
 
-    // Build email HTML
+    // Build email HTML with DPO settings
     const firmName = resume.firm_name || 'Notre cabinet';
+    const dpoSettings = await getDpoSettings();
     const emailHtml = buildConsentRequestEmailHtml({
         candidateName: resume.candidate_name,
-        firmName,
+        firmName: dpoSettings.firm_name || firmName,
         consentUrl,
-        expiryDays: CONSENT_TOKEN_EXPIRY_DAYS
+        expiryDays: CONSENT_TOKEN_EXPIRY_DAYS,
+        dpoSettings
     });
 
     // Send email via Gmail (using GLOBAL token)
     try {
         await gdprMailService.sendEmail({
             to: resume.candidate_email,
-            subject: `Demande de consentement RGPD - ${firmName}`,
+            subject: `Demande de consentement - conservation et traitement de votre CV`,
             html: emailHtml
         });
     } catch (emailError) {

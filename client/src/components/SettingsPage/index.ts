@@ -7,3 +7,4 @@ export { default as PromptsTab } from './PromptsTab';
 export { default as WeightsTab } from './WeightsTab';
 export { ChatbotTab } from './ChatbotTab';
 export { GdprTab } from './GdprTab';
+export { DpoTab } from './DpoTab';

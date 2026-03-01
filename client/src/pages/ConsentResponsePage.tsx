@@ -239,9 +239,26 @@ const ConsentResponsePage = (): JSX.Element => {
                         {t('consent.response.message', { firm: consentInfo?.firmName })}
                     </p>
 
-                    <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                    {/* Why we process section */}
+                    <div className="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-4 mb-4">
+                        <h3 className="font-medium text-blue-900 mb-2">
+                            📋 {t('consent.response.whyWeProcess')}
+                        </h3>
+                        <ul className="text-sm text-gray-700 space-y-1">
+                            <li>• {t('consent.response.whyItem1')}</li>
+                            <li>• {t('consent.response.whyItem2')}</li>
+                            <li>• {t('consent.response.whyItem3')}</li>
+                            <li>• {t('consent.response.whyItem4')}</li>
+                        </ul>
+                        <p className="text-xs text-gray-500 mt-2 italic">
+                            {t('consent.response.automatedProcessing')}
+                        </p>
+                    </div>
+
+                    {/* Data concerned section */}
+                    <div className="bg-gray-50 rounded-lg p-4 mb-4">
                         <h3 className="font-medium text-gray-900 mb-2">
-                            {t('consent.response.whatWeStore')}
+                            📁 {t('consent.response.whatWeStore')}
                         </h3>
                         <ul className="text-sm text-gray-600 space-y-1">
                             <li>• {t('consent.response.storeItem1')}</li>
@@ -250,18 +267,22 @@ const ConsentResponsePage = (): JSX.Element => {
                         </ul>
                     </div>
 
-                    <div className="bg-blue-50 rounded-lg p-4 mb-6">
+                    {/* Retention period */}
+                    <div className="bg-amber-50 border-l-4 border-amber-500 rounded-lg p-4 mb-4">
                         <div className="flex items-start gap-2">
-                            <ClockIcon className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                            <p className="text-sm text-blue-800">
-                                {t('consent.response.retentionPeriod')}
+                            <ClockIcon className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                            <p className="text-sm text-amber-800">
+                                ⏱️ {t('consent.response.retentionPeriod')}
                             </p>
                         </div>
                     </div>
 
-                    <p className="text-sm text-gray-500 mb-6">
-                        {t('consent.response.rights')}
-                    </p>
+                    {/* Rights section */}
+                    <div className="bg-green-50 border-l-4 border-green-500 rounded-lg p-4 mb-6">
+                        <p className="text-sm text-green-800">
+                            ✅ {t('consent.response.rights')}
+                        </p>
+                    </div>
 
                     {/* Action Buttons */}
                     <div className="grid grid-cols-2 gap-4">
