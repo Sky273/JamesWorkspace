@@ -26,7 +26,8 @@ import {
   ChartBarIcon,
   BuildingOfficeIcon,
   EnvelopeIcon,
-  ShieldCheckIcon
+  ShieldCheckIcon,
+  UserCircleIcon
 } from '@heroicons/react/24/outline';
 import userGuideContentFR from '@root/USER_GUIDE.md?raw';
 import userGuideContentEN from '@root/USER_GUIDE_EN.md?raw';
@@ -51,6 +52,7 @@ const UserGuidePage = (): JSX.Element => {
   const sections: Section[] = isEnglish ? [
     { id: 'introduction', title: 'Introduction', icon: BookOpenIcon },
     { id: 'quick-start', title: 'Quick Start', icon: SparklesIcon },
+    { id: 'user-profile', title: 'User Profile', icon: UserCircleIcon },
     { id: 'resume-management', title: 'Resume Management', icon: DocumentTextIcon },
     { id: 'missions', title: 'Missions', icon: BriefcaseIcon },
     { id: 'profile-matching', title: 'Profile Matching', icon: UserGroupIcon },
@@ -71,6 +73,7 @@ const UserGuidePage = (): JSX.Element => {
   ] : [
     { id: 'introduction', title: 'Introduction', icon: BookOpenIcon },
     { id: 'demarrage-rapide', title: 'Démarrage Rapide', icon: SparklesIcon },
+    { id: 'profil-utilisateur', title: 'Profil Utilisateur', icon: UserCircleIcon },
     { id: 'gestion-des-cv', title: 'Gestion des CV', icon: DocumentTextIcon },
     { id: 'missions', title: 'Missions', icon: BriefcaseIcon },
     { id: 'matching-profils', title: 'Matching Profils', icon: UserGroupIcon },
@@ -96,6 +99,7 @@ const UserGuidePage = (): JSX.Element => {
     const sectionMapEN: { [key: string]: string } = {
       'introduction': 'Introduction',
       'quick-start': 'Quick Start',
+      'user-profile': 'User Profile',
       'resume-management': 'Resume Management',
       'missions': 'Missions',
       'profile-matching': 'Profile Matching',
@@ -118,6 +122,7 @@ const UserGuidePage = (): JSX.Element => {
     const sectionMapFR: { [key: string]: string } = {
       'introduction': 'Introduction',
       'demarrage-rapide': 'Démarrage Rapide',
+      'profil-utilisateur': 'Profil Utilisateur',
       'gestion-des-cv': 'Gestion des CV',
       'missions': 'Missions',
       'matching-profils': 'Matching Profils',
