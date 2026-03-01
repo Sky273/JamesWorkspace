@@ -1,3 +1,32 @@
+## v1.7.1 - 2026-03-01
+### 📚 Documentation & Qualité
+
+#### Documentation Swagger Complète
+- **Endpoints 2FA** : Documentation des 5 routes `/api/2fa/*`
+- **Email Templates** : 10 endpoints pour la gestion des templates MJML
+- **Consent RGPD** : 7 endpoints pour la gestion du consentement
+- **GDPR Mail** : 5 endpoints pour la configuration email RGPD
+- **Admin** : 4 endpoints pour les logs de sécurité et statistiques
+- **Schemas** : Ajout de `EmailTemplate`, `ConsentStatus`, `SecurityLog`
+- **User schema** : Ajout des champs `totp_enabled`, `totp_enabled_at`
+- **LoginRequest/Response** : Support du champ `totpCode` et `requires2FA`
+
+#### Guide Utilisateur
+- **Section Profil Utilisateur** : Nouvelle section complète dans USER_GUIDE.md et USER_GUIDE_EN.md
+- **Documentation 2FA** : Instructions détaillées pour activer/désactiver le 2FA
+- **Navigation** : Ajout de la section dans le menu de UserGuidePage.tsx
+
+#### Corrections
+- **Route PUT /api/users/:id** : Ajout de la route manquante pour la mise à jour du profil utilisateur
+- **Dépendance otplib** : Suppression (remplacée par speakeasy)
+- **Configuration knip** : Nettoyage et mise à jour
+
+#### Tests
+- **64 nouveaux tests** : Tests pour `logger.backend.js` et `validation.js`
+- **Total** : 325 tests passés
+
+---
+
 ## v1.7.0 - 2026-03-01
 ### 🔐 Authentification à Deux Facteurs (2FA)
 
