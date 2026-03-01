@@ -16,12 +16,24 @@ const ALLOWED_TABLES = new Set([
     'llm_settings',
     'templates',
     'resumes',
+    'resume_versions',
     'missions',
     'resume_adaptations',
+    'clients',
+    'client_contacts',
+    'resume_submissions',
+    'user_mail_tokens',
+    'firm_gdpr_mail_tokens',
+    'global_gdpr_mail_token',
+    'email_templates',
     'rome_metiers',
     'industry_aliases',
     'market_facts',
-    'market_trends'
+    'market_trends',
+    'token_blacklist',
+    'user_blacklist',
+    'tags',
+    'security_logs'
 ]);
 
 /**

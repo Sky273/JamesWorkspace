@@ -1,3 +1,29 @@
+## v1.6.6 - 2026-03-01
+### 🔧 Corrections & Améliorations
+
+#### Token GDPR Global
+- **Architecture corrigée** : Le token Gmail RGPD est maintenant **global** (pas par cabinet)
+- **Nouvelle table** : `global_gdpr_mail_token` pour stocker un seul token pour toute l'application
+- **Refresh automatique** : Token rafraîchi automatiquement chaque semaine via le scheduler
+- **Retry intelligent** : Si Google rejette le token, refresh automatique et retry
+- **Migration SQL** : `docker/migrations/add_global_gdpr_mail_token.sql`
+
+#### Consentement RGPD
+- **Statut 'error'** : Ajout de `'error'` comme valeur valide pour `consent_status`
+- **Rappels fonctionnels** : Correction de l'appel `sendEmail()` pour les rappels de consentement
+- **Migration SQL** : `docker/migrations/add_error_to_consent_status.sql`
+
+#### Qualité du Code
+- **Tests corrigés** : Correction des 4 tests cassés dans `health.routes.test.js` (mock `req.query`)
+- **Whitelist SQL étendue** : Ajout de 12 tables manquantes dans `postgresHelpers.js`
+- **Logging amélioré** : Remplacement des erreurs silencieuses par des logs `warn` dans `mailService.js`
+
+#### UI Mobile
+- **Menu hamburger** : Fond opaque (`bg-white`/`bg-gray-800`) pour une meilleure lisibilité
+- **Backdrop blur** : Effet de flou sur l'arrière-plan du menu mobile
+
+---
+
 ## v1.6.5 - 2026-02-28
 ### 🔒 Sécurité & Qualité du Code
 

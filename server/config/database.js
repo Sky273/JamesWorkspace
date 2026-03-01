@@ -30,8 +30,13 @@ const dbConfig = {
     connectionTimeoutMillis: 5000,
     
     // SSL configuration (for production)
+    // POSTGRES_SSL=true : Enable SSL with certificate validation (recommended for production)
+    // POSTGRES_SSL=relaxed : Enable SSL without certificate validation (for self-signed certs)
+    // POSTGRES_SSL not set or false : No SSL (development only)
     ssl: process.env.POSTGRES_SSL === 'true' ? {
-        rejectUnauthorized: false
+        rejectUnauthorized: true  // Strict mode: validate server certificate
+    } : process.env.POSTGRES_SSL === 'relaxed' ? {
+        rejectUnauthorized: false // Relaxed mode: accept self-signed certificates
     } : false
 };
 

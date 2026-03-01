@@ -641,7 +641,7 @@ export async function sendConsentReminders() {
                 daysRemaining
             });
 
-            await gdprMailService.sendEmail(resume.firm_id, {
+            await gdprMailService.sendEmail({
                 to: resume.candidate_email,
                 subject: `Rappel : Demande de consentement RGPD - ${firmName}`,
                 html: emailHtml

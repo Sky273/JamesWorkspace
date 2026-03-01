@@ -255,7 +255,12 @@ export async function disconnect(userId, providerName = 'gmail') {
             const provider = getProvider(providerName);
             await provider.revokeToken(accessToken);
         } catch (error) {
-            // Ignore revocation errors
+            // Log revocation errors but don't fail the disconnect
+            safeLog('warn', 'Token revocation failed during disconnect', { 
+                userId, 
+                provider: providerName, 
+                error: error.message 
+            });
         }
     }
     

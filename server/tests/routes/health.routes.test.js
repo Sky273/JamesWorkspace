@@ -30,7 +30,9 @@ describe('Health Routes', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         
-        mockReq = {};
+        mockReq = {
+            query: {}
+        };
         mockRes = {
             status: vi.fn().mockReturnThis(),
             json: vi.fn().mockReturnThis()

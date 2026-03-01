@@ -197,7 +197,7 @@ CREATE TABLE public.resumes (
     CONSTRAINT resumes_pkey PRIMARY KEY (id),
     CONSTRAINT resumes_status_check CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'inactive'::character varying, 'archived'::character varying, 'new'::character varying, 'pending'::character varying, 'processing'::character varying, 'analyzed'::character varying, 'improved'::character varying, 'error'::character varying, 'failed'::character varying])::text[]))),
     CONSTRAINT resumes_profile_type_check CHECK (((profile_type)::text = ANY ((ARRAY['employee'::character varying, 'external'::character varying])::text[]))),
-    CONSTRAINT resumes_consent_status_check CHECK (((consent_status)::text = ANY ((ARRAY['not_required'::character varying, 'pending_consent'::character varying, 'active'::character varying, 'refused'::character varying, 'expired'::character varying, 'purged'::character varying])::text[])))
+    CONSTRAINT resumes_consent_status_check CHECK (((consent_status)::text = ANY ((ARRAY['not_required'::character varying, 'pending_consent'::character varying, 'active'::character varying, 'refused'::character varying, 'expired'::character varying, 'purged'::character varying, 'error'::character varying])::text[])))
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_resumes_consent_token ON public.resumes(consent_token) WHERE consent_token IS NOT NULL;

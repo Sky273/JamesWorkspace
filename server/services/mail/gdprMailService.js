@@ -242,9 +242,10 @@ async function getAccessToken() {
  * @param {string} emailData.subject - Email subject
  * @param {string} emailData.html - HTML body
  * @param {string} emailData.text - Plain text body (optional)
+ * @param {boolean} isRetry - Internal flag for retry after token refresh
  * @returns {Promise<Object>}
  */
-export async function sendEmail({ to, subject, html, text }) {
+export async function sendEmail({ to, subject, html, text }, isRetry = false) {
     // Get GLOBAL access token (will refresh if needed)
     let accessToken;
     try {
@@ -297,21 +298,47 @@ export async function sendEmail({ to, subject, html, text }) {
         .replace(/\//g, '_')
         .replace(/=+$/, '');
 
-    // Send email
-    const result = await gmail.users.messages.send({
-        userId: 'me',
-        requestBody: {
-            raw: encodedMessage
+    try {
+        // Send email
+        const result = await gmail.users.messages.send({
+            userId: 'me',
+            requestBody: {
+                raw: encodedMessage
+            }
+        });
+
+        safeLog('info', 'GDPR email sent via Gmail (GLOBAL)', { to, messageId: result.data.id });
+
+        return {
+            success: true,
+            messageId: result.data.id,
+            sentTo: to
+        };
+    } catch (sendError) {
+        // Check if it's an authentication error - token might be invalid even if not expired
+        const isAuthError = sendError.message?.includes('invalid authentication credentials') ||
+                           sendError.message?.includes('Invalid Credentials') ||
+                           sendError.message?.includes('Request had invalid authentication') ||
+                           sendError.code === 401;
+        
+        if (isAuthError && !isRetry) {
+            safeLog('warn', 'GDPR token rejected by Google, forcing refresh and retry', { error: sendError.message });
+            
+            // Force token expiry to trigger refresh on next call
+            await query(`
+                UPDATE global_gdpr_mail_token
+                SET token_expiry = NOW() - INTERVAL '1 hour',
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = 'global'
+            `);
+            
+            // Retry once with refreshed token
+            return sendEmail({ to, subject, html, text }, true);
         }
-    });
-
-    safeLog('info', 'GDPR email sent via Gmail (GLOBAL)', { to, messageId: result.data.id });
-
-    return {
-        success: true,
-        messageId: result.data.id,
-        sentTo: to
-    };
+        
+        // Re-throw the error if it's not an auth error or if retry already failed
+        throw sendError;
+    }
 }
 
 /**
@@ -393,6 +420,101 @@ export async function validateToken() {
     }
 }
 
+/**
+ * Proactively refresh the GLOBAL GDPR token
+ * This should be called periodically (e.g., weekly) to ensure token persistence
+ * Google access tokens expire after 1 hour, but refresh tokens are long-lived
+ * Proactive refresh keeps the refresh token active and prevents expiration
+ * @returns {Promise<{success: boolean, message: string, email?: string}>}
+ */
+export async function proactiveTokenRefresh() {
+    safeLog('info', '[GDPR Token Refresh] Starting proactive token refresh');
+    
+    try {
+        // Check if we have a token configured
+        const result = await query(`
+            SELECT access_token_encrypted, refresh_token_encrypted, token_expiry, email
+            FROM global_gdpr_mail_token
+            WHERE id = 'global'
+        `);
+
+        if (result.rows.length === 0) {
+            safeLog('info', '[GDPR Token Refresh] No GDPR token configured, skipping refresh');
+            return { success: true, message: 'No token configured' };
+        }
+
+        const tokenData = result.rows[0];
+        
+        if (!tokenData.refresh_token_encrypted) {
+            safeLog('warn', '[GDPR Token Refresh] No refresh token available');
+            return { success: false, message: 'No refresh token available' };
+        }
+
+        // Force refresh by getting a new access token using the refresh token
+        const refreshToken = decryptToken(tokenData.refresh_token_encrypted);
+        const oauth2Client = await getOAuth2Client();
+        oauth2Client.setCredentials({ refresh_token: refreshToken });
+
+        const { credentials } = await oauth2Client.refreshAccessToken();
+        
+        // Update stored tokens
+        const newAccessTokenEncrypted = encryptToken(credentials.access_token);
+        const newRefreshTokenEncrypted = credentials.refresh_token 
+            ? encryptToken(credentials.refresh_token) 
+            : tokenData.refresh_token_encrypted;
+        const newExpiry = calculateTokenExpiry(credentials.expiry_date 
+            ? Math.floor((credentials.expiry_date - Date.now()) / 1000) 
+            : 3600);
+
+        await query(`
+            UPDATE global_gdpr_mail_token
+            SET access_token_encrypted = $1,
+                refresh_token_encrypted = $2,
+                token_expiry = $3,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = 'global'
+        `, [newAccessTokenEncrypted, newRefreshTokenEncrypted, newExpiry]);
+
+        safeLog('info', '[GDPR Token Refresh] Token refreshed successfully', { 
+            email: tokenData.email,
+            newExpiry: newExpiry.toISOString(),
+            hasNewRefreshToken: !!credentials.refresh_token
+        });
+
+        return { 
+            success: true, 
+            message: 'Token refreshed successfully',
+            email: tokenData.email
+        };
+    } catch (error) {
+        safeLog('error', '[GDPR Token Refresh] Proactive refresh failed', { error: error.message });
+        
+        // Check if token was revoked
+        const isRevokedToken = error.message?.includes('invalid_grant') || 
+                              error.message?.includes('Token has been expired or revoked');
+        
+        if (isRevokedToken) {
+            // Mark token as invalid
+            await query(`
+                UPDATE global_gdpr_mail_token
+                SET token_expiry = NOW() - INTERVAL '1 day',
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = 'global'
+            `);
+            
+            return { 
+                success: false, 
+                message: 'Token révoqué par Google - reconnexion requise'
+            };
+        }
+        
+        return { 
+            success: false, 
+            message: error.message 
+        };
+    }
+}
+
 export const gdprMailService = {
     getAuthUrl,
     handleOAuthCallback,
@@ -400,7 +522,8 @@ export const gdprMailService = {
     validateToken,
     sendEmail,
     sendTestEmail,
-    disconnect
+    disconnect,
+    proactiveTokenRefresh
 };
 
 export default gdprMailService;

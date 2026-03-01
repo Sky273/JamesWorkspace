@@ -4,6 +4,7 @@
  * - Check for expired consents
  * - Send consent reminders
  * - Purge expired/refused resumes
+ * - Proactive GDPR token refresh (weekly)
  */
 
 import { safeLog } from '../utils/logger.backend.js';
@@ -12,16 +13,19 @@ import {
     sendConsentReminders, 
     purgeExpiredResumes 
 } from './consent.service.js';
+import { proactiveTokenRefresh } from './mail/gdprMailService.js';
 
 // Scheduler intervals
 let consentCheckInterval = null;
 let reminderInterval = null;
 let purgeInterval = null;
+let tokenRefreshInterval = null;
 
 // Default intervals (in milliseconds)
 const CONSENT_CHECK_INTERVAL = 60 * 60 * 1000; // 1 hour
 const REMINDER_CHECK_INTERVAL = 6 * 60 * 60 * 1000; // 6 hours
 const PURGE_CHECK_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours
+const TOKEN_REFRESH_INTERVAL = 7 * 24 * 60 * 60 * 1000; // 7 days (weekly)
 
 /**
  * Run consent expiration check
@@ -66,6 +70,26 @@ async function runPurgeCheck() {
 }
 
 /**
+ * Run proactive GDPR token refresh
+ * This keeps the Google OAuth refresh token active and prevents expiration
+ */
+async function runTokenRefresh() {
+    try {
+        const result = await proactiveTokenRefresh();
+        if (result.success) {
+            safeLog('info', '[Scheduler] GDPR token refresh completed', { 
+                email: result.email,
+                message: result.message 
+            });
+        } else {
+            safeLog('warn', '[Scheduler] GDPR token refresh issue', { message: result.message });
+        }
+    } catch (error) {
+        safeLog('error', '[Scheduler] GDPR token refresh failed', { error: error.message });
+    }
+}
+
+/**
  * Start all scheduled tasks
  */
 export function startScheduler() {
@@ -76,6 +100,8 @@ export function startScheduler() {
         safeLog('info', '[Scheduler] Running initial consent checks');
         await runConsentCheck();
         await runPurgeCheck();
+        // Also run token refresh on startup to ensure token is valid
+        await runTokenRefresh();
     }, 30000); // 30 seconds after startup
 
     // Schedule periodic consent expiration checks
@@ -96,10 +122,17 @@ export function startScheduler() {
         purgeInterval.unref();
     }
 
+    // Schedule weekly GDPR token refresh (keeps refresh token active)
+    tokenRefreshInterval = setInterval(runTokenRefresh, TOKEN_REFRESH_INTERVAL);
+    if (tokenRefreshInterval.unref) {
+        tokenRefreshInterval.unref();
+    }
+
     safeLog('info', '[Scheduler] GDPR consent scheduler started', {
         consentCheckInterval: `${CONSENT_CHECK_INTERVAL / 1000 / 60} minutes`,
         reminderInterval: `${REMINDER_CHECK_INTERVAL / 1000 / 60 / 60} hours`,
-        purgeInterval: `${PURGE_CHECK_INTERVAL / 1000 / 60 / 60} hours`
+        purgeInterval: `${PURGE_CHECK_INTERVAL / 1000 / 60 / 60} hours`,
+        tokenRefreshInterval: `${TOKEN_REFRESH_INTERVAL / 1000 / 60 / 60 / 24} days`
     });
 }
 
@@ -124,6 +157,11 @@ export function stopScheduler() {
         purgeInterval = null;
     }
 
+    if (tokenRefreshInterval) {
+        clearInterval(tokenRefreshInterval);
+        tokenRefreshInterval = null;
+    }
+
     safeLog('info', '[Scheduler] GDPR consent scheduler stopped');
 }
 
@@ -136,7 +174,8 @@ export async function runAllChecks() {
     const results = {
         expiredCount: 0,
         remindersSent: 0,
-        purgedCount: 0
+        purgedCount: 0,
+        tokenRefresh: null
     };
 
     try {
@@ -155,6 +194,13 @@ export async function runAllChecks() {
         results.purgedCount = await purgeExpiredResumes();
     } catch (error) {
         safeLog('error', '[Scheduler] Manual purge check failed', { error: error.message });
+    }
+
+    try {
+        results.tokenRefresh = await proactiveTokenRefresh();
+    } catch (error) {
+        safeLog('error', '[Scheduler] Manual token refresh failed', { error: error.message });
+        results.tokenRefresh = { success: false, message: error.message };
     }
 
     safeLog('info', '[Scheduler] Manual checks completed', results);
