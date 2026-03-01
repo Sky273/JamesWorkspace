@@ -113,7 +113,7 @@ router.get('/actions', authenticateToken, requireAdmin, (req, res) => {
             label: key.charAt(0) + key.slice(1).toLowerCase()
         }))
     });
-}));
+});
 
 /**
  * GET /api/gdpr-audit/export/:email
