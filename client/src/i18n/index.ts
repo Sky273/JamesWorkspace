@@ -1,6 +1,9 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import LanguageDetector from 'i18next-browser-languagedetector';
+import * as LanguageDetectorModule from 'i18next-browser-languagedetector';
+
+// Handle both ESM and CJS exports for Vite 7 compatibility
+const LanguageDetector = LanguageDetectorModule.default || LanguageDetectorModule;
 
 import enTranslations from './locales/en.json';
 import frTranslations from './locales/fr.json';
