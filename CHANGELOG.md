@@ -1,3 +1,35 @@
+## v1.7.5 - 2026-03-01
+### 📋 Journal d'Audit RGPD
+
+#### Nouvelle Fonctionnalité : Journal RGPD
+- **Table `gdpr_audit_log`** : Nouvelle table pour tracer toutes les actions RGPD
+- **Service backend** : `gdprAudit.service.js` pour logger et consulter les actions
+- **API REST** : Endpoints `/api/gdpr-audit/*` pour consultation admin
+- **Écran admin** : Nouvelle page "Journal RGPD" accessible via Admin → Journal RGPD
+
+#### Actions Journalisées
+- **Consentement** : Envoi de demande, rappel, acceptation, refus
+- **Données** : Export, suppression, anonymisation
+- **CV** : Upload, traitement, purge automatique
+- **Automatisé** : Purges planifiées, rappels automatiques
+
+#### Fonctionnalités de l'Écran Admin
+- **Filtres avancés** : Par cabinet, catégorie, action, type (auto/manuel), email, dates
+- **Statistiques** : Total actions 30j, répartition par catégorie, auto vs manuel
+- **Pagination** : Navigation dans les logs avec 25 entrées par page
+- **Détails JSON** : Affichage extensible des métadonnées
+
+#### Intégration
+- **consent.service.js** : Logging automatique des actions de consentement
+- **Purges automatiques** : Traçabilité des suppressions planifiées
+- **Multi-cabinet** : Distinction par firm_id pour environnements multi-tenants
+
+#### Documentation
+- **Guide utilisateur FR/EN** : Section "Journal d'Audit RGPD" ajoutée
+- **Menu navigation** : Lien ajouté dans la section Admin
+
+---
+
 ## v1.7.4 - 2026-03-01
 ### 🛡️ RGPD & DPO - Conformité Renforcée
 
