@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '../hooks/useAuth';
+import { useAuthFetch } from '../hooks/useAuthFetch';
 import {
   ShieldCheckIcon,
   FunnelIcon,
@@ -68,7 +68,7 @@ interface Stats {
 
 const GdprAuditPage = () => {
   const { t } = useTranslation();
-  const { authFetch } = useAuth();
+  const { authGet } = useAuthFetch();
 
   // State
   const [logs, setLogs] = useState<GdprAuditLog[]>([]);
@@ -96,7 +96,7 @@ const GdprAuditPage = () => {
   // Fetch action types and categories
   const fetchActionTypes = useCallback(async () => {
     try {
-      const response = await authFetch('/api/gdpr-audit/actions');
+      const response = await authGet('/api/gdpr-audit/actions');
       if (response.ok) {
         const data = await response.json();
         setActionTypes(data.actions || []);
@@ -105,12 +105,12 @@ const GdprAuditPage = () => {
     } catch (err) {
       console.error('Failed to fetch action types:', err);
     }
-  }, [authFetch]);
+  }, [authGet]);
 
   // Fetch firms
   const fetchFirms = useCallback(async () => {
     try {
-      const response = await authFetch('/api/gdpr-audit/firms');
+      const response = await authGet('/api/gdpr-audit/firms');
       if (response.ok) {
         const data = await response.json();
         setFirms(data || []);
@@ -118,7 +118,7 @@ const GdprAuditPage = () => {
     } catch (err) {
       console.error('Failed to fetch firms:', err);
     }
-  }, [authFetch]);
+  }, [authGet]);
 
   // Fetch stats
   const fetchStats = useCallback(async () => {
@@ -126,7 +126,7 @@ const GdprAuditPage = () => {
       const params = new URLSearchParams({ days: '30' });
       if (filters.firmId) params.append('firmId', filters.firmId);
       
-      const response = await authFetch(`/api/gdpr-audit/stats?${params}`);
+      const response = await authGet(`/api/gdpr-audit/stats?${params}`);
       if (response.ok) {
         const data = await response.json();
         setStats(data);
@@ -134,7 +134,7 @@ const GdprAuditPage = () => {
     } catch (err) {
       console.error('Failed to fetch stats:', err);
     }
-  }, [authFetch, filters.firmId]);
+  }, [authGet, filters.firmId]);
 
   // Fetch logs
   const fetchLogs = useCallback(async () => {
@@ -155,7 +155,7 @@ const GdprAuditPage = () => {
       if (filters.startDate) params.append('startDate', filters.startDate);
       if (filters.endDate) params.append('endDate', filters.endDate);
 
-      const response = await authFetch(`/api/gdpr-audit/logs?${params}`);
+      const response = await authGet(`/api/gdpr-audit/logs?${params}`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch audit logs');
@@ -169,7 +169,7 @@ const GdprAuditPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [authFetch, page, filters]);
+  }, [authGet, page, filters]);
 
   // Initial load
   useEffect(() => {
