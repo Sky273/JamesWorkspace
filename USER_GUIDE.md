@@ -1138,6 +1138,20 @@ Le RGPD impose d'obtenir le consentement explicite des personnes dont vous trait
 - Formation
 - Compétences
 
+#### Traitements Effectués sur les Données
+
+Lorsqu'un candidat donne son consentement, les traitements suivants peuvent être effectués sur son CV :
+
+| Traitement | Description |
+|------------|-------------|
+| **Conservation** | Le CV est conservé dans le vivier de talents pour recontacter le candidat |
+| **Analyse** | Extraction automatisée des compétences, expériences et mots-clés |
+| **Amélioration** | Reformulation et amélioration du CV via IA |
+| **Adaptation** | Adaptation du CV à une opportunité spécifique (mission) |
+| **Évaluation** | Calcul d'un score d'adéquation entre le profil et une opportunité |
+
+> **Important** : Ces traitements automatisés servent à identifier des opportunités adaptées au profil du candidat. Ils ne produisent pas, à eux seuls, une décision automatique concernant le candidat. Une revue humaine intervient systématiquement.
+
 ### Import d'un CV Externe
 
 #### Processus d'Import
@@ -1152,10 +1166,14 @@ Le RGPD impose d'obtenir le consentement explicite des personnes dont vous trait
 
 L'email envoyé au candidat contient :
 - L'identité de votre entreprise
-- La finalité du traitement (gestion de candidature)
+- **Pourquoi nous conservons et traitons le CV** (finalités détaillées)
+- **Les données concernées** (CV, coordonnées, analyses générées)
+- **Le partage des données** (pas de transmission à des tiers sans accord)
+- **La durée de conservation** (2 ans maximum)
+- **Les droits du candidat** (accès, rectification, suppression, etc.)
 - Un lien pour **accepter** le consentement
 - Un lien pour **refuser** le consentement
-- La durée de conservation prévue
+- L'email du **DPO** pour exercer ses droits
 
 **Délai de réponse** : Le candidat dispose de **14 jours** pour répondre.
 
@@ -1203,6 +1221,21 @@ L'application gère automatiquement le cycle de vie des CV :
 #### Rappels Automatiques
 
 Un email de rappel est envoyé automatiquement si le candidat n'a pas répondu après 7 jours.
+
+### Configuration du DPO (Délégué à la Protection des Données)
+
+Le DPO est le point de contact pour les candidats souhaitant exercer leurs droits RGPD. Ses coordonnées sont incluses dans les emails de consentement.
+
+#### Configuration
+
+1. Accédez à **Paramètres** → **DPO**
+2. Renseignez les informations du DPO :
+   - **Nom du DPO** : Nom complet du délégué
+   - **Email du DPO** : Adresse email de contact (ex: `dpo@votreentreprise.com`)
+   - **Téléphone du DPO** : Numéro de téléphone (optionnel)
+3. Cliquez sur **Enregistrer les paramètres**
+
+> **Important** : L'email du DPO sera affiché dans les emails de consentement envoyés aux candidats. Assurez-vous qu'il s'agit d'une adresse email surveillée et capable de traiter les demandes d'exercice de droits.
 
 ### Configuration Gmail RGPD
 

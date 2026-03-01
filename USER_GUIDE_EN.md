@@ -892,6 +892,20 @@ GDPR requires obtaining explicit consent from individuals whose personal data yo
 - Education
 - Skills
 
+#### Data Processing Activities
+
+When a candidate gives consent, the following processing activities may be performed on their resume:
+
+| Processing | Description |
+|------------|-------------|
+| **Storage** | Resume is kept in the talent pool to contact the candidate |
+| **Analysis** | Automated extraction of skills, experience, and keywords |
+| **Improvement** | AI-powered reformulation and improvement of the resume |
+| **Adaptation** | Adapting the resume to a specific opportunity (mission) |
+| **Evaluation** | Calculating a match score between profile and opportunity |
+
+> **Important**: These automated processes help identify suitable opportunities for the candidate's profile. They do not, by themselves, produce an automated decision concerning the candidate. Human review is always involved.
+
 ### Importing an External Resume
 
 #### Import Process
@@ -906,10 +920,14 @@ GDPR requires obtaining explicit consent from individuals whose personal data yo
 
 The email sent to the candidate contains:
 - Your company's identity
-- Purpose of processing (candidate management)
+- **Why we store and process the resume** (detailed purposes)
+- **Data concerned** (resume, contact details, generated analyses)
+- **Data sharing** (no transmission to third parties without agreement)
+- **Retention period** (2 years maximum)
+- **Candidate rights** (access, rectification, deletion, etc.)
 - A link to **accept** consent
 - A link to **refuse** consent
-- Planned retention period
+- **DPO email** to exercise rights
 
 **Response deadline**: The candidate has **14 days** to respond.
 
@@ -957,6 +975,21 @@ The application automatically manages resume lifecycle:
 #### Automatic Reminders
 
 A reminder email is automatically sent if the candidate hasn't responded after 7 days.
+
+### DPO Configuration (Data Protection Officer)
+
+The DPO is the contact point for candidates wishing to exercise their GDPR rights. Their contact details are included in consent emails.
+
+#### Configuration
+
+1. Go to **Settings** → **DPO**
+2. Fill in DPO information:
+   - **DPO Name**: Full name of the officer
+   - **DPO Email**: Contact email address (e.g., `dpo@yourcompany.com`)
+   - **DPO Phone**: Phone number (optional)
+3. Click **Save settings**
+
+> **Important**: The DPO email will be displayed in consent emails sent to candidates. Make sure it's a monitored email address capable of handling rights exercise requests.
 
 ### Gmail GDPR Configuration
 
