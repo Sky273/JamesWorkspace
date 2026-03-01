@@ -1,3 +1,33 @@
+## v1.7.2 - 2026-03-01
+### 🔧 Améliorations Qualité & Sécurité
+
+#### Sécurité
+- **Vulnérabilité esbuild** : Corrigée via override npm (^0.25.0)
+- **Vulnérabilités elliptic** : 6 low severity (dépendances transitives, acceptable)
+
+#### Tests (+48 nouveaux tests)
+- **totp.service.js** : 14 tests (génération secret, vérification 2FA, lifecycle)
+- **consent.service.js** : 24 tests (initialisation, validation token, RGPD)
+- **mailService.js** : 10 tests (OAuth, connexion, tokens)
+- **Total** : 373 tests passés
+
+#### ESLint
+- **0 erreurs** (contre 322 avant)
+- Configuration ajustée pour règles trop strictes
+- Ignores : `client/dist/`, `coverage/`, fichiers timestamp Vite
+
+#### Nettoyage
+- **Dépendance supprimée** : `hi-base32` (remplacée par speakeasy)
+- **Fichier supprimé** : `smtpService.js` (non utilisé)
+- **Configuration Knip** : Mise à jour des ignores
+- **78 packages** mis à jour (mineures)
+
+#### Migrations Reportées
+- React 18 → 19 : Dépendances incompatibles (@headlessui, framer-motion)
+- Vite 5 → 6/7 : Breaking changes majeurs
+
+---
+
 ## v1.7.1 - 2026-03-01
 ### 📚 Documentation & Qualité
 

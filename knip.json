@@ -13,7 +13,10 @@
     "pdf-server/**/*.{js,cjs}"
   ],
   "ignore": [
-    "client/src/**/*.test.{ts,tsx,js,jsx}"
+    "client/src/**/*.test.{ts,tsx,js,jsx}",
+    "client/src/vite-env.d.ts",
+    "client/src/types/*.d.ts",
+    "client/src/test/setup.ts"
   ],
   "ignoreDependencies": [
     "@types/*",
