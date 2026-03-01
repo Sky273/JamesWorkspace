@@ -3,7 +3,6 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import fs from 'fs';
 import commonjs from '@rollup/plugin-commonjs';
-import resolve from '@rollup/plugin-node-resolve';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import compression from 'vite-plugin-compression';
 import zlib from 'zlib';
@@ -305,18 +304,10 @@ export default defineConfig(({ mode }) => {
       esmExternals: true,
     },
     rollupOptions: {
-            plugins: [
-        resolve({
-          browser: true,
-          preferBuiltins: false,
-          // Force ESM resolution for React packages
-          exportConditions: ['import', 'module', 'browser', 'default'],
-        }),
+      plugins: [
         commonjs({
           include: /node_modules/,
           transformMixedEsModules: true,
-          // Fix for void-elements default export issue in Vite 7
-          requireReturnsDefault: 'auto',
         }),
       ],
       output: {

@@ -787,7 +787,7 @@ app.use(express.static(distPath, {
 
 // SPA fallback - serve index.html for all non-API routes
 // This handles client-side routing (React Router)
-app.get('*', (req, res, next) => {
+app.get('/*splat', (req, res, next) => {
     // Skip API routes - they should return 404 if not found
     if (req.path.startsWith('/api/')) {
         return next();

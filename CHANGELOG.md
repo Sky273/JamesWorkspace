@@ -1,9 +1,10 @@
 ## v1.7.3 - 2026-03-01
-### 🚀 Migration React 19
+### 🚀 Migration React 19 + Express 5
 
 #### Migration Majeure
 - **React** : 18.3.1 → 19.1.0
 - **React DOM** : 18.3.1 → 19.1.0
+- **Express** : 4.22.1 → 5.2.1
 - **framer-motion** : 10.18.0 → 12.34.3
 - **i18next** : 24.2.3 → 25.8.13
 - **@types/react** : 18.3.28 → 19.2.14
@@ -13,13 +14,16 @@
 - **Compatibilité JSX** : Shim global pour `JSX.Element`
 - **framer-motion** : `as const` pour les valeurs `ease`
 
-#### Sécurité & Configuration
+#### Migration Express 5
+- **Wildcard routes** : `app.get('*')` → `app.get('/*splat')`
+- **Async handlers** : Gestion automatique des promesses rejetées
+
+#### Nettoyage
+- **Suppression** : `@rollup/plugin-node-resolve` (inutile avec Vite 5)
 - **Configuration .env** : Nettoyage des duplications
-- **ALLOWED_ORIGINS** : Correction valeur invalide `3443`
-- **NODE_ENV** : Suppression duplication
 
 #### Note Technique
-- Vite 7 testé mais incompatible (problèmes ESM/CJS avec react-i18next)
+- Vite 7 testé mais incompatible (problèmes ESM/CJS)
 - Vite 5.4.x maintenu pour stabilité
 
 ---
