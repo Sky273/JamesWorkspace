@@ -6,9 +6,10 @@ export interface TinyMCEEditor {
   remove: () => void;
   setContent: (content: string) => void;
   getContent: () => string;
-  on: (event: string, callback: () => void) => void;
+  on: (event: string, callback: (e?: unknown) => void) => void;
   id: string;
   getBody: () => HTMLElement;
+  getDoc: () => Document | null;
   selection: {
     getContent: (args?: { format?: string }) => string;
     setContent: (content: string) => void;
@@ -35,7 +36,14 @@ export interface TinyMCEEditor {
         icon?: string;
         tooltip?: string;
         onAction?: () => void;
-        onSetup?: (api: unknown) => void;
+        onSetup?: (api: { setActive: (active: boolean) => void }) => () => void;
+      }) => void;
+      addToggleButton: (name: string, config: {
+        text?: string;
+        icon?: string;
+        tooltip?: string;
+        onAction?: () => void;
+        onSetup?: (api: { setActive: (active: boolean) => void }) => () => void;
       }) => void;
     };
   };

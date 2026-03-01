@@ -19,9 +19,11 @@ import ImprovementAnimation from '../components/ImprovementAnimation';
 import ConsentBadge, { ConsentStatus } from '../components/ConsentBadge';
 import ImprovedTextTab from '../components/ResumeAnalysis/ImprovedTextTab';
 import CompareTab from '../components/ResumeAnalysis/CompareTab';
+import OverviewTab from '../components/ResumeAnalysis/OverviewTab';
 import { loadTinyMCE } from '../utils/lazyTinyMCE';
 import { fetchWithAuth, createAuthOptionsWithCsrf } from '../utils/apiInterceptor';
 import { TinyMCEEditor } from '../types/tinymce.d';
+import { registerSuggestionsPlugin, parseSuggestions } from '../utils/tinymceSuggestionsPlugin';
 
 const ResumeImprovePage = (): JSX.Element => {
   const { id } = useParams<{ id: string }>();
@@ -31,7 +33,7 @@ const ResumeImprovePage = (): JSX.Element => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isImproving, setIsImproving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'improved' | 'compare'>('improved');
+  const [activeTab, setActiveTab] = useState<'improved' | 'compare' | 'analysis'>('improved');
   const [localResume, setLocalResume] = useState<Resume | null>(null);
   const [tinymceLoaded, setTinymceLoaded] = useState(false);
   const [editorReady, setEditorReady] = useState(false);
@@ -107,13 +109,18 @@ const ResumeImprovePage = (): JSX.Element => {
           height: 500,
           menubar: true,
           plugins: ['advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview', 'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen', 'insertdatetime', 'media', 'table', 'help', 'wordcount'],
-          toolbar: 'undo redo | formatselect | bold italic backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | help',
+          toolbar: 'undo redo | formatselect | bold italic backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | suggestions | help',
           content_style: `body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 14px; padding-left: 30px !important; }`,
           branding: false,
           promotion: false,
           license_key: 'gpl',
           setup: (editor: TinyMCEEditor) => {
             editorRef.current = editor;
+            
+            // Register suggestions plugin with parsed suggestions
+            const suggestions = parseSuggestions(localResume['Improved Key Improvements'] || localResume['Key Improvements']);
+            registerSuggestionsPlugin(editor, { suggestions });
+            
             editor.on('init', () => {
               setEditorReady(true);
               editor.setContent(localResume['Improved Text'] || '');
@@ -360,6 +367,16 @@ const ResumeImprovePage = (): JSX.Element => {
                 >
                   {t('resume.analysis.tabs.compare')}
                 </button>
+                <button
+                  onClick={() => setActiveTab('analysis')}
+                  className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+                    activeTab === 'analysis'
+                      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                  }`}
+                >
+                  {t('resume.analysis.tabs.overview')}
+                </button>
               </nav>
             </div>
 
@@ -376,6 +393,7 @@ const ResumeImprovePage = (): JSX.Element => {
                 />
               )}
               {activeTab === 'compare' && <CompareTab resume={localResume} />}
+              {activeTab === 'analysis' && <OverviewTab resume={localResume} t={t} />}
             </div>
           </div>
         )}
