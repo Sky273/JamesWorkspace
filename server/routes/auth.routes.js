@@ -101,10 +101,9 @@ router.post('/signin', authLimiter, validateBody(signInSchema), async (req, res)
 
         // Check if 2FA is enabled
         const has2FA = await is2FAEnabled(user.id);
+        const { totpCode } = req.body;
         
         if (has2FA) {
-            const { totpCode } = req.body;
-            
             if (!totpCode) {
                 // 2FA required but no code provided - return special response
                 return res.status(200).json({

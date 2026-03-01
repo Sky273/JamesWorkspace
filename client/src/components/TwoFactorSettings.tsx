@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheckIcon, ShieldExclamationIcon, KeyIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { ShieldCheckIcon, ShieldExclamationIcon, KeyIcon, TrashIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 import TwoFactorSetup from './TwoFactorSetup';
 import { useAuthFetch } from '../hooks/useAuthFetch';
 
@@ -11,6 +12,7 @@ interface TwoFactorStatus {
 }
 
 export default function TwoFactorSettings() {
+  const { t } = useTranslation();
   const { authGet, authPost } = useAuthFetch();
   const [status, setStatus] = useState<TwoFactorStatus | null>(null);
   const [loading, setLoading] = useState(true);
@@ -116,8 +118,16 @@ export default function TwoFactorSettings() {
       <div className="flex items-center gap-3 mb-4">
         <ShieldCheckIcon className="h-6 w-6 text-blue-600" />
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-          Authentification à deux facteurs (2FA)
+          {t('twoFactor.title')}
         </h3>
+      </div>
+
+      {/* OAuth notice */}
+      <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg flex items-start gap-2">
+        <InformationCircleIcon className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+        <p className="text-sm text-blue-700 dark:text-blue-300">
+          {t('twoFactor.loginOnlyNotice')}
+        </p>
       </div>
 
       {status?.enabled ? (

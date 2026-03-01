@@ -2,22 +2,48 @@
  * TOTP (Time-based One-Time Password) Service
  * Implements 2FA using RFC 6238 TOTP algorithm
  * 
- * Uses otplib for TOTP generation/verification
+ * Uses speakeasy for reliable TOTP generation/verification
  * Uses qrcode for QR code generation
  */
 
-import { TOTP, generateSecret } from 'otplib';
+import speakeasy from 'speakeasy';
 import QRCode from 'qrcode';
 import crypto from 'crypto';
 import { query } from '../config/database.js';
 import { safeLog } from '../utils/logger.backend.js';
 
-// Create TOTP instance with configuration
-const totp = new TOTP({
-    digits: 6,
-    period: 30, // 30 seconds window
-    window: 1   // Allow 1 step before/after for clock drift
-});
+/**
+ * Generate a random base32 secret using speakeasy
+ * @returns {string} Base32 secret
+ */
+function generateSecret() {
+    const secret = speakeasy.generateSecret({ length: 20 });
+    return secret.base32;
+}
+
+/**
+ * Verify a TOTP token against a secret using speakeasy
+ * @param {string} token - The 6-digit token
+ * @param {string} secret - The base32 secret
+ * @returns {boolean} Whether the token is valid
+ */
+function verifyToken(token, secret) {
+    try {
+        const isValid = speakeasy.totp.verify({
+            secret: secret,
+            encoding: 'base32',
+            token: token,
+            window: 2 // Allow 2 steps before/after for clock drift (60 seconds)
+        });
+        return isValid;
+    } catch (error) {
+        safeLog('error', 'TOTP verification error', { 
+            error: error.message,
+            stack: error.stack?.substring(0, 200)
+        });
+        return false;
+    }
+}
 
 // Encryption key for storing secrets (use same as OAuth tokens)
 const ENCRYPTION_KEY = process.env.OAUTH_ENCRYPTION_KEY || process.env.JWT_SECRET;
@@ -135,9 +161,9 @@ export async function verifyAndEnable2FA(userId, code) {
         return { success: false, message: 'Aucune configuration 2FA en attente' };
     }
     
-    // Decrypt and verify
+    // Decrypt and verify using speakeasy
     const secret = decryptSecret(totp_pending_secret);
-    const isValid = totp.verify({ token: code, secret });
+    const isValid = verifyToken(code, secret);
     
     if (!isValid) {
         safeLog('warn', '2FA verification failed - invalid code', { userId });
@@ -181,9 +207,13 @@ export async function verifyTotpCode(userId, code) {
     
     const { totp_secret, totp_backup_codes } = result.rows[0];
     
+    if (!totp_secret) {
+        return { valid: false, usedBackupCode: false };
+    }
+    
     // Try TOTP code first
     const secret = decryptSecret(totp_secret);
-    const isValidTotp = totp.verify({ token: code, secret });
+    const isValidTotp = verifyToken(code, secret);
     
     if (isValidTotp) {
         safeLog('debug', '2FA verification successful (TOTP)', { userId });

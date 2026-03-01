@@ -64,11 +64,14 @@ router.post('/verify', authenticateToken, async (req, res) => {
     try {
         const { code } = req.body;
         
-        if (!code || code.length !== 6) {
+        // Normalize code: remove spaces and ensure string
+        const normalizedCode = String(code || '').replace(/\s/g, '').trim();
+        
+        if (!normalizedCode || normalizedCode.length < 6) {
             return res.status(400).json({ error: 'Code à 6 chiffres requis' });
         }
         
-        const result = await verifyAndEnable2FA(req.user.id, code);
+        const result = await verifyAndEnable2FA(req.user.id, normalizedCode);
         
         if (result.success) {
             res.json(result);
@@ -76,7 +79,7 @@ router.post('/verify', authenticateToken, async (req, res) => {
             res.status(400).json(result);
         }
     } catch (error) {
-        safeLog('error', 'Error verifying 2FA', { error: error.message });
+        safeLog('error', 'Error verifying 2FA', { error: error.message, stack: error.stack });
         res.status(500).json({ error: 'Failed to verify 2FA' });
     }
 });

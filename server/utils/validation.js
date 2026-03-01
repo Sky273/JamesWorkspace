@@ -20,7 +20,8 @@ export const airtableIdSchema = z.string().regex(/^rec[a-zA-Z0-9]{14}$/);
 // Auth schemas
 export const signInSchema = z.object({
   email: emailSchema,
-  password: passwordSchema
+  password: passwordSchema,
+  totpCode: z.string().min(6).max(8).optional() // 6-digit TOTP code or 8-char backup code
 });
 
 export const registerSchema = z.object({

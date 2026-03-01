@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { ShieldCheckIcon, KeyIcon } from '@heroicons/react/24/outline';
+import { ShieldCheckIcon, KeyIcon, ExclamationCircleIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
+import { authService } from '../services/authService';
+import toast from 'react-hot-toast';
 
 interface TwoFactorVerifyProps {
   userId: string;
@@ -13,40 +15,61 @@ export default function TwoFactorVerify({ userId, email, password, onSuccess, on
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
 
   const handleVerify = async () => {
     if (code.length < 6) {
       setError('Entrez un code à 6 chiffres ou un code de secours');
+      setStatus('error');
       return;
     }
 
     setLoading(true);
     setError('');
+    setStatus('loading');
+    toast.loading('Vérification en cours...', { id: '2fa-verify' });
 
     try {
+      const csrfToken = await authService.getCsrfToken();
+      
       const response = await fetch('/api/auth/signin', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken
+        },
         credentials: 'include',
-        body: JSON.stringify({ 
-          email, 
-          password,
-          totpCode: code 
-        })
+        body: JSON.stringify({ email, password, totpCode: code })
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || 'Code invalide');
+        const errorMsg = data.error || 'Code 2FA invalide';
+        setError(errorMsg);
+        setStatus('error');
+        toast.error(errorMsg, { id: '2fa-verify' });
         return;
       }
 
       if (data.user) {
-        onSuccess(data.user);
+        setStatus('success');
+        toast.success('Connexion réussie !', { id: '2fa-verify' });
+        // Small delay to show success state
+        setTimeout(() => {
+          onSuccess(data.user);
+        }, 500);
+      } else {
+        setError('Réponse inattendue du serveur');
+        setStatus('error');
+        toast.error('Réponse inattendue du serveur', { id: '2fa-verify' });
       }
     } catch (err) {
-      setError('Erreur de connexion');
+      console.error('[2FA] Error:', err);
+      const errorMsg = 'Erreur de connexion au serveur';
+      setError(errorMsg);
+      setStatus('error');
+      toast.error(errorMsg, { id: '2fa-verify' });
     } finally {
       setLoading(false);
     }
@@ -109,18 +132,38 @@ export default function TwoFactorVerify({ userId, email, password, onSuccess, on
 
           <div className="flex gap-3">
             <button
+              type="button"
               onClick={onCancel}
-              className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              disabled={loading}
+              className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
             >
               Annuler
             </button>
             <button
+              type="button"
               onClick={handleVerify}
               disabled={loading || code.length < 6}
-              className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+              className={`flex-1 px-4 py-3 rounded-lg transition-colors flex items-center justify-center gap-2 ${
+                status === 'success' 
+                  ? 'bg-green-600 text-white' 
+                  : status === 'error'
+                  ? 'bg-red-600 text-white hover:bg-red-700'
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              } disabled:opacity-50 disabled:cursor-not-allowed`}
             >
               {loading ? (
-                <span className="animate-spin">⏳</span>
+                <>
+                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Vérification...
+                </>
+              ) : status === 'success' ? (
+                <>
+                  <CheckCircleIcon className="h-5 w-5" />
+                  Connecté !
+                </>
               ) : (
                 <>
                   <KeyIcon className="h-5 w-5" />
