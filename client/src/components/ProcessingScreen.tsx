@@ -88,7 +88,7 @@ const ProcessingStep = ({ step, stepInfo, currentStep, error, allSteps }: Proces
       transition: {
         duration: 1.5,
         repeat: Infinity,
-        ease: "easeInOut"
+        ease: "easeInOut" as const
       }
     },
     inactive: {
@@ -102,7 +102,7 @@ const ProcessingStep = ({ step, stepInfo, currentStep, error, allSteps }: Proces
       transition: {
         duration: 1.5,
         repeat: Infinity,
-        ease: "linear"
+        ease: "linear" as const
       }
     }
   };

@@ -1,9 +1,18 @@
 ## v1.7.2 - 2026-03-01
-### 🔧 Améliorations Qualité & Sécurité
+### � Migration React 19 & Améliorations Qualité
+
+#### Migration React 19
+- **React** : 18.3.1 → 19.1.0
+- **React DOM** : 18.3.1 → 19.1.0
+- **@types/react** : 18.3.28 → 19.2.14
+- **@types/react-dom** : 18.3.7 → 19.2.3
+- **framer-motion** : 10.18.0 → 12.34.3
+- **Compatibilité JSX** : Shim global pour `JSX.Element`
 
 #### Sécurité
 - **Vulnérabilité esbuild** : Corrigée via override npm (^0.25.0)
 - **Vulnérabilités elliptic** : 6 low severity (dépendances transitives, acceptable)
+- **Configuration .env** : Nettoyage des duplications, correction ALLOWED_ORIGINS
 
 #### Tests (+48 nouveaux tests)
 - **totp.service.js** : 14 tests (génération secret, vérification 2FA, lifecycle)
@@ -21,10 +30,6 @@
 - **Fichier supprimé** : `smtpService.js` (non utilisé)
 - **Configuration Knip** : Mise à jour des ignores
 - **78 packages** mis à jour (mineures)
-
-#### Migrations Reportées
-- React 18 → 19 : Dépendances incompatibles (@headlessui, framer-motion)
-- Vite 5 → 6/7 : Breaking changes majeurs
 
 ---
 
