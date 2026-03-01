@@ -1291,15 +1291,57 @@ Conformément au RGPD, les candidats disposent des droits suivants :
 | **Opposition** | Refuser le traitement | Lien "Refuser" dans l'email |
 | **Portabilité** | Récupérer ses données | Contacter le DPO |
 
-### Registre des Traitements
+### Journal d'Audit RGPD
 
-L'application conserve un historique des actions RGPD :
-- Date d'envoi de la demande de consentement
-- Date de réponse du candidat
-- Statut du consentement
-- Date de suppression (le cas échéant)
+L'application conserve un journal complet de toutes les actions RGPD, accessible aux administrateurs via **Admin → Journal RGPD**.
 
-Ces informations sont accessibles aux administrateurs pour répondre aux demandes de la CNIL.
+#### Actions Journalisées
+
+Toutes les actions liées au RGPD sont automatiquement enregistrées :
+
+| Catégorie | Actions |
+|-----------|---------|
+| **Consentement** | Envoi de demande, rappel, acceptation, refus, expiration |
+| **Données** | Export, suppression, anonymisation |
+| **CV** | Upload, traitement, purge, accès |
+| **Automatisé** | Purges planifiées, rappels automatiques |
+| **Admin** | Modification des paramètres, configuration DPO |
+
+#### Informations Enregistrées
+
+Pour chaque action, le journal conserve :
+- **Date et heure** de l'action
+- **Type d'action** (envoi consentement, purge, etc.)
+- **Cabinet** concerné (pour les environnements multi-cabinets)
+- **Cible** : nom et email du candidat concerné
+- **Type** : action manuelle ou automatisée
+- **Détails** : informations complémentaires (durée de rétention, raison, etc.)
+
+#### Consultation du Journal
+
+1. Accédez à **Admin → Journal RGPD**
+2. Utilisez les **filtres** pour affiner la recherche :
+   - Par **cabinet** (firm)
+   - Par **catégorie** (consentement, données, CV, etc.)
+   - Par **type d'action** spécifique
+   - Par **type** (automatisé ou manuel)
+   - Par **email** du candidat
+   - Par **période** (dates de début et fin)
+3. Consultez les **statistiques** en haut de page :
+   - Total des actions sur 30 jours
+   - Répartition par catégorie
+   - Actions automatisées vs manuelles
+
+#### Utilité pour la Conformité
+
+Ce journal permet de :
+- ✅ **Répondre aux demandes de la CNIL** avec un historique complet
+- ✅ **Prouver la conformité** en cas de contrôle
+- ✅ **Tracer les actions** sur les données personnelles
+- ✅ **Auditer les processus** automatisés
+- ✅ **Identifier les anomalies** dans le traitement des consentements
+
+> **Note** : Le journal est en lecture seule et ne peut pas être modifié. Les entrées sont conservées pour une durée conforme aux exigences légales.
 
 ---
 
@@ -1338,6 +1380,7 @@ Utilisez le sélecteur de langue dans la barre supérieure.
 - Tags (nettoyage et ESCO)
 - Métiers (ROME 4.0)
 - Logs de Sécurité
+- **Journal RGPD** (audit des actions RGPD)
 - Métriques
 - Paramètres
 

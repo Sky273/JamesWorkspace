@@ -617,6 +617,7 @@
     "adaptations": "Adaptations",
     "security": "Logs de Sécurité",
     "securityLogs": "Logs de Sécurité",
+    "gdprAudit": "Journal RGPD",
     "metrics": "Métriques",
     "marketRadar": "Radar du Marché",
     "metiers": "Métiers & Compétences",
@@ -1614,5 +1615,36 @@
         }
       }
     }
+  },
+  "gdprAudit": {
+    "title": "Journal RGPD",
+    "subtitle": "Historique des actions de conformité RGPD",
+    "filters": "Filtres",
+    "refresh": "Actualiser",
+    "totalActions": "Actions (30j)",
+    "consentActions": "Consentements",
+    "automatedActions": "Automatisées",
+    "manualActions": "Manuelles",
+    "firm": "Cabinet",
+    "allFirms": "Tous les cabinets",
+    "category": "Catégorie",
+    "allCategories": "Toutes",
+    "action": "Action",
+    "allActions": "Toutes",
+    "type": "Type",
+    "all": "Tous",
+    "automated": "Automatisé",
+    "manual": "Manuel",
+    "targetEmail": "Email cible",
+    "startDate": "Date début",
+    "endDate": "Date fin",
+    "clearFilters": "Effacer les filtres",
+    "dateTime": "Date/Heure",
+    "target": "Cible",
+    "details": "Détails",
+    "viewDetails": "Voir",
+    "noLogs": "Aucune action RGPD enregistrée",
+    "showing": "Affichage",
+    "of": "sur"
   }
 }

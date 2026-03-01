@@ -8,6 +8,7 @@ import crypto from 'crypto';
 import { query } from '../config/database.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { gdprMailService } from './mail/gdprMailService.js';
+import { logGdprAction, GDPR_ACTIONS } from './gdprAudit.service.js';
 
 // Constants
 const CONSENT_TOKEN_EXPIRY_DAYS = 14; // 2 weeks
@@ -432,6 +433,19 @@ export async function sendConsentRequest(resumeId) {
         tokenPrefix: resume.consent_token.substring(0, 8)
     });
 
+    // Log GDPR action
+    await logGdprAction({
+        action: GDPR_ACTIONS.CONSENT_REQUEST_SENT,
+        firmId: resume.firm_id,
+        firmName: resume.firm_name,
+        targetType: 'candidate',
+        targetId: resumeId,
+        targetName: resume.candidate_name,
+        targetEmail: resume.candidate_email,
+        details: { expiryDays: CONSENT_TOKEN_EXPIRY_DAYS },
+        isAutomated: false
+    });
+
     return { success: true, sentTo: resume.candidate_email };
 }
 
@@ -546,6 +560,22 @@ export async function recordConsentResponse(token, accepted) {
         accepted, 
         newStatus,
         retentionUntil 
+    });
+
+    // Log GDPR action
+    await logGdprAction({
+        action: accepted ? GDPR_ACTIONS.CONSENT_GRANTED : GDPR_ACTIONS.CONSENT_REFUSED,
+        firmId: resume.firm_id,
+        firmName: resume.firm_name,
+        targetType: 'candidate',
+        targetId: resume.id,
+        targetName: resume.candidate_name,
+        targetEmail: resume.candidate_email,
+        details: { 
+            retentionUntil: retentionUntil?.toISOString(),
+            retentionDays: accepted ? RETENTION_PERIOD_DAYS : 0
+        },
+        isAutomated: false
     });
 
     // If refused, schedule immediate purge
@@ -731,6 +761,19 @@ export async function sendConsentReminders() {
                 WHERE id = $1
             `, [resume.id]);
 
+            // Log GDPR action
+            await logGdprAction({
+                action: GDPR_ACTIONS.CONSENT_REMINDER_SENT,
+                firmId: resume.firm_id,
+                firmName: resume.firm_name,
+                targetType: 'candidate',
+                targetId: resume.id,
+                targetName: resume.candidate_name,
+                targetEmail: resume.candidate_email,
+                details: { daysRemaining },
+                isAutomated: true
+            });
+
             sentCount++;
         } catch (error) {
             safeLog('error', 'Failed to send consent reminder', { 
@@ -750,10 +793,21 @@ export async function sendConsentReminders() {
 /**
  * Purge a single resume and its versions
  * @param {string} resumeId - Resume UUID
+ * @param {Object} [auditInfo] - Optional audit info for logging
  * @returns {Promise<boolean>} Success
  */
-export async function purgeResume(resumeId) {
+export async function purgeResume(resumeId, auditInfo = null) {
     safeLog('info', 'Purging resume', { resumeId });
+
+    // Get resume info for audit logging if not provided
+    let resumeInfo = auditInfo;
+    if (!resumeInfo) {
+        const infoResult = await query(`
+            SELECT id, firm_id, firm_name, candidate_name, candidate_email, consent_status
+            FROM resumes WHERE id = $1
+        `, [resumeId]);
+        resumeInfo = infoResult.rows[0];
+    }
 
     // Delete versions first (foreign key constraint)
     await query(`DELETE FROM resume_versions WHERE resume_id = $1`, [resumeId]);
@@ -769,6 +823,25 @@ export async function purgeResume(resumeId) {
 
     if (result.rows.length > 0) {
         safeLog('info', 'Resume purged successfully', { resumeId });
+
+        // Log GDPR action
+        if (resumeInfo) {
+            await logGdprAction({
+                action: GDPR_ACTIONS.CV_PURGED,
+                firmId: resumeInfo.firm_id,
+                firmName: resumeInfo.firm_name,
+                targetType: 'candidate',
+                targetId: resumeId,
+                targetName: resumeInfo.candidate_name,
+                targetEmail: resumeInfo.candidate_email,
+                details: { 
+                    reason: resumeInfo.consent_status === 'refused' ? 'consent_refused' : 
+                            resumeInfo.consent_status === 'expired' ? 'consent_expired' : 'manual_purge'
+                },
+                isAutomated: auditInfo?.isAutomated ?? false
+            });
+        }
+
         return true;
     }
 
@@ -781,9 +854,10 @@ export async function purgeResume(resumeId) {
  * @returns {Promise<number>} Number of resumes purged
  */
 export async function purgeExpiredResumes() {
-    // Find resumes to purge
+    // Find resumes to purge with full info for audit
     const result = await query(`
-        SELECT id FROM resumes 
+        SELECT id, firm_id, firm_name, candidate_name, candidate_email, consent_status
+        FROM resumes 
         WHERE consent_status IN ('refused', 'expired')
     `);
 
@@ -791,7 +865,7 @@ export async function purgeExpiredResumes() {
 
     for (const resume of result.rows) {
         try {
-            await purgeResume(resume.id);
+            await purgeResume(resume.id, { ...resume, isAutomated: true });
             purgedCount++;
         } catch (error) {
             safeLog('error', 'Failed to purge resume', { 
@@ -803,6 +877,13 @@ export async function purgeExpiredResumes() {
 
     if (purgedCount > 0) {
         safeLog('info', 'Resumes purged', { count: purgedCount });
+
+        // Log batch purge action
+        await logGdprAction({
+            action: GDPR_ACTIONS.AUTO_PURGE_EXECUTED,
+            details: { purgedCount, reason: 'scheduled_cleanup' },
+            isAutomated: true
+        });
     }
 
     return purgedCount;

@@ -45,6 +45,7 @@ const ConsentResponsePage = lazy(() => import('./pages/ConsentResponsePage'));
 const UserProfilePage = lazy(() => import('./pages/UserProfilePage'));
 const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'));
 const TermsOfServicePage = lazy(() => import('./pages/TermsOfServicePage'));
+const GdprAuditPage = lazy(() => import('./pages/GdprAuditPage'));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -150,6 +151,7 @@ const App = (): JSX.Element => {
                   <Route path="facts" element={<FactsPage />} />
                   <Route path="metiers" element={<AdminRoute><MetiersPage /></AdminRoute>} />
                   <Route path="dashboard/email-templates" element={<AdminRoute><EmailTemplatesPage /></AdminRoute>} />
+                  <Route path="dashboard/gdpr-audit" element={<AdminRoute><GdprAuditPage /></AdminRoute>} />
                 </Route>
               </Routes>
             </Suspense>

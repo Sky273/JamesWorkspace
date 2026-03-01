@@ -67,6 +67,7 @@ import emailTemplatesRoutes from './routes/emailTemplates.routes.js';
 import consentRoutes from './routes/consent.routes.js';
 import gdprMailRoutes from './routes/gdprMail.routes.js';
 import twofaRoutes from './routes/twofa.routes.js';
+import gdprAuditRoutes from './routes/gdprAudit.routes.js';
 
 // Import services
 import { metrics } from './services/metrics.service.js';
@@ -86,6 +87,8 @@ import { destroyEscoCache } from './services/escoService.js';
 import { initializeDatabase, closePool } from './services/database.service.js';
 // GDPR consent scheduler
 import { startScheduler, stopScheduler } from './services/scheduler.service.js';
+// GDPR Audit Log initialization
+import { initGdprAuditTable } from './services/gdprAudit.service.js';
 
 const app = express();
 
@@ -661,6 +664,9 @@ app.use('/api/consent', consentRoutes);
 // GDPR Mail configuration routes
 app.use('/api/gdpr/mail', gdprMailRoutes);
 
+// GDPR Audit Log routes (admin only)
+app.use('/api/gdpr-audit', gdprAuditRoutes);
+
 // 2FA (Two-Factor Authentication) routes
 app.use('/api/2fa', twofaRoutes);
 
@@ -909,6 +915,14 @@ async function onServerStart(protocol, port) {
     const dbInitialized = await initializeDatabase();
     if (dbInitialized) {
         safeLog('info', 'PostgreSQL database initialized successfully');
+        
+        // Initialize GDPR Audit Log table
+        try {
+            await initGdprAuditTable();
+            safeLog('info', 'GDPR Audit Log table initialized');
+        } catch (error) {
+            safeLog('error', 'Failed to initialize GDPR Audit Log table', { error: error.message });
+        }
     } else {
         safeLog('error', 'PostgreSQL database initialization failed');
     }

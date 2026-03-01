@@ -1045,15 +1045,57 @@ Under GDPR, candidates have the following rights:
 | **Objection** | Refuse processing | "Refuse" link in email |
 | **Portability** | Retrieve their data | Contact DPO |
 
-### Processing Register
+### GDPR Audit Log
 
-The application maintains a history of GDPR actions:
-- Consent request send date
-- Candidate response date
-- Consent status
-- Deletion date (if applicable)
+The application maintains a comprehensive log of all GDPR actions, accessible to administrators via **Admin → GDPR Audit Log**.
 
-This information is accessible to administrators to respond to regulatory requests.
+#### Logged Actions
+
+All GDPR-related actions are automatically recorded:
+
+| Category | Actions |
+|----------|---------|
+| **Consent** | Request sent, reminder, acceptance, refusal, expiration |
+| **Data** | Export, deletion, anonymization |
+| **CV** | Upload, processing, purge, access |
+| **Automated** | Scheduled purges, automatic reminders |
+| **Admin** | Settings changes, DPO configuration |
+
+#### Recorded Information
+
+For each action, the log records:
+- **Date and time** of the action
+- **Action type** (consent sent, purge, etc.)
+- **Firm** concerned (for multi-firm environments)
+- **Target**: candidate name and email
+- **Type**: manual or automated action
+- **Details**: additional information (retention period, reason, etc.)
+
+#### Viewing the Log
+
+1. Go to **Admin → GDPR Audit Log**
+2. Use **filters** to refine your search:
+   - By **firm**
+   - By **category** (consent, data, CV, etc.)
+   - By specific **action type**
+   - By **type** (automated or manual)
+   - By candidate **email**
+   - By **date range** (start and end dates)
+3. View **statistics** at the top of the page:
+   - Total actions over 30 days
+   - Breakdown by category
+   - Automated vs manual actions
+
+#### Compliance Benefits
+
+This log enables you to:
+- ✅ **Respond to regulatory requests** with complete history
+- ✅ **Prove compliance** in case of audit
+- ✅ **Trace actions** on personal data
+- ✅ **Audit automated processes**
+- ✅ **Identify anomalies** in consent processing
+
+> **Note**: The log is read-only and cannot be modified. Entries are retained for a duration compliant with legal requirements.
 
 ---
 
@@ -1088,6 +1130,7 @@ Use the language selector in the top bar.
 **Admin Section** (if authorized):
 - Users
 - Security Logs
+- **GDPR Audit Log** (GDPR action audit)
 - Metrics
 - Settings
 

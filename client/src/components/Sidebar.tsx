@@ -21,7 +21,8 @@ import {
   SignalIcon,
   BuildingOfficeIcon,
   EnvelopeIcon,
-  XMarkIcon
+  XMarkIcon,
+  ClipboardDocumentListIcon
 } from '@heroicons/react/24/outline';
 import classNames from 'classnames';
 import { useTranslation } from 'react-i18next';
@@ -95,6 +96,7 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
       { name: t('navigation.tags'), href: '/dashboard/tags', icon: TagIcon },
       { name: t('navigation.users'), href: '/dashboard/users', icon: UsersIcon },
       { name: t('navigation.security'), href: '/dashboard/security-logs', icon: ShieldCheckIcon },
+      { name: t('navigation.gdprAudit'), href: '/dashboard/gdpr-audit', icon: ClipboardDocumentListIcon },
       { name: t('navigation.metrics'), href: '/dashboard/metrics', icon: ChartBarIcon },
     ],
     adminOnly: true

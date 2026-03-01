@@ -975,6 +975,7 @@
     "metiers": "Jobs & Skills",
     "security": "Security Logs",
     "securityLogs": "Security Logs",
+    "gdprAudit": "GDPR Audit Log",
     "clients": "Clients & Prospects",
     "profileMatching": "Profile Matching",
     "adaptations": "Adaptations",
@@ -1612,5 +1613,36 @@
         }
       }
     }
+  },
+  "gdprAudit": {
+    "title": "GDPR Audit Log",
+    "subtitle": "History of GDPR compliance actions",
+    "filters": "Filters",
+    "refresh": "Refresh",
+    "totalActions": "Actions (30d)",
+    "consentActions": "Consents",
+    "automatedActions": "Automated",
+    "manualActions": "Manual",
+    "firm": "Firm",
+    "allFirms": "All firms",
+    "category": "Category",
+    "allCategories": "All",
+    "action": "Action",
+    "allActions": "All",
+    "type": "Type",
+    "all": "All",
+    "automated": "Automated",
+    "manual": "Manual",
+    "targetEmail": "Target email",
+    "startDate": "Start date",
+    "endDate": "End date",
+    "clearFilters": "Clear filters",
+    "dateTime": "Date/Time",
+    "target": "Target",
+    "details": "Details",
+    "viewDetails": "View",
+    "noLogs": "No GDPR actions recorded",
+    "showing": "Showing",
+    "of": "of"
   }
 }
