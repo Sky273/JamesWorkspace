@@ -11,6 +11,7 @@ import { selectWithTimeout, findWithTimeout, createWithTimeout, updateWithTimeou
 import { query } from '../config/database.js';
 import * as googleAuthService from '../services/googleAuth.service.js';
 import crypto from 'crypto';
+import { is2FAEnabled, verifyTotpCode } from '../services/totp.service.js';
 
 const router = express.Router();
 
@@ -96,6 +97,42 @@ router.post('/signin', authLimiter, validateBody(signInSchema), async (req, res)
                 metadata: { reason: 'account_inactive' }
             });
             return res.status(403).json({ error: 'Account is inactive. Please contact administrator.' });
+        }
+
+        // Check if 2FA is enabled
+        const has2FA = await is2FAEnabled(user.id);
+        
+        if (has2FA) {
+            const { totpCode } = req.body;
+            
+            if (!totpCode) {
+                // 2FA required but no code provided - return special response
+                return res.status(200).json({
+                    requires2FA: true,
+                    userId: user.id,
+                    message: 'Code 2FA requis'
+                });
+            }
+            
+            // Verify 2FA code
+            const verification = await verifyTotpCode(user.id, totpCode);
+            
+            if (!verification.valid) {
+                securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.AUTH_FAILURE, {
+                    ...metadata,
+                    email: normalizedEmail,
+                    userId: user.id,
+                    statusCode: 401,
+                    action: '2FA_VERIFICATION',
+                    message: '2FA verification failed',
+                    metadata: { reason: 'invalid_2fa_code' }
+                });
+                return res.status(401).json({ error: 'Code 2FA invalide' });
+            }
+            
+            if (verification.usedBackupCode) {
+                safeLog('warn', '2FA backup code used during login', { userId: user.id });
+            }
         }
 
         // Update last login timestamp

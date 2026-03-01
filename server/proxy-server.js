@@ -66,6 +66,7 @@ import { destroyMjml } from './services/emailTemplates.service.js';
 import emailTemplatesRoutes from './routes/emailTemplates.routes.js';
 import consentRoutes from './routes/consent.routes.js';
 import gdprMailRoutes from './routes/gdprMail.routes.js';
+import twofaRoutes from './routes/twofa.routes.js';
 
 // Import services
 import { metrics } from './services/metrics.service.js';
@@ -659,6 +660,9 @@ app.use('/api/consent', consentRoutes);
 
 // GDPR Mail configuration routes
 app.use('/api/gdpr/mail', gdprMailRoutes);
+
+// 2FA (Two-Factor Authentication) routes
+app.use('/api/2fa', twofaRoutes);
 
 // ============================================
 // PDF SERVER PROXY

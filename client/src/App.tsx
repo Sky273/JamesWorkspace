@@ -42,6 +42,7 @@ const EmailTemplatesPage = lazy(() => import('./pages/admin/EmailTemplatesPage')
 const SignIn = lazy(() => import('./components/SignIn'));
 const Register = lazy(() => import('./components/Register'));
 const ConsentResponsePage = lazy(() => import('./pages/ConsentResponsePage'));
+const UserProfilePage = lazy(() => import('./pages/UserProfilePage'));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -130,6 +131,7 @@ const App = (): JSX.Element => {
                   <Route path="adaptations/:id" element={<AdaptationViewPage />} />
                   <Route path="profile-matching" element={<ProfileMatchingPage />} />
                   <Route path="guide" element={<UserGuidePage />} />
+                  <Route path="profile" element={<UserProfilePage />} />
                   
                   {/* Admin-only routes */}
                   <Route path="templates" element={<AdminRoute><TemplatesPage /></AdminRoute>} />

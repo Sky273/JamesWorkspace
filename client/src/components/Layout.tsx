@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Sidebar from './Sidebar';
 import ScrollToTop from './ScrollToTop';
@@ -83,19 +83,25 @@ const Layout = (): JSX.Element => {
       {user && (
         <div className="fixed top-0 right-2 sm:right-4 z-50 h-16 flex items-center">
           <div className="flex items-center space-x-2 sm:space-x-3">
-          {/* Avatar with initials */}
-          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-semibold text-xs sm:text-sm shadow-md">
-            {getInitials(user?.name || user?.Name)}
-          </div>
-          {/* User info - hidden on small mobile */}
-          <div className="hidden xs:flex flex-col">
-            <span className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white leading-tight truncate max-w-[100px] sm:max-w-[150px]">
-              {user?.name || user?.Name || t('userProfile.anonymous')}
-            </span>
-            <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 leading-tight truncate max-w-[100px] sm:max-w-[150px]">
-              {user?.FirmName || user?.firm || user?.Firm || t('userProfile.noCompany')} • {getRoleLabel(user?.role || user?.Role)}
-            </span>
-          </div>
+          {/* Avatar with initials - clickable link to profile */}
+          <Link 
+            to="/profile" 
+            className="flex items-center space-x-2 sm:space-x-3 hover:opacity-80 transition-opacity"
+            title={t('userProfile.viewProfile') || 'Mon compte'}
+          >
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-semibold text-xs sm:text-sm shadow-md">
+              {getInitials(user?.name || user?.Name)}
+            </div>
+            {/* User info - hidden on small mobile */}
+            <div className="hidden xs:flex flex-col">
+              <span className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white leading-tight truncate max-w-[100px] sm:max-w-[150px]">
+                {user?.name || user?.Name || t('userProfile.anonymous')}
+              </span>
+              <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 leading-tight truncate max-w-[100px] sm:max-w-[150px]">
+                {user?.FirmName || user?.firm || user?.Firm || t('userProfile.noCompany')} • {getRoleLabel(user?.role || user?.Role)}
+              </span>
+            </div>
+          </Link>
           {/* Sign out button */}
           <button 
             onClick={handleSignOut} 

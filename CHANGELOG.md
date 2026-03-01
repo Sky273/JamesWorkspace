@@ -1,3 +1,33 @@
+## v1.7.0 - 2026-03-01
+### 🔐 Authentification à Deux Facteurs (2FA)
+
+#### Nouvelle Fonctionnalité : 2FA TOTP
+- **Service TOTP** : Implémentation complète avec `otplib` (RFC 6238)
+- **QR Code** : Génération automatique pour Google Authenticator, Authy, etc.
+- **Codes de secours** : 8 codes de secours générés et chiffrés en base
+- **Flux de login** : Vérification 2FA intégrée au processus de connexion
+- **Gestion utilisateur** : Activation, désactivation, régénération des codes
+
+#### Fichiers Backend
+- `server/services/totp.service.js` : Service complet de gestion TOTP
+- `server/routes/twofa.routes.js` : Routes API `/api/2fa/*`
+- `server/routes/auth.routes.js` : Intégration 2FA au login
+- `docker/migrations/add_2fa_columns.sql` : Migration SQL
+
+#### Fichiers Frontend
+- `TwoFactorSetup.tsx` : Assistant de configuration 2FA avec QR code
+- `TwoFactorVerify.tsx` : Écran de vérification lors du login
+- `TwoFactorSettings.tsx` : Gestion 2FA dans les paramètres utilisateur
+- `SignIn.tsx` : Support du flux 2FA
+- `AuthContext.tsx` : Type `SignInResponse` pour 2FA
+
+#### Sécurité
+- Secrets TOTP chiffrés en AES-256-GCM
+- Codes de secours à usage unique
+- Logging des événements 2FA
+
+---
+
 ## v1.6.6 - 2026-03-01
 ### 🔧 Corrections & Améliorations
 

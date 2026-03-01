@@ -11,6 +11,7 @@ import { toast } from 'react-hot-toast';
 import { resetSessionState } from '../utils/apiInterceptor';
 import logger from '../utils/logger.frontend';
 import { fetchWithCsrfRetry } from '../utils/apiInterceptor';
+import TwoFactorVerify from './TwoFactorVerify';
 
 const SignIn = (): JSX.Element => {
   const { signIn } = useAuth();
@@ -22,6 +23,8 @@ const SignIn = (): JSX.Element => {
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [googleLoading, setGoogleLoading] = useState<boolean>(false);
+  const [requires2FA, setRequires2FA] = useState<boolean>(false);
+  const [pending2FAUserId, setPending2FAUserId] = useState<string>('');
 
   // Reset session state on mount to ensure clean state for login
   // This clears isSessionExpiring flag and stale CSRF token cache
@@ -69,7 +72,16 @@ const SignIn = (): JSX.Element => {
     setLoading(true);
 
     try {
-      await signIn(email.toLowerCase(), password);
+      const result = await signIn(email.toLowerCase(), password);
+      
+      // Check if 2FA is required
+      if (result && typeof result === 'object' && 'requires2FA' in result && result.requires2FA) {
+        setRequires2FA(true);
+        setPending2FAUserId(result.userId || '');
+        setLoading(false);
+        return;
+      }
+      
       navigate('/');
     } catch (error) {
       logger.error('Sign in failed:', error);
@@ -77,6 +89,18 @@ const SignIn = (): JSX.Element => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handle2FASuccess = (user: unknown): void => {
+    // User is now authenticated, navigate to home
+    navigate('/');
+    window.location.reload(); // Refresh to update auth state
+  };
+
+  const handle2FACancel = (): void => {
+    setRequires2FA(false);
+    setPending2FAUserId('');
+    setPassword('');
   };
 
   const handleEmailChange = (e: ChangeEvent<HTMLInputElement>): void => {
@@ -107,6 +131,19 @@ const SignIn = (): JSX.Element => {
       setGoogleLoading(false);
     }
   };
+
+  // Show 2FA verification screen if required
+  if (requires2FA) {
+    return (
+      <TwoFactorVerify
+        userId={pending2FAUserId}
+        email={email}
+        password={password}
+        onSuccess={handle2FASuccess}
+        onCancel={handle2FACancel}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">

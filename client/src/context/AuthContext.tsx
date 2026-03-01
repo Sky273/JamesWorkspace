@@ -4,7 +4,7 @@
  */
 
 import { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from 'react';
-import { authService, User, RegisterData, RegisterResponse } from '../services/authService';
+import { authService, User, RegisterData, RegisterResponse, SignInResponse } from '../services/authService';
 import { setSessionExpiredHandler, resetSessionState } from '../utils/apiInterceptor';
 import toast from 'react-hot-toast';
 import logger from '../utils/logger.frontend';
@@ -20,7 +20,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   error: string | null;
-  signIn: (email: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<User | SignInResponse>;
   signOut: () => Promise<void>;
   register: (userData: RegisterData) => Promise<RegisterResponse>;
   isAuthenticated: boolean;
@@ -154,12 +154,20 @@ export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
     fetchCurrentUser();
   }, []);
 
-  const signIn = useCallback(async (email: string, password: string): Promise<void> => {
+  const signIn = useCallback(async (email: string, password: string): Promise<User | SignInResponse> => {
     try {
       setLoading(true);
       setError(null);
-      const userData = await authService.signIn(email, password);
-      setUser(userData);
+      const result = await authService.signIn(email, password);
+      
+      // Check if 2FA is required
+      if ('requires2FA' in result && result.requires2FA) {
+        return result as SignInResponse;
+      }
+      
+      // Normal login - set user
+      setUser(result as User);
+      return result;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An error occurred';
       setError(errorMessage);

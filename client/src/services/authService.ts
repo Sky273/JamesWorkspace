@@ -43,6 +43,13 @@ export interface RegisterResponse {
   message: string;
 }
 
+export interface SignInResponse {
+  user?: User;
+  requires2FA?: boolean;
+  userId?: string;
+  message?: string;
+}
+
 export interface CreateUserData {
   email: string;
   password: string;
@@ -101,7 +108,7 @@ export const authService = {
     }
   },
 
-  async signIn(email: string, password: string): Promise<User> {
+  async signIn(email: string, password: string, totpCode?: string): Promise<User | SignInResponse> {
     try {
       const csrfToken = await this.getCsrfToken();
 
@@ -112,15 +119,24 @@ export const authService = {
           'X-CSRF-Token': csrfToken
         },
         credentials: 'include',
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email, password, totpCode })
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new AuthenticationError(errorData.error || 'Failed to sign in');
+      const data = await response.json();
+
+      // Check if 2FA is required
+      if (data.requires2FA) {
+        return {
+          requires2FA: true,
+          userId: data.userId,
+          message: data.message
+        } as SignInResponse;
       }
 
-      const data = await response.json();
+      if (!response.ok) {
+        throw new AuthenticationError(data.error || 'Failed to sign in');
+      }
+
       cachedUser = data.user as User;
       
       // Reset session state on successful login (clears isSessionExpiring flag)
