@@ -318,11 +318,6 @@ export default defineConfig(({ mode }) => {
           transformMixedEsModules: true,
           // Fix for void-elements default export issue in Vite 7
           requireReturnsDefault: 'auto',
-          // Ensure named exports are properly extracted
-          namedExports: {
-            'react': ['Fragment', 'isValidElement', 'cloneElement', 'createElement', 'Children', 'useState', 'useEffect', 'useContext', 'useRef', 'useMemo', 'useCallback', 'useReducer', 'forwardRef', 'createContext', 'memo', 'lazy', 'Suspense', 'startTransition', 'useTransition', 'useDeferredValue', 'useId', 'useSyncExternalStore', 'useInsertionEffect', 'useLayoutEffect', 'useImperativeHandle', 'useDebugValue', 'Component', 'PureComponent', 'StrictMode', 'Profiler', 'createRef', 'isValidElement'],
-            'react-dom': ['createRoot', 'hydrateRoot', 'flushSync', 'createPortal', 'findDOMNode', 'render', 'unmountComponentAtNode'],
-          },
         }),
       ],
       output: {
