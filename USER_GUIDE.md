@@ -320,6 +320,88 @@ Si vous souhaitez une nouvelle version améliorée :
 3. Choisissez le modèle de mise en forme
 4. Le fichier PDF se télécharge automatiquement
 
+### Commentaires sur les CV
+
+Chaque CV dispose d'une section **Commentaires** permettant aux utilisateurs de collaborer et d'échanger des informations sur un candidat.
+
+#### Ajouter un Commentaire
+
+1. Ouvrez un CV (page d'analyse ou d'amélioration)
+2. Faites défiler jusqu'à la section **"Commentaires"** en bas de page
+3. Saisissez votre commentaire dans le champ de texte
+4. Cliquez sur **"Ajouter"** pour publier
+
+#### Types de Commentaires
+
+| Type | Description | Visibilité |
+|------|-------------|------------|
+| **Public** | Visible par tous les utilisateurs | Tous |
+| **Privé** | Visible uniquement par vous | Vous seul |
+
+Pour créer un commentaire privé, cochez l'option **"Commentaire privé"** avant de publier.
+
+#### Gérer ses Commentaires
+
+- **Modifier** : Cliquez sur l'icône de modification pour éditer votre commentaire
+- **Supprimer** : Cliquez sur l'icône de suppression pour retirer votre commentaire
+
+> **Note** : Vous ne pouvez modifier ou supprimer que vos propres commentaires.
+
+#### Cas d'Usage
+
+- **Notes de suivi** : Documenter les échanges avec le candidat
+- **Retours d'entretien** : Partager les impressions après un entretien
+- **Informations complémentaires** : Ajouter des détails non présents dans le CV
+- **Alertes** : Signaler des points d'attention aux collègues
+
+### Partager un CV via QR Code
+
+La fonctionnalité de **partage par QR code** permet de partager facilement un CV avec des tiers (clients, managers, candidats) sans qu'ils aient besoin de se connecter à l'application.
+
+#### Partager depuis la Page d'Analyse (CV Original)
+
+1. Ouvrez un CV analysé
+2. Cliquez sur le bouton **"Partager"** (icône de partage)
+3. Un modal s'affiche avec :
+   - Un **QR code** scannable
+   - L'**URL de partage** copiable
+   - Un bouton pour **télécharger le QR code** en image
+
+> ⚠️ **Attention** : Depuis la page d'analyse, vous partagez la **version originale** du CV, et non la version améliorée. Un message d'avertissement vous le rappelle.
+
+#### Partager depuis la Page d'Amélioration (CV Amélioré)
+
+1. Ouvrez un CV amélioré
+2. Cliquez sur le bouton **"Partager"**
+3. L'application génère automatiquement un **PDF du CV amélioré** avec le modèle sélectionné
+4. Le QR code et le lien de partage sont affichés
+
+#### Utiliser le Lien de Partage
+
+Le destinataire peut :
+- **Scanner le QR code** avec son smartphone
+- **Cliquer sur le lien** copié et partagé par email ou messagerie
+
+Le CV s'affiche directement dans le navigateur :
+- **Sur ordinateur** : Le PDF s'affiche dans le navigateur
+- **Sur mobile** : Des boutons "Ouvrir" et "Télécharger" sont proposés
+
+#### Sécurité du Partage
+
+- Les liens de partage utilisent un **token unique** de 64 caractères
+- Les liens sont **persistants** et restent valides
+- Aucune authentification n'est requise pour accéder au CV partagé
+- Les liens ne peuvent pas être devinés (token cryptographiquement sécurisé)
+
+#### Cas d'Usage
+
+| Situation | Action recommandée |
+|-----------|-------------------|
+| Envoyer un CV à un client | Partager depuis la page d'amélioration (CV optimisé) |
+| Permettre au candidat de vérifier son CV | Partager depuis la page d'analyse (CV original) |
+| Présentation en réunion | Afficher le QR code sur écran pour accès rapide |
+| Intégration dans un email | Copier le lien et l'insérer dans le corps du message |
+
 ---
 
 ## Missions

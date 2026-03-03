@@ -273,6 +273,88 @@ Click on a resume in the **"Resume Library"** list to access its detailed view w
 3. Choose the formatting template
 4. The PDF file downloads automatically
 
+### Resume Comments
+
+Each resume has a **Comments** section allowing users to collaborate and share information about a candidate.
+
+#### Adding a Comment
+
+1. Open a resume (analysis or improvement page)
+2. Scroll down to the **"Comments"** section at the bottom of the page
+3. Enter your comment in the text field
+4. Click **"Add"** to publish
+
+#### Comment Types
+
+| Type | Description | Visibility |
+|------|-------------|------------|
+| **Public** | Visible to all users | Everyone |
+| **Private** | Visible only to you | You only |
+
+To create a private comment, check the **"Private comment"** option before publishing.
+
+#### Managing Your Comments
+
+- **Edit**: Click the edit icon to modify your comment
+- **Delete**: Click the delete icon to remove your comment
+
+> **Note**: You can only edit or delete your own comments.
+
+#### Use Cases
+
+- **Follow-up notes**: Document exchanges with the candidate
+- **Interview feedback**: Share impressions after an interview
+- **Additional information**: Add details not present in the resume
+- **Alerts**: Flag points of attention to colleagues
+
+### Sharing a Resume via QR Code
+
+The **QR code sharing** feature allows you to easily share a resume with third parties (clients, managers, candidates) without them needing to log into the application.
+
+#### Sharing from the Analysis Page (Original Resume)
+
+1. Open an analyzed resume
+2. Click the **"Share"** button (share icon)
+3. A modal displays with:
+   - A scannable **QR code**
+   - A copyable **share URL**
+   - A button to **download the QR code** as an image
+
+> ⚠️ **Warning**: From the analysis page, you are sharing the **original version** of the resume, not the improved version. A warning message reminds you of this.
+
+#### Sharing from the Improvement Page (Improved Resume)
+
+1. Open an improved resume
+2. Click the **"Share"** button
+3. The application automatically generates a **PDF of the improved resume** with the selected template
+4. The QR code and share link are displayed
+
+#### Using the Share Link
+
+The recipient can:
+- **Scan the QR code** with their smartphone
+- **Click the link** copied and shared via email or messaging
+
+The resume displays directly in the browser:
+- **On desktop**: The PDF displays in the browser
+- **On mobile**: "Open" and "Download" buttons are provided
+
+#### Sharing Security
+
+- Share links use a **unique 64-character token**
+- Links are **persistent** and remain valid
+- No authentication is required to access the shared resume
+- Links cannot be guessed (cryptographically secure token)
+
+#### Use Cases
+
+| Situation | Recommended Action |
+|-----------|-------------------|
+| Send a resume to a client | Share from the improvement page (optimized resume) |
+| Allow candidate to verify their resume | Share from the analysis page (original resume) |
+| Presentation in a meeting | Display the QR code on screen for quick access |
+| Integration in an email | Copy the link and insert it in the message body |
+
 ---
 
 ## Missions
