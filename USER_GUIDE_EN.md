@@ -8,20 +8,21 @@
 4. [Resume Management](#resume-management)
 5. [Missions](#missions)
 6. [Profile Matching](#profile-matching)
-7. [Resume Adaptations](#resume-adaptations)
-8. [Clients & Prospects](#clients--prospects)
-9. [Email CV Sending](#email-cv-sending)
-10. [Market Radar](#market-radar)
-11. [AI Assistant](#ai-assistant)
-12. [Administration](#administration)
-13. [GDPR Compliance](#gdpr-compliance)
-14. [Interface and Navigation](#interface-and-navigation)
-15. [Best Practices](#best-practices)
-16. [Troubleshooting](#troubleshooting)
-17. [FAQ](#faq)
-18. [Roadmap](#roadmap)
-19. [Glossary](#glossary)
-20. [Support](#support)
+7. [Selection Pipeline](#selection-pipeline)
+8. [Resume Adaptations](#resume-adaptations)
+9. [Clients & Prospects](#clients--prospects)
+10. [Email CV Sending](#email-cv-sending)
+11. [Market Radar](#market-radar)
+12. [AI Assistant](#ai-assistant)
+13. [Administration](#administration)
+14. [GDPR Compliance](#gdpr-compliance)
+15. [Interface and Navigation](#interface-and-navigation)
+16. [Best Practices](#best-practices)
+17. [Troubleshooting](#troubleshooting)
+18. [FAQ](#faq)
+19. [Roadmap](#roadmap)
+20. [Glossary](#glossary)
+21. [Support](#support)
 
 ---
 
@@ -251,7 +252,9 @@ Click on a resume in the **"Resume Library"** list to access its detailed view w
 
 #### Improved Tab
 - AI-generated optimized version
-- Editable with rich text editor
+- **Rich editor** with integrated AI suggestions
+- **Suggestions panel**: Improvement recommendations by section
+- Option to re-improve the resume with AI
 - Export to PDF with template selection
 
 ### Improving a Resume
@@ -265,6 +268,51 @@ Click on a resume in the **"Resume Library"** list to access its detailed view w
    - Professional structure
 
 **Note**: In anonymous mode, the improved resume will not contain personally identifiable information.
+
+### Editing and Refining an Improved Resume
+
+Once the improved resume is generated, you can further customize it:
+
+#### Rich Editor
+
+The Improved tab offers a complete **WYSIWYG editor**:
+- Text formatting (bold, italic, lists)
+- Direct content modification
+- Automatic saving of changes
+
+#### AI Suggestions Integrated in Text
+
+Improvement suggestions are displayed **directly inline** in the editor:
+
+- **Visual indicators**: Colored markers highlight passages to improve
+- **Contextual suggestions**: Hover or click on a marker to see the suggestion
+- **Easy application**: Click to apply the suggestion or dismiss it
+
+This integration allows you to immediately see where and how to improve the resume without leaving the text context.
+
+#### Suggestions Panel by Section
+
+Additionally, a side panel groups **suggestions by section**:
+
+| Section | Suggestion Types |
+|---------|------------------|
+| **Summary** | Reformulations for greater impact |
+| **Skills** | Missing keywords, organization |
+| **Experience** | Result quantification, action verbs |
+| **Education** | Certification highlighting |
+| **ATS** | Optimizations for automated filters |
+
+**Using suggestions**:
+1. Review suggestions in the side panel or directly in the text
+2. Click on a suggestion to apply it or use it as inspiration
+3. Manually edit the text in the editor if needed
+
+#### Re-improve with AI
+
+If you want a new improved version:
+1. Click **"Improve with AI"** in the Improved tab
+2. The AI generates a new version based on the current content
+3. Scores are automatically recalculated
 
 ### Exporting a Resume
 
@@ -518,6 +566,150 @@ If you modify a mission description, click the **"Refresh"** button (refresh ico
 2. **Adjust weights**: Adapt weights according to the relative importance of criteria
 3. **Analyze top profiles**: Use detailed analysis for the top 3-5 candidates
 4. **Check gaps**: Missing skills can be discussion points during interviews
+
+---
+
+## Selection Pipeline
+
+### What is the Selection Pipeline?
+
+The **Selection Pipeline** is a feature for managing the candidate selection process for your missions. It's a tracking tool that allows you to:
+
+- **Track progress** of each candidate in the selection process
+- **Schedule interviews** with clients or partners
+- **Record history** of stages completed by each candidate
+- **Centralize notes** and comments on each application
+
+> **Note**: This pipeline is designed for selecting profiles (freelancers, partner employees) for client missions, not for internal recruitment.
+
+### Accessing the Pipeline
+
+The pipeline is accessible from the **"Selection"** tab on each resume's analysis page.
+
+### Pipeline Stages
+
+The pipeline includes 8 configured stages:
+
+| Stage | Description | Color |
+|-------|-------------|-------|
+| **New** | Candidate added to the process | Gray |
+| **Pre-selection** | Under internal evaluation | Blue |
+| **Submitted to client** | Resume sent to client | Purple |
+| **Interview scheduled** | Interview planned | Orange |
+| **Interview completed** | Interview finished | Light green |
+| **Selected** | Candidate retained | Green |
+| **Not retained** | Candidate not selected | Red |
+| **On hold** | Process paused | Orange |
+
+### Adding a Candidate to the Pipeline
+
+1. Open a resume and go to the **"Selection"** tab
+2. Click **"Add to process"**
+3. Optionally select:
+   - The associated **mission**
+   - The concerned **client**
+4. Add **notes** if needed
+5. Click **"Add"**
+
+### Managing Stages
+
+#### Changing a Candidate's Stage
+
+1. Click on the candidate card to expand it
+2. In the **"Change stage"** section, click on the desired stage
+3. History is automatically updated
+
+#### Adding Notes
+
+Notes allow you to document the follow-up:
+- Comments on the profile
+- Client feedback
+- Points of attention
+
+### Interview Scheduling
+
+#### Scheduling an Interview
+
+1. Expand the candidate card
+2. Click **"Schedule an interview"**
+3. Fill in the form:
+
+| Field | Description | Required |
+|-------|-------------|----------|
+| **Title** | Interview title | Yes |
+| **Type** | Client, Partner, Technical, HR | No |
+| **Date and time** | Interview moment | Yes |
+| **Duration** | 30 min to 2h | No |
+| **Location** | Address or "Video call" | No |
+| **Meeting link** | Google Meet, Teams URL, etc. | No |
+| **Description** | Additional details | No |
+
+4. Click **"Schedule"**
+
+> **Tip**: When an interview is scheduled, the candidate automatically moves to the "Interview scheduled" stage.
+
+#### Interview Types
+
+- **Client interview**: With the end client
+- **Partner interview**: With a partner company
+- **Technical interview**: Technical skills assessment
+- **HR interview**: HR validation interview
+
+#### Completing an Interview
+
+1. Click the ✓ (check) icon next to the interview
+2. Select the **outcome**:
+   - **Positive**: Successful interview
+   - **Neutral**: To be evaluated
+   - **Negative**: Unsuccessful
+   - **Follow-up needed**: Requires follow-up
+3. Add **notes** about the outcome
+4. Click **"Complete"**
+
+#### Canceling an Interview
+
+Click the ✗ (cross) icon to cancel a scheduled interview.
+
+### Google Calendar Integration
+
+#### Connecting Your Calendar
+
+1. Go to **Settings** > **Calendar**
+2. Click **"Connect Google Calendar"**
+3. Authorize access to your Google calendar
+4. Once connected, interviews will automatically be added to your calendar
+
+#### Calendar Features
+
+- **Automatic creation**: Scheduled interviews create an event in your calendar
+- **Invitations**: Participants receive an email invitation
+- **Reminders**: Notifications 24h and 30 min before the interview
+- **Synchronization**: Changes are reflected in the calendar
+
+### Pipeline History
+
+Click **"View history"** to see all stages completed by a candidate:
+- Date and time of each change
+- Previous and new stage
+- User who made the change
+- Associated notes
+
+### Removing a Candidate
+
+To remove a candidate from the pipeline:
+1. Expand the candidate card
+2. Click **"Remove from pipeline"**
+3. Confirm the deletion
+
+> **Warning**: This action also deletes the history and associated interviews.
+
+### Best Practices
+
+1. **Document each stage**: Add notes with each stage change
+2. **Schedule quickly**: Create interviews as soon as they're confirmed
+3. **Complete interviews**: Mark interviews as completed with an outcome
+4. **Use types**: Categorize your interviews for better tracking
+5. **Connect your calendar**: Avoid double entries and forgotten appointments
 
 ---
 
@@ -1467,25 +1659,26 @@ Don't hesitate to contact your administrator or use the AI assistant to share yo
 
 ---
 
-**Last updated**: Version 1.6.2 - February 2026
+**Last updated**: Version 1.7.0 - March 2026
 
 **Recent updates**:
+- **Selection Pipeline**: Complete candidate selection process tracking with configurable stages
+- **Interview Scheduling**: Client/partner interview management with Google Calendar integration
+- **Pipeline History**: Full traceability of stage changes and notes
+- **Integrated AI Suggestions**: Improvement recommendations displayed directly in the resume editor
 - **Full GDPR Compliance**: Automated consent management for external resumes
 - **GDPR Badge**: Visual consent status indicator on each resume
-- **Automatic Sending**: Consent request email sent on import
-- **Automatic Deletion**: Resumes deleted if consent refused or expired
 - **MJML Email Templates**: Visual template editor with blocks
 - **Clients & Prospects**: Commercial portfolio with contacts and send history
 - **Email CV Sending**: Gmail draft creation with CV attachment and custom templates
 
 **Previous versions**:
+- v1.6.x: GDPR compliance, automatic consent sending, automatic CV deletion
 - v1.6.0: Company Logo, Enhanced User Profiles, Extended Email Keywords
 - v1.5.x: PostgreSQL migration, enhanced security, security logs, Swagger/OpenAPI
 - v1.4.x: Complete Market Radar, Tags management, ROME 4.0 reference
-- v1.3.0: Anonymous CV mode with trigram
-- Progress overlay during analysis and improvement
-- LLM prompt debugging (developer mode)
-- Updated Swagger documentation
+- v1.3.0: Anonymous CV mode with trigram, progress overlay
+- v1.2.x: Profile matching, Market Radar France, URL navigation
 
 ---
 

@@ -70,6 +70,8 @@ import twofaRoutes from './routes/twofa.routes.js';
 import gdprAuditRoutes from './routes/gdprAudit.routes.js';
 import resumeCommentsRoutes from './routes/resumeComments.routes.js';
 import shareRoutes from './routes/share.routes.js';
+import pipelineRoutes from './routes/pipeline.routes.js';
+import calendarRoutes from './routes/calendar.routes.js';
 
 // Import services
 import { metrics } from './services/metrics.service.js';
@@ -95,6 +97,10 @@ import { initGdprAuditTable } from './services/gdprAudit.service.js';
 import { initResumeCommentsTable } from './services/resumeComments.service.js';
 // Share Resume initialization
 import { initShareResumeTable } from './services/shareResume.service.js';
+// Candidate Pipeline initialization
+import { initCandidatePipelineTable } from './services/candidatePipeline.service.js';
+// Calendar service initialization
+import { initCalendarTokensTable, destroyCalendarService } from './services/calendar.service.js';
 
 const app = express();
 
@@ -682,6 +688,12 @@ app.use('/api/resumes', resumeCommentsRoutes);
 // Share routes (public PDF sharing via QR code)
 app.use('/api/share', shareRoutes);
 
+// Pipeline routes (candidate selection pipeline and interviews)
+app.use('/api/pipeline', pipelineRoutes);
+
+// Calendar routes (Google Calendar integration)
+app.use('/api/calendar', calendarRoutes);
+
 // ============================================
 // PDF SERVER PROXY
 // ============================================
@@ -951,6 +963,22 @@ async function onServerStart(protocol, port) {
         } catch (error) {
             safeLog('error', 'Failed to initialize Share Resume table', { error: error.message });
         }
+        
+        // Initialize Candidate Pipeline tables
+        try {
+            await initCandidatePipelineTable();
+            safeLog('info', 'Candidate Pipeline tables initialized');
+        } catch (error) {
+            safeLog('error', 'Failed to initialize Candidate Pipeline tables', { error: error.message });
+        }
+        
+        // Initialize Calendar tokens table
+        try {
+            await initCalendarTokensTable();
+            safeLog('info', 'Calendar tokens table initialized');
+        } catch (error) {
+            safeLog('error', 'Failed to initialize Calendar tokens table', { error: error.message });
+        }
     } else {
         safeLog('error', 'PostgreSQL database initialization failed');
     }
@@ -1001,6 +1029,7 @@ const gracefulShutdown = async (signal) => {
         destroyEscoCache();
         destroyMailStatesCleanup();
         destroyGoogleapis();
+        destroyCalendarService();
         destroyMjml();
         stopScheduler();
         safeLog('info', 'All caches destroyed');

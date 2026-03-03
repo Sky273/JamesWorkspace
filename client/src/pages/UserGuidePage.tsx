@@ -27,7 +27,8 @@ import {
   BuildingOfficeIcon,
   EnvelopeIcon,
   ShieldCheckIcon,
-  UserCircleIcon
+  UserCircleIcon,
+  FunnelIcon
 } from '@heroicons/react/24/outline';
 import userGuideContentFR from '@root/USER_GUIDE.md?raw';
 import userGuideContentEN from '@root/USER_GUIDE_EN.md?raw';
@@ -56,6 +57,7 @@ const UserGuidePage = (): JSX.Element => {
     { id: 'resume-management', title: 'Resume Management', icon: DocumentTextIcon },
     { id: 'missions', title: 'Missions', icon: BriefcaseIcon },
     { id: 'profile-matching', title: 'Profile Matching', icon: UserGroupIcon },
+    { id: 'selection-pipeline', title: 'Selection Pipeline', icon: FunnelIcon },
     { id: 'resume-adaptations', title: 'Adaptations', icon: SparklesIcon },
     { id: 'clients-prospects', title: 'Clients & Prospects', icon: BuildingOfficeIcon },
     { id: 'email-cv-sending', title: 'Email CV Sending', icon: EnvelopeIcon },
@@ -77,6 +79,7 @@ const UserGuidePage = (): JSX.Element => {
     { id: 'gestion-des-cv', title: 'Gestion des CV', icon: DocumentTextIcon },
     { id: 'missions', title: 'Missions', icon: BriefcaseIcon },
     { id: 'matching-profils', title: 'Matching Profils', icon: UserGroupIcon },
+    { id: 'pipeline-de-selection', title: 'Pipeline de Sélection', icon: FunnelIcon },
     { id: 'adaptations-de-cv', title: 'Adaptations', icon: SparklesIcon },
     { id: 'clients-prospects', title: 'Clients & Prospects', icon: BuildingOfficeIcon },
     { id: 'envoi-de-cv-par-email', title: 'Envoi de CV par Email', icon: EnvelopeIcon },
@@ -103,6 +106,7 @@ const UserGuidePage = (): JSX.Element => {
       'resume-management': 'Resume Management',
       'missions': 'Missions',
       'profile-matching': 'Profile Matching',
+      'selection-pipeline': 'Selection Pipeline',
       'resume-adaptations': 'Resume Adaptations',
       'clients-prospects': 'Clients & Prospects',
       'email-cv-sending': 'Email CV Sending',
@@ -126,6 +130,7 @@ const UserGuidePage = (): JSX.Element => {
       'gestion-des-cv': 'Gestion des CV',
       'missions': 'Missions',
       'matching-profils': 'Matching Profils',
+      'pipeline-de-selection': 'Pipeline de Sélection',
       'adaptations-de-cv': 'Adaptations de CV',
       'clients-prospects': 'Clients & Prospects',
       'envoi-de-cv-par-email': 'Envoi de CV par Email',

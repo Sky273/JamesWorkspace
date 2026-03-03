@@ -23,6 +23,7 @@ import ImprovementAnimation from '../components/ImprovementAnimation';
 import OverviewTab from '../components/ResumeAnalysis/OverviewTab';
 import SkillsTagsTab from '../components/ResumeAnalysis/SkillsTagsTab';
 import OriginalTextTab from '../components/ResumeAnalysis/OriginalTextTab';
+import PipelineTab from '../components/ResumeAnalysis/PipelineTab';
 import ResumeComments from '../components/ResumeComments';
 
 const ResumeAnalysisPage = (): JSX.Element => {
@@ -32,7 +33,7 @@ const ResumeAnalysisPage = (): JSX.Element => {
   const { currentResume, setCurrentResume, resumes, improveCurrentResume, loading: contextLoading, processingStep } = useResume();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'skills' | 'original'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'skills' | 'original' | 'pipeline'>('overview');
   const [isImproving, setIsImproving] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareUrl, setShareUrl] = useState<string>('');
@@ -337,6 +338,16 @@ const ResumeAnalysisPage = (): JSX.Element => {
               >
                 {t('resume.analysis.tabs.original')}
               </button>
+              <button
+                onClick={() => setActiveTab('pipeline')}
+                className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === 'pipeline'
+                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                }`}
+              >
+                {t('resume.analysis.tabs.pipeline')}
+              </button>
             </nav>
           </div>
 
@@ -345,6 +356,12 @@ const ResumeAnalysisPage = (): JSX.Element => {
             {activeTab === 'skills' && <SkillsTagsTab resume={currentResume} />}
             {activeTab === 'original' && (
               <OriginalTextTab resume={currentResume} />
+            )}
+            {activeTab === 'pipeline' && id && (
+              <PipelineTab
+                resumeId={id}
+                resumeName={(currentResume?.['Name'] as string) || (currentResume?.name as string) || 'CV'}
+              />
             )}
           </div>
         </div>

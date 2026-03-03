@@ -8,20 +8,21 @@
 4. [Gestion des CV](#gestion-des-cv)
 5. [Missions](#missions)
 6. [Matching Profils](#matching-profils)
-7. [Adaptations de CV](#adaptations-de-cv)
-8. [Clients & Prospects](#clients--prospects)
-9. [Envoi de CV par Email](#envoi-de-cv-par-email)
-10. [Radar Marché](#radar-marché)
-11. [Assistant IA](#assistant-ia)
-12. [Administration](#administration)
-13. [Conformité RGPD](#conformité-rgpd)
-14. [Interface et Navigation](#interface-et-navigation)
-15. [Bonnes Pratiques](#bonnes-pratiques)
-16. [Dépannage](#dépannage)
-17. [FAQ](#faq)
-18. [Prochaines Étapes](#prochaines-étapes)
-19. [Glossaire](#glossaire)
-20. [Support](#support)
+7. [Pipeline de Sélection](#pipeline-de-sélection)
+8. [Adaptations de CV](#adaptations-de-cv)
+9. [Clients & Prospects](#clients--prospects)
+10. [Envoi de CV par Email](#envoi-de-cv-par-email)
+11. [Radar Marché](#radar-marché)
+12. [Assistant IA](#assistant-ia)
+13. [Administration](#administration)
+14. [Conformité RGPD](#conformité-rgpd)
+15. [Interface et Navigation](#interface-et-navigation)
+16. [Bonnes Pratiques](#bonnes-pratiques)
+17. [Dépannage](#dépannage)
+18. [FAQ](#faq)
+19. [Prochaines Étapes](#prochaines-étapes)
+20. [Glossaire](#glossaire)
+21. [Support](#support)
 
 ---
 
@@ -565,6 +566,150 @@ Si vous modifiez la description d'une mission, cliquez sur le bouton **"Actualis
 2. **Ajustez les poids** : Adaptez les pondérations selon l'importance relative des critères
 3. **Analysez les top profils** : Utilisez l'analyse détaillée pour les 3-5 meilleurs candidats
 4. **Vérifiez les lacunes** : Les compétences manquantes peuvent être des points de discussion en entretien
+
+---
+
+## Pipeline de Sélection
+
+### Qu'est-ce que le Pipeline de Sélection ?
+
+Le **Pipeline de Sélection** est une fonctionnalité permettant de gérer le processus de sélection des candidats pour vos missions. Il s'agit d'un outil de suivi qui vous permet de :
+
+- **Suivre l'avancement** de chaque candidat dans le processus de sélection
+- **Planifier des entretiens** avec les clients ou partenaires
+- **Historiser les étapes** franchies par chaque candidat
+- **Centraliser les notes** et commentaires sur chaque candidature
+
+> **Note** : Ce pipeline est conçu pour la sélection de profils (indépendants, salariés de partenaires) pour des missions client, pas pour le recrutement interne.
+
+### Accéder au Pipeline
+
+Le pipeline est accessible depuis l'onglet **"Sélection"** sur la page d'analyse de chaque CV.
+
+### Étapes du Pipeline
+
+Le pipeline comprend 8 étapes configurées :
+
+| Étape | Description | Couleur |
+|-------|-------------|---------|
+| **Nouveau** | Candidat ajouté au processus | Gris |
+| **Présélection** | En cours d'évaluation interne | Bleu |
+| **Soumis au client** | CV envoyé au client | Violet |
+| **Entretien planifié** | Entretien programmé | Orange |
+| **Entretien effectué** | Entretien terminé | Vert clair |
+| **Sélectionné** | Candidat retenu | Vert |
+| **Non retenu** | Candidat non sélectionné | Rouge |
+| **En attente** | Processus en pause | Orange |
+
+### Ajouter un Candidat au Pipeline
+
+1. Ouvrez un CV et accédez à l'onglet **"Sélection"**
+2. Cliquez sur **"Ajouter au processus"**
+3. Sélectionnez optionnellement :
+   - La **mission** associée
+   - Le **client** concerné
+4. Ajoutez des **notes** si nécessaire
+5. Cliquez sur **"Ajouter"**
+
+### Gérer les Étapes
+
+#### Changer l'Étape d'un Candidat
+
+1. Cliquez sur la carte du candidat pour la développer
+2. Dans la section **"Changer l'étape"**, cliquez sur l'étape souhaitée
+3. L'historique est automatiquement mis à jour
+
+#### Ajouter des Notes
+
+Les notes permettent de documenter le suivi :
+- Commentaires sur le profil
+- Retours client
+- Points d'attention
+
+### Planification d'Entretiens
+
+#### Planifier un Entretien
+
+1. Développez la carte du candidat
+2. Cliquez sur **"Planifier un entretien"**
+3. Remplissez le formulaire :
+
+| Champ | Description | Obligatoire |
+|-------|-------------|-------------|
+| **Titre** | Intitulé de l'entretien | Oui |
+| **Type** | Client, Partenaire, Technique, RH | Non |
+| **Date et heure** | Moment de l'entretien | Oui |
+| **Durée** | 30 min à 2h | Non |
+| **Lieu** | Adresse ou "Visio" | Non |
+| **Lien de réunion** | URL Google Meet, Teams, etc. | Non |
+| **Description** | Détails supplémentaires | Non |
+
+4. Cliquez sur **"Planifier"**
+
+> **Astuce** : Lorsqu'un entretien est planifié, le candidat passe automatiquement à l'étape "Entretien planifié".
+
+#### Types d'Entretiens
+
+- **Entretien client** : Avec le client final
+- **Entretien partenaire** : Avec une entreprise partenaire
+- **Entretien technique** : Évaluation des compétences techniques
+- **Entretien RH** : Entretien de validation RH
+
+#### Terminer un Entretien
+
+1. Cliquez sur l'icône ✓ (check) à côté de l'entretien
+2. Sélectionnez le **résultat** :
+   - **Positif** : Entretien concluant
+   - **Neutre** : À évaluer
+   - **Négatif** : Non concluant
+   - **À suivre** : Nécessite un suivi
+3. Ajoutez des **notes** sur le résultat
+4. Cliquez sur **"Terminer"**
+
+#### Annuler un Entretien
+
+Cliquez sur l'icône ✗ (croix) pour annuler un entretien planifié.
+
+### Intégration Google Calendar
+
+#### Connecter votre Calendrier
+
+1. Accédez aux **Paramètres** > **Calendrier**
+2. Cliquez sur **"Connecter Google Calendar"**
+3. Autorisez l'accès à votre calendrier Google
+4. Une fois connecté, les entretiens seront automatiquement ajoutés à votre calendrier
+
+#### Fonctionnalités Calendar
+
+- **Création automatique** : Les entretiens planifiés créent un événement dans votre calendrier
+- **Invitations** : Les participants reçoivent une invitation par email
+- **Rappels** : Notifications 24h et 30 min avant l'entretien
+- **Synchronisation** : Les modifications sont répercutées dans le calendrier
+
+### Historique du Pipeline
+
+Cliquez sur **"Voir l'historique"** pour consulter toutes les étapes franchies par un candidat :
+- Date et heure de chaque changement
+- Étape précédente et nouvelle étape
+- Utilisateur ayant effectué le changement
+- Notes associées
+
+### Retirer un Candidat
+
+Pour retirer un candidat du pipeline :
+1. Développez la carte du candidat
+2. Cliquez sur **"Retirer du pipeline"**
+3. Confirmez la suppression
+
+> **Attention** : Cette action supprime également l'historique et les entretiens associés.
+
+### Bonnes Pratiques
+
+1. **Documentez chaque étape** : Ajoutez des notes à chaque changement d'étape
+2. **Planifiez rapidement** : Créez les entretiens dès qu'ils sont confirmés
+3. **Terminez les entretiens** : Marquez les entretiens comme terminés avec un résultat
+4. **Utilisez les types** : Catégorisez vos entretiens pour un meilleur suivi
+5. **Connectez votre calendrier** : Évitez les doubles saisies et les oublis
 
 ---
 
@@ -1745,18 +1890,21 @@ N'hésitez pas à contacter votre administrateur ou à utiliser l'assistant IA p
 
 ---
 
-**Dernière mise à jour** : Version 1.6.2 - Février 2026
+**Dernière mise à jour** : Version 1.7.0 - Mars 2026
 
 **Nouveautés récentes** :
+- **Pipeline de Sélection** : Suivi complet du processus de sélection des candidats avec étapes configurables
+- **Planification d'entretiens** : Gestion des entretiens clients/partenaires avec intégration Google Calendar
+- **Historique du pipeline** : Traçabilité complète des changements d'étapes et des notes
+- **Suggestions IA intégrées** : Recommandations d'amélioration affichées directement dans l'éditeur de CV
 - **Conformité RGPD complète** : Gestion automatisée du consentement pour les CV externes
 - **Badge RGPD** : Indicateur visuel du statut de consentement sur chaque CV
-- **Envoi automatique** : Email de demande de consentement envoyé à l'import
-- **Suppression automatique** : CV supprimés si consentement refusé ou expiré
 - **Templates Email MJML** : Éditeur visuel de templates avec blocs (Logo, En-tête, Paragraphe, Signature, Pied de page)
 - **Gestion Clients & Prospects** : Portefeuille commercial avec contacts et historique des envois
 - **Envoi de CV par Email** : Création de brouillons Gmail avec CV en pièce jointe et templates personnalisés
 
 **Versions précédentes** :
+- v1.6.x : Conformité RGPD, envoi automatique consentement, suppression automatique CV
 - v1.6.0 : Logo Cabinet, Profils Utilisateurs Enrichis, Mots-clés Email Étendus
 - v1.5.x : Migration PostgreSQL, sécurité renforcée, logs de sécurité, Swagger/OpenAPI, prompts LLM améliorés
 - v1.4.x : Radar Marché complet, gestion des Tags, référentiel ROME 4.0
