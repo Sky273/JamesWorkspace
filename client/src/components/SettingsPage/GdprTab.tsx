@@ -58,6 +58,8 @@ export const GdprTab = ({ t }: GdprTabProps): JSX.Element => {
 
   const handleConnect = async () => {
     setConnecting(true);
+    let pollInterval: NodeJS.Timeout | null = null;
+    
     try {
       const options = await createAuthOptionsWithCsrf({ method: 'GET' });
       const response = await fetchWithAuth('/api/gdpr/mail/auth-url', options);
@@ -70,10 +72,14 @@ export const GdprTab = ({ t }: GdprTabProps): JSX.Element => {
           'width=600,height=700,scrollbars=yes'
         );
         
-        // Poll for completion
-        const pollInterval = setInterval(async () => {
-          if (popup?.closed) {
-            clearInterval(pollInterval);
+        // Poll for completion with timeout (max 5 minutes)
+        let pollCount = 0;
+        const maxPolls = 600; // 5 minutes at 500ms intervals
+        
+        pollInterval = setInterval(async () => {
+          pollCount++;
+          if (popup?.closed || pollCount >= maxPolls) {
+            if (pollInterval) clearInterval(pollInterval);
             setConnecting(false);
             // Refresh status
             await fetchMailStatus();
@@ -85,8 +91,10 @@ export const GdprTab = ({ t }: GdprTabProps): JSX.Element => {
     } catch (error) {
       logger.error('[GdprTab] Error connecting Gmail:', error);
       toast.error(t('settings.gdpr.errors.connectFailed'));
+      if (pollInterval) clearInterval(pollInterval);
     } finally {
-      setConnecting(false);
+      // Note: setConnecting(false) is handled in the interval callback
+      // to avoid premature state change
     }
   };
 

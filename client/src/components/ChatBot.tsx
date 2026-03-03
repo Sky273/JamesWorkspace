@@ -90,22 +90,29 @@ const ChatBot = (): JSX.Element | null => {
       return;
     }
 
+    // Track all timeouts for cleanup
+    const timeoutIds: NodeJS.Timeout[] = [];
+
     // Show tooltip after 10 seconds initially, then every 30 seconds
     const initialTimeout = setTimeout(() => {
       setShowHelpTooltip(true);
       // Hide after 4 seconds
-      setTimeout(() => setShowHelpTooltip(false), 4000);
+      const hideTimeout = setTimeout(() => setShowHelpTooltip(false), 4000);
+      timeoutIds.push(hideTimeout);
     }, 10000);
 
     const interval = setInterval(() => {
       setShowHelpTooltip(true);
       // Hide after 4 seconds
-      setTimeout(() => setShowHelpTooltip(false), 4000);
+      const hideTimeout = setTimeout(() => setShowHelpTooltip(false), 4000);
+      timeoutIds.push(hideTimeout);
     }, 30000);
 
     return () => {
       clearTimeout(initialTimeout);
       clearInterval(interval);
+      // Clear all nested timeouts
+      timeoutIds.forEach(id => clearTimeout(id));
     };
   }, [isOpen]);
 

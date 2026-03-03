@@ -4,7 +4,7 @@
  * This page fetches the file from the backend API and displays it
  */
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { DocumentArrowDownIcon, ExclamationTriangleIcon, EyeIcon } from '@heroicons/react/24/outline';
@@ -25,6 +25,9 @@ const SharedFilePage = (): JSX.Element => {
   const [filename, setFilename] = useState<string>('cv.pdf');
   const [isMobile, setIsMobile] = useState(false);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  
+  // Use ref to track blob URL for cleanup (avoids stale closure)
+  const blobUrlRef = useRef<string | null>(null);
 
   // Handle download on mobile
   const handleDownload = useCallback(() => {
@@ -84,6 +87,7 @@ const SharedFilePage = (): JSX.Element => {
         const blob = await response.blob();
         const url = URL.createObjectURL(blob);
         setBlobUrl(url);
+        blobUrlRef.current = url; // Track for cleanup
 
         // If it's a PDF
         if (contentType.includes('pdf')) {
@@ -116,10 +120,11 @@ const SharedFilePage = (): JSX.Element => {
 
     fetchFile();
 
-    // Cleanup blob URL on unmount
+    // Cleanup blob URL on unmount using ref (avoids stale closure)
     return () => {
-      if (blobUrl) {
-        URL.revokeObjectURL(blobUrl);
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current);
+        blobUrlRef.current = null;
       }
     };
   }, [token, type, t]);
