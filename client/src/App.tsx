@@ -46,6 +46,7 @@ const UserProfilePage = lazy(() => import('./pages/UserProfilePage'));
 const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'));
 const TermsOfServicePage = lazy(() => import('./pages/TermsOfServicePage'));
 const GdprAuditPage = lazy(() => import('./pages/GdprAuditPage'));
+const SharedFilePage = lazy(() => import('./pages/SharedFilePage'));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -114,6 +115,8 @@ const App = (): JSX.Element => {
                 {/* Public legal pages (no auth required) */}
                 <Route path="/privacy" element={<PrivacyPolicyPage />} />
                 <Route path="/terms" element={<TermsOfServicePage />} />
+                {/* Public shared file pages (no auth required) */}
+                <Route path="/share/:type/:token" element={<SharedFilePage />} />
                 <Route
                   path="/"
                   element={

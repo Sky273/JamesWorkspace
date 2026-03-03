@@ -8,8 +8,10 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useResume } from '../context/ResumeContext';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { ArrowRightIcon, SparklesIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
+import { ArrowRightIcon, SparklesIcon, CheckCircleIcon, ShareIcon } from '@heroicons/react/24/outline';
 import Breadcrumbs from '../components/Breadcrumbs';
+import ShareQRCodeModal from '../components/ShareQRCodeModal';
+import { fetchWithAuth } from '../utils/apiInterceptor';
 import ConsentBadge, { ConsentStatus } from '../components/ConsentBadge';
 import { Resume } from '../types/entities';
 import { resumeService } from '../utils/resumeService';
@@ -32,6 +34,9 @@ const ResumeAnalysisPage = (): JSX.Element => {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'skills' | 'original'>('overview');
   const [isImproving, setIsImproving] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareUrl, setShareUrl] = useState<string>('');
+  const [shareLoading, setShareLoading] = useState(false);
 
   useEffect(() => {
     const loadResume = async () => {
@@ -120,6 +125,34 @@ const ResumeAnalysisPage = (): JSX.Element => {
     }, 100);
   }, [currentResume, isImproving, improveCurrentResume, t, navigate, id]);
 
+  // Handle share original file
+  const handleShare = useCallback(async () => {
+    if (!id) return;
+    
+    setShareLoading(true);
+    setShowShareModal(true);
+    
+    try {
+      const response = await fetchWithAuth(`/api/share/resume/${id}/original`);
+      const data = await response.json();
+      
+      if (data.success && data.token) {
+        // Build URL on frontend using current origin - use /share/file route
+        const shareUrl = `${window.location.origin}/share/file/${data.token}`;
+        setShareUrl(shareUrl);
+      } else {
+        toast.error(t('share.error', 'Failed to generate share link'));
+        setShowShareModal(false);
+      }
+    } catch (err) {
+      logger.error('Failed to get share URL:', err);
+      toast.error(t('share.error', 'Failed to generate share link'));
+      setShowShareModal(false);
+    } finally {
+      setShareLoading(false);
+    }
+  }, [id, t]);
+
   // Loading state
   if (loading) {
     return (
@@ -195,6 +228,16 @@ const ResumeAnalysisPage = (): JSX.Element => {
             </div>
             
             <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+              {/* Share button */}
+              <button
+                onClick={handleShare}
+                className="inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium transition-colors text-sm sm:text-base"
+                title={t('share.button', 'Share')}
+              >
+                <ShareIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span className="hidden sm:inline">{t('share.button', 'Share')}</span>
+              </button>
+              
               {hasImprovedText ? (
                 <>
                   <Link
@@ -313,6 +356,17 @@ const ResumeAnalysisPage = (): JSX.Element => {
           </div>
         )}
       </div>
+
+      {/* Share QR Code Modal */}
+      <ShareQRCodeModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        url={shareUrl}
+        title={t('share.originalFile', 'Original CV')}
+        candidateName={currentResume['Name'] || 'CV'}
+        isLoading={shareLoading}
+        warning={t('share.originalWarning', 'You are about to share the original version of this CV, not the improved version.')}
+      />
     </div>
   );
 };

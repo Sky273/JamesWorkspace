@@ -8,8 +8,10 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useResume } from '../context/ResumeContext';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { ArrowRightIcon, SparklesIcon } from '@heroicons/react/24/outline';
+import { ArrowRightIcon, SparklesIcon, ShareIcon } from '@heroicons/react/24/outline';
 import Breadcrumbs from '../components/Breadcrumbs';
+import ShareQRCodeModal from '../components/ShareQRCodeModal';
+import { templateService } from '../utils/templateService';
 import { Resume } from '../types/entities';
 import { resumeService } from '../utils/resumeService';
 import toast from 'react-hot-toast';
@@ -40,6 +42,9 @@ const ResumeImprovePage = (): JSX.Element => {
   const [editorReady, setEditorReady] = useState(false);
   const editorRef = useRef<TinyMCEEditor | null>(null);
   const initializationInProgress = useRef(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareUrl, setShareUrl] = useState<string>('');
+  const [shareLoading, setShareLoading] = useState(false);
 
   useEffect(() => {
     const loadResume = async () => {
@@ -235,6 +240,80 @@ const ResumeImprovePage = (): JSX.Element => {
     }
   }, [currentResume, setCurrentResume]);
 
+  // Handle share improved PDF
+  const handleShare = useCallback(async () => {
+    if (!id || !localResume) return;
+    
+    setShareLoading(true);
+    setShowShareModal(true);
+    
+    try {
+      // Get the first available template
+      const templates = await templateService.getAllTemplates();
+      if (!templates || templates.length === 0) {
+        throw new Error('No templates available');
+      }
+      const template = templates[0];
+      
+      // Prepare content with replacements
+      const content = localResume['Improved Text'] || localResume['Original Text'] || '';
+      const candidateName = localResume['Name'] || 'Candidat';
+      const candidateTitle = localResume['Title'] || '';
+      
+      let processedBody = template.TemplateContent || '';
+      processedBody = processedBody.replace(/-name-/g, candidateName);
+      processedBody = processedBody.replace(/-title-/g, candidateTitle);
+      processedBody = processedBody.replace(/-content-/g, content);
+      
+      let processedHeader = template.HeaderContent || '';
+      if (processedHeader) {
+        processedHeader = processedHeader.replace(/-name-/g, candidateName);
+        processedHeader = processedHeader.replace(/-title-/g, candidateTitle);
+      }
+      
+      let processedFooter = template.FooterContent || '';
+      if (processedFooter) {
+        processedFooter = processedFooter.replace(/-name-/g, candidateName);
+        processedFooter = processedFooter.replace(/-title-/g, candidateTitle);
+      }
+      
+      // Generate and store the PDF
+      const options = await createAuthOptionsWithCsrf({
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      const response = await fetchWithAuth(`/api/share/resume/${id}/generate`, {
+        ...options,
+        method: 'POST',
+        body: JSON.stringify({
+          htmlContent: processedBody,
+          filename: candidateName.replace(/\s+/g, '_'),
+          stylesheet: template.Stylesheet || '',
+          headerContent: processedHeader || undefined,
+          footerContent: processedFooter || undefined,
+          footerHeight: template.FooterHeight || 25
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success && data.token) {
+        // Build URL on frontend using current origin - use /share/pdf route
+        const shareUrl = `${window.location.origin}/share/pdf/${data.token}`;
+        setShareUrl(shareUrl);
+      } else {
+        toast.error(t('share.error', 'Failed to generate share link'));
+        setShowShareModal(false);
+      }
+    } catch (err) {
+      logger.error('Failed to generate share URL:', err);
+      toast.error(t('share.error', 'Failed to generate share link'));
+      setShowShareModal(false);
+    } finally {
+      setShareLoading(false);
+    }
+  }, [id, localResume, t]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
@@ -273,25 +352,37 @@ const ResumeImprovePage = (): JSX.Element => {
           animate={{ opacity: 1, y: 0 }}
           className="mb-6"
         >
-          <div>
-              <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {resumeName}
-                </h1>
-                {localResume?.consent_status && (
-                  <ConsentBadge
-                    status={localResume.consent_status as ConsentStatus}
-                    candidateName={localResume?.candidate_name as string | undefined}
-                    candidateEmail={localResume?.candidate_email as string | undefined}
-                    consentTokenExpiresAt={localResume?.consent_token_expires_at as string | null | undefined}
-                    retentionUntil={localResume?.retention_until as string | null | undefined}
-                    compact={true}
-                  />
-                )}
+          <div className="flex items-start justify-between">
+              <div>
+                <div className="flex items-center gap-3">
+                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                    {resumeName}
+                  </h1>
+                  {localResume?.consent_status && (
+                    <ConsentBadge
+                      status={localResume.consent_status as ConsentStatus}
+                      candidateName={localResume?.candidate_name as string | undefined}
+                      candidateEmail={localResume?.candidate_email as string | undefined}
+                      consentTokenExpiresAt={localResume?.consent_token_expires_at as string | null | undefined}
+                      retentionUntil={localResume?.retention_until as string | null | undefined}
+                      compact={true}
+                    />
+                  )}
+                </div>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {t('resume.improve.title')}
+                </p>
               </div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                {t('resume.improve.title')}
-              </p>
+              {hasImprovedText && (
+                <button
+                  onClick={handleShare}
+                  className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium transition-colors"
+                  title={t('share.button', 'Share')}
+                >
+                  <ShareIcon className="h-5 w-5" />
+                  {t('share.button', 'Share')}
+                </button>
+              )}
             </div>
         </motion.div>
 
@@ -408,6 +499,16 @@ const ResumeImprovePage = (): JSX.Element => {
           </>
         )}
       </div>
+
+      {/* Share QR Code Modal */}
+      <ShareQRCodeModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        url={shareUrl}
+        title={t('share.improvedCV', 'Improved CV')}
+        candidateName={localResume?.['Name'] || 'CV'}
+        isLoading={shareLoading}
+      />
     </div>
   );
 };

@@ -69,6 +69,7 @@ import gdprMailRoutes from './routes/gdprMail.routes.js';
 import twofaRoutes from './routes/twofa.routes.js';
 import gdprAuditRoutes from './routes/gdprAudit.routes.js';
 import resumeCommentsRoutes from './routes/resumeComments.routes.js';
+import shareRoutes from './routes/share.routes.js';
 
 // Import services
 import { metrics } from './services/metrics.service.js';
@@ -92,6 +93,8 @@ import { startScheduler, stopScheduler } from './services/scheduler.service.js';
 import { initGdprAuditTable } from './services/gdprAudit.service.js';
 // Resume Comments initialization
 import { initResumeCommentsTable } from './services/resumeComments.service.js';
+// Share Resume initialization
+import { initShareResumeTable } from './services/shareResume.service.js';
 
 const app = express();
 
@@ -676,6 +679,9 @@ app.use('/api/2fa', twofaRoutes);
 // Resume Comments routes (mounted under /api/resumes for REST consistency)
 app.use('/api/resumes', resumeCommentsRoutes);
 
+// Share routes (public PDF sharing via QR code)
+app.use('/api/share', shareRoutes);
+
 // ============================================
 // PDF SERVER PROXY
 // ============================================
@@ -936,6 +942,14 @@ async function onServerStart(protocol, port) {
             safeLog('info', 'Resume Comments table initialized');
         } catch (error) {
             safeLog('error', 'Failed to initialize Resume Comments table', { error: error.message });
+        }
+        
+        // Initialize Share Resume table columns
+        try {
+            await initShareResumeTable();
+            safeLog('info', 'Share Resume table initialized');
+        } catch (error) {
+            safeLog('error', 'Failed to initialize Share Resume table', { error: error.message });
         }
     } else {
         safeLog('error', 'PostgreSQL database initialization failed');
