@@ -21,7 +21,7 @@ interface BreadcrumbsProps {
 
 const Breadcrumbs = ({ items, className = '' }: BreadcrumbsProps): JSX.Element | null => {
   const location = useLocation();
-  const params = useParams<{ id?: string }>();
+  const _params = useParams<{ id?: string }>();
   const { t } = useTranslation();
   const { currentResume } = useResume();
 
@@ -32,11 +32,11 @@ const Breadcrumbs = ({ items, className = '' }: BreadcrumbsProps): JSX.Element |
       { label: t('navigation.home'), href: '/' }
     ];
 
-    let currentPath = '';
+    let _currentPath = '';
 
     for (let i = 0; i < pathSegments.length; i++) {
       const segment = pathSegments[i];
-      currentPath += `/${segment}`;
+      _currentPath += `/${segment}`;
       const isLast = i === pathSegments.length - 1;
 
       // Handle different route patterns

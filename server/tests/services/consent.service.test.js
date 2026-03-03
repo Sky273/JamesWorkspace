@@ -325,18 +325,30 @@ describe('Consent Service', () => {
 
     describe('purgeResume', () => {
         it('should delete resume and related data', async () => {
+            // First query: get resume info for audit
+            query.mockResolvedValueOnce({ rows: [{ 
+                id: 'test-resume', 
+                firm_id: 'firm-1', 
+                firm_name: 'Test Firm',
+                candidate_name: 'John Doe',
+                candidate_email: 'john@example.com',
+                consent_status: 'active'
+            }] });
             query.mockResolvedValueOnce({ rows: [] }); // Delete versions
             query.mockResolvedValueOnce({ rows: [] }); // Delete adaptations
             query.mockResolvedValueOnce({ rows: [] }); // Delete submissions
             query.mockResolvedValueOnce({ rows: [{ id: 'test-resume' }] }); // Delete resume
+            query.mockResolvedValueOnce({ rows: [{}] }); // Log GDPR action
 
             const result = await consentService.purgeResume('test-resume');
             
             expect(result).toBe(true);
-            expect(query).toHaveBeenCalledTimes(4);
+            expect(query).toHaveBeenCalledTimes(6);
         });
 
         it('should return false if resume not found', async () => {
+            // First query: get resume info (not found)
+            query.mockResolvedValueOnce({ rows: [] });
             query.mockResolvedValueOnce({ rows: [] }); // Delete versions
             query.mockResolvedValueOnce({ rows: [] }); // Delete adaptations
             query.mockResolvedValueOnce({ rows: [] }); // Delete submissions
@@ -350,16 +362,23 @@ describe('Consent Service', () => {
 
     describe('purgeExpiredResumes', () => {
         it('should purge all expired/refused resumes', async () => {
-            // Find resumes to purge
-            query.mockResolvedValueOnce({ rows: [{ id: '1' }, { id: '2' }] });
+            // Find resumes to purge (with full info for audit)
+            query.mockResolvedValueOnce({ rows: [
+                { id: '1', firm_id: 'f1', firm_name: 'Firm1', candidate_name: 'A', candidate_email: 'a@test.com', consent_status: 'refused' },
+                { id: '2', firm_id: 'f2', firm_name: 'Firm2', candidate_name: 'B', candidate_email: 'b@test.com', consent_status: 'expired' }
+            ] });
             
-            // For each resume: 4 delete queries
+            // For each resume: 4 delete queries + 1 GDPR log (auditInfo is passed so no SELECT)
             for (let i = 0; i < 2; i++) {
                 query.mockResolvedValueOnce({ rows: [] }); // versions
                 query.mockResolvedValueOnce({ rows: [] }); // adaptations
                 query.mockResolvedValueOnce({ rows: [] }); // submissions
-                query.mockResolvedValueOnce({ rows: [{ id: String(i + 1) }] }); // resume
+                query.mockResolvedValueOnce({ rows: [{ id: String(i + 1) }] }); // resume deleted
+                query.mockResolvedValueOnce({ rows: [{}] }); // GDPR log for individual purge
             }
+            
+            // Final batch GDPR log
+            query.mockResolvedValueOnce({ rows: [{}] });
 
             const result = await consentService.purgeExpiredResumes();
             

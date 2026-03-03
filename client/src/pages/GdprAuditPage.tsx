@@ -7,7 +7,6 @@ import {
   ArrowPathIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-  DocumentArrowDownIcon,
   ClockIcon,
   UserIcon,
   BuildingOfficeIcon,
