@@ -21,6 +21,7 @@ import ImprovementAnimation from '../components/ImprovementAnimation';
 import OverviewTab from '../components/ResumeAnalysis/OverviewTab';
 import SkillsTagsTab from '../components/ResumeAnalysis/SkillsTagsTab';
 import OriginalTextTab from '../components/ResumeAnalysis/OriginalTextTab';
+import ResumeComments from '../components/ResumeComments';
 
 const ResumeAnalysisPage = (): JSX.Element => {
   const { id } = useParams<{ id: string }>();
@@ -304,6 +305,13 @@ const ResumeAnalysisPage = (): JSX.Element => {
             )}
           </div>
         </div>
+
+        {/* Comments section */}
+        {id && (
+          <div className="mt-6">
+            <ResumeComments resumeId={id} />
+          </div>
+        )}
       </div>
     </div>
   );

@@ -68,6 +68,7 @@ import consentRoutes from './routes/consent.routes.js';
 import gdprMailRoutes from './routes/gdprMail.routes.js';
 import twofaRoutes from './routes/twofa.routes.js';
 import gdprAuditRoutes from './routes/gdprAudit.routes.js';
+import resumeCommentsRoutes from './routes/resumeComments.routes.js';
 
 // Import services
 import { metrics } from './services/metrics.service.js';
@@ -89,6 +90,8 @@ import { initializeDatabase, closePool } from './services/database.service.js';
 import { startScheduler, stopScheduler } from './services/scheduler.service.js';
 // GDPR Audit Log initialization
 import { initGdprAuditTable } from './services/gdprAudit.service.js';
+// Resume Comments initialization
+import { initResumeCommentsTable } from './services/resumeComments.service.js';
 
 const app = express();
 
@@ -670,6 +673,9 @@ app.use('/api/gdpr-audit', gdprAuditRoutes);
 // 2FA (Two-Factor Authentication) routes
 app.use('/api/2fa', twofaRoutes);
 
+// Resume Comments routes (mounted under /api/resumes for REST consistency)
+app.use('/api/resumes', resumeCommentsRoutes);
+
 // ============================================
 // PDF SERVER PROXY
 // ============================================
@@ -922,6 +928,14 @@ async function onServerStart(protocol, port) {
             safeLog('info', 'GDPR Audit Log table initialized');
         } catch (error) {
             safeLog('error', 'Failed to initialize GDPR Audit Log table', { error: error.message });
+        }
+        
+        // Initialize Resume Comments table
+        try {
+            await initResumeCommentsTable();
+            safeLog('info', 'Resume Comments table initialized');
+        } catch (error) {
+            safeLog('error', 'Failed to initialize Resume Comments table', { error: error.message });
         }
     } else {
         safeLog('error', 'PostgreSQL database initialization failed');

@@ -20,6 +20,7 @@ import ConsentBadge, { ConsentStatus } from '../components/ConsentBadge';
 import ImprovedTextTab from '../components/ResumeAnalysis/ImprovedTextTab';
 import CompareTab from '../components/ResumeAnalysis/CompareTab';
 import OverviewTab from '../components/ResumeAnalysis/OverviewTab';
+import ResumeComments from '../components/ResumeComments';
 import { loadTinyMCE } from '../utils/lazyTinyMCE';
 import { fetchWithAuth, createAuthOptionsWithCsrf } from '../utils/apiInterceptor';
 import { TinyMCEEditor } from '../types/tinymce.d';
@@ -344,58 +345,67 @@ const ResumeImprovePage = (): JSX.Element => {
             </button>
           </div>
         ) : (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-            <div className="border-b border-gray-200 dark:border-gray-700">
-              <nav className="flex -mb-px">
-                <button
-                  onClick={() => setActiveTab('improved')}
-                  className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
-                    activeTab === 'improved'
-                      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                  }`}
-                >
-                  {t('resume.analysis.tabs.improved')}
-                </button>
-                <button
-                  onClick={() => setActiveTab('compare')}
-                  className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
-                    activeTab === 'compare'
-                      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                  }`}
-                >
-                  {t('resume.analysis.tabs.compare')}
-                </button>
-                <button
-                  onClick={() => setActiveTab('analysis')}
-                  className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
-                    activeTab === 'analysis'
-                      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                  }`}
-                >
-                  {t('resume.analysis.tabs.overview')}
-                </button>
-              </nav>
+          <>
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+              <div className="border-b border-gray-200 dark:border-gray-700">
+                <nav className="flex -mb-px">
+                  <button
+                    onClick={() => setActiveTab('improved')}
+                    className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+                      activeTab === 'improved'
+                        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                    }`}
+                  >
+                    {t('resume.analysis.tabs.improved')}
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('compare')}
+                    className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+                      activeTab === 'compare'
+                        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                    }`}
+                  >
+                    {t('resume.analysis.tabs.compare')}
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('analysis')}
+                    className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+                      activeTab === 'analysis'
+                        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                    }`}
+                  >
+                    {t('resume.analysis.tabs.overview')}
+                  </button>
+                </nav>
+              </div>
+
+              <div className="p-6">
+                {activeTab === 'improved' && (
+                  <ImprovedTextTab
+                    resume={localResume}
+                    onSave={handleSaveImprovedContent}
+                    onUpdateField={updateResumeField}
+                    editorReady={editorReady}
+                    onAIModify={handleAIModify}
+                    onVersionRestored={handleVersionRestored}
+                    onAdaptToMission={() => navigate(`/resumes/${id}/adapt`)}
+                  />
+                )}
+                {activeTab === 'compare' && <CompareTab resume={localResume} />}
+                {activeTab === 'analysis' && <OverviewTab resume={localResume} t={t} />}
+              </div>
             </div>
 
-            <div className="p-6">
-              {activeTab === 'improved' && (
-                <ImprovedTextTab
-                  resume={localResume}
-                  onSave={handleSaveImprovedContent}
-                  onUpdateField={updateResumeField}
-                  editorReady={editorReady}
-                  onAIModify={handleAIModify}
-                  onVersionRestored={handleVersionRestored}
-                  onAdaptToMission={() => navigate(`/resumes/${id}/adapt`)}
-                />
-              )}
-              {activeTab === 'compare' && <CompareTab resume={localResume} />}
-              {activeTab === 'analysis' && <OverviewTab resume={localResume} t={t} />}
-            </div>
-          </div>
+            {/* Comments section */}
+            {id && (
+              <div className="mt-6">
+                <ResumeComments resumeId={id} />
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

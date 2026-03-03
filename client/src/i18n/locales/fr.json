@@ -1647,5 +1647,27 @@
     "noLogs": "Aucune action RGPD enregistrée",
     "showing": "Affichage",
     "of": "sur"
+  },
+  "comments": {
+    "title": "Commentaires",
+    "comment": "commentaire",
+    "comments": "commentaires",
+    "placeholder": "Ajouter un commentaire...",
+    "private": "Privé (visible uniquement par moi)",
+    "privateLabel": "Privé",
+    "post": "Publier",
+    "posting": "Publication...",
+    "edit": "Modifier",
+    "delete": "Supprimer",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "edited": "modifié",
+    "loading": "Chargement des commentaires...",
+    "empty": "Aucun commentaire. Soyez le premier à en ajouter !",
+    "fetchError": "Échec du chargement des commentaires",
+    "addError": "Échec de l'ajout du commentaire",
+    "updateError": "Échec de la mise à jour du commentaire",
+    "deleteError": "Échec de la suppression du commentaire",
+    "confirmDelete": "Êtes-vous sûr de vouloir supprimer ce commentaire ?"
   }
 }
