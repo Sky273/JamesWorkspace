@@ -277,6 +277,7 @@
         "uploading": "Envoi en cours..."
       },
       "messages": {
+        "confirmDeleteUser": "Êtes-vous sûr de vouloir supprimer cet utilisateur ? Cette action est irréversible.",
         "userCreated": "Utilisateur créé avec succès",
         "userUpdated": "Utilisateur mis à jour avec succès",
         "userDeleted": "Utilisateur supprimé avec succès",

@@ -20,14 +20,24 @@ interface SuggestionsPluginConfig {
   onToggle?: (visible: boolean) => void;
 }
 
-// Section markers to identify where to place suggestions
+// Section markers to identify where to place suggestions (expanded for better detection)
 const SECTION_MARKERS: Record<string, string[]> = {
-  executiveSummary: ['profil', 'résumé', 'summary', 'profile', 'présentation', 'introduction', 'objectif'],
-  skills: ['compétences', 'skills', 'technologies', 'outils', 'expertise', 'savoir-faire'],
-  experiences: ['expérience', 'experience', 'parcours', 'missions', 'postes', 'emplois'],
-  education: ['formation', 'education', 'diplômes', 'études', 'certifications', 'académique'],
-  hobbiesLanguages: ['langues', 'languages', 'loisirs', 'hobbies', 'centres d\'intérêt', 'interests'],
-  atsOptimization: [] // Global suggestions, shown at top
+  executiveSummary: ['profil', 'résumé', 'summary', 'profile', 'présentation', 'introduction', 'objectif', 'sommaire', 'à propos', 'about'],
+  skills: ['compétences', 'skills', 'technologies', 'outils', 'expertise', 'savoir-faire', 'compétences techniques', 'technical skills', 'stack technique', 'environnement technique'],
+  experiences: ['expérience', 'experience', 'parcours', 'missions', 'postes', 'emplois', 'expériences professionnelles', 'professional experience', 'work experience', 'historique'],
+  education: ['formation', 'education', 'diplômes', 'études', 'certifications', 'académique', 'cursus', 'scolarité', 'diplôme'],
+  hobbiesLanguages: ['langues', 'languages', 'loisirs', 'hobbies', 'centres d\'intérêt', 'interests', 'activités', 'divers', 'autres'],
+  atsOptimization: [] // Global suggestions, shown in panel at top
+};
+
+// Section labels for display in the global panel
+const SECTION_LABELS: Record<string, string> = {
+  executiveSummary: 'Résumé exécutif',
+  skills: 'Compétences',
+  experiences: 'Expérience',
+  education: 'Formation',
+  hobbiesLanguages: 'Langues & Loisirs',
+  atsOptimization: 'Optimisation ATS'
 };
 
 // CSS styles for suggestion markers
@@ -62,12 +72,92 @@ const SUGGESTION_STYLES = `
     position: absolute;
     background: #1F2937;
     color: white;
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-size: 12px;
-    max-width: 300px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    max-width: 400px;
     z-index: 10000;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    line-height: 1.5;
+  }
+  .suggestion-panel {
+    background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
+    border: 1px solid #F59E0B;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15);
+  }
+  .suggestion-panel-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    color: #92400E;
+    font-size: 15px;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(146, 64, 14, 0.2);
+  }
+  .suggestion-panel-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .suggestion-panel-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 12px;
+    margin-bottom: 6px;
+    background: rgba(255, 255, 255, 0.6);
+    border-radius: 8px;
+    color: #78350F;
+    font-size: 13px;
+    line-height: 1.4;
+    transition: background 0.2s;
+  }
+  .suggestion-panel-item:hover {
+    background: rgba(255, 255, 255, 0.9);
+  }
+  .suggestion-panel-item-icon {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #F59E0B;
+    color: white;
+    border-radius: 50%;
+    font-size: 11px;
+    font-weight: bold;
+  }
+  .suggestion-panel-item-text {
+    flex: 1;
+  }
+  .suggestion-section-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
+    border: 1px solid #F59E0B;
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 12px;
+    color: #92400E;
+    font-weight: 500;
+    margin-left: 8px;
+    cursor: help;
+    box-shadow: 0 2px 4px rgba(245, 158, 11, 0.2);
+  }
+  .suggestion-highlight-wrapper {
+    position: relative;
+    background: linear-gradient(to right, rgba(254, 249, 195, 0.5), rgba(255, 251, 235, 0.3));
+    border-left: 4px solid #F59E0B;
+    padding-left: 12px;
+    margin-left: -16px;
+    border-radius: 0 8px 8px 0;
   }
 `;
 
@@ -78,11 +168,11 @@ const ICONS = {
   info: 'ℹ️'
 };
 
-// Styles for highlighted sections
-const HIGHLIGHT_STYLE = 'background: linear-gradient(to right, #FEF9C3, #FFFBEB); border-left: 3px solid #F59E0B; padding-left: 8px; margin-left: -11px; display: flex; align-items: flex-start;';
+// Styles for highlighted sections - clean design without emoji, using only border accent
+const HIGHLIGHT_STYLE = 'background: linear-gradient(to right, rgba(254, 249, 195, 0.6), rgba(255, 251, 235, 0.2)); border-left: 4px solid #F59E0B; padding: 8px 12px 8px 16px; margin: 4px 0 4px -16px; border-radius: 0 8px 8px 0; box-shadow: 0 2px 8px rgba(245, 158, 11, 0.1);';
 
-// Lightbulb style that adapts to text size
-const LIGHTBULB_STYLE = 'margin-right: 6px; font-size: 0.9em; line-height: inherit;';
+// Badge style for suggestion count - now includes the lightbulb icon
+const BADGE_STYLE = 'display: inline-flex; align-items: center; gap: 4px; background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%); color: white; border-radius: 12px; padding: 3px 10px; font-size: 11px; font-weight: 600; margin-left: 10px; box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3); cursor: help; vertical-align: middle;';
 
 let suggestionsVisible = true; // Show suggestions by default
 let originalContent = '';
@@ -119,7 +209,7 @@ function createSuggestionMarker(suggestion: string, type: 'warning' | 'error' | 
 
 /**
  * Insert suggestions into content near relevant sections
- * Wraps the section header line with highlight styling and adds lightbulb icon at the start
+ * Adds badges on detected section headers with tooltips showing suggestions
  */
 function insertSuggestionsIntoContent(content: string, suggestions: SuggestionsBySection): string {
   let modifiedContent = content;
@@ -128,14 +218,17 @@ function insertSuggestionsIntoContent(content: string, suggestions: SuggestionsB
   logger.info('[SuggestionsPlugin] Section positions found:', Array.from(sectionPositions.entries()));
   logger.info('[SuggestionsPlugin] Suggestions to insert:', suggestions);
   
-  // If no sections found, add suggestions at the beginning
+  // Count total suggestions
+  const totalSuggestions = Object.values(suggestions).flat().filter(Boolean).length;
+  
+  if (totalSuggestions === 0) {
+    logger.info('[SuggestionsPlugin] No suggestions to display');
+    return modifiedContent;
+  }
+  
+  // If no sections found in content, we can't place inline suggestions
   if (sectionPositions.size === 0) {
-    logger.info('[SuggestionsPlugin] No sections found, adding global suggestions panel');
-    const allSuggestions = Object.values(suggestions).flat().filter(Boolean);
-    if (allSuggestions.length > 0) {
-      const suggestionsPanel = createSuggestionsPanel(allSuggestions);
-      modifiedContent = suggestionsPanel + modifiedContent;
-    }
+    logger.info('[SuggestionsPlugin] No sections found in content, cannot place inline suggestions');
     return modifiedContent;
   }
   
@@ -173,11 +266,17 @@ function insertSuggestionsIntoContent(content: string, suggestions: SuggestionsB
     const fullElement = modifiedContent.substring(lastOpenTagIndex, tagEndPos);
     logger.info(`[SuggestionsPlugin] Full element for ${section}:`, fullElement.substring(0, 100));
     
-    // Create tooltip with all suggestions for this section
-    const tooltipText = sectionSuggestions.join(' | ').replace(/"/g, '&quot;');
+    // Create tooltip with all suggestions for this section - formatted as list
+    const tooltipLines = sectionSuggestions.map((s, i) => `${i + 1}. ${s}`).join('&#10;');
+    const tooltipText = tooltipLines.replace(/"/g, '&quot;');
     
-    // Wrap with highlight div and add lightbulb at the start
-    const highlightedElement = `<div style="${HIGHLIGHT_STYLE}" class="suggestion-highlight" title="${tooltipText}"><span style="${LIGHTBULB_STYLE}">💡</span>${fullElement}</div>`;
+    // Create a badge showing suggestion count
+    const suggestionBadge = `<span style="${BADGE_STYLE}" title="${tooltipText}">💡 ${sectionSuggestions.length}</span>`;
+    
+    // Wrap with highlight div and badge after the header (no emoji on the left, just the border accent)
+    // Insert badge right after the closing tag of the header element
+    const elementWithBadge = fullElement.replace(/(<\/[a-z][a-z0-9]*>)$/i, `${suggestionBadge}$1`);
+    const highlightedElement = `<div style="${HIGHLIGHT_STYLE}" class="suggestion-highlight" title="${tooltipText}">${elementWithBadge}</div>`;
     
     logger.info(`[SuggestionsPlugin] Wrapping element from ${lastOpenTagIndex} to ${tagEndPos}`);
     
@@ -192,16 +291,78 @@ function insertSuggestionsIntoContent(content: string, suggestions: SuggestionsB
 
 /**
  * Create a suggestions panel to display at the top of the content
+ * Displays suggestions grouped by section with improved styling
  */
-function createSuggestionsPanel(suggestions: string[]): string {
-  const items = suggestions.slice(0, 6).map(s => 
-    `<li style="margin-bottom: 4px; color: #D97706;">${ICONS.warning} ${s}</li>`
+function createSuggestionsPanel(suggestions: string[], sectionKey?: string): string {
+  // Display ALL suggestions
+  const items = suggestions.map((s, index) => 
+    `<li style="display: flex; align-items: flex-start; gap: 10px; padding: 8px 12px; margin-bottom: 6px; background: rgba(255, 255, 255, 0.6); border-radius: 8px; color: #78350F; font-size: 13px; line-height: 1.4;">
+      <span style="flex-shrink: 0; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; background: #F59E0B; color: white; border-radius: 50%; font-size: 11px; font-weight: bold;">${index + 1}</span>
+      <span style="flex: 1;">${s}</span>
+    </li>`
   ).join('');
   
+  const title = sectionKey ? SECTION_LABELS[sectionKey] || 'Suggestions' : 'Suggestions d\'amélioration';
+  
   return `
-    <div style="background: #FEF3C7; border: 1px solid #F59E0B; border-radius: 8px; padding: 12px; margin-bottom: 16px;">
-      <div style="font-weight: bold; color: #92400E; margin-bottom: 8px;">💡 Suggestions d'amélioration</div>
-      <ul style="margin: 0; padding-left: 20px; list-style: none;">${items}</ul>
+    <div class="suggestion-panel" style="background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%); border: 1px solid #F59E0B; border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15);">
+      <div style="display: flex; align-items: center; gap: 10px; font-weight: 600; color: #92400E; font-size: 15px; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid rgba(146, 64, 14, 0.2);">
+        <span style="font-size: 1.3em;">💡</span>
+        <span>${title}</span>
+        <span style="background: #92400E; color: white; border-radius: 10px; padding: 2px 8px; font-size: 12px; margin-left: auto;">${suggestions.length}</span>
+      </div>
+      <ul style="margin: 0; padding: 0; list-style: none;">${items}</ul>
+    </div>
+  `;
+}
+
+/**
+ * Create a comprehensive suggestions panel grouped by section
+ */
+function createGroupedSuggestionsPanel(suggestions: SuggestionsBySection): string {
+  const sections: string[] = [];
+  let totalCount = 0;
+  
+  // Order of sections to display
+  const sectionOrder: (keyof SuggestionsBySection)[] = [
+    'executiveSummary', 'skills', 'experiences', 'education', 'hobbiesLanguages', 'atsOptimization'
+  ];
+  
+  for (const sectionKey of sectionOrder) {
+    const sectionSuggestions = suggestions[sectionKey];
+    if (!sectionSuggestions || sectionSuggestions.length === 0) continue;
+    
+    totalCount += sectionSuggestions.length;
+    const label = SECTION_LABELS[sectionKey] || sectionKey;
+    
+    const items = sectionSuggestions.map((s) => 
+      `<li style="display: flex; align-items: flex-start; gap: 8px; padding: 6px 10px; margin-bottom: 4px; background: rgba(255, 255, 255, 0.5); border-radius: 6px; color: #78350F; font-size: 12px; line-height: 1.4;">
+        <span style="color: #F59E0B; font-weight: bold;">•</span>
+        <span style="flex: 1;">${s}</span>
+      </li>`
+    ).join('');
+    
+    sections.push(`
+      <div style="margin-bottom: 12px;">
+        <div style="display: flex; align-items: center; gap: 8px; font-weight: 600; color: #92400E; font-size: 13px; margin-bottom: 6px;">
+          <span>${label}</span>
+          <span style="background: rgba(146, 64, 14, 0.2); color: #92400E; border-radius: 8px; padding: 1px 6px; font-size: 11px;">${sectionSuggestions.length}</span>
+        </div>
+        <ul style="margin: 0; padding: 0; list-style: none;">${items}</ul>
+      </div>
+    `);
+  }
+  
+  if (sections.length === 0) return '';
+  
+  return `
+    <div class="suggestion-panel" style="background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%); border: 1px solid #F59E0B; border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15);">
+      <div style="display: flex; align-items: center; gap: 10px; font-weight: 600; color: #92400E; font-size: 15px; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid rgba(146, 64, 14, 0.2);">
+        <span style="font-size: 1.3em;">💡</span>
+        <span>Suggestions d'amélioration</span>
+        <span style="background: #92400E; color: white; border-radius: 10px; padding: 2px 8px; font-size: 12px; margin-left: auto;">${totalCount}</span>
+      </div>
+      ${sections.join('')}
     </div>
   `;
 }
@@ -210,12 +371,19 @@ function createSuggestionsPanel(suggestions: string[]): string {
  * Remove all suggestion markers from content
  */
 function removeSuggestionMarkers(content: string): string {
+  // Remove suggestion badges (the orange pill with count)
+  let cleaned = content.replace(/<span[^>]*title="[^"]*"[^>]*>💡\s*\d+<\/span>/g, '');
   // Remove highlight wrappers but keep inner content
-  let cleaned = content.replace(/<div[^>]*class="suggestion-highlight"[^>]*><span[^>]*>💡<\/span>/g, '');
+  cleaned = cleaned.replace(/<div[^>]*class="suggestion-highlight"[^>]*>/g, '');
   cleaned = cleaned.replace(/<\/div>(\s*<\/div>)?/g, (match, group1) => group1 ? '</div>' : '');
-  // Remove suggestions panel
+  // Remove suggestions panel (grouped panel with multiple sections)
+  cleaned = cleaned.replace(/<div[^>]*class="suggestion-panel"[^>]*>[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/g, '');
+  // Remove suggestions panel (simple panel)
+  cleaned = cleaned.replace(/<div[^>]*class="suggestion-panel"[^>]*>[\s\S]*?<\/ul>\s*<\/div>/g, '');
+  // Remove old style panels
   cleaned = cleaned.replace(/<div style="background: #FEF3C7[^>]*>[\s\S]*?<\/div>\s*<\/div>/g, '');
-  // Remove any remaining lightbulb spans
+  cleaned = cleaned.replace(/<div style="background: linear-gradient[^>]*>[\s\S]*?<\/div>\s*<\/div>/g, '');
+  // Remove any remaining lightbulb spans (legacy)
   cleaned = cleaned.replace(/<span[^>]*>💡<\/span>/g, '');
   return cleaned;
 }
@@ -316,21 +484,43 @@ export function registerSuggestionsPlugin(
 }
 
 /**
- * Parse suggestions from JSON string
+ * Parse suggestions from JSON string or object
+ * Handles various formats from the analysis API
  */
-export function parseSuggestions(suggestionsJson: string | undefined): SuggestionsBySection {
-  if (!suggestionsJson) return {};
+export function parseSuggestions(suggestionsJson: string | object | undefined): SuggestionsBySection {
+  if (!suggestionsJson) {
+    logger.info('[SuggestionsPlugin] No suggestions provided');
+    return {};
+  }
   
   try {
-    const parsed = typeof suggestionsJson === 'string' 
-      ? JSON.parse(suggestionsJson) 
-      : suggestionsJson;
+    let parsed: unknown;
+    
+    if (typeof suggestionsJson === 'string') {
+      // Try to parse JSON string
+      parsed = JSON.parse(suggestionsJson);
+    } else {
+      // Already an object
+      parsed = suggestionsJson;
+    }
     
     if (typeof parsed === 'object' && parsed !== null) {
-      return parsed as SuggestionsBySection;
+      const suggestions = parsed as SuggestionsBySection;
+      
+      // Log what we found
+      const sectionCounts = Object.entries(suggestions)
+        .filter(([, v]) => Array.isArray(v) && v.length > 0)
+        .map(([k, v]) => `${k}: ${(v as string[]).length}`);
+      
+      logger.info('[SuggestionsPlugin] Parsed suggestions:', {
+        sections: sectionCounts,
+        total: Object.values(suggestions).flat().filter(Boolean).length
+      });
+      
+      return suggestions;
     }
-  } catch {
-    // Ignore parsing errors
+  } catch (err) {
+    logger.warn('[SuggestionsPlugin] Failed to parse suggestions:', err);
   }
   
   return {};
