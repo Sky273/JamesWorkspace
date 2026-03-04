@@ -444,6 +444,36 @@ The Missions page displays all your opportunities with:
 - Creation date
 - Actions (view, edit, delete)
 
+### Mission Detail Page
+
+By clicking on a mission, you access its detail page which includes:
+
+#### Mission Information
+- **Title and client**: Header with main information
+- **Description**: Detailed offer content
+- **Extracted keywords**: Technical skills, tools, industries, soft skills
+
+#### Integrated Kanban Pipeline
+
+Below the description, a **Kanban board** displays all candidates in the selection process for this mission:
+
+| Feature | Description |
+|---------|-------------|
+| **Columns** | One column per pipeline stage (New, Pre-selection, Submitted, Interview, etc.) |
+| **Candidate cards** | Name, score, tags, notes, date, interview count |
+| **Drag & Drop** | Drag a card to another column to change the stage |
+| **Counter** | Number of candidates per stage |
+
+#### Kanban Actions
+
+- **Add a candidate**: Button at the top to search and add a resume to the pipeline
+- **Manage interviews**: Camera icon to schedule/view interviews
+- **Edit notes**: Bubble icon to add comments
+- **View resume**: Eye icon to access the full profile
+- **Remove**: Trash icon to delete from pipeline
+
+> **Tip**: The Kanban allows you to quickly visualize the progress of all candidates for a mission and manage the selection process without leaving the page.
+
 ---
 
 ## Profile Matching
@@ -576,15 +606,19 @@ If you modify a mission description, click the **"Refresh"** button (refresh ico
 The **Selection Pipeline** is a feature for managing the candidate selection process for your missions. It's a tracking tool that allows you to:
 
 - **Track progress** of each candidate in the selection process
-- **Schedule interviews** with clients or partners
+- **Schedule multiple interviews** successively with clients or partners
 - **Record history** of stages completed by each candidate
 - **Centralize notes** and comments on each application
+- **Visualize the pipeline** as a Kanban board at the mission level
 
 > **Note**: This pipeline is designed for selecting profiles (freelancers, partner employees) for client missions, not for internal recruitment.
 
 ### Accessing the Pipeline
 
-The pipeline is accessible from the **"Selection"** tab on each resume's analysis page.
+The pipeline is accessible in two ways:
+
+1. **From a Resume**: **"Selection"** tab on the analysis or improvement page
+2. **From a Mission**: Integrated Kanban view on each mission's detail page
 
 ### Pipeline Stages
 
@@ -628,25 +662,43 @@ Notes allow you to document the follow-up:
 
 ### Interview Scheduling
 
+The pipeline allows scheduling **multiple successive interviews** for the same candidate on a mission. This reflects the real selection process which may include technical, HR, then client interviews.
+
 #### Scheduling an Interview
 
-1. Expand the candidate card
-2. Click **"Schedule an interview"**
-3. Fill in the form:
+1. Click the **camera icon** on the candidate card, or **"Schedule an interview"**
+2. Fill in the form:
 
 | Field | Description | Required |
 |-------|-------------|----------|
 | **Title** | Interview title | Yes |
-| **Type** | Client, Partner, Technical, HR | No |
+| **Type** | Client, Partner, Technical, HR | Yes |
 | **Date and time** | Interview moment | Yes |
 | **Duration** | 30 min to 2h | No |
 | **Location** | Address or "Video call" | No |
 | **Meeting link** | Google Meet, Teams URL, etc. | No |
 | **Description** | Additional details | No |
 
-4. Click **"Schedule"**
+3. Click **"Schedule"**
 
-> **Tip**: When an interview is scheduled, the candidate automatically moves to the "Interview scheduled" stage.
+#### Interview Types and Pipeline Impact
+
+| Type | Color | Changes stage? |
+|------|-------|----------------|
+| **Client interview** | Blue | ✅ Yes → "Interview scheduled" |
+| **Partner interview** | Purple | ❌ No |
+| **Technical interview** | Green | ❌ No |
+| **HR interview** | Orange | ❌ No |
+
+> **Important**: Only **"Client"** type interviews automatically move the candidate to the "Interview scheduled" stage. Other interview types (technical, HR, partner) are preparatory steps that don't modify the pipeline stage.
+
+#### Managing Multiple Interviews
+
+From a candidate's interview list, you can:
+- **View all interviews**: Past, scheduled, cancelled
+- **Add a new interview**: "Schedule an interview" button
+- **Mark as completed**: ✓ icon with outcome selection
+- **Cancel**: ✗ icon to cancel a scheduled interview
 
 #### Interview Types
 
@@ -703,6 +755,36 @@ To remove a candidate from the pipeline:
 
 > **Warning**: This action also deletes the history and associated interviews.
 
+### Kanban View at Mission Level
+
+The mission detail page displays a **Kanban board** allowing you to visualize all pipeline candidates for that mission.
+
+#### Kanban Features
+
+- **Columns by stage**: Each column represents a pipeline stage
+- **Candidate cards**: Display name, score, tags, notes, date, interview count
+- **Drag & Drop**: Drag and drop cards between columns to change stage
+- **Counter**: Number of candidates per stage shown in the header
+
+#### Card Actions
+
+| Icon | Action |
+|------|--------|
+| 📹 Camera | Manage interviews |
+| 💬 Bubble | Edit notes |
+| 👁 Eye | View full resume |
+| 🗑 Trash | Remove from pipeline |
+
+#### Adding a Candidate from the Mission
+
+1. Click **"Add candidate"** at the top of the Kanban
+2. Search for a resume in the list
+3. Select the desired resume
+4. Add optional notes
+5. Click **"Add"**
+
+The candidate appears in the "New" column.
+
 ### Best Practices
 
 1. **Document each stage**: Add notes with each stage change
@@ -710,6 +792,7 @@ To remove a candidate from the pipeline:
 3. **Complete interviews**: Mark interviews as completed with an outcome
 4. **Use types**: Categorize your interviews for better tracking
 5. **Connect your calendar**: Avoid double entries and forgotten appointments
+6. **Use the Kanban**: Visualize overall progress on the mission page
 
 ---
 

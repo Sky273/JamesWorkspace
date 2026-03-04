@@ -569,11 +569,24 @@ export default function PipelineTab({ resumeId, resumeName }: PipelineTabProps) 
                                     )}
                                   </div>
                                   {interview.outcome && (
-                                    <div className="mt-2 text-sm">
-                                      <span className="font-medium">{t('pipeline.outcome')}:</span>{' '}
-                                      {interview.outcome}
+                                    <div className="mt-2 text-sm flex items-center gap-2">
+                                      <span className="font-medium">{t('pipeline.outcome')}:</span>
+                                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                                        interview.outcome === 'positive' 
+                                          ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300'
+                                          : interview.outcome === 'negative'
+                                          ? 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300'
+                                          : interview.outcome === 'neutral'
+                                          ? 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                                          : 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300'
+                                      }`}>
+                                        {interview.outcome === 'positive' && '✓ '}
+                                        {interview.outcome === 'negative' && '✗ '}
+                                        {interview.outcome === 'to_follow_up' && '→ '}
+                                        {t(`pipeline.outcomes.${interview.outcome === 'to_follow_up' ? 'toFollowUp' : interview.outcome}`)}
+                                      </span>
                                       {interview.outcome_notes && (
-                                        <span className="text-gray-500"> - {interview.outcome_notes}</span>
+                                        <span className="text-gray-500 dark:text-gray-400 italic">- {interview.outcome_notes}</span>
                                       )}
                                     </div>
                                   )}

@@ -444,6 +444,36 @@ La page Missions affiche toutes vos opportunités avec :
 - Date de création
 - Actions (voir, modifier, supprimer)
 
+### Page de Détail d'une Mission
+
+En cliquant sur une mission, vous accédez à sa page de détail qui comprend :
+
+#### Informations de la Mission
+- **Titre et client** : En-tête avec les informations principales
+- **Description** : Contenu détaillé de l'offre
+- **Mots-clés extraits** : Compétences techniques, outils, secteurs, soft skills
+
+#### Pipeline Kanban Intégré
+
+Sous la description, un **tableau Kanban** affiche tous les candidats en cours de sélection pour cette mission :
+
+| Fonctionnalité | Description |
+|----------------|-------------|
+| **Colonnes** | Une colonne par étape du pipeline (Nouveau, Présélection, Soumis, Entretien, etc.) |
+| **Cartes candidats** | Nom, score, tags, notes, date, nombre d'entretiens |
+| **Drag & Drop** | Glissez une carte vers une autre colonne pour changer l'étape |
+| **Compteur** | Nombre de candidats par étape |
+
+#### Actions sur le Kanban
+
+- **Ajouter un candidat** : Bouton en haut pour rechercher et ajouter un CV au pipeline
+- **Gérer les entretiens** : Icône caméra pour planifier/voir les entretiens
+- **Modifier les notes** : Icône bulle pour ajouter des commentaires
+- **Voir le CV** : Icône œil pour accéder à la fiche complète
+- **Retirer** : Icône corbeille pour supprimer du pipeline
+
+> **Astuce** : Le Kanban permet de visualiser rapidement l'avancement de tous les candidats pour une mission et de gérer le processus de sélection sans quitter la page.
+
 ---
 
 ## Matching Profils
@@ -576,15 +606,19 @@ Si vous modifiez la description d'une mission, cliquez sur le bouton **"Actualis
 Le **Pipeline de Sélection** est une fonctionnalité permettant de gérer le processus de sélection des candidats pour vos missions. Il s'agit d'un outil de suivi qui vous permet de :
 
 - **Suivre l'avancement** de chaque candidat dans le processus de sélection
-- **Planifier des entretiens** avec les clients ou partenaires
+- **Planifier plusieurs entretiens** successifs avec les clients ou partenaires
 - **Historiser les étapes** franchies par chaque candidat
 - **Centraliser les notes** et commentaires sur chaque candidature
+- **Visualiser le pipeline** sous forme de tableau Kanban au niveau mission
 
 > **Note** : Ce pipeline est conçu pour la sélection de profils (indépendants, salariés de partenaires) pour des missions client, pas pour le recrutement interne.
 
 ### Accéder au Pipeline
 
-Le pipeline est accessible depuis l'onglet **"Sélection"** sur la page d'analyse de chaque CV.
+Le pipeline est accessible de deux façons :
+
+1. **Depuis un CV** : Onglet **"Sélection"** sur la page d'analyse ou d'amélioration du CV
+2. **Depuis une Mission** : Vue Kanban intégrée sur la page de détail de chaque mission
 
 ### Étapes du Pipeline
 
@@ -628,32 +662,43 @@ Les notes permettent de documenter le suivi :
 
 ### Planification d'Entretiens
 
+Le pipeline permet de planifier **plusieurs entretiens successifs** pour un même candidat sur une mission. Cela reflète le processus réel de sélection qui peut inclure des entretiens techniques, RH, puis client.
+
 #### Planifier un Entretien
 
-1. Développez la carte du candidat
-2. Cliquez sur **"Planifier un entretien"**
-3. Remplissez le formulaire :
+1. Cliquez sur l'icône **caméra** sur la carte du candidat, ou sur **"Planifier un entretien"**
+2. Remplissez le formulaire :
 
 | Champ | Description | Obligatoire |
 |-------|-------------|-------------|
 | **Titre** | Intitulé de l'entretien | Oui |
-| **Type** | Client, Partenaire, Technique, RH | Non |
+| **Type** | Client, Partenaire, Technique, RH | Oui |
 | **Date et heure** | Moment de l'entretien | Oui |
 | **Durée** | 30 min à 2h | Non |
 | **Lieu** | Adresse ou "Visio" | Non |
 | **Lien de réunion** | URL Google Meet, Teams, etc. | Non |
 | **Description** | Détails supplémentaires | Non |
 
-4. Cliquez sur **"Planifier"**
+3. Cliquez sur **"Planifier"**
 
-> **Astuce** : Lorsqu'un entretien est planifié, le candidat passe automatiquement à l'étape "Entretien planifié".
+#### Types d'Entretiens et Impact sur le Pipeline
 
-#### Types d'Entretiens
+| Type | Couleur | Change l'étape ? |
+|------|---------|------------------|
+| **Entretien client** | Bleu | ✅ Oui → "Entretien planifié" |
+| **Entretien partenaire** | Violet | ❌ Non |
+| **Entretien technique** | Vert | ❌ Non |
+| **Entretien RH** | Orange | ❌ Non |
 
-- **Entretien client** : Avec le client final
-- **Entretien partenaire** : Avec une entreprise partenaire
-- **Entretien technique** : Évaluation des compétences techniques
-- **Entretien RH** : Entretien de validation RH
+> **Important** : Seul l'entretien de type **"Client"** fait automatiquement passer le candidat à l'étape "Entretien planifié". Les autres types d'entretiens (technique, RH, partenaire) sont des étapes préparatoires qui ne modifient pas l'étape du pipeline.
+
+#### Gérer les Entretiens Multiples
+
+Depuis la liste des entretiens d'un candidat, vous pouvez :
+- **Voir tous les entretiens** : Passés, planifiés, annulés
+- **Ajouter un nouvel entretien** : Bouton "Planifier un entretien"
+- **Marquer comme terminé** : Icône ✓ avec sélection du résultat
+- **Annuler** : Icône ✗ pour annuler un entretien planifié
 
 #### Terminer un Entretien
 
@@ -703,6 +748,36 @@ Pour retirer un candidat du pipeline :
 
 > **Attention** : Cette action supprime également l'historique et les entretiens associés.
 
+### Vue Kanban au Niveau Mission
+
+La page de détail d'une mission affiche un **tableau Kanban** permettant de visualiser tous les candidats du pipeline pour cette mission.
+
+#### Fonctionnalités du Kanban
+
+- **Colonnes par étape** : Chaque colonne représente une étape du pipeline
+- **Cartes candidats** : Affichent nom, score, tags, notes, date, nombre d'entretiens
+- **Drag & Drop** : Glissez-déposez les cartes entre colonnes pour changer l'étape
+- **Compteur** : Nombre de candidats par étape affiché dans l'en-tête
+
+#### Actions sur les Cartes
+
+| Icône | Action |
+|-------|--------|
+| 📹 Caméra | Gérer les entretiens |
+| 💬 Bulle | Modifier les notes |
+| 👁 Œil | Voir le CV complet |
+| 🗑 Corbeille | Retirer du pipeline |
+
+#### Ajouter un Candidat depuis la Mission
+
+1. Cliquez sur **"Ajouter un candidat"** en haut du Kanban
+2. Recherchez un CV dans la liste
+3. Sélectionnez le CV souhaité
+4. Ajoutez des notes optionnelles
+5. Cliquez sur **"Ajouter"**
+
+Le candidat apparaît dans la colonne "Nouveau".
+
 ### Bonnes Pratiques
 
 1. **Documentez chaque étape** : Ajoutez des notes à chaque changement d'étape
@@ -710,6 +785,7 @@ Pour retirer un candidat du pipeline :
 3. **Terminez les entretiens** : Marquez les entretiens comme terminés avec un résultat
 4. **Utilisez les types** : Catégorisez vos entretiens pour un meilleur suivi
 5. **Connectez votre calendrier** : Évitez les doubles saisies et les oublis
+6. **Utilisez le Kanban** : Visualisez l'avancement global sur la page mission
 
 ---
 

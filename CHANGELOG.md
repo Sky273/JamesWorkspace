@@ -1,3 +1,34 @@
+## v1.7.6 - 2026-03-04
+### 📊 Pipeline Kanban & Entretiens Multiples
+
+#### Vue Kanban au Niveau Mission
+- **Nouveau** : Tableau Kanban intégré sur la page de détail de chaque mission
+- **Colonnes par étape** : Visualisation des candidats par étape du pipeline
+- **Drag & Drop** : Glisser-déposer pour changer l'étape d'un candidat
+- **Cartes candidats** : Affichent nom, score, tags, notes, date, nombre d'entretiens
+- **Ajout direct** : Ajouter des CVs au pipeline depuis la page mission
+
+#### Gestion des Entretiens Multiples
+- **Entretiens successifs** : Possibilité de planifier plusieurs entretiens pour un même candidat
+- **Types d'entretiens** : Client (bleu), Partenaire (violet), Technique (vert), RH (orange)
+- **Impact différencié** : Seul l'entretien "Client" fait passer à l'étape "Entretien planifié"
+- **Liste des entretiens** : Modal affichant tous les entretiens (passés, planifiés, annulés)
+- **Actions rapides** : Marquer comme terminé ou annuler depuis la liste
+
+#### Onglet Sélection Étendu
+- **Page Amélioration** : L'onglet "Sélection" est maintenant disponible sur la page d'amélioration du CV
+- **Accès unifié** : Pipeline accessible depuis l'analyse ET l'amélioration
+
+#### Corrections
+- **Requête SQL** : Correction de la colonne `global_score` → `global_rating` dans le service pipeline
+- **Google SSO** : Prompt OAuth changé de 'select_account' à 'consent' pour garantir le refresh token
+
+#### Documentation
+- **Guide utilisateur FR/EN** : Mise à jour de la section Pipeline de Sélection
+- **Nouvelles sections** : Vue Kanban, Entretiens multiples, Types d'entretiens
+
+---
+
 ## v1.7.5 - 2026-03-01
 ### 📋 Journal d'Audit RGPD
 
