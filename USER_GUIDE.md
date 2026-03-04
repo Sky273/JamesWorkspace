@@ -1200,11 +1200,93 @@ Un template peut être défini comme **"Par défaut"** pour être pré-sélectio
 
 ### Gestion des Modèles de CV
 
-Les modèles définissent la structure et le style des CV exportés.
+Les modèles définissent la structure et le style des CV exportés en PDF. Chaque modèle contient un en-tête, un corps et un pied de page, ainsi qu'une feuille de style CSS.
 
-1. Accédez à **"Modèles de CV"**
-2. Créez ou modifiez un modèle avec l'éditeur HTML/CSS
-3. Définissez un modèle par défaut
+#### Accéder aux Modèles
+
+1. Accédez à **"Modèles de CV"** dans le menu principal
+2. Visualisez la liste des modèles disponibles avec leur aperçu
+3. Utilisez la recherche pour filtrer les modèles
+
+#### Créer un Modèle Manuellement
+
+1. Cliquez sur **"Nouveau modèle"**
+2. Remplissez le formulaire :
+
+| Champ | Description |
+|-------|-------------|
+| **Nom** | Nom du modèle (ex: "Template Corporate Bleu") |
+| **Description** | Description du style et de l'usage |
+| **En-tête** | HTML de l'en-tête (logo, nom du cabinet) |
+| **Corps** | HTML du corps avec les placeholders |
+| **Pied de page** | HTML du pied de page (pagination, mentions) |
+| **Feuille de style** | CSS pour le style visuel |
+
+3. Utilisez l'éditeur visuel TinyMCE pour chaque section
+4. Cliquez sur **"Enregistrer"**
+
+#### Placeholders Obligatoires
+
+Le corps du modèle doit contenir ces 3 placeholders qui seront remplacés automatiquement :
+
+| Placeholder | Description |
+|-------------|-------------|
+| `-name-` | Nom complet du candidat |
+| `-title-` | Titre ou poste du candidat |
+| `-content-` | Contenu complet du CV (expériences, compétences, etc.) |
+
+**Exemple de corps minimal** :
+```html
+<div class="cv-container">
+  <h1 class="candidate-name">-name-</h1>
+  <h2 class="candidate-title">-title-</h2>
+  <div class="cv-content">-content-</div>
+</div>
+```
+
+#### Extraire un Modèle depuis un CV Existant (IA)
+
+Cette fonctionnalité permet de créer automatiquement un modèle à partir d'un CV existant en analysant sa structure visuelle avec l'IA.
+
+**Comment ça marche :**
+
+1. Sur la page **"Modèles de CV"**, cliquez sur le bouton violet **"Extraire"** (icône étincelles)
+2. Une fenêtre modale s'ouvre
+3. **Glissez-déposez** un CV au format PDF ou DOCX, ou cliquez pour sélectionner un fichier
+4. Cliquez sur **"Extraire le modèle"**
+5. L'IA analyse le CV et extrait :
+   - La structure de l'en-tête (logo, coordonnées du cabinet)
+   - Le style visuel (couleurs, polices, mise en page)
+   - La structure du pied de page
+   - La feuille de style CSS
+6. Un **aperçu** du modèle extrait s'affiche
+7. Cliquez sur **"Créer le modèle"** pour ouvrir l'éditeur pré-rempli
+8. Ajustez le modèle si nécessaire et enregistrez
+
+**Points importants :**
+- L'IA extrait uniquement la **structure visuelle**, pas le contenu du CV
+- Les informations personnelles du candidat sont remplacées par les placeholders `-name-`, `-title-`, `-content-`
+- Les images/logos sont remplacés par des placeholders texte `[LOGO CABINET]`
+- Le modèle IA utilisé est celui configuré dans les paramètres système
+- Vérifiez et ajustez toujours le résultat avant de l'enregistrer
+
+**Formats supportés :** PDF, DOCX (max 10 Mo)
+
+#### Modifier un Modèle
+
+1. Cliquez sur l'icône **crayon** sur la carte du modèle
+2. Modifiez les sections souhaitées
+3. Cliquez sur **"Enregistrer"**
+
+#### Supprimer un Modèle
+
+1. Cliquez sur l'icône **corbeille** sur la carte du modèle
+2. Confirmez la suppression
+
+#### Prévisualiser un Modèle
+
+1. Cliquez sur l'icône **œil** sur la carte du modèle
+2. Un aperçu du modèle s'affiche avec les placeholders visibles
 
 ### Paramètres Système
 

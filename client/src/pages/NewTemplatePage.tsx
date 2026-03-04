@@ -65,6 +65,41 @@ const NewTemplatePage = (): JSX.Element => {
 
   useEffect(() => {
     const fetchTemplate = async (): Promise<void> => {
+      // Check if we have an extracted template from sessionStorage
+      const extractedTemplateJson = sessionStorage.getItem('extractedTemplate');
+      if (extractedTemplateJson && !id) {
+        try {
+          const extractedTemplate = JSON.parse(extractedTemplateJson);
+          const newFormData = {
+            name: extractedTemplate.name || '',
+            description: extractedTemplate.description || '',
+            headerContent: extractedTemplate.headerContent || '',
+            templateContent: extractedTemplate.templateContent || '',
+            footerContent: extractedTemplate.footerContent || '',
+            footerHeight: extractedTemplate.footerHeight || 25,
+            stylesheet: extractedTemplate.stylesheet || '',
+            status: 'Active',
+            popular: false,
+            tags: extractedTemplate.tags || []
+          };
+          setFormData(newFormData);
+          // Store initial content for editors
+          initialContentRef.current = {
+            header: newFormData.headerContent,
+            body: newFormData.templateContent,
+            footer: newFormData.footerContent
+          };
+          // Clear sessionStorage after loading
+          sessionStorage.removeItem('extractedTemplate');
+          toast.success(t('templates.extract.templateLoaded'));
+          setDataReady(true);
+          return;
+        } catch (parseError) {
+          logger.error('Error parsing extracted template:', parseError);
+          sessionStorage.removeItem('extractedTemplate');
+        }
+      }
+
       if (!id) {
         // New template - data is ready immediately
         setDataReady(true);

@@ -559,7 +559,37 @@
         "load": "Échec du chargement du modèle"
       }
     },
-    "selectTemplate": "Sélectionner un modèle"
+    "selectTemplate": "Sélectionner un modèle",
+    "extract": {
+      "title": "Extraire depuis un CV",
+      "subtitle": "Créez automatiquement un modèle à partir d'un CV existant",
+      "buttonShort": "Extraire",
+      "dragDrop": "Glissez-déposez un CV ici ou cliquez pour sélectionner",
+      "dropHere": "Déposez le fichier ici...",
+      "supportedFormats": "Formats supportés : PDF, DOCX (max 10 Mo)",
+      "clickToChange": "Cliquez pour changer de fichier",
+      "howItWorks": "Comment ça fonctionne ?",
+      "step1": "Chargez un CV au format PDF ou Word",
+      "step2": "L'IA analyse la structure et le style du document",
+      "step3": "Un modèle réutilisable est généré automatiquement",
+      "step4": "Personnalisez le modèle avant de l'enregistrer",
+      "analyzing": "Analyse du CV en cours...",
+      "pleaseWait": "L'IA extrait la structure et les styles du document",
+      "extractButton": "Extraire le modèle",
+      "extractionComplete": "Extraction terminée !",
+      "usedModel": "Modèle IA utilisé",
+      "preview": "Aperçu du modèle",
+      "reviewNote": "Vérifiez et ajustez le modèle extrait avant de l'enregistrer. L'IA peut nécessiter des corrections manuelles.",
+      "createTemplate": "Créer le modèle",
+      "templateLoaded": "Modèle extrait chargé dans l'éditeur",
+      "success": "Modèle extrait avec succès !",
+      "error": "Erreur lors de l'extraction du modèle",
+      "errorTitle": "Échec de l'extraction",
+      "tryAgain": "Réessayer",
+      "extractedColors": "Couleurs extraites",
+      "extractedFonts": "Polices extraites",
+      "extractionMethod": "Méthode d'extraction"
+    }
   },
   "processing": {
     "steps": {
@@ -1730,8 +1760,8 @@
     "location": "Lieu",
     "locationPlaceholder": "Ex: Bureau Paris, Visio...",
     "meetingLink": "Lien de réunion",
-    "description": "Description",
-    "descriptionPlaceholder": "Détails supplémentaires sur l'entretien...",
+    "interviewDescription": "Description",
+    "interviewDescriptionPlaceholder": "Détails supplémentaires sur l'entretien...",
     "schedule": "Planifier",
     "joinMeeting": "Rejoindre",
     "outcome": "Résultat",

@@ -1071,11 +1071,93 @@ The assistant is designed to answer questions about **ResumeConverter** only. It
 
 ### Resume Template Management
 
-Templates define the structure and style of exported resumes.
+Templates define the structure and style of exported PDF resumes. Each template contains a header, body, and footer, along with a CSS stylesheet.
 
-1. Go to **"Resume Templates"**
-2. Create or edit a template with the HTML/CSS editor
-3. Set a default template
+#### Accessing Templates
+
+1. Go to **"Resume Templates"** in the main menu
+2. View the list of available templates with their preview
+3. Use the search to filter templates
+
+#### Creating a Template Manually
+
+1. Click **"New Template"**
+2. Fill in the form:
+
+| Field | Description |
+|-------|-------------|
+| **Name** | Template name (e.g., "Corporate Blue Template") |
+| **Description** | Description of the style and usage |
+| **Header** | HTML for the header (logo, company name) |
+| **Body** | HTML for the body with placeholders |
+| **Footer** | HTML for the footer (pagination, legal mentions) |
+| **Stylesheet** | CSS for visual styling |
+
+3. Use the TinyMCE visual editor for each section
+4. Click **"Save"**
+
+#### Required Placeholders
+
+The template body must contain these 3 placeholders that will be automatically replaced:
+
+| Placeholder | Description |
+|-------------|-------------|
+| `-name-` | Candidate's full name |
+| `-title-` | Candidate's title or position |
+| `-content-` | Full CV content (experience, skills, etc.) |
+
+**Minimal body example**:
+```html
+<div class="cv-container">
+  <h1 class="candidate-name">-name-</h1>
+  <h2 class="candidate-title">-title-</h2>
+  <div class="cv-content">-content-</div>
+</div>
+```
+
+#### Extract a Template from an Existing CV (AI)
+
+This feature allows you to automatically create a template from an existing CV by analyzing its visual structure with AI.
+
+**How it works:**
+
+1. On the **"Resume Templates"** page, click the purple **"Extract"** button (sparkles icon)
+2. A modal window opens
+3. **Drag and drop** a CV in PDF or DOCX format, or click to select a file
+4. Click **"Extract Template"**
+5. The AI analyzes the CV and extracts:
+   - Header structure (logo, company contact info)
+   - Visual style (colors, fonts, layout)
+   - Footer structure
+   - CSS stylesheet
+6. A **preview** of the extracted template is displayed
+7. Click **"Create Template"** to open the pre-filled editor
+8. Adjust the template if needed and save
+
+**Important notes:**
+- The AI extracts only the **visual structure**, not the CV content
+- Candidate's personal information is replaced with placeholders `-name-`, `-title-`, `-content-`
+- Images/logos are replaced with text placeholders `[COMPANY LOGO]`
+- The AI model used is the one configured in system settings
+- Always review and adjust the result before saving
+
+**Supported formats:** PDF, DOCX (max 10 MB)
+
+#### Editing a Template
+
+1. Click the **pencil** icon on the template card
+2. Edit the desired sections
+3. Click **"Save"**
+
+#### Deleting a Template
+
+1. Click the **trash** icon on the template card
+2. Confirm the deletion
+
+#### Previewing a Template
+
+1. Click the **eye** icon on the template card
+2. A preview of the template is displayed with visible placeholders
 
 ### System Settings
 

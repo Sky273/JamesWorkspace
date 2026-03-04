@@ -116,6 +116,32 @@ const sanitizeTemplateData = (data: TemplateData): SanitizedTemplateData => {
     ) as SanitizedTemplateData;
 };
 
+export interface ExtractedTemplate {
+    name: string;
+    description: string;
+    headerContent: string;
+    templateContent: string;
+    footerContent: string;
+    stylesheet: string;
+    footerHeight: number;
+    tags: string[];
+    extractedColors?: string[];
+    extractedFonts?: string[];
+    layoutDescription?: string;
+}
+
+export interface ExtractTemplateResponse {
+    success: boolean;
+    template: ExtractedTemplate;
+    model: string;
+    extractionMethod?: string;
+    usage?: {
+        prompt_tokens: number;
+        completion_tokens: number;
+        total_tokens: number;
+    };
+}
+
 export const templateService = {
     // Get only active templates (for export/selection purposes)
     async getAllTemplates(): Promise<Template[]> {
@@ -243,6 +269,35 @@ export const templateService = {
             return await response.json();
         } catch (error) {
             logger.error('Error deleting template:', error);
+            throw error;
+        }
+    },
+
+    async extractFromCV(file: File): Promise<ExtractTemplateResponse> {
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const authOptions = await createAuthOptionsWithCsrf({
+                method: 'POST',
+                body: formData
+            });
+            
+            // Remove Content-Type header to let browser set it with boundary for multipart
+            if (authOptions.headers && 'Content-Type' in authOptions.headers) {
+                delete (authOptions.headers as Record<string, string>)['Content-Type'];
+            }
+
+            const response = await fetchWithAuth('/api/templates/extract-from-cv', authOptions);
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || errorData.message || 'Failed to extract template from CV');
+            }
+            
+            return await response.json();
+        } catch (error) {
+            logger.error('Error extracting template from CV:', error);
             throw error;
         }
     }

@@ -123,7 +123,7 @@ async function callOpenAI(messages, model, options) {
                 'Authorization': `Bearer ${OPENAI_API_KEY}`,
                 'Content-Type': 'application/json'
             },
-            timeout: 120000 // Increase timeout for large context
+            timeout: 300000 // 5 minutes timeout for large context
         }
     );
 
@@ -209,7 +209,7 @@ async function callAnthropic(messages, model, options) {
                 'anthropic-version': '2023-06-01',
                 'Content-Type': 'application/json'
             },
-            timeout: 60000
+            timeout: 300000 // 5 minutes timeout
         }
     );
 
@@ -224,6 +224,158 @@ async function callAnthropic(messages, model, options) {
         content: response.data.content[0].text,
         model: model, // Use configured model, not the one returned by API
         actualModel: response.data.model, // Keep actual model for debugging
+        usage: response.data.usage
+    };
+}
+
+/**
+ * Call LLM with vision capabilities (image analysis)
+ * Supports OpenAI GPT-4o/GPT-4-vision and Anthropic Claude 3
+ * @param {string} systemPrompt - System prompt for the model
+ * @param {Array} userContent - Array of content objects (text and image_url)
+ * @param {Object} options - Optional parameters
+ * @returns {Promise<Object>} - LLM response
+ */
+export async function callLLMWithVision(systemPrompt, userContent, options = {}) {
+    try {
+        const settings = await getLLMSettings();
+        const model = settings.llmModel || 'gpt-4o';
+        const provider = settings.llmProvider || 'openai';
+
+        safeLog('info', 'Calling LLM with vision', {
+            model,
+            provider,
+            contentItems: userContent.length,
+            hasImages: userContent.some(c => c.type === 'image_url')
+        });
+
+        if (provider === 'anthropic') {
+            return await callAnthropicWithVision(systemPrompt, userContent, model, options);
+        } else {
+            return await callOpenAIWithVision(systemPrompt, userContent, model, options);
+        }
+    } catch (error) {
+        safeLog('error', 'LLM vision call failed', {
+            error: error.message,
+            stack: error.stack
+        });
+        throw error;
+    }
+}
+
+/**
+ * Call OpenAI API with vision (GPT-4o, GPT-4-vision)
+ */
+async function callOpenAIWithVision(systemPrompt, userContent, model, options) {
+    if (!OPENAI_API_KEY) {
+        throw new Error('OpenAI API key not configured');
+    }
+
+    // Ensure we use a vision-capable model
+    const visionModel = model.includes('gpt-4') ? model : 'gpt-4o';
+
+    const messages = [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userContent }
+    ];
+
+    const requestBody = {
+        model: visionModel,
+        messages,
+        ...getTokenParameter(visionModel, options.max_tokens || 4000)
+    };
+
+    if (options.temperature !== undefined && supportsCustomTemperature(visionModel)) {
+        requestBody.temperature = options.temperature;
+    }
+
+    const response = await axios.post(
+        'https://api.openai.com/v1/chat/completions',
+        requestBody,
+        {
+            headers: {
+                'Authorization': `Bearer ${OPENAI_API_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            timeout: 600000 // 10 minutes timeout for vision (large images)
+        }
+    );
+
+    const usage = response.data.usage || {};
+    metrics.trackLLMRequest(visionModel, usage.total_tokens || 0, true, usage.prompt_tokens || 0, usage.completion_tokens || 0);
+
+    const content = response.data.choices?.[0]?.message?.content;
+    if (!content) {
+        throw new Error('OpenAI vision returned empty content');
+    }
+
+    return {
+        content,
+        model: visionModel,
+        actualModel: response.data.model,
+        usage: response.data.usage
+    };
+}
+
+/**
+ * Call Anthropic API with vision (Claude 3)
+ */
+async function callAnthropicWithVision(systemPrompt, userContent, model, options) {
+    if (!ANTHROPIC_API_KEY) {
+        throw new Error('Anthropic API key not configured');
+    }
+
+    // Convert OpenAI format to Anthropic format
+    const anthropicContent = userContent.map(item => {
+        if (item.type === 'image_url') {
+            // Extract base64 data from data URL
+            const dataUrl = item.image_url.url;
+            const matches = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+            if (matches) {
+                return {
+                    type: 'image',
+                    source: {
+                        type: 'base64',
+                        media_type: matches[1],
+                        data: matches[2]
+                    }
+                };
+            }
+        }
+        return { type: 'text', text: item.text || item.content || '' };
+    });
+
+    const requestBody = {
+        model,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: anthropicContent }],
+        max_tokens: options.max_tokens || 4000
+    };
+
+    if (options.temperature !== undefined) {
+        requestBody.temperature = options.temperature;
+    }
+
+    const response = await axios.post(
+        'https://api.anthropic.com/v1/messages',
+        requestBody,
+        {
+            headers: {
+                'x-api-key': ANTHROPIC_API_KEY,
+                'anthropic-version': '2023-06-01',
+                'Content-Type': 'application/json'
+            },
+            timeout: 600000 // 10 minutes timeout for vision
+        }
+    );
+
+    const usage = response.data.usage || {};
+    metrics.trackLLMRequest(model, (usage.input_tokens || 0) + (usage.output_tokens || 0), true, usage.input_tokens || 0, usage.output_tokens || 0);
+
+    return {
+        content: response.data.content[0].text,
+        model,
+        actualModel: response.data.model,
         usage: response.data.usage
     };
 }

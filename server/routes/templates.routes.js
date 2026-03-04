@@ -1,4 +1,5 @@
 import express from 'express';
+import multer from 'multer';
 import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
 import { validateBody, validateParams, createTemplateSchema } from '../utils/validation.js';
 import { templatesCache } from '../services/cache.service.js';
@@ -10,6 +11,22 @@ import {
     updateWithTimeout, 
     destroyWithTimeout 
 } from '../utils/postgresHelpers.js';
+import { extractTemplateFromHTML, extractTemplateFromImage, extractTemplateFromCV } from '../services/templateExtraction.service.js';
+import puppeteer from 'puppeteer';
+
+// Configure multer for file uploads (memory storage for template extraction)
+const upload = multer({ 
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max
+    fileFilter: (req, file, cb) => {
+        const allowedTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/msword'];
+        if (allowedTypes.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Invalid file type. Only PDF and Word documents are allowed.'), false);
+        }
+    }
+});
 
 const router = express.Router();
 
@@ -264,6 +281,527 @@ router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), async 
         });
     }
 });
+
+// POST /api/templates/extract-from-cv - Extract template from uploaded CV
+// Supports DOCX (HTML + images extraction) and PDF (vision-based extraction)
+router.post('/extract-from-cv', authenticateToken, requireAdmin, upload.single('file'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'No file uploaded' });
+        }
+
+        const { buffer, originalname, mimetype } = req.file;
+        let result;
+        
+        safeLog('info', 'Starting template extraction', { 
+            fileName: originalname,
+            mimetype,
+            fileSize: buffer.length,
+            userId: req.user?.id
+        });
+
+        if (mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+            // DOCX: Extract HTML with styles and images
+            result = await extractFromDOCX(buffer, originalname);
+        } else if (mimetype === 'application/pdf') {
+            // PDF: Convert to image and use vision analysis
+            result = await extractFromPDF(buffer, originalname);
+        } else if (mimetype === 'application/msword') {
+            return res.status(400).json({ error: 'Old .doc format is not supported. Please convert to .docx or PDF.' });
+        } else {
+            return res.status(400).json({ error: 'Unsupported file type.' });
+        }
+
+        res.json({
+            success: true,
+            template: result.template,
+            model: result.model,
+            usage: result.usage,
+            extractionMethod: result.extractionMethod
+        });
+
+    } catch (error) {
+        safeLog('error', 'Template extraction failed', { 
+            error: error.message,
+            stack: error.stack
+        });
+        return res.status(500).json({ 
+            error: 'Failed to extract template from CV',
+            message: error.message 
+        });
+    }
+});
+
+/**
+ * Extract template from DOCX file using HTML conversion with images
+ * Also extracts styles from word/styles.xml for colors and fonts
+ */
+async function extractFromDOCX(buffer, fileName) {
+    const mammoth = (await import('mammoth')).default;
+    const JSZip = (await import('jszip')).default;
+    
+    // Collect images during conversion
+    const extractedImages = [];
+    
+    // Try to extract styles from the DOCX (which is a ZIP file)
+    let extractedStyles = { colors: [], fonts: [] };
+    try {
+        safeLog('debug', 'Loading DOCX as ZIP to extract styles');
+        const zip = await JSZip.loadAsync(buffer);
+        const stylesFile = zip.file('word/styles.xml');
+        safeLog('debug', 'Styles file found', { exists: !!stylesFile });
+        
+        if (stylesFile) {
+            const stylesXml = await stylesFile.async('string');
+            safeLog('debug', 'Styles XML loaded', { length: stylesXml?.length });
+            extractedStyles = parseDocxStyles(stylesXml);
+            safeLog('info', 'Extracted styles from DOCX', extractedStyles);
+        }
+    } catch (styleError) {
+        safeLog('warn', 'Could not extract styles from DOCX', { error: styleError.message, stack: styleError.stack });
+    }
+    
+    // Configure mammoth to convert to HTML and extract images as base64
+    // Note: mammoth preserves document structure but not all inline styles
+    // We use includeDefaultStyleMap to keep default mappings and add custom ones
+    const options = {
+        buffer,
+        convertImage: mammoth.images.imgElement(async (image) => {
+            try {
+                safeLog('debug', 'Extracting image from DOCX', { contentType: image.contentType });
+                const imageBuffer = await image.read();
+                const base64 = imageBuffer.toString('base64');
+                const contentType = image.contentType || 'image/png';
+                
+                extractedImages.push({
+                    name: `image_${extractedImages.length + 1}`,
+                    base64,
+                    contentType
+                });
+                
+                safeLog('info', 'Image extracted from DOCX', { 
+                    name: `image_${extractedImages.length}`,
+                    contentType,
+                    sizeKB: Math.round(base64.length / 1024)
+                });
+                
+                // Return inline base64 image with preserved dimensions if available
+                return {
+                    src: `data:${contentType};base64,${base64}`
+                };
+            } catch (imgError) {
+                safeLog('warn', 'Failed to extract image from DOCX', { error: imgError.message });
+                return { src: '' };
+            }
+        }),
+        // Extended style map to preserve more document structure
+        styleMap: [
+            // Headings
+            "p[style-name='Heading 1'] => h1.doc-heading1:fresh",
+            "p[style-name='Heading 2'] => h2.doc-heading2:fresh",
+            "p[style-name='Heading 3'] => h3.doc-heading3:fresh",
+            "p[style-name='Title'] => h1.doc-title:fresh",
+            "p[style-name='Subtitle'] => h2.doc-subtitle:fresh",
+            // Text formatting
+            "b => strong",
+            "i => em",
+            "u => span.underline",
+            "strike => span.strikethrough",
+            // Lists
+            "p[style-name='List Paragraph'] => li:fresh",
+            // Tables - preserve structure
+            "table => table.doc-table",
+            // Special sections that might be header/footer
+            "p[style-name='Header'] => div.doc-header > p:fresh",
+            "p[style-name='Footer'] => div.doc-footer > p:fresh",
+            // Preserve any colored/highlighted text
+            "highlight => span.highlight"
+        ],
+        includeDefaultStyleMap: true
+    };
+    
+    // Convert to HTML
+    const htmlResult = await mammoth.convertToHtml(options);
+    
+    if (!htmlResult.value || htmlResult.value.trim().length < 50) {
+        throw new Error('Could not extract sufficient content from the Word document.');
+    }
+    
+    safeLog('info', 'DOCX converted to HTML', {
+        htmlLength: htmlResult.value.length,
+        imageCount: extractedImages.length,
+        warnings: htmlResult.messages?.length || 0
+    });
+    
+    // Call the HTML-based extraction service with extracted styles info
+    const result = await extractTemplateFromHTML(
+        htmlResult.value, 
+        extractedImages, 
+        fileName,
+        extractedStyles
+    );
+    result.extractionMethod = 'docx-html';
+    
+    // Add extracted styles to result if LLM didn't provide them
+    if (extractedStyles.colors.length > 0 && (!result.template.extractedColors || result.template.extractedColors.length === 0)) {
+        result.template.extractedColors = extractedStyles.colors;
+    }
+    if (extractedStyles.fonts.length > 0 && (!result.template.extractedFonts || result.template.extractedFonts.length === 0)) {
+        result.template.extractedFonts = extractedStyles.fonts;
+    }
+    
+    return result;
+}
+
+/**
+ * Parse DOCX styles.xml to extract colors and fonts
+ */
+function parseDocxStyles(stylesXml) {
+    const colors = new Set();
+    const fonts = new Set();
+    
+    // Extract colors (format: w:val="RRGGBB" or w:color="RRGGBB")
+    const colorRegex = /w:(?:val|color)="([0-9A-Fa-f]{6})"/g;
+    let match;
+    while ((match = colorRegex.exec(stylesXml)) !== null) {
+        const color = match[1].toUpperCase();
+        if (color !== '000000' && color !== 'FFFFFF' && color !== 'AUTO') {
+            colors.add(`#${color}`);
+        }
+    }
+    
+    // Extract fonts (w:ascii="FontName" or w:hAnsi="FontName")
+    const fontRegex = /w:(?:ascii|hAnsi|cs)="([^"]+)"/g;
+    while ((match = fontRegex.exec(stylesXml)) !== null) {
+        const font = match[1];
+        if (!['Times New Roman', 'Arial', 'Calibri'].includes(font)) {
+            fonts.add(font);
+        }
+    }
+    
+    return {
+        colors: Array.from(colors).slice(0, 10),
+        fonts: Array.from(fonts).slice(0, 5)
+    };
+}
+
+/**
+ * Extract images from PDF using pdf-lib
+ * pdf-lib provides direct access to embedded images in the PDF
+ */
+async function extractImagesFromPDF(buffer) {
+    const extractedImages = [];
+    
+    try {
+        const { PDFDocument } = await import('pdf-lib');
+        
+        // Load the PDF document
+        const pdfDoc = await PDFDocument.load(buffer);
+        const pages = pdfDoc.getPages();
+        
+        safeLog('info', 'Extracting images from PDF', { numPages: pages.length });
+        
+        // Get all embedded images from the PDF
+        // pdf-lib stores images in the document's XObject dictionary
+        const pdfObjects = pdfDoc.context.indirectObjects;
+        
+        for (const [ref, obj] of pdfObjects) {
+            try {
+                // Check if this is an image XObject
+                if (obj && obj.dict) {
+                    const subtype = obj.dict.get(pdfDoc.context.obj('/Subtype'));
+                    if (subtype && subtype.toString() === '/Image') {
+                        const width = obj.dict.get(pdfDoc.context.obj('/Width'));
+                        const height = obj.dict.get(pdfDoc.context.obj('/Height'));
+                        
+                        if (width && height) {
+                            // Try to get the image stream data
+                            const stream = obj.getContents ? obj.getContents() : null;
+                            
+                            if (stream && stream.length > 100) {
+                                // Check for JPEG signature (FFD8FF)
+                                const isJpeg = stream[0] === 0xFF && stream[1] === 0xD8 && stream[2] === 0xFF;
+                                
+                                if (isJpeg) {
+                                    const base64 = Buffer.from(stream).toString('base64');
+                                    
+                                    extractedImages.push({
+                                        name: `pdf_image_${extractedImages.length + 1}`,
+                                        base64,
+                                        contentType: 'image/jpeg',
+                                        width: width.numberValue || 0,
+                                        height: height.numberValue || 0
+                                    });
+                                    
+                                    safeLog('info', 'Extracted JPEG image from PDF', {
+                                        name: `pdf_image_${extractedImages.length}`,
+                                        width: width.numberValue,
+                                        height: height.numberValue,
+                                        sizeKB: Math.round(base64.length / 1024)
+                                    });
+                                }
+                                // Check for PNG signature (89504E47)
+                                else if (stream[0] === 0x89 && stream[1] === 0x50 && stream[2] === 0x4E && stream[3] === 0x47) {
+                                    const base64 = Buffer.from(stream).toString('base64');
+                                    
+                                    extractedImages.push({
+                                        name: `pdf_image_${extractedImages.length + 1}`,
+                                        base64,
+                                        contentType: 'image/png',
+                                        width: width.numberValue || 0,
+                                        height: height.numberValue || 0
+                                    });
+                                    
+                                    safeLog('info', 'Extracted PNG image from PDF', {
+                                        name: `pdf_image_${extractedImages.length}`,
+                                        width: width.numberValue,
+                                        height: height.numberValue,
+                                        sizeKB: Math.round(base64.length / 1024)
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (objError) {
+                // Skip objects that can't be processed
+                safeLog('debug', 'Could not process PDF object', { error: objError.message });
+            }
+        }
+        
+        // If no images found with pdf-lib, log for debugging
+        if (extractedImages.length === 0) {
+            safeLog('debug', 'No standard images found in PDF, images may be in a different format');
+        }
+        
+    } catch (error) {
+        safeLog('warn', 'PDF image extraction failed', { error: error.message, stack: error.stack?.substring(0, 500) });
+    }
+    
+    return extractedImages;
+}
+
+/**
+ * Extract template from PDF file using vision analysis
+ */
+async function extractFromPDF(buffer, fileName) {
+    let browser = null;
+    
+    try {
+        // First, extract text for context
+        let textContent = '';
+        try {
+            const pdfParse = (await import('pdf-parse')).default;
+            const pdfData = await pdfParse(buffer);
+            textContent = pdfData.text;
+        } catch (textError) {
+            safeLog('warn', 'PDF text extraction failed, continuing with vision only', { error: textError.message });
+        }
+        
+        // Extract images from PDF
+        const extractedImages = await extractImagesFromPDF(buffer);
+        safeLog('info', 'PDF image extraction complete', { imageCount: extractedImages.length });
+        
+        // Convert PDF to image using Puppeteer
+        safeLog('info', 'Converting PDF to image for vision analysis', {
+            bufferSize: buffer.length,
+            fileName
+        });
+        
+        browser = await puppeteer.launch({
+            headless: true,
+            args: [
+                '--no-sandbox', 
+                '--disable-setuid-sandbox', 
+                '--disable-dev-shm-usage',
+                '--disable-web-security',
+                '--allow-file-access-from-files'
+            ]
+        });
+        
+        const page = await browser.newPage();
+        
+        // Listen for console messages from the page
+        page.on('console', msg => {
+            safeLog('debug', `PDF Page Console [${msg.type()}]: ${msg.text()}`);
+        });
+        
+        page.on('pageerror', error => {
+            safeLog('error', 'PDF Page Error', { error: error.message });
+        });
+        
+        // Set viewport for good quality
+        await page.setViewport({ width: 1200, height: 1600, deviceScaleFactor: 2 });
+        
+        // Create a data URL from the PDF buffer
+        const pdfBase64 = buffer.toString('base64');
+        safeLog('debug', 'PDF converted to base64', { base64Length: pdfBase64.length });
+        
+        // Use PDF.js to render the PDF in the browser
+        // Using PDF.js 3.x which has better compatibility with Puppeteer
+        await page.setContent(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body { margin: 0; padding: 0; background: white; }
+                    #canvas { display: block; }
+                    #status { position: absolute; top: 10px; left: 10px; font-family: monospace; font-size: 12px; }
+                </style>
+            </head>
+            <body>
+                <div id="status">Loading PDF.js...</div>
+                <canvas id="canvas"></canvas>
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+                <script>
+                    const statusEl = document.getElementById('status');
+                    
+                    async function renderPDF() {
+                        try {
+                            // Set worker
+                            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                            
+                            statusEl.textContent = 'Decoding PDF data...';
+                            console.log('Starting PDF render...');
+                            
+                            const pdfBase64 = '${pdfBase64}';
+                            const pdfData = atob(pdfBase64);
+                            const pdfArray = new Uint8Array(pdfData.length);
+                            for (let i = 0; i < pdfData.length; i++) {
+                                pdfArray[i] = pdfData.charCodeAt(i);
+                            }
+                            
+                            statusEl.textContent = 'Loading PDF document...';
+                            console.log('PDF data decoded, length:', pdfArray.length);
+                            
+                            const loadingTask = pdfjsLib.getDocument({ data: pdfArray });
+                            const pdf = await loadingTask.promise;
+                            console.log('PDF loaded, pages:', pdf.numPages);
+                            
+                            statusEl.textContent = 'Rendering page 1...';
+                            const pdfPage = await pdf.getPage(1);
+                            
+                            const scale = 2;
+                            const viewport = pdfPage.getViewport({ scale: scale });
+                            
+                            const canvas = document.getElementById('canvas');
+                            const context = canvas.getContext('2d');
+                            canvas.height = viewport.height;
+                            canvas.width = viewport.width;
+                            
+                            console.log('Canvas size:', canvas.width, 'x', canvas.height);
+                            
+                            const renderContext = {
+                                canvasContext: context,
+                                viewport: viewport
+                            };
+                            
+                            await pdfPage.render(renderContext).promise;
+                            
+                            statusEl.style.display = 'none';
+                            console.log('PDF rendered successfully');
+                            window.pdfRendered = true;
+                        } catch (err) {
+                            console.error('PDF render error:', err);
+                            statusEl.textContent = 'Error: ' + (err.message || String(err));
+                            window.pdfError = err.message || String(err);
+                        }
+                    }
+                    
+                    // Wait for PDF.js to load then render
+                    if (typeof pdfjsLib !== 'undefined') {
+                        renderPDF();
+                    } else {
+                        window.pdfError = 'PDF.js library failed to load';
+                    }
+                </script>
+            </body>
+            </html>
+        `, { waitUntil: 'networkidle0', timeout: 60000 });
+        
+        // Wait for PDF to render
+        await page.waitForFunction(() => window.pdfRendered || window.pdfError, { timeout: 120000 }); // 2 minutes timeout
+        
+        // Check for errors
+        const pdfError = await page.evaluate(() => window.pdfError);
+        if (pdfError) {
+            throw new Error(`PDF rendering failed: ${pdfError}`);
+        }
+        
+        // Get canvas dimensions
+        const canvasDimensions = await page.evaluate(() => {
+            const canvas = document.getElementById('canvas');
+            return { width: canvas.width, height: canvas.height };
+        });
+        
+        // Take screenshot of the canvas
+        const canvasElement = await page.$('#canvas');
+        const imageBuffer = await canvasElement.screenshot({ type: 'png' });
+        const imageBase64 = imageBuffer.toString('base64');
+        
+        safeLog('info', 'PDF converted to image', {
+            imageSize: Math.round(imageBase64.length / 1024) + 'KB',
+            dimensions: canvasDimensions
+        });
+        
+        await browser.close();
+        browser = null;
+        
+        // Call the vision-based extraction service with extracted images
+        const result = await extractTemplateFromImage(imageBase64, textContent, fileName, extractedImages);
+        result.extractionMethod = 'pdf-vision';
+        
+        // Add extracted images to result if LLM didn't include them
+        if (extractedImages.length > 0 && result.template) {
+            // Replace logo placeholders with actual images
+            const logoImage = extractedImages[0];
+            const logoBase64 = `data:${logoImage.contentType};base64,${logoImage.base64}`;
+            
+            if (result.template.headerContent) {
+                // Replace various logo placeholder patterns
+                result.template.headerContent = result.template.headerContent
+                    .replace(/<img[^>]*src=['"]logo\.png['"][^>]*>/gi, `<img src="${logoBase64}" alt="Logo" class="template-logo" style="max-height:60px;">`)
+                    .replace(/<img[^>]*src=['"][^'"]*logo[^'"]*['"][^>]*>/gi, `<img src="${logoBase64}" alt="Logo" class="template-logo" style="max-height:60px;">`)
+                    .replace(/\[LOGO\]/gi, `<img src="${logoBase64}" alt="Logo" class="template-logo" style="max-height:60px;">`)
+                    .replace(/-logo-/gi, `<img src="${logoBase64}" alt="Logo" class="template-logo" style="max-height:60px;">`);
+            }
+            
+            if (result.template.templateContent) {
+                result.template.templateContent = result.template.templateContent
+                    .replace(/<img[^>]*src=['"]logo\.png['"][^>]*>/gi, `<img src="${logoBase64}" alt="Logo" class="template-logo" style="max-height:60px;">`)
+                    .replace(/<img[^>]*src=['"][^'"]*logo[^'"]*['"][^>]*>/gi, `<img src="${logoBase64}" alt="Logo" class="template-logo" style="max-height:60px;">`)
+                    .replace(/\[LOGO\]/gi, `<img src="${logoBase64}" alt="Logo" class="template-logo" style="max-height:60px;">`)
+                    .replace(/-logo-/gi, `<img src="${logoBase64}" alt="Logo" class="template-logo" style="max-height:60px;">`);
+            }
+            
+            safeLog('info', 'Replaced logo placeholders with extracted image');
+        }
+        
+        return result;
+        
+    } catch (error) {
+        if (browser) {
+            await browser.close();
+        }
+        safeLog('error', 'PDF vision extraction failed', { error: error.message });
+        
+        // Fallback to text-only extraction
+        safeLog('info', 'Falling back to text-only extraction');
+        try {
+            const pdfParse = (await import('pdf-parse')).default;
+            const pdfData = await pdfParse(buffer);
+            if (pdfData.text && pdfData.text.trim().length > 50) {
+                const result = await extractTemplateFromCV(pdfData.text, fileName);
+                result.extractionMethod = 'pdf-text-fallback';
+                return result;
+            }
+        } catch (fallbackError) {
+            safeLog('error', 'Fallback extraction also failed', { error: fallbackError.message });
+        }
+        
+        throw error;
+    }
+}
 
 // DELETE /api/templates/:id - Delete template
 router.delete('/:id', authenticateToken, requireAdmin, validateParams('id'), async (req, res) => {
