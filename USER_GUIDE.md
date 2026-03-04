@@ -1939,47 +1939,33 @@ R : Oui, l'interface s'adapte aux tablettes et smartphones.
 
 ## Prochaines Étapes
 
-L'application ResumeConverter est en constante évolution. Voici les améliorations prévues pour les prochaines versions :
+L'application ResumeConverter est en constante évolution, et **vous êtes au cœur de cette évolution**.
 
-### Intégration ESCO
+### À Votre Écoute
 
-L'intégration du référentiel **ESCO** (European Skills, Competences, Qualifications and Occupations) est en cours de réflexion. Cette évolution permettra :
+Les prochaines fonctionnalités de l'application seront définies **en fonction de vos besoins et de vos retours**. Nous sommes convaincus que les meilleures améliorations viennent de ceux qui utilisent l'outil au quotidien.
 
-- **Compatibilité France Travail** : Utilisation de compétences alignées avec le référentiel officiel
-- **Standardisation européenne** : Compétences reconnues dans toute l'Union Européenne
-- **Meilleure interopérabilité** : Facilitation des échanges avec les systèmes de recrutement institutionnels
+**Comment participer ?**
 
-### Gestion Avancée des Compétences
+- **Partagez vos idées** : Quelles fonctionnalités vous feraient gagner du temps ?
+- **Signalez les difficultés** : Qu'est-ce qui pourrait être plus simple ou plus intuitif ?
+- **Proposez des évolutions** : Comment l'application pourrait-elle mieux répondre à vos besoins métier ?
 
-Une refonte de la gestion des compétences CV est envisagée pour mieux distinguer :
-
-- **Environnement technique** : Technologies, outils et plateformes maîtrisés (langages, frameworks, logiciels)
-- **Compétences métier** : Savoir-faire et expertises fonctionnelles
-- **Soft skills** : Compétences comportementales et relationnelles
-
-Cette distinction permettra une analyse plus fine et des recommandations plus pertinentes.
-
-### Optimisations Techniques
-
-Des améliorations de performance sont prévues :
-
-- **Chargement server-side** : Optimisation du chargement des données volumineuses
-- **Pagination avancée** : Amélioration de la navigation dans les listes longues
-- **Filtrage performant** : Filtres côté serveur pour une meilleure réactivité
+Chaque suggestion est étudiée avec attention. N'hésitez pas à contacter votre administrateur ou à utiliser l'assistant IA pour transmettre vos idées !
 
 ### Corrections et Améliorations Continues
 
 L'équipe travaille en permanence sur :
 
-- **Correction de bugs** : Résolution des problèmes signalés par les utilisateurs
+- **Correction de bugs** : Résolution rapide des problèmes signalés par les utilisateurs
 - **Amélioration de l'expérience utilisateur** : Interface plus intuitive et fluide
-- **Nouvelles fonctionnalités** : Basées sur les retours utilisateurs
+- **Optimisations de performance** : Application toujours plus réactive
 
 ### Vos Retours Sont Précieux !
 
 Nous encourageons vivement les utilisateurs à partager leurs remarques, critiques et suggestions d'amélioration. Chaque retour contribue à rendre l'application meilleure pour tous.
 
-N'hésitez pas à contacter votre administrateur ou à utiliser l'assistant IA pour transmettre vos idées !
+**Ensemble, construisons l'outil qui vous correspond !**
 
 ---
 

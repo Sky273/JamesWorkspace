@@ -1743,47 +1743,33 @@ A: Yes, the interface adapts to tablets and smartphones.
 
 ## Roadmap
 
-ResumeConverter is constantly evolving. Here are the improvements planned for upcoming versions:
+ResumeConverter is constantly evolving, and **you are at the heart of this evolution**.
 
-### ESCO Integration
+### Listening to You
 
-Integration of the **ESCO** (European Skills, Competences, Qualifications and Occupations) framework is under consideration. This evolution will enable:
+The next features of the application will be defined **based on your needs and feedback**. We believe that the best improvements come from those who use the tool every day.
 
-- **France Travail Compatibility**: Using skills aligned with the official French employment agency framework
-- **European Standardization**: Skills recognized throughout the European Union
-- **Better Interoperability**: Easier exchanges with institutional recruitment systems
+**How to participate?**
 
-### Advanced Skills Management
+- **Share your ideas**: What features would save you time?
+- **Report difficulties**: What could be simpler or more intuitive?
+- **Suggest evolutions**: How could the application better meet your business needs?
 
-A redesign of CV skills management is being considered to better distinguish:
-
-- **Technical Environment**: Technologies, tools and platforms mastered (languages, frameworks, software)
-- **Business Skills**: Functional know-how and expertise
-- **Soft Skills**: Behavioral and interpersonal competencies
-
-This distinction will allow for more refined analysis and more relevant recommendations.
-
-### Technical Optimizations
-
-Performance improvements are planned:
-
-- **Server-side Loading**: Optimization of large data loading
-- **Advanced Pagination**: Improved navigation in long lists
-- **Performant Filtering**: Server-side filters for better responsiveness
+Every suggestion is carefully reviewed. Don't hesitate to contact your administrator or use the AI assistant to share your ideas!
 
 ### Continuous Fixes and Improvements
 
 The team is constantly working on:
 
-- **Bug Fixes**: Resolving issues reported by users
+- **Bug Fixes**: Quick resolution of issues reported by users
 - **User Experience Enhancement**: More intuitive and fluid interface
-- **New Features**: Based on user feedback
+- **Performance Optimizations**: An ever more responsive application
 
 ### Your Feedback is Valuable!
 
 We strongly encourage users to share their comments, criticisms and suggestions for improvement. Every piece of feedback helps make the application better for everyone.
 
-Don't hesitate to contact your administrator or use the AI assistant to share your ideas!
+**Together, let's build the tool that fits your needs!**
 
 ---
 
