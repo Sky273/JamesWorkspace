@@ -236,6 +236,114 @@ export const swaggerPaths = {
             responses: { 200: { description: 'Adaptation created', content: { 'application/json': { schema: { $ref: '#/components/schemas/Adaptation' } } } } }
         }
     },
+    '/resumes/{id}/ai-modify': {
+        post: {
+            tags: ['Resumes'],
+            summary: 'AI-powered resume modification',
+            description: 'Modify specific sections of a resume using AI based on user instructions.',
+            security: [{ cookieAuth: [], csrfToken: [] }],
+            parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+            requestBody: {
+                required: true,
+                content: {
+                    'application/json': {
+                        schema: {
+                            type: 'object',
+                            required: ['instruction'],
+                            properties: {
+                                instruction: { type: 'string', description: 'User instruction for AI modification' },
+                                section: { type: 'string', description: 'Specific section to modify (optional)' },
+                                currentText: { type: 'string', description: 'Current resume text to modify' }
+                            }
+                        }
+                    }
+                }
+            },
+            responses: {
+                200: { description: 'Modified resume text', content: { 'application/json': { schema: { type: 'object', properties: { modifiedText: { type: 'string' }, changes: { type: 'array', items: { type: 'string' } } } } } } },
+                400: { description: 'Instruction required' }
+            }
+        }
+    },
+    '/resumes/analyze': {
+        post: {
+            tags: ['Resumes'],
+            summary: 'Analyze resume text',
+            description: 'Analyze resume text using AI to extract skills, experience, and provide scores.',
+            security: [{ cookieAuth: [], csrfToken: [] }],
+            requestBody: {
+                required: true,
+                content: {
+                    'application/json': {
+                        schema: {
+                            type: 'object',
+                            required: ['text'],
+                            properties: {
+                                text: { type: 'string', description: 'Resume text to analyze' },
+                                resumeId: { type: 'string', format: 'uuid', description: 'Resume ID to update with analysis results' }
+                            }
+                        }
+                    }
+                }
+            },
+            responses: {
+                200: {
+                    description: 'Analysis results',
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    scores: { type: 'object' },
+                                    tags: { type: 'object' },
+                                    summary: { type: 'string' },
+                                    keyImprovements: { type: 'array', items: { type: 'string' } }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    '/resumes/analyze-text': {
+        post: {
+            tags: ['Resumes'],
+            summary: 'Analyze raw text',
+            description: 'Analyze raw text without associating with a resume record.',
+            security: [{ cookieAuth: [], csrfToken: [] }],
+            requestBody: {
+                required: true,
+                content: { 'application/json': { schema: { type: 'object', required: ['text'], properties: { text: { type: 'string' } } } } }
+            },
+            responses: { 200: { description: 'Analysis results' } }
+        }
+    },
+    '/resumes/improve': {
+        post: {
+            tags: ['Resumes'],
+            summary: 'Improve resume text',
+            description: 'Improve resume text using AI to enhance content, formatting, and impact.',
+            security: [{ cookieAuth: [], csrfToken: [] }],
+            requestBody: {
+                required: true,
+                content: {
+                    'application/json': {
+                        schema: {
+                            type: 'object',
+                            required: ['text'],
+                            properties: {
+                                text: { type: 'string', description: 'Resume text to improve' },
+                                resumeId: { type: 'string', format: 'uuid' },
+                                templateId: { type: 'string', format: 'uuid' }
+                            }
+                        }
+                    }
+                }
+            },
+            responses: { 200: { description: 'Improved resume text' } }
+        }
+    },
 
     // ============================================
     // RESUME VERSIONS
@@ -374,9 +482,91 @@ export const swaggerPaths = {
         post: {
             tags: ['Missions'],
             summary: 'Find matching profiles for a mission',
+            description: 'Uses AI to find the best matching resumes for a mission based on skills, experience, and other criteria.',
             security: [{ cookieAuth: [], csrfToken: [] }],
             parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
-            responses: { 200: { description: 'Matching profiles' } }
+            requestBody: {
+                content: {
+                    'application/json': {
+                        schema: {
+                            type: 'object',
+                            properties: {
+                                limit: { type: 'integer', default: 10, description: 'Max profiles to return' },
+                                minScore: { type: 'integer', default: 0, description: 'Minimum match score (0-100)' },
+                                status: { type: 'string', description: 'Filter by resume status' },
+                                weights: { type: 'object', description: 'Custom weights for scoring criteria' }
+                            }
+                        }
+                    }
+                }
+            },
+            responses: {
+                200: {
+                    description: 'Matching profiles with scores',
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    profiles: { type: 'array', items: { type: 'object' } },
+                                    mission: { type: 'object' },
+                                    totalFound: { type: 'integer' }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    '/missions/{missionId}/adaptations': {
+        get: {
+            tags: ['Missions', 'Adaptations'],
+            summary: 'Get adaptations for a mission',
+            security: [{ cookieAuth: [] }],
+            parameters: [{ name: 'missionId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+            responses: {
+                200: { description: 'List of adaptations', content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/Adaptation' } } } } }
+            }
+        }
+    },
+    '/missions/{missionId}/keywords-cache': {
+        delete: {
+            tags: ['Missions'],
+            summary: 'Clear cached keywords for a mission',
+            security: [{ cookieAuth: [], csrfToken: [] }],
+            parameters: [{ name: 'missionId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+            responses: { 200: { description: 'Cache cleared' } }
+        }
+    },
+    '/missions/{missionId}/analyze-profile/{resumeId}': {
+        post: {
+            tags: ['Missions'],
+            summary: 'Detailed LLM analysis of a profile for a mission',
+            description: 'Performs in-depth AI analysis comparing a specific resume against mission requirements.',
+            security: [{ cookieAuth: [], csrfToken: [] }],
+            parameters: [
+                { name: 'missionId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+                { name: 'resumeId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }
+            ],
+            responses: {
+                200: {
+                    description: 'Detailed analysis results',
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    matchScore: { type: 'integer' },
+                                    strengths: { type: 'array', items: { type: 'string' } },
+                                    gaps: { type: 'array', items: { type: 'string' } },
+                                    recommendations: { type: 'array', items: { type: 'string' } }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
 
@@ -1566,6 +1756,693 @@ export const swaggerPaths = {
                 },
                 400: { description: 'Invalid code' },
                 401: { $ref: '#/components/responses/Unauthorized' }
+            }
+        }
+    },
+
+    // ============================================
+    // PIPELINE (Candidate Selection)
+    // ============================================
+    '/pipeline/stages': {
+        get: {
+            tags: ['Pipeline'],
+            summary: 'Get all pipeline stages',
+            description: 'Returns the configured pipeline stages with labels and colors.',
+            security: [{ cookieAuth: [] }],
+            responses: {
+                200: {
+                    description: 'List of stages',
+                    content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/PipelineStage' } } } }
+                }
+            }
+        }
+    },
+    '/pipeline': {
+        post: {
+            tags: ['Pipeline'],
+            summary: 'Add resume to pipeline',
+            description: 'Adds a resume to the selection pipeline, optionally linked to a mission and/or client.',
+            security: [{ cookieAuth: [], csrfToken: [] }],
+            requestBody: {
+                required: true,
+                content: {
+                    'application/json': {
+                        schema: {
+                            type: 'object',
+                            required: ['resumeId'],
+                            properties: {
+                                resumeId: { type: 'string', format: 'uuid' },
+                                missionId: { type: 'string', format: 'uuid' },
+                                clientId: { type: 'string', format: 'uuid' },
+                                stage: { type: 'string', default: 'new' },
+                                notes: { type: 'string' }
+                            }
+                        }
+                    }
+                }
+            },
+            responses: {
+                201: { description: 'Pipeline entry created', content: { 'application/json': { schema: { $ref: '#/components/schemas/PipelineEntry' } } } },
+                400: { description: 'Resume ID required' }
+            }
+        }
+    },
+    '/pipeline/{id}': {
+        get: {
+            tags: ['Pipeline'],
+            summary: 'Get pipeline entry by ID',
+            security: [{ cookieAuth: [] }],
+            parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+            responses: {
+                200: { description: 'Pipeline entry', content: { 'application/json': { schema: { $ref: '#/components/schemas/PipelineEntry' } } } },
+                404: { $ref: '#/components/responses/NotFound' }
+            }
+        },
+        delete: {
+            tags: ['Pipeline'],
+            summary: 'Remove from pipeline',
+            security: [{ cookieAuth: [], csrfToken: [] }],
+            parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+            responses: { 200: { description: 'Removed from pipeline' } }
+        }
+    },
+    '/pipeline/resume/{resumeId}': {
+        get: {
+            tags: ['Pipeline'],
+            summary: 'Get pipeline entries for a resume',
+            description: 'Returns all pipeline entries where this resume is included.',
+            security: [{ cookieAuth: [] }],
+            parameters: [{ name: 'resumeId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+            responses: {
+                200: { description: 'Pipeline entries', content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/PipelineEntry' } } } } }
+            }
+        }
+    },
+    '/pipeline/mission/{missionId}': {
+        get: {
+            tags: ['Pipeline'],
+            summary: 'Get pipeline entries for a mission (Kanban view)',
+            description: 'Returns all candidates in the pipeline for a specific mission, used for Kanban board display.',
+            security: [{ cookieAuth: [] }],
+            parameters: [{ name: 'missionId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+            responses: {
+                200: { description: 'Pipeline entries', content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/PipelineEntry' } } } } }
+            }
+        }
+    },
+    '/pipeline/overview': {
+        get: {
+            tags: ['Pipeline'],
+            summary: 'Get pipeline overview grouped by stage',
+            security: [{ cookieAuth: [] }],
+            parameters: [
+                { name: 'clientId', in: 'query', schema: { type: 'string', format: 'uuid' } },
+                { name: 'missionId', in: 'query', schema: { type: 'string', format: 'uuid' } }
+            ],
+            responses: { 200: { description: 'Pipeline overview by stage' } }
+        }
+    },
+    '/pipeline/stats': {
+        get: {
+            tags: ['Pipeline'],
+            summary: 'Get pipeline statistics',
+            security: [{ cookieAuth: [] }],
+            parameters: [
+                { name: 'missionId', in: 'query', schema: { type: 'string', format: 'uuid' } },
+                { name: 'clientId', in: 'query', schema: { type: 'string', format: 'uuid' } }
+            ],
+            responses: { 200: { description: 'Pipeline statistics' } }
+        }
+    },
+    '/pipeline/{id}/stage': {
+        patch: {
+            tags: ['Pipeline'],
+            summary: 'Move candidate to different stage',
+            description: 'Changes the pipeline stage for a candidate. Records history.',
+            security: [{ cookieAuth: [], csrfToken: [] }],
+            parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+            requestBody: {
+                required: true,
+                content: {
+                    'application/json': {
+                        schema: {
+                            type: 'object',
+                            required: ['stage'],
+                            properties: {
+                                stage: { type: 'string' },
+                                notes: { type: 'string' }
+                            }
+                        }
+                    }
+                }
+            },
+            responses: {
+                200: { description: 'Stage updated', content: { 'application/json': { schema: { $ref: '#/components/schemas/PipelineEntry' } } } },
+                400: { description: 'Invalid stage' }
+            }
+        }
+    },
+    '/pipeline/{id}/notes': {
+        patch: {
+            tags: ['Pipeline'],
+            summary: 'Update pipeline notes',
+            security: [{ cookieAuth: [], csrfToken: [] }],
+            parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+            requestBody: {
+                content: { 'application/json': { schema: { type: 'object', properties: { notes: { type: 'string' } } } } }
+            },
+            responses: { 200: { description: 'Notes updated' } }
+        }
+    },
+    '/pipeline/{id}/history': {
+        get: {
+            tags: ['Pipeline'],
+            summary: 'Get pipeline history',
+            description: 'Returns the stage change history for a pipeline entry.',
+            security: [{ cookieAuth: [] }],
+            parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+            responses: {
+                200: { description: 'History entries', content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/PipelineHistory' } } } } }
+            }
+        }
+    },
+
+    // ============================================
+    // INTERVIEWS
+    // ============================================
+    '/pipeline/{id}/interviews': {
+        get: {
+            tags: ['Interviews'],
+            summary: 'Get interviews for a pipeline entry',
+            security: [{ cookieAuth: [] }],
+            parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+            responses: {
+                200: { description: 'List of interviews', content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/Interview' } } } } }
+            }
+        },
+        post: {
+            tags: ['Interviews'],
+            summary: 'Schedule an interview',
+            description: 'Schedules a new interview for a pipeline entry. Only "client" type interviews move the candidate to "interview" stage.',
+            security: [{ cookieAuth: [], csrfToken: [] }],
+            parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+            requestBody: {
+                required: true,
+                content: {
+                    'application/json': {
+                        schema: {
+                            type: 'object',
+                            required: ['title', 'scheduledAt'],
+                            properties: {
+                                title: { type: 'string' },
+                                description: { type: 'string' },
+                                interviewType: { type: 'string', enum: ['client', 'partner', 'technical', 'hr'] },
+                                scheduledAt: { type: 'string', format: 'date-time' },
+                                durationMinutes: { type: 'integer', default: 60 },
+                                location: { type: 'string' },
+                                meetingLink: { type: 'string' },
+                                attendees: { type: 'array', items: { type: 'object', properties: { name: { type: 'string' }, email: { type: 'string' } } } },
+                                calendarEventId: { type: 'string' },
+                                calendarProvider: { type: 'string', enum: ['google', 'outlook'] }
+                            }
+                        }
+                    }
+                }
+            },
+            responses: {
+                201: { description: 'Interview scheduled', content: { 'application/json': { schema: { $ref: '#/components/schemas/Interview' } } } },
+                400: { description: 'Title and scheduled date required' }
+            }
+        }
+    },
+    '/pipeline/interviews/upcoming': {
+        get: {
+            tags: ['Interviews'],
+            summary: 'Get upcoming interviews',
+            security: [{ cookieAuth: [] }],
+            parameters: [
+                { name: 'days', in: 'query', schema: { type: 'integer', default: 30 }, description: 'Number of days to look ahead' }
+            ],
+            responses: {
+                200: { description: 'Upcoming interviews', content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/Interview' } } } } }
+            }
+        }
+    },
+    '/pipeline/interviews/{interviewId}': {
+        patch: {
+            tags: ['Interviews'],
+            summary: 'Update an interview',
+            security: [{ cookieAuth: [], csrfToken: [] }],
+            parameters: [{ name: 'interviewId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+            responses: { 200: { description: 'Interview updated' } }
+        },
+        delete: {
+            tags: ['Interviews'],
+            summary: 'Delete an interview',
+            security: [{ cookieAuth: [], csrfToken: [] }],
+            parameters: [{ name: 'interviewId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+            responses: { 200: { description: 'Interview deleted' } }
+        }
+    },
+    '/pipeline/interviews/{interviewId}/complete': {
+        post: {
+            tags: ['Interviews'],
+            summary: 'Complete an interview with outcome',
+            security: [{ cookieAuth: [], csrfToken: [] }],
+            parameters: [{ name: 'interviewId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+            requestBody: {
+                required: true,
+                content: {
+                    'application/json': {
+                        schema: {
+                            type: 'object',
+                            required: ['outcome'],
+                            properties: {
+                                outcome: { type: 'string', enum: ['positive', 'neutral', 'negative', 'to_follow_up'] },
+                                outcomeNotes: { type: 'string' }
+                            }
+                        }
+                    }
+                }
+            },
+            responses: {
+                200: { description: 'Interview completed', content: { 'application/json': { schema: { $ref: '#/components/schemas/Interview' } } } },
+                400: { description: 'Outcome required' }
+            }
+        }
+    },
+    '/pipeline/interviews/{interviewId}/cancel': {
+        post: {
+            tags: ['Interviews'],
+            summary: 'Cancel an interview',
+            security: [{ cookieAuth: [], csrfToken: [] }],
+            parameters: [{ name: 'interviewId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+            responses: { 200: { description: 'Interview cancelled' } }
+        }
+    },
+
+    // ============================================
+    // CALENDAR (Google Calendar Integration)
+    // ============================================
+    '/calendar/status': {
+        get: {
+            tags: ['Calendar'],
+            summary: 'Check calendar connection status',
+            security: [{ cookieAuth: [] }],
+            responses: {
+                200: { description: 'Connection status', content: { 'application/json': { schema: { type: 'object', properties: { connected: { type: 'boolean' } } } } } }
+            }
+        }
+    },
+    '/calendar/auth-url': {
+        get: {
+            tags: ['Calendar'],
+            summary: 'Get Google Calendar OAuth URL',
+            security: [{ cookieAuth: [] }],
+            responses: {
+                200: { description: 'Auth URL', content: { 'application/json': { schema: { type: 'object', properties: { authUrl: { type: 'string' } } } } } }
+            }
+        }
+    },
+    '/calendar/callback': {
+        get: {
+            tags: ['Calendar'],
+            summary: 'Google Calendar OAuth callback',
+            parameters: [
+                { name: 'code', in: 'query', required: true, schema: { type: 'string' } },
+                { name: 'state', in: 'query', required: true, schema: { type: 'string' } }
+            ],
+            responses: { 200: { description: 'HTML response to close popup' } }
+        }
+    },
+    '/calendar/disconnect': {
+        post: {
+            tags: ['Calendar'],
+            summary: 'Disconnect Google Calendar',
+            security: [{ cookieAuth: [], csrfToken: [] }],
+            responses: { 200: { description: 'Calendar disconnected' } }
+        }
+    },
+    '/calendar/events': {
+        get: {
+            tags: ['Calendar'],
+            summary: 'Get upcoming calendar events',
+            security: [{ cookieAuth: [] }],
+            parameters: [
+                { name: 'days', in: 'query', schema: { type: 'integer', default: 30 } }
+            ],
+            responses: { 200: { description: 'Calendar events' } }
+        },
+        post: {
+            tags: ['Calendar'],
+            summary: 'Create calendar event',
+            security: [{ cookieAuth: [], csrfToken: [] }],
+            requestBody: {
+                content: {
+                    'application/json': {
+                        schema: {
+                            type: 'object',
+                            required: ['title', 'startTime', 'endTime'],
+                            properties: {
+                                title: { type: 'string' },
+                                description: { type: 'string' },
+                                startTime: { type: 'string', format: 'date-time' },
+                                endTime: { type: 'string', format: 'date-time' },
+                                location: { type: 'string' },
+                                attendees: { type: 'array', items: { type: 'object', properties: { email: { type: 'string' } } } }
+                            }
+                        }
+                    }
+                }
+            },
+            responses: { 201: { description: 'Event created' } }
+        }
+    },
+    '/calendar/events/{eventId}': {
+        put: {
+            tags: ['Calendar'],
+            summary: 'Update calendar event',
+            security: [{ cookieAuth: [], csrfToken: [] }],
+            parameters: [{ name: 'eventId', in: 'path', required: true, schema: { type: 'string' } }],
+            responses: { 200: { description: 'Event updated' } }
+        },
+        delete: {
+            tags: ['Calendar'],
+            summary: 'Delete calendar event',
+            security: [{ cookieAuth: [], csrfToken: [] }],
+            parameters: [{ name: 'eventId', in: 'path', required: true, schema: { type: 'string' } }],
+            responses: { 200: { description: 'Event deleted' } }
+        }
+    },
+
+    // ============================================
+    // RESUME COMMENTS
+    // ============================================
+    '/resumes/{resumeId}/comments': {
+        get: {
+            tags: ['Comments'],
+            summary: 'Get comments for a resume',
+            security: [{ cookieAuth: [] }],
+            parameters: [{ name: 'resumeId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+            responses: {
+                200: {
+                    description: 'List of comments',
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    success: { type: 'boolean' },
+                                    comments: { type: 'array', items: { $ref: '#/components/schemas/ResumeComment' } },
+                                    count: { type: 'integer' }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        post: {
+            tags: ['Comments'],
+            summary: 'Add comment to a resume',
+            security: [{ cookieAuth: [], csrfToken: [] }],
+            parameters: [{ name: 'resumeId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+            requestBody: {
+                required: true,
+                content: {
+                    'application/json': {
+                        schema: {
+                            type: 'object',
+                            required: ['content'],
+                            properties: {
+                                content: { type: 'string' },
+                                isPrivate: { type: 'boolean', default: false }
+                            }
+                        }
+                    }
+                }
+            },
+            responses: {
+                201: { description: 'Comment added', content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean' }, comment: { $ref: '#/components/schemas/ResumeComment' } } } } } },
+                400: { description: 'Content required' }
+            }
+        }
+    },
+    '/resumes/{resumeId}/comments/{commentId}': {
+        put: {
+            tags: ['Comments'],
+            summary: 'Update a comment',
+            security: [{ cookieAuth: [], csrfToken: [] }],
+            parameters: [
+                { name: 'resumeId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+                { name: 'commentId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }
+            ],
+            responses: { 200: { description: 'Comment updated' }, 403: { description: 'Can only edit own comments' } }
+        },
+        delete: {
+            tags: ['Comments'],
+            summary: 'Delete a comment',
+            security: [{ cookieAuth: [], csrfToken: [] }],
+            parameters: [
+                { name: 'resumeId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+                { name: 'commentId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }
+            ],
+            responses: { 200: { description: 'Comment deleted' }, 403: { description: 'Can only delete own comments' } }
+        }
+    },
+
+    // ============================================
+    // SHARE (QR Code)
+    // ============================================
+    '/share/resume/{resumeId}/generate': {
+        post: {
+            tags: ['Share'],
+            summary: 'Generate shareable PDF link',
+            description: 'Generates a PDF from HTML content and creates a shareable link with QR code.',
+            security: [{ cookieAuth: [], csrfToken: [] }],
+            parameters: [{ name: 'resumeId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+            requestBody: {
+                required: true,
+                content: {
+                    'application/json': {
+                        schema: {
+                            type: 'object',
+                            required: ['htmlContent'],
+                            properties: {
+                                htmlContent: { type: 'string' },
+                                filename: { type: 'string' },
+                                stylesheet: { type: 'string' },
+                                headerContent: { type: 'string' },
+                                footerContent: { type: 'string' },
+                                footerHeight: { type: 'integer' }
+                            }
+                        }
+                    }
+                }
+            },
+            responses: {
+                200: { description: 'Share token generated', content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean' }, token: { type: 'string' } } } } } },
+                400: { description: 'HTML content required' }
+            }
+        }
+    },
+    '/share/resume/{resumeId}/original': {
+        post: {
+            tags: ['Share'],
+            summary: 'Generate shareable link for original CV',
+            security: [{ cookieAuth: [], csrfToken: [] }],
+            parameters: [{ name: 'resumeId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+            responses: {
+                200: { description: 'Share token generated', content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean' }, token: { type: 'string' } } } } } }
+            }
+        }
+    },
+    '/share/view/{token}': {
+        get: {
+            tags: ['Share'],
+            summary: 'View shared resume (public)',
+            description: 'Public endpoint to view a shared resume PDF.',
+            parameters: [{ name: 'token', in: 'path', required: true, schema: { type: 'string' } }],
+            responses: {
+                200: { description: 'PDF file', content: { 'application/pdf': { schema: { type: 'string', format: 'binary' } } } },
+                404: { description: 'Invalid or expired token' }
+            }
+        }
+    },
+
+    // ============================================
+    // GDPR AUDIT LOG
+    // ============================================
+    '/gdpr-audit/logs': {
+        get: {
+            tags: ['GDPR Audit', 'Admin'],
+            summary: 'Get GDPR audit logs (admin)',
+            description: 'Returns paginated GDPR audit logs with filtering options.',
+            security: [{ cookieAuth: [] }],
+            parameters: [
+                { name: 'firmId', in: 'query', schema: { type: 'string', format: 'uuid' } },
+                { name: 'action', in: 'query', schema: { type: 'string' } },
+                { name: 'category', in: 'query', schema: { type: 'string', enum: ['consent', 'data', 'cv', 'automated'] } },
+                { name: 'userId', in: 'query', schema: { type: 'string', format: 'uuid' } },
+                { name: 'targetEmail', in: 'query', schema: { type: 'string' } },
+                { name: 'isAutomated', in: 'query', schema: { type: 'string', enum: ['true', 'false'] } },
+                { name: 'startDate', in: 'query', schema: { type: 'string', format: 'date' } },
+                { name: 'endDate', in: 'query', schema: { type: 'string', format: 'date' } },
+                { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
+                { name: 'limit', in: 'query', schema: { type: 'integer', default: 50 } },
+                { name: 'sortBy', in: 'query', schema: { type: 'string', default: 'created_at' } },
+                { name: 'sortOrder', in: 'query', schema: { type: 'string', enum: ['asc', 'desc'], default: 'desc' } }
+            ],
+            responses: {
+                200: {
+                    description: 'Paginated audit logs',
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    logs: { type: 'array', items: { $ref: '#/components/schemas/GdprAuditLog' } },
+                                    pagination: { $ref: '#/components/schemas/PaginatedResponse/properties/pagination' }
+                                }
+                            }
+                        }
+                    }
+                },
+                403: { $ref: '#/components/responses/Forbidden' }
+            }
+        }
+    },
+    '/gdpr-audit/stats': {
+        get: {
+            tags: ['GDPR Audit', 'Admin'],
+            summary: 'Get GDPR audit statistics (admin)',
+            security: [{ cookieAuth: [] }],
+            parameters: [
+                { name: 'firmId', in: 'query', schema: { type: 'string', format: 'uuid' } },
+                { name: 'days', in: 'query', schema: { type: 'integer', default: 30 } }
+            ],
+            responses: {
+                200: {
+                    description: 'Audit statistics',
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    total: { type: 'integer' },
+                                    byCategory: { type: 'object', additionalProperties: { type: 'integer' } },
+                                    byAction: { type: 'object', additionalProperties: { type: 'integer' } },
+                                    automated: { type: 'integer' },
+                                    manual: { type: 'integer' }
+                                }
+                            }
+                        }
+                    }
+                },
+                403: { $ref: '#/components/responses/Forbidden' }
+            }
+        }
+    },
+    '/gdpr-audit/firms': {
+        get: {
+            tags: ['GDPR Audit', 'Admin'],
+            summary: 'Get firms for audit filter (admin)',
+            security: [{ cookieAuth: [] }],
+            responses: {
+                200: { description: 'List of firms', content: { 'application/json': { schema: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, name: { type: 'string' } } } } } } },
+                403: { $ref: '#/components/responses/Forbidden' }
+            }
+        }
+    },
+    '/gdpr-audit/actions': {
+        get: {
+            tags: ['GDPR Audit', 'Admin'],
+            summary: 'Get available GDPR actions and categories',
+            security: [{ cookieAuth: [] }],
+            responses: {
+                200: {
+                    description: 'Actions and categories',
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    actions: { type: 'array', items: { type: 'string' } },
+                                    categories: { type: 'array', items: { type: 'string' } }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    '/gdpr-audit/export/{targetEmail}': {
+        get: {
+            tags: ['GDPR Audit', 'Admin'],
+            summary: 'Export audit logs for a specific email (admin)',
+            security: [{ cookieAuth: [] }],
+            parameters: [{ name: 'targetEmail', in: 'path', required: true, schema: { type: 'string', format: 'email' } }],
+            responses: {
+                200: { description: 'Audit logs for email' },
+                403: { $ref: '#/components/responses/Forbidden' }
+            }
+        }
+    },
+
+    // ============================================
+    // SUBMISSIONS STATS
+    // ============================================
+    '/submissions/stats/summary': {
+        get: {
+            tags: ['Submissions'],
+            summary: 'Get submission statistics',
+            security: [{ cookieAuth: [] }],
+            responses: {
+                200: {
+                    description: 'Submission statistics',
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    total_submissions: { type: 'integer' },
+                                    sent: { type: 'integer' },
+                                    viewed: { type: 'integer' },
+                                    accepted: { type: 'integer' },
+                                    rejected: { type: 'integer' },
+                                    pending: { type: 'integer' },
+                                    unique_clients: { type: 'integer' },
+                                    unique_resumes: { type: 'integer' }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+
+    // ============================================
+    // API DOCUMENTATION
+    // ============================================
+    '/docs': {
+        get: {
+            tags: ['Documentation'],
+            summary: 'Get OpenAPI specification',
+            description: 'Returns the OpenAPI/Swagger specification as JSON.',
+            responses: {
+                200: { description: 'OpenAPI specification JSON' }
+            }
+        }
+    },
+    '/docs/ui': {
+        get: {
+            tags: ['Documentation'],
+            summary: 'Swagger UI',
+            description: 'Interactive API documentation using Swagger UI.',
+            responses: {
+                200: { description: 'HTML page with Swagger UI' }
             }
         }
     },

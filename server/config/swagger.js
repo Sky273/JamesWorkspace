@@ -48,7 +48,14 @@ export const swaggerDocument = {
         { name: 'ROME', description: 'ROME métiers and competences' },
         { name: 'Health', description: 'Health check and system status' },
         { name: 'Metrics', description: 'Application metrics and monitoring' },
-        { name: 'Admin', description: 'Administrative endpoints (security logs, stats)' }
+        { name: 'Admin', description: 'Administrative endpoints (security logs, stats)' },
+        { name: 'Pipeline', description: 'Candidate selection pipeline and Kanban board' },
+        { name: 'Interviews', description: 'Interview scheduling and management' },
+        { name: 'Calendar', description: 'Google Calendar integration' },
+        { name: 'Comments', description: 'Resume comments and notes' },
+        { name: 'Share', description: 'Resume sharing via QR code' },
+        { name: 'GDPR Audit', description: 'GDPR audit log (admin only)' },
+        { name: 'Documentation', description: 'API documentation endpoints' }
     ],
     components: {
         securitySchemes: {
@@ -466,6 +473,129 @@ export const swaggerDocument = {
                             cache: { type: 'object' }
                         }
                     }
+                }
+            },
+            // ============================================
+            // PIPELINE & INTERVIEWS
+            // ============================================
+            PipelineStage: {
+                type: 'object',
+                description: 'Pipeline stage configuration',
+                properties: {
+                    id: { type: 'string', example: 'new' },
+                    label: { type: 'string', example: 'Nouveau' },
+                    labelEn: { type: 'string', example: 'New' },
+                    color: { type: 'string', example: 'gray' },
+                    order: { type: 'integer' }
+                }
+            },
+            PipelineEntry: {
+                type: 'object',
+                description: 'Candidate pipeline entry',
+                properties: {
+                    id: { type: 'string', format: 'uuid' },
+                    resume_id: { type: 'string', format: 'uuid' },
+                    resume_name: { type: 'string' },
+                    resume_title: { type: 'string' },
+                    mission_id: { type: 'string', format: 'uuid', nullable: true },
+                    mission_title: { type: 'string', nullable: true },
+                    client_id: { type: 'string', format: 'uuid', nullable: true },
+                    client_name: { type: 'string', nullable: true },
+                    stage: { type: 'string', enum: ['new', 'preselection', 'submitted', 'interview', 'interviewed', 'selected', 'rejected', 'on_hold'] },
+                    notes: { type: 'string', nullable: true },
+                    global_rating: { type: 'integer', nullable: true },
+                    skills: { type: 'array', items: { type: 'string' }, nullable: true },
+                    interview_count: { type: 'integer' },
+                    next_interview: { type: 'string', format: 'date-time', nullable: true },
+                    created_at: { type: 'string', format: 'date-time' },
+                    moved_at: { type: 'string', format: 'date-time' },
+                    created_by: { type: 'string', format: 'uuid' }
+                }
+            },
+            Interview: {
+                type: 'object',
+                description: 'Interview scheduled for a pipeline entry',
+                properties: {
+                    id: { type: 'string', format: 'uuid' },
+                    pipeline_id: { type: 'string', format: 'uuid' },
+                    title: { type: 'string' },
+                    description: { type: 'string', nullable: true },
+                    interview_type: { type: 'string', enum: ['client', 'partner', 'technical', 'hr'] },
+                    scheduled_at: { type: 'string', format: 'date-time' },
+                    duration_minutes: { type: 'integer', default: 60 },
+                    location: { type: 'string', nullable: true },
+                    meeting_link: { type: 'string', nullable: true },
+                    status: { type: 'string', enum: ['scheduled', 'completed', 'cancelled'] },
+                    outcome: { type: 'string', enum: ['positive', 'neutral', 'negative', 'to_follow_up'], nullable: true },
+                    outcome_notes: { type: 'string', nullable: true },
+                    calendar_event_id: { type: 'string', nullable: true },
+                    calendar_provider: { type: 'string', enum: ['google', 'outlook'], nullable: true },
+                    created_at: { type: 'string', format: 'date-time' },
+                    created_by: { type: 'string', format: 'uuid' }
+                }
+            },
+            PipelineHistory: {
+                type: 'object',
+                description: 'Pipeline stage change history',
+                properties: {
+                    id: { type: 'string', format: 'uuid' },
+                    pipeline_id: { type: 'string', format: 'uuid' },
+                    from_stage: { type: 'string', nullable: true },
+                    to_stage: { type: 'string' },
+                    notes: { type: 'string', nullable: true },
+                    changed_by: { type: 'string', format: 'uuid' },
+                    changed_by_name: { type: 'string' },
+                    changed_at: { type: 'string', format: 'date-time' }
+                }
+            },
+            // ============================================
+            // RESUME COMMENTS
+            // ============================================
+            ResumeComment: {
+                type: 'object',
+                description: 'Comment on a resume',
+                properties: {
+                    id: { type: 'string', format: 'uuid' },
+                    resume_id: { type: 'string', format: 'uuid' },
+                    user_id: { type: 'string', format: 'uuid' },
+                    user_name: { type: 'string' },
+                    content: { type: 'string' },
+                    is_private: { type: 'boolean', description: 'If true, only visible to the author' },
+                    created_at: { type: 'string', format: 'date-time' },
+                    updated_at: { type: 'string', format: 'date-time' }
+                }
+            },
+            // ============================================
+            // GDPR AUDIT
+            // ============================================
+            GdprAuditLog: {
+                type: 'object',
+                description: 'GDPR audit log entry',
+                properties: {
+                    id: { type: 'string', format: 'uuid' },
+                    firm_id: { type: 'string', format: 'uuid', nullable: true },
+                    firm_name: { type: 'string', nullable: true },
+                    user_id: { type: 'string', format: 'uuid', nullable: true },
+                    user_name: { type: 'string', nullable: true },
+                    action: { type: 'string', example: 'consent_sent' },
+                    category: { type: 'string', enum: ['consent', 'data', 'cv', 'automated'] },
+                    target_email: { type: 'string', format: 'email', nullable: true },
+                    target_resume_id: { type: 'string', format: 'uuid', nullable: true },
+                    is_automated: { type: 'boolean' },
+                    details: { type: 'object', nullable: true },
+                    created_at: { type: 'string', format: 'date-time' }
+                }
+            },
+            // ============================================
+            // SHARE (QR CODE)
+            // ============================================
+            ShareToken: {
+                type: 'object',
+                description: 'Shareable link token for a resume',
+                properties: {
+                    token: { type: 'string' },
+                    resume_id: { type: 'string', format: 'uuid' },
+                    expires_at: { type: 'string', format: 'date-time' }
                 }
             }
         },
