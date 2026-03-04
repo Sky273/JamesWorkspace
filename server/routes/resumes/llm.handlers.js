@@ -214,8 +214,15 @@ export async function improveHandler(req, res) {
             industriesPreview: acceptedIndustries.substring(0, 100) + '...'
         });
 
+        // Clean up text before improvement (removes HTML tags for cleaner LLM processing)
+        const cleanedText = cleanupText(text);
+        safeLog('debug', 'Text cleaned before improvement', { 
+            originalLength: text.length, 
+            cleanedLength: cleanedText.length 
+        });
+
         // Step 1: Improve the resume
-        const improved = await improveResume(text, analysis, model, improvementPrompt, cvMode, userMetadata);
+        const improved = await improveResume(cleanedText, analysis, model, improvementPrompt, cvMode, userMetadata);
         
         // Step 2: Analyze the improved text to get post-improvement suggestions
         
@@ -323,7 +330,14 @@ export async function improveByIdHandler(req, res) {
             return res.status(500).json({ error: 'LLM model not configured in Settings.' });
         }
 
-        const improved = await improveResume(resumeText, analysis, model, improvementPrompt, cvMode, userMetadata);
+        // Clean up text before improvement (removes HTML tags for cleaner LLM processing)
+        const cleanedText = cleanupText(resumeText);
+        safeLog('debug', 'Text cleaned before improvement (by ID)', { 
+            originalLength: resumeText.length, 
+            cleanedLength: cleanedText.length 
+        });
+
+        const improved = await improveResume(cleanedText, analysis, model, improvementPrompt, cvMode, userMetadata);
         
         // Recalculate globalRating based on admin-defined weights
         if (improved.analysis) {

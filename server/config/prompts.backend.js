@@ -365,6 +365,16 @@ SUGGESTIONS (2–3 PAR SECTION, ACTIONNABLES)
 - Ne pas demander d'ajouter des informations impossibles à fournir.
 - Ne pas demander de chiffres si rien n'est mesurable dans le CV ; suggérer plutôt "préciser livrables" ou "préciser périmètre".
 
+STRUCTURATION DU TEXTE (OBLIGATOIRE)
+Vous devez retourner le texte du CV restructuré en HTML propre dans le champ "structuredText".
+- Utilisez <h2> pour les titres de sections principales (Sommaire, Compétences, Expérience, Formation, Langues, etc.)
+- Utilisez <h3> pour les sous-sections (nom d'entreprise, poste)
+- Utilisez <p> pour les paragraphes
+- Utilisez <ul><li> pour les listes (compétences, responsabilités)
+- Utilisez <strong> pour les éléments importants (dates, titres de poste)
+- NE PAS inventer de contenu, uniquement restructurer ce qui existe
+- Conserver TOUT le contenu original, juste le reformater en HTML
+
 FORMAT DE RÉPONSE — JSON STRICT UNIQUEMENT
 Répondez UNIQUEMENT avec un JSON valide (aucun texte avant/après), exactement au format suivant :
 
@@ -378,6 +388,7 @@ Répondez UNIQUEMENT avec un JSON valide (aucun texte avant/après), exactement 
   "educationRating": "XX%",
   "hobbiesLanguagesRating": "XX%",
   "atsOptimizationRating": "XX%",
+  "structuredText": "<h2>Sommaire</h2><p>...</p><h2>Compétences</h2>...(HTML complet du CV restructuré)",
   "tags": {
     "skills": ["..."],
     "industries": ["..."],

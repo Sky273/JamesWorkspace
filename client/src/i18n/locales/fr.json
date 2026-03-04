@@ -133,6 +133,7 @@
       "optionalEnhancements": "Améliorations optionnelles",
       "originalText": "Texte Original",
       "originalTextDescription": "Contenu extrait du CV original",
+      "originalTextDescriptionEditable": "Modifiez le texte extrait avant l'amélioration",
       "improvedText": "Contenu Amélioré",
       "improvedTextDescription": "Voici la version améliorée par l'IA de votre CV",
       "scoreImprovedBy": "Votre score CV a été amélioré de",
@@ -211,14 +212,18 @@
     "export": {
       "title": "Export du CV",
       "needsImprovement": "Amélioration requise",
-      "needsImprovementDescription": "Veuillez d'abord améliorer le CV avant de l'exporter."
+      "needsImprovementDescription": "Veuillez d'abord améliorer le CV avant de l'exporter.",
+      "exportingImproved": "Export du CV amélioré",
+      "exportingOriginal": "Export du CV original",
+      "improveFirst": "Améliorer d'abord ?"
     },
     "improveSuccess": "CV amélioré avec succès",
     "improveError": "Erreur lors de l'amélioration du CV",
     "exportSuccess": "CV exporté avec succès",
     "exportError": "Erreur lors de l'export du CV",
     "saveSuccess": "Modifications enregistrées",
-    "saveError": "Erreur lors de l'enregistrement"
+    "saveError": "Erreur lors de l'enregistrement",
+    "unsavedChanges": "Vous avez des modifications non enregistrées"
   },
   "users": {
     "management": {

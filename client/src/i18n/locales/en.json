@@ -278,6 +278,7 @@
       "optionalEnhancements": "Optional Enhancements",
       "originalText": "Original Text",
       "originalTextDescription": "Content extracted from the original resume",
+      "originalTextDescriptionEditable": "Edit the extracted text before improvement",
       "improvedText": "Improved Text",
       "improvedTextDescription": "Here is the improved version of your resume by the AI",
       "scoreImprovedBy": "Your resume score improved by",
@@ -355,14 +356,18 @@
     "export": {
       "title": "Resume Export",
       "needsImprovement": "Improvement Required",
-      "needsImprovementDescription": "Please improve the resume first before exporting."
+      "needsImprovementDescription": "Please improve the resume first before exporting.",
+      "exportingImproved": "Exporting improved CV",
+      "exportingOriginal": "Exporting original CV",
+      "improveFirst": "Improve first?"
     },
     "improveSuccess": "Resume improved successfully",
     "improveError": "Error improving resume",
     "exportSuccess": "Resume exported successfully",
     "exportError": "Error exporting resume",
     "saveSuccess": "Changes saved",
-    "saveError": "Error saving changes"
+    "saveError": "Error saving changes",
+    "unsavedChanges": "You have unsaved changes"
   },
   "users": {
     "management": {

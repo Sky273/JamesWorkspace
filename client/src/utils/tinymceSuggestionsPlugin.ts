@@ -226,9 +226,13 @@ function insertSuggestionsIntoContent(content: string, suggestions: SuggestionsB
     return modifiedContent;
   }
   
-  // If no sections found in content, we can't place inline suggestions
+  // If no sections found in content, add a global suggestions panel at the top
   if (sectionPositions.size === 0) {
-    logger.info('[SuggestionsPlugin] No sections found in content, cannot place inline suggestions');
+    logger.info('[SuggestionsPlugin] No sections found in content, adding global suggestions panel');
+    const globalPanel = createGroupedSuggestionsPanel(suggestions);
+    if (globalPanel) {
+      return globalPanel + modifiedContent;
+    }
     return modifiedContent;
   }
   
@@ -376,10 +380,11 @@ function removeSuggestionMarkers(content: string): string {
   // Remove highlight wrappers but keep inner content
   cleaned = cleaned.replace(/<div[^>]*class="suggestion-highlight"[^>]*>/g, '');
   cleaned = cleaned.replace(/<\/div>(\s*<\/div>)?/g, (match, group1) => group1 ? '</div>' : '');
-  // Remove suggestions panel (grouped panel with multiple sections)
-  cleaned = cleaned.replace(/<div[^>]*class="suggestion-panel"[^>]*>[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/g, '');
-  // Remove suggestions panel (simple panel)
-  cleaned = cleaned.replace(/<div[^>]*class="suggestion-panel"[^>]*>[\s\S]*?<\/ul>\s*<\/div>/g, '');
+  // Remove suggestions panel - match the entire panel structure (greedy match for nested divs)
+  // This handles both inline style and class-based panels
+  cleaned = cleaned.replace(/<div[^>]*class="suggestion-panel"[^>]*>[\s\S]*?<\/ul>\s*(<\/div>\s*)*<\/div>/g, '');
+  // Remove panels with inline gradient style (for global panel)
+  cleaned = cleaned.replace(/<div[^>]*style="[^"]*background:\s*linear-gradient\(135deg,\s*#FEF3C7[^"]*"[^>]*>[\s\S]*?<\/ul>\s*(<\/div>\s*)*<\/div>/g, '');
   // Remove old style panels
   cleaned = cleaned.replace(/<div style="background: #FEF3C7[^>]*>[\s\S]*?<\/div>\s*<\/div>/g, '');
   cleaned = cleaned.replace(/<div style="background: linear-gradient[^>]*>[\s\S]*?<\/div>\s*<\/div>/g, '');

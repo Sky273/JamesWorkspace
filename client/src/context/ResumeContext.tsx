@@ -44,6 +44,7 @@ interface ResumeContextType {
   updateResumeAnalysis: (resumeId: string, analysisData: Partial<Resume>) => Promise<Resume>;
   fetchResumes: () => Promise<void>;
   updateImprovedContent: (resumeId: string, content: string) => Promise<{ success: boolean; currentVersion?: number }>;
+  updateOriginalContent: (resumeId: string, content: string) => Promise<{ success: boolean }>;
   deleteResume: (resumeId: string) => Promise<void>;
 }
 
@@ -248,6 +249,9 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
       const tags = analysis.tags || { skills: [], industries: [], tools: [], softSkills: [] };
       const suggestions = analysis.suggestions || {};
       
+      // Use structuredText from analysis if available, otherwise use raw text
+      const originalText = analysis.structuredText || text;
+      
       // Update resume with analysis data via API
       const updateOptions = await createAuthOptionsWithCsrf({
         method: 'PUT',
@@ -255,7 +259,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          'Original Text': text,
+          'Original Text': originalText,
           'Global Rating': analysis.globalRating,
           'Skills Score': analysis.skillsRating,
           'Experience Score': analysis.experiencesRating,
@@ -473,6 +477,30 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
     }
   }, []);
 
+  const updateOriginalContent = useCallback(async (resumeId: string, content: string): Promise<{ success: boolean }> => {
+    try {
+      const updateOptions = await createAuthOptionsWithCsrf({
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 'Original Text': content })
+      });
+      const response = await fetchWithAuth(`/api/resumes/${resumeId}`, updateOptions);
+      if (!response.ok) {
+        throw new Error('Failed to update original content');
+      }
+
+      setCurrentResume(prev => prev ? {
+        ...prev,
+        'Original Text': content
+      } : null);
+
+      return { success: true };
+    } catch (error) {
+      logger.error('Error updating original content:', error);
+      throw error;
+    }
+  }, []);
+
   const deleteResume = useCallback(async (resumeId: string): Promise<void> => {
     const controller = new AbortController();
     setAbortController(controller);
@@ -517,6 +545,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
     updateResumeAnalysis,
     fetchResumes,
     updateImprovedContent,
+    updateOriginalContent,
     deleteResume
   };
 

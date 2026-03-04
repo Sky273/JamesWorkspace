@@ -100,30 +100,55 @@ export async function handleOAuthCallback(providerName, code, userId) {
 
 /**
  * Get user's mail connection status
+ * Checks both dedicated mail tokens AND SSO Google connection
  * @param {string} userId 
  * @returns {Promise<Object>}
  */
 export async function getConnectionStatus(userId) {
-    const result = await query(`
+    // First check dedicated mail tokens
+    const mailTokenResult = await query(`
         SELECT provider, email, token_expiry, updated_at
         FROM user_mail_tokens
         WHERE user_id = $1
     `, [userId]);
     
-    if (result.rows.length === 0) {
-        return { connected: false };
+    if (mailTokenResult.rows.length > 0) {
+        const token = mailTokenResult.rows[0];
+        const expired = isTokenExpired(token.token_expiry);
+        
+        return {
+            connected: !expired,
+            provider: token.provider,
+            email: token.email,
+            expiresAt: token.token_expiry,
+            needsReauth: expired,
+            source: 'mail_tokens'
+        };
     }
     
-    const token = result.rows[0];
-    const expired = isTokenExpired(token.token_expiry);
+    // Check if user is connected via Google SSO
+    const ssoResult = await query(`
+        SELECT google_id, google_email
+        FROM users
+        WHERE id = $1 AND google_id IS NOT NULL
+    `, [userId]);
     
-    return {
-        connected: !expired,
-        provider: token.provider,
-        email: token.email,
-        expiresAt: token.token_expiry,
-        needsReauth: expired
-    };
+    if (ssoResult.rows.length > 0 && ssoResult.rows[0].google_id) {
+        // User is connected via Google SSO
+        // They should have tokens saved during SSO login, but they may have expired
+        // Return connected=true with needsReauth=true to indicate they need to re-login via SSO
+        // The frontend will handle this by showing a different message for SSO users
+        return {
+            connected: false,
+            provider: 'gmail',
+            email: ssoResult.rows[0].google_email,
+            needsReauth: true,
+            source: 'sso',
+            isSsoUser: true
+        };
+    }
+    
+    return { connected: false };
 }
 
 /**

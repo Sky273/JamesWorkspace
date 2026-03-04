@@ -59,7 +59,7 @@ export async function getAuthUrl(state) {
         access_type: 'offline',
         scope: googleAuthConfig.scopes,
         state: state,
-        prompt: 'select_account' // Allow user to select account
+        prompt: 'consent' // Force consent to always get refresh token for Gmail access
     });
 }
 

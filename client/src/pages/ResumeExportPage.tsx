@@ -185,28 +185,7 @@ const ResumeExportPage = (): JSX.Element => {
 
   const resumeName = currentResume['Name'] || currentResume['File Name'] || 'CV';
   const hasImprovedText = !!currentResume['Improved Text'];
-
-  if (!hasImprovedText) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
-        <div className="max-w-7xl mx-auto px-4 text-center">
-          <DocumentArrowDownIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-            {t('resume.export.needsImprovement')}
-          </h2>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
-            {t('resume.export.needsImprovementDescription')}
-          </p>
-          <Link
-            to={`/resumes/${id}/improve`}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
-          >
-            {t('resume.actions.improve')}
-          </Link>
-        </div>
-      </div>
-    );
-  }
+  const exportSource = hasImprovedText ? 'improved' : 'original';
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
@@ -242,24 +221,57 @@ const ResumeExportPage = (): JSX.Element => {
             </div>
         </motion.div>
 
-        {/* Step indicator - removed since breadcrumbs handle navigation */}
+        {/* Export source indicator */}
+        <div className="mb-6">
+          <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg ${
+            exportSource === 'improved' 
+              ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800'
+              : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800'
+          }`}>
+            <DocumentArrowDownIcon className="w-5 h-5" />
+            <span className="font-medium">
+              {exportSource === 'improved' 
+                ? t('resume.export.exportingImproved', 'Exporting improved CV')
+                : t('resume.export.exportingOriginal', 'Exporting original CV')}
+            </span>
+            {exportSource === 'original' && (
+              <Link
+                to={`/resumes/${id}/analysis`}
+                className="ml-2 text-sm underline hover:no-underline"
+              >
+                {t('resume.export.improveFirst', 'Improve first?')}
+              </Link>
+            )}
+          </div>
+        </div>
+
+        {/* Step indicator */}
         <div className="mb-6">
           <div className="flex items-center gap-2 text-sm">
             <Link
               to={`/resumes/${id}/analysis`}
-              className="px-3 py-1 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
+              className="px-3 py-1 text-green-600 dark:text-green-400 hover:underline"
             >
-              {t('resume.steps.analysis')}
+              {t('resume.steps.analysis')} ✓
             </Link>
             <ArrowRightIcon className="w-4 h-4 text-gray-400" />
-            <Link
-              to={`/resumes/${id}/improve`}
-              className="px-3 py-1 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
-            >
-              {t('resume.steps.improve')}
-            </Link>
+            {hasImprovedText ? (
+              <Link
+                to={`/resumes/${id}/improve`}
+                className="px-3 py-1 text-green-600 dark:text-green-400 hover:underline"
+              >
+                {t('resume.steps.improve')} ✓
+              </Link>
+            ) : (
+              <Link
+                to={`/resumes/${id}/analysis`}
+                className="px-3 py-1 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
+              >
+                {t('resume.steps.improve')}
+              </Link>
+            )}
             <ArrowRightIcon className="w-4 h-4 text-gray-400" />
-            <span className="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full font-medium">
+            <span className="px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full font-medium">
               {t('resume.steps.export')}
             </span>
           </div>
@@ -292,7 +304,7 @@ const ResumeExportPage = (): JSX.Element => {
             const template = await templateService.getTemplateById(selectedTemplate);
             if (!template) throw new Error('Template not found');
             
-            const content = currentResume['Improved Text'] || '';
+            const content = currentResume['Improved Text'] || currentResume['Original Text'] || '';
             const candidateName = currentResume['Name'] || 'Candidat';
             const candidateTitle = currentResume['Title'] || '';
             

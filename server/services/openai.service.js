@@ -262,6 +262,11 @@ function normalizeAnalysisResponse(analysis) {
     normalized['Key Improvements'] = normalized.suggestions;
     normalized['Summary'] = analysis['Summary'] || analysis.summary || '';
     
+    // Preserve structuredText if provided by LLM (HTML-formatted version of the CV)
+    if (analysis.structuredText) {
+        normalized.structuredText = analysis.structuredText;
+    }
+    
     return normalized;
 }
 
@@ -286,7 +291,7 @@ export async function analyzeResume(resumeText, model, analysisPrompt, userMetad
             { role: 'system', content: systemMessage },
             { role: 'user', content: prompt }
         ],
-        maxTokens: 4096,
+        maxTokens: 16000,
         temperature: 0.3,
         responseFormat: { type: "json_object" },
         maxPromptLength: 120000,
