@@ -1804,7 +1804,17 @@
       "cancelFailed": "Error cancelling interview",
       "historyFailed": "Error loading history",
       "interviewRequired": "Title and date are required",
-      "outcomeRequired": "Outcome is required"
-    }
+      "outcomeRequired": "Outcome is required",
+      "selectResume": "Please select a resume"
+    },
+    "candidates": "candidate(s)",
+    "addCandidate": "Add candidate",
+    "searchResumes": "Search resumes...",
+    "noResumesAvailable": "No resumes available",
+    "unknownCandidate": "Unknown candidate",
+    "editNotes": "Edit notes",
+    "viewResume": "View resume",
+    "notesUpdated": "Notes updated",
+    "manageInterviews": "Manage interviews"
   }
 }

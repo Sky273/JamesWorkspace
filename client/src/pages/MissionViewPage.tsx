@@ -13,8 +13,10 @@ import {
   BriefcaseIcon,
   BuildingOfficeIcon,
   CalendarIcon,
-  TagIcon
+  TagIcon,
+  UserGroupIcon
 } from '@heroicons/react/24/outline';
+import MissionPipelineKanban from '../components/MissionsPage/MissionPipelineKanban';
 import { useAuthFetch } from '../hooks/useAuthFetch';
 import { createSafeHtml } from '../utils/sanitizer.frontend';
 import toast from 'react-hot-toast';
@@ -298,6 +300,19 @@ const MissionViewPage = (): JSX.Element => {
               </div>
             </div>
           )}
+        </motion.div>
+
+        {/* Pipeline Kanban */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="mt-6"
+        >
+          <MissionPipelineKanban
+            missionId={id!}
+            missionTitle={mission.Title || t('missions.noTitle')}
+          />
         </motion.div>
       </div>
     </div>

@@ -211,8 +211,8 @@ export async function getPipelineByMissionId(missionId) {
             SELECT 
                 cp.*,
                 r.name as resume_name,
-                r.global_score,
-                r.tags,
+                r.global_rating as global_score,
+                r.skills as tags,
                 (SELECT COUNT(*) FROM pipeline_interviews pi WHERE pi.pipeline_id = cp.id) as interview_count,
                 (SELECT scheduled_at FROM pipeline_interviews pi WHERE pi.pipeline_id = cp.id AND pi.status = 'scheduled' ORDER BY scheduled_at ASC LIMIT 1) as next_interview
             FROM candidate_pipeline cp
@@ -436,21 +436,24 @@ export async function scheduleInterview({
             calendarEventId, calendarProvider, createdBy
         ]);
 
-        // Auto-move to interview stage if currently in earlier stage
-        const pipeline = await getPipelineById(pipelineId);
-        const currentStageOrder = PIPELINE_STAGES.find(s => s.id === pipeline.stage)?.order || 0;
-        const interviewStageOrder = PIPELINE_STAGES.find(s => s.id === 'interview')?.order || 4;
+        // Only move to interview stage for 'client' interview type
+        // Other interview types (partner, technical, hr) don't change the pipeline stage
+        if (interviewType === 'client') {
+            const pipeline = await getPipelineById(pipelineId);
+            const currentStageOrder = PIPELINE_STAGES.find(s => s.id === pipeline.stage)?.order || 0;
+            const interviewStageOrder = PIPELINE_STAGES.find(s => s.id === 'interview')?.order || 4;
 
-        if (currentStageOrder < interviewStageOrder) {
-            await moveToStage({
-                pipelineId,
-                newStage: 'interview',
-                changedBy: createdBy,
-                notes: `Entretien planifié: ${title}`
-            });
+            if (currentStageOrder < interviewStageOrder) {
+                await moveToStage({
+                    pipelineId,
+                    newStage: 'interview',
+                    changedBy: createdBy,
+                    notes: `Entretien client planifié: ${title}`
+                });
+            }
         }
 
-        safeLog('info', 'Interview scheduled', { pipelineId, scheduledAt });
+        safeLog('info', 'Interview scheduled', { pipelineId, interviewType, scheduledAt });
         return result.rows[0];
     } catch (error) {
         safeLog('error', 'Failed to schedule interview', { error: error.message });

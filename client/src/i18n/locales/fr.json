@@ -1806,7 +1806,17 @@
       "cancelFailed": "Erreur lors de l'annulation de l'entretien",
       "historyFailed": "Erreur lors du chargement de l'historique",
       "interviewRequired": "Le titre et la date sont requis",
-      "outcomeRequired": "Le résultat est requis"
-    }
+      "outcomeRequired": "Le résultat est requis",
+      "selectResume": "Veuillez sélectionner un CV"
+    },
+    "candidates": "candidat(s)",
+    "addCandidate": "Ajouter un candidat",
+    "searchResumes": "Rechercher un CV...",
+    "noResumesAvailable": "Aucun CV disponible",
+    "unknownCandidate": "Candidat inconnu",
+    "editNotes": "Modifier les notes",
+    "viewResume": "Voir le CV",
+    "notesUpdated": "Notes mises à jour",
+    "manageInterviews": "Gérer les entretiens"
   }
 }

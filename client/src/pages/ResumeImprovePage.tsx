@@ -22,6 +22,7 @@ import ConsentBadge, { ConsentStatus } from '../components/ConsentBadge';
 import ImprovedTextTab from '../components/ResumeAnalysis/ImprovedTextTab';
 import CompareTab from '../components/ResumeAnalysis/CompareTab';
 import OverviewTab from '../components/ResumeAnalysis/OverviewTab';
+import PipelineTab from '../components/ResumeAnalysis/PipelineTab';
 import ResumeComments from '../components/ResumeComments';
 import { loadTinyMCE } from '../utils/lazyTinyMCE';
 import { fetchWithAuth, createAuthOptionsWithCsrf } from '../utils/apiInterceptor';
@@ -36,7 +37,7 @@ const ResumeImprovePage = (): JSX.Element => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isImproving, setIsImproving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'improved' | 'compare' | 'analysis'>('improved');
+  const [activeTab, setActiveTab] = useState<'improved' | 'compare' | 'analysis' | 'pipeline'>('improved');
   const [localResume, setLocalResume] = useState<Resume | null>(null);
   const [tinymceLoaded, setTinymceLoaded] = useState(false);
   const [editorReady, setEditorReady] = useState(false);
@@ -470,6 +471,16 @@ const ResumeImprovePage = (): JSX.Element => {
                   >
                     {t('resume.analysis.tabs.overview')}
                   </button>
+                  <button
+                    onClick={() => setActiveTab('pipeline')}
+                    className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+                      activeTab === 'pipeline'
+                        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                    }`}
+                  >
+                    {t('resume.analysis.tabs.pipeline')}
+                  </button>
                 </nav>
               </div>
 
@@ -487,6 +498,12 @@ const ResumeImprovePage = (): JSX.Element => {
                 )}
                 {activeTab === 'compare' && <CompareTab resume={localResume} />}
                 {activeTab === 'analysis' && <OverviewTab resume={localResume} t={t} />}
+                {activeTab === 'pipeline' && id && (
+                  <PipelineTab
+                    resumeId={id}
+                    resumeName={(localResume?.['Name'] as string) || (localResume?.name as string) || 'CV'}
+                  />
+                )}
               </div>
             </div>
 
