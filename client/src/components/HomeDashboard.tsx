@@ -240,7 +240,7 @@ function HomeDashboard(): JSX.Element | null {
           <KPICard
             icon={ChartBarIcon}
             label={t('home.dashboard.kpis.averageScore')}
-            value={`${stats.scores.averageOriginal}%`}
+            value={`${stats.scores.averageImproved > 0 ? stats.scores.averageImproved : stats.scores.averageOriginal}%`}
             subValue={stats.scores.improvement > 0 ? `+${stats.scores.improvement} pts ${t('home.dashboard.kpis.afterImprovement')}` : undefined}
             color="text-green-600 dark:text-green-400"
             delay={0.2}

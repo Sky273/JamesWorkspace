@@ -363,6 +363,8 @@
         "analyzed": "CV analysés",
         "averageScore": "Score moyen",
         "activeMissions": "Missions actives",
+        "totalMissions": "{{count}} au total",
+        "thisMonth": "{{count}} ce mois",
         "afterImprovement": "après amélioration"
       },
       "recentActivity": "Activité récente",

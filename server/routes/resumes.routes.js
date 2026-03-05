@@ -22,6 +22,34 @@ import versionsRouter from './resumes/versions.routes.js';
 
 const router = express.Router();
 
+// Helper to validate UUID format
+const isValidUUID = (str) => {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(str);
+};
+
+// Helper to get user's firm_id (returns UUID)
+const getUserFirmId = async (req) => {
+    const firmId = req.user?.firm_id || req.user?.firmId;
+    if (firmId && isValidUUID(firmId)) {
+        return firmId;
+    }
+    
+    const firmName = req.user?.firm || req.user?.Firm;
+    if (firmName) {
+        try {
+            const result = await query('SELECT id FROM firms WHERE name = $1', [firmName]);
+            if (result.rows.length > 0) {
+                return result.rows[0].id;
+            }
+        } catch (error) {
+            safeLog('error', 'Error looking up firm by name', { firmName, error: error.message });
+        }
+    }
+    
+    return null;
+};
+
 // Configure multer for file uploads
 const upload = multer({ dest: UPLOAD_DIR });
 
@@ -250,27 +278,43 @@ router.get('/stats', authenticateToken, async (req, res) => {
         const resumeStatsResult = await query(resumeStatsQuery, [...params, today, thisWeek, thisMonth]);
         const resumeStats = resumeStatsResult.rows[0];
 
-        // Fetch mission stats
+        // Fetch mission stats - use same logic as missions.routes.js (firm OR firm_id)
         let missionWhereClause = '';
-        if (!isAdmin && userFirm) {
-            missionWhereClause = 'WHERE firm = $1';
+        let missionParams = [];
+        if (!isAdmin) {
+            const userFirmId = await getUserFirmId(req);
+            if (userFirmId) {
+                missionWhereClause = 'WHERE (firm = $1 OR firm_id = $2)';
+                missionParams = [userFirm || '', userFirmId];
+            } else if (userFirm) {
+                missionWhereClause = 'WHERE firm = $1';
+                missionParams = [userFirm];
+            }
         }
         
         const missionStatsQuery = `
             SELECT 
                 COUNT(*) as total,
-                COUNT(CASE WHEN status = 'active' THEN 1 END) as active
+                COUNT(CASE WHEN LOWER(status) = 'active' THEN 1 END) as active
             FROM missions
             ${missionWhereClause}
         `;
         
-        const missionStatsResult = await query(missionStatsQuery, !isAdmin && userFirm ? [userFirm] : []);
+        const missionStatsResult = await query(missionStatsQuery, missionParams);
         const missionStats = missionStatsResult.rows[0];
 
-        // Fetch adaptation stats
+        // Fetch adaptation stats - use same firm/firm_id logic
         let adaptationWhereClause = '';
-        if (!isAdmin && userFirm) {
-            adaptationWhereClause = 'WHERE firm = $1';
+        let adaptationParams = [];
+        if (!isAdmin) {
+            const userFirmId = await getUserFirmId(req);
+            if (userFirmId) {
+                adaptationWhereClause = 'WHERE (firm = $1 OR firm_id = $2)';
+                adaptationParams = [userFirm || '', userFirmId];
+            } else if (userFirm) {
+                adaptationWhereClause = 'WHERE firm = $1';
+                adaptationParams = [userFirm];
+            }
         }
         
         const adaptationStatsQuery = `
@@ -279,7 +323,7 @@ router.get('/stats', authenticateToken, async (req, res) => {
             ${adaptationWhereClause}
         `;
         
-        const adaptationStatsResult = await query(adaptationStatsQuery, !isAdmin && userFirm ? [userFirm] : []);
+        const adaptationStatsResult = await query(adaptationStatsQuery, adaptationParams);
         const adaptationStats = adaptationStatsResult.rows[0];
 
         const avgOriginal = parseFloat(resumeStats.avg_original_score) || 0;

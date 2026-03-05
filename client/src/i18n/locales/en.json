@@ -146,6 +146,8 @@
         "analyzed": "Analyzed Resumes",
         "averageScore": "Average Score",
         "activeMissions": "Active Missions",
+        "totalMissions": "{{count}} total",
+        "thisMonth": "{{count}} this month",
         "afterImprovement": "after improvement"
       },
       "recentActivity": "Recent Activity",
