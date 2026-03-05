@@ -80,13 +80,17 @@ function Run-Container {
     Write-Host "Starting container: $ContainerName" -ForegroundColor Green
     Write-Host ""
     
+    # Create named volume for PostgreSQL data persistence
+    docker volume create resumeconverter-pgdata 2>$null
+    
     docker run -d `
         --name $ContainerName `
-        -p 3001:3001 `
+        -p 3443:3443 `
         -e OPENAI_API_KEY=$env:OPENAI_API_KEY `
         -e ANTHROPIC_API_KEY=$env:ANTHROPIC_API_KEY `
         -e JWT_SECRET="docker-jwt-secret-$(Get-Random)" `
         -e JWT_REFRESH_SECRET="docker-jwt-refresh-$(Get-Random)" `
+        -v "resumeconverter-pgdata:/var/lib/postgresql/14/main" `
         -v "${PWD}/uploads:/app/uploads" `
         -v "${PWD}/logs:/app/logs" `
         --restart unless-stopped `
@@ -97,7 +101,8 @@ function Run-Container {
         Write-Host "Container started successfully!" -ForegroundColor Green
         Write-Host ""
         Write-Host "============================================" -ForegroundColor Cyan
-        Write-Host "  Application URL: http://localhost:3001" -ForegroundColor White
+        Write-Host "  Application URL: https://localhost:3443" -ForegroundColor White
+        Write-Host "  Database Volume: resumeconverter-pgdata (persistent)" -ForegroundColor White
         Write-Host "  Default login:   admin@resumeconverter.local" -ForegroundColor White
         Write-Host "  Default password: admin123" -ForegroundColor White
         Write-Host "============================================" -ForegroundColor Cyan

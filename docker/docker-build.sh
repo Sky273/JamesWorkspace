@@ -69,13 +69,17 @@ run_container() {
     echo "Starting container: $CONTAINER_NAME"
     echo ""
     
+    # Create named volume for PostgreSQL data persistence
+    docker volume create resumeconverter-pgdata 2>/dev/null
+    
     docker run -d \
         --name $CONTAINER_NAME \
-        -p 3001:3001 \
+        -p 3443:3443 \
         -e OPENAI_API_KEY="${OPENAI_API_KEY}" \
         -e ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY}" \
         -e JWT_SECRET="docker-jwt-secret-$(date +%s)" \
         -e JWT_REFRESH_SECRET="docker-jwt-refresh-$(date +%s)" \
+        -v "resumeconverter-pgdata:/var/lib/postgresql/14/main" \
         -v "$(pwd)/uploads:/app/uploads" \
         -v "$(pwd)/logs:/app/logs" \
         --restart unless-stopped \
@@ -86,7 +90,8 @@ run_container() {
         echo "Container started successfully!"
         echo ""
         echo "============================================"
-        echo "  Application URL: http://localhost:3001"
+        echo "  Application URL: https://localhost:3443"
+        echo "  Database Volume: resumeconverter-pgdata (persistent)"
         echo "  Default login:   admin@resumeconverter.local"
         echo "  Default password: admin123"
         echo "============================================"

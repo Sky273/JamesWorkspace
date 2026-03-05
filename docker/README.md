@@ -124,16 +124,34 @@ docker run -d \
 
 ## 📁 Persistent Data
 
-The following directories are mounted as volumes for data persistence:
+All data is automatically persisted via Docker volumes:
 
-| Host Path | Container Path | Purpose |
-|-----------|----------------|---------|
+| Volume/Path | Container Path | Purpose |
+|-------------|----------------|---------|
+| `resumeconverter-pgdata` | `/var/lib/postgresql/14/main` | **PostgreSQL database** |
 | `./uploads` | `/app/uploads` | Uploaded resume files |
 | `./logs` | `/app/logs` | Application logs |
 
-⚠️ **Note**: PostgreSQL data is stored inside the container. For production, consider:
-- Using a separate PostgreSQL container/service
-- Mounting a volume for `/var/lib/postgresql/14/main`
+✅ **PostgreSQL data is persistent**: Data is stored in a named Docker volume `resumeconverter-pgdata`. Your data is preserved even if the container is deleted and recreated.
+
+### Managing PostgreSQL Volume
+
+```bash
+# List Docker volumes
+docker volume ls
+
+# Inspect the data volume
+docker volume inspect resumeconverter-pgdata
+
+# Backup database
+docker exec resumeconverter-app pg_dump -U resumeconverter resumeconverter > backup.sql
+
+# Restore database
+docker exec -i resumeconverter-app psql -U resumeconverter resumeconverter < backup.sql
+
+# ⚠️ Delete volume (DATA LOSS!)
+docker volume rm resumeconverter-pgdata
+```
 
 ## 🏗️ Architecture
 

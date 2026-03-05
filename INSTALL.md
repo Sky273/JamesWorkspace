@@ -9,7 +9,7 @@ Ce guide détaille les procédures d'installation et de lancement de ResumeConve
 1. [Prérequis](#prérequis)
 2. [Installation hors Docker (Développement)](#installation-hors-docker-développement)
 3. [Installation avec Docker (Production)](#installation-avec-docker-production)
-4. [Configuration](#configuration)
+4. [Configuration complète](#configuration-complète)
 5. [Dépannage](#dépannage)
 
 ---
@@ -59,46 +59,154 @@ Cette commande installe toutes les dépendances du projet (serveur, client, PDF 
 
 #### 3.1 Créer le fichier `.env`
 
-Copiez le fichier d'exemple et modifiez-le :
+Créez un fichier `.env` à la racine du projet :
 
 ```bash
-cp .env.example .env
+# Windows
+copy NUL .env
+
+# Linux/Mac
+touch .env
 ```
 
-#### 3.2 Variables d'environnement requises
+#### 3.2 Configuration complète du fichier `.env`
 
-Éditez le fichier `.env` avec vos paramètres :
+Copiez et adaptez la configuration suivante dans votre fichier `.env` :
 
 ```env
-# ============================================
-# BASE DE DONNÉES POSTGRESQL
-# ============================================
+# ==============================================================================
+# RESUMECONVERTER - CONFIGURATION ENVIRONNEMENT
+# ==============================================================================
+# Ce fichier contient toutes les variables d'environnement nécessaires.
+# Les variables marquées [REQUIS] sont obligatoires.
+# Les variables marquées [OPTIONNEL] peuvent être omises.
+# ==============================================================================
+
+# ==============================================================================
+# BASE DE DONNÉES POSTGRESQL [REQUIS]
+# ==============================================================================
+# Connexion à la base de données PostgreSQL
+
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
 POSTGRES_DB=resumeconverter
-POSTGRES_USER=votre_utilisateur
-POSTGRES_PASSWORD=votre_mot_de_passe
+POSTGRES_USER=resumeconverter
+POSTGRES_PASSWORD=votre_mot_de_passe_securise
 
-# ============================================
-# SÉCURITÉ (générez des secrets uniques !)
-# ============================================
-JWT_SECRET=votre_secret_jwt_minimum_32_caracteres
-JWT_REFRESH_SECRET=votre_secret_refresh_minimum_32_caracteres
-REFRESH_TOKEN_SECRET=votre_secret_token_minimum_32_caracteres
-CSRF_SECRET=votre_secret_csrf_minimum_32_caracteres
+# Pool de connexions (optionnel)
+POSTGRES_MAX_CONNECTIONS=10
 
-# ============================================
-# CLÉS API (optionnel mais recommandé)
-# ============================================
-OPENAI_API_KEY=sk-...
-ANTHROPIC_API_KEY=sk-ant-...
+# SSL pour PostgreSQL (production)
+# Valeurs: true (SSL strict), relaxed (SSL sans validation cert), false (pas de SSL)
+POSTGRES_SSL=false
 
-# ============================================
-# SERVEUR
-# ============================================
+# Retry configuration (optionnel)
+POSTGRES_MAX_RETRIES=5
+POSTGRES_RETRY_DELAY=1000
+
+# ==============================================================================
+# SÉCURITÉ - SECRETS JWT ET CSRF [REQUIS]
+# ==============================================================================
+# IMPORTANT: Générez des secrets uniques et sécurisés (minimum 32 caractères)
+# Commande pour générer un secret:
+#   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+
+JWT_SECRET=REMPLACEZ_PAR_UN_SECRET_DE_64_CARACTERES_HEXADECIMAUX
+JWT_REFRESH_SECRET=REMPLACEZ_PAR_UN_AUTRE_SECRET_DE_64_CARACTERES
+REFRESH_TOKEN_SECRET=REMPLACEZ_PAR_ENCORE_UN_AUTRE_SECRET_64_CHARS
+CSRF_SECRET=REMPLACEZ_PAR_UN_SECRET_CSRF_DE_64_CARACTERES_HEX
+
+# ==============================================================================
+# SERVEUR [OPTIONNEL]
+# ==============================================================================
+# Configuration des ports et mode d'exécution
+
 NODE_ENV=development
-PORT=3001
+# Valeurs: development, production
+
+PROXY_PORT=3001
 PDF_SERVER_PORT=3002
+HTTPS_PORT=3443
+HTTPS_ENABLED=false
+
+# Répertoire des uploads (relatif à la racine du projet)
+UPLOAD_DIR=./uploads
+
+# ==============================================================================
+# CORS - ORIGINES AUTORISÉES [OPTIONNEL]
+# ==============================================================================
+# Liste des origines autorisées, séparées par des virgules
+# Par défaut: localhost sur les ports de développement
+
+ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3001,https://localhost:3443
+
+# ==============================================================================
+# INTELLIGENCE ARTIFICIELLE - CLÉS API [OPTIONNEL]
+# ==============================================================================
+# Au moins une clé API est nécessaire pour l'analyse et l'amélioration des CV
+
+# OpenAI (GPT-4, GPT-4o)
+# Obtenir une clé: https://platform.openai.com/api-keys
+OPENAI_API_KEY=sk-votre-cle-openai
+
+# Anthropic (Claude)
+# Obtenir une clé: https://console.anthropic.com/
+ANTHROPIC_API_KEY=sk-ant-votre-cle-anthropic
+
+# ==============================================================================
+# GOOGLE OAUTH - AUTHENTIFICATION SSO [OPTIONNEL]
+# ==============================================================================
+# Pour activer "Se connecter avec Google" et l'envoi d'emails via Gmail
+# Configurer dans: https://console.cloud.google.com/
+
+GOOGLE_CLIENT_ID=votre-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=votre-client-secret
+
+# URIs de redirection OAuth (adapter selon votre domaine)
+GOOGLE_AUTH_REDIRECT_URI=http://localhost:3001/api/auth/google/callback
+GOOGLE_REDIRECT_URI=http://localhost:3001/api/mail/callback/gmail
+GOOGLE_GDPR_REDIRECT_URI=http://localhost:3001/api/gdpr/mail/callback
+
+# Clé de chiffrement pour les tokens OAuth stockés (64 caractères hex)
+# Générer avec: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+MAIL_TOKEN_ENCRYPTION_KEY=REMPLACEZ_PAR_64_CARACTERES_HEXADECIMAUX
+
+# ==============================================================================
+# SMTP - ENVOI D'EMAILS GDPR [OPTIONNEL]
+# ==============================================================================
+# Configuration SMTP pour l'envoi automatique des emails de consentement GDPR
+# Alternative à Gmail OAuth pour les emails GDPR
+
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=votre-email@example.com
+SMTP_PASSWORD=votre-mot-de-passe-smtp
+SMTP_FROM_NAME=ResumeConverter
+SMTP_FROM_EMAIL=noreply@example.com
+
+# ==============================================================================
+# MARKET RADAR - FRANCE TRAVAIL API [OPTIONNEL]
+# ==============================================================================
+# Pour les statistiques du marché de l'emploi français
+# S'inscrire sur: https://francetravail.io/
+
+FRANCE_TRAVAIL_CLIENT_ID=votre-client-id
+FRANCE_TRAVAIL_CLIENT_SECRET=votre-client-secret
+FRANCE_TRAVAIL_API_URL=https://api.francetravail.io/partenaire/offresdemploi/v2
+
+# ==============================================================================
+# MARKET RADAR - ADZUNA API [OPTIONNEL]
+# ==============================================================================
+# Pour les statistiques du marché de l'emploi international
+# S'inscrire sur: https://developer.adzuna.com/signup
+
+ADZUNA_APP_ID=votre-app-id
+ADZUNA_APP_KEY=votre-app-key
+
+# ==============================================================================
+# FIN DE LA CONFIGURATION
+# ==============================================================================
 ```
 
 ### Étape 4 : Configurer PostgreSQL
@@ -294,14 +402,34 @@ docker run -d \
 
 ### Persistance des données
 
-| Chemin hôte | Chemin conteneur | Description |
-|-------------|------------------|-------------|
+Les données sont automatiquement persistées via des volumes Docker :
+
+| Volume/Chemin | Chemin conteneur | Description |
+|---------------|------------------|-------------|
+| `resumeconverter-pgdata` | `/var/lib/postgresql/14/main` | **Base de données PostgreSQL** |
 | `./uploads` | `/app/uploads` | Fichiers CV uploadés |
 | `./logs` | `/app/logs` | Logs applicatifs |
 
-⚠️ **Note importante :** Les données PostgreSQL sont stockées à l'intérieur du conteneur. Pour la production, envisagez :
-- Utiliser un service PostgreSQL externe
-- Monter un volume pour `/var/lib/postgresql/14/main`
+✅ **Les données PostgreSQL sont persistantes** : Elles sont stockées dans un volume Docker nommé `resumeconverter-pgdata`. Vos données sont conservées même si le conteneur est supprimé et recréé.
+
+#### Gestion du volume PostgreSQL
+
+```bash
+# Voir les volumes Docker
+docker volume ls
+
+# Inspecter le volume de données
+docker volume inspect resumeconverter-pgdata
+
+# Sauvegarder les données (exporter la base)
+docker exec resumeconverter-app pg_dump -U resumeconverter resumeconverter > backup.sql
+
+# Restaurer les données
+docker exec -i resumeconverter-app psql -U resumeconverter resumeconverter < backup.sql
+
+# ⚠️ Supprimer le volume (PERTE DE DONNÉES !)
+docker volume rm resumeconverter-pgdata
+```
 
 ### Système de migrations automatiques
 
@@ -317,44 +445,38 @@ Les migrations sont trackées dans la table `schema_migrations`.
 
 ---
 
-## Configuration
+## Configuration complète
 
-### Variables d'environnement
+### Récapitulatif des variables d'environnement
 
-#### Base de données
+La configuration complète du fichier `.env` est détaillée dans la section [Installation hors Docker > Étape 3](#étape-3--configurer-lenvironnement).
 
-| Variable | Description | Défaut |
-|----------|-------------|--------|
-| `POSTGRES_HOST` | Hôte PostgreSQL | `127.0.0.1` |
-| `POSTGRES_PORT` | Port PostgreSQL | `5432` |
-| `POSTGRES_DB` | Nom de la base | `resumeconverter` |
-| `POSTGRES_USER` | Utilisateur | `resumeconverter` |
-| `POSTGRES_PASSWORD` | Mot de passe | `resumeconverter` |
+#### Variables requises (minimum pour démarrer)
 
-#### Sécurité
+| Variable | Description | Comment générer |
+|----------|-------------|-----------------|
+| `POSTGRES_PASSWORD` | Mot de passe PostgreSQL | Choisir un mot de passe sécurisé |
+| `JWT_SECRET` | Secret JWT (min 32 car.) | `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
+| `JWT_REFRESH_SECRET` | Secret refresh token | Même commande |
+| `REFRESH_TOKEN_SECRET` | Secret token additionnel | Même commande |
+| `CSRF_SECRET` | Secret CSRF | Même commande |
 
-| Variable | Description | Requis |
-|----------|-------------|--------|
-| `JWT_SECRET` | Secret pour les tokens JWT (min 32 car.) | ✅ |
-| `JWT_REFRESH_SECRET` | Secret pour les refresh tokens | ✅ |
-| `REFRESH_TOKEN_SECRET` | Secret additionnel | ✅ |
-| `CSRF_SECRET` | Secret CSRF | ✅ |
+#### Variables recommandées (fonctionnalités IA)
 
-#### API externes
+| Variable | Description | Où l'obtenir |
+|----------|-------------|--------------|
+| `OPENAI_API_KEY` | Clé API OpenAI (GPT-4) | https://platform.openai.com/api-keys |
+| `ANTHROPIC_API_KEY` | Clé API Anthropic (Claude) | https://console.anthropic.com/ |
 
-| Variable | Description | Requis |
-|----------|-------------|--------|
-| `OPENAI_API_KEY` | Clé API OpenAI | Optionnel |
-| `ANTHROPIC_API_KEY` | Clé API Anthropic (Claude) | Optionnel |
+#### Variables optionnelles par fonctionnalité
 
-#### Serveur
-
-| Variable | Description | Défaut |
-|----------|-------------|--------|
-| `NODE_ENV` | Environnement (`development`/`production`) | `development` |
-| `PORT` | Port du serveur proxy | `3001` |
-| `HTTPS_PORT` | Port HTTPS | `3443` |
-| `PDF_SERVER_PORT` | Port du serveur PDF | `3002` |
+| Fonctionnalité | Variables requises |
+|----------------|-------------------|
+| **Google SSO** | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_AUTH_REDIRECT_URI` |
+| **Envoi email Gmail** | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`, `MAIL_TOKEN_ENCRYPTION_KEY` |
+| **Emails GDPR via SMTP** | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` |
+| **Market Radar FR** | `FRANCE_TRAVAIL_CLIENT_ID`, `FRANCE_TRAVAIL_CLIENT_SECRET` |
+| **Market Radar INT** | `ADZUNA_APP_ID`, `ADZUNA_APP_KEY` |
 
 ### Configuration HTTPS (hors Docker)
 
@@ -372,6 +494,11 @@ openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
 2. Configurez `client/.env` :
 ```env
 VITE_HTTPS_ENABLED=true
+```
+
+3. Ajoutez dans `.env` :
+```env
+HTTPS_ENABLED=true
 ```
 
 ---
