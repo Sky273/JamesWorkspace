@@ -105,9 +105,10 @@ RUN echo "host all all 127.0.0.1/32 md5" >> /etc/postgresql/14/main/pg_hba.conf 
 USER root
 
 # =============================================================================
-# Database Schema Initialization Script
+# Database Schema Initialization Script and Migrations
 # =============================================================================
 COPY docker/init-db.sql /docker-entrypoint-initdb.d/
+COPY docker/migrations /docker-entrypoint-initdb.d/migrations/
 
 # =============================================================================
 # Supervisor Configuration (Process Manager)
