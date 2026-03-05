@@ -916,7 +916,10 @@
     "status": {
       "Active": "Active",
       "Closed": "Closed",
-      "Draft": "Draft"
+      "Draft": "Draft",
+      "active": "Active",
+      "closed": "Closed",
+      "draft": "Draft"
     },
     "stats": {
       "total": "Total missions",

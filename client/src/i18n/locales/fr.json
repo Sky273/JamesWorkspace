@@ -940,7 +940,10 @@
     "status": {
       "Active": "Active",
       "Closed": "Clôturée",
-      "Draft": "Brouillon"
+      "Draft": "Brouillon",
+      "active": "Active",
+      "closed": "Clôturée",
+      "draft": "Brouillon"
     },
     "stats": {
       "total": "Total missions",
