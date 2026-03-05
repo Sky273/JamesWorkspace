@@ -333,124 +333,151 @@ router.post('/extract-from-cv', authenticateToken, requireAdmin, upload.single('
 });
 
 /**
- * Extract template from DOCX file using HTML conversion with images
- * Also extracts styles from word/styles.xml for colors and fonts
+ * Extract template from DOCX file using direct HTML extraction
+ * Optimized for speed - no Puppeteer rendering
  */
 async function extractFromDOCX(buffer, fileName) {
-    const mammoth = (await import('mammoth')).default;
     const JSZip = (await import('jszip')).default;
+    const mammoth = (await import('mammoth')).default;
     
-    // Collect images during conversion
+    const startTime = Date.now();
+    safeLog('info', 'Starting DOCX template extraction', { fileName, bufferSize: buffer.length });
+    
+    // Step 1: Extract images and styles from DOCX (fast, parallel)
     const extractedImages = [];
-    
-    // Try to extract styles from the DOCX (which is a ZIP file)
     let extractedStyles = { colors: [], fonts: [] };
+    
     try {
-        safeLog('debug', 'Loading DOCX as ZIP to extract styles');
         const zip = await JSZip.loadAsync(buffer);
-        const stylesFile = zip.file('word/styles.xml');
-        safeLog('debug', 'Styles file found', { exists: !!stylesFile });
         
+        // Extract styles
+        const stylesFile = zip.file('word/styles.xml');
         if (stylesFile) {
             const stylesXml = await stylesFile.async('string');
-            safeLog('debug', 'Styles XML loaded', { length: stylesXml?.length });
             extractedStyles = parseDocxStyles(stylesXml);
-            safeLog('info', 'Extracted styles from DOCX', extractedStyles);
+            safeLog('debug', 'Extracted styles from DOCX', extractedStyles);
         }
-    } catch (styleError) {
-        safeLog('warn', 'Could not extract styles from DOCX', { error: styleError.message, stack: styleError.stack });
+        
+        // Extract all images from word/media folder
+        const mediaFiles = Object.keys(zip.files)
+            .filter(name => name.startsWith('word/media/'));
+            
+        for (const mediaPath of mediaFiles) {
+            try {
+                const file = zip.file(mediaPath);
+                if (file) {
+                    const imageData = await file.async('base64');
+                    const ext = mediaPath.split('.').pop().toLowerCase();
+                    const contentType = ext === 'png' ? 'image/png' : 
+                                       ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : 
+                                       ext === 'gif' ? 'image/gif' : 'image/png';
+                    
+                    extractedImages.push({
+                        name: mediaPath.split('/').pop(),
+                        base64: imageData,
+                        contentType
+                    });
+                }
+            } catch (imgErr) {
+                safeLog('warn', 'Failed to extract image', { path: mediaPath, error: imgErr.message });
+            }
+        }
+        
+        safeLog('debug', 'Images extracted', { count: extractedImages.length, elapsed: Date.now() - startTime });
+    } catch (zipError) {
+        safeLog('warn', 'Could not parse DOCX as ZIP', { error: zipError.message });
     }
     
-    // Configure mammoth to convert to HTML and extract images as base64
-    // Note: mammoth preserves document structure but not all inline styles
-    // We use includeDefaultStyleMap to keep default mappings and add custom ones
-    const options = {
-        buffer,
-        convertImage: mammoth.images.imgElement(async (image) => {
-            try {
-                safeLog('debug', 'Extracting image from DOCX', { contentType: image.contentType });
-                const imageBuffer = await image.read();
-                const base64 = imageBuffer.toString('base64');
-                const contentType = image.contentType || 'image/png';
-                
-                extractedImages.push({
-                    name: `image_${extractedImages.length + 1}`,
-                    base64,
-                    contentType
-                });
-                
-                safeLog('info', 'Image extracted from DOCX', { 
-                    name: `image_${extractedImages.length}`,
-                    contentType,
-                    sizeKB: Math.round(base64.length / 1024)
-                });
-                
-                // Return inline base64 image with preserved dimensions if available
-                return {
-                    src: `data:${contentType};base64,${base64}`
-                };
-            } catch (imgError) {
-                safeLog('warn', 'Failed to extract image from DOCX', { error: imgError.message });
-                return { src: '' };
-            }
-        }),
-        // Extended style map to preserve more document structure
-        styleMap: [
-            // Headings
-            "p[style-name='Heading 1'] => h1.doc-heading1:fresh",
-            "p[style-name='Heading 2'] => h2.doc-heading2:fresh",
-            "p[style-name='Heading 3'] => h3.doc-heading3:fresh",
-            "p[style-name='Title'] => h1.doc-title:fresh",
-            "p[style-name='Subtitle'] => h2.doc-subtitle:fresh",
-            // Text formatting
-            "b => strong",
-            "i => em",
-            "u => span.underline",
-            "strike => span.strikethrough",
-            // Lists
-            "p[style-name='List Paragraph'] => li:fresh",
-            // Tables - preserve structure
-            "table => table.doc-table",
-            // Special sections that might be header/footer
-            "p[style-name='Header'] => div.doc-header > p:fresh",
-            "p[style-name='Footer'] => div.doc-footer > p:fresh",
-            // Preserve any colored/highlighted text
-            "highlight => span.highlight"
-        ],
-        includeDefaultStyleMap: true
-    };
+    // Step 2: Convert DOCX to HTML with mammoth
+    let htmlContent = '';
+    try {
+        const options = {
+            buffer,
+            convertImage: mammoth.images.imgElement(async (image) => {
+                try {
+                    const imageBuffer = await image.read();
+                    const base64 = imageBuffer.toString('base64');
+                    const contentType = image.contentType || 'image/png';
+                    return { src: `data:${contentType};base64,${base64}` };
+                } catch {
+                    return { src: '' };
+                }
+            }),
+            styleMap: [
+                "p[style-name='Heading 1'] => h1:fresh",
+                "p[style-name='Heading 2'] => h2:fresh",
+                "p[style-name='Heading 3'] => h3:fresh",
+                "p[style-name='Title'] => h1.title:fresh",
+                "b => strong",
+                "i => em",
+                "u => u"
+            ],
+            includeDefaultStyleMap: true
+        };
+        
+        const htmlResult = await mammoth.convertToHtml(options);
+        htmlContent = htmlResult.value || '';
+        
+        safeLog('info', 'DOCX converted to HTML', {
+            htmlLength: htmlContent.length,
+            imageCount: extractedImages.length,
+            elapsed: Date.now() - startTime
+        });
+    } catch (mammothError) {
+        safeLog('error', 'Mammoth conversion failed', { error: mammothError.message });
+        throw new Error('Failed to convert Word document: ' + mammothError.message);
+    }
     
-    // Convert to HTML
-    const htmlResult = await mammoth.convertToHtml(options);
-    
-    if (!htmlResult.value || htmlResult.value.trim().length < 50) {
+    if (htmlContent.length < 50) {
         throw new Error('Could not extract sufficient content from the Word document.');
     }
     
-    safeLog('info', 'DOCX converted to HTML', {
-        htmlLength: htmlResult.value.length,
-        imageCount: extractedImages.length,
-        warnings: htmlResult.messages?.length || 0
-    });
-    
-    // Call the HTML-based extraction service with extracted styles info
-    const result = await extractTemplateFromHTML(
-        htmlResult.value, 
-        extractedImages, 
-        fileName,
-        extractedStyles
-    );
+    // Step 3: Direct HTML-based extraction (fast, no Puppeteer)
+    const result = await extractTemplateFromHTML(htmlContent, extractedImages, fileName, extractedStyles);
     result.extractionMethod = 'docx-html';
     
-    // Add extracted styles to result if LLM didn't provide them
-    if (extractedStyles.colors.length > 0 && (!result.template.extractedColors || result.template.extractedColors.length === 0)) {
+    // Inject extracted images into result
+    injectExtractedImages(result.template, extractedImages);
+    
+    // Add extracted styles
+    if (extractedStyles.colors.length > 0 && !result.template.extractedColors?.length) {
         result.template.extractedColors = extractedStyles.colors;
     }
-    if (extractedStyles.fonts.length > 0 && (!result.template.extractedFonts || result.template.extractedFonts.length === 0)) {
+    if (extractedStyles.fonts.length > 0 && !result.template.extractedFonts?.length) {
         result.template.extractedFonts = extractedStyles.fonts;
     }
     
+    safeLog('info', 'DOCX extraction completed', { 
+        totalElapsed: Date.now() - startTime,
+        templateName: result.template?.name
+    });
+    
     return result;
+}
+
+/**
+ * Inject extracted images into template placeholders
+ */
+function injectExtractedImages(template, images) {
+    if (!template || images.length === 0) return;
+    
+    const logoImage = images[0];
+    const logoBase64 = `data:${logoImage.contentType};base64,${logoImage.base64}`;
+    const logoTag = `<img src="${logoBase64}" alt="Logo" class="template-logo" style="max-height:60px;">`;
+    
+    const replacePlaceholders = (content) => {
+        if (!content) return content;
+        return content
+            .replace(/\[LOGO\]/gi, logoTag)
+            .replace(/\[LOGO CABINET\]/gi, logoTag)
+            .replace(/-logo-/gi, logoTag)
+            .replace(/<img[^>]*src=['"]logo\.png['"][^>]*>/gi, logoTag)
+            .replace(/<img[^>]*src=['"][^'"]*placeholder[^'"]*['"][^>]*>/gi, logoTag);
+    };
+    
+    template.headerContent = replacePlaceholders(template.headerContent);
+    template.templateContent = replacePlaceholders(template.templateContent);
+    template.footerContent = replacePlaceholders(template.footerContent);
 }
 
 /**

@@ -11,7 +11,7 @@ const Footer = (): JSX.Element => {
   const { t } = useTranslation();
   
   return (
-    <footer className="footer">
+    <footer className="footer bg-gray-100 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 py-6">
       <div className="container mx-auto px-4">
         <div className="flex flex-col items-center justify-center space-y-4">
           <a href="https://www.aptea.net/" target="_blank" rel="noopener noreferrer">

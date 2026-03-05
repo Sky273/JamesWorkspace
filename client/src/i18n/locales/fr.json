@@ -580,6 +580,7 @@
       "step4": "Personnalisez le modèle avant de l'enregistrer",
       "analyzing": "Analyse du CV en cours...",
       "pleaseWait": "L'IA extrait la structure et les styles du document",
+      "longOperation": "Cette opération peut prendre 1 à 3 minutes selon la complexité du document.",
       "extractButton": "Extraire le modèle",
       "extractionComplete": "Extraction terminée !",
       "usedModel": "Modèle IA utilisé",

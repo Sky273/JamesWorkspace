@@ -288,7 +288,11 @@ export const templateService = {
                 delete (authOptions.headers as Record<string, string>)['Content-Type'];
             }
 
-            const response = await fetchWithAuth('/api/templates/extract-from-cv', authOptions);
+            // Use extended timeout for template extraction (5 minutes)
+            // This operation involves LLM processing which can take several minutes
+            const EXTRACTION_TIMEOUT = 5 * 60 * 1000; // 5 minutes
+            
+            const response = await fetchWithAuth('/api/templates/extract-from-cv', authOptions, EXTRACTION_TIMEOUT);
             
             if (!response.ok) {
                 const errorData = await response.json();

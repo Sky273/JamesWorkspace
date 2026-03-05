@@ -14,29 +14,38 @@ import { safeLog } from '../utils/logger.backend.js';
  */
 const HTML_EXTRACTION_PROMPT = `Tu es un expert en création de templates de CV réutilisables.
 
-TÂCHE: Convertir le HTML d'un CV en template réutilisable.
+TÂCHE: Convertir le HTML d'un CV en template VIDE réutilisable.
 
-INSTRUCTIONS:
-1. Identifie le HEADER (en-tête avec logo/nom de société) → copie-le dans headerContent
-2. Identifie le FOOTER (pied de page) → copie-le dans footerContent  
-3. Pour le CORPS du CV:
-   - Remplace le nom du candidat par: -name-
-   - Remplace le titre/poste par: -title-
-   - Remplace tout le contenu (expériences, compétences, etc.) par: -content-
-4. Crée un STYLESHEET CSS basé sur les styles observés
+RÈGLES CRITIQUES:
+1. AUCUNE information personnelle (pas de nom, email, téléphone, adresse, dates, entreprises, écoles)
+2. AUCUN contenu de CV (pas de titres de sections comme "Compétences", "Expériences", etc.)
+3. UN SEUL placeholder -content- pour TOUT le corps du CV
+
+STRUCTURE DU TEMPLATE:
+1. HEADER: en-tête avec logo/nom de société → headerContent (remplacer logo par -logo-)
+2. FOOTER: pied de page société → footerContent (garder infos société)
+3. CORPS: structure MINIMALISTE avec 3 placeholders UNIQUEMENT:
+   - -name- : nom du candidat
+   - -title- : titre/poste
+   - -content- : UN SEUL bloc pour TOUT le contenu (pas de sections séparées!)
+
+EXEMPLE CORRECT de templateContent:
+"<div class='cv-header'><h1>-name-</h1><h2>-title-</h2></div><div class='cv-body'>-content-</div>"
+
+EXEMPLE INCORRECT (à NE PAS faire):
+"<h3>Contact</h3>-content-<h3>Compétences</h3>-content-<h3>Expériences</h3>-content-"
 
 IMPORTANT: 
-- Conserve les images base64 (<img src="data:...">) telles quelles
-- Conserve les styles inline
-- Le stylesheet doit contenir du CSS valide
+- Conserve les images base64 (<img src="data:...">) ou remplace par -logo-
+- Crée un stylesheet CSS basé sur les couleurs et polices observées
 
 Tu DOIS retourner un JSON avec TOUS ces champs:
 
 {
   "name": "string - nom du template",
-  "description": "string - description",
-  "headerContent": "string - HTML du header",
-  "templateContent": "string - HTML avec -name-, -title-, -content-",
+  "description": "string - description du style",
+  "headerContent": "string - HTML du header avec -logo-",
+  "templateContent": "string - HTML MINIMALISTE avec -name-, -title-, -content- (UN SEUL -content-)",
   "footerContent": "string - HTML du footer",
   "stylesheet": "string - CSS complet",
   "footerHeight": 25,
@@ -55,36 +64,38 @@ const VISION_EXTRACTION_PROMPT = `Tu es un expert en création de templates de C
 
 TÂCHE: Analyser cette image de CV et créer un template HTML/CSS VIDE (sans contenu).
 
-RÈGLES IMPORTANTES:
-1. NE PAS inclure le contenu du CV (pas de texte comme "SOMMAIRE", "COMPÉTENCES", noms, expériences, etc.)
-2. Le template doit être VIDE avec uniquement des placeholders
-3. Pour les logos/images, utilise le placeholder: -logo-
+RÈGLES CRITIQUES:
+1. AUCUNE information personnelle (pas de nom, email, téléphone, adresse, dates, entreprises, écoles)
+2. AUCUN contenu de CV (pas de titres de sections comme "Compétences", "Expériences", "Contact", etc.)
+3. UN SEUL placeholder -content- pour TOUT le corps du CV (pas plusieurs -content- séparés!)
+4. Pour les logos/images, utilise le placeholder: -logo-
+
+STRUCTURE DU TEMPLATE:
+1. HEADER: bandeau coloré avec logo de société → headerContent avec -logo-
+2. FOOTER: pied de page société → footerContent (garder infos société)
+3. CORPS: structure MINIMALISTE avec 3 placeholders UNIQUEMENT:
+   - -name- : nom du candidat
+   - -title- : titre/poste
+   - -content- : UN SEUL bloc pour TOUT le contenu
+
+EXEMPLE CORRECT de templateContent:
+"<div class='cv-header'><h1>-name-</h1><h2>-title-</h2></div><div class='cv-body'>-content-</div>"
+
+EXEMPLE INCORRECT (à NE PAS faire):
+"<h3>Contact</h3>-content-<h3>Compétences</h3>-content-<h3>Expériences</h3>-content-"
 
 ANALYSE L'IMAGE POUR EXTRAIRE:
-1. HEADER: bandeau coloré avec logo de société → HTML avec -logo- pour l'image
-2. FOOTER: pied de page avec coordonnées société → HTML (garder les infos société car c'est le template)
-3. CORPS: structure VIDE avec placeholders uniquement
-4. STYLES: couleurs exactes (#hex), polices, espacements → CSS
-
-PLACEHOLDERS OBLIGATOIRES:
-- -name- : nom du candidat
-- -title- : titre/poste du candidat  
-- -content- : TOUT le contenu du CV (expériences, compétences, formation, etc.)
-- -logo- : pour les images/logos
-
-EXEMPLE de templateContent CORRECT:
-"<div class='cv-body'><h1 class='name'>-name-</h1><h2 class='title'>-title-</h2><div class='content'>-content-</div></div>"
-
-EXEMPLE INCORRECT (à éviter):
-"<h3>SOMMAIRE</h3><p>Texte...</p><h3>COMPÉTENCES</h3><ul><li>Java</li>..."
+- Couleurs exactes (#hex) utilisées
+- Polices de caractères
+- Espacements et mise en page
 
 Tu DOIS retourner un JSON avec TOUS ces champs:
 
 {
   "name": "string - nom du template basé sur la société",
   "description": "string - description du style visuel",
-  "headerContent": "string - HTML du header avec -logo- pour les images",
-  "templateContent": "string - HTML VIDE avec -name-, -title-, -content- UNIQUEMENT",
+  "headerContent": "string - HTML du header avec -logo-",
+  "templateContent": "string - HTML MINIMALISTE avec -name-, -title-, -content- (UN SEUL -content-)",
   "footerContent": "string - HTML du footer (coordonnées société OK)",
   "stylesheet": "string - CSS complet avec couleurs exactes",
   "footerHeight": 25,
@@ -136,7 +147,7 @@ export async function extractTemplateFromHTML(htmlContent, images = [], fileName
             stylesContext += 'Utilise ces couleurs et polices dans le CSS généré.\n';
         }
 
-        // Build concise user instruction
+        // Build user instruction with full HTML content including images
         const userInstruction = `Voici le HTML du CV "${fileName}" à convertir en template:
 
 ${htmlContent}
@@ -156,8 +167,8 @@ Retourne le JSON du template avec tous les champs requis (name, description, hea
         ];
 
         const response = await callLLM(messages, {
-            temperature: 0.1, // Lower temperature for more faithful reproduction
-            max_tokens: 16000 // Increased for large base64 images
+            temperature: 0.1,
+            max_tokens: 32000 // Large for base64 images
         });
 
         return processLLMResponse(response, fileName, images);
@@ -221,7 +232,7 @@ export async function extractTemplateFromImage(imageBase64, textContent = '', fi
             userContent,
             {
                 temperature: 0.2,
-                max_tokens: 10000
+                max_tokens: 20000
             }
         );
 

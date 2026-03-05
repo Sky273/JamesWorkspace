@@ -579,6 +579,7 @@
       "step4": "Customize the template before saving",
       "analyzing": "Analyzing CV...",
       "pleaseWait": "AI is extracting the document structure and styles",
+      "longOperation": "This operation may take 1 to 3 minutes depending on document complexity.",
       "extractButton": "Extract Template",
       "extractionComplete": "Extraction complete!",
       "usedModel": "AI model used",
