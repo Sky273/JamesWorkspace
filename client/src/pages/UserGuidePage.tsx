@@ -153,7 +153,8 @@ const UserGuidePage = (): JSX.Element => {
     if (!sectionTitle) return '';
 
     // Find the section in the markdown content
-    const sectionRegex = new RegExp(`## ${sectionTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([\\s\\S]*?)(?=\n## |$)`, 'i');
+    // Use \n## to match only level-2 headings (not ### which contains ##)
+    const sectionRegex = new RegExp(`\\n## ${sectionTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([\\s\\S]*?)(?=\\n## |$)`, 'i');
     const match = userGuideContent.match(sectionRegex);
     
     if (match) {
