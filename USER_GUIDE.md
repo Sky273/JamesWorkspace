@@ -1781,48 +1781,188 @@ Utilisez le sélecteur de langue dans la barre supérieure.
 
 ## Bonnes Pratiques
 
-### Pour des CV de Qualité
+### 📄 Gestion des CV
 
-#### Avant l'Import
+#### Import et Qualité
 
-- Utilisez le format PDF de préférence
-- Évitez les colonnes complexes et tableaux
-- Assurez-vous que le texte est sélectionnable (pas un scan)
-- Utilisez des polices standard
+| Bonne Pratique | Pourquoi |
+|----------------|----------|
+| **Utilisez le format PDF** | Meilleure extraction du texte et mise en page préservée |
+| **Évitez les tableaux complexes** | L'IA extrait mieux le texte linéaire |
+| **Vérifiez que le texte est sélectionnable** | Les scans (images) ne peuvent pas être analysés |
+| **Polices standard** | Arial, Calibri, Times New Roman pour une meilleure compatibilité |
 
-#### Structure Recommandée
-
-1. En-tête (nom, contact)
-2. Résumé professionnel
-3. Expérience (ordre antichronologique)
-4. Formation
-5. Compétences
-6. Langues et certifications
-
-### Pour des Adaptations Efficaces
-
-- Créez des missions avec des descriptions détaillées
-- Incluez toutes les compétences requises
-- Précisez le contexte de l'entreprise
-- Relisez et personnalisez les adaptations générées
-
-### Workflow Recommandé
+#### Structure Recommandée des CV
 
 ```
-1. Import du CV original
-   ↓
-2. Analyse automatique
-   ↓
-3. Amélioration par l'IA
-   ↓
-4. Révision manuelle si nécessaire
-   ↓
-5. Création de missions ciblées
-   ↓
-6. Génération d'adaptations
-   ↓
-7. Export et envoi
+1. En-tête (nom, contact, titre professionnel)
+2. Résumé professionnel (3-5 lignes)
+3. Compétences clés (techniques et fonctionnelles)
+4. Expérience professionnelle (ordre antichronologique)
+5. Formation et certifications
+6. Langues et informations complémentaires
 ```
+
+#### Après l'Analyse
+
+- **Vérifiez le texte extrait** : Consultez l'onglet "Original" pour vous assurer que l'extraction est correcte
+- **Relisez les améliorations** : L'IA propose, vous validez et personnalisez
+- **Utilisez les versions** : Créez plusieurs versions pour différents contextes
+- **Complétez les informations manquantes** : Email candidat, type de profil, secteur
+
+### 🎯 Missions et Matching
+
+#### Création de Missions Efficaces
+
+| Élément | Conseil |
+|---------|---------|
+| **Titre** | Précis et recherchable (ex: "Développeur Java Senior - Banque") |
+| **Description** | Détaillez le contexte, les responsabilités et l'environnement technique |
+| **Compétences requises** | Listez les compétences obligatoires avec niveau attendu |
+| **Compétences souhaitées** | Ajoutez les "nice to have" pour affiner le matching |
+| **Client associé** | Liez la mission à un client pour un meilleur suivi |
+
+#### Optimisation du Matching
+
+- **Ajustez les poids** : Adaptez les pondérations selon l'importance relative des critères
+- **Actualisez les mots-clés** : Cliquez sur "Actualiser" après modification de la description
+- **Utilisez le Profile Matching** : Identifiez rapidement les meilleurs candidats pour une mission
+
+### 👥 Gestion des Clients et Contacts
+
+#### Organisation Efficace
+
+- **Qualifiez vos clients** : Distinguez clients actifs, prospects et inactifs
+- **Renseignez les contacts** : Fonction, email, téléphone pour chaque interlocuteur
+- **Identifiez le contact principal** : Facilitez les communications
+- **Mettez à jour régulièrement** : Supprimez les contacts obsolètes
+
+#### Suivi Commercial
+
+- **Documentez les interactions** : Utilisez les notes pour historiser les échanges
+- **Suivez les envois** : Consultez l'historique des CV envoyés par client
+- **Analysez les conversions** : Identifiez les clients les plus réceptifs
+
+### 📊 Pipeline de Recrutement
+
+#### Gestion du Pipeline
+
+| Étape | Action Recommandée |
+|-------|-------------------|
+| **Nouveau** | Qualifiez rapidement le candidat |
+| **Présélectionné** | Contactez le candidat sous 48h |
+| **Entretien planifié** | Créez l'entretien avec toutes les informations |
+| **Entretien passé** | Documentez le feedback immédiatement |
+| **Proposé** | Suivez la décision client |
+| **Accepté/Refusé** | Archivez avec les raisons |
+
+#### Documentation
+
+- **Ajoutez des notes à chaque étape** : Historisez les décisions et feedbacks
+- **Planifiez les entretiens rapidement** : Dès confirmation, créez l'événement
+- **Renseignez les issues d'entretien** : Feedback structuré pour améliorer le processus
+
+### ✉️ Envoi de CV et Communication
+
+#### Préparation
+
+- **Personnalisez vos templates** : Adaptez le ton à votre image de marque
+- **Complétez votre profil** : Fonction et téléphone pour une signature professionnelle
+- **Vérifiez les coordonnées** : Email du contact avant envoi
+
+#### Bonnes Pratiques d'Envoi
+
+- **Un CV par email** : Évitez les envois groupés impersonnels
+- **Relisez le CV joint** : Vérifiez la version et le format avant envoi
+- **Utilisez Gmail connecté** : Pour un suivi automatique des envois
+- **Consultez l'historique** : Évitez les doublons d'envoi
+
+### 🔒 Conformité RGPD
+
+#### Gestion du Consentement
+
+| Action | Quand |
+|--------|-------|
+| **Demander le consentement** | Dès l'import d'un CV avec email |
+| **Relancer si nécessaire** | Après 7 jours sans réponse |
+| **Respecter les refus** | Anonymiser ou supprimer les données |
+| **Documenter** | Conserver la trace des consentements |
+
+#### Bonnes Pratiques RGPD
+
+- **Collectez l'email candidat** : Indispensable pour la demande de consentement
+- **Utilisez les templates officiels** : Conformes aux exigences légales
+- **Surveillez les expirations** : Renouvelez les consentements avant expiration
+- **Auditez régulièrement** : Consultez le journal d'audit RGPD
+
+### 📈 Market Radar et Veille
+
+#### Utilisation Efficace
+
+- **Consultez régulièrement** : Les données marché sont mises à jour périodiquement
+- **Comparez les régions** : Identifiez les opportunités géographiques
+- **Analysez les tendances** : Anticipez les évolutions du marché
+- **Croisez avec vos missions** : Adaptez vos recherches aux réalités du marché
+
+### ⚙️ Administration et Configuration
+
+#### Pour les Administrateurs
+
+- **Configurez les prompts IA** : Adaptez les instructions selon votre métier
+- **Ajustez les poids d'évaluation** : Priorisez les critères importants pour vous
+- **Gérez les utilisateurs** : Attribuez les bons rôles (admin, utilisateur)
+- **Personnalisez les templates** : Email et export adaptés à votre charte
+
+#### Sécurité
+
+- **Changez les mots de passe par défaut** : Dès la première connexion
+- **Activez la 2FA** : Double authentification pour les comptes sensibles
+- **Surveillez les logs** : Détectez les activités suspectes
+- **Déconnectez-vous** : En fin de session sur poste partagé
+
+### 🔄 Workflow Recommandé
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    WORKFLOW OPTIMAL                          │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  1. IMPORT CV                                                │
+│     └─→ Format PDF, texte sélectionnable                    │
+│                        ↓                                     │
+│  2. ANALYSE AUTOMATIQUE                                      │
+│     └─→ Vérifier extraction, scores, tags                   │
+│                        ↓                                     │
+│  3. AMÉLIORATION IA                                          │
+│     └─→ Relire, personnaliser, valider                      │
+│                        ↓                                     │
+│  4. CONSENTEMENT RGPD                                        │
+│     └─→ Envoyer demande si email disponible                 │
+│                        ↓                                     │
+│  5. MATCHING MISSION                                         │
+│     └─→ Identifier les missions compatibles                 │
+│                        ↓                                     │
+│  6. ADAPTATION CV                                            │
+│     └─→ Générer version adaptée à la mission                │
+│                        ↓                                     │
+│  7. ENVOI CLIENT                                             │
+│     └─→ Email personnalisé avec CV adapté                   │
+│                        ↓                                     │
+│  8. SUIVI PIPELINE                                           │
+│     └─→ Documenter chaque étape jusqu'au placement          │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 💡 Conseils de Productivité
+
+| Conseil | Bénéfice |
+|---------|----------|
+| **Utilisez les raccourcis clavier** | Navigation plus rapide |
+| **Filtrez efficacement** | Trouvez rapidement les CV pertinents |
+| **Créez des templates réutilisables** | Gagnez du temps sur les envois |
+| **Consultez le chatbot** | Assistance contextuelle immédiate |
+| **Exportez régulièrement** | Sauvegardez vos données importantes |
 
 ---
 

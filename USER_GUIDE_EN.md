@@ -1585,48 +1585,188 @@ Use the language selector in the top bar.
 
 ## Best Practices
 
-### For Quality Resumes
+### 📄 Resume Management
 
-#### Before Import
+#### Import and Quality
 
-- Use PDF format preferably
-- Avoid complex columns and tables
-- Ensure text is selectable (not a scan)
-- Use standard fonts
+| Best Practice | Why |
+|---------------|-----|
+| **Use PDF format** | Better text extraction and preserved layout |
+| **Avoid complex tables** | AI extracts linear text better |
+| **Ensure text is selectable** | Scans (images) cannot be analyzed |
+| **Standard fonts** | Arial, Calibri, Times New Roman for better compatibility |
 
-#### Recommended Structure
-
-1. Header (name, contact)
-2. Professional summary
-3. Experience (reverse chronological order)
-4. Education
-5. Skills
-6. Languages and certifications
-
-### For Effective Adaptations
-
-- Create missions with detailed descriptions
-- Include all required skills
-- Specify company context
-- Review and personalize generated adaptations
-
-### Recommended Workflow
+#### Recommended Resume Structure
 
 ```
-1. Import original resume
-   ↓
-2. Automatic analysis
-   ↓
-3. AI improvement
-   ↓
-4. Manual review if needed
-   ↓
-5. Create targeted missions
-   ↓
-6. Generate adaptations
-   ↓
-7. Export and send
+1. Header (name, contact, professional title)
+2. Professional summary (3-5 lines)
+3. Key skills (technical and functional)
+4. Professional experience (reverse chronological)
+5. Education and certifications
+6. Languages and additional information
 ```
+
+#### After Analysis
+
+- **Check extracted text**: View the "Original" tab to ensure extraction is correct
+- **Review improvements**: AI suggests, you validate and personalize
+- **Use versions**: Create multiple versions for different contexts
+- **Complete missing information**: Candidate email, profile type, industry
+
+### 🎯 Missions and Matching
+
+#### Creating Effective Missions
+
+| Element | Advice |
+|---------|--------|
+| **Title** | Precise and searchable (e.g., "Senior Java Developer - Banking") |
+| **Description** | Detail context, responsibilities, and technical environment |
+| **Required skills** | List mandatory skills with expected level |
+| **Preferred skills** | Add "nice to have" to refine matching |
+| **Associated client** | Link mission to a client for better tracking |
+
+#### Optimizing Matching
+
+- **Adjust weights**: Adapt weights according to relative importance of criteria
+- **Update keywords**: Click "Refresh" after modifying the description
+- **Use Profile Matching**: Quickly identify best candidates for a mission
+
+### 👥 Client and Contact Management
+
+#### Effective Organization
+
+- **Qualify your clients**: Distinguish active clients, prospects, and inactive
+- **Fill in contacts**: Function, email, phone for each contact
+- **Identify primary contact**: Facilitate communications
+- **Update regularly**: Remove obsolete contacts
+
+#### Commercial Tracking
+
+- **Document interactions**: Use notes to record exchanges
+- **Track submissions**: View CV submission history by client
+- **Analyze conversions**: Identify most receptive clients
+
+### 📊 Recruitment Pipeline
+
+#### Pipeline Management
+
+| Stage | Recommended Action |
+|-------|-------------------|
+| **New** | Quickly qualify the candidate |
+| **Shortlisted** | Contact candidate within 48h |
+| **Interview scheduled** | Create interview with all information |
+| **Interview completed** | Document feedback immediately |
+| **Proposed** | Follow client decision |
+| **Accepted/Rejected** | Archive with reasons |
+
+#### Documentation
+
+- **Add notes at each stage**: Record decisions and feedback
+- **Schedule interviews quickly**: Create event as soon as confirmed
+- **Record interview outcomes**: Structured feedback to improve process
+
+### ✉️ CV Submission and Communication
+
+#### Preparation
+
+- **Customize your templates**: Adapt tone to your brand image
+- **Complete your profile**: Function and phone for professional signature
+- **Verify contact details**: Email before sending
+
+#### Sending Best Practices
+
+- **One CV per email**: Avoid impersonal bulk sends
+- **Review attached CV**: Check version and format before sending
+- **Use connected Gmail**: For automatic submission tracking
+- **Check history**: Avoid duplicate submissions
+
+### 🔒 GDPR Compliance
+
+#### Consent Management
+
+| Action | When |
+|--------|------|
+| **Request consent** | As soon as CV with email is imported |
+| **Follow up if needed** | After 7 days without response |
+| **Respect refusals** | Anonymize or delete data |
+| **Document** | Keep record of consents |
+
+#### GDPR Best Practices
+
+- **Collect candidate email**: Essential for consent request
+- **Use official templates**: Compliant with legal requirements
+- **Monitor expirations**: Renew consents before expiration
+- **Audit regularly**: Check GDPR audit log
+
+### 📈 Market Radar and Intelligence
+
+#### Effective Use
+
+- **Check regularly**: Market data is updated periodically
+- **Compare regions**: Identify geographical opportunities
+- **Analyze trends**: Anticipate market changes
+- **Cross-reference with missions**: Adapt searches to market realities
+
+### ⚙️ Administration and Configuration
+
+#### For Administrators
+
+- **Configure AI prompts**: Adapt instructions to your business
+- **Adjust evaluation weights**: Prioritize criteria important to you
+- **Manage users**: Assign correct roles (admin, user)
+- **Customize templates**: Email and export adapted to your brand
+
+#### Security
+
+- **Change default passwords**: On first login
+- **Enable 2FA**: Two-factor authentication for sensitive accounts
+- **Monitor logs**: Detect suspicious activity
+- **Log out**: At end of session on shared computers
+
+### 🔄 Recommended Workflow
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    OPTIMAL WORKFLOW                          │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  1. IMPORT CV                                                │
+│     └─→ PDF format, selectable text                         │
+│                        ↓                                     │
+│  2. AUTOMATIC ANALYSIS                                       │
+│     └─→ Verify extraction, scores, tags                     │
+│                        ↓                                     │
+│  3. AI IMPROVEMENT                                           │
+│     └─→ Review, personalize, validate                       │
+│                        ↓                                     │
+│  4. GDPR CONSENT                                             │
+│     └─→ Send request if email available                     │
+│                        ↓                                     │
+│  5. MISSION MATCHING                                         │
+│     └─→ Identify compatible missions                        │
+│                        ↓                                     │
+│  6. CV ADAPTATION                                            │
+│     └─→ Generate version adapted to mission                 │
+│                        ↓                                     │
+│  7. CLIENT SUBMISSION                                        │
+│     └─→ Personalized email with adapted CV                  │
+│                        ↓                                     │
+│  8. PIPELINE TRACKING                                        │
+│     └─→ Document each stage until placement                 │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 💡 Productivity Tips
+
+| Tip | Benefit |
+|-----|---------|
+| **Use keyboard shortcuts** | Faster navigation |
+| **Filter effectively** | Quickly find relevant CVs |
+| **Create reusable templates** | Save time on submissions |
+| **Consult the chatbot** | Immediate contextual assistance |
+| **Export regularly** | Back up important data |
 
 ---
 
