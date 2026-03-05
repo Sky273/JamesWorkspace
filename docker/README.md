@@ -128,7 +128,7 @@ All data is automatically persisted via Docker volumes:
 
 | Volume/Path | Container Path | Purpose |
 |-------------|----------------|---------|
-| `resumeconverter-pgdata` | `/var/lib/postgresql/14/main` | **PostgreSQL database** |
+| `resumeconverter-pgdata` | `/var/lib/postgresql/18/main` | **PostgreSQL 18 database** |
 | `./uploads` | `/app/uploads` | Uploaded resume files |
 | `./logs` | `/app/logs` | Application logs |
 

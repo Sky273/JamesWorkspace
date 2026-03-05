@@ -11,14 +11,19 @@ ENV DEBIAN_FRONTEND=noninteractive
 # =============================================================================
 # System Dependencies
 # =============================================================================
+# Add PostgreSQL 18 repository
+RUN curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor -o /usr/share/keyrings/postgresql-keyring.gpg && \
+    echo "deb [signed-by=/usr/share/keyrings/postgresql-keyring.gpg] http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list
+
 RUN apt-get update && apt-get install -y \
     # Node.js prerequisites
     curl \
     gnupg \
     ca-certificates \
-    # PostgreSQL
-    postgresql \
-    postgresql-contrib \
+    lsb-release \
+    # PostgreSQL 18
+    postgresql-18 \
+    postgresql-contrib-18 \
     # Puppeteer dependencies (Chrome headless)
     chromium-browser \
     fonts-liberation \
@@ -91,16 +96,16 @@ RUN ls -la /app/client/dist/ && echo "Frontend build successful!"
 # =============================================================================
 USER postgres
 
-# Initialize PostgreSQL cluster and create database
+# Initialize PostgreSQL 18 cluster and create database
 RUN /etc/init.d/postgresql start && \
     psql --command "CREATE USER resumeconverter WITH SUPERUSER PASSWORD 'resumeconverter';" && \
     createdb -O resumeconverter resumeconverter && \
     /etc/init.d/postgresql stop
 
 # Allow connections from localhost and external (for pgAdmin access)
-RUN echo "host all all 127.0.0.1/32 md5" >> /etc/postgresql/14/main/pg_hba.conf && \
-    echo "host all all 0.0.0.0/0 md5" >> /etc/postgresql/14/main/pg_hba.conf && \
-    echo "listen_addresses='*'" >> /etc/postgresql/14/main/postgresql.conf
+RUN echo "host all all 127.0.0.1/32 md5" >> /etc/postgresql/18/main/pg_hba.conf && \
+    echo "host all all 0.0.0.0/0 md5" >> /etc/postgresql/18/main/pg_hba.conf && \
+    echo "listen_addresses='*'" >> /etc/postgresql/18/main/postgresql.conf
 
 USER root
 

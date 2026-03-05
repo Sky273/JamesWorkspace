@@ -28,7 +28,7 @@ Ce guide détaille les procédures d'installation et de lancement de ResumeConve
 |-----------|------------------|--------------|
 | Node.js | 18.x ou supérieur | `node --version` |
 | npm | 9.x ou supérieur | `npm --version` |
-| PostgreSQL | 14.x ou supérieur | `psql --version` |
+| PostgreSQL | 18.x | `psql --version` |
 
 ### Prérequis Docker
 
@@ -350,18 +350,30 @@ export ANTHROPIC_API_KEY="sk-ant-..."
 #### Commande Docker directe
 
 ```bash
+# Créer le volume pour la persistance PostgreSQL
+docker volume create resumeconverter-pgdata
+
+# Lancer le conteneur
 docker run -d \
     --name resumeconverter-app \
     -p 3443:3443 \
-    -e OPENAI_API_KEY="votre-clé" \
-    -e ANTHROPIC_API_KEY="votre-clé" \
-    -e JWT_SECRET="secret-jwt-production-minimum-32-caracteres" \
+    -e OPENAI_API_KEY="votre-clé-openai" \
+    -e ANTHROPIC_API_KEY="votre-clé-anthropic" \
+    -e JWT_SECRET="secret-jwt-production-minimum-32-caracteres-hexadecimaux" \
     -e JWT_REFRESH_SECRET="secret-refresh-production-minimum-32-caracteres" \
+    -e REFRESH_TOKEN_SECRET="secret-token-production-minimum-32-caracteres" \
+    -e CSRF_SECRET="secret-csrf-production-minimum-32-caracteres" \
+    -e GOOGLE_CLIENT_ID="votre-client-id.apps.googleusercontent.com" \
+    -e GOOGLE_CLIENT_SECRET="votre-client-secret" \
+    -e MAIL_TOKEN_ENCRYPTION_KEY="64-caracteres-hexadecimaux-pour-chiffrement" \
+    -v resumeconverter-pgdata:/var/lib/postgresql/18/main \
     -v ./uploads:/app/uploads \
     -v ./logs:/app/logs \
     --restart unless-stopped \
     resumeconverter:latest
 ```
+
+> **Note** : Les variables `GOOGLE_*` et `MAIL_TOKEN_ENCRYPTION_KEY` sont optionnelles (nécessaires uniquement pour SSO Google et envoi d'emails via Gmail).
 
 ### Étape 4 : Accéder à l'application
 
@@ -406,7 +418,7 @@ Les données sont automatiquement persistées via des volumes Docker :
 
 | Volume/Chemin | Chemin conteneur | Description |
 |---------------|------------------|-------------|
-| `resumeconverter-pgdata` | `/var/lib/postgresql/14/main` | **Base de données PostgreSQL** |
+| `resumeconverter-pgdata` | `/var/lib/postgresql/18/main` | **Base de données PostgreSQL 18** |
 | `./uploads` | `/app/uploads` | Fichiers CV uploadés |
 | `./logs` | `/app/logs` | Logs applicatifs |
 

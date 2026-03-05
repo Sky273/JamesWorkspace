@@ -28,7 +28,7 @@
 |--------|-------------|
 | **Frontend** | React 18, TypeScript, Vite, TailwindCSS, Framer Motion |
 | **Backend** | Node.js, Express.js |
-| **Base de données** | PostgreSQL 15+ avec pg (node-postgres) |
+| **Base de données** | PostgreSQL 18 avec pg (node-postgres) |
 | **IA/LLM** | OpenAI (GPT-4/5), Anthropic (Claude) |
 | **APIs Externes** | France Travail, Adzuna, ROME 4.0, ESCO |
 | **Génération PDF** | Puppeteer (html-pdf-node) |
@@ -835,6 +835,107 @@ const logger = {
 
 ---
 
+## Déploiement Docker
+
+### Architecture du Conteneur
+
+L'application peut être déployée via un conteneur Docker tout-en-un qui inclut tous les composants nécessaires :
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                      Conteneur Docker                                │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │                     Supervisor                               │    │
+│  │  ┌──────────────────┐  ┌──────────────────┐                 │    │
+│  │  │   Proxy Server   │  │    PDF Server    │                 │    │
+│  │  │   (Express.js)   │  │   (Puppeteer)    │                 │    │
+│  │  │   Port: 3443     │  │   Port: 3002     │                 │    │
+│  │  └──────────────────┘  └──────────────────┘                 │    │
+│  └─────────────────────────────────────────────────────────────┘    │
+│                              │                                       │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │                   PostgreSQL 18                              │    │
+│  │                   Port: 5432 (interne)                       │    │
+│  └──────────────────────────┬──────────────────────────────────┘    │
+└─────────────────────────────┼───────────────────────────────────────┘
+                              │
+              ┌───────────────▼───────────────┐
+              │     Volume Docker             │
+              │   resumeconverter-pgdata      │
+              │   (données persistantes)      │
+              └───────────────────────────────┘
+```
+
+### Composants Docker
+
+| Fichier | Rôle |
+|---------|------|
+| `Dockerfile` | Image Ubuntu 22.04 avec Node.js 20, PostgreSQL 18, Chromium |
+| `docker/entrypoint.sh` | Script de démarrage avec init DB et migrations automatiques |
+| `docker/supervisord.conf` | Gestionnaire de processus (proxy + PDF servers) |
+| `docker/init-db.sql` | Schéma complet de la base de données |
+| `docker/migrations/` | Scripts de migration incrémentaux |
+
+### Persistance des Données
+
+| Volume | Chemin conteneur | Description |
+|--------|------------------|-------------|
+| `resumeconverter-pgdata` | `/var/lib/postgresql/18/main` | Base de données PostgreSQL |
+| `./uploads` | `/app/uploads` | Fichiers CV uploadés |
+| `./logs` | `/app/logs` | Logs applicatifs |
+
+### Système de Migrations
+
+Le conteneur gère automatiquement les migrations de base de données :
+
+1. **Premier lancement** : Exécute `init-db.sql` complet, marque toutes les migrations comme appliquées
+2. **Lancements suivants** : Vérifie la table `schema_migrations`, applique uniquement les nouvelles migrations
+3. **Mise à jour d'image** : Applique automatiquement les migrations manquantes
+
+```sql
+-- Table de suivi des migrations
+CREATE TABLE schema_migrations (
+    id SERIAL PRIMARY KEY,
+    migration_name VARCHAR(255) NOT NULL UNIQUE,
+    applied_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### Variables d'Environnement Docker
+
+| Variable | Requis | Description |
+|----------|--------|-------------|
+| `JWT_SECRET` | ✅ | Secret JWT (min 32 caractères) |
+| `JWT_REFRESH_SECRET` | ✅ | Secret refresh token |
+| `REFRESH_TOKEN_SECRET` | ✅ | Secret token additionnel |
+| `CSRF_SECRET` | ✅ | Secret CSRF |
+| `OPENAI_API_KEY` | Optionnel | Clé API OpenAI |
+| `ANTHROPIC_API_KEY` | Optionnel | Clé API Anthropic |
+| `GOOGLE_CLIENT_ID` | Optionnel | Client ID Google OAuth |
+| `GOOGLE_CLIENT_SECRET` | Optionnel | Secret Google OAuth |
+| `MAIL_TOKEN_ENCRYPTION_KEY` | Optionnel | Clé de chiffrement tokens mail |
+
+### Commandes Docker
+
+```bash
+# Construction
+./docker/docker-build.sh build
+
+# Lancement
+./docker/docker-build.sh run
+
+# Logs
+./docker/docker-build.sh logs
+
+# Shell
+./docker/docker-build.sh shell
+
+# Arrêt
+./docker/docker-build.sh stop
+```
+
+---
+
 ## Conclusion
 
 ResumeConverter est une application **bien architecturée** avec une attention particulière portée à la **sécurité** (authentification JWT robuste, protection CSRF, rate limiting multi-niveaux, protection SQL injection). L'utilisation de **PostgreSQL** comme base de données offre performance, scalabilité et intégrité des données.
@@ -850,5 +951,5 @@ L'architecture actuelle est **adaptée pour un usage PME/ESN** et peut supporter
 
 ---
 
-*Document mis à jour le 3 mars 2026*
-*Version: 1.7.5*
+*Document mis à jour le 5 mars 2026*
+*Version: 1.7.6*

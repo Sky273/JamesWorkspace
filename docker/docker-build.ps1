@@ -83,14 +83,25 @@ function Run-Container {
     # Create named volume for PostgreSQL data persistence
     docker volume create resumeconverter-pgdata 2>$null
     
+    # Generate stable secrets if not provided (persist across restarts)
+    $JwtSecret = if ($env:JWT_SECRET) { $env:JWT_SECRET } else { "docker-jwt-secret-change-in-production-min32chars" }
+    $JwtRefreshSecret = if ($env:JWT_REFRESH_SECRET) { $env:JWT_REFRESH_SECRET } else { "docker-jwt-refresh-secret-change-in-production-min32chars" }
+    $RefreshTokenSecret = if ($env:REFRESH_TOKEN_SECRET) { $env:REFRESH_TOKEN_SECRET } else { "docker-refresh-token-secret-change-in-production-min32chars" }
+    $CsrfSecret = if ($env:CSRF_SECRET) { $env:CSRF_SECRET } else { "docker-csrf-secret-change-in-production-min32chars" }
+    
     docker run -d `
         --name $ContainerName `
         -p 3443:3443 `
         -e OPENAI_API_KEY=$env:OPENAI_API_KEY `
         -e ANTHROPIC_API_KEY=$env:ANTHROPIC_API_KEY `
-        -e JWT_SECRET="docker-jwt-secret-$(Get-Random)" `
-        -e JWT_REFRESH_SECRET="docker-jwt-refresh-$(Get-Random)" `
-        -v "resumeconverter-pgdata:/var/lib/postgresql/14/main" `
+        -e JWT_SECRET="$JwtSecret" `
+        -e JWT_REFRESH_SECRET="$JwtRefreshSecret" `
+        -e REFRESH_TOKEN_SECRET="$RefreshTokenSecret" `
+        -e CSRF_SECRET="$CsrfSecret" `
+        -e GOOGLE_CLIENT_ID=$env:GOOGLE_CLIENT_ID `
+        -e GOOGLE_CLIENT_SECRET=$env:GOOGLE_CLIENT_SECRET `
+        -e MAIL_TOKEN_ENCRYPTION_KEY=$env:MAIL_TOKEN_ENCRYPTION_KEY `
+        -v "resumeconverter-pgdata:/var/lib/postgresql/18/main" `
         -v "${PWD}/uploads:/app/uploads" `
         -v "${PWD}/logs:/app/logs" `
         --restart unless-stopped `
