@@ -12,6 +12,7 @@ import logger from '../utils/logger.frontend';
 import { createSafeHtml } from '../utils/sanitizer.frontend';
 import { useTranslation } from 'react-i18next';
 import { fetchWithAuth } from '../utils/apiInterceptor';
+import { removeSuggestionMarkers } from '../utils/tinymceSuggestionsPlugin';
 
 interface Template {
   id: string;
@@ -66,7 +67,8 @@ const AdaptationComparison = ({ originalText, adaptedText, matchScore, candidate
       const template = await templateService.getTemplateById(selectedTemplate);
       if (!template) throw new Error('Template not found');
 
-      const content = adaptedText;
+      // Clean suggestion markers from content before export
+      const content = removeSuggestionMarkers(adaptedText);
       const name = candidateName || 'Candidat';
       const title = candidateTitle || 'Titre Professionnel';
       const simplifiedFilename = name.replace(/[^a-zA-Z]/g, '_') + '_adapted.pdf';

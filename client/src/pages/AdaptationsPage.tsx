@@ -24,6 +24,7 @@ import Pagination from '../components/Pagination';
 import { loadTinyMCE } from '../utils/lazyTinyMCE';
 import { SkeletonAdaptationList } from '../components/ui/Skeleton';
 import Breadcrumbs from '../components/Breadcrumbs';
+import { removeSuggestionMarkers } from '../utils/tinymceSuggestionsPlugin';
 
 interface Adaptation {
   id: string;
@@ -246,7 +247,9 @@ const AdaptationsPage = (): JSX.Element => {
       const candidateName = resume?.Name || 'Candidat';
       const candidateTitle = resume?.Title || 'Titre Professionnel';
       const customerName = resume?.CustomerName || '';
-      const content = adaptationToExport['Adapted Text'] || '';
+      // Clean suggestion markers from content before export
+      const rawContent = adaptationToExport['Adapted Text'] || '';
+      const content = removeSuggestionMarkers(rawContent);
       
       // Use trigram if anonymized, otherwise use candidate name
       const isAnonymized = resume?.Anonymized === true || resume?.Anonymized === 'true';

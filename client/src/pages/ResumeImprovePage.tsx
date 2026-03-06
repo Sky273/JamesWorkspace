@@ -27,7 +27,7 @@ import ResumeComments from '../components/ResumeComments';
 import { loadTinyMCE } from '../utils/lazyTinyMCE';
 import { fetchWithAuth, createAuthOptionsWithCsrf } from '../utils/apiInterceptor';
 import { TinyMCEEditor } from '../types/tinymce.d';
-import { registerSuggestionsPlugin, parseSuggestions } from '../utils/tinymceSuggestionsPlugin';
+import { registerSuggestionsPlugin, parseSuggestions, removeSuggestionMarkers } from '../utils/tinymceSuggestionsPlugin';
 
 const ResumeImprovePage = (): JSX.Element => {
   const { id } = useParams<{ id: string }>();
@@ -167,8 +167,18 @@ const ResumeImprovePage = (): JSX.Element => {
   const handleSaveImprovedContent = useCallback(async () => {
     if (!currentResume || !editorRef.current) return;
     try {
-      const content = editorRef.current.getContent();
+      const rawContent = editorRef.current.getContent();
+      // Remove suggestion markers before saving to ensure clean content is stored
+      const content = removeSuggestionMarkers(rawContent);
       const result = await updateImprovedContent(currentResume.id, content);
+      // Update editor with cleaned content
+      editorRef.current.setContent(content);
+      // Update localResume to keep it in sync with saved content
+      setLocalResume(prev => prev ? {
+        ...prev,
+        'Improved Text': content,
+        'Current Version': result.currentVersion || prev['Current Version']
+      } : null);
       toast.success(t('resume.saveSuccess'));
     } catch (err) {
       logger.error('Error saving improved content:', err);
@@ -256,8 +266,9 @@ const ResumeImprovePage = (): JSX.Element => {
       }
       const template = templates[0];
       
-      // Prepare content with replacements
-      const content = localResume['Improved Text'] || localResume['Original Text'] || '';
+      // Prepare content with replacements - clean suggestion markers
+      const rawContent = localResume['Improved Text'] || localResume['Original Text'] || '';
+      const content = removeSuggestionMarkers(rawContent);
       const candidateName = localResume['Name'] || 'Candidat';
       const candidateTitle = localResume['Title'] || '';
       

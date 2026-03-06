@@ -20,6 +20,7 @@ import ExportTab from '../components/ResumeAnalysis/ExportTab';
 import ConsentBadge, { ConsentStatus } from '../components/ConsentBadge';
 import SendEmailModal from '../components/ResumeAnalysis/SendEmailModal';
 import { fetchWithAuth } from '../utils/apiInterceptor';
+import { removeSuggestionMarkers } from '../utils/tinymceSuggestionsPlugin';
 
 interface Template {
   id: string;
@@ -106,7 +107,9 @@ const ResumeExportPage = (): JSX.Element => {
       const template = await templateService.getTemplateById(selectedTemplate);
       if (!template) throw new Error('Template not found');
 
-      const content = currentResume['Improved Text'] || currentResume['Original Text'] || '';
+      // Clean suggestion markers from content before export
+      const rawContent = currentResume['Improved Text'] || currentResume['Original Text'] || '';
+      const content = removeSuggestionMarkers(rawContent);
       const candidateName = currentResume['Name'] || 'Candidat';
       const candidateTitle = currentResume['Title'] || '';
 
@@ -304,7 +307,9 @@ const ResumeExportPage = (): JSX.Element => {
             const template = await templateService.getTemplateById(selectedTemplate);
             if (!template) throw new Error('Template not found');
             
-            const content = currentResume['Improved Text'] || currentResume['Original Text'] || '';
+            // Clean suggestion markers from content before export
+            const rawContent = currentResume['Improved Text'] || currentResume['Original Text'] || '';
+            const content = removeSuggestionMarkers(rawContent);
             const candidateName = currentResume['Name'] || 'Candidat';
             const candidateTitle = currentResume['Title'] || '';
             

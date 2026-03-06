@@ -27,6 +27,7 @@ import toast from 'react-hot-toast';
 import logger from '../utils/logger.frontend';
 import { formatDate } from '../utils/dateFormatter';
 import i18n from '../i18n';
+import { removeSuggestionMarkers } from '../utils/tinymceSuggestionsPlugin';
 
 interface Template {
   id: string;
@@ -246,7 +247,9 @@ const AdaptationViewPage = (): JSX.Element => {
       const template = await templateService.getTemplateById(selectedTemplate);
       if (!template) throw new Error('Template not found');
 
-      const content = editorRef.current?.getContent() || adaptation['Adapted Text'] || '';
+      // Clean suggestion markers from content before export
+      const rawContent = editorRef.current?.getContent() || adaptation['Adapted Text'] || '';
+      const content = removeSuggestionMarkers(rawContent);
       const name = adaptation['Resume Name'] || 'Candidat';
       const title = adaptation['Mission Title'] || 'CV Adapté';
 
@@ -646,7 +649,9 @@ const AdaptationViewPage = (): JSX.Element => {
               template = allTemplates[0];
             }
             
-            const content = editorRef.current?.getContent() || adaptation['Adapted Text'] || '';
+            // Clean suggestion markers from content before export
+            const rawContent = editorRef.current?.getContent() || adaptation['Adapted Text'] || '';
+            const content = removeSuggestionMarkers(rawContent);
             const name = adaptation['Resume Name'] || adaptation.ResumeName || 'Candidat';
             const title = adaptation['Mission Title'] || 'CV Adapté';
 

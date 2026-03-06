@@ -464,11 +464,19 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
       const updatedData = await response.json();
       const newVersion = updatedData['Current Version'] || 0;
 
+      // Update currentResume
       setCurrentResume(prev => prev ? {
         ...prev,
         'Improved Text': content,
         'Current Version': newVersion
       } : null);
+
+      // Also update the resumes list to keep it in sync
+      setResumes(prev => prev.map(resume => 
+        resume.id === resumeId 
+          ? { ...resume, 'Improved Text': content, 'Current Version': newVersion }
+          : resume
+      ));
 
       return { success: true, currentVersion: newVersion };
     } catch (error) {
