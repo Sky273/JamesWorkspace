@@ -221,15 +221,32 @@ router.post('/', authenticateToken, async (req, res) => {
     try {
         const userFirmId = await getUserFirmId(req);
         const userId = req.user?.id;
+        const isAdmin = isUserAdmin(req);
 
         if (!userFirmId) {
             return res.status(400).json({ error: 'User must belong to a firm to create clients' });
         }
 
-        const { name, type, status, address, website, industry, notes } = req.body;
+        const { name, type, status, address, website, industry, notes, firm_id } = req.body;
 
         if (!name) {
             return res.status(400).json({ error: 'Client name is required' });
+        }
+
+        // Determine target firm_id: admin can specify a different firm
+        let targetFirmId = userFirmId;
+        if (isAdmin && firm_id && firm_id !== userFirmId) {
+            // Admin is creating for another firm - validate the firm exists
+            const firmResult = await query('SELECT id, name FROM firms WHERE id = $1', [firm_id]);
+            if (firmResult.rows.length === 0) {
+                return res.status(400).json({ error: 'Specified firm not found' });
+            }
+            targetFirmId = firmResult.rows[0].id;
+            safeLog('info', 'Admin creating client for another firm', { 
+                adminId: userId, 
+                targetFirmId, 
+                targetFirmName: firmResult.rows[0].name 
+            });
         }
 
         const result = await query(
@@ -237,7 +254,7 @@ router.post('/', authenticateToken, async (req, res) => {
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
              RETURNING *`,
             [
-                userFirmId,
+                targetFirmId,
                 name,
                 type || 'prospect',
                 status || 'active',
@@ -280,7 +297,23 @@ router.put('/:id', authenticateToken, async (req, res) => {
             return res.status(403).json({ error: 'Access denied' });
         }
 
-        const { name, type, status, address, website, industry, notes } = req.body;
+        const { name, type, status, address, website, industry, notes, firm_id } = req.body;
+
+        // Handle firm_id update (admin only)
+        let targetFirmId = existing.firm_id;
+        if (isAdmin && firm_id && firm_id !== existing.firm_id) {
+            const firmResult = await query('SELECT id, name FROM firms WHERE id = $1', [firm_id]);
+            if (firmResult.rows.length === 0) {
+                return res.status(400).json({ error: 'Specified firm not found' });
+            }
+            targetFirmId = firmResult.rows[0].id;
+            safeLog('info', 'Admin changing client firm', { 
+                adminId: req.user?.id, 
+                clientId: id,
+                oldFirmId: existing.firm_id,
+                newFirmId: targetFirmId 
+            });
+        }
 
         const result = await query(
             `UPDATE clients 
@@ -291,10 +324,11 @@ router.put('/:id', authenticateToken, async (req, res) => {
                  website = $5,
                  industry = $6,
                  notes = $7,
+                 firm_id = $8,
                  updated_at = CURRENT_TIMESTAMP
-             WHERE id = $8
+             WHERE id = $9
              RETURNING *`,
-            [name, type, status, address, website, industry, notes, id]
+            [name, type, status, address, website, industry, notes, targetFirmId, id]
         );
 
         return res.json(result.rows[0]);

@@ -225,6 +225,28 @@ router.post('/', authenticateToken, validateBody(createMissionSchema), async (re
         const missionData = req.body;
         const userFirm = req.user?.firm || req.user?.Firm;
         const userFirmId = await getUserFirmId(req);
+        const userRole = (req.user?.role || req.user?.Role || '').toLowerCase();
+        const isAdmin = userRole === 'admin';
+        
+        // Determine target firm_id: admin can specify a different firm
+        let targetFirmId = userFirmId;
+        let targetFirmName = userFirm;
+        const requestedFirmId = missionData.firm_id || missionData['Firm ID'];
+        
+        if (isAdmin && requestedFirmId && requestedFirmId !== userFirmId) {
+            // Admin is creating for another firm - validate the firm exists
+            const firmResult = await query('SELECT id, name FROM firms WHERE id = $1', [requestedFirmId]);
+            if (firmResult.rows.length === 0) {
+                return res.status(400).json({ error: 'Specified firm not found' });
+            }
+            targetFirmId = firmResult.rows[0].id;
+            targetFirmName = firmResult.rows[0].name;
+            safeLog('info', 'Admin creating mission for another firm', { 
+                adminId: req.user?.id, 
+                targetFirmId, 
+                targetFirmName 
+            });
+        }
         
         let content = missionData.Content || missionData.content || '';
         if (content) {
@@ -238,13 +260,13 @@ router.post('/', authenticateToken, validateBody(createMissionSchema), async (re
             if (clientResult.rows.length === 0) {
                 return res.status(400).json({ error: 'Client not found' });
             }
-            if (clientResult.rows[0].firm_id !== userFirmId) {
+            if (clientResult.rows[0].firm_id !== targetFirmId) {
                 safeLog('warn', 'Client firm mismatch', { 
                     clientFirmId: clientResult.rows[0].firm_id, 
-                    userFirmId,
+                    targetFirmId,
                     userId: req.user?.id 
                 });
-                return res.status(403).json({ error: 'Client does not belong to your firm' });
+                return res.status(403).json({ error: 'Client does not belong to the target firm' });
             }
         }
         
@@ -260,8 +282,8 @@ router.post('/', authenticateToken, validateBody(createMissionSchema), async (re
         const newMission = await createWithTimeout('missions', {
             title: missionData.Title || missionData.title,
             content: content,
-            firm: userFirm || missionData.Firm || missionData.firm || null,
-            firm_id: userFirmId || missionData['Firm ID'] || missionData.firm_id || null,
+            firm: targetFirmName || missionData.Firm || missionData.firm || null,
+            firm_id: targetFirmId || null,
             status: missionData.Status || missionData.status || 'active',
             keywords: missionData.Keywords || missionData.keywords || null,
             required_skills: missionData['Required Skills'] || missionData.required_skills || null,
@@ -373,6 +395,25 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateM
                 }
             }
             updates.contact_id = contactId || null;
+        }
+        
+        // Handle firm_id update (admin only)
+        if (isAdmin && (updateData.firm_id || updateData['Firm ID'])) {
+            const newFirmId = updateData.firm_id || updateData['Firm ID'];
+            if (newFirmId !== existingMission.firm_id) {
+                const firmResult = await query('SELECT id, name FROM firms WHERE id = $1', [newFirmId]);
+                if (firmResult.rows.length === 0) {
+                    return res.status(400).json({ error: 'Specified firm not found' });
+                }
+                updates.firm_id = firmResult.rows[0].id;
+                updates.firm = firmResult.rows[0].name;
+                safeLog('info', 'Admin changing mission firm', { 
+                    adminId: req.user?.id, 
+                    missionId: id,
+                    oldFirmId: existingMission.firm_id,
+                    newFirmId: updates.firm_id 
+                });
+            }
         }
 
         const updatedMission = await updateWithTimeout('missions', id, updates);

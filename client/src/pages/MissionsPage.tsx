@@ -25,6 +25,7 @@ import { createSafeHtml } from '../utils/sanitizer.frontend';
 
 import { StatsCards, SearchAndActions } from '../components/MissionsPage';
 import Pagination from '../components/Pagination';
+import AdminFirmSelector from '../components/AdminFirmSelector';
 import { loadTinyMCE } from '../utils/lazyTinyMCE';
 import { SkeletonMissionList } from '../components/ui/Skeleton';
 import Breadcrumbs from '../components/Breadcrumbs';
@@ -34,6 +35,7 @@ interface Mission {
   Title?: string;
   Content?: string;
   Firm?: string;
+  'Firm ID'?: string;
   'Created At'?: string;
   Status?: 'Active' | 'Closed' | 'Draft';
   'Client ID'?: string;
@@ -64,6 +66,7 @@ interface FormData {
   Status: 'Active' | 'Closed' | 'Draft';
   'Client ID': string;
   'Contact ID': string;
+  'Firm ID': string;
 }
 
 interface Stats {
@@ -96,7 +99,8 @@ const MissionsPage = (): JSX.Element => {
     Content: '',
     Status: 'Active',
     'Client ID': '',
-    'Contact ID': ''
+    'Contact ID': '',
+    'Firm ID': ''
   });
   const editorRef = useRef<{ setContent: (content: string) => void; getContent: () => string } | null>(null);
   const [editorReady, setEditorReady] = useState<boolean>(false);
@@ -246,13 +250,18 @@ const MissionsPage = (): JSX.Element => {
     e.preventDefault();
     try {
       // Prepare data - convert empty strings to null for optional fields
-      const dataToSend = {
+      const dataToSend: Record<string, unknown> = {
         Title: formData.Title,
         Content: formData.Content,
         Status: formData.Status,
         'Client ID': formData['Client ID'] || null,
         'Contact ID': formData['Contact ID'] || null
       };
+      
+      // Add firm_id if admin selected a firm (for both new and edited missions)
+      if (formData['Firm ID']) {
+        dataToSend['firm_id'] = formData['Firm ID'];
+      }
 
       const response = editingMission
         ? await authPut(`/api/missions/${editingMission.id}`, dataToSend)
@@ -296,14 +305,15 @@ const MissionsPage = (): JSX.Element => {
       Content: mission.Content || '',
       Status: mission.Status || 'Active',
       'Client ID': mission['Client ID'] || '',
-      'Contact ID': mission['Contact ID'] || ''
+      'Contact ID': mission['Contact ID'] || '',
+      'Firm ID': mission['Firm ID'] || ''
     });
     setShowModal(true);
   };
 
   const resetForm = (): void => {
     setEditingMission(null);
-    setFormData({ Title: '', Content: '', Status: 'Active', 'Client ID': '', 'Contact ID': '' });
+    setFormData({ Title: '', Content: '', Status: 'Active', 'Client ID': '', 'Contact ID': '', 'Firm ID': '' });
     setContacts([]);
     const tinymce = window.tinymce as unknown as { init: (config: Record<string, unknown>) => void; get: (id: string) => { remove: () => void; getContent: () => string; setContent: (content: string) => void } | null } | undefined;
     if (tinymce && tinymce.get('missionContentEditor')) {
@@ -490,6 +500,13 @@ const MissionsPage = (): JSX.Element => {
                         </span>
                       </div>
                     )}
+                    {/* Firm info */}
+                    <div className="flex items-center gap-1 mt-1">
+                      <BuildingOfficeIcon className="w-3 h-3 text-gray-400" />
+                      <span className="text-xs text-gray-400 dark:text-gray-500">
+                        {mission.Firm || t('missions.noFirm', 'Aucun cabinet')}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -601,6 +618,14 @@ const MissionsPage = (): JSX.Element => {
             </div>
 
             <form onSubmit={handleSubmit} className="p-4 overflow-y-auto max-h-[70vh]">
+              {/* Admin Firm Selector - only visible for admins when creating */}
+              <AdminFirmSelector
+                selectedFirmId={formData['Firm ID']}
+                onFirmChange={(firmId) => setFormData({ ...formData, 'Firm ID': firmId })}
+                className="mb-4"
+                t={t}
+              />
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">

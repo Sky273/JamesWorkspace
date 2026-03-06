@@ -1,3 +1,36 @@
+## v1.7.7 - 2026-03-05
+### 🐳 Docker PostgreSQL 18 & Documentation
+
+#### Configuration Docker
+- **PostgreSQL 18** : Mise à jour de PostgreSQL 14 vers 18 pour cohérence avec l'environnement hors Docker
+- **Secrets stables** : Les secrets JWT ne sont plus générés aléatoirement à chaque démarrage (évite déconnexions)
+- **Variables complètes** : Ajout de `REFRESH_TOKEN_SECRET`, `CSRF_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `MAIL_TOKEN_ENCRYPTION_KEY`
+- **Volume PostgreSQL** : Chemin mis à jour vers `/var/lib/postgresql/18/main`
+
+#### Documentation
+- **INSTALL.md** : Commande Docker complète avec tous les secrets et volume PostgreSQL
+- **ARCHITECTURE.md** : Nouvelle section "Déploiement Docker" avec schéma d'architecture conteneur
+- **docker/README.md** : Mise à jour des chemins PostgreSQL 18
+
+#### Guide Utilisateur
+- **Bonnes Pratiques** : Section entièrement réécrite pour couvrir l'application complète
+  - 📄 Gestion des CV (import, qualité, structure)
+  - 🎯 Missions et Matching (création, optimisation)
+  - 👥 Clients et Contacts (organisation, suivi)
+  - 📊 Pipeline de Recrutement (gestion par étape)
+  - ✉️ Envoi de CV (préparation, bonnes pratiques)
+  - 🔒 Conformité RGPD (consentement, audit)
+  - 📈 Market Radar (veille marché)
+  - ⚙️ Administration (configuration, sécurité)
+  - 🔄 Workflow Recommandé (schéma complet)
+  - 💡 Conseils de Productivité
+- **Guide EN** : Synchronisé avec la version française
+
+#### Corrections
+- **UserGuidePage** : Correction du regex d'extraction de section (matchait `###` au lieu de `##`)
+
+---
+
 ## v1.7.6 - 2026-03-04
 ### 📊 Pipeline Kanban & Entretiens Multiples
 

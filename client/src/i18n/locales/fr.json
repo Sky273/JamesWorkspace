@@ -56,7 +56,10 @@
     "saved": "Enregistré",
     "saving": "Enregistrement...",
     "view": "Voir",
-    "openMenu": "Ouvrir le menu"
+    "openMenu": "Ouvrir le menu",
+    "selectFirm": "Cabinet",
+    "myFirm": "Mon cabinet (par défaut)",
+    "adminFirmHint": "En tant qu'admin, vous pouvez créer cet élément pour un autre cabinet"
   },
   "header": {
     "changeLanguage": "Changer de langue",
@@ -502,7 +505,8 @@
     "card": {
       "popular": "Populaire",
       "preview": "Aperçu",
-      "noDescription": "Aucune description"
+      "noDescription": "Aucune description",
+      "global": "Global (tous les cabinets)"
     },
     "status": {
       "error": "Échec du chargement des modèles",

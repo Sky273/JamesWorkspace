@@ -9,7 +9,7 @@ import { UserIcon, BriefcaseIcon } from '@heroicons/react/24/outline';
 import { useResume } from '../../context/ResumeContext';
 import { loadTinyMCE } from '../../utils/lazyTinyMCE';
 import { TinyMCEEditor } from '../../types/tinymce.d';
-import { registerSuggestionsPlugin, parseSuggestions } from '../../utils/tinymceSuggestionsPlugin';
+import { registerSuggestionsPlugin, parseSuggestions, removeSuggestionMarkers } from '../../utils/tinymceSuggestionsPlugin';
 import toast from 'react-hot-toast';
 import logger from '../../utils/logger.frontend';
 
@@ -149,8 +149,12 @@ const OriginalTextTab = ({ resume }: OriginalTextTabProps): JSX.Element => {
     
     setSaving(true);
     try {
-      const content = editorRef.current.getContent();
+      const rawContent = editorRef.current.getContent();
+      // Remove suggestion markers before saving to ensure clean content is stored
+      const content = removeSuggestionMarkers(rawContent);
       await updateOriginalContent(resume.id, content);
+      // Update editor with cleaned content and reset change tracking
+      editorRef.current.setContent(content);
       initialContentRef.current = content;
       setHasChanges(false);
       toast.success(t('resume.saveSuccess', 'Modifications saved successfully'));

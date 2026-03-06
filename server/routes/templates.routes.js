@@ -1,6 +1,6 @@
 import express from 'express';
 import multer from 'multer';
-import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
+import { authenticateToken, requireAdmin, isUserAdmin } from '../middleware/auth.middleware.js';
 import { validateBody, validateParams, createTemplateSchema } from '../utils/validation.js';
 import { templatesCache } from '../services/cache.service.js';
 import { safeLog } from '../utils/logger.backend.js';
@@ -13,6 +13,35 @@ import {
 } from '../utils/postgresHelpers.js';
 import { extractTemplateFromHTML, extractTemplateFromImage, extractTemplateFromCV } from '../services/templateExtraction.service.js';
 import puppeteer from 'puppeteer';
+import { query } from '../config/database.js';
+
+// Helper to validate UUID format
+const isValidUUID = (str) => {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(str);
+};
+
+// Helper to get user's firm_id (returns UUID)
+const getUserFirmId = async (req) => {
+    const firmId = req.user?.firm_id || req.user?.firmId;
+    if (firmId && isValidUUID(firmId)) {
+        return firmId;
+    }
+    
+    const firmName = req.user?.firm || req.user?.Firm;
+    if (firmName) {
+        try {
+            const result = await query('SELECT id FROM firms WHERE name = $1', [firmName]);
+            if (result.rows.length > 0) {
+                return result.rows[0].id;
+            }
+        } catch (error) {
+            safeLog('error', 'Error looking up firm by name', { firmName, error: error.message });
+        }
+    }
+    
+    return null;
+};
 
 // Configure multer for file uploads (memory storage for template extraction)
 const upload = multer({ 
@@ -41,20 +70,29 @@ router.get('/', authenticateToken, async (req, res) => {
         const limit = parseInt(req.query.limit) || 100;
         const offset = (page - 1) * limit;
         const { search, status } = req.query;
+        const isAdmin = isUserAdmin(req);
+        const userFirmId = await getUserFirmId(req);
         
         // Build WHERE clause
         const conditions = [];
         const params = [];
         let paramIndex = 1;
         
+        // Firm filter: non-admins see only their firm's templates + global templates (firm_id IS NULL)
+        if (!isAdmin && userFirmId) {
+            conditions.push(`(t.firm_id = $${paramIndex} OR t.firm_id IS NULL)`);
+            params.push(userFirmId);
+            paramIndex++;
+        }
+        
         if (status && status !== 'all') {
-            conditions.push(`status = $${paramIndex}`);
+            conditions.push(`t.status = $${paramIndex}`);
             params.push(status.toLowerCase());
             paramIndex++;
         }
         
         if (search) {
-            conditions.push(`(LOWER(name) LIKE $${paramIndex} OR LOWER(description) LIKE $${paramIndex})`);
+            conditions.push(`(LOWER(t.name) LIKE $${paramIndex} OR LOWER(t.description) LIKE $${paramIndex})`);
             params.push(`%${search.toLowerCase()}%`);
             paramIndex++;
         }
@@ -63,21 +101,36 @@ router.get('/', authenticateToken, async (req, res) => {
 
         // Get total count first
         const countWhereClause = whereClause ? `WHERE ${whereClause}` : '';
-        const countQuery = `SELECT COUNT(*) as total FROM templates ${countWhereClause}`;
+        const countQuery = `SELECT COUNT(*) as total FROM templates t ${countWhereClause}`;
         const countResult = await selectWithTimeout('templates', {
             rawQuery: countQuery,
             rawParams: params
         });
         const totalCount = parseInt(countResult[0]?.total || 0);
 
-        // Fetch templates with pagination
-        const templates = await selectWithTimeout('templates', {
-            where: whereClause,
-            params: params,
-            orderBy: 'name ASC',
-            limit: limit + 1,
-            offset: offset
-        });
+        // Fetch templates with pagination and firm name
+        const selectWhereClause = whereClause ? `WHERE ${whereClause}` : '';
+        const templatesQuery = `
+            SELECT t.*, f.name as firm_name
+            FROM templates t
+            LEFT JOIN firms f ON t.firm_id = f.id
+            ${selectWhereClause}
+            ORDER BY t.name ASC
+            LIMIT $${params.length + 1} OFFSET $${params.length + 2}
+        `;
+        const templatesResult = await query(templatesQuery, [...params, limit + 1, offset]);
+        const templates = templatesResult.rows;
+        
+        // Debug log to check firm_name
+        if (templates.length > 0) {
+            safeLog('info', 'Templates with firm info', { 
+                firstTemplate: { 
+                    name: templates[0].name, 
+                    firm_id: templates[0].firm_id, 
+                    firm_name: templates[0].firm_name 
+                }
+            });
+        }
 
         // Check if there are more records
         const hasMore = templates.length > limit;
@@ -101,6 +154,8 @@ router.get('/', authenticateToken, async (req, res) => {
             FooterContent: template.footer_content || '',
             FooterHeight: template.footer_height || 25,
             Stylesheet: template.stylesheet || '',
+            FirmId: template.firm_id || null,
+            FirmName: template.firm_name || null,
             lastUpdated: template.updated_at
         }));
 
@@ -146,6 +201,7 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
             FooterContent: template.footer_content || '',
             FooterHeight: template.footer_height || 25,
             Stylesheet: template.stylesheet || '',
+            FirmId: template.firm_id || null,
             lastUpdated: template.updated_at
         };
         
@@ -167,6 +223,32 @@ router.post('/', authenticateToken, requireAdmin, validateBody(createTemplateSch
     try {
         templatesCache.invalidate('all_templates');
         
+        const isAdmin = isUserAdmin(req);
+        const userFirmId = await getUserFirmId(req);
+        
+        // Determine target firm_id: admin can specify a different firm or create global templates
+        let targetFirmId = userFirmId;
+        const requestedFirmId = req.body.firm_id || req.body['Firm ID'];
+        
+        if (isAdmin) {
+            if (requestedFirmId === '' || requestedFirmId === null) {
+                // Admin explicitly wants a global template
+                targetFirmId = null;
+            } else if (requestedFirmId && requestedFirmId !== userFirmId) {
+                // Admin is creating for another firm - validate the firm exists
+                const firmResult = await query('SELECT id, name FROM firms WHERE id = $1', [requestedFirmId]);
+                if (firmResult.rows.length === 0) {
+                    return res.status(400).json({ error: 'Specified firm not found' });
+                }
+                targetFirmId = firmResult.rows[0].id;
+                safeLog('info', 'Admin creating template for another firm', { 
+                    adminId: req.user?.id, 
+                    targetFirmId, 
+                    targetFirmName: firmResult.rows[0].name 
+                });
+            }
+        }
+        
         const templateData = {
             name: req.body.Name,
             description: req.body.Description || null,
@@ -178,7 +260,8 @@ router.post('/', authenticateToken, requireAdmin, validateBody(createTemplateSch
             template_content: req.body.TemplateContent,
             footer_content: req.body.FooterContent || '',
             footer_height: req.body.FooterHeight || 25,
-            stylesheet: req.body.Stylesheet || ''
+            stylesheet: req.body.Stylesheet || '',
+            firm_id: targetFirmId
         };
 
         const records = await createWithTimeout('templates', [{
@@ -222,6 +305,35 @@ router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), async 
         templatesCache.invalidate('all_templates');
         
         const { id } = req.params;
+        const isAdmin = isUserAdmin(req);
+        
+        // Get existing template to check firm_id
+        const existingTemplate = await findWithTimeout('templates', id);
+        
+        // Handle firm_id update (admin only)
+        let targetFirmId = existingTemplate.firm_id;
+        const requestedFirmId = req.body.firm_id || req.body.FirmId;
+        
+        if (isAdmin && requestedFirmId !== undefined) {
+            if (requestedFirmId === '' || requestedFirmId === null) {
+                // Admin explicitly wants a global template
+                targetFirmId = null;
+            } else if (requestedFirmId !== existingTemplate.firm_id) {
+                // Admin is changing to another firm - validate the firm exists
+                const firmResult = await query('SELECT id, name FROM firms WHERE id = $1', [requestedFirmId]);
+                if (firmResult.rows.length === 0) {
+                    return res.status(400).json({ error: 'Specified firm not found' });
+                }
+                targetFirmId = firmResult.rows[0].id;
+                safeLog('info', 'Admin changing template firm', { 
+                    adminId: req.user?.id, 
+                    templateId: id,
+                    oldFirmId: existingTemplate.firm_id,
+                    newFirmId: targetFirmId 
+                });
+            }
+        }
+        
         const templateData = {
             name: req.body.Name,
             description: req.body.Description,
@@ -233,10 +345,11 @@ router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), async 
             template_content: req.body.TemplateContent,
             footer_content: req.body.FooterContent,
             footer_height: req.body.FooterHeight,
-            stylesheet: req.body.Stylesheet
+            stylesheet: req.body.Stylesheet,
+            firm_id: targetFirmId
         };
 
-        // Remove undefined values
+        // Remove undefined values (but keep null for firm_id)
         Object.keys(templateData).forEach(key => {
             if (templateData[key] === undefined) {
                 delete templateData[key];
@@ -263,6 +376,7 @@ router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), async 
             FooterContent: result.footer_content,
             FooterHeight: result.footer_height,
             Stylesheet: result.stylesheet,
+            FirmId: result.firm_id,
             LastUpdated: result.updated_at
         });
     } catch (error) {

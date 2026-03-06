@@ -103,6 +103,7 @@ CREATE TABLE public.templates (
     footer_content text,
     footer_height integer DEFAULT 25,
     stylesheet text,
+    firm_id uuid,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT templates_pkey PRIMARY KEY (id),
@@ -111,6 +112,7 @@ CREATE TABLE public.templates (
 );
 
 COMMENT ON TABLE public.templates IS 'Resume templates with HTML/CSS styling';
+COMMENT ON COLUMN public.templates.firm_id IS 'Optional firm association - NULL means global template visible to all';
 
 -- Resumes
 CREATE TABLE public.resumes (
@@ -816,6 +818,7 @@ CREATE INDEX idx_templates_name ON public.templates USING btree (name);
 CREATE INDEX idx_templates_status ON public.templates USING btree (status);
 CREATE INDEX idx_templates_popular ON public.templates USING btree (popular);
 CREATE INDEX idx_templates_tags ON public.templates USING gin (tags);
+CREATE INDEX idx_templates_firm_id ON public.templates USING btree (firm_id);
 
 -- Resumes indexes
 CREATE INDEX idx_resumes_name ON public.resumes USING btree (name);
@@ -957,6 +960,10 @@ CREATE INDEX idx_pipeline_interviews_scheduled_at ON public.pipeline_interviews 
 -- Users FK
 ALTER TABLE ONLY public.users
     ADD CONSTRAINT users_firm_id_fkey FOREIGN KEY (firm_id) REFERENCES public.firms(id) ON DELETE SET NULL;
+
+-- Templates FKs
+ALTER TABLE ONLY public.templates
+    ADD CONSTRAINT templates_firm_id_fkey FOREIGN KEY (firm_id) REFERENCES public.firms(id) ON DELETE SET NULL;
 
 -- Resumes FKs
 ALTER TABLE ONLY public.resumes

@@ -10,6 +10,7 @@ import { templateService } from '../utils/templateService';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import logger from '../utils/logger.frontend';
+import AdminFirmSelector from '../components/AdminFirmSelector';
 
 import { loadTinyMCE } from '../utils/lazyTinyMCE';
 
@@ -24,6 +25,7 @@ interface FormData {
   status: string;
   popular: boolean;
   tags: string[];
+  firmId: string;
 }
 
 // TinyMCE types are declared in src/types/tinymce.d.ts
@@ -60,7 +62,8 @@ const NewTemplatePage = (): JSX.Element => {
     stylesheet: '',
     status: 'Active',
     popular: false,
-    tags: []
+    tags: [],
+    firmId: ''
   });
 
   useEffect(() => {
@@ -80,7 +83,8 @@ const NewTemplatePage = (): JSX.Element => {
             stylesheet: extractedTemplate.stylesheet || '',
             status: 'Active',
             popular: false,
-            tags: extractedTemplate.tags || []
+            tags: extractedTemplate.tags || [],
+            firmId: ''
           };
           setFormData(newFormData);
           // Store initial content for editors
@@ -118,7 +122,8 @@ const NewTemplatePage = (): JSX.Element => {
           stylesheet: template.Stylesheet || '',
           status: template.Status?.charAt(0).toUpperCase() + template.Status?.slice(1).toLowerCase() || 'Active',
           popular: template.Popular || false,
-          tags: template.Tags || []
+          tags: template.Tags || [],
+          firmId: template.FirmId || template.firm_id || ''
         };
         setFormData(newFormData);
         // Store initial content for editors
@@ -305,13 +310,23 @@ const NewTemplatePage = (): JSX.Element => {
     if (!formData.templateContent?.trim()) { toast.error(t('templates.editor.validation.contentRequired')); return; }
 
     try {
-      const templateData = {
-        ...formData,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const templateData: any = {
+        name: formData.name,
+        description: formData.description,
+        headerContent: formData.headerContent,
+        templateContent: formData.templateContent,
+        footerContent: formData.footerContent,
+        footerHeight: formData.footerHeight,
+        stylesheet: formData.stylesheet,
         tags: Array.isArray(formData.tags) ? formData.tags : [],
         popular: Boolean(formData.popular),
         status: formData.status || 'Active'
       };
-
+      
+      // Always include firm_id for admin (empty string means global template)
+      templateData.firm_id = formData.firmId || '';
+      
       if (id) {
         await templateService.updateTemplate(id, templateData);
         toast.success(t('templates.editor.success.update'));
@@ -345,6 +360,14 @@ const NewTemplatePage = (): JSX.Element => {
           <div className="flex justify-center items-center py-12"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div></div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Admin Firm Selector - visible for admins */}
+            <AdminFirmSelector
+              selectedFirmId={formData.firmId}
+              onFirmChange={(firmId) => setFormData({ ...formData, firmId })}
+              className="mb-2"
+              t={t}
+            />
+
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('templates.editor.name.label')}</label>
               <input type="text" id="name" name="name" required value={formData.name} onChange={handleChange} placeholder={t('templates.editor.name.placeholder')} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white" />

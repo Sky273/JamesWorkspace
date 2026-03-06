@@ -952,4 +952,4 @@ L'architecture actuelle est **adaptée pour un usage PME/ESN** et peut supporter
 ---
 
 *Document mis à jour le 5 mars 2026*
-*Version: 1.7.6*
+*Version: 1.7.7*

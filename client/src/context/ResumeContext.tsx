@@ -489,10 +489,18 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
         throw new Error('Failed to update original content');
       }
 
+      // Update currentResume
       setCurrentResume(prev => prev ? {
         ...prev,
         'Original Text': content
       } : null);
+
+      // Also update the resumes list to keep it in sync
+      setResumes(prev => prev.map(resume => 
+        resume.id === resumeId 
+          ? { ...resume, 'Original Text': content }
+          : resume
+      ));
 
       return { success: true };
     } catch (error) {

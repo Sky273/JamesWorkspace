@@ -17,6 +17,8 @@ export interface Template {
     Tags?: string[];
     Popular?: boolean;
     Stylesheet?: string;
+    FirmId?: string;
+    firm_id?: string;
     createdAt?: string;
     updatedAt?: string;
 }
@@ -32,6 +34,7 @@ export interface TemplateData {
     tags?: string[];
     popular?: boolean;
     stylesheet?: string;
+    firm_id?: string;
 }
 
 export interface Pagination {
@@ -59,6 +62,7 @@ interface SanitizedTemplateData {
     Tags: string[];
     Popular?: boolean;
     Stylesheet?: string;
+    firm_id?: string;
 }
 
 const validateTemplateData = (data: TemplateData): void => {
@@ -110,9 +114,14 @@ const sanitizeTemplateData = (data: TemplateData): SanitizedTemplateData => {
         sanitized.Stylesheet = data.stylesheet.trim();
     }
 
-    // Remove any remaining undefined or null values
+    // Include firm_id if provided (empty string means global template)
+    if (data.firm_id !== undefined) {
+        sanitized.firm_id = data.firm_id;
+    }
+
+    // Remove any remaining undefined or null values, but keep empty string for firm_id
     return Object.fromEntries(
-        Object.entries(sanitized).filter(([, value]) => value != null)
+        Object.entries(sanitized).filter(([key, value]) => value != null || key === 'firm_id')
     ) as SanitizedTemplateData;
 };
 

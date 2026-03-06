@@ -373,10 +373,15 @@ function createGroupedSuggestionsPanel(suggestions: SuggestionsBySection): strin
 
 /**
  * Remove all suggestion markers from content
+ * Exported for use when saving content without suggestions
  */
-function removeSuggestionMarkers(content: string): string {
-  // Remove suggestion badges (the orange pill with count)
+export function removeSuggestionMarkers(content: string): string {
+  // Remove suggestion badges (the orange pill with count) - multiple patterns to catch all variants
   let cleaned = content.replace(/<span[^>]*title="[^"]*"[^>]*>💡\s*\d+<\/span>/g, '');
+  // Remove orange gradient badges (BADGE_STYLE pattern: background: linear-gradient(135deg, #F59E0B...)
+  cleaned = cleaned.replace(/<span[^>]*style="[^"]*background:\s*linear-gradient\(135deg,\s*#F59E0B[^"]*"[^>]*>.*?<\/span>/g, '');
+  // Remove any span with lightbulb emoji and a number (generic pattern)
+  cleaned = cleaned.replace(/<span[^>]*>[\s]*💡[\s]*\d+[\s]*<\/span>/g, '');
   // Remove highlight wrappers but keep inner content
   cleaned = cleaned.replace(/<div[^>]*class="suggestion-highlight"[^>]*>/g, '');
   cleaned = cleaned.replace(/<\/div>(\s*<\/div>)?/g, (match, group1) => group1 ? '</div>' : '');
@@ -390,6 +395,8 @@ function removeSuggestionMarkers(content: string): string {
   cleaned = cleaned.replace(/<div style="background: linear-gradient[^>]*>[\s\S]*?<\/div>\s*<\/div>/g, '');
   // Remove any remaining lightbulb spans (legacy)
   cleaned = cleaned.replace(/<span[^>]*>💡<\/span>/g, '');
+  // Remove any span containing only lightbulb and/or numbers (catch-all for badge variants)
+  cleaned = cleaned.replace(/<span[^>]*style="[^"]*#F59E0B[^"]*"[^>]*>[^<]*<\/span>/g, '');
   return cleaned;
 }
 

@@ -17,7 +17,8 @@ import {
   DocumentTextIcon,
   EyeIcon,
   XMarkIcon,
-  SparklesIcon
+  SparklesIcon,
+  BuildingOfficeIcon
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
@@ -41,6 +42,8 @@ interface Template {
   Status?: string;
   Popular?: boolean;
   Tags?: string[];
+  FirmId?: string;
+  FirmName?: string;
 }
 
 interface TemplateCardProps {
@@ -113,6 +116,12 @@ const TemplateCard = ({ template, onDeleteClick, onPreviewClick, index }: Templa
             </span>
           </div>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 line-clamp-2">{template.Description || t('templates.card.noDescription')}</p>
+          <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+            <span className="inline-flex items-center gap-1">
+              <BuildingOfficeIcon className="w-3 h-3" />
+              {template.FirmName || t('templates.card.global')}
+            </span>
+          </p>
         </div>
 
         {template.Tags && template.Tags.length > 0 && (

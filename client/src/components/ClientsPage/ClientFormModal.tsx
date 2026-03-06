@@ -6,13 +6,15 @@ import { useState, useEffect, FormEvent, ChangeEvent } from 'react';
 import Modal from './Modal';
 import { Client, ClientType, ClientStatus } from '../../types/entities';
 import clientService from '../../utils/clientService';
+import AdminFirmSelector from '../AdminFirmSelector';
 
 interface ClientFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: Partial<Client>) => void;
+  onSubmit: (data: Partial<Client> & { firm_id?: string }) => void;
   client: Client | null;
-  t: (key: string) => string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  t: any;
 }
 
 const ClientFormModal = ({ isOpen, onClose, onSubmit, client, t }: ClientFormModalProps): JSX.Element => {
@@ -25,6 +27,7 @@ const ClientFormModal = ({ isOpen, onClose, onSubmit, client, t }: ClientFormMod
   const [notes, setNotes] = useState<string>('');
   const [industries, setIndustries] = useState<string[]>([]);
   const [loadingIndustries, setLoadingIndustries] = useState<boolean>(false);
+  const [selectedFirmId, setSelectedFirmId] = useState<string>('');
 
   // Load industries from backend
   useEffect(() => {
@@ -55,6 +58,7 @@ const ClientFormModal = ({ isOpen, onClose, onSubmit, client, t }: ClientFormMod
       setWebsite(client.website || '');
       setIndustry(client.industry || '');
       setNotes(client.notes || '');
+      setSelectedFirmId(client.firm_id || '');
     } else {
       setName('');
       setType('prospect');
@@ -63,12 +67,13 @@ const ClientFormModal = ({ isOpen, onClose, onSubmit, client, t }: ClientFormMod
       setWebsite('');
       setIndustry('');
       setNotes('');
+      setSelectedFirmId('');
     }
   }, [client, isOpen]);
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>): void => {
     e.preventDefault();
-    onSubmit({
+    const data: Partial<Client> & { firm_id?: string } = {
       name,
       type,
       status,
@@ -76,7 +81,12 @@ const ClientFormModal = ({ isOpen, onClose, onSubmit, client, t }: ClientFormMod
       website: website || undefined,
       industry: industry || undefined,
       notes: notes || undefined
-    });
+    };
+    // Add firm_id if admin selected a firm (for both new and edited clients)
+    if (selectedFirmId) {
+      data.firm_id = selectedFirmId;
+    }
+    onSubmit(data);
   };
 
   return (
@@ -87,6 +97,14 @@ const ClientFormModal = ({ isOpen, onClose, onSubmit, client, t }: ClientFormMod
       size="lg"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Admin Firm Selector - visible for admins */}
+        <AdminFirmSelector
+          selectedFirmId={selectedFirmId}
+          onFirmChange={setSelectedFirmId}
+          className="mb-2"
+          t={t}
+        />
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">

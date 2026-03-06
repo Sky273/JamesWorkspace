@@ -56,7 +56,10 @@
     "saved": "Saved",
     "saving": "Saving...",
     "view": "View",
-    "openMenu": "Open menu"
+    "openMenu": "Open menu",
+    "selectFirm": "Firm",
+    "myFirm": "My firm (default)",
+    "adminFirmHint": "As an admin, you can create this item for another firm"
   },
   "header": {
     "changeLanguage": "Change language",
@@ -501,7 +504,8 @@
     "card": {
       "popular": "Popular",
       "preview": "Preview",
-      "noDescription": "No description"
+      "noDescription": "No description",
+      "global": "Global (all firms)"
     },
     "status": {
       "error": "Failed to load templates",

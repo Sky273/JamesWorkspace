@@ -416,7 +416,7 @@ const ClientsPage = (): JSX.Element => {
                 </div>
 
                 {/* Stats */}
-                <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 mb-4">
+                <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 mb-2">
                   <div className="flex items-center gap-1">
                     <UserGroupIcon className="w-4 h-4" />
                     <span>{client.contacts_count || 0} {t('clients.contactsLabel')}</span>
@@ -425,6 +425,13 @@ const ClientsPage = (): JSX.Element => {
                     <PaperAirplaneIcon className="w-4 h-4" />
                     <span>{client.submissions_count || 0} {t('clients.submissionsLabel')}</span>
                   </div>
+                </div>
+                {/* Firm info */}
+                <div className="flex items-center gap-1 mb-4">
+                  <BuildingOfficeIcon className="w-3 h-3 text-gray-400" />
+                  <span className="text-xs text-gray-400 dark:text-gray-500">
+                    {client.firm_name || t('clients.noFirm', 'Aucun cabinet')}
+                  </span>
                 </div>
 
                 {/* Actions */}
