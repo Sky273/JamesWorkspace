@@ -61,10 +61,8 @@ const AdminFirmSelector = ({
           const userFirm = firmsList.find((f: Firm) => f.name === userFirmName);
           if (userFirm) {
             setUserFirmId(userFirm.id);
-            // If no firm is selected yet, default to user's firm
-            if (!selectedFirmId) {
-              onFirmChange(userFirm.id);
-            }
+            // Don't auto-set default firm here - it causes timing issues with React state
+            // The backend will use the user's firm if no firm_id is sent
           }
         }
       } catch (error) {
@@ -94,8 +92,8 @@ const AdminFirmSelector = ({
   };
 
   // Determine the display value for the select
-  // If selectedFirmId matches userFirmId, show MY_FIRM_VALUE
-  const displayValue = selectedFirmId === userFirmId ? MY_FIRM_VALUE : selectedFirmId;
+  // If selectedFirmId is empty or matches userFirmId, show MY_FIRM_VALUE
+  const displayValue = (!selectedFirmId || selectedFirmId === userFirmId) ? MY_FIRM_VALUE : selectedFirmId;
 
   return (
     <div className={className}>

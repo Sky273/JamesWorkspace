@@ -259,8 +259,11 @@ const MissionsPage = (): JSX.Element => {
       };
       
       // Add firm_id if admin selected a firm (for both new and edited missions)
+      // Log for debugging
+      console.log('[MissionsPage] handleSubmit - formData Firm ID:', formData['Firm ID']);
       if (formData['Firm ID']) {
         dataToSend['firm_id'] = formData['Firm ID'];
+        console.log('[MissionsPage] handleSubmit - sending firm_id:', formData['Firm ID']);
       }
 
       const response = editingMission

@@ -228,24 +228,26 @@ router.post('/', authenticateToken, validateBody(createMissionSchema), async (re
         const userRole = (req.user?.role || req.user?.Role || '').toLowerCase();
         const isAdmin = userRole === 'admin';
         
-        // Determine target firm_id: admin can specify a different firm
+        // Determine target firm_id: admin can specify any firm
         let targetFirmId = userFirmId;
         let targetFirmName = userFirm;
         const requestedFirmId = missionData.firm_id || missionData['Firm ID'];
         
-        if (isAdmin && requestedFirmId && requestedFirmId !== userFirmId) {
-            // Admin is creating for another firm - validate the firm exists
+        // If admin sends a firm_id, always use it (validate it exists)
+        if (isAdmin && requestedFirmId) {
             const firmResult = await query('SELECT id, name FROM firms WHERE id = $1', [requestedFirmId]);
             if (firmResult.rows.length === 0) {
                 return res.status(400).json({ error: 'Specified firm not found' });
             }
             targetFirmId = firmResult.rows[0].id;
             targetFirmName = firmResult.rows[0].name;
-            safeLog('info', 'Admin creating mission for another firm', { 
-                adminId: req.user?.id, 
-                targetFirmId, 
-                targetFirmName 
-            });
+            if (requestedFirmId !== userFirmId) {
+                safeLog('info', 'Admin creating mission for another firm', { 
+                    adminId: req.user?.id, 
+                    targetFirmId, 
+                    targetFirmName 
+                });
+            }
         }
         
         let content = missionData.Content || missionData.content || '';
@@ -278,6 +280,15 @@ router.post('/', authenticateToken, validateBody(createMissionSchema), async (re
                 return res.status(400).json({ error: 'Contact not found or does not belong to this client' });
             }
         }
+        
+        // Debug: log what we're about to save
+        safeLog('info', 'Creating mission with firm data', {
+            targetFirmId,
+            targetFirmName,
+            requestedFirmId,
+            userFirmId,
+            isAdmin
+        });
         
         const newMission = await createWithTimeout('missions', {
             title: missionData.Title || missionData.title,
@@ -400,13 +411,14 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateM
         // Handle firm_id update (admin only)
         if (isAdmin && (updateData.firm_id || updateData['Firm ID'])) {
             const newFirmId = updateData.firm_id || updateData['Firm ID'];
+            // Always validate and use the provided firm_id
+            const firmResult = await query('SELECT id, name FROM firms WHERE id = $1', [newFirmId]);
+            if (firmResult.rows.length === 0) {
+                return res.status(400).json({ error: 'Specified firm not found' });
+            }
+            updates.firm_id = firmResult.rows[0].id;
+            updates.firm = firmResult.rows[0].name;
             if (newFirmId !== existingMission.firm_id) {
-                const firmResult = await query('SELECT id, name FROM firms WHERE id = $1', [newFirmId]);
-                if (firmResult.rows.length === 0) {
-                    return res.status(400).json({ error: 'Specified firm not found' });
-                }
-                updates.firm_id = firmResult.rows[0].id;
-                updates.firm = firmResult.rows[0].name;
                 safeLog('info', 'Admin changing mission firm', { 
                     adminId: req.user?.id, 
                     missionId: id,

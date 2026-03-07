@@ -53,7 +53,9 @@ export const createMissionSchema = z.object({
   'Client ID': z.string().uuid().optional().nullable(),
   client_id: z.string().uuid().optional().nullable(),
   'Contact ID': z.string().uuid().optional().nullable(),
-  contact_id: z.string().uuid().optional().nullable()
+  contact_id: z.string().uuid().optional().nullable(),
+  'Firm ID': z.string().uuid().optional().nullable(),
+  firm_id: z.string().uuid().optional().nullable()
 });
 
 export const updateMissionSchema = z.object({
@@ -63,7 +65,9 @@ export const updateMissionSchema = z.object({
   'Client ID': z.string().uuid().optional().nullable(),
   client_id: z.string().uuid().optional().nullable(),
   'Contact ID': z.string().uuid().optional().nullable(),
-  contact_id: z.string().uuid().optional().nullable()
+  contact_id: z.string().uuid().optional().nullable(),
+  'Firm ID': z.string().uuid().optional().nullable(),
+  firm_id: z.string().uuid().optional().nullable()
 });
 
 // Template schemas

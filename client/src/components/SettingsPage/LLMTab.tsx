@@ -47,8 +47,10 @@ const LLMTab = ({ formData, onInputChange, t }: LLMTabProps): JSX.Element => {
           className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
         >
           <optgroup label="GPT-5 (Dernière génération - 2026)">
-            <option value="gpt-5.2">GPT-5.2 (Plus récent)</option>
-            <option value="gpt-5.2-pro">GPT-5.2 Pro (Plus intelligent)</option>
+            <option value="gpt-5.4">GPT-5.4 (Dernière version)</option>
+            <option value="gpt-5.4-pro">GPT-5.4 Pro (Plus intelligent)</option>
+            <option value="gpt-5.2">GPT-5.2</option>
+            <option value="gpt-5.2-pro">GPT-5.2 Pro</option>
             <option value="gpt-5.1-chat-latest">GPT-5.1 Chat</option>
             <option value="gpt-5-chat-latest">GPT-5 Chat</option>
             <option value="gpt-5-pro">GPT-5 Pro</option>
