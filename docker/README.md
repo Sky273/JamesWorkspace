@@ -138,6 +138,65 @@ All data is automatically persisted in **local directories** (not Docker volumes
 - The Docker image is rebuilt
 - Docker is restarted
 
+### Connecting to PostgreSQL
+
+#### From inside the container (shell)
+
+```bash
+# Open a shell in the container
+docker exec -it resumeconverter-app bash
+
+# Connect to PostgreSQL
+psql -U resumeconverter -d resumeconverter
+```
+
+#### Direct psql connection (one command)
+
+```bash
+# Windows (PowerShell/CMD)
+docker exec -it resumeconverter-app psql -U resumeconverter -d resumeconverter
+
+# Linux/Mac
+docker exec -it resumeconverter-app psql -U resumeconverter -d resumeconverter
+```
+
+#### From host machine (external connection)
+
+PostgreSQL is exposed on port **5433** (to avoid conflicts with local PostgreSQL):
+
+```bash
+# Using psql client installed on host
+psql -h localhost -p 5433 -U resumeconverter -d resumeconverter
+# Password: RcV2026!PgSecure#Db
+
+# Using pgAdmin or DBeaver
+# Host: localhost
+# Port: 5433
+# Database: resumeconverter
+# User: resumeconverter
+# Password: RcV2026!PgSecure#Db
+```
+
+#### Common SQL commands
+
+```sql
+-- List all tables
+\dt
+
+-- Describe a table
+\d users
+
+-- Count records
+SELECT COUNT(*) FROM users;
+SELECT COUNT(*) FROM resumes;
+
+-- View current connections
+SELECT * FROM pg_stat_activity;
+
+-- Exit psql
+\q
+```
+
 ### Managing PostgreSQL Data
 
 ```bash
@@ -147,11 +206,17 @@ docker exec resumeconverter-app pg_dump -U resumeconverter resumeconverter > bac
 # Restore database
 docker exec -i resumeconverter-app psql -U resumeconverter resumeconverter < backup.sql
 
-# View data directory size
+# View data directory size (Linux/Mac)
 du -sh ./data/postgresql
 
-# ⚠️ Delete data (DATA LOSS!)
+# View data directory size (Windows PowerShell)
+(Get-ChildItem -Recurse ./data/postgresql | Measure-Object -Property Length -Sum).Sum / 1MB
+
+# ⚠️ Delete data (DATA LOSS!) - Linux/Mac
 rm -rf ./data/postgresql
+
+# ⚠️ Delete data (DATA LOSS!) - Windows
+rmdir /s /q data\postgresql
 ```
 
 ### Migrating from Docker Volume
