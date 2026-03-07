@@ -382,6 +382,20 @@ chmod +x docker/docker-build.sh
 | `./docker/docker-build.sh shell` | Ouvrir un shell dans le conteneur |
 | `./docker/docker-build.sh clean` | Supprimer conteneur et image |
 
+### Identifiants PostgreSQL Docker
+
+Les identifiants de la base de données intégrée au conteneur sont :
+
+| Variable | Valeur |
+|----------|--------|
+| `POSTGRES_HOST` | `127.0.0.1` (interne au conteneur) |
+| `POSTGRES_PORT` | `5432` (interne) / `5433` (externe) |
+| `POSTGRES_DB` | `resumeconverter` |
+| `POSTGRES_USER` | `resumeconverter` |
+| `POSTGRES_PASSWORD` | `RcV2026!PgSecure#Db` |
+
+> **Note** : Ces identifiants sont utilisés en interne par le conteneur. Pour une sécurité maximale en production, vous pouvez les surcharger via des variables d'environnement au lancement.
+
 ### Persistance des données
 
 Les données sont automatiquement persistées via des volumes Docker :
