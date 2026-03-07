@@ -870,7 +870,7 @@ L'application peut être déployée via un conteneur Docker tout-en-un qui inclu
 
 | Fichier | Rôle |
 |---------|------|
-| `Dockerfile` | Image Ubuntu 22.04 avec Node.js 20, PostgreSQL 18, Chromium |
+| `Dockerfile` | Image Ubuntu 22.04 avec Node.js 20, PostgreSQL 18, Google Chrome |
 | `docker/entrypoint.sh` | Script de démarrage avec init DB et migrations automatiques |
 | `docker/supervisord.conf` | Gestionnaire de processus (proxy + PDF servers) |
 | `docker/init-db.sql` | Schéma complet de la base de données |
@@ -915,7 +915,29 @@ CREATE TABLE schema_migrations (
 | `GOOGLE_CLIENT_SECRET` | Optionnel | Secret Google OAuth |
 | `MAIL_TOKEN_ENCRYPTION_KEY` | Optionnel | Clé de chiffrement tokens mail |
 
+### Identifiants PostgreSQL Docker
+
+| Variable | Valeur |
+|----------|--------|
+| `POSTGRES_HOST` | `127.0.0.1` (interne) |
+| `POSTGRES_PORT` | `5432` (interne) / `5433` (externe) |
+| `POSTGRES_DB` | `resumeconverter` |
+| `POSTGRES_USER` | `resumeconverter` |
+| `POSTGRES_PASSWORD` | `RcV2026!PgSecure#Db` |
+
 ### Commandes Docker
+
+#### Windows - Scripts .bat (simples)
+
+| Script | Description |
+|--------|-------------|
+| `docker-build.bat` | Construire l'image Docker |
+| `docker-run.bat` | Démarrer le conteneur |
+| `docker-stop.bat` | Arrêter et supprimer le conteneur |
+| `docker-logs.bat` | Voir les logs en temps réel |
+| `docker-shell.bat` | Ouvrir un shell dans le conteneur |
+
+#### Linux/Mac
 
 ```bash
 # Construction
@@ -951,5 +973,5 @@ L'architecture actuelle est **adaptée pour un usage PME/ESN** et peut supporter
 
 ---
 
-*Document mis à jour le 5 mars 2026*
+*Document mis à jour le 7 mars 2026*
 *Version: 1.7.7*
