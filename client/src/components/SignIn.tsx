@@ -12,6 +12,7 @@ import { resetSessionState } from '../utils/apiInterceptor';
 import logger from '../utils/logger.frontend';
 import { fetchWithCsrfRetry } from '../utils/apiInterceptor';
 import TwoFactorVerify from './TwoFactorVerify';
+import Footer from './Footer';
 
 const SignIn = (): JSX.Element => {
   const { signIn } = useAuth();
@@ -274,6 +275,7 @@ const SignIn = (): JSX.Element => {
           </div>
         </form>
       </div>
+      <Footer />
     </div>
   );
 };
