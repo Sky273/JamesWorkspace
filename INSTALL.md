@@ -304,30 +304,20 @@ git clone https://github.com/votre-repo/ResumeConverter.git
 cd ResumeConverter
 ```
 
-### Étape 2 : Construire l'image Docker
+### Étape 2 : Construire et lancer (méthode simple)
 
-#### Windows (PowerShell)
+#### Windows - Scripts .bat (recommandé)
 
-```powershell
-.\docker\docker-build.ps1 -Build
+Des scripts simples sont disponibles à la racine du projet :
+
+```batch
+docker-build.bat   # Construire l'image Docker
+docker-run.bat     # Démarrer le conteneur
 ```
 
-#### Linux/Mac
+C'est tout ! L'application sera accessible sur https://localhost:3443
 
-```bash
-chmod +x docker/docker-build.sh
-./docker/docker-build.sh build
-```
-
-#### Commande Docker directe
-
-```bash
-docker build -t resumeconverter:latest .
-```
-
-### Étape 3 : Lancer le conteneur
-
-#### Windows (PowerShell)
+#### Windows - PowerShell (options avancées)
 
 ```powershell
 # Avec les clés API (optionnel)
@@ -340,42 +330,12 @@ $env:ANTHROPIC_API_KEY = "sk-ant-..."
 #### Linux/Mac
 
 ```bash
-# Avec les clés API (optionnel)
-export OPENAI_API_KEY="sk-..."
-export ANTHROPIC_API_KEY="sk-ant-..."
-
+chmod +x docker/docker-build.sh
+./docker/docker-build.sh build
 ./docker/docker-build.sh run
 ```
 
-#### Commande Docker directe
-
-```bash
-# Créer le volume pour la persistance PostgreSQL
-docker volume create resumeconverter-pgdata
-
-# Lancer le conteneur
-docker run -d \
-    --name resumeconverter-app \
-    -p 3443:3443 \
-    -e OPENAI_API_KEY="votre-clé-openai" \
-    -e ANTHROPIC_API_KEY="votre-clé-anthropic" \
-    -e JWT_SECRET="secret-jwt-production-minimum-32-caracteres-hexadecimaux" \
-    -e JWT_REFRESH_SECRET="secret-refresh-production-minimum-32-caracteres" \
-    -e REFRESH_TOKEN_SECRET="secret-token-production-minimum-32-caracteres" \
-    -e CSRF_SECRET="secret-csrf-production-minimum-32-caracteres" \
-    -e GOOGLE_CLIENT_ID="votre-client-id.apps.googleusercontent.com" \
-    -e GOOGLE_CLIENT_SECRET="votre-client-secret" \
-    -e MAIL_TOKEN_ENCRYPTION_KEY="64-caracteres-hexadecimaux-pour-chiffrement" \
-    -v resumeconverter-pgdata:/var/lib/postgresql/18/main \
-    -v ./uploads:/app/uploads \
-    -v ./logs:/app/logs \
-    --restart unless-stopped \
-    resumeconverter:latest
-```
-
-> **Note** : Les variables `GOOGLE_*` et `MAIL_TOKEN_ENCRYPTION_KEY` sont optionnelles (nécessaires uniquement pour SSO Google et envoi d'emails via Gmail).
-
-### Étape 4 : Accéder à l'application
+### Étape 3 : Accéder à l'application
 
 | Service | URL |
 |---------|-----|
@@ -390,7 +350,17 @@ docker run -d \
 
 ### Commandes Docker utiles
 
-#### Windows (PowerShell)
+#### Windows - Scripts .bat (simples)
+
+| Script | Description |
+|--------|-------------|
+| `docker-build.bat` | Construire l'image Docker |
+| `docker-run.bat` | Démarrer le conteneur |
+| `docker-stop.bat` | Arrêter et supprimer le conteneur |
+| `docker-logs.bat` | Voir les logs en temps réel |
+| `docker-shell.bat` | Ouvrir un shell dans le conteneur |
+
+#### Windows - PowerShell (avancé)
 
 | Commande | Description |
 |----------|-------------|
