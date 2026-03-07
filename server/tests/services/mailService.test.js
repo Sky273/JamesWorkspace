@@ -60,6 +60,9 @@ describe('Mail Service', () => {
 
     describe('getConnectionStatus', () => {
         it('should return not connected if no tokens', async () => {
+            // First query: check user_mail_tokens - no tokens
+            query.mockResolvedValueOnce({ rows: [] });
+            // Second query: check users for SSO - no SSO
             query.mockResolvedValueOnce({ rows: [] });
 
             const status = await mailService.getConnectionStatus('user_123');
