@@ -11,16 +11,19 @@ ENV DEBIAN_FRONTEND=noninteractive
 # =============================================================================
 # System Dependencies
 # =============================================================================
+# Install prerequisites first (curl, gpg needed for adding repos)
+RUN apt-get update && apt-get install -y \
+    curl \
+    gnupg \
+    ca-certificates \
+    lsb-release \
+    && rm -rf /var/lib/apt/lists/*
+
 # Add PostgreSQL 18 repository
 RUN curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor -o /usr/share/keyrings/postgresql-keyring.gpg && \
     echo "deb [signed-by=/usr/share/keyrings/postgresql-keyring.gpg] http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list
 
 RUN apt-get update && apt-get install -y \
-    # Node.js prerequisites
-    curl \
-    gnupg \
-    ca-certificates \
-    lsb-release \
     # PostgreSQL 18
     postgresql-18 \
     postgresql-contrib-18 \
@@ -68,8 +71,8 @@ WORKDIR /app
 COPY package*.json ./
 COPY client/scripts ./client/scripts/
 
-# Install all dependencies
-RUN npm ci
+# Install all dependencies (--legacy-peer-deps for ESLint compatibility)
+RUN npm ci --legacy-peer-deps
 
 # Copy application source
 COPY client ./client
