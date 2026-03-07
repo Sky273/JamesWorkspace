@@ -80,7 +80,7 @@ run_container() {
     
     docker run -d \
         --name $CONTAINER_NAME \
-        -p 443:443 \
+        -p 3443:3443 \
         -e OPENAI_API_KEY="${OPENAI_API_KEY}" \
         -e ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY}" \
         -e JWT_SECRET="${JWT_SECRET_VAL}" \
@@ -101,7 +101,7 @@ run_container() {
         echo "Container started successfully!"
         echo ""
         echo "============================================"
-        echo "  Application URL: https://localhost"
+        echo "  Application URL: https://localhost:3443"
         echo "  Database Volume: resumeconverter-pgdata (persistent)"
         echo "  Default login:   admin@resumeconverter.local"
         echo "  Default password: admin123"

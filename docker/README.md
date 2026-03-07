@@ -7,7 +7,7 @@ This Docker setup creates a **single, fully autonomous container** that includes
 - **PostgreSQL 18** - Database server
 - **Node.js 20** - Runtime environment
 - **Google Chrome** - For PDF generation (Puppeteer)
-- **Proxy Server** (port 443 HTTPS) - Main application server
+- **Proxy Server** (port 3443 HTTPS) - Main application server
 - **PDF Server** (port 3002) - PDF generation service
 - **Frontend** - Pre-built React application
 
@@ -54,7 +54,7 @@ chmod +x docker/docker-build.sh
 
 After starting the container:
 
-- **URL**: https://localhost
+- **URL**: https://localhost:3443
 - **Email**: `admin@resumeconverter.local`
 - **Password**: `admin123`
 
@@ -111,7 +111,7 @@ For more control, run Docker directly:
 ```bash
 docker run -d \
     --name resumeconverter-app \
-    -p 443:443 \
+    -p 3443:3443 \
     -p 5433:5432 \
     -e OPENAI_API_KEY="your-key" \
     -e ANTHROPIC_API_KEY="your-key" \
@@ -163,7 +163,7 @@ docker volume rm resumeconverter-pgdata
 │  │                  Supervisor                      │   │
 │  │  ┌──────────────┐  ┌──────────────┐            │   │
 │  │  │ Proxy Server │  │  PDF Server  │            │   │
-│  │  │   :443      │  │    :3002     │            │   │
+│  │  │   :3443      │  │    :3002     │            │   │
 │  │  └──────────────┘  └──────────────┘            │   │
 │  └─────────────────────────────────────────────────┘   │
 │                          │                              │
@@ -172,7 +172,7 @@ docker volume rm resumeconverter-pgdata
 │  └─────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────┘
                            │
-                    Port 443 (HTTPS) exposed
+                    Port 3443 (HTTPS) exposed
                            │
                     ┌──────▼──────┐
                     │   Browser   │
@@ -195,7 +195,7 @@ docker volume rm resumeconverter-pgdata
 docker logs resumeconverter-app
 
 # Check if port is in use
-netstat -an | grep 443
+netstat -an | grep 3443
 ```
 
 ### Database issues

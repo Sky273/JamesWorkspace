@@ -110,7 +110,7 @@ USER postgres
 
 # Initialize PostgreSQL 18 cluster and create database
 RUN /etc/init.d/postgresql start && \
-    psql --command "CREATE USER resumeconverter WITH SUPERUSER PASSWORD 'resumeconverter';" && \
+    psql --command "CREATE USER resumeconverter WITH SUPERUSER PASSWORD 'RcV2026!PgSecure#Db';" && \
     createdb -O resumeconverter resumeconverter && \
     /etc/init.d/postgresql stop
 
@@ -143,7 +143,7 @@ RUN chmod +x /entrypoint.sh
 # =============================================================================
 ENV NODE_ENV=production
 ENV PORT=3001
-ENV HTTPS_PORT=443
+ENV HTTPS_PORT=3443
 ENV HTTPS_ENABLED=true
 ENV PDF_SERVER_PORT=3002
 ENV POSTGRES_HOST=127.0.0.1
@@ -164,16 +164,16 @@ RUN mkdir -p /app/logs /app/uploads /app/data /var/log/supervisor
 # Expose Ports
 # =============================================================================
 # 3001 = Proxy Server HTTP (internal)
-# 443 = Proxy Server HTTPS (main app)
+# 3443 = Proxy Server HTTPS (main app)
 # 3002 = PDF Server
 # 5432 = PostgreSQL (internal only)
-EXPOSE 443
+EXPOSE 3443
 
 # =============================================================================
 # Health Check
 # =============================================================================
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f -k https://localhost:443/health || exit 1
+    CMD curl -f -k https://localhost:3443/health || exit 1
 
 # =============================================================================
 # Entrypoint

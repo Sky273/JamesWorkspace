@@ -12,7 +12,7 @@ REM Start new container
 REM Note: Stop local dev server before running Docker to avoid port conflicts
 docker run -d ^
     --name resumeconverter-app ^
-    -p 443:443 ^
+    -p 3443:3443 ^
     -p 5433:5432 ^
     -v "%cd%\uploads:/app/uploads" ^
     -v "%cd%\logs:/app/logs" ^
@@ -24,7 +24,7 @@ if %ERRORLEVEL% EQU 0 (
     echo ============================================
     echo   Container started successfully!
     echo.
-    echo   URL: https://localhost
+    echo   URL: https://localhost:3443
     echo   Login: admin@resumeconverter.local
     echo   Password: admin123
     echo ============================================
