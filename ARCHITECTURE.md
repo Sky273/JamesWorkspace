@@ -933,11 +933,15 @@ L'application peut être déployée via un conteneur Docker tout-en-un qui inclu
 
 ### Persistance des Données
 
-| Volume | Chemin conteneur | Description |
-|--------|------------------|-------------|
-| `resumeconverter-pgdata` | `/var/lib/postgresql/18/main` | Base de données PostgreSQL |
+Les données sont stockées dans des **répertoires locaux** (pas des volumes Docker) pour une meilleure portabilité :
+
+| Chemin local | Chemin conteneur | Description |
+|--------------|------------------|-------------|
+| `./data/postgresql` | `/var/lib/postgresql/18/main` | Base de données PostgreSQL |
 | `./uploads` | `/app/uploads` | Fichiers CV uploadés |
 | `./logs` | `/app/logs` | Logs applicatifs |
+
+✅ Les données survivent aux rebuilds d'image et aux suppressions de conteneur.
 
 ### Système de Migrations
 

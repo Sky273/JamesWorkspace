@@ -38,6 +38,9 @@ Thumbs.db
 # Uploads
 uploads/
 
+# Docker persistent data
+data/
+
 # Testing
 coverage/
 

@@ -125,33 +125,51 @@ docker run -d \
 
 ## 📁 Persistent Data
 
-All data is automatically persisted via Docker volumes:
+All data is automatically persisted in **local directories** (not Docker volumes):
 
-| Volume/Path | Container Path | Purpose |
-|-------------|----------------|---------|
-| `resumeconverter-pgdata` | `/var/lib/postgresql/18/main` | PostgreSQL 18 database |
+| Local Path | Container Path | Purpose |
+|------------|----------------|---------|
+| `./data/postgresql` | `/var/lib/postgresql/18/main` | PostgreSQL 18 database |
 | `./uploads` | `/app/uploads` | Uploaded resume files |
 | `./logs` | `/app/logs` | Application logs |
 
-✅ **PostgreSQL data is persistent**: Data is stored in a named Docker volume `resumeconverter-pgdata`. Your data is preserved even if the container is deleted and recreated.
+✅ **PostgreSQL data is persistent**: Data is stored in `./data/postgresql/` directory. Your data is preserved even if:
+- The container is deleted and recreated
+- The Docker image is rebuilt
+- Docker is restarted
 
-### Managing PostgreSQL Volume
+### Managing PostgreSQL Data
 
 ```bash
-# List Docker volumes
-docker volume ls
-
-# Inspect the data volume
-docker volume inspect resumeconverter-pgdata
-
 # Backup database
 docker exec resumeconverter-app pg_dump -U resumeconverter resumeconverter > backup.sql
 
 # Restore database
 docker exec -i resumeconverter-app psql -U resumeconverter resumeconverter < backup.sql
 
-# ⚠️ Delete volume (DATA LOSS!)
+# View data directory size
+du -sh ./data/postgresql
+
+# ⚠️ Delete data (DATA LOSS!)
+rm -rf ./data/postgresql
+```
+
+### Migrating from Docker Volume
+
+If you previously used a Docker volume (`resumeconverter-pgdata`), you can migrate:
+
+```bash
+# 1. Stop container
+docker stop resumeconverter-app
+
+# 2. Copy data from volume to local directory
+docker run --rm -v resumeconverter-pgdata:/source -v $(pwd)/data/postgresql:/dest alpine cp -a /source/. /dest/
+
+# 3. Remove old volume (optional)
 docker volume rm resumeconverter-pgdata
+
+# 4. Restart with new local mount
+docker-run.bat  # or ./docker/docker-build.sh run
 ```
 
 ## 🏗️ Architecture

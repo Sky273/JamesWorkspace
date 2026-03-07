@@ -8,12 +8,19 @@ REM Stop and remove existing container if running
 docker stop resumeconverter-app 2>nul
 docker rm resumeconverter-app 2>nul
 
+REM Create data directories if they don't exist
+if not exist "%cd%\data\postgresql" mkdir "%cd%\data\postgresql"
+if not exist "%cd%\uploads" mkdir "%cd%\uploads"
+if not exist "%cd%\logs" mkdir "%cd%\logs"
+
 REM Start new container
 REM Note: Stop local dev server before running Docker to avoid port conflicts
+REM PostgreSQL data is persisted in ./data/postgresql (survives rebuilds)
 docker run -d ^
     --name resumeconverter-app ^
     -p 3443:3443 ^
     -p 5433:5432 ^
+    -v "%cd%\data\postgresql:/var/lib/postgresql/18/main" ^
     -v "%cd%\uploads:/app/uploads" ^
     -v "%cd%\logs:/app/logs" ^
     --restart unless-stopped ^

@@ -34,7 +34,44 @@ fi
 # Start PostgreSQL
 # =============================================================================
 echo "[2/5] Starting PostgreSQL..."
-service postgresql start
+
+# PostgreSQL data directory
+PGDATA="/var/lib/postgresql/18/main"
+
+# Check if data directory is empty or not a valid cluster (first run with mounted volume)
+if [ ! -f "$PGDATA/PG_VERSION" ]; then
+    echo "Initializing PostgreSQL cluster in mounted volume..."
+    
+    # Ensure directory exists and has correct permissions
+    mkdir -p "$PGDATA"
+    chown postgres:postgres "$PGDATA"
+    chmod 700 "$PGDATA"
+    
+    # Initialize the cluster as postgres user
+    su - postgres -c "/usr/lib/postgresql/18/bin/initdb -D $PGDATA --encoding=UTF8 --locale=C"
+    
+    # Configure PostgreSQL for connections
+    echo "host all all 127.0.0.1/32 md5" >> "$PGDATA/pg_hba.conf"
+    echo "host all all 0.0.0.0/0 md5" >> "$PGDATA/pg_hba.conf"
+    echo "listen_addresses='*'" >> "$PGDATA/postgresql.conf"
+    
+    # Start PostgreSQL
+    su - postgres -c "/usr/lib/postgresql/18/bin/pg_ctl start -D $PGDATA -l /var/log/postgresql/postgresql-18-main.log -w"
+    
+    # Create user and database
+    echo "Creating database user and database..."
+    su - postgres -c "psql -c \"CREATE USER $POSTGRES_USER WITH SUPERUSER PASSWORD '$POSTGRES_PASSWORD';\""
+    su - postgres -c "createdb -O $POSTGRES_USER $POSTGRES_DB"
+    
+    echo "PostgreSQL cluster initialized!"
+else
+    # Fix permissions for mounted data directory (required when mounting from host)
+    chown -R postgres:postgres "$PGDATA"
+    chmod 700 "$PGDATA"
+    
+    # Start PostgreSQL using pg_ctl directly (more reliable with mounted volumes)
+    su - postgres -c "/usr/lib/postgresql/18/bin/pg_ctl start -D $PGDATA -l /var/log/postgresql/postgresql-18-main.log -w"
+fi
 
 # Wait for PostgreSQL to be ready
 until pg_isready -h 127.0.0.1 -p 5432 -U resumeconverter; do

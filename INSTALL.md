@@ -398,33 +398,33 @@ Les identifiants de la base de données intégrée au conteneur sont :
 
 ### Persistance des données
 
-Les données sont automatiquement persistées via des volumes Docker :
+Les données sont automatiquement persistées dans des **répertoires locaux** (pas des volumes Docker) :
 
-| Volume/Chemin | Chemin conteneur | Description |
-|---------------|------------------|-------------|
-| `resumeconverter-pgdata` | `/var/lib/postgresql/18/main` | **Base de données PostgreSQL 18** |
+| Chemin local | Chemin conteneur | Description |
+|--------------|------------------|-------------|
+| `./data/postgresql` | `/var/lib/postgresql/18/main` | **Base de données PostgreSQL 18** |
 | `./uploads` | `/app/uploads` | Fichiers CV uploadés |
 | `./logs` | `/app/logs` | Logs applicatifs |
 
-✅ **Les données PostgreSQL sont persistantes** : Elles sont stockées dans un volume Docker nommé `resumeconverter-pgdata`. Vos données sont conservées même si le conteneur est supprimé et recréé.
+✅ **Les données PostgreSQL sont persistantes** : Elles sont stockées dans le répertoire `./data/postgresql/`. Vos données sont conservées même si :
+- Le conteneur est supprimé et recréé
+- L'image Docker est reconstruite
+- Docker est redémarré
 
-#### Gestion du volume PostgreSQL
+#### Gestion des données PostgreSQL
 
 ```bash
-# Voir les volumes Docker
-docker volume ls
-
-# Inspecter le volume de données
-docker volume inspect resumeconverter-pgdata
-
 # Sauvegarder les données (exporter la base)
 docker exec resumeconverter-app pg_dump -U resumeconverter resumeconverter > backup.sql
 
 # Restaurer les données
 docker exec -i resumeconverter-app psql -U resumeconverter resumeconverter < backup.sql
 
-# ⚠️ Supprimer le volume (PERTE DE DONNÉES !)
-docker volume rm resumeconverter-pgdata
+# Voir la taille du répertoire de données
+du -sh ./data/postgresql
+
+# ⚠️ Supprimer les données (PERTE DE DONNÉES !)
+rm -rf ./data/postgresql
 ```
 
 ### Système de migrations automatiques

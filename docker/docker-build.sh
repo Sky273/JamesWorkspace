@@ -69,8 +69,10 @@ run_container() {
     echo "Starting container: $CONTAINER_NAME"
     echo ""
     
-    # Create named volume for PostgreSQL data persistence
-    docker volume create resumeconverter-pgdata 2>/dev/null
+    # Create local data directories for persistence (survives rebuilds)
+    mkdir -p "$(pwd)/data/postgresql"
+    mkdir -p "$(pwd)/uploads"
+    mkdir -p "$(pwd)/logs"
     
     # Use environment secrets if provided, otherwise use defaults
     JWT_SECRET_VAL="${JWT_SECRET:-docker-jwt-secret-change-in-production-min32chars}"
@@ -90,7 +92,7 @@ run_container() {
         -e GOOGLE_CLIENT_ID="${GOOGLE_CLIENT_ID}" \
         -e GOOGLE_CLIENT_SECRET="${GOOGLE_CLIENT_SECRET}" \
         -e MAIL_TOKEN_ENCRYPTION_KEY="${MAIL_TOKEN_ENCRYPTION_KEY}" \
-        -v "resumeconverter-pgdata:/var/lib/postgresql/18/main" \
+        -v "$(pwd)/data/postgresql:/var/lib/postgresql/18/main" \
         -v "$(pwd)/uploads:/app/uploads" \
         -v "$(pwd)/logs:/app/logs" \
         --restart unless-stopped \
@@ -102,7 +104,7 @@ run_container() {
         echo ""
         echo "============================================"
         echo "  Application URL: https://localhost:3443"
-        echo "  Database Volume: resumeconverter-pgdata (persistent)"
+        echo "  Database: ./data/postgresql (persistent local directory)"
         echo "  Default login:   admin@resumeconverter.local"
         echo "  Default password: admin123"
         echo "============================================"

@@ -80,8 +80,14 @@ function Run-Container {
     Write-Host "Starting container: $ContainerName" -ForegroundColor Green
     Write-Host ""
     
-    # Create named volume for PostgreSQL data persistence
-    docker volume create resumeconverter-pgdata 2>$null
+    # Create local data directories for persistence (survives rebuilds)
+    $DataDir = Join-Path $PWD "data\postgresql"
+    $UploadsDir = Join-Path $PWD "uploads"
+    $LogsDir = Join-Path $PWD "logs"
+    
+    if (-not (Test-Path $DataDir)) { New-Item -ItemType Directory -Path $DataDir -Force | Out-Null }
+    if (-not (Test-Path $UploadsDir)) { New-Item -ItemType Directory -Path $UploadsDir -Force | Out-Null }
+    if (-not (Test-Path $LogsDir)) { New-Item -ItemType Directory -Path $LogsDir -Force | Out-Null }
     
     # Generate stable secrets if not provided (persist across restarts)
     $JwtSecret = if ($env:JWT_SECRET) { $env:JWT_SECRET } else { "docker-jwt-secret-change-in-production-min32chars" }
@@ -101,9 +107,9 @@ function Run-Container {
         -e GOOGLE_CLIENT_ID=$env:GOOGLE_CLIENT_ID `
         -e GOOGLE_CLIENT_SECRET=$env:GOOGLE_CLIENT_SECRET `
         -e MAIL_TOKEN_ENCRYPTION_KEY=$env:MAIL_TOKEN_ENCRYPTION_KEY `
-        -v "resumeconverter-pgdata:/var/lib/postgresql/18/main" `
-        -v "${PWD}/uploads:/app/uploads" `
-        -v "${PWD}/logs:/app/logs" `
+        -v "${DataDir}:/var/lib/postgresql/18/main" `
+        -v "${UploadsDir}:/app/uploads" `
+        -v "${LogsDir}:/app/logs" `
         --restart unless-stopped `
         "${ImageName}:${Tag}"
     
@@ -113,7 +119,7 @@ function Run-Container {
         Write-Host ""
         Write-Host "============================================" -ForegroundColor Cyan
         Write-Host "  Application URL: https://localhost:3443" -ForegroundColor White
-        Write-Host "  Database Volume: resumeconverter-pgdata (persistent)" -ForegroundColor White
+        Write-Host "  Database: ./data/postgresql (persistent local directory)" -ForegroundColor White
         Write-Host "  Default login:   admin@resumeconverter.local" -ForegroundColor White
         Write-Host "  Default password: admin123" -ForegroundColor White
         Write-Host "============================================" -ForegroundColor Cyan
