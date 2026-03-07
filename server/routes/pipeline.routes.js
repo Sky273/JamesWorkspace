@@ -5,6 +5,8 @@
 
 import express from 'express';
 import { authenticateToken } from '../middleware/auth.middleware.js';
+import { userRateLimit } from '../middleware/rateLimit.middleware.js';
+import { validateBody, validateParams, createPipelineEntrySchema, updatePipelineEntrySchema, createInterviewSchema, updateInterviewSchema } from '../utils/validation.js';
 import { safeLog } from '../utils/logger.backend.js';
 import {
     PIPELINE_STAGES,
@@ -49,7 +51,7 @@ router.get('/stages', authenticateToken, (req, res) => {
  * POST /api/pipeline
  * Add a resume to the pipeline
  */
-router.post('/', authenticateToken, async (req, res) => {
+router.post('/', authenticateToken, userRateLimit(), validateBody(createPipelineEntrySchema), async (req, res) => {
     try {
         const { resumeId, missionId, clientId, stage, notes } = req.body;
 
@@ -221,7 +223,7 @@ router.get('/:id/history', authenticateToken, async (req, res) => {
  * POST /api/pipeline/:id/interviews
  * Schedule an interview
  */
-router.post('/:id/interviews', authenticateToken, async (req, res) => {
+router.post('/:id/interviews', authenticateToken, userRateLimit(), validateParams('id'), async (req, res) => {
     try {
         const {
             title,

@@ -193,6 +193,97 @@ export const updateAdaptationSchema = z.object({
   'Adapted Text': z.string().optional()
 }).strict();
 
+// Client schemas
+export const createClientSchema = z.object({
+  name: z.string().min(1).max(255),
+  type: z.enum(['client', 'prospect']).optional(),
+  industry: z.string().max(255).optional(),
+  website: z.string().url().optional().or(z.literal('')),
+  address: z.string().max(500).optional(),
+  notes: z.string().max(5000).optional(),
+  status: z.enum(['active', 'inactive']).optional()
+}).passthrough();
+
+export const updateClientSchema = z.object({
+  name: z.string().min(1).max(255).optional(),
+  type: z.enum(['client', 'prospect']).optional(),
+  industry: z.string().max(255).optional(),
+  website: z.string().url().optional().or(z.literal('')),
+  address: z.string().max(500).optional(),
+  notes: z.string().max(5000).optional(),
+  status: z.enum(['active', 'inactive']).optional()
+}).passthrough();
+
+// Client Contact schemas
+export const createContactSchema = z.object({
+  name: z.string().min(1).max(255),
+  email: z.string().email().optional().or(z.literal('')),
+  phone: z.string().max(50).optional(),
+  job_title: z.string().max(255).optional(),
+  is_primary: z.boolean().optional()
+}).passthrough();
+
+export const updateContactSchema = z.object({
+  name: z.string().min(1).max(255).optional(),
+  email: z.string().email().optional().or(z.literal('')),
+  phone: z.string().max(50).optional(),
+  job_title: z.string().max(255).optional(),
+  is_primary: z.boolean().optional()
+}).passthrough();
+
+// Pipeline schemas
+export const createPipelineEntrySchema = z.object({
+  resume_id: z.string().uuid(),
+  mission_id: z.string().uuid().optional().nullable(),
+  client_id: z.string().uuid().optional().nullable(),
+  stage: z.enum(['sourced', 'screening', 'interview', 'offer', 'hired', 'rejected']).optional(),
+  notes: z.string().max(5000).optional()
+}).passthrough();
+
+export const updatePipelineEntrySchema = z.object({
+  stage: z.enum(['sourced', 'screening', 'interview', 'offer', 'hired', 'rejected']).optional(),
+  notes: z.string().max(5000).optional(),
+  mission_id: z.string().uuid().optional().nullable(),
+  client_id: z.string().uuid().optional().nullable()
+}).passthrough();
+
+// Email Template schemas
+export const createEmailTemplateSchema = z.object({
+  name: z.string().min(1).max(255),
+  subject_template: z.string().min(1).max(500),
+  mjml_content: z.string().min(1),
+  type: z.enum(['submission', 'consent', 'reminder', 'custom']).optional()
+}).passthrough();
+
+export const updateEmailTemplateSchema = z.object({
+  name: z.string().min(1).max(255).optional(),
+  subject_template: z.string().min(1).max(500).optional(),
+  mjml_content: z.string().min(1).optional(),
+  type: z.enum(['submission', 'consent', 'reminder', 'custom']).optional()
+}).passthrough();
+
+// Calendar/Interview schemas
+export const createInterviewSchema = z.object({
+  pipeline_id: z.string().uuid(),
+  scheduled_at: z.string().datetime().or(z.string()),
+  duration_minutes: z.number().min(15).max(480).optional(),
+  meeting_link: z.string().url().optional().or(z.literal('')),
+  location: z.string().max(500).optional(),
+  notes: z.string().max(5000).optional(),
+  attendees: z.array(z.string().email()).optional()
+}).passthrough();
+
+export const updateInterviewSchema = z.object({
+  scheduled_at: z.string().datetime().or(z.string()).optional(),
+  duration_minutes: z.number().min(15).max(480).optional(),
+  meeting_link: z.string().url().optional().or(z.literal('')),
+  location: z.string().max(500).optional(),
+  notes: z.string().max(5000).optional(),
+  status: z.enum(['scheduled', 'completed', 'cancelled', 'no_show']).optional(),
+  outcome: z.string().max(5000).optional(),
+  attendees: z.array(z.string().email()).optional()
+}).passthrough();
+
 // Settings schemas
 export const updateSettingsSchema = z.object({
   llmModel: z.string().optional(),

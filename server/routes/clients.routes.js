@@ -1,5 +1,7 @@
 import express from 'express';
 import { authenticateToken, isUserAdmin } from '../middleware/auth.middleware.js';
+import { userRateLimit } from '../middleware/rateLimit.middleware.js';
+import { validateBody, validateParams, createClientSchema, updateClientSchema, createContactSchema, updateContactSchema } from '../utils/validation.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { query } from '../config/database.js';
 import { getUserFirmId, isValidUUID } from '../utils/firmHelpers.js';
@@ -188,7 +190,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
 });
 
 // POST /api/clients - Create client
-router.post('/', authenticateToken, async (req, res) => {
+router.post('/', authenticateToken, userRateLimit(), validateBody(createClientSchema), async (req, res) => {
     try {
         const userFirmId = await getUserFirmId(req);
         const userId = req.user?.id;
@@ -251,7 +253,7 @@ router.post('/', authenticateToken, async (req, res) => {
 });
 
 // PUT /api/clients/:id - Update client
-router.put('/:id', authenticateToken, async (req, res) => {
+router.put('/:id', authenticateToken, userRateLimit(), validateParams('id'), validateBody(updateClientSchema), async (req, res) => {
     try {
         const { id } = req.params;
         const userFirmId = await getUserFirmId(req);
@@ -394,7 +396,7 @@ router.get('/:clientId/contacts', authenticateToken, async (req, res) => {
 });
 
 // POST /api/clients/:clientId/contacts - Create contact
-router.post('/:clientId/contacts', authenticateToken, async (req, res) => {
+router.post('/:clientId/contacts', authenticateToken, userRateLimit(), validateBody(createContactSchema), async (req, res) => {
     try {
         const { clientId } = req.params;
         const userFirmId = await getUserFirmId(req);
@@ -439,7 +441,7 @@ router.post('/:clientId/contacts', authenticateToken, async (req, res) => {
 });
 
 // PUT /api/clients/:clientId/contacts/:id - Update contact
-router.put('/:clientId/contacts/:id', authenticateToken, async (req, res) => {
+router.put('/:clientId/contacts/:id', authenticateToken, userRateLimit(), validateBody(updateContactSchema), async (req, res) => {
     try {
         const { clientId, id } = req.params;
         const userFirmId = await getUserFirmId(req);
