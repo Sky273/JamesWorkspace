@@ -541,6 +541,61 @@ SECURITY_EVENTS = {
 
 ---
 
+## Monitoring & APM
+
+### 📊 APM Interne
+
+L'application intègre un middleware APM (`apm.middleware.js`) pour le suivi des performances :
+
+```javascript
+// Configuration APM
+const APM_CONFIG = {
+    slowRequestThreshold: 1000,      // 1s = requête lente
+    verySlowRequestThreshold: 5000,  // 5s = très lente
+    criticalRequestThreshold: 30000, // 30s = critique
+    traceSamplingRate: 1.0,          // 100% des requêtes tracées
+    maxSlowRequests: 100             // Buffer circulaire
+};
+```
+
+**Fonctionnalités :**
+- Détection automatique des requêtes lentes
+- Classification par sévérité (slow, very_slow, critical)
+- Breakdown timing détaillé avec `req.apmMark()`
+- Normalisation des endpoints pour agrégation
+- Buffer circulaire des 100 dernières requêtes lentes
+- Statistiques par endpoint (count, avg, max)
+
+**API :**
+- `GET /api/metrics/apm` - Statistiques APM
+- `GET /api/metrics/apm/slow-requests` - Liste des requêtes lentes
+- `DELETE /api/metrics/apm/slow-requests` - Vider le buffer
+
+### 📈 Métriques Système
+
+| Métrique | Description |
+|----------|-------------|
+| **Mémoire** | Heap used/total, RSS, external |
+| **Requêtes** | Count par endpoint, temps moyen |
+| **LLM** | Tokens consommés, coûts estimés |
+| **Cache** | Hit/miss ratio, taille |
+| **Rate Limit** | Hits par type de limite |
+
+### 🔮 Améliorations Futures (APM Externe)
+
+Pour une mise en production à grande échelle, un APM externe apporterait :
+
+| Fonctionnalité | APM Interne | APM Externe (Datadog, New Relic) |
+|----------------|-------------|----------------------------------|
+| Requêtes lentes | ✅ | ✅ |
+| Tracing distribué | ❌ | ✅ |
+| Alerting avancé | ❌ | ✅ |
+| Dashboards historiques | ❌ | ✅ |
+| Corrélation logs/traces | ❌ | ✅ |
+| Profiling code | ❌ | ✅ |
+
+---
+
 ## Optimisations
 
 ### ⚡ Cache en Mémoire
@@ -823,7 +878,7 @@ const logger = {
 |--------------|--------|----------------------|
 | **Couverture tests** | Tests limités | Augmenter couverture (unit + integration + e2e) |
 | **Pas de CI/CD documenté** | Déploiement manuel | GitHub Actions / GitLab CI |
-| **Monitoring limité** | Métriques basiques | APM (Datadog, New Relic) pour production |
+| **APM interne uniquement** | Pas de tracing distribué | APM externe (Datadog, New Relic) pour tracing cross-service, alerting avancé, dashboards historiques |
 
 ### Fonctionnel
 
