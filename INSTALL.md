@@ -563,13 +563,16 @@ kill -9 <PID>
 
 #### Erreur PDF generation
 
-Vérifiez que Chromium/Puppeteer est correctement installé :
+Vérifiez que Google Chrome/Puppeteer est correctement installé :
 ```bash
 # Hors Docker
 npx puppeteer browsers install chrome
 
 # Docker - Vérifier dans le conteneur
-docker exec -it resumeconverter-app chromium-browser --version
+docker exec -it resumeconverter-app google-chrome-stable --version
+
+# Voir les logs du serveur PDF
+docker exec resumeconverter-app cat /var/log/supervisor/pdf-server.err.log
 ```
 
 ### Logs et debugging

@@ -1,8 +1,8 @@
 # Resume Converter
 
-[![Version](https://img.shields.io/badge/version-1.5.7-blue.svg)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.7.7-blue.svg)](./CHANGELOG.md)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-green.svg)](https://nodejs.org/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-blue.svg)](https://www.postgresql.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18+-blue.svg)](https://www.postgresql.org/)
 [![React](https://img.shields.io/badge/React-18.2-61dafb.svg)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue.svg)](https://www.typescriptlang.org/)
 
@@ -61,7 +61,7 @@ Application professionnelle de gestion et d'analyse de CVs avec intelligence art
 ## 📋 Prérequis
 
 - **Node.js** >= 18.0.0
-- **PostgreSQL** >= 15
+- **PostgreSQL** >= 18
 - **npm** >= 9.0.0
 
 ## 🛠️ Installation
@@ -85,18 +85,24 @@ Créer un fichier `.env` à la racine :
 
 ```env
 # Base de données PostgreSQL
-DATABASE_URL=postgresql://user:password@localhost:5432/resume_converter
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_DB=resumeconverter
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=your-password
 
-# Sécurité
+# Sécurité (minimum 32 caractères chacun)
 JWT_SECRET=your-super-secret-jwt-key-min-32-chars
-CSRF_SECRET=your-csrf-secret-key
+REFRESH_TOKEN_SECRET=your-refresh-token-secret-min-32-chars
+CSRF_SECRET=your-csrf-secret-key-min-32-chars
 
 # APIs LLM (optionnel)
 OPENAI_API_KEY=sk-...
 ANTHROPIC_API_KEY=sk-ant-...
 
-# Frontend (Vite)
-VITE_API_URL=http://localhost:3001
+# Serveur
+HTTPS_ENABLED=true
+HTTPS_PORT=3443
 ```
 
 ### 4. Initialiser la base de données
@@ -366,15 +372,25 @@ Configuration via les paramètres de l'application ou variables d'environnement.
 
 ## 🐳 Docker
 
-```bash
-# Build
-docker build -t resume-converter .
+L'application peut être déployée via Docker avec tous les services intégrés (PostgreSQL 18, Node.js, Google Chrome pour PDF).
 
-# Run
-docker-compose up -d
+```bash
+# Build de l'image
+docker build -t resumeconverter:latest .
+
+# Lancer le conteneur
+docker run -d \
+    --name resumeconverter-app \
+    -p 3443:3443 \
+    -p 5433:5432 \
+    --restart unless-stopped \
+    resumeconverter:latest
 ```
 
-Voir le dossier `docker/` pour les configurations détaillées.
+**Accès** : https://localhost:3443  
+**Identifiants** : `admin@resumeconverter.local` / `admin123`
+
+Voir le dossier `docker/` et `docker/README.md` pour les configurations détaillées.
 
 ## 📚 Documentation
 

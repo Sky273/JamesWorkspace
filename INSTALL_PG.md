@@ -18,11 +18,10 @@ Après l'installation, ajouter ces variables d'environnement dans `.env` :
 
 ```env
 # PostgreSQL Configuration
-DATABASE_URL=postgresql://resumeconverter_app:password@localhost:5432/resumeconverter
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
 POSTGRES_DB=resumeconverter
-POSTGRES_USER=resumeconverter_app
+POSTGRES_USER=resumeconverter
 POSTGRES_PASSWORD=votre_mot_de_passe_securise
 POSTGRES_MAX_CONNECTIONS=20
 

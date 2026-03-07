@@ -4,10 +4,10 @@
 
 This Docker setup creates a **single, fully autonomous container** that includes:
 
-- **PostgreSQL 14** - Database server
+- **PostgreSQL 18** - Database server
 - **Node.js 20** - Runtime environment
-- **Chromium** - For PDF generation (Puppeteer)
-- **Proxy Server** (port 3001) - Main application server
+- **Google Chrome** - For PDF generation (Puppeteer)
+- **Proxy Server** (port 3443 HTTPS) - Main application server
 - **PDF Server** (port 3002) - PDF generation service
 - **Frontend** - Pre-built React application
 
@@ -54,7 +54,7 @@ chmod +x docker/docker-build.sh
 
 After starting the container:
 
-- **URL**: http://localhost:3001
+- **URL**: https://localhost:3443
 - **Email**: `admin@resumeconverter.local`
 - **Password**: `admin123`
 
@@ -111,11 +111,12 @@ For more control, run Docker directly:
 ```bash
 docker run -d \
     --name resumeconverter-app \
-    -p 3001:3001 \
+    -p 3443:3443 \
+    -p 5433:5432 \
     -e OPENAI_API_KEY="your-key" \
     -e ANTHROPIC_API_KEY="your-key" \
-    -e JWT_SECRET="your-secret" \
-    -e JWT_REFRESH_SECRET="your-refresh-secret" \
+    -e JWT_SECRET="your-secret-min-32-chars" \
+    -e REFRESH_TOKEN_SECRET="your-refresh-secret-min-32-chars" \
     -v ./uploads:/app/uploads \
     -v ./logs:/app/logs \
     --restart unless-stopped \
@@ -128,7 +129,7 @@ All data is automatically persisted via Docker volumes:
 
 | Volume/Path | Container Path | Purpose |
 |-------------|----------------|---------|
-| `resumeconverter-pgdata` | `/var/lib/postgresql/18/main` | **PostgreSQL 18 database** |
+| `resumeconverter-pgdata` | `/var/lib/postgresql/18/main` | PostgreSQL 18 database |
 | `./uploads` | `/app/uploads` | Uploaded resume files |
 | `./logs` | `/app/logs` | Application logs |
 
@@ -162,7 +163,7 @@ docker volume rm resumeconverter-pgdata
 │  │                  Supervisor                      │   │
 │  │  ┌──────────────┐  ┌──────────────┐            │   │
 │  │  │ Proxy Server │  │  PDF Server  │            │   │
-│  │  │   :3001      │  │    :3002     │            │   │
+│  │  │   :3443      │  │    :3002     │            │   │
 │  │  └──────────────┘  └──────────────┘            │   │
 │  └─────────────────────────────────────────────────┘   │
 │                          │                              │
@@ -171,7 +172,7 @@ docker volume rm resumeconverter-pgdata
 │  └─────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────┘
                            │
-                    Port 3001 exposed
+                    Port 3443 (HTTPS) exposed
                            │
                     ┌──────▼──────┐
                     │   Browser   │
@@ -194,7 +195,7 @@ docker volume rm resumeconverter-pgdata
 docker logs resumeconverter-app
 
 # Check if port is in use
-netstat -an | grep 3001
+netstat -an | grep 3443
 ```
 
 ### Database issues
@@ -213,8 +214,11 @@ psql -U resumeconverter -d resumeconverter
 ### PDF generation fails
 
 ```bash
-# Check if Chromium is working
-docker exec -it resumeconverter-app chromium-browser --version
+# Check if Google Chrome is working
+docker exec -it resumeconverter-app google-chrome-stable --version
+
+# Check PDF server logs
+docker exec resumeconverter-app cat /var/log/supervisor/pdf-server.err.log
 ```
 
 ## 📊 Resource Requirements
