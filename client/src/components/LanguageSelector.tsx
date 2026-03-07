@@ -15,16 +15,42 @@ import { GlobeAltIcon } from '@heroicons/react/24/outline';
 interface Language {
   code: string;
   label: string;
-  flag: string;
 }
+
+// ============================================
+// FLAG COMPONENTS (SVG for cross-platform support)
+// ============================================
+
+const FlagFR = () => (
+  <svg className="w-5 h-4 rounded-sm" viewBox="0 0 640 480" xmlns="http://www.w3.org/2000/svg">
+    <rect width="213.3" height="480" fill="#002654"/>
+    <rect x="213.3" width="213.4" height="480" fill="#fff"/>
+    <rect x="426.7" width="213.3" height="480" fill="#ce1126"/>
+  </svg>
+);
+
+const FlagGB = () => (
+  <svg className="w-5 h-4 rounded-sm" viewBox="0 0 640 480" xmlns="http://www.w3.org/2000/svg">
+    <path fill="#012169" d="M0 0h640v480H0z"/>
+    <path fill="#FFF" d="m75 0 244 181L562 0h78v62L400 241l240 178v61h-80L320 301 81 480H0v-60l239-178L0 64V0h75z"/>
+    <path fill="#C8102E" d="m424 281 216 159v40L369 281h55zm-184 20 6 35L54 480H0l240-179zM640 0v3L391 191l2-44L590 0h50zM0 0l239 176h-60L0 42V0z"/>
+    <path fill="#FFF" d="M241 0v480h160V0H241zM0 160v160h640V160H0z"/>
+    <path fill="#C8102E" d="M0 193v96h640v-96H0zM273 0v480h96V0h-96z"/>
+  </svg>
+);
+
+const flags: Record<string, () => JSX.Element> = {
+  fr: FlagFR,
+  en: FlagGB,
+};
 
 // ============================================
 // CONSTANTS
 // ============================================
 
 const languages: Language[] = [
-  { code: 'fr', label: 'Français', flag: '��' },
-  { code: 'en', label: 'English', flag: '��' },
+  { code: 'fr', label: 'Français' },
+  { code: 'en', label: 'English' },
 ];
 
 // ============================================
@@ -67,7 +93,7 @@ const LanguageSelector = (): JSX.Element => {
                         : 'text-gray-700 dark:text-gray-300'
                     } flex w-full items-center px-4 py-2 text-sm`}
                   >
-                    <span className="mr-2">{language.flag}</span>
+                    <span className="mr-2 flex-shrink-0">{flags[language.code]()}</span>
                     {t(`header.language.${language.code}`)}
                     {currentLanguage.code === language.code && (
                       <span className="ml-auto text-indigo-600 dark:text-indigo-400">✓</span>
