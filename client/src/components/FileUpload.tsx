@@ -12,7 +12,9 @@ import { useDropzone, FileRejection, FileError } from 'react-dropzone';
 import { DocumentArrowUpIcon, UserIcon, BuildingOfficeIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useResume } from '../context/ResumeContext';
+import { useAuth } from '../context/AuthContext';
 import ProcessingScreen from './ProcessingScreen';
+import AdminFirmSelector from './AdminFirmSelector';
 import { useTranslation } from 'react-i18next';
 import logger from '../utils/logger.frontend';
 
@@ -20,10 +22,12 @@ interface CandidateInfo {
   profileType: 'employee' | 'external';
   candidateName: string;
   candidateEmail: string;
+  firmId: string;
 }
 
 const FileUpload = (): JSX.Element => {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const { uploadResume, loading, processingStep, processingError, setProcessingError } = useResume();
   
   // Step management: 'info' for GDPR form, 'upload' for file upload
@@ -31,8 +35,11 @@ const FileUpload = (): JSX.Element => {
   const [candidateInfo, setCandidateInfo] = useState<CandidateInfo>({
     profileType: 'external',
     candidateName: '',
-    candidateEmail: ''
+    candidateEmail: '',
+    firmId: ''
   });
+  
+  const isAdmin = user?.role?.toLowerCase() === 'admin';
   const [formErrors, setFormErrors] = useState<{ name?: string; email?: string }>({});
 
   // Validate email format
@@ -165,6 +172,14 @@ const FileUpload = (): JSX.Element => {
       </h2>
       
       <form onSubmit={handleInfoSubmit} className="space-y-6">
+        {/* Admin Firm Selector - only visible for admins */}
+        <AdminFirmSelector
+          selectedFirmId={candidateInfo.firmId}
+          onFirmChange={(firmId) => setCandidateInfo(prev => ({ ...prev, firmId }))}
+          className="mb-2"
+          t={t}
+        />
+        
         {/* Profile Type Selection */}
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">

@@ -18,7 +18,8 @@ import {
   XMarkIcon,
   TrashIcon,
   ArrowDownTrayIcon,
-  EyeIcon
+  EyeIcon,
+  BuildingOfficeIcon
 } from '@heroicons/react/24/outline';
 import { formatDate } from '../utils/dateFormatter';
 
@@ -523,7 +524,7 @@ const ResumesPage = (): JSX.Element => {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between gap-2 text-sm text-gray-500 dark:text-gray-400 mb-3">
+                <div className="flex items-center justify-between gap-2 text-sm text-gray-500 dark:text-gray-400 mb-2">
                   <div className="flex items-center gap-2">
                     <CalendarIcon className="w-4 h-4" />
                     {formatResumeDate(resume['Created At'])}
@@ -539,6 +540,16 @@ const ResumesPage = (): JSX.Element => {
                     />
                   )}
                 </div>
+                
+                {/* Firm badge */}
+                {resume.FirmName && (
+                  <div className="flex items-center gap-1 mb-3">
+                    <BuildingOfficeIcon className="w-3 h-3 text-gray-400" />
+                    <span className="text-xs text-gray-400 dark:text-gray-500">
+                      {resume.FirmName}
+                    </span>
+                  </div>
+                )}
 
                 <div className="flex flex-wrap gap-1">
                   {(['Skills', 'Industries', 'Tools', 'Soft Skills'] as const).map(category => {

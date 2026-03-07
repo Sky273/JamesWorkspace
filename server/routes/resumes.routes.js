@@ -540,16 +540,30 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
         }
 
         const userFirm = req.user.firm || req.user.customer;
-        const { name, title, profile_type, candidate_name, candidate_email } = req.body;
+        const userRole = (req.user?.role || req.user?.Role || '').toLowerCase();
+        const isAdmin = userRole === 'admin';
+        const { name, title, profile_type, candidate_name, candidate_email, firm_id: requestedFirmId } = req.body;
 
         // Read file content from temp location
         const fileBuffer = await fs.readFile(req.file.path);
 
-        // Find firm by name to get ID
+        // Find firm by name to get ID (default to user's firm)
         let firmId = req.user.firmId || null;
         let firmName = userFirm;
         
-        if (!firmId && userFirm) {
+        // If admin sends a firm_id, use it instead
+        if (isAdmin && requestedFirmId && isValidUUID(requestedFirmId)) {
+            const firmResult = await query('SELECT id, name FROM firms WHERE id = $1', [requestedFirmId]);
+            if (firmResult.rows.length > 0) {
+                firmId = firmResult.rows[0].id;
+                firmName = firmResult.rows[0].name;
+                safeLog('info', 'Admin uploading resume for another firm', { 
+                    adminId: req.user?.id, 
+                    targetFirmId: firmId, 
+                    targetFirmName: firmName 
+                });
+            }
+        } else if (!firmId && userFirm) {
             const firms = await selectWithTimeout('firms', {
                 where: 'name = $1',
                 params: [userFirm],

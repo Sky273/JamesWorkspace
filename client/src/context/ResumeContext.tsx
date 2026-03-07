@@ -21,6 +21,7 @@ export interface CandidateInfo {
   profileType: 'employee' | 'external';
   candidateName: string;
   candidateEmail: string;
+  firmId?: string;
 }
 
 // ============================================
@@ -185,6 +186,10 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
         formData.append('candidate_name', candidateInfo.candidateName);
         if (candidateInfo.candidateEmail) {
           formData.append('candidate_email', candidateInfo.candidateEmail);
+        }
+        // Add firm_id for admin users selecting a different firm
+        if (candidateInfo.firmId) {
+          formData.append('firm_id', candidateInfo.firmId);
         }
       }
       

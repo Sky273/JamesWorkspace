@@ -53,7 +53,7 @@ router.get('/', authenticateToken, async (req, res) => {
     try {
         const userRole = (req.user?.role || req.user?.Role || '').toLowerCase();
         const isAdmin = userRole === 'admin';
-        const userFirm = req.user?.firm || req.user?.firm_id;
+        const userFirmName = req.user?.firm || req.user?.Firm;
         
         // Extract pagination and filter parameters
         const page = parseInt(req.query.page) || 1;
@@ -66,39 +66,53 @@ router.get('/', authenticateToken, async (req, res) => {
         const params = [];
         let paramIndex = 1;
 
-        // Firm filter (non-admin users) - check both firm name and firm_id
+        // Firm filter (non-admin users) - filter by firm name (more reliable)
+        // Using firm name because firm_id in user table may not match firm_id in firms table
         if (!isAdmin) {
             const userFirmId = await getUserFirmId(req);
-            if (userFirmId) {
-                conditions.push(`(firm = $${paramIndex} OR firm_id = $${paramIndex + 1})`);
-                params.push(userFirm || '');
+            safeLog('info', 'Missions GET - user firm filter', { 
+                userFirmId, 
+                userFirmName, 
+                userId: req.user?.id 
+            });
+            if (userFirmName) {
+                // Filter by firm name - this is more reliable as it matches the firm column in missions
+                conditions.push(`m.firm = $${paramIndex}`);
+                params.push(userFirmName);
+                paramIndex++;
+            } else if (userFirmId) {
+                // Fallback to firm_id if no firm name
+                conditions.push(`m.firm_id = $${paramIndex}`);
                 params.push(userFirmId);
-                paramIndex += 2;
-            } else if (userFirm) {
-                conditions.push(`firm = $${paramIndex}`);
-                params.push(userFirm);
                 paramIndex++;
             }
         }
 
         // Status filter
         if (status && status !== 'all') {
-            conditions.push(`status = $${paramIndex}`);
+            conditions.push(`m.status = $${paramIndex}`);
             params.push(status);
             paramIndex++;
         }
 
         // Search filter (searches in title, content, firm)
         if (search) {
-            conditions.push(`(title ILIKE $${paramIndex} OR firm ILIKE $${paramIndex})`);
+            conditions.push(`(m.title ILIKE $${paramIndex} OR m.firm ILIKE $${paramIndex})`);
             params.push(`%${search}%`);
             paramIndex++;
         }
 
         const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+        
+        // Debug: log the WHERE clause and params
+        safeLog('info', 'Missions GET - query debug', { 
+            whereClause, 
+            params,
+            conditions 
+        });
 
-        // Count total records
-        const countQuery = `SELECT COUNT(*) as total FROM missions ${whereClause}`;
+        // Count total records - use m alias for consistency
+        const countQuery = `SELECT COUNT(*) as total FROM missions m ${whereClause}`;
         const countResult = await selectWithTimeout('missions', {
             rawQuery: countQuery,
             rawParams: params
