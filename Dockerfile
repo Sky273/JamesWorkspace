@@ -27,8 +27,7 @@ RUN apt-get update && apt-get install -y \
     # PostgreSQL 18
     postgresql-18 \
     postgresql-contrib-18 \
-    # Puppeteer dependencies (Chrome headless)
-    chromium-browser \
+    # Puppeteer/Chrome dependencies
     fonts-liberation \
     libappindicator3-1 \
     libasound2 \
@@ -46,11 +45,18 @@ RUN apt-get update && apt-get install -y \
     libxdamage1 \
     libxrandr2 \
     xdg-utils \
+    wget \
     # Process manager
     supervisor \
     # SSL certificate generation
     openssl \
-    # Utilities
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Google Chrome (stable) for Puppeteer
+RUN wget -q -O /tmp/chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb \
+    && apt-get update \
+    && apt-get install -y /tmp/chrome.deb \
+    && rm /tmp/chrome.deb \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Node.js 20.x
@@ -58,9 +64,9 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-# Set Puppeteer to use system Chromium
+# Set Puppeteer to use Google Chrome
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
 
 # =============================================================================
 # Application Setup
@@ -84,6 +90,9 @@ COPY scripts ./scripts
 COPY USER_GUIDE.md ./
 COPY USER_GUIDE_EN.md ./
 COPY CHANGELOG.md ./
+
+# Copy Docker environment file as .env
+COPY .env.docker ./.env
 
 # Create certificates directory (certificates will be generated at runtime or mounted)
 RUN mkdir -p /app/certificates

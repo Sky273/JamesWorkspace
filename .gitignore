@@ -8,6 +8,7 @@ server/node_modules/
 .env.development
 .env.production
 .env.staging
+.env.docker
 
 # Build outputs
 dist/

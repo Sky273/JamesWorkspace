@@ -63,7 +63,7 @@ async function getBrowser() {
   }
   
   if (!browserInstance || !browserInstance.isConnected()) {
-    browserInstance = await puppeteer.launch({
+    const launchOptions = {
       headless: true,
       args: [
         '--no-sandbox',
@@ -82,7 +82,14 @@ async function getBrowser() {
         '--safebrowsing-disable-auto-update',
         '--js-flags=--max-old-space-size=256' // Limit Chrome memory
       ]
-    });
+    };
+    
+    // Use system Chromium in Docker (installed via apt)
+    if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+      launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+    }
+    
+    browserInstance = await puppeteer.launch(launchOptions);
     browserPageCount = 0;
     log('info', 'Browser instance created');
   }
