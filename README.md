@@ -1,6 +1,6 @@
 # Resume Converter
 
-[![Version](https://img.shields.io/badge/version-1.7.7-blue.svg)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.7.8-blue.svg)](./CHANGELOG.md)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-green.svg)](https://nodejs.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18+-blue.svg)](https://www.postgresql.org/)
 [![React](https://img.shields.io/badge/React-18.2-61dafb.svg)](https://reactjs.org/)

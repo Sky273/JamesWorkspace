@@ -1,3 +1,27 @@
+## v1.7.8 - 2026-03-07
+### 🐳 Docker Améliorations & Documentation APM
+
+#### Docker
+- **Port HTTPS** : Utilisation du port 3443 (au lieu de 443) pour éviter les conflits de permissions
+- **Mot de passe PostgreSQL sécurisé** : Nouveau mot de passe `RcV2026!PgSecure#Db` au lieu de `resumeconverter`
+- **Scripts .bat Windows** : Nouveaux scripts simplifiés à la racine (`docker-build.bat`, `docker-run.bat`, `docker-stop.bat`, `docker-logs.bat`, `docker-shell.bat`)
+- **Google Chrome** : Utilisation de Google Chrome au lieu de Chromium pour la génération PDF (meilleure compatibilité)
+
+#### Documentation
+- **INSTALL.md** : Simplification de la section Docker avec scripts .bat comme méthode recommandée
+- **ARCHITECTURE.md** : 
+  - Nouvelle section "Monitoring & APM" documentant l'APM interne
+  - Tableau comparatif APM interne vs externe (Datadog, New Relic)
+  - Ajout des identifiants PostgreSQL Docker
+  - Ajout des scripts .bat Windows
+- **docker/README.md** : Mise à jour des ports et credentials
+
+#### Corrections
+- **Puppeteer** : Correction du chemin exécutable dans `supervisord.conf` (`google-chrome-stable`)
+- **Cohérence mot de passe** : Synchronisation entre création utilisateur PostgreSQL et variable d'environnement
+
+---
+
 ## v1.7.7 - 2026-03-05
 ### 🐳 Docker PostgreSQL 18 & Documentation
 
