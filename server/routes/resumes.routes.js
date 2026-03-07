@@ -9,6 +9,7 @@ import { validateParams, validateBody, updateResumeSchema } from '../utils/valid
 import { selectWithTimeout, updateWithTimeout, destroyWithTimeout } from '../utils/postgresHelpers.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { query } from '../config/database.js';
+import { getUserFirmId, isValidUUID, getFirmById } from '../utils/firmHelpers.js';
 
 // Import LLM handlers (PostgreSQL version)
 import { analyzeHandler, analyzeTextHandler, improveHandler, improveByIdHandler, matchHandler, adaptHandler } from './resumes/llm.handlers.js';
@@ -22,34 +23,6 @@ import versionsRouter from './resumes/versions.routes.js';
 
 const router = express.Router();
 
-// Helper to validate UUID format
-const isValidUUID = (str) => {
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    return uuidRegex.test(str);
-};
-
-// Helper to get user's firm_id (returns UUID)
-const getUserFirmId = async (req) => {
-    const firmId = req.user?.firm_id || req.user?.firmId;
-    if (firmId && isValidUUID(firmId)) {
-        return firmId;
-    }
-    
-    const firmName = req.user?.firm || req.user?.Firm;
-    if (firmName) {
-        try {
-            const result = await query('SELECT id FROM firms WHERE name = $1', [firmName]);
-            if (result.rows.length > 0) {
-                return result.rows[0].id;
-            }
-        } catch (error) {
-            safeLog('error', 'Error looking up firm by name', { firmName, error: error.message });
-        }
-    }
-    
-    return null;
-};
-
 // Configure multer for file uploads
 const upload = multer({ dest: UPLOAD_DIR });
 
@@ -60,7 +33,6 @@ const upload = multer({ dest: UPLOAD_DIR });
 // GET /api/resumes - Get all resumes (with server-side pagination and filters)
 router.get('/', authenticateToken, async (req, res) => {
     try {
-        const userFirm = req.user.firm || req.user.customer;
         const isAdmin = req.user.role?.toLowerCase() === 'admin';
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 50;
@@ -74,11 +46,25 @@ router.get('/', authenticateToken, async (req, res) => {
         const params = [];
         let paramIndex = 1;
         
-        // Firm filter (non-admin users)
-        if (!isAdmin && userFirm) {
-            conditions.push(`firm_name = $${paramIndex}`);
-            params.push(userFirm);
-            paramIndex++;
+        // Firm filter (non-admin users) - filter by firm_id only
+        if (!isAdmin) {
+            const userFirmId = await getUserFirmId(req);
+            safeLog('info', 'Resumes GET - user firm filter', { 
+                userFirmId, 
+                userId: req.user?.id 
+            });
+            if (userFirmId) {
+                conditions.push(`firm_id = $${paramIndex}`);
+                params.push(userFirmId);
+                paramIndex++;
+            } else {
+                // No valid firm_id - return empty results for security
+                safeLog('warn', 'User has no valid firm_id, returning empty results', { userId: req.user?.id });
+                return res.json({
+                    records: [],
+                    pagination: { page: 1, limit, totalPages: 0, totalCount: 0, hasMore: false }
+                });
+            }
         }
         
         // Status filter
@@ -539,7 +525,6 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
             return res.status(400).json({ error: 'No file uploaded' });
         }
 
-        const userFirm = req.user.firm || req.user.customer;
         const userRole = (req.user?.role || req.user?.Role || '').toLowerCase();
         const isAdmin = userRole === 'admin';
         const { name, title, profile_type, candidate_name, candidate_email, firm_id: requestedFirmId } = req.body;
@@ -547,32 +532,27 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
         // Read file content from temp location
         const fileBuffer = await fs.readFile(req.file.path);
 
-        // Find firm by name to get ID (default to user's firm)
-        let firmId = req.user.firmId || null;
-        let firmName = userFirm;
+        // Get firm_id - use only UUID, no name lookup
+        let firmId = await getUserFirmId(req);
+        let firmName = null;
         
         // If admin sends a firm_id, use it instead
         if (isAdmin && requestedFirmId && isValidUUID(requestedFirmId)) {
-            const firmResult = await query('SELECT id, name FROM firms WHERE id = $1', [requestedFirmId]);
-            if (firmResult.rows.length > 0) {
-                firmId = firmResult.rows[0].id;
-                firmName = firmResult.rows[0].name;
+            const firm = await getFirmById(requestedFirmId);
+            if (firm) {
+                firmId = firm.id;
+                firmName = firm.name;
                 safeLog('info', 'Admin uploading resume for another firm', { 
                     adminId: req.user?.id, 
                     targetFirmId: firmId, 
                     targetFirmName: firmName 
                 });
             }
-        } else if (!firmId && userFirm) {
-            const firms = await selectWithTimeout('firms', {
-                where: 'name = $1',
-                params: [userFirm],
-                limit: 1
-            });
-            
-            if (firms.length > 0) {
-                firmId = firms[0].id;
-                firmName = firms[0].name;
+        } else if (firmId) {
+            // Get firm name from firm_id
+            const firm = await getFirmById(firmId);
+            if (firm) {
+                firmName = firm.name;
             }
         }
 

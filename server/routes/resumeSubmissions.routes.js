@@ -2,42 +2,13 @@ import express from 'express';
 import { authenticateToken, isUserAdmin } from '../middleware/auth.middleware.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { query } from '../config/database.js';
+import { getUserFirmId, isValidUUID } from '../utils/firmHelpers.js';
 
 const router = express.Router();
 
 // ============================================
 // RESUME SUBMISSIONS ROUTES (PostgreSQL)
 // ============================================
-
-// Helper to get user's firm_id (returns UUID)
-const getUserFirmId = async (req) => {
-    // First check if we have a direct UUID
-    const firmId = req.user?.firm_id || req.user?.firmId;
-    if (firmId && isValidUUID(firmId)) {
-        return firmId;
-    }
-    
-    // If we have a firm name, look up the UUID
-    const firmName = req.user?.firm || req.user?.Firm;
-    if (firmName) {
-        try {
-            const result = await query('SELECT id FROM firms WHERE name = $1', [firmName]);
-            if (result.rows.length > 0) {
-                return result.rows[0].id;
-            }
-        } catch (error) {
-            safeLog('error', 'Error looking up firm by name', { firmName, error: error.message });
-        }
-    }
-    
-    return null;
-};
-
-// Helper to validate UUID format
-const isValidUUID = (str) => {
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    return uuidRegex.test(str);
-};
 
 // GET /api/submissions - Get all submissions (with pagination and firm segregation)
 router.get('/', authenticateToken, async (req, res) => {

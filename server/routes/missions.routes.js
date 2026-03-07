@@ -11,38 +11,9 @@ import { safeLog } from '../utils/logger.backend.js';
 import { sanitizeErrorMessage } from '../utils/errors.js';
 import { selectWithTimeout, findWithTimeout, createWithTimeout, updateWithTimeout, destroyWithTimeout } from '../utils/postgresHelpers.js';
 import { query } from '../config/database.js';
+import { getUserFirmId, getUserFirmName, isValidUUID, getFirmById } from '../utils/firmHelpers.js';
 
 const router = express.Router();
-
-// Helper to validate UUID format
-const isValidUUID = (str) => {
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    return uuidRegex.test(str);
-};
-
-// Helper to get user's firm_id (returns UUID)
-const getUserFirmId = async (req) => {
-    // First check if we have a direct UUID
-    const firmId = req.user?.firm_id || req.user?.firmId;
-    if (firmId && isValidUUID(firmId)) {
-        return firmId;
-    }
-    
-    // If we have a firm name, look up the UUID
-    const firmName = req.user?.firm || req.user?.Firm;
-    if (firmName) {
-        try {
-            const result = await query('SELECT id FROM firms WHERE name = $1', [firmName]);
-            if (result.rows.length > 0) {
-                return result.rows[0].id;
-            }
-        } catch (error) {
-            safeLog('error', 'Error looking up firm by name', { firmName, error: error.message });
-        }
-    }
-    
-    return null;
-};
 
 // ============================================
 // MISSIONS ROUTES
@@ -66,25 +37,24 @@ router.get('/', authenticateToken, async (req, res) => {
         const params = [];
         let paramIndex = 1;
 
-        // Firm filter (non-admin users) - filter by firm name (more reliable)
-        // Using firm name because firm_id in user table may not match firm_id in firms table
+        // Firm filter (non-admin users) - filter by firm_id only
         if (!isAdmin) {
             const userFirmId = await getUserFirmId(req);
             safeLog('info', 'Missions GET - user firm filter', { 
                 userFirmId, 
-                userFirmName, 
                 userId: req.user?.id 
             });
-            if (userFirmName) {
-                // Filter by firm name - this is more reliable as it matches the firm column in missions
-                conditions.push(`m.firm = $${paramIndex}`);
-                params.push(userFirmName);
-                paramIndex++;
-            } else if (userFirmId) {
-                // Fallback to firm_id if no firm name
+            if (userFirmId) {
                 conditions.push(`m.firm_id = $${paramIndex}`);
                 params.push(userFirmId);
                 paramIndex++;
+            } else {
+                // No valid firm_id - return empty results for security
+                safeLog('warn', 'User has no valid firm_id, returning empty results', { userId: req.user?.id });
+                return res.json({
+                    records: [],
+                    pagination: { page: 1, limit, totalPages: 0, totalCount: 0, hasMore: false }
+                });
             }
         }
 

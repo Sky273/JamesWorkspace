@@ -14,34 +14,7 @@ import {
 import { extractTemplateFromHTML, extractTemplateFromImage, extractTemplateFromCV } from '../services/templateExtraction.service.js';
 import puppeteer from 'puppeteer';
 import { query } from '../config/database.js';
-
-// Helper to validate UUID format
-const isValidUUID = (str) => {
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    return uuidRegex.test(str);
-};
-
-// Helper to get user's firm_id (returns UUID)
-const getUserFirmId = async (req) => {
-    const firmId = req.user?.firm_id || req.user?.firmId;
-    if (firmId && isValidUUID(firmId)) {
-        return firmId;
-    }
-    
-    const firmName = req.user?.firm || req.user?.Firm;
-    if (firmName) {
-        try {
-            const result = await query('SELECT id FROM firms WHERE name = $1', [firmName]);
-            if (result.rows.length > 0) {
-                return result.rows[0].id;
-            }
-        } catch (error) {
-            safeLog('error', 'Error looking up firm by name', { firmName, error: error.message });
-        }
-    }
-    
-    return null;
-};
+import { getUserFirmId, isValidUUID } from '../utils/firmHelpers.js';
 
 // Configure multer for file uploads (memory storage for template extraction)
 const upload = multer({ 
