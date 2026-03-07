@@ -381,13 +381,13 @@ docker build -t resumeconverter:latest .
 # Lancer le conteneur
 docker run -d \
     --name resumeconverter-app \
-    -p 3443:3443 \
+    -p 443:443 \
     -p 5433:5432 \
     --restart unless-stopped \
     resumeconverter:latest
 ```
 
-**Accès** : https://localhost:3443  
+**Accès** : https://localhost  
 **Identifiants** : `admin@resumeconverter.local` / `admin123`
 
 Voir le dossier `docker/` et `docker/README.md` pour les configurations détaillées.

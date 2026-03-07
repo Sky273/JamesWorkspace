@@ -126,7 +126,7 @@ NODE_ENV=development
 
 PROXY_PORT=3001
 PDF_SERVER_PORT=3002
-HTTPS_PORT=3443
+HTTPS_PORT=443
 HTTPS_ENABLED=false
 
 # Répertoire des uploads (relatif à la racine du projet)
@@ -138,7 +138,7 @@ UPLOAD_DIR=./uploads
 # Liste des origines autorisées, séparées par des virgules
 # Par défaut: localhost sur les ports de développement
 
-ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3001,https://localhost:3443
+ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3001,https://localhost
 
 # ==============================================================================
 # INTELLIGENCE ARTIFICIELLE - CLÉS API [OPTIONNEL]
@@ -315,7 +315,7 @@ docker-build.bat   # Construire l'image Docker
 docker-run.bat     # Démarrer le conteneur
 ```
 
-C'est tout ! L'application sera accessible sur https://localhost:3443
+C'est tout ! L'application sera accessible sur https://localhost
 
 #### Windows - PowerShell (options avancées)
 
@@ -339,8 +339,8 @@ chmod +x docker/docker-build.sh
 
 | Service | URL |
 |---------|-----|
-| Application | https://localhost:3443 |
-| Health Check | https://localhost:3443/health |
+| Application | https://localhost |
+| Health Check | https://localhost/health |
 
 **Identifiants par défaut :**
 - Email : `admin@resumeconverter.local`

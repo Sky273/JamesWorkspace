@@ -91,7 +91,7 @@ function Run-Container {
     
     docker run -d `
         --name $ContainerName `
-        -p 3443:3443 `
+        -p 443:443 `
         -e OPENAI_API_KEY=$env:OPENAI_API_KEY `
         -e ANTHROPIC_API_KEY=$env:ANTHROPIC_API_KEY `
         -e JWT_SECRET="$JwtSecret" `
@@ -112,7 +112,7 @@ function Run-Container {
         Write-Host "Container started successfully!" -ForegroundColor Green
         Write-Host ""
         Write-Host "============================================" -ForegroundColor Cyan
-        Write-Host "  Application URL: https://localhost:3443" -ForegroundColor White
+        Write-Host "  Application URL: https://localhost" -ForegroundColor White
         Write-Host "  Database Volume: resumeconverter-pgdata (persistent)" -ForegroundColor White
         Write-Host "  Default login:   admin@resumeconverter.local" -ForegroundColor White
         Write-Host "  Default password: admin123" -ForegroundColor White
