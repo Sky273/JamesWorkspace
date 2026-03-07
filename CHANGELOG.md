@@ -3,7 +3,7 @@
 
 #### Docker
 - **Port HTTPS** : Utilisation du port 3443 (au lieu de 443) pour éviter les conflits de permissions
-- **Mot de passe PostgreSQL sécurisé** : Nouveau mot de passe `RcV2026!PgSecure#Db` au lieu de `resumeconverter`
+- **Mot de passe PostgreSQL sécurisé** : Nouveau mot de passe sécurisé (voir documentation interne)
 - **Scripts .bat Windows** : Nouveaux scripts simplifiés à la racine (`docker-build.bat`, `docker-run.bat`, `docker-stop.bat`, `docker-logs.bat`, `docker-shell.bat`)
 - **Google Chrome** : Utilisation de Google Chrome au lieu de Chromium pour la génération PDF (meilleure compatibilité)
 

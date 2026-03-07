@@ -167,14 +167,14 @@ PostgreSQL is exposed on port **5433** (to avoid conflicts with local PostgreSQL
 ```bash
 # Using psql client installed on host
 psql -h localhost -p 5433 -U resumeconverter -d resumeconverter
-# Password: RcV2026!PgSecure#Db
+# Password: see POSTGRES_PASSWORD in Dockerfile
 
 # Using pgAdmin or DBeaver
 # Host: localhost
 # Port: 5433
 # Database: resumeconverter
 # User: resumeconverter
-# Password: RcV2026!PgSecure#Db
+# Password: see POSTGRES_PASSWORD in Dockerfile
 ```
 
 #### Common SQL commands

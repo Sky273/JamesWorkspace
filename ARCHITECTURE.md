@@ -982,7 +982,7 @@ CREATE TABLE schema_migrations (
 | `POSTGRES_PORT` | `5432` (interne) / `5433` (externe) |
 | `POSTGRES_DB` | `resumeconverter` |
 | `POSTGRES_USER` | `resumeconverter` |
-| `POSTGRES_PASSWORD` | `RcV2026!PgSecure#Db` |
+| `POSTGRES_PASSWORD` | Voir `Dockerfile` |
 
 ### Commandes Docker
 

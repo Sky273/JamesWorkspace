@@ -392,7 +392,7 @@ Les identifiants de la base de données intégrée au conteneur sont :
 | `POSTGRES_PORT` | `5432` (interne) / `5433` (externe) |
 | `POSTGRES_DB` | `resumeconverter` |
 | `POSTGRES_USER` | `resumeconverter` |
-| `POSTGRES_PASSWORD` | `RcV2026!PgSecure#Db` |
+| `POSTGRES_PASSWORD` | Voir `Dockerfile` (variable `POSTGRES_PASSWORD`) |
 
 > **Note** : Ces identifiants sont utilisés en interne par le conteneur. Pour une sécurité maximale en production, vous pouvez les surcharger via des variables d'environnement au lancement.
 
