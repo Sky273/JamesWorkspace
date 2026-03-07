@@ -23,12 +23,12 @@ show_help() {
     echo "  clean     Remove container and image"
     echo ""
     echo "Environment variables:"
-    echo "  TAG=v1.5.7  Set image tag (default: latest)"
+    echo "  TAG=v1.7.7  Set image tag (default: latest)"
     echo ""
     echo "Examples:"
     echo "  ./docker-build.sh build"
     echo "  ./docker-build.sh run"
-    echo "  TAG=v1.5.7 ./docker-build.sh run"
+    echo "  TAG=v1.7.7 ./docker-build.sh run"
     echo ""
 }
 

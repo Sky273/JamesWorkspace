@@ -34,7 +34,7 @@ function Show-Help {
     Write-Host "Examples:"
     Write-Host "  .\docker-build.ps1 -Build           # Build the image"
     Write-Host "  .\docker-build.ps1 -Run             # Build and run"
-    Write-Host "  .\docker-build.ps1 -Run -Tag v1.5.7 # Run with specific tag"
+    Write-Host "  .\docker-build.ps1 -Run -Tag v1.7.7 # Run with specific tag"
     Write-Host "  .\docker-build.ps1 -Logs            # View logs"
     Write-Host "  .\docker-build.ps1 -Stop            # Stop container"
     Write-Host "  .\docker-build.ps1 -Clean           # Remove everything"
