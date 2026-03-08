@@ -10,7 +10,9 @@ Ce guide détaille les procédures d'installation et de lancement de ResumeConve
 2. [Installation hors Docker (Développement)](#installation-hors-docker-développement)
 3. [Installation avec Docker (Production)](#installation-avec-docker-production)
 4. [Configuration complète](#configuration-complète)
-5. [Dépannage](#dépannage)
+5. [Sauvegarde](#sauvegarde)
+6. [Plan de Reprise d'Activité (PRA)](#plan-de-reprise-dactivité-pra)
+7. [Dépannage](#dépannage)
 
 ---
 
@@ -496,6 +498,190 @@ VITE_HTTPS_ENABLED=true
 ```env
 HTTPS_ENABLED=true
 ```
+
+---
+
+## Sauvegarde
+
+ResumeConverter intègre un système de sauvegarde automatique de la base de données vers un serveur FTP/SFTP distant.
+
+### Configuration de la sauvegarde
+
+La configuration se fait depuis l'interface d'administration : **Menu > Sauvegarde** (accessible aux administrateurs uniquement).
+
+#### Paramètres de connexion
+
+| Paramètre | Description |
+|-----------|-------------|
+| **Protocole** | FTP, FTPS (FTP over TLS) ou SFTP (SSH) |
+| **Mode TLS** | Explicite (AUTH TLS - recommandé), Implicite (port 990), ou Aucun |
+| **Hôte** | Adresse du serveur FTP/SFTP |
+| **Port** | Port de connexion (21 pour FTP/FTPS, 22 pour SFTP) |
+| **Utilisateur** | Nom d'utilisateur FTP/SFTP |
+| **Mot de passe** | Mot de passe (stocké chiffré en base) |
+| **Chemin distant** | Répertoire de destination sur le serveur (ex: `/backups`) |
+
+#### Planification des sauvegardes
+
+Trois types de planification sont disponibles :
+
+| Type | Description | Rétention par défaut |
+|------|-------------|---------------------|
+| **Quotidienne** | Tous les jours à l'heure configurée | 7 jours |
+| **Hebdomadaire** | Un jour par semaine | 4 semaines |
+| **Mensuelle** | Un jour par mois | 12 mois |
+
+### Sauvegarde manuelle
+
+Depuis l'interface **Sauvegarde > Configuration**, cliquez sur **"Exécuter maintenant"** pour lancer une sauvegarde immédiate.
+
+### Sauvegarde via ligne de commande
+
+```bash
+# Hors Docker - Sauvegarde PostgreSQL manuelle
+pg_dump -U resumeconverter -d resumeconverter -F c -f backup_$(date +%Y%m%d_%H%M%S).dump
+
+# Docker - Sauvegarde depuis le conteneur
+docker exec resumeconverter-app pg_dump -U resumeconverter resumeconverter > backup_$(date +%Y%m%d_%H%M%S).sql
+```
+
+### Restauration
+
+#### Depuis l'interface
+
+1. Accédez à **Sauvegarde > Restauration**
+2. Sélectionnez le fichier de sauvegarde dans la liste
+3. Cliquez sur **"Restaurer"**
+4. Confirmez l'opération (⚠️ Cette action écrase toutes les données actuelles)
+
+#### Via ligne de commande
+
+```bash
+# Hors Docker - Restauration PostgreSQL
+pg_restore -U resumeconverter -d resumeconverter -c backup.dump
+
+# Docker - Restauration depuis un fichier SQL
+docker exec -i resumeconverter-app psql -U resumeconverter resumeconverter < backup.sql
+```
+
+### Bonnes pratiques
+
+- ✅ **Testez régulièrement** la connexion FTP/SFTP depuis l'interface
+- ✅ **Vérifiez les sauvegardes** en consultant l'historique
+- ✅ **Utilisez FTPS ou SFTP** pour sécuriser les transferts
+- ✅ **Configurez plusieurs types** de sauvegarde (quotidienne + hebdomadaire)
+- ✅ **Stockez les sauvegardes** sur un serveur distant (pas sur la même machine)
+- ⚠️ **Testez la restauration** sur un environnement de test avant la production
+
+---
+
+## Plan de Reprise d'Activité (PRA)
+
+Ce chapitre décrit les procédures de reprise d'activité en cas d'incident majeur.
+
+### Scénarios de sinistre
+
+| Scénario | Impact | Temps de reprise estimé |
+|----------|--------|------------------------|
+| Panne serveur | Service indisponible | 15-30 min (avec Docker) |
+| Corruption base de données | Perte de données | 30-60 min |
+| Perte totale du serveur | Perte complète | 1-2 heures |
+| Cyberattaque / Ransomware | Données compromises | 2-4 heures |
+
+### Prérequis pour la reprise
+
+1. **Sauvegardes récentes** sur un serveur FTP/SFTP distant
+2. **Documentation à jour** (ce guide, credentials)
+3. **Accès à un nouveau serveur** avec Docker installé
+4. **Fichier `.env`** sauvegardé séparément (contient les secrets)
+
+### Procédure de reprise complète
+
+#### Étape 1 : Préparer le nouveau serveur
+
+```bash
+# Installer Docker
+curl -fsSL https://get.docker.com | sh
+
+# Cloner le dépôt
+git clone https://github.com/votre-repo/ResumeConverter.git
+cd ResumeConverter
+```
+
+#### Étape 2 : Restaurer la configuration
+
+```bash
+# Copier le fichier .env sauvegardé
+cp /chemin/vers/backup/.env .
+
+# Vérifier les variables critiques
+cat .env | grep -E "(POSTGRES_|JWT_|CSRF_)"
+```
+
+#### Étape 3 : Construire et démarrer l'application
+
+```bash
+# Windows
+.\docker\docker-build.ps1 -Build
+.\docker\docker-build.ps1 -Run
+
+# Linux/Mac
+./docker/docker-build.sh build
+./docker/docker-build.sh run
+```
+
+#### Étape 4 : Restaurer la base de données
+
+```bash
+# Télécharger la dernière sauvegarde depuis le serveur FTP
+# (ou utiliser l'interface si l'application est accessible)
+
+# Restaurer depuis un fichier SQL
+docker exec -i resumeconverter-app psql -U resumeconverter resumeconverter < backup.sql
+
+# Ou depuis un dump binaire
+docker cp backup.dump resumeconverter-app:/tmp/
+docker exec resumeconverter-app pg_restore -U resumeconverter -d resumeconverter -c /tmp/backup.dump
+```
+
+#### Étape 5 : Vérifier le fonctionnement
+
+```bash
+# Vérifier les logs
+docker logs resumeconverter-app --tail 50
+
+# Tester l'accès
+curl -k https://localhost:3443/api/health
+```
+
+### Checklist de reprise
+
+- [ ] Nouveau serveur opérationnel avec Docker
+- [ ] Dépôt Git cloné
+- [ ] Fichier `.env` restauré avec les bons secrets
+- [ ] Image Docker construite
+- [ ] Conteneur démarré
+- [ ] Base de données restaurée depuis la sauvegarde
+- [ ] Connexion utilisateur testée
+- [ ] Fonctionnalités critiques vérifiées
+- [ ] DNS/Reverse proxy reconfiguré (si applicable)
+- [ ] Certificats SSL installés (si applicable)
+
+### Contacts d'urgence
+
+| Rôle | Contact | Responsabilité |
+|------|---------|----------------|
+| Administrateur système | À définir | Infrastructure, Docker |
+| DBA | À définir | Base de données, restauration |
+| Responsable applicatif | À définir | Configuration, tests |
+
+### Tests de PRA recommandés
+
+| Fréquence | Test | Objectif |
+|-----------|------|----------|
+| Mensuel | Restauration sur environnement de test | Vérifier l'intégrité des sauvegardes |
+| Trimestriel | Simulation de panne complète | Mesurer le temps de reprise réel |
+| Annuel | Exercice PRA complet | Former l'équipe, identifier les lacunes |
 
 ---
 

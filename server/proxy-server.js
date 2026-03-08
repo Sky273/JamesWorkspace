@@ -72,6 +72,7 @@ import resumeCommentsRoutes from './routes/resumeComments.routes.js';
 import shareRoutes from './routes/share.routes.js';
 import pipelineRoutes from './routes/pipeline.routes.js';
 import calendarRoutes from './routes/calendar.routes.js';
+import backupRoutes from './routes/backup.routes.js';
 
 // Import services
 import { metrics } from './services/metrics.service.js';
@@ -91,6 +92,8 @@ import { destroyEscoCache } from './services/escoService.js';
 import { initializeDatabase, closePool } from './services/database.service.js';
 // GDPR consent scheduler
 import { startScheduler, stopScheduler } from './services/scheduler.service.js';
+// Backup scheduler
+import { initBackupScheduler, stopBackupScheduler } from './services/backup-scheduler.service.js';
 // GDPR Audit Log initialization
 import { initGdprAuditTable } from './services/gdprAudit.service.js';
 // Resume Comments initialization
@@ -694,6 +697,9 @@ app.use('/api/pipeline', pipelineRoutes);
 // Calendar routes (Google Calendar integration)
 app.use('/api/calendar', calendarRoutes);
 
+// Backup routes (database backup via FTP/SFTP)
+app.use('/api/backup', backupRoutes);
+
 // ============================================
 // PDF SERVER PROXY
 // ============================================
@@ -1005,6 +1011,10 @@ async function onServerStart(protocol, port) {
     // Start GDPR consent scheduler (checks for expired consents, sends reminders, purges)
     startScheduler();
     safeLog('info', 'GDPR Consent Scheduler started');
+    
+    // Start backup scheduler (scheduled database backups via FTP/SFTP)
+    initBackupScheduler();
+    safeLog('info', 'Backup Scheduler initialized');
 }
 
 // Graceful shutdown with proper cleanup
@@ -1042,6 +1052,7 @@ const gracefulShutdown = async (signal) => {
         destroyCalendarService();
         destroyMjml();
         stopScheduler();
+        stopBackupScheduler();
         safeLog('info', 'All caches destroyed');
         
         // Close PostgreSQL connection pool

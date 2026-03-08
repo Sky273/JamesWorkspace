@@ -269,16 +269,63 @@ docker-run.bat  # or ./docker/docker-build.sh run
 3. **API keys** are passed as environment variables (not stored in image)
 4. **HTTPS** should be configured via reverse proxy (nginx, traefik) in production
 
-## 🐛 Troubleshooting
+## � Viewing Logs
+
+The container runs two services via Supervisor. Use these scripts to view logs:
+
+### Quick Scripts (from project root)
+
+| Script | Description |
+|--------|-------------|
+| `docker-logs.bat` | View **Proxy Server** logs (main backend) |
+| `docker-logs-pdf.bat` | View **PDF Server** logs |
+
+### Manual Log Commands
+
+```bash
+# Proxy Server logs (main application)
+docker exec -it resumeconverter-app tail -f /var/log/supervisor/proxy-server.out.log /var/log/supervisor/proxy-server.err.log
+
+# PDF Server logs
+docker exec -it resumeconverter-app tail -f /var/log/supervisor/pdf-server.out.log /var/log/supervisor/pdf-server.err.log
+
+# Supervisor logs (service manager)
+docker exec -it resumeconverter-app tail -f /var/log/supervisor/supervisord.log
+
+# All container output (less detailed)
+docker logs -f resumeconverter-app
+```
+
+### Log File Locations (inside container)
+
+| Log File | Purpose |
+|----------|---------|
+| `/var/log/supervisor/proxy-server.out.log` | Proxy server stdout |
+| `/var/log/supervisor/proxy-server.err.log` | Proxy server stderr |
+| `/var/log/supervisor/pdf-server.out.log` | PDF server stdout |
+| `/var/log/supervisor/pdf-server.err.log` | PDF server stderr |
+| `/var/log/supervisor/supervisord.log` | Supervisor manager |
+
+## �🐛 Troubleshooting
 
 ### Container won't start
 
 ```bash
-# Check logs
+# Check container logs
 docker logs resumeconverter-app
 
 # Check if port is in use
 netstat -an | grep 3443
+```
+
+### Application errors
+
+```bash
+# View proxy server logs (main backend)
+docker exec -it resumeconverter-app tail -100 /var/log/supervisor/proxy-server.err.log
+
+# Or use the quick script
+docker-logs.bat
 ```
 
 ### Database issues
@@ -301,7 +348,10 @@ psql -U resumeconverter -d resumeconverter
 docker exec -it resumeconverter-app google-chrome-stable --version
 
 # Check PDF server logs
-docker exec resumeconverter-app cat /var/log/supervisor/pdf-server.err.log
+docker exec -it resumeconverter-app tail -100 /var/log/supervisor/pdf-server.err.log
+
+# Or use the quick script
+docker-logs-pdf.bat
 ```
 
 ## 📊 Resource Requirements

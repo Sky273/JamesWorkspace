@@ -304,6 +304,38 @@ export const updateSettingsSchema = z.object({
   'DPO Phone': z.string().optional()
 }).strict();
 
+// Backup settings schemas
+export const updateBackupSettingsSchema = z.object({
+  protocol: z.enum(['ftp', 'ftps', 'sftp']).optional(),
+  tls_mode: z.enum(['none', 'explicit', 'implicit']).optional(),
+  host: z.string().max(255).optional(),
+  port: z.number().min(1).max(65535).optional(),
+  username: z.string().max(255).optional(),
+  password: z.string().optional(),
+  remote_path: z.string().max(500).optional(),
+  daily_enabled: z.boolean().optional(),
+  daily_time: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/).optional(),
+  daily_retention: z.number().min(1).max(365).optional(),
+  weekly_enabled: z.boolean().optional(),
+  weekly_day: z.number().min(0).max(6).optional(),
+  weekly_time: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/).optional(),
+  weekly_retention: z.number().min(1).max(52).optional(),
+  monthly_enabled: z.boolean().optional(),
+  monthly_day: z.number().min(1).max(28).optional(),
+  monthly_time: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/).optional(),
+  monthly_retention: z.number().min(1).max(120).optional()
+}).passthrough();
+
+export const testBackupConnectionSchema = z.object({
+  protocol: z.enum(['ftp', 'ftps', 'sftp']).optional(),
+  tls_mode: z.enum(['none', 'explicit', 'implicit']).optional(),
+  host: z.string().min(1).max(255),
+  port: z.number().min(1).max(65535).optional(),
+  username: z.string().min(1).max(255),
+  password: z.string().optional(),
+  remote_path: z.string().max(500).optional()
+}).passthrough();
+
 // ============================================
 // VALIDATION MIDDLEWARE
 // ============================================

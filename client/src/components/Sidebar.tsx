@@ -22,7 +22,8 @@ import {
   BuildingOfficeIcon,
   EnvelopeIcon,
   XMarkIcon,
-  ClipboardDocumentListIcon
+  ClipboardDocumentListIcon,
+  ServerStackIcon
 } from '@heroicons/react/24/outline';
 import classNames from 'classnames';
 import { useTranslation } from 'react-i18next';
@@ -102,9 +103,10 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
     adminOnly: true
   };
 
-  // Bottom items (Settings and User Guide)
+  // Bottom items (Settings, Backup, and User Guide)
   const bottomItems: NavItem[] = [
     { name: t('navigation.settings'), href: '/settings', icon: Cog6ToothIcon, adminOnly: true },
+    { name: t('navigation.backup'), href: '/dashboard/backup', icon: ServerStackIcon, adminOnly: true },
     { name: t('navigation.userGuide'), href: '/guide', icon: BookOpenIcon },
   ];
 

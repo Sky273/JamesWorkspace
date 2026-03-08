@@ -125,7 +125,8 @@ function Run-Container {
         Write-Host "============================================" -ForegroundColor Cyan
         Write-Host ""
         Write-Host "Commands:"
-        Write-Host "  View logs:    .\docker-build.ps1 -Logs"
+        Write-Host "  Proxy logs:   docker-logs.bat (or .\docker-build.ps1 -Logs)"
+        Write-Host "  PDF logs:     docker-logs-pdf.bat"
         Write-Host "  Stop:         .\docker-build.ps1 -Stop"
         Write-Host "  Shell access: .\docker-build.ps1 -Shell"
         Write-Host ""
@@ -143,10 +144,11 @@ function Stop-Container {
 }
 
 function Show-Logs {
-    Write-Host "Showing logs for: $ContainerName" -ForegroundColor Cyan
+    Write-Host "Showing Proxy Server logs for: $ContainerName" -ForegroundColor Cyan
     Write-Host "Press Ctrl+C to exit" -ForegroundColor Yellow
+    Write-Host "(For PDF server logs, use: docker-logs-pdf.bat)" -ForegroundColor Gray
     Write-Host ""
-    docker logs -f $ContainerName
+    docker exec -it $ContainerName tail -f /var/log/supervisor/proxy-server.out.log /var/log/supervisor/proxy-server.err.log
 }
 
 function Open-Shell {

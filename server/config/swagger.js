@@ -55,6 +55,7 @@ export const swaggerDocument = {
         { name: 'Comments', description: 'Resume comments and notes' },
         { name: 'Share', description: 'Resume sharing via QR code' },
         { name: 'GDPR Audit', description: 'GDPR audit log (admin only)' },
+        { name: 'Backup', description: 'Database backup management (admin only)' },
         { name: 'Documentation', description: 'API documentation endpoints' }
     ],
     components: {

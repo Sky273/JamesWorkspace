@@ -2424,6 +2424,319 @@ export const swaggerPaths = {
     },
 
     // ============================================
+    // BACKUP (Admin only)
+    // ============================================
+    '/backup/settings': {
+        get: {
+            tags: ['Backup', 'Admin'],
+            summary: 'Get backup settings',
+            description: 'Get current backup configuration including FTP/SFTP settings and schedule. Password is not returned.',
+            security: [{ cookieAuth: [] }],
+            responses: {
+                200: {
+                    description: 'Backup settings',
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    protocol: { type: 'string', enum: ['ftp', 'ftps', 'sftp'] },
+                                    tls_mode: { type: 'string', enum: ['none', 'explicit', 'implicit'] },
+                                    host: { type: 'string' },
+                                    port: { type: 'integer' },
+                                    username: { type: 'string' },
+                                    hasPassword: { type: 'boolean' },
+                                    remote_path: { type: 'string' },
+                                    daily_enabled: { type: 'boolean' },
+                                    daily_time: { type: 'string' },
+                                    daily_retention: { type: 'integer' },
+                                    weekly_enabled: { type: 'boolean' },
+                                    weekly_day: { type: 'integer' },
+                                    weekly_time: { type: 'string' },
+                                    weekly_retention: { type: 'integer' },
+                                    monthly_enabled: { type: 'boolean' },
+                                    monthly_day: { type: 'integer' },
+                                    monthly_time: { type: 'string' },
+                                    monthly_retention: { type: 'integer' },
+                                    schedulerStatus: { type: 'object' }
+                                }
+                            }
+                        }
+                    }
+                },
+                403: { $ref: '#/components/responses/Forbidden' }
+            }
+        },
+        put: {
+            tags: ['Backup', 'Admin'],
+            summary: 'Update backup settings',
+            description: 'Update backup configuration including FTP/SFTP connection and schedule settings.',
+            security: [{ cookieAuth: [], csrfToken: [] }],
+            requestBody: {
+                required: true,
+                content: {
+                    'application/json': {
+                        schema: {
+                            type: 'object',
+                            properties: {
+                                protocol: { type: 'string', enum: ['ftp', 'ftps', 'sftp'] },
+                                tls_mode: { type: 'string', enum: ['none', 'explicit', 'implicit'] },
+                                host: { type: 'string' },
+                                port: { type: 'integer' },
+                                username: { type: 'string' },
+                                password: { type: 'string' },
+                                remote_path: { type: 'string' },
+                                daily_enabled: { type: 'boolean' },
+                                daily_time: { type: 'string' },
+                                daily_retention: { type: 'integer' },
+                                weekly_enabled: { type: 'boolean' },
+                                weekly_day: { type: 'integer' },
+                                weekly_time: { type: 'string' },
+                                weekly_retention: { type: 'integer' },
+                                monthly_enabled: { type: 'boolean' },
+                                monthly_day: { type: 'integer' },
+                                monthly_time: { type: 'string' },
+                                monthly_retention: { type: 'integer' }
+                            }
+                        }
+                    }
+                }
+            },
+            responses: {
+                200: { description: 'Settings updated' },
+                403: { $ref: '#/components/responses/Forbidden' }
+            }
+        }
+    },
+    '/backup/test-connection': {
+        post: {
+            tags: ['Backup', 'Admin'],
+            summary: 'Test FTP/SFTP connection',
+            description: 'Test connection to the configured FTP/SFTP server. If password is not provided, uses the stored password.',
+            security: [{ cookieAuth: [], csrfToken: [] }],
+            requestBody: {
+                required: true,
+                content: {
+                    'application/json': {
+                        schema: {
+                            type: 'object',
+                            required: ['host', 'username'],
+                            properties: {
+                                protocol: { type: 'string', enum: ['ftp', 'ftps', 'sftp'] },
+                                tls_mode: { type: 'string', enum: ['none', 'explicit', 'implicit'] },
+                                host: { type: 'string' },
+                                port: { type: 'integer' },
+                                username: { type: 'string' },
+                                password: { type: 'string' },
+                                remote_path: { type: 'string' }
+                            }
+                        }
+                    }
+                }
+            },
+            responses: {
+                200: {
+                    description: 'Connection test result',
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    success: { type: 'boolean' },
+                                    message: { type: 'string' }
+                                }
+                            }
+                        }
+                    }
+                },
+                403: { $ref: '#/components/responses/Forbidden' }
+            }
+        }
+    },
+    '/backup/run': {
+        post: {
+            tags: ['Backup', 'Admin'],
+            summary: 'Run manual backup',
+            description: 'Trigger a manual database backup and upload to the configured FTP/SFTP server.',
+            security: [{ cookieAuth: [], csrfToken: [] }],
+            responses: {
+                200: {
+                    description: 'Backup result',
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    success: { type: 'boolean' },
+                                    filename: { type: 'string' },
+                                    size: { type: 'integer' },
+                                    uploaded: { type: 'boolean' }
+                                }
+                            }
+                        }
+                    }
+                },
+                403: { $ref: '#/components/responses/Forbidden' },
+                500: { description: 'Backup failed' }
+            }
+        }
+    },
+    '/backup/history': {
+        get: {
+            tags: ['Backup', 'Admin'],
+            summary: 'Get backup history',
+            description: 'Get list of past backup operations with their status.',
+            security: [{ cookieAuth: [] }],
+            parameters: [
+                { name: 'limit', in: 'query', schema: { type: 'integer', default: 50 } },
+                { name: 'offset', in: 'query', schema: { type: 'integer', default: 0 } }
+            ],
+            responses: {
+                200: {
+                    description: 'Backup history',
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'array',
+                                items: {
+                                    type: 'object',
+                                    properties: {
+                                        id: { type: 'string', format: 'uuid' },
+                                        backup_type: { type: 'string' },
+                                        filename: { type: 'string' },
+                                        file_size: { type: 'integer' },
+                                        status: { type: 'string', enum: ['pending', 'running', 'success', 'failed'] },
+                                        error_message: { type: 'string' },
+                                        started_at: { type: 'string', format: 'date-time' },
+                                        completed_at: { type: 'string', format: 'date-time' },
+                                        uploaded: { type: 'boolean' }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                403: { $ref: '#/components/responses/Forbidden' }
+            }
+        }
+    },
+    '/backup/history/{id}': {
+        delete: {
+            tags: ['Backup', 'Admin'],
+            summary: 'Delete backup history entry',
+            description: 'Delete a specific backup history entry.',
+            security: [{ cookieAuth: [], csrfToken: [] }],
+            parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+            responses: {
+                200: { description: 'Entry deleted' },
+                403: { $ref: '#/components/responses/Forbidden' }
+            }
+        }
+    },
+    '/backup/list-remote': {
+        get: {
+            tags: ['Backup', 'Admin'],
+            summary: 'List remote backups',
+            description: 'List backup files available on the remote FTP/SFTP server.',
+            security: [{ cookieAuth: [] }],
+            responses: {
+                200: {
+                    description: 'Remote backup files',
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    success: { type: 'boolean' },
+                                    files: {
+                                        type: 'array',
+                                        items: {
+                                            type: 'object',
+                                            properties: {
+                                                name: { type: 'string' },
+                                                size: { type: 'integer' },
+                                                date: { type: 'string', format: 'date-time' }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                403: { $ref: '#/components/responses/Forbidden' }
+            }
+        }
+    },
+    '/backup/restore': {
+        post: {
+            tags: ['Backup', 'Admin'],
+            summary: 'Restore database from backup',
+            description: 'Download a backup file from the remote server and restore the database. WARNING: This will overwrite all current data.',
+            security: [{ cookieAuth: [], csrfToken: [] }],
+            requestBody: {
+                required: true,
+                content: {
+                    'application/json': {
+                        schema: {
+                            type: 'object',
+                            required: ['filename'],
+                            properties: {
+                                filename: { type: 'string', description: 'Name of the backup file to restore' }
+                            }
+                        }
+                    }
+                }
+            },
+            responses: {
+                200: {
+                    description: 'Restore result',
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    success: { type: 'boolean' },
+                                    message: { type: 'string' }
+                                }
+                            }
+                        }
+                    }
+                },
+                400: { description: 'Filename required' },
+                403: { $ref: '#/components/responses/Forbidden' },
+                500: { description: 'Restore failed' }
+            }
+        }
+    },
+    '/backup/scheduler-status': {
+        get: {
+            tags: ['Backup', 'Admin'],
+            summary: 'Get scheduler status',
+            description: 'Get the current status of the backup scheduler (active jobs, next run times).',
+            security: [{ cookieAuth: [] }],
+            responses: {
+                200: {
+                    description: 'Scheduler status',
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    daily: { type: 'boolean' },
+                                    weekly: { type: 'boolean' },
+                                    monthly: { type: 'boolean' }
+                                }
+                            }
+                        }
+                    }
+                },
+                403: { $ref: '#/components/responses/Forbidden' }
+            }
+        }
+    },
+
+    // ============================================
     // API DOCUMENTATION
     // ============================================
     '/docs': {

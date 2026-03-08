@@ -1,8 +1,8 @@
 @echo off
 echo ============================================
-echo   ResumeConverter - Container Logs
+echo   ResumeConverter - Proxy Server Logs
 echo   Press Ctrl+C to exit
 echo ============================================
 echo.
 
-docker logs -f resumeconverter-app
+docker exec -it resumeconverter-app tail -f /var/log/supervisor/proxy-server.out.log /var/log/supervisor/proxy-server.err.log

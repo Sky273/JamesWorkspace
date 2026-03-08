@@ -1180,5 +1180,69 @@ INSERT INTO public.email_templates (
 ) ON CONFLICT (id) DO NOTHING;
 
 -- =============================================================================
+-- BACKUP TABLES
+-- =============================================================================
+
+-- Backup settings table
+CREATE TABLE IF NOT EXISTS backup_settings (
+    id uuid DEFAULT public.uuid_generate_v4() PRIMARY KEY,
+    protocol VARCHAR(10) DEFAULT 'ftp' CHECK (protocol IN ('ftp', 'ftps', 'sftp')),
+    tls_mode VARCHAR(10) DEFAULT 'explicit' CHECK (tls_mode IN ('none', 'explicit', 'implicit')),
+    host VARCHAR(255),
+    port INTEGER DEFAULT 21,
+    username VARCHAR(255),
+    password TEXT,
+    remote_path VARCHAR(500) DEFAULT '/backups',
+    daily_enabled BOOLEAN DEFAULT false,
+    daily_time TIME DEFAULT '02:00',
+    daily_retention INTEGER DEFAULT 7,
+    weekly_enabled BOOLEAN DEFAULT false,
+    weekly_day INTEGER DEFAULT 0 CHECK (weekly_day >= 0 AND weekly_day <= 6),
+    weekly_time TIME DEFAULT '03:00',
+    weekly_retention INTEGER DEFAULT 4,
+    monthly_enabled BOOLEAN DEFAULT false,
+    monthly_day INTEGER DEFAULT 1 CHECK (monthly_day >= 1 AND monthly_day <= 28),
+    monthly_time TIME DEFAULT '04:00',
+    monthly_retention INTEGER DEFAULT 12,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE backup_settings IS 'Configuration for scheduled database backups via FTP/SFTP';
+
+-- Backup history table
+CREATE TABLE IF NOT EXISTS backup_history (
+    id uuid DEFAULT public.uuid_generate_v4() PRIMARY KEY,
+    backup_type VARCHAR(20) NOT NULL CHECK (backup_type IN ('daily', 'weekly', 'monthly', 'manual')),
+    filename VARCHAR(500) NOT NULL,
+    file_size BIGINT,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'running', 'success', 'failed')),
+    error_message TEXT,
+    started_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP WITH TIME ZONE,
+    uploaded BOOLEAN DEFAULT false
+);
+
+COMMENT ON TABLE backup_history IS 'History of database backup operations';
+
+CREATE INDEX IF NOT EXISTS idx_backup_history_started_at ON backup_history(started_at DESC);
+CREATE INDEX IF NOT EXISTS idx_backup_history_status ON backup_history(status);
+
+-- Trigger for backup_settings updated_at
+CREATE OR REPLACE FUNCTION update_backup_settings_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trigger_backup_settings_updated_at ON backup_settings;
+CREATE TRIGGER trigger_backup_settings_updated_at
+    BEFORE UPDATE ON backup_settings
+    FOR EACH ROW
+    EXECUTE FUNCTION update_backup_settings_updated_at();
+
+-- =============================================================================
 -- END OF SCHEMA
 -- =============================================================================

@@ -18,7 +18,8 @@ show_help() {
     echo "  build     Build the Docker image"
     echo "  run       Run the container (builds if needed)"
     echo "  stop      Stop the running container"
-    echo "  logs      Show container logs"
+    echo "  logs      Show Proxy Server logs (main backend)"
+    echo "  logs-pdf  Show PDF Server logs"
     echo "  shell     Open a shell in the running container"
     echo "  clean     Remove container and image"
     echo ""
@@ -110,7 +111,8 @@ run_container() {
         echo "============================================"
         echo ""
         echo "Commands:"
-        echo "  View logs:    ./docker-build.sh logs"
+        echo "  Proxy logs:   ./docker-build.sh logs"
+        echo "  PDF logs:     ./docker-build.sh logs-pdf"
         echo "  Stop:         ./docker-build.sh stop"
         echo "  Shell access: ./docker-build.sh shell"
         echo ""
@@ -128,10 +130,18 @@ stop_container() {
 }
 
 show_logs() {
-    echo "Showing logs for: $CONTAINER_NAME"
+    echo "Showing Proxy Server logs for: $CONTAINER_NAME"
+    echo "Press Ctrl+C to exit"
+    echo "(For PDF server logs, use: ./docker-build.sh logs-pdf)"
+    echo ""
+    docker exec -it $CONTAINER_NAME tail -f /var/log/supervisor/proxy-server.out.log /var/log/supervisor/proxy-server.err.log
+}
+
+show_logs_pdf() {
+    echo "Showing PDF Server logs for: $CONTAINER_NAME"
     echo "Press Ctrl+C to exit"
     echo ""
-    docker logs -f $CONTAINER_NAME
+    docker exec -it $CONTAINER_NAME tail -f /var/log/supervisor/pdf-server.out.log /var/log/supervisor/pdf-server.err.log
 }
 
 open_shell() {
@@ -160,6 +170,9 @@ case "$1" in
         ;;
     logs)
         show_logs
+        ;;
+    logs-pdf)
+        show_logs_pdf
         ;;
     shell)
         open_shell

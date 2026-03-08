@@ -1,3 +1,29 @@
+## v1.8.0 - 2026-03-08
+### 🗄️ Page Sauvegarde Dédiée & Corrections FTP/TLS
+
+#### Nouvelle Page Sauvegarde
+- **Page dédiée** : Nouvelle page "Sauvegarde" accessible depuis le menu principal (admin uniquement)
+- **URL** : `/dashboard/backup` avec protection AdminRoute
+- **Menu** : Entrée "Sauvegarde" dans la partie basse du menu, entre Paramètres et Guide Utilisateur
+- **Traductions** : Namespace `backup.*` complet en français et anglais
+
+#### Sauvegarde FTP/SFTP
+- **Modes TLS** : Support complet des modes TLS (Explicite AUTH TLS, Implicite port 990, Aucun)
+- **Correction FTP** : Résolution de l'erreur "503 Use AUTH first" - AUTH TLS envoyé avant USER
+- **Validation Zod** : Schémas de validation pour les paramètres de sauvegarde
+- **Planification** : Sauvegardes quotidiennes, hebdomadaires et mensuelles avec rétention configurable
+
+#### Scripts Docker
+- **docker-logs.bat** : Affiche les logs du Proxy Server (backend principal)
+- **docker-logs-pdf.bat** : Nouveau script pour les logs du PDF Server
+- **Documentation** : Section "Viewing Logs" ajoutée dans docker/README.md
+
+#### Améliorations Techniques
+- **basic-ftp** : Correction du paramètre `secure` (true pour explicite, "implicit" pour implicite)
+- **Logging** : Logs détaillés pour le diagnostic des connexions FTP/SFTP
+
+---
+
 ## v1.7.9 - 2026-03-08
 ### 🏠 Page d'Accueil Publique & Stockage Logo en Base
 
