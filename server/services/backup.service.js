@@ -586,8 +586,10 @@ export async function createBackup(type = 'manual') {
         }
         
         // Build pg_dump command
+        // --clean: Include DROP commands before CREATE
+        // --if-exists: Add IF EXISTS to DROP commands (avoids errors on first restore)
         const env = { ...process.env, PGPASSWORD: POSTGRES_PASSWORD };
-        const command = `"${pgDumpBin}" -h ${POSTGRES_HOST} -p ${POSTGRES_PORT} -U ${POSTGRES_USER} -d ${POSTGRES_DB} -F p -f "${localPath}"`;
+        const command = `"${pgDumpBin}" -h ${POSTGRES_HOST} -p ${POSTGRES_PORT} -U ${POSTGRES_USER} -d ${POSTGRES_DB} -F p --clean --if-exists -f "${localPath}"`;
         
         // Execute pg_dump
         await execAsync(command, { env });
@@ -726,6 +728,26 @@ export async function restoreBackup(filename) {
         
         // Build psql command
         const env = { ...process.env, PGPASSWORD: POSTGRES_PASSWORD };
+        
+        // First, check if the backup file contains DROP commands (new format with --clean)
+        const backupContent = fs.readFileSync(localPath, 'utf8').slice(0, 5000);
+        const hasDropCommands = backupContent.includes('DROP TABLE') || backupContent.includes('DROP SCHEMA');
+        
+        if (!hasDropCommands) {
+            // Old backup format without DROP commands - need to truncate tables first
+            safeLog('info', 'Old backup format detected, truncating tables before restore');
+            
+            // Get list of tables and truncate them (in reverse dependency order)
+            const truncateCommand = `"${psqlBin}" -h ${POSTGRES_HOST} -p ${POSTGRES_PORT} -U ${POSTGRES_USER} -d ${POSTGRES_DB} -c "DO $$ DECLARE r RECORD; BEGIN FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP EXECUTE 'TRUNCATE TABLE ' || quote_ident(r.tablename) || ' CASCADE'; END LOOP; END $$;"`;
+            
+            try {
+                await execAsync(truncateCommand, { env });
+                safeLog('info', 'Tables truncated successfully');
+            } catch (truncateError) {
+                safeLog('warn', 'Failed to truncate tables, continuing with restore', { error: truncateError.message });
+            }
+        }
+        
         const command = `"${psqlBin}" -h ${POSTGRES_HOST} -p ${POSTGRES_PORT} -U ${POSTGRES_USER} -d ${POSTGRES_DB} -f "${localPath}"`;
         
         // Execute restore

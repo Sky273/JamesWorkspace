@@ -59,7 +59,8 @@
     "openMenu": "Ouvrir le menu",
     "selectFirm": "Cabinet",
     "myFirm": "Mon cabinet (par défaut)",
-    "adminFirmHint": "En tant qu'admin, vous pouvez créer cet élément pour un autre cabinet"
+    "adminFirmHint": "En tant qu'admin, vous pouvez créer cet élément pour un autre cabinet",
+    "refresh": "Actualiser"
   },
   "header": {
     "changeLanguage": "Changer de langue",
