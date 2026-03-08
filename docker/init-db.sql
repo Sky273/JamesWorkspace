@@ -47,6 +47,8 @@ CREATE TABLE public.firms (
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     logo_url text,
+    logo_data bytea,
+    logo_mime_type character varying(50),
     CONSTRAINT firms_pkey PRIMARY KEY (id),
     CONSTRAINT firms_name_key UNIQUE (name),
     CONSTRAINT firms_status_check CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'inactive'::character varying])::text[])))

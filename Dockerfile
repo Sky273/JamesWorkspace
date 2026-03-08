@@ -158,7 +158,7 @@ ENV CSRF_SECRET=docker-csrf-secret-change-in-production-min32chars
 ENV SKIP_ENV_VALIDATION=true
 
 # Create required directories
-RUN mkdir -p /app/logs /app/uploads /app/data /var/log/supervisor
+RUN mkdir -p /app/logs /app/uploads /app/uploads/logos /app/data /var/log/supervisor
 
 # =============================================================================
 # Expose Ports

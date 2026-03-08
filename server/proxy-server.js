@@ -790,6 +790,16 @@ app.use((req, res, next) => {
     next();
 });
 
+// Serve logos from uploads/logos directory (persisted in Docker)
+const logosPath = path.join(__dirname, '..', 'uploads', 'logos');
+app.use('/logos', express.static(logosPath, {
+    etag: true,
+    lastModified: true,
+    setHeaders: (res) => {
+        res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 1 day
+    }
+}));
+
 // Static file serving with aggressive caching for hashed assets
 app.use(express.static(distPath, {
     etag: true,

@@ -1,8 +1,5 @@
 import express from 'express';
 import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
 import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
 import { validateBody, validateParams, createFirmSchema } from '../utils/validation.js';
 import { firmsCache } from '../services/cache.service.js';
@@ -16,32 +13,11 @@ import {
 } from '../utils/postgresHelpers.js';
 import { query } from '../config/database.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 const router = express.Router();
 
-// Configure multer for logo uploads
-const LOGOS_DIR = path.join(__dirname, '../../client/public/logos');
-
-// Ensure logos directory exists
-if (!fs.existsSync(LOGOS_DIR)) {
-    fs.mkdirSync(LOGOS_DIR, { recursive: true });
-}
-
-const logoStorage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, LOGOS_DIR);
-    },
-    filename: (req, file, cb) => {
-        const firmId = req.params.id;
-        const ext = path.extname(file.originalname).toLowerCase();
-        cb(null, `firm-${firmId}${ext}`);
-    }
-});
-
+// Configure multer for logo uploads - use memory storage to store in database
 const logoUpload = multer({
-    storage: logoStorage,
+    storage: multer.memoryStorage(),
     limits: { fileSize: 2 * 1024 * 1024 }, // 2MB max
     fileFilter: (req, file, cb) => {
         const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
@@ -245,7 +221,7 @@ router.delete('/:id', authenticateToken, requireAdmin, validateParams('id'), asy
     }
 });
 
-// POST /api/firms/:id/logo - Upload firm logo
+// POST /api/firms/:id/logo - Upload firm logo (stored in database)
 router.post('/:id/logo', authenticateToken, requireAdmin, validateParams('id'), logoUpload.single('logo'), async (req, res) => {
     try {
         const { id } = req.params;
@@ -257,27 +233,26 @@ router.post('/:id/logo', authenticateToken, requireAdmin, validateParams('id'), 
         // Verify firm exists
         const firm = await findWithTimeout('firms', id);
         if (!firm) {
-            // Delete uploaded file if firm doesn't exist
-            fs.unlinkSync(req.file.path);
             return res.status(404).json({ error: 'Firm not found' });
         }
         
-        // Generate the public URL for the logo
-        const logoUrl = `/logos/${req.file.filename}`;
+        // Store logo data directly in database
+        const logoData = req.file.buffer;
+        const logoMimeType = req.file.mimetype;
         
-        // Update firm with logo URL
-        await updateWithTimeout('firms', [{
-            id: id,
-            fields: { logo_url: logoUrl }
-        }]);
+        // Update firm with logo data in database
+        await query(
+            'UPDATE firms SET logo_data = $1, logo_mime_type = $2, logo_url = $3 WHERE id = $4',
+            [logoData, logoMimeType, `/api/firms/${id}/logo/image`, id]
+        );
         
         firmsCache.invalidate('all_firms');
         
-        safeLog('info', 'Firm logo uploaded', { firmId: id, logoUrl });
+        safeLog('info', 'Firm logo uploaded to database', { firmId: id, mimeType: logoMimeType, size: logoData.length });
         
         res.json({ 
             success: true, 
-            logo_url: logoUrl,
+            logo_url: `/api/firms/${id}/logo/image`,
             message: 'Logo uploaded successfully' 
         });
     } catch (error) {
@@ -289,30 +264,47 @@ router.post('/:id/logo', authenticateToken, requireAdmin, validateParams('id'), 
     }
 });
 
+// GET /api/firms/:id/logo/image - Serve firm logo from database
+router.get('/:id/logo/image', async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        const result = await query(
+            'SELECT logo_data, logo_mime_type FROM firms WHERE id = $1',
+            [id]
+        );
+        
+        if (result.rows.length === 0 || !result.rows[0].logo_data) {
+            return res.status(404).json({ error: 'Logo not found' });
+        }
+        
+        const { logo_data, logo_mime_type } = result.rows[0];
+        
+        res.set('Content-Type', logo_mime_type || 'image/png');
+        res.set('Cache-Control', 'public, max-age=86400'); // Cache for 1 day
+        res.send(logo_data);
+    } catch (error) {
+        safeLog('error', 'Error serving firm logo', { error: error.message, firmId: req.params.id });
+        return res.status(500).json({ error: 'Failed to serve logo' });
+    }
+});
+
 // DELETE /api/firms/:id/logo - Delete firm logo
 router.delete('/:id/logo', authenticateToken, requireAdmin, validateParams('id'), async (req, res) => {
     try {
         const { id } = req.params;
         
-        // Get firm to find current logo
+        // Get firm to verify it exists
         const firm = await findWithTimeout('firms', id);
         if (!firm) {
             return res.status(404).json({ error: 'Firm not found' });
         }
         
-        // Delete logo file if exists
-        if (firm.logo_url) {
-            const logoPath = path.join(LOGOS_DIR, path.basename(firm.logo_url));
-            if (fs.existsSync(logoPath)) {
-                fs.unlinkSync(logoPath);
-            }
-        }
-        
-        // Update firm to remove logo URL
-        await updateWithTimeout('firms', [{
-            id: id,
-            fields: { logo_url: null }
-        }]);
+        // Clear logo data from database
+        await query(
+            'UPDATE firms SET logo_data = NULL, logo_mime_type = NULL, logo_url = NULL WHERE id = $1',
+            [id]
+        );
         
         firmsCache.invalidate('all_firms');
         
