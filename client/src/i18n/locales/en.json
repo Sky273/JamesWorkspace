@@ -350,7 +350,8 @@
       "improve": "Improve",
       "improveNow": "Improve Now",
       "export": "Export",
-      "viewImproved": "View Improved"
+      "viewImproved": "View Improved",
+      "view": "View"
     },
     "steps": {
       "analysis": "Analysis",
@@ -957,6 +958,7 @@
     "editTag": "Edit tag",
     "editingIn": "Editing in category",
     "tagName": "Tag name",
+    "back": "Back",
     "cancel": "Cancel",
     "save": "Save",
     "refresh": "Refresh",
@@ -1084,6 +1086,7 @@
     "tags": "Tags",
     "users": "Users",
     "settings": "Settings",
+    "missions": "Missions",
     "metrics": "Metrics",
     "marketRadar": "Market Radar",
     "metiers": "Jobs & Skills",

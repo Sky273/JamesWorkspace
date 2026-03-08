@@ -33,14 +33,12 @@ const ClientFormModal = ({ isOpen, onClose, onSubmit, client, t }: ClientFormMod
   useEffect(() => {
     const loadIndustries = async () => {
       if (isOpen) {
-        console.log('[ClientFormModal] Loading industries...');
         setLoadingIndustries(true);
         try {
           const data = await clientService.getIndustries();
-          console.log('[ClientFormModal] Industries loaded:', data);
           setIndustries(data || []);
         } catch (error) {
-          console.error('[ClientFormModal] Failed to load industries:', error);
+          // Silently fail - industries dropdown will be empty
         } finally {
           setLoadingIndustries(false);
         }

@@ -237,17 +237,8 @@ async function getClient(settings) {
     } else {
         const ftp = await import('basic-ftp');
         const client = new ftp.Client();
-        client.ftp.verbose = true;  // Enable verbose logging for debugging
-        
-        // Log raw settings received
-        console.log('[FTP] Raw settings received:', JSON.stringify({
-            protocol: settings.protocol,
-            tls_mode: settings.tls_mode,
-            host: settings.host,
-            port: settings.port,
-            username: settings.username,
-            hasPassword: !!settings.password
-        }));
+        // Enable verbose logging only in development
+        client.ftp.verbose = process.env.NODE_ENV === 'development';
         
         // TLS options: accept self-signed certificates
         const secureOptions = {
@@ -263,14 +254,12 @@ async function getClient(settings) {
         
         // Default to 'explicit' if tls_mode is not set or is invalid
         if (!tlsMode || !['none', 'explicit', 'implicit'].includes(tlsMode)) {
-            console.log(`[FTP] Invalid or missing tls_mode: "${tlsMode}", defaulting to "explicit"`);
             tlsMode = 'explicit';
         }
         
         // If protocol is 'ftps', force TLS mode (default to explicit if not specified or 'none')
         if (settings.protocol === 'ftps') {
             if (tlsMode === 'none') {
-                console.log('[FTP] Protocol is ftps but tls_mode is none, forcing to explicit');
                 tlsMode = 'explicit';
             }
         }
@@ -283,12 +272,8 @@ async function getClient(settings) {
         // - secure: false = Plain FTP (no encryption)
         if (tlsMode === 'explicit') {
             secure = true;  // AUTH TLS - sends AUTH TLS before USER
-            console.log('[FTP] Setting secure to TRUE for explicit AUTH TLS');
         } else if (tlsMode === 'implicit') {
             secure = 'implicit';  // Implicit TLS (direct TLS connection on port 990)
-            console.log('[FTP] Setting secure to "implicit" for implicit TLS');
-        } else {
-            console.log('[FTP] Setting secure to false for plain FTP');
         }
         // tlsMode === 'none' => secure = false (plain FTP, no encryption)
         
@@ -320,9 +305,6 @@ async function getClient(settings) {
             secure: accessParams.secure,
             secureType: typeof accessParams.secure
         });
-        
-        // Log the exact secure value being used
-        console.log(`[FTP] Connecting with secure=${JSON.stringify(accessParams.secure)} (type: ${typeof accessParams.secure})`);
         
         await client.access(accessParams);
         
