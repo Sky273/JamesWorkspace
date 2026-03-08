@@ -1,3 +1,26 @@
+## v1.7.9 - 2026-03-08
+### 🏠 Page d'Accueil Publique & Stockage Logo en Base
+
+#### Page d'Accueil Publique
+- **Nouvelle page** : Page d'accueil publique pour les utilisateurs non connectés (`/welcome`)
+- **Header public** : Boutons "Se connecter" et "S'inscrire" stylisés de manière cohérente
+- **Section Hero** : Réutilisation de la hero zone de la page d'accueil principale
+- **Footer** : Affichage du footer de l'application
+- **Configuration** : Variable d'environnement `VITE_PUBLIC_HOME=true` pour activer la page publique
+- **Redirection intelligente** : Les utilisateurs non connectés sont redirigés vers `/welcome` si activé
+
+#### Stockage Logo Cabinet en Base de Données
+- **Nouveau champ** : `logo_data` (BYTEA) et `logo_mime_type` dans la table `firms`
+- **Persistance Docker** : Les logos sont maintenant stockés en base de données (plus de perte lors des rebuilds)
+- **Route API** : `GET /api/firms/:id/logo/image` pour servir les logos depuis la base
+- **Migration** : `add_firm_logo_data.sql` pour les bases existantes
+
+#### Améliorations UI
+- **Footer sur Register** : Ajout du footer sur la page d'inscription (comme sur SignIn)
+- **Boutons cohérents** : Style unifié pour les boutons de connexion/inscription
+
+---
+
 ## v1.7.8 - 2026-03-07
 ### 🐳 Docker Améliorations & Documentation APM
 

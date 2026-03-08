@@ -16,6 +16,7 @@ import logger from './utils/logger.frontend';
 
 // Lazy load pages for code splitting
 const HomePage = lazy(() => import('./pages/HomePage'));
+const PublicHomePage = lazy(() => import('./pages/PublicHomePage'));
 const ResumesPage = lazy(() => import('./pages/ResumesPage'));
 const TemplatesPage = lazy(() => import('./pages/TemplatesPage'));
 const UploadPage = lazy(() => import('./pages/UploadPage'));
@@ -63,15 +64,19 @@ const ProtectedRoute = ({ children }: RouteProps): JSX.Element => {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   
+  // Check if public home is enabled
+  const publicHomeEnabled = import.meta.env.VITE_PUBLIC_HOME === 'true';
+  const redirectPath = publicHomeEnabled ? '/welcome' : '/signin';
+  
   useEffect(() => {
     if (!isAuthenticated) {
-      logger.log('[ProtectedRoute] User not authenticated, redirecting to signin');
-      navigate('/signin', { replace: true });
+      logger.log(`[ProtectedRoute] User not authenticated, redirecting to ${redirectPath}`);
+      navigate(redirectPath, { replace: true });
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, navigate, redirectPath]);
   
   if (!isAuthenticated) {
-    return <Navigate to="/signin" replace />;
+    return <Navigate to={redirectPath} replace />;
   }
 
   return <>{children}</>;
@@ -100,6 +105,27 @@ const AdminRoute = ({ children }: RouteProps): JSX.Element => {
   return <>{children}</>;
 };
 
+// Check if public home is enabled via environment variable
+const isPublicHomeEnabled = import.meta.env.VITE_PUBLIC_HOME === 'true';
+
+// Public home route - shows public page if enabled and not authenticated, otherwise redirects
+const PublicHomeRoute = (): JSX.Element => {
+  const { isAuthenticated } = useAuth();
+  
+  // If user is authenticated, redirect to protected home
+  if (isAuthenticated) {
+    return <Navigate to="/home" replace />;
+  }
+  
+  // If public home is enabled, show public page
+  if (isPublicHomeEnabled) {
+    return <PublicHomePage />;
+  }
+  
+  // Otherwise, redirect to signin
+  return <Navigate to="/signin" replace />;
+};
+
 const App = (): JSX.Element => {
   return (
     <ErrorBoundary>
@@ -117,6 +143,8 @@ const App = (): JSX.Element => {
                 <Route path="/terms" element={<TermsOfServicePage />} />
                 {/* Public shared file pages (no auth required) */}
                 <Route path="/share/:type/:token" element={<SharedFilePage />} />
+                {/* Public home page (only when VITE_PUBLIC_HOME=true) */}
+                <Route path="/welcome" element={<PublicHomeRoute />} />
                 <Route
                   path="/"
                   element={

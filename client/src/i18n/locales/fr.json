@@ -77,6 +77,11 @@
     "privacy": "Politique de confidentialité",
     "terms": "Conditions d'utilisation"
   },
+  "public": {
+    "home": {
+      "getStarted": "Commencer"
+    }
+  },
   "auth": {
     "signIn": {
       "title": "Connectez-vous à votre compte",
