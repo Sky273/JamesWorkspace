@@ -162,9 +162,38 @@ export async function saveBackupSettings(settings) {
 }
 
 /**
+ * Cleanup stale "running" entries that have been stuck for more than 30 minutes
+ * This handles cases where the backup process crashed without updating the status
+ */
+async function cleanupStaleRunningEntries() {
+    try {
+        const result = await query(`
+            UPDATE backup_history 
+            SET status = 'failed', 
+                error_message = 'Backup process timed out or crashed',
+                completed_at = NOW()
+            WHERE status = 'running' 
+            AND started_at < NOW() - INTERVAL '30 minutes'
+            RETURNING id
+        `);
+        if (result.rows.length > 0) {
+            safeLog('info', 'Cleaned up stale running backup entries', { 
+                count: result.rows.length,
+                ids: result.rows.map(r => r.id)
+            });
+        }
+    } catch (error) {
+        safeLog('error', 'Failed to cleanup stale running entries', { error: error.message });
+    }
+}
+
+/**
  * Create a backup history entry
  */
 async function createHistoryEntry(type, filename) {
+    // First, cleanup any stale running entries
+    await cleanupStaleRunningEntries();
+    
     const result = await query(`
         INSERT INTO backup_history (backup_type, filename, status)
         VALUES ($1, $2, 'running')
@@ -199,6 +228,9 @@ async function updateHistoryEntry(id, updates) {
  * Get backup history
  */
 export async function getBackupHistory(limit = 50, offset = 0) {
+    // Cleanup stale running entries before returning history
+    await cleanupStaleRunningEntries();
+    
     const result = await query(`
         SELECT * FROM backup_history
         ORDER BY started_at DESC
@@ -617,12 +649,20 @@ export async function createBackup(type = 'manual') {
         }
         
         // Update history entry
-        await updateHistoryEntry(historyEntry.id, {
-            status: 'success',
-            file_size: fileSize,
-            completed_at: new Date().toISOString(),
-            uploaded
-        });
+        try {
+            await updateHistoryEntry(historyEntry.id, {
+                status: 'success',
+                file_size: fileSize,
+                completed_at: new Date().toISOString(),
+                uploaded
+            });
+        } catch (updateError) {
+            safeLog('error', 'Failed to update history entry to success', { 
+                historyId: historyEntry.id, 
+                error: updateError.message 
+            });
+            // Don't throw - backup was successful, just logging failed
+        }
         
         safeLog('info', 'Database backup completed', { 
             type, 
@@ -639,14 +679,21 @@ export async function createBackup(type = 'manual') {
         };
         
     } catch (error) {
-        safeLog('error', 'Database backup failed', { type, error: error.message });
+        safeLog('error', 'Database backup failed', { type, error: error.message, stack: error.stack });
         
         if (historyEntry) {
-            await updateHistoryEntry(historyEntry.id, {
-                status: 'failed',
-                error_message: error.message,
-                completed_at: new Date().toISOString()
-            });
+            try {
+                await updateHistoryEntry(historyEntry.id, {
+                    status: 'failed',
+                    error_message: error.message,
+                    completed_at: new Date().toISOString()
+                });
+            } catch (updateError) {
+                safeLog('error', 'Failed to update history entry status', { 
+                    historyId: historyEntry.id, 
+                    error: updateError.message 
+                });
+            }
         }
         
         // Cleanup temp files
