@@ -4,7 +4,6 @@
  */
 
 const express = require('express');
-const puppeteer = require('puppeteer');
 const bodyParser = require('body-parser');
 const path = require('path');
 const cors = require('cors');
@@ -21,89 +20,37 @@ const PORT = process.env.PDF_SERVER_PORT || 3002;
 // CONFIGURATION
 // ============================================
 
-// Browser instance for reuse (kept for potential future Puppeteer needs)
-let browserInstance = null;
-let browserPageCount = 0;
-const MAX_PAGES_BEFORE_RESTART = parseInt(process.env.PDF_MAX_PAGES || '50', 10);
-const BROWSER_IDLE_TIMEOUT = parseInt(process.env.PDF_IDLE_TIMEOUT || '300000', 10); // 5 min default
 const PDF_GENERATION_TIMEOUT = parseInt(process.env.PDF_TIMEOUT || '30000', 10); // 30s default
 const MAX_HTML_SIZE = parseInt(process.env.PDF_MAX_HTML_SIZE || '5242880', 10); // 5MB default
-let browserIdleTimer = null;
 
-// Rate limiting
+// Rate limiting with automatic cleanup
 const requestCounts = new Map();
 const RATE_LIMIT_WINDOW = 60000; // 1 minute
 const RATE_LIMIT_MAX = parseInt(process.env.PDF_RATE_LIMIT || '30', 10); // 30 requests per minute
+let rateLimitCleanupInterval = null;
 
-// ============================================
-// BROWSER MANAGEMENT (for potential Puppeteer needs)
-// ============================================
-
-async function getBrowser() {
-  if (browserIdleTimer) {
-    clearTimeout(browserIdleTimer);
-    browserIdleTimer = null;
-  }
-  
-  if (browserInstance && browserPageCount >= MAX_PAGES_BEFORE_RESTART) {
-    log('info', `Restarting browser after ${browserPageCount} pages to free memory`);
-    await closeBrowser();
-  }
-  
-  if (!browserInstance || !browserInstance.isConnected()) {
-    const launchOptions = {
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--disable-extensions',
-        '--disable-background-networking',
-        '--disable-default-apps',
-        '--disable-sync',
-        '--disable-translate',
-        '--hide-scrollbars',
-        '--metrics-recording-only',
-        '--mute-audio',
-        '--no-first-run',
-        '--safebrowsing-disable-auto-update',
-        '--js-flags=--max-old-space-size=256'
-      ]
-    };
-    
-    if (process.env.PUPPETEER_EXECUTABLE_PATH) {
-      launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+// Periodic cleanup of rate limit entries to prevent memory leak
+function startRateLimitCleanup() {
+  rateLimitCleanupInterval = setInterval(() => {
+    const now = Date.now();
+    let cleaned = 0;
+    for (const [key, data] of requestCounts.entries()) {
+      if (now - data.windowStart > RATE_LIMIT_WINDOW * 2) {
+        requestCounts.delete(key);
+        cleaned++;
+      }
     }
-    
-    browserInstance = await puppeteer.launch(launchOptions);
-    browserPageCount = 0;
-    log('info', 'Browser instance created');
-  }
-  return browserInstance;
+    if (cleaned > 0) {
+      log('debug', 'Rate limit cleanup', { entriesRemoved: cleaned, remaining: requestCounts.size });
+    }
+  }, RATE_LIMIT_WINDOW); // Cleanup every minute
 }
 
-async function closeBrowser() {
-  if (browserInstance) {
-    try {
-      await browserInstance.close();
-      log('info', 'Browser instance closed');
-    } catch (err) {
-      log('error', 'Error closing browser', { error: err.message });
-    }
-    browserInstance = null;
-    browserPageCount = 0;
+function stopRateLimitCleanup() {
+  if (rateLimitCleanupInterval) {
+    clearInterval(rateLimitCleanupInterval);
+    rateLimitCleanupInterval = null;
   }
-}
-
-function scheduleBrowserClose() {
-  if (browserIdleTimer) {
-    clearTimeout(browserIdleTimer);
-  }
-  browserIdleTimer = setTimeout(async () => {
-    log('info', 'Browser idle timeout - closing to free memory');
-    await closeBrowser();
-  }, BROWSER_IDLE_TIMEOUT);
 }
 
 // ============================================
@@ -310,11 +257,7 @@ app.get('/health', (req, res) => {
       heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024) + 'MB',
       heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024) + 'MB'
     },
-    browser: {
-      active: !!browserInstance,
-      pageCount: browserPageCount,
-      maxBeforeRestart: MAX_PAGES_BEFORE_RESTART
-    },
+    rateLimitEntries: requestCounts.size,
     config: {
       timeout: PDF_GENERATION_TIMEOUT,
       rateLimit: RATE_LIMIT_MAX,
@@ -337,7 +280,13 @@ app.get('/*splat', (req, res) => {
 
 const gracefulShutdown = async (signal) => {
   log('info', `${signal} received, shutting down gracefully`);
-  await closeBrowser();
+  
+  // Stop rate limit cleanup interval
+  stopRateLimitCleanup();
+  
+  // Clear rate limit map
+  requestCounts.clear();
+  
   log('info', 'PDF server shutdown complete');
   process.exit(0);
 };
@@ -359,22 +308,14 @@ process.on('disconnect', () => {
 // ============================================
 
 app.listen(PORT, async () => {
-  log('info', 'Cleaning PDF server cache on startup...');
-  try {
-    if (browserInstance) {
-      await closeBrowser();
-      log('info', 'Browser cache cleaned successfully');
-    }
-  } catch (error) {
-    log('error', 'Error cleaning browser cache on startup', { error: error.message });
-  }
+  // Start rate limit cleanup to prevent memory leaks
+  startRateLimitCleanup();
   
   log('info', `PDF Server started on port ${PORT}`, {
     config: {
-      maxPages: MAX_PAGES_BEFORE_RESTART,
-      idleTimeout: BROWSER_IDLE_TIMEOUT,
       pdfTimeout: PDF_GENERATION_TIMEOUT,
-      rateLimit: RATE_LIMIT_MAX
+      rateLimit: RATE_LIMIT_MAX,
+      maxHtmlSize: MAX_HTML_SIZE
     }
   });
 });

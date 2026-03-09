@@ -14,6 +14,36 @@ import { query } from '../config/database.js';
 import { safeLog } from '../utils/logger.backend.js';
 
 const execAsync = promisify(exec);
+
+// ============================================
+// LAZY-LOADED FTP/SFTP MODULES
+// Cache modules to avoid repeated dynamic imports
+// ============================================
+
+let SftpClientModule = null;
+let basicFtpModule = null;
+
+/**
+ * Get SFTP client class (lazy loaded and cached)
+ */
+async function getSftpClient() {
+    if (!SftpClientModule) {
+        SftpClientModule = (await import('ssh2-sftp-client')).default;
+        safeLog('debug', 'ssh2-sftp-client module loaded');
+    }
+    return SftpClientModule;
+}
+
+/**
+ * Get basic-ftp module (lazy loaded and cached)
+ */
+async function getBasicFtp() {
+    if (!basicFtpModule) {
+        basicFtpModule = await import('basic-ftp');
+        safeLog('debug', 'basic-ftp module loaded');
+    }
+    return basicFtpModule;
+}
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -257,7 +287,7 @@ export async function deleteHistoryEntry(id) {
  */
 async function getClient(settings) {
     if (settings.protocol === 'sftp') {
-        const SftpClient = (await import('ssh2-sftp-client')).default;
+        const SftpClient = await getSftpClient();
         const client = new SftpClient();
         await client.connect({
             host: settings.host,
@@ -267,7 +297,7 @@ async function getClient(settings) {
         });
         return { client, type: 'sftp' };
     } else {
-        const ftp = await import('basic-ftp');
+        const ftp = await getBasicFtp();
         const client = new ftp.Client();
         // Enable verbose logging only in development
         client.ftp.verbose = process.env.NODE_ENV === 'development';
