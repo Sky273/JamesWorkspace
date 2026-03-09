@@ -20,7 +20,7 @@ const __dirname = path.dirname(__filename);
 
 // Load user guide markdown
 let userGuideContent = '';
-const MAX_GUIDE_LENGTH = 60000; // Limit guide size to avoid token limits
+const MAX_GUIDE_LENGTH = 100000; // Limit guide size to avoid token limits
 
 const loadUserGuide = async () => {
     try {

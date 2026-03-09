@@ -1,3 +1,22 @@
+## v1.8.1 - 2026-03-09
+### 🔧 Corrections de Stabilité & Sécurité
+
+#### Corrections de Sécurité
+- **Sanitization XSS** : Ajout de `createSafeHtml()` pour tous les rendus HTML dynamiques (VersionsPanel, ExportTab, CompareTab)
+- **Configuration proxy** : Correction de la détection d'IP pour le rate limiting derrière reverse proxy
+
+#### Corrections de Stabilité
+- **Statut sauvegarde** : Correction du statut "Running" qui restait affiché après une sauvegarde terminée
+- **Nettoyage automatique** : Les sauvegardes bloquées depuis plus de 30 minutes sont automatiquement marquées comme échouées
+- **Scheduler de sauvegarde** : Démarrage explicite des jobs cron avec `.start()` pour garantir leur exécution
+
+#### Améliorations Techniques
+- **Référence base de données** : Correction des références obsolètes vers l'ancienne table `customers` (renommée `firms`)
+- **Limite chatbot** : Augmentation de la limite du guide utilisateur de 60000 à 100000 caractères
+- **Nettoyage logs** : Suppression des `console.log` de debug dans le preview PDF
+
+---
+
 ## v1.8.0 - 2026-03-08
 ### 🗄️ Page Sauvegarde Dédiée & Corrections FTP/TLS
 
