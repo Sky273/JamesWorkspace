@@ -50,6 +50,9 @@ RUN apt-get update && apt-get install -y \
     supervisor \
     # SSL certificate generation
     openssl \
+    # LibreOffice for HTML to DOCX conversion (headless mode)
+    libreoffice-writer-nogui \
+    libreoffice-calc-nogui \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Google Chrome (stable) for Puppeteer
@@ -57,6 +60,14 @@ RUN wget -q -O /tmp/chrome.deb https://dl.google.com/linux/direct/google-chrome-
     && apt-get update \
     && apt-get install -y /tmp/chrome.deb \
     && rm /tmp/chrome.deb \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install PrinceXML 16.2 for high-quality PDF generation
+RUN wget -q -O /tmp/prince.deb https://www.princexml.com/download/prince_16.2-1_ubuntu22.04_amd64.deb \
+    && apt-get update \
+    && apt-get install -y gdebi-core \
+    && gdebi --non-interactive /tmp/prince.deb \
+    && rm /tmp/prince.deb \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Node.js 20.x

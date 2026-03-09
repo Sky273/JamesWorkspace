@@ -18,6 +18,8 @@ interface Template {
   Name: string;
 }
 
+export type ExportFormat = 'pdf' | 'docx' | 'doc';
+
 interface ExportTabProps {
   resume: Resume;
   templates: Template[];
@@ -27,10 +29,18 @@ interface ExportTabProps {
   exportLoading: boolean;
   onExport: () => void;
   onSendEmail?: () => void;
+  selectedFormat?: ExportFormat;
+  onFormatChange?: (format: ExportFormat) => void;
 }
 
-const ExportTab = ({ resume, templates, selectedTemplate, onTemplateChange, loadingTemplates, exportLoading, onExport, onSendEmail }: ExportTabProps): JSX.Element => {
+const ExportTab = ({ resume, templates, selectedTemplate, onTemplateChange, loadingTemplates, exportLoading, onExport, onSendEmail, selectedFormat = 'pdf', onFormatChange }: ExportTabProps): JSX.Element => {
   const { t } = useTranslation();
+
+  const formatOptions: { value: ExportFormat; label: string }[] = [
+    { value: 'pdf', label: 'PDF' },
+    { value: 'docx', label: 'DOCX (Word)' },
+    { value: 'doc', label: 'DOC (Word 97-2003)' }
+  ];
 
   return (
     <div className="space-y-4">
@@ -62,6 +72,21 @@ const ExportTab = ({ resume, templates, selectedTemplate, onTemplateChange, load
                 )}
               </select>
             </div>
+            <div>
+              <label htmlFor="format" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                {t('resume.analysis.exportOptions.format', 'Format')}
+              </label>
+              <select
+                id="format"
+                value={selectedFormat}
+                onChange={(e: ChangeEvent<HTMLSelectElement>) => onFormatChange?.(e.target.value as ExportFormat)}
+                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+              >
+                {formatOptions.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </div>
             <button
               onClick={onExport}
               disabled={!selectedTemplate || exportLoading}
@@ -76,7 +101,7 @@ const ExportTab = ({ resume, templates, selectedTemplate, onTemplateChange, load
                   {t('resume.analysis.exportOptions.exporting')}
                 </>
               ) : (
-                t('resume.analysis.exportOptions.exportPDF')
+                t('resume.analysis.exportOptions.export', 'Exporter')
               )}
             </button>
             

@@ -376,27 +376,43 @@ function createGroupedSuggestionsPanel(suggestions: SuggestionsBySection): strin
  * Exported for use when saving content without suggestions
  */
 export function removeSuggestionMarkers(content: string): string {
-  // Remove suggestion badges (the orange pill with count) - multiple patterns to catch all variants
-  let cleaned = content.replace(/<span[^>]*title="[^"]*"[^>]*>💡\s*\d+<\/span>/g, '');
-  // Remove orange gradient badges (BADGE_STYLE pattern: background: linear-gradient(135deg, #F59E0B...)
-  cleaned = cleaned.replace(/<span[^>]*style="[^"]*background:\s*linear-gradient\(135deg,\s*#F59E0B[^"]*"[^>]*>.*?<\/span>/g, '');
-  // Remove any span with lightbulb emoji and a number (generic pattern)
-  cleaned = cleaned.replace(/<span[^>]*>[\s]*💡[\s]*\d+[\s]*<\/span>/g, '');
-  // Remove highlight wrappers but keep inner content
-  cleaned = cleaned.replace(/<div[^>]*class="suggestion-highlight"[^>]*>/g, '');
-  cleaned = cleaned.replace(/<\/div>(\s*<\/div>)?/g, (match, group1) => group1 ? '</div>' : '');
-  // Remove suggestions panel - match the entire panel structure (greedy match for nested divs)
-  // This handles both inline style and class-based panels
-  cleaned = cleaned.replace(/<div[^>]*class="suggestion-panel"[^>]*>[\s\S]*?<\/ul>\s*(<\/div>\s*)*<\/div>/g, '');
-  // Remove panels with inline gradient style (for global panel)
-  cleaned = cleaned.replace(/<div[^>]*style="[^"]*background:\s*linear-gradient\(135deg,\s*#FEF3C7[^"]*"[^>]*>[\s\S]*?<\/ul>\s*(<\/div>\s*)*<\/div>/g, '');
-  // Remove old style panels
-  cleaned = cleaned.replace(/<div style="background: #FEF3C7[^>]*>[\s\S]*?<\/div>\s*<\/div>/g, '');
-  cleaned = cleaned.replace(/<div style="background: linear-gradient[^>]*>[\s\S]*?<\/div>\s*<\/div>/g, '');
-  // Remove any remaining lightbulb spans (legacy)
-  cleaned = cleaned.replace(/<span[^>]*>💡<\/span>/g, '');
-  // Remove any span containing only lightbulb and/or numbers (catch-all for badge variants)
-  cleaned = cleaned.replace(/<span[^>]*style="[^"]*#F59E0B[^"]*"[^>]*>[^<]*<\/span>/g, '');
+  let cleaned = content;
+  
+  // Step 1: Remove suggestion badges (the orange pill with count)
+  // These are spans with the BADGE_STYLE containing #F59E0B or #D97706
+  // Pattern matches: <span style="...#F59E0B...">💡 N</span>
+  cleaned = cleaned.replace(/<span[^>]*style="[^"]*(?:#F59E0B|#D97706)[^"]*"[^>]*>[^<]*<\/span>/g, '');
+  
+  // Step 2: Remove any span with lightbulb emoji (with or without number)
+  cleaned = cleaned.replace(/<span[^>]*>[^<]*💡[^<]*<\/span>/g, '');
+  
+  // Step 3: Remove any span with title attribute containing suggestion text (tooltip spans)
+  cleaned = cleaned.replace(/<span[^>]*title="[^"]*"[^>]*>💡[^<]*<\/span>/g, '');
+  
+  // Step 4: Remove suggestion-highlight wrapper divs but KEEP their inner content
+  // Use a function to properly handle nested content
+  let prevCleaned = '';
+  while (prevCleaned !== cleaned) {
+    prevCleaned = cleaned;
+    // Match highlight divs and extract inner content
+    cleaned = cleaned.replace(/<div[^>]*(?:class="suggestion-highlight"|style="[^"]*border-left:\s*4px\s+solid\s+#F59E0B)[^>]*>([\s\S]*?)<\/div>/g, '$1');
+  }
+  
+  // Step 5: Remove suggestion panels (the yellow boxes at top)
+  // These contain class="suggestion-panel" or the gradient background #FEF3C7
+  cleaned = cleaned.replace(/<div[^>]*class="suggestion-panel"[^>]*>[\s\S]*?<\/ul>\s*<\/div>/g, '');
+  cleaned = cleaned.replace(/<div[^>]*style="[^"]*background:\s*linear-gradient\(135deg,\s*#FEF3C7[^"]*"[^>]*>[\s\S]*?<\/ul>\s*<\/div>/g, '');
+  
+  // Step 6: Clean up any orphaned lightbulb emojis (standalone or in spans)
+  cleaned = cleaned.replace(/💡\s*\d*/g, '');
+  
+  // Step 7: Remove empty spans and divs that might be left over
+  cleaned = cleaned.replace(/<span[^>]*>\s*<\/span>/g, '');
+  cleaned = cleaned.replace(/<div[^>]*>\s*<\/div>/g, '');
+  
+  // Step 8: Clean up any double spaces or extra whitespace
+  cleaned = cleaned.replace(/\s{2,}/g, ' ');
+  
   return cleaned;
 }
 

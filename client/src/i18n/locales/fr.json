@@ -188,6 +188,8 @@
         "loadingTemplates": "Chargement des modèles...",
         "noTemplates": "Aucun modèle disponible",
         "preview": "Aperçu",
+        "format": "Format",
+        "export": "Exporter",
         "exportPDF": "Exporter en PDF",
         "exporting": "Exportation...",
         "sendEmail": "Envoyer par email"

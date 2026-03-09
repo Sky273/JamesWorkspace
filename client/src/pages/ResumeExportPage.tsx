@@ -16,7 +16,7 @@ import { templateService } from '../utils/templateService';
 import toast from 'react-hot-toast';
 import logger from '../utils/logger.frontend';
 import { SkeletonCard } from '../components/ui/Skeleton';
-import ExportTab from '../components/ResumeAnalysis/ExportTab';
+import ExportTab, { ExportFormat } from '../components/ResumeAnalysis/ExportTab';
 import ConsentBadge, { ConsentStatus } from '../components/ConsentBadge';
 import SendEmailModal from '../components/ResumeAnalysis/SendEmailModal';
 import { fetchWithAuth } from '../utils/apiInterceptor';
@@ -44,6 +44,7 @@ const ResumeExportPage = (): JSX.Element => {
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
+  const [selectedFormat, setSelectedFormat] = useState<ExportFormat>('pdf');
 
   useEffect(() => {
     const loadResume = async () => {
@@ -99,7 +100,7 @@ const ResumeExportPage = (): JSX.Element => {
     fetchTemplates();
   }, [t]);
 
-  const handleExportToPDF = useCallback(async () => {
+  const handleExport = useCallback(async () => {
     if (!currentResume || !selectedTemplate) return;
 
     try {
@@ -130,38 +131,46 @@ const ResumeExportPage = (): JSX.Element => {
         processedFooter = processedFooter.replace(/-title-/g, candidateTitle);
       }
 
-      const response = await fetchWithAuth('/generate-pdf', {
+      // Determine endpoint and file extension based on format
+      const endpoint = selectedFormat === 'pdf' ? '/generate-pdf' : '/generate-docx';
+      const fileExtension = selectedFormat === 'pdf' ? 'pdf' : selectedFormat;
+      const mimeType = selectedFormat === 'pdf' 
+        ? 'application/pdf' 
+        : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
+      const response = await fetchWithAuth(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json; charset=utf-8' },
         body: JSON.stringify({
           htmlContent: processedBody,
-          filename: `${candidateName.replace(/\s+/g, '_')}.pdf`,
+          filename: `${candidateName.replace(/\s+/g, '_')}.${fileExtension}`,
           stylesheet: template.Stylesheet || '',
           headerContent: processedHeader || undefined,
           footerContent: processedFooter || undefined,
-          footerHeight: template.FooterHeight || 25
+          footerHeight: template.FooterHeight || 25,
+          format: selectedFormat
         })
       });
 
-      if (!response.ok) throw new Error('Failed to generate PDF');
+      if (!response.ok) throw new Error(`Failed to generate ${selectedFormat.toUpperCase()}`);
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${candidateName.replace(/\s+/g, '_')}_${template.Name}.pdf`;
+      a.download = `${candidateName.replace(/\s+/g, '_')}_${template.Name}.${fileExtension}`;
       document.body.appendChild(a);
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
       toast.success(t('resume.exportSuccess'));
     } catch (err) {
-      logger.error('Error exporting PDF:', err);
+      logger.error('Error exporting:', err);
       toast.error(t('resume.exportError'));
     } finally {
       setExportLoading(false);
     }
-  }, [currentResume, selectedTemplate, t]);
+  }, [currentResume, selectedTemplate, selectedFormat, t]);
 
   if (loading) {
     return (
@@ -289,8 +298,10 @@ const ResumeExportPage = (): JSX.Element => {
             onTemplateChange={setSelectedTemplate}
             loadingTemplates={loadingTemplates}
             exportLoading={exportLoading}
-            onExport={handleExportToPDF}
+            onExport={handleExport}
             onSendEmail={() => setShowEmailModal(true)}
+            selectedFormat={selectedFormat}
+            onFormatChange={setSelectedFormat}
           />
         </div>
       </div>
@@ -303,7 +314,8 @@ const ResumeExportPage = (): JSX.Element => {
           resumeName={currentResume['Name'] || ''}
           resumeTitle={currentResume['Title'] || ''}
           onClose={() => setShowEmailModal(false)}
-          onGeneratePdf={async () => {
+          attachmentFormat={selectedFormat}
+          onGenerateAttachment={async (format) => {
             const template = await templateService.getTemplateById(selectedTemplate);
             if (!template) throw new Error('Template not found');
             
@@ -333,20 +345,25 @@ const ResumeExportPage = (): JSX.Element => {
               processedFooter = processedFooter.replace(/-title-/g, candidateTitle);
             }
             
-            const response = await fetchWithAuth('/generate-pdf', {
+            // Determine endpoint based on format
+            const endpoint = format === 'pdf' ? '/generate-pdf' : '/generate-docx';
+            const fileExtension = format === 'pdf' ? 'pdf' : format;
+            
+            const response = await fetchWithAuth(endpoint, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json; charset=utf-8' },
               body: JSON.stringify({
                 htmlContent: processedBody,
-                filename: `${candidateName.replace(/\s+/g, '_')}.pdf`,
+                filename: `${candidateName.replace(/\s+/g, '_')}.${fileExtension}`,
                 stylesheet: template.Stylesheet || '',
                 headerContent: processedHeader || undefined,
                 footerContent: processedFooter || undefined,
-                footerHeight: template.FooterHeight || 25
+                footerHeight: template.FooterHeight || 25,
+                format: format
               })
             });
             
-            if (!response.ok) throw new Error('Failed to generate PDF');
+            if (!response.ok) throw new Error(`Failed to generate ${format.toUpperCase()}`);
             return await response.blob();
           }}
         />

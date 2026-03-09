@@ -634,8 +634,8 @@ const AdaptationViewPage = (): JSX.Element => {
           resumeTitle={adaptation.ResumeTitle || adaptation['Mission Title'] || ''}
           currentVersion={1}
           onClose={() => setShowEmailModal(false)}
-          onGeneratePdf={async () => {
-            // Always fetch templates to ensure we have one for PDF generation
+          onGenerateAttachment={async (format) => {
+            // Always fetch templates to ensure we have one for document generation
             const allTemplates = await templateService.getAllTemplates();
             if (!allTemplates || allTemplates.length === 0) {
               throw new Error('No CV template available');
@@ -675,20 +675,24 @@ const AdaptationViewPage = (): JSX.Element => {
               </html>
             `;
 
-            const pdfFilename = `${name.replace(/[^a-zA-Z0-9]/g, '_')}_${title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+            // Determine endpoint and filename based on format
+            const endpoint = format === 'pdf' ? '/generate-pdf' : '/generate-docx';
+            const fileExtension = format === 'pdf' ? 'pdf' : format;
+            const filename = `${name.replace(/[^a-zA-Z0-9]/g, '_')}_${title.replace(/[^a-zA-Z0-9]/g, '_')}.${fileExtension}`;
             
             const options = await createAuthOptionsWithCsrf({
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 htmlContent,
-                filename: pdfFilename,
-                footerHeight: template.FooterHeight || 50
+                filename,
+                footerHeight: template.FooterHeight || 50,
+                format
               })
             });
 
-            const response = await fetchWithAuth('/generate-pdf', options);
-            if (!response.ok) throw new Error('Failed to generate PDF');
+            const response = await fetchWithAuth(endpoint, options);
+            if (!response.ok) throw new Error(`Failed to generate ${format.toUpperCase()}`);
             return await response.blob();
           }}
           prefilledClientId={adaptation['Mission Client ID'] as string | undefined}

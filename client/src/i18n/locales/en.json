@@ -335,6 +335,8 @@
         "loadingTemplates": "Loading templates...",
         "noTemplates": "No templates available",
         "preview": "Preview",
+        "format": "Format",
+        "export": "Export",
         "exportPDF": "Export as PDF",
         "exporting": "Exporting...",
         "sendEmail": "Send by email"

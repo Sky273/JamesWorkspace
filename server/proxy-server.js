@@ -542,7 +542,8 @@ const csrfExemptPaths = [
     '/api/auth/refresh',
     '/api/auth/logout',
     '/api/auth/register',
-    '/generate-pdf'  // PDF generation proxy - internal server-to-server call
+    '/generate-pdf',  // PDF generation proxy - internal server-to-server call
+    '/generate-docx'  // DOCX generation proxy - internal server-to-server call
 ];
 
 // Paths that start with these prefixes are exempt from CSRF (public consent response)
@@ -742,6 +743,40 @@ app.post('/generate-pdf', async (req, res) => {
     } catch (error) {
         safeLog('error', 'PDF proxy error', { error: error.message });
         res.status(500).json({ error: 'Failed to generate PDF', details: error.message });
+    }
+});
+
+app.post('/generate-docx', async (req, res) => {
+    try {
+        safeLog('info', 'Proxying DOCX generation request to PDF server');
+        
+        const response = await fetch(`${PDF_SERVER_URL}/generate-docx`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(req.body)
+        });
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            safeLog('error', 'DOCX server error', { status: response.status, error: errorText });
+            return res.status(response.status).json({ error: errorText });
+        }
+        
+        // Stream the DOCX response back to the client
+        const contentType = response.headers.get('Content-Type') || 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+        res.setHeader('Content-Type', contentType);
+        const contentDisposition = response.headers.get('Content-Disposition');
+        if (contentDisposition) {
+            res.setHeader('Content-Disposition', contentDisposition);
+        }
+        
+        const buffer = await response.arrayBuffer();
+        res.send(Buffer.from(buffer));
+    } catch (error) {
+        safeLog('error', 'DOCX proxy error', { error: error.message });
+        res.status(500).json({ error: 'Failed to generate DOCX', details: error.message });
     }
 });
 

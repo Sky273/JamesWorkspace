@@ -44,6 +44,8 @@ interface Contact {
   is_primary?: boolean;
 }
 
+export type AttachmentFormat = 'pdf' | 'docx' | 'doc';
+
 interface SendEmailModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -51,7 +53,8 @@ interface SendEmailModalProps {
   resumeId: string;
   resumeTitle?: string;
   currentVersion?: number;
-  onGeneratePdf: () => Promise<Blob>;
+  onGenerateAttachment: (format: AttachmentFormat) => Promise<Blob>;
+  attachmentFormat?: AttachmentFormat;
   // Pre-fill props for adaptation emails
   prefilledClientId?: string;
   prefilledContactId?: string;
@@ -61,7 +64,7 @@ interface SendEmailModalProps {
 
 type ModalStep = 'connect' | 'select' | 'sending' | 'success' | 'error';
 
-const SendEmailModal = ({ isOpen, onClose, resumeName, resumeId, resumeTitle, currentVersion, onGeneratePdf, prefilledClientId, prefilledContactId, missionTitle, isAdaptation }: SendEmailModalProps): JSX.Element | null => {
+const SendEmailModal = ({ isOpen, onClose, resumeName, resumeId, resumeTitle, currentVersion, onGenerateAttachment, attachmentFormat = 'pdf', prefilledClientId, prefilledContactId, missionTitle, isAdaptation }: SendEmailModalProps): JSX.Element | null => {
   const { t } = useTranslation();
   const { user } = useAuth();
   
@@ -291,8 +294,8 @@ const SendEmailModal = ({ isOpen, onClose, resumeName, resumeId, resumeTitle, cu
     setStep('sending');
 
     try {
-      // Generate PDF
-      const pdfBlob = await onGeneratePdf();
+      // Generate attachment (PDF, DOCX, or DOC)
+      const attachmentBlob = await onGenerateAttachment(attachmentFormat);
       
       // Convert to base64
       const reader = new FileReader();
@@ -302,7 +305,7 @@ const SendEmailModal = ({ isOpen, onClose, resumeName, resumeId, resumeTitle, cu
           resolve(base64);
         };
         reader.onerror = reject;
-        reader.readAsDataURL(pdfBlob);
+        reader.readAsDataURL(attachmentBlob);
       });
 
       // Create draft with submission tracking and template
