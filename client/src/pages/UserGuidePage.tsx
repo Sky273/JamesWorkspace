@@ -28,7 +28,8 @@ import {
   EnvelopeIcon,
   ShieldCheckIcon,
   UserCircleIcon,
-  FunnelIcon
+  FunnelIcon,
+  ServerIcon
 } from '@heroicons/react/24/outline';
 import userGuideContentFR from '@root/USER_GUIDE.md?raw';
 import userGuideContentEN from '@root/USER_GUIDE_EN.md?raw';
@@ -64,6 +65,7 @@ const UserGuidePage = (): JSX.Element => {
     { id: 'market-radar', title: 'Market Radar', icon: ChartBarIcon },
     { id: 'ai-assistant', title: 'AI Assistant', icon: ChatBubbleLeftRightIcon },
     { id: 'administration', title: 'Administration', icon: Cog6ToothIcon },
+    { id: 'database-backup', title: 'Database Backup', icon: ServerIcon },
     { id: 'gdpr-compliance', title: 'GDPR Compliance', icon: ShieldCheckIcon },
     { id: 'interface-and-navigation', title: 'Interface', icon: ComputerDesktopIcon },
     { id: 'best-practices', title: 'Best Practices', icon: LightBulbIcon },
@@ -86,6 +88,7 @@ const UserGuidePage = (): JSX.Element => {
     { id: 'radar-marche', title: 'Radar Marché', icon: ChartBarIcon },
     { id: 'assistant-ia', title: 'Assistant IA', icon: ChatBubbleLeftRightIcon },
     { id: 'administration', title: 'Administration', icon: Cog6ToothIcon },
+    { id: 'sauvegarde-de-la-base-de-donnees', title: 'Sauvegarde', icon: ServerIcon },
     { id: 'conformite-rgpd', title: 'Conformité RGPD', icon: ShieldCheckIcon },
     { id: 'interface-et-navigation', title: 'Interface', icon: ComputerDesktopIcon },
     { id: 'bonnes-pratiques', title: 'Bonnes Pratiques', icon: LightBulbIcon },
