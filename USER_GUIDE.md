@@ -15,14 +15,15 @@
 11. [Radar Marché](#radar-marché)
 12. [Assistant IA](#assistant-ia)
 13. [Administration](#administration)
-14. [Conformité RGPD](#conformité-rgpd)
-15. [Interface et Navigation](#interface-et-navigation)
-16. [Bonnes Pratiques](#bonnes-pratiques)
-17. [Dépannage](#dépannage)
-18. [FAQ](#faq)
-19. [Prochaines Étapes](#prochaines-étapes)
-20. [Glossaire](#glossaire)
-21. [Support](#support)
+14. [Sauvegarde de la Base de Données](#sauvegarde-de-la-base-de-données)
+15. [Conformité RGPD](#conformité-rgpd)
+16. [Interface et Navigation](#interface-et-navigation)
+17. [Bonnes Pratiques](#bonnes-pratiques)
+18. [Dépannage](#dépannage)
+19. [FAQ](#faq)
+20. [Prochaines Étapes](#prochaines-étapes)
+21. [Glossaire](#glossaire)
+22. [Support](#support)
 
 ---
 
@@ -1498,7 +1499,9 @@ Chaque métier contient :
 | **Savoirs** | Connaissances théoriques |
 | **Enjeux** | Défis et évolutions du métier |
 
-### Sauvegarde de la Base de Données
+---
+
+## Sauvegarde de la Base de Données
 
 La page **Sauvegarde** permet de configurer et gérer les sauvegardes automatiques de la base de données vers un serveur FTP ou SFTP distant.
 

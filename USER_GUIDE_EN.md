@@ -15,14 +15,15 @@
 11. [Market Radar](#market-radar)
 12. [AI Assistant](#ai-assistant)
 13. [Administration](#administration)
-14. [GDPR Compliance](#gdpr-compliance)
-15. [Interface and Navigation](#interface-and-navigation)
-16. [Best Practices](#best-practices)
-17. [Troubleshooting](#troubleshooting)
-18. [FAQ](#faq)
-19. [Roadmap](#roadmap)
-20. [Glossary](#glossary)
-21. [Support](#support)
+14. [Database Backup](#database-backup)
+15. [GDPR Compliance](#gdpr-compliance)
+16. [Interface and Navigation](#interface-and-navigation)
+17. [Best Practices](#best-practices)
+18. [Troubleshooting](#troubleshooting)
+19. [FAQ](#faq)
+20. [Roadmap](#roadmap)
+21. [Glossary](#glossary)
+22. [Support](#support)
 
 ---
 
@@ -1305,6 +1306,96 @@ View usage statistics:
 - Number of analyzed resumes
 - Adaptations created
 - LLM token usage
+
+---
+
+## Database Backup
+
+The **Backup** page allows you to configure and manage automatic database backups to a remote FTP or SFTP server.
+
+### Accessing the Backup Page
+
+1. Go to **"Backup"** in the sidebar menu (Administration section)
+2. The page displays connection settings and backup history
+
+### Connection Configuration
+
+Configure the backup server connection settings:
+
+| Parameter | Description |
+|-----------|-------------|
+| **Protocol** | FTP or SFTP |
+| **Host** | Server address (e.g., `ftp.example.com`) |
+| **Port** | Connection port (21 for FTP, 22 for SFTP) |
+| **Username** | FTP/SFTP username |
+| **Password** | Connection password |
+| **Remote Directory** | Destination folder on the server (e.g., `/backups`) |
+| **TLS Mode** | For FTP: Explicit (AUTH TLS), Implicit (port 990), or None |
+
+> **Security Recommendation**: Prefer SFTP or FTP with explicit TLS to encrypt transfers.
+
+### Testing the Connection
+
+Before enabling scheduled backups:
+
+1. Fill in the connection settings
+2. Click **"Test Connection"**
+3. Verify that the test shows "Connection successful"
+
+### Scheduled Backups
+
+Configure up to three types of automatic backups:
+
+| Type | Frequency | Configuration |
+|------|-----------|---------------|
+| **Daily** | Every day | Execution time (e.g., 02:00) |
+| **Weekly** | Once a week | Day and time (e.g., Sunday 03:00) |
+| **Monthly** | Once a month | Day of month and time (e.g., 1st at 04:00) |
+
+For each type:
+1. Enable the backup with the toggle
+2. Configure the execution time
+3. Set the **retention** (number of backups to keep)
+
+> **Tip**: Schedule backups during off-peak hours (night) to minimize performance impact.
+
+### Manual Backup
+
+To perform an immediate backup:
+
+1. Click **"Backup Now"**
+2. Select the backup type (daily, weekly, or monthly)
+3. The backup starts and its status appears in the history
+
+### Backup History
+
+The history displays all completed backups:
+
+| Column | Description |
+|--------|-------------|
+| **Date** | Backup date and time |
+| **Type** | Daily, Weekly, or Monthly |
+| **File** | Backup filename |
+| **Size** | Compressed file size |
+| **Status** | Success, Running, or Failed |
+
+### Restoration
+
+To restore a backup:
+
+1. Locate the backup in the history
+2. Click the **"Restore"** icon
+3. Confirm the restoration
+
+> **⚠️ Warning**: Restoration replaces all current data with the backup data. This action is irreversible.
+
+### Best Practices
+
+- **Test regularly** the FTP/SFTP connection
+- **Check the history** to ensure backups are running correctly
+- **Keep multiple versions** (retention of at least 7 days for daily backups)
+- **Test restoration** periodically on a test environment
+- **Monitor disk space** on the backup server
 
 ---
 
