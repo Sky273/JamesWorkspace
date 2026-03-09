@@ -1013,8 +1013,12 @@ async function onServerStart(protocol, port) {
     safeLog('info', 'GDPR Consent Scheduler started');
     
     // Start backup scheduler (scheduled database backups via FTP/SFTP)
-    initBackupScheduler();
-    safeLog('info', 'Backup Scheduler initialized');
+    try {
+        await initBackupScheduler();
+        safeLog('info', 'Backup Scheduler initialized');
+    } catch (error) {
+        safeLog('error', 'Failed to initialize Backup Scheduler', { error: error.message });
+    }
 }
 
 // Graceful shutdown with proper cleanup

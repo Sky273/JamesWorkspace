@@ -93,17 +93,32 @@ export async function initBackupScheduler() {
             return;
         }
         
+        // Log settings for debugging
+        safeLog('info', '[BackupScheduler] Loaded backup settings', {
+            host: settings.host ? '***configured***' : 'NOT SET',
+            daily_enabled: settings.daily_enabled,
+            daily_time: settings.daily_time,
+            weekly_enabled: settings.weekly_enabled,
+            weekly_day: settings.weekly_day,
+            weekly_time: settings.weekly_time,
+            monthly_enabled: settings.monthly_enabled,
+            monthly_day: settings.monthly_day,
+            monthly_time: settings.monthly_time
+        });
+        
         // Stop existing jobs before reinitializing
         stopAllJobs();
         
         // Daily backup
         if (settings.daily_enabled && settings.host) {
             const cronExpr = buildDailyCron(settings.daily_time);
+            safeLog('debug', '[BackupScheduler] Creating daily cron job', { cronExpr });
             cronJobs.daily = cron.schedule(cronExpr, () => executeBackup('daily'), {
-                scheduled: true,
+                scheduled: false,
                 timezone: 'Europe/Paris'
             });
-            safeLog('info', '[BackupScheduler] Daily backup scheduled', { 
+            cronJobs.daily.start();
+            safeLog('info', '[BackupScheduler] Daily backup scheduled and started', { 
                 cron: cronExpr,
                 time: settings.daily_time 
             });
@@ -112,12 +127,14 @@ export async function initBackupScheduler() {
         // Weekly backup
         if (settings.weekly_enabled && settings.host) {
             const cronExpr = buildWeeklyCron(settings.weekly_time, settings.weekly_day);
+            safeLog('debug', '[BackupScheduler] Creating weekly cron job', { cronExpr });
             cronJobs.weekly = cron.schedule(cronExpr, () => executeBackup('weekly'), {
-                scheduled: true,
+                scheduled: false,
                 timezone: 'Europe/Paris'
             });
+            cronJobs.weekly.start();
             const dayNames = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
-            safeLog('info', '[BackupScheduler] Weekly backup scheduled', { 
+            safeLog('info', '[BackupScheduler] Weekly backup scheduled and started', { 
                 cron: cronExpr,
                 day: dayNames[settings.weekly_day],
                 time: settings.weekly_time 
@@ -127,11 +144,13 @@ export async function initBackupScheduler() {
         // Monthly backup
         if (settings.monthly_enabled && settings.host) {
             const cronExpr = buildMonthlyCron(settings.monthly_time, settings.monthly_day);
+            safeLog('debug', '[BackupScheduler] Creating monthly cron job', { cronExpr });
             cronJobs.monthly = cron.schedule(cronExpr, () => executeBackup('monthly'), {
-                scheduled: true,
+                scheduled: false,
                 timezone: 'Europe/Paris'
             });
-            safeLog('info', '[BackupScheduler] Monthly backup scheduled', { 
+            cronJobs.monthly.start();
+            safeLog('info', '[BackupScheduler] Monthly backup scheduled and started', { 
                 cron: cronExpr,
                 dayOfMonth: settings.monthly_day,
                 time: settings.monthly_time 
