@@ -285,7 +285,7 @@ router.get('/memory', async (req, res) => {
             totalCacheEntries: 
                 (cacheStats.simpleCache.settings || 0) +
                 (cacheStats.simpleCache.templates || 0) +
-                (cacheStats.simpleCache.customers || 0) +
+                (cacheStats.simpleCache.firms || 0) +
                 (cacheStats.trends.size || 0) +
                 (cacheStats.facts.size || 0) +
                 (cacheStats.metiers.size || 0) +

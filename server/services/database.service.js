@@ -40,7 +40,7 @@ export async function initializeDatabase() {
         
         const tables = tablesResult.rows.map(row => row.table_name);
         const expectedTables = [
-            'customers',
+            'firms',
             'users',
             'llm_settings',
             'templates',

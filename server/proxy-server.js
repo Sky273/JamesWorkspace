@@ -107,6 +107,12 @@ import { initCalendarTokensTable, destroyCalendarService } from './services/cale
 
 const app = express();
 
+// Trust proxy - required when running behind reverse proxy (Docker, Nginx, etc.)
+// This enables correct IP detection for rate limiting and logging
+// 'loopback' trusts the local loopback interface (127.0.0.1, ::1)
+// In production behind a known proxy, you can use 1 or the proxy's IP
+app.set('trust proxy', 'loopback');
+
 // Configure axios with connection pooling
 configureAxios();
 

@@ -15,6 +15,7 @@ import {
   CheckCircleIcon
 } from '@heroicons/react/24/outline';
 import { ResumeVersion, ResumeVersionsResponse } from '../../types/entities';
+import { createSafeHtml } from '../../utils/sanitizer.frontend';
 import {
   getVersions,
   restoreVersion,
@@ -258,10 +259,10 @@ const VersionsPanel = ({
                           <div className="mt-4 p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
                             <div className="text-sm text-gray-600 dark:text-gray-300 max-h-48 overflow-y-auto prose prose-sm dark:prose-invert">
                               <div 
-                                dangerouslySetInnerHTML={{ 
-                                  __html: version.improvedText?.substring(0, 1000) + 
-                                    (version.improvedText?.length > 1000 ? '...' : '') 
-                                }} 
+                                dangerouslySetInnerHTML={createSafeHtml(
+                                  (version.improvedText?.substring(0, 1000) || '') + 
+                                    (version.improvedText?.length > 1000 ? '...' : '')
+                                )} 
                               />
                             </div>
                           </div>

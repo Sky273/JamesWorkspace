@@ -4,6 +4,7 @@
  */
 
 import { useTranslation } from 'react-i18next';
+import { createSafeHtml } from '../../utils/sanitizer.frontend';
 
 interface Resume {
   'Global Rating'?: string | number;
@@ -46,9 +47,9 @@ const CompareTab = ({ resume }: CompareTabProps): JSX.Element => {
           </div>
           <div className="prose prose-sm max-w-none dark:prose-invert max-h-[600px] overflow-y-auto">
             <div 
-              dangerouslySetInnerHTML={{ 
-                __html: resume['Original Text'] || '' 
-              }} 
+              dangerouslySetInnerHTML={createSafeHtml(
+                resume['Original Text'] || ''
+              )} 
             />
           </div>
         </div>
@@ -64,9 +65,9 @@ const CompareTab = ({ resume }: CompareTabProps): JSX.Element => {
           </div>
           <div className="prose prose-sm max-w-none dark:prose-invert max-h-[600px] overflow-y-auto">
             <div 
-              dangerouslySetInnerHTML={{ 
-                __html: resume['Improved Text'] || '' 
-              }} 
+              dangerouslySetInnerHTML={createSafeHtml(
+                resume['Improved Text'] || ''
+              )} 
             />
           </div>
         </div>

@@ -5,6 +5,7 @@
 
 import { ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import { createSafeHtml } from '../../utils/sanitizer.frontend';
 
 interface Resume {
   'Improved Text'?: string;
@@ -100,9 +101,9 @@ const ExportTab = ({ resume, templates, selectedTemplate, onTemplateChange, load
           </h3>
           <div className="prose prose-sm max-w-none dark:prose-invert max-h-96 overflow-y-auto">
             <div 
-              dangerouslySetInnerHTML={{ 
-                __html: resume['Improved Text'] || resume['Original Text'] || '' 
-              }} 
+              dangerouslySetInnerHTML={createSafeHtml(
+                resume['Improved Text'] || resume['Original Text'] || ''
+              )} 
             />
           </div>
         </div>

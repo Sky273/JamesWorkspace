@@ -776,7 +776,6 @@ async function extractFromPDF(buffer, fileName) {
                             pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
                             
                             statusEl.textContent = 'Decoding PDF data...';
-                            console.log('Starting PDF render...');
                             
                             const pdfBase64 = '${pdfBase64}';
                             const pdfData = atob(pdfBase64);
@@ -786,11 +785,9 @@ async function extractFromPDF(buffer, fileName) {
                             }
                             
                             statusEl.textContent = 'Loading PDF document...';
-                            console.log('PDF data decoded, length:', pdfArray.length);
                             
                             const loadingTask = pdfjsLib.getDocument({ data: pdfArray });
                             const pdf = await loadingTask.promise;
-                            console.log('PDF loaded, pages:', pdf.numPages);
                             
                             statusEl.textContent = 'Rendering page 1...';
                             const pdfPage = await pdf.getPage(1);
@@ -803,8 +800,6 @@ async function extractFromPDF(buffer, fileName) {
                             canvas.height = viewport.height;
                             canvas.width = viewport.width;
                             
-                            console.log('Canvas size:', canvas.width, 'x', canvas.height);
-                            
                             const renderContext = {
                                 canvasContext: context,
                                 viewport: viewport
@@ -813,7 +808,6 @@ async function extractFromPDF(buffer, fileName) {
                             await pdfPage.render(renderContext).promise;
                             
                             statusEl.style.display = 'none';
-                            console.log('PDF rendered successfully');
                             window.pdfRendered = true;
                         } catch (err) {
                             console.error('PDF render error:', err);
