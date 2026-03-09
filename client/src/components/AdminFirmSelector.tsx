@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { TFunction } from 'i18next';
 import { BuildingOfficeIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '../context/AuthContext';
 import userService from '../utils/userService';
@@ -20,8 +21,7 @@ interface AdminFirmSelectorProps {
   label?: string;
   className?: string;
   disabled?: boolean;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  t: any;
+  t: TFunction;
 }
 
 // Special value to indicate "my firm" selection

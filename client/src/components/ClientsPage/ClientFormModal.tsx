@@ -3,6 +3,7 @@
  */
 
 import { useState, useEffect, FormEvent, ChangeEvent } from 'react';
+import { TFunction } from 'i18next';
 import Modal from './Modal';
 import { Client, ClientType, ClientStatus } from '../../types/entities';
 import clientService from '../../utils/clientService';
@@ -13,8 +14,7 @@ interface ClientFormModalProps {
   onClose: () => void;
   onSubmit: (data: Partial<Client> & { firm_id?: string }) => void;
   client: Client | null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  t: any;
+  t: TFunction;
 }
 
 const ClientFormModal = ({ isOpen, onClose, onSubmit, client, t }: ClientFormModalProps): JSX.Element => {
