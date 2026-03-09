@@ -1498,6 +1498,94 @@ Chaque métier contient :
 | **Savoirs** | Connaissances théoriques |
 | **Enjeux** | Défis et évolutions du métier |
 
+### Sauvegarde de la Base de Données
+
+La page **Sauvegarde** permet de configurer et gérer les sauvegardes automatiques de la base de données vers un serveur FTP ou SFTP distant.
+
+#### Accéder à la Page Sauvegarde
+
+1. Accédez à **"Sauvegarde"** dans le menu latéral (section Administration)
+2. La page affiche les paramètres de connexion et l'historique des sauvegardes
+
+#### Configuration de la Connexion
+
+Configurez les paramètres de connexion au serveur de sauvegarde :
+
+| Paramètre | Description |
+|-----------|-------------|
+| **Protocole** | FTP ou SFTP |
+| **Hôte** | Adresse du serveur (ex: `ftp.exemple.com`) |
+| **Port** | Port de connexion (21 pour FTP, 22 pour SFTP) |
+| **Utilisateur** | Nom d'utilisateur FTP/SFTP |
+| **Mot de passe** | Mot de passe de connexion |
+| **Répertoire distant** | Dossier de destination sur le serveur (ex: `/backups`) |
+| **Mode TLS** | Pour FTP : Explicite (AUTH TLS), Implicite (port 990) ou Aucun |
+
+> **Recommandation sécurité** : Privilégiez SFTP ou FTP avec TLS explicite pour chiffrer les transferts.
+
+#### Tester la Connexion
+
+Avant d'activer les sauvegardes planifiées :
+
+1. Remplissez les paramètres de connexion
+2. Cliquez sur **"Tester la connexion"**
+3. Vérifiez que le test affiche "Connexion réussie"
+
+#### Sauvegardes Planifiées
+
+Configurez jusqu'à trois types de sauvegardes automatiques :
+
+| Type | Fréquence | Configuration |
+|------|-----------|---------------|
+| **Quotidienne** | Tous les jours | Heure d'exécution (ex: 02:00) |
+| **Hebdomadaire** | Une fois par semaine | Jour et heure (ex: Dimanche 03:00) |
+| **Mensuelle** | Une fois par mois | Jour du mois et heure (ex: 1er à 04:00) |
+
+Pour chaque type :
+1. Activez la sauvegarde avec le toggle
+2. Configurez l'heure d'exécution
+3. Définissez la **rétention** (nombre de sauvegardes à conserver)
+
+> **Conseil** : Planifiez les sauvegardes pendant les heures creuses (nuit) pour minimiser l'impact sur les performances.
+
+#### Sauvegarde Manuelle
+
+Pour effectuer une sauvegarde immédiate :
+
+1. Cliquez sur **"Sauvegarder maintenant"**
+2. Sélectionnez le type de sauvegarde (quotidienne, hebdomadaire ou mensuelle)
+3. La sauvegarde démarre et son statut s'affiche dans l'historique
+
+#### Historique des Sauvegardes
+
+L'historique affiche toutes les sauvegardes effectuées :
+
+| Colonne | Description |
+|---------|-------------|
+| **Date** | Date et heure de la sauvegarde |
+| **Type** | Quotidienne, Hebdomadaire ou Mensuelle |
+| **Fichier** | Nom du fichier de sauvegarde |
+| **Taille** | Taille du fichier compressé |
+| **Statut** | Succès, En cours ou Échec |
+
+#### Restauration
+
+Pour restaurer une sauvegarde :
+
+1. Localisez la sauvegarde dans l'historique
+2. Cliquez sur l'icône **"Restaurer"**
+3. Confirmez la restauration
+
+> **⚠️ Attention** : La restauration remplace toutes les données actuelles par celles de la sauvegarde. Cette action est irréversible.
+
+#### Bonnes Pratiques
+
+- **Testez régulièrement** la connexion FTP/SFTP
+- **Vérifiez l'historique** pour vous assurer que les sauvegardes s'exécutent correctement
+- **Conservez plusieurs versions** (rétention d'au moins 7 jours pour les quotidiennes)
+- **Testez la restauration** périodiquement sur un environnement de test
+- **Surveillez l'espace disque** sur le serveur de sauvegarde
+
 ---
 
 ## Conformité RGPD
