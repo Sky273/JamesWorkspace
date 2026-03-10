@@ -11,20 +11,8 @@ import type * as PDFJS from 'pdfjs-dist';
 
 type PDFJSModule = typeof PDFJS;
 
-// Lazy load word-extractor only when needed (it's a Node.js library with browser compatibility issues)
-let WordExtractor: unknown = null;
-const loadWordExtractor = async (): Promise<unknown> => {
-    if (!WordExtractor) {
-        try {
-            const module = await import('word-extractor');
-            WordExtractor = module.default;
-        } catch (error) {
-            logger.warn('word-extractor not available, falling back to mammoth for .doc files');
-            return null;
-        }
-    }
-    return WordExtractor;
-};
+// Note: word-extractor is now used server-side only (see /api/resumes/extract-doc)
+// because it's a Node.js library that doesn't work in browsers
 
 // PDF.js module reference (loaded lazily)
 let pdfjsModule: PDFJSModule | null = null;
@@ -293,34 +281,41 @@ export async function extractTextFromDOCX(file: File): Promise<string> {
 
 /**
  * Extract text from DOC (Word 97-2003)
- * Falls back to mammoth if word-extractor is not available
+ * Uses server-side extraction because word-extractor is a Node.js library
+ * that doesn't work in browsers
  */
 export async function extractTextFromDOC(file: File): Promise<string> {
     try {
-        logger.log('Extracting text from DOC file (Word 97-2003)...');
+        logger.log('Extracting text from DOC file (Word 97-2003) via server...');
         
-        // Try to load word-extractor dynamically
-        const WordExtractorClass = await loadWordExtractor() as { new(): { extract: (buffer: Uint8Array | ArrayBuffer) => Promise<{ getBody: () => string }> } } | null;
+        // DOC files require server-side extraction using word-extractor
+        // because it's a Node.js library that doesn't work in browsers
+        const formData = new FormData();
+        formData.append('file', file);
         
-        if (WordExtractorClass) {
-            const extractor = new WordExtractorClass();
-            const arrayBuffer = await file.arrayBuffer();
-            // Use Uint8Array instead of Buffer for browser compatibility (Vite 7)
-            const uint8Array = new Uint8Array(arrayBuffer);
-            
-            const extracted = await extractor.extract(uint8Array);
-            const text = extracted.getBody().trim();
-            logger.log(`Successfully extracted ${text.length} characters from DOC using word-extractor`);
-            return text;
-        } else {
-            // Fallback to mammoth for .doc files (may have limited support)
-            logger.log('Falling back to mammoth for DOC extraction...');
-            const arrayBuffer = await file.arrayBuffer();
-            const result = await mammoth.extractRawText({ arrayBuffer });
-            const text = result.value.trim();
-            logger.log(`Successfully extracted ${text.length} characters from DOC using mammoth`);
-            return text;
+        // Import dynamically to avoid circular dependencies
+        const { fetchWithAuth, createAuthOptionsWithCsrf } = await import('./apiInterceptor');
+        
+        const options = await createAuthOptionsWithCsrf({
+            method: 'POST',
+            body: formData
+        });
+        
+        // Remove Content-Type to let browser set it with boundary
+        if (options.headers) {
+            delete options.headers['Content-Type'];
         }
+        
+        const response = await fetchWithAuth('/api/resumes/extract-doc', options);
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: 'Failed to extract text from DOC' }));
+            throw new Error(errorData.error || 'Failed to extract text from DOC file');
+        }
+        
+        const { text } = await response.json();
+        logger.log(`Successfully extracted ${text.length} characters from DOC via server`);
+        return text;
     } catch (error) {
         logger.error('Error extracting text from DOC:', error);
         throw new Error(`Failed to extract text from DOC: ${error instanceof Error ? error.message : 'Unknown error'}`);

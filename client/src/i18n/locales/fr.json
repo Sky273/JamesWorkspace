@@ -449,6 +449,7 @@
     "title": "CVthèque",
     "subtitle": "Gérez et analysez les profils de vos consultants",
     "uploadButton": "Télécharger un nouveau CV",
+    "batchUploadButton": "Import par lot",
     "searchPlaceholder": "Rechercher des CV...",
     "filterButton": "Filtrer",
     "noResults": "Aucun CV trouvé",
@@ -476,7 +477,8 @@
       "improved": "Amélioré",
       "processing": "En cours",
       "analyzed": "Analysé",
-      "error": "Erreur"
+      "error": "Erreur",
+      "active": "Actif"
     },
     "stats": {
       "total": "Total CVs",

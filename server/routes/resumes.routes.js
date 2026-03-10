@@ -518,6 +518,65 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
     }
 });
 
+// POST /api/resumes/extract-doc - Extract text from DOC file (Word 97-2003)
+// This endpoint is needed because word-extractor is a Node.js library that doesn't work in browsers
+router.post('/extract-doc', authenticateToken, upload.single('file'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'No file uploaded' });
+        }
+
+        const fileBuffer = await fs.readFile(req.file.path);
+        
+        // Dynamic import of word-extractor
+        let text = '';
+        try {
+            const WordExtractor = (await import('word-extractor')).default;
+            const extractor = new WordExtractor();
+            const extracted = await extractor.extract(fileBuffer);
+            text = extracted.getBody().trim();
+            safeLog('info', 'Successfully extracted text from DOC file', { 
+                fileName: req.file.originalname,
+                textLength: text.length 
+            });
+        } catch (extractError) {
+            safeLog('error', 'word-extractor failed', { error: extractError.message });
+            
+            // Fallback: try mammoth (limited support for .doc)
+            try {
+                const mammoth = (await import('mammoth')).default;
+                const result = await mammoth.extractRawText({ buffer: fileBuffer });
+                text = result.value.trim();
+                safeLog('info', 'Extracted text from DOC using mammoth fallback', { 
+                    fileName: req.file.originalname,
+                    textLength: text.length 
+                });
+            } catch (mammothError) {
+                safeLog('error', 'mammoth fallback also failed', { error: mammothError.message });
+                throw new Error(`Failed to extract text from DOC file. The file may be corrupted or in an unsupported format.`);
+            }
+        }
+
+        // Clean up temp file
+        await fs.unlink(req.file.path).catch(() => {});
+
+        if (!text || text.length < 10) {
+            return res.status(400).json({ 
+                error: 'Could not extract meaningful text from the DOC file. The file may be empty or corrupted.' 
+            });
+        }
+
+        res.json({ text });
+    } catch (error) {
+        // Clean up temp file on error
+        if (req.file?.path) {
+            await fs.unlink(req.file.path).catch(() => {});
+        }
+        safeLog('error', 'Error extracting text from DOC', { error: error.message });
+        res.status(500).json({ error: error.message || 'Failed to extract text from DOC file' });
+    }
+});
+
 // POST /api/resumes/upload - Upload resume file
 router.post('/upload', authenticateToken, upload.single('file'), async (req, res) => {
     try {

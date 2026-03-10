@@ -10,7 +10,8 @@ import {
   ArrowPathIcon,
   PlusIcon,
   ChevronDownIcon,
-  XMarkIcon
+  XMarkIcon,
+  FolderArrowDownIcon
 } from '@heroicons/react/24/outline';
 
 interface SearchAndActionsProps {
@@ -21,6 +22,7 @@ interface SearchAndActionsProps {
   selectedTagsCount: number;
   onRefresh: () => void;
   onUpload: () => void;
+  onBatchUpload?: () => void;
   onReset?: () => void;
   t: (key: string) => string;
 }
@@ -33,6 +35,7 @@ const SearchAndActions = ({
   selectedTagsCount,
   onRefresh, 
   onUpload,
+  onBatchUpload,
   onReset,
   t 
 }: SearchAndActionsProps): JSX.Element => {
@@ -85,6 +88,16 @@ const SearchAndActions = ({
           >
             <XMarkIcon className="w-4 h-4" />
             <span className="hidden sm:inline">{t('common.resetFilters')}</span>
+          </button>
+        )}
+        {onBatchUpload && (
+          <button
+            onClick={onBatchUpload}
+            className="flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors text-sm sm:text-base"
+            title={t('resumes.batchUploadButton')}
+          >
+            <FolderArrowDownIcon className="w-5 h-5" />
+            <span className="hidden sm:inline">{t('resumes.batchUploadButton')}</span>
           </button>
         )}
         <button

@@ -364,6 +364,7 @@ const ResumesPage = (): JSX.Element => {
           selectedTagsCount={selectedTags.length}
           onRefresh={fetchResumes}
           onUpload={() => navigate('/upload?new')}
+          onBatchUpload={() => navigate('/batch-upload')}
           onReset={clearFilters}
           t={t}
         />

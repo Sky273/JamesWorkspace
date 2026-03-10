@@ -230,6 +230,7 @@
     "title": "Resume Library",
     "subtitle": "Manage and analyze your consultants' profiles",
     "uploadButton": "Upload New Resume",
+    "batchUploadButton": "Batch Import",
     "searchPlaceholder": "Search resumes...",
     "filterButton": "Filter",
     "noResults": "No resumes found",
@@ -257,7 +258,8 @@
       "improved": "Improved",
       "processing": "Processing",
       "analyzed": "Analyzed",
-      "error": "Error"
+      "error": "Error",
+      "active": "Active"
     },
     "stats": {
       "total": "Total Resumes",
