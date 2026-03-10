@@ -4,7 +4,7 @@
  * CVs are treated as internal (employee) without candidate name for GDPR
  */
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useDropzone, FileRejection } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -17,7 +17,8 @@ import {
   ArrowPathIcon,
   SparklesIcon,
   DocumentTextIcon,
-  FolderArrowDownIcon
+  FolderArrowDownIcon,
+  ArrowDownTrayIcon
 } from '@heroicons/react/24/outline';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { useAuth } from '../context/AuthContext';
@@ -26,15 +27,18 @@ import { extractResumeText } from '../utils/resumeProcessing';
 import logger from '../utils/logger.frontend';
 import toast from 'react-hot-toast';
 import AdminFirmSelector from '../components/AdminFirmSelector';
+import { templateService, Template } from '../utils/templateService';
 
 interface FileStatus {
   file: File;
-  status: 'pending' | 'uploading' | 'extracting' | 'analyzing' | 'improving' | 'success' | 'error';
+  status: 'pending' | 'uploading' | 'extracting' | 'analyzing' | 'improving' | 'exporting' | 'success' | 'error';
   progress: number;
   error?: string;
   resumeId?: string;
   resumeName?: string;
 }
+
+type ExportFormat = 'pdf' | 'docx' | 'doc';
 
 const BatchUploadPage = (): JSX.Element => {
   const { t } = useTranslation();
@@ -44,18 +48,116 @@ const BatchUploadPage = (): JSX.Element => {
   
   const [files, setFiles] = useState<FileStatus[]>([]);
   const [improveOption, setImproveOption] = useState<boolean>(false);
+  const [exportOption, setExportOption] = useState<boolean>(false);
+  const [deleteAfterExport, setDeleteAfterExport] = useState<boolean>(false);
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<string>('');
+  const [exportFormat, setExportFormat] = useState<ExportFormat>('pdf');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const [isExporting, setIsExporting] = useState<boolean>(false);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  const [resumesDeleted, setResumesDeleted] = useState<boolean>(false); // Track if resumes were deleted
   const [selectedFirmId, setSelectedFirmId] = useState<string>('');
+  const [showClearConfirm, setShowClearConfirm] = useState<boolean>(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const processedResumeIdsRef = useRef<string[]>([]);
+  const filesRef = useRef<FileStatus[]>([]); // Ref to track current files state
+  const timeoutRefs = useRef<NodeJS.Timeout[]>([]); // Track timeouts for cleanup
+  const isMountedRef = useRef<boolean>(true); // Track component mount state
+  
+  // Constants
+  const MAX_FILES = 100;
+
+  // Cleanup on unmount
+  useEffect(() => {
+    isMountedRef.current = true;
+    
+    return () => {
+      isMountedRef.current = false;
+      
+      // Abort any ongoing processing
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+      
+      // Clear all pending timeouts
+      timeoutRefs.current.forEach(timeout => clearTimeout(timeout));
+      timeoutRefs.current = [];
+      
+      // Clear refs to allow garbage collection
+      filesRef.current = [];
+      processedResumeIdsRef.current = [];
+    };
+  }, []);
+
+  // Load templates when export option is enabled
+  useEffect(() => {
+    if (exportOption && templates.length === 0) {
+      let isCancelled = false;
+      
+      templateService.getAllTemplates()
+        .then(fetchedTemplates => {
+          if (!isCancelled && isMountedRef.current) {
+            setTemplates(fetchedTemplates);
+            if (fetchedTemplates.length > 0) {
+              setSelectedTemplate(fetchedTemplates[0].id);
+            }
+          }
+        })
+        .catch(err => {
+          if (!isCancelled && isMountedRef.current) {
+            logger.error('Error fetching templates:', err);
+            toast.error('Erreur lors du chargement des modèles');
+          }
+        });
+      
+      return () => {
+        isCancelled = true;
+      };
+    }
+  }, [exportOption, templates.length]);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
-    const newFiles: FileStatus[] = acceptedFiles.map(file => ({
+    // Check file limit
+    const currentCount = filesRef.current.length;
+    const availableSlots = MAX_FILES - currentCount;
+    
+    if (availableSlots <= 0) {
+      toast.error(t('batchUpload.maxFilesReached', `Maximum ${MAX_FILES} fichiers autorisés`));
+      return;
+    }
+    
+    // Limit files to available slots
+    const filesToAdd = acceptedFiles.slice(0, availableSlots);
+    if (filesToAdd.length < acceptedFiles.length) {
+      toast(t('batchUpload.someFilesSkipped', `${acceptedFiles.length - filesToAdd.length} fichier(s) ignoré(s) (limite: ${MAX_FILES})`), { icon: '⚠️' });
+    }
+    
+    // Filter duplicates by filename
+    const existingNames = new Set(filesRef.current.map(f => f.file.name));
+    const uniqueFiles = filesToAdd.filter(file => {
+      if (existingNames.has(file.name)) {
+        toast(t('batchUpload.duplicateSkipped', `"${file.name}" déjà dans la liste`), { icon: '⚠️' });
+        return false;
+      }
+      return true;
+    });
+    
+    if (uniqueFiles.length === 0) return;
+    
+    const newFiles: FileStatus[] = uniqueFiles.map(file => ({
       file,
       status: 'pending',
       progress: 0
     }));
-    setFiles(prev => [...prev, ...newFiles]);
-  }, []);
+    
+    setFiles(prev => {
+      const updated = [...prev, ...newFiles];
+      filesRef.current = updated;
+      return updated;
+    });
+  }, [t]);
 
   const onDropRejected = useCallback((fileRejections: FileRejection[]) => {
     fileRejections.forEach(rejection => {
@@ -86,15 +188,35 @@ const BatchUploadPage = (): JSX.Element => {
   });
 
   const removeFile = (index: number) => {
-    setFiles(prev => prev.filter((_, i) => i !== index));
+    setFiles(prev => {
+      const updated = prev.filter((_, i) => i !== index);
+      filesRef.current = updated;
+      return updated;
+    });
   };
 
   const clearAllFiles = () => {
     setFiles([]);
+    filesRef.current = [];
+    setShowClearConfirm(false);
   };
 
   const updateFileStatus = (index: number, updates: Partial<FileStatus>) => {
-    setFiles(prev => prev.map((f, i) => i === index ? { ...f, ...updates } : f));
+    if (!isMountedRef.current) return; // Guard against unmount
+    setFiles(prev => {
+      const updated = prev.map((f, i) => i === index ? { ...f, ...updates } : f);
+      filesRef.current = updated;
+      return updated;
+    });
+  };
+  
+  // Retry a failed file
+  const retryFile = (index: number) => {
+    setFiles(prev => {
+      const updated = prev.map((f, i) => i === index ? { ...f, status: 'pending' as const, progress: 0, error: undefined } : f);
+      filesRef.current = updated;
+      return updated;
+    });
   };
 
   const processFile = async (fileStatus: FileStatus, index: number, signal: AbortSignal): Promise<void> => {
@@ -139,6 +261,11 @@ const BatchUploadPage = (): JSX.Element => {
         resumeName: uploadedResume.Name,
         progress: 25 
       });
+      
+      // Track this resume ID for potential deletion later
+      if (uploadedResume.id) {
+        processedResumeIdsRef.current.push(uploadedResume.id);
+      }
       
       // Step 2: Extract text
       updateFileStatus(index, { status: 'extracting', progress: 35 });
@@ -303,39 +430,202 @@ const BatchUploadPage = (): JSX.Element => {
   };
 
   const startProcessing = async () => {
-    if (files.length === 0) {
-      toast.error('Aucun fichier à traiter');
+    const currentFiles = filesRef.current;
+    if (currentFiles.length === 0) {
+      toast.error(t('batchUpload.noFiles', 'Aucun fichier à traiter'));
       return;
     }
     
     setIsProcessing(true);
     abortControllerRef.current = new AbortController();
+    processedResumeIdsRef.current = []; // Reset the list of processed resume IDs
     
     // Process files sequentially to avoid overwhelming the server
-    for (let i = 0; i < files.length; i++) {
+    for (let i = 0; i < currentFiles.length; i++) {
       if (abortControllerRef.current.signal.aborted) break;
       
-      if (files[i].status === 'pending') {
-        await processFile(files[i], i, abortControllerRef.current.signal);
+      // Use filesRef to get current status (avoids stale closure)
+      if (filesRef.current[i]?.status === 'pending') {
+        await processFile(filesRef.current[i], i, abortControllerRef.current.signal);
       }
     }
     
-    setIsProcessing(false);
-    
-    const successCount = files.filter(f => f.status === 'success').length;
-    const errorCount = files.filter(f => f.status === 'error').length;
-    
-    if (successCount > 0) {
-      toast.success(`${successCount} CV(s) traité(s) avec succès`);
+    if (isMountedRef.current) {
+      setIsProcessing(false);
     }
-    if (errorCount > 0) {
-      toast.error(`${errorCount} CV(s) en erreur`);
+    
+    // Use filesRef to get accurate counts (avoids stale closure issue)
+    const updatedFiles = filesRef.current;
+    const finalSuccessCount = updatedFiles.filter(f => f.status === 'success').length;
+    const finalErrorCount = updatedFiles.filter(f => f.status === 'error').length;
+    
+    if (finalSuccessCount > 0) {
+      toast.success(t('batchUpload.successCount', `${finalSuccessCount} CV(s) traité(s) avec succès`));
+      
+      // Auto-trigger batch export if option is enabled, then delete if requested
+      if (exportOption && selectedTemplate) {
+        // Small delay to ensure state is updated - track timeout for cleanup
+        const exportTimeout = setTimeout(async () => {
+          if (!isMountedRef.current) return; // Guard against unmount
+          
+          await startBatchExport();
+          
+          // Delete resumes after export (regardless of export success) if option is enabled
+          if (deleteAfterExport && isMountedRef.current) {
+            await deleteProcessedResumes();
+          }
+        }, 500);
+        timeoutRefs.current.push(exportTimeout);
+      } else if (deleteAfterExport) {
+        // Delete without export if only delete option is enabled - track timeout
+        const deleteTimeout = setTimeout(async () => {
+          if (!isMountedRef.current) return; // Guard against unmount
+          await deleteProcessedResumes();
+        }, 500);
+        timeoutRefs.current.push(deleteTimeout);
+      }
     }
+    if (finalErrorCount > 0) {
+      toast.error(t('batchUpload.errorCount', `${finalErrorCount} CV(s) en erreur`));
+    }
+  };
+  
+  // Estimate processing time based on options
+  const getEstimatedTime = (): string => {
+    const pending = filesRef.current.filter(f => f.status === 'pending').length;
+    if (pending === 0) return '';
+    
+    // Base time: ~10s per file for upload+extract+analyze
+    // Improve adds ~45s per file
+    let secondsPerFile = 10;
+    if (improveOption) secondsPerFile += 45;
+    
+    const totalSeconds = pending * secondsPerFile;
+    const minutes = Math.ceil(totalSeconds / 60);
+    
+    if (minutes < 1) return t('batchUpload.estimatedTime', '< 1 minute');
+    if (minutes === 1) return t('batchUpload.estimatedTime1min', '~1 minute');
+    return t('batchUpload.estimatedTimeMinutes', `~${minutes} minutes`);
   };
 
   const cancelProcessing = () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
+    }
+  };
+
+  // Batch export function - generates ZIP with all successful resumes
+  const startBatchExport = async () => {
+    // Use filesRef to avoid stale closure issue
+    const successfulFiles = filesRef.current.filter(f => f.status === 'success' && f.resumeId);
+    
+    if (successfulFiles.length === 0) {
+      toast.error(t('batchUpload.noFilesToExport', 'Aucun CV traité à exporter'));
+      return false;
+    }
+    
+    if (!selectedTemplate) {
+      toast.error(t('batchUpload.selectTemplate', 'Veuillez sélectionner un modèle'));
+      return false;
+    }
+    
+    setIsExporting(true);
+    
+    try {
+      const resumeIds = successfulFiles.map(f => f.resumeId).filter(Boolean);
+      
+      const options = await createAuthOptionsWithCsrf({
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          resumeIds,
+          templateId: selectedTemplate,
+          format: exportFormat
+        })
+      });
+      
+      const response = await fetchWithAuth('/api/batch-export', options);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Erreur d\'export' }));
+        throw new Error(errorData.error || 'Erreur lors de l\'export');
+      }
+      
+      // Download ZIP file
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `export_cvs_${new Date().toISOString().split('T')[0]}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      
+      toast.success(`${resumeIds.length} CV(s) exporté(s) avec succès`);
+      
+      // Return true to indicate successful export (for delete after export flow)
+      return true;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
+      logger.error('[BatchUpload] Export error:', error);
+      toast.error(errorMessage);
+      return false;
+    } finally {
+      if (isMountedRef.current) {
+        setIsExporting(false);
+      }
+    }
+  };
+
+  // Delete all successfully processed resumes using the ref (avoids closure issues)
+  const deleteProcessedResumes = async () => {
+    if (!isMountedRef.current) return;
+    
+    const resumeIdsToDelete = processedResumeIdsRef.current;
+    
+    if (resumeIdsToDelete.length === 0) {
+      logger.warn('[BatchUpload] No resume IDs to delete');
+      return;
+    }
+    
+    logger.info(`[BatchUpload] Deleting ${resumeIdsToDelete.length} resumes`);
+    setIsDeleting(true);
+    let deletedCount = 0;
+    
+    try {
+      for (const resumeId of resumeIdsToDelete) {
+        try {
+          const options = await createAuthOptionsWithCsrf({
+            method: 'DELETE'
+          });
+          
+          const response = await fetchWithAuth(`/api/resumes/${resumeId}`, options);
+          
+          if (response.ok) {
+            deletedCount++;
+            logger.debug(`[BatchUpload] Deleted resume ${resumeId}`);
+          } else {
+            logger.warn(`[BatchUpload] Failed to delete resume ${resumeId}`);
+          }
+        } catch (err) {
+          logger.error(`[BatchUpload] Error deleting resume ${resumeId}:`, err);
+        }
+      }
+      
+      // Clear the ref after deletion
+      processedResumeIdsRef.current = [];
+      
+      if (deletedCount > 0) {
+        toast.success(`${deletedCount} CV(s) supprimé(s) de la base de données`);
+        if (isMountedRef.current) {
+          setResumesDeleted(true); // Mark that resumes have been deleted
+        }
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setIsDeleting(false);
+      }
     }
   };
 
@@ -349,6 +639,7 @@ const BatchUploadPage = (): JSX.Element => {
       case 'extracting':
       case 'analyzing':
       case 'improving':
+      case 'exporting':
         return <ArrowPathIcon className="w-5 h-5 text-blue-500 animate-spin" />;
       default:
         return <DocumentTextIcon className="w-5 h-5 text-gray-400" />;
@@ -357,20 +648,24 @@ const BatchUploadPage = (): JSX.Element => {
 
   const getStatusText = (status: FileStatus['status']) => {
     switch (status) {
-      case 'pending': return 'En attente';
-      case 'uploading': return 'Upload...';
-      case 'extracting': return 'Extraction...';
-      case 'analyzing': return 'Analyse...';
-      case 'improving': return 'Amélioration...';
-      case 'success': return 'Terminé';
-      case 'error': return 'Erreur';
+      case 'pending': return t('batchUpload.status.pending', 'En attente');
+      case 'uploading': return t('batchUpload.status.uploading', 'Upload...');
+      case 'extracting': return t('batchUpload.status.extracting', 'Extraction...');
+      case 'analyzing': return t('batchUpload.status.analyzing', 'Analyse...');
+      case 'improving': return t('batchUpload.status.improving', 'Amélioration...');
+      case 'exporting': return t('batchUpload.status.exporting', 'Export...');
+      case 'success': return t('batchUpload.status.success', 'Terminé');
+      case 'error': return t('batchUpload.status.error', 'Erreur');
       default: return '';
     }
   };
 
-  const pendingCount = files.filter(f => f.status === 'pending').length;
-  const successCount = files.filter(f => f.status === 'success').length;
-  const errorCount = files.filter(f => f.status === 'error').length;
+  // Memoize counters to avoid recalculating on every render
+  const { pendingCount, successCount, errorCount } = useMemo(() => ({
+    pendingCount: files.filter(f => f.status === 'pending').length,
+    successCount: files.filter(f => f.status === 'success').length,
+    errorCount: files.filter(f => f.status === 'error').length
+  }), [files]);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
@@ -398,7 +693,7 @@ const BatchUploadPage = (): JSX.Element => {
           className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-6"
         >
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Options de traitement
+            {t('batchUpload.processingOptions', 'Options de traitement')}
           </h2>
           
           <div className="space-y-4">
@@ -421,7 +716,122 @@ const BatchUploadPage = (): JSX.Element => {
             
             {improveOption && (
               <p className="text-sm text-amber-600 dark:text-amber-400 ml-8">
-                ⚠️ L'amélioration prend plus de temps (environ 30-60 secondes par CV)
+                ⚠️ {t('batchUpload.improveWarning', 'L\'amélioration prend plus de temps (environ 30-60 secondes par CV)')}
+              </p>
+            )}
+
+            {/* Export option */}
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={exportOption}
+                onChange={(e) => setExportOption(e.target.checked)}
+                disabled={isProcessing}
+                className="w-5 h-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700"
+              />
+              <div className="flex items-center gap-2">
+                <ArrowDownTrayIcon className="w-5 h-5 text-green-500" />
+                <span className="text-gray-700 dark:text-gray-300">
+                  {t('batchUpload.exportOption', 'Exporter les CVs après traitement (ZIP)')}
+                </span>
+              </div>
+            </label>
+
+            {/* Export options - template and format selection */}
+            {exportOption && (
+              <div className="ml-8 space-y-3 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {t('batchUpload.exportTemplate', 'Modèle d\'export')}
+                  </label>
+                  <select
+                    value={selectedTemplate}
+                    onChange={(e) => setSelectedTemplate(e.target.value)}
+                    disabled={isProcessing || templates.length === 0}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                  >
+                    {templates.length === 0 ? (
+                      <option value="">{t('batchUpload.loadingTemplates', 'Chargement des modèles...')}</option>
+                    ) : (
+                      templates.map(template => (
+                        <option key={template.id} value={template.id}>
+                          {template.Name}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {t('batchUpload.exportFormat', 'Format d\'export')}
+                  </label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="exportFormat"
+                        value="pdf"
+                        checked={exportFormat === 'pdf'}
+                        onChange={() => setExportFormat('pdf')}
+                        disabled={isProcessing}
+                        className="text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <span className="text-gray-700 dark:text-gray-300">PDF</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="exportFormat"
+                        value="docx"
+                        checked={exportFormat === 'docx'}
+                        onChange={() => setExportFormat('docx')}
+                        disabled={isProcessing}
+                        className="text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <span className="text-gray-700 dark:text-gray-300">DOCX</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="exportFormat"
+                        value="doc"
+                        checked={exportFormat === 'doc'}
+                        onChange={() => setExportFormat('doc')}
+                        disabled={isProcessing}
+                        className="text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <span className="text-gray-700 dark:text-gray-300">DOC</span>
+                    </label>
+                  </div>
+                </div>
+                
+                <p className="text-sm text-blue-600 dark:text-blue-400">
+                  ℹ️ {t('batchUpload.zipInfo', 'Un fichier ZIP contenant tous les CVs exportés sera téléchargé à la fin du traitement')}
+                </p>
+              </div>
+            )}
+
+            {/* Delete after processing option */}
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={deleteAfterExport}
+                onChange={(e) => setDeleteAfterExport(e.target.checked)}
+                disabled={isProcessing}
+                className="w-5 h-5 text-red-600 border-gray-300 rounded focus:ring-red-500 dark:border-gray-600 dark:bg-gray-700"
+              />
+              <div className="flex items-center gap-2">
+                <XMarkIcon className="w-5 h-5 text-red-500" />
+                <span className="text-gray-700 dark:text-gray-300">
+                  {t('batchUpload.deleteAfterOption', 'Supprimer les CVs après traitement')}
+                </span>
+              </div>
+            </label>
+
+            {deleteAfterExport && (
+              <p className="text-sm text-red-600 dark:text-red-400 ml-8">
+                ⚠️ {t('batchUpload.deleteWarning', `Les CVs seront supprimés de la base de données après ${exportOption ? 'l\'export' : 'le traitement'}. Cette action est irréversible.`)}
               </p>
             )}
             
@@ -461,12 +871,12 @@ const BatchUploadPage = (): JSX.Element => {
             <FolderArrowDownIcon className="w-16 h-16 mx-auto text-gray-400 dark:text-gray-500 mb-4" />
             <p className="text-lg text-gray-700 dark:text-gray-300 mb-2">
               {isDragActive 
-                ? 'Déposez les fichiers ici...' 
-                : 'Glissez-déposez vos CVs ici, ou cliquez pour sélectionner'
+                ? t('batchUpload.dropHere', 'Déposez les fichiers ici...') 
+                : t('batchUpload.dragDrop', 'Glissez-déposez vos CVs ici, ou cliquez pour sélectionner')
               }
             </p>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              PDF, DOC, DOCX • Max 50MB par fichier
+              {t('batchUpload.fileTypes', 'PDF, DOC, DOCX • Max 50MB par fichier')}
             </p>
           </div>
         </motion.div>
@@ -480,34 +890,70 @@ const BatchUploadPage = (): JSX.Element => {
           >
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Fichiers ({files.length})
+                {t('batchUpload.filesCount', `Fichiers (${files.length}/${MAX_FILES})`)}
               </h2>
               {!isProcessing && (
-                <button
-                  onClick={clearAllFiles}
-                  className="text-sm text-red-600 hover:text-red-700 dark:text-red-400"
-                >
-                  Tout supprimer
-                </button>
+                <div className="flex items-center gap-2">
+                  {errorCount > 0 && (
+                    <button
+                      onClick={() => {
+                        // Retry all failed files
+                        files.forEach((f, i) => {
+                          if (f.status === 'error') retryFile(i);
+                        });
+                      }}
+                      className="text-sm text-amber-600 hover:text-amber-700 dark:text-amber-400 flex items-center gap-1"
+                    >
+                      <ArrowPathIcon className="w-4 h-4" />
+                      {t('batchUpload.retryAll', 'Réessayer les erreurs')}
+                    </button>
+                  )}
+                  {showClearConfirm ? (
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        {t('batchUpload.confirmClear', 'Confirmer ?')}
+                      </span>
+                      <button
+                        onClick={clearAllFiles}
+                        className="text-sm text-red-600 hover:text-red-700 dark:text-red-400 font-medium"
+                      >
+                        {t('common.yes', 'Oui')}
+                      </button>
+                      <button
+                        onClick={() => setShowClearConfirm(false)}
+                        className="text-sm text-gray-600 hover:text-gray-700 dark:text-gray-400"
+                      >
+                        {t('common.no', 'Non')}
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setShowClearConfirm(true)}
+                      className="text-sm text-red-600 hover:text-red-700 dark:text-red-400"
+                    >
+                      {t('batchUpload.clearAll', 'Tout supprimer')}
+                    </button>
+                  )}
+                </div>
               )}
             </div>
             
             {/* Stats */}
-            {(successCount > 0 || errorCount > 0) && (
+            {(successCount > 0 || errorCount > 0 || pendingCount > 0) && (
               <div className="flex gap-4 mb-4 text-sm">
                 {successCount > 0 && (
                   <span className="text-green-600 dark:text-green-400">
-                    ✓ {successCount} réussi(s)
+                    ✓ {successCount} {t('batchUpload.stats.success', 'réussi(s)')}
                   </span>
                 )}
                 {errorCount > 0 && (
                   <span className="text-red-600 dark:text-red-400">
-                    ✗ {errorCount} erreur(s)
+                    ✗ {errorCount} {t('batchUpload.stats.error', 'erreur(s)')}
                   </span>
                 )}
                 {pendingCount > 0 && (
                   <span className="text-gray-500 dark:text-gray-400">
-                    ○ {pendingCount} en attente
+                    ○ {pendingCount} {t('batchUpload.stats.pending', 'en attente')}
                   </span>
                 )}
               </div>
@@ -560,11 +1006,23 @@ const BatchUploadPage = (): JSX.Element => {
                       </div>
                     )}
                     
+                    {/* Retry button for failed files */}
+                    {!isProcessing && fileStatus.status === 'error' && (
+                      <button
+                        onClick={() => retryFile(index)}
+                        className="p-1 text-amber-500 hover:text-amber-600 transition-colors"
+                        title={t('batchUpload.retry', 'Réessayer')}
+                      >
+                        <ArrowPathIcon className="w-5 h-5" />
+                      </button>
+                    )}
+                    
                     {/* Remove button */}
                     {!isProcessing && fileStatus.status !== 'success' && (
                       <button
                         onClick={() => removeFile(index)}
                         className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                        title={t('batchUpload.remove', 'Supprimer')}
                       >
                         <XMarkIcon className="w-5 h-5" />
                       </button>
@@ -589,24 +1047,57 @@ const BatchUploadPage = (): JSX.Element => {
               className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
             >
               <XMarkIcon className="w-5 h-5" />
-              Annuler
+              {t('common.cancel', 'Annuler')}
             </button>
           ) : (
             <>
-              <button
-                onClick={() => navigate('/resumes')}
-                className="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-              >
-                Retour aux CVs
-              </button>
-              <button
-                onClick={startProcessing}
-                disabled={files.length === 0 || pendingCount === 0}
-                className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <DocumentArrowUpIcon className="w-5 h-5" />
-                Traiter {pendingCount > 0 ? `${pendingCount} fichier(s)` : ''}
-              </button>
+              <div className="flex flex-col items-center">
+                <button
+                  onClick={() => navigate('/resumes')}
+                  className="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                >
+                  {t('batchUpload.backToResumes', 'Retour aux CVs')}
+                </button>
+              </div>
+              <div className="flex flex-col items-center">
+                <button
+                  onClick={startProcessing}
+                  disabled={files.length === 0 || pendingCount === 0}
+                  className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <DocumentArrowUpIcon className="w-5 h-5" />
+                  {t('batchUpload.process', 'Traiter')} {pendingCount > 0 ? `${pendingCount} ${t('batchUpload.files', 'fichier(s)')}` : ''}
+                </button>
+                {/* Estimated time */}
+                {pendingCount > 0 && (
+                  <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    {getEstimatedTime()}
+                  </span>
+                )}
+              </div>
+              
+              {/* Manual export button - shown when there are successful files, export option is enabled, and resumes not deleted */}
+              {exportOption && successCount > 0 && !isExporting && !resumesDeleted && (
+                <button
+                  onClick={startBatchExport}
+                  disabled={!selectedTemplate || isExporting}
+                  className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ArrowDownTrayIcon className="w-5 h-5" />
+                  {t('batchUpload.export', 'Exporter')} {successCount} CV(s)
+                </button>
+              )}
+              
+              {/* Export in progress indicator */}
+              {isExporting && (
+                <button
+                  disabled
+                  className="px-6 py-3 bg-green-600 text-white rounded-lg flex items-center gap-2 opacity-75 cursor-wait"
+                >
+                  <ArrowPathIcon className="w-5 h-5 animate-spin" />
+                  {t('batchUpload.exporting', 'Export en cours...')}
+                </button>
+              )}
             </>
           )}
         </motion.div>
@@ -619,8 +1110,7 @@ const BatchUploadPage = (): JSX.Element => {
           className="mt-8 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800"
         >
           <p className="text-sm text-blue-700 dark:text-blue-300">
-            <strong>RGPD :</strong> Les CVs importés par lot sont considérés comme internes (collaborateurs). 
-            Aucune demande de consentement ne sera envoyée et aucun nom de candidat n'est enregistré.
+            <strong>{t('batchUpload.gdprTitle', 'RGPD')} :</strong> {t('batchUpload.gdprInfo', 'Les CVs importés par lot sont considérés comme internes (collaborateurs). Aucune demande de consentement ne sera envoyée et aucun nom de candidat n\'est enregistré.')}
           </p>
         </motion.div>
       </div>

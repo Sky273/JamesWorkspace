@@ -322,6 +322,55 @@ Si vous souhaitez une nouvelle version améliorée :
 3. Choisissez le modèle de mise en forme
 4. Le fichier PDF se télécharge automatiquement
 
+### Import par Lot (Administrateurs)
+
+L'import par lot permet aux **administrateurs** de charger plusieurs CVs simultanément pour un traitement automatisé.
+
+#### Accéder à l'Import par Lot
+
+1. Accédez à **"CVthèque"** dans le menu latéral
+2. Cliquez sur le bouton **"Import par lot"** (visible uniquement pour les administrateurs)
+
+#### Options de Traitement
+
+| Option | Description |
+|--------|-------------|
+| **Améliorer automatiquement** | L'IA améliore chaque CV après l'analyse (ajoute ~45s par CV) |
+| **Exporter après traitement** | Génère un fichier ZIP contenant tous les CVs exportés |
+| **Supprimer après traitement** | Supprime les CVs de la base après export (utile pour traitement ponctuel) |
+
+#### Paramètres d'Export
+
+Si l'option d'export est activée :
+- **Modèle d'export** : Sélectionnez le template de mise en forme
+- **Format** : PDF, DOCX ou DOC
+
+#### Processus d'Import
+
+1. **Glissez-déposez** vos fichiers (PDF, DOC, DOCX) dans la zone prévue
+2. **Limite** : Maximum 100 fichiers par lot
+3. **Taille max** : 50 MB par fichier
+4. Configurez les **options de traitement**
+5. Cliquez sur **"Traiter X fichier(s)"**
+6. Suivez la progression en temps réel
+
+#### Suivi du Traitement
+
+Pour chaque fichier, vous pouvez voir :
+- **Statut** : En attente, Upload, Extraction, Analyse, Amélioration, Export, Terminé, Erreur
+- **Barre de progression** : Avancement du traitement
+- **Temps estimé** : Durée approximative restante
+
+#### Gestion des Erreurs
+
+- Les fichiers en erreur peuvent être **réessayés** individuellement
+- Le bouton **"Réessayer les erreurs"** permet de relancer tous les fichiers échoués
+- Les fichiers réussis ne sont pas affectés par les erreurs des autres
+
+#### RGPD
+
+> **Important** : Les CVs importés par lot sont automatiquement considérés comme **internes (collaborateurs)**. Aucune demande de consentement n'est envoyée et aucun nom de candidat n'est enregistré.
+
 ### Commentaires sur les CV
 
 Chaque CV dispose d'une section **Commentaires** permettant aux utilisateurs de collaborer et d'échanger des informations sur un candidat.

@@ -9,6 +9,7 @@ import { fileURLToPath } from 'url';
 import https from 'https';
 import fs from 'fs';
 import 'dotenv/config';
+import JSZip from 'jszip';
 
 // Import safeLog early for global error handlers
 import { safeLog } from './utils/logger.backend.js';
@@ -30,6 +31,8 @@ const __dirname = path.dirname(__filename);
 import { PORT, ALLOWED_ORIGINS, JWT_SECRET } from './config/constants.js';
 import { configureAxios, httpAgent, httpsAgent } from './config/axios.js';
 import { validateEnvironmentOrExit } from './config/envValidation.js';
+import { authenticateToken } from './middleware/auth.middleware.js';
+import { query } from './services/database.service.js';
 
 // Validate environment variables at startup
 validateEnvironmentOrExit(process.env.NODE_ENV === 'production');
@@ -777,6 +780,174 @@ app.post('/generate-docx', async (req, res) => {
     } catch (error) {
         safeLog('error', 'DOCX proxy error', { error: error.message });
         res.status(500).json({ error: 'Failed to generate DOCX', details: error.message });
+    }
+});
+
+// ============================================
+// BATCH EXPORT (ZIP)
+// ============================================
+
+// Helper function to call PDF server with timeout and retry
+async function callPdfServer(endpoint, body, timeout = 30000) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    
+    try {
+        const response = await fetch(`${PDF_SERVER_URL}${endpoint}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        return response;
+    } catch (err) {
+        clearTimeout(timeoutId);
+        throw err;
+    }
+}
+
+app.post('/api/batch-export', authenticateToken, async (req, res) => {
+    try {
+        const { resumeIds, templateId, format } = req.body;
+        
+        if (!resumeIds || !Array.isArray(resumeIds) || resumeIds.length === 0) {
+            return res.status(400).json({ error: 'Resume IDs are required' });
+        }
+        
+        if (!templateId) {
+            return res.status(400).json({ error: 'Template ID is required' });
+        }
+        
+        const exportFormat = format || 'pdf';
+        safeLog('info', 'Starting batch export', { 
+            resumeCount: resumeIds.length, 
+            templateId, 
+            format: exportFormat,
+            pdfServerUrl: PDF_SERVER_URL
+        });
+        
+        // Test PDF server connectivity first
+        try {
+            const testResponse = await fetch(`${PDF_SERVER_URL}/health`, { 
+                method: 'GET',
+                signal: AbortSignal.timeout(5000)
+            });
+            if (!testResponse.ok) {
+                safeLog('warn', 'PDF server health check failed', { status: testResponse.status });
+            }
+        } catch (healthErr) {
+            safeLog('error', 'PDF server not reachable', { 
+                url: PDF_SERVER_URL, 
+                error: healthErr.message 
+            });
+            return res.status(503).json({ 
+                error: 'PDF server is not available. Please ensure the PDF server is running.',
+                details: `Cannot reach ${PDF_SERVER_URL}`
+            });
+        }
+        
+        // Fetch template
+        const templateResult = await query('SELECT * FROM templates WHERE id = $1', [templateId]);
+        if (templateResult.rows.length === 0) {
+            return res.status(404).json({ error: 'Template not found' });
+        }
+        const template = templateResult.rows[0];
+        
+        // Create ZIP archive
+        const zip = new JSZip();
+        const errors = [];
+        
+        // Process each resume sequentially to avoid overwhelming the PDF server
+        for (const resumeId of resumeIds) {
+            try {
+                // Fetch resume
+                const resumeResult = await query('SELECT * FROM resumes WHERE id = $1', [resumeId]);
+                if (resumeResult.rows.length === 0) {
+                    errors.push({ resumeId, error: 'Resume not found' });
+                    continue;
+                }
+                const resume = resumeResult.rows[0];
+                
+                // Prepare content
+                const content = resume.improved_text || resume.original_text || '';
+                const candidateName = resume.name || 'Candidat';
+                const candidateTitle = resume.title || '';
+                
+                // Process template
+                let processedBody = template.template_content || '';
+                processedBody = processedBody.replace(/-name-/g, candidateName);
+                processedBody = processedBody.replace(/-title-/g, candidateTitle);
+                processedBody = processedBody.replace(/-content-/g, content);
+                
+                let processedHeader = template.header_content || '';
+                if (processedHeader) {
+                    processedHeader = processedHeader.replace(/-name-/g, candidateName);
+                    processedHeader = processedHeader.replace(/-title-/g, candidateTitle);
+                }
+                
+                let processedFooter = template.footer_content || '';
+                if (processedFooter) {
+                    processedFooter = processedFooter.replace(/-name-/g, candidateName);
+                    processedFooter = processedFooter.replace(/-title-/g, candidateTitle);
+                }
+                
+                // Generate document via PDF server
+                // DOC and DOCX both use /generate-docx endpoint with different format parameter
+                const endpoint = exportFormat === 'pdf' ? '/generate-pdf' : '/generate-docx';
+                const fileExtension = exportFormat === 'pdf' ? 'pdf' : exportFormat; // 'doc' or 'docx'
+                
+                const pdfResponse = await callPdfServer(endpoint, {
+                    htmlContent: processedBody,
+                    filename: `${candidateName.replace(/\s+/g, '_')}.${fileExtension}`,
+                    stylesheet: template.stylesheet || '',
+                    headerContent: processedHeader || undefined,
+                    footerContent: processedFooter || undefined,
+                    footerHeight: template.footer_height || 25,
+                    format: exportFormat
+                }, 60000); // 60s timeout per document
+                
+                if (!pdfResponse.ok) {
+                    const errorText = await pdfResponse.text().catch(() => 'Unknown error');
+                    safeLog('error', 'PDF generation failed', { resumeId, status: pdfResponse.status, error: errorText });
+                    errors.push({ resumeId, error: `Failed to generate ${exportFormat.toUpperCase()}: ${errorText}` });
+                    continue;
+                }
+                
+                const buffer = await pdfResponse.arrayBuffer();
+                const fileName = `${candidateName.replace(/[^a-zA-Z0-9\-_\s]/g, '').replace(/\s+/g, '_')}.${fileExtension}`;
+                zip.file(fileName, buffer);
+                
+                safeLog('debug', 'Added file to ZIP', { fileName, resumeId, size: buffer.byteLength });
+            } catch (err) {
+                safeLog('error', 'Error processing resume for batch export', { resumeId, error: err.message });
+                errors.push({ resumeId, error: err.message });
+            }
+        }
+        
+        // Check if any files were added
+        if (Object.keys(zip.files).length === 0) {
+            return res.status(500).json({ 
+                error: 'No files could be generated', 
+                details: errors 
+            });
+        }
+        
+        // Generate ZIP
+        const zipBuffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+        
+        safeLog('info', 'Batch export completed', { 
+            filesCount: Object.keys(zip.files).length,
+            errorsCount: errors.length,
+            zipSize: zipBuffer.length
+        });
+        
+        res.setHeader('Content-Type', 'application/zip');
+        res.setHeader('Content-Disposition', `attachment; filename="batch_export_${Date.now()}.zip"`);
+        res.send(zipBuffer);
+    } catch (error) {
+        safeLog('error', 'Batch export error', { error: error.message });
+        res.status(500).json({ error: 'Failed to generate batch export', details: error.message });
     }
 });
 

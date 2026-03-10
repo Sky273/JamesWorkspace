@@ -163,7 +163,7 @@ const App = (): JSX.Element => {
                   <Route path="resumes/:id/export" element={<ResumeExportPage />} />
                   <Route path="resumes/:id/adapt" element={<ResumeAdaptPage />} />
                   <Route path="upload" element={<UploadPage />} />
-                  <Route path="batch-upload" element={<BatchUploadPage />} />
+                  <Route path="batch-upload" element={<AdminRoute><BatchUploadPage /></AdminRoute>} />
                   <Route path="missions" element={<MissionsPage />} />
                   <Route path="missions/:id" element={<MissionViewPage />} />
                   <Route path="clients" element={<ClientsPage />} />

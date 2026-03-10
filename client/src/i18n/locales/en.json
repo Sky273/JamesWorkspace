@@ -268,8 +268,9 @@
       "avgScore": "Average Score"
     },
     "deleteConfirm": {
-      "title": "[FR] Title"
-    }
+      "title": "Confirm Deletion"
+    },
+    "confirmDeleteMessage": "Are you sure you want to delete this resume? This action cannot be undone."
   },
   "upload": {
     "title": "Resume Analyzer",
@@ -1961,5 +1962,62 @@
     "restoreError": "Restore failed",
     "restoreWarningTitle": "Warning - Danger Zone",
     "restoreWarning": "Restoring a backup will overwrite all current database data. This action is irreversible. Make sure you have a recent backup before proceeding."
+  },
+  "batchUpload": {
+    "title": "Batch Import",
+    "subtitle": "Upload multiple CVs at once for automatic analysis",
+    "processingOptions": "Processing Options",
+    "improveOption": "Automatically improve CVs",
+    "improveWarning": "Improvement takes longer (about 30-60 seconds per CV)",
+    "exportOption": "Export CVs after processing (ZIP)",
+    "exportTemplate": "Export template",
+    "loadingTemplates": "Loading templates...",
+    "exportFormat": "Export format",
+    "zipInfo": "A ZIP file containing all exported CVs will be downloaded at the end of processing",
+    "deleteAfterOption": "Delete CVs after processing",
+    "deleteWarning": "CVs will be deleted from the database after processing. This action is irreversible.",
+    "deleteWarningExport": "CVs will be deleted from the database after export. This action is irreversible.",
+    "dropHere": "Drop files here...",
+    "dragDrop": "Drag and drop your CVs here, or click to select",
+    "fileTypes": "PDF, DOC, DOCX • Max 50MB per file",
+    "filesCount": "Files",
+    "retryAll": "Retry errors",
+    "confirmClear": "Confirm?",
+    "clearAll": "Clear all",
+    "retry": "Retry",
+    "remove": "Remove",
+    "backToResumes": "Back to CVs",
+    "process": "Process",
+    "files": "file(s)",
+    "export": "Export",
+    "exporting": "Exporting...",
+    "gdprTitle": "GDPR",
+    "gdprInfo": "Batch imported CVs are treated as internal (employees). No consent request will be sent and no candidate name is recorded.",
+    "noFiles": "No files to process",
+    "noFilesToExport": "No processed CVs to export",
+    "selectTemplate": "Please select a template",
+    "successCount": "CV(s) processed successfully",
+    "errorCount": "CV(s) with errors",
+    "maxFilesReached": "Maximum number of files reached",
+    "someFilesSkipped": "Some files were skipped (limit reached)",
+    "duplicateSkipped": "File already in the list",
+    "estimatedTime": "< 1 minute",
+    "estimatedTime1min": "~1 minute",
+    "estimatedTimeMinutes": "~{{minutes}} minutes",
+    "status": {
+      "pending": "Pending",
+      "uploading": "Uploading...",
+      "extracting": "Extracting...",
+      "analyzing": "Analyzing...",
+      "improving": "Improving...",
+      "exporting": "Exporting...",
+      "success": "Done",
+      "error": "Error"
+    },
+    "stats": {
+      "success": "successful",
+      "error": "error(s)",
+      "pending": "pending"
+    }
   }
 }

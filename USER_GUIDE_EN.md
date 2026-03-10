@@ -322,6 +322,55 @@ If you want a new improved version:
 3. Choose the formatting template
 4. The PDF file downloads automatically
 
+### Batch Import (Administrators)
+
+Batch import allows **administrators** to upload multiple resumes simultaneously for automated processing.
+
+#### Accessing Batch Import
+
+1. Go to **"Resume Library"** in the sidebar
+2. Click the **"Batch Import"** button (visible only to administrators)
+
+#### Processing Options
+
+| Option | Description |
+|--------|-------------|
+| **Automatically improve** | AI improves each resume after analysis (adds ~45s per resume) |
+| **Export after processing** | Generates a ZIP file containing all exported resumes |
+| **Delete after processing** | Removes resumes from database after export (useful for one-time processing) |
+
+#### Export Settings
+
+If the export option is enabled:
+- **Export template**: Select the formatting template
+- **Format**: PDF, DOCX, or DOC
+
+#### Import Process
+
+1. **Drag and drop** your files (PDF, DOC, DOCX) into the designated area
+2. **Limit**: Maximum 100 files per batch
+3. **Max size**: 50 MB per file
+4. Configure **processing options**
+5. Click **"Process X file(s)"**
+6. Monitor progress in real-time
+
+#### Progress Tracking
+
+For each file, you can see:
+- **Status**: Pending, Uploading, Extracting, Analyzing, Improving, Exporting, Done, Error
+- **Progress bar**: Processing advancement
+- **Estimated time**: Approximate remaining duration
+
+#### Error Handling
+
+- Failed files can be **retried** individually
+- The **"Retry errors"** button allows relaunching all failed files
+- Successful files are not affected by other files' errors
+
+#### GDPR
+
+> **Important**: Batch imported resumes are automatically treated as **internal (employees)**. No consent request is sent and no candidate name is recorded.
+
 ### Resume Comments
 
 Each resume has a **Comments** section allowing users to collaborate and share information about a candidate.
