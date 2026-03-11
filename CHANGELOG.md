@@ -1,3 +1,23 @@
+## v1.8.3 - 2026-03-11
+### 🔧 Corrections Scheduler Backup & Radar du Marché
+
+#### Corrections Scheduler de Sauvegarde
+- **Initialisation correcte** : `initBackupScheduler()` déplacé dans le bloc DB connecté pour garantir l'exécution après connexion à la base
+- **Création automatique des tables** : Nouvelle fonction `initBackupTables()` crée automatiquement `backup_settings` et `backup_history` au démarrage
+- **Gestion des erreurs** : Meilleure gestion des erreurs DB lors du chargement des paramètres de sauvegarde
+
+#### Corrections Radar du Marché
+- **Valeurs carte de France** : Correction de l'affichage des chiffres sur la carte (offres d'emploi, embauches, etc.)
+- **Conversion NULL/DECIMAL** : Les valeurs NULL sont maintenant converties en 0, les DECIMAL en nombres côté serveur
+- **4 fonctions corrigées** : `getStoredTrendsLight`, `getStoredTrendsWithMetadata`, `getTrendMetadata`, `loadTrendsCache`
+
+#### Améliorations Techniques
+- **Import statique** : Conversion de l'import dynamique `apiInterceptor` en import statique dans `textExtraction.ts` (supprime le warning Rollup)
+- **Types API** : Nouveau fichier `client/src/types/api.ts` avec types standardisés pour les réponses API
+- **Index types** : Nouveau fichier `client/src/types/index.ts` pour exports centralisés
+
+---
+
 ## v1.8.2 - 2026-03-09
 ### 🖨️ Migration vers PrinceXML & Refactoring PDF Server
 
