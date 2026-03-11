@@ -1208,13 +1208,10 @@ const BatchUploadPage = (): JSX.Element => {
           className="flex justify-center gap-4"
         >
           {isProcessing ? (
-            <button
-              onClick={cancelProcessing}
-              className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
-            >
-              <XMarkIcon className="w-5 h-5" />
-              {t('common.cancel', 'Annuler')}
-            </button>
+            <div className="px-6 py-3 bg-indigo-600 text-white rounded-lg flex items-center gap-2 opacity-75">
+              <ArrowPathIcon className="w-5 h-5 animate-spin" />
+              {t('batchUpload.processing', 'Traitement en cours...')}
+            </div>
           ) : (
             <>
               <div className="flex flex-col items-center">

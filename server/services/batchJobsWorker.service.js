@@ -439,11 +439,69 @@ async function processImportItem(item, job, options) {
             const improvedAnalysis = improvedResult.analysis || {};
             const improvedTags = improvedAnalysis.tags || {};
 
+            safeLog('debug', 'Improved result details', {
+                hasText: !!improvedResult.text,
+                textLength: improvedResult.text?.length,
+                textPreview: improvedResult.text?.substring(0, 150),
+                analysisKeys: Object.keys(improvedAnalysis),
+                tagsKeys: Object.keys(improvedTags),
+                skillsCount: improvedTags.skills?.length,
+                industriesCount: improvedTags.industries?.length
+            });
+
+            // Parse individual scores
+            const skillsScore = parseScore(improvedAnalysis.skillsRating);
+            const experienceScore = parseScore(improvedAnalysis.experiencesRating);
+            const educationScore = parseScore(improvedAnalysis.educationRating);
+            const atsScore = parseScore(improvedAnalysis.atsOptimizationRating);
+            const executiveSummaryScore = parseScore(improvedAnalysis.executiveSummaryRating);
+            const hobbiesLanguagesScore = parseScore(improvedAnalysis.hobbiesLanguagesRating);
+
+            // Get LLM settings for weights
+            const { getLLMSettings } = await import('./settings.service.js');
+            const llmSettings = await getLLMSettings();
+            
+            // Get weights from settings (with defaults)
+            const weights = {
+                executiveSummary: llmSettings['Executive Summary Weight'] || llmSettings.executiveSummaryWeight || 20,
+                skills: llmSettings['Skills Weight'] || llmSettings.skillsWeight || 20,
+                experience: llmSettings['Experience Weight'] || llmSettings.experienceWeight || 20,
+                education: llmSettings['Education Weight'] || llmSettings.educationWeight || 15,
+                ats: llmSettings['ATS Weight'] || llmSettings.atsWeight || 15,
+                hobbiesLanguages: llmSettings['Hobbies Languages Weight'] || llmSettings.hobbiesLanguagesWeight || 10
+            };
+            
+            // Normalize weights to ensure they sum to 100
+            const totalWeight = Object.values(weights).reduce((sum, w) => sum + w, 0);
+            
+            // Calculate weighted global rating
+            const globalRating = Math.round(
+                ((executiveSummaryScore || 0) * weights.executiveSummary +
+                 (skillsScore || 0) * weights.skills +
+                 (experienceScore || 0) * weights.experience +
+                 (educationScore || 0) * weights.education +
+                 (atsScore || 0) * weights.ats +
+                 (hobbiesLanguagesScore || 0) * weights.hobbiesLanguages) / totalWeight
+            );
+            
+            safeLog('debug', 'Calculated improved global rating', {
+                weights,
+                totalWeight,
+                scores: { skillsScore, experienceScore, educationScore, atsScore, executiveSummaryScore, hobbiesLanguagesScore },
+                globalRating
+            });
+
             safeLog('info', 'Saving improved CV data', { 
                 itemId: item.id, 
                 resumeId,
                 hasImprovedText: !!improvedResult.text,
-                improvedGlobalRating: improvedAnalysis.globalRating
+                improvedGlobalRating: globalRating,
+                skillsScore,
+                experienceScore,
+                educationScore,
+                atsScore,
+                executiveSummaryScore,
+                hobbiesLanguagesScore
             });
 
             await query(`
@@ -467,13 +525,13 @@ async function processImportItem(item, job, options) {
                 WHERE id = $14
             `, [
                 improvedResult.text,
-                parseScore(improvedAnalysis.globalRating),
-                parseScore(improvedAnalysis.skillsRating),
-                parseScore(improvedAnalysis.experiencesRating),
-                parseScore(improvedAnalysis.educationRating),
-                parseScore(improvedAnalysis.atsOptimizationRating),
-                parseScore(improvedAnalysis.executiveSummaryRating),
-                parseScore(improvedAnalysis.hobbiesLanguagesRating),
+                globalRating,
+                skillsScore,
+                experienceScore,
+                educationScore,
+                atsScore,
+                executiveSummaryScore,
+                hobbiesLanguagesScore,
                 JSON.stringify(improvedTags.skills || []),
                 JSON.stringify(improvedTags.industries || []),
                 JSON.stringify(improvedTags.tools || []),
@@ -550,11 +608,59 @@ async function processImproveItem(item, job, options) {
     const improvedAnalysis = improvedResult.analysis || {};
     const improvedTags = improvedAnalysis.tags || {};
 
+    // Parse individual scores
+    const skillsScore = parseScore(improvedAnalysis.skillsRating);
+    const experienceScore = parseScore(improvedAnalysis.experiencesRating);
+    const educationScore = parseScore(improvedAnalysis.educationRating);
+    const atsScore = parseScore(improvedAnalysis.atsOptimizationRating);
+    const executiveSummaryScore = parseScore(improvedAnalysis.executiveSummaryRating);
+    const hobbiesLanguagesScore = parseScore(improvedAnalysis.hobbiesLanguagesRating);
+
+    // Get LLM settings for weights
+    const { getLLMSettings } = await import('./settings.service.js');
+    const llmSettings = await getLLMSettings();
+    
+    // Get weights from settings (with defaults)
+    const weights = {
+        executiveSummary: llmSettings['Executive Summary Weight'] || llmSettings.executiveSummaryWeight || 20,
+        skills: llmSettings['Skills Weight'] || llmSettings.skillsWeight || 20,
+        experience: llmSettings['Experience Weight'] || llmSettings.experienceWeight || 20,
+        education: llmSettings['Education Weight'] || llmSettings.educationWeight || 15,
+        ats: llmSettings['ATS Weight'] || llmSettings.atsWeight || 15,
+        hobbiesLanguages: llmSettings['Hobbies Languages Weight'] || llmSettings.hobbiesLanguagesWeight || 10
+    };
+    
+    // Normalize weights to ensure they sum to 100
+    const totalWeight = Object.values(weights).reduce((sum, w) => sum + w, 0);
+    
+    // Calculate weighted global rating
+    const globalRating = Math.round(
+        ((executiveSummaryScore || 0) * weights.executiveSummary +
+         (skillsScore || 0) * weights.skills +
+         (experienceScore || 0) * weights.experience +
+         (educationScore || 0) * weights.education +
+         (atsScore || 0) * weights.ats +
+         (hobbiesLanguagesScore || 0) * weights.hobbiesLanguages) / totalWeight
+    );
+    
+    safeLog('debug', 'Calculated improved global rating (improve job)', {
+        weights,
+        totalWeight,
+        scores: { skillsScore, experienceScore, educationScore, atsScore, executiveSummaryScore, hobbiesLanguagesScore },
+        globalRating
+    });
+
     safeLog('info', 'Saving improved CV data (improve job)', { 
         itemId: item.id, 
         resumeId: item.resume_id,
         hasImprovedText: !!improvedResult.text,
-        improvedGlobalRating: improvedAnalysis.globalRating
+        improvedGlobalRating: globalRating,
+        skillsScore,
+        experienceScore,
+        educationScore,
+        atsScore,
+        executiveSummaryScore,
+        hobbiesLanguagesScore
     });
 
     await query(`
@@ -578,13 +684,13 @@ async function processImproveItem(item, job, options) {
         WHERE id = $14
     `, [
         improvedResult.text,
-        parseScore(improvedAnalysis.globalRating),
-        parseScore(improvedAnalysis.skillsRating),
-        parseScore(improvedAnalysis.experiencesRating),
-        parseScore(improvedAnalysis.educationRating),
-        parseScore(improvedAnalysis.atsOptimizationRating),
-        parseScore(improvedAnalysis.executiveSummaryRating),
-        parseScore(improvedAnalysis.hobbiesLanguagesRating),
+        globalRating,
+        skillsScore,
+        experienceScore,
+        educationScore,
+        atsScore,
+        executiveSummaryScore,
+        hobbiesLanguagesScore,
         JSON.stringify(improvedTags.skills || []),
         JSON.stringify(improvedTags.industries || []),
         JSON.stringify(improvedTags.tools || []),
@@ -598,20 +704,54 @@ async function processImproveItem(item, job, options) {
 }
 
 /**
+ * Extract text from PDF using pdfjs-dist (more reliable than pdf-parse)
+ */
+async function extractTextFromPDFBuffer(buffer) {
+    const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
+    
+    // Convert Buffer to Uint8Array (required by pdfjs-dist)
+    const uint8Array = new Uint8Array(buffer);
+    
+    // Load the PDF document
+    const loadingTask = pdfjsLib.getDocument({ data: uint8Array });
+    const pdf = await loadingTask.promise;
+    
+    let fullText = '';
+    
+    // Extract text from each page
+    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+        const page = await pdf.getPage(pageNum);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items
+            .map(item => item.str)
+            .join(' ');
+        fullText += pageText + '\n';
+    }
+    
+    return fullText.trim();
+}
+
+/**
  * Extract text from file buffer
  */
 async function extractTextFromBuffer(buffer, mimeType, fileName) {
-    // Use pdf-parse for PDF, mammoth for DOCX, word-extractor for DOC
+    // Use pdfjs-dist for PDF, mammoth for DOCX, word-extractor for DOC
     if (mimeType === 'application/pdf') {
-        const pdfParse = (await import('pdf-parse')).default;
-        const data = await pdfParse(buffer);
-        return data.text;
+        try {
+            return await extractTextFromPDFBuffer(buffer);
+        } catch (pdfError) {
+            safeLog('error', 'PDF extraction with pdfjs-dist failed', { error: pdfError.message, fileName });
+            throw new Error(`Failed to extract text from PDF: ${pdfError.message}`);
+        }
     } else if (mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
         const mammoth = await import('mammoth');
         const result = await mammoth.extractRawText({ buffer });
         return result.value;
     } else if (mimeType === 'application/msword') {
-        const WordExtractor = (await import('word-extractor')).default;
+        // word-extractor is CommonJS
+        const { createRequire } = await import('module');
+        const require = createRequire(import.meta.url);
+        const WordExtractor = require('word-extractor');
         const extractor = new WordExtractor();
         const doc = await extractor.extract(buffer);
         return doc.getBody();
@@ -681,16 +821,27 @@ async function improveResumeWithLLM(text, analysis, firmId) {
 
     // Acquire LLM slot for improvement (rate limiting)
     await acquireLLMSlot();
-    let improvedText;
+    let improveResult;
     try {
-        improvedText = await improveResume(cleanedText, analysis, model, improvementPrompt, null);
+        // improveResume returns { text, analysis } object
+        improveResult = await improveResume(cleanedText, analysis, model, improvementPrompt, null);
     } finally {
         releaseLLMSlot();
     }
 
+    // Extract the actual text from the result (improveResume returns { text, analysis })
+    const improvedText = typeof improveResult === 'string' ? improveResult : improveResult?.text;
+    
     if (!improvedText) {
         throw new Error('Improvement returned empty text');
     }
+
+    safeLog('debug', 'Improvement result received', {
+        resultType: typeof improveResult,
+        hasText: !!improvedText,
+        textLength: improvedText?.length,
+        textPreview: improvedText?.substring(0, 100)
+    });
 
     // Re-analyze the improved text (with rate limiting)
     let analysisPrompt = settings['Analysis Prompt'] || DEFAULT_ANALYSIS_PROMPT;
@@ -706,6 +857,15 @@ async function improveResumeWithLLM(text, analysis, firmId) {
     }
     
     improvedAnalysis = await calculateWeightedGlobalRating(improvedAnalysis, settings);
+
+    safeLog('debug', 'Post-improvement analysis completed', {
+        hasAnalysis: !!improvedAnalysis,
+        globalRating: improvedAnalysis?.globalRating,
+        skillsRating: improvedAnalysis?.skillsRating,
+        experiencesRating: improvedAnalysis?.experiencesRating,
+        hasTags: !!improvedAnalysis?.tags,
+        tagsKeys: improvedAnalysis?.tags ? Object.keys(improvedAnalysis.tags) : []
+    });
 
     return {
         text: improvedText,
