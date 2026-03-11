@@ -7,6 +7,7 @@ import { loadPdfjs } from './lazyPdfjs';
 import { createLazyWorker } from './lazyTesseract';
 import mammoth from 'mammoth';
 import logger from './logger.frontend';
+import { fetchWithAuth, createAuthOptionsWithCsrf } from './apiInterceptor';
 import type * as PDFJS from 'pdfjs-dist';
 
 type PDFJSModule = typeof PDFJS;
@@ -292,9 +293,6 @@ export async function extractTextFromDOC(file: File): Promise<string> {
         // because it's a Node.js library that doesn't work in browsers
         const formData = new FormData();
         formData.append('file', file);
-        
-        // Import dynamically to avoid circular dependencies
-        const { fetchWithAuth, createAuthOptionsWithCsrf } = await import('./apiInterceptor');
         
         const options = await createAuthOptionsWithCsrf({
             method: 'POST',
