@@ -1360,7 +1360,10 @@ async function getStoredTrendsLight(options = {}) {
             Region: record.region,
             RegionCode: record.region_code,
             Date: record.date,
-            Value: record.value,
+            // Ensure Value is a number (PostgreSQL DECIMAL can return string, NULL should be 0)
+            Value: record.value !== null && record.value !== undefined 
+                ? (typeof record.value === 'string' ? parseFloat(record.value) : Number(record.value))
+                : 0,
             ValueLabel: record.value_label,
             // Audit fields for freshness display
             CollectedAt: record.collected_at,
@@ -1436,7 +1439,9 @@ async function getStoredTrendsWithMetadata(options = {}) {
             Region: record.region,
             RegionCode: record.region_code,
             Date: record.date,
-            Value: record.value,
+            Value: record.value !== null && record.value !== undefined 
+                ? (typeof record.value === 'string' ? parseFloat(record.value) : Number(record.value))
+                : 0,
             ValueLabel: record.value_label,
             Metadata: record.metadata // Include metadata for hover display
         }));
@@ -1484,7 +1489,9 @@ async function getTrendMetadata(trendId) {
             Region: record.region,
             RegionCode: record.region_code,
             Date: record.date,
-            Value: record.value,
+            Value: record.value !== null && record.value !== undefined 
+                ? (typeof record.value === 'string' ? parseFloat(record.value) : Number(record.value))
+                : 0,
             ValueLabel: record.value_label,
             Metadata: record.metadata
         };
@@ -1531,7 +1538,9 @@ async function loadTrendsCache() {
         Region: record.region,
         RegionCode: record.region_code,
         Date: record.date,
-        Value: record.value,
+        Value: record.value !== null && record.value !== undefined 
+            ? (typeof record.value === 'string' ? parseFloat(record.value) : Number(record.value))
+            : 0,
         ValueLabel: record.value_label
         // NO Metadata here - fetched on demand
     }));
