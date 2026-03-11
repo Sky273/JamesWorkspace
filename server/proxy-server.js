@@ -76,6 +76,7 @@ import pipelineRoutes from './routes/pipeline.routes.js';
 import calendarRoutes from './routes/calendar.routes.js';
 import backupRoutes from './routes/backup.routes.js';
 import batchExportRoutes from './routes/batchExport.routes.js';
+import batchJobsRoutes from './routes/batchJobs.routes.js';
 
 // Import services
 import { metrics } from './services/metrics.service.js';
@@ -106,6 +107,8 @@ import { initResumeCommentsTable } from './services/resumeComments.service.js';
 import { initShareResumeTable } from './services/shareResume.service.js';
 // Candidate Pipeline initialization
 import { initCandidatePipelineTable } from './services/candidatePipeline.service.js';
+// Batch Jobs worker initialization
+import { initializeWorker as initBatchJobsWorker, startWorker as startBatchJobsWorker, stopWorker as stopBatchJobsWorker } from './services/batchJobsWorker.service.js';
 // Calendar service initialization
 import { initCalendarTokensTable, destroyCalendarService } from './services/calendar.service.js';
 
@@ -714,6 +717,9 @@ app.use('/api/backup', backupRoutes);
 // Batch export routes (ZIP with multiple PDFs/DOCXs)
 app.use('/api/batch-export', batchExportRoutes);
 
+// Batch jobs routes (background processing)
+app.use('/api/batch-jobs', batchJobsRoutes);
+
 // ============================================
 // PDF SERVER PROXY
 // ============================================
@@ -1076,6 +1082,15 @@ async function onServerStart(protocol, port) {
     // Start GDPR consent scheduler (checks for expired consents, sends reminders, purges)
     startScheduler();
     safeLog('info', 'GDPR Consent Scheduler started');
+    
+    // Initialize and start batch jobs worker
+    try {
+        await initBatchJobsWorker();
+        startBatchJobsWorker();
+        safeLog('info', 'Batch Jobs Worker started');
+    } catch (error) {
+        safeLog('error', 'Failed to start Batch Jobs Worker', { error: error.message });
+    }
 }
 
 // Graceful shutdown with proper cleanup
@@ -1111,6 +1126,7 @@ const gracefulShutdown = async (signal) => {
         destroyMailStatesCleanup();
         destroyGoogleapis();
         destroyCalendarService();
+        await stopBatchJobsWorker();
         destroyMjml();
         stopScheduler();
         stopBackupScheduler();

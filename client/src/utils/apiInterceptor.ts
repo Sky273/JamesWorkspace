@@ -163,8 +163,9 @@ const fetchWithTimeout = async (
 
 /**
  * Attempt to refresh the access token using the refresh token
+ * Exported for use in long-running operations (e.g., batch upload)
  */
-const attemptTokenRefresh = async (): Promise<boolean> => {
+export const attemptTokenRefresh = async (): Promise<boolean> => {
   if (isRefreshing && refreshPromise) {
     return refreshPromise;
   }

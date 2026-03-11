@@ -18,16 +18,19 @@ import {
   SparklesIcon,
   DocumentTextIcon,
   FolderArrowDownIcon,
-  ArrowDownTrayIcon
+  ArrowDownTrayIcon,
+  ClockIcon,
+  QueueListIcon
 } from '@heroicons/react/24/outline';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { useAuth } from '../context/AuthContext';
-import { fetchWithAuth, createAuthOptionsWithCsrf } from '../utils/apiInterceptor';
+import { fetchWithAuth, createAuthOptionsWithCsrf, attemptTokenRefresh } from '../utils/apiInterceptor';
 import { extractResumeText } from '../utils/resumeProcessing';
 import logger from '../utils/logger.frontend';
 import toast from 'react-hot-toast';
 import AdminFirmSelector from '../components/AdminFirmSelector';
 import { templateService, Template } from '../utils/templateService';
+import JobsTab from '../components/BatchUpload/JobsTab';
 
 interface FileStatus {
   file: File;
@@ -46,6 +49,7 @@ const BatchUploadPage = (): JSX.Element => {
   const { user } = useAuth();
   const isAdmin = user?.role?.toLowerCase() === 'admin';
   
+  const [activeTab, setActiveTab] = useState<'import' | 'jobs'>('import');
   const [files, setFiles] = useState<FileStatus[]>([]);
   const [improveOption, setImproveOption] = useState<boolean>(false);
   const [exportOption, setExportOption] = useState<boolean>(false);
@@ -64,6 +68,7 @@ const BatchUploadPage = (): JSX.Element => {
   const filesRef = useRef<FileStatus[]>([]); // Ref to track current files state
   const timeoutRefs = useRef<NodeJS.Timeout[]>([]); // Track timeouts for cleanup
   const isMountedRef = useRef<boolean>(true); // Track component mount state
+  const keepAliveIntervalRef = useRef<NodeJS.Timeout | null>(null); // Session keep-alive interval
   
   // Constants
   const MAX_FILES = 100;
@@ -79,6 +84,12 @@ const BatchUploadPage = (): JSX.Element => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
         abortControllerRef.current = null;
+      }
+      
+      // Clear keep-alive interval
+      if (keepAliveIntervalRef.current) {
+        clearInterval(keepAliveIntervalRef.current);
+        keepAliveIntervalRef.current = null;
       }
       
       // Clear all pending timeouts
@@ -437,8 +448,107 @@ const BatchUploadPage = (): JSX.Element => {
     }
     
     setIsProcessing(true);
+    
+    try {
+      // Create a batch job with all files - backend will process in parallel
+      const formData = new FormData();
+      currentFiles.forEach((fileStatus) => {
+        formData.append('files', fileStatus.file);
+      });
+      
+      // Add options as individual form fields
+      formData.append('improve', String(improveOption));
+      formData.append('export', String(exportOption));
+      formData.append('exportFormat', exportFormat);
+      if (selectedTemplate) {
+        formData.append('templateId', selectedTemplate);
+      }
+      formData.append('deleteAfterExport', String(deleteAfterExport));
+      
+      // Mark all files as uploading
+      currentFiles.forEach((_, index) => {
+        updateFileStatus(index, { status: 'uploading', progress: 10 });
+      });
+      
+      // Create the job - get CSRF token and send with FormData
+      // IMPORTANT: Don't set Content-Type header - browser will set it with correct boundary for multipart/form-data
+      const csrfOptions = await createAuthOptionsWithCsrf({ method: 'POST' });
+      const response = await fetchWithAuth('/api/batch-jobs', {
+        method: 'POST',
+        headers: {
+          'x-csrf-token': (csrfOptions.headers as Record<string, string>)?.['x-csrf-token'] || ''
+        },
+        credentials: 'include',
+        body: formData
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Erreur lors de la création du job');
+      }
+      
+      const job = await response.json();
+      logger.info('[BatchUpload] Job created', { jobId: job.id, itemCount: job.total_items });
+      
+      // Mark all files as processing (backend handles the rest)
+      currentFiles.forEach((_, index) => {
+        updateFileStatus(index, { status: 'analyzing', progress: 50 });
+      });
+      
+      toast.success(t('batchJobs.jobCreated', { count: job.total_items }));
+      
+      // Clear files and switch to Jobs tab
+      setFiles([]);
+      setActiveTab('jobs');
+      
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
+      logger.error('[BatchUpload] Error creating job:', error);
+      toast.error(errorMessage);
+      
+      // Mark all files as error
+      currentFiles.forEach((_, index) => {
+        updateFileStatus(index, { status: 'error', error: errorMessage });
+      });
+    } finally {
+      if (isMountedRef.current) {
+        setIsProcessing(false);
+      }
+    }
+  };
+
+  // Legacy sequential processing (kept for reference but not used)
+  const startProcessingLegacy = async () => {
+    const currentFiles = filesRef.current;
+    if (currentFiles.length === 0) {
+      toast.error(t('batchUpload.noFiles', 'Aucun fichier à traiter'));
+      return;
+    }
+    
+    setIsProcessing(true);
     abortControllerRef.current = new AbortController();
     processedResumeIdsRef.current = []; // Reset the list of processed resume IDs
+    
+    // Start session keep-alive interval (refresh token every 2 minutes)
+    // This prevents session expiration during long batch processing
+    const KEEP_ALIVE_INTERVAL = 2 * 60 * 1000; // 2 minutes
+    keepAliveIntervalRef.current = setInterval(async () => {
+      if (!isMountedRef.current || !isProcessing) {
+        if (keepAliveIntervalRef.current) {
+          clearInterval(keepAliveIntervalRef.current);
+          keepAliveIntervalRef.current = null;
+        }
+        return;
+      }
+      
+      logger.info('[BatchUpload] Session keep-alive: refreshing token...');
+      const success = await attemptTokenRefresh();
+      if (!success) {
+        logger.warn('[BatchUpload] Session keep-alive: token refresh failed');
+      } else {
+        logger.debug('[BatchUpload] Session keep-alive: token refreshed successfully');
+      }
+    }, KEEP_ALIVE_INTERVAL);
     
     // Process files sequentially to avoid overwhelming the server
     for (let i = 0; i < currentFiles.length; i++) {
@@ -448,6 +558,12 @@ const BatchUploadPage = (): JSX.Element => {
       if (filesRef.current[i]?.status === 'pending') {
         await processFile(filesRef.current[i], i, abortControllerRef.current.signal);
       }
+    }
+    
+    // Stop keep-alive interval when processing is done
+    if (keepAliveIntervalRef.current) {
+      clearInterval(keepAliveIntervalRef.current);
+      keepAliveIntervalRef.current = null;
     }
     
     if (isMountedRef.current) {
@@ -512,6 +628,11 @@ const BatchUploadPage = (): JSX.Element => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
+    }
+    // Stop keep-alive interval
+    if (keepAliveIntervalRef.current) {
+      clearInterval(keepAliveIntervalRef.current);
+      keepAliveIntervalRef.current = null;
     }
     if (isMountedRef.current) {
       setIsProcessing(false);
@@ -690,6 +811,46 @@ const BatchUploadPage = (): JSX.Element => {
           </p>
         </motion.div>
 
+        {/* Tabs */}
+        <div className="flex border-b border-gray-200 dark:border-gray-700 mb-6">
+          <button
+            onClick={() => setActiveTab('import')}
+            className={`flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'import'
+                ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+            }`}
+          >
+            <DocumentArrowUpIcon className="w-5 h-5" />
+            {t('batchUpload.tabs.import', 'Import')}
+          </button>
+          <button
+            onClick={() => setActiveTab('jobs')}
+            className={`flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'jobs'
+                ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+            }`}
+          >
+            <QueueListIcon className="w-5 h-5" />
+            {t('batchUpload.tabs.jobs', 'Jobs')}
+          </button>
+        </div>
+
+        {/* Jobs Tab Content */}
+        {activeTab === 'jobs' && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6"
+          >
+            <JobsTab />
+          </motion.div>
+        )}
+
+        {/* Import Tab Content */}
+        {activeTab === 'import' && (
+          <>
         {/* Options */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -1118,6 +1279,8 @@ const BatchUploadPage = (): JSX.Element => {
             <strong>{t('batchUpload.gdprTitle', 'RGPD')} :</strong> {t('batchUpload.gdprInfo', 'Les CVs importés par lot sont considérés comme internes (collaborateurs). Aucune demande de consentement ne sera envoyée et aucun nom de candidat n\'est enregistré.')}
           </p>
         </motion.div>
+          </>
+        )}
       </div>
     </div>
   );

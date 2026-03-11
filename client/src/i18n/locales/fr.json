@@ -1966,6 +1966,10 @@
   "batchUpload": {
     "title": "Import par lot",
     "subtitle": "Chargez plusieurs CVs d'un coup pour les analyser automatiquement",
+    "tabs": {
+      "import": "Import",
+      "jobs": "Jobs"
+    },
     "processingOptions": "Options de traitement",
     "improveOption": "Améliorer les CVs automatiquement",
     "improveWarning": "L'amélioration prend plus de temps (environ 30-60 secondes par CV)",
@@ -2019,6 +2023,31 @@
       "success": "réussi(s)",
       "error": "erreur(s)",
       "pending": "en attente"
+    }
+  },
+  "batchJobs": {
+    "title": "Jobs de traitement",
+    "refresh": "Actualiser",
+    "noJobs": "Aucun job de traitement",
+    "noItems": "Aucun élément",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "download": "Télécharger l'export",
+    "downloadStarted": "Téléchargement démarré",
+    "jobCreated": "Job créé avec {{count}} fichier(s). Consultez l'onglet Jobs pour suivre la progression.",
+    "jobCancelled": "Job annulé",
+    "jobDeleted": "Job supprimé",
+    "status": {
+      "pending": "En attente",
+      "processing": "En cours",
+      "completed": "Terminé",
+      "failed": "Échoué",
+      "cancelled": "Annulé"
+    },
+    "type": {
+      "import": "Import",
+      "improve": "Amélioration",
+      "importImprove": "Import + Amélioration"
     }
   }
 }
