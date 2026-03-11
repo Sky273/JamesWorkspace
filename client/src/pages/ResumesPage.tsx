@@ -370,7 +370,7 @@ const ResumesPage = (): JSX.Element => {
         />
 
         <AnimatePresence>
-          {isFilterExpanded && (
+          {isFilterExpanded && totalCount > 0 && (
             <motion.div
               variants={filterContentVariants}
               initial="collapsed"

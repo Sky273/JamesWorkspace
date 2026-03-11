@@ -14,9 +14,9 @@ const router = express.Router();
 // Cache configuration
 const TAGS_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
 
-// In-memory cache for cleaned tags
-let cleanedTagsCache = null;
-let cleanedTagsCacheTime = 0;
+// In-memory cache for cleaned tags (per-firm cache: { firm_id: result, admin: result })
+let cleanedTagsCache = {};
+let cleanedTagsCacheTime = {};
 // In-memory cache for ESCO tags
 let escoTagsCache = null;
 let escoTagsCacheTime = 0;
@@ -24,10 +24,13 @@ let escoTagsCacheTime = 0;
 // Periodic cache cleanup - auto-expire if not accessed for 2x TTL
 const tagsCacheCleanupInterval = setInterval(() => {
     const now = Date.now();
-    if (cleanedTagsCacheTime && now - cleanedTagsCacheTime > TAGS_CACHE_TTL * 2) {
-        cleanedTagsCache = null;
-        cleanedTagsCacheTime = 0;
-        safeLog('debug', 'Tags: Cleaned tags cache auto-expired');
+    // Clean up per-firm cleaned tags cache
+    for (const key of Object.keys(cleanedTagsCacheTime)) {
+        if (now - cleanedTagsCacheTime[key] > TAGS_CACHE_TTL * 2) {
+            delete cleanedTagsCache[key];
+            delete cleanedTagsCacheTime[key];
+            safeLog('debug', `Tags: Cleaned tags cache auto-expired for ${key}`);
+        }
     }
     if (escoTagsCacheTime && now - escoTagsCacheTime > TAGS_CACHE_TTL * 2) {
         escoTagsCache = null;
@@ -40,8 +43,8 @@ const tagsCacheCleanupInterval = setInterval(() => {
  * Invalidate tags cache
  */
 function invalidateTagsCache() {
-    cleanedTagsCache = null;
-    cleanedTagsCacheTime = 0;
+    cleanedTagsCache = {};
+    cleanedTagsCacheTime = {};
     escoTagsCache = null;
     escoTagsCacheTime = 0;
     safeLog('debug', 'Tags: Cache invalidated');
@@ -158,13 +161,25 @@ router.get('/', authenticateToken, async (req, res) => {
     }
 });
 
-// GET /api/tags/cleaned - Get cleaned tags (aggregated from all resumes - optimized SQL)
+// GET /api/tags/cleaned - Get cleaned tags (aggregated from resumes - filtered by firm for non-admins)
 router.get('/cleaned', authenticateToken, async (req, res) => {
     try {
-        // Return cached cleaned tags if available and not expired
-        if (cleanedTagsCache && cleanedTagsCacheTime && (Date.now() - cleanedTagsCacheTime) < TAGS_CACHE_TTL) {
-            return res.json(cleanedTagsCache);
+        const userRole = req.user?.role?.toLowerCase();
+        const userFirmId = req.user?.firm_id;
+        const isAdmin = userRole === 'admin';
+        
+        // Cache key includes firm_id for non-admins to ensure proper isolation
+        const cacheKey = isAdmin ? 'admin' : `firm_${userFirmId}`;
+        
+        // Return cached cleaned tags if available and not expired (per-firm cache)
+        if (cleanedTagsCache?.[cacheKey] && cleanedTagsCacheTime?.[cacheKey] && 
+            (Date.now() - cleanedTagsCacheTime[cacheKey]) < TAGS_CACHE_TTL) {
+            return res.json(cleanedTagsCache[cacheKey]);
         }
+        
+        // Build WHERE clause for firm filtering (admins see all, others see only their firm)
+        const firmFilter = isAdmin ? '' : 'WHERE firm_id = $1';
+        const firmParams = isAdmin ? [] : [userFirmId];
         
         // Use PostgreSQL to aggregate and deduplicate cleaned tags directly in the database
         // Note: PostgreSQL doesn't allow ORDER BY in jsonb_agg(DISTINCT ...), so we use subqueries
@@ -174,7 +189,8 @@ router.get('/cleaned', authenticateToken, async (req, res) => {
                     (SELECT jsonb_agg(tag ORDER BY tag) FROM (
                         SELECT DISTINCT tag 
                         FROM resumes, jsonb_array_elements_text(COALESCE(skills_cleaned, '[]'::jsonb)) AS tag 
-                        WHERE tag IS NOT NULL AND tag != ''
+                        ${firmFilter}
+                        ${firmFilter ? 'AND' : 'WHERE'} tag IS NOT NULL AND tag != ''
                     ) AS distinct_tags),
                     '[]'::jsonb
                 ) AS skills,
@@ -182,7 +198,8 @@ router.get('/cleaned', authenticateToken, async (req, res) => {
                     (SELECT jsonb_agg(tag ORDER BY tag) FROM (
                         SELECT DISTINCT tag 
                         FROM resumes, jsonb_array_elements_text(COALESCE(industries_cleaned, '[]'::jsonb)) AS tag 
-                        WHERE tag IS NOT NULL AND tag != ''
+                        ${firmFilter}
+                        ${firmFilter ? 'AND' : 'WHERE'} tag IS NOT NULL AND tag != ''
                     ) AS distinct_tags),
                     '[]'::jsonb
                 ) AS industries,
@@ -190,7 +207,8 @@ router.get('/cleaned', authenticateToken, async (req, res) => {
                     (SELECT jsonb_agg(tag ORDER BY tag) FROM (
                         SELECT DISTINCT tag 
                         FROM resumes, jsonb_array_elements_text(COALESCE(tools_cleaned, '[]'::jsonb)) AS tag 
-                        WHERE tag IS NOT NULL AND tag != ''
+                        ${firmFilter}
+                        ${firmFilter ? 'AND' : 'WHERE'} tag IS NOT NULL AND tag != ''
                     ) AS distinct_tags),
                     '[]'::jsonb
                 ) AS tools,
@@ -198,7 +216,8 @@ router.get('/cleaned', authenticateToken, async (req, res) => {
                     (SELECT jsonb_agg(tag ORDER BY tag) FROM (
                         SELECT DISTINCT tag 
                         FROM resumes, jsonb_array_elements_text(COALESCE(soft_skills_cleaned, '[]'::jsonb)) AS tag 
-                        WHERE tag IS NOT NULL AND tag != ''
+                        ${firmFilter}
+                        ${firmFilter ? 'AND' : 'WHERE'} tag IS NOT NULL AND tag != ''
                     ) AS distinct_tags),
                     '[]'::jsonb
                 ) AS soft_skills
@@ -206,7 +225,7 @@ router.get('/cleaned', authenticateToken, async (req, res) => {
         
         const queryResult = await selectWithTimeout('resumes', {
             rawQuery: aggregateQuery,
-            rawParams: []
+            rawParams: firmParams
         });
         
         const row = queryResult[0] || {};
@@ -217,9 +236,11 @@ router.get('/cleaned', authenticateToken, async (req, res) => {
             'Soft Skills': row.soft_skills || []
         };
         
-        // Update cache with timestamp
-        cleanedTagsCache = result;
-        cleanedTagsCacheTime = Date.now();
+        // Update per-firm cache with timestamp
+        if (!cleanedTagsCache) cleanedTagsCache = {};
+        if (!cleanedTagsCacheTime) cleanedTagsCacheTime = {};
+        cleanedTagsCache[cacheKey] = result;
+        cleanedTagsCacheTime[cacheKey] = Date.now();
         
         res.json(result);
     } catch (error) {

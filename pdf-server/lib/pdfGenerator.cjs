@@ -1,17 +1,55 @@
 /**
- * PDF Generator using PrinceXML
+ * PDF Generator using Puppeteer/Chrome
  * Generates high-quality PDFs from HTML content
  */
 
-const { execSync } = require('child_process');
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
+const puppeteer = require('puppeteer');
 const { log } = require('./logger.cjs');
-const { buildPrinceHtml } = require('./htmlBuilder.cjs');
+const { buildPuppeteerHtml, buildPuppeteerFooter } = require('./htmlBuilder.cjs');
+
+// Reusable browser instance for performance
+let browserInstance = null;
+let browserLaunchPromise = null;
 
 /**
- * Generate PDF from HTML content using PrinceXML
+ * Get or create a browser instance
+ * @returns {Promise<Browser>} Puppeteer browser instance
+ */
+async function getBrowser() {
+  if (browserInstance && browserInstance.isConnected()) {
+    return browserInstance;
+  }
+  
+  // Prevent multiple simultaneous launches
+  if (browserLaunchPromise) {
+    return browserLaunchPromise;
+  }
+  
+  browserLaunchPromise = puppeteer.launch({
+    headless: 'new',
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/google-chrome-stable',
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-gpu',
+      '--disable-software-rasterizer'
+    ]
+  });
+  
+  browserInstance = await browserLaunchPromise;
+  browserLaunchPromise = null;
+  
+  // Handle browser disconnect
+  browserInstance.on('disconnected', () => {
+    browserInstance = null;
+  });
+  
+  return browserInstance;
+}
+
+/**
+ * Generate PDF from HTML content using Puppeteer/Chrome
  * @param {Object} options - Generation options
  * @param {string} options.htmlContent - Main body HTML content
  * @param {string} options.stylesheet - Custom CSS stylesheet
@@ -21,64 +59,94 @@ const { buildPrinceHtml } = require('./htmlBuilder.cjs');
  * @returns {Promise<Buffer>} PDF buffer
  */
 async function generatePdf({ htmlContent, stylesheet, headerContent, footerContent, footerHeight }) {
-  const tempDir = os.tmpdir();
-  const tempId = `pdf_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-  const htmlFilePath = path.join(tempDir, `${tempId}.html`);
-  const pdfFilePath = path.join(tempDir, `${tempId}.pdf`);
-
+  let page = null;
+  
   try {
+    const hasFooterContent = footerContent && footerContent.trim() !== '';
+    const customFooterHeight = footerHeight || 25;
+    
     // Build the complete HTML document
-    const wrappedHtmlContent = buildPrinceHtml({
+    const wrappedHtmlContent = buildPuppeteerHtml({
       htmlContent,
       stylesheet,
       headerContent,
-      footerContent,
-      footerHeight
+      footerHeight: customFooterHeight,
+      hasFooter: hasFooterContent
     });
-
-    // Write HTML to temporary file
-    fs.writeFileSync(htmlFilePath, wrappedHtmlContent, 'utf8');
     
-    log('debug', 'Prince PDF generation', { 
+    log('debug', 'Puppeteer PDF generation', { 
       htmlLength: wrappedHtmlContent.length, 
       hasHeader: !!headerContent, 
-      hasFooter: !!(footerContent && footerContent.trim()) 
+      hasFooter: hasFooterContent,
+      footerHeight: customFooterHeight
     });
 
-    // Generate PDF using Prince
-    try {
-      execSync(`prince "${htmlFilePath}" -o "${pdfFilePath}"`, {
-        timeout: 30000,
-        stdio: ['pipe', 'pipe', 'pipe']
-      });
-    } catch (cmdError) {
-      log('error', 'Prince PDF generation failed', { 
-        error: cmdError.message, 
-        stderr: cmdError.stderr?.toString() 
-      });
-      throw new Error(`Prince PDF generation failed: ${cmdError.message}`);
+    const browser = await getBrowser();
+    page = await browser.newPage();
+
+    // Set content and wait for resources to load
+    await page.setContent(wrappedHtmlContent, { 
+      waitUntil: 'networkidle0',
+      timeout: 30000
+    });
+
+    // Calculate footer height for margins
+    // The margin-bottom must be at least equal to the footer height + padding
+    const footerMargin = hasFooterContent ? Math.min(customFooterHeight + 15, 250) : 10;
+
+    const pdfOptions = {
+      format: 'A4',
+      printBackground: true,
+      scale: 1,
+      margin: {
+        top: '15mm',
+        right: '10mm',
+        bottom: `${footerMargin}mm`,
+        left: '10mm'
+      },
+      timeout: 30000
+    };
+
+    // Add footer using Puppeteer's native displayHeaderFooter
+    if (hasFooterContent) {
+      pdfOptions.displayHeaderFooter = true;
+      pdfOptions.headerTemplate = '<span></span>'; // Empty header (we use inline header)
+      pdfOptions.footerTemplate = buildPuppeteerFooter(footerContent);
     }
 
-    // Check if PDF was generated
-    if (!fs.existsSync(pdfFilePath)) {
-      throw new Error('Prince did not generate the PDF file');
-    }
-
-    // Read and return the generated PDF
-    const pdfBuffer = fs.readFileSync(pdfFilePath);
+    const pdfBuffer = await page.pdf(pdfOptions);
     
     log('debug', 'PDF generated', { size: `${Math.round(pdfBuffer.length / 1024)}KB` });
     
     return pdfBuffer;
+  } catch (error) {
+    log('error', 'Puppeteer PDF generation failed', { error: error.message });
+    throw new Error(`PDF generation failed: ${error.message}`);
   } finally {
-    // Cleanup temporary files
-    try {
-      if (fs.existsSync(htmlFilePath)) fs.unlinkSync(htmlFilePath);
-      if (fs.existsSync(pdfFilePath)) fs.unlinkSync(pdfFilePath);
-    } catch (cleanupError) {
-      log('warn', 'Failed to cleanup temp files', { error: cleanupError.message });
+    // Close the page but keep the browser
+    if (page) {
+      try {
+        await page.close();
+      } catch (closeError) {
+        log('warn', 'Failed to close page', { error: closeError.message });
+      }
     }
   }
 }
 
-module.exports = { generatePdf };
+/**
+ * Close the browser instance (call on server shutdown)
+ */
+async function closeBrowser() {
+  if (browserInstance) {
+    try {
+      await browserInstance.close();
+      browserInstance = null;
+      log('info', 'Browser instance closed');
+    } catch (error) {
+      log('warn', 'Failed to close browser', { error: error.message });
+    }
+  }
+}
+
+module.exports = { generatePdf, closeBrowser };
