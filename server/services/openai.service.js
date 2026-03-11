@@ -5,6 +5,7 @@ import { metrics } from './metrics.service.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { validatePromptSize } from '../utils/postgresHelpers.js';
 import { securityLog, LOG_LEVELS, SECURITY_EVENTS } from './security.service.js';
+import { withRetry, getCircuitBreakerStates } from './retry.service.js';
 
 const OPENAI_CHAT_API_URL = 'https://api.openai.com/v1/chat/completions';
 const OPENAI_RESPONSES_API_URL = 'https://api.openai.com/v1/responses';
@@ -692,4 +693,40 @@ export async function adaptResumeToMission({
     let content = response.choices[0].message.content;
     content = content.replace(/^```html\s*/i, '').replace(/```\s*$/i, '').trim();
     return content;
+}
+
+// ============================================
+// CIRCUIT BREAKER WRAPPED FUNCTIONS
+// ============================================
+
+/**
+ * Call OpenAI API with circuit breaker protection
+ * Wraps callOpenAI with retry logic and circuit breaker pattern
+ * @param {Object} params - Same parameters as callOpenAI
+ * @returns {Promise<Object>} - OpenAI response data
+ */
+export async function callOpenAIWithCircuitBreaker(params) {
+    const operationName = params.operationType || 'OpenAI API call';
+    
+    return withRetry(
+        () => callOpenAI(params),
+        {
+            serviceName: 'openai',
+            operationName,
+            retryConfig: {
+                maxRetries: 2,
+                initialDelayMs: 2000,
+                maxDelayMs: 30000
+            }
+        }
+    );
+}
+
+/**
+ * Get OpenAI circuit breaker status
+ * @returns {Object} Circuit breaker state for OpenAI
+ */
+export function getOpenAICircuitBreakerStatus() {
+    const states = getCircuitBreakerStates();
+    return states.openai || { state: 'UNKNOWN', failures: 0 };
 }

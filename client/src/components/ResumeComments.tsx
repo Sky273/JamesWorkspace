@@ -17,6 +17,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../context/AuthContext';
 import { fetchWithAuth, createAuthOptionsWithCsrf } from '../utils/apiInterceptor';
+import logger from '../utils/logger.frontend';
 
 interface Comment {
   id: string;
@@ -59,7 +60,7 @@ const ResumeComments = ({ resumeId, className = '' }: ResumeCommentsProps): JSX.
         setComments(data.comments);
       }
     } catch (err) {
-      console.error('Failed to fetch comments:', err);
+      logger.error('[Comments] Failed to fetch comments:', err);
       setError(t('comments.fetchError', 'Failed to load comments'));
     } finally {
       setIsLoading(false);
@@ -97,7 +98,7 @@ const ResumeComments = ({ resumeId, className = '' }: ResumeCommentsProps): JSX.
         setIsPrivate(false);
       }
     } catch (err) {
-      console.error('Failed to add comment:', err);
+      logger.error('[Comments] Failed to add comment:', err);
       setError(t('comments.addError', 'Failed to add comment'));
     } finally {
       setIsSubmitting(false);
@@ -128,7 +129,7 @@ const ResumeComments = ({ resumeId, className = '' }: ResumeCommentsProps): JSX.
         setEditContent('');
       }
     } catch (err) {
-      console.error('Failed to update comment:', err);
+      logger.error('[Comments] Failed to update comment:', err);
       setError(t('comments.updateError', 'Failed to update comment'));
     }
   };
@@ -150,7 +151,7 @@ const ResumeComments = ({ resumeId, className = '' }: ResumeCommentsProps): JSX.
         setComments(prev => prev.filter(c => c.id !== commentId));
       }
     } catch (err) {
-      console.error('Failed to delete comment:', err);
+      logger.error('[Comments] Failed to delete comment:', err);
       setError(t('comments.deleteError', 'Failed to delete comment'));
     }
   };

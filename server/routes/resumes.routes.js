@@ -9,7 +9,58 @@ import { validateParams, validateBody, updateResumeSchema } from '../utils/valid
 import { selectWithTimeout, updateWithTimeout, destroyWithTimeout } from '../utils/postgresHelpers.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { query } from '../config/database.js';
-import { getUserFirmId, isValidUUID, getFirmById } from '../utils/firmHelpers.js';
+import { getUserFirmId, isValidUUID, getFirmById, isUserAdmin } from '../utils/firmHelpers.js';
+
+/**
+ * Check if user has access to a specific resume
+ * Admins can access all resumes, users can only access resumes from their firm
+ * @param {Object} req - Express request object
+ * @param {string} resumeId - Resume UUID
+ * @returns {Promise<{hasAccess: boolean, resume: Object|null, error: string|null}>}
+ */
+async function checkResumeAccess(req, resumeId) {
+    try {
+        // Fetch resume with firm_id
+        const result = await query(
+            'SELECT id, firm_id, name FROM resumes WHERE id = $1',
+            [resumeId]
+        );
+        
+        if (result.rows.length === 0) {
+            return { hasAccess: false, resume: null, error: 'Resume not found' };
+        }
+        
+        const resume = result.rows[0];
+        
+        // Admins can access all resumes
+        if (isUserAdmin(req)) {
+            return { hasAccess: true, resume, error: null };
+        }
+        
+        // Non-admin users can only access resumes from their firm
+        const userFirmId = await getUserFirmId(req);
+        
+        if (!userFirmId) {
+            safeLog('warn', 'User has no valid firm_id', { userId: req.user?.id });
+            return { hasAccess: false, resume: null, error: 'User has no valid firm association' };
+        }
+        
+        if (resume.firm_id !== userFirmId) {
+            safeLog('warn', 'Access denied: user tried to access resume from different firm', {
+                userId: req.user?.id,
+                userFirmId,
+                resumeFirmId: resume.firm_id,
+                resumeId
+            });
+            return { hasAccess: false, resume, error: 'Access denied' };
+        }
+        
+        return { hasAccess: true, resume, error: null };
+    } catch (error) {
+        safeLog('error', 'Error checking resume access', { error: error.message, resumeId });
+        return { hasAccess: false, resume: null, error: 'Failed to verify access' };
+    }
+}
 
 // Import LLM handlers (PostgreSQL version)
 import { analyzeHandler, analyzeTextHandler, improveHandler, improveByIdHandler, matchHandler, adaptHandler } from './resumes/llm.handlers.js';
@@ -423,12 +474,18 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
         
         const resume = result.rows[0];
         
-        const userRole = (req.user?.role || '').toLowerCase();
-        const isAdmin = userRole === 'admin';
-        const userFirm = req.user?.firm || req.user?.customer;
-        
-        if (!isAdmin && resume.firm_name !== userFirm) {
-            return res.status(403).json({ error: 'Access denied: You can only view resumes from your firm' });
+        // Verify user has access to this resume (firm-based access control using firm_id)
+        if (!isUserAdmin(req)) {
+            const userFirmId = await getUserFirmId(req);
+            if (!userFirmId || resume.firm_id !== userFirmId) {
+                safeLog('warn', 'Access denied: user tried to view resume from different firm', {
+                    userId: req.user?.id,
+                    userFirmId,
+                    resumeFirmId: resume.firm_id,
+                    resumeId: id
+                });
+                return res.status(403).json({ error: 'Access denied: You can only view resumes from your firm' });
+            }
         }
         
         // Map to frontend format
@@ -768,6 +825,15 @@ function parseScore(value) {
 router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateResumeSchema), async (req, res) => {
     try {
         const { id } = req.params;
+        
+        // Verify user has access to this resume (firm-based access control)
+        const { hasAccess, error: accessError } = await checkResumeAccess(req, id);
+        
+        if (!hasAccess) {
+            const statusCode = accessError === 'Resume not found' ? 404 : 403;
+            return res.status(statusCode).json({ error: accessError });
+        }
+        
         safeLog('info', 'PUT /api/resumes/:id called', { 
             resumeId: id, 
             bodyKeys: Object.keys(req.body),
@@ -1052,8 +1118,17 @@ router.delete('/:id', authenticateToken, validateParams('id'), async (req, res) 
     try {
         const { id } = req.params;
         
+        // Verify user has access to this resume (firm-based access control)
+        const { hasAccess, error: accessError } = await checkResumeAccess(req, id);
+        
+        if (!hasAccess) {
+            const statusCode = accessError === 'Resume not found' ? 404 : 403;
+            return res.status(statusCode).json({ error: accessError });
+        }
+        
         await destroyWithTimeout('resumes', [id]);
         
+        safeLog('info', 'Resume deleted', { resumeId: id, userId: req.user?.id });
         res.json({ message: 'Resume deleted successfully' });
     } catch (error) {
         if (error.statusCode === 404) {

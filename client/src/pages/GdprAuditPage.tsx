@@ -16,6 +16,7 @@ import {
   ExclamationTriangleIcon,
   InformationCircleIcon,
 } from '@heroicons/react/24/outline';
+import logger from '../utils/logger.frontend';
 
 interface GdprAuditLog {
   id: string;
@@ -102,7 +103,7 @@ const GdprAuditPage = () => {
         setCategories(data.categories || []);
       }
     } catch (err) {
-      console.error('Failed to fetch action types:', err);
+      logger.error('[GdprAudit] Failed to fetch action types:', err);
     }
   }, [authGet]);
 
@@ -115,7 +116,7 @@ const GdprAuditPage = () => {
         setFirms(data || []);
       }
     } catch (err) {
-      console.error('Failed to fetch firms:', err);
+      logger.error('[GdprAudit] Failed to fetch firms:', err);
     }
   }, [authGet]);
 
@@ -131,7 +132,7 @@ const GdprAuditPage = () => {
         setStats(data);
       }
     } catch (err) {
-      console.error('Failed to fetch stats:', err);
+      logger.error('[GdprAudit] Failed to fetch stats:', err);
     }
   }, [authGet, filters.firmId]);
 

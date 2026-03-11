@@ -2784,6 +2784,105 @@ export const swaggerPaths = {
                 }
             }
         }
+    },
+
+    // ============================================
+    // BATCH EXPORT
+    // ============================================
+    '/batch-export': {
+        post: {
+            tags: ['Resumes'],
+            summary: 'Batch export resumes to ZIP',
+            description: 'Generates a ZIP archive containing multiple resumes exported as PDF or DOCX files using a specified template.',
+            security: [{ cookieAuth: [] }, { csrfToken: [] }],
+            requestBody: {
+                required: true,
+                content: {
+                    'application/json': {
+                        schema: {
+                            type: 'object',
+                            required: ['resumeIds', 'templateId'],
+                            properties: {
+                                resumeIds: {
+                                    type: 'array',
+                                    items: { type: 'string', format: 'uuid' },
+                                    description: 'Array of resume IDs to export'
+                                },
+                                templateId: {
+                                    type: 'string',
+                                    format: 'uuid',
+                                    description: 'Template ID to use for export'
+                                },
+                                format: {
+                                    type: 'string',
+                                    enum: ['pdf', 'docx', 'doc'],
+                                    default: 'pdf',
+                                    description: 'Export format'
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            responses: {
+                200: {
+                    description: 'ZIP archive containing exported files',
+                    content: {
+                        'application/zip': {
+                            schema: { type: 'string', format: 'binary' }
+                        }
+                    }
+                },
+                400: { description: 'Invalid request (missing resumeIds or templateId)' },
+                404: { description: 'Template not found' },
+                503: { description: 'PDF server not available' }
+            }
+        }
+    },
+
+    // ============================================
+    // CIRCUIT BREAKERS
+    // ============================================
+    '/llm/circuit-breakers': {
+        get: {
+            tags: ['LLM', 'Admin'],
+            summary: 'Get circuit breaker states',
+            description: 'Returns the current state of all circuit breakers for LLM services (OpenAI, Anthropic). Admin only.',
+            security: [{ cookieAuth: [] }],
+            responses: {
+                200: {
+                    description: 'Circuit breaker states',
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    openai: {
+                                        type: 'object',
+                                        properties: {
+                                            name: { type: 'string' },
+                                            state: { type: 'string', enum: ['CLOSED', 'OPEN', 'HALF_OPEN'] },
+                                            failures: { type: 'integer' },
+                                            lastFailureTime: { type: 'integer', nullable: true }
+                                        }
+                                    },
+                                    anthropic: {
+                                        type: 'object',
+                                        properties: {
+                                            name: { type: 'string' },
+                                            state: { type: 'string', enum: ['CLOSED', 'OPEN', 'HALF_OPEN'] },
+                                            failures: { type: 'integer' },
+                                            lastFailureTime: { type: 'integer', nullable: true }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                403: { $ref: '#/components/responses/Forbidden' }
+            }
+        }
     }
 };
 

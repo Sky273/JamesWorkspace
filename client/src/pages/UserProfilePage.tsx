@@ -18,6 +18,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useAuthFetch } from '../hooks/useAuthFetch';
 import Breadcrumbs from '../components/Breadcrumbs';
+import logger from '../utils/logger.frontend';
 import TwoFactorSettings from '../components/TwoFactorSettings';
 
 interface UserProfile {
@@ -60,7 +61,7 @@ const UserProfilePage = (): JSX.Element => {
         });
       }
     } catch (error) {
-      console.error('Failed to fetch profile:', error);
+      logger.error('[UserProfile] Failed to fetch profile:', error);
     } finally {
       setLoading(false);
     }

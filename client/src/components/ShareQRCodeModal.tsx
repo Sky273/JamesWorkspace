@@ -14,6 +14,7 @@ import {
   ArrowDownTrayIcon,
   ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
+import logger from '../utils/logger.frontend';
 
 interface ShareQRCodeModalProps {
   isOpen: boolean;
@@ -46,7 +47,7 @@ const ShareQRCodeModal = ({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error('Failed to copy:', err);
+      logger.error('[ShareQR] Failed to copy:', err);
     }
   };
 

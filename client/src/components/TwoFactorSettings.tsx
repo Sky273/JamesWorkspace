@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import TwoFactorSetup from './TwoFactorSetup';
 import { useAuthFetch } from '../hooks/useAuthFetch';
+import logger from '../utils/logger.frontend';
 
 interface TwoFactorStatus {
   enabled: boolean;
@@ -32,7 +33,7 @@ export default function TwoFactorSettings() {
         setStatus(data);
       }
     } catch (error) {
-      console.error('Failed to fetch 2FA status:', error);
+      logger.error('[2FA] Failed to fetch status:', error);
     } finally {
       setLoading(false);
     }

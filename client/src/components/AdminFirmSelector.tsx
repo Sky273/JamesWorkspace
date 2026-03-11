@@ -9,6 +9,7 @@ import { TFunction } from 'i18next';
 import { BuildingOfficeIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '../context/AuthContext';
 import userService from '../utils/userService';
+import logger from '../utils/logger.frontend';
 
 interface Firm {
   id: string;
@@ -66,7 +67,7 @@ const AdminFirmSelector = ({
           }
         }
       } catch (error) {
-        console.error('[AdminFirmSelector] Failed to load firms:', error);
+        logger.error('[AdminFirmSelector] Failed to load firms:', error);
         setFirms([]);
       } finally {
         setLoading(false);

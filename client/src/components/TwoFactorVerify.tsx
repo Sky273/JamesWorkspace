@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ShieldCheckIcon, KeyIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 import { authService } from '../services/authService';
 import toast from 'react-hot-toast';
+import logger from '../utils/logger.frontend';
 
 interface TwoFactorVerifyProps {
   userId: string;
@@ -65,7 +66,7 @@ export default function TwoFactorVerify({ userId, email, password, onSuccess, on
         toast.error('Réponse inattendue du serveur', { id: '2fa-verify' });
       }
     } catch (err) {
-      console.error('[2FA] Error:', err);
+      logger.error('[2FA] Verification error:', err);
       const errorMsg = 'Erreur de connexion au serveur';
       setError(errorMsg);
       setStatus('error');

@@ -8,6 +8,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { DocumentArrowDownIcon, ExclamationTriangleIcon, EyeIcon } from '@heroicons/react/24/outline';
+import logger from '../utils/logger.frontend';
 
 type FileType = 'pdf' | 'file';
 
@@ -112,7 +113,7 @@ const SharedFilePage = (): JSX.Element => {
 
         setLoading(false);
       } catch (err) {
-        console.error('Failed to fetch shared file:', err);
+        logger.error('[SharedFile] Failed to fetch shared file:', err);
         setError(t('share.fetchError', 'Failed to load file'));
         setLoading(false);
       }

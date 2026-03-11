@@ -14,6 +14,7 @@ import type { Map as MaplibreMap } from 'maplibre-gl';
 import { MarketTrend, getAllTrends, getTrendMetadata } from '../../services/marketRadarService';
 import { getStoredMetiers, Metier } from '../../services/romeService';
 import TrendMetadataDisplay, { parseMetadata } from './TrendMetadataDisplay';
+import logger from '../../utils/logger.frontend';
 
 // Data source types
 type DataSourceType = 'all' | 'offres' | 'tension' | 'salaire' | 'dynamique_emploi' | 'embauche' | 'demandeur' | 'demandeur_entrant';
@@ -262,7 +263,7 @@ export default function FranceMapTab({ className = '' }: FranceMapTabProps) {
         setSelectedTrendMetadata(response.trend);
       }
     } catch (err) {
-      console.error('Failed to load trend metadata:', err);
+      logger.error('[FranceMap] Failed to load trend metadata:', err);
     } finally {
       setMetadataLoading(false);
     }
@@ -333,7 +334,7 @@ export default function FranceMapTab({ className = '' }: FranceMapTabProps) {
           }
         })
         .catch(err => {
-          console.error('Failed to load trend metadata for new region:', err);
+          logger.error('[FranceMap] Failed to load trend metadata for new region:', err);
           setSelectedTrendMetadata(null);
         })
         .finally(() => {
