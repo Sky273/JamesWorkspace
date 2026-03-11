@@ -2004,6 +2004,7 @@
     "estimatedTime": "< 1 minute",
     "estimatedTime1min": "~1 minute",
     "estimatedTimeMinutes": "~{{minutes}} minutes",
+    "processingCancelled": "Traitement annulé",
     "status": {
       "pending": "En attente",
       "uploading": "Upload...",

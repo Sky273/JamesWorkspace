@@ -511,6 +511,11 @@ const BatchUploadPage = (): JSX.Element => {
   const cancelProcessing = () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    if (isMountedRef.current) {
+      setIsProcessing(false);
+      toast(t('batchUpload.processingCancelled', 'Traitement annulé'), { icon: '⚠️' });
     }
   };
 
