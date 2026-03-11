@@ -87,6 +87,63 @@ if (!fs.existsSync(TEMP_DIR)) {
 }
 
 /**
+ * Initialize backup tables if they don't exist
+ * Called at server startup
+ */
+export async function initBackupTables() {
+    try {
+        // Create backup_settings table
+        await query(`
+            CREATE TABLE IF NOT EXISTS backup_settings (
+                id uuid DEFAULT public.uuid_generate_v4() PRIMARY KEY,
+                protocol VARCHAR(10) DEFAULT 'ftp' CHECK (protocol IN ('ftp', 'ftps', 'sftp')),
+                tls_mode VARCHAR(10) DEFAULT 'explicit' CHECK (tls_mode IN ('none', 'explicit', 'implicit')),
+                host VARCHAR(255),
+                port INTEGER DEFAULT 21,
+                username VARCHAR(255),
+                password VARCHAR(255),
+                remote_path VARCHAR(500) DEFAULT '/',
+                daily_enabled BOOLEAN DEFAULT false,
+                daily_time VARCHAR(5) DEFAULT '02:00',
+                weekly_enabled BOOLEAN DEFAULT false,
+                weekly_day INTEGER DEFAULT 0 CHECK (weekly_day >= 0 AND weekly_day <= 6),
+                weekly_time VARCHAR(5) DEFAULT '03:00',
+                monthly_enabled BOOLEAN DEFAULT false,
+                monthly_day INTEGER DEFAULT 1 CHECK (monthly_day >= 1 AND monthly_day <= 28),
+                monthly_time VARCHAR(5) DEFAULT '04:00',
+                retention_days INTEGER DEFAULT 30,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+        
+        // Create backup_history table
+        await query(`
+            CREATE TABLE IF NOT EXISTS backup_history (
+                id uuid DEFAULT public.uuid_generate_v4() PRIMARY KEY,
+                type VARCHAR(20) NOT NULL,
+                filename VARCHAR(255) NOT NULL,
+                size_bytes BIGINT,
+                status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'running', 'completed', 'failed')),
+                started_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                completed_at TIMESTAMP WITH TIME ZONE,
+                error_message TEXT,
+                uploaded BOOLEAN DEFAULT false
+            )
+        `);
+        
+        // Create indexes
+        await query(`CREATE INDEX IF NOT EXISTS idx_backup_history_started_at ON backup_history(started_at DESC)`);
+        await query(`CREATE INDEX IF NOT EXISTS idx_backup_history_status ON backup_history(status)`);
+        
+        safeLog('info', 'Backup tables initialized');
+    } catch (error) {
+        safeLog('error', 'Failed to initialize backup tables', { error: error.message });
+        throw error;
+    }
+}
+
+/**
  * Get backup settings from database
  */
 export async function getBackupSettings() {

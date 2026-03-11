@@ -83,10 +83,20 @@ function stopAllJobs() {
 
 /**
  * Initialize backup scheduler based on settings
+ * Called at server startup and after settings changes
  */
 export async function initBackupScheduler() {
     try {
-        const settings = await getBackupSettings();
+        let settings;
+        try {
+            settings = await getBackupSettings();
+        } catch (dbError) {
+            // Table might not exist yet or DB connection issue
+            safeLog('warn', '[BackupScheduler] Could not load backup settings from database', {
+                error: dbError.message
+            });
+            return;
+        }
         
         if (!settings) {
             safeLog('info', '[BackupScheduler] No backup settings found, scheduler not started');

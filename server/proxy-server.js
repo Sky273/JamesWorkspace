@@ -95,8 +95,9 @@ import { destroyEscoCache } from './services/escoService.js';
 import { initializeDatabase, closePool } from './services/database.service.js';
 // GDPR consent scheduler
 import { startScheduler, stopScheduler } from './services/scheduler.service.js';
-// Backup scheduler
+// Backup scheduler and tables
 import { initBackupScheduler, stopBackupScheduler } from './services/backup-scheduler.service.js';
+import { initBackupTables } from './services/backup.service.js';
 // GDPR Audit Log initialization
 import { initGdprAuditTable } from './services/gdprAudit.service.js';
 // Resume Comments initialization
@@ -1042,6 +1043,23 @@ async function onServerStart(protocol, port) {
         } catch (error) {
             safeLog('error', 'Failed to initialize Calendar tokens table', { error: error.message });
         }
+        
+        // Initialize Backup tables (backup_settings, backup_history)
+        try {
+            await initBackupTables();
+            safeLog('info', 'Backup tables initialized');
+        } catch (error) {
+            safeLog('error', 'Failed to initialize Backup tables', { error: error.message });
+        }
+        
+        // Start backup scheduler (scheduled database backups via FTP/SFTP)
+        // Must be after initBackupTables since it reads from backup_settings table
+        try {
+            await initBackupScheduler();
+            safeLog('info', 'Backup Scheduler initialized');
+        } catch (error) {
+            safeLog('error', 'Failed to initialize Backup Scheduler', { error: error.message });
+        }
     } else {
         safeLog('error', 'PostgreSQL database initialization failed');
     }
@@ -1058,14 +1076,6 @@ async function onServerStart(protocol, port) {
     // Start GDPR consent scheduler (checks for expired consents, sends reminders, purges)
     startScheduler();
     safeLog('info', 'GDPR Consent Scheduler started');
-    
-    // Start backup scheduler (scheduled database backups via FTP/SFTP)
-    try {
-        await initBackupScheduler();
-        safeLog('info', 'Backup Scheduler initialized');
-    } catch (error) {
-        safeLog('error', 'Failed to initialize Backup Scheduler', { error: error.message });
-    }
 }
 
 // Graceful shutdown with proper cleanup
