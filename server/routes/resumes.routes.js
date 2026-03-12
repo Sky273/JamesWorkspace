@@ -279,12 +279,19 @@ router.get('/stats', authenticateToken, async (req, res) => {
         const userFirm = req.user.firm || req.user.customer;
         const isAdmin = req.user.role?.toLowerCase() === 'admin';
 
-        // Build WHERE clause based on user role
+        // Build WHERE clause based on user role - use firm_id for consistency with other queries
         let whereClause = '';
         const params = [];
-        if (!isAdmin && userFirm) {
-            whereClause = 'WHERE r.firm_name = $1';
-            params.push(userFirm);
+        if (!isAdmin) {
+            const userFirmId = await getUserFirmId(req);
+            if (userFirmId) {
+                whereClause = 'WHERE r.firm_id = $1';
+                params.push(userFirmId);
+            } else if (userFirm) {
+                // Fallback to firm_name if no firm_id
+                whereClause = 'WHERE r.firm_name = $1';
+                params.push(userFirm);
+            }
         }
 
         // Calculate date ranges
