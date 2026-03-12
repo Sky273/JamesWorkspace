@@ -2037,6 +2037,10 @@
     "jobCreated": "Job created with {{count}} file(s). Check the Jobs tab to track progress.",
     "jobCancelled": "Job cancelled",
     "jobDeleted": "Job deleted",
+    "serverInfo": {
+      "title": "Background Processing",
+      "description": "Jobs are processed on the server. You can navigate freely in the application without interrupting the processing."
+    },
     "status": {
       "pending": "Pending",
       "processing": "Processing",

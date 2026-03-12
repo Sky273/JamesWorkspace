@@ -2037,6 +2037,10 @@
     "jobCreated": "Job créé avec {{count}} fichier(s). Consultez l'onglet Jobs pour suivre la progression.",
     "jobCancelled": "Job annulé",
     "jobDeleted": "Job supprimé",
+    "serverInfo": {
+      "title": "Traitement en arrière-plan",
+      "description": "Les jobs sont traités sur le serveur. Vous pouvez naviguer librement dans l'application sans interrompre le traitement."
+    },
     "status": {
       "pending": "En attente",
       "processing": "En cours",

@@ -27,7 +27,7 @@ import os from 'os';
 // Worker configuration
 const WORKER_INTERVAL = 5000; // Check for pending jobs every 5 seconds
 const BATCH_SIZE = 100; // Process up to 100 items in parallel
-const MAX_CONCURRENT_LLM = 10; // Max concurrent LLM requests to avoid rate limits
+const MAX_CONCURRENT_LLM = 20; // Max concurrent LLM requests to avoid rate limits
 const SHUTDOWN_TIMEOUT = 30000; // Max wait time for graceful shutdown (30s)
 
 // Worker state
@@ -56,6 +56,47 @@ function parseScore(value) {
         return isNaN(num) ? null : num;
     }
     return null;
+}
+
+/**
+ * Generate a trigram from candidate name (first letter of first name + first two letters of last name)
+ * Examples: "Jean Dupont" -> "JDU", "Marie Martin" -> "MMA", "Pierre-Louis Durand" -> "PDU"
+ * @param {string} name - Full name of the candidate
+ * @returns {string} - Trigram in uppercase (3 characters)
+ */
+function generateTrigram(name) {
+    if (!name || typeof name !== 'string') {
+        return 'XXX';
+    }
+    
+    // Clean and normalize the name
+    const cleanedName = name
+        .trim()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // Remove accents
+        .toUpperCase();
+    
+    // Split by spaces, hyphens, or other separators
+    const parts = cleanedName.split(/[\s\-_.,]+/).filter(p => p.length > 0);
+    
+    if (parts.length === 0) {
+        return 'XXX';
+    }
+    
+    if (parts.length === 1) {
+        // Only one part: take first 3 letters
+        const single = parts[0];
+        return (single.substring(0, 3) + 'XX').substring(0, 3);
+    }
+    
+    // Multiple parts: first letter of first name + first two letters of last name
+    const firstName = parts[0];
+    const lastName = parts[parts.length - 1]; // Take the last part as surname
+    
+    const firstInitial = firstName.charAt(0) || 'X';
+    const lastInitials = (lastName.substring(0, 2) + 'XX').substring(0, 2);
+    
+    return firstInitial + lastInitials;
 }
 
 /**
@@ -382,6 +423,22 @@ async function processImportItem(item, job, options) {
 
     // Step 4: Update resume with analysis
     const tags = analysis.tags || { skills: [], industries: [], tools: [], softSkills: [] };
+    
+    // Get LLM settings to check if CV should be anonymized
+    const { getLLMSettings } = await import('./settings.service.js');
+    const llmSettings = await getLLMSettings();
+    const isAnonymous = llmSettings.cvMode === 'anonymous';
+    
+    // Generate trigram only if anonymous mode is enabled, otherwise use full name
+    const trigram = isAnonymous ? generateTrigram(analysis.name) : null;
+    const displayName = isAnonymous ? trigram : analysis.name;
+    safeLog('debug', 'Name handling based on cvMode', { 
+        cvMode: llmSettings.cvMode, 
+        isAnonymous, 
+        originalName: analysis.name, 
+        trigram, 
+        displayName 
+    });
 
     await query(`
         UPDATE resumes SET
@@ -400,9 +457,10 @@ async function processImportItem(item, job, options) {
             key_improvements = $13,
             name = COALESCE($14, name),
             title = $15,
+            trigram = $16,
             status = 'analyzed',
             analyzed_at = NOW()
-        WHERE id = $16
+        WHERE id = $17
     `, [
         analysis.structuredText || text,
         parseScore(analysis.globalRating),
@@ -417,12 +475,18 @@ async function processImportItem(item, job, options) {
         JSON.stringify(tags.tools || []),
         JSON.stringify(tags.softSkills || []),
         JSON.stringify(analysis.suggestions || {}),
-        analysis.name,
+        displayName,  // Use trigram in anonymous mode, full name otherwise
         analysis.title,
+        trigram,
         resumeId
     ]);
 
-    await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, { progress: 70 });
+    // Save original name and display name to job item for tracking
+    await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, { 
+        progress: 70,
+        original_name: analysis.name,
+        display_name: displayName
+    });
 
     // Step 5: Improve if requested
     if (improve) {
@@ -490,6 +554,8 @@ async function processImportItem(item, job, options) {
                 scores: { skillsScore, experienceScore, educationScore, atsScore, executiveSummaryScore, hobbiesLanguagesScore },
                 globalRating
             });
+
+            // Name and trigram are already set during initial analysis, no need to recalculate
 
             safeLog('info', 'Saving improved CV data', { 
                 itemId: item.id, 
@@ -649,6 +715,8 @@ async function processImproveItem(item, job, options) {
         scores: { skillsScore, experienceScore, educationScore, atsScore, executiveSummaryScore, hobbiesLanguagesScore },
         globalRating
     });
+
+    // Name and trigram are already set during initial analysis, no need to recalculate
 
     safeLog('info', 'Saving improved CV data (improve job)', { 
         itemId: item.id, 
@@ -887,11 +955,27 @@ async function generateJobExport(jobId, options) {
     const job = await getJob(jobId);
     const items = await getJobItems(jobId);
     
+    // Log all item statuses for debugging
+    const statusCounts = items.reduce((acc, item) => {
+        acc[item.status] = (acc[item.status] || 0) + 1;
+        return acc;
+    }, {});
+    safeLog('info', 'Job items status breakdown', { jobId, totalItems: items.length, statusCounts });
+    
     // Get successful items with resume_id
     const successfulItems = items.filter(item => item.status === 'success' && item.resume_id);
+    const successWithoutResumeId = items.filter(item => item.status === 'success' && !item.resume_id);
+    
+    if (successWithoutResumeId.length > 0) {
+        safeLog('warn', 'Some successful items have no resume_id', { 
+            jobId, 
+            count: successWithoutResumeId.length,
+            itemIds: successWithoutResumeId.slice(0, 5).map(i => i.id)
+        });
+    }
     
     if (successfulItems.length === 0) {
-        safeLog('warn', 'No successful items to export', { jobId });
+        safeLog('warn', 'No successful items to export', { jobId, statusCounts });
         return;
     }
     
@@ -948,34 +1032,56 @@ async function generateJobExport(jobId, options) {
                 .replace(/-name-/g, candidateName)
                 .replace(/-title-/g, candidateTitle);
             
-            // Generate document via PDF server
+            // Generate document via PDF server with retry
             const endpoint = exportFormat === 'pdf' ? '/generate-pdf' : '/generate-docx';
             const fileExtension = exportFormat === 'pdf' ? 'pdf' : exportFormat;
             
-            const response = await fetch(`${PDF_SERVER_URL}${endpoint}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    htmlContent: processedBody,
-                    filename: `${candidateName.replace(/\s+/g, '_')}.${fileExtension}`,
-                    stylesheet: template.stylesheet || '',
-                    headerContent: processedHeader || undefined,
-                    footerContent: processedFooter || undefined,
-                    footerHeight: template.footer_height || 25,
-                    format: exportFormat
-                })
-            });
+            const MAX_RETRIES = 3;
+            let lastError = null;
             
-            if (!response.ok) {
-                const errorText = await response.text().catch(() => 'Unknown error');
-                safeLog('error', 'Failed to generate document for export', { resumeId: item.resume_id, status: response.status, error: errorText });
-                return { success: false, error: `PDF generation failed: ${errorText}`, resumeId: item.resume_id };
+            for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+                try {
+                    const response = await fetch(`${PDF_SERVER_URL}${endpoint}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            htmlContent: processedBody,
+                            filename: `${candidateName.replace(/\s+/g, '_')}.${fileExtension}`,
+                            stylesheet: template.stylesheet || '',
+                            headerContent: processedHeader || undefined,
+                            footerContent: processedFooter || undefined,
+                            footerHeight: template.footer_height || 25,
+                            format: exportFormat
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        const errorText = await response.text().catch(() => 'Unknown error');
+                        lastError = `PDF generation failed (status ${response.status}): ${errorText}`;
+                        if (attempt < MAX_RETRIES) {
+                            safeLog('warn', 'PDF generation failed, retrying...', { resumeId: item.resume_id, attempt, error: lastError });
+                            await new Promise(resolve => setTimeout(resolve, 1000 * attempt)); // Exponential backoff
+                            continue;
+                        }
+                        safeLog('error', 'Failed to generate document for export after retries', { resumeId: item.resume_id, attempts: MAX_RETRIES, error: lastError });
+                        return { success: false, error: lastError, resumeId: item.resume_id };
+                    }
+                    
+                    const buffer = await response.arrayBuffer();
+                    const fileName = `${candidateName.replace(/[^a-zA-Z0-9\-_\s]/g, '').replace(/\s+/g, '_')}.${fileExtension}`;
+                    
+                    return { success: true, fileName, buffer, resumeId: item.resume_id };
+                } catch (fetchErr) {
+                    lastError = fetchErr.message;
+                    if (attempt < MAX_RETRIES) {
+                        safeLog('warn', 'PDF fetch error, retrying...', { resumeId: item.resume_id, attempt, error: lastError });
+                        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+                        continue;
+                    }
+                }
             }
             
-            const buffer = await response.arrayBuffer();
-            const fileName = `${candidateName.replace(/[^a-zA-Z0-9\-_\s]/g, '').replace(/\s+/g, '_')}.${fileExtension}`;
-            
-            return { success: true, fileName, buffer, resumeId: item.resume_id };
+            return { success: false, error: lastError || 'Unknown error after retries', resumeId: item.resume_id };
             
         } catch (err) {
             safeLog('error', 'Error processing resume for export', { resumeId: item.resume_id, error: err.message });
@@ -983,9 +1089,24 @@ async function generateJobExport(jobId, options) {
         }
     };
     
-    // Process all items in parallel
-    safeLog('info', 'Starting parallel export processing', { jobId, itemCount: successfulItems.length });
-    const results = await Promise.all(successfulItems.map(item => processExportItem(item)));
+    // Process items sequentially to avoid rate limiting (429 errors)
+    // The PDF server has rate limiting, so we process one at a time with a small delay
+    const PDF_BATCH_SIZE = 3; // Process 3 PDFs at a time (reduced from 10)
+    const BATCH_DELAY_MS = 500; // Wait 500ms between batches
+    safeLog('info', 'Starting batched export processing', { jobId, itemCount: successfulItems.length, batchSize: PDF_BATCH_SIZE });
+    
+    const results = [];
+    for (let i = 0; i < successfulItems.length; i += PDF_BATCH_SIZE) {
+        const batch = successfulItems.slice(i, i + PDF_BATCH_SIZE);
+        safeLog('debug', 'Processing PDF batch', { jobId, batchStart: i, batchSize: batch.length, totalProcessed: results.length });
+        const batchResults = await Promise.all(batch.map(item => processExportItem(item)));
+        results.push(...batchResults);
+        
+        // Add delay between batches to avoid rate limiting
+        if (i + PDF_BATCH_SIZE < successfulItems.length) {
+            await new Promise(resolve => setTimeout(resolve, BATCH_DELAY_MS));
+        }
+    }
     
     // Collect results
     for (const result of results) {

@@ -83,6 +83,8 @@ export async function initializeBatchJobsTable() {
                 status VARCHAR(20) NOT NULL DEFAULT 'pending',
                 progress INTEGER DEFAULT 0,
                 error_message TEXT,
+                original_name VARCHAR(255),
+                display_name VARCHAR(255),
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
                 processed_at TIMESTAMP WITH TIME ZONE
             )
@@ -95,6 +97,19 @@ export async function initializeBatchJobsTable() {
             CREATE INDEX IF NOT EXISTS idx_batch_jobs_user_id ON batch_jobs(user_id);
             CREATE INDEX IF NOT EXISTS idx_batch_job_items_job_id ON batch_job_items(job_id);
             CREATE INDEX IF NOT EXISTS idx_batch_job_items_status ON batch_job_items(status);
+        `);
+
+        // Add new columns if they don't exist (migration for existing tables)
+        await query(`
+            DO $$ 
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'batch_job_items' AND column_name = 'original_name') THEN
+                    ALTER TABLE batch_job_items ADD COLUMN original_name VARCHAR(255);
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'batch_job_items' AND column_name = 'display_name') THEN
+                    ALTER TABLE batch_job_items ADD COLUMN display_name VARCHAR(255);
+                END IF;
+            END $$;
         `);
 
         safeLog('info', 'Batch jobs tables initialized');
@@ -233,7 +248,7 @@ export async function getJobItems(jobId) {
     try {
         const result = await query(`
             SELECT id, job_id, resume_id, file_name, status, progress, error_message, 
-                   created_at, processed_at
+                   original_name, display_name, created_at, processed_at
             FROM batch_job_items
             WHERE job_id = $1
             ORDER BY created_at ASC
@@ -401,6 +416,18 @@ export async function updateJobItemStatus(itemId, status, updates = {}) {
         if (updates.resume_id) {
             setClauses.push(`resume_id = $${paramIndex}`);
             params.push(updates.resume_id);
+            paramIndex++;
+        }
+
+        if (updates.original_name) {
+            setClauses.push(`original_name = $${paramIndex}`);
+            params.push(updates.original_name);
+            paramIndex++;
+        }
+
+        if (updates.display_name) {
+            setClauses.push(`display_name = $${paramIndex}`);
+            params.push(updates.display_name);
             paramIndex++;
         }
 

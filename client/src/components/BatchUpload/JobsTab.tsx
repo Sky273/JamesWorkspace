@@ -30,6 +30,8 @@ interface JobItem {
   progress: number;
   error_message?: string;
   resume_id?: number;
+  original_name?: string;
+  display_name?: string;
 }
 
 interface Job {
@@ -305,6 +307,21 @@ const JobsTab = (): JSX.Element => {
         </button>
       </div>
 
+      {/* Info banner */}
+      <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+        <div className="flex-shrink-0 mt-0.5">
+          <svg className="w-5 h-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+          </svg>
+        </div>
+        <div className="text-sm text-blue-700 dark:text-blue-300">
+          <p className="font-medium">{t('batchJobs.serverInfo.title', 'Traitement en arrière-plan')}</p>
+          <p className="mt-1 text-blue-600 dark:text-blue-400">
+            {t('batchJobs.serverInfo.description', 'Les jobs sont traités sur le serveur. Vous pouvez naviguer librement dans l\'application sans interrompre le traitement.')}
+          </p>
+        </div>
+      </div>
+
       {/* Jobs list */}
       {jobs.length === 0 ? (
         <div className="text-center py-12 text-gray-500 dark:text-gray-400">
@@ -450,15 +467,22 @@ const JobsTab = (): JSX.Element => {
                               key={item.id}
                               className="flex items-center justify-between py-2 px-3 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700"
                             >
-                              <div className="flex items-center gap-2">
-                                {item.status === 'success' && <CheckCircleIcon className="w-4 h-4 text-green-500" />}
-                                {item.status === 'error' && <ExclamationCircleIcon className="w-4 h-4 text-red-500" />}
-                                {item.status === 'processing' && <ArrowPathIcon className="w-4 h-4 text-blue-500 animate-spin" />}
-                                {item.status === 'pending' && <ClockIcon className="w-4 h-4 text-gray-400" />}
-                                {item.status === 'skipped' && <XCircleIcon className="w-4 h-4 text-gray-400" />}
-                                <span className="text-sm text-gray-700 dark:text-gray-300 truncate max-w-xs">
-                                  {item.file_name}
-                                </span>
+                              <div className="flex items-center gap-2 flex-1 min-w-0">
+                                {item.status === 'success' && <CheckCircleIcon className="w-4 h-4 text-green-500 flex-shrink-0" />}
+                                {item.status === 'error' && <ExclamationCircleIcon className="w-4 h-4 text-red-500 flex-shrink-0" />}
+                                {item.status === 'processing' && <ArrowPathIcon className="w-4 h-4 text-blue-500 animate-spin flex-shrink-0" />}
+                                {item.status === 'pending' && <ClockIcon className="w-4 h-4 text-gray-400 flex-shrink-0" />}
+                                {item.status === 'skipped' && <XCircleIcon className="w-4 h-4 text-gray-400 flex-shrink-0" />}
+                                <div className="flex flex-col min-w-0">
+                                  <span className="text-sm text-gray-700 dark:text-gray-300 truncate">
+                                    {item.file_name}
+                                  </span>
+                                  {item.original_name && item.display_name && (
+                                    <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                      {item.original_name} → <span className="font-medium text-indigo-600 dark:text-indigo-400">{item.display_name}</span>
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                               <div className="flex items-center gap-3">
                                 {item.status === 'processing' && (
