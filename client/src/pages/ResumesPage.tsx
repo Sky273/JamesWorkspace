@@ -599,13 +599,15 @@ const ResumesPage = (): JSX.Element => {
                   <EyeIcon className="w-4 h-4" />
                   {t('resumes.view')}
                 </button>
-                <button
-                  onClick={(e) => handleDownloadResume(resume, e)}
-                  className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
-                  title={t('resumes.downloadResume')}
-                >
-                  <ArrowDownTrayIcon className="w-4 h-4" />
-                </button>
+                {resume['Resume File']?.[0] && (
+                  <button
+                    onClick={(e) => handleDownloadResume(resume, e)}
+                    className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                    title={t('resumes.downloadResume')}
+                  >
+                    <ArrowDownTrayIcon className="w-4 h-4" />
+                  </button>
+                )}
                 <button
                   onClick={(e) => openDeleteConfirm(resume, e)}
                   className="p-2 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"

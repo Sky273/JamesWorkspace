@@ -533,6 +533,31 @@ async function getClient(settings) {
 }
 
 /**
+ * Properly close FTP/SFTP connection
+ * For FTP with TLS, sends QUIT command before closing to properly terminate TLS session
+ */
+async function closeClient(clientWrapper) {
+    if (!clientWrapper) return;
+    
+    try {
+        if (clientWrapper.type === 'sftp') {
+            await clientWrapper.client.end();
+        } else {
+            // For FTP, send QUIT command first to properly close TLS connection
+            // This prevents "Client did not properly shut down TLS connection" errors
+            try {
+                await clientWrapper.client.quit();
+            } catch (_quitError) {
+                // QUIT may fail if connection is already broken, ignore
+            }
+            clientWrapper.client.close();
+        }
+    } catch (_e) {
+        // Ignore close errors
+    }
+}
+
+/**
  * Test connection to FTP/SFTP server
  */
 export async function testConnection(settings) {
@@ -560,17 +585,7 @@ export async function testConnection(settings) {
         });
         return { success: false, message: error.message };
     } finally {
-        if (clientWrapper) {
-            try {
-                if (clientWrapper.type === 'sftp') {
-                    await clientWrapper.client.end();
-                } else {
-                    clientWrapper.client.close();
-                }
-            } catch (_e) {
-                // Ignore close errors
-            }
-        }
+        await closeClient(clientWrapper);
     }
 }
 
@@ -601,17 +616,7 @@ async function uploadFile(settings, localPath, remotePath) {
         });
         throw error; // Re-throw to propagate the error
     } finally {
-        if (clientWrapper) {
-            try {
-                if (clientWrapper.type === 'sftp') {
-                    await clientWrapper.client.end();
-                } else {
-                    clientWrapper.client.close();
-                }
-            } catch (_e) {
-                // Ignore close errors
-            }
-        }
+        await closeClient(clientWrapper);
     }
 }
 
@@ -632,17 +637,7 @@ async function downloadFile(settings, remotePath, localPath) {
         safeLog('info', 'File downloaded successfully', { remotePath, localPath });
         return true;
     } finally {
-        if (clientWrapper) {
-            try {
-                if (clientWrapper.type === 'sftp') {
-                    await clientWrapper.client.end();
-                } else {
-                    clientWrapper.client.close();
-                }
-            } catch (_e) {
-                // Ignore close errors
-            }
-        }
+        await closeClient(clientWrapper);
     }
 }
 
@@ -687,17 +682,7 @@ export async function listRemoteBackups(settings) {
         safeLog('error', 'Failed to list remote backups', { error: _error.message });
         return { success: false, files: [], message: _error.message };
     } finally {
-        if (clientWrapper) {
-            try {
-                if (clientWrapper.type === 'sftp') {
-                    await clientWrapper.client.end();
-                } else {
-                    clientWrapper.client.close();
-                }
-            } catch (_e) {
-                // Ignore close errors
-            }
-        }
+        await closeClient(clientWrapper);
     }
 }
 
@@ -747,17 +732,7 @@ async function cleanupOldBackups(settings, type, retention) {
     } catch (error) {
         safeLog('error', 'Failed to cleanup old backups', { error: error.message });
     } finally {
-        if (clientWrapper) {
-            try {
-                if (clientWrapper.type === 'sftp') {
-                    await clientWrapper.client.end();
-                } else {
-                    clientWrapper.client.close();
-                }
-            } catch (e) {
-                // Ignore close errors
-            }
-        }
+        await closeClient(clientWrapper);
     }
 }
 
