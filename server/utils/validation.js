@@ -304,6 +304,7 @@ export const updateSettingsSchema = z.object({
 
 // Backup settings schemas
 export const updateBackupSettingsSchema = z.object({
+  backup_target: z.enum(['local', 'remote']).optional(),
   protocol: z.enum(['ftp', 'ftps', 'sftp']).optional(),
   tls_mode: z.enum(['none', 'explicit', 'implicit']).optional(),
   host: z.string().max(255).optional(),

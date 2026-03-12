@@ -24,6 +24,7 @@ import logger from '../utils/logger.frontend';
 
 interface BackupSettings {
     id?: string;
+    backup_target: 'local' | 'remote';
     protocol: 'ftp' | 'ftps' | 'sftp';
     tls_mode: 'none' | 'explicit' | 'implicit';
     host: string;
@@ -68,6 +69,7 @@ interface RemoteFile {
 }
 
 const defaultSettings: BackupSettings = {
+    backup_target: 'local',
     protocol: 'ftp',
     tls_mode: 'explicit',
     host: '',
@@ -383,7 +385,51 @@ const BackupPage = (): JSX.Element => {
             {/* Configuration Section */}
             {activeSection === 'config' && (
                 <div className="space-y-6">
-                    {/* Connection Settings */}
+                    {/* Backup Target Selection */}
+                    <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 space-y-4">
+                        <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                            {t('backup.targetTitle', 'Backup Target')}
+                        </h3>
+                        
+                        <div className="flex gap-4">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="radio"
+                                    name="backup_target"
+                                    value="local"
+                                    checked={settings.backup_target === 'local'}
+                                    onChange={() => handleInputChange('backup_target', 'local')}
+                                    className="w-4 h-4 text-blue-600"
+                                />
+                                <span className="text-sm text-gray-700 dark:text-gray-300">
+                                    {t('backup.targetLocal', 'Local only (server disk)')}
+                                </span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="radio"
+                                    name="backup_target"
+                                    value="remote"
+                                    checked={settings.backup_target === 'remote'}
+                                    onChange={() => handleInputChange('backup_target', 'remote')}
+                                    className="w-4 h-4 text-blue-600"
+                                />
+                                <span className="text-sm text-gray-700 dark:text-gray-300">
+                                    {t('backup.targetRemote', 'Remote server (FTP/SFTP)')}
+                                </span>
+                            </label>
+                        </div>
+                        
+                        {settings.backup_target === 'local' && (
+                            <p className="text-sm text-amber-600 dark:text-amber-400 flex items-center gap-2">
+                                <ExclamationTriangleIcon className="w-4 h-4" />
+                                {t('backup.localWarning', 'Local backups are stored on the server. For disaster recovery, consider using remote backup.')}
+                            </p>
+                        )}
+                    </div>
+
+                    {/* Connection Settings - only show for remote target */}
+                    {settings.backup_target === 'remote' && (
                     <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 space-y-4">
                         <h3 className="text-lg font-medium text-gray-900 dark:text-white">
                             {t('backup.connectionTitle')}
@@ -428,7 +474,7 @@ const BackupPage = (): JSX.Element => {
                             
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                    {t('backup.host')}
+                                    {t('backup.host')} <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     type="text"
@@ -436,6 +482,7 @@ const BackupPage = (): JSX.Element => {
                                     onChange={(e) => handleInputChange('host', e.target.value)}
                                     placeholder="ftp.example.com"
                                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                    required
                                 />
                             </div>
                             
@@ -510,6 +557,7 @@ const BackupPage = (): JSX.Element => {
                             </button>
                         </div>
                     </div>
+                    )}
 
                     {/* Schedule Settings */}
                     <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 space-y-4">

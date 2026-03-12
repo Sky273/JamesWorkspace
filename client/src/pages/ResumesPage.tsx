@@ -292,7 +292,14 @@ const ResumesPage = (): JSX.Element => {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = resume['Resume File']?.[0]?.filename || resume['File Name'] || 'resume';
+      // Get filename from Content-Disposition header or fallback to resume data
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = resume['Resume File']?.[0]?.filename || resume['File Name'] || resume.Name || 'resume';
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename="?([^";\n]+)"?/);
+        if (match) filename = decodeURIComponent(match[1]);
+      }
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -592,15 +599,13 @@ const ResumesPage = (): JSX.Element => {
                   <EyeIcon className="w-4 h-4" />
                   {t('resumes.view')}
                 </button>
-                {resume['Resume File']?.[0]?.filename && (
-                  <button
-                    onClick={(e) => handleDownloadResume(resume, e)}
-                    className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
-                    title={t('resumes.downloadResume')}
-                  >
-                    <ArrowDownTrayIcon className="w-4 h-4" />
-                  </button>
-                )}
+                <button
+                  onClick={(e) => handleDownloadResume(resume, e)}
+                  className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                  title={t('resumes.downloadResume')}
+                >
+                  <ArrowDownTrayIcon className="w-4 h-4" />
+                </button>
                 <button
                   onClick={(e) => openDeleteConfirm(resume, e)}
                   className="p-2 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"

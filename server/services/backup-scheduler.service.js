@@ -120,7 +120,10 @@ export async function initBackupScheduler() {
         stopAllJobs();
         
         // Daily backup
-        if (settings.daily_enabled && settings.host) {
+        if (settings.daily_enabled) {
+            if (!settings.host) {
+                safeLog('warn', '[BackupScheduler] Daily backup enabled but no FTP/SFTP host configured - backups will be local only');
+            }
             const cronExpr = buildDailyCron(settings.daily_time);
             safeLog('debug', '[BackupScheduler] Creating daily cron job', { cronExpr });
             cronJobs.daily = cron.schedule(cronExpr, () => executeBackup('daily'), {
@@ -130,12 +133,18 @@ export async function initBackupScheduler() {
             cronJobs.daily.start();
             safeLog('info', '[BackupScheduler] Daily backup scheduled and started', { 
                 cron: cronExpr,
-                time: settings.daily_time 
+                time: settings.daily_time,
+                uploadEnabled: !!settings.host
             });
+        } else {
+            safeLog('debug', '[BackupScheduler] Daily backup not enabled');
         }
         
         // Weekly backup
-        if (settings.weekly_enabled && settings.host) {
+        if (settings.weekly_enabled) {
+            if (!settings.host) {
+                safeLog('warn', '[BackupScheduler] Weekly backup enabled but no FTP/SFTP host configured - backups will be local only');
+            }
             const cronExpr = buildWeeklyCron(settings.weekly_time, settings.weekly_day);
             safeLog('debug', '[BackupScheduler] Creating weekly cron job', { cronExpr });
             cronJobs.weekly = cron.schedule(cronExpr, () => executeBackup('weekly'), {
@@ -147,12 +156,18 @@ export async function initBackupScheduler() {
             safeLog('info', '[BackupScheduler] Weekly backup scheduled and started', { 
                 cron: cronExpr,
                 day: dayNames[settings.weekly_day],
-                time: settings.weekly_time 
+                time: settings.weekly_time,
+                uploadEnabled: !!settings.host
             });
+        } else {
+            safeLog('debug', '[BackupScheduler] Weekly backup not enabled');
         }
         
         // Monthly backup
-        if (settings.monthly_enabled && settings.host) {
+        if (settings.monthly_enabled) {
+            if (!settings.host) {
+                safeLog('warn', '[BackupScheduler] Monthly backup enabled but no FTP/SFTP host configured - backups will be local only');
+            }
             const cronExpr = buildMonthlyCron(settings.monthly_time, settings.monthly_day);
             safeLog('debug', '[BackupScheduler] Creating monthly cron job', { cronExpr });
             cronJobs.monthly = cron.schedule(cronExpr, () => executeBackup('monthly'), {
@@ -163,8 +178,11 @@ export async function initBackupScheduler() {
             safeLog('info', '[BackupScheduler] Monthly backup scheduled and started', { 
                 cron: cronExpr,
                 dayOfMonth: settings.monthly_day,
-                time: settings.monthly_time 
+                time: settings.monthly_time,
+                uploadEnabled: !!settings.host
             });
+        } else {
+            safeLog('debug', '[BackupScheduler] Monthly backup not enabled');
         }
         
         const activeJobs = Object.entries(cronJobs)

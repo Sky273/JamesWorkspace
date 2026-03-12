@@ -329,4 +329,3 @@ router.delete('/disconnect', authenticateToken, async (req, res) => {
 });
 
 export default router;
-export { destroyMailStatesCleanup };

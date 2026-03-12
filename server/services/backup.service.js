@@ -96,6 +96,7 @@ export async function initBackupTables() {
         await query(`
             CREATE TABLE IF NOT EXISTS backup_settings (
                 id uuid DEFAULT public.uuid_generate_v4() PRIMARY KEY,
+                backup_target VARCHAR(10) DEFAULT 'local' CHECK (backup_target IN ('local', 'remote')),
                 protocol VARCHAR(10) DEFAULT 'ftp' CHECK (protocol IN ('ftp', 'ftps', 'sftp')),
                 tls_mode VARCHAR(10) DEFAULT 'explicit' CHECK (tls_mode IN ('none', 'explicit', 'implicit')),
                 host VARCHAR(255),
@@ -105,16 +106,37 @@ export async function initBackupTables() {
                 remote_path VARCHAR(500) DEFAULT '/',
                 daily_enabled BOOLEAN DEFAULT false,
                 daily_time VARCHAR(5) DEFAULT '02:00',
+                daily_retention INTEGER DEFAULT 7,
                 weekly_enabled BOOLEAN DEFAULT false,
                 weekly_day INTEGER DEFAULT 0 CHECK (weekly_day >= 0 AND weekly_day <= 6),
                 weekly_time VARCHAR(5) DEFAULT '03:00',
+                weekly_retention INTEGER DEFAULT 4,
                 monthly_enabled BOOLEAN DEFAULT false,
                 monthly_day INTEGER DEFAULT 1 CHECK (monthly_day >= 1 AND monthly_day <= 28),
                 monthly_time VARCHAR(5) DEFAULT '04:00',
-                retention_days INTEGER DEFAULT 30,
+                monthly_retention INTEGER DEFAULT 12,
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             )
+        `);
+        
+        // Add columns if they don't exist (migration for existing tables)
+        await query(`
+            DO $$ 
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'backup_settings' AND column_name = 'backup_target') THEN
+                    ALTER TABLE backup_settings ADD COLUMN backup_target VARCHAR(10) DEFAULT 'local' CHECK (backup_target IN ('local', 'remote'));
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'backup_settings' AND column_name = 'daily_retention') THEN
+                    ALTER TABLE backup_settings ADD COLUMN daily_retention INTEGER DEFAULT 7;
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'backup_settings' AND column_name = 'weekly_retention') THEN
+                    ALTER TABLE backup_settings ADD COLUMN weekly_retention INTEGER DEFAULT 4;
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'backup_settings' AND column_name = 'monthly_retention') THEN
+                    ALTER TABLE backup_settings ADD COLUMN monthly_retention INTEGER DEFAULT 12;
+                END IF;
+            END $$;
         `);
         
         // Create backup_history table
@@ -169,33 +191,35 @@ export async function saveBackupSettings(settings) {
         if (existingSettings) {
             const result = await query(`
                 UPDATE backup_settings SET
-                    protocol = $1,
-                    tls_mode = $2,
-                    host = $3,
-                    port = $4,
-                    username = $5,
-                    password = $6,
-                    remote_path = $7,
-                    daily_enabled = $8,
-                    daily_time = $9,
-                    daily_retention = $10,
-                    weekly_enabled = $11,
-                    weekly_day = $12,
-                    weekly_time = $13,
-                    weekly_retention = $14,
-                    monthly_enabled = $15,
-                    monthly_day = $16,
-                    monthly_time = $17,
-                    monthly_retention = $18
-                WHERE id = $19
+                    backup_target = $1,
+                    protocol = $2,
+                    tls_mode = $3,
+                    host = $4,
+                    port = $5,
+                    username = $6,
+                    password = $7,
+                    remote_path = $8,
+                    daily_enabled = $9,
+                    daily_time = $10,
+                    daily_retention = $11,
+                    weekly_enabled = $12,
+                    weekly_day = $13,
+                    weekly_time = $14,
+                    weekly_retention = $15,
+                    monthly_enabled = $16,
+                    monthly_day = $17,
+                    monthly_time = $18,
+                    monthly_retention = $19
+                WHERE id = $20
                 RETURNING *
             `, [
+                settings.backup_target || 'local',
                 settings.protocol || 'ftp',
                 settings.tls_mode || 'explicit',
-                settings.host,
+                settings.host || '',
                 settings.port || 21,
-                settings.username,
-                settings.password,
+                settings.username || '',
+                settings.password || '',
                 settings.remote_path || '/backups',
                 settings.daily_enabled || false,
                 settings.daily_time || '02:00',
@@ -214,19 +238,20 @@ export async function saveBackupSettings(settings) {
         } else {
             const result = await query(`
                 INSERT INTO backup_settings (
-                    protocol, tls_mode, host, port, username, password, remote_path,
+                    backup_target, protocol, tls_mode, host, port, username, password, remote_path,
                     daily_enabled, daily_time, daily_retention,
                     weekly_enabled, weekly_day, weekly_time, weekly_retention,
                     monthly_enabled, monthly_day, monthly_time, monthly_retention
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
                 RETURNING *
             `, [
+                settings.backup_target || 'local',
                 settings.protocol || 'ftp',
                 settings.tls_mode || 'explicit',
-                settings.host,
+                settings.host || '',
                 settings.port || 21,
-                settings.username,
-                settings.password,
+                settings.username || '',
+                settings.password || '',
                 settings.remote_path || '/backups',
                 settings.daily_enabled || false,
                 settings.daily_time || '02:00',
@@ -245,6 +270,59 @@ export async function saveBackupSettings(settings) {
     } catch (error) {
         safeLog('error', 'Failed to save backup settings', { error: error.message });
         throw error;
+    }
+}
+
+/**
+ * Cleanup old local backup files based on retention policy
+ * @param {string} type - Backup type (daily, weekly, monthly, manual)
+ * @param {number} retention - Number of backups to keep
+ */
+async function cleanupOldLocalBackups(type, retention) {
+    try {
+        // List all backup files in the backup directory
+        const files = fs.readdirSync(BACKUP_DIR);
+        
+        // Filter files matching the backup type pattern: backup-{type}-*.sql.gz
+        const pattern = new RegExp(`^backup-${type}-.*\\.sql\\.gz$`);
+        const matchingFiles = files
+            .filter(f => pattern.test(f))
+            .map(f => ({
+                name: f,
+                path: path.join(BACKUP_DIR, f),
+                mtime: fs.statSync(path.join(BACKUP_DIR, f)).mtime
+            }))
+            .sort((a, b) => b.mtime - a.mtime); // Sort by date, newest first
+        
+        // Keep only the most recent 'retention' files, delete the rest
+        if (matchingFiles.length > retention) {
+            const filesToDelete = matchingFiles.slice(retention);
+            
+            for (const file of filesToDelete) {
+                try {
+                    fs.unlinkSync(file.path);
+                    safeLog('info', 'Deleted old local backup', { 
+                        filename: file.name, 
+                        type,
+                        age: Math.round((Date.now() - file.mtime.getTime()) / (1000 * 60 * 60 * 24)) + ' days'
+                    });
+                } catch (deleteError) {
+                    safeLog('error', 'Failed to delete old local backup', { 
+                        filename: file.name, 
+                        error: deleteError.message 
+                    });
+                }
+            }
+            
+            safeLog('info', 'Local backup cleanup completed', { 
+                type, 
+                retention,
+                kept: retention,
+                deleted: filesToDelete.length 
+            });
+        }
+    } catch (error) {
+        safeLog('error', 'Failed to cleanup old local backups', { type, error: error.message });
     }
 }
 
@@ -709,11 +787,14 @@ export async function createBackup(type = 'manual') {
         const stats = fs.statSync(compressedPath);
         const fileSize = stats.size;
         
-        // Get settings and upload
+        // Get settings and upload if remote target is configured
         const settings = await getBackupSettings();
         let uploaded = false;
         
-        if (settings && settings.host) {
+        // Only upload if backup_target is 'remote' and host is configured
+        const shouldUpload = settings && settings.backup_target === 'remote' && settings.host;
+        
+        if (shouldUpload) {
             try {
                 const remotePath = path.posix.join(settings.remote_path || '/backups', compressedFilename);
                 await uploadFile(settings, compressedPath, remotePath);
@@ -729,9 +810,26 @@ export async function createBackup(type = 'manual') {
                 
                 // Remove local file after successful upload
                 fs.unlinkSync(compressedPath);
+                safeLog('info', 'Backup uploaded to remote server', { filename: compressedFilename });
             } catch (uploadError) {
                 safeLog('error', 'Failed to upload backup', { error: uploadError.message });
                 // Keep local file if upload fails
+            }
+        } else {
+            safeLog('info', 'Backup stored locally', { 
+                filename: compressedFilename, 
+                path: compressedPath,
+                target: settings?.backup_target || 'local'
+            });
+            
+            // Cleanup old local backups based on retention
+            if (settings) {
+                let retention = 7;
+                if (type === 'daily') retention = settings.daily_retention || 7;
+                else if (type === 'weekly') retention = settings.weekly_retention || 4;
+                else if (type === 'monthly') retention = settings.monthly_retention || 12;
+                
+                await cleanupOldLocalBackups(type, retention);
             }
         }
         
@@ -891,6 +989,117 @@ export async function restoreBackup(filename) {
     }
 }
 
+/**
+ * Cleanup all old local backups based on retention settings
+ * Can be called manually or by scheduler
+ * @returns {Promise<{daily: number, weekly: number, monthly: number, manual: number}>}
+ */
+export async function cleanupAllLocalBackups() {
+    const settings = await getBackupSettings();
+    const results = { daily: 0, weekly: 0, monthly: 0, manual: 0 };
+    
+    if (!settings) {
+        safeLog('debug', 'No backup settings found, skipping local backup cleanup');
+        return results;
+    }
+    
+    // Only cleanup if backup_target is 'local' (remote backups are cleaned on the server)
+    if (settings.backup_target !== 'local') {
+        safeLog('debug', 'Backup target is remote, skipping local backup cleanup');
+        return results;
+    }
+    
+    const types = [
+        { type: 'daily', retention: settings.daily_retention || 7 },
+        { type: 'weekly', retention: settings.weekly_retention || 4 },
+        { type: 'monthly', retention: settings.monthly_retention || 12 },
+        { type: 'manual', retention: 10 } // Keep last 10 manual backups
+    ];
+    
+    for (const { type, retention } of types) {
+        try {
+            const files = fs.readdirSync(BACKUP_DIR);
+            const pattern = new RegExp(`^backup-${type}-.*\\.sql\\.gz$`);
+            const matchingFiles = files
+                .filter(f => pattern.test(f))
+                .map(f => ({
+                    name: f,
+                    path: path.join(BACKUP_DIR, f),
+                    mtime: fs.statSync(path.join(BACKUP_DIR, f)).mtime
+                }))
+                .sort((a, b) => b.mtime - a.mtime);
+            
+            if (matchingFiles.length > retention) {
+                const filesToDelete = matchingFiles.slice(retention);
+                
+                for (const file of filesToDelete) {
+                    try {
+                        fs.unlinkSync(file.path);
+                        results[type]++;
+                        
+                        // Also delete from history
+                        await query(`
+                            DELETE FROM backup_history 
+                            WHERE filename = $1
+                        `, [file.name]);
+                    } catch (e) {
+                        safeLog('error', 'Failed to delete backup file', { file: file.name, error: e.message });
+                    }
+                }
+            }
+        } catch (e) {
+            safeLog('error', `Failed to cleanup ${type} backups`, { error: e.message });
+        }
+    }
+    
+    const totalDeleted = Object.values(results).reduce((a, b) => a + b, 0);
+    if (totalDeleted > 0) {
+        safeLog('info', 'Local backup cleanup completed', { results, totalDeleted });
+    }
+    
+    return results;
+}
+
+/**
+ * Get local backup statistics
+ * @returns {Promise<Object>}
+ */
+export async function getLocalBackupStats() {
+    try {
+        const files = fs.readdirSync(BACKUP_DIR);
+        const stats = {
+            daily: { count: 0, totalSize: 0, oldest: null, newest: null },
+            weekly: { count: 0, totalSize: 0, oldest: null, newest: null },
+            monthly: { count: 0, totalSize: 0, oldest: null, newest: null },
+            manual: { count: 0, totalSize: 0, oldest: null, newest: null }
+        };
+        
+        for (const type of ['daily', 'weekly', 'monthly', 'manual']) {
+            const pattern = new RegExp(`^backup-${type}-.*\\.sql\\.gz$`);
+            const matchingFiles = files
+                .filter(f => pattern.test(f))
+                .map(f => {
+                    const filePath = path.join(BACKUP_DIR, f);
+                    const fileStat = fs.statSync(filePath);
+                    return { name: f, size: fileStat.size, mtime: fileStat.mtime };
+                })
+                .sort((a, b) => b.mtime - a.mtime);
+            
+            stats[type].count = matchingFiles.length;
+            stats[type].totalSize = matchingFiles.reduce((sum, f) => sum + f.size, 0);
+            if (matchingFiles.length > 0) {
+                stats[type].newest = matchingFiles[0].mtime;
+                stats[type].oldest = matchingFiles[matchingFiles.length - 1].mtime;
+            }
+        }
+        
+        return stats;
+    } catch (error) {
+        safeLog('error', 'Failed to get local backup stats', { error: error.message });
+        return null;
+    }
+}
+
 export default {
     getBackupSettings,
     saveBackupSettings,
@@ -899,5 +1108,7 @@ export default {
     testConnection,
     listRemoteBackups,
     createBackup,
-    restoreBackup
+    restoreBackup,
+    cleanupAllLocalBackups,
+    getLocalBackupStats
 };

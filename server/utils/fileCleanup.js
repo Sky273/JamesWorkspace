@@ -242,6 +242,21 @@ async function cleanupAllDirectories() {
         safeLog('debug', 'Batch jobs cleanup skipped', { error: error.message });
     }
     
+    // Cleanup old local backup files based on retention settings
+    try {
+        const { cleanupAllLocalBackups } = await import('../services/backup.service.js');
+        const backupCleanup = await cleanupAllLocalBackups();
+        const totalDeleted = Object.values(backupCleanup).reduce((a, b) => a + b, 0);
+        results.localBackups = { success: true, deleted: totalDeleted, ...backupCleanup };
+        cleanupStats.localBackups = {
+            lastCleanup: new Date().toISOString(),
+            ...backupCleanup
+        };
+    } catch (error) {
+        results.localBackups = { success: false, error: error.message };
+        safeLog('debug', 'Local backups cleanup skipped', { error: error.message });
+    }
+    
     return results;
 }
 

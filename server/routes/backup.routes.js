@@ -61,6 +61,7 @@ router.get('/settings', async (req, res) => {
 router.put('/settings', validateBody(updateBackupSettingsSchema), async (req, res) => {
     try {
         const {
+            backup_target,
             protocol,
             tls_mode,
             host,
@@ -85,12 +86,13 @@ router.put('/settings', validateBody(updateBackupSettingsSchema), async (req, re
         const existingSettings = await getBackupSettings();
         
         const settings = await saveBackupSettings({
+            backup_target: backup_target || 'local',
             protocol: protocol || 'ftp',
             tls_mode: tls_mode || 'explicit',
-            host,
+            host: host || '',
             port: port || (protocol === 'sftp' ? 22 : 21),
-            username,
-            password: password || (existingSettings?.password),
+            username: username || '',
+            password: password || (existingSettings?.password) || '',
             remote_path: remote_path || '/backups',
             daily_enabled: daily_enabled || false,
             daily_time: daily_time || '02:00',
