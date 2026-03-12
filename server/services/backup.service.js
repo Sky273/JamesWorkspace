@@ -424,13 +424,24 @@ async function getClient(settings) {
     if (settings.protocol === 'sftp') {
         const SftpClient = await getSftpClient();
         const client = new SftpClient();
-        await client.connect({
-            host: settings.host,
-            port: settings.port || 22,
-            username: settings.username,
-            password: settings.password
-        });
-        return { client, type: 'sftp' };
+        try {
+            await client.connect({
+                host: settings.host,
+                port: settings.port || 22,
+                username: settings.username,
+                password: settings.password
+            });
+            return { client, type: 'sftp' };
+        } catch (error) {
+            safeLog('error', 'SFTP connection failed', {
+                host: settings.host,
+                port: settings.port || 22,
+                username: settings.username,
+                error: error.message,
+                code: error.code
+            });
+            throw error;
+        }
     } else {
         const ftp = await getBasicFtp();
         const client = new ftp.Client();
@@ -503,9 +514,21 @@ async function getClient(settings) {
             secureType: typeof accessParams.secure
         });
         
-        await client.access(accessParams);
-        
-        return { client, type: 'ftp' };
+        try {
+            await client.access(accessParams);
+            return { client, type: 'ftp' };
+        } catch (error) {
+            safeLog('error', 'FTP connection failed', {
+                host: accessParams.host,
+                port: accessParams.port,
+                user: accessParams.user,
+                secure: accessParams.secure,
+                tlsMode,
+                error: error.message,
+                code: error.code
+            });
+            throw error;
+        }
     }
 }
 
@@ -567,6 +590,16 @@ async function uploadFile(settings, localPath, remotePath) {
         
         safeLog('info', 'File uploaded successfully', { localPath, remotePath });
         return true;
+    } catch (error) {
+        safeLog('error', 'File upload failed', { 
+            localPath, 
+            remotePath, 
+            error: error.message,
+            code: error.code,
+            host: settings.host,
+            protocol: settings.protocol
+        });
+        throw error; // Re-throw to propagate the error
     } finally {
         if (clientWrapper) {
             try {
@@ -812,8 +845,16 @@ export async function createBackup(type = 'manual') {
                 fs.unlinkSync(compressedPath);
                 safeLog('info', 'Backup uploaded to remote server', { filename: compressedFilename });
             } catch (uploadError) {
-                safeLog('error', 'Failed to upload backup', { error: uploadError.message });
-                // Keep local file if upload fails
+                safeLog('error', 'BACKUP UPLOAD FAILED - Backup created locally but upload to remote server failed', { 
+                    error: uploadError.message,
+                    stack: uploadError.stack,
+                    code: uploadError.code,
+                    filename: compressedFilename,
+                    host: settings.host,
+                    protocol: settings.protocol
+                });
+                console.error(`[Backup] UPLOAD FAILED: ${uploadError.message}`);
+                // Keep local file if upload fails - backup is partially successful
             }
         } else {
             safeLog('info', 'Backup stored locally', { 

@@ -66,20 +66,33 @@ function buildMonthlyCron(time, dayOfMonth) {
 
 /**
  * Execute backup with error handling
+ * Ensures errors are always logged and never fail silently
  */
 async function executeBackup(type) {
+    const startTime = Date.now();
     try {
         safeLog('info', `[BackupScheduler] Starting scheduled ${type} backup`);
         const result = await createBackup(type);
+        const duration = ((Date.now() - startTime) / 1000).toFixed(1);
         safeLog('info', `[BackupScheduler] Scheduled ${type} backup completed`, {
             filename: result.filename,
             size: result.size,
-            uploaded: result.uploaded
+            uploaded: result.uploaded,
+            durationSeconds: duration
         });
     } catch (error) {
-        safeLog('error', `[BackupScheduler] Scheduled ${type} backup failed`, {
-            error: error.message
+        const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+        // Log error with full details - never fail silently
+        safeLog('error', `[BackupScheduler] BACKUP FAILED - Scheduled ${type} backup failed after ${duration}s`, {
+            type,
+            error: error.message,
+            stack: error.stack,
+            code: error.code,
+            durationSeconds: duration
         });
+        // Also log to console.error to ensure visibility
+        console.error(`[BackupScheduler] BACKUP FAILED: ${type} - ${error.message}`);
+        console.error(error.stack);
     }
 }
 
