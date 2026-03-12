@@ -11,10 +11,11 @@
 7. [Intégrations Externes](#intégrations-externes)
 8. [Sécurité](#sécurité)
 9. [Optimisations](#optimisations)
-10. [Internationalisation (i18n)](#internationalisation-i18n)
-11. [Qualité du Code](#qualité-du-code)
-12. [Points Forts](#-points-forts)
-13. [Points Faibles et Axes d'Amélioration](#-points-faibles-et-axes-damélioration)
+10. [Gestion des Fichiers Temporaires](#gestion-des-fichiers-temporaires)
+11. [Internationalisation (i18n)](#internationalisation-i18n)
+12. [Qualité du Code](#qualité-du-code)
+13. [Points Forts](#-points-forts)
+14. [Points Faibles et Axes d'Amélioration](#-points-faibles-et-axes-damélioration)
 
 ---
 
@@ -685,7 +686,104 @@ export async function loadPdfjs() {
 - **Rate Limit Stores** : Nettoyage toutes les heures
 - **Token Blacklist** : Suppression tokens expirés
 - **Cache** : Éviction entrées expirées + limite taille
-- **Fichiers uploadés** : Nettoyage périodique
+- **Fichiers temporaires** : Nettoyage multi-répertoires (voir section dédiée)
+
+---
+
+## Gestion des Fichiers Temporaires
+
+### Architecture de Nettoyage
+
+Le système gère automatiquement les fichiers temporaires générés côté serveur pour éviter l'accumulation sur le disque.
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                      FileCleanupManager                              │
+│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐   │
+│  │    uploads/      │  │  batch-exports/  │  │     shared/      │   │
+│  │    TTL: 1h       │  │    TTL: 24h      │  │    TTL: 30j      │   │
+│  │  Fichiers upload │  │  ZIPs d'export   │  │  PDFs partagés   │   │
+│  └──────────────────┘  └──────────────────┘  └──────────────────┘   │
+│  ┌──────────────────┐                                               │
+│  │   server/temp/   │                                               │
+│  │    TTL: 1h       │                                               │
+│  │ Fichiers backup  │                                               │
+│  └──────────────────┘                                               │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Répertoires Gérés
+
+| Répertoire | TTL | Contenu | Nettoyage |
+|------------|-----|---------|-----------|
+| `./uploads/` | 1 heure | Fichiers uploadés (CVs) | Périodique |
+| `os.tmpdir()/batch-exports/` | 24 heures | ZIPs d'export batch | Périodique + après téléchargement |
+| `./uploads/shared/` | 30 jours | PDFs partagés publiquement | Périodique |
+| `./server/temp/` | 1 heure | Fichiers temporaires backup | Périodique |
+| `./uploads/logos/` | ∞ | Logos des firms | Persistants (non nettoyés) |
+
+### Mécanismes de Nettoyage
+
+```javascript
+// server/utils/fileCleanup.js
+
+// Configuration des répertoires avec TTL
+const CLEANUP_DIRS = {
+    uploads: { path: UPLOAD_DIR, maxAgeMs: 60 * 60 * 1000 },        // 1h
+    batchExports: { path: BATCH_EXPORTS_DIR, maxAgeMs: 24 * 60 * 60 * 1000 }, // 24h
+    serverTemp: { path: TEMP_DIR, maxAgeMs: 60 * 60 * 1000 },       // 1h
+    sharedPdfs: { path: SHARED_DIR, maxAgeMs: 30 * 24 * 60 * 60 * 1000 }  // 30j
+};
+
+// Nettoyage périodique (toutes les heures)
+startPeriodicCleanup(60 * 60 * 1000);
+```
+
+### Suppression Après Téléchargement
+
+Les fichiers ZIP d'export batch sont automatiquement supprimés après téléchargement :
+
+```javascript
+// server/routes/batchJobs.routes.js
+res.on('finish', () => {
+    fs.unlink(job.export_file_path, (err) => {
+        if (!err) safeLog('debug', 'Export file deleted after download');
+    });
+});
+```
+
+### Endpoint de Monitoring (Admin)
+
+```
+GET /api/health/storage
+Authorization: Bearer <admin_token>
+
+Response:
+{
+  "summary": {
+    "totalFiles": 12,
+    "totalSizeMB": 45.2,
+    "cleanupTimerActive": true,
+    "lastCleanupTime": "2026-03-12T03:00:00.000Z",
+    "totalFilesDeleted": 156
+  },
+  "directories": {
+    "uploads": { "fileCount": 5, "totalSizeMB": 2.1, "maxAgeHours": 1 },
+    "batchExports": { "fileCount": 2, "totalSizeMB": 35.8, "maxAgeHours": 24 },
+    "sharedPdfs": { "fileCount": 5, "totalSizeMB": 7.3, "maxAgeHours": 720 }
+  }
+}
+```
+
+### Fonctions Exportées
+
+| Fonction | Description |
+|----------|-------------|
+| `startPeriodicCleanup(intervalMs)` | Démarre le nettoyage périodique |
+| `stopPeriodicCleanup()` | Arrête le timer de nettoyage |
+| `cleanupOldFiles(dir, maxAgeMs)` | Nettoie un répertoire spécifique |
+| `getStorageStats()` | Retourne les statistiques d'espace disque |
+| `getFileCleanupStats()` | Retourne les statistiques de nettoyage |
 
 ---
 

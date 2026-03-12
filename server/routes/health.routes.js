@@ -9,6 +9,8 @@ import { getEscoCacheStats } from '../services/escoService.js';
 import { getTagsCacheStats } from './tags.routes.js';
 import { getBlacklistStats } from '../services/tokenBlacklist.service.js';
 import { safeLog } from '../utils/logger.backend.js';
+import { getStorageStats, getFileCleanupStats } from '../utils/fileCleanup.js';
+import { authenticateToken } from '../middleware/auth.middleware.js';
 
 const router = express.Router();
 
@@ -293,6 +295,55 @@ router.get('/memory', async (req, res) => {
             gcAvailable: typeof global.gc === 'function'
         }
     });
+});
+
+// ============================================
+// STORAGE STATS ENDPOINT (Admin only)
+// ============================================
+
+/**
+ * GET /api/health/storage
+ * Get storage usage statistics for all managed directories
+ * Requires admin authentication
+ */
+router.get('/storage', authenticateToken, async (req, res) => {
+    try {
+        // Check if user is admin
+        const userRole = (req.user?.role || '').toLowerCase();
+        if (userRole !== 'admin') {
+            return res.status(403).json({ error: 'Admin access required' });
+        }
+
+        const storageStats = await getStorageStats();
+        const cleanupStats = getFileCleanupStats();
+
+        // Calculate totals
+        const totalFiles = Object.values(storageStats).reduce((sum, dir) => sum + dir.fileCount, 0);
+        const totalSizeMB = Object.values(storageStats).reduce((sum, dir) => sum + dir.totalSizeMB, 0);
+
+        res.json({
+            status: 'ok',
+            timestamp: new Date().toISOString(),
+            summary: {
+                totalFiles,
+                totalSizeMB: Math.round(totalSizeMB * 100) / 100,
+                cleanupTimerActive: cleanupStats.timerActive,
+                lastCleanupTime: cleanupStats.lastCleanupTime,
+                totalFilesDeleted: cleanupStats.totalFilesDeleted
+            },
+            directories: storageStats,
+            cleanupHistory: cleanupStats.cleanupStats
+        });
+
+        safeLog('info', 'Storage stats requested', { 
+            userId: req.user?.id, 
+            totalFiles, 
+            totalSizeMB: Math.round(totalSizeMB * 100) / 100 
+        });
+    } catch (error) {
+        safeLog('error', 'Failed to get storage stats', { error: error.message });
+        res.status(500).json({ error: 'Failed to get storage statistics' });
+    }
 });
 
 export default router;

@@ -18,7 +18,14 @@ vi.mock('../../services/cache.service.js', () => ({
 // Mock constants
 vi.mock('../../config/constants.js', () => ({
     OPENAI_API_KEY: 'test-openai-key',
-    ANTHROPIC_API_KEY: 'test-anthropic-key'
+    ANTHROPIC_API_KEY: 'test-anthropic-key',
+    UPLOAD_DIR: './test-uploads'
+}));
+
+// Mock fileCleanup
+vi.mock('../../utils/fileCleanup.js', () => ({
+    getStorageStats: vi.fn().mockResolvedValue({}),
+    getFileCleanupStats: vi.fn().mockReturnValue({ timerActive: false, cleanupStats: {} })
 }));
 
 import { query as dbQuery } from '../../config/database.js';

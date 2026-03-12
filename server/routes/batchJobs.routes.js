@@ -369,6 +369,22 @@ router.get('/:id/download', authenticateToken, async (req, res) => {
         const fileStream = fs.createReadStream(job.export_file_path);
         fileStream.pipe(res);
 
+        // Delete file after download completes to free disk space
+        res.on('finish', () => {
+            fs.unlink(job.export_file_path, (err) => {
+                if (err && err.code !== 'ENOENT') {
+                    safeLog('warn', 'Failed to delete export file after download', { 
+                        filePath: job.export_file_path, 
+                        error: err.message 
+                    });
+                } else {
+                    safeLog('debug', 'Export file deleted after download', { 
+                        filePath: job.export_file_path 
+                    });
+                }
+            });
+        });
+
         safeLog('info', 'Export file downloaded', { jobId: id, fileName: job.export_file_name });
     } catch (error) {
         safeLog('error', 'Failed to download export file', { error: error.message });

@@ -1,16 +1,47 @@
 import fs from 'fs/promises';
 import path from 'path';
+import os from 'os';
+import { fileURLToPath } from 'url';
 import { UPLOAD_DIR } from '../config/constants.js';
 import { safeLog } from './logger.backend.js';
 
 /**
- * Utility for cleaning up temporary files
+ * Utility for cleaning up temporary files across multiple directories
  */
+
+// ES module __dirname equivalent
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Directory configurations with TTL (time-to-live)
+const CLEANUP_DIRS = {
+    uploads: {
+        path: UPLOAD_DIR,
+        maxAgeMs: 60 * 60 * 1000,  // 1 hour
+        description: 'Uploaded files'
+    },
+    batchExports: {
+        path: path.join(os.tmpdir(), 'batch-exports'),
+        maxAgeMs: 24 * 60 * 60 * 1000,  // 24 hours
+        description: 'Batch export ZIPs'
+    },
+    serverTemp: {
+        path: path.join(__dirname, '..', 'temp'),
+        maxAgeMs: 60 * 60 * 1000,  // 1 hour
+        description: 'Server temp files'
+    },
+    sharedPdfs: {
+        path: path.join(UPLOAD_DIR, 'shared'),
+        maxAgeMs: 30 * 24 * 60 * 60 * 1000,  // 30 days
+        description: 'Shared PDF files'
+    }
+};
 
 // Store timer reference for cleanup
 let fileCleanupTimer = null;
 let lastCleanupTime = null;
 let totalFilesDeleted = 0;
+let cleanupStats = {};
 
 /**
  * Stop the periodic file cleanup timer
@@ -41,8 +72,61 @@ export function getFileCleanupStats() {
         timerActive: !!fileCleanupTimer,
         lastCleanupTime: lastCleanupTime ? new Date(lastCleanupTime).toISOString() : null,
         totalFilesDeleted,
-        uploadDir: UPLOAD_DIR
+        directories: CLEANUP_DIRS,
+        cleanupStats
     };
+}
+
+/**
+ * Get directory size and file count
+ * @param {string} directory - Directory path
+ * @returns {Promise<{fileCount: number, totalSize: number}>}
+ */
+async function getDirectoryStats(directory) {
+    try {
+        await fs.access(directory);
+        const files = await fs.readdir(directory);
+        let fileCount = 0;
+        let totalSize = 0;
+
+        for (const file of files) {
+            try {
+                const filePath = path.join(directory, file);
+                const stats = await fs.stat(filePath);
+                if (!stats.isDirectory()) {
+                    fileCount++;
+                    totalSize += stats.size;
+                }
+            } catch (_e) {
+                // Ignore errors for individual files
+            }
+        }
+
+        return { fileCount, totalSize };
+    } catch (_e) {
+        return { fileCount: 0, totalSize: 0 };
+    }
+}
+
+/**
+ * Get storage usage for all managed directories
+ * @returns {Promise<Object>} Storage stats per directory
+ */
+export async function getStorageStats() {
+    const stats = {};
+    
+    for (const [key, config] of Object.entries(CLEANUP_DIRS)) {
+        const dirStats = await getDirectoryStats(config.path);
+        stats[key] = {
+            path: config.path,
+            description: config.description,
+            maxAgeHours: Math.round(config.maxAgeMs / (60 * 60 * 1000)),
+            ...dirStats,
+            totalSizeMB: Math.round(dirStats.totalSize / (1024 * 1024) * 100) / 100
+        };
+    }
+    
+    return stats;
 }
 
 /**
@@ -120,26 +204,72 @@ export async function cleanupOldFiles(directory, maxAgeMs = 60 * 60 * 1000) {
 }
 
 /**
- * Start periodic cleanup of temporary files
+ * Clean all configured directories with their respective TTLs
+ * @returns {Promise<Object>} Cleanup results per directory
+ */
+async function cleanupAllDirectories() {
+    const results = {};
+    
+    for (const [key, config] of Object.entries(CLEANUP_DIRS)) {
+        try {
+            const deletedCount = await cleanupOldFiles(config.path, config.maxAgeMs);
+            results[key] = { success: true, deletedCount };
+            cleanupStats[key] = { 
+                lastCleanup: new Date().toISOString(), 
+                deletedCount 
+            };
+        } catch (error) {
+            results[key] = { success: false, error: error.message };
+            safeLog('error', `Cleanup failed for ${config.description}`, { 
+                directory: config.path, 
+                error: error.message 
+            });
+        }
+    }
+    
+    return results;
+}
+
+/**
+ * Start periodic cleanup of temporary files across all directories
  * @param {number} intervalMs - Cleanup interval in milliseconds (default: 1 hour)
- * @param {number} maxAgeMs - Maximum file age in milliseconds (default: 1 hour)
+ * @param {number} _maxAgeMs - Deprecated: each directory uses its own TTL from CLEANUP_DIRS
  * @returns {NodeJS.Timeout} - Interval timer
  */
-export function startPeriodicCleanup(intervalMs = 60 * 60 * 1000, maxAgeMs = 60 * 60 * 1000) {
-    safeLog('info', 'Starting periodic file cleanup', {
+export function startPeriodicCleanup(intervalMs = 60 * 60 * 1000, _maxAgeMs = 60 * 60 * 1000) {
+    const dirCount = Object.keys(CLEANUP_DIRS).length;
+    safeLog('info', 'Starting periodic file cleanup for all directories', {
         intervalMinutes: intervalMs / 60000,
-        maxAgeMinutes: maxAgeMs / 60000,
-        directory: UPLOAD_DIR
+        directories: dirCount,
+        configs: Object.entries(CLEANUP_DIRS).map(([key, config]) => ({
+            name: key,
+            path: config.path,
+            maxAgeHours: Math.round(config.maxAgeMs / (60 * 60 * 1000))
+        }))
     });
 
-    // Run cleanup immediately on startup
-    cleanupOldFiles(UPLOAD_DIR, maxAgeMs).catch(error => {
+    // Run cleanup immediately on startup for all directories
+    cleanupAllDirectories().then(results => {
+        const totalDeleted = Object.values(results)
+            .filter(r => r.success)
+            .reduce((sum, r) => sum + r.deletedCount, 0);
+        if (totalDeleted > 0) {
+            safeLog('info', 'Initial cleanup completed', { totalDeleted, results });
+        }
+    }).catch(error => {
         safeLog('error', 'Initial cleanup failed', { error: error.message });
     });
 
-    // Schedule periodic cleanup
+    // Schedule periodic cleanup for all directories
     const timer = setInterval(() => {
-        cleanupOldFiles(UPLOAD_DIR, maxAgeMs).catch(error => {
+        cleanupAllDirectories().then(results => {
+            const totalDeleted = Object.values(results)
+                .filter(r => r.success)
+                .reduce((sum, r) => sum + r.deletedCount, 0);
+            if (totalDeleted > 0) {
+                safeLog('info', 'Periodic cleanup completed', { totalDeleted });
+            }
+        }).catch(error => {
             safeLog('error', 'Periodic cleanup failed', { error: error.message });
         });
     }, intervalMs);
