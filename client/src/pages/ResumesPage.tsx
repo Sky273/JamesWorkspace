@@ -117,6 +117,9 @@ const ResumesPage = (): JSX.Element => {
   const [hasMore, setHasMore] = useState<boolean>(false);
   const pageSize = 20;
 
+  // Global stats from backend
+  const [globalStats, setGlobalStats] = useState<Stats>({ total: 0, improved: 0, processing: 0, avgScore: 0 });
+
   // Filter state
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -175,6 +178,28 @@ const ResumesPage = (): JSX.Element => {
   useEffect(() => {
     fetchResumes();
   }, [fetchResumes]);
+
+  // Fetch global stats from backend (once on mount and after delete)
+  const fetchGlobalStats = useCallback(async () => {
+    try {
+      const response = await authGet('/api/resumes/stats');
+      if (response.ok) {
+        const data = await response.json();
+        setGlobalStats({
+          total: data.resumes?.total || 0,
+          improved: data.resumes?.improved || 0,
+          processing: 0, // Not tracked in stats endpoint, will be calculated from current page as fallback
+          avgScore: data.scores?.averageImproved || data.scores?.averageOriginal || 0
+        });
+      }
+    } catch (error) {
+      logger.error('Error fetching global stats:', error);
+    }
+  }, [authGet]);
+
+  useEffect(() => {
+    fetchGlobalStats();
+  }, [fetchGlobalStats]);
 
   // Fetch all available cleaned tags from backend (once on mount)
   // Uses /api/tags/cleaned which has optimized SQL aggregation and caching
@@ -265,8 +290,9 @@ const ResumesPage = (): JSX.Element => {
     if (resumeToDelete) {
       try {
         await deleteResume(resumeToDelete.id);
-        // Refresh the list after successful deletion
+        // Refresh the list and stats after successful deletion
         await fetchResumes();
+        await fetchGlobalStats();
       } catch (error) {
         logger.error("Failed to delete resume from page:", error);
       }
@@ -320,19 +346,13 @@ const ResumesPage = (): JSX.Element => {
     return formatDate(dateString, 'medium') || 'Invalid date';
   };
 
-  // Stats based on current page data (case-insensitive status comparison)
+  // Stats from backend API (global stats, not page-specific)
+  // Processing count is calculated from current page as it's not tracked in stats endpoint
   const stats: Stats = {
-    total: totalCount,
-    improved: resumes.filter(r => r.Status?.toLowerCase() === 'improved').length,
+    total: globalStats.total || totalCount,
+    improved: globalStats.improved,
     processing: resumes.filter(r => r.Status?.toLowerCase() === 'processing' || r.Status?.toLowerCase() === 'analyzing').length,
-    avgScore: resumes.length > 0 
-      ? Math.round(resumes.reduce((sum, r) => {
-          // Use improved rating if available, otherwise use global rating
-          const rating = r['Improved Global Rating'] || r['Global Rating'];
-          const score = typeof rating === 'number' ? rating : parseInt(String(rating || '0').replace('%', '')) || 0;
-          return sum + score;
-        }, 0) / resumes.length)
-      : 0
+    avgScore: globalStats.avgScore
   };
 
   // Pagination handlers
