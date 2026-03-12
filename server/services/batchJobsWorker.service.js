@@ -1056,6 +1056,9 @@ async function generateJobExport(jobId, options) {
         formatFolders[format] = zip.folder(format.toUpperCase());
     }
     
+    // Get template name for file naming
+    const templateName = (template.name || 'Template').replace(/[^a-zA-Z0-9\-_\s]/g, '').replace(/\s+/g, '_');
+    
     // Process single item for a specific format
     const processExportItemForFormat = async (item, format) => {
         try {
@@ -1074,6 +1077,8 @@ async function generateJobExport(jobId, options) {
             
             const candidateName = resume.name || 'Candidat';
             const candidateTitle = resume.title || '';
+            // Use trigram if available, otherwise fallback to candidate name
+            const trigram = resume.trigram || candidateName.replace(/[^a-zA-Z0-9]/g, '').substring(0, 3).toUpperCase();
             
             // Process template
             let processedBody = template.template_content || '';
@@ -1125,9 +1130,11 @@ async function generateJobExport(jobId, options) {
                     }
                     
                     const buffer = await response.arrayBuffer();
-                    const fileName = `${candidateName.replace(/[^a-zA-Z0-9\-_\s]/g, '').replace(/\s+/g, '_')}.${fileExtension}`;
+                    // File name format: trigramme_nom_modèle.extension
+                    const fileName = `${trigram}_${templateName}.${fileExtension}`;
                     
-                    return { success: true, fileName, buffer, resumeId: item.resume_id, format };
+                    // Include relative_path for preserving folder structure
+                    return { success: true, fileName, buffer, resumeId: item.resume_id, format, relativePath: item.relative_path };
                 } catch (fetchErr) {
                     lastError = fetchErr.message;
                     if (attempt < MAX_RETRIES) {
@@ -1177,21 +1184,35 @@ async function generateJobExport(jobId, options) {
             // Add results to the appropriate folder
             for (const result of batchResults) {
                 if (result.success) {
-                    // Handle duplicate file names by adding a suffix
-                    let finalFileName = result.fileName;
-                    const count = fileNameCounts.get(result.fileName) || 0;
-                    if (count > 0) {
-                        const lastDot = result.fileName.lastIndexOf('.');
-                        if (lastDot > 0) {
-                            finalFileName = `${result.fileName.substring(0, lastDot)}_${count + 1}${result.fileName.substring(lastDot)}`;
-                        } else {
-                            finalFileName = `${result.fileName}_${count + 1}`;
+                    // Determine the file path in the ZIP
+                    let filePath = result.fileName;
+                    
+                    // If relativePath exists, use it to preserve folder structure
+                    if (result.relativePath) {
+                        // relativePath is like "folder/subfolder/filename.pdf"
+                        // Extract the directory part and replace the filename with the generated one
+                        const pathParts = result.relativePath.split('/');
+                        if (pathParts.length > 1) {
+                            // Remove the original filename and use the directory structure
+                            pathParts.pop();
+                            filePath = pathParts.join('/') + '/' + result.fileName;
                         }
                     }
-                    fileNameCounts.set(result.fileName, count + 1);
                     
-                    // Add to the format-specific folder
-                    formatFolders[format].file(finalFileName, result.buffer);
+                    // Handle duplicate file paths by adding a suffix
+                    const count = fileNameCounts.get(filePath) || 0;
+                    if (count > 0) {
+                        const lastDot = filePath.lastIndexOf('.');
+                        if (lastDot > 0) {
+                            filePath = `${filePath.substring(0, lastDot)}_${count + 1}${filePath.substring(lastDot)}`;
+                        } else {
+                            filePath = `${filePath}_${count + 1}`;
+                        }
+                    }
+                    fileNameCounts.set(result.relativePath ? filePath.split('/').slice(0, -1).join('/') + '/' + result.fileName : filePath, count + 1);
+                    
+                    // Add to the format-specific folder (JSZip handles nested paths automatically)
+                    formatFolders[format].file(filePath, result.buffer);
                     exportSuccessCount++;
                 } else {
                     exportErrorCount++;

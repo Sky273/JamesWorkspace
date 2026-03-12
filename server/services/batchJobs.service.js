@@ -80,6 +80,7 @@ export async function initializeBatchJobsTable() {
                 file_name VARCHAR(255),
                 file_data BYTEA,
                 file_mime_type VARCHAR(100),
+                relative_path VARCHAR(1024),
                 status VARCHAR(20) NOT NULL DEFAULT 'pending',
                 progress INTEGER DEFAULT 0,
                 error_message TEXT,
@@ -88,6 +89,16 @@ export async function initializeBatchJobsTable() {
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
                 processed_at TIMESTAMP WITH TIME ZONE
             )
+        `);
+        
+        // Add relative_path column if it doesn't exist (for existing tables)
+        await query(`
+            DO $$ 
+            BEGIN 
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'batch_job_items' AND column_name = 'relative_path') THEN
+                    ALTER TABLE batch_job_items ADD COLUMN relative_path VARCHAR(1024);
+                END IF;
+            END $$;
         `);
 
         // Create indexes for performance
@@ -145,7 +156,7 @@ export async function createJob({ firmId, userId, jobType = 'import', options = 
 /**
  * Add items to a batch job
  * @param {string} jobId - Job ID
- * @param {Array} items - Array of { fileName, fileData, fileMimeType }
+ * @param {Array} items - Array of { fileName, fileData, fileMimeType, relativePath }
  * @returns {Promise<number>} Number of items added
  */
 export async function addJobItems(jobId, items) {
@@ -154,9 +165,9 @@ export async function addJobItems(jobId, items) {
 
         for (const item of items) {
             await query(`
-                INSERT INTO batch_job_items (job_id, file_name, file_data, file_mime_type, status)
-                VALUES ($1, $2, $3, $4, $5)
-            `, [jobId, item.fileName, item.fileData, item.fileMimeType, ITEM_STATUS.PENDING]);
+                INSERT INTO batch_job_items (job_id, file_name, file_data, file_mime_type, relative_path, status)
+                VALUES ($1, $2, $3, $4, $5, $6)
+            `, [jobId, item.fileName, item.fileData, item.fileMimeType, item.relativePath || null, ITEM_STATUS.PENDING]);
             addedCount++;
         }
 
@@ -247,7 +258,7 @@ export async function getJob(jobId) {
 export async function getJobItems(jobId) {
     try {
         const result = await query(`
-            SELECT id, job_id, resume_id, file_name, status, progress, error_message, 
+            SELECT id, job_id, resume_id, file_name, relative_path, status, progress, error_message, 
                    original_name, display_name, created_at, processed_at
             FROM batch_job_items
             WHERE job_id = $1

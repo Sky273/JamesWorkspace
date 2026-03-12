@@ -33,6 +33,7 @@ import JobsTab from '../components/BatchUpload/JobsTab';
 
 interface FileStatus {
   file: File;
+  relativePath?: string; // Preserve folder structure from webkitRelativePath
   status: 'pending' | 'uploading' | 'extracting' | 'analyzing' | 'improving' | 'exporting' | 'success' | 'error';
   progress: number;
   error?: string;
@@ -170,6 +171,7 @@ const BatchUploadPage = (): JSX.Element => {
         
         const newFiles: FileStatus[] = uniqueFiles.map(file => ({
           file,
+          relativePath: (file as File & { webkitRelativePath?: string }).webkitRelativePath || undefined,
           status: 'pending',
           progress: 0
         }));
@@ -468,9 +470,15 @@ const BatchUploadPage = (): JSX.Element => {
     try {
       // Create a batch job with all files - backend will process in parallel
       const formData = new FormData();
+      const relativePaths: (string | null)[] = [];
+      
       currentFiles.forEach((fileStatus) => {
         formData.append('files', fileStatus.file);
+        relativePaths.push(fileStatus.relativePath || null);
       });
+      
+      // Add relative paths to preserve folder structure
+      formData.append('relativePaths', JSON.stringify(relativePaths));
       
       // Add options as individual form fields
       formData.append('improve', String(improveOption));
@@ -1097,6 +1105,41 @@ const BatchUploadPage = (): JSX.Element => {
             <p className="text-sm text-gray-500 dark:text-gray-400">
               {t('batchUpload.fileTypes', 'PDF, DOC, DOCX • Max 50MB par fichier')}
             </p>
+            
+            {/* Folder selection button */}
+            <div className="mt-4 flex justify-center">
+              <label className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-lg cursor-pointer hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-colors">
+                <FolderArrowDownIcon className="w-5 h-5" />
+                {t('batchUpload.selectFolder', 'Sélectionner un dossier')}
+                <input
+                  type="file"
+                  className="hidden"
+                  // @ts-expect-error webkitdirectory is not in standard types
+                  webkitdirectory=""
+                  directory=""
+                  multiple
+                  disabled={isProcessing}
+                  accept=".pdf,.doc,.docx"
+                  onChange={(e) => {
+                    const fileList = e.target.files;
+                    if (fileList) {
+                      const filesArray = Array.from(fileList);
+                      // Filter for supported file types
+                      const validFiles = filesArray.filter(f => 
+                        f.name.toLowerCase().endsWith('.pdf') || 
+                        f.name.toLowerCase().endsWith('.doc') || 
+                        f.name.toLowerCase().endsWith('.docx')
+                      );
+                      if (validFiles.length > 0) {
+                        onDrop(validFiles);
+                      }
+                    }
+                    // Reset input to allow selecting same folder again
+                    e.target.value = '';
+                  }}
+                />
+              </label>
+            </div>
           </div>
         </motion.div>
 

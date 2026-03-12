@@ -99,17 +99,31 @@ router.post('/', authenticateToken, upload.array('files', 100), async (req, res)
 
         // Add files to the job
         if (req.files && req.files.length > 0) {
-            const items = req.files.map(file => ({
+            // Parse relative paths if provided (JSON array matching files order)
+            let relativePaths = [];
+            if (req.body.relativePaths) {
+                try {
+                    relativePaths = typeof req.body.relativePaths === 'string' 
+                        ? JSON.parse(req.body.relativePaths) 
+                        : req.body.relativePaths;
+                } catch {
+                    relativePaths = [];
+                }
+            }
+
+            const items = req.files.map((file, index) => ({
                 fileName: file.originalname,
                 fileData: file.buffer,
-                fileMimeType: file.mimetype
+                fileMimeType: file.mimetype,
+                relativePath: relativePaths[index] || null
             }));
 
             safeLog('info', 'Adding items to job', { 
                 jobId: job.id, 
                 itemCount: items.length,
                 fileNames: items.map(i => i.fileName),
-                fileSizes: items.map(i => i.fileData?.length || 0)
+                fileSizes: items.map(i => i.fileData?.length || 0),
+                hasRelativePaths: relativePaths.length > 0
             });
 
             const addedCount = await addJobItems(job.id, items);
