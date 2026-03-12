@@ -623,7 +623,7 @@ const ResumesPage = (): JSX.Element => {
                   <button
                     onClick={(e) => handleDownloadResume(resume, e)}
                     className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
-                    title={t('resumes.downloadResume')}
+                    title={resume['File Name'] || resume['Resume File']?.[0]?.filename || t('resumes.downloadResume')}
                   >
                     <ArrowDownTrayIcon className="w-4 h-4" />
                   </button>
