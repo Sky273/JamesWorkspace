@@ -944,12 +944,17 @@ async function improveResumeWithLLM(text, analysis, firmId) {
 /**
  * Generate export ZIP for a completed job
  * @param {string} jobId - Job ID
- * @param {Object} options - Export options (templateId, exportFormat)
+ * @param {Object} options - Export options (templateId, exportFormats)
  */
 async function generateJobExport(jobId, options) {
-    const { templateId, exportFormat = 'pdf' } = options;
+    // Support both old exportFormat (single) and new exportFormats (array)
+    let exportFormats = options.exportFormats || [options.exportFormat || 'pdf'];
+    if (!Array.isArray(exportFormats)) {
+        exportFormats = [exportFormats];
+    }
+    const { templateId } = options;
     
-    safeLog('info', 'Generating export for job', { jobId, templateId, exportFormat });
+    safeLog('info', 'Generating export for job', { jobId, templateId, exportFormats });
     
     // Get job and items
     const job = await getJob(jobId);
@@ -997,22 +1002,27 @@ async function generateJobExport(jobId, options) {
     let exportSuccessCount = 0;
     let exportErrorCount = 0;
     const exportErrors = [];
-    const exportResults = [];
     
-    // Process single item for export
-    const processExportItem = async (item) => {
+    // Create folders for each format in the ZIP
+    const formatFolders = {};
+    for (const format of exportFormats) {
+        formatFolders[format] = zip.folder(format.toUpperCase());
+    }
+    
+    // Process single item for a specific format
+    const processExportItemForFormat = async (item, format) => {
         try {
             // Fetch resume
             const resumeResult = await query('SELECT * FROM resumes WHERE id = $1', [item.resume_id]);
             if (resumeResult.rows.length === 0) {
-                return { success: false, error: 'Resume not found in database', resumeId: item.resume_id };
+                return { success: false, error: 'Resume not found in database', resumeId: item.resume_id, format };
             }
             
             const resume = resumeResult.rows[0];
             const content = resume.improved_text || resume.original_text || '';
             
             if (!content || content.trim().length === 0) {
-                return { success: false, error: 'Resume has no content', resumeId: item.resume_id };
+                return { success: false, error: 'Resume has no content', resumeId: item.resume_id, format };
             }
             
             const candidateName = resume.name || 'Candidat';
@@ -1033,8 +1043,8 @@ async function generateJobExport(jobId, options) {
                 .replace(/-title-/g, candidateTitle);
             
             // Generate document via PDF server with retry
-            const endpoint = exportFormat === 'pdf' ? '/generate-pdf' : '/generate-docx';
-            const fileExtension = exportFormat === 'pdf' ? 'pdf' : exportFormat;
+            const endpoint = format === 'pdf' ? '/generate-pdf' : '/generate-docx';
+            const fileExtension = format === 'pdf' ? 'pdf' : format;
             
             const MAX_RETRIES = 3;
             let lastError = null;
@@ -1051,99 +1061,126 @@ async function generateJobExport(jobId, options) {
                             headerContent: processedHeader || undefined,
                             footerContent: processedFooter || undefined,
                             footerHeight: template.footer_height || 25,
-                            format: exportFormat
+                            format: format
                         })
                     });
                     
                     if (!response.ok) {
                         const errorText = await response.text().catch(() => 'Unknown error');
-                        lastError = `PDF generation failed (status ${response.status}): ${errorText}`;
+                        lastError = `${format.toUpperCase()} generation failed (status ${response.status}): ${errorText}`;
                         if (attempt < MAX_RETRIES) {
-                            safeLog('warn', 'PDF generation failed, retrying...', { resumeId: item.resume_id, attempt, error: lastError });
+                            safeLog('warn', `${format.toUpperCase()} generation failed, retrying...`, { resumeId: item.resume_id, attempt, error: lastError });
                             await new Promise(resolve => setTimeout(resolve, 1000 * attempt)); // Exponential backoff
                             continue;
                         }
-                        safeLog('error', 'Failed to generate document for export after retries', { resumeId: item.resume_id, attempts: MAX_RETRIES, error: lastError });
-                        return { success: false, error: lastError, resumeId: item.resume_id };
+                        safeLog('error', `Failed to generate ${format.toUpperCase()} for export after retries`, { resumeId: item.resume_id, attempts: MAX_RETRIES, error: lastError });
+                        return { success: false, error: lastError, resumeId: item.resume_id, format };
                     }
                     
                     const buffer = await response.arrayBuffer();
                     const fileName = `${candidateName.replace(/[^a-zA-Z0-9\-_\s]/g, '').replace(/\s+/g, '_')}.${fileExtension}`;
                     
-                    return { success: true, fileName, buffer, resumeId: item.resume_id };
+                    return { success: true, fileName, buffer, resumeId: item.resume_id, format };
                 } catch (fetchErr) {
                     lastError = fetchErr.message;
                     if (attempt < MAX_RETRIES) {
-                        safeLog('warn', 'PDF fetch error, retrying...', { resumeId: item.resume_id, attempt, error: lastError });
+                        safeLog('warn', `${format.toUpperCase()} fetch error, retrying...`, { resumeId: item.resume_id, attempt, error: lastError });
                         await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
                         continue;
                     }
                 }
             }
             
-            return { success: false, error: lastError || 'Unknown error after retries', resumeId: item.resume_id };
+            return { success: false, error: lastError || 'Unknown error after retries', resumeId: item.resume_id, format };
             
         } catch (err) {
-            safeLog('error', 'Error processing resume for export', { resumeId: item.resume_id, error: err.message });
-            return { success: false, error: err.message, resumeId: item.resume_id };
+            safeLog('error', `Error processing resume for ${format.toUpperCase()} export`, { resumeId: item.resume_id, error: err.message });
+            return { success: false, error: err.message, resumeId: item.resume_id, format };
         }
     };
     
     // Process items sequentially to avoid rate limiting (429 errors)
-    // The PDF server has rate limiting, so we process one at a time with a small delay
-    const PDF_BATCH_SIZE = 3; // Process 3 PDFs at a time (reduced from 10)
+    // The PDF server has rate limiting, so we process with small batches and delays
+    const PDF_BATCH_SIZE = 3; // Process 3 documents at a time
     const BATCH_DELAY_MS = 500; // Wait 500ms between batches
-    safeLog('info', 'Starting batched export processing', { jobId, itemCount: successfulItems.length, batchSize: PDF_BATCH_SIZE });
     
-    const results = [];
-    for (let i = 0; i < successfulItems.length; i += PDF_BATCH_SIZE) {
-        const batch = successfulItems.slice(i, i + PDF_BATCH_SIZE);
-        safeLog('debug', 'Processing PDF batch', { jobId, batchStart: i, batchSize: batch.length, totalProcessed: results.length });
-        const batchResults = await Promise.all(batch.map(item => processExportItem(item)));
-        results.push(...batchResults);
+    // Calculate total operations: items × formats
+    const totalOperations = successfulItems.length * exportFormats.length;
+    safeLog('info', 'Starting batched export processing', { 
+        jobId, 
+        itemCount: successfulItems.length, 
+        formats: exportFormats,
+        totalOperations,
+        batchSize: PDF_BATCH_SIZE 
+    });
+    
+    // Process each format separately to organize files in folders
+    for (const format of exportFormats) {
+        safeLog('info', `Processing format: ${format.toUpperCase()}`, { jobId, itemCount: successfulItems.length });
         
-        // Add delay between batches to avoid rate limiting
-        if (i + PDF_BATCH_SIZE < successfulItems.length) {
+        // Track file name duplicates per format folder
+        const fileNameCounts = new Map();
+        
+        for (let i = 0; i < successfulItems.length; i += PDF_BATCH_SIZE) {
+            const batch = successfulItems.slice(i, i + PDF_BATCH_SIZE);
+            safeLog('debug', `Processing ${format.toUpperCase()} batch`, { jobId, batchStart: i, batchSize: batch.length });
+            
+            const batchResults = await Promise.all(batch.map(item => processExportItemForFormat(item, format)));
+            
+            // Add results to the appropriate folder
+            for (const result of batchResults) {
+                if (result.success) {
+                    // Handle duplicate file names by adding a suffix
+                    let finalFileName = result.fileName;
+                    const count = fileNameCounts.get(result.fileName) || 0;
+                    if (count > 0) {
+                        const lastDot = result.fileName.lastIndexOf('.');
+                        if (lastDot > 0) {
+                            finalFileName = `${result.fileName.substring(0, lastDot)}_${count + 1}${result.fileName.substring(lastDot)}`;
+                        } else {
+                            finalFileName = `${result.fileName}_${count + 1}`;
+                        }
+                    }
+                    fileNameCounts.set(result.fileName, count + 1);
+                    
+                    // Add to the format-specific folder
+                    formatFolders[format].file(finalFileName, result.buffer);
+                    exportSuccessCount++;
+                } else {
+                    exportErrorCount++;
+                    exportErrors.push({ resumeId: result.resumeId, format: result.format, error: result.error });
+                }
+            }
+            
+            // Add delay between batches to avoid rate limiting
+            if (i + PDF_BATCH_SIZE < successfulItems.length) {
+                await new Promise(resolve => setTimeout(resolve, BATCH_DELAY_MS));
+            }
+        }
+        
+        // Log duplicates for this format
+        const duplicatesDetected = Array.from(fileNameCounts.entries()).filter(([_, count]) => count > 1);
+        if (duplicatesDetected.length > 0) {
+            safeLog('debug', `Duplicates in ${format.toUpperCase()} folder`, { 
+                duplicates: duplicatesDetected.map(([name, count]) => `${name} (x${count})`) 
+            });
+        }
+        
+        // Add delay between formats
+        if (exportFormats.indexOf(format) < exportFormats.length - 1) {
             await new Promise(resolve => setTimeout(resolve, BATCH_DELAY_MS));
         }
     }
     
-    // Collect results - handle duplicate file names
-    const fileNameCounts = new Map();
-    for (const result of results) {
-        if (result.success) {
-            // Handle duplicate file names by adding a suffix
-            let finalFileName = result.fileName;
-            const count = fileNameCounts.get(result.fileName) || 0;
-            if (count > 0) {
-                // Add suffix before extension: "name.pdf" -> "name_2.pdf"
-                const lastDot = result.fileName.lastIndexOf('.');
-                if (lastDot > 0) {
-                    finalFileName = `${result.fileName.substring(0, lastDot)}_${count + 1}${result.fileName.substring(lastDot)}`;
-                } else {
-                    finalFileName = `${result.fileName}_${count + 1}`;
-                }
-            }
-            fileNameCounts.set(result.fileName, count + 1);
-            
-            zip.file(finalFileName, result.buffer);
-            exportSuccessCount++;
-        } else {
-            exportErrorCount++;
-            exportErrors.push({ resumeId: result.resumeId, error: result.error });
-        }
-    }
-    
-    // Log export statistics including duplicate detection
-    const duplicatesDetected = Array.from(fileNameCounts.entries()).filter(([_, count]) => count > 1);
+    // Log export statistics
     safeLog('info', 'Export processing completed', { 
         jobId, 
         totalItems: successfulItems.length,
+        formats: exportFormats,
         exportSuccessCount, 
         exportErrorCount,
         filesInZip: Object.keys(zip.files).length,
-        duplicateNames: duplicatesDetected.length > 0 ? duplicatesDetected.map(([name, count]) => `${name} (x${count})`) : undefined,
-        errors: exportErrors.length > 0 ? exportErrors.slice(0, 5) : undefined // Log first 5 errors
+        errors: exportErrors.length > 0 ? exportErrors.slice(0, 5) : undefined
     });
     
     // Check if any files were added

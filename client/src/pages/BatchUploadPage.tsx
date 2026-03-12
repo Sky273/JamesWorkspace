@@ -42,6 +42,7 @@ interface FileStatus {
 }
 
 type ExportFormat = 'pdf' | 'docx' | 'doc';
+type ExportFormats = ExportFormat[];
 
 const BatchUploadPage = (): JSX.Element => {
   const { t } = useTranslation();
@@ -56,13 +57,14 @@ const BatchUploadPage = (): JSX.Element => {
   const [deleteAfterExport, setDeleteAfterExport] = useState<boolean>(false);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
-  const [exportFormat, setExportFormat] = useState<ExportFormat>('pdf');
+  const [exportFormats, setExportFormats] = useState<ExportFormats>(['pdf']);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
   const [resumesDeleted, setResumesDeleted] = useState<boolean>(false); // Track if resumes were deleted
   const [selectedFirmId, setSelectedFirmId] = useState<string>('');
   const [showClearConfirm, setShowClearConfirm] = useState<boolean>(false);
+  const [isLoadingFiles, setIsLoadingFiles] = useState<boolean>(false); // Loading state when files are being added
   const abortControllerRef = useRef<AbortController | null>(null);
   const processedResumeIdsRef = useRef<string[]>([]);
   const filesRef = useRef<FileStatus[]>([]); // Ref to track current files state
@@ -130,44 +132,59 @@ const BatchUploadPage = (): JSX.Element => {
   }, [exportOption, templates.length]);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
-    // Check file limit
-    const currentCount = filesRef.current.length;
-    const availableSlots = MAX_FILES - currentCount;
+    // Show loading animation immediately
+    setIsLoadingFiles(true);
     
-    if (availableSlots <= 0) {
-      toast.error(t('batchUpload.maxFilesReached', `Maximum ${MAX_FILES} fichiers autorisés`));
-      return;
-    }
-    
-    // Limit files to available slots
-    const filesToAdd = acceptedFiles.slice(0, availableSlots);
-    if (filesToAdd.length < acceptedFiles.length) {
-      toast(t('batchUpload.someFilesSkipped', `${acceptedFiles.length - filesToAdd.length} fichier(s) ignoré(s) (limite: ${MAX_FILES})`), { icon: '⚠️' });
-    }
-    
-    // Filter duplicates by filename
-    const existingNames = new Set(filesRef.current.map(f => f.file.name));
-    const uniqueFiles = filesToAdd.filter(file => {
-      if (existingNames.has(file.name)) {
-        toast(t('batchUpload.duplicateSkipped', `"${file.name}" déjà dans la liste`), { icon: '⚠️' });
-        return false;
+    // Use setTimeout to allow the UI to update before processing files
+    setTimeout(() => {
+      try {
+        // Check file limit
+        const currentCount = filesRef.current.length;
+        const availableSlots = MAX_FILES - currentCount;
+        
+        if (availableSlots <= 0) {
+          toast.error(t('batchUpload.maxFilesReached', `Maximum ${MAX_FILES} fichiers autorisés`));
+          setIsLoadingFiles(false);
+          return;
+        }
+        
+        // Limit files to available slots
+        const filesToAdd = acceptedFiles.slice(0, availableSlots);
+        if (filesToAdd.length < acceptedFiles.length) {
+          toast(t('batchUpload.someFilesSkipped', `${acceptedFiles.length - filesToAdd.length} fichier(s) ignoré(s) (limite: ${MAX_FILES})`), { icon: '⚠️' });
+        }
+        
+        // Filter duplicates by filename
+        const existingNames = new Set(filesRef.current.map(f => f.file.name));
+        const uniqueFiles = filesToAdd.filter(file => {
+          if (existingNames.has(file.name)) {
+            toast(t('batchUpload.duplicateSkipped', `"${file.name}" déjà dans la liste`), { icon: '⚠️' });
+            return false;
+          }
+          return true;
+        });
+        
+        if (uniqueFiles.length === 0) {
+          setIsLoadingFiles(false);
+          return;
+        }
+        
+        const newFiles: FileStatus[] = uniqueFiles.map(file => ({
+          file,
+          status: 'pending',
+          progress: 0
+        }));
+        
+        setFiles(prev => {
+          const updated = [...prev, ...newFiles];
+          filesRef.current = updated;
+          return updated;
+        });
+      } finally {
+        // Stop loading animation after files are added
+        setIsLoadingFiles(false);
       }
-      return true;
-    });
-    
-    if (uniqueFiles.length === 0) return;
-    
-    const newFiles: FileStatus[] = uniqueFiles.map(file => ({
-      file,
-      status: 'pending',
-      progress: 0
-    }));
-    
-    setFiles(prev => {
-      const updated = [...prev, ...newFiles];
-      filesRef.current = updated;
-      return updated;
-    });
+    }, 50); // Small delay to allow UI to show loading state
   }, [t]);
 
   const onDropRejected = useCallback((fileRejections: FileRejection[]) => {
@@ -459,7 +476,7 @@ const BatchUploadPage = (): JSX.Element => {
       // Add options as individual form fields
       formData.append('improve', String(improveOption));
       formData.append('export', String(exportOption));
-      formData.append('exportFormat', exportFormat);
+      formData.append('exportFormats', JSON.stringify(exportFormats));
       if (selectedTemplate) {
         formData.append('templateId', selectedTemplate);
       }
@@ -666,7 +683,7 @@ const BatchUploadPage = (): JSX.Element => {
         body: JSON.stringify({
           resumeIds,
           templateId: selectedTemplate,
-          format: exportFormat
+          formats: exportFormats
         })
       });
       
@@ -930,46 +947,63 @@ const BatchUploadPage = (): JSX.Element => {
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('batchUpload.exportFormat', 'Format d\'export')}
+                    {t('batchUpload.exportFormats', 'Formats d\'export (sélection multiple)')}
                   </label>
                   <div className="flex gap-4">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
-                        type="radio"
-                        name="exportFormat"
-                        value="pdf"
-                        checked={exportFormat === 'pdf'}
-                        onChange={() => setExportFormat('pdf')}
+                        type="checkbox"
+                        checked={exportFormats.includes('pdf')}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setExportFormats([...exportFormats, 'pdf']);
+                          } else {
+                            setExportFormats(exportFormats.filter(f => f !== 'pdf'));
+                          }
+                        }}
                         disabled={isProcessing}
-                        className="text-indigo-600 focus:ring-indigo-500"
+                        className="rounded text-indigo-600 focus:ring-indigo-500"
                       />
                       <span className="text-gray-700 dark:text-gray-300">PDF</span>
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
-                        type="radio"
-                        name="exportFormat"
-                        value="docx"
-                        checked={exportFormat === 'docx'}
-                        onChange={() => setExportFormat('docx')}
+                        type="checkbox"
+                        checked={exportFormats.includes('docx')}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setExportFormats([...exportFormats, 'docx']);
+                          } else {
+                            setExportFormats(exportFormats.filter(f => f !== 'docx'));
+                          }
+                        }}
                         disabled={isProcessing}
-                        className="text-indigo-600 focus:ring-indigo-500"
+                        className="rounded text-indigo-600 focus:ring-indigo-500"
                       />
                       <span className="text-gray-700 dark:text-gray-300">DOCX</span>
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
-                        type="radio"
-                        name="exportFormat"
-                        value="doc"
-                        checked={exportFormat === 'doc'}
-                        onChange={() => setExportFormat('doc')}
+                        type="checkbox"
+                        checked={exportFormats.includes('doc')}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setExportFormats([...exportFormats, 'doc']);
+                          } else {
+                            setExportFormats(exportFormats.filter(f => f !== 'doc'));
+                          }
+                        }}
                         disabled={isProcessing}
-                        className="text-indigo-600 focus:ring-indigo-500"
+                        className="rounded text-indigo-600 focus:ring-indigo-500"
                       />
                       <span className="text-gray-700 dark:text-gray-300">DOC</span>
                     </label>
                   </div>
+                  {exportFormats.length === 0 && (
+                    <p className="text-xs text-red-500 mt-1">
+                      {t('batchUpload.selectAtLeastOneFormat', 'Sélectionnez au moins un format')}
+                    </p>
+                  )}
                 </div>
                 
                 <p className="text-sm text-blue-600 dark:text-blue-400">
@@ -1025,15 +1059,35 @@ const BatchUploadPage = (): JSX.Element => {
           <div
             {...getRootProps()}
             className={`
-              border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all
+              border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all relative
               ${isDragActive 
                 ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' 
                 : 'border-gray-300 dark:border-gray-600 hover:border-indigo-400 dark:hover:border-indigo-500'
               }
-              ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}
+              ${isProcessing || isLoadingFiles ? 'opacity-50 cursor-not-allowed' : ''}
             `}
           >
             <input {...getInputProps()} />
+            
+            {/* Loading overlay when files are being added */}
+            {isLoadingFiles && (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="absolute inset-0 bg-white/80 dark:bg-gray-800/80 rounded-xl flex flex-col items-center justify-center z-10"
+              >
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                >
+                  <ArrowPathIcon className="w-12 h-12 text-indigo-500" />
+                </motion.div>
+                <p className="mt-3 text-indigo-600 dark:text-indigo-400 font-medium">
+                  {t('batchUpload.loadingFiles', 'Chargement des fichiers...')}
+                </p>
+              </motion.div>
+            )}
+            
             <FolderArrowDownIcon className="w-16 h-16 mx-auto text-gray-400 dark:text-gray-500 mb-4" />
             <p className="text-lg text-gray-700 dark:text-gray-300 mb-2">
               {isDragActive 
@@ -1225,7 +1279,7 @@ const BatchUploadPage = (): JSX.Element => {
               <div className="flex flex-col items-center">
                 <button
                   onClick={startProcessing}
-                  disabled={files.length === 0 || pendingCount === 0}
+                  disabled={files.length === 0 || pendingCount === 0 || (exportOption && exportFormats.length === 0)}
                   className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <DocumentArrowUpIcon className="w-5 h-5" />

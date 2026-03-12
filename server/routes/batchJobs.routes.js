@@ -67,10 +67,25 @@ router.post('/', authenticateToken, upload.array('files', 100), async (req, res)
         }
 
         // Parse options - handle both string 'true' and boolean true
+        // Parse exportFormats - can be JSON string array or single format string for backward compatibility
+        let exportFormats = ['pdf'];
+        if (req.body.exportFormats) {
+            try {
+                exportFormats = typeof req.body.exportFormats === 'string' 
+                    ? JSON.parse(req.body.exportFormats) 
+                    : req.body.exportFormats;
+            } catch {
+                exportFormats = [req.body.exportFormats]; // Single format as fallback
+            }
+        } else if (req.body.exportFormat) {
+            // Backward compatibility with single format
+            exportFormats = [req.body.exportFormat];
+        }
+
         const options = {
             improve: req.body.improve === 'true' || req.body.improve === true,
             export: req.body.export === 'true' || req.body.export === true,
-            exportFormat: req.body.exportFormat || 'pdf',
+            exportFormats: exportFormats,
             templateId: req.body.templateId || null,
             deleteAfterExport: req.body.deleteAfterExport === 'true' || req.body.deleteAfterExport === true
         };

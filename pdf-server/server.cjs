@@ -26,7 +26,7 @@ const MAX_HTML_SIZE = parseInt(process.env.PDF_MAX_HTML_SIZE || '5242880', 10); 
 // Rate limiting with automatic cleanup
 const requestCounts = new Map();
 const RATE_LIMIT_WINDOW = 60000; // 1 minute
-const RATE_LIMIT_MAX = parseInt(process.env.PDF_RATE_LIMIT || '200', 10); // 200 requests per minute (increased for batch processing)
+const RATE_LIMIT_MAX = parseInt(process.env.PDF_RATE_LIMIT || '300', 10); // 300 requests per minute (100 docs × 3 formats)
 let rateLimitCleanupInterval = null;
 
 // Periodic cleanup of rate limit entries to prevent memory leak
