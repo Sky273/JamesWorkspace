@@ -123,7 +123,8 @@ router.post('/', authenticateToken, upload.array('files', 100), async (req, res)
                 itemCount: items.length,
                 fileNames: items.map(i => i.fileName),
                 fileSizes: items.map(i => i.fileData?.length || 0),
-                hasRelativePaths: relativePaths.length > 0
+                hasRelativePaths: relativePaths.length > 0,
+                relativePaths: relativePaths.slice(0, 5) // Log first 5 paths for debugging
             });
 
             const addedCount = await addJobItems(job.id, items);

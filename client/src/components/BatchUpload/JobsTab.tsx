@@ -26,6 +26,7 @@ import toast from 'react-hot-toast';
 interface JobItem {
   id: string;
   file_name: string;
+  relative_path?: string;
   status: 'pending' | 'processing' | 'success' | 'error' | 'skipped';
   progress: number;
   error_message?: string;
@@ -475,7 +476,12 @@ const JobsTab = (): JSX.Element => {
                                 {item.status === 'skipped' && <XCircleIcon className="w-4 h-4 text-gray-400 flex-shrink-0" />}
                                 <div className="flex flex-col min-w-0">
                                   <span className="text-sm text-gray-700 dark:text-gray-300 truncate">
-                                    {item.file_name}
+                                    {item.relative_path ? (
+                                      <span title={item.relative_path}>
+                                        <span className="text-gray-400 dark:text-gray-500">{item.relative_path.split('/').slice(0, -1).join('/') + '/'}</span>
+                                        {item.file_name}
+                                      </span>
+                                    ) : item.file_name}
                                   </span>
                                   {item.original_name && item.display_name && (
                                     <span className="text-xs text-gray-500 dark:text-gray-400 truncate">

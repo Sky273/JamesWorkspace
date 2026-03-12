@@ -1018,6 +1018,15 @@ async function generateJobExport(jobId, options) {
     const successfulItems = items.filter(item => item.status === 'success' && item.resume_id);
     const successWithoutResumeId = items.filter(item => item.status === 'success' && !item.resume_id);
     
+    // Log relative paths for debugging
+    const itemsWithRelativePath = successfulItems.filter(item => item.relative_path);
+    safeLog('info', 'Relative paths in successful items', { 
+        jobId, 
+        totalSuccessful: successfulItems.length,
+        withRelativePath: itemsWithRelativePath.length,
+        samplePaths: itemsWithRelativePath.slice(0, 5).map(i => ({ fileName: i.file_name, relativePath: i.relative_path }))
+    });
+    
     if (successWithoutResumeId.length > 0) {
         safeLog('warn', 'Some successful items have no resume_id', { 
             jobId, 
@@ -1187,6 +1196,13 @@ async function generateJobExport(jobId, options) {
                     // Determine the file path in the ZIP
                     let filePath = result.fileName;
                     
+                    // Log relativePath for debugging
+                    safeLog('debug', 'Processing export result', { 
+                        fileName: result.fileName, 
+                        relativePath: result.relativePath,
+                        hasRelativePath: !!result.relativePath
+                    });
+                    
                     // If relativePath exists, use it to preserve folder structure
                     if (result.relativePath) {
                         // relativePath is like "folder/subfolder/filename.pdf"
@@ -1197,6 +1213,10 @@ async function generateJobExport(jobId, options) {
                             pathParts.pop();
                             filePath = pathParts.join('/') + '/' + result.fileName;
                         }
+                        safeLog('debug', 'Using relative path structure', { 
+                            originalRelativePath: result.relativePath,
+                            finalFilePath: filePath 
+                        });
                     }
                     
                     // Handle duplicate file paths by adding a suffix
@@ -1212,6 +1232,7 @@ async function generateJobExport(jobId, options) {
                     fileNameCounts.set(result.relativePath ? filePath.split('/').slice(0, -1).join('/') + '/' + result.fileName : filePath, count + 1);
                     
                     // Add to the format-specific folder (JSZip handles nested paths automatically)
+                    safeLog('debug', 'Adding file to ZIP', { format, filePath });
                     formatFolders[format].file(filePath, result.buffer);
                     exportSuccessCount++;
                 } else {

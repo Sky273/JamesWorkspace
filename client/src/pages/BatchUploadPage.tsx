@@ -5,8 +5,101 @@
  */
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { useDropzone, FileRejection } from 'react-dropzone';
+import { useDropzone, FileRejection, DropEvent } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion';
+
+// Extended File type with custom path property
+type FileWithPath = File & {
+  customRelativePath?: string;
+};
+
+// Helper to traverse directory entries and get files with paths
+const traverseFileTree = async (entry: FileSystemEntry, path: string = ''): Promise<FileWithPath[]> => {
+  const files: FileWithPath[] = [];
+  
+  if (entry.isFile) {
+    const fileEntry = entry as FileSystemFileEntry;
+    return new Promise((resolve) => {
+      fileEntry.file((file) => {
+        // Create a new file with the relative path stored in custom property
+        const fileWithPath = file as FileWithPath;
+        fileWithPath.customRelativePath = path + file.name;
+        resolve([fileWithPath]);
+      }, () => resolve([]));
+    });
+  } else if (entry.isDirectory) {
+    const dirEntry = entry as FileSystemDirectoryEntry;
+    const dirReader = dirEntry.createReader();
+    
+    return new Promise((resolve) => {
+      const readEntries = (allEntries: FileSystemEntry[] = []) => {
+        dirReader.readEntries(async (entries) => {
+          if (entries.length === 0) {
+            // All entries read, process them
+            const filePromises = allEntries.map(e => 
+              traverseFileTree(e, path + entry.name + '/')
+            );
+            const fileArrays = await Promise.all(filePromises);
+            resolve(fileArrays.flat());
+          } else {
+            // More entries to read
+            readEntries([...allEntries, ...entries]);
+          }
+        }, () => resolve([]));
+      };
+      readEntries();
+    });
+  }
+  
+  return files;
+};
+
+// Custom getFilesFromEvent to preserve folder structure
+const getFilesFromEvent = async (event: DropEvent): Promise<FileWithPath[]> => {
+  const files: FileWithPath[] = [];
+  
+  if ('dataTransfer' in event && event.dataTransfer) {
+    const items = event.dataTransfer.items;
+    
+    if (items && items.length > 0) {
+      const entries: FileSystemEntry[] = [];
+      
+      // Collect all entries first
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.kind === 'file') {
+          const entry = item.webkitGetAsEntry?.();
+          if (entry) {
+            entries.push(entry);
+          }
+        }
+      }
+      
+      // Process entries to get files with paths
+      if (entries.length > 0) {
+        const filePromises = entries.map(entry => traverseFileTree(entry));
+        const fileArrays = await Promise.all(filePromises);
+        files.push(...fileArrays.flat());
+      }
+    }
+    
+    // Fallback to regular files if no entries found
+    if (files.length === 0 && event.dataTransfer.files) {
+      for (let i = 0; i < event.dataTransfer.files.length; i++) {
+        files.push(event.dataTransfer.files[i] as FileWithPath);
+      }
+    }
+  } else if ('target' in event && event.target) {
+    const input = event.target as HTMLInputElement;
+    if (input.files) {
+      for (let i = 0; i < input.files.length; i++) {
+        files.push(input.files[i] as FileWithPath);
+      }
+    }
+  }
+  
+  return files;
+};
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -169,12 +262,26 @@ const BatchUploadPage = (): JSX.Element => {
           return;
         }
         
-        const newFiles: FileStatus[] = uniqueFiles.map(file => ({
-          file,
-          relativePath: (file as File & { webkitRelativePath?: string }).webkitRelativePath || undefined,
-          status: 'pending',
-          progress: 0
-        }));
+        const newFiles: FileStatus[] = uniqueFiles.map(file => {
+          const fileWithPath = file as FileWithPath;
+          // Check customRelativePath (from drag & drop) or webkitRelativePath (from folder button)
+          const customPath = fileWithPath.customRelativePath;
+          const webkitPath = fileWithPath.webkitRelativePath;
+          // Use customPath first (drag & drop), then webkitPath (folder selection)
+          const relativePath = (customPath && customPath.length > 0) 
+            ? customPath 
+            : (webkitPath && webkitPath.length > 0) 
+              ? webkitPath 
+              : undefined;
+          // Log for debugging
+          logger.info('File added', { fileName: file.name, customPath, webkitPath, relativePath });
+          return {
+            file,
+            relativePath,
+            status: 'pending' as const,
+            progress: 0
+          };
+        });
         
         setFiles(prev => {
           const updated = [...prev, ...newFiles];
@@ -207,6 +314,7 @@ const BatchUploadPage = (): JSX.Element => {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     onDropRejected,
+    getFilesFromEvent: getFilesFromEvent as (event: DropEvent) => Promise<File[]>,
     accept: {
       'application/pdf': ['.pdf'],
       'application/msword': ['.doc'],
@@ -1124,6 +1232,14 @@ const BatchUploadPage = (): JSX.Element => {
                     const fileList = e.target.files;
                     if (fileList) {
                       const filesArray = Array.from(fileList);
+                      // Log webkitRelativePath for debugging
+                      logger.info('Folder selection - files with paths', { 
+                        count: filesArray.length,
+                        samplePaths: filesArray.slice(0, 5).map(f => ({
+                          name: f.name,
+                          webkitRelativePath: (f as File & { webkitRelativePath?: string }).webkitRelativePath
+                        }))
+                      });
                       // Filter for supported file types
                       const validFiles = filesArray.filter(f => 
                         f.name.toLowerCase().endsWith('.pdf') || 
@@ -1234,8 +1350,15 @@ const BatchUploadPage = (): JSX.Element => {
                     {getStatusIcon(fileStatus.status)}
                     
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                        {fileStatus.file.name}
+                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate" title={fileStatus.relativePath || fileStatus.file.name}>
+                        {fileStatus.relativePath ? (
+                          <>
+                            <span className="text-gray-400 dark:text-gray-500">
+                              {fileStatus.relativePath.split('/').slice(0, -1).join('/') + '/'}
+                            </span>
+                            {fileStatus.file.name}
+                          </>
+                        ) : fileStatus.file.name}
                       </p>
                       <div className="flex items-center gap-2">
                         <span className={`text-xs ${
