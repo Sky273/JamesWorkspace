@@ -403,22 +403,46 @@ async function processImportItem(item, job, options) {
         mimeType: item.file_mime_type
     });
 
-    // Step 1: Create resume record
+    // Step 1: Create resume record with file data (like single upload)
     await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, { progress: 20 });
 
     const resumeResult = await query(`
         INSERT INTO resumes (
             name, 
+            file_name,
+            resume_file_data,
+            resume_file_size,
+            resume_file_type,
+            resume_file_url,
             status, 
-            firm_id, 
+            firm_id,
+            firm_name,
             profile_type,
             consent_status,
             created_at
-        ) VALUES ($1, $2, $3, $4, $5, NOW())
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
         RETURNING id
-    `, [item.file_name, 'processing', job.firm_id, 'employee', 'not_required']);
+    `, [
+        item.file_name,
+        item.file_name,
+        item.file_data,
+        item.file_data?.length || 0,
+        item.file_mime_type || 'application/octet-stream',
+        null, // Will be updated after insert with correct ID
+        'processing',
+        job.firm_id,
+        job.firm_name || null,
+        'employee',
+        'not_required'
+    ]);
 
     const resumeId = resumeResult.rows[0].id;
+
+    // Update resume_file_url with correct ID (like single upload)
+    await query(
+        `UPDATE resumes SET resume_file_url = $1 WHERE id = $2`,
+        [`/api/resumes/${resumeId}/download`, resumeId]
+    );
 
     // Update item with resume_id
     await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, { 
