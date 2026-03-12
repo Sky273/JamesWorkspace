@@ -4,8 +4,8 @@ echo   ResumeConverter - Stopping Container
 echo ============================================
 echo.
 
-docker stop resumeconverter-app
-docker rm resumeconverter-app
+docker stop resumeconverter-app >nul 2>&1
+docker rm resumeconverter-app >nul 2>&1
 
 echo.
 echo Container stopped and removed.
