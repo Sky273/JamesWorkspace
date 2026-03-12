@@ -646,7 +646,7 @@ const oauthStates = new Map();
 const STATE_EXPIRY = 10 * 60 * 1000; // 10 minutes
 
 // Cleanup expired states periodically
-setInterval(() => {
+let authOauthStatesCleanupInterval = setInterval(() => {
     const now = Date.now();
     for (const [state, data] of oauthStates.entries()) {
         if (now - data.createdAt > STATE_EXPIRY) {
@@ -654,6 +654,18 @@ setInterval(() => {
         }
     }
 }, 60 * 1000); // Every minute
+
+/**
+ * Destroy OAuth states cleanup interval (for graceful shutdown)
+ */
+export function destroyAuthOauthStates() {
+    if (authOauthStatesCleanupInterval) {
+        clearInterval(authOauthStatesCleanupInterval);
+        authOauthStatesCleanupInterval = null;
+    }
+    oauthStates.clear();
+    safeLog('info', 'Auth OAuth states cleanup destroyed');
+}
 
 // GET /api/auth/google - Initiate Google OAuth flow
 router.get('/google', authLimiter, async (req, res) => {

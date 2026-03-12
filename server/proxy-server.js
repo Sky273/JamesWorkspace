@@ -43,7 +43,7 @@ import { cleanupAllCaches } from './services/cache.service.js';
 // Import routes
 import healthRoutes from './routes/health.routes.js';
 import metricsRoutes from './routes/metrics.routes.js';
-import authRoutes from './routes/auth.routes.js';
+import authRoutes, { destroyAuthOauthStates } from './routes/auth.routes.js';
 import settingsRoutes from './routes/settings.routes.js';
 import missionsRoutes from './routes/missions.routes.js';
 import resumesRoutes from './routes/resumes.routes.js';
@@ -1122,6 +1122,7 @@ const gracefulShutdown = async (signal) => {
         destroyTagsCache();
         destroyEscoCache();
         destroyMailStatesCleanup();
+        destroyAuthOauthStates();
         destroyGoogleapis();
         destroyCalendarService();
         await stopBatchJobsWorker();

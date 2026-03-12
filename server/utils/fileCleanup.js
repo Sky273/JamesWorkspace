@@ -205,6 +205,7 @@ export async function cleanupOldFiles(directory, maxAgeMs = 60 * 60 * 1000) {
 
 /**
  * Clean all configured directories with their respective TTLs
+ * Also cleans up old batch jobs and their file_data
  * @returns {Promise<Object>} Cleanup results per directory
  */
 async function cleanupAllDirectories() {
@@ -225,6 +226,20 @@ async function cleanupAllDirectories() {
                 error: error.message 
             });
         }
+    }
+    
+    // Also cleanup batch jobs file_data and old jobs
+    try {
+        const { cleanupOldJobs } = await import('../services/batchJobs.service.js');
+        const batchCleanup = await cleanupOldJobs(7); // Keep jobs for 7 days
+        results.batchJobs = { success: true, ...batchCleanup };
+        cleanupStats.batchJobs = {
+            lastCleanup: new Date().toISOString(),
+            ...batchCleanup
+        };
+    } catch (error) {
+        results.batchJobs = { success: false, error: error.message };
+        safeLog('debug', 'Batch jobs cleanup skipped', { error: error.message });
     }
     
     return results;

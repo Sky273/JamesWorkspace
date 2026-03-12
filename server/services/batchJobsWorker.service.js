@@ -41,6 +41,11 @@ let activeProcessingCount = 0;
 let activeLLMRequests = 0;
 const llmQueue = [];
 
+// Track queue health for debugging
+let llmQueueStuckCount = 0;
+const LLM_QUEUE_STUCK_THRESHOLD = 60000; // 1 minute
+let lastLLMActivity = Date.now();
+
 /**
  * Parse a score value to integer (handles "84%", 84, "84", etc.)
  * @param {any} value - Score value
@@ -121,10 +126,24 @@ async function acquireLLMSlot() {
  * Release a slot for LLM request
  */
 function releaseLLMSlot() {
-    activeLLMRequests--;
+    activeLLMRequests = Math.max(0, activeLLMRequests - 1); // Prevent negative count
+    lastLLMActivity = Date.now();
     if (llmQueue.length > 0) {
         const next = llmQueue.shift();
         next();
+    }
+}
+
+/**
+ * Reset LLM queue if stuck (called during shutdown or error recovery)
+ */
+function resetLLMQueue() {
+    const queueLength = llmQueue.length;
+    const activeCount = activeLLMRequests;
+    llmQueue.length = 0; // Clear queue
+    activeLLMRequests = 0;
+    if (queueLength > 0 || activeCount > 0) {
+        safeLog('warn', 'LLM queue reset', { clearedQueue: queueLength, clearedActive: activeCount });
     }
 }
 
@@ -235,6 +254,10 @@ export async function stopWorker() {
 
     isWorkerRunning = false;
     activeProcessingCount = 0;
+    
+    // Reset LLM queue to prevent stuck requests
+    resetLLMQueue();
+    
     safeLog('info', 'Batch jobs worker stopped');
 }
 

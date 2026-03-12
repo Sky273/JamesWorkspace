@@ -35,12 +35,13 @@ let mailStatesCleanupInterval = setInterval(cleanupExpiredStates, 5 * 60 * 1000)
 /**
  * Destroy mail states cleanup interval (for graceful shutdown)
  */
-function destroyMailStatesCleanup() {
+export function destroyMailStatesCleanup() {
     if (mailStatesCleanupInterval) {
         clearInterval(mailStatesCleanupInterval);
         mailStatesCleanupInterval = null;
     }
     oauthStates.clear();
+    safeLog('info', 'Mail OAuth states cleanup destroyed');
 }
 
 // ============================================
