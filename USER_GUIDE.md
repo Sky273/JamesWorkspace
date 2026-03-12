@@ -331,6 +331,34 @@ L'import par lot permet aux **administrateurs** de charger plusieurs CVs simulta
 1. Accédez à **"CVthèque"** dans le menu latéral
 2. Cliquez sur le bouton **"Import par lot"** (visible uniquement pour les administrateurs)
 
+#### Méthodes d'Import
+
+| Méthode | Description |
+|---------|-------------|
+| **Glisser-déposer** | Glissez des fichiers ou un dossier entier dans la zone de dépôt |
+| **Sélectionner un dossier** | Cliquez sur le bouton "Sélectionner un dossier" pour choisir un dossier avec ses sous-dossiers |
+| **Cliquer pour sélectionner** | Cliquez dans la zone de dépôt pour sélectionner des fichiers individuels |
+
+#### Préservation de la Structure des Dossiers
+
+L'import par lot **préserve automatiquement la structure des dossiers** lors de l'import et de l'export :
+
+- **Affichage** : Le chemin relatif de chaque fichier est affiché en gris devant le nom du fichier
+- **Export** : Le fichier ZIP généré reproduit la structure des dossiers d'origine
+
+**Exemple :**
+```
+Dossier importé :                    ZIP exporté :
+MonDossier/                          PDF/
+├── Consultants/                     ├── MonDossier/Consultants/
+│   ├── Senior/                      │   ├── Senior/
+│   │   └── CV_Jean.pdf              │   │   └── JDU_Template.pdf
+│   └── Junior/                      │   └── Junior/
+│       └── CV_Marie.pdf             │       └── MMA_Template.pdf
+```
+
+> **Note** : Le nom du fichier exporté suit le format `{trigramme}_{nom_du_modèle}.{extension}` où le trigramme est extrait du CV analysé.
+
 #### Options de Traitement
 
 | Option | Description |
@@ -343,28 +371,47 @@ L'import par lot permet aux **administrateurs** de charger plusieurs CVs simulta
 
 Si l'option d'export est activée :
 - **Modèle d'export** : Sélectionnez le template de mise en forme
-- **Format** : PDF, DOCX ou DOC
+- **Format** : PDF, DOCX ou les deux
 
 #### Processus d'Import
 
-1. **Glissez-déposez** vos fichiers (PDF, DOC, DOCX) dans la zone prévue
+1. **Glissez-déposez** vos fichiers ou dossiers, ou utilisez le bouton **"Sélectionner un dossier"**
 2. **Limite** : Maximum 100 fichiers par lot
 3. **Taille max** : 50 MB par fichier
-4. Configurez les **options de traitement**
-5. Cliquez sur **"Traiter X fichier(s)"**
-6. Suivez la progression en temps réel
+4. **Vérifiez** les chemins relatifs affichés pour chaque fichier
+5. Configurez les **options de traitement**
+6. Cliquez sur **"Traiter X fichier(s)"**
+7. Suivez la progression en temps réel
+
+#### Onglet Jobs
+
+L'onglet **Jobs** permet de suivre et gérer tous les traitements par lot :
+
+| Information | Description |
+|-------------|-------------|
+| **Statut** | En attente, En cours, Terminé, Échoué, Annulé |
+| **Progression** | Nombre de fichiers traités / total |
+| **Succès/Erreurs** | Compteurs de fichiers réussis et échoués |
+| **Détails** | Liste des fichiers avec leur chemin relatif et statut individuel |
+| **Export** | Bouton de téléchargement du ZIP (si export activé) |
+
+**Actions disponibles :**
+- **Télécharger** : Télécharge le fichier ZIP d'export (jobs terminés avec export)
+- **Annuler** : Annule un job en cours
+- **Supprimer** : Supprime un job de l'historique
 
 #### Suivi du Traitement
 
 Pour chaque fichier, vous pouvez voir :
+- **Chemin relatif** : Structure de dossiers d'origine (en gris)
+- **Nom du fichier** : Nom du CV
 - **Statut** : En attente, Upload, Extraction, Analyse, Amélioration, Export, Terminé, Erreur
 - **Barre de progression** : Avancement du traitement
-- **Temps estimé** : Durée approximative restante
 
 #### Gestion des Erreurs
 
-- Les fichiers en erreur peuvent être **réessayés** individuellement
-- Le bouton **"Réessayer les erreurs"** permet de relancer tous les fichiers échoués
+- Les fichiers en erreur sont signalés avec un message d'erreur détaillé
+- Le traitement continue pour les autres fichiers même en cas d'erreur
 - Les fichiers réussis ne sont pas affectés par les erreurs des autres
 
 #### RGPD

@@ -331,6 +331,34 @@ Batch import allows **administrators** to upload multiple resumes simultaneously
 1. Go to **"Resume Library"** in the sidebar
 2. Click the **"Batch Import"** button (visible only to administrators)
 
+#### Import Methods
+
+| Method | Description |
+|--------|-------------|
+| **Drag and drop** | Drag files or an entire folder into the drop zone |
+| **Select folder** | Click the "Select folder" button to choose a folder with subfolders |
+| **Click to select** | Click in the drop zone to select individual files |
+
+#### Folder Structure Preservation
+
+Batch import **automatically preserves the folder structure** during import and export:
+
+- **Display**: The relative path of each file is shown in gray before the file name
+- **Export**: The generated ZIP file reproduces the original folder structure
+
+**Example:**
+```
+Imported folder:                     Exported ZIP:
+MyFolder/                            PDF/
+├── Consultants/                     ├── MyFolder/Consultants/
+│   ├── Senior/                      │   ├── Senior/
+│   │   └── CV_John.pdf              │   │   └── JDO_Template.pdf
+│   └── Junior/                      │   └── Junior/
+│       └── CV_Mary.pdf              │       └── MMA_Template.pdf
+```
+
+> **Note**: The exported file name follows the format `{trigram}_{template_name}.{extension}` where the trigram is extracted from the analyzed resume.
+
 #### Processing Options
 
 | Option | Description |
@@ -343,28 +371,47 @@ Batch import allows **administrators** to upload multiple resumes simultaneously
 
 If the export option is enabled:
 - **Export template**: Select the formatting template
-- **Format**: PDF, DOCX, or DOC
+- **Format**: PDF, DOCX, or both
 
 #### Import Process
 
-1. **Drag and drop** your files (PDF, DOC, DOCX) into the designated area
+1. **Drag and drop** your files or folders, or use the **"Select folder"** button
 2. **Limit**: Maximum 100 files per batch
 3. **Max size**: 50 MB per file
-4. Configure **processing options**
-5. Click **"Process X file(s)"**
-6. Monitor progress in real-time
+4. **Verify** the relative paths displayed for each file
+5. Configure **processing options**
+6. Click **"Process X file(s)"**
+7. Monitor progress in real-time
+
+#### Jobs Tab
+
+The **Jobs** tab allows you to track and manage all batch processing jobs:
+
+| Information | Description |
+|-------------|-------------|
+| **Status** | Pending, Processing, Completed, Failed, Cancelled |
+| **Progress** | Number of files processed / total |
+| **Success/Errors** | Counters for successful and failed files |
+| **Details** | List of files with their relative path and individual status |
+| **Export** | Download button for the ZIP file (if export enabled) |
+
+**Available actions:**
+- **Download**: Download the export ZIP file (completed jobs with export)
+- **Cancel**: Cancel a job in progress
+- **Delete**: Remove a job from history
 
 #### Progress Tracking
 
 For each file, you can see:
+- **Relative path**: Original folder structure (in gray)
+- **File name**: Resume name
 - **Status**: Pending, Uploading, Extracting, Analyzing, Improving, Exporting, Done, Error
 - **Progress bar**: Processing advancement
-- **Estimated time**: Approximate remaining duration
 
 #### Error Handling
 
-- Failed files can be **retried** individually
-- The **"Retry errors"** button allows relaunching all failed files
+- Failed files are flagged with a detailed error message
+- Processing continues for other files even if errors occur
 - Successful files are not affected by other files' errors
 
 #### GDPR
