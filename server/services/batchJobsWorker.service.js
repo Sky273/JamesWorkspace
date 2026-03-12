@@ -1108,10 +1108,25 @@ async function generateJobExport(jobId, options) {
         }
     }
     
-    // Collect results
+    // Collect results - handle duplicate file names
+    const fileNameCounts = new Map();
     for (const result of results) {
         if (result.success) {
-            zip.file(result.fileName, result.buffer);
+            // Handle duplicate file names by adding a suffix
+            let finalFileName = result.fileName;
+            const count = fileNameCounts.get(result.fileName) || 0;
+            if (count > 0) {
+                // Add suffix before extension: "name.pdf" -> "name_2.pdf"
+                const lastDot = result.fileName.lastIndexOf('.');
+                if (lastDot > 0) {
+                    finalFileName = `${result.fileName.substring(0, lastDot)}_${count + 1}${result.fileName.substring(lastDot)}`;
+                } else {
+                    finalFileName = `${result.fileName}_${count + 1}`;
+                }
+            }
+            fileNameCounts.set(result.fileName, count + 1);
+            
+            zip.file(finalFileName, result.buffer);
             exportSuccessCount++;
         } else {
             exportErrorCount++;
@@ -1119,12 +1134,15 @@ async function generateJobExport(jobId, options) {
         }
     }
     
-    // Log export statistics
+    // Log export statistics including duplicate detection
+    const duplicatesDetected = Array.from(fileNameCounts.entries()).filter(([_, count]) => count > 1);
     safeLog('info', 'Export processing completed', { 
         jobId, 
         totalItems: successfulItems.length,
         exportSuccessCount, 
         exportErrorCount,
+        filesInZip: Object.keys(zip.files).length,
+        duplicateNames: duplicatesDetected.length > 0 ? duplicatesDetected.map(([name, count]) => `${name} (x${count})`) : undefined,
         errors: exportErrors.length > 0 ? exportErrors.slice(0, 5) : undefined // Log first 5 errors
     });
     
