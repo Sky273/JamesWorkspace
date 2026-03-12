@@ -1,67 +1,59 @@
 /**
  * Backup Scheduler Service
- * Handles scheduled database backups using node-cron
+ * Handles scheduled database backups using setInterval
+ * Checks every minute if a backup should run
  */
 
-import cron from 'node-cron';
 import { safeLog } from '../utils/logger.backend.js';
 import { getBackupSettings, createBackup } from './backup.service.js';
 
-// Store active cron jobs
-const cronJobs = {
+// Store scheduler state
+let schedulerInterval = null;
+let lastExecuted = {
     daily: null,
     weekly: null,
     monthly: null
 };
 
 /**
- * Convert time string (HH:MM) to cron expression parts
- * Converts from Europe/Paris timezone to UTC for cron execution
+ * Parse time string (HH:MM or HH:MM:SS) to hours and minutes
  */
 function parseTime(timeStr) {
     const [hours, minutes] = (timeStr || '02:00').split(':').map(Number);
-    
-    // Convert Paris time to UTC (Paris is UTC+1 in winter, UTC+2 in summer)
-    // For simplicity, we'll use a fixed offset of -1 hour (winter time)
-    // This means 07:40 Paris = 06:40 UTC
+    return { hours, minutes };
+}
+
+/**
+ * Get current time in Paris timezone
+ */
+function getParisTime() {
     const now = new Date();
-    const parisDate = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
-    const utcDate = new Date(now.toLocaleString('en-US', { timeZone: 'UTC' }));
-    const offsetHours = Math.round((parisDate - utcDate) / (1000 * 60 * 60));
-    
-    // Adjust hours to UTC
-    let utcHours = hours - offsetHours;
-    if (utcHours < 0) utcHours += 24;
-    if (utcHours >= 24) utcHours -= 24;
-    
-    return { hours: utcHours, minutes, originalHours: hours };
+    const parisStr = now.toLocaleString('en-US', { 
+        timeZone: 'Europe/Paris',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+    });
+    const [hours, minutes] = parisStr.split(':').map(Number);
+    const dayOfWeek = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Paris' })).getDay();
+    const dayOfMonth = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Paris' })).getDate();
+    return { hours, minutes, dayOfWeek, dayOfMonth };
 }
 
 /**
- * Build cron expression for daily backup
- * Format: minute hour * * *
+ * Check if time matches (within the same minute)
  */
-function buildDailyCron(time) {
-    const { hours, minutes } = parseTime(time);
-    return `${minutes} ${hours} * * *`;
+function timeMatches(configTime, currentHours, currentMinutes) {
+    const { hours, minutes } = parseTime(configTime);
+    return hours === currentHours && minutes === currentMinutes;
 }
 
 /**
- * Build cron expression for weekly backup
- * Format: minute hour * * dayOfWeek
+ * Get today's date string for tracking executed backups
  */
-function buildWeeklyCron(time, dayOfWeek) {
-    const { hours, minutes } = parseTime(time);
-    return `${minutes} ${hours} * * ${dayOfWeek}`;
-}
-
-/**
- * Build cron expression for monthly backup
- * Format: minute hour dayOfMonth * *
- */
-function buildMonthlyCron(time, dayOfMonth) {
-    const { hours, minutes } = parseTime(time);
-    return `${minutes} ${hours} ${dayOfMonth} * *`;
+function getTodayKey() {
+    const now = new Date();
+    return now.toISOString().split('T')[0]; // YYYY-MM-DD
 }
 
 /**
@@ -97,29 +89,69 @@ async function executeBackup(type) {
 }
 
 /**
- * Stop all cron jobs
+ * Check and execute scheduled backups
  */
-function stopAllJobs() {
-    for (const [type, job] of Object.entries(cronJobs)) {
-        if (job) {
-            job.stop();
-            cronJobs[type] = null;
-            safeLog('debug', `[BackupScheduler] Stopped ${type} backup job`);
+async function checkAndExecuteBackups() {
+    try {
+        const settings = await getBackupSettings();
+        if (!settings) return;
+        
+        const { hours, minutes, dayOfWeek, dayOfMonth } = getParisTime();
+        const todayKey = getTodayKey();
+        
+        // Daily backup
+        if (settings.daily_enabled && timeMatches(settings.daily_time, hours, minutes)) {
+            if (lastExecuted.daily !== todayKey) {
+                lastExecuted.daily = todayKey;
+                safeLog('info', '[BackupScheduler] Triggering daily backup', { time: `${hours}:${minutes}`, parisTime: settings.daily_time });
+                executeBackup('daily');
+            }
         }
+        
+        // Weekly backup (check day of week)
+        if (settings.weekly_enabled && 
+            settings.weekly_day === dayOfWeek && 
+            timeMatches(settings.weekly_time, hours, minutes)) {
+            const weekKey = `${todayKey}-weekly`;
+            if (lastExecuted.weekly !== weekKey) {
+                lastExecuted.weekly = weekKey;
+                safeLog('info', '[BackupScheduler] Triggering weekly backup', { time: `${hours}:${minutes}`, dayOfWeek });
+                executeBackup('weekly');
+            }
+        }
+        
+        // Monthly backup (check day of month)
+        if (settings.monthly_enabled && 
+            settings.monthly_day === dayOfMonth && 
+            timeMatches(settings.monthly_time, hours, minutes)) {
+            const monthKey = `${todayKey}-monthly`;
+            if (lastExecuted.monthly !== monthKey) {
+                lastExecuted.monthly = monthKey;
+                safeLog('info', '[BackupScheduler] Triggering monthly backup', { time: `${hours}:${minutes}`, dayOfMonth });
+                executeBackup('monthly');
+            }
+        }
+    } catch (error) {
+        safeLog('error', '[BackupScheduler] Error checking backups', { error: error.message });
     }
 }
 
 /**
  * Initialize backup scheduler based on settings
- * Called at server startup and after settings changes
+ * Uses setInterval to check every minute if a backup should run
  */
 export async function initBackupScheduler() {
     try {
+        // Stop existing interval if any
+        if (schedulerInterval) {
+            clearInterval(schedulerInterval);
+            schedulerInterval = null;
+        }
+        
         let settings;
         try {
             settings = await getBackupSettings();
         } catch (dbError) {
-            // Table might not exist yet or DB connection issue
             safeLog('warn', '[BackupScheduler] Could not load backup settings from database', {
                 error: dbError.message
             });
@@ -132,97 +164,54 @@ export async function initBackupScheduler() {
         }
         
         // Log settings for debugging
+        const dayNames = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
         safeLog('info', '[BackupScheduler] Loaded backup settings', {
             host: settings.host ? '***configured***' : 'NOT SET',
             daily_enabled: settings.daily_enabled,
             daily_time: settings.daily_time,
             weekly_enabled: settings.weekly_enabled,
             weekly_day: settings.weekly_day,
+            weekly_day_name: dayNames[settings.weekly_day],
             weekly_time: settings.weekly_time,
             monthly_enabled: settings.monthly_enabled,
             monthly_day: settings.monthly_day,
             monthly_time: settings.monthly_time
         });
         
-        // Stop existing jobs before reinitializing
-        stopAllJobs();
+        // Check if any backup is enabled
+        const hasEnabledBackups = settings.daily_enabled || settings.weekly_enabled || settings.monthly_enabled;
         
-        // Daily backup
-        if (settings.daily_enabled) {
-            if (!settings.host) {
-                safeLog('warn', '[BackupScheduler] Daily backup enabled but no FTP/SFTP host configured - backups will be local only');
-            }
-            const cronExpr = buildDailyCron(settings.daily_time);
-            const { hours: utcHours, minutes, originalHours } = parseTime(settings.daily_time);
-            safeLog('debug', '[BackupScheduler] Creating daily cron job', { cronExpr, parisTime: settings.daily_time, utcHours, minutes });
-            cronJobs.daily = cron.schedule(cronExpr, () => executeBackup('daily'), {
-                scheduled: false
-            });
-            cronJobs.daily.start();
-            safeLog('info', '[BackupScheduler] Daily backup scheduled and started', { 
-                cron: cronExpr,
-                parisTime: settings.daily_time,
-                utcTime: `${String(utcHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`,
-                uploadEnabled: !!settings.host
-            });
-        } else {
-            safeLog('debug', '[BackupScheduler] Daily backup not enabled');
+        if (!hasEnabledBackups) {
+            safeLog('info', '[BackupScheduler] No backup jobs enabled');
+            return;
         }
         
-        // Weekly backup
-        if (settings.weekly_enabled) {
-            if (!settings.host) {
-                safeLog('warn', '[BackupScheduler] Weekly backup enabled but no FTP/SFTP host configured - backups will be local only');
-            }
-            const cronExpr = buildWeeklyCron(settings.weekly_time, settings.weekly_day);
-            safeLog('debug', '[BackupScheduler] Creating weekly cron job', { cronExpr });
-            cronJobs.weekly = cron.schedule(cronExpr, () => executeBackup('weekly'), {
-                scheduled: false
+        // Start interval to check every 30 seconds
+        schedulerInterval = setInterval(checkAndExecuteBackups, 30 * 1000);
+        
+        // Log scheduled times
+        if (settings.daily_enabled) {
+            safeLog('info', '[BackupScheduler] Daily backup scheduled', { 
+                time: settings.daily_time,
+                uploadEnabled: !!settings.host
             });
-            cronJobs.weekly.start();
-            const dayNames = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
-            safeLog('info', '[BackupScheduler] Weekly backup scheduled and started', { 
-                cron: cronExpr,
+        }
+        if (settings.weekly_enabled) {
+            safeLog('info', '[BackupScheduler] Weekly backup scheduled', { 
                 day: dayNames[settings.weekly_day],
                 time: settings.weekly_time,
                 uploadEnabled: !!settings.host
             });
-        } else {
-            safeLog('debug', '[BackupScheduler] Weekly backup not enabled');
         }
-        
-        // Monthly backup
         if (settings.monthly_enabled) {
-            if (!settings.host) {
-                safeLog('warn', '[BackupScheduler] Monthly backup enabled but no FTP/SFTP host configured - backups will be local only');
-            }
-            const cronExpr = buildMonthlyCron(settings.monthly_time, settings.monthly_day);
-            safeLog('debug', '[BackupScheduler] Creating monthly cron job', { cronExpr });
-            cronJobs.monthly = cron.schedule(cronExpr, () => executeBackup('monthly'), {
-                scheduled: false
-            });
-            cronJobs.monthly.start();
-            safeLog('info', '[BackupScheduler] Monthly backup scheduled and started', { 
-                cron: cronExpr,
+            safeLog('info', '[BackupScheduler] Monthly backup scheduled', { 
                 dayOfMonth: settings.monthly_day,
                 time: settings.monthly_time,
                 uploadEnabled: !!settings.host
             });
-        } else {
-            safeLog('debug', '[BackupScheduler] Monthly backup not enabled');
         }
         
-        const activeJobs = Object.entries(cronJobs)
-            .filter(([, job]) => job !== null)
-            .map(([type]) => type);
-        
-        if (activeJobs.length > 0) {
-            safeLog('info', '[BackupScheduler] Backup scheduler initialized', { 
-                activeJobs 
-            });
-        } else {
-            safeLog('info', '[BackupScheduler] No backup jobs enabled');
-        }
+        safeLog('info', '[BackupScheduler] Backup scheduler initialized (checking every 30s)');
         
     } catch (error) {
         safeLog('error', '[BackupScheduler] Failed to initialize backup scheduler', {
@@ -236,6 +225,8 @@ export async function initBackupScheduler() {
  */
 export async function reloadBackupScheduler() {
     safeLog('info', '[BackupScheduler] Reloading backup scheduler');
+    // Reset last executed to allow re-triggering if time changed
+    lastExecuted = { daily: null, weekly: null, monthly: null };
     await initBackupScheduler();
 }
 
@@ -244,7 +235,10 @@ export async function reloadBackupScheduler() {
  */
 export function stopBackupScheduler() {
     safeLog('info', '[BackupScheduler] Stopping backup scheduler');
-    stopAllJobs();
+    if (schedulerInterval) {
+        clearInterval(schedulerInterval);
+        schedulerInterval = null;
+    }
 }
 
 /**
@@ -252,9 +246,8 @@ export function stopBackupScheduler() {
  */
 export function getSchedulerStatus() {
     return {
-        daily: cronJobs.daily !== null,
-        weekly: cronJobs.weekly !== null,
-        monthly: cronJobs.monthly !== null
+        running: schedulerInterval !== null,
+        lastExecuted
     };
 }
 

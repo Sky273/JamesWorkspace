@@ -16,6 +16,8 @@
 12. [Qualité du Code](#qualité-du-code)
 13. [Points Forts](#-points-forts)
 14. [Points Faibles et Axes d'Amélioration](#-points-faibles-et-axes-damélioration)
+15. [Déploiement Docker](#déploiement-docker)
+16. [Sauvegardes et Planification](#sauvegardes-et-planification)
 
 ---
 
@@ -1115,6 +1117,174 @@ CREATE TABLE schema_migrations (
 
 ---
 
+## Sauvegardes et Planification
+
+### Architecture des Sauvegardes
+
+L'application intègre un système complet de sauvegarde automatique de la base de données avec support FTP/SFTP et stockage local.
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                      Backup Scheduler Service                        │
+│  ┌──────────────────────────────────────────────────────────────┐   │
+│  │              setInterval (toutes les 30 secondes)             │   │
+│  │                                                               │   │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐          │   │
+│  │  │   Daily     │  │   Weekly    │  │   Monthly   │          │   │
+│  │  │  Backup     │  │   Backup    │  │   Backup    │          │   │
+│  │  │  (HH:MM)    │  │ (Jour+HH:MM)│  │(Jour+HH:MM) │          │   │
+│  │  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘          │   │
+│  └─────────┼────────────────┼────────────────┼──────────────────┘   │
+│            │                │                │                       │
+│            ▼                ▼                ▼                       │
+│  ┌──────────────────────────────────────────────────────────────┐   │
+│  │                     Backup Service                            │   │
+│  │  1. pg_dump → SQL                                            │   │
+│  │  2. gzip compression                                         │   │
+│  │  3. Upload FTP/SFTP ou stockage local                        │   │
+│  │  4. Cleanup anciens backups (rétention configurable)         │   │
+│  └──────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Planification des Sauvegardes
+
+Le scheduler utilise `setInterval` avec vérification toutes les 30 secondes pour déclencher les sauvegardes à l'heure configurée (timezone Europe/Paris).
+
+| Type | Fréquence | Configuration |
+|------|-----------|---------------|
+| **Daily** | Tous les jours | Heure (HH:MM) |
+| **Weekly** | Une fois par semaine | Jour de la semaine + Heure |
+| **Monthly** | Une fois par mois | Jour du mois + Heure |
+
+**Mécanisme de déclenchement :**
+```javascript
+// server/services/backup-scheduler.service.js
+function checkAndExecuteBackups() {
+    const { hours, minutes, dayOfWeek, dayOfMonth } = getParisTime();
+    
+    // Daily: vérifie heure + évite double exécution le même jour
+    if (settings.daily_enabled && timeMatches(settings.daily_time, hours, minutes)) {
+        if (lastExecuted.daily !== todayKey) {
+            lastExecuted.daily = todayKey;
+            executeBackup('daily');
+        }
+    }
+    // Weekly: vérifie jour de semaine + heure
+    // Monthly: vérifie jour du mois + heure
+}
+```
+
+### Cibles de Sauvegarde
+
+| Cible | Protocole | Configuration |
+|-------|-----------|---------------|
+| **FTP** | FTP avec TLS explicite | Host, port, user, password |
+| **FTPS** | FTP over TLS | Host, port, user, password, tls_mode |
+| **SFTP** | SSH File Transfer | Host, port, user, password |
+| **Local** | Système de fichiers | Répertoire `/app/server/backups` |
+
+### Politique de Rétention
+
+Chaque type de sauvegarde a sa propre politique de rétention configurable :
+
+| Type | Rétention par défaut | Description |
+|------|---------------------|-------------|
+| **Daily** | 7 jours | Conserve les 7 dernières sauvegardes quotidiennes |
+| **Weekly** | 4 semaines | Conserve les 4 dernières sauvegardes hebdomadaires |
+| **Monthly** | 12 mois | Conserve les 12 dernières sauvegardes mensuelles |
+| **Manual** | 30 jours | Sauvegardes manuelles déclenchées via l'interface |
+
+Le nettoyage s'applique automatiquement après chaque sauvegarde, tant sur le serveur distant (FTP/SFTP) que localement.
+
+### Format des Fichiers de Sauvegarde
+
+```
+backup-{type}-resumeconverter-{timestamp}.sql.gz
+
+Exemples:
+- backup-daily-resumeconverter-2026-03-12T07-30-29.sql.gz
+- backup-weekly-resumeconverter-2026-03-10T03-00-00.sql.gz
+- backup-monthly-resumeconverter-2026-03-01T04-00-00.sql.gz
+- backup-manual-resumeconverter-2026-03-12T14-25-00.sql.gz
+```
+
+### Historique des Sauvegardes
+
+Chaque sauvegarde est enregistrée dans la table `backup_history` :
+
+```sql
+CREATE TABLE backup_history (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    type VARCHAR(20) NOT NULL,           -- daily, weekly, monthly, manual
+    filename VARCHAR(255) NOT NULL,
+    file_size BIGINT,
+    status VARCHAR(20) NOT NULL,         -- running, success, failed
+    error_message TEXT,
+    started_at TIMESTAMPTZ DEFAULT NOW(),
+    completed_at TIMESTAMPTZ,
+    uploaded BOOLEAN DEFAULT FALSE
+);
+```
+
+### Configuration via Interface
+
+L'écran de configuration des sauvegardes (`/dashboard/backup`) permet de :
+
+- **Configurer la cible** : Local, FTP, FTPS ou SFTP
+- **Tester la connexion** : Vérification avant sauvegarde
+- **Planifier les sauvegardes** : Daily, Weekly, Monthly avec horaires
+- **Définir la rétention** : Nombre de sauvegardes à conserver par type
+- **Déclencher manuellement** : Sauvegarde immédiate
+- **Consulter l'historique** : Liste des sauvegardes avec statut
+- **Restaurer** : Téléchargement et restauration d'une sauvegarde
+
+### Gestion des Erreurs
+
+Le système garantit qu'aucune erreur ne passe silencieusement :
+
+```javascript
+// Logging détaillé en cas d'erreur
+safeLog('error', 'BACKUP FAILED - Scheduled daily backup failed', {
+    type,
+    error: error.message,
+    stack: error.stack,
+    code: error.code,
+    durationSeconds: duration
+});
+console.error(`[BackupScheduler] BACKUP FAILED: ${type} - ${error.message}`);
+```
+
+| Niveau | Événement | Action |
+|--------|-----------|--------|
+| **INFO** | Démarrage backup | Log avec timestamp et type |
+| **INFO** | Backup réussi | Log avec filename, taille, durée |
+| **ERROR** | Connexion FTP échouée | Log avec host, port, code erreur |
+| **ERROR** | Upload échoué | Log + conservation locale du fichier |
+| **ERROR** | Backup échoué | Log complet avec stack trace |
+
+### Services et Fichiers
+
+| Fichier | Rôle |
+|---------|------|
+| `backup-scheduler.service.js` | Planification avec setInterval |
+| `backup.service.js` | Création, upload, restauration, nettoyage |
+| `backup.routes.js` | API REST pour configuration et actions |
+
+### API Backup
+
+| Endpoint | Méthode | Description |
+|----------|---------|-------------|
+| `/api/backup/settings` | GET | Récupérer la configuration |
+| `/api/backup/settings` | PUT | Mettre à jour la configuration |
+| `/api/backup/test-connection` | POST | Tester la connexion FTP/SFTP |
+| `/api/backup/create` | POST | Déclencher une sauvegarde manuelle |
+| `/api/backup/history` | GET | Historique des sauvegardes |
+| `/api/backup/restore/:filename` | POST | Restaurer une sauvegarde |
+| `/api/backup/download/:filename` | GET | Télécharger une sauvegarde |
+
+---
+
 ## Conclusion
 
 ResumeConverter est une application **bien architecturée** avec une attention particulière portée à la **sécurité** (authentification JWT robuste, protection CSRF, rate limiting multi-niveaux, protection SQL injection). L'utilisation de **PostgreSQL** comme base de données offre performance, scalabilité et intégrité des données.
@@ -1130,5 +1300,5 @@ L'architecture actuelle est **adaptée pour un usage PME/ESN** et peut supporter
 
 ---
 
-*Document mis à jour le 7 mars 2026*
-*Version: 1.7.8*
+*Document mis à jour le 12 mars 2026*
+*Version: 1.7.9*
