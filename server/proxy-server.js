@@ -30,8 +30,6 @@ const __dirname = path.dirname(__filename);
 import { PORT, ALLOWED_ORIGINS, JWT_SECRET } from './config/constants.js';
 import { configureAxios, httpAgent, httpsAgent } from './config/axios.js';
 import { validateEnvironmentOrExit } from './config/envValidation.js';
-import { authenticateToken } from './middleware/auth.middleware.js';
-import { query } from './services/database.service.js';
 
 // Validate environment variables at startup
 validateEnvironmentOrExit(process.env.NODE_ENV === 'production');

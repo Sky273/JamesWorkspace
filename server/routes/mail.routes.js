@@ -134,7 +134,7 @@ router.get('/callback/gmail', async (req, res) => {
 router.post('/draft', authenticateToken, async (req, res) => {
     try {
         const userId = req.user.id || req.user.userId;
-        const userFirm = req.user.firm || req.user.customer;
+        const _userFirm = req.user.firm || req.user.customer;
         
         // Debug: log raw request body keys and template info
         safeLog('debug', 'Mail draft request body', { 

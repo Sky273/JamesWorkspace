@@ -619,7 +619,7 @@ async function processImportItem(item, job, options) {
 /**
  * Process an improve item (improve existing resume)
  */
-async function processImproveItem(item, job, options) {
+async function processImproveItem(item, job, _options) {
     if (!item.resume_id) {
         throw new Error('Resume ID manquant');
     }
@@ -830,7 +830,7 @@ async function extractTextFromBuffer(buffer, mimeType, fileName) {
 /**
  * Analyze a resume using the LLM (with rate limiting)
  */
-async function analyzeResumeWithLLM(text, firmId) {
+async function analyzeResumeWithLLM(text, _firmId) {
     const { analyzeResume, cleanupText } = await import('./openai.service.js');
     const { getLLMSettings, calculateWeightedGlobalRating } = await import('./settings.service.js');
     const { getAcceptedIndustriesString } = await import('./industry.service.js');
@@ -870,7 +870,7 @@ async function analyzeResumeWithLLM(text, firmId) {
 /**
  * Improve a resume using the LLM (with rate limiting)
  */
-async function improveResumeWithLLM(text, analysis, firmId) {
+async function improveResumeWithLLM(text, analysis, _firmId) {
     const { improveResume, cleanupText, analyzeResume } = await import('./openai.service.js');
     const { getLLMSettings, calculateWeightedGlobalRating } = await import('./settings.service.js');
     const { getAcceptedIndustriesString } = await import('./industry.service.js');
@@ -957,7 +957,7 @@ async function generateJobExport(jobId, options) {
     safeLog('info', 'Generating export for job', { jobId, templateId, exportFormats });
     
     // Get job and items
-    const job = await getJob(jobId);
+    const _job = await getJob(jobId);
     const items = await getJobItems(jobId);
     
     // Log all item statuses for debugging

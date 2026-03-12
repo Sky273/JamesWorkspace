@@ -155,7 +155,7 @@ export async function verifyAndEnable2FA(userId, code) {
         return { success: false, message: 'Utilisateur non trouvé' };
     }
     
-    const { totp_pending_secret, totp_pending_backup_codes } = result.rows[0];
+    const { totp_pending_secret, totp_pending_backup_codes: _totp_pending_backup_codes } = result.rows[0];
     
     if (!totp_pending_secret) {
         return { success: false, message: 'Aucune configuration 2FA en attente' };
@@ -287,7 +287,7 @@ export async function get2FAStatus(userId) {
         try {
             const codes = JSON.parse(decryptSecret(totp_backup_codes));
             backupCodesRemaining = codes.length;
-        } catch (e) {
+        } catch (_e) {
             // Ignore decryption errors
         }
     }

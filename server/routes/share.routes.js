@@ -5,7 +5,6 @@
 
 import { Router, json } from 'express';
 import fs from 'fs/promises';
-import path from 'path';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import shareResumeService from '../services/shareResume.service.js';
 import { safeLog } from '../utils/logger.backend.js';

@@ -525,7 +525,7 @@ export async function analyzeProfileForMission(missionId, resumeId, userMetadata
     let analysis;
     try {
         analysis = JSON.parse(response.choices[0].message.content);
-    } catch (parseError) {
+    } catch (_parseError) {
         throw new Error('Erreur lors de l\'analyse détaillée du profil.');
     }
     

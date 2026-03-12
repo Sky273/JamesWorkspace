@@ -2,7 +2,7 @@ import express from 'express';
 import { authenticateToken, isUserAdmin } from '../middleware/auth.middleware.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { query } from '../config/database.js';
-import { getUserFirmId, isValidUUID } from '../utils/firmHelpers.js';
+import { getUserFirmId } from '../utils/firmHelpers.js';
 
 const router = express.Router();
 

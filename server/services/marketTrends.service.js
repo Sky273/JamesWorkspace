@@ -448,7 +448,7 @@ function generateResponseHash(data) {
         const crypto = require('crypto');
         const jsonStr = JSON.stringify(data);
         return crypto.createHash('md5').update(jsonStr).digest('hex');
-    } catch (error) {
+    } catch (_error) {
         return null;
     }
 }
@@ -1513,7 +1513,7 @@ const TRENDS_CACHE_MAX_SIZE = 20000; // Max records (reduced from 100K to save ~
 
 // Derived caches (computed from light cache)
 let filterOptionsCache = null;
-let filterOptionsCacheTime = 0;
+let _filterOptionsCacheTime = 0;
 let summaryCache = null;
 
 /**

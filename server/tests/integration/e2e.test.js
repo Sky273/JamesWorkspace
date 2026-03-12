@@ -207,7 +207,7 @@ describe('E2E: Authentication Flow', () => {
     describe('Token Refresh Flow', () => {
         it('should refresh access token with valid refresh token', async () => {
             // Generate initial tokens
-            const refreshToken = generateRefreshToken(mockUser);
+            const _refreshToken = generateRefreshToken(mockUser);
             
             // Mock user lookup for refresh
             findWithTimeout.mockResolvedValueOnce(mockUser);
@@ -549,7 +549,7 @@ describe('E2E: Authorization Flow', () => {
 
         it('should restrict admin endpoints to admin users', () => {
             const userRole = mockUser.role;
-            const adminRequired = true;
+            const _adminRequired = true;
             
             expect(userRole === 'admin').toBe(false);
             // Route should return 403 Forbidden

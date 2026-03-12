@@ -406,7 +406,7 @@ async function collectMarketFacts(options = {}) {
  * This function collects offers with salary info for analysis
  */
 async function collectSalaryData(romeCode, region = null) {
-    const token = await getAccessToken();
+    const _token = await getAccessToken();
     const allOffers = [];
     
     try {

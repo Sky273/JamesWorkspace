@@ -87,7 +87,7 @@ describe('Security Service', () => {
   });
 
   describe('securityLog', () => {
-    const initialLogCount = securityLogs.length;
+    const _initialLogCount = securityLogs.length;
 
     it('should add log entry to securityLogs array', () => {
       const countBefore = securityLogs.length;

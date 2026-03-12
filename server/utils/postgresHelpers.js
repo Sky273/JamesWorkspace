@@ -247,7 +247,7 @@ export async function findWithTimeout(table, id, options = {}, timeout = 30000) 
  * @param {number} timeout - Query timeout in ms
  * @returns {Promise<Array>} Array of created rows
  */
-export async function createWithTimeout(table, recordOrRecords, options = {}, timeout = 30000) {
+export async function createWithTimeout(table, recordOrRecords, _options = {}, timeout = 30000) {
     // Validate table name to prevent SQL injection
     const validatedTable = validateTableName(table);
     

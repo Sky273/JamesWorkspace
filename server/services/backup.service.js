@@ -70,7 +70,7 @@ function findPgBinary(binaryName) {
             if (binPath && fs.existsSync(fullPath)) {
                 return fullPath;
             }
-        } catch (e) {
+        } catch (_e) {
             // Continue to next path
         }
     }
@@ -466,7 +466,7 @@ export async function testConnection(settings) {
                 } else {
                     clientWrapper.client.close();
                 }
-            } catch (e) {
+            } catch (_e) {
                 // Ignore close errors
             }
         }
@@ -497,7 +497,7 @@ async function uploadFile(settings, localPath, remotePath) {
                 } else {
                     clientWrapper.client.close();
                 }
-            } catch (e) {
+            } catch (_e) {
                 // Ignore close errors
             }
         }
@@ -528,7 +528,7 @@ async function downloadFile(settings, remotePath, localPath) {
                 } else {
                     clientWrapper.client.close();
                 }
-            } catch (e) {
+            } catch (_e) {
                 // Ignore close errors
             }
         }
@@ -572,9 +572,9 @@ export async function listRemoteBackups(settings) {
         files.sort((a, b) => new Date(b.date) - new Date(a.date));
         
         return { success: true, files };
-    } catch (error) {
-        safeLog('error', 'Failed to list remote backups', { error: error.message });
-        return { success: false, files: [], message: error.message };
+    } catch (_error) {
+        safeLog('error', 'Failed to list remote backups', { error: _error.message });
+        return { success: false, files: [], message: _error.message };
     } finally {
         if (clientWrapper) {
             try {
@@ -583,7 +583,7 @@ export async function listRemoteBackups(settings) {
                 } else {
                     clientWrapper.client.close();
                 }
-            } catch (e) {
+            } catch (_e) {
                 // Ignore close errors
             }
         }
@@ -682,7 +682,7 @@ export async function createBackup(type = 'manual') {
         // Check if pg_dump is available
         try {
             await execAsync(`"${pgDumpBin}" --version`);
-        } catch (error) {
+        } catch (_error) {
             throw new Error('pg_dump not found. Please install PostgreSQL client tools.');
         }
         
@@ -787,7 +787,7 @@ export async function createBackup(type = 'manual') {
         try {
             if (fs.existsSync(localPath)) fs.unlinkSync(localPath);
             if (fs.existsSync(compressedPath)) fs.unlinkSync(compressedPath);
-        } catch (e) {
+        } catch (_e) {
             // Ignore cleanup errors
         }
         
@@ -838,7 +838,7 @@ export async function restoreBackup(filename) {
         // Check if psql is available
         try {
             await execAsync(`"${psqlBin}" --version`);
-        } catch (error) {
+        } catch (_error) {
             throw new Error('psql not found. Please install PostgreSQL client tools.');
         }
         
@@ -883,7 +883,7 @@ export async function restoreBackup(filename) {
         try {
             if (fs.existsSync(localCompressedPath)) fs.unlinkSync(localCompressedPath);
             if (fs.existsSync(localPath)) fs.unlinkSync(localPath);
-        } catch (e) {
+        } catch (_e) {
             // Ignore cleanup errors
         }
         

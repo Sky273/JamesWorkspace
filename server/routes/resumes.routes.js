@@ -90,7 +90,7 @@ router.get('/', authenticateToken, async (req, res) => {
         const offset = (page - 1) * limit;
         
         // Extract filter parameters
-        const { search, status, tags } = req.query;
+        const { search, status, tags: _tags } = req.query;
 
         // Build WHERE clause
         const conditions = [];

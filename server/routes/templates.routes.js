@@ -14,7 +14,7 @@ import {
 import { extractTemplateFromHTML, extractTemplateFromImage, extractTemplateFromCV } from '../services/templateExtraction.service.js';
 import puppeteer from 'puppeteer';
 import { query } from '../config/database.js';
-import { getUserFirmId, isValidUUID } from '../utils/firmHelpers.js';
+import { getUserFirmId } from '../utils/firmHelpers.js';
 
 // Configure multer for file uploads (memory storage for template extraction)
 const upload = multer({ 
@@ -619,7 +619,7 @@ async function extractImagesFromPDF(buffer) {
         // pdf-lib stores images in the document's XObject dictionary
         const pdfObjects = pdfDoc.context.indirectObjects;
         
-        for (const [ref, obj] of pdfObjects) {
+        for (const [_ref, obj] of pdfObjects) {
             try {
                 // Check if this is an image XObject
                 if (obj && obj.dict) {

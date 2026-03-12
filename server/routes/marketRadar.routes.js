@@ -583,7 +583,7 @@ router.post('/trends/collect', authenticateToken, requireAdmin, async (req, res)
             try {
                 safeLog('info', 'Market Radar: Background collection starting...');
                 
-                const trends = await collectMarketTrends({
+                const _trends = await collectMarketTrends({
                     onTrendCollected: async (trend) => {
                         processedCount++;
                         

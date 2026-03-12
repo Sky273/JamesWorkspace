@@ -42,9 +42,7 @@ vi.mock('child_process', () => ({
 import { query } from '../../config/database.js';
 import {
     getBackupSettings,
-    saveBackupSettings,
-    getBackupHistory,
-    testConnection
+    saveBackupSettings
 } from '../../services/backup.service.js';
 
 describe('Backup Service', () => {

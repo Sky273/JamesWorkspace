@@ -19,7 +19,6 @@ import {
   DocumentTextIcon,
   FolderArrowDownIcon,
   ArrowDownTrayIcon,
-  ClockIcon,
   QueueListIcon
 } from '@heroicons/react/24/outline';
 import Breadcrumbs from '../components/Breadcrumbs';

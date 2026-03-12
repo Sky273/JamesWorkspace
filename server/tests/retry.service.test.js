@@ -228,7 +228,7 @@ describe('withRetry', () => {
                     operationName: 'test',
                     retryConfig: { maxRetries: 0, initialDelayMs: 10 }
                 });
-            } catch (e) {
+            } catch (_e) {
                 // Expected
             }
         }
@@ -276,7 +276,7 @@ describe('Circuit Breaker Management', () => {
                         operationName: 'test',
                         retryConfig: { maxRetries: 0, initialDelayMs: 1 }
                     });
-                } catch (e) {}
+                } catch (_e) { /* expected */ }
             }
         })();
 

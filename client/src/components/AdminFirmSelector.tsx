@@ -75,7 +75,7 @@ const AdminFirmSelector = ({
     };
 
     loadFirms();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [isAdmin, user?.firm]);
 
   // Don't render anything for non-admin users

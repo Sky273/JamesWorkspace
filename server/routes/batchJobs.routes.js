@@ -5,7 +5,6 @@
 
 import express from 'express';
 import fs from 'fs';
-import path from 'path';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { safeLog } from '../utils/logger.backend.js';
 import multer from 'multer';

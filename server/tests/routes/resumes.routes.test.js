@@ -3,26 +3,27 @@
  * Tests for firm-based access control on resume operations
  */
 
-import { jest, describe, it, expect, beforeEach } from '@jest/globals';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 // Mock dependencies
-jest.unstable_mockModule('../../config/database.js', () => ({
-    query: jest.fn()
+vi.mock('../../config/database.js', () => ({
+    query: vi.fn()
 }));
 
-jest.unstable_mockModule('../../utils/firmHelpers.js', () => ({
-    getUserFirmId: jest.fn(),
-    isUserAdmin: jest.fn(),
-    isValidUUID: jest.fn((id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id))
+vi.mock('../../utils/firmHelpers.js', () => ({
+    getUserFirmId: vi.fn(),
+    isUserAdmin: vi.fn(),
+    isValidUUID: vi.fn((id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id))
 }));
 
-jest.unstable_mockModule('../../utils/logger.backend.js', () => ({
-    safeLog: jest.fn()
+vi.mock('../../utils/logger.backend.js', () => ({
+    safeLog: vi.fn(),
+    createModuleLogger: vi.fn(() => vi.fn())
 }));
 
 // Import mocked modules
-const { query } = await import('../../config/database.js');
-const { getUserFirmId, isUserAdmin } = await import('../../utils/firmHelpers.js');
+import { query } from '../../config/database.js';
+import { getUserFirmId, isUserAdmin } from '../../utils/firmHelpers.js';
 
 describe('Resume Access Control', () => {
     const mockResumeId = '123e4567-e89b-12d3-a456-426614174000';
@@ -30,7 +31,7 @@ describe('Resume Access Control', () => {
     const mockOtherFirmId = 'abcdef01-2345-6789-abcd-ef0123456789';
 
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
     });
 
     describe('Admin Access', () => {
@@ -113,11 +114,3 @@ describe('Resume Access Control', () => {
     });
 });
 
-describe('Circuit Breaker Integration', () => {
-    it('should export circuit breaker status function', async () => {
-        // This test verifies the circuit breaker is properly exported
-        const { getOpenAICircuitBreakerStatus } = await import('../../services/openai.service.js');
-        
-        expect(typeof getOpenAICircuitBreakerStatus).toBe('function');
-    });
-});

@@ -6,7 +6,7 @@
 import express from 'express';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { userRateLimit } from '../middleware/rateLimit.middleware.js';
-import { validateBody, validateParams, createPipelineEntrySchema, updatePipelineEntrySchema, createInterviewSchema, updateInterviewSchema } from '../utils/validation.js';
+import { validateBody, validateParams, createPipelineEntrySchema } from '../utils/validation.js';
 import { safeLog } from '../utils/logger.backend.js';
 import {
     PIPELINE_STAGES,

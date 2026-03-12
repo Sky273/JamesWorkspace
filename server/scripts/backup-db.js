@@ -64,7 +64,7 @@ async function createBackup() {
     // Check if pg_dump is available
     try {
         await execAsync('pg_dump --version');
-    } catch (error) {
+    } catch (_error) {
         console.error('❌ pg_dump not found. Please install PostgreSQL client tools.');
         console.error('   On Windows: Install PostgreSQL and add bin folder to PATH');
         console.error('   On macOS: brew install postgresql');

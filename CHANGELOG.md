@@ -1,3 +1,24 @@
+## v1.8.4 - 2026-03-12
+### 📦 Export Multi-Format & Qualité Code
+
+#### Export par Lot Multi-Format
+- **Sélection multiple** : Remplacement des radio buttons par des checkboxes pour sélectionner plusieurs formats (PDF, DOCX, DOC)
+- **Dossiers par type** : Le ZIP d'export contient maintenant un dossier par format sélectionné (PDF/, DOCX/, DOC/)
+- **Rate limit augmenté** : Limite PDF serveur passée de 200 à 300 req/min pour supporter 100 docs × 3 formats
+- **Animation de chargement** : Feedback visuel lors du dépôt de fichiers dans la zone de drop
+
+#### Qualité Code
+- **Tests corrigés** : Migration du fichier `resumes.routes.test.js` de Jest vers Vitest
+- **Lint fixes** : Correction de 22 erreurs ESLint (imports inutilisés)
+- **Variables préfixées** : ~20 variables catch/paramètres inutilisés préfixés avec `_`
+- **396 tests passent** : Tous les tests unitaires et d'intégration passent
+
+#### Corrections Techniques
+- **Gestion des doublons** : Les fichiers avec le même nom reçoivent un suffixe numérique dans le ZIP
+- **Validation frontend** : Le bouton "Traiter" est désactivé si l'export est activé mais aucun format n'est sélectionné
+
+---
+
 ## v1.8.3 - 2026-03-11
 ### 🔧 Corrections Scheduler Backup & Radar du Marché
 

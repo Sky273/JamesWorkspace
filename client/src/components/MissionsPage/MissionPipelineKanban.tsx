@@ -12,7 +12,6 @@ import {
   UserIcon,
   CalendarIcon,
   StarIcon,
-  ChevronRightIcon,
   XMarkIcon,
   MagnifyingGlassIcon,
   DocumentTextIcon,

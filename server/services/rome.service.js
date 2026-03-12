@@ -41,7 +41,7 @@ async function getMetiers() {
  * Get ALL fiches métiers in a single API call (to avoid rate limiting)
  * @returns {Array} - All fiches métiers
  */
-async function getAllFichesMetiers() {
+async function _getAllFichesMetiers() {
     const token = await getAccessToken();
     
     try {

@@ -11,7 +11,7 @@ import { safeLog } from '../utils/logger.backend.js';
 import { sanitizeErrorMessage } from '../utils/errors.js';
 import { selectWithTimeout, findWithTimeout, createWithTimeout, updateWithTimeout, destroyWithTimeout } from '../utils/postgresHelpers.js';
 import { query } from '../config/database.js';
-import { getUserFirmId, getUserFirmName, isValidUUID, getFirmById } from '../utils/firmHelpers.js';
+import { getUserFirmId } from '../utils/firmHelpers.js';
 
 const router = express.Router();
 
@@ -24,7 +24,7 @@ router.get('/', authenticateToken, async (req, res) => {
     try {
         const userRole = (req.user?.role || req.user?.Role || '').toLowerCase();
         const isAdmin = userRole === 'admin';
-        const userFirmName = req.user?.firm || req.user?.Firm;
+        const _userFirmName = req.user?.firm || req.user?.Firm;
         
         // Extract pagination and filter parameters
         const page = parseInt(req.query.page) || 1;

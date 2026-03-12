@@ -339,7 +339,7 @@ async function collectMarketFacts(options = {}) {
                         category,
                         where: location.code
                     });
-                } catch (e) {
+                } catch (_e) {
                     // Salary data might not be available
                 }
 
@@ -387,7 +387,7 @@ async function collectMarketFacts(options = {}) {
             try {
                 await delay(200);
                 salaryData = await getSalaryHistogram({ what: keyword });
-            } catch (e) {
+            } catch (_e) {
                 // Salary data might not be available
             }
 
@@ -399,7 +399,7 @@ async function collectMarketFacts(options = {}) {
                     what: keyword,
                     months: 6
                 });
-            } catch (e) {
+            } catch (_e) {
                 // Historical data might not be available
             }
 

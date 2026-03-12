@@ -13,8 +13,7 @@ import {
   BriefcaseIcon,
   BuildingOfficeIcon,
   CalendarIcon,
-  TagIcon,
-  UserGroupIcon
+  TagIcon
 } from '@heroicons/react/24/outline';
 import MissionPipelineKanban from '../components/MissionsPage/MissionPipelineKanban';
 import { useAuthFetch } from '../hooks/useAuthFetch';

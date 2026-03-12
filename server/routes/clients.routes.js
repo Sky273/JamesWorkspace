@@ -4,7 +4,7 @@ import { userRateLimit } from '../middleware/rateLimit.middleware.js';
 import { validateBody, validateParams, createClientSchema, updateClientSchema, createContactSchema, updateContactSchema } from '../utils/validation.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { query } from '../config/database.js';
-import { getUserFirmId, isValidUUID } from '../utils/firmHelpers.js';
+import { getUserFirmId } from '../utils/firmHelpers.js';
 
 const router = express.Router();
 

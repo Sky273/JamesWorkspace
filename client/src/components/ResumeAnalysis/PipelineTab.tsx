@@ -14,10 +14,8 @@ import {
   UserGroupIcon,
   ChevronRightIcon,
   TrashIcon,
-  PencilIcon,
   CheckCircleIcon,
   XCircleIcon,
-  ExclamationCircleIcon,
   ArrowPathIcon
 } from '@heroicons/react/24/outline';
 import { toast } from 'react-hot-toast';
@@ -36,7 +34,6 @@ import {
   scheduleInterview,
   completeInterview,
   cancelInterview,
-  deleteInterview,
   updatePipelineNotes
 } from '../../services/pipelineService';
 import { fetchWithAuth } from '../../utils/apiInterceptor';
