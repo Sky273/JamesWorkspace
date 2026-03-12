@@ -16,10 +16,25 @@ const cronJobs = {
 
 /**
  * Convert time string (HH:MM) to cron expression parts
+ * Converts from Europe/Paris timezone to UTC for cron execution
  */
 function parseTime(timeStr) {
     const [hours, minutes] = (timeStr || '02:00').split(':').map(Number);
-    return { hours, minutes };
+    
+    // Convert Paris time to UTC (Paris is UTC+1 in winter, UTC+2 in summer)
+    // For simplicity, we'll use a fixed offset of -1 hour (winter time)
+    // This means 07:40 Paris = 06:40 UTC
+    const now = new Date();
+    const parisDate = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
+    const utcDate = new Date(now.toLocaleString('en-US', { timeZone: 'UTC' }));
+    const offsetHours = Math.round((parisDate - utcDate) / (1000 * 60 * 60));
+    
+    // Adjust hours to UTC
+    let utcHours = hours - offsetHours;
+    if (utcHours < 0) utcHours += 24;
+    if (utcHours >= 24) utcHours -= 24;
+    
+    return { hours: utcHours, minutes, originalHours: hours };
 }
 
 /**
@@ -125,15 +140,16 @@ export async function initBackupScheduler() {
                 safeLog('warn', '[BackupScheduler] Daily backup enabled but no FTP/SFTP host configured - backups will be local only');
             }
             const cronExpr = buildDailyCron(settings.daily_time);
-            safeLog('debug', '[BackupScheduler] Creating daily cron job', { cronExpr });
+            const { hours: utcHours, minutes, originalHours } = parseTime(settings.daily_time);
+            safeLog('debug', '[BackupScheduler] Creating daily cron job', { cronExpr, parisTime: settings.daily_time, utcHours, minutes });
             cronJobs.daily = cron.schedule(cronExpr, () => executeBackup('daily'), {
-                scheduled: false,
-                timezone: 'Europe/Paris'
+                scheduled: false
             });
             cronJobs.daily.start();
             safeLog('info', '[BackupScheduler] Daily backup scheduled and started', { 
                 cron: cronExpr,
-                time: settings.daily_time,
+                parisTime: settings.daily_time,
+                utcTime: `${String(utcHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`,
                 uploadEnabled: !!settings.host
             });
         } else {
@@ -148,8 +164,7 @@ export async function initBackupScheduler() {
             const cronExpr = buildWeeklyCron(settings.weekly_time, settings.weekly_day);
             safeLog('debug', '[BackupScheduler] Creating weekly cron job', { cronExpr });
             cronJobs.weekly = cron.schedule(cronExpr, () => executeBackup('weekly'), {
-                scheduled: false,
-                timezone: 'Europe/Paris'
+                scheduled: false
             });
             cronJobs.weekly.start();
             const dayNames = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
@@ -171,8 +186,7 @@ export async function initBackupScheduler() {
             const cronExpr = buildMonthlyCron(settings.monthly_time, settings.monthly_day);
             safeLog('debug', '[BackupScheduler] Creating monthly cron job', { cronExpr });
             cronJobs.monthly = cron.schedule(cronExpr, () => executeBackup('monthly'), {
-                scheduled: false,
-                timezone: 'Europe/Paris'
+                scheduled: false
             });
             cronJobs.monthly.start();
             safeLog('info', '[BackupScheduler] Monthly backup scheduled and started', { 
