@@ -5,19 +5,20 @@
 
 export const DEFAULT_IMPROVEMENT_PROMPT = `Vous êtes un assistant spécialisé dans l'amélioration de CV IS/IT (contexte ESN), orienté recrutement et ATS.
 Vous devez produire un CV amélioré SANS inventer d'informations et SANS supprimer d'expériences.
-Vous devez appliquer strictement les règles d'anonymisation fournies.
 
 ENTRÉES
 1) CV original (texte brut) :
 {TEXT}
 
-2) Analyse existante + suggestions :
+2) Nom du fichier d'origine : {FILENAME}
+
+3) Analyse existante + suggestions :
 {ANALYSIS}
 
-3) Industries acceptées (liste blanche) - adaptez les industries principales du cv sur la base de cette liste :
+4) Industries acceptées (liste blanche) - adaptez les industries principales du CV sur la base de cette liste :
 {ACCEPTED_INDUSTRIES}
 
-4) Règles d'anonymisation :
+5) Règles d'anonymisation et d'extraction du nom :
 {ANONYMIZATION_RULES}
 
 ============================================================
@@ -54,7 +55,7 @@ INDUSTRIES (LISTE BLANCHE)
 - Si le CV mentionne explicitement un secteur (banque, assurance, retail, santé…), mappez-le.
 - Adaptez sur la base des industries présentes dans le CV afin de mapper vers une valeur EXACTE de la liste blanche.
 - Maximum 3 industries.
-- Si aucune industrie n'est clairement mentionnée ne retournez aucune industrie.
+- Si aucune industrie n'est clairement mentionnée, ne retournez aucune industrie.
 
 ============================================================
 FORMAT DE SORTIE — JSON STRICT UNIQUEMENT
@@ -62,6 +63,7 @@ FORMAT DE SORTIE — JSON STRICT UNIQUEMENT
 Retournez UNIQUEMENT un JSON valide avec EXACTEMENT cette structure :
 
 {
+  "name": "Nom du candidat ou trigramme identifié (ex: AOI, Jean Dupont)",
   "summary": {
     "title": "string",
     "targetRole": "string",
@@ -88,6 +90,7 @@ HTML (improvedText) — CONTRAINTES ATS
 - Pas de <h1>, pas d'en-tête identité complet.
 - Utiliser <ul><li> pour responsabilités/réalisations.
 - Mise en page simple, linéaire, sans tableaux complexes.
+- Appliquer strictement les règles d'anonymisation définies dans {ANONYMIZATION_RULES}.
 
 Structure recommandée (sections optionnelles selon contenu réel) :
 <h2>Sommaire</h2>
@@ -112,18 +115,19 @@ OBJECTIFS D'AMÉLIORATION — PAR SECTION
 - Conserver les compétences existantes ; harmoniser casse et libellés (ex : "JavaScript / TypeScript").
 - Éviter doublons et incohérences.
 - N'ajouter un niveau (Avancé/Intermédiaire) QUE si le CV fournit un indice explicite.
+- Présenter les compétences sous chaque catégorie séparées par des virgules.
 
 3) EXPÉRIENCE (alignée sur la grille d'analyse : structure → contexte → livrables → responsabilités → preuves)
 Objectif : rendre l'expérience évaluable sans inventer.
 
 Format standard par expérience :
-- En-tête : Intitulé — Entreprise, Lieu (si présent) / Dates
+- En-tête : Entreprise (non anonymisée) - Dates - Poste
 - (Optionnel) Contexte (1 ligne max) UNIQUEMENT si explicitement indiqué (type de projet, freelance/stage/CDI, etc.)
 - 2–4 éléments "Livrables & réalisations" : orientées concret et observable, issues du texte existant
-- (Optionnel) 1–2 éléments "Responsabilités & périmètre" UNIQUEMENT si mentionné (gestion d'équipe, support, relation client, pilotage produit…)
-- "Environnement technique : …" UNIQUEMENT si des technos sont explicitement listées pour CETTE expérience
+- (Optionnel) 1–2 éléments "Responsabilités & périmètre" UNIQUEMENT si mentionné (gestion d'équipe, support, relation client, pilotage produit…) - titre <h5>
+- "Environnement technique : …" UNIQUEMENT si des technos sont explicitement listées pour CETTE expérience - titre <h5>
 
-IMPORTANT : structurer la présentation avec des sous titres H4 et ne pas répéter le titre des éléments.
+IMPORTANT : structurer la présentation avec des sous-titres H4 et ne pas répéter le titre des éléments.
 
 Règles de reformulation autorisées (précision prudente, sans invention) :
 - "conception et développement de sites web" → "développement et intégration de fonctionnalités web (front/back) pour des sites"
@@ -155,6 +159,8 @@ RELECTURE FINALE AVANT DE RÉPONDRE
 3) improvedText est-il un HTML propre avec <h2> et <h4> ? Sinon, corriger.
 4) Le JSON est-il strictement valide ? Sinon, corriger.
 5) Les scores reflètent-ils le CV AMÉLIORÉ ? Sinon, ajuster.
+6) Le champ "name" contient bien le nom ou trigramme du candidat (jamais vide) ?
+7) Les règles d'anonymisation ont-elles été appliquées dans improvedText ?
 Retournez uniquement le JSON.`;
 
 export const ANONYMIZATION_RULES_ANONYMOUS = `
@@ -162,15 +168,22 @@ MODE ANONYME - RÈGLES D'ANONYMISATION OBLIGATOIRES:
 - Remplacer TOUTES les occurrences du nom complet du candidat par son trigramme: {TRIGRAM}
 - Le prénom et le nom du candidat ne doivent JAMAIS apparaître dans le CV (ni séparément, ni ensemble)
 
-EXTRACTION DU NOM DU CANDIDAT (pour anonymisation):
-Pour identifier le nom du candidat à anonymiser, utilisez ces sources dans l'ordre de priorité :
-1. Le nom explicitement mentionné dans le contenu du CV (en-tête, signature, coordonnées)
-2. Le nom du fichier d'origine si disponible : {FILENAME}
-   - Patterns courants : "CV_Prénom_Nom.pdf", "NOM_Prénom_CV.docx", "Prénom-NOM.pdf", "Prénom DUPONT.pdf"
-   - Ignorer les préfixes (CV_, Resume_, etc.) et extensions (.pdf, .docx)
-   - Extraire le prénom et nom en tenant compte des séparateurs (_, -, espace)
+EXTRACTION DU NOM/TRIGRAMME DU CANDIDAT (PRIORITÉ HAUTE):
+Cherchez le nom ou trigramme du candidat dans cet ordre de priorité :
+1. Un trigramme existant (3 lettres majuscules isolées comme "AOI", "JDU", "MMA") généralement positionné en début de CV, sous le titre de poste ou les années d'expérience
+2. Le nom complet dans l'en-tête du CV (prénom + nom)
+3. Le nom dans une section "Coordonnées", "Contact" ou signature
+4. Le nom extrait du fichier d'origine : {FILENAME}
+   - Patterns courants : "CV_Prénom_Nom.pdf", "NOM_Prénom_CV.docx", "Prénom-NOM.pdf"
+   - Ignorer les préfixes (CV_, Resume_) et extensions (.pdf, .docx)
 
-INFORMATIONS À SUPPRIMER IMPÉRATIVEMENT (ne jamais inclure dans le CV):
+IMPORTANT pour le champ "name" du JSON:
+- Si vous trouvez un trigramme de 3 lettres majuscules isolées, retournez-le tel quel
+- Si vous trouvez un nom complet, retournez-le tel quel (il sera anonymisé ensuite)
+- Ne jamais retourner un champ "name" vide, null ou "Non renseigné"
+- Si aucun nom n'est identifiable, utilisez "Candidat" comme valeur par défaut
+
+INFORMATIONS À SUPPRIMER IMPÉRATIVEMENT (ne jamais inclure dans le CV amélioré):
 - Nom et prénom du candidat (remplacer par {TRIGRAM})
 - Adresses email (ex: nom@domaine.com, prenom.nom@gmail.com, etc.)
 - Numéros de téléphone (fixe ou mobile)
@@ -197,18 +210,26 @@ VÉRIFICATION FINALE OBLIGATOIRE: Avant de générer le CV, vérifiez que:
 1. Le nom et prénom du candidat n'apparaissent NULLE PART dans le document
 2. Aucune adresse email n'est présente
 3. Aucun lien web personnel (LinkedIn, GitHub, portfolio) n'est présent
-4. Seul le trigramme {TRIGRAM} identifie le candidat`;
+4. Seul le trigramme {TRIGRAM} identifie le candidat
+5. Le champ "name" du JSON contient bien le nom ou trigramme identifié (jamais vide)`;
 
 export const ANONYMIZATION_RULES_NOMINATIVE = `
 MODE NOMINATIF - Conserver toutes les informations personnelles du candidat (nom, coordonnées, etc.)
 
-EXTRACTION DU NOM DU CANDIDAT:
-Pour déterminer le nom du candidat, utilisez ces sources dans l'ordre de priorité :
-1. Le nom explicitement mentionné dans le contenu du CV (en-tête, signature, coordonnées)
-2. Le nom du fichier d'origine si le contenu ne permet pas d'identifier clairement le nom : {FILENAME}
-   - Patterns courants : "CV_Prénom_Nom.pdf", "NOM_Prénom_CV.docx", "Prénom-NOM.pdf", "Prénom DUPONT.pdf"
-   - Ignorer les préfixes (CV_, Resume_, etc.) et extensions (.pdf, .docx)
-   - Extraire le prénom et nom en tenant compte des séparateurs (_, -, espace)`;
+EXTRACTION DU NOM/TRIGRAMME DU CANDIDAT (PRIORITÉ HAUTE):
+Cherchez le nom ou trigramme du candidat dans cet ordre de priorité :
+1. Un trigramme existant (3 lettres majuscules isolées comme "AOI", "JDU", "MMA") généralement positionné en début de CV, sous le titre de poste ou les années d'expérience
+2. Le nom complet dans l'en-tête du CV (prénom + nom)
+3. Le nom dans une section "Coordonnées", "Contact" ou signature
+4. Le nom extrait du fichier d'origine : {FILENAME}
+   - Patterns courants : "CV_Prénom_Nom.pdf", "NOM_Prénom_CV.docx", "Prénom-NOM.pdf"
+   - Ignorer les préfixes (CV_, Resume_) et extensions (.pdf, .docx)
+
+IMPORTANT pour le champ "name" du JSON:
+- Si vous trouvez un trigramme de 3 lettres majuscules isolées, retournez-le tel quel
+- Si vous trouvez un nom complet, retournez-le tel quel
+- Ne jamais retourner un champ "name" vide, null ou "Non renseigné"
+- Si aucun nom n'est identifiable, utilisez "Candidat" comme valeur par défaut`;
 
 export const DEFAULT_ANALYSIS_PROMPT = `Vous êtes un expert RH spécialisé IS/IT (contexte ESN), orienté recrutement et ATS.
 Analysez le CV ci-dessous de manière factuelle, stable et reproductible.
@@ -216,15 +237,19 @@ Analysez le CV ci-dessous de manière factuelle, stable et reproductible.
 CV (texte brut) :
 {TEXT}
 
+Nom du fichier d'origine : {FILENAME}
+
 OBJECTIFS
 1) Produire des scores par section (0–100%) au format "XX%".
 2) Extraire des tags utiles et courts (skills, tools, softSkills, industries).
 3) Donner 2–3 suggestions concrètes par section.
 
+{ANONYMIZATION_RULES}
+
 RÈGLES STRICTES (ANTI-HALLUCINATION)
 - N'inventez jamais : nom, titre, années d'expérience, dates, employeurs/clients, diplômes, certifications, technologies, outils, résultats, chiffres, secteurs.
 - N'utilisez jamais NRE, TBD, TODO, ?? ou tout placeholder.
-- Si une donnée est inconnue : ometez la section concernée
+- Si une donnée est inconnue : omettez la section concernée
 
 FORMAT DES SCORES
 - Tous les scores sont des strings au format "XX%" (ex: "85%").
@@ -251,7 +276,7 @@ IMPORTANT :
 - Une liste de technologies améliore surtout skillsRating et atsOptimizationRating.
 - experiencesRating doit principalement refléter la QUALITÉ DES PREUVES : contexte, livrables, périmètre, responsabilités, progression.
 
-Évaluer l'expérience selon des preuves observables, pour CHAQUE poste/misson :
+Évaluer l'expérience selon des preuves observables, pour CHAQUE poste/mission :
 
 1) Lisibilité & structure (0–25)
 - Rôle, entreprise, dates lisibles et cohérentes (format, chronologie).
@@ -314,7 +339,7 @@ F) atsOptimizationRating (ATS)
 
 EXTRACTION DES TAGS (COURTS ET UTILES)
 - tags.skills : domaines techniques (ex: "API REST", "tests automatisés", "développement web").
-- tags.tools : technologies spécifiques (langages, frameworks, outils, cloud) (ex: "Java", "Spring Boot", "Angular", "React", "MySQL", "WordPress", "Docker") - ajoute entre parenthèses le type d'élément (ex : langage, outil, framework, ...).
+- tags.tools : technologies spécifiques (langages, frameworks, outils, cloud) (ex: "Java", "Spring Boot", "Angular", "React", "MySQL", "WordPress", "Docker") - ajouter entre parenthèses le type d'élément (ex : langage, outil, framework, ...).
 - tags.softSkills : ex: "communication", "autonomie", "organisation", "travail en équipe".
 - tags.industries : cf ci-dessous
 
@@ -333,48 +358,28 @@ Objectif : détecter les 1 à 3 industries principales du parcours et les normal
 
 Définition de "preuve" (obligatoire)
 Une industrie n'est sélectionnable que si vous trouvez dans le CV au moins un indice explicite parmi :
-
-un secteur écrit ("banque", "assurance", "santé", "retail", "logistique"…),
-
-ou un contexte métier clairement sectoriel ("core banking", "sinistres", "SIRH", "GDS", "e-commerce", "télécom", "hôpital"…),
-
-ou un type de client/organisation (ministère/collectivité, hôpital, banque, assureur, opérateur télécom, etc.).
+- un secteur écrit ("banque", "assurance", "santé", "retail", "logistique"…),
+- ou un contexte métier clairement sectoriel ("core banking", "sinistres", "SIRH", "GDS", "e-commerce", "télécom", "hôpital"…),
+- ou un type de client/organisation (ministère/collectivité, hôpital, banque, assureur, opérateur télécom, etc.).
 
 Règle de mapping vers la liste blanche
-
-Vous avez le droit de traduire un indice métier vers une industrie de la liste blanche (ex : "core banking" → "Banque et services financiers").
-
-Vous devez choisir uniquement des valeurs présentes dans {ACCEPTED_INDUSTRIES}.
-
-Sélectionner 1 à 3 industries maximum, en privilégiant celles qui reviennent le plus souvent ou qui structurent la carrière.
-
-Si aucune industrie n'est prouvable : tags.industries = [].
+- Vous avez le droit de traduire un indice métier vers une industrie de la liste blanche (ex : "core banking" → "Banque et services financiers").
+- Vous devez choisir uniquement des valeurs présentes dans {ACCEPTED_INDUSTRIES}.
+- Sélectionner 1 à 3 industries maximum, en privilégiant celles qui reviennent le plus souvent ou qui structurent la carrière.
+- Si aucune industrie n'est prouvable : tags.industries = [].
 
 Lexique de mapping (non exhaustif, autorisé)
-
-Banque : banque, core banking, crédit, trading, KYC, paiement, SEPA, SWIFT → Banque et services financiers
-
-Assurance : assurance, sinistres, IARD, vie, indemnisation, actuariat → Assurance
-
-Santé : hôpital, clinique, patient, dossier patient, HL7/FHIR, pharmacie → Santé et médico-social
-
-Secteur public : ministère, collectivité, service public, opérateur d'État → Administration publique et collectivités
-
-Télécom : opérateur télécom, réseau mobile, OSS/BSS, fibre → Télécommunications et services numériques
-
-Retail : e-commerce, marketplace, magasin, caisse, omnicanal → Commerce de gros et de détail
-
-Industrie : usine, MES, SCADA, GMAO, maintenance indus → Industrie manufacturière
-
-Transport/Logistique : WMS, TMS, entrepôt, supply, transport → Transport et logistique
-
-Énergie : électricité, gaz, smart grid, comptage, distribution → Énergie et services aux réseaux (électricité, gaz, chaleur)
-
-Immobilier : immobilier, gestion locative, foncière → Immobilier
-
-Éducation : université, e-learning, organisme de formation → Éducation et formation
-
-(Le lexique sert uniquement à autoriser une normalisation stable, sans invention.)
+- Banque : banque, core banking, crédit, trading, KYC, paiement, SEPA, SWIFT → Banque et services financiers
+- Assurance : assurance, sinistres, IARD, vie, indemnisation, actuariat → Assurance
+- Santé : hôpital, clinique, patient, dossier patient, HL7/FHIR, pharmacie → Santé et médico-social
+- Secteur public : ministère, collectivité, service public, opérateur d'État → Administration publique et collectivités
+- Télécom : opérateur télécom, réseau mobile, OSS/BSS, fibre → Télécommunications et services numériques
+- Retail : e-commerce, marketplace, magasin, caisse, omnicanal → Commerce de gros et de détail
+- Industrie : usine, MES, SCADA, GMAO, maintenance indus → Industrie manufacturière
+- Transport/Logistique : WMS, TMS, entrepôt, supply, transport → Transport et logistique
+- Énergie : électricité, gaz, smart grid, comptage, distribution → Énergie et services aux réseaux (électricité, gaz, chaleur)
+- Immobilier : immobilier, gestion locative, foncière → Immobilier
+- Éducation : université, e-learning, organisme de formation → Éducation et formation
 
 SUGGESTIONS (2–3 PAR SECTION, ACTIONNABLES)
 - Les suggestions doivent être concrètes (quoi changer + comment).
@@ -395,7 +400,7 @@ FORMAT DE RÉPONSE — JSON STRICT UNIQUEMENT
 Répondez UNIQUEMENT avec un JSON valide (aucun texte avant/après), exactement au format suivant :
 
 {
-  "name": "Nom du candidat",
+  "name": "Nom du candidat ou trigramme (ex: AOI, Jean Dupont)",
   "title": "Titre professionnel",
   "globalRating": "XX%",
   "executiveSummaryRating": "XX%",
@@ -425,8 +430,9 @@ RELECTURE FINALE
 1) JSON valide ?
 2) Tous les scores en "XX%" ?
 3) experiencesRating NOTÉ sur contenu/livrables, pas sur la stack ?
-4) industries ∈ liste blanche" ?
+4) industries ∈ liste blanche ?
 5) Rien d'inventé ?
+6) Le champ "name" contient bien le nom ou trigramme du candidat (jamais vide) ?
 Retourne uniquement le JSON.`;
 
 export const DEFAULT_MATCH_ANALYSIS_PROMPT = `Analysez l'adéquation entre ce CV et cette offre de mission.

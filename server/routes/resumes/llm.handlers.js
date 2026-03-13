@@ -9,7 +9,7 @@ import { analyzeResume, improveResume, matchResumeWithMission, adaptResumeToMiss
 import { getRequestMetadata } from '../../services/security.service.js';
 import { getLLMSettings, calculateWeightedGlobalRating } from '../../services/settings.service.js';
 import { getAcceptedIndustriesString } from '../../services/industry.service.js';
-import { DEFAULT_IMPROVEMENT_PROMPT, DEFAULT_ANALYSIS_PROMPT, DEFAULT_MATCH_ANALYSIS_PROMPT, DEFAULT_ADAPTATION_PROMPT } from '../../config/prompts.backend.js';
+import { DEFAULT_IMPROVEMENT_PROMPT, DEFAULT_ANALYSIS_PROMPT, DEFAULT_MATCH_ANALYSIS_PROMPT, DEFAULT_ADAPTATION_PROMPT, ANONYMIZATION_RULES_ANONYMOUS, ANONYMIZATION_RULES_NOMINATIVE } from '../../config/prompts.backend.js';
 
 /**
  * Handle LLM errors consistently
@@ -98,9 +98,15 @@ export async function analyzeHandler(req, res) {
         // Inject accepted industries into the prompt
         const acceptedIndustries = await getAcceptedIndustriesString();
         analysisPrompt = analysisPrompt.replace('{ACCEPTED_INDUSTRIES}', acceptedIndustries);
-        safeLog('debug', 'Injected accepted industries into analysis prompt', { 
+        
+        // Inject anonymization rules based on cvMode
+        const anonymizationRules = cvMode === 'anonymous' ? ANONYMIZATION_RULES_ANONYMOUS : ANONYMIZATION_RULES_NOMINATIVE;
+        analysisPrompt = analysisPrompt.replace('{ANONYMIZATION_RULES}', anonymizationRules);
+        
+        safeLog('debug', 'Injected accepted industries and anonymization rules into analysis prompt', { 
             industriesCount: acceptedIndustries.split(',').length,
-            industriesPreview: acceptedIndustries.substring(0, 100) + '...'
+            industriesPreview: acceptedIndustries.substring(0, 100) + '...',
+            cvMode
         });
 
         // Clean up text before analysis (removes HTML entities and tags for cleaner LLM processing)
@@ -157,13 +163,18 @@ export async function analyzeTextHandler(req, res) {
         // Inject accepted industries into the prompt
         const acceptedIndustries = await getAcceptedIndustriesString();
         analysisPrompt = analysisPrompt.replace('{ACCEPTED_INDUSTRIES}', acceptedIndustries);
+        
+        // Inject anonymization rules based on cvMode
+        const anonymizationRules = cvMode === 'anonymous' ? ANONYMIZATION_RULES_ANONYMOUS : ANONYMIZATION_RULES_NOMINATIVE;
+        analysisPrompt = analysisPrompt.replace('{ANONYMIZATION_RULES}', anonymizationRules);
 
         // Clean up text before analysis (removes HTML entities and tags for cleaner LLM processing)
         const cleanedText = cleanupText(text);
         safeLog('debug', 'Text cleaned before analysis', { 
             originalLength: text.length, 
             cleanedLength: cleanedText.length,
-            fileName: fileName || 'not provided'
+            fileName: fileName || 'not provided',
+            cvMode
         });
 
         let analysis = await analyzeResume(cleanedText, model, analysisPrompt, userMetadata, false, fileName || null);
@@ -213,9 +224,15 @@ export async function improveHandler(req, res) {
         improvementPrompt = improvementPrompt.replace('{ACCEPTED_INDUSTRIES}', acceptedIndustries);
         analysisPrompt = analysisPrompt.replace('{ACCEPTED_INDUSTRIES}', acceptedIndustries);
         
-        safeLog('debug', 'Injected accepted industries into improvement prompt', { 
+        // Inject anonymization rules based on cvMode into BOTH prompts
+        const anonymizationRules = cvMode === 'anonymous' ? ANONYMIZATION_RULES_ANONYMOUS : ANONYMIZATION_RULES_NOMINATIVE;
+        improvementPrompt = improvementPrompt.replace('{ANONYMIZATION_RULES}', anonymizationRules);
+        analysisPrompt = analysisPrompt.replace('{ANONYMIZATION_RULES}', anonymizationRules);
+        
+        safeLog('debug', 'Injected accepted industries and anonymization rules into prompts', { 
             industriesCount: acceptedIndustries.split(',').length,
-            industriesPreview: acceptedIndustries.substring(0, 100) + '...'
+            industriesPreview: acceptedIndustries.substring(0, 100) + '...',
+            cvMode
         });
 
         // Clean up text before improvement (removes HTML tags for cleaner LLM processing)
@@ -334,11 +351,20 @@ export async function improveByIdHandler(req, res) {
             return res.status(500).json({ error: 'LLM model not configured in Settings.' });
         }
 
+        // Inject accepted industries into the prompt
+        const acceptedIndustries = await getAcceptedIndustriesString();
+        improvementPrompt = improvementPrompt.replace('{ACCEPTED_INDUSTRIES}', acceptedIndustries);
+        
+        // Inject anonymization rules based on cvMode
+        const anonymizationRules = cvMode === 'anonymous' ? ANONYMIZATION_RULES_ANONYMOUS : ANONYMIZATION_RULES_NOMINATIVE;
+        improvementPrompt = improvementPrompt.replace('{ANONYMIZATION_RULES}', anonymizationRules);
+
         // Clean up text before improvement (removes HTML tags for cleaner LLM processing)
         const cleanedText = cleanupText(resumeText);
         safeLog('debug', 'Text cleaned before improvement (by ID)', { 
             originalLength: resumeText.length, 
-            cleanedLength: cleanedText.length 
+            cleanedLength: cleanedText.length,
+            cvMode
         });
 
         const improved = await improveResume(cleanedText, analysis, model, improvementPrompt, cvMode, userMetadata);

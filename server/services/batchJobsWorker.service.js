@@ -1037,10 +1037,11 @@ async function analyzeResumeWithLLM(text, _firmId, originalFileName = null) {
     const { analyzeResume, cleanupText } = await import('./openai.service.js');
     const { getLLMSettings, calculateWeightedGlobalRating } = await import('./settings.service.js');
     const { getAcceptedIndustriesString } = await import('./industry.service.js');
-    const { DEFAULT_ANALYSIS_PROMPT } = await import('../config/prompts.backend.js');
+    const { DEFAULT_ANALYSIS_PROMPT, ANONYMIZATION_RULES_ANONYMOUS, ANONYMIZATION_RULES_NOMINATIVE } = await import('../config/prompts.backend.js');
 
     const settings = await getLLMSettings();
     const model = settings.llmModel;
+    const cvMode = settings.cvMode || 'nominative';
     let analysisPrompt = settings['Analysis Prompt'] || DEFAULT_ANALYSIS_PROMPT;
 
     if (!model) {
@@ -1050,6 +1051,10 @@ async function analyzeResumeWithLLM(text, _firmId, originalFileName = null) {
     // Inject accepted industries
     const acceptedIndustries = await getAcceptedIndustriesString();
     analysisPrompt = analysisPrompt.replace('{ACCEPTED_INDUSTRIES}', acceptedIndustries);
+    
+    // Inject anonymization rules based on cvMode
+    const anonymizationRules = cvMode === 'anonymous' ? ANONYMIZATION_RULES_ANONYMOUS : ANONYMIZATION_RULES_NOMINATIVE;
+    analysisPrompt = analysisPrompt.replace('{ANONYMIZATION_RULES}', anonymizationRules);
 
     // Clean text before analysis
     const cleanedText = cleanupText(text);
@@ -1077,15 +1082,24 @@ async function improveResumeWithLLM(text, analysis, _firmId) {
     const { improveResume, cleanupText, analyzeResume } = await import('./openai.service.js');
     const { getLLMSettings, calculateWeightedGlobalRating } = await import('./settings.service.js');
     const { getAcceptedIndustriesString } = await import('./industry.service.js');
-    const { DEFAULT_IMPROVEMENT_PROMPT, DEFAULT_ANALYSIS_PROMPT } = await import('../config/prompts.backend.js');
+    const { DEFAULT_IMPROVEMENT_PROMPT, DEFAULT_ANALYSIS_PROMPT, ANONYMIZATION_RULES_ANONYMOUS, ANONYMIZATION_RULES_NOMINATIVE } = await import('../config/prompts.backend.js');
 
     const settings = await getLLMSettings();
     const model = settings.llmModel;
+    const cvMode = settings.cvMode || 'nominative';
     let improvementPrompt = settings['Improvement Prompt'] || DEFAULT_IMPROVEMENT_PROMPT;
 
     if (!model) {
         throw new Error('LLM model not configured');
     }
+
+    // Inject accepted industries
+    const acceptedIndustries = await getAcceptedIndustriesString();
+    improvementPrompt = improvementPrompt.replace('{ACCEPTED_INDUSTRIES}', acceptedIndustries);
+    
+    // Inject anonymization rules based on cvMode
+    const anonymizationRules = cvMode === 'anonymous' ? ANONYMIZATION_RULES_ANONYMOUS : ANONYMIZATION_RULES_NOMINATIVE;
+    improvementPrompt = improvementPrompt.replace('{ANONYMIZATION_RULES}', anonymizationRules);
 
     // Clean text
     const cleanedText = cleanupText(text);
@@ -1095,7 +1109,7 @@ async function improveResumeWithLLM(text, analysis, _firmId) {
     let improveResult;
     try {
         // improveResume returns { text, analysis } object
-        improveResult = await improveResume(cleanedText, analysis, model, improvementPrompt, null);
+        improveResult = await improveResume(cleanedText, analysis, model, improvementPrompt, cvMode);
     } finally {
         releaseLLMSlot();
     }
@@ -1117,8 +1131,8 @@ async function improveResumeWithLLM(text, analysis, _firmId) {
 
     // Re-analyze the improved text (with rate limiting)
     let analysisPrompt = settings['Analysis Prompt'] || DEFAULT_ANALYSIS_PROMPT;
-    const acceptedIndustries = await getAcceptedIndustriesString();
     analysisPrompt = analysisPrompt.replace('{ACCEPTED_INDUSTRIES}', acceptedIndustries);
+    analysisPrompt = analysisPrompt.replace('{ANONYMIZATION_RULES}', anonymizationRules);
 
     await acquireLLMSlot();
     let improvedAnalysis;
