@@ -58,46 +58,88 @@ const traverseFileTree = async (entry: FileSystemEntry, path: string = ''): Prom
 const getFilesFromEvent = async (event: DropEvent): Promise<FileWithPath[]> => {
   const files: FileWithPath[] = [];
   
-  if ('dataTransfer' in event && event.dataTransfer) {
-    const items = event.dataTransfer.items;
+  // Handle FileSystemFileHandle[] (new API in react-dropzone v15)
+  if (Array.isArray(event)) {
+    console.log('[getFilesFromEvent] Received FileSystemFileHandle array:', event.length);
+    for (const handle of event) {
+      if ('getFile' in handle && typeof handle.getFile === 'function') {
+        try {
+          const file = await (handle as FileSystemFileHandle).getFile();
+          files.push(file as FileWithPath);
+        } catch (error) {
+          console.error('[getFilesFromEvent] Error getting file from handle:', error);
+        }
+      }
+    }
+    console.log('[getFilesFromEvent] Files from handles:', files.length);
+    return files;
+  }
+  
+  // Handle DragEvent
+  const dragEvent = event as DragEvent;
+  console.log('[getFilesFromEvent] Event type:', dragEvent.type, 'Has dataTransfer:', !!dragEvent.dataTransfer);
+  
+  if (dragEvent.dataTransfer) {
+    const items = dragEvent.dataTransfer.items;
+    const dataTransferFiles = dragEvent.dataTransfer.files;
     
+    console.log('[getFilesFromEvent] items length:', items?.length, 'files length:', dataTransferFiles?.length);
+    
+    // IMPORTANT: Collect entries synchronously before any async operations
+    // because dataTransfer.items is cleared by the browser after the event handler returns
     if (items && items.length > 0) {
       const entries: FileSystemEntry[] = [];
       
-      // Collect all entries first
+      // Collect all entries SYNCHRONOUSLY first
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
+        console.log('[getFilesFromEvent] Item', i, 'kind:', item.kind, 'type:', item.type);
         if (item.kind === 'file') {
           const entry = item.webkitGetAsEntry?.();
+          console.log('[getFilesFromEvent] Entry:', entry?.name, 'isFile:', entry?.isFile, 'isDirectory:', entry?.isDirectory);
           if (entry) {
             entries.push(entry);
           }
         }
       }
       
-      // Process entries to get files with paths
+      console.log('[getFilesFromEvent] Collected entries:', entries.length);
+      
+      // Now process entries asynchronously
       if (entries.length > 0) {
-        const filePromises = entries.map(entry => traverseFileTree(entry));
-        const fileArrays = await Promise.all(filePromises);
-        files.push(...fileArrays.flat());
+        try {
+          const filePromises = entries.map(entry => traverseFileTree(entry));
+          const fileArrays = await Promise.all(filePromises);
+          files.push(...fileArrays.flat());
+          console.log('[getFilesFromEvent] Files from entries:', files.length);
+        } catch (error) {
+          console.error('[getFilesFromEvent] Error traversing file tree:', error);
+        }
       }
     }
     
-    // Fallback to regular files if no entries found
-    if (files.length === 0 && event.dataTransfer.files) {
-      for (let i = 0; i < event.dataTransfer.files.length; i++) {
-        files.push(event.dataTransfer.files[i] as FileWithPath);
+    // Fallback to regular files if no entries found or traversal failed
+    if (files.length === 0 && dataTransferFiles && dataTransferFiles.length > 0) {
+      console.log('[getFilesFromEvent] Using fallback dataTransfer.files');
+      for (let i = 0; i < dataTransferFiles.length; i++) {
+        files.push(dataTransferFiles[i] as FileWithPath);
       }
     }
-  } else if ('target' in event && event.target) {
-    const input = event.target as HTMLInputElement;
-    if (input.files) {
+  }
+  
+  // Handle input change event
+  const inputEvent = event as Event;
+  if ('target' in inputEvent && inputEvent.target) {
+    const input = inputEvent.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      console.log('[getFilesFromEvent] Files from input:', input.files.length);
       for (let i = 0; i < input.files.length; i++) {
         files.push(input.files[i] as FileWithPath);
       }
     }
   }
   
+  console.log('[getFilesFromEvent] Returning files:', files.length);
   return files;
 };
 import { useTranslation } from 'react-i18next';
