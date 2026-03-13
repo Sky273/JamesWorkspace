@@ -351,15 +351,20 @@ export async function analyzeResume(resumeText, model, analysisPrompt, userMetad
  * @param {Object} analysis - Analysis data
  * @param {string} model - OpenAI model to use
  * @param {string} improvementPromptTemplate - Improvement prompt template
+ * @param {string} originalFileName - Original file name for name extraction hint
+ * @param {Object} userMetadata - User metadata for logging
  * @returns {Promise<string>} - Improved resume text
  */
-export async function improveResume(text, analysis, model, improvementPromptTemplate, userMetadata = null) {
+export async function improveResume(text, analysis, model, improvementPromptTemplate, originalFileName = null, userMetadata = null) {
     const analysisJson = JSON.stringify(analysis, null, 2);
+    const fileNameValue = originalFileName || 'Non disponible';
     const improvementPrompt = improvementPromptTemplate
         .replace(/{ANALYSIS}/g, analysisJson)
         .replace(/{analysis}/g, analysisJson)
         .replace(/{TEXT}/g, text)
-        .replace(/{text}/g, text);
+        .replace(/{text}/g, text)
+        .replace(/{FILENAME}/g, fileNameValue)
+        .replace(/{filename}/g, fileNameValue);
 
     // Debug: Log the full prompt sent to LLM (dev mode only)
     if (process.env.NODE_ENV === 'development' || process.env.DEBUG_LLM === 'true') {

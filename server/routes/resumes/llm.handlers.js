@@ -95,18 +95,24 @@ export async function analyzeHandler(req, res) {
             return res.status(500).json({ error: 'LLM model not configured in Settings.' });
         }
 
+        // Get original filename for name extraction hint
+        const originalFileName = resumeRecord.original_file_name || resumeRecord.name || null;
+        const fileNameValue = originalFileName || 'Non disponible';
+        
         // Inject accepted industries into the prompt
         const acceptedIndustries = await getAcceptedIndustriesString();
         analysisPrompt = analysisPrompt.replace('{ACCEPTED_INDUSTRIES}', acceptedIndustries);
         
-        // Inject anonymization rules based on cvMode
-        const anonymizationRules = cvMode === 'anonymous' ? ANONYMIZATION_RULES_ANONYMOUS : ANONYMIZATION_RULES_NOMINATIVE;
+        // Inject anonymization rules based on cvMode (with FILENAME replaced)
+        let anonymizationRules = cvMode === 'anonymous' ? ANONYMIZATION_RULES_ANONYMOUS : ANONYMIZATION_RULES_NOMINATIVE;
+        anonymizationRules = anonymizationRules.replace(/{FILENAME}/g, fileNameValue);
         analysisPrompt = analysisPrompt.replace('{ANONYMIZATION_RULES}', anonymizationRules);
         
         safeLog('debug', 'Injected accepted industries and anonymization rules into analysis prompt', { 
             industriesCount: acceptedIndustries.split(',').length,
             industriesPreview: acceptedIndustries.substring(0, 100) + '...',
-            cvMode
+            cvMode,
+            fileName: fileNameValue
         });
 
         // Clean up text before analysis (removes HTML entities and tags for cleaner LLM processing)
@@ -115,9 +121,6 @@ export async function analyzeHandler(req, res) {
             originalLength: resumeText.length, 
             cleanedLength: cleanedText.length 
         });
-
-        // Get original filename for name extraction hint
-        const originalFileName = resumeRecord.original_file_name || resumeRecord.name || null;
         
         let analysis = await analyzeResume(cleanedText, model, analysisPrompt, userMetadata, false, originalFileName);
         
@@ -160,12 +163,16 @@ export async function analyzeTextHandler(req, res) {
             return res.status(500).json({ error: 'LLM model not configured in Settings.' });
         }
 
+        // Get filename value for injection
+        const fileNameValue = fileName || 'Non disponible';
+        
         // Inject accepted industries into the prompt
         const acceptedIndustries = await getAcceptedIndustriesString();
         analysisPrompt = analysisPrompt.replace('{ACCEPTED_INDUSTRIES}', acceptedIndustries);
         
-        // Inject anonymization rules based on cvMode
-        const anonymizationRules = cvMode === 'anonymous' ? ANONYMIZATION_RULES_ANONYMOUS : ANONYMIZATION_RULES_NOMINATIVE;
+        // Inject anonymization rules based on cvMode (with FILENAME replaced)
+        let anonymizationRules = cvMode === 'anonymous' ? ANONYMIZATION_RULES_ANONYMOUS : ANONYMIZATION_RULES_NOMINATIVE;
+        anonymizationRules = anonymizationRules.replace(/{FILENAME}/g, fileNameValue);
         analysisPrompt = analysisPrompt.replace('{ANONYMIZATION_RULES}', anonymizationRules);
 
         // Clean up text before analysis (removes HTML entities and tags for cleaner LLM processing)
@@ -173,7 +180,7 @@ export async function analyzeTextHandler(req, res) {
         safeLog('debug', 'Text cleaned before analysis', { 
             originalLength: text.length, 
             cleanedLength: cleanedText.length,
-            fileName: fileName || 'not provided',
+            fileName: fileNameValue,
             cvMode
         });
 
@@ -202,7 +209,7 @@ export async function analyzeTextHandler(req, res) {
  */
 export async function improveHandler(req, res) {
     try {
-        const { text, analysis } = req.body;
+        const { text, analysis, fileName } = req.body;
         const userMetadata = getRequestMetadata(req);
         
         if (!text) {
@@ -219,20 +226,25 @@ export async function improveHandler(req, res) {
             return res.status(500).json({ error: 'LLM model not configured in Settings.' });
         }
 
+        // Get filename value for injection
+        const fileNameValue = fileName || 'Non disponible';
+        
         // Inject accepted industries into BOTH prompts
         const acceptedIndustries = await getAcceptedIndustriesString();
         improvementPrompt = improvementPrompt.replace('{ACCEPTED_INDUSTRIES}', acceptedIndustries);
         analysisPrompt = analysisPrompt.replace('{ACCEPTED_INDUSTRIES}', acceptedIndustries);
         
-        // Inject anonymization rules based on cvMode into BOTH prompts
-        const anonymizationRules = cvMode === 'anonymous' ? ANONYMIZATION_RULES_ANONYMOUS : ANONYMIZATION_RULES_NOMINATIVE;
+        // Inject anonymization rules based on cvMode into BOTH prompts (with FILENAME replaced)
+        let anonymizationRules = cvMode === 'anonymous' ? ANONYMIZATION_RULES_ANONYMOUS : ANONYMIZATION_RULES_NOMINATIVE;
+        anonymizationRules = anonymizationRules.replace(/{FILENAME}/g, fileNameValue);
         improvementPrompt = improvementPrompt.replace('{ANONYMIZATION_RULES}', anonymizationRules);
         analysisPrompt = analysisPrompt.replace('{ANONYMIZATION_RULES}', anonymizationRules);
         
         safeLog('debug', 'Injected accepted industries and anonymization rules into prompts', { 
             industriesCount: acceptedIndustries.split(',').length,
             industriesPreview: acceptedIndustries.substring(0, 100) + '...',
-            cvMode
+            cvMode,
+            fileName: fileNameValue
         });
 
         // Clean up text before improvement (removes HTML tags for cleaner LLM processing)
@@ -243,7 +255,7 @@ export async function improveHandler(req, res) {
         });
 
         // Step 1: Improve the resume
-        const improved = await improveResume(cleanedText, analysis, model, improvementPrompt, cvMode, userMetadata);
+        const improved = await improveResume(cleanedText, analysis, model, improvementPrompt, fileName || null, userMetadata);
         
         // Step 2: Analyze the improved text to get post-improvement suggestions
         
@@ -351,12 +363,17 @@ export async function improveByIdHandler(req, res) {
             return res.status(500).json({ error: 'LLM model not configured in Settings.' });
         }
 
+        // Get original filename for name extraction hint
+        const originalFileName = resumeRecord.original_file_name || resumeRecord.name || null;
+        const fileNameValue = originalFileName || 'Non disponible';
+        
         // Inject accepted industries into the prompt
         const acceptedIndustries = await getAcceptedIndustriesString();
         improvementPrompt = improvementPrompt.replace('{ACCEPTED_INDUSTRIES}', acceptedIndustries);
         
-        // Inject anonymization rules based on cvMode
-        const anonymizationRules = cvMode === 'anonymous' ? ANONYMIZATION_RULES_ANONYMOUS : ANONYMIZATION_RULES_NOMINATIVE;
+        // Inject anonymization rules based on cvMode (with FILENAME replaced)
+        let anonymizationRules = cvMode === 'anonymous' ? ANONYMIZATION_RULES_ANONYMOUS : ANONYMIZATION_RULES_NOMINATIVE;
+        anonymizationRules = anonymizationRules.replace(/{FILENAME}/g, fileNameValue);
         improvementPrompt = improvementPrompt.replace('{ANONYMIZATION_RULES}', anonymizationRules);
 
         // Clean up text before improvement (removes HTML tags for cleaner LLM processing)
@@ -364,10 +381,11 @@ export async function improveByIdHandler(req, res) {
         safeLog('debug', 'Text cleaned before improvement (by ID)', { 
             originalLength: resumeText.length, 
             cleanedLength: cleanedText.length,
-            cvMode
+            cvMode,
+            fileName: fileNameValue
         });
-
-        const improved = await improveResume(cleanedText, analysis, model, improvementPrompt, cvMode, userMetadata);
+        
+        const improved = await improveResume(cleanedText, analysis, model, improvementPrompt, originalFileName, userMetadata);
         
         // Recalculate globalRating based on admin-defined weights
         if (improved.analysis) {

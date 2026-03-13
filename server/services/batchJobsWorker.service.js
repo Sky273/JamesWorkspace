@@ -572,7 +572,8 @@ async function processImportItem(item, job, options) {
                 improvedResult = await improveResumeWithLLM(
                     textForImprovement,
                     analysis,
-                    job.firm_id
+                    job.firm_id,
+                    item.file_name
                 );
                 // Success - break out of retry loop
                 break;
@@ -787,7 +788,7 @@ async function processImproveItem(item, job, _options) {
                 itemId: item.id, 
                 resumeId: item.resume_id 
             });
-            improvedResult = await improveResumeWithLLM(text, analysis, job.firm_id);
+            improvedResult = await improveResumeWithLLM(text, analysis, job.firm_id, item.file_name);
             // Success - break out of retry loop
             break;
         } catch (improveError) {
@@ -1048,12 +1049,16 @@ async function analyzeResumeWithLLM(text, _firmId, originalFileName = null) {
         throw new Error('LLM model not configured');
     }
 
+    // Get filename value for injection
+    const fileNameValue = originalFileName || 'Non disponible';
+    
     // Inject accepted industries
     const acceptedIndustries = await getAcceptedIndustriesString();
     analysisPrompt = analysisPrompt.replace('{ACCEPTED_INDUSTRIES}', acceptedIndustries);
     
-    // Inject anonymization rules based on cvMode
-    const anonymizationRules = cvMode === 'anonymous' ? ANONYMIZATION_RULES_ANONYMOUS : ANONYMIZATION_RULES_NOMINATIVE;
+    // Inject anonymization rules based on cvMode (with FILENAME replaced)
+    let anonymizationRules = cvMode === 'anonymous' ? ANONYMIZATION_RULES_ANONYMOUS : ANONYMIZATION_RULES_NOMINATIVE;
+    anonymizationRules = anonymizationRules.replace(/{FILENAME}/g, fileNameValue);
     analysisPrompt = analysisPrompt.replace('{ANONYMIZATION_RULES}', anonymizationRules);
 
     // Clean text before analysis
@@ -1077,8 +1082,12 @@ async function analyzeResumeWithLLM(text, _firmId, originalFileName = null) {
 
 /**
  * Improve a resume using the LLM (with rate limiting)
+ * @param {string} text - Resume text to improve
+ * @param {Object} analysis - Analysis data
+ * @param {string} _firmId - Firm ID (unused but kept for API consistency)
+ * @param {string} originalFileName - Original file name for name extraction hint
  */
-async function improveResumeWithLLM(text, analysis, _firmId) {
+async function improveResumeWithLLM(text, analysis, _firmId, originalFileName = null) {
     const { improveResume, cleanupText, analyzeResume } = await import('./openai.service.js');
     const { getLLMSettings, calculateWeightedGlobalRating } = await import('./settings.service.js');
     const { getAcceptedIndustriesString } = await import('./industry.service.js');
@@ -1093,12 +1102,16 @@ async function improveResumeWithLLM(text, analysis, _firmId) {
         throw new Error('LLM model not configured');
     }
 
+    // Get filename value for injection
+    const fileNameValue = originalFileName || 'Non disponible';
+    
     // Inject accepted industries
     const acceptedIndustries = await getAcceptedIndustriesString();
     improvementPrompt = improvementPrompt.replace('{ACCEPTED_INDUSTRIES}', acceptedIndustries);
     
-    // Inject anonymization rules based on cvMode
-    const anonymizationRules = cvMode === 'anonymous' ? ANONYMIZATION_RULES_ANONYMOUS : ANONYMIZATION_RULES_NOMINATIVE;
+    // Inject anonymization rules based on cvMode (with FILENAME replaced)
+    let anonymizationRules = cvMode === 'anonymous' ? ANONYMIZATION_RULES_ANONYMOUS : ANONYMIZATION_RULES_NOMINATIVE;
+    anonymizationRules = anonymizationRules.replace(/{FILENAME}/g, fileNameValue);
     improvementPrompt = improvementPrompt.replace('{ANONYMIZATION_RULES}', anonymizationRules);
 
     // Clean text
@@ -1109,7 +1122,7 @@ async function improveResumeWithLLM(text, analysis, _firmId) {
     let improveResult;
     try {
         // improveResume returns { text, analysis } object
-        improveResult = await improveResume(cleanedText, analysis, model, improvementPrompt, cvMode);
+        improveResult = await improveResume(cleanedText, analysis, model, improvementPrompt, originalFileName);
     } finally {
         releaseLLMSlot();
     }
