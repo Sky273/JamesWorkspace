@@ -3,7 +3,7 @@
  * TypeScript version
  */
 
-import { ForwardRefExoticComponent, RefAttributes, SVGProps, useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import { ForwardRefExoticComponent, RefAttributes, SVGProps, useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useInView } from 'react-intersection-observer';
@@ -192,20 +192,20 @@ interface NavSection {
 
 function HomePage(): JSX.Element {
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [activeSection, setActiveSection] = useState<string>('hero');
   const [isScrolled, setIsScrolled] = useState<boolean>(false);
   const [featuresRef] = useInView({
     triggerOnce: true,
     threshold: 0.1
   });
-
-  const navSections: NavSection[] = [
+  
+  const navSections: NavSection[] = useMemo(() => [
     { id: 'hero', label: t('home.nav.hero', 'Accueil') },
     { id: 'dashboard', label: t('home.nav.dashboard', 'Tableau de bord') },
     { id: 'how-it-works', label: t('home.nav.howItWorks', 'Comment ça marche') },
     { id: 'features', label: t('home.nav.features', 'Fonctionnalités clés') }
-  ];
+  ], [t, i18n.language]);
 
   const handleScrollSpy = useCallback(() => {
     const scrollPosition = window.scrollY + 150;

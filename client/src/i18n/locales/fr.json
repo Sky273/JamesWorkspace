@@ -346,6 +346,12 @@
     "saveFailed": "Échec de l'enregistrement"
   },
   "home": {
+    "nav": {
+      "hero": "Accueil",
+      "dashboard": "Tableau de bord",
+      "howItWorks": "Comment ça marche",
+      "features": "Fonctionnalités clés"
+    },
     "hero": {
       "title1": "Votre CVthèque.",
       "title2": "Optimisée. Activée.",

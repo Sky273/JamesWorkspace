@@ -127,6 +127,12 @@
     "allRightsReserved": "All rights reserved"
   },
   "home": {
+    "nav": {
+      "hero": "Home",
+      "dashboard": "Dashboard",
+      "howItWorks": "How It Works",
+      "features": "Key Features"
+    },
     "hero": {
       "title1": "Your Resume Library.",
       "title2": "Optimized. Activated.",
