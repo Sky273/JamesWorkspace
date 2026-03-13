@@ -1991,6 +1991,7 @@
     "loadingFiles": "Chargement des fichiers...",
     "dragDrop": "Glissez-déposez vos CVs ici, ou cliquez pour sélectionner",
     "fileTypes": "PDF, DOC, DOCX • Max 50MB par fichier",
+    "nominativeRecommendation": "Pour une meilleure extraction des noms, privilégiez des fichiers nommés avec le nom du candidat (ex: Jean_Dupont_CV.pdf)",
     "filesCount": "Fichiers",
     "retryAll": "Réessayer les erreurs",
     "confirmClear": "Confirmer ?",

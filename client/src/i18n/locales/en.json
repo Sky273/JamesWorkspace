@@ -1991,6 +1991,7 @@
     "loadingFiles": "Loading files...",
     "dragDrop": "Drag and drop your CVs here, or click to select",
     "fileTypes": "PDF, DOC, DOCX • Max 50MB per file",
+    "nominativeRecommendation": "For better name extraction, use files named with the candidate's name (e.g., John_Doe_CV.pdf)",
     "filesCount": "Files",
     "retryAll": "Retry errors",
     "confirmClear": "Confirm?",

@@ -1213,6 +1213,9 @@ const BatchUploadPage = (): JSX.Element => {
             <p className="text-sm text-gray-500 dark:text-gray-400">
               {t('batchUpload.fileTypes', 'PDF, DOC, DOCX • Max 50MB par fichier')}
             </p>
+            <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+              💡 {t('batchUpload.nominativeRecommendation', 'Pour une meilleure extraction des noms, privilégiez des fichiers nommés avec le nom du candidat (ex: Jean_Dupont_CV.pdf)')}
+            </p>
             
             {/* Folder selection button */}
             <div className="mt-4 flex justify-center">
