@@ -418,6 +418,28 @@ All LLM requests are tracked in `llm_metrics` table:
 
 ---
 
+## Known Vulnerabilities & Mitigations
+
+### elliptic (GHSA-848j-6mx2-7j84) - Low Severity
+
+**Status**: Mitigated  
+**CVSS Score**: 5.6 (Low)  
+**Affected Package**: `elliptic` <=6.6.1 (transitive dependency of `vite-plugin-node-polyfills`)
+
+**Description**: The `elliptic` library uses a cryptographic primitive with a risky implementation. This is a transitive dependency used only during frontend build for Node.js polyfills.
+
+**Mitigation Applied**:
+1. Crypto-related polyfills (`crypto`, `tls`, `net`, etc.) are explicitly excluded in `client/vite.config.js`
+2. The vulnerable code is NOT included in the production bundle
+3. No browser-side cryptographic operations depend on this library
+4. All actual cryptographic operations (JWT, password hashing, TOTP) are performed server-side using native Node.js crypto
+
+**Risk Assessment**: Minimal - The vulnerable code is only present in `node_modules` but excluded from the build. No application functionality uses browser-side elliptic curve cryptography.
+
+**Resolution**: Awaiting upstream fix in `elliptic` library. Will update when version >6.6.1 is released with the fix.
+
+---
+
 ## Files Reference
 
 | File | Purpose |

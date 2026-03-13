@@ -158,6 +158,24 @@ export default defineConfig(({ mode }) => {
         process: true,
       },
       protocolImports: true,
+      // Exclude crypto-related polyfills to avoid elliptic vulnerability (GHSA-848j-6mx2-7j84)
+      // We don't use browser-side crypto operations that require these polyfills
+      exclude: [
+        'crypto',
+        'tls',
+        'net',
+        'dns',
+        'dgram',
+        'child_process',
+        'cluster',
+        'module',
+        'readline',
+        'repl',
+        'tty',
+        'v8',
+        'vm',
+        'worker_threads',
+      ],
     }),
     httpConfigPlugin(),
     // Gzip compression for production builds
