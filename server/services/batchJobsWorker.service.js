@@ -493,9 +493,12 @@ async function processImportItem(item, job, options) {
         safeLog('info', 'CV analyzed', { itemId: item.id, hasAnalysis: !!analysis, globalRating: analysis?.globalRating, name: analysis?.name });
     }
 
-    // Check if name extraction failed (XXX returned) - only for new analysis, not resumed items
-    // Case-insensitive check for xxx, XXX, Xxx, etc.
-    if (!isResumedWithName && analysis.name?.toUpperCase() === 'XXX') {
+    // Check if name extraction failed - only for new analysis, not resumed items
+    // Detect: XXX (new instruction), Candidat (old instruction), or CAN (trigram of Candidat)
+    const nameUpper = analysis.name?.toUpperCase()?.trim();
+    const isNameExtractionFailed = nameUpper === 'XXX' || nameUpper === 'CANDIDAT' || nameUpper === 'CAN';
+    
+    if (!isResumedWithName && isNameExtractionFailed) {
         safeLog('warn', 'Name extraction failed - pausing item for manual input', { 
             itemId: item.id, 
             fileName: item.file_name,
