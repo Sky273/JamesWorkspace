@@ -467,10 +467,92 @@ async function processImportItem(item, job, options) {
 
     await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, { progress: 40 });
 
-    // Step 3: Analyze the CV (pass original filename for name extraction hint)
-    safeLog('info', 'Analyzing CV with LLM', { itemId: item.id, firmId: job.firm_id, fileName: item.file_name });
-    const analysis = await analyzeResumeWithLLM(text, job.firm_id, item.file_name);
-    safeLog('info', 'CV analyzed', { itemId: item.id, hasAnalysis: !!analysis, globalRating: analysis?.globalRating });
+    // Step 3: Analyze the CV or use pending data if resuming with provided name
+    let analysis;
+    let isResumedWithName = false;
+    
+    // Check if this item is resuming with a manually provided name
+    if (item.original_name && item.pending_data) {
+        const pendingData = typeof item.pending_data === 'string' ? JSON.parse(item.pending_data) : item.pending_data;
+        if (pendingData.analysis) {
+            safeLog('info', 'Resuming item with provided name', { 
+                itemId: item.id, 
+                providedName: item.original_name,
+                fileName: item.file_name 
+            });
+            analysis = pendingData.analysis;
+            analysis.name = item.original_name; // Use the manually provided name
+            isResumedWithName = true;
+        }
+    }
+    
+    // If not resuming, perform normal analysis
+    if (!analysis) {
+        safeLog('info', 'Analyzing CV with LLM', { itemId: item.id, firmId: job.firm_id, fileName: item.file_name });
+        analysis = await analyzeResumeWithLLM(text, job.firm_id, item.file_name);
+        safeLog('info', 'CV analyzed', { itemId: item.id, hasAnalysis: !!analysis, globalRating: analysis?.globalRating, name: analysis?.name });
+    }
+
+    // Check if name extraction failed (XXX returned) - only for new analysis, not resumed items
+    // Case-insensitive check for xxx, XXX, Xxx, etc.
+    if (!isResumedWithName && analysis.name?.toUpperCase() === 'XXX') {
+        safeLog('warn', 'Name extraction failed - pausing item for manual input', { 
+            itemId: item.id, 
+            fileName: item.file_name,
+            resumeId 
+        });
+        
+        // Save partial analysis to resume (without name)
+        const tags = analysis.tags || { skills: [], industries: [], tools: [], softSkills: [] };
+        await query(`
+            UPDATE resumes SET
+                original_text = $1,
+                global_rating = $2,
+                skills_score = $3,
+                experience_score = $4,
+                education_score = $5,
+                ats_score = $6,
+                executive_summary_score = $7,
+                hobbies_languages_score = $8,
+                skills = $9,
+                industries = $10,
+                tools = $11,
+                soft_skills = $12,
+                key_improvements = $13,
+                title = $14,
+                status = 'pending_name',
+                analyzed_at = NOW()
+            WHERE id = $15
+        `, [
+            analysis.structuredText || text,
+            parseScore(analysis.globalRating),
+            parseScore(analysis.skillsRating),
+            parseScore(analysis.experiencesRating),
+            parseScore(analysis.educationRating),
+            parseScore(analysis.atsOptimizationRating),
+            parseScore(analysis.executiveSummaryRating),
+            parseScore(analysis.hobbiesLanguagesRating),
+            JSON.stringify(tags.skills || []),
+            JSON.stringify(tags.industries || []),
+            JSON.stringify(tags.tools || []),
+            JSON.stringify(tags.softSkills || []),
+            JSON.stringify(analysis.suggestions || {}),
+            analysis.title,
+            resumeId
+        ]);
+        
+        // Set item to pending_name status - will be resumed when name is provided
+        await updateJobItemStatus(item.id, ITEM_STATUS.PENDING_NAME, { 
+            progress: 60,
+            error_message: 'En attente du nom du candidat (extraction automatique échouée)',
+            pending_analysis: JSON.stringify(analysis),
+            pending_text: text,
+            pending_improve: improve
+        });
+        
+        // Return early - item will be resumed when name is provided
+        return;
+    }
 
     await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, { progress: 60 });
 

@@ -10,6 +10,7 @@ import { safeLog } from '../utils/logger.backend.js';
 import multer from 'multer';
 import {
     JOB_STATUS,
+    ITEM_STATUS,
     createJob,
     addJobItems,
     addJobResumeIds,
@@ -18,7 +19,10 @@ import {
     getJobsByFirm,
     getAllJobs,
     cancelJob,
-    deleteJob
+    deleteJob,
+    getJobItem,
+    resumeItemWithName,
+    getItemsPendingName
 } from '../services/batchJobs.service.js';
 
 const router = express.Router();
@@ -404,6 +408,86 @@ router.get('/:id/download', authenticateToken, async (req, res) => {
     } catch (error) {
         safeLog('error', 'Failed to download export file', { error: error.message });
         res.status(500).json({ error: 'Erreur lors du téléchargement' });
+    }
+});
+
+/**
+ * GET /api/batch-jobs/:id/pending-names
+ * Get items waiting for name input
+ */
+router.get('/:id/pending-names', authenticateToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userRole = req.user?.role?.toLowerCase();
+        const userFirmId = req.user?.firmId || req.user?.firm_id;
+        const isAdmin = userRole === 'admin';
+
+        const job = await getJob(id);
+        if (!job) {
+            return res.status(404).json({ error: 'Job non trouvé' });
+        }
+
+        // Check access
+        if (!isAdmin && job.firm_id !== userFirmId) {
+            return res.status(403).json({ error: 'Accès non autorisé' });
+        }
+
+        const items = await getItemsPendingName(id);
+        res.json({ items });
+    } catch (error) {
+        safeLog('error', 'Failed to get items pending name', { error: error.message });
+        res.status(500).json({ error: 'Erreur lors de la récupération des items' });
+    }
+});
+
+/**
+ * POST /api/batch-jobs/items/:itemId/provide-name
+ * Provide name for an item waiting for name input and resume processing
+ */
+router.post('/items/:itemId/provide-name', authenticateToken, async (req, res) => {
+    try {
+        const { itemId } = req.params;
+        const { name } = req.body;
+        const userRole = req.user?.role?.toLowerCase();
+        const userFirmId = req.user?.firmId || req.user?.firm_id;
+        const isAdmin = userRole === 'admin';
+
+        if (!name || typeof name !== 'string' || name.trim().length === 0) {
+            return res.status(400).json({ error: 'Le nom du candidat est requis' });
+        }
+
+        const item = await getJobItem(itemId);
+        if (!item) {
+            return res.status(404).json({ error: 'Item non trouvé' });
+        }
+
+        // Check access
+        if (!isAdmin && item.firm_id !== userFirmId) {
+            return res.status(403).json({ error: 'Accès non autorisé' });
+        }
+
+        if (item.status !== ITEM_STATUS.PENDING_NAME) {
+            return res.status(400).json({ 
+                error: `L'item n'est pas en attente de nom (statut actuel: ${item.status})` 
+            });
+        }
+
+        const updatedItem = await resumeItemWithName(itemId, name.trim());
+        
+        safeLog('info', 'Name provided for batch item', { 
+            itemId, 
+            providedName: name.trim(),
+            fileName: item.file_name 
+        });
+
+        res.json({ 
+            success: true, 
+            message: 'Nom fourni, le traitement va reprendre',
+            item: updatedItem 
+        });
+    } catch (error) {
+        safeLog('error', 'Failed to provide name for item', { error: error.message });
+        res.status(500).json({ error: error.message || 'Erreur lors de la mise à jour' });
     }
 });
 

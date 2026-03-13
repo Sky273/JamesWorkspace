@@ -181,7 +181,7 @@ IMPORTANT pour le champ "name" du JSON:
 - Si vous trouvez un trigramme de 3 lettres majuscules isolées, retournez-le tel quel
 - Si vous trouvez un nom complet, retournez-le tel quel (il sera anonymisé ensuite)
 - Ne jamais retourner un champ "name" vide, null ou "Non renseigné"
-- Si aucun nom n'est identifiable, utilisez "Candidat" comme valeur par défaut
+- Si aucun nom n'est identifiable après avoir vérifié toutes les sources ci-dessus, retournez "XXX" (ceci permettra un traitement ultérieur des cas problématiques)
 
 INFORMATIONS À SUPPRIMER IMPÉRATIVEMENT (ne jamais inclure dans le CV amélioré):
 - Nom et prénom du candidat (remplacer par {TRIGRAM})
@@ -229,7 +229,7 @@ IMPORTANT pour le champ "name" du JSON:
 - Si vous trouvez un trigramme de 3 lettres majuscules isolées, retournez-le tel quel
 - Si vous trouvez un nom complet, retournez-le tel quel
 - Ne jamais retourner un champ "name" vide, null ou "Non renseigné"
-- Si aucun nom n'est identifiable, utilisez "Candidat" comme valeur par défaut`;
+- Si aucun nom n'est identifiable après avoir vérifié toutes les sources ci-dessus, retournez "XXX" (ceci permettra un traitement ultérieur des cas problématiques)`;
 
 export const DEFAULT_ANALYSIS_PROMPT = `Vous êtes un expert RH spécialisé IS/IT (contexte ESN), orienté recrutement et ATS.
 Analysez le CV ci-dessous de manière factuelle, stable et reproductible.

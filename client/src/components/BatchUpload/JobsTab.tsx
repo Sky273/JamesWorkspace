@@ -17,7 +17,9 @@ import {
   ChevronUpIcon,
   DocumentTextIcon,
   SparklesIcon,
-  ArrowDownTrayIcon
+  ArrowDownTrayIcon,
+  UserIcon,
+  PaperAirplaneIcon
 } from '@heroicons/react/24/outline';
 import { fetchWithAuth, createAuthOptionsWithCsrf } from '../../utils/apiInterceptor';
 import logger from '../../utils/logger.frontend';
@@ -27,12 +29,17 @@ interface JobItem {
   id: string;
   file_name: string;
   relative_path?: string;
-  status: 'pending' | 'processing' | 'success' | 'error' | 'skipped';
+  status: 'pending' | 'processing' | 'pending_name' | 'success' | 'error' | 'skipped';
   progress: number;
   error_message?: string;
   resume_id?: number;
   original_name?: string;
   display_name?: string;
+  pending_data?: {
+    analysis?: Record<string, unknown>;
+    text?: string;
+    improve?: boolean;
+  };
 }
 
 interface Job {
@@ -67,6 +74,8 @@ const JobsTab = (): JSX.Element => {
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
+  const [pendingNameInputs, setPendingNameInputs] = useState<Record<string, string>>({});
+  const [submittingName, setSubmittingName] = useState<string | null>(null);
 
   const fetchJobs = useCallback(async () => {
     try {
@@ -189,6 +198,45 @@ const JobsTab = (): JSX.Element => {
     } catch (error) {
       logger.error('Error downloading export:', error);
       toast.error('Erreur lors du téléchargement');
+    }
+  };
+
+  const handleProvideName = async (itemId: string) => {
+    const name = pendingNameInputs[itemId]?.trim();
+    if (!name) {
+      toast.error(t('batchJobs.nameRequired', 'Veuillez saisir le nom du candidat'));
+      return;
+    }
+
+    setSubmittingName(itemId);
+    try {
+      const options = await createAuthOptionsWithCsrf({
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name })
+      });
+      const response = await fetchWithAuth(`/api/batch-jobs/items/${itemId}/provide-name`, options);
+      
+      if (response.ok) {
+        toast.success(t('batchJobs.nameProvided', 'Nom fourni, traitement en cours...'));
+        setPendingNameInputs(prev => {
+          const updated = { ...prev };
+          delete updated[itemId];
+          return updated;
+        });
+        // Refresh job details
+        if (expandedJobId) {
+          fetchJobDetails(expandedJobId);
+        }
+      } else {
+        const error = await response.json();
+        toast.error(error.error || 'Erreur lors de la soumission du nom');
+      }
+    } catch (error) {
+      logger.error('Error providing name:', error);
+      toast.error('Erreur lors de la soumission du nom');
+    } finally {
+      setSubmittingName(null);
     }
   };
 
@@ -473,6 +521,7 @@ const JobsTab = (): JSX.Element => {
                                 {item.status === 'error' && <ExclamationCircleIcon className="w-4 h-4 text-red-500 flex-shrink-0" />}
                                 {item.status === 'processing' && <ArrowPathIcon className="w-4 h-4 text-blue-500 animate-spin flex-shrink-0" />}
                                 {item.status === 'pending' && <ClockIcon className="w-4 h-4 text-gray-400 flex-shrink-0" />}
+                                {item.status === 'pending_name' && <UserIcon className="w-4 h-4 text-orange-500 flex-shrink-0" />}
                                 {item.status === 'skipped' && <XCircleIcon className="w-4 h-4 text-gray-400 flex-shrink-0" />}
                                 <div className="flex flex-col min-w-0">
                                   <span className="text-sm text-gray-700 dark:text-gray-300 truncate">
@@ -506,12 +555,38 @@ const JobsTab = (): JSX.Element => {
                                     </span>
                                   </div>
                                 )}
-                                {item.error_message && (
+                                {item.status !== 'pending_name' && item.error_message && (
                                   <span className="text-xs text-red-500 truncate max-w-xs" title={item.error_message}>
                                     {item.error_message}
                                   </span>
                                 )}
                               </div>
+                              {/* Name input for pending_name items */}
+                              {item.status === 'pending_name' && (
+                                <div className="flex items-center gap-2 ml-2">
+                                  <input
+                                    type="text"
+                                    value={pendingNameInputs[item.id] || ''}
+                                    onChange={(e) => setPendingNameInputs(prev => ({ ...prev, [item.id]: e.target.value }))}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleProvideName(item.id)}
+                                    placeholder={t('batchJobs.enterCandidateName', 'Nom du candidat...')}
+                                    className="w-40 px-2 py-1 text-sm border border-orange-300 dark:border-orange-600 rounded focus:ring-2 focus:ring-orange-500 focus:border-orange-500 dark:bg-gray-700 dark:text-white"
+                                    disabled={submittingName === item.id}
+                                  />
+                                  <button
+                                    onClick={() => handleProvideName(item.id)}
+                                    disabled={submittingName === item.id || !pendingNameInputs[item.id]?.trim()}
+                                    className="p-1.5 text-white bg-orange-500 hover:bg-orange-600 disabled:bg-gray-300 disabled:cursor-not-allowed rounded transition-colors"
+                                    title={t('batchJobs.submitName', 'Valider le nom')}
+                                  >
+                                    {submittingName === item.id ? (
+                                      <ArrowPathIcon className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                      <PaperAirplaneIcon className="w-4 h-4" />
+                                    )}
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>

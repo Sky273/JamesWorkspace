@@ -20,6 +20,7 @@ export const JOB_STATUS = {
 export const ITEM_STATUS = {
     PENDING: 'pending',
     PROCESSING: 'processing',
+    PENDING_NAME: 'pending_name',  // Waiting for manual name input (XXX detected)
     SUCCESS: 'success',
     ERROR: 'error',
     SKIPPED: 'skipped'
@@ -119,6 +120,9 @@ export async function initializeBatchJobsTable() {
                 END IF;
                 IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'batch_job_items' AND column_name = 'display_name') THEN
                     ALTER TABLE batch_job_items ADD COLUMN display_name VARCHAR(255);
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'batch_job_items' AND column_name = 'pending_data') THEN
+                    ALTER TABLE batch_job_items ADD COLUMN pending_data JSONB;
                 END IF;
             END $$;
         `);
@@ -442,6 +446,18 @@ export async function updateJobItemStatus(itemId, status, updates = {}) {
             paramIndex++;
         }
 
+        // Store pending data for items waiting for name input
+        if (updates.pending_analysis || updates.pending_text || updates.pending_improve !== undefined) {
+            const pendingData = {
+                analysis: updates.pending_analysis ? JSON.parse(updates.pending_analysis) : null,
+                text: updates.pending_text || null,
+                improve: updates.pending_improve || false
+            };
+            setClauses.push(`pending_data = $${paramIndex}`);
+            params.push(JSON.stringify(pendingData));
+            paramIndex++;
+        }
+
         await query(`
             UPDATE batch_job_items 
             SET ${setClauses.join(', ')}
@@ -449,6 +465,82 @@ export async function updateJobItemStatus(itemId, status, updates = {}) {
         `, params);
     } catch (error) {
         safeLog('error', 'Failed to update batch job item status', { error: error.message, itemId });
+        throw error;
+    }
+}
+
+/**
+ * Get item by ID
+ * @param {string} itemId - Item ID
+ * @returns {Promise<Object|null>} Item or null
+ */
+export async function getJobItem(itemId) {
+    try {
+        const result = await query(`
+            SELECT bji.*, bj.firm_id, bj.options
+            FROM batch_job_items bji
+            JOIN batch_jobs bj ON bji.job_id = bj.id
+            WHERE bji.id = $1
+        `, [itemId]);
+        return result.rows[0] || null;
+    } catch (error) {
+        safeLog('error', 'Failed to get batch job item', { error: error.message, itemId });
+        throw error;
+    }
+}
+
+/**
+ * Resume item processing after name is provided
+ * @param {string} itemId - Item ID
+ * @param {string} candidateName - Provided candidate name
+ * @returns {Promise<Object>} Updated item
+ */
+export async function resumeItemWithName(itemId, candidateName) {
+    try {
+        // Get the item with pending data
+        const item = await getJobItem(itemId);
+        if (!item) {
+            throw new Error('Item not found');
+        }
+        
+        if (item.status !== ITEM_STATUS.PENDING_NAME) {
+            throw new Error(`Item is not waiting for name input (status: ${item.status})`);
+        }
+        
+        // Update item status to pending so worker picks it up
+        await query(`
+            UPDATE batch_job_items 
+            SET status = $1, 
+                original_name = $2,
+                error_message = NULL
+            WHERE id = $3
+        `, [ITEM_STATUS.PENDING, candidateName, itemId]);
+        
+        safeLog('info', 'Item resumed with provided name', { itemId, candidateName });
+        
+        return { ...item, status: ITEM_STATUS.PENDING, original_name: candidateName };
+    } catch (error) {
+        safeLog('error', 'Failed to resume item with name', { error: error.message, itemId });
+        throw error;
+    }
+}
+
+/**
+ * Get items pending name input for a job
+ * @param {string} jobId - Job ID
+ * @returns {Promise<Array>} Items pending name
+ */
+export async function getItemsPendingName(jobId) {
+    try {
+        const result = await query(`
+            SELECT id, file_name, resume_id, progress, error_message, pending_data
+            FROM batch_job_items 
+            WHERE job_id = $1 AND status = $2
+            ORDER BY created_at ASC
+        `, [jobId, ITEM_STATUS.PENDING_NAME]);
+        return result.rows;
+    } catch (error) {
+        safeLog('error', 'Failed to get items pending name', { error: error.message, jobId });
         throw error;
     }
 }
