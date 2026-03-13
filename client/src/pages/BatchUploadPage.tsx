@@ -1258,6 +1258,9 @@ const BatchUploadPage = (): JSX.Element => {
             <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
               💡 {t('batchUpload.nominativeRecommendation', 'Pour une meilleure extraction des noms, privilégiez des fichiers nommés avec le nom du candidat (ex: Jean_Dupont_CV.pdf)')}
             </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              ⚠️ {t('batchUpload.lockedFilesWarning', 'Fermez les fichiers ouverts dans Word, LibreOffice ou autre application avant l\'import. Les fichiers verrouillés (ex: ~$document.docx) seront ignorés.')}
+            </p>
             
             {/* Folder selection button */}
             <div className="mt-4 flex justify-center">
