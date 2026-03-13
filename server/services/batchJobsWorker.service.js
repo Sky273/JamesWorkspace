@@ -453,7 +453,13 @@ async function processImportItem(item, job, options) {
     // Step 2: Extract text from file
     safeLog('info', 'Extracting text from file', { itemId: item.id, fileName: item.file_name });
     const text = await extractTextFromBuffer(item.file_data, item.file_mime_type, item.file_name);
-    safeLog('info', 'Text extracted', { itemId: item.id, textLength: text?.length });
+    
+    // Log first 500 chars of extracted text to verify trigrams and names are preserved
+    safeLog('debug', 'Text extracted - preview', { 
+        itemId: item.id, 
+        textLength: text?.length,
+        textPreview: text?.substring(0, 500)
+    });
 
     if (!text || text.length < 50) {
         throw new Error('Impossible d\'extraire le texte du CV');
@@ -461,9 +467,9 @@ async function processImportItem(item, job, options) {
 
     await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, { progress: 40 });
 
-    // Step 3: Analyze the CV
-    safeLog('info', 'Analyzing CV with LLM', { itemId: item.id, firmId: job.firm_id });
-    const analysis = await analyzeResumeWithLLM(text, job.firm_id);
+    // Step 3: Analyze the CV (pass original filename for name extraction hint)
+    safeLog('info', 'Analyzing CV with LLM', { itemId: item.id, firmId: job.firm_id, fileName: item.file_name });
+    const analysis = await analyzeResumeWithLLM(text, job.firm_id, item.file_name);
     safeLog('info', 'CV analyzed', { itemId: item.id, hasAnalysis: !!analysis, globalRating: analysis?.globalRating });
 
     await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, { progress: 60 });
@@ -540,13 +546,64 @@ async function processImportItem(item, job, options) {
         safeLog('info', 'Improving CV with LLM', { itemId: item.id, resumeId });
         await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, { progress: 75 });
 
-        const improvedResult = await improveResumeWithLLM(
-            analysis.structuredText || text,
-            analysis,
-            job.firm_id
-        );
+        // Use structuredText if available and valid, otherwise fall back to original text
+        let textForImprovement = text;
+        if (analysis.structuredText && analysis.structuredText.trim().length > 100) {
+            textForImprovement = analysis.structuredText;
+            safeLog('debug', 'Using structuredText for improvement', { 
+                itemId: item.id, 
+                structuredTextLength: analysis.structuredText.length 
+            });
+        } else {
+            safeLog('debug', 'Using original text for improvement (structuredText empty or too short)', { 
+                itemId: item.id, 
+                originalTextLength: text.length,
+                structuredTextLength: analysis.structuredText?.length || 0
+            });
+        }
 
-        if (improvedResult) {
+        let improvedResult;
+        const MAX_IMPROVE_RETRIES = 2;
+        let lastImproveError = null;
+        
+        for (let attempt = 1; attempt <= MAX_IMPROVE_RETRIES; attempt++) {
+            try {
+                safeLog('info', `Improvement attempt ${attempt}/${MAX_IMPROVE_RETRIES}`, { itemId: item.id, resumeId });
+                improvedResult = await improveResumeWithLLM(
+                    textForImprovement,
+                    analysis,
+                    job.firm_id
+                );
+                // Success - break out of retry loop
+                break;
+            } catch (improveError) {
+                lastImproveError = improveError;
+                safeLog('warn', `CV improvement attempt ${attempt} failed`, { 
+                    itemId: item.id, 
+                    resumeId, 
+                    attempt,
+                    maxRetries: MAX_IMPROVE_RETRIES,
+                    error: improveError.message 
+                });
+                
+                // If not last attempt, wait before retrying
+                if (attempt < MAX_IMPROVE_RETRIES) {
+                    await new Promise(resolve => setTimeout(resolve, 2000 * attempt));
+                }
+            }
+        }
+        
+        // If all retries failed, throw the last error
+        if (!improvedResult && lastImproveError) {
+            safeLog('error', 'CV improvement failed after all retries', { 
+                itemId: item.id, 
+                resumeId, 
+                error: lastImproveError.message 
+            });
+            throw new Error(`Échec de l'amélioration du CV après ${MAX_IMPROVE_RETRIES} tentatives: ${lastImproveError.message}`);
+        }
+
+        if (improvedResult && improvedResult.text && improvedResult.text.trim().length > 0) {
             const improvedAnalysis = improvedResult.analysis || {};
             const improvedTags = improvedAnalysis.tags || {};
 
@@ -655,7 +712,18 @@ async function processImportItem(item, job, options) {
 
             safeLog('info', 'CV improvement saved successfully', { itemId: item.id, resumeId });
         } else {
-            safeLog('warn', 'Improvement returned no result', { itemId: item.id, resumeId });
+            // Improvement returned empty text - this should not happen after the try-catch above
+            // but we handle it as a safety net
+            safeLog('error', 'Improvement returned empty or no result after successful call', { 
+                itemId: item.id, 
+                resumeId,
+                hasResult: !!improvedResult,
+                hasText: !!improvedResult?.text,
+                textLength: improvedResult?.text?.length || 0
+            });
+            
+            // Throw error to mark item as failed
+            throw new Error('L\'amélioration a retourné un texte vide. Le CV n\'a pas pu être amélioré.');
         }
     }
 
@@ -708,11 +776,57 @@ async function processImproveItem(item, job, _options) {
 
     await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, { progress: 50 });
 
-    // Improve the resume
-    const improvedResult = await improveResumeWithLLM(text, analysis, job.firm_id);
+    // Improve the resume with retry mechanism
+    let improvedResult;
+    const MAX_IMPROVE_RETRIES = 2;
+    let lastImproveError = null;
+    
+    for (let attempt = 1; attempt <= MAX_IMPROVE_RETRIES; attempt++) {
+        try {
+            safeLog('info', `Improvement attempt ${attempt}/${MAX_IMPROVE_RETRIES} (improve job)`, { 
+                itemId: item.id, 
+                resumeId: item.resume_id 
+            });
+            improvedResult = await improveResumeWithLLM(text, analysis, job.firm_id);
+            // Success - break out of retry loop
+            break;
+        } catch (improveError) {
+            lastImproveError = improveError;
+            safeLog('warn', `CV improvement attempt ${attempt} failed (improve job)`, { 
+                itemId: item.id, 
+                resumeId: item.resume_id, 
+                attempt,
+                maxRetries: MAX_IMPROVE_RETRIES,
+                error: improveError.message 
+            });
+            
+            // If not last attempt, wait before retrying
+            if (attempt < MAX_IMPROVE_RETRIES) {
+                await new Promise(resolve => setTimeout(resolve, 2000 * attempt));
+            }
+        }
+    }
+    
+    // If all retries failed, throw the last error
+    if (!improvedResult && lastImproveError) {
+        safeLog('error', 'CV improvement failed after all retries (improve job)', { 
+            itemId: item.id, 
+            resumeId: item.resume_id, 
+            error: lastImproveError.message 
+        });
+        throw new Error(`Échec de l'amélioration du CV après ${MAX_IMPROVE_RETRIES} tentatives: ${lastImproveError.message}`);
+    }
 
-    if (!improvedResult) {
-        throw new Error('Échec de l\'amélioration');
+    // Validate that we have actual improved text
+    if (!improvedResult || !improvedResult.text || improvedResult.text.trim().length === 0) {
+        safeLog('error', 'Improvement returned empty result (improve job)', { 
+            itemId: item.id, 
+            resumeId: item.resume_id,
+            hasResult: !!improvedResult,
+            hasText: !!improvedResult?.text,
+            textLength: improvedResult?.text?.length || 0
+        });
+        throw new Error('L\'amélioration a retourné un texte vide. Le CV n\'a pas pu être amélioré.');
     }
 
     await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, { progress: 80 });
@@ -820,6 +934,7 @@ async function processImproveItem(item, job, _options) {
 
 /**
  * Extract text from PDF using pdfjs-dist (more reliable than pdf-parse)
+ * Improved to better preserve structure, trigrams, and candidate names
  */
 async function extractTextFromPDFBuffer(buffer) {
     const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
@@ -833,17 +948,55 @@ async function extractTextFromPDFBuffer(buffer) {
     
     let fullText = '';
     
-    // Extract text from each page
+    // Extract text from each page with improved structure preservation
     for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
         const page = await pdf.getPage(pageNum);
         const textContent = await page.getTextContent();
-        const pageText = textContent.items
-            .map(item => item.str)
-            .join(' ');
-        fullText += pageText + '\n';
+        
+        // Group text items by their vertical position (Y coordinate) to preserve lines
+        const lines = [];
+        let currentLine = [];
+        let lastY = null;
+        const Y_THRESHOLD = 5; // Pixels threshold to consider same line
+        
+        for (const item of textContent.items) {
+            const y = item.transform ? item.transform[5] : 0;
+            
+            // If Y position changed significantly, start a new line
+            if (lastY !== null && Math.abs(y - lastY) > Y_THRESHOLD) {
+                if (currentLine.length > 0) {
+                    lines.push(currentLine);
+                    currentLine = [];
+                }
+            }
+            
+            // Add item to current line (preserve the text as-is, including trigrams)
+            if (item.str && item.str.trim()) {
+                currentLine.push(item.str);
+            }
+            lastY = y;
+        }
+        
+        // Don't forget the last line
+        if (currentLine.length > 0) {
+            lines.push(currentLine);
+        }
+        
+        // Join items within each line with space, join lines with newline
+        const pageText = lines
+            .map(line => line.join(' '))
+            .join('\n');
+        
+        fullText += pageText + '\n\n';
     }
     
-    return fullText.trim();
+    // Clean up excessive whitespace while preserving structure
+    fullText = fullText
+        .replace(/[ \t]+/g, ' ')           // Multiple spaces to single space
+        .replace(/\n{3,}/g, '\n\n')        // Max 2 consecutive newlines
+        .trim();
+    
+    return fullText;
 }
 
 /**
@@ -876,8 +1029,11 @@ async function extractTextFromBuffer(buffer, mimeType, fileName) {
 
 /**
  * Analyze a resume using the LLM (with rate limiting)
+ * @param {string} text - Resume text to analyze
+ * @param {string} _firmId - Firm ID (unused but kept for API consistency)
+ * @param {string} originalFileName - Original file name for name extraction hint
  */
-async function analyzeResumeWithLLM(text, _firmId) {
+async function analyzeResumeWithLLM(text, _firmId, originalFileName = null) {
     const { analyzeResume, cleanupText } = await import('./openai.service.js');
     const { getLLMSettings, calculateWeightedGlobalRating } = await import('./settings.service.js');
     const { getAcceptedIndustriesString } = await import('./industry.service.js');
@@ -902,8 +1058,8 @@ async function analyzeResumeWithLLM(text, _firmId) {
     await acquireLLMSlot();
     let analysis;
     try {
-        // Analyze
-        analysis = await analyzeResume(cleanedText, model, analysisPrompt, null, false);
+        // Analyze with original filename for name extraction hint
+        analysis = await analyzeResume(cleanedText, model, analysisPrompt, null, false, originalFileName);
     } finally {
         releaseLLMSlot();
     }
@@ -947,8 +1103,9 @@ async function improveResumeWithLLM(text, analysis, _firmId) {
     // Extract the actual text from the result (improveResume returns { text, analysis })
     const improvedText = typeof improveResult === 'string' ? improveResult : improveResult?.text;
     
-    if (!improvedText) {
-        throw new Error('Improvement returned empty text');
+    // Validate that we have actual content (not null, undefined, or empty string)
+    if (!improvedText || improvedText.trim().length === 0) {
+        throw new Error('L\'amélioration LLM a retourné un texte vide. Le CV n\'a pas pu être amélioré.');
     }
 
     safeLog('debug', 'Improvement result received', {
@@ -1261,14 +1418,16 @@ async function generateJobExport(jobId, options) {
         }
     }
     
-    // Log export statistics
+    // Log export statistics - count only actual files, not directories
+    const actualFilesInZip = Object.values(zip.files).filter(f => !f.dir).length;
     safeLog('info', 'Export processing completed', { 
         jobId, 
         totalItems: successfulItems.length,
         formats: exportFormats,
         exportSuccessCount, 
         exportErrorCount,
-        filesInZip: Object.keys(zip.files).length,
+        filesInZip: actualFilesInZip,
+        totalZipEntries: Object.keys(zip.files).length,
         errors: exportErrors.length > 0 ? exportErrors.slice(0, 5) : undefined
     });
     

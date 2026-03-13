@@ -28,7 +28,7 @@ const upload = multer({
     storage: multer.memoryStorage(),
     limits: {
         fileSize: 50 * 1024 * 1024, // 50MB per file
-        files: 100 // Max 100 files per request
+        files: 200 // Max 200 files per request
     },
     fileFilter: (req, file, cb) => {
         const allowedMimes = [
@@ -48,7 +48,7 @@ const upload = multer({
  * POST /api/batch-jobs
  * Create a new batch job with files
  */
-router.post('/', authenticateToken, upload.array('files', 100), async (req, res) => {
+router.post('/', authenticateToken, upload.array('files', 200), async (req, res) => {
     try {
         const userId = req.user?.id;
         const userRole = req.user?.role?.toLowerCase();

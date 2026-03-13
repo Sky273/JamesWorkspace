@@ -110,7 +110,10 @@ export async function analyzeHandler(req, res) {
             cleanedLength: cleanedText.length 
         });
 
-        let analysis = await analyzeResume(cleanedText, model, analysisPrompt, userMetadata);
+        // Get original filename for name extraction hint
+        const originalFileName = resumeRecord.original_file_name || resumeRecord.name || null;
+        
+        let analysis = await analyzeResume(cleanedText, model, analysisPrompt, userMetadata, false, originalFileName);
         
         // Recalculate globalRating based on admin-defined weights
         analysis = await calculateWeightedGlobalRating(analysis, settings);
@@ -135,7 +138,7 @@ export async function analyzeHandler(req, res) {
  */
 export async function analyzeTextHandler(req, res) {
     try {
-        const { text } = req.body;
+        const { text, fileName } = req.body;
         const userMetadata = getRequestMetadata(req);
         
         if (!text) {
@@ -159,10 +162,11 @@ export async function analyzeTextHandler(req, res) {
         const cleanedText = cleanupText(text);
         safeLog('debug', 'Text cleaned before analysis', { 
             originalLength: text.length, 
-            cleanedLength: cleanedText.length 
+            cleanedLength: cleanedText.length,
+            fileName: fileName || 'not provided'
         });
 
-        let analysis = await analyzeResume(cleanedText, model, analysisPrompt, userMetadata);
+        let analysis = await analyzeResume(cleanedText, model, analysisPrompt, userMetadata, false, fileName || null);
         
         // Recalculate globalRating based on admin-defined weights
         analysis = await calculateWeightedGlobalRating(analysis, settings);

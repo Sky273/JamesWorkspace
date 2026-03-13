@@ -166,7 +166,7 @@ const BatchUploadPage = (): JSX.Element => {
   const keepAliveIntervalRef = useRef<NodeJS.Timeout | null>(null); // Session keep-alive interval
   
   // Constants
-  const MAX_FILES = 100;
+  const MAX_FILES = 200;
 
   // Cleanup on unmount
   useEffect(() => {

@@ -272,16 +272,24 @@ function normalizeAnalysisResponse(analysis) {
 }
 
 /**
- * Analyze resume text using OpenAI
- * @param {string} resumeText - Resume text to analyze
+ * Analyze a resume using OpenAI
+ * @param {string} resumeText - The resume text to analyze
  * @param {string} model - OpenAI model to use
- * @param {string} analysisPrompt - Analysis prompt template
+ * @param {string} analysisPrompt - The analysis prompt template
  * @param {Object} userMetadata - User metadata for logging
  * @param {boolean} isImprovedCV - Whether this is an improved CV (for logging purposes only)
+ * @param {string} originalFileName - Original file name for name extraction hint
  * @returns {Promise<Object>} - Parsed analysis result
  */
-export async function analyzeResume(resumeText, model, analysisPrompt, userMetadata = null, isImprovedCV = false) {
-    const prompt = analysisPrompt.replace('{TEXT}', resumeText);
+export async function analyzeResume(resumeText, model, analysisPrompt, userMetadata = null, isImprovedCV = false, originalFileName = null) {
+    let prompt = analysisPrompt.replace('{TEXT}', resumeText);
+    
+    // Inject original filename if available (helps LLM determine candidate name)
+    if (originalFileName) {
+        prompt = prompt.replace('{FILENAME}', originalFileName);
+    } else {
+        prompt = prompt.replace('{FILENAME}', 'Non disponible');
+    }
     
     // Agnostic system message - same for all CVs
     const systemMessage = 'You are a JSON-only resume analysis API. Respond with valid JSON only.';
@@ -363,15 +371,24 @@ export async function improveResume(text, analysis, model, improvementPromptTemp
         safeLog('debug', '--- END PROMPT ---');
     }
 
+    // Validate input text before calling LLM
+    if (!text || text.trim().length < 100) {
+        safeLog('error', 'Improvement input text too short', { 
+            textLength: text?.length || 0,
+            minRequired: 100
+        });
+        throw new Error('Le texte du CV est trop court pour être amélioré (minimum 100 caractères).');
+    }
+
     const response = await callOpenAI({
         model,
         messages: [
             { role: 'system', content: 'You are a professional resume improvement assistant. You MUST respond with valid JSON only, following the exact structure specified in the user prompt. Do not include any text outside the JSON object.' },
             { role: 'user', content: improvementPrompt }
         ],
-        maxTokens: 8192,
+        maxTokens: 16384,  // Increased from 8192 to handle longer CVs
         temperature: 0.3,
-        timeout: 90000,
+        timeout: 300000,   // 5 minutes for complex CVs
         userMetadata,
         operationType: 'Resume Improvement'
     });
@@ -397,6 +414,16 @@ export async function improveResume(text, analysis, model, improvementPromptTemp
             
             // Clean up the HTML content
             const cleanedText = cleanupHtml(parsed.improvedText || '');
+            
+            // Validate that we have actual content
+            if (!cleanedText || cleanedText.trim().length === 0) {
+                safeLog('error', 'LLM returned empty improvedText in JSON response', {
+                    hasImprovedText: !!parsed.improvedText,
+                    improvedTextLength: parsed.improvedText?.length || 0,
+                    cleanedTextLength: cleanedText?.length || 0
+                });
+                throw new Error('Le modèle LLM a retourné un CV amélioré vide. Veuillez réessayer.');
+            }
             
             // Build analysis object from improvements
             const improvements = parsed.improvements || {};
@@ -443,6 +470,17 @@ export async function improveResume(text, analysis, model, improvementPromptTemp
 
     // Fallback: if response is plain HTML, return with empty analysis
     const cleanedText = cleanupHtml(rawContent);
+    
+    // Validate fallback content is not empty
+    if (!cleanedText || cleanedText.trim().length === 0) {
+        safeLog('error', 'LLM returned empty content in fallback (non-JSON) response', {
+            rawContentLength: rawContent?.length || 0,
+            cleanedTextLength: cleanedText?.length || 0,
+            rawContentPreview: rawContent?.substring(0, 200)
+        });
+        throw new Error('Le modèle LLM a retourné une réponse vide. Veuillez réessayer.');
+    }
+    
     return {
         text: cleanedText,
         analysis: {

@@ -162,6 +162,14 @@ MODE ANONYME - RÈGLES D'ANONYMISATION OBLIGATOIRES:
 - Remplacer TOUTES les occurrences du nom complet du candidat par son trigramme: {TRIGRAM}
 - Le prénom et le nom du candidat ne doivent JAMAIS apparaître dans le CV (ni séparément, ni ensemble)
 
+EXTRACTION DU NOM DU CANDIDAT (pour anonymisation):
+Pour identifier le nom du candidat à anonymiser, utilisez ces sources dans l'ordre de priorité :
+1. Le nom explicitement mentionné dans le contenu du CV (en-tête, signature, coordonnées)
+2. Le nom du fichier d'origine si disponible : {FILENAME}
+   - Patterns courants : "CV_Prénom_Nom.pdf", "NOM_Prénom_CV.docx", "Prénom-NOM.pdf", "Prénom DUPONT.pdf"
+   - Ignorer les préfixes (CV_, Resume_, etc.) et extensions (.pdf, .docx)
+   - Extraire le prénom et nom en tenant compte des séparateurs (_, -, espace)
+
 INFORMATIONS À SUPPRIMER IMPÉRATIVEMENT (ne jamais inclure dans le CV):
 - Nom et prénom du candidat (remplacer par {TRIGRAM})
 - Adresses email (ex: nom@domaine.com, prenom.nom@gmail.com, etc.)
@@ -192,7 +200,15 @@ VÉRIFICATION FINALE OBLIGATOIRE: Avant de générer le CV, vérifiez que:
 4. Seul le trigramme {TRIGRAM} identifie le candidat`;
 
 export const ANONYMIZATION_RULES_NOMINATIVE = `
-- Conserver toutes les informations personnelles du candidat (nom, coordonnées, etc.)`;
+MODE NOMINATIF - Conserver toutes les informations personnelles du candidat (nom, coordonnées, etc.)
+
+EXTRACTION DU NOM DU CANDIDAT:
+Pour déterminer le nom du candidat, utilisez ces sources dans l'ordre de priorité :
+1. Le nom explicitement mentionné dans le contenu du CV (en-tête, signature, coordonnées)
+2. Le nom du fichier d'origine si le contenu ne permet pas d'identifier clairement le nom : {FILENAME}
+   - Patterns courants : "CV_Prénom_Nom.pdf", "NOM_Prénom_CV.docx", "Prénom-NOM.pdf", "Prénom DUPONT.pdf"
+   - Ignorer les préfixes (CV_, Resume_, etc.) et extensions (.pdf, .docx)
+   - Extraire le prénom et nom en tenant compte des séparateurs (_, -, espace)`;
 
 export const DEFAULT_ANALYSIS_PROMPT = `Vous êtes un expert RH spécialisé IS/IT (contexte ESN), orienté recrutement et ATS.
 Analysez le CV ci-dessous de manière factuelle, stable et reproductible.
