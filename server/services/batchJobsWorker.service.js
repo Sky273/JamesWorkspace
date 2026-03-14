@@ -63,6 +63,25 @@ function parseScore(value) {
     return null;
 }
 
+function removeSuggestionMarkers(content) {
+    let cleaned = content || '';
+    cleaned = cleaned.replace(/<span[^>]*style="[^"]*(?:#F59E0B|#D97706)[^"]*"[^>]*>[^<]*<\/span>/g, '');
+    cleaned = cleaned.replace(/<span[^>]*>[^<]*💡[^<]*<\/span>/g, '');
+    cleaned = cleaned.replace(/<span[^>]*title="[^"]*"[^>]*>💡[^<]*<\/span>/g, '');
+    let previous = '';
+    while (previous !== cleaned) {
+        previous = cleaned;
+        cleaned = cleaned.replace(/<div[^>]*(?:class="suggestion-highlight"|style="[^"]*border-left:\s*4px\s+solid\s+#F59E0B)[^>]*>([\s\S]*?)<\/div>/g, '$1');
+    }
+    cleaned = cleaned.replace(/<div[^>]*class="suggestion-panel"[^>]*>[\s\S]*?<\/ul>\s*<\/div>/g, '');
+    cleaned = cleaned.replace(/<div[^>]*style="[^"]*background:\s*linear-gradient\(135deg,\s*#FEF3C7[^"]*"[^>]*>[\s\S]*?<\/ul>\s*<\/div>/g, '');
+    cleaned = cleaned.replace(/💡\s*\d*/g, '');
+    cleaned = cleaned.replace(/<span[^>]*>\s*<\/span>/g, '');
+    cleaned = cleaned.replace(/<div[^>]*>\s*<\/div>/g, '');
+    cleaned = cleaned.replace(/\s{2,}/g, ' ');
+    return cleaned;
+}
+
 /**
  * Generate a trigram from candidate name (first letter of first name + first two letters of last name)
  * Examples: "Jean Dupont" -> "JDU", "Marie Martin" -> "MMA", "Pierre-Louis Durand" -> "PDU"
@@ -296,11 +315,8 @@ async function processNextBatch() {
                     // Generate export ZIP if export was requested
                     const options = typeof job.options === 'string' ? JSON.parse(job.options) : (job.options || {});
                     if (options.export && options.templateId) {
-                        try {
-                            await generateJobExport(job.id, options);
-                        } catch (exportError) {
-                            safeLog('error', 'Failed to generate export for job', { jobId: job.id, error: exportError.message });
-                        }
+                        await generateJobExport(job.id, options);
+                        await updateJobCounters(job.id);
                     }
                     
                     await updateJobStatus(job.id, JOB_STATUS.COMPLETED);
@@ -327,11 +343,8 @@ async function processNextBatch() {
                 // Generate export ZIP if export was requested
                 const options = typeof job.options === 'string' ? JSON.parse(job.options) : (job.options || {});
                 if (options.export && options.templateId) {
-                    try {
-                        await generateJobExport(job.id, options);
-                    } catch (exportError) {
-                        safeLog('error', 'Failed to generate export for job', { jobId: job.id, error: exportError.message });
-                    }
+                    await generateJobExport(job.id, options);
+                    await updateJobCounters(job.id);
                 }
                 
                 await updateJobStatus(job.id, JOB_STATUS.COMPLETED);
@@ -1333,6 +1346,7 @@ async function generateJobExport(jobId, options) {
     let exportSuccessCount = 0;
     let exportErrorCount = 0;
     const exportErrors = [];
+    const itemResults = new Map();
     
     // Create folders for each format in the ZIP
     const formatFolders = {};
@@ -1342,6 +1356,10 @@ async function generateJobExport(jobId, options) {
     
     // Get template name for file naming
     const templateName = (template.name || 'Template').replace(/[^a-zA-Z0-9\-_\s]/g, '').replace(/\s+/g, '_');
+
+    for (const item of successfulItems) {
+        itemResults.set(item.id, { item, failures: [], successCount: 0 });
+    }
     
     /**
      * Helper: generate a document via PDF server with retry
@@ -1406,12 +1424,12 @@ async function generateJobExport(jobId, options) {
                     [item.adaptation_id]
                 );
                 if (adaptResult.rows.length === 0) {
-                    return { success: false, error: 'Adaptation not found', resumeId: item.resume_id, format, sourceType };
+                    return { success: false, itemId: item.id, error: 'Adaptation not found', resumeId: item.resume_id, format, sourceType };
                 }
                 const adaptation = adaptResult.rows[0];
-                content = adaptation.adapted_text || '';
+                content = removeSuggestionMarkers(adaptation.adapted_text || '');
                 if (!content || content.trim().length === 0) {
-                    return { success: false, error: 'Adaptation has no content', resumeId: item.resume_id, format, sourceType };
+                    return { success: false, itemId: item.id, error: 'Adaptation has no content', resumeId: item.resume_id, format, sourceType };
                 }
                 candidateName = adaptation.candidate_name || 'Candidat';
                 candidateTitle = adaptation.adapted_title || '';
@@ -1420,12 +1438,12 @@ async function generateJobExport(jobId, options) {
                 // Fetch resume
                 const resumeResult = await query('SELECT * FROM resumes WHERE id = $1', [item.resume_id]);
                 if (resumeResult.rows.length === 0) {
-                    return { success: false, error: 'Resume not found in database', resumeId: item.resume_id, format, sourceType };
+                    return { success: false, itemId: item.id, error: 'Resume not found in database', resumeId: item.resume_id, format, sourceType };
                 }
                 const resume = resumeResult.rows[0];
-                content = resume.improved_text || resume.original_text || '';
+                content = removeSuggestionMarkers(resume.improved_text || resume.original_text || '');
                 if (!content || content.trim().length === 0) {
-                    return { success: false, error: 'Resume has no content', resumeId: item.resume_id, format, sourceType };
+                    return { success: false, itemId: item.id, error: 'Resume has no content', resumeId: item.resume_id, format, sourceType };
                 }
                 candidateName = resume.name || 'Candidat';
                 candidateTitle = resume.title || '';
@@ -1450,7 +1468,7 @@ async function generateJobExport(jobId, options) {
             const result = await generateDocumentWithRetry(processedBody, processedHeader, processedFooter, candidateName, format);
             
             if (!result.success) {
-                return { success: false, error: result.error, resumeId: item.resume_id, format, sourceType };
+                return { success: false, itemId: item.id, error: result.error, resumeId: item.resume_id, format, sourceType };
             }
             
             const sanitizedItemName = (item.file_name || '')
@@ -1460,10 +1478,10 @@ async function generateJobExport(jobId, options) {
                 ? `${trigram}_${sanitizedItemName}_${templateName}.${fileExtension}`
                 : `${trigram}_${templateName}.${fileExtension}`;
             
-            return { success: true, fileName, buffer: result.buffer, resumeId: item.resume_id, format, relativePath: item.relative_path, sourceType };
+            return { success: true, itemId: item.id, fileName, buffer: result.buffer, resumeId: item.resume_id, format, relativePath: item.relative_path, sourceType };
         } catch (err) {
             safeLog('error', `Error processing ${sourceType} for ${format.toUpperCase()} export`, { resumeId: item.resume_id, adaptationId: item.adaptation_id, error: err.message });
-            return { success: false, error: err.message, resumeId: item.resume_id, format, sourceType };
+            return { success: false, itemId: item.id, error: err.message, resumeId: item.resume_id, format, sourceType };
         }
     };
     
@@ -1498,6 +1516,10 @@ async function generateJobExport(jobId, options) {
             // Add results to the appropriate folder
             for (const result of batchResults) {
                 if (result.success) {
+                    const itemResult = itemResults.get(result.itemId);
+                    if (itemResult) {
+                        itemResult.successCount++;
+                    }
                     // Determine the file path in the ZIP
                     let filePath = result.fileName;
                     
@@ -1542,7 +1564,11 @@ async function generateJobExport(jobId, options) {
                     exportSuccessCount++;
                 } else {
                     exportErrorCount++;
-                    exportErrors.push({ resumeId: result.resumeId, format: result.format, error: result.error });
+                    exportErrors.push({ itemId: result.itemId, resumeId: result.resumeId, format: result.format, error: result.error });
+                    const itemResult = itemResults.get(result.itemId);
+                    if (itemResult) {
+                        itemResult.failures.push(`${result.format.toUpperCase()}: ${result.error}`);
+                    }
                 }
             }
             
@@ -1578,11 +1604,22 @@ async function generateJobExport(jobId, options) {
         totalZipEntries: Object.keys(zip.files).length,
         errors: exportErrors.length > 0 ? exportErrors.slice(0, 5) : undefined
     });
+
+    for (const { item, failures, successCount } of itemResults.values()) {
+        if (failures.length > 0) {
+            await updateJobItemStatus(item.id, ITEM_STATUS.ERROR, {
+                progress: 100,
+                error_message: failures.join(' | ').slice(0, 1000)
+            });
+        } else if (successCount > 0) {
+            await updateJobItemStatus(item.id, ITEM_STATUS.SUCCESS, { progress: 100 });
+        }
+    }
     
     // Check if any files were added
-    if (Object.keys(zip.files).length === 0) {
+    if (actualFilesInZip === 0) {
         safeLog('warn', 'No files generated for export', { jobId, exportErrors });
-        return;
+        throw new Error('No files generated for export');
     }
     
     // Generate ZIP and save to temp directory
