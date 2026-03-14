@@ -124,6 +124,12 @@ export async function initializeBatchJobsTable() {
                 IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'batch_job_items' AND column_name = 'pending_data') THEN
                     ALTER TABLE batch_job_items ADD COLUMN pending_data JSONB;
                 END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'batch_job_items' AND column_name = 'source_type') THEN
+                    ALTER TABLE batch_job_items ADD COLUMN source_type VARCHAR(20) DEFAULT 'resume';
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'batch_job_items' AND column_name = 'adaptation_id') THEN
+                    ALTER TABLE batch_job_items ADD COLUMN adaptation_id UUID;
+                END IF;
             END $$;
         `);
 
@@ -231,6 +237,47 @@ export async function addJobResumeIds(jobId, resumeIds) {
 }
 
 /**
+ * Add export items to a batch job (for deal-export jobs)
+ * @param {string} jobId - Job ID
+ * @param {Array} items - Array of { resumeId, adaptationId, sourceType, fileName, relativePath }
+ * @returns {Promise<number>} Number of items added
+ */
+export async function addJobExportItems(jobId, items) {
+    try {
+        let addedCount = 0;
+
+        for (const item of items) {
+            await query(`
+                INSERT INTO batch_job_items (job_id, resume_id, adaptation_id, source_type, file_name, relative_path, status)
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
+            `, [
+                jobId,
+                item.resumeId || null,
+                item.adaptationId || null,
+                item.sourceType,
+                item.fileName,
+                item.relativePath || null,
+                ITEM_STATUS.PENDING
+            ]);
+            addedCount++;
+        }
+
+        // Update total_items count
+        await query(`
+            UPDATE batch_jobs 
+            SET total_items = (SELECT COUNT(*) FROM batch_job_items WHERE job_id = $1)
+            WHERE id = $1
+        `, [jobId]);
+
+        safeLog('info', 'Added export items to batch job', { jobId, count: addedCount });
+        return addedCount;
+    } catch (error) {
+        safeLog('error', 'Failed to add export items to batch job', { error: error.message, jobId });
+        throw error;
+    }
+}
+
+/**
  * Get a job by ID
  * @param {string} jobId - Job ID
  * @returns {Promise<Object|null>} Job or null
@@ -262,7 +309,7 @@ export async function getJob(jobId) {
 export async function getJobItems(jobId) {
     try {
         const result = await query(`
-            SELECT id, job_id, resume_id, file_name, relative_path, status, progress, error_message, 
+            SELECT id, job_id, resume_id, adaptation_id, source_type, file_name, relative_path, status, progress, error_message, 
                    original_name, display_name, created_at, processed_at
             FROM batch_job_items
             WHERE job_id = $1
@@ -875,6 +922,7 @@ export default {
     createJob,
     addJobItems,
     addJobResumeIds,
+    addJobExportItems,
     getJob,
     getJobItems,
     getJobsByFirm,

@@ -14,6 +14,7 @@ import {
     createJob,
     addJobItems,
     addJobResumeIds,
+    addJobExportItems,
     getJob,
     getJobItems,
     getJobsByFirm,
@@ -24,6 +25,7 @@ import {
     resumeItemWithName,
     getItemsPendingName
 } from '../services/batchJobs.service.js';
+import { query } from '../config/database.js';
 
 const router = express.Router();
 
@@ -207,6 +209,143 @@ router.post('/improve', authenticateToken, async (req, res) => {
     } catch (error) {
         safeLog('error', 'Failed to create batch improvement job', { error: error.message });
         res.status(500).json({ error: error.message || 'Erreur lors de la création du job' });
+    }
+});
+
+/**
+ * POST /api/batch-jobs/deal-export
+ * Create a batch export job for a deal (CVs + adaptations)
+ */
+router.post('/deal-export', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user?.id;
+        const userRole = req.user?.role?.toLowerCase();
+        const userFirmId = req.user?.firmId || req.user?.firm_id;
+        const isAdmin = userRole === 'admin';
+
+        const { dealId, templateId, exportFormats = ['pdf'] } = req.body;
+
+        if (!dealId) {
+            return res.status(400).json({ error: 'Deal ID requis' });
+        }
+        if (!templateId) {
+            return res.status(400).json({ error: 'Template ID requis' });
+        }
+
+        // Verify deal exists and user has access
+        const dealResult = await query(
+            'SELECT id, title, firm_id FROM deals WHERE id = $1',
+            [dealId]
+        );
+        if (dealResult.rows.length === 0) {
+            return res.status(404).json({ error: 'Affaire non trouvée' });
+        }
+        const deal = dealResult.rows[0];
+
+        if (!isAdmin && deal.firm_id !== userFirmId) {
+            return res.status(403).json({ error: 'Accès non autorisé' });
+        }
+
+        // 1. Get resumes linked to the deal
+        const resumesResult = await query(`
+            SELECT r.id, r.name, r.title,
+                   latest_item.relative_path
+            FROM resumes r
+            INNER JOIN deal_resumes dr ON r.id = dr.resume_id
+            LEFT JOIN LATERAL (
+                SELECT bji.relative_path
+                FROM batch_job_items bji
+                WHERE bji.resume_id = r.id
+                  AND bji.relative_path IS NOT NULL
+                ORDER BY bji.created_at DESC
+                LIMIT 1
+            ) latest_item ON TRUE
+            WHERE dr.deal_id = $1
+            ORDER BY LOWER(r.name) ASC
+        `, [dealId]);
+
+        // 2. Get adaptations linked to missions of this deal
+        const adaptationsResult = await query(`
+            SELECT ra.id, ra.resume_id, ra.candidate_name, ra.adapted_title, ra.mission_title,
+                   latest_item.relative_path,
+                   m.title as mission_name
+            FROM resume_adaptations ra
+            INNER JOIN missions m ON ra.mission_id = m.id
+            LEFT JOIN LATERAL (
+                SELECT bji.relative_path
+                FROM batch_job_items bji
+                WHERE bji.resume_id = ra.resume_id
+                  AND bji.relative_path IS NOT NULL
+                ORDER BY bji.created_at DESC
+                LIMIT 1
+            ) latest_item ON TRUE
+            WHERE m.deal_id = $1
+            ORDER BY m.title ASC, ra.candidate_name ASC
+        `, [dealId]);
+
+        const totalItems = resumesResult.rows.length + adaptationsResult.rows.length;
+        if (totalItems === 0) {
+            return res.status(400).json({ error: 'Aucun CV ni adaptation à exporter pour cette affaire' });
+        }
+
+        // Create the job
+        const job = await createJob({
+            firmId: deal.firm_id,
+            userId,
+            jobType: 'deal-export',
+            options: {
+                dealId,
+                dealTitle: deal.title,
+                templateId,
+                exportFormats: Array.isArray(exportFormats) ? exportFormats : [exportFormats],
+                export: true
+            }
+        });
+
+        // Build export items
+        const exportItems = [];
+
+        for (const resume of resumesResult.rows) {
+            exportItems.push({
+                resumeId: resume.id,
+                adaptationId: null,
+                sourceType: 'resume',
+                fileName: resume.name || 'CV',
+                relativePath: resume.relative_path || null
+            });
+        }
+
+        for (const adaptation of adaptationsResult.rows) {
+            exportItems.push({
+                resumeId: adaptation.resume_id,
+                adaptationId: adaptation.id,
+                sourceType: 'adaptation',
+                fileName: `${adaptation.candidate_name || 'Candidat'} - ${adaptation.mission_name || 'Mission'}`,
+                relativePath: adaptation.relative_path || null
+            });
+        }
+
+        await addJobExportItems(job.id, exportItems);
+
+        const updatedJob = await getJob(job.id);
+
+        safeLog('info', 'Deal export job created', {
+            jobId: job.id,
+            dealId,
+            dealTitle: deal.title,
+            resumeCount: resumesResult.rows.length,
+            adaptationCount: adaptationsResult.rows.length,
+            exportFormats
+        });
+
+        res.status(201).json({
+            ...updatedJob,
+            resumeCount: resumesResult.rows.length,
+            adaptationCount: adaptationsResult.rows.length
+        });
+    } catch (error) {
+        safeLog('error', 'Failed to create deal export job', { error: error.message });
+        res.status(500).json({ error: error.message || 'Erreur lors de la création du job d\'export' });
     }
 });
 

@@ -367,6 +367,10 @@ async function processItem(item, job) {
             await processImportItem(item, job, options);
         } else if (job.job_type === 'improve') {
             await processImproveItem(item, job, options);
+        } else if (job.job_type === 'deal-export') {
+            // Deal-export items don't need individual processing - 
+            // the actual export happens in generateJobExport when the job completes
+            await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, { progress: 50 });
         } else {
             throw new Error(`Unknown job type: ${job.job_type}`);
         }
@@ -1283,9 +1287,9 @@ async function generateJobExport(jobId, options) {
     }, {});
     safeLog('info', 'Job items status breakdown', { jobId, totalItems: items.length, statusCounts });
     
-    // Get successful items with resume_id
-    const successfulItems = items.filter(item => item.status === 'success' && item.resume_id);
-    const successWithoutResumeId = items.filter(item => item.status === 'success' && !item.resume_id);
+    // Get successful items with resume_id or adaptation_id
+    const successfulItems = items.filter(item => item.status === 'success' && (item.resume_id || item.adaptation_id));
+    const successWithoutResumeId = items.filter(item => item.status === 'success' && !item.resume_id && !item.adaptation_id);
     
     // Log relative paths for debugging
     const itemsWithRelativePath = successfulItems.filter(item => item.relative_path);
@@ -1328,35 +1332,116 @@ async function generateJobExport(jobId, options) {
     let exportErrorCount = 0;
     const exportErrors = [];
     
+    // Detect if this is a deal-export job (has adaptation items)
+    const isDealExport = _job?.job_type === 'deal-export';
+    
     // Create folders for each format in the ZIP
     const formatFolders = {};
     for (const format of exportFormats) {
-        formatFolders[format] = zip.folder(format.toUpperCase());
+        const formatFolder = zip.folder(format.toUpperCase());
+        if (isDealExport) {
+            // For deal-export: create CVs/ and Adaptations/ subfolders
+            formatFolders[format] = {
+                root: formatFolder,
+                cvs: formatFolder.folder('CVs'),
+                adaptations: formatFolder.folder('Adaptations')
+            };
+        } else {
+            formatFolders[format] = { root: formatFolder };
+        }
     }
     
     // Get template name for file naming
     const templateName = (template.name || 'Template').replace(/[^a-zA-Z0-9\-_\s]/g, '').replace(/\s+/g, '_');
     
+    /**
+     * Helper: generate a document via PDF server with retry
+     */
+    const generateDocumentWithRetry = async (processedBody, processedHeader, processedFooter, candidateName, format) => {
+        const endpoint = format === 'pdf' ? '/generate-pdf' : '/generate-docx';
+        const fileExtension = format === 'pdf' ? 'pdf' : format;
+        const MAX_RETRIES = 3;
+        let lastError = null;
+        
+        for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+            try {
+                const response = await fetch(`${PDF_SERVER_URL}${endpoint}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        htmlContent: processedBody,
+                        filename: `${candidateName.replace(/\s+/g, '_')}.${fileExtension}`,
+                        stylesheet: template.stylesheet || '',
+                        headerContent: processedHeader || undefined,
+                        footerContent: processedFooter || undefined,
+                        footerHeight: template.footer_height || 25,
+                        format: format
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text().catch(() => 'Unknown error');
+                    lastError = `${format.toUpperCase()} generation failed (status ${response.status}): ${errorText}`;
+                    if (attempt < MAX_RETRIES) {
+                        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+                        continue;
+                    }
+                    return { success: false, error: lastError };
+                }
+                
+                const buffer = await response.arrayBuffer();
+                return { success: true, buffer };
+            } catch (fetchErr) {
+                lastError = fetchErr.message;
+                if (attempt < MAX_RETRIES) {
+                    await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+                    continue;
+                }
+            }
+        }
+        return { success: false, error: lastError || 'Unknown error after retries' };
+    };
+    
     // Process single item for a specific format
     const processExportItemForFormat = async (item, format) => {
+        const fileExtension = format === 'pdf' ? 'pdf' : format;
+        const sourceType = item.source_type || 'resume';
+        
         try {
-            // Fetch resume
-            const resumeResult = await query('SELECT * FROM resumes WHERE id = $1', [item.resume_id]);
-            if (resumeResult.rows.length === 0) {
-                return { success: false, error: 'Resume not found in database', resumeId: item.resume_id, format };
+            let content, candidateName, candidateTitle, trigram;
+            
+            if (sourceType === 'adaptation' && item.adaptation_id) {
+                // Fetch adaptation
+                const adaptResult = await query(
+                    'SELECT adapted_text, candidate_name, adapted_title, mission_title FROM resume_adaptations WHERE id = $1',
+                    [item.adaptation_id]
+                );
+                if (adaptResult.rows.length === 0) {
+                    return { success: false, error: 'Adaptation not found', resumeId: item.resume_id, format, sourceType };
+                }
+                const adaptation = adaptResult.rows[0];
+                content = adaptation.adapted_text || '';
+                if (!content || content.trim().length === 0) {
+                    return { success: false, error: 'Adaptation has no content', resumeId: item.resume_id, format, sourceType };
+                }
+                candidateName = adaptation.candidate_name || 'Candidat';
+                candidateTitle = adaptation.adapted_title || '';
+                trigram = candidateName.replace(/[^a-zA-Z0-9]/g, '').substring(0, 3).toUpperCase();
+            } else {
+                // Fetch resume
+                const resumeResult = await query('SELECT * FROM resumes WHERE id = $1', [item.resume_id]);
+                if (resumeResult.rows.length === 0) {
+                    return { success: false, error: 'Resume not found in database', resumeId: item.resume_id, format, sourceType };
+                }
+                const resume = resumeResult.rows[0];
+                content = resume.improved_text || resume.original_text || '';
+                if (!content || content.trim().length === 0) {
+                    return { success: false, error: 'Resume has no content', resumeId: item.resume_id, format, sourceType };
+                }
+                candidateName = resume.name || 'Candidat';
+                candidateTitle = resume.title || '';
+                trigram = resume.trigram || candidateName.replace(/[^a-zA-Z0-9]/g, '').substring(0, 3).toUpperCase();
             }
-            
-            const resume = resumeResult.rows[0];
-            const content = resume.improved_text || resume.original_text || '';
-            
-            if (!content || content.trim().length === 0) {
-                return { success: false, error: 'Resume has no content', resumeId: item.resume_id, format };
-            }
-            
-            const candidateName = resume.name || 'Candidat';
-            const candidateTitle = resume.title || '';
-            // Use trigram if available, otherwise fallback to candidate name
-            const trigram = resume.trigram || candidateName.replace(/[^a-zA-Z0-9]/g, '').substring(0, 3).toUpperCase();
             
             // Process template
             let processedBody = template.template_content || '';
@@ -1372,62 +1457,20 @@ async function generateJobExport(jobId, options) {
                 .replace(/-name-/g, candidateName)
                 .replace(/-title-/g, candidateTitle);
             
-            // Generate document via PDF server with retry
-            const endpoint = format === 'pdf' ? '/generate-pdf' : '/generate-docx';
-            const fileExtension = format === 'pdf' ? 'pdf' : format;
+            // Generate document
+            const result = await generateDocumentWithRetry(processedBody, processedHeader, processedFooter, candidateName, format);
             
-            const MAX_RETRIES = 3;
-            let lastError = null;
-            
-            for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-                try {
-                    const response = await fetch(`${PDF_SERVER_URL}${endpoint}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            htmlContent: processedBody,
-                            filename: `${candidateName.replace(/\s+/g, '_')}.${fileExtension}`,
-                            stylesheet: template.stylesheet || '',
-                            headerContent: processedHeader || undefined,
-                            footerContent: processedFooter || undefined,
-                            footerHeight: template.footer_height || 25,
-                            format: format
-                        })
-                    });
-                    
-                    if (!response.ok) {
-                        const errorText = await response.text().catch(() => 'Unknown error');
-                        lastError = `${format.toUpperCase()} generation failed (status ${response.status}): ${errorText}`;
-                        if (attempt < MAX_RETRIES) {
-                            safeLog('warn', `${format.toUpperCase()} generation failed, retrying...`, { resumeId: item.resume_id, attempt, error: lastError });
-                            await new Promise(resolve => setTimeout(resolve, 1000 * attempt)); // Exponential backoff
-                            continue;
-                        }
-                        safeLog('error', `Failed to generate ${format.toUpperCase()} for export after retries`, { resumeId: item.resume_id, attempts: MAX_RETRIES, error: lastError });
-                        return { success: false, error: lastError, resumeId: item.resume_id, format };
-                    }
-                    
-                    const buffer = await response.arrayBuffer();
-                    // File name format: trigramme_nom_modèle.extension
-                    const fileName = `${trigram}_${templateName}.${fileExtension}`;
-                    
-                    // Include relative_path for preserving folder structure
-                    return { success: true, fileName, buffer, resumeId: item.resume_id, format, relativePath: item.relative_path };
-                } catch (fetchErr) {
-                    lastError = fetchErr.message;
-                    if (attempt < MAX_RETRIES) {
-                        safeLog('warn', `${format.toUpperCase()} fetch error, retrying...`, { resumeId: item.resume_id, attempt, error: lastError });
-                        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
-                        continue;
-                    }
-                }
+            if (!result.success) {
+                return { success: false, error: result.error, resumeId: item.resume_id, format, sourceType };
             }
             
-            return { success: false, error: lastError || 'Unknown error after retries', resumeId: item.resume_id, format };
+            // File name format: trigramme_nom_modèle.extension
+            const fileName = `${trigram}_${templateName}.${fileExtension}`;
             
+            return { success: true, fileName, buffer: result.buffer, resumeId: item.resume_id, format, relativePath: item.relative_path, sourceType };
         } catch (err) {
-            safeLog('error', `Error processing resume for ${format.toUpperCase()} export`, { resumeId: item.resume_id, error: err.message });
-            return { success: false, error: err.message, resumeId: item.resume_id, format };
+            safeLog('error', `Error processing ${sourceType} for ${format.toUpperCase()} export`, { resumeId: item.resume_id, adaptationId: item.adaptation_id, error: err.message });
+            return { success: false, error: err.message, resumeId: item.resume_id, format, sourceType };
         }
     };
     
@@ -1500,9 +1543,16 @@ async function generateJobExport(jobId, options) {
                     }
                     fileNameCounts.set(result.relativePath ? filePath.split('/').slice(0, -1).join('/') + '/' + result.fileName : filePath, count + 1);
                     
-                    // Add to the format-specific folder (JSZip handles nested paths automatically)
-                    safeLog('debug', 'Adding file to ZIP', { format, filePath });
-                    formatFolders[format].file(filePath, result.buffer);
+                    // Add to the appropriate folder
+                    safeLog('debug', 'Adding file to ZIP', { format, filePath, sourceType: result.sourceType });
+                    const folder = formatFolders[format];
+                    if (isDealExport && result.sourceType === 'adaptation') {
+                        folder.adaptations.file(filePath, result.buffer);
+                    } else if (isDealExport) {
+                        folder.cvs.file(filePath, result.buffer);
+                    } else {
+                        folder.root.file(filePath, result.buffer);
+                    }
                     exportSuccessCount++;
                 } else {
                     exportErrorCount++;

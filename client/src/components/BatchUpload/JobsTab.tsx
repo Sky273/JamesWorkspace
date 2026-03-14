@@ -45,12 +45,15 @@ interface JobItem {
 interface Job {
   id: string;
   status: 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
-  job_type: 'import' | 'improve';
+  job_type: 'import' | 'improve' | 'deal-export';
   options: {
     improve?: boolean;
     export?: boolean;
     exportFormat?: string;
+    exportFormats?: string[];
     templateId?: string;
+    dealId?: string;
+    dealTitle?: string;
   };
   total_items: number;
   processed_items: number;
@@ -318,12 +321,22 @@ const JobsTab = (): JSX.Element => {
     if (jobType === 'improve') {
       return <SparklesIcon className="w-4 h-4 text-yellow-500" />;
     }
+    if (jobType === 'deal-export') {
+      return <ArrowDownTrayIcon className="w-4 h-4 text-purple-500" />;
+    }
     return <DocumentTextIcon className="w-4 h-4 text-blue-500" />;
   };
 
   const getJobTypeText = (job: Job) => {
     if (job.job_type === 'improve') {
       return t('batchJobs.type.improve', 'Amélioration');
+    }
+    if (job.job_type === 'deal-export') {
+      const options = typeof job.options === 'string' ? JSON.parse(job.options) : job.options;
+      const dealTitle = options?.dealTitle || '';
+      return dealTitle
+        ? t('batchJobs.type.dealExportNamed', 'Export affaire : {{title}}', { title: dealTitle })
+        : t('batchJobs.type.dealExport', 'Export affaire');
     }
     const options = typeof job.options === 'string' ? JSON.parse(job.options) : job.options;
     if (options?.improve) {

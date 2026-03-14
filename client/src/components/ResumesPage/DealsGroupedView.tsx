@@ -28,6 +28,7 @@ import { formatDate } from '../../utils/dateFormatter';
 import { SkeletonResumeList } from '../ui/Skeleton';
 import ConsentBadge, { ConsentStatus } from '../ConsentBadge';
 import { ManageResumeDealsModal } from './index';
+import DealExportModal from './DealExportModal';
 
 interface ResumeBasic {
   id: string;
@@ -133,6 +134,9 @@ const DealsGroupedView = (): JSX.Element => {
   const [loading, setLoading] = useState(true);
   const [expandedDeals, setExpandedDeals] = useState<Set<string>>(new Set());
   const [unassignedExpanded, setUnassignedExpanded] = useState(false);
+
+  // Deal export modal state
+  const [exportingDeal, setExportingDeal] = useState<{ id: string; title: string; resumeCount: number; adaptationCount: number } | null>(null);
 
   // Drag & Drop state
   const [draggedResume, setDraggedResume] = useState<{ resumeId: string; sourceDealId: string | null } | null>(null);
@@ -565,6 +569,28 @@ const DealsGroupedView = (): JSX.Element => {
                 <span className="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-2.5 py-1 rounded-full text-sm font-medium">
                   {deal.resumes.length} CV{deal.resumes.length !== 1 ? 's' : ''}
                 </span>
+                {/* Export button */}
+                <span
+                  role="button"
+                  tabIndex={0}
+                  title={t('dealExport.buttonTitle', 'Exporter cette affaire')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const adaptationCount = (deal.missions || []).reduce(
+                      (sum, m) => sum + (m.adaptations?.length || 0), 0
+                    );
+                    setExportingDeal({
+                      id: deal.id,
+                      title: deal.title,
+                      resumeCount: deal.resumes.length,
+                      adaptationCount
+                    });
+                  }}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); e.currentTarget.click(); } }}
+                  className="p-1.5 text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-colors cursor-pointer"
+                >
+                  <ArrowDownTrayIcon className="w-4 h-4" />
+                </span>
               </div>
             </button>
 
@@ -755,6 +781,17 @@ const DealsGroupedView = (): JSX.Element => {
             )}
           </AnimatePresence>
         </div>
+      )}
+
+      {/* Deal Export Modal */}
+      {exportingDeal && (
+        <DealExportModal
+          dealId={exportingDeal.id}
+          dealTitle={exportingDeal.title}
+          resumeCount={exportingDeal.resumeCount}
+          adaptationCount={exportingDeal.adaptationCount}
+          onClose={() => setExportingDeal(null)}
+        />
       )}
     </div>
   );
