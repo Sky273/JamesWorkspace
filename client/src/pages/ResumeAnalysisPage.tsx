@@ -30,7 +30,8 @@ const ResumeAnalysisPage = (): JSX.Element => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const fromDealsView = (location.state as { from?: string } | null)?.from === 'dealsGroupedView';
+  const fromDealsView = (location.state as { from?: string } | null)?.from === 'dealsGroupedView'
+    || sessionStorage.getItem('dealsGroupedViewState') !== null;
   const { t } = useTranslation();
   const { currentResume, setCurrentResume, resumes, improveCurrentResume, loading: contextLoading, processingStep } = useResume();
   const [loading, setLoading] = useState(true);

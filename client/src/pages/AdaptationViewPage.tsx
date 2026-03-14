@@ -71,7 +71,8 @@ const AdaptationViewPage = (): JSX.Element => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const fromDealsView = (location.state as { from?: string } | null)?.from === 'dealsGroupedView';
+  const fromDealsView = (location.state as { from?: string } | null)?.from === 'dealsGroupedView'
+    || sessionStorage.getItem('dealsGroupedViewState') !== null;
   const { t } = useTranslation();
   const { authGet } = useAuthFetch();
   const [adaptation, setAdaptation] = useState<Adaptation | null>(null);

@@ -133,7 +133,7 @@ const ResumesPage = (): JSX.Element => {
   const [allTags, setAllTags] = useState<TagsByCategory>({ Skills: [], Industries: [], Tools: [], 'Soft Skills': [] });
   const location = useLocation();
   const [viewMode, setViewMode] = useState<'list' | 'byDeal'>(
-    (location.state as { viewMode?: string } | null)?.viewMode === 'byDeal' ? 'byDeal' : 'list'
+    (location.state as { viewMode?: string } | null)?.viewMode === 'list' ? 'list' : 'byDeal'
   );
 
   // Debounce search input
@@ -393,17 +393,6 @@ const ResumesPage = (): JSX.Element => {
         <span className="text-sm text-gray-600 dark:text-gray-400">{t('resumes.viewMode', 'Affichage')} :</span>
         <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
           <button
-            onClick={() => setViewMode('list')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-              viewMode === 'list'
-                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-            }`}
-          >
-            <ListBulletIcon className="w-4 h-4" />
-            {t('resumes.viewList', 'Liste')}
-          </button>
-          <button
             onClick={() => setViewMode('byDeal')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
               viewMode === 'byDeal'
@@ -413,6 +402,17 @@ const ResumesPage = (): JSX.Element => {
           >
             <FolderIcon className="w-4 h-4" />
             {t('resumes.viewByDeal', 'Par affaire')}
+          </button>
+          <button
+            onClick={() => setViewMode('list')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              viewMode === 'list'
+                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}
+          >
+            <ListBulletIcon className="w-4 h-4" />
+            {t('resumes.viewList', 'Liste')}
           </button>
         </div>
       </div>
