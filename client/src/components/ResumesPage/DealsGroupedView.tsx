@@ -141,6 +141,16 @@ const DealsGroupedView = (): JSX.Element => {
   const dragCounterRef = useRef<Record<string, number>>({});
   const isInitialLoadRef = useRef(true);
 
+  // Save current view state to sessionStorage before navigating away
+  const saveViewState = useCallback(() => {
+    const state = {
+      expandedDeals: Array.from(expandedDeals),
+      unassignedExpanded,
+      scrollY: window.scrollY
+    };
+    sessionStorage.setItem('dealsGroupedViewState', JSON.stringify(state));
+  }, [expandedDeals, unassignedExpanded]);
+
   const fetchGroupedData = useCallback(async () => {
     try {
       setLoading(true);
@@ -148,13 +158,35 @@ const DealsGroupedView = (): JSX.Element => {
       if (response.ok) {
         const result = await response.json();
         setData(result);
-        // Auto-expand deals that have resumes only on first load
+        // On first load, try to restore saved state, otherwise auto-expand deals with resumes
         if (isInitialLoadRef.current) {
-          const dealsWithResumes = new Set<string>(
-            result.deals.filter((d: DealGroup) => d.resumes.length > 0).map((d: DealGroup) => d.id)
-          );
-          setExpandedDeals(dealsWithResumes);
           isInitialLoadRef.current = false;
+          const savedState = sessionStorage.getItem('dealsGroupedViewState');
+          if (savedState) {
+            try {
+              const parsed = JSON.parse(savedState);
+              setExpandedDeals(new Set(parsed.expandedDeals || []));
+              setUnassignedExpanded(parsed.unassignedExpanded || false);
+              // Restore scroll position after render
+              if (parsed.scrollY != null) {
+                requestAnimationFrame(() => {
+                  setTimeout(() => window.scrollTo(0, parsed.scrollY), 50);
+                });
+              }
+              sessionStorage.removeItem('dealsGroupedViewState');
+            } catch {
+              // Fallback: expand deals with resumes
+              const dealsWithResumes = new Set<string>(
+                result.deals.filter((d: DealGroup) => d.resumes.length > 0).map((d: DealGroup) => d.id)
+              );
+              setExpandedDeals(dealsWithResumes);
+            }
+          } else {
+            const dealsWithResumes = new Set<string>(
+              result.deals.filter((d: DealGroup) => d.resumes.length > 0).map((d: DealGroup) => d.id)
+            );
+            setExpandedDeals(dealsWithResumes);
+          }
         }
       }
     } catch (error) {
@@ -295,7 +327,8 @@ const DealsGroupedView = (): JSX.Element => {
   };
 
   const handleResumeClick = (resumeId: string) => {
-    navigate(`/resumes/${resumeId}/analysis`);
+    saveViewState();
+    navigate(`/resumes/${resumeId}/analysis`, { state: { from: 'dealsGroupedView' } });
   };
 
   const handleDownload = async (resume: ResumeBasic, e: React.MouseEvent) => {
@@ -609,7 +642,7 @@ const DealsGroupedView = (): JSX.Element => {
                                     return (
                                       <div
                                         key={adaptation.id}
-                                        onClick={(e) => { e.stopPropagation(); navigate(`/adaptations/${adaptation.id}`); }}
+                                        onClick={(e) => { e.stopPropagation(); saveViewState(); navigate(`/adaptations/${adaptation.id}`, { state: { from: 'dealsGroupedView' } }); }}
                                         className="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-700/30 border border-gray-100 dark:border-gray-700 rounded-md cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors"
                                       >
                                         <div className="flex items-center gap-2 min-w-0 flex-1">

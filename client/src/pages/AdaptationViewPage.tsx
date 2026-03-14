@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useState, useRef, useCallback, ChangeEvent } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { 
@@ -70,6 +70,8 @@ interface Adaptation {
 const AdaptationViewPage = (): JSX.Element => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const fromDealsView = (location.state as { from?: string } | null)?.from === 'dealsGroupedView';
   const { t } = useTranslation();
   const { authGet } = useAuthFetch();
   const [adaptation, setAdaptation] = useState<Adaptation | null>(null);
@@ -129,7 +131,9 @@ const AdaptationViewPage = (): JSX.Element => {
   }, [id, authGet, t]);
 
   const handleBack = () => {
-    if (window.history.length > 2) {
+    if (fromDealsView) {
+      navigate('/resumes', { state: { viewMode: 'byDeal' } });
+    } else if (window.history.length > 2) {
       navigate(-1);
     } else {
       navigate('/adaptations');

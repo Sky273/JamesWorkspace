@@ -501,6 +501,7 @@
     "viewMode": "Affichage",
     "viewList": "Liste",
     "viewByDeal": "Par affaire",
+    "backToDealsView": "Retour à la vue par affaire",
     "groupedView": {
       "deals": "affaires",
       "assigned": "CVs affectés",

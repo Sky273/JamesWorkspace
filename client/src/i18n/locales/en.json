@@ -282,6 +282,7 @@
     "viewMode": "View",
     "viewList": "List",
     "viewByDeal": "By deal",
+    "backToDealsView": "Back to deals view",
     "groupedView": {
       "deals": "deals",
       "assigned": "assigned CVs",

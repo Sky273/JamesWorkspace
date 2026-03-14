@@ -4,11 +4,11 @@
  */
 
 import { useEffect, useState, useCallback } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import { useResume } from '../context/ResumeContext';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { ArrowRightIcon, SparklesIcon, CheckCircleIcon, ShareIcon } from '@heroicons/react/24/outline';
+import { ArrowRightIcon, ArrowLeftIcon, SparklesIcon, CheckCircleIcon, ShareIcon } from '@heroicons/react/24/outline';
 import Breadcrumbs from '../components/Breadcrumbs';
 import ShareQRCodeModal from '../components/ShareQRCodeModal';
 import { fetchWithAuth } from '../utils/apiInterceptor';
@@ -29,6 +29,8 @@ import ResumeComments from '../components/ResumeComments';
 const ResumeAnalysisPage = (): JSX.Element => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const fromDealsView = (location.state as { from?: string } | null)?.from === 'dealsGroupedView';
   const { t } = useTranslation();
   const { currentResume, setCurrentResume, resumes, improveCurrentResume, loading: contextLoading, processingStep } = useResume();
   const [loading, setLoading] = useState(true);
@@ -197,6 +199,17 @@ const ResumeAnalysisPage = (): JSX.Element => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
       <div className="max-w-7xl mx-auto px-4">
+        {/* Back to deals view */}
+        {fromDealsView && (
+          <button
+            onClick={() => navigate('/resumes', { state: { viewMode: 'byDeal' } })}
+            className="inline-flex items-center gap-2 px-3 py-1.5 mb-3 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+          >
+            <ArrowLeftIcon className="w-4 h-4" />
+            {t('resumes.backToDealsView', 'Retour à la vue par affaire')}
+          </button>
+        )}
+
         {/* Breadcrumbs */}
         <Breadcrumbs className="mb-4" />
 

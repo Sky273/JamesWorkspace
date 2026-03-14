@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useState, useMemo, useCallback, MouseEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useResume } from '../context/ResumeContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -131,7 +131,10 @@ const ResumesPage = (): JSX.Element => {
   const [resumeToDelete, setResumeToDelete] = useState<Resume | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<ExpandedCategories>({});
   const [allTags, setAllTags] = useState<TagsByCategory>({ Skills: [], Industries: [], Tools: [], 'Soft Skills': [] });
-  const [viewMode, setViewMode] = useState<'list' | 'byDeal'>('list');
+  const location = useLocation();
+  const [viewMode, setViewMode] = useState<'list' | 'byDeal'>(
+    (location.state as { viewMode?: string } | null)?.viewMode === 'byDeal' ? 'byDeal' : 'list'
+  );
 
   // Debounce search input
   useEffect(() => {
