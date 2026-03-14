@@ -16,8 +16,10 @@ import {
   GlobeAltIcon,
   MapPinIcon,
   PaperAirplaneIcon,
-  DocumentTextIcon
+  DocumentTextIcon,
+  FolderIcon
 } from '@heroicons/react/24/outline';
+import { useNavigate } from 'react-router-dom';
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
 
 interface ClientWithDetails extends Client {
@@ -47,6 +49,7 @@ const ClientDetailModal = ({
   t 
 }: ClientDetailModalProps): JSX.Element => {
   const [activeTab, setActiveTab] = useState<'contacts' | 'submissions'>('contacts');
+  const navigate = useNavigate();
 
   if (!client) return <></>;
 
@@ -92,13 +95,25 @@ const ClientDetailModal = ({
               )}
             </div>
           </div>
-          <button
-            onClick={onEditClient}
-            className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-          >
-            <PencilSquareIcon className="w-4 h-4" />
-            {t('common.edit')}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                onClose();
+                navigate(`/clients?tab=deals&clientId=${client.id}`);
+              }}
+              className="flex items-center gap-2 px-3 py-2 text-sm bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
+            >
+              <FolderIcon className="w-4 h-4" />
+              Affaires
+            </button>
+            <button
+              onClick={onEditClient}
+              className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+            >
+              <PencilSquareIcon className="w-4 h-4" />
+              {t('common.edit')}
+            </button>
+          </div>
         </div>
 
         {/* Info */}

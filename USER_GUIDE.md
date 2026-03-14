@@ -10,20 +10,21 @@
 6. [Matching Profils](#matching-profils)
 7. [Pipeline de Sélection](#pipeline-de-sélection)
 8. [Adaptations de CV](#adaptations-de-cv)
-9. [Clients & Prospects](#clients--prospects)
-10. [Envoi de CV par Email](#envoi-de-cv-par-email)
-11. [Radar Marché](#radar-marché)
-12. [Assistant IA](#assistant-ia)
-13. [Administration](#administration)
-14. [Sauvegarde de la Base de Données](#sauvegarde-de-la-base-de-données)
-15. [Conformité RGPD](#conformité-rgpd)
-16. [Interface et Navigation](#interface-et-navigation)
-17. [Bonnes Pratiques](#bonnes-pratiques)
-18. [Dépannage](#dépannage)
-19. [FAQ](#faq)
-20. [Prochaines Étapes](#prochaines-étapes)
-21. [Glossaire](#glossaire)
-22. [Support](#support)
+9. [Clients & Prospects (CRM)](#clients--prospects)
+10. [Affaires](#affaires)
+11. [Envoi de CV par Email](#envoi-de-cv-par-email)
+12. [Radar Marché](#radar-marché)
+13. [Assistant IA](#assistant-ia)
+14. [Administration](#administration)
+15. [Sauvegarde de la Base de Données](#sauvegarde-de-la-base-de-données)
+16. [Conformité RGPD](#conformité-rgpd)
+17. [Interface et Navigation](#interface-et-navigation)
+18. [Bonnes Pratiques](#bonnes-pratiques)
+19. [Dépannage](#dépannage)
+20. [FAQ](#faq)
+21. [Prochaines Étapes](#prochaines-étapes)
+22. [Glossaire](#glossaire)
+23. [Support](#support)
 
 ---
 
@@ -933,12 +934,15 @@ L'IA effectue une analyse en plusieurs étapes :
 
 ### Qu'est-ce que la Gestion Clients & Prospects ?
 
-La fonctionnalité **Clients & Prospects** permet de gérer votre portefeuille commercial : entreprises clientes, prospects, et leurs contacts. Ces informations sont utilisées pour le suivi des envois de CV et la personnalisation des emails.
+La fonctionnalité **Clients & Prospects** (accessible via l'onglet **CRM** dans le menu latéral) permet de gérer votre portefeuille commercial : entreprises clientes, prospects, leurs contacts, ainsi que les **affaires** (opportunités commerciales). Ces informations sont utilisées pour le suivi des envois de CV, la personnalisation des emails, et l'organisation de vos CVs par opportunité.
 
-### Accéder à la Gestion Clients & Prospects
+### Accéder au CRM
 
-1. Accédez à **"Clients & Prospects"** dans le menu latéral
-2. Visualisez la liste de vos clients et prospects avec leurs contacts
+1. Accédez à **"CRM"** dans le menu latéral
+2. L'espace CRM propose trois onglets :
+   - **Clients & Prospects** : Gestion de vos entreprises et contacts
+   - **Affaires** : Gestion de vos opportunités commerciales (voir section dédiée ci-dessous)
+   - **Tableau de bord** : Vue synthétique de votre activité commerciale
 
 ### Types d'Entreprises
 
@@ -995,6 +999,114 @@ Pour chaque client/prospect, vous pouvez consulter l'historique des CV envoyés 
 - **Qualifiez vos contacts** : Renseignez la fonction pour personnaliser vos emails
 - **Mettez à jour régulièrement** : Supprimez les contacts obsolètes
 - **Convertissez vos prospects** : Changez le type en "Client" après signature
+- **Créez des affaires** : Associez vos CVs à des affaires pour un suivi structuré
+
+---
+
+## Affaires
+
+### Qu'est-ce qu'une Affaire ?
+
+Une **affaire** représente une opportunité commerciale ou un besoin client auquel vous pouvez associer des CVs. Les affaires permettent d'organiser vos candidatures par contexte métier et de suivre l'avancement de chaque opportunité.
+
+### Accéder aux Affaires
+
+1. Accédez à **"CRM"** dans le menu latéral
+2. Cliquez sur l'onglet **"Affaires"**
+
+### Créer une Affaire
+
+1. Cliquez sur **"Nouvelle affaire"**
+2. Remplissez le formulaire :
+
+| Champ | Description | Obligatoire |
+|-------|-------------|-------------|
+| **Titre** | Intitulé de l'affaire (ex: "Migration SI - BNP") | Oui |
+| **Client** | Client ou prospect associé | Non |
+| **Contact** | Interlocuteur chez le client | Non |
+| **Statut** | En cours, Gagnée, Perdue, En attente | Oui |
+| **Priorité** | Basse, Moyenne, Haute, Urgente | Oui |
+| **Description** | Détails de l'opportunité | Non |
+
+3. Cliquez sur **"Enregistrer"**
+
+### Statuts d'une Affaire
+
+| Statut | Description | Couleur |
+|--------|-------------|---------|
+| **En cours** | Affaire active, en négociation | Bleu |
+| **Gagnée** | Affaire conclue avec succès | Vert |
+| **Perdue** | Affaire non retenue | Rouge |
+| **En attente** | Affaire temporairement suspendue | Jaune |
+
+### Priorités
+
+| Priorité | Indicateur |
+|----------|------------|
+| **Basse** | ○ Gris |
+| **Moyenne** | ● Bleu |
+| **Haute** | ●● Orange |
+| **Urgente** | ●●● Rouge |
+
+### Associer des CVs à une Affaire
+
+Il existe plusieurs manières d'associer un CV à une affaire :
+
+#### Depuis la CVthèque (vue Liste)
+
+1. Sur la fiche d'un CV, cliquez sur l'icône **mallette** (gérer les affaires)
+2. Sélectionnez une ou plusieurs affaires dans la liste
+3. Le CV est immédiatement associé
+
+#### Depuis la CVthèque (vue Par affaire)
+
+1. Basculez en vue **"Par affaire"** via le toggle en haut de la CVthèque
+2. **Glissez-déposez** (drag & drop) un CV depuis n'importe quelle section vers une affaire
+3. Le CV est automatiquement déplacé/ajouté à l'affaire cible
+
+#### Depuis la fiche d'une Affaire (CRM)
+
+1. Ouvrez une affaire dans l'onglet **"Affaires"** du CRM
+2. Utilisez le bouton **"Ajouter un CV"** pour rechercher et associer des CVs
+
+### Vue par Affaire dans la CVthèque
+
+La CVthèque propose deux modes d'affichage, accessibles via un toggle en haut de page :
+
+#### Mode Liste (par défaut)
+
+Le mode classique : tous les CVs affichés dans une liste paginée avec filtres et recherche.
+
+#### Mode Par Affaire
+
+Ce mode organise les CVs par affaire, avec :
+
+- **Barre de résumé** : Nombre total d'affaires, de CVs affectés et de CVs non affectés
+- **Sections repliables** : Chaque affaire apparaît comme un accordéon affichant le titre, le statut, la priorité, le client et le contact
+- **Badge compteur** : Nombre de CVs associés à chaque affaire
+- **Section "Non affectés"** : Les CVs qui ne sont associés à aucune affaire apparaissent dans une section dédiée en bas de page
+
+#### Drag & Drop
+
+Le mode **Par affaire** supporte le **glisser-déposer** de CVs entre les sections :
+
+1. **Cliquez et maintenez** sur une carte CV
+2. **Faites glisser** le CV vers la section de l'affaire cible
+3. La zone de destination se met en surbrillance violette avec un indicateur "Déposer ici"
+4. **Relâchez** pour confirmer le déplacement
+
+**Comportements :**
+- **CV non affecté → Affaire** : Le CV est ajouté à l'affaire
+- **Affaire A → Affaire B** : Le CV est retiré de A et ajouté à B
+- Un toast de confirmation s'affiche après chaque opération
+- L'état ouvert/fermé des sections est préservé après un déplacement
+
+### Bonnes Pratiques
+
+- **Nommez clairement vos affaires** : Utilisez un format cohérent (ex: "Projet - Client")
+- **Mettez à jour les statuts** : Passez une affaire en "Gagnée" ou "Perdue" pour un suivi fiable
+- **Utilisez les priorités** : Les affaires urgentes apparaissent en premier dans la vue par affaire
+- **Drag & drop pour organiser** : Utilisez la vue par affaire pour réaffecter rapidement vos CVs
 
 ---
 

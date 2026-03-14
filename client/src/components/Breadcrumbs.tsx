@@ -59,7 +59,7 @@ const Breadcrumbs = ({ items, className = '' }: BreadcrumbsProps): JSX.Element |
 
         case 'clients':
           breadcrumbs.push({
-            label: t('navigation.clients'),
+            label: t('navigation.crm', 'CRM'),
             href: isLast ? undefined : '/clients',
             current: isLast
           });

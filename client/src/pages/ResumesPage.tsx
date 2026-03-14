@@ -19,11 +19,13 @@ import {
   TrashIcon,
   ArrowDownTrayIcon,
   EyeIcon,
-  BuildingOfficeIcon
+  BuildingOfficeIcon,
+  ListBulletIcon,
+  FolderIcon
 } from '@heroicons/react/24/outline';
 import { formatDate } from '../utils/dateFormatter';
 
-import { StatsCards, SearchAndActions } from '../components/ResumesPage';
+import { StatsCards, SearchAndActions, ManageResumeDealsModal, DealsGroupedView } from '../components/ResumesPage';
 import Pagination from '../components/Pagination';
 import { SkeletonResumeList } from '../components/ui/Skeleton';
 import Breadcrumbs from '../components/Breadcrumbs';
@@ -129,6 +131,7 @@ const ResumesPage = (): JSX.Element => {
   const [resumeToDelete, setResumeToDelete] = useState<Resume | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<ExpandedCategories>({});
   const [allTags, setAllTags] = useState<TagsByCategory>({ Skills: [], Industries: [], Tools: [], 'Soft Skills': [] });
+  const [viewMode, setViewMode] = useState<'list' | 'byDeal'>('list');
 
   // Debounce search input
   useEffect(() => {
@@ -382,6 +385,39 @@ const ResumesPage = (): JSX.Element => {
 
       <StatsCards stats={stats} t={t} />
 
+      {/* View mode toggle */}
+      <div className="flex items-center gap-2 mb-4">
+        <span className="text-sm text-gray-600 dark:text-gray-400">{t('resumes.viewMode', 'Affichage')} :</span>
+        <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
+          <button
+            onClick={() => setViewMode('list')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              viewMode === 'list'
+                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}
+          >
+            <ListBulletIcon className="w-4 h-4" />
+            {t('resumes.viewList', 'Liste')}
+          </button>
+          <button
+            onClick={() => setViewMode('byDeal')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              viewMode === 'byDeal'
+                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}
+          >
+            <FolderIcon className="w-4 h-4" />
+            {t('resumes.viewByDeal', 'Par affaire')}
+          </button>
+        </div>
+      </div>
+
+      {viewMode === 'byDeal' ? (
+        <DealsGroupedView />
+      ) : (
+      <>
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
         <SearchAndActions
           searchQuery={searchQuery}
@@ -628,6 +664,9 @@ const ResumesPage = (): JSX.Element => {
                     <ArrowDownTrayIcon className="w-4 h-4" />
                   </button>
                 )}
+                <ManageResumeDealsModal 
+                  resumeId={resume.id} 
+                />
                 <button
                   onClick={(e) => openDeleteConfirm(resume, e)}
                   className="p-2 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"
@@ -651,6 +690,9 @@ const ResumesPage = (): JSX.Element => {
         loading={loading}
         itemName={t('resumes.results')}
       />
+
+      </>
+      )}
 
       {showDeleteConfirm && resumeToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">

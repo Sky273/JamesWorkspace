@@ -237,7 +237,13 @@ router.get('/', authenticateToken, async (req, res) => {
             });
         }
 
-        res.json(jobs);
+        // Check export file availability on disk for each job
+        const jobsWithAvailability = jobs.map(job => ({
+            ...job,
+            export_file_available: !!(job.export_file_path && job.export_file_name && fs.existsSync(job.export_file_path))
+        }));
+
+        res.json(jobsWithAvailability);
     } catch (error) {
         safeLog('error', 'Failed to get batch jobs', { error: error.message });
         res.status(500).json({ error: 'Erreur lors de la récupération des jobs' });
@@ -269,7 +275,8 @@ router.get('/:id', authenticateToken, async (req, res) => {
         // Get job items
         const items = await getJobItems(id);
 
-        res.json({ ...job, items });
+        const export_file_available = !!(job.export_file_path && job.export_file_name && fs.existsSync(job.export_file_path));
+        res.json({ ...job, items, export_file_available });
     } catch (error) {
         safeLog('error', 'Failed to get batch job', { error: error.message });
         res.status(500).json({ error: 'Erreur lors de la récupération du job' });

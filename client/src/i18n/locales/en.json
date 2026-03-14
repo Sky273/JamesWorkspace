@@ -276,7 +276,26 @@
     "deleteConfirm": {
       "title": "Confirm Deletion"
     },
-    "confirmDeleteMessage": "Are you sure you want to delete this resume? This action cannot be undone."
+    "confirmDeleteMessage": "Are you sure you want to delete this resume? This action cannot be undone.",
+    "filterByDeal": "Filter by deal",
+    "allDeals": "All deals",
+    "viewMode": "View",
+    "viewList": "List",
+    "viewByDeal": "By deal",
+    "groupedView": {
+      "deals": "deals",
+      "assigned": "assigned CVs",
+      "unassigned": "unassigned",
+      "noResumes": "No CVs associated with this deal",
+      "noDeals": "No deals created. Create a deal in the CRM tab to get started.",
+      "unassignedTitle": "CVs not assigned to a deal",
+      "errorLoading": "Error loading data",
+      "dropHere": "Drop here to add to this deal",
+      "moving": "Moving CV...",
+      "moved": "CV moved to \"{{deal}}\"",
+      "added": "CV added to \"{{deal}}\"",
+      "dropError": "Error moving CV"
+    }
   },
   "upload": {
     "title": "Resume Analyzer",
@@ -1106,6 +1125,7 @@
     "gdprAudit": "GDPR Audit Log",
     "backup": "Backup",
     "clients": "Clients & Prospects",
+    "crm": "CRM",
     "profileMatching": "Profile Matching",
     "adaptations": "Adaptations",
     "userGuide": "User Guide",
@@ -1431,6 +1451,77 @@
       "confirmDeleteClient": "Are you sure you want to delete the client \"{{name}}\"?",
       "confirmDeleteContact": "Are you sure you want to delete the contact \"{{name}}\"?",
       "cannotDeleteWithSubmissions": "Cannot delete: CV submissions are associated"
+    }
+  },
+  "crm": {
+    "title": "CRM",
+    "subtitle": "Manage your clients, prospects and deals",
+    "tabs": {
+      "clients": "Clients & Prospects",
+      "deals": "Deals"
+    },
+    "deals": {
+      "title": "Deals",
+      "subtitle": "Manage your deals and business opportunities",
+      "addDeal": "New deal",
+      "editDeal": "Edit deal",
+      "searchPlaceholder": "Search deals...",
+      "results": "deals",
+      "noDeals": "No deals found",
+      "viewDeals": "Deals",
+      "allClients": "All clients",
+      "allStatuses": "All statuses",
+      "filterByClient": "Filter by client",
+      "filterByStatus": "Filter by status",
+      "name": "Deal name",
+      "namePlaceholder": "E.g.: Senior developer recruitment",
+      "client": "Client",
+      "selectClient": "Select a client",
+      "contact": "Contact person",
+      "selectContact": "Select a contact",
+      "noContactsForClient": "No contacts for this client",
+      "status": "Status",
+      "priority": "Priority",
+      "description": "Description",
+      "descriptionPlaceholder": "Deal description...",
+      "expectedCloseDate": "Expected close date",
+      "cvCount": "Associated CVs",
+      "statuses": {
+        "open": "Open",
+        "won": "Won",
+        "lost": "Lost",
+        "on_hold": "On hold"
+      },
+      "priorities": {
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High",
+        "urgent": "Urgent"
+      },
+      "messages": {
+        "dealCreated": "Deal created successfully",
+        "dealUpdated": "Deal updated successfully",
+        "dealDeleted": "Deal deleted successfully",
+        "errorFetching": "Error loading deals",
+        "errorCreating": "Error creating deal",
+        "errorUpdating": "Error updating deal",
+        "errorDeleting": "Error deleting deal",
+        "confirmDelete": "Are you sure you want to delete the deal \"{{name}}\"?"
+      },
+      "modal": {
+        "manageDeals": "CV Deals",
+        "associatedDeals": "Associated deals",
+        "addToDeal": "Add to a deal",
+        "searchDeal": "Search a deal...",
+        "noDealsAssociated": "This CV is not associated with any deal",
+        "allDealsAssociated": "All deals are already associated",
+        "noDealFound": "No deal found",
+        "cvAdded": "CV added to deal",
+        "cvRemoved": "CV removed from deal",
+        "errorAdding": "Error adding",
+        "errorRemoving": "Error removing",
+        "removeFromDeal": "Remove from this deal"
+      }
     }
   },
   "mail": {

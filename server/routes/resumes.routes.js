@@ -90,12 +90,13 @@ router.get('/', authenticateToken, async (req, res) => {
         const offset = (page - 1) * limit;
         
         // Extract filter parameters
-        const { search, status, tags: _tags } = req.query;
+        const { search, status, tags: _tags, dealId } = req.query;
 
         // Build WHERE clause
         const conditions = [];
         const params = [];
         let paramIndex = 1;
+        let needsJoin = false;
         
         // Firm filter (non-admin users) - filter by firm_id only
         if (!isAdmin) {
@@ -112,7 +113,7 @@ router.get('/', authenticateToken, async (req, res) => {
                 // No valid firm_id - return empty results for security
                 safeLog('warn', 'User has no valid firm_id, returning empty results', { userId: req.user?.id });
                 return res.json({
-                    records: [],
+                    data: [],
                     pagination: { page: 1, limit, totalPages: 0, totalCount: 0, hasMore: false }
                 });
             }
@@ -132,41 +133,89 @@ router.get('/', authenticateToken, async (req, res) => {
             paramIndex++;
         }
 
+        // Deal filter (filter by affaire) - requires JOIN
+        if (dealId) {
+            needsJoin = true;
+        }
+
         const whereClause = conditions.length > 0 ? conditions.join(' AND ') : '';
 
         // Get total count for pagination
-        let countSql = 'SELECT COUNT(*) as total FROM resumes';
-        if (whereClause) {
-            countSql += ` WHERE ${whereClause}`;
+        let countSql;
+        let countParams = [...params];
+        
+        if (needsJoin) {
+            // With JOIN for deal filter
+            countSql = `SELECT COUNT(DISTINCT r.id) as total FROM resumes r 
+                        INNER JOIN deal_resumes dr ON r.id = dr.resume_id 
+                        WHERE dr.deal_id = $${paramIndex}`;
+            countParams.push(dealId);
+            if (whereClause) {
+                countSql = countSql.replace('WHERE dr.deal_id', `WHERE ${whereClause.replace(/\b(firm_id|status|name|title|file_name)\b/g, 'r.$1')} AND dr.deal_id`);
+            }
+        } else {
+            // Simple count without JOIN
+            countSql = 'SELECT COUNT(*) as total FROM resumes';
+            if (whereClause) {
+                countSql += ` WHERE ${whereClause}`;
+            }
         }
-        const countResult = await query(countSql, params);
+        
+        const countResult = await query(countSql, countParams);
         const totalCount = parseInt(countResult.rows[0]?.total || '0', 10);
 
         // Fetch resumes with pagination using raw query to exclude resume_file_data (binary)
-        // This avoids loading large binary data when listing resumes
-        let rawSql = `SELECT id, name, title, file_name, resume_file_url, resume_file_size, resume_file_type,
-            status, firm_id, firm_name, skills, industries, tools, soft_skills,
-            skills_cleaned, industries_cleaned, tools_cleaned, soft_skills_cleaned,
-            skills_esco, industries_esco, tools_esco, soft_skills_esco,
-            key_improvements, summary, experience_years, education_level, certifications, languages,
-            created_at, updated_at, analyzed_at, original_text, improved_text, original_name,
-            global_rating, skills_score, experience_score, education_score, ats_score,
-            executive_summary_score, hobbies_languages_score,
-            improved_global_rating, improved_skills_score, improved_experience_score, improved_education_score,
-            improved_ats_score, improved_executive_summary_score, improved_hobbies_languages_score,
-            template_id, template_name, improvement_suggestions, analysis_details, improvement_date,
-            trigram, improved_key_improvements, improved_skills, improved_industries, improved_tools, improved_soft_skills,
-            profile_type, candidate_name, candidate_email, consent_status, consent_requested_at, consent_responded_at, consent_token_expires_at, retention_until
-            FROM resumes`;
+        let rawSql;
+        let queryParams = [...params];
         
-        if (whereClause) {
-            rawSql += ` WHERE ${whereClause}`;
+        if (needsJoin) {
+            // With JOIN for deal filter
+            rawSql = `SELECT DISTINCT r.id, r.name, r.title, r.file_name, r.resume_file_url, r.resume_file_size, r.resume_file_type,
+                r.status, r.firm_id, r.firm_name, r.skills, r.industries, r.tools, r.soft_skills,
+                r.skills_cleaned, r.industries_cleaned, r.tools_cleaned, r.soft_skills_cleaned,
+                r.skills_esco, r.industries_esco, r.tools_esco, r.soft_skills_esco,
+                r.key_improvements, r.summary, r.experience_years, r.education_level, r.certifications, r.languages,
+                r.created_at, r.updated_at, r.analyzed_at, r.original_text, r.improved_text, r.original_name,
+                r.global_rating, r.skills_score, r.experience_score, r.education_score, r.ats_score,
+                r.executive_summary_score, r.hobbies_languages_score,
+                r.improved_global_rating, r.improved_skills_score, r.improved_experience_score, r.improved_education_score,
+                r.improved_ats_score, r.improved_executive_summary_score, r.improved_hobbies_languages_score,
+                r.template_id, r.template_name, r.improvement_suggestions, r.analysis_details, r.improvement_date,
+                r.trigram, r.improved_key_improvements, r.improved_skills, r.improved_industries, r.improved_tools, r.improved_soft_skills,
+                r.profile_type, r.candidate_name, r.candidate_email, r.consent_status, r.consent_requested_at, r.consent_responded_at, r.consent_token_expires_at, r.retention_until
+                FROM resumes r
+                INNER JOIN deal_resumes dr ON r.id = dr.resume_id
+                WHERE dr.deal_id = $${paramIndex}`;
+            queryParams.push(dealId);
+            if (whereClause) {
+                rawSql = rawSql.replace('WHERE dr.deal_id', `WHERE ${whereClause.replace(/\b(firm_id|status|name|title|file_name)\b/g, 'r.$1')} AND dr.deal_id`);
+            }
+            rawSql += ` ORDER BY LOWER(r.name) ASC, r.created_at DESC LIMIT ${limit + 1} OFFSET ${offset}`;
+        } else {
+            // Simple query without JOIN
+            rawSql = `SELECT id, name, title, file_name, resume_file_url, resume_file_size, resume_file_type,
+                status, firm_id, firm_name, skills, industries, tools, soft_skills,
+                skills_cleaned, industries_cleaned, tools_cleaned, soft_skills_cleaned,
+                skills_esco, industries_esco, tools_esco, soft_skills_esco,
+                key_improvements, summary, experience_years, education_level, certifications, languages,
+                created_at, updated_at, analyzed_at, original_text, improved_text, original_name,
+                global_rating, skills_score, experience_score, education_score, ats_score,
+                executive_summary_score, hobbies_languages_score,
+                improved_global_rating, improved_skills_score, improved_experience_score, improved_education_score,
+                improved_ats_score, improved_executive_summary_score, improved_hobbies_languages_score,
+                template_id, template_name, improvement_suggestions, analysis_details, improvement_date,
+                trigram, improved_key_improvements, improved_skills, improved_industries, improved_tools, improved_soft_skills,
+                profile_type, candidate_name, candidate_email, consent_status, consent_requested_at, consent_responded_at, consent_token_expires_at, retention_until
+                FROM resumes`;
+            if (whereClause) {
+                rawSql += ` WHERE ${whereClause}`;
+            }
+            rawSql += ` ORDER BY LOWER(name) ASC, created_at DESC LIMIT ${limit + 1} OFFSET ${offset}`;
         }
-        rawSql += ` ORDER BY LOWER(name) ASC, created_at DESC LIMIT ${limit + 1} OFFSET ${offset}`;
         
         const resumes = await selectWithTimeout('resumes', {
             rawQuery: rawSql,
-            rawParams: params
+            rawParams: queryParams
         });
 
         // Check if there are more records
@@ -270,6 +319,85 @@ router.get('/', authenticateToken, async (req, res) => {
             error: 'Failed to fetch resumes',
             message: error.message 
         });
+    }
+});
+
+// GET /api/resumes/grouped-by-deal - Get resumes grouped by deal for the "Par affaire" view
+router.get('/grouped-by-deal', authenticateToken, async (req, res) => {
+    try {
+        const isAdmin = req.user.role?.toLowerCase() === 'admin';
+        const userFirmId = await getUserFirmId(req);
+        
+        if (!userFirmId && !isAdmin) {
+            return res.status(403).json({ error: 'No firm association' });
+        }
+
+        // 1. Get all deals for this firm with resume counts
+        const dealsResult = await query(`
+            SELECT d.id, d.title, d.status, d.priority,
+                   c.name as client_name, c.type as client_type,
+                   cc.name as contact_name,
+                   (SELECT COUNT(*) FROM deal_resumes dr WHERE dr.deal_id = d.id) as resumes_count
+            FROM deals d
+            LEFT JOIN clients c ON d.client_id = c.id
+            LEFT JOIN client_contacts cc ON d.contact_id = cc.id
+            WHERE d.firm_id = $1
+            ORDER BY 
+                CASE d.priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 WHEN 'low' THEN 3 ELSE 4 END,
+                d.title ASC
+        `, [userFirmId]);
+
+        // 2. For each deal, get associated resumes (basic fields only)
+        const deals = [];
+        for (const deal of dealsResult.rows) {
+            const resumesResult = await query(`
+                SELECT r.id, r.name, r.title, r.status, r.global_rating, r.improved_global_rating,
+                       r.created_at, r.file_name, r.firm_name, r.candidate_name, r.candidate_email,
+                       r.consent_status, r.consent_token_expires_at, r.retention_until,
+                       r.skills_cleaned, r.industries_cleaned, r.tools_cleaned, r.soft_skills_cleaned,
+                       r.skills, r.industries, r.tools, r.soft_skills,
+                       dr.added_at as deal_added_at, dr.status as deal_resume_status
+                FROM resumes r
+                INNER JOIN deal_resumes dr ON r.id = dr.resume_id
+                WHERE dr.deal_id = $1
+                ORDER BY LOWER(r.name) ASC
+            `, [deal.id]);
+            
+            deals.push({
+                ...deal,
+                resumes: resumesResult.rows
+            });
+        }
+
+        // 3. Get unassigned resumes (not in any deal)
+        let unassignedCondition = 'WHERE r.id NOT IN (SELECT DISTINCT resume_id FROM deal_resumes)';
+        const unassignedParams = [];
+        if (!isAdmin) {
+            unassignedCondition += ' AND r.firm_id = $1';
+            unassignedParams.push(userFirmId);
+        }
+
+        const unassignedResult = await query(`
+            SELECT r.id, r.name, r.title, r.status, r.global_rating, r.improved_global_rating,
+                   r.created_at, r.file_name, r.firm_name, r.candidate_name, r.candidate_email,
+                   r.consent_status, r.consent_token_expires_at, r.retention_until,
+                   r.skills_cleaned, r.industries_cleaned, r.tools_cleaned, r.soft_skills_cleaned,
+                   r.skills, r.industries, r.tools, r.soft_skills
+            FROM resumes r
+            ${unassignedCondition}
+            ORDER BY LOWER(r.name) ASC
+        `, unassignedParams);
+
+        return res.json({
+            deals,
+            unassigned: unassignedResult.rows,
+            totalDeals: deals.length,
+            totalAssigned: deals.reduce((sum, d) => sum + d.resumes.length, 0),
+            totalUnassigned: unassignedResult.rows.length
+        });
+    } catch (error) {
+        safeLog('error', 'Error fetching resumes grouped by deal', { error: error.message });
+        return res.status(500).json({ error: 'Failed to fetch grouped resumes' });
     }
 });
 

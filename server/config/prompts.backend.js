@@ -44,7 +44,8 @@ RÈGLES STRICTES (ANTI-INVENTION / ANTI-PLACEHOLDER)
 ============================================================
 - Ne jamais inventer : dates, durées, employeurs/clients, projets, chiffres, résultats, diplômes,
   certifications, technologies, outils, responsabilités non présentes, langues/niveaux.
-- Ne pas supprimer d'expériences. Vous pouvez condenser, mais conserver les faits essentiels.
+- INTERDICTION ABSOLUE de supprimer des expériences. Chaque expérience/mission/poste du CV original DOIT apparaître dans le CV amélioré.
+- Vous pouvez reformuler et restructurer, mais JAMAIS fusionner ni omettre une expérience.
 - Si une information est absente : ne pas l'ajouter. Ne pas écrire "Non renseigné" ou équivalent.
 - Interdiction absolue de placeholders : NRE, TBD, TODO, ??.
 - Ne pas ajouter un titre global contenant le nom du candidat (injecté ailleurs).
@@ -120,6 +121,8 @@ OBJECTIFS D'AMÉLIORATION — PAR SECTION
 3) EXPÉRIENCE (alignée sur la grille d'analyse : structure → contexte → livrables → responsabilités → preuves)
 Objectif : rendre l'expérience évaluable sans inventer.
 
+RÈGLE CRITIQUE : Comptez le nombre d'expériences/missions/postes dans le CV original. Le CV amélioré DOIT contenir EXACTEMENT le même nombre d'expériences. Si une expérience semble mineure ou courte, la conserver quand même (reformulée si nécessaire).
+
 Format standard par expérience :
 - En-tête : Entreprise (non anonymisée) - Dates - Poste
 - (Optionnel) Contexte (1 ligne max) UNIQUEMENT si explicitement indiqué (type de projet, freelance/stage/CDI, etc.)
@@ -137,17 +140,22 @@ Règles de reformulation autorisées (précision prudente, sans invention) :
 - blockchain/smart contracts mentionnés → "contribution au développement de smart contracts"
 - PWA mentionnée → "développement d'une Progressive Web App (PWA)"
 
-4) FORMATION / CERTIFICATIONS (structure + faits)
+4) FORMATION (structure + faits)
 - Conserver toutes les formations ; dates harmonisées ("Mois AAAA – Mois AAAA" ou "AAAA – AAAA").
 - Format par formation :
   [Diplôme / formation] — [Établissement], [Ville/Pays si présent] / [Dates]
   (optionnel) Spécialisation : [si présent]
   (optionnel) Points pertinents IT : 1–3 éléments max si explicitement mentionnés (projets, technos, thèmes)
-- Certifications :
-  - Créer la section uniquement si certifications explicitement présentes.
-  - Ne jamais transformer une formation en certification.
 
-5) LANGUES & CENTRES D'INTÉRÊT
+5) CERTIFICATIONS (SECTION SÉPARÉE - OBLIGATOIRE SI PRÉSENTES)
+RÈGLE CRITIQUE : Si le CV original contient des certifications, elles DOIVENT apparaître dans le CV amélioré.
+- Reconnaître comme certifications : AWS, Azure, GCP, Scrum (PSM, CSM), PMP, ITIL, Cisco (CCNA, CCNP), Oracle, SAFe, Prince2, ISO, TOGAF, Kubernetes (CKA, CKAD), Terraform, etc.
+- Inclure aussi : certifications mentionnées dans les compétences, en fin de CV, ou dans une section dédiée.
+- Format : [Nom certification] — [Organisme si connu] / [Date ou "En cours" si mentionné]
+- Ne jamais transformer une formation diplômante en certification.
+- Ne jamais omettre une certification présente dans le CV original.
+
+6) LANGUES & CENTRES D'INTÉRÊT
 - Langues : présenter au mieux les langues. Si des niveaux sont indiqués, les reprendre.
 - Centres d'intérêt : conserver, reformuler pour les rendre lisibles et éventuellement reliés à des soft skills (sans inventer).
 
@@ -155,12 +163,15 @@ Règles de reformulation autorisées (précision prudente, sans invention) :
 RELECTURE FINALE AVANT DE RÉPONDRE
 ============================================================
 1) Ai-je inventé quelque chose ? Si oui, supprimer.
-2) Ai-je gardé toutes les expériences ? Sinon, corriger.
-3) improvedText est-il un HTML propre avec <h2> et <h4> ? Sinon, corriger.
-4) Le JSON est-il strictement valide ? Sinon, corriger.
-5) Les scores reflètent-ils le CV AMÉLIORÉ ? Sinon, ajuster.
-6) Le champ "name" contient bien le nom ou trigramme du candidat (jamais vide) ?
-7) Les règles d'anonymisation ont-elles été appliquées dans improvedText ?
+2) COMPTAGE DES EXPÉRIENCES : Combien d'expériences/missions/postes dans le CV original ? Combien dans mon improvedText ? 
+   -> Si le compte ne correspond pas, AJOUTER les expériences manquantes avant de répondre.
+3) VÉRIFICATION DES CERTIFICATIONS : Le CV original contient-il des certifications (AWS, Azure, Scrum, PMP, ITIL, etc.) ?
+   -> Si oui, sont-elles toutes présentes dans mon improvedText ? Sinon, les AJOUTER.
+4) improvedText est-il un HTML propre avec <h2> et <h4> ? Sinon, corriger.
+5) Le JSON est-il strictement valide ? Sinon, corriger.
+6) Les scores reflètent-ils le CV AMÉLIORÉ ? Sinon, ajuster.
+7) Le champ "name" contient bien le nom ou trigramme du candidat (jamais vide) ?
+8) Les règles d'anonymisation ont-elles été appliquées dans improvedText ?
 Retournez uniquement le JSON.`;
 
 export const ANONYMIZATION_RULES_ANONYMOUS = `

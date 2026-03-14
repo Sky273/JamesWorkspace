@@ -83,7 +83,7 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
       { name: t('navigation.missions'), href: '/missions', icon: BriefcaseIcon },
       { name: t('navigation.profileMatching'), href: '/profile-matching', icon: UserGroupIcon },
       { name: t('navigation.adaptations'), href: '/adaptations', icon: SparklesIcon },
-      { name: t('navigation.clients'), href: '/clients', icon: BuildingOfficeIcon },
+      { name: t('navigation.crm', 'CRM'), href: '/clients', icon: BuildingOfficeIcon },
       { name: t('navigation.marketRadar'), href: '/facts', icon: SignalIcon },
     ]
   };

@@ -75,6 +75,7 @@ import calendarRoutes from './routes/calendar.routes.js';
 import backupRoutes from './routes/backup.routes.js';
 import batchExportRoutes from './routes/batchExport.routes.js';
 import batchJobsRoutes from './routes/batchJobs.routes.js';
+import dealsRoutes from './routes/deals.routes.js';
 
 // Import services
 import { metrics } from './services/metrics.service.js';
@@ -105,6 +106,8 @@ import { initResumeCommentsTable } from './services/resumeComments.service.js';
 import { initShareResumeTable } from './services/shareResume.service.js';
 // Candidate Pipeline initialization
 import { initCandidatePipelineTable } from './services/candidatePipeline.service.js';
+// Deals initialization
+import { initDealsTable } from './services/deals.service.js';
 // Batch Jobs worker initialization
 import { initializeWorker as initBatchJobsWorker, startWorker as startBatchJobsWorker, stopWorker as stopBatchJobsWorker } from './services/batchJobsWorker.service.js';
 // Calendar service initialization
@@ -676,6 +679,9 @@ app.use('/api/docs', docsRoutes);
 // Clients routes
 app.use('/api/clients', clientsRoutes);
 
+// Deals routes
+app.use('/api/deals', dealsRoutes);
+
 // Resume Submissions routes
 app.use('/api/submissions', resumeSubmissionsRoutes);
 
@@ -1038,6 +1044,14 @@ async function onServerStart(protocol, port) {
             safeLog('info', 'Candidate Pipeline tables initialized');
         } catch (error) {
             safeLog('error', 'Failed to initialize Candidate Pipeline tables', { error: error.message });
+        }
+        
+        // Initialize Deals tables
+        try {
+            await initDealsTable();
+            safeLog('info', 'Deals tables initialized');
+        } catch (error) {
+            safeLog('error', 'Failed to initialize Deals tables', { error: error.message });
         }
         
         // Initialize Calendar tokens table

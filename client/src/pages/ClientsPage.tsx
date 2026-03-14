@@ -1,9 +1,10 @@
 /**
- * ClientsPage - Manage clients and prospects
- * TypeScript version
+ * CRMPage - Manage clients, prospects and deals
+ * TypeScript version - Renamed from ClientsPage
  */
 
 import { useState, useEffect, ChangeEvent } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import clientService from '../utils/clientService';
 import toast from 'react-hot-toast';
@@ -22,8 +23,10 @@ import {
   MapPinIcon,
   BriefcaseIcon,
   PaperAirplaneIcon,
-  EyeIcon
+  EyeIcon,
+  FolderIcon
 } from '@heroicons/react/24/outline';
+import { DealsTab } from '../components/CRM';
 
 import {
   ClientFormModal,
@@ -50,11 +53,21 @@ interface DeleteTarget {
   clientId?: string;
 }
 
-const ClientsPage = (): JSX.Element => {
+type CRMTab = 'clients' | 'deals';
+type ClientFilter = 'all' | 'client' | 'prospect';
+
+const CRMPage = (): JSX.Element => {
   const { t } = useTranslation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  
+  // Main CRM tab (clients vs deals)
+  const [crmTab, setCrmTab] = useState<CRMTab>(
+    (searchParams.get('tab') as CRMTab) || 'clients'
+  );
+  
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [activeTab, setActiveTab] = useState<'all' | 'client' | 'prospect'>('all');
+  const [activeTab, setActiveTab] = useState<ClientFilter>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [debouncedSearch, setDebouncedSearch] = useState<string>('');
   
@@ -218,13 +231,56 @@ const ClientsPage = (): JSX.Element => {
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-          {t('clients.title')}
+          {t('crm.title', 'CRM')}
         </h1>
         <p className="text-gray-600 dark:text-gray-400">
-          {t('clients.subtitle')}
+          {t('crm.subtitle', 'Gérez vos clients, prospects et affaires')}
         </p>
       </div>
 
+      {/* CRM Main Tabs */}
+      <div className="flex items-center gap-1 mb-6 border-b border-gray-200 dark:border-gray-700">
+        <button
+          onClick={() => {
+            setCrmTab('clients');
+            searchParams.set('tab', 'clients');
+            searchParams.delete('clientId');
+            setSearchParams(searchParams);
+          }}
+          className={`flex items-center gap-2 px-4 py-3 font-medium border-b-2 transition-colors ${
+            crmTab === 'clients'
+              ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+              : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+          }`}
+        >
+          <BuildingOfficeIcon className="w-5 h-5" />
+          {t('crm.tabs.clients', 'Clients & Prospects')}
+        </button>
+        <button
+          onClick={() => {
+            setCrmTab('deals');
+            searchParams.set('tab', 'deals');
+            setSearchParams(searchParams);
+          }}
+          className={`flex items-center gap-2 px-4 py-3 font-medium border-b-2 transition-colors ${
+            crmTab === 'deals'
+              ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+              : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+          }`}
+        >
+          <FolderIcon className="w-5 h-5" />
+          {t('crm.tabs.deals', 'Affaires')}
+        </button>
+      </div>
+
+      {/* Deals Tab Content */}
+      {crmTab === 'deals' && (
+        <DealsTab preFilterClientId={searchParams.get('clientId') || undefined} />
+      )}
+
+      {/* Clients Tab Content */}
+      {crmTab === 'clients' && (
+        <>
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 flex items-center gap-3">
@@ -483,6 +539,8 @@ const ClientsPage = (): JSX.Element => {
         loading={loading}
         itemName={t('clients.results')}
       />
+        </>
+      )}
 
       {/* Modals */}
       <ClientFormModal
@@ -529,4 +587,5 @@ const ClientsPage = (): JSX.Element => {
   );
 };
 
-export default ClientsPage;
+export default CRMPage;
+export { CRMPage as ClientsPage };

@@ -495,7 +495,26 @@
     "deleteConfirm": {
       "title": "Confirmer la suppression"
     },
-    "confirmDeleteMessage": "Êtes-vous sûr de vouloir supprimer ce CV ? Cette action est irréversible."
+    "confirmDeleteMessage": "Êtes-vous sûr de vouloir supprimer ce CV ? Cette action est irréversible.",
+    "filterByDeal": "Filtrer par affaire",
+    "allDeals": "Toutes les affaires",
+    "viewMode": "Affichage",
+    "viewList": "Liste",
+    "viewByDeal": "Par affaire",
+    "groupedView": {
+      "deals": "affaires",
+      "assigned": "CVs affectés",
+      "unassigned": "non affectés",
+      "noResumes": "Aucun CV associé à cette affaire",
+      "noDeals": "Aucune affaire créée. Créez une affaire dans l'onglet CRM pour commencer.",
+      "unassignedTitle": "CVs non affectés à une affaire",
+      "errorLoading": "Erreur lors du chargement des données",
+      "dropHere": "Déposer ici pour ajouter à cette affaire",
+      "moving": "Déplacement du CV...",
+      "moved": "CV déplacé vers « {{deal}} »",
+      "added": "CV ajouté à « {{deal}} »",
+      "dropError": "Erreur lors du déplacement"
+    }
   },
   "upload": {
     "title": "Analyseur de CV",
@@ -674,6 +693,7 @@
     "settings": "Paramètres",
     "missions": "Missions",
     "clients": "Clients & Prospects",
+    "crm": "CRM",
     "profileMatching": "Matching Profils",
     "adaptations": "Adaptations",
     "security": "Logs de Sécurité",
@@ -1431,6 +1451,78 @@
       "confirmDeleteClient": "Êtes-vous sûr de vouloir supprimer le client \"{{name}}\" ?",
       "confirmDeleteContact": "Êtes-vous sûr de vouloir supprimer le contact \"{{name}}\" ?",
       "cannotDeleteWithSubmissions": "Impossible de supprimer : des envois de CV sont associés"
+    }
+  },
+  "crm": {
+    "title": "CRM",
+    "subtitle": "Gérez vos clients, prospects et affaires",
+    "tabs": {
+      "clients": "Clients & Prospects",
+      "deals": "Affaires"
+    },
+    "deals": {
+      "title": "Affaires",
+      "subtitle": "Gérez vos affaires et opportunités commerciales",
+      "addDeal": "Nouvelle affaire",
+      "editDeal": "Modifier l'affaire",
+      "searchPlaceholder": "Rechercher une affaire...",
+      "results": "affaires",
+      "noDeals": "Aucune affaire trouvée",
+      "viewDeals": "Affaires",
+      "allClients": "Tous les clients",
+      "allStatuses": "Tous les statuts",
+      "filterByClient": "Filtrer par client",
+      "filterByStatus": "Filtrer par statut",
+      "name": "Nom de l'affaire",
+      "namePlaceholder": "Ex: Recrutement développeur senior",
+      "client": "Client",
+      "selectClient": "Sélectionner un client",
+      "contact": "Interlocuteur",
+      "selectContact": "Sélectionner un interlocuteur",
+      "noContactsForClient": "Aucun contact pour ce client",
+      "status": "Statut",
+      "priority": "Priorité",
+      "description": "Description",
+      "descriptionPlaceholder": "Description de l'affaire...",
+      "expectedCloseDate": "Date de clôture prévue",
+      "cvCount": "CVs associés",
+      "statuses": {
+        "open": "En cours",
+        "won": "Gagnée",
+        "lost": "Perdue",
+        "on_hold": "En attente"
+      },
+      "priorities": {
+        "low": "Basse",
+        "medium": "Moyenne",
+        "high": "Haute",
+        "urgent": "Urgente"
+      },
+      "messages": {
+        "dealCreated": "Affaire créée avec succès",
+        "dealUpdated": "Affaire mise à jour avec succès",
+        "dealDeleted": "Affaire supprimée avec succès",
+        "saving": "Enregistrement en cours...",
+        "errorFetching": "Erreur lors du chargement des affaires",
+        "errorCreating": "Erreur lors de la création de l'affaire",
+        "errorUpdating": "Erreur lors de la mise à jour de l'affaire",
+        "errorDeleting": "Erreur lors de la suppression de l'affaire",
+        "confirmDelete": "Êtes-vous sûr de vouloir supprimer l'affaire \"{{name}}\" ?"
+      },
+      "modal": {
+        "manageDeals": "Affaires du CV",
+        "associatedDeals": "Affaires associées",
+        "addToDeal": "Ajouter à une affaire",
+        "searchDeal": "Rechercher une affaire...",
+        "noDealsAssociated": "Ce CV n'est associé à aucune affaire",
+        "allDealsAssociated": "Toutes les affaires sont déjà associées",
+        "noDealFound": "Aucune affaire trouvée",
+        "cvAdded": "CV ajouté à l'affaire",
+        "cvRemoved": "CV retiré de l'affaire",
+        "errorAdding": "Erreur lors de l'ajout",
+        "errorRemoving": "Erreur lors de la suppression",
+        "removeFromDeal": "Retirer de cette affaire"
+      }
     }
   },
   "mail": {

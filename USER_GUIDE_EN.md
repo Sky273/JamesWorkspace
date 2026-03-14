@@ -10,20 +10,21 @@
 6. [Profile Matching](#profile-matching)
 7. [Selection Pipeline](#selection-pipeline)
 8. [Resume Adaptations](#resume-adaptations)
-9. [Clients & Prospects](#clients--prospects)
-10. [Email CV Sending](#email-cv-sending)
-11. [Market Radar](#market-radar)
-12. [AI Assistant](#ai-assistant)
-13. [Administration](#administration)
-14. [Database Backup](#database-backup)
-15. [GDPR Compliance](#gdpr-compliance)
-16. [Interface and Navigation](#interface-and-navigation)
-17. [Best Practices](#best-practices)
-18. [Troubleshooting](#troubleshooting)
-19. [FAQ](#faq)
-20. [Roadmap](#roadmap)
-21. [Glossary](#glossary)
-22. [Support](#support)
+9. [Clients & Prospects (CRM)](#clients--prospects)
+10. [Deals](#deals)
+11. [Email CV Sending](#email-cv-sending)
+12. [Market Radar](#market-radar)
+13. [AI Assistant](#ai-assistant)
+14. [Administration](#administration)
+15. [Database Backup](#database-backup)
+16. [GDPR Compliance](#gdpr-compliance)
+17. [Interface and Navigation](#interface-and-navigation)
+18. [Best Practices](#best-practices)
+19. [Troubleshooting](#troubleshooting)
+20. [FAQ](#faq)
+21. [Roadmap](#roadmap)
+22. [Glossary](#glossary)
+23. [Support](#support)
 
 ---
 
@@ -940,12 +941,15 @@ The AI performs a multi-step analysis:
 
 ### What is Clients & Prospects Management?
 
-The **Clients & Prospects** feature allows you to manage your commercial portfolio: client companies, prospects, and their contacts. This information is used for tracking resume submissions and personalizing emails.
+The **Clients & Prospects** feature (accessible via the **CRM** tab in the sidebar) allows you to manage your commercial portfolio: client companies, prospects, their contacts, and **deals** (business opportunities). This information is used for tracking resume submissions, personalizing emails, and organizing your resumes by opportunity.
 
-### Accessing Clients & Prospects
+### Accessing the CRM
 
-1. Go to **"Clients & Prospects"** in the sidebar menu
-2. View the list of your clients and prospects with their contacts
+1. Go to **"CRM"** in the sidebar menu
+2. The CRM area offers three tabs:
+   - **Clients & Prospects**: Manage your companies and contacts
+   - **Deals**: Manage your business opportunities (see dedicated section below)
+   - **Dashboard**: Overview of your commercial activity
 
 ### Company Types
 
@@ -996,6 +1000,120 @@ For each client/prospect, you can view the history of submitted resumes:
 1. Open the client/prospect profile
 2. Check the **"Submissions"** section
 3. View submitted resumes with date, recipient contact, and status
+
+### Best Practices
+
+- **Qualify your contacts**: Fill in the role to personalize your emails
+- **Update regularly**: Remove obsolete contacts
+- **Convert your prospects**: Change the type to "Client" after signing
+- **Create deals**: Associate your resumes with deals for structured tracking
+
+---
+
+## Deals
+
+### What is a Deal?
+
+A **deal** represents a business opportunity or client need to which you can associate resumes. Deals allow you to organize your candidates by business context and track the progress of each opportunity.
+
+### Accessing Deals
+
+1. Go to **"CRM"** in the sidebar menu
+2. Click the **"Deals"** tab
+
+### Creating a Deal
+
+1. Click **"New Deal"**
+2. Fill in the form:
+
+| Field | Description | Required |
+|-------|-------------|----------|
+| **Title** | Deal title (e.g., "IT Migration - HSBC") | Yes |
+| **Client** | Associated client or prospect | No |
+| **Contact** | Contact person at the client | No |
+| **Status** | Open, Won, Lost, On Hold | Yes |
+| **Priority** | Low, Medium, High, Urgent | Yes |
+| **Description** | Opportunity details | No |
+
+3. Click **"Save"**
+
+### Deal Statuses
+
+| Status | Description | Color |
+|--------|-------------|-------|
+| **Open** | Active deal, in negotiation | Blue |
+| **Won** | Successfully closed deal | Green |
+| **Lost** | Deal not retained | Red |
+| **On Hold** | Temporarily suspended deal | Yellow |
+
+### Priorities
+
+| Priority | Indicator |
+|----------|-----------|
+| **Low** | ○ Gray |
+| **Medium** | ● Blue |
+| **High** | ●● Orange |
+| **Urgent** | ●●● Red |
+
+### Associating Resumes with a Deal
+
+There are several ways to associate a resume with a deal:
+
+#### From the Resume Library (List View)
+
+1. On a resume card, click the **briefcase** icon (manage deals)
+2. Select one or more deals from the list
+3. The resume is immediately associated
+
+#### From the Resume Library (By Deal View)
+
+1. Switch to **"By deal"** view using the toggle at the top of the resume library
+2. **Drag and drop** a resume from any section onto a deal
+3. The resume is automatically moved/added to the target deal
+
+#### From a Deal Profile (CRM)
+
+1. Open a deal in the **"Deals"** tab of the CRM
+2. Use the **"Add a resume"** button to search and associate resumes
+
+### By Deal View in the Resume Library
+
+The resume library offers two display modes, accessible via a toggle at the top of the page:
+
+#### List Mode (Default)
+
+The classic mode: all resumes displayed in a paginated list with filters and search.
+
+#### By Deal Mode
+
+This mode organizes resumes by deal, with:
+
+- **Summary bar**: Total number of deals, assigned resumes, and unassigned resumes
+- **Collapsible sections**: Each deal appears as an accordion showing title, status, priority, client, and contact
+- **Counter badge**: Number of resumes associated with each deal
+- **"Unassigned" section**: Resumes not associated with any deal appear in a dedicated section at the bottom
+
+#### Drag & Drop
+
+The **By deal** mode supports **drag and drop** of resumes between sections:
+
+1. **Click and hold** on a resume card
+2. **Drag** the resume onto the target deal section
+3. The drop zone highlights in purple with a "Drop here" indicator
+4. **Release** to confirm the move
+
+**Behaviors:**
+- **Unassigned resume → Deal**: The resume is added to the deal
+- **Deal A → Deal B**: The resume is removed from A and added to B
+- A confirmation toast appears after each operation
+- The expanded/collapsed state of sections is preserved after a move
+
+### Best Practices
+
+- **Name your deals clearly**: Use a consistent format (e.g., "Project - Client")
+- **Update statuses**: Mark a deal as "Won" or "Lost" for reliable tracking
+- **Use priorities**: Urgent deals appear first in the by-deal view
+- **Drag & drop to organize**: Use the by-deal view to quickly reassign your resumes
 
 ---
 

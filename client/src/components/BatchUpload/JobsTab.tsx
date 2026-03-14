@@ -65,6 +65,7 @@ interface Job {
   items?: JobItem[];
   export_file_path?: string;
   export_file_name?: string;
+  export_file_available?: boolean;
 }
 
 const JobsTab = (): JSX.Element => {
@@ -458,7 +459,7 @@ const JobsTab = (): JSX.Element => {
                     {/* Actions */}
                     <div className="flex items-center gap-2">
                       {/* Download button for completed jobs with export */}
-                      {job.status === 'completed' && job.export_file_name && (
+                      {job.status === 'completed' && job.export_file_available && job.export_file_name && (
                         <button
                           onClick={(e) => { e.stopPropagation(); handleDownloadExport(job.id, job.export_file_name!); }}
                           className="p-1.5 text-green-500 hover:text-green-600 transition-colors"
