@@ -6,6 +6,7 @@
 
 import { safeLog } from '../utils/logger.backend.js';
 import { query } from '../config/database.js';
+import { processAnalysisTags } from '../utils/tagCleaner.js';
 import {
     JOB_STATUS,
     ITEM_STATUS,
@@ -525,7 +526,8 @@ async function processImportItem(item, job, options) {
         });
         
         // Save partial analysis to resume (without name)
-        const tags = analysis.tags || { skills: [], industries: [], tools: [], softSkills: [] };
+        // Process tags to get both raw and cleaned versions
+        const { rawTags: pendingRawTags, cleanedTags: pendingCleanedTags } = processAnalysisTags(analysis);
         await query(`
             UPDATE resumes SET
                 original_text = $1,
@@ -540,11 +542,15 @@ async function processImportItem(item, job, options) {
                 industries = $10,
                 tools = $11,
                 soft_skills = $12,
-                key_improvements = $13,
-                title = $14,
+                skills_cleaned = $13,
+                industries_cleaned = $14,
+                tools_cleaned = $15,
+                soft_skills_cleaned = $16,
+                key_improvements = $17,
+                title = $18,
                 status = 'pending_name',
                 analyzed_at = NOW()
-            WHERE id = $15
+            WHERE id = $19
         `, [
             analysis.structuredText || text,
             parseScore(analysis.globalRating),
@@ -554,10 +560,14 @@ async function processImportItem(item, job, options) {
             parseScore(analysis.atsOptimizationRating),
             parseScore(analysis.executiveSummaryRating),
             parseScore(analysis.hobbiesLanguagesRating),
-            JSON.stringify(tags.skills || []),
-            JSON.stringify(tags.industries || []),
-            JSON.stringify(tags.tools || []),
-            JSON.stringify(tags.softSkills || []),
+            JSON.stringify(pendingRawTags.skills),
+            JSON.stringify(pendingRawTags.industries),
+            JSON.stringify(pendingRawTags.tools),
+            JSON.stringify(pendingRawTags.softSkills),
+            JSON.stringify(pendingCleanedTags.skills),
+            JSON.stringify(pendingCleanedTags.industries),
+            JSON.stringify(pendingCleanedTags.tools),
+            JSON.stringify(pendingCleanedTags.softSkills),
             JSON.stringify(analysis.suggestions || {}),
             analysis.title,
             resumeId
@@ -579,7 +589,8 @@ async function processImportItem(item, job, options) {
     await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, { progress: 60 });
 
     // Step 4: Update resume with analysis
-    const tags = analysis.tags || { skills: [], industries: [], tools: [], softSkills: [] };
+    // Process tags to get both raw and cleaned versions
+    const { rawTags, cleanedTags } = processAnalysisTags(analysis);
     
     // Get LLM settings to check if CV should be anonymized
     const { getLLMSettings } = await import('./settings.service.js');
@@ -611,13 +622,17 @@ async function processImportItem(item, job, options) {
             industries = $10,
             tools = $11,
             soft_skills = $12,
-            key_improvements = $13,
-            name = COALESCE($14, name),
-            title = $15,
-            trigram = $16,
+            skills_cleaned = $13,
+            industries_cleaned = $14,
+            tools_cleaned = $15,
+            soft_skills_cleaned = $16,
+            key_improvements = $17,
+            name = COALESCE($18, name),
+            title = $19,
+            trigram = $20,
             status = 'analyzed',
             analyzed_at = NOW()
-        WHERE id = $17
+        WHERE id = $21
     `, [
         analysis.structuredText || text,
         parseScore(analysis.globalRating),
@@ -627,10 +642,14 @@ async function processImportItem(item, job, options) {
         parseScore(analysis.atsOptimizationRating),
         parseScore(analysis.executiveSummaryRating),
         parseScore(analysis.hobbiesLanguagesRating),
-        JSON.stringify(tags.skills || []),
-        JSON.stringify(tags.industries || []),
-        JSON.stringify(tags.tools || []),
-        JSON.stringify(tags.softSkills || []),
+        JSON.stringify(rawTags.skills),
+        JSON.stringify(rawTags.industries),
+        JSON.stringify(rawTags.tools),
+        JSON.stringify(rawTags.softSkills),
+        JSON.stringify(cleanedTags.skills),
+        JSON.stringify(cleanedTags.industries),
+        JSON.stringify(cleanedTags.tools),
+        JSON.stringify(cleanedTags.softSkills),
         JSON.stringify(analysis.suggestions || {}),
         displayName,  // Use trigram in anonymous mode, full name otherwise
         analysis.title,

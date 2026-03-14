@@ -8,6 +8,7 @@ import { authenticateToken } from '../middleware/auth.middleware.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { selectWithTimeout, updateWithTimeout } from '../utils/postgresHelpers.js';
 import { processCleanedTagsToEsco } from '../services/escoService.js';
+import { getUserFirmId } from '../utils/firmHelpers.js';
 
 const router = express.Router();
 
@@ -165,11 +166,18 @@ router.get('/', authenticateToken, async (req, res) => {
 router.get('/cleaned', authenticateToken, async (req, res) => {
     try {
         const userRole = req.user?.role?.toLowerCase();
-        const userFirmId = req.user?.firm_id;
+        const userFirmId = await getUserFirmId(req);
         const isAdmin = userRole === 'admin';
+        const scope = req.query.scope === 'grouped-by-deal' ? 'grouped-by-deal' : 'default';
         
-        // Cache key includes firm_id for non-admins to ensure proper isolation
-        const cacheKey = isAdmin ? 'admin' : `firm_${userFirmId}`;
+        if (scope === 'grouped-by-deal' && !userFirmId && !isAdmin) {
+            return res.status(403).json({ error: 'No firm association' });
+        }
+
+        // Cache key includes scope and firm_id for proper isolation
+        const cacheKey = isAdmin
+            ? `admin_${scope}`
+            : `firm_${userFirmId}_${scope}`;
         
         // Return cached cleaned tags if available and not expired (per-firm cache)
         if (cleanedTagsCache?.[cacheKey] && cleanedTagsCacheTime?.[cacheKey] && 
@@ -177,55 +185,127 @@ router.get('/cleaned', authenticateToken, async (req, res) => {
             return res.json(cleanedTagsCache[cacheKey]);
         }
         
-        // Build WHERE clause for firm filtering (admins see all, others see only their firm)
-        const firmFilter = isAdmin ? '' : 'WHERE firm_id = $1';
-        const firmParams = isAdmin ? [] : [userFirmId];
-        
-        // Use PostgreSQL to aggregate and deduplicate cleaned tags directly in the database
-        // Note: PostgreSQL doesn't allow ORDER BY in jsonb_agg(DISTINCT ...), so we use subqueries
-        const aggregateQuery = `
-            SELECT 
-                COALESCE(
-                    (SELECT jsonb_agg(tag ORDER BY tag) FROM (
-                        SELECT DISTINCT tag 
-                        FROM resumes, jsonb_array_elements_text(COALESCE(skills_cleaned, '[]'::jsonb)) AS tag 
-                        ${firmFilter}
-                        ${firmFilter ? 'AND' : 'WHERE'} tag IS NOT NULL AND tag != ''
-                    ) AS distinct_tags),
-                    '[]'::jsonb
-                ) AS skills,
-                COALESCE(
-                    (SELECT jsonb_agg(tag ORDER BY tag) FROM (
-                        SELECT DISTINCT tag 
-                        FROM resumes, jsonb_array_elements_text(COALESCE(industries_cleaned, '[]'::jsonb)) AS tag 
-                        ${firmFilter}
-                        ${firmFilter ? 'AND' : 'WHERE'} tag IS NOT NULL AND tag != ''
-                    ) AS distinct_tags),
-                    '[]'::jsonb
-                ) AS industries,
-                COALESCE(
-                    (SELECT jsonb_agg(tag ORDER BY tag) FROM (
-                        SELECT DISTINCT tag 
-                        FROM resumes, jsonb_array_elements_text(COALESCE(tools_cleaned, '[]'::jsonb)) AS tag 
-                        ${firmFilter}
-                        ${firmFilter ? 'AND' : 'WHERE'} tag IS NOT NULL AND tag != ''
-                    ) AS distinct_tags),
-                    '[]'::jsonb
-                ) AS tools,
-                COALESCE(
-                    (SELECT jsonb_agg(tag ORDER BY tag) FROM (
-                        SELECT DISTINCT tag 
-                        FROM resumes, jsonb_array_elements_text(COALESCE(soft_skills_cleaned, '[]'::jsonb)) AS tag 
-                        ${firmFilter}
-                        ${firmFilter ? 'AND' : 'WHERE'} tag IS NOT NULL AND tag != ''
-                    ) AS distinct_tags),
-                    '[]'::jsonb
-                ) AS soft_skills
-        `;
+        let aggregateQuery = '';
+        let queryParams = [];
+
+        if (scope === 'grouped-by-deal') {
+            // For grouped-by-deal view:
+            // - Admin: all resumes (linked to any deal OR unassigned)
+            // - User: resumes linked to their firm's deals OR unassigned resumes from their firm
+            // Use COALESCE to fallback to raw tags if cleaned tags are not available
+            const firmCondition = isAdmin
+                ? ''
+                : `WHERE (
+                        r.id IN (
+                            SELECT dr.resume_id
+                            FROM deal_resumes dr
+                            INNER JOIN deals d ON d.id = dr.deal_id
+                            WHERE d.firm_id = $1
+                        )
+                        OR (
+                            r.firm_id = $1
+                            AND r.id NOT IN (
+                                SELECT DISTINCT resume_id
+                                FROM deal_resumes
+                                WHERE resume_id IS NOT NULL
+                            )
+                        )
+                    )`;
+            
+            aggregateQuery = `
+                WITH visible_resumes AS (
+                    SELECT DISTINCT
+                        COALESCE(r.skills_cleaned, r.skills) as skills_data,
+                        COALESCE(r.industries_cleaned, r.industries) as industries_data,
+                        COALESCE(r.tools_cleaned, r.tools) as tools_data,
+                        COALESCE(r.soft_skills_cleaned, r.soft_skills) as soft_skills_data
+                    FROM resumes r
+                    ${firmCondition}
+                )
+                SELECT 
+                    COALESCE(
+                        (SELECT jsonb_agg(tag ORDER BY tag) FROM (
+                            SELECT DISTINCT tag
+                            FROM visible_resumes, jsonb_array_elements_text(COALESCE(skills_data, '[]'::jsonb)) AS tag
+                            WHERE tag IS NOT NULL AND tag != ''
+                        ) AS distinct_tags),
+                        '[]'::jsonb
+                    ) AS skills,
+                    COALESCE(
+                        (SELECT jsonb_agg(tag ORDER BY tag) FROM (
+                            SELECT DISTINCT tag
+                            FROM visible_resumes, jsonb_array_elements_text(COALESCE(industries_data, '[]'::jsonb)) AS tag
+                            WHERE tag IS NOT NULL AND tag != ''
+                        ) AS distinct_tags),
+                        '[]'::jsonb
+                    ) AS industries,
+                    COALESCE(
+                        (SELECT jsonb_agg(tag ORDER BY tag) FROM (
+                            SELECT DISTINCT tag
+                            FROM visible_resumes, jsonb_array_elements_text(COALESCE(tools_data, '[]'::jsonb)) AS tag
+                            WHERE tag IS NOT NULL AND tag != ''
+                        ) AS distinct_tags),
+                        '[]'::jsonb
+                    ) AS tools,
+                    COALESCE(
+                        (SELECT jsonb_agg(tag ORDER BY tag) FROM (
+                            SELECT DISTINCT tag
+                            FROM visible_resumes, jsonb_array_elements_text(COALESCE(soft_skills_data, '[]'::jsonb)) AS tag
+                            WHERE tag IS NOT NULL AND tag != ''
+                        ) AS distinct_tags),
+                        '[]'::jsonb
+                    ) AS soft_skills
+            `;
+            queryParams = isAdmin ? [] : [userFirmId];
+        } else {
+            // Default scope: use COALESCE to fallback to raw tags if cleaned tags are not available
+            const firmFilter = isAdmin ? '' : 'WHERE firm_id = $1';
+            const firmParams = isAdmin ? [] : [userFirmId];
+            aggregateQuery = `
+                SELECT 
+                    COALESCE(
+                        (SELECT jsonb_agg(tag ORDER BY tag) FROM (
+                            SELECT DISTINCT tag 
+                            FROM resumes, jsonb_array_elements_text(COALESCE(COALESCE(skills_cleaned, skills), '[]'::jsonb)) AS tag 
+                            ${firmFilter}
+                            ${firmFilter ? 'AND' : 'WHERE'} tag IS NOT NULL AND tag != ''
+                        ) AS distinct_tags),
+                        '[]'::jsonb
+                    ) AS skills,
+                    COALESCE(
+                        (SELECT jsonb_agg(tag ORDER BY tag) FROM (
+                            SELECT DISTINCT tag 
+                            FROM resumes, jsonb_array_elements_text(COALESCE(COALESCE(industries_cleaned, industries), '[]'::jsonb)) AS tag 
+                            ${firmFilter}
+                            ${firmFilter ? 'AND' : 'WHERE'} tag IS NOT NULL AND tag != ''
+                        ) AS distinct_tags),
+                        '[]'::jsonb
+                    ) AS industries,
+                    COALESCE(
+                        (SELECT jsonb_agg(tag ORDER BY tag) FROM (
+                            SELECT DISTINCT tag 
+                            FROM resumes, jsonb_array_elements_text(COALESCE(COALESCE(tools_cleaned, tools), '[]'::jsonb)) AS tag 
+                            ${firmFilter}
+                            ${firmFilter ? 'AND' : 'WHERE'} tag IS NOT NULL AND tag != ''
+                        ) AS distinct_tags),
+                        '[]'::jsonb
+                    ) AS tools,
+                    COALESCE(
+                        (SELECT jsonb_agg(tag ORDER BY tag) FROM (
+                            SELECT DISTINCT tag 
+                            FROM resumes, jsonb_array_elements_text(COALESCE(COALESCE(soft_skills_cleaned, soft_skills), '[]'::jsonb)) AS tag 
+                            ${firmFilter}
+                            ${firmFilter ? 'AND' : 'WHERE'} tag IS NOT NULL AND tag != ''
+                        ) AS distinct_tags),
+                        '[]'::jsonb
+                    ) AS soft_skills
+            `;
+            queryParams = firmParams;
+        }
         
         const queryResult = await selectWithTimeout('resumes', {
             rawQuery: aggregateQuery,
-            rawParams: firmParams
+            rawParams: queryParams
         });
         
         const row = queryResult[0] || {};

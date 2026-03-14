@@ -647,9 +647,14 @@ export async function deleteJob(jobId) {
 export async function getPendingJobs() {
     try {
         const result = await query(`
-            SELECT * FROM batch_jobs 
-            WHERE status IN ($1, $2)
-            ORDER BY created_at ASC
+            SELECT bj.*,
+                   u.name as user_name,
+                   f.name as firm_name
+            FROM batch_jobs bj
+            LEFT JOIN users u ON bj.user_id = u.id
+            LEFT JOIN firms f ON bj.firm_id = f.id
+            WHERE bj.status IN ($1, $2)
+            ORDER BY bj.created_at ASC
             LIMIT 5
         `, [JOB_STATUS.PENDING, JOB_STATUS.PROCESSING]);
 

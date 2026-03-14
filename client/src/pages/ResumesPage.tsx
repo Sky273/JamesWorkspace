@@ -207,12 +207,13 @@ const ResumesPage = (): JSX.Element => {
     fetchGlobalStats();
   }, [fetchGlobalStats]);
 
-  // Fetch all available cleaned tags from backend (once on mount)
+  // Fetch all available cleaned tags from backend
   // Uses /api/tags/cleaned which has optimized SQL aggregation and caching
   useEffect(() => {
     const fetchAllTags = async () => {
       try {
-        const response = await authGet('/api/tags/cleaned');
+        const scope = viewMode === 'byDeal' ? 'grouped-by-deal' : 'default';
+        const response = await authGet(`/api/tags/cleaned?scope=${scope}`);
         if (response.ok) {
           const tags = await response.json();
           setAllTags(tags);
@@ -222,7 +223,7 @@ const ResumesPage = (): JSX.Element => {
       }
     };
     fetchAllTags();
-  }, [authGet]);
+  }, [authGet, viewMode]);
 
   // Calculate total pages
   const totalPages = Math.ceil(totalCount / pageSize);
@@ -418,7 +419,7 @@ const ResumesPage = (): JSX.Element => {
       </div>
 
       {viewMode === 'byDeal' ? (
-        <DealsGroupedView />
+        <DealsGroupedView allTags={allTags} />
       ) : (
       <>
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
