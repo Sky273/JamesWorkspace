@@ -484,7 +484,7 @@ export async function adaptHandler(req, res) {
         let matchPrompt = settings['Match Analysis Prompt'] || DEFAULT_MATCH_ANALYSIS_PROMPT;
         const matchAnalysis = await matchResumeWithMission(resumeText, missionTitle, missionContent, model, matchPrompt, userMetadata);
 
-        const adaptedText = await adaptResumeToMission({
+        const adaptationResult = await adaptResumeToMission({
             resumeText,
             resumeAnalysis: null,
             missionTitle,
@@ -495,6 +495,10 @@ export async function adaptHandler(req, res) {
             userMetadata
         });
         
+        // Extract adaptedText and adaptedTitle from result (new format returns object)
+        const adaptedText = typeof adaptationResult === 'string' ? adaptationResult : adaptationResult.adaptedText;
+        const adaptedTitle = typeof adaptationResult === 'string' ? null : (adaptationResult.adaptedTitle || null);
+
         // Parse match score (can be "32%" or 32 or null)
         let matchScoreNum = null;
         if (matchAnalysis?.matchScore) {
@@ -509,6 +513,8 @@ export async function adaptHandler(req, res) {
         safeLog('debug', 'Creating adaptation with data', {
             resumeId: resumeRecord.id,
             resumeName: resumeRecord.name,
+            candidateName: resumeRecord.candidate_name,
+            adaptedTitle: adaptedTitle,
             missionId: missionRecord.id,
             missionTitle: missionTitle,
             firm: resumeRecord.firm_name
@@ -518,6 +524,8 @@ export async function adaptHandler(req, res) {
             resume_id: resumeRecord.id,
             mission_id: missionRecord.id,
             resume_name: resumeRecord.name || null,
+            candidate_name: resumeRecord.candidate_name || null,
+            adapted_title: adaptedTitle,
             mission_title: missionTitle || null,
             mission_content: missionContent || null,
             firm: resumeRecord.firm_name || null,
@@ -531,6 +539,7 @@ export async function adaptHandler(req, res) {
 
         res.json({
             adaptedText,
+            adaptedTitle,
             matchAnalysis,
             adaptationId: adaptationRecord.id
         });

@@ -33,6 +33,8 @@ interface Adaptation {
   'Resume ID'?: string;
   'Mission ID'?: string;
   'Resume Name'?: string;
+  'Candidate Name'?: string;
+  'Adapted Title'?: string;
   'Adapted Text'?: string;
   'Match Score'?: number;
   'Match Analysis'?: string;
@@ -244,8 +246,8 @@ const AdaptationsPage = (): JSX.Element => {
 
       const resumeId = adaptationToExport.Resume?.[0];
       const resume = resumes.find(r => r.id === resumeId);
-      const candidateName = resume?.Name || 'Candidat';
-      const candidateTitle = resume?.Title || 'Titre Professionnel';
+      const candidateName = adaptationToExport['Candidate Name'] || resume?.Name || 'Candidat';
+      const candidateTitle = adaptationToExport['Adapted Title'] || resume?.Title || 'Titre Professionnel';
       const customerName = resume?.CustomerName || '';
       // Clean suggestion markers from content before export
       const rawContent = adaptationToExport['Adapted Text'] || '';
@@ -483,7 +485,10 @@ const AdaptationsPage = (): JSX.Element => {
                   }`}>{t(`adaptations.status.${adaptation.Status?.toLowerCase() || 'unknown'}`, adaptation.Status || 'N/A')}</span>
                 </div>
                 <div className="mb-4">
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-2 line-clamp-1">{getResumeName(adaptation)}</h3>
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-1 line-clamp-1">{adaptation['Candidate Name'] || getResumeName(adaptation)}</h3>
+                  {adaptation['Adapted Title'] && (
+                    <p className="text-sm font-medium text-blue-600 dark:text-blue-400 mb-1 line-clamp-1 italic">{adaptation['Adapted Title']}</p>
+                  )}
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-1"><span className="font-medium">{t('adaptations.mission')}:</span> {getMissionTitle(adaptation)}</p>
                   {adaptation['Created At'] && <p className="text-xs text-gray-500 dark:text-gray-500">{formatDateTime(adaptation['Created At'])}</p>}
                 </div>

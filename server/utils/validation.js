@@ -55,7 +55,9 @@ export const createMissionSchema = z.object({
   'Contact ID': z.string().uuid().optional().nullable(),
   contact_id: z.string().uuid().optional().nullable(),
   'Firm ID': z.string().uuid().optional().nullable(),
-  firm_id: z.string().uuid().optional().nullable()
+  firm_id: z.string().uuid().optional().nullable(),
+  'Deal ID': z.string().uuid().optional().nullable(),
+  deal_id: z.string().uuid().optional().nullable()
 });
 
 export const updateMissionSchema = z.object({
@@ -67,7 +69,9 @@ export const updateMissionSchema = z.object({
   'Contact ID': z.string().uuid().optional().nullable(),
   contact_id: z.string().uuid().optional().nullable(),
   'Firm ID': z.string().uuid().optional().nullable(),
-  firm_id: z.string().uuid().optional().nullable()
+  firm_id: z.string().uuid().optional().nullable(),
+  'Deal ID': z.string().uuid().optional().nullable(),
+  deal_id: z.string().uuid().optional().nullable()
 });
 
 // Template schemas
@@ -188,7 +192,9 @@ export const chatbotRequestSchema = z.object({
 
 // Adaptation schemas
 export const updateAdaptationSchema = z.object({
-  'Adapted Text': z.string().optional()
+  'Adapted Text': z.string().optional(),
+  'Adapted Title': z.string().max(500).optional().nullable(),
+  adapted_title: z.string().max(500).optional().nullable()
 }).strict();
 
 // Client schemas

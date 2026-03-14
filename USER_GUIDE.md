@@ -509,6 +509,8 @@ Le CV s'affiche directement dans le navigateur :
 
 Une **mission** représente une opportunité professionnelle (poste, projet, contrat) pour laquelle vous souhaitez adapter des CV.
 
+Une mission peut être **associée à une affaire** (deal) pour organiser le suivi commercial. Cette association est optionnelle : une mission peut exister indépendamment.
+
 ### Créer une Mission
 
 1. Accédez à **"Missions"** dans le menu
@@ -518,7 +520,10 @@ Une **mission** représente une opportunité professionnelle (poste, projet, con
 | Champ | Description | Obligatoire |
 |-------|-------------|-------------|
 | **Titre** | Intitulé du poste | Oui |
-| **Client** | Entreprise cliente | Oui |
+| **Affaire** | Affaire associée (optionnel) | Non |
+| **Client** | Entreprise cliente | Non |
+| **Interlocuteur** | Contact chez le client | Non |
+| **Statut** | Active, Brouillon ou Clôturée | Non |
 | **Description** | Description détaillée du poste | Oui |
 
 #### Conseils pour une Description Efficace
@@ -537,8 +542,10 @@ Une **mission** représente une opportunité professionnelle (poste, projet, con
 ### Gérer les Missions
 
 La page Missions affiche toutes vos opportunités avec :
-- Titre et entreprise
-- Nombre de CV adaptés
+- Titre et statut
+- **Affaire associée** (si rattachée à un deal)
+- Client et interlocuteur
+- Cabinet
 - Date de création
 - Actions (voir, modifier, supprimer)
 
@@ -548,8 +555,19 @@ En cliquant sur une mission, vous accédez à sa page de détail qui comprend :
 
 #### Informations de la Mission
 - **Titre et client** : En-tête avec les informations principales
+- **Affaire** : Lien vers l'affaire associée (si applicable)
 - **Description** : Contenu détaillé de l'offre
 - **Mots-clés extraits** : Compétences techniques, outils, secteurs, soft skills
+
+### Missions et Affaires
+
+Le lien entre missions et affaires permet de :
+- **Regrouper** plusieurs missions sous une même affaire
+- **Voir les missions** directement dans la vue CRM des affaires (nombre de missions affiché)
+- **Voir les missions** dans la vue "Par affaire" de la CVthèque avec le nombre d'adaptations
+- **Filtrer** les missions par affaire via le paramètre de requête `?dealId=`
+
+Une affaire peut contenir **0 à N missions**, et une mission peut n'être associée à **aucune affaire**.
 
 #### Pipeline Kanban Intégré
 

@@ -92,6 +92,15 @@ export async function initDealsTable() {
             CREATE INDEX IF NOT EXISTS idx_deal_resumes_resume_id ON deal_resumes(resume_id);
         `);
 
+        // Migration: Add deal_id column to missions table (missions can belong to a deal)
+        try {
+            await query(`ALTER TABLE missions ADD COLUMN IF NOT EXISTS deal_id UUID REFERENCES deals(id) ON DELETE SET NULL`);
+            await query(`CREATE INDEX IF NOT EXISTS idx_missions_deal_id ON missions(deal_id)`);
+            safeLog('info', 'Migration: missions.deal_id column ensured');
+        } catch (migrationError) {
+            safeLog('debug', 'Migration note: missions.deal_id', { note: migrationError.message });
+        }
+
         safeLog('info', 'Deals tables initialized successfully');
     } catch (error) {
         safeLog('error', 'Error initializing deals tables', { error: error.message });
@@ -273,7 +282,8 @@ export async function getDealById(dealId) {
                    cc.phone as contact_phone,
                    cc.role as contact_role,
                    u.name as created_by_name,
-                   (SELECT COUNT(*) FROM deal_resumes dr WHERE dr.deal_id = d.id) as resumes_count
+                   (SELECT COUNT(*) FROM deal_resumes dr WHERE dr.deal_id = d.id) as resumes_count,
+                   (SELECT COUNT(*) FROM missions m WHERE m.deal_id = d.id) as missions_count
             FROM deals d
             LEFT JOIN clients c ON d.client_id = c.id
             LEFT JOIN client_contacts cc ON d.contact_id = cc.id
@@ -349,7 +359,8 @@ export async function getDeals(firmId, filters = {}, pagination = {}) {
                    cc.name as contact_name,
                    cc.email as contact_email,
                    cc.role as contact_role,
-                   (SELECT COUNT(*) FROM deal_resumes dr WHERE dr.deal_id = d.id) as resumes_count
+                   (SELECT COUNT(*) FROM deal_resumes dr WHERE dr.deal_id = d.id) as resumes_count,
+                   (SELECT COUNT(*) FROM missions m WHERE m.deal_id = d.id) as missions_count
             FROM deals d
             LEFT JOIN clients c ON d.client_id = c.id
             LEFT JOIN client_contacts cc ON d.contact_id = cc.id

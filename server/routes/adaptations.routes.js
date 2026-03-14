@@ -97,6 +97,8 @@ router.get('/', authenticateToken, async (req, res) => {
             'Resume ID': record.resume_id,
             'Mission ID': record.mission_id,
             'Resume Name': record.resume_name,
+            'Candidate Name': record.candidate_name,
+            'Adapted Title': record.adapted_title,
             'Mission Title': record.mission_title,
             'Mission Content': record.mission_content,
             'Adapted Text': record.adapted_text,
@@ -165,6 +167,8 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
             'Resume ID': record.resume_id,
             'Mission ID': record.mission_id,
             'Resume Name': record.resume_name,
+            'Candidate Name': record.candidate_name,
+            'Adapted Title': record.adapted_title,
             'Mission Title': record.mission_title,
             'Mission Content': record.mission_content,
             'Mission Client ID': missionClientId,
@@ -208,6 +212,9 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateA
         if (req.body['Adapted Text'] !== undefined) {
             updates.adapted_text = req.body['Adapted Text'];
         }
+        if (req.body['Adapted Title'] !== undefined || req.body.adapted_title !== undefined) {
+            updates.adapted_title = req.body['Adapted Title'] ?? req.body.adapted_title;
+        }
         if (req.body.Status !== undefined || req.body.status !== undefined) {
             updates.status = req.body.Status || req.body.status;
         }
@@ -225,6 +232,8 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateA
             'Resume ID': updatedRecord.resume_id,
             'Mission ID': updatedRecord.mission_id,
             'Resume Name': updatedRecord.resume_name,
+            'Candidate Name': updatedRecord.candidate_name,
+            'Adapted Title': updatedRecord.adapted_title,
             'Mission Title': updatedRecord.mission_title,
             'Adapted Text': updatedRecord.adapted_text,
             'Match Score': updatedRecord.match_score,

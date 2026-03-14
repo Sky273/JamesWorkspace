@@ -294,7 +294,10 @@
       "moving": "Moving CV...",
       "moved": "CV moved to \"{{deal}}\"",
       "added": "CV added to \"{{deal}}\"",
-      "dropError": "Error moving CV"
+      "dropError": "Error moving CV",
+      "missions": "Missions",
+      "adaptations": "adaptation(s)",
+      "cvs": "CVs"
     }
   },
   "upload": {
@@ -1034,7 +1037,15 @@
     },
     "description": "Description",
     "extractedKeywords": "Extracted keywords",
-    "noTitle": "No title"
+    "noTitle": "No title",
+    "deal": "Deal",
+    "selectDeal": "No deal (optional)",
+    "client": "Client / Prospect",
+    "selectClient": "Select a client",
+    "selectClientFirst": "Select a client first",
+    "contact": "Contact",
+    "selectContact": "Select a contact",
+    "noFirm": "No firm"
   },
   "adaptations": {
     "title": "Resume Adaptations",
@@ -1064,6 +1075,11 @@
       "failed": "Failed"
     },
     "adaptationDetails": "Adaptation Details",
+    "adaptedTitlePlaceholder": "Adapted professional title...",
+    "noAdaptedTitle": "No adapted title",
+    "editAdaptedTitle": "Edit adapted title",
+    "candidateName": "Candidate name",
+    "adaptedTitle": "Adapted professional title",
     "tabs": {
       "adaptedCV": "Adapted CV",
       "analysis": "Analysis",
@@ -1486,6 +1502,7 @@
       "descriptionPlaceholder": "Deal description...",
       "expectedCloseDate": "Expected close date",
       "cvCount": "Associated CVs",
+      "missions": "mission(s)",
       "statuses": {
         "open": "Open",
         "won": "Won",

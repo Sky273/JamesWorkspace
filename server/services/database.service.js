@@ -76,6 +76,15 @@ export async function initializeDatabase() {
         const extensions = extensionsResult.rows.map(row => row.extname);
         safeLog('info', 'PostgreSQL extensions loaded', { extensions });
         
+        // Migration: Add candidate_name and adapted_title columns to resume_adaptations
+        try {
+            await query(`ALTER TABLE resume_adaptations ADD COLUMN IF NOT EXISTS candidate_name VARCHAR(255)`);
+            await query(`ALTER TABLE resume_adaptations ADD COLUMN IF NOT EXISTS adapted_title VARCHAR(500)`);
+            safeLog('info', 'Migration: resume_adaptations.candidate_name and adapted_title columns ensured');
+        } catch (migrationError) {
+            safeLog('debug', 'Migration note: candidate_name/adapted_title columns', { note: migrationError.message });
+        }
+
         return true;
     } catch (error) {
         safeLog('error', 'Database initialization failed', {

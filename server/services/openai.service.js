@@ -719,10 +719,19 @@ export async function adaptResumeToMission({
         .replace('{MISSION_CONTENT}', missionContent)
         .replace('{MATCH_ANALYSIS}', JSON.stringify(matchAnalysis, null, 2));
 
+    const systemPrompt = `You are an expert HR consultant. You must respond with a valid JSON object containing exactly two fields:
+1. "adaptedTitle": A professional title (in the same language as the resume) adapted/optimized for the target mission. This should be a concise job title (e.g. "Développeur Full Stack Senior", "Chef de Projet Digital") that best positions the candidate for this specific mission. Maximum 100 characters.
+2. "adaptedText": The full adapted resume in clean HTML format.
+
+Example response format:
+{"adaptedTitle": "Consultant Data Engineer Senior", "adaptedText": "<h2>...</h2><p>...</p>"}
+
+Do NOT wrap your response in markdown code blocks. Return ONLY the JSON object.`;
+
     const response = await callOpenAI({
         model,
         messages: [
-            { role: 'system', content: 'You are an expert HR consultant. Provide adapted resumes in clean HTML format. Do NOT wrap your response in markdown code blocks.' },
+            { role: 'system', content: systemPrompt },
             { role: 'user', content: prompt }
         ],
         maxTokens: 4096,
@@ -734,8 +743,26 @@ export async function adaptResumeToMission({
 
     // Clean markdown code blocks if present
     let content = response.choices[0].message.content;
-    content = content.replace(/^```html\s*/i, '').replace(/```\s*$/i, '').trim();
-    return content;
+    content = content.replace(/^```json\s*/i, '').replace(/^```html\s*/i, '').replace(/```\s*$/i, '').trim();
+    
+    // Try to parse as JSON to extract adaptedTitle and adaptedText
+    try {
+        const parsed = JSON.parse(content);
+        if (parsed.adaptedText && parsed.adaptedTitle) {
+            return {
+                adaptedText: parsed.adaptedText,
+                adaptedTitle: parsed.adaptedTitle
+            };
+        }
+    } catch {
+        // If JSON parsing fails, fall back to treating the whole content as adaptedText
+        safeLog('warn', 'adaptResumeToMission: Could not parse JSON response, falling back to plain text');
+    }
+    
+    return {
+        adaptedText: content,
+        adaptedTitle: null
+    };
 }
 
 // ============================================

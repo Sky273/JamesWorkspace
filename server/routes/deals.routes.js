@@ -138,6 +138,37 @@ router.get('/:id', authenticateToken, async (req, res) => {
     }
 });
 
+// GET /api/deals/:id/missions - Get missions associated with a deal
+router.get('/:id/missions', authenticateToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const access = await checkDealAccess(req, id);
+        
+        if (!access.hasAccess) {
+            return res.status(access.error === 'Deal not found' ? 404 : 403)
+                .json({ error: access.error });
+        }
+
+        const result = await query(`
+            SELECT m.id, m.title, m.status, m.created_at, m.updated_at,
+                   m.client_id, m.contact_id, m.deal_id,
+                   c.name as client_name,
+                   cc.name as contact_name,
+                   (SELECT COUNT(*) FROM resume_adaptations ra WHERE ra.mission_id = m.id) as adaptations_count
+            FROM missions m
+            LEFT JOIN clients c ON m.client_id = c.id
+            LEFT JOIN client_contacts cc ON m.contact_id = cc.id
+            WHERE m.deal_id = $1
+            ORDER BY m.created_at DESC
+        `, [id]);
+
+        return res.json(result.rows);
+    } catch (error) {
+        safeLog('error', 'Error fetching deal missions', { error: error.message, dealId: req.params.id });
+        return res.status(500).json({ error: 'Failed to fetch deal missions' });
+    }
+});
+
 // POST /api/deals - Create a new deal
 router.post('/', authenticateToken, userRateLimit(), async (req, res) => {
     try {

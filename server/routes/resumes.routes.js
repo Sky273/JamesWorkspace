@@ -347,7 +347,7 @@ router.get('/grouped-by-deal', authenticateToken, async (req, res) => {
                 d.title ASC
         `, [userFirmId]);
 
-        // 2. For each deal, get associated resumes (basic fields only)
+        // 2. For each deal, get associated resumes and missions
         const deals = [];
         for (const deal of dealsResult.rows) {
             const resumesResult = await query(`
@@ -362,10 +362,36 @@ router.get('/grouped-by-deal', authenticateToken, async (req, res) => {
                 WHERE dr.deal_id = $1
                 ORDER BY LOWER(r.name) ASC
             `, [deal.id]);
+
+            // Get missions associated with this deal
+            const missionsResult = await query(`
+                SELECT m.id, m.title, m.status, m.created_at
+                FROM missions m
+                WHERE m.deal_id = $1
+                ORDER BY m.created_at DESC
+            `, [deal.id]);
+
+            // For each mission, get its adaptations
+            const missions = [];
+            for (const mission of missionsResult.rows) {
+                const adaptationsResult = await query(`
+                    SELECT ra.id, ra.resume_id, ra.resume_name, ra.candidate_name, ra.adapted_title,
+                           ra.match_score, ra.status, ra.created_at
+                    FROM resume_adaptations ra
+                    WHERE ra.mission_id = $1
+                    ORDER BY ra.created_at DESC
+                `, [mission.id]);
+                missions.push({
+                    ...mission,
+                    adaptations_count: adaptationsResult.rows.length,
+                    adaptations: adaptationsResult.rows
+                });
+            }
             
             deals.push({
                 ...deal,
-                resumes: resumesResult.rows
+                resumes: resumesResult.rows,
+                missions
             });
         }
 

@@ -14,7 +14,11 @@ import {
   CalendarIcon,
   ChartBarIcon,
   ArrowDownTrayIcon,
-  EnvelopeIcon
+  EnvelopeIcon,
+  UserIcon,
+  PencilIcon,
+  CheckIcon,
+  XMarkIcon
 } from '@heroicons/react/24/outline';
 import { useAuthFetch } from '../hooks/useAuthFetch';
 import { createSafeHtml } from '../utils/sanitizer.frontend';
@@ -47,6 +51,8 @@ interface Adaptation {
   'Resume ID'?: string;
   'Mission ID'?: string;
   'Resume Name'?: string;
+  'Candidate Name'?: string;
+  'Adapted Title'?: string;
   'Adapted Text'?: string;
   'Match Score'?: number;
   'Match Analysis'?: string;
@@ -87,6 +93,11 @@ const AdaptationViewPage = (): JSX.Element => {
   
   // Email modal state
   const [showEmailModal, setShowEmailModal] = useState(false);
+  
+  // Adapted title editing state
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [editedTitle, setEditedTitle] = useState('');
+  const [savingTitle, setSavingTitle] = useState(false);
 
   useEffect(() => {
     const loadAdaptation = async () => {
@@ -238,6 +249,32 @@ const AdaptationViewPage = (): JSX.Element => {
     }
   };
 
+  // Save adapted title
+  const handleSaveTitle = async (): Promise<void> => {
+    if (!adaptation) return;
+    
+    try {
+      setSavingTitle(true);
+      const authOptions = await createAuthOptionsWithCsrf({ 
+        method: 'PUT', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ 'Adapted Title': editedTitle }) 
+      });
+      
+      const response = await fetchWithAuth(`/api/adaptations/${adaptation.id}`, authOptions);
+      if (!response.ok) throw new Error('Failed to save title');
+      
+      setAdaptation({ ...adaptation, 'Adapted Title': editedTitle });
+      setEditingTitle(false);
+      toast.success(t('common.saved'));
+    } catch (err) {
+      logger.error('Error saving adapted title:', err);
+      toast.error(t('errors.saveFailed'));
+    } finally {
+      setSavingTitle(false);
+    }
+  };
+
   // Export to PDF
   const handleExportToPDF = async (): Promise<void> => {
     if (!adaptation || !selectedTemplate) return;
@@ -250,8 +287,8 @@ const AdaptationViewPage = (): JSX.Element => {
       // Clean suggestion markers from content before export
       const rawContent = editorRef.current?.getContent() || adaptation['Adapted Text'] || '';
       const content = removeSuggestionMarkers(rawContent);
-      const name = adaptation['Resume Name'] || 'Candidat';
-      const title = adaptation['Mission Title'] || 'CV Adapté';
+      const name = adaptation['Candidate Name'] || adaptation['Resume Name'] || 'Candidat';
+      const title = adaptation['Adapted Title'] || adaptation['Mission Title'] || 'CV Adapté';
 
       let processedBody = template.TemplateContent || '';
       processedBody = processedBody.replace(/-name-/g, name);
@@ -393,13 +430,70 @@ const AdaptationViewPage = (): JSX.Element => {
           animate={{ opacity: 1, y: 0 }}
           className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden"
         >
-          {/* Header */}
+          {/* Header - Candidate Name + Adapted Title */}
           <div className="p-6 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                  {t('adaptations.adaptationDetails')}
-                </h1>
+              <div className="flex-1 min-w-0">
+                {/* Candidate name */}
+                <div className="flex items-center gap-2 mb-1">
+                  <UserIcon className="w-5 h-5 text-blue-500 flex-shrink-0" />
+                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white truncate">
+                    {adaptation['Candidate Name'] || adaptation['Resume Name'] || adaptation.ResumeName || t('adaptations.card.noName')}
+                  </h1>
+                </div>
+
+                {/* Adapted professional title - editable */}
+                <div className="flex items-center gap-2 ml-7 mb-3">
+                  {editingTitle ? (
+                    <div className="flex items-center gap-2 flex-1">
+                      <input
+                        type="text"
+                        value={editedTitle}
+                        onChange={(e) => setEditedTitle(e.target.value)}
+                        className="flex-1 px-3 py-1.5 text-base font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-blue-300 dark:border-blue-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                        placeholder={t('adaptations.adaptedTitlePlaceholder', 'Titre professionnel adapté...')}
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleSaveTitle();
+                          if (e.key === 'Escape') setEditingTitle(false);
+                        }}
+                      />
+                      <button
+                        onClick={handleSaveTitle}
+                        disabled={savingTitle}
+                        className="p-1.5 text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 transition-colors"
+                        title={t('common.save')}
+                      >
+                        <CheckIcon className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => setEditingTitle(false)}
+                        className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                        title={t('common.cancel')}
+                      >
+                        <XMarkIcon className="w-5 h-5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 group">
+                      <span className="text-base font-medium text-gray-600 dark:text-gray-300 italic">
+                        {adaptation['Adapted Title'] || t('adaptations.noAdaptedTitle', 'Aucun titre adapté')}
+                      </span>
+                      <button
+                        onClick={() => {
+                          setEditedTitle(adaptation['Adapted Title'] || '');
+                          setEditingTitle(true);
+                        }}
+                        className="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 opacity-0 group-hover:opacity-100 transition-all"
+                        title={t('adaptations.editAdaptedTitle', 'Modifier le titre adapté')}
+                      >
+                        <PencilIcon className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Metadata row */}
                 <div className="flex flex-wrap items-center gap-4 text-sm">
                   {/* Resume info */}
                   <button

@@ -509,6 +509,8 @@ The resume displays directly in the browser:
 
 A **mission** represents a professional opportunity (position, project, contract) for which you want to adapt resumes.
 
+A mission can be **associated with a deal** to organize commercial tracking. This association is optional: a mission can exist independently.
+
 ### Creating a Mission
 
 1. Go to **"Missions"** in the menu
@@ -518,7 +520,10 @@ A **mission** represents a professional opportunity (position, project, contract
 | Field | Description | Required |
 |-------|-------------|----------|
 | **Title** | Position title | Yes |
-| **Client** | Client company | Yes |
+| **Deal** | Associated deal (optional) | No |
+| **Client** | Client company | No |
+| **Contact** | Contact person at the client | No |
+| **Status** | Active, Draft or Closed | No |
 | **Description** | Detailed position description | Yes |
 
 #### Tips for an Effective Description
@@ -537,8 +542,10 @@ A **mission** represents a professional opportunity (position, project, contract
 ### Managing Missions
 
 The Missions page displays all your opportunities with:
-- Title and company
-- Number of adapted resumes
+- Title and status
+- **Associated deal** (if linked to a deal)
+- Client and contact
+- Firm
 - Creation date
 - Actions (view, edit, delete)
 
@@ -548,8 +555,19 @@ By clicking on a mission, you access its detail page which includes:
 
 #### Mission Information
 - **Title and client**: Header with main information
+- **Deal**: Link to the associated deal (if applicable)
 - **Description**: Detailed offer content
 - **Extracted keywords**: Technical skills, tools, industries, soft skills
+
+### Missions and Deals
+
+The link between missions and deals allows you to:
+- **Group** multiple missions under the same deal
+- **View missions** directly in the CRM deals view (mission count displayed)
+- **View missions** in the "By deal" view of the CV library with adaptation counts
+- **Filter** missions by deal via the `?dealId=` query parameter
+
+A deal can contain **0 to N missions**, and a mission can be associated with **no deal**.
 
 #### Integrated Kanban Pipeline
 

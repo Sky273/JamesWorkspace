@@ -17,7 +17,8 @@ import {
   ArrowDownTrayIcon,
   BuildingOfficeIcon,
   FolderOpenIcon,
-  UserIcon
+  UserIcon,
+  ChartBarIcon
 } from '@heroicons/react/24/outline';
 import { useAuthFetch } from '../../hooks/useAuthFetch';
 import { fetchWithAuth, createAuthOptionsWithCsrf } from '../../utils/apiInterceptor';
@@ -55,6 +56,26 @@ interface ResumeBasic {
   deal_resume_status?: string;
 }
 
+interface MissionAdaptation {
+  id: string;
+  resume_id: string;
+  resume_name: string;
+  candidate_name?: string;
+  adapted_title?: string;
+  match_score?: number;
+  status: string;
+  created_at: string;
+}
+
+interface DealMission {
+  id: string;
+  title: string;
+  status: string;
+  created_at: string;
+  adaptations_count: number;
+  adaptations: MissionAdaptation[];
+}
+
 interface DealGroup {
   id: string;
   title: string;
@@ -65,6 +86,7 @@ interface DealGroup {
   contact_name?: string;
   resumes_count: number;
   resumes: ResumeBasic[];
+  missions: DealMission[];
 }
 
 interface GroupedData {
@@ -501,9 +523,16 @@ const DealsGroupedView = (): JSX.Element => {
                   </div>
                 </div>
               </div>
-              <span className="ml-4 flex-shrink-0 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-2.5 py-1 rounded-full text-sm font-medium">
-                {deal.resumes.length} CV{deal.resumes.length !== 1 ? 's' : ''}
-              </span>
+              <div className="ml-4 flex items-center gap-2 flex-shrink-0">
+                {deal.missions && deal.missions.length > 0 && (
+                  <span className="bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-2.5 py-1 rounded-full text-sm font-medium">
+                    {deal.missions.length} mission{deal.missions.length !== 1 ? 's' : ''}
+                  </span>
+                )}
+                <span className="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-2.5 py-1 rounded-full text-sm font-medium">
+                  {deal.resumes.length} CV{deal.resumes.length !== 1 ? 's' : ''}
+                </span>
+              </div>
             </button>
 
             {/* Drop indicator when dragging over collapsed deal */}
@@ -533,15 +562,109 @@ const DealsGroupedView = (): JSX.Element => {
                         </p>
                       </div>
                     )}
-                    {deal.resumes.length === 0 && !isDragOver ? (
+                    {/* Missions section */}
+                    {deal.missions && deal.missions.length > 0 && (
+                      <div className="pt-3 mb-3">
+                        <h4 className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                          <BriefcaseIcon className="w-3.5 h-3.5" />
+                          {t('resumes.groupedView.missions', 'Missions')} ({deal.missions.length})
+                        </h4>
+                        <div className="space-y-2">
+                          {deal.missions.map(mission => (
+                            <div key={mission.id} className="border border-indigo-100 dark:border-indigo-800/30 rounded-lg overflow-hidden">
+                              {/* Mission header */}
+                              <div
+                                onClick={() => navigate(`/missions/${mission.id}`)}
+                                className="flex items-center justify-between px-3 py-2 bg-indigo-50 dark:bg-indigo-900/10 cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900/20 transition-colors"
+                              >
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <BriefcaseIcon className="w-4 h-4 text-indigo-500 flex-shrink-0" />
+                                  <span className="text-sm font-medium text-gray-900 dark:text-white truncate">{mission.title}</span>
+                                  <span className={`px-1.5 py-0.5 rounded-full text-xs font-medium ${
+                                    mission.status === 'active' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                                    mission.status === 'closed' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                                    'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                                  }`}>
+                                    {t(`missions.status.${mission.status || 'active'}`, mission.status)}
+                                  </span>
+                                </div>
+                                <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
+                                  {mission.adaptations_count || 0} {t('resumes.groupedView.adaptations', 'adaptation(s)')}
+                                </span>
+                              </div>
+                              {/* Adaptations under this mission */}
+                              {mission.adaptations && mission.adaptations.length > 0 && (
+                                <div className="px-3 py-2 bg-white dark:bg-gray-800/50 space-y-1.5">
+                                  {mission.adaptations.map(adaptation => {
+                                    const scoreColor = (adaptation.match_score || 0) >= 80
+                                      ? 'text-green-600 dark:text-green-400'
+                                      : (adaptation.match_score || 0) >= 60
+                                      ? 'text-yellow-600 dark:text-yellow-400'
+                                      : 'text-red-600 dark:text-red-400';
+                                    const scoreBg = (adaptation.match_score || 0) >= 80
+                                      ? 'bg-green-100 dark:bg-green-900/30'
+                                      : (adaptation.match_score || 0) >= 60
+                                      ? 'bg-yellow-100 dark:bg-yellow-900/30'
+                                      : 'bg-red-100 dark:bg-red-900/30';
+                                    return (
+                                      <div
+                                        key={adaptation.id}
+                                        onClick={(e) => { e.stopPropagation(); navigate(`/adaptations/${adaptation.id}`); }}
+                                        className="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-700/30 border border-gray-100 dark:border-gray-700 rounded-md cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors"
+                                      >
+                                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                                          <DocumentTextIcon className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                                          <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                            {adaptation.candidate_name || adaptation.resume_name || t('adaptations.card.noName', 'Sans nom')}
+                                          </span>
+                                          {adaptation.adapted_title && (
+                                            <span className="text-xs text-blue-600 dark:text-blue-400 italic truncate max-w-[200px]">
+                                              {adaptation.adapted_title}
+                                            </span>
+                                          )}
+                                        </div>
+                                        <div className="flex items-center gap-2 flex-shrink-0">
+                                          {adaptation.match_score != null && (
+                                            <span className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-semibold ${scoreBg} ${scoreColor}`}>
+                                              <ChartBarIcon className="w-3 h-3" />
+                                              {adaptation.match_score}%
+                                            </span>
+                                          )}
+                                          <span className={`px-1.5 py-0.5 rounded-full text-xs font-medium ${
+                                            adaptation.status === 'completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                                            adaptation.status === 'failed' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                                            'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                                          }`}>
+                                            {t(`adaptations.status.${adaptation.status || 'completed'}`, adaptation.status)}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Resumes section */}
+                    {deal.resumes.length === 0 && !isDragOver && (!deal.missions || deal.missions.length === 0) ? (
                       <p className="text-center text-sm text-gray-500 dark:text-gray-400 py-4">
                         {t('resumes.groupedView.noResumes', 'Aucun CV associé à cette affaire')}
                       </p>
-                    ) : (
+                    ) : deal.resumes.length > 0 ? (
                       <div className="space-y-2 pt-3">
+                        {deal.resumes.length > 0 && deal.missions && deal.missions.length > 0 && (
+                          <h4 className="text-xs font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                            <DocumentTextIcon className="w-3.5 h-3.5" />
+                            {t('resumes.groupedView.cvs', 'CVs')} ({deal.resumes.length})
+                          </h4>
+                        )}
                         {deal.resumes.map(resume => renderResumeCard(resume, deal.id))}
                       </div>
-                    )}
+                    ) : null}
                   </div>
                 </motion.div>
               )}

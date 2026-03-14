@@ -23,6 +23,8 @@ interface AdaptationCardProps {
   adaptation: Adaptation;
   index: number;
   resumeName: string;
+  candidateName?: string;
+  adaptedTitle?: string;
   missionTitle: string;
   onView: (adaptation: Adaptation) => void;
   onExport: (adaptation: Adaptation) => void;
@@ -55,6 +57,8 @@ const AdaptationCard = ({
   adaptation, 
   index, 
   resumeName, 
+  candidateName,
+  adaptedTitle,
   missionTitle, 
   onView, 
   onExport, 
@@ -84,9 +88,15 @@ const AdaptationCard = ({
           </span>
         </div>
 
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 truncate">
-          {resumeName}
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1 truncate">
+          {candidateName || resumeName}
         </h3>
+
+        {adaptedTitle && (
+          <p className="text-sm font-medium text-blue-600 dark:text-blue-400 mb-2 truncate italic">
+            {adaptedTitle}
+          </p>
+        )}
 
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 truncate">
           → {missionTitle}

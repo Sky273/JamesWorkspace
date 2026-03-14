@@ -30,7 +30,7 @@ router.get('/', authenticateToken, async (req, res) => {
         const page = parseInt(req.query.page) || 1;
         const limit = Math.min(parseInt(req.query.limit) || 20, 100);
         const offset = (page - 1) * limit;
-        const { search, status } = req.query;
+        const { search, status, dealId } = req.query;
 
         // Build WHERE conditions
         const conditions = [];
@@ -72,6 +72,17 @@ router.get('/', authenticateToken, async (req, res) => {
             paramIndex++;
         }
 
+        // Deal filter
+        if (dealId) {
+            if (dealId === 'none') {
+                conditions.push(`m.deal_id IS NULL`);
+            } else {
+                conditions.push(`m.deal_id = $${paramIndex}`);
+                params.push(dealId);
+                paramIndex++;
+            }
+        }
+
         const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
         
         // Debug: log the WHERE clause and params
@@ -89,14 +100,16 @@ router.get('/', authenticateToken, async (req, res) => {
         });
         const totalCount = parseInt(countResult[0]?.total || 0);
 
-        // Fetch paginated records with client and contact joins
+        // Fetch paginated records with client, contact, and deal joins
         const dataQuery = `
             SELECT m.*, 
                    c.name as client_name, c.type as client_type,
-                   cc.name as contact_name, cc.email as contact_email, cc.role as contact_role
+                   cc.name as contact_name, cc.email as contact_email, cc.role as contact_role,
+                   d.title as deal_title, d.status as deal_status
             FROM missions m
             LEFT JOIN clients c ON m.client_id = c.id
             LEFT JOIN client_contacts cc ON m.contact_id = cc.id
+            LEFT JOIN deals d ON m.deal_id = d.id
             ${whereClause}
             ORDER BY m.created_at DESC
             LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
@@ -124,7 +137,10 @@ router.get('/', authenticateToken, async (req, res) => {
             'Contact ID': record.contact_id,
             'Contact Name': record.contact_name,
             'Contact Email': record.contact_email,
-            'Contact Role': record.contact_role
+            'Contact Role': record.contact_role,
+            'Deal ID': record.deal_id,
+            'Deal Title': record.deal_title,
+            'Deal Status': record.deal_status
         }));
 
         const totalPages = Math.ceil(totalCount / limit);
@@ -151,14 +167,16 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
     try {
         const { id } = req.params;
         
-        // Fetch mission with client and contact joins
+        // Fetch mission with client, contact, and deal joins
         const result = await query(`
             SELECT m.*, 
                    c.name as client_name, c.type as client_type,
-                   cc.name as contact_name, cc.email as contact_email, cc.role as contact_role
+                   cc.name as contact_name, cc.email as contact_email, cc.role as contact_role,
+                   d.title as deal_title, d.status as deal_status
             FROM missions m
             LEFT JOIN clients c ON m.client_id = c.id
             LEFT JOIN client_contacts cc ON m.contact_id = cc.id
+            LEFT JOIN deals d ON m.deal_id = d.id
             WHERE m.id = $1
         `, [id]);
         
@@ -195,7 +213,10 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
             'Contact ID': record.contact_id,
             'Contact Name': record.contact_name,
             'Contact Email': record.contact_email,
-            'Contact Role': record.contact_role
+            'Contact Role': record.contact_role,
+            'Deal ID': record.deal_id,
+            'Deal Title': record.deal_title,
+            'Deal Status': record.deal_status
         });
     } catch (error) {
         safeLog('error', 'Error fetching mission', { error: error.message, missionId: req.params.id });
@@ -264,6 +285,18 @@ router.post('/', authenticateToken, validateBody(createMissionSchema), async (re
                 return res.status(400).json({ error: 'Contact not found or does not belong to this client' });
             }
         }
+
+        // Validate deal_id if provided
+        const dealId = missionData['Deal ID'] || missionData.deal_id || null;
+        if (dealId) {
+            const dealResult = await query('SELECT firm_id FROM deals WHERE id = $1', [dealId]);
+            if (dealResult.rows.length === 0) {
+                return res.status(400).json({ error: 'Deal not found' });
+            }
+            if (dealResult.rows[0].firm_id !== targetFirmId) {
+                return res.status(403).json({ error: 'Deal does not belong to the target firm' });
+            }
+        }
         
         // Debug: log what we're about to save
         safeLog('info', 'Creating mission with firm data', {
@@ -284,17 +317,20 @@ router.post('/', authenticateToken, validateBody(createMissionSchema), async (re
             required_skills: missionData['Required Skills'] || missionData.required_skills || null,
             preferred_skills: missionData['Preferred Skills'] || missionData.preferred_skills || null,
             client_id: clientId,
-            contact_id: contactId
+            contact_id: contactId,
+            deal_id: dealId
         });
 
         // Fetch with joins to return full data
         const result = await query(`
             SELECT m.*, 
                    c.name as client_name, c.type as client_type,
-                   cc.name as contact_name, cc.email as contact_email, cc.role as contact_role
+                   cc.name as contact_name, cc.email as contact_email, cc.role as contact_role,
+                   d.title as deal_title, d.status as deal_status
             FROM missions m
             LEFT JOIN clients c ON m.client_id = c.id
             LEFT JOIN client_contacts cc ON m.contact_id = cc.id
+            LEFT JOIN deals d ON m.deal_id = d.id
             WHERE m.id = $1
         `, [newMission.id]);
         
@@ -318,7 +354,10 @@ router.post('/', authenticateToken, validateBody(createMissionSchema), async (re
             'Contact ID': record.contact_id,
             'Contact Name': record.contact_name,
             'Contact Email': record.contact_email,
-            'Contact Role': record.contact_role
+            'Contact Role': record.contact_role,
+            'Deal ID': record.deal_id,
+            'Deal Title': record.deal_title,
+            'Deal Status': record.deal_status
         });
     } catch (error) {
         safeLog('error', 'Error creating mission', { error: error.message });
@@ -392,6 +431,21 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateM
             updates.contact_id = contactId || null;
         }
         
+        // Handle deal_id update
+        if (updateData['Deal ID'] !== undefined || updateData.deal_id !== undefined) {
+            const newDealId = updateData['Deal ID'] || updateData.deal_id;
+            if (newDealId) {
+                const dealResult = await query('SELECT firm_id FROM deals WHERE id = $1', [newDealId]);
+                if (dealResult.rows.length === 0) {
+                    return res.status(400).json({ error: 'Deal not found' });
+                }
+                if (dealResult.rows[0].firm_id !== userFirmId) {
+                    return res.status(403).json({ error: 'Deal does not belong to your firm' });
+                }
+            }
+            updates.deal_id = newDealId || null;
+        }
+
         // Handle firm_id update (admin only)
         if (isAdmin && (updateData.firm_id || updateData['Firm ID'])) {
             const newFirmId = updateData.firm_id || updateData['Firm ID'];
@@ -418,10 +472,12 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateM
         const result = await query(`
             SELECT m.*, 
                    c.name as client_name, c.type as client_type,
-                   cc.name as contact_name, cc.email as contact_email, cc.role as contact_role
+                   cc.name as contact_name, cc.email as contact_email, cc.role as contact_role,
+                   d.title as deal_title, d.status as deal_status
             FROM missions m
             LEFT JOIN clients c ON m.client_id = c.id
             LEFT JOIN client_contacts cc ON m.contact_id = cc.id
+            LEFT JOIN deals d ON m.deal_id = d.id
             WHERE m.id = $1
         `, [updatedMission.id]);
         
@@ -445,7 +501,10 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateM
             'Contact ID': record.contact_id,
             'Contact Name': record.contact_name,
             'Contact Email': record.contact_email,
-            'Contact Role': record.contact_role
+            'Contact Role': record.contact_role,
+            'Deal ID': record.deal_id,
+            'Deal Title': record.deal_title,
+            'Deal Status': record.deal_status
         });
     } catch (error) {
         safeLog('error', 'Error updating mission', { error: error.message, missionId: req.params.id });
@@ -510,6 +569,8 @@ router.get('/:missionId/adaptations', authenticateToken, validateParams('mission
             'Resume ID': record.resume_id,
             'Mission ID': record.mission_id,
             'Resume Name': record.resume_name,
+            'Candidate Name': record.candidate_name,
+            'Adapted Title': record.adapted_title,
             'Mission Title': record.mission_title,
             'Adapted Text': record.adapted_text,
             'Match Score': record.match_score,

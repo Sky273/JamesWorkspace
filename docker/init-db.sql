@@ -265,6 +265,8 @@ CREATE TABLE public.resume_adaptations (
     resume_id uuid,
     mission_id uuid,
     resume_name character varying(255),
+    candidate_name character varying(255),
+    adapted_title character varying(500),
     mission_title character varying(500),
     firm_id uuid,
     firm character varying(255),

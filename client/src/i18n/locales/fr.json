@@ -513,7 +513,10 @@
       "moving": "Déplacement du CV...",
       "moved": "CV déplacé vers « {{deal}} »",
       "added": "CV ajouté à « {{deal}} »",
-      "dropError": "Erreur lors du déplacement"
+      "dropError": "Erreur lors du déplacement",
+      "missions": "Missions",
+      "adaptations": "adaptation(s)",
+      "cvs": "CVs"
     }
   },
   "upload": {
@@ -1060,7 +1063,15 @@
     "description": "Description",
     "extractedKeywords": "Mots-clés extraits",
     "noTitle": "Sans titre",
-    "results": "missions"
+    "results": "missions",
+    "deal": "Affaire",
+    "selectDeal": "Aucune affaire (optionnel)",
+    "client": "Client / Prospect",
+    "selectClient": "Sélectionner un client",
+    "selectClientFirst": "Sélectionner d'abord un client",
+    "contact": "Interlocuteur",
+    "selectContact": "Sélectionner un interlocuteur",
+    "noFirm": "Aucun cabinet"
   },
   "adaptations": {
     "title": "Adaptations de CV",
@@ -1090,6 +1101,11 @@
       "failed": "Échoué"
     },
     "adaptationDetails": "Détails de l'adaptation",
+    "adaptedTitlePlaceholder": "Titre professionnel adapté...",
+    "noAdaptedTitle": "Aucun titre adapté",
+    "editAdaptedTitle": "Modifier le titre adapté",
+    "candidateName": "Nom du candidat",
+    "adaptedTitle": "Titre professionnel adapté",
     "tabs": {
       "adaptedCV": "CV Adapté",
       "analysis": "Analyse",
@@ -1486,6 +1502,7 @@
       "descriptionPlaceholder": "Description de l'affaire...",
       "expectedCloseDate": "Date de clôture prévue",
       "cvCount": "CVs associés",
+      "missions": "mission(s)",
       "statuses": {
         "open": "En cours",
         "won": "Gagnée",

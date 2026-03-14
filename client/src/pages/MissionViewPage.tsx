@@ -13,7 +13,8 @@ import {
   BriefcaseIcon,
   BuildingOfficeIcon,
   CalendarIcon,
-  TagIcon
+  TagIcon,
+  FolderIcon
 } from '@heroicons/react/24/outline';
 import MissionPipelineKanban from '../components/MissionsPage/MissionPipelineKanban';
 import { useAuthFetch } from '../hooks/useAuthFetch';
@@ -31,6 +32,13 @@ interface Mission {
   'Created At'?: string;
   Status?: 'Active' | 'Closed' | 'Draft';
   Keywords?: string;
+  'Deal ID'?: string;
+  'Deal Title'?: string;
+  'Deal Status'?: string;
+  'Client ID'?: string;
+  'Client Name'?: string;
+  'Contact Name'?: string;
+  'Contact Role'?: string;
 }
 
 const MissionViewPage = (): JSX.Element => {
@@ -201,6 +209,18 @@ const MissionViewPage = (): JSX.Element => {
                   {mission.Status && (
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(mission.Status)}`}>
                       {t(`missions.status.${mission.Status.toLowerCase()}`)}
+                    </span>
+                  )}
+                  {mission['Deal Title'] && (
+                    <span className="flex items-center gap-1 text-indigo-600 dark:text-indigo-400 font-medium">
+                      <FolderIcon className="w-4 h-4" />
+                      {mission['Deal Title']}
+                    </span>
+                  )}
+                  {mission['Client Name'] && (
+                    <span className="flex items-center gap-1">
+                      <BuildingOfficeIcon className="w-4 h-4" />
+                      {mission['Client Name']}
                     </span>
                   )}
                 </div>

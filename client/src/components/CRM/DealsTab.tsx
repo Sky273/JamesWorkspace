@@ -46,6 +46,7 @@ interface Deal {
   budget_min?: number;
   budget_max?: number;
   resumes_count: number;
+  missions_count: number;
   created_at: string;
   updated_at: string;
 }
@@ -510,10 +511,16 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
                   </div>
                 )}
 
-                {/* CVs count */}
-                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-3">
-                  <DocumentTextIcon className="w-4 h-4 flex-shrink-0" />
-                  <span>{deal.resumes_count} CV(s) associé(s)</span>
+                {/* CVs and Missions count */}
+                <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400 mb-3">
+                  <div className="flex items-center gap-1">
+                    <DocumentTextIcon className="w-4 h-4 flex-shrink-0" />
+                    <span>{deal.resumes_count} CV(s)</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <BriefcaseIcon className="w-4 h-4 flex-shrink-0" />
+                    <span>{deal.missions_count || 0} {t('crm.deals.missions', 'mission(s)')}</span>
+                  </div>
                 </div>
 
                 {/* Actions */}

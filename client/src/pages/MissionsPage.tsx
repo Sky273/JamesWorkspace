@@ -45,6 +45,9 @@ interface Mission {
   'Contact Name'?: string;
   'Contact Email'?: string;
   'Contact Role'?: string;
+  'Deal ID'?: string;
+  'Deal Title'?: string;
+  'Deal Status'?: string;
 }
 
 interface Client {
@@ -60,6 +63,13 @@ interface Contact {
   role?: string;
 }
 
+interface Deal {
+  id: string;
+  title: string;
+  status: string;
+  client_name?: string;
+}
+
 interface FormData {
   Title: string;
   Content: string;
@@ -67,6 +77,7 @@ interface FormData {
   'Client ID': string;
   'Contact ID': string;
   'Firm ID': string;
+  'Deal ID': string;
 }
 
 interface Stats {
@@ -100,7 +111,8 @@ const MissionsPage = (): JSX.Element => {
     Status: 'Active',
     'Client ID': '',
     'Contact ID': '',
-    'Firm ID': ''
+    'Firm ID': '',
+    'Deal ID': ''
   });
   const editorRef = useRef<{ setContent: (content: string) => void; getContent: () => string } | null>(null);
   const [editorReady, setEditorReady] = useState<boolean>(false);
@@ -110,6 +122,8 @@ const MissionsPage = (): JSX.Element => {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loadingClients, setLoadingClients] = useState<boolean>(false);
   const [loadingContacts, setLoadingContacts] = useState<boolean>(false);
+  const [deals, setDeals] = useState<Deal[]>([]);
+  const [loadingDeals, setLoadingDeals] = useState<boolean>(false);
 
   useEffect(() => {
     let mounted = true;
@@ -139,6 +153,22 @@ const MissionsPage = (): JSX.Element => {
     }
   }, [authGet]);
 
+  // Fetch deals
+  const fetchDeals = useCallback(async (): Promise<void> => {
+    try {
+      setLoadingDeals(true);
+      const response = await authGet('/api/deals?limit=100');
+      if (response.ok) {
+        const data = await response.json();
+        setDeals(data.data || []);
+      }
+    } catch (error) {
+      logger.error('Error fetching deals:', error);
+    } finally {
+      setLoadingDeals(false);
+    }
+  }, [authGet]);
+
   // Fetch contacts when client changes
   const fetchContacts = useCallback(async (clientId: string): Promise<void> => {
     if (!clientId) {
@@ -159,12 +189,13 @@ const MissionsPage = (): JSX.Element => {
     }
   }, [authGet]);
 
-  // Load clients when modal opens
+  // Load clients and deals when modal opens
   useEffect(() => {
     if (showModal) {
       fetchClients();
+      fetchDeals();
     }
-  }, [showModal, fetchClients]);
+  }, [showModal, fetchClients, fetchDeals]);
 
   // Load contacts when client changes
   useEffect(() => {
@@ -255,7 +286,8 @@ const MissionsPage = (): JSX.Element => {
         Content: formData.Content,
         Status: formData.Status,
         'Client ID': formData['Client ID'] || null,
-        'Contact ID': formData['Contact ID'] || null
+        'Contact ID': formData['Contact ID'] || null,
+        'Deal ID': formData['Deal ID'] || null
       };
       
       // Add firm_id if admin selected a firm (for both new and edited missions)
@@ -306,14 +338,15 @@ const MissionsPage = (): JSX.Element => {
       Status: mission.Status || 'Active',
       'Client ID': mission['Client ID'] || '',
       'Contact ID': mission['Contact ID'] || '',
-      'Firm ID': mission['Firm ID'] || ''
+      'Firm ID': mission['Firm ID'] || '',
+      'Deal ID': mission['Deal ID'] || ''
     });
     setShowModal(true);
   };
 
   const resetForm = (): void => {
     setEditingMission(null);
-    setFormData({ Title: '', Content: '', Status: 'Active', 'Client ID': '', 'Contact ID': '', 'Firm ID': '' });
+    setFormData({ Title: '', Content: '', Status: 'Active', 'Client ID': '', 'Contact ID': '', 'Firm ID': '', 'Deal ID': '' });
     setContacts([]);
     const tinymce = window.tinymce as unknown as { init: (config: Record<string, unknown>) => void; get: (id: string) => { remove: () => void; getContent: () => string; setContent: (content: string) => void } | null } | undefined;
     if (tinymce && tinymce.get('missionContentEditor')) {
@@ -500,6 +533,15 @@ const MissionsPage = (): JSX.Element => {
                         </span>
                       </div>
                     )}
+                    {/* Deal info */}
+                    {mission['Deal Title'] && (
+                      <div className="flex items-center gap-1 mt-1">
+                        <BriefcaseIcon className="w-4 h-4 text-indigo-500" />
+                        <span className="text-sm text-indigo-600 dark:text-indigo-400 font-medium truncate">
+                          {mission['Deal Title']}
+                        </span>
+                      </div>
+                    )}
                     {/* Firm info */}
                     <div className="flex items-center gap-1 mt-1">
                       <BuildingOfficeIcon className="w-3 h-3 text-gray-400" />
@@ -654,6 +696,26 @@ const MissionsPage = (): JSX.Element => {
                     <option value="Closed">{t('missions.status.Closed')}</option>
                   </select>
                 </div>
+              </div>
+
+              {/* Deal Selection */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  {t('missions.deal', 'Affaire')}
+                </label>
+                <select
+                  value={formData['Deal ID']}
+                  onChange={(e: ChangeEvent<HTMLSelectElement>) => setFormData({ ...formData, 'Deal ID': e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                  disabled={loadingDeals}
+                >
+                  <option value="">{loadingDeals ? t('common.loading', 'Chargement...') : t('missions.selectDeal', 'Aucune affaire (optionnel)')}</option>
+                  {deals.map((deal) => (
+                    <option key={deal.id} value={deal.id}>
+                      {deal.title}{deal.client_name ? ` — ${deal.client_name}` : ''} ({deal.status})
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* Client and Contact Selection */}
