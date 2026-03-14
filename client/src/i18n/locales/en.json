@@ -1141,6 +1141,7 @@
     "securityLogs": "Security Logs",
     "gdprAudit": "GDPR Audit Log",
     "backup": "Backup",
+    "jobs": "Jobs",
     "clients": "Clients & Prospects",
     "crm": "CRM",
     "profileMatching": "Profile Matching",
@@ -2150,6 +2151,7 @@
   },
   "batchJobs": {
     "title": "Processing Jobs",
+    "subtitle": "Track imports, improvements, and exports running in the background.",
     "refresh": "Refresh",
     "noJobs": "No processing jobs",
     "noItems": "No items",
@@ -2160,6 +2162,8 @@
     "jobCreated": "Job created with {{count}} file(s). Check the Jobs tab to track progress.",
     "jobCancelled": "Job cancelled",
     "jobDeleted": "Job deleted",
+    "sourceRelativePath": "Source relative path",
+    "sourceFile": "Source file",
     "serverInfo": {
       "title": "Background Processing",
       "description": "Jobs are processed on the server. You can navigate freely in the application without interrupting the processing."

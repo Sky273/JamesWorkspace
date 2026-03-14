@@ -39,6 +39,8 @@ interface ResumeBasic {
   improved_global_rating?: number;
   created_at: string;
   file_name?: string;
+  original_name?: string;
+  relative_path?: string;
   firm_name?: string;
   candidate_name?: string;
   candidate_email?: string;
@@ -364,6 +366,20 @@ const DealsGroupedView = (): JSX.Element => {
     }
   };
 
+  const getDownloadTitle = (resume: ResumeBasic): string => {
+    const lines = [t('resumes.downloadResume')];
+
+    if (resume.relative_path) {
+      lines.push(`${t('batchJobs.sourceRelativePath', 'Chemin relatif source')} : ${resume.relative_path}`);
+    }
+
+    if (resume.original_name) {
+      lines.push(`${t('batchJobs.sourceFile', 'Fichier source')} : ${resume.original_name}`);
+    }
+
+    return lines.join('\n');
+  };
+
   const renderResumeCard = (resume: ResumeBasic, sourceDealId: string | null) => {
     const rating = resume.improved_global_rating || resume.global_rating;
     const statusClass =
@@ -450,7 +466,7 @@ const DealsGroupedView = (): JSX.Element => {
               <button
                 onClick={(e) => handleDownload(resume, e)}
                 className="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors rounded"
-                title={t('resumes.downloadResume')}
+                title={getDownloadTitle(resume)}
               >
                 <ArrowDownTrayIcon className="w-4 h-4" />
               </button>
@@ -525,7 +541,7 @@ const DealsGroupedView = (): JSX.Element => {
               className={`w-full flex items-center justify-between px-4 py-3 transition-colors text-left ${
                 isDragOver
                   ? 'bg-purple-100/50 dark:bg-purple-900/30'
-                  : 'hover:bg-gray-50 dark:hover:bg-gray-750'
+                  : 'hover:bg-gray-50 dark:hover:bg-gray-700/60'
               }`}
             >
               <div className="flex items-center gap-3 min-w-0">
@@ -745,7 +761,7 @@ const DealsGroupedView = (): JSX.Element => {
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
           <button
             onClick={() => setUnassignedExpanded(!unassignedExpanded)}
-            className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors text-left"
+            className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/60 transition-colors text-left"
           >
             <div className="flex items-center gap-3">
               {unassignedExpanded ? (

@@ -109,6 +109,20 @@ const Breadcrumbs = ({ items, className = '' }: BreadcrumbsProps): JSX.Element |
           });
           break;
 
+        case 'batch-upload':
+          breadcrumbs.push({
+            label: t('batchUpload.title', 'Import par lot'),
+            current: true
+          });
+          break;
+
+        case 'batch-jobs':
+          breadcrumbs.push({
+            label: t('navigation.jobs', 'Jobs'),
+            current: true
+          });
+          break;
+
         case 'settings':
           breadcrumbs.push({
             label: t('navigation.settings'),

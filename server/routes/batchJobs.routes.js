@@ -248,16 +248,28 @@ router.post('/deal-export', authenticateToken, async (req, res) => {
 
         // 1. Get resumes linked to the deal
         const resumesResult = await query(`
-            SELECT r.id, r.name, r.title,
-                   latest_item.relative_path
+            SELECT r.id, r.name, r.title, r.file_name as source_file_name,
+                   COALESCE(r.relative_path, latest_item.relative_path) as relative_path
             FROM resumes r
             INNER JOIN deal_resumes dr ON r.id = dr.resume_id
             LEFT JOIN LATERAL (
                 SELECT bji.relative_path
                 FROM batch_job_items bji
-                WHERE bji.resume_id = r.id
-                  AND bji.relative_path IS NOT NULL
-                ORDER BY bji.created_at DESC
+                INNER JOIN batch_jobs bj ON bj.id = bji.job_id
+                WHERE bji.relative_path IS NOT NULL
+                  AND bj.job_type = 'import'
+                  AND (
+                      bji.resume_id = r.id
+                      OR (
+                          bji.resume_id IS NULL
+                          AND r.file_name IS NOT NULL
+                          AND bji.file_name = r.file_name
+                          AND bj.firm_id = r.firm_id
+                      )
+                  )
+                ORDER BY
+                    CASE WHEN bji.resume_id = r.id THEN 0 ELSE 1 END,
+                    bji.created_at DESC
                 LIMIT 1
             ) latest_item ON TRUE
             WHERE dr.deal_id = $1
@@ -267,16 +279,30 @@ router.post('/deal-export', authenticateToken, async (req, res) => {
         // 2. Get adaptations linked to missions of this deal
         const adaptationsResult = await query(`
             SELECT ra.id, ra.resume_id, ra.candidate_name, ra.adapted_title, ra.mission_title,
-                   latest_item.relative_path,
-                   m.title as mission_name
+                   COALESCE(r.relative_path, latest_item.relative_path) as relative_path,
+                   m.title as mission_name,
+                   r.file_name as source_file_name
             FROM resume_adaptations ra
             INNER JOIN missions m ON ra.mission_id = m.id
+            INNER JOIN resumes r ON r.id = ra.resume_id
             LEFT JOIN LATERAL (
                 SELECT bji.relative_path
                 FROM batch_job_items bji
-                WHERE bji.resume_id = ra.resume_id
-                  AND bji.relative_path IS NOT NULL
-                ORDER BY bji.created_at DESC
+                INNER JOIN batch_jobs bj ON bj.id = bji.job_id
+                WHERE bji.relative_path IS NOT NULL
+                  AND bj.job_type = 'import'
+                  AND (
+                      bji.resume_id = ra.resume_id
+                      OR (
+                          bji.resume_id IS NULL
+                          AND r.file_name IS NOT NULL
+                          AND bji.file_name = r.file_name
+                          AND bj.firm_id = r.firm_id
+                      )
+                  )
+                ORDER BY
+                    CASE WHEN bji.resume_id = ra.resume_id THEN 0 ELSE 1 END,
+                    bji.created_at DESC
                 LIMIT 1
             ) latest_item ON TRUE
             WHERE m.deal_id = $1
@@ -311,7 +337,8 @@ router.post('/deal-export', authenticateToken, async (req, res) => {
                 adaptationId: null,
                 sourceType: 'resume',
                 fileName: resume.name || 'CV',
-                relativePath: resume.relative_path || null
+                relativePath: resume.relative_path || null,
+                originalName: resume.source_file_name || null
             });
         }
 
@@ -321,6 +348,7 @@ router.post('/deal-export', authenticateToken, async (req, res) => {
                 adaptationId: adaptation.id,
                 sourceType: 'adaptation',
                 fileName: `${adaptation.candidate_name || 'Candidat'} - ${adaptation.mission_name || 'Mission'}`,
+                originalName: adaptation.source_file_name || null,
                 relativePath: adaptation.relative_path || null
             });
         }

@@ -352,13 +352,34 @@ router.get('/grouped-by-deal', authenticateToken, async (req, res) => {
         for (const deal of dealsResult.rows) {
             const resumesResult = await query(`
                 SELECT r.id, r.name, r.title, r.status, r.global_rating, r.improved_global_rating,
-                       r.created_at, r.file_name, r.firm_name, r.candidate_name, r.candidate_email,
+                       r.created_at, r.file_name, r.original_name, r.firm_name, r.candidate_name, r.candidate_email,
                        r.consent_status, r.consent_token_expires_at, r.retention_until,
                        r.skills_cleaned, r.industries_cleaned, r.tools_cleaned, r.soft_skills_cleaned,
                        r.skills, r.industries, r.tools, r.soft_skills,
+                       COALESCE(r.relative_path, latest_item.relative_path) as relative_path,
                        dr.added_at as deal_added_at, dr.status as deal_resume_status
                 FROM resumes r
                 INNER JOIN deal_resumes dr ON r.id = dr.resume_id
+                LEFT JOIN LATERAL (
+                    SELECT bji.relative_path
+                    FROM batch_job_items bji
+                    INNER JOIN batch_jobs bj ON bj.id = bji.job_id
+                    WHERE bji.relative_path IS NOT NULL
+                      AND bj.job_type = 'import'
+                      AND (
+                          bji.resume_id = r.id
+                          OR (
+                              bji.resume_id IS NULL
+                              AND r.file_name IS NOT NULL
+                              AND bji.file_name = r.file_name
+                              AND bj.firm_id = r.firm_id
+                          )
+                      )
+                    ORDER BY
+                        CASE WHEN bji.resume_id = r.id THEN 0 ELSE 1 END,
+                        bji.created_at DESC
+                    LIMIT 1
+                ) latest_item ON TRUE
                 WHERE dr.deal_id = $1
                 ORDER BY LOWER(r.name) ASC
             `, [deal.id]);
@@ -405,11 +426,32 @@ router.get('/grouped-by-deal', authenticateToken, async (req, res) => {
 
         const unassignedResult = await query(`
             SELECT r.id, r.name, r.title, r.status, r.global_rating, r.improved_global_rating,
-                   r.created_at, r.file_name, r.firm_name, r.candidate_name, r.candidate_email,
+                   r.created_at, r.file_name, r.original_name, r.firm_name, r.candidate_name, r.candidate_email,
                    r.consent_status, r.consent_token_expires_at, r.retention_until,
                    r.skills_cleaned, r.industries_cleaned, r.tools_cleaned, r.soft_skills_cleaned,
-                   r.skills, r.industries, r.tools, r.soft_skills
+                   r.skills, r.industries, r.tools, r.soft_skills,
+                   COALESCE(r.relative_path, latest_item.relative_path) as relative_path
             FROM resumes r
+            LEFT JOIN LATERAL (
+                SELECT bji.relative_path
+                FROM batch_job_items bji
+                INNER JOIN batch_jobs bj ON bj.id = bji.job_id
+                WHERE bji.relative_path IS NOT NULL
+                  AND bj.job_type = 'import'
+                  AND (
+                      bji.resume_id = r.id
+                      OR (
+                          bji.resume_id IS NULL
+                          AND r.file_name IS NOT NULL
+                          AND bji.file_name = r.file_name
+                          AND bj.firm_id = r.firm_id
+                      )
+                  )
+                ORDER BY
+                    CASE WHEN bji.resume_id = r.id THEN 0 ELSE 1 END,
+                    bji.created_at DESC
+                LIMIT 1
+            ) latest_item ON TRUE
             ${unassignedCondition}
             ORDER BY LOWER(r.name) ASC
         `, unassignedParams);

@@ -704,6 +704,7 @@
     "securityLogs": "Logs de Sécurité",
     "gdprAudit": "Journal RGPD",
     "backup": "Sauvegarde",
+    "jobs": "Jobs",
     "metrics": "Métriques",
     "marketRadar": "Radar du Marché",
     "metiers": "Métiers & Compétences",
@@ -2151,6 +2152,7 @@
   },
   "batchJobs": {
     "title": "Jobs de traitement",
+    "subtitle": "Suivez les imports, améliorations et exports lancés en arrière-plan.",
     "refresh": "Actualiser",
     "noJobs": "Aucun job de traitement",
     "noItems": "Aucun élément",
@@ -2161,6 +2163,8 @@
     "jobCreated": "Job créé avec {{count}} fichier(s). Consultez l'onglet Jobs pour suivre la progression.",
     "jobCancelled": "Job annulé",
     "jobDeleted": "Job supprimé",
+    "sourceRelativePath": "Chemin relatif source",
+    "sourceFile": "Fichier source",
     "serverInfo": {
       "title": "Traitement en arrière-plan",
       "description": "Les jobs sont traités sur le serveur. Vous pouvez naviguer librement dans l'application sans interrompre le traitement."

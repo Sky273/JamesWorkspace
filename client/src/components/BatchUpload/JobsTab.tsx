@@ -538,15 +538,34 @@ const JobsTab = (): JSX.Element => {
                                 {item.status === 'pending_name' && <UserIcon className="w-4 h-4 text-orange-500 flex-shrink-0" />}
                                 {item.status === 'skipped' && <XCircleIcon className="w-4 h-4 text-gray-400 flex-shrink-0" />}
                                 <div className="flex flex-col min-w-0">
-                                  <span className="text-sm text-gray-700 dark:text-gray-300 truncate">
-                                    {item.relative_path ? (
-                                      <span title={item.relative_path}>
-                                        <span className="text-gray-400 dark:text-gray-500">{item.relative_path.split('/').slice(0, -1).join('/') + '/'}</span>
-                                        {item.file_name}
-                                      </span>
-                                    ) : item.file_name}
+                                  <span className="text-sm text-gray-700 dark:text-gray-300 truncate" title={item.file_name}>
+                                    {item.file_name}
                                   </span>
-                                  {item.original_name && item.display_name && (
+                                  {item.relative_path && (
+                                    <span
+                                      className="text-xs text-gray-500 dark:text-gray-400 truncate"
+                                      title={item.relative_path}
+                                    >
+                                      {item.relative_path}
+                                    </span>
+                                  )}
+                                  {job.job_type === 'deal-export' && !item.relative_path && item.original_name && (
+                                    <span
+                                      className="text-xs text-gray-500 dark:text-gray-400 truncate"
+                                      title={item.original_name}
+                                    >
+                                      {item.original_name}
+                                    </span>
+                                  )}
+                                  {job.job_type !== 'deal-export' && item.original_name && !item.display_name && (
+                                    <span
+                                      className="text-xs text-gray-500 dark:text-gray-400 truncate"
+                                      title={item.original_name}
+                                    >
+                                      {item.original_name}
+                                    </span>
+                                  )}
+                                  {job.job_type !== 'deal-export' && item.original_name && item.display_name && (
                                     <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
                                       {item.original_name} → <span className="font-medium text-indigo-600 dark:text-indigo-400">{item.display_name}</span>
                                     </span>

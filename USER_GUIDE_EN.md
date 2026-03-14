@@ -384,9 +384,13 @@ If the export option is enabled:
 6. Click **"Process X file(s)"**
 7. Monitor progress in real-time
 
-#### Jobs Tab
+#### Dedicated Jobs Screen
 
-The **Jobs** tab allows you to track and manage all batch processing jobs:
+The **Jobs** screen allows you to track and manage all batch processing jobs:
+
+**Access:**
+- From the **Batch Upload** screen, after starting a processing job, you are automatically redirected to **Jobs**
+- From the lower sidebar menu: **Settings** → **Jobs** → **Backup**
 
 | Information | Description |
 |-------------|-------------|

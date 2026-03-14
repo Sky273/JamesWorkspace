@@ -50,6 +50,7 @@ const GdprAuditPage = lazy(() => import('./pages/GdprAuditPage'));
 const SharedFilePage = lazy(() => import('./pages/SharedFilePage'));
 const BackupPage = lazy(() => import('./pages/BackupPage'));
 const BatchUploadPage = lazy(() => import('./pages/BatchUploadPage'));
+const BatchJobsPage = lazy(() => import('./pages/BatchJobsPage'));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -164,6 +165,7 @@ const App = (): JSX.Element => {
                   <Route path="resumes/:id/adapt" element={<ResumeAdaptPage />} />
                   <Route path="upload" element={<UploadPage />} />
                   <Route path="batch-upload" element={<AdminRoute><BatchUploadPage /></AdminRoute>} />
+                  <Route path="batch-jobs" element={<AdminRoute><BatchJobsPage /></AdminRoute>} />
                   <Route path="missions" element={<MissionsPage />} />
                   <Route path="missions/:id" element={<MissionViewPage />} />
                   <Route path="clients" element={<ClientsPage />} />

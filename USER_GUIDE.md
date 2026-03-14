@@ -384,9 +384,13 @@ Si l'option d'export est activée :
 6. Cliquez sur **"Traiter X fichier(s)"**
 7. Suivez la progression en temps réel
 
-#### Onglet Jobs
+#### Écran Jobs dédié
 
-L'onglet **Jobs** permet de suivre et gérer tous les traitements par lot :
+L'écran **Jobs** permet de suivre et gérer tous les traitements par lot :
+
+**Accès :**
+- Depuis l'écran **Import par lot**, après lancement d'un traitement, vous êtes redirigé automatiquement vers **Jobs**
+- Depuis le menu latéral inférieur : **Paramètres** → **Jobs** → **Sauvegarde**
 
 | Information | Description |
 |-------------|-------------|

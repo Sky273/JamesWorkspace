@@ -153,8 +153,7 @@ import {
   SparklesIcon,
   DocumentTextIcon,
   FolderArrowDownIcon,
-  ArrowDownTrayIcon,
-  QueueListIcon
+  ArrowDownTrayIcon
 } from '@heroicons/react/24/outline';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { useAuth } from '../context/AuthContext';
@@ -164,7 +163,6 @@ import logger from '../utils/logger.frontend';
 import toast from 'react-hot-toast';
 import AdminFirmSelector from '../components/AdminFirmSelector';
 import { templateService, Template } from '../utils/templateService';
-import JobsTab from '../components/BatchUpload/JobsTab';
 
 interface FileStatus {
   file: File;
@@ -185,7 +183,6 @@ const BatchUploadPage = (): JSX.Element => {
   const { user } = useAuth();
   const isAdmin = user?.role?.toLowerCase() === 'admin';
   
-  const [activeTab, setActiveTab] = useState<'import' | 'jobs'>('import');
   const [files, setFiles] = useState<FileStatus[]>([]);
   const [improveOption, setImproveOption] = useState<boolean>(false);
   const [exportOption, setExportOption] = useState<boolean>(false);
@@ -671,9 +668,9 @@ const BatchUploadPage = (): JSX.Element => {
       
       toast.success(t('batchJobs.jobCreated', { count: job.total_items }));
       
-      // Clear files and switch to Jobs tab
+      // Clear files and redirect to the dedicated Jobs page
       setFiles([]);
-      setActiveTab('jobs');
+      navigate('/batch-jobs');
       
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
@@ -985,46 +982,6 @@ const BatchUploadPage = (): JSX.Element => {
           </p>
         </motion.div>
 
-        {/* Tabs */}
-        <div className="flex border-b border-gray-200 dark:border-gray-700 mb-6">
-          <button
-            onClick={() => setActiveTab('import')}
-            className={`flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === 'import'
-                ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
-                : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-            }`}
-          >
-            <DocumentArrowUpIcon className="w-5 h-5" />
-            {t('batchUpload.tabs.import', 'Import')}
-          </button>
-          <button
-            onClick={() => setActiveTab('jobs')}
-            className={`flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === 'jobs'
-                ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
-                : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-            }`}
-          >
-            <QueueListIcon className="w-5 h-5" />
-            {t('batchUpload.tabs.jobs', 'Jobs')}
-          </button>
-        </div>
-
-        {/* Jobs Tab Content */}
-        {activeTab === 'jobs' && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6"
-          >
-            <JobsTab />
-          </motion.div>
-        )}
-
-        {/* Import Tab Content */}
-        {activeTab === 'import' && (
-          <>
         {/* Options */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -1543,8 +1500,6 @@ const BatchUploadPage = (): JSX.Element => {
             <strong>{t('batchUpload.gdprTitle', 'RGPD')} :</strong> {t('batchUpload.gdprInfo', 'Les CVs importés par lot sont considérés comme internes (collaborateurs). Aucune demande de consentement ne sera envoyée et aucun nom de candidat n\'est enregistré.')}
           </p>
         </motion.div>
-          </>
-        )}
       </div>
     </div>
   );

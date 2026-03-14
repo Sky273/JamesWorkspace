@@ -74,6 +74,15 @@ export async function initializeBatchJobsTable() {
         `);
 
         await query(`
+            DO $$
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'resumes' AND column_name = 'relative_path') THEN
+                    ALTER TABLE resumes ADD COLUMN relative_path VARCHAR(1024);
+                END IF;
+            END $$;
+        `);
+
+        await query(`
             CREATE TABLE IF NOT EXISTS batch_job_items (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 job_id UUID REFERENCES batch_jobs(id) ON DELETE CASCADE,
@@ -248,8 +257,8 @@ export async function addJobExportItems(jobId, items) {
 
         for (const item of items) {
             await query(`
-                INSERT INTO batch_job_items (job_id, resume_id, adaptation_id, source_type, file_name, relative_path, status)
-                VALUES ($1, $2, $3, $4, $5, $6, $7)
+                INSERT INTO batch_job_items (job_id, resume_id, adaptation_id, source_type, file_name, relative_path, original_name, status)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             `, [
                 jobId,
                 item.resumeId || null,
@@ -257,6 +266,7 @@ export async function addJobExportItems(jobId, items) {
                 item.sourceType,
                 item.fileName,
                 item.relativePath || null,
+                item.originalName || null,
                 ITEM_STATUS.PENDING
             ]);
             addedCount++;

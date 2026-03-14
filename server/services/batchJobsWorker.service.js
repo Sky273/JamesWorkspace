@@ -414,6 +414,7 @@ async function processImportItem(item, job, options) {
         INSERT INTO resumes (
             name, 
             file_name,
+            relative_path,
             resume_file_data,
             resume_file_size,
             resume_file_type,
@@ -424,11 +425,12 @@ async function processImportItem(item, job, options) {
             profile_type,
             consent_status,
             created_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())
         RETURNING id
     `, [
         item.file_name,
         item.file_name,
+        item.relative_path || null,
         item.file_data,
         item.file_data?.length || 0,
         item.file_mime_type || 'application/octet-stream',
@@ -1332,23 +1334,10 @@ async function generateJobExport(jobId, options) {
     let exportErrorCount = 0;
     const exportErrors = [];
     
-    // Detect if this is a deal-export job (has adaptation items)
-    const isDealExport = _job?.job_type === 'deal-export';
-    
     // Create folders for each format in the ZIP
     const formatFolders = {};
     for (const format of exportFormats) {
-        const formatFolder = zip.folder(format.toUpperCase());
-        if (isDealExport) {
-            // For deal-export: create CVs/ and Adaptations/ subfolders
-            formatFolders[format] = {
-                root: formatFolder,
-                cvs: formatFolder.folder('CVs'),
-                adaptations: formatFolder.folder('Adaptations')
-            };
-        } else {
-            formatFolders[format] = { root: formatFolder };
-        }
+        formatFolders[format] = { root: zip.folder(format.toUpperCase()) };
     }
     
     // Get template name for file naming
@@ -1464,8 +1453,12 @@ async function generateJobExport(jobId, options) {
                 return { success: false, error: result.error, resumeId: item.resume_id, format, sourceType };
             }
             
-            // File name format: trigramme_nom_modèle.extension
-            const fileName = `${trigram}_${templateName}.${fileExtension}`;
+            const sanitizedItemName = (item.file_name || '')
+                .replace(/[^a-zA-Z0-9\-_\s]/g, '')
+                .replace(/\s+/g, '_');
+            const fileName = sourceType === 'adaptation' && sanitizedItemName
+                ? `${trigram}_${sanitizedItemName}_${templateName}.${fileExtension}`
+                : `${trigram}_${templateName}.${fileExtension}`;
             
             return { success: true, fileName, buffer: result.buffer, resumeId: item.resume_id, format, relativePath: item.relative_path, sourceType };
         } catch (err) {
@@ -1543,16 +1536,9 @@ async function generateJobExport(jobId, options) {
                     }
                     fileNameCounts.set(result.relativePath ? filePath.split('/').slice(0, -1).join('/') + '/' + result.fileName : filePath, count + 1);
                     
-                    // Add to the appropriate folder
+                    // Add to the format-specific folder
                     safeLog('debug', 'Adding file to ZIP', { format, filePath, sourceType: result.sourceType });
-                    const folder = formatFolders[format];
-                    if (isDealExport && result.sourceType === 'adaptation') {
-                        folder.adaptations.file(filePath, result.buffer);
-                    } else if (isDealExport) {
-                        folder.cvs.file(filePath, result.buffer);
-                    } else {
-                        folder.root.file(filePath, result.buffer);
-                    }
+                    formatFolders[format].root.file(filePath, result.buffer);
                     exportSuccessCount++;
                 } else {
                     exportErrorCount++;
