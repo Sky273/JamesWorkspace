@@ -6,8 +6,7 @@
 import { 
     extractTextFromPDF, 
     extractTextFromDOCX, 
-    extractTextFromDOC,
-    cleanupPdfWorker
+    extractTextFromDOC
 } from './textExtraction';
 import { createAuthOptionsWithCsrf } from './apiInterceptor';
 import logger from './logger.frontend';
@@ -396,8 +395,5 @@ export async function processResume(input: File | string, isImprovement: boolean
     } catch (error) {
         logger.error('Error processing resume:', error);
         throw error;
-    } finally {
-        // Cleanup PDF.js worker if it was used
-        cleanupPdfWorker();
     }
 }

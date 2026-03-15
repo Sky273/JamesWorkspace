@@ -843,6 +843,195 @@ router.post('/extract-doc', authenticateToken, upload.single('file'), async (req
     }
 });
 
+// POST /api/resumes/extract-pdf - Extract text from PDF file (server-side)
+// This endpoint enables CSP-compliant PDF extraction without 'unsafe-eval'
+// Includes OCR support for scanned PDFs using Tesseract.js
+router.post('/extract-pdf', authenticateToken, upload.single('file'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'No file uploaded' });
+        }
+
+        const fileBuffer = await fs.readFile(req.file.path);
+        const startTime = Date.now();
+        
+        safeLog('info', 'Starting server-side PDF extraction', { 
+            fileName: req.file.originalname,
+            fileSize: fileBuffer.length 
+        });
+
+        // Use pdfjs-dist/legacy for Node.js compatibility
+        const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
+        const uint8Array = new Uint8Array(fileBuffer);
+        
+        const loadingTask = pdfjsLib.getDocument({ data: uint8Array });
+        const pdf = await loadingTask.promise;
+        
+        let fullText = '';
+        const numPages = pdf.numPages;
+        let ocrUsed = false;
+        let ocrPageCount = 0;
+        let totalOcrConfidence = 0;
+        
+        // Lazy load Tesseract only if needed
+        let tesseractWorker = null;
+        
+        // Extract text from each page with structure preservation
+        for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+            const page = await pdf.getPage(pageNum);
+            const textContent = await page.getTextContent();
+            
+            // Check if page appears to be scanned (very little text)
+            const totalTextLength = textContent.items.reduce((sum, item) => sum + (item.str || '').length, 0);
+            const isScannedPage = totalTextLength < 50 || textContent.items.length < 5;
+            
+            if (isScannedPage) {
+                // Use OCR for scanned pages
+                safeLog('info', `Page ${pageNum} appears to be scanned (${totalTextLength} chars), using OCR...`, {
+                    fileName: req.file.originalname
+                });
+                
+                try {
+                    // Initialize Tesseract worker on first scanned page
+                    if (!tesseractWorker) {
+                        const Tesseract = await import('tesseract.js');
+                        tesseractWorker = await Tesseract.createWorker('fra+eng', 1, {
+                            logger: (m) => {
+                                if (m.status === 'recognizing text') {
+                                    safeLog('debug', `OCR progress page ${pageNum}: ${(m.progress * 100).toFixed(0)}%`);
+                                }
+                            }
+                        });
+                    }
+                    
+                    // Render page to canvas/image for OCR
+                    const scale = 2.0; // Higher scale = better OCR quality
+                    const viewport = page.getViewport({ scale });
+                    
+                    // Create a canvas using node-canvas or similar
+                    const { createCanvas } = await import('canvas');
+                    const canvas = createCanvas(viewport.width, viewport.height);
+                    const context = canvas.getContext('2d');
+                    
+                    await page.render({
+                        canvasContext: context,
+                        viewport: viewport
+                    }).promise;
+                    
+                    // Convert canvas to PNG buffer for Tesseract
+                    const imageBuffer = canvas.toBuffer('image/png');
+                    
+                    // Perform OCR
+                    const { data: { text: ocrText, confidence } } = await tesseractWorker.recognize(imageBuffer);
+                    
+                    if (ocrText && ocrText.trim().length > 20) {
+                        fullText += ocrText.trim() + '\n\n';
+                        ocrUsed = true;
+                        ocrPageCount++;
+                        totalOcrConfidence += confidence;
+                        safeLog('info', `OCR completed for page ${pageNum}`, { 
+                            confidence: confidence.toFixed(2),
+                            textLength: ocrText.trim().length
+                        });
+                    } else {
+                        safeLog('warn', `OCR returned insufficient text for page ${pageNum}`, {
+                            confidence: confidence?.toFixed(2) || 'N/A',
+                            textLength: ocrText?.trim().length || 0
+                        });
+                        fullText += `[Page ${pageNum}: OCR failed - insufficient text extracted]\n\n`;
+                    }
+                } catch (ocrError) {
+                    safeLog('error', `OCR failed for page ${pageNum}`, { error: ocrError.message });
+                    fullText += `[Page ${pageNum}: OCR error - ${ocrError.message}]\n\n`;
+                }
+                continue;
+            }
+            
+            // Group text items by vertical position to preserve lines
+            const lines = [];
+            let currentLine = [];
+            let lastY = null;
+            const Y_THRESHOLD = 5;
+            
+            for (const item of textContent.items) {
+                const y = item.transform ? item.transform[5] : 0;
+                
+                if (lastY !== null && Math.abs(y - lastY) > Y_THRESHOLD) {
+                    if (currentLine.length > 0) {
+                        lines.push(currentLine);
+                        currentLine = [];
+                    }
+                }
+                
+                if (item.str && item.str.trim()) {
+                    currentLine.push(item.str);
+                }
+                lastY = y;
+            }
+            
+            if (currentLine.length > 0) {
+                lines.push(currentLine);
+            }
+            
+            const pageText = lines
+                .map(line => line.join(' '))
+                .join('\n');
+            
+            fullText += pageText + '\n\n';
+        }
+        
+        // Cleanup Tesseract worker if used
+        if (tesseractWorker) {
+            await tesseractWorker.terminate();
+        }
+        
+        // Clean up excessive whitespace
+        fullText = fullText
+            .replace(/[ \t]+/g, ' ')
+            .replace(/\n{3,}/g, '\n\n')
+            .trim();
+        
+        // Clean up temp file
+        await fs.unlink(req.file.path).catch(() => {});
+        
+        const extractionTime = Date.now() - startTime;
+        const avgOcrConfidence = ocrPageCount > 0 ? (totalOcrConfidence / ocrPageCount).toFixed(2) : null;
+        
+        safeLog('info', 'PDF extraction completed', { 
+            fileName: req.file.originalname,
+            textLength: fullText.length,
+            pages: numPages,
+            ocrUsed,
+            ocrPageCount,
+            avgOcrConfidence,
+            extractionTimeMs: extractionTime
+        });
+
+        if (!fullText || fullText.length < 10) {
+            return res.status(400).json({ 
+                error: 'Could not extract meaningful text from the PDF file. The file may be empty, corrupted, or entirely scanned.',
+                ocrRequired: ocrUsed
+            });
+        }
+
+        res.json({ 
+            text: fullText,
+            pages: numPages,
+            ocrUsed,
+            ocrPageCount,
+            avgOcrConfidence,
+            extractionTimeMs: extractionTime
+        });
+    } catch (error) {
+        // Clean up temp file on error
+        if (req.file?.path) {
+            await fs.unlink(req.file.path).catch(() => {});
+        }
+        safeLog('error', 'Error extracting text from PDF', { error: error.message });
+        res.status(500).json({ error: error.message || 'Failed to extract text from PDF file' });
+    }
+});
+
 // POST /api/resumes/upload - Upload resume file
 router.post('/upload', authenticateToken, upload.single('file'), async (req, res) => {
     try {

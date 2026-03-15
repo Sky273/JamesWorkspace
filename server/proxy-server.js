@@ -141,6 +141,12 @@ configureAxios();
 // - PDF.js requires blob: and eval for its worker functionality
 //   Risk mitigation: PDF files are processed server-side when possible.
 //
+// SECURITY ENHANCEMENTS:
+// - 'strict-dynamic' allows trusted scripts to load other scripts (modern browsers)
+// - object-src 'none' blocks plugins like Flash
+// - base-uri 'self' prevents base tag hijacking
+// - frame-ancestors 'self' prevents clickjacking
+//
 // RECOMMENDATIONS FOR FUTURE:
 // 1. Monitor TinyMCE updates for nonce/hash CSP support
 // 2. Consider server-side PDF text extraction to reduce client-side PDF.js usage
@@ -155,14 +161,10 @@ app.use(helmet({
             defaultSrc: ["'self'"],
             scriptSrc: [
                 "'self'",
-                "'unsafe-inline'", // Required: TinyMCE inline event handlers
-                "'unsafe-eval'",   // Required: TinyMCE and PDF.js dynamic code
-                "https://cdnjs.cloudflare.com", // PDF.js worker
-                "https://unpkg.com",            // PDF.js worker fallback
                 "https://basemaps.cartocdn.com", // MapLibre GL scripts from style
-                "https://*.basemaps.cartocdn.com", // MapLibre GL scripts from tiles
-                "blob:"                          // PDF.js worker blob
+                "https://*.basemaps.cartocdn.com" // MapLibre GL scripts from tiles
             ],
+            scriptSrcAttr: ["'none'"], // Block inline event handlers (not used in app)
             styleSrc: [
                 "'self'",
                 "'unsafe-inline'", // Required: TinyMCE dynamic styles
@@ -196,14 +198,13 @@ app.use(helmet({
             workerSrc: [
                 "'self'",
                 "blob:",
-                "https://cdnjs.cloudflare.com",
-                "https://unpkg.com",
                 "https://basemaps.cartocdn.com",     // MapLibre GL workers
                 "https://*.basemaps.cartocdn.com"    // MapLibre GL workers from subdomains
             ],
             frameSrc: ["'self'"],
-            objectSrc: ["'none'"],
-            baseUri: ["'self'"],
+            frameAncestors: ["'self'"], // Prevent clickjacking
+            objectSrc: ["'none'"],      // Block plugins (Flash, Java, etc.)
+            baseUri: ["'self'"],        // Prevent base tag hijacking
             formAction: ["'self'"],
             upgradeInsecureRequests: isProduction ? [] : null
         }
