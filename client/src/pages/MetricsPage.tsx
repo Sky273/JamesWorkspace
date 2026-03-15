@@ -471,43 +471,42 @@ const MetricsPage = (): JSX.Element => {
           )}
 
           {/* APM (Application Performance Monitoring) Section */}
-          {apmMetrics && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.19 }} className="rounded-xl border bg-rose-50 text-rose-600 border-rose-200 dark:bg-gray-800 dark:text-rose-400 dark:border-rose-700 p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <p className="text-sm font-medium opacity-80">{t('metrics.apm', 'Performance (APM)')}</p>
-                    <p className="text-2xl font-bold mt-1">{safeNumber(apmMetrics.summary?.totalTracked)}</p>
-                    <p className="text-xs mt-1 opacity-60">{t('metrics.slowRequests', 'Requêtes lentes')} ({t('metrics.last5min', '5 min')}: {safeNumber(apmMetrics.summary?.last5min)})</p>
+                    <p className="text-2xl font-bold mt-1">{safeNumber(apmMetrics?.summary?.totalTracked)}</p>
+                    <p className="text-xs mt-1 opacity-60">{t('metrics.slowRequests', 'Requêtes lentes')} ({t('metrics.last5min', '5 min')}: {safeNumber(apmMetrics?.summary?.last5min)})</p>
                   </div>
                   <BoltIcon className="w-10 h-10 opacity-50" />
                 </div>
                 <div className="grid grid-cols-3 gap-3 text-sm mb-4">
                   <div className="bg-rose-100 dark:bg-rose-900/30 rounded-lg p-3">
                     <p className="opacity-70 text-xs">{t('metrics.slow', 'Lentes')}</p>
-                    <p className="font-semibold">{safeNumber(apmMetrics.summary?.severityCounts?.slow)}</p>
-                    <p className="text-xs opacity-50">&gt; {apmMetrics.config?.slowThreshold || 1000}ms</p>
+                    <p className="font-semibold">{safeNumber(apmMetrics?.summary?.severityCounts?.slow)}</p>
+                    <p className="text-xs opacity-50">&gt; {apmMetrics?.config?.slowThreshold || 1000}ms</p>
                   </div>
                   <div className="bg-rose-100 dark:bg-rose-900/30 rounded-lg p-3">
                     <p className="opacity-70 text-xs">{t('metrics.verySlow', 'Très lentes')}</p>
-                    <p className="font-semibold">{safeNumber(apmMetrics.summary?.severityCounts?.very_slow)}</p>
-                    <p className="text-xs opacity-50">&gt; {apmMetrics.config?.verySlowThreshold || 5000}ms</p>
+                    <p className="font-semibold">{safeNumber(apmMetrics?.summary?.severityCounts?.very_slow)}</p>
+                    <p className="text-xs opacity-50">&gt; {apmMetrics?.config?.verySlowThreshold || 5000}ms</p>
                   </div>
                   <div className="bg-rose-100 dark:bg-rose-900/30 rounded-lg p-3">
                     <p className="opacity-70 text-xs">{t('metrics.critical', 'Critiques')}</p>
-                    <p className="font-semibold text-rose-700 dark:text-rose-300">{safeNumber(apmMetrics.summary?.severityCounts?.critical)}</p>
-                    <p className="text-xs opacity-50">&gt; {apmMetrics.config?.criticalThreshold || 30000}ms</p>
+                    <p className="font-semibold text-rose-700 dark:text-rose-300">{safeNumber(apmMetrics?.summary?.severityCounts?.critical)}</p>
+                    <p className="text-xs opacity-50">&gt; {apmMetrics?.config?.criticalThreshold || 30000}ms</p>
                   </div>
                 </div>
-                {safeNumber(apmMetrics.summary?.totalTracked) === 0 && (
+                {safeNumber(apmMetrics?.summary?.totalTracked) === 0 && (
                   <p className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
                     <span className="inline-block w-2 h-2 bg-green-500 rounded-full"></span>
                     {t('metrics.noSlowRequests', 'Aucune requête lente détectée')}
                   </p>
                 )}
-                {safeNumber(apmMetrics.summary?.avgDuration) > 0 && (
+                {safeNumber(apmMetrics?.summary?.avgDuration) > 0 && (
                   <p className="text-xs opacity-60 mt-2">
-                    {t('metrics.avgDuration', 'Durée moyenne')}: {safeNumber(apmMetrics.summary?.avgDuration)}ms
+                    {t('metrics.avgDuration', 'Durée moyenne')}: {safeNumber(apmMetrics?.summary?.avgDuration)}ms
                   </p>
                 )}
               </motion.div>
@@ -516,12 +515,12 @@ const MetricsPage = (): JSX.Element => {
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <p className="text-sm font-medium opacity-80">{t('metrics.slowEndpoints', 'Endpoints lents')}</p>
-                    <p className="text-2xl font-bold mt-1">{apmMetrics.topSlowEndpoints?.length || 0}</p>
+                    <p className="text-2xl font-bold mt-1">{apmMetrics?.topSlowEndpoints?.length || 0}</p>
                     <p className="text-xs mt-1 opacity-60">{t('metrics.topSlowEndpoints', 'Endpoints les plus lents')}</p>
                   </div>
                   <ClockIcon className="w-10 h-10 opacity-50" />
                 </div>
-                {apmMetrics.topSlowEndpoints && apmMetrics.topSlowEndpoints.length > 0 ? (
+                {apmMetrics?.topSlowEndpoints && apmMetrics.topSlowEndpoints.length > 0 ? (
                   <div className="overflow-x-auto max-h-48">
                     <table className="w-full text-sm">
                       <thead>
@@ -549,7 +548,6 @@ const MetricsPage = (): JSX.Element => {
                 )}
               </motion.div>
             </div>
-          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="rounded-xl border bg-blue-50 text-blue-600 border-blue-200 dark:bg-gray-800 dark:text-blue-400 dark:border-blue-700 p-6">
