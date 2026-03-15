@@ -160,27 +160,29 @@ interface DatabaseMetrics {
 }
 
 interface APMMetrics {
-  totalSlowRequests?: number;
-  thresholds?: {
-    slow?: string;
-    verySlow?: string;
-    critical?: string;
+  config?: {
+    slowThreshold?: number;
+    verySlowThreshold?: number;
+    criticalThreshold?: number;
   };
-  breakdown?: {
-    slow?: number;
-    verySlow?: number;
-    critical?: number;
+  summary?: {
+    totalTracked?: number;
+    last5min?: number;
+    last1h?: number;
+    avgDuration?: number;
+    severityCounts?: {
+      slow?: number;
+      very_slow?: number;
+      critical?: number;
+    };
   };
-  topSlowEndpoints?: Record<string, { count: number; avgDuration: number; maxDuration: number }>;
-  recentSlowRequests?: Array<{
-    timestamp: string;
-    method: string;
-    path: string;
+  topSlowEndpoints?: Array<{
     endpoint: string;
-    duration: number;
-    severity: 'slow' | 'very_slow' | 'critical';
-    statusCode: number;
+    count: number;
+    avgDuration: number;
+    maxDuration: number;
   }>;
+  timestamp?: string;
 }
 
 const MetricsPage = (): JSX.Element => {
@@ -475,32 +477,37 @@ const MetricsPage = (): JSX.Element => {
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <p className="text-sm font-medium opacity-80">{t('metrics.apm', 'Performance (APM)')}</p>
-                    <p className="text-2xl font-bold mt-1">{safeNumber(apmMetrics.totalSlowRequests)}</p>
-                    <p className="text-xs mt-1 opacity-60">{t('metrics.slowRequests', 'Requêtes lentes')}</p>
+                    <p className="text-2xl font-bold mt-1">{safeNumber(apmMetrics.summary?.totalTracked)}</p>
+                    <p className="text-xs mt-1 opacity-60">{t('metrics.slowRequests', 'Requêtes lentes')} ({t('metrics.last5min', '5 min')}: {safeNumber(apmMetrics.summary?.last5min)})</p>
                   </div>
                   <BoltIcon className="w-10 h-10 opacity-50" />
                 </div>
                 <div className="grid grid-cols-3 gap-3 text-sm mb-4">
                   <div className="bg-rose-100 dark:bg-rose-900/30 rounded-lg p-3">
                     <p className="opacity-70 text-xs">{t('metrics.slow', 'Lentes')}</p>
-                    <p className="font-semibold">{safeNumber(apmMetrics.breakdown?.slow)}</p>
-                    <p className="text-xs opacity-50">&gt; {apmMetrics.thresholds?.slow || '1s'}</p>
+                    <p className="font-semibold">{safeNumber(apmMetrics.summary?.severityCounts?.slow)}</p>
+                    <p className="text-xs opacity-50">&gt; {apmMetrics.config?.slowThreshold || 1000}ms</p>
                   </div>
                   <div className="bg-rose-100 dark:bg-rose-900/30 rounded-lg p-3">
                     <p className="opacity-70 text-xs">{t('metrics.verySlow', 'Très lentes')}</p>
-                    <p className="font-semibold">{safeNumber(apmMetrics.breakdown?.verySlow)}</p>
-                    <p className="text-xs opacity-50">&gt; {apmMetrics.thresholds?.verySlow || '5s'}</p>
+                    <p className="font-semibold">{safeNumber(apmMetrics.summary?.severityCounts?.very_slow)}</p>
+                    <p className="text-xs opacity-50">&gt; {apmMetrics.config?.verySlowThreshold || 5000}ms</p>
                   </div>
                   <div className="bg-rose-100 dark:bg-rose-900/30 rounded-lg p-3">
                     <p className="opacity-70 text-xs">{t('metrics.critical', 'Critiques')}</p>
-                    <p className="font-semibold text-rose-700 dark:text-rose-300">{safeNumber(apmMetrics.breakdown?.critical)}</p>
-                    <p className="text-xs opacity-50">&gt; {apmMetrics.thresholds?.critical || '30s'}</p>
+                    <p className="font-semibold text-rose-700 dark:text-rose-300">{safeNumber(apmMetrics.summary?.severityCounts?.critical)}</p>
+                    <p className="text-xs opacity-50">&gt; {apmMetrics.config?.criticalThreshold || 30000}ms</p>
                   </div>
                 </div>
-                {apmMetrics.totalSlowRequests === 0 && (
+                {safeNumber(apmMetrics.summary?.totalTracked) === 0 && (
                   <p className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
                     <span className="inline-block w-2 h-2 bg-green-500 rounded-full"></span>
                     {t('metrics.noSlowRequests', 'Aucune requête lente détectée')}
+                  </p>
+                )}
+                {safeNumber(apmMetrics.summary?.avgDuration) > 0 && (
+                  <p className="text-xs opacity-60 mt-2">
+                    {t('metrics.avgDuration', 'Durée moyenne')}: {safeNumber(apmMetrics.summary?.avgDuration)}ms
                   </p>
                 )}
               </motion.div>
@@ -509,12 +516,12 @@ const MetricsPage = (): JSX.Element => {
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <p className="text-sm font-medium opacity-80">{t('metrics.slowEndpoints', 'Endpoints lents')}</p>
-                    <p className="text-2xl font-bold mt-1">{Object.keys(apmMetrics.topSlowEndpoints || {}).length}</p>
+                    <p className="text-2xl font-bold mt-1">{apmMetrics.topSlowEndpoints?.length || 0}</p>
                     <p className="text-xs mt-1 opacity-60">{t('metrics.topSlowEndpoints', 'Endpoints les plus lents')}</p>
                   </div>
                   <ClockIcon className="w-10 h-10 opacity-50" />
                 </div>
-                {apmMetrics.topSlowEndpoints && Object.keys(apmMetrics.topSlowEndpoints).length > 0 ? (
+                {apmMetrics.topSlowEndpoints && apmMetrics.topSlowEndpoints.length > 0 ? (
                   <div className="overflow-x-auto max-h-48">
                     <table className="w-full text-sm">
                       <thead>
@@ -526,12 +533,12 @@ const MetricsPage = (): JSX.Element => {
                         </tr>
                       </thead>
                       <tbody>
-                        {Object.entries(apmMetrics.topSlowEndpoints).slice(0, 5).map(([endpoint, stats], index) => (
+                        {apmMetrics.topSlowEndpoints.slice(0, 5).map((item, index) => (
                           <tr key={index} className="border-b border-rose-100 dark:border-rose-800">
-                            <td className="py-2 px-2 font-mono text-xs truncate max-w-[150px]" title={endpoint}>{endpoint}</td>
-                            <td className="py-2 px-2 text-right font-semibold">{stats.count}</td>
-                            <td className="py-2 px-2 text-right opacity-70">{stats.avgDuration}ms</td>
-                            <td className="py-2 px-2 text-right text-rose-700 dark:text-rose-300">{stats.maxDuration}ms</td>
+                            <td className="py-2 px-2 font-mono text-xs truncate max-w-[150px]" title={item.endpoint}>{item.endpoint}</td>
+                            <td className="py-2 px-2 text-right font-semibold">{item.count}</td>
+                            <td className="py-2 px-2 text-right opacity-70">{item.avgDuration}ms</td>
+                            <td className="py-2 px-2 text-right text-rose-700 dark:text-rose-300">{item.maxDuration}ms</td>
                           </tr>
                         ))}
                       </tbody>
