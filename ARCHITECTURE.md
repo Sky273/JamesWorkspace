@@ -35,7 +35,7 @@
 | **IA/LLM** | OpenAI (GPT-4/5), Anthropic (Claude) |
 | **APIs Externes** | France Travail, Adzuna, ROME 4.0, ESCO |
 | **Génération PDF** | Puppeteer (html-pdf-node) |
-| **Éditeur WYSIWYG** | TinyMCE 7 |
+| **Éditeur WYSIWYG** | TinyMCE 8.3 |
 | **Cartographie** | MapLibre GL JS |
 | **Authentification** | JWT (Access + Refresh Tokens) |
 | **Sécurité** | Helmet, CSRF (Double Submit), Rate Limiting, SQL Injection Protection |
@@ -474,21 +474,78 @@ export const fetchWithCsrfRetry = async (url, options) => {
 
 ### 🔒 Content Security Policy (CSP)
 
+**Score Mozilla HTTP Observatory : A+** ✅
+
+L'application implémente une CSP stricte avec `default-src 'none'`, ce qui garantit que toutes les ressources doivent être explicitement autorisées.
+
 ```javascript
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // TinyMCE requirement
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      connectSrc: ["'self'", "https://api.openai.com", "https://api.anthropic.com"],
-      // ...
+      defaultSrc: ["'none'"],                    // Strict: tout bloqué par défaut
+      scriptSrc: ["'self'", "https://basemaps.cartocdn.com", "https://*.basemaps.cartocdn.com"],
+      scriptSrcAttr: ["'none'"],                 // Bloque les event handlers inline
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://unpkg.com", "https://basemaps.cartocdn.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
+      imgSrc: ["'self'", "data:", "blob:", "https:"],
+      connectSrc: ["'self'", "blob:", "https://api.openai.com", "https://api.anthropic.com", "https://basemaps.cartocdn.com"],
+      workerSrc: ["'self'", "blob:"],
+      childSrc: ["'self'", "blob:"],
+      frameSrc: ["'self'"],
+      frameAncestors: ["'self'"],                // Protection clickjacking
+      objectSrc: ["'none'"],                     // Bloque Flash, Java, etc.
+      mediaSrc: ["'self'"],
+      manifestSrc: ["'self'"],
+      baseUri: ["'self'"],                       // Prévient base tag hijacking
+      formAction: ["'self'"],
+      upgradeInsecureRequests: []                // Force HTTPS
     }
   }
 }));
 ```
 
-> ⚠️ **Note** : `unsafe-inline` et `unsafe-eval` sont requis par TinyMCE. Mitigation : sanitization DOMPurify.
+#### Directives de sécurité
+
+| Directive | Valeur | Sécurité |
+|-----------|--------|----------|
+| `default-src` | `'none'` | ✅ Strict - tout bloqué par défaut |
+| `script-src` | `'self'` | ✅ Pas de `'unsafe-inline'` ni `'unsafe-eval'` |
+| `script-src-attr` | `'none'` | ✅ Bloque les event handlers inline |
+| `style-src` | `'self' 'unsafe-inline'` | ⚠️ Requis par TinyMCE (voir note) |
+| `object-src` | `'none'` | ✅ Bloque plugins dangereux |
+| `frame-ancestors` | `'self'` | ✅ Protection clickjacking |
+| `base-uri` | `'self'` | ✅ Prévient base tag hijacking |
+
+#### Extraction PDF côté serveur
+
+Pour éliminer `'unsafe-eval'` de la CSP, l'extraction de texte PDF a été migrée du client vers le serveur :
+
+```
+Client (avant)                    Serveur (après)
+┌─────────────────┐              ┌─────────────────┐
+│  pdfjs-dist     │    ──►       │  pdfjs-dist     │
+│  (unsafe-eval)  │              │  /legacy        │
+│  Tesseract.js   │              │  Tesseract.js   │
+│  (OCR client)   │              │  (OCR serveur)  │
+└─────────────────┘              └─────────────────┘
+```
+
+**Endpoint** : `POST /api/resumes/extract-pdf`
+- Extraction texte via `pdfjs-dist/legacy`
+- OCR automatique pour PDFs scannés (Tesseract.js)
+- Support français + anglais
+
+#### Note sur `'unsafe-inline'` dans `style-src`
+
+TinyMCE 8.x nécessite `'unsafe-inline'` dans `style-src` pour le formatage inline (gras, couleurs, etc.). C'est une limitation documentée par TinyMCE :
+
+> *"TinyMCE currently requires the `unsafe-inline` value in the `style-src` directive to present content other than plain-text."*
+> — [Documentation TinyMCE CSP](https://www.tiny.cloud/docs/tinymce/latest/tinymce-and-csp/)
+
+**Mitigations :**
+- Sanitization côté client avec DOMPurify
+- Sanitization côté serveur avec sanitize-html
+- Validation stricte des entrées utilisateur
 
 ### 🧹 Sanitization
 

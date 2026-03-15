@@ -158,7 +158,8 @@ const isProduction = process.env.NODE_ENV === 'production';
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
-            defaultSrc: ["'self'"],
+            // STRICT CSP: default-src 'none' requires explicit directives for all resource types
+            defaultSrc: ["'none'"],
             scriptSrc: [
                 "'self'",
                 "https://basemaps.cartocdn.com", // MapLibre GL scripts from style
@@ -167,7 +168,7 @@ app.use(helmet({
             scriptSrcAttr: ["'none'"], // Block inline event handlers (not used in app)
             styleSrc: [
                 "'self'",
-                "'unsafe-inline'", // Required: TinyMCE dynamic styles
+                "'unsafe-inline'", // Required: TinyMCE dynamic styles (cannot be removed per TinyMCE docs)
                 "https://fonts.googleapis.com",
                 "https://unpkg.com",  // Swagger UI styles
                 "https://basemaps.cartocdn.com", // MapLibre GL styles
@@ -189,6 +190,7 @@ app.use(helmet({
             ],
             connectSrc: [
                 "'self'",
+                "blob:", // Required for TinyMCE and MapLibre GL
                 "https://api.openai.com",
                 "https://api.anthropic.com",
                 "https://basemaps.cartocdn.com",     // MapLibre GL - base domain
@@ -201,9 +203,12 @@ app.use(helmet({
                 "https://basemaps.cartocdn.com",     // MapLibre GL workers
                 "https://*.basemaps.cartocdn.com"    // MapLibre GL workers from subdomains
             ],
+            childSrc: ["'self'", "blob:"], // For iframes and workers
             frameSrc: ["'self'"],
             frameAncestors: ["'self'"], // Prevent clickjacking
             objectSrc: ["'none'"],      // Block plugins (Flash, Java, etc.)
+            mediaSrc: ["'self'"],       // Audio/video sources
+            manifestSrc: ["'self'"],    // Web app manifests
             baseUri: ["'self'"],        // Prevent base tag hijacking
             formAction: ["'self'"],
             upgradeInsecureRequests: isProduction ? [] : null
