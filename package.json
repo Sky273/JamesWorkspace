@@ -98,6 +98,7 @@
     "bn.js": "^5.2.3",
     "elliptic": "^6.6.1",
     "esbuild": "^0.25.0",
+    "yauzl": "^3.2.1",
     "browserify-sign": {
       "elliptic": "^6.6.1"
     },
