@@ -6,152 +6,12 @@
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useDropzone, FileRejection, DropEvent } from 'react-dropzone';
-import { motion, AnimatePresence } from 'framer-motion';
-
-// Extended File type with custom path property
-type FileWithPath = File & {
-  customRelativePath?: string;
-};
-
-// Helper to traverse directory entries and get files with paths
-const traverseFileTree = async (entry: FileSystemEntry, path: string = ''): Promise<FileWithPath[]> => {
-  const files: FileWithPath[] = [];
-  
-  if (entry.isFile) {
-    const fileEntry = entry as FileSystemFileEntry;
-    return new Promise((resolve) => {
-      fileEntry.file((file) => {
-        // Create a new file with the relative path stored in custom property
-        const fileWithPath = file as FileWithPath;
-        fileWithPath.customRelativePath = path + file.name;
-        resolve([fileWithPath]);
-      }, () => resolve([]));
-    });
-  } else if (entry.isDirectory) {
-    const dirEntry = entry as FileSystemDirectoryEntry;
-    const dirReader = dirEntry.createReader();
-    
-    return new Promise((resolve) => {
-      const readEntries = (allEntries: FileSystemEntry[] = []) => {
-        dirReader.readEntries(async (entries) => {
-          if (entries.length === 0) {
-            // All entries read, process them
-            const filePromises = allEntries.map(e => 
-              traverseFileTree(e, path + entry.name + '/')
-            );
-            const fileArrays = await Promise.all(filePromises);
-            resolve(fileArrays.flat());
-          } else {
-            // More entries to read
-            readEntries([...allEntries, ...entries]);
-          }
-        }, () => resolve([]));
-      };
-      readEntries();
-    });
-  }
-  
-  return files;
-};
-
-// Custom getFilesFromEvent to preserve folder structure
-const getFilesFromEvent = async (event: DropEvent): Promise<FileWithPath[]> => {
-  const files: FileWithPath[] = [];
-  
-  // Handle FileSystemFileHandle[] (new API in react-dropzone v15)
-  if (Array.isArray(event)) {
-    console.log('[getFilesFromEvent] Received FileSystemFileHandle array:', event.length);
-    for (const handle of event) {
-      if ('getFile' in handle && typeof handle.getFile === 'function') {
-        try {
-          const file = await (handle as FileSystemFileHandle).getFile();
-          files.push(file as FileWithPath);
-        } catch (error) {
-          console.error('[getFilesFromEvent] Error getting file from handle:', error);
-        }
-      }
-    }
-    console.log('[getFilesFromEvent] Files from handles:', files.length);
-    return files;
-  }
-  
-  // Handle DragEvent
-  const dragEvent = event as DragEvent;
-  console.log('[getFilesFromEvent] Event type:', dragEvent.type, 'Has dataTransfer:', !!dragEvent.dataTransfer);
-  
-  if (dragEvent.dataTransfer) {
-    const items = dragEvent.dataTransfer.items;
-    const dataTransferFiles = dragEvent.dataTransfer.files;
-    
-    console.log('[getFilesFromEvent] items length:', items?.length, 'files length:', dataTransferFiles?.length);
-    
-    // IMPORTANT: Collect entries synchronously before any async operations
-    // because dataTransfer.items is cleared by the browser after the event handler returns
-    if (items && items.length > 0) {
-      const entries: FileSystemEntry[] = [];
-      
-      // Collect all entries SYNCHRONOUSLY first
-      for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-        console.log('[getFilesFromEvent] Item', i, 'kind:', item.kind, 'type:', item.type);
-        if (item.kind === 'file') {
-          const entry = item.webkitGetAsEntry?.();
-          console.log('[getFilesFromEvent] Entry:', entry?.name, 'isFile:', entry?.isFile, 'isDirectory:', entry?.isDirectory);
-          if (entry) {
-            entries.push(entry);
-          }
-        }
-      }
-      
-      console.log('[getFilesFromEvent] Collected entries:', entries.length);
-      
-      // Now process entries asynchronously
-      if (entries.length > 0) {
-        try {
-          const filePromises = entries.map(entry => traverseFileTree(entry));
-          const fileArrays = await Promise.all(filePromises);
-          files.push(...fileArrays.flat());
-          console.log('[getFilesFromEvent] Files from entries:', files.length);
-        } catch (error) {
-          console.error('[getFilesFromEvent] Error traversing file tree:', error);
-        }
-      }
-    }
-    
-    // Fallback to regular files if no entries found or traversal failed
-    if (files.length === 0 && dataTransferFiles && dataTransferFiles.length > 0) {
-      console.log('[getFilesFromEvent] Using fallback dataTransfer.files');
-      for (let i = 0; i < dataTransferFiles.length; i++) {
-        files.push(dataTransferFiles[i] as FileWithPath);
-      }
-    }
-  }
-  
-  // Handle input change event
-  const inputEvent = event as Event;
-  if ('target' in inputEvent && inputEvent.target) {
-    const input = inputEvent.target as HTMLInputElement;
-    if (input.files && input.files.length > 0) {
-      console.log('[getFilesFromEvent] Files from input:', input.files.length);
-      for (let i = 0; i < input.files.length; i++) {
-        files.push(input.files[i] as FileWithPath);
-      }
-    }
-  }
-  
-  console.log('[getFilesFromEvent] Returning files:', files.length);
-  return files;
-};
+import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { 
   DocumentArrowUpIcon, 
-  XMarkIcon, 
-  CheckCircleIcon, 
-  ExclamationCircleIcon,
   ArrowPathIcon,
-  SparklesIcon,
-  DocumentTextIcon,
   FolderArrowDownIcon,
   ArrowDownTrayIcon
 } from '@heroicons/react/24/outline';
@@ -161,21 +21,10 @@ import { fetchWithAuth, createAuthOptionsWithCsrf, attemptTokenRefresh } from '.
 import { extractResumeText } from '../utils/resumeProcessing';
 import logger from '../utils/logger.frontend';
 import toast from 'react-hot-toast';
-import AdminFirmSelector from '../components/AdminFirmSelector';
 import { templateService, Template } from '../utils/templateService';
-
-interface FileStatus {
-  file: File;
-  relativePath?: string; // Preserve folder structure from webkitRelativePath
-  status: 'pending' | 'uploading' | 'extracting' | 'analyzing' | 'improving' | 'exporting' | 'success' | 'error';
-  progress: number;
-  error?: string;
-  resumeId?: string;
-  resumeName?: string;
-}
-
-type ExportFormat = 'pdf' | 'docx' | 'doc';
-type ExportFormats = ExportFormat[];
+import { type FileWithPath, type FileStatus, type ExportFormats, getFilesFromEvent } from './batchUpload.utils';
+import BatchUploadOptions from './BatchUploadOptions';
+import BatchUploadFileList from './BatchUploadFileList';
 
 const BatchUploadPage = (): JSX.Element => {
   const { t } = useTranslation();
@@ -926,37 +775,6 @@ const BatchUploadPage = (): JSX.Element => {
     }
   };
 
-  const getStatusIcon = (status: FileStatus['status']) => {
-    switch (status) {
-      case 'success':
-        return <CheckCircleIcon className="w-5 h-5 text-green-500" />;
-      case 'error':
-        return <ExclamationCircleIcon className="w-5 h-5 text-red-500" />;
-      case 'uploading':
-      case 'extracting':
-      case 'analyzing':
-      case 'improving':
-      case 'exporting':
-        return <ArrowPathIcon className="w-5 h-5 text-blue-500 animate-spin" />;
-      default:
-        return <DocumentTextIcon className="w-5 h-5 text-gray-400" />;
-    }
-  };
-
-  const getStatusText = (status: FileStatus['status']) => {
-    switch (status) {
-      case 'pending': return t('batchUpload.status.pending', 'En attente');
-      case 'uploading': return t('batchUpload.status.uploading', 'Upload...');
-      case 'extracting': return t('batchUpload.status.extracting', 'Extraction...');
-      case 'analyzing': return t('batchUpload.status.analyzing', 'Analyse...');
-      case 'improving': return t('batchUpload.status.improving', 'Amélioration...');
-      case 'exporting': return t('batchUpload.status.exporting', 'Export...');
-      case 'success': return t('batchUpload.status.success', 'Terminé');
-      case 'error': return t('batchUpload.status.error', 'Erreur');
-      default: return '';
-    }
-  };
-
   // Memoize counters to avoid recalculating on every render
   const { pendingCount, successCount, errorCount } = useMemo(() => ({
     pendingCount: files.filter(f => f.status === 'pending').length,
@@ -993,174 +811,23 @@ const BatchUploadPage = (): JSX.Element => {
             {t('batchUpload.processingOptions', 'Options de traitement')}
           </h2>
           
-          <div className="space-y-4">
-            {/* Improve option */}
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={improveOption}
-                onChange={(e) => setImproveOption(e.target.checked)}
-                disabled={isProcessing}
-                className="w-5 h-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700"
-              />
-              <div className="flex items-center gap-2">
-                <SparklesIcon className="w-5 h-5 text-yellow-500" />
-                <span className="text-gray-700 dark:text-gray-300">
-                  {t('batchUpload.improveOption', 'Améliorer les CVs automatiquement')}
-                </span>
-              </div>
-            </label>
-            
-            {improveOption && (
-              <p className="text-sm text-amber-600 dark:text-amber-400 ml-8">
-                ⚠️ {t('batchUpload.improveWarning', 'L\'amélioration prend plus de temps (environ 30-60 secondes par CV)')}
-              </p>
-            )}
-
-            {/* Export option */}
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={exportOption}
-                onChange={(e) => setExportOption(e.target.checked)}
-                disabled={isProcessing}
-                className="w-5 h-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700"
-              />
-              <div className="flex items-center gap-2">
-                <ArrowDownTrayIcon className="w-5 h-5 text-green-500" />
-                <span className="text-gray-700 dark:text-gray-300">
-                  {t('batchUpload.exportOption', 'Exporter les CVs après traitement (ZIP)')}
-                </span>
-              </div>
-            </label>
-
-            {/* Export options - template and format selection */}
-            {exportOption && (
-              <div className="ml-8 space-y-3 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('batchUpload.exportTemplate', 'Modèle d\'export')}
-                  </label>
-                  <select
-                    value={selectedTemplate}
-                    onChange={(e) => setSelectedTemplate(e.target.value)}
-                    disabled={isProcessing || templates.length === 0}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
-                  >
-                    {templates.length === 0 ? (
-                      <option value="">{t('batchUpload.loadingTemplates', 'Chargement des modèles...')}</option>
-                    ) : (
-                      templates.map(template => (
-                        <option key={template.id} value={template.id}>
-                          {template.Name}
-                        </option>
-                      ))
-                    )}
-                  </select>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('batchUpload.exportFormats', 'Formats d\'export (sélection multiple)')}
-                  </label>
-                  <div className="flex gap-4">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={exportFormats.includes('pdf')}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setExportFormats([...exportFormats, 'pdf']);
-                          } else {
-                            setExportFormats(exportFormats.filter(f => f !== 'pdf'));
-                          }
-                        }}
-                        disabled={isProcessing}
-                        className="rounded text-indigo-600 focus:ring-indigo-500"
-                      />
-                      <span className="text-gray-700 dark:text-gray-300">PDF</span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={exportFormats.includes('docx')}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setExportFormats([...exportFormats, 'docx']);
-                          } else {
-                            setExportFormats(exportFormats.filter(f => f !== 'docx'));
-                          }
-                        }}
-                        disabled={isProcessing}
-                        className="rounded text-indigo-600 focus:ring-indigo-500"
-                      />
-                      <span className="text-gray-700 dark:text-gray-300">DOCX</span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={exportFormats.includes('doc')}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setExportFormats([...exportFormats, 'doc']);
-                          } else {
-                            setExportFormats(exportFormats.filter(f => f !== 'doc'));
-                          }
-                        }}
-                        disabled={isProcessing}
-                        className="rounded text-indigo-600 focus:ring-indigo-500"
-                      />
-                      <span className="text-gray-700 dark:text-gray-300">DOC</span>
-                    </label>
-                  </div>
-                  {exportFormats.length === 0 && (
-                    <p className="text-xs text-red-500 mt-1">
-                      {t('batchUpload.selectAtLeastOneFormat', 'Sélectionnez au moins un format')}
-                    </p>
-                  )}
-                </div>
-                
-                <p className="text-sm text-blue-600 dark:text-blue-400">
-                  ℹ️ {t('batchUpload.zipInfo', 'Un fichier ZIP contenant tous les CVs exportés sera téléchargé à la fin du traitement')}
-                </p>
-              </div>
-            )}
-
-            {/* Delete after processing option */}
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={deleteAfterExport}
-                onChange={(e) => setDeleteAfterExport(e.target.checked)}
-                disabled={isProcessing}
-                className="w-5 h-5 text-red-600 border-gray-300 rounded focus:ring-red-500 dark:border-gray-600 dark:bg-gray-700"
-              />
-              <div className="flex items-center gap-2">
-                <XMarkIcon className="w-5 h-5 text-red-500" />
-                <span className="text-gray-700 dark:text-gray-300">
-                  {t('batchUpload.deleteAfterOption', 'Supprimer les CVs après traitement')}
-                </span>
-              </div>
-            </label>
-
-            {deleteAfterExport && (
-              <p className="text-sm text-red-600 dark:text-red-400 ml-8">
-                ⚠️ {t('batchUpload.deleteWarning', `Les CVs seront supprimés de la base de données après ${exportOption ? 'l\'export' : 'le traitement'}. Cette action est irréversible.`)}
-              </p>
-            )}
-            
-            {/* Admin firm selector */}
-            {isAdmin && (
-              <div className="mt-4">
-                <AdminFirmSelector
-                  selectedFirmId={selectedFirmId}
-                  onFirmChange={setSelectedFirmId}
-                  disabled={isProcessing}
-                  t={t}
-                />
-              </div>
-            )}
-          </div>
+          <BatchUploadOptions
+            improveOption={improveOption}
+            setImproveOption={setImproveOption}
+            exportOption={exportOption}
+            setExportOption={setExportOption}
+            deleteAfterExport={deleteAfterExport}
+            setDeleteAfterExport={setDeleteAfterExport}
+            templates={templates}
+            selectedTemplate={selectedTemplate}
+            setSelectedTemplate={setSelectedTemplate}
+            exportFormats={exportFormats}
+            setExportFormats={setExportFormats}
+            isProcessing={isProcessing}
+            isAdmin={isAdmin}
+            selectedFirmId={selectedFirmId}
+            setSelectedFirmId={setSelectedFirmId}
+          />
         </motion.div>
 
         {/* Dropzone */}
@@ -1263,164 +930,20 @@ const BatchUploadPage = (): JSX.Element => {
         </motion.div>
 
         {/* File list */}
-        {files.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-6"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                {t('batchUpload.filesCount', `Fichiers (${files.length}/${MAX_FILES})`)}
-              </h2>
-              {!isProcessing && (
-                <div className="flex items-center gap-2">
-                  {errorCount > 0 && (
-                    <button
-                      onClick={() => {
-                        // Retry all failed files
-                        files.forEach((f, i) => {
-                          if (f.status === 'error') retryFile(i);
-                        });
-                      }}
-                      className="text-sm text-amber-600 hover:text-amber-700 dark:text-amber-400 flex items-center gap-1"
-                    >
-                      <ArrowPathIcon className="w-4 h-4" />
-                      {t('batchUpload.retryAll', 'Réessayer les erreurs')}
-                    </button>
-                  )}
-                  {showClearConfirm ? (
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">
-                        {t('batchUpload.confirmClear', 'Confirmer ?')}
-                      </span>
-                      <button
-                        onClick={clearAllFiles}
-                        className="text-sm text-red-600 hover:text-red-700 dark:text-red-400 font-medium"
-                      >
-                        {t('common.yes', 'Oui')}
-                      </button>
-                      <button
-                        onClick={() => setShowClearConfirm(false)}
-                        className="text-sm text-gray-600 hover:text-gray-700 dark:text-gray-400"
-                      >
-                        {t('common.no', 'Non')}
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => setShowClearConfirm(true)}
-                      className="text-sm text-red-600 hover:text-red-700 dark:text-red-400"
-                    >
-                      {t('batchUpload.clearAll', 'Tout supprimer')}
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-            
-            {/* Stats */}
-            {(successCount > 0 || errorCount > 0 || pendingCount > 0) && (
-              <div className="flex gap-4 mb-4 text-sm">
-                {successCount > 0 && (
-                  <span className="text-green-600 dark:text-green-400">
-                    ✓ {successCount} {t('batchUpload.stats.success', 'réussi(s)')}
-                  </span>
-                )}
-                {errorCount > 0 && (
-                  <span className="text-red-600 dark:text-red-400">
-                    ✗ {errorCount} {t('batchUpload.stats.error', 'erreur(s)')}
-                  </span>
-                )}
-                {pendingCount > 0 && (
-                  <span className="text-gray-500 dark:text-gray-400">
-                    ○ {pendingCount} {t('batchUpload.stats.pending', 'en attente')}
-                  </span>
-                )}
-              </div>
-            )}
-            
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              <AnimatePresence>
-                {files.map((fileStatus, index) => (
-                  <motion.div
-                    key={`${fileStatus.file.name}-${index}`}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
-                    className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
-                  >
-                    {getStatusIcon(fileStatus.status)}
-                    
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate" title={fileStatus.relativePath || fileStatus.file.name}>
-                        {fileStatus.relativePath ? (
-                          <>
-                            <span className="text-gray-400 dark:text-gray-500">
-                              {fileStatus.relativePath.split('/').slice(0, -1).join('/') + '/'}
-                            </span>
-                            {fileStatus.file.name}
-                          </>
-                        ) : fileStatus.file.name}
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <span className={`text-xs ${
-                          fileStatus.status === 'error' ? 'text-red-500' :
-                          fileStatus.status === 'success' ? 'text-green-500' :
-                          'text-gray-500 dark:text-gray-400'
-                        }`}>
-                          {fileStatus.error || getStatusText(fileStatus.status)}
-                        </span>
-                        {fileStatus.resumeId && fileStatus.status === 'success' && (
-                          <button
-                            onClick={() => navigate(`/resumes/${fileStatus.resumeId}/analysis`)}
-                            className="text-xs text-indigo-600 hover:text-indigo-700 dark:text-indigo-400"
-                          >
-                            Voir →
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                    
-                    {/* Progress bar */}
-                    {['uploading', 'extracting', 'analyzing', 'improving'].includes(fileStatus.status) && (
-                      <div className="w-20">
-                        <div className="h-1.5 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-indigo-500 transition-all duration-300"
-                            style={{ width: `${fileStatus.progress}%` }}
-                          />
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Retry button for failed files */}
-                    {!isProcessing && fileStatus.status === 'error' && (
-                      <button
-                        onClick={() => retryFile(index)}
-                        className="p-1 text-amber-500 hover:text-amber-600 transition-colors"
-                        title={t('batchUpload.retry', 'Réessayer')}
-                      >
-                        <ArrowPathIcon className="w-5 h-5" />
-                      </button>
-                    )}
-                    
-                    {/* Remove button */}
-                    {!isProcessing && fileStatus.status !== 'success' && (
-                      <button
-                        onClick={() => removeFile(index)}
-                        className="p-1 text-gray-400 hover:text-red-500 transition-colors"
-                        title={t('batchUpload.remove', 'Supprimer')}
-                      >
-                        <XMarkIcon className="w-5 h-5" />
-                      </button>
-                    )}
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </div>
-          </motion.div>
-        )}
+        <BatchUploadFileList
+          files={files}
+          isProcessing={isProcessing}
+          pendingCount={pendingCount}
+          successCount={successCount}
+          errorCount={errorCount}
+          maxFiles={MAX_FILES}
+          showClearConfirm={showClearConfirm}
+          setShowClearConfirm={setShowClearConfirm}
+          onRemoveFile={removeFile}
+          onRetryFile={retryFile}
+          onClearAll={clearAllFiles}
+          onRetryAll={() => files.forEach((f, i) => { if (f.status === 'error') retryFile(i); })}
+        />
 
         {/* Action buttons */}
         <motion.div
