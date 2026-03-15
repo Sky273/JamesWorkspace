@@ -3,19 +3,11 @@
  * TypeScript version
  */
 
-import { useState, useEffect, useRef, useCallback, FormEvent, ChangeEvent } from 'react';
+import { useState, useEffect, useRef, useCallback, FormEvent } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { 
-  PencilSquareIcon, 
-  TrashIcon,
-  BriefcaseIcon,
-  BuildingOfficeIcon,
-  XMarkIcon,
-  EyeIcon,
-  UserIcon
-} from '@heroicons/react/24/outline';
+import { BriefcaseIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '../context/AuthContext';
 import { useAuthFetch } from '../hooks/useAuthFetch';
 import toast from 'react-hot-toast';
@@ -29,6 +21,9 @@ import AdminFirmSelector from '../components/AdminFirmSelector';
 import { loadTinyMCE } from '../utils/lazyTinyMCE';
 import { SkeletonMissionList } from '../components/ui/Skeleton';
 import Breadcrumbs from '../components/Breadcrumbs';
+import MissionCard from './MissionCard';
+import MissionFormModal from './MissionFormModal';
+import MissionPreviewModal from './MissionPreviewModal';
 
 interface Mission {
   id: string;
@@ -48,6 +43,7 @@ interface Mission {
   'Deal ID'?: string;
   'Deal Title'?: string;
   'Deal Status'?: string;
+  [key: string]: unknown;
 }
 
 interface Client {
@@ -483,111 +479,13 @@ const MissionsPage = (): JSX.Element => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredMissions.map((mission, index) => (
-            <motion.div
+            <MissionCard
               key={mission.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
-              className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow overflow-hidden"
-            >
-              <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                <div className="flex justify-between items-start">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
-                        {mission.Title}
-                      </h3>
-                      <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
-                        mission.Status === 'Closed' 
-                          ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                          : mission.Status === 'Draft'
-                          ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-                          : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                      }`}>
-                        {t(`missions.status.${mission.Status || 'Active'}`)}
-                      </span>
-                    </div>
-                    {/* Client/Prospect info */}
-                    {mission['Client Name'] && (
-                      <div className="flex items-center gap-1 mt-1">
-                        <BuildingOfficeIcon className="w-4 h-4 text-purple-500" />
-                        <span className="text-sm text-purple-600 dark:text-purple-400 font-medium truncate">
-                          {mission['Client Name']}
-                        </span>
-                        <span className={`ml-1 px-1.5 py-0.5 text-xs rounded ${
-                          mission['Client Type'] === 'prospect' 
-                            ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
-                            : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                        }`}>
-                          {mission['Client Type'] === 'prospect' ? t('clients.prospect', 'Prospect') : t('clients.client', 'Client')}
-                        </span>
-                      </div>
-                    )}
-                    {/* Contact info */}
-                    {mission['Contact Name'] && (
-                      <div className="flex items-center gap-1 mt-1">
-                        <UserIcon className="w-4 h-4 text-green-500" />
-                        <span className="text-sm text-green-600 dark:text-green-400 truncate">
-                          {mission['Contact Name']}
-                          {mission['Contact Role'] && <span className="text-gray-400 dark:text-gray-500"> - {mission['Contact Role']}</span>}
-                        </span>
-                      </div>
-                    )}
-                    {/* Deal info */}
-                    {mission['Deal Title'] && (
-                      <div className="flex items-center gap-1 mt-1">
-                        <BriefcaseIcon className="w-4 h-4 text-indigo-500" />
-                        <span className="text-sm text-indigo-600 dark:text-indigo-400 font-medium truncate">
-                          {mission['Deal Title']}
-                        </span>
-                      </div>
-                    )}
-                    {/* Firm info */}
-                    <div className="flex items-center gap-1 mt-1">
-                      <BuildingOfficeIcon className="w-3 h-3 text-gray-400" />
-                      <span className="text-xs text-gray-400 dark:text-gray-500">
-                        {mission.Firm || t('missions.noFirm', 'Aucun cabinet')}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-4">
-                {mission.Content ? (
-                  <div 
-                    className="text-sm text-gray-600 dark:text-gray-400 line-clamp-3 prose prose-sm dark:prose-invert max-w-none"
-                    dangerouslySetInnerHTML={createSafeHtml(mission.Content)}
-                  />
-                ) : (
-                  <p className="text-sm text-gray-400 italic">{t('missions.noDescription')}</p>
-                )}
-              </div>
-
-              <div className="flex items-center gap-2 p-4 pt-0">
-                <button
-                  onClick={() => navigate(`/missions/${mission.id}`)}
-                  className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                >
-                  <EyeIcon className="w-4 h-4" />
-                  {t('missions.view')}
-                </button>
-                <button
-                  onClick={() => handleEdit(mission)}
-                  className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
-                  title={t('common.edit')}
-                >
-                  <PencilSquareIcon className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => handleDelete(mission.id)}
-                  className="p-2 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"
-                  title={t('common.delete')}
-                >
-                  <TrashIcon className="w-4 h-4" />
-                </button>
-              </div>
-            </motion.div>
+              mission={mission}
+              index={index}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+            />
           ))}
         </div>
       )}
@@ -604,189 +502,27 @@ const MissionsPage = (): JSX.Element => {
       />
 
       {previewMission && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-hidden"
-          >
-            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-              <div>
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-                  {previewMission.Title}
-                </h3>
-                {previewMission.Firm && (
-                  <p className="text-sm text-blue-600 dark:text-blue-400">{previewMission.Firm}</p>
-                )}
-              </div>
-              <button onClick={() => setPreviewMission(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                <XMarkIcon className="w-6 h-6" />
-              </button>
-            </div>
-            <div className="p-6 overflow-auto max-h-[60vh]">
-              {previewMission.Content ? (
-                <div className="prose prose-sm dark:prose-invert max-w-none" dangerouslySetInnerHTML={createSafeHtml(previewMission.Content)} />
-              ) : (
-                <p className="text-gray-500 dark:text-gray-400 italic">{t('missions.noDescription')}</p>
-              )}
-            </div>
-            <div className="flex justify-end gap-3 p-4 border-t border-gray-200 dark:border-gray-700">
-              <button onClick={() => setPreviewMission(null)} className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
-                {t('common.close')}
-              </button>
-              <button onClick={() => { handleEdit(previewMission); setPreviewMission(null); }} className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
-                <PencilSquareIcon className="w-4 h-4" />
-                {t('common.edit')}
-              </button>
-            </div>
-          </motion.div>
-        </div>
+        <MissionPreviewModal
+          mission={previewMission}
+          onClose={() => setPreviewMission(null)}
+          onEdit={handleEdit}
+        />
       )}
 
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden"
-          >
-            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                {editingMission ? t('missions.editMission') : t('missions.addMission')}
-              </h2>
-              <button onClick={() => { setShowModal(false); resetForm(); }} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                <XMarkIcon className="w-6 h-6" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit} className="p-4 overflow-y-auto max-h-[70vh]">
-              {/* Admin Firm Selector - only visible for admins when creating */}
-              <AdminFirmSelector
-                selectedFirmId={formData['Firm ID']}
-                onFirmChange={(firmId) => setFormData({ ...formData, 'Firm ID': firmId })}
-                className="mb-4"
-                t={t}
-              />
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t('missions.missionTitle')} *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.Title}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, Title: e.target.value })}
-                    placeholder={t('missions.titlePlaceholder')}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t('missions.missionStatus')}
-                  </label>
-                  <select
-                    value={formData.Status}
-                    onChange={(e: ChangeEvent<HTMLSelectElement>) => setFormData({ ...formData, Status: e.target.value as 'Active' | 'Closed' | 'Draft' })}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="Active">{t('missions.status.Active')}</option>
-                    <option value="Draft">{t('missions.status.Draft')}</option>
-                    <option value="Closed">{t('missions.status.Closed')}</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Deal Selection */}
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  {t('missions.deal', 'Affaire')}
-                </label>
-                <select
-                  value={formData['Deal ID']}
-                  onChange={(e: ChangeEvent<HTMLSelectElement>) => setFormData({ ...formData, 'Deal ID': e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                  disabled={loadingDeals}
-                >
-                  <option value="">{loadingDeals ? t('common.loading', 'Chargement...') : t('missions.selectDeal', 'Aucune affaire (optionnel)')}</option>
-                  {deals.map((deal) => (
-                    <option key={deal.id} value={deal.id}>
-                      {deal.title}{deal.client_name ? ` — ${deal.client_name}` : ''} ({deal.status})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Client and Contact Selection */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t('missions.client', 'Client / Prospect')}
-                  </label>
-                  <select
-                    value={formData['Client ID']}
-                    onChange={(e: ChangeEvent<HTMLSelectElement>) => {
-                      setFormData({ ...formData, 'Client ID': e.target.value, 'Contact ID': '' });
-                    }}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                    disabled={loadingClients}
-                  >
-                    <option value="">{loadingClients ? t('common.loading', 'Chargement...') : t('missions.selectClient', 'Sélectionner un client')}</option>
-                    {clients.map((client) => (
-                      <option key={client.id} value={client.id}>
-                        {client.name} ({client.type === 'prospect' ? t('clients.prospect', 'Prospect') : t('clients.client', 'Client')})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t('missions.contact', 'Interlocuteur')}
-                  </label>
-                  <select
-                    value={formData['Contact ID']}
-                    onChange={(e: ChangeEvent<HTMLSelectElement>) => setFormData({ ...formData, 'Contact ID': e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-                    disabled={!formData['Client ID'] || loadingContacts}
-                  >
-                    <option value="">
-                      {!formData['Client ID'] 
-                        ? t('missions.selectClientFirst', 'Sélectionner d\'abord un client') 
-                        : loadingContacts 
-                        ? t('common.loading', 'Chargement...') 
-                        : t('missions.selectContact', 'Sélectionner un interlocuteur')}
-                    </option>
-                    {contacts.map((contact) => (
-                      <option key={contact.id} value={contact.id}>
-                        {contact.name}{contact.role ? ` - ${contact.role}` : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  {t('missions.missionContent')} *
-                </label>
-                <div id="missionContentEditor" className="border border-gray-300 dark:border-gray-600 rounded-lg"></div>
-                <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                  {t('missions.editorHelp')}
-                </p>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-                <button type="button" onClick={() => { setShowModal(false); resetForm(); }} className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
-                  {t('common.cancel')}
-                </button>
-                <button type="submit" className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
-                  {editingMission ? t('missions.update') : t('missions.create')}
-                </button>
-              </div>
-            </form>
-          </motion.div>
-        </div>
+        <MissionFormModal
+          isEditing={!!editingMission}
+          formData={formData}
+          setFormData={setFormData}
+          clients={clients}
+          contacts={contacts}
+          deals={deals}
+          loadingClients={loadingClients}
+          loadingContacts={loadingContacts}
+          loadingDeals={loadingDeals}
+          onSubmit={handleSubmit}
+          onClose={() => { setShowModal(false); resetForm(); }}
+        />
       )}
     </motion.div>
   );
