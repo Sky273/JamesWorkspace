@@ -232,9 +232,30 @@ export function startServer(app, serverDir) {
         const privateKey = fs.readFileSync(path.join(certsPath, 'private.key'), 'utf8');
         const certificate = fs.readFileSync(path.join(certsPath, 'certificate.crt'), 'utf8');
         
+        // Strong TLS configuration - only allow secure cipher suites
+        // Reference: https://wiki.mozilla.org/Security/Server_Side_TLS
         const httpsOptions = {
             key: privateKey,
-            cert: certificate
+            cert: certificate,
+            // Minimum TLS 1.2 (TLS 1.0 and 1.1 are deprecated)
+            minVersion: 'TLSv1.2',
+            // Strong cipher suites only (Mozilla Intermediate compatibility)
+            // Ordered by preference: ECDHE > DHE, AES-GCM > AES-CBC, SHA384 > SHA256
+            ciphers: [
+                'ECDHE-ECDSA-AES128-GCM-SHA256',
+                'ECDHE-RSA-AES128-GCM-SHA256',
+                'ECDHE-ECDSA-AES256-GCM-SHA384',
+                'ECDHE-RSA-AES256-GCM-SHA384',
+                'ECDHE-ECDSA-CHACHA20-POLY1305',
+                'ECDHE-RSA-CHACHA20-POLY1305',
+                'DHE-RSA-AES128-GCM-SHA256',
+                'DHE-RSA-AES256-GCM-SHA384'
+            ].join(':'),
+            // Prefer server cipher order
+            honorCipherOrder: true,
+            // Disable session tickets for forward secrecy
+            // (optional, can be enabled if session resumption is needed)
+            // secureOptions: require('constants').SSL_OP_NO_TICKET
         };
         
         server = https.createServer(httpsOptions, app);

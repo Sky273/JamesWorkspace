@@ -38,6 +38,12 @@ const isProduction = process.env.NODE_ENV === 'production';
 
 export function configureHelmet(app) {
     app.use(helmet({
+        // HSTS - Force HTTPS for 1 year, include subdomains
+        hsts: {
+            maxAge: 31536000, // 1 year in seconds
+            includeSubDomains: true,
+            preload: true // Allow submission to browser preload lists
+        },
         contentSecurityPolicy: {
             directives: {
                 // STRICT CSP: default-src 'none' requires explicit directives for all resource types
