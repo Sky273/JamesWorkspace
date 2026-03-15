@@ -67,7 +67,7 @@ const ImprovedTextTab = ({ resume, onSave, onUpdateField, editorReady = false, o
           }
         }
         setVersionsLoaded(true);
-      } catch (error) {
+      } catch {
         setVersionsLoaded(true);
       }
     };
@@ -120,13 +120,12 @@ const ImprovedTextTab = ({ resume, onSave, onUpdateField, editorReady = false, o
     try {
       const response = await getVersions(resume.id, { limit: 1 });
       if (response.versions.length > 0) {
-        const latestVersion = response.versions[0];
         // Notify parent to update editor content
         if (onVersionRestored) {
           onVersionRestored(newVersion);
         }
       }
-    } catch (error) {
+    } catch {
       // Still notify parent even if reload fails
       if (onVersionRestored) {
         onVersionRestored(newVersion);
@@ -300,7 +299,7 @@ const ImprovedTextTab = ({ resume, onSave, onUpdateField, editorReady = false, o
                   setAiResponseMessage(message);
                 }
                 setAiInstructions('');
-              } catch (error) {
+              } catch {
                 setAiResponseMessage('');
               } finally {
                 setIsAIModifying(false);

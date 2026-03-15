@@ -23,7 +23,7 @@ interface MissionSelectorProps {
   selectedMissionId?: string | null;
 }
 
-const MissionSelector = ({ onSelect, onClose, selectedMissionId = null }: MissionSelectorProps): JSX.Element => {
+const MissionSelector = ({ onSelect, onClose, selectedMissionId: _selectedMissionId = null }: MissionSelectorProps): JSX.Element => {
   const { authGet } = useAuthFetch();
   const [missions, setMissions] = useState<Mission[]>([]);
   const [loading, setLoading] = useState<boolean>(true);

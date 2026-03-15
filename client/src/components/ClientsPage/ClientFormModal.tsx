@@ -37,7 +37,7 @@ const ClientFormModal = ({ isOpen, onClose, onSubmit, client, t }: ClientFormMod
         try {
           const data = await clientService.getIndustries();
           setIndustries(data || []);
-        } catch (error) {
+        } catch {
           // Silently fail - industries dropdown will be empty
         } finally {
           setLoadingIndustries(false);

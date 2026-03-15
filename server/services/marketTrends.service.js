@@ -1849,7 +1849,7 @@ async function getTrendFilterOptions() {
         
         // Update cache
         filterOptionsCache = result;
-        filterOptionsCacheTime = Date.now();
+        _filterOptionsCacheTime = Date.now();
         safeLog('info', 'MarketTrends: Cached filter options');
         
         return result;

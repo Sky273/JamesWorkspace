@@ -39,7 +39,7 @@ const FileUpload = (): JSX.Element => {
     firmId: ''
   });
   
-  const isAdmin = user?.role?.toLowerCase() === 'admin';
+  const _isAdmin = user?.role?.toLowerCase() === 'admin';
   const [formErrors, setFormErrors] = useState<{ name?: string; email?: string }>({});
 
   // Validate email format

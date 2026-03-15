@@ -27,11 +27,6 @@ interface Steps {
   [key: string]: StepInfo;
 }
 
-interface ProcessingScreenProps {
-  currentStep: string;
-  error?: string | null;
-}
-
 interface LoadingTextProps {
   texts: string[];
   color: string;

@@ -18,11 +18,7 @@ import {
   TrashIcon,
   UserIcon,
   BuildingOfficeIcon,
-  DocumentTextIcon,
-  CalendarIcon,
-  FlagIcon,
-  ChevronDownIcon,
-  EyeIcon
+  DocumentTextIcon
 } from '@heroicons/react/24/outline';
 import { fetchWithAuth, createAuthOptionsWithCsrf } from '../../utils/apiInterceptor';
 import logger from '../../utils/logger.frontend';
@@ -202,13 +198,14 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
 
   // Update URL when client filter changes
   useEffect(() => {
+    const newParams = new URLSearchParams(searchParams);
     if (clientFilter) {
-      searchParams.set('clientId', clientFilter);
+      newParams.set('clientId', clientFilter);
     } else {
-      searchParams.delete('clientId');
+      newParams.delete('clientId');
     }
-    setSearchParams(searchParams, { replace: true });
-  }, [clientFilter]);
+    setSearchParams(newParams, { replace: true });
+  }, [clientFilter, searchParams, setSearchParams]);
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {

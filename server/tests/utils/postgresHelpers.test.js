@@ -32,7 +32,7 @@ vi.mock('../../utils/logger.backend.js', () => ({
 }));
 
 import { safeLog } from '../../utils/logger.backend.js';
-import { getClientWithRetry, __mockClient } from '../../config/database.js';
+import { __mockClient } from '../../config/database.js';
 import {
     selectWithTimeout,
     findWithTimeout,

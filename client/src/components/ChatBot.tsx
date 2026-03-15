@@ -64,7 +64,7 @@ const ChatBot = (): JSX.Element | null => {
           height: Math.min(Math.max(parsed.height || DEFAULT_HEIGHT, MIN_HEIGHT), MAX_HEIGHT)
         };
       }
-    } catch (e) {
+    } catch {
       // Ignore localStorage errors
     }
     return { width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT };
@@ -120,7 +120,7 @@ const ChatBot = (): JSX.Element | null => {
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(size));
-    } catch (e) {
+    } catch {
       // Ignore localStorage errors
     }
   }, [size]);

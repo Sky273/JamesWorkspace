@@ -1224,12 +1224,10 @@ const BatchUploadPage = (): JSX.Element => {
               <label className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-lg cursor-pointer hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-colors">
                 <FolderArrowDownIcon className="w-5 h-5" />
                 {t('batchUpload.selectFolder', 'Sélectionner un dossier')}
-                <input
+<input
                   type="file"
                   className="hidden"
-                  // @ts-expect-error webkitdirectory is not in standard types
-                  webkitdirectory=""
-                  directory=""
+                  {...{ webkitdirectory: '', directory: '' } as React.InputHTMLAttributes<HTMLInputElement>}
                   multiple
                   disabled={isProcessing}
                   accept=".pdf,.doc,.docx"

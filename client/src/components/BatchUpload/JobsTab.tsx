@@ -77,7 +77,7 @@ const JobsTab = (): JSX.Element => {
   const [loading, setLoading] = useState(true);
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
+  const [autoRefreshEnabled, _setAutoRefreshEnabled] = useState(true);
   const [pendingNameInputs, setPendingNameInputs] = useState<Record<string, string>>({});
   const [submittingName, setSubmittingName] = useState<string | null>(null);
 
