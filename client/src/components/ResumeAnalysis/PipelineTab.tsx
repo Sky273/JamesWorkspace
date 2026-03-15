@@ -38,6 +38,10 @@ import {
 } from '../../services/pipelineService';
 import { fetchWithAuth } from '../../utils/apiInterceptor';
 import logger from '../../utils/logger.frontend';
+import PipelineAddModal from './PipelineAddModal';
+import PipelineScheduleModal from './PipelineScheduleModal';
+import PipelineCompleteModal from './PipelineCompleteModal';
+import PipelineHistoryModal from './PipelineHistoryModal';
 
 interface Mission {
   id: string;
@@ -643,344 +647,48 @@ export default function PipelineTab({ resumeId, resumeName }: PipelineTabProps) 
 
       {/* Add to Pipeline Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              {t('pipeline.addToProcessTitle')}
-            </h3>
-
-            <div className="space-y-4">
-              {/* Mission selector */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('pipeline.selectMission')}
-                </label>
-                <select
-                  value={newPipeline.missionId}
-                  onChange={(e) => setNewPipeline({ ...newPipeline, missionId: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                >
-                  <option value="">{t('pipeline.noMission')}</option>
-                  {missions.map((mission) => (
-                    <option key={mission.id} value={mission.id}>
-                      {mission.title} - {mission.client}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Client selector */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('pipeline.selectClient')}
-                </label>
-                <select
-                  value={newPipeline.clientId}
-                  onChange={(e) => setNewPipeline({ ...newPipeline, clientId: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                >
-                  <option value="">{t('pipeline.noClient')}</option>
-                  {clients.map((client) => (
-                    <option key={client.id} value={client.id}>
-                      {client.name} {client.type ? `(${client.type})` : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Notes */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('pipeline.notes')}
-                </label>
-                <textarea
-                  value={newPipeline.notes}
-                  onChange={(e) => setNewPipeline({ ...newPipeline, notes: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  rows={3}
-                  placeholder={t('pipeline.notesPlaceholder')}
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3 mt-6">
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-              >
-                {t('common.cancel')}
-              </button>
-              <button
-                onClick={handleAddToPipeline}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                {t('pipeline.add')}
-              </button>
-            </div>
-          </div>
-        </div>
+        <PipelineAddModal
+          missions={missions}
+          clients={clients}
+          newPipeline={newPipeline}
+          setNewPipeline={setNewPipeline}
+          onAdd={handleAddToPipeline}
+          onClose={() => setShowAddModal(false)}
+        />
       )}
 
       {/* Schedule Interview Modal */}
       {showInterviewModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              {t('pipeline.scheduleInterviewTitle')}
-            </h3>
-
-            <div className="space-y-4">
-              {/* Title */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('pipeline.interviewTitle')} *
-                </label>
-                <input
-                  type="text"
-                  value={newInterview.title}
-                  onChange={(e) => setNewInterview({ ...newInterview, title: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  placeholder={t('pipeline.interviewTitlePlaceholder')}
-                />
-              </div>
-
-              {/* Type */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('pipeline.interviewType')}
-                </label>
-                <select
-                  value={newInterview.interviewType}
-                  onChange={(e) => setNewInterview({ ...newInterview, interviewType: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                >
-                  <option value="client">{t('pipeline.types.client')}</option>
-                  <option value="partner">{t('pipeline.types.partner')}</option>
-                  <option value="technical">{t('pipeline.types.technical')}</option>
-                  <option value="hr">{t('pipeline.types.hr')}</option>
-                </select>
-              </div>
-
-              {/* Date/Time */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('pipeline.scheduledAt')} *
-                </label>
-                <input
-                  type="datetime-local"
-                  value={newInterview.scheduledAt}
-                  onChange={(e) => setNewInterview({ ...newInterview, scheduledAt: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                />
-              </div>
-
-              {/* Duration */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('pipeline.duration')}
-                </label>
-                <select
-                  value={newInterview.durationMinutes}
-                  onChange={(e) => setNewInterview({ ...newInterview, durationMinutes: parseInt(e.target.value) })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                >
-                  <option value={30}>30 min</option>
-                  <option value={45}>45 min</option>
-                  <option value={60}>1h</option>
-                  <option value={90}>1h30</option>
-                  <option value={120}>2h</option>
-                </select>
-              </div>
-
-              {/* Location */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('pipeline.location')}
-                </label>
-                <input
-                  type="text"
-                  value={newInterview.location}
-                  onChange={(e) => setNewInterview({ ...newInterview, location: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  placeholder={t('pipeline.locationPlaceholder')}
-                />
-              </div>
-
-              {/* Meeting Link */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('pipeline.meetingLink')}
-                </label>
-                <input
-                  type="url"
-                  value={newInterview.meetingLink}
-                  onChange={(e) => setNewInterview({ ...newInterview, meetingLink: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  placeholder="https://meet.google.com/..."
-                />
-              </div>
-
-              {/* Description */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('pipeline.interviewDescription')}
-                </label>
-                <textarea
-                  value={newInterview.description}
-                  onChange={(e) => setNewInterview({ ...newInterview, description: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  rows={3}
-                  placeholder={t('pipeline.interviewDescriptionPlaceholder')}
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3 mt-6">
-              <button
-                onClick={() => setShowInterviewModal(false)}
-                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-              >
-                {t('common.cancel')}
-              </button>
-              <button
-                onClick={handleScheduleInterview}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                {t('pipeline.schedule')}
-              </button>
-            </div>
-          </div>
-        </div>
+        <PipelineScheduleModal
+          newInterview={newInterview}
+          setNewInterview={setNewInterview}
+          onSchedule={handleScheduleInterview}
+          onClose={() => setShowInterviewModal(false)}
+        />
       )}
 
       {/* Complete Interview Modal */}
       {showCompleteModal && selectedInterview && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              {t('pipeline.completeInterviewTitle')}
-            </h3>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('pipeline.outcome')} *
-                </label>
-                <select
-                  value={interviewOutcome.outcome}
-                  onChange={(e) => setInterviewOutcome({ ...interviewOutcome, outcome: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                >
-                  <option value="">{t('pipeline.selectOutcome')}</option>
-                  <option value="positive">{t('pipeline.outcomes.positive')}</option>
-                  <option value="neutral">{t('pipeline.outcomes.neutral')}</option>
-                  <option value="negative">{t('pipeline.outcomes.negative')}</option>
-                  <option value="to_follow_up">{t('pipeline.outcomes.toFollowUp')}</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('pipeline.outcomeNotes')}
-                </label>
-                <textarea
-                  value={interviewOutcome.outcomeNotes}
-                  onChange={(e) => setInterviewOutcome({ ...interviewOutcome, outcomeNotes: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  rows={3}
-                  placeholder={t('pipeline.outcomeNotesPlaceholder')}
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3 mt-6">
-              <button
-                onClick={() => {
-                  setShowCompleteModal(false);
-                  setSelectedInterview(null);
-                }}
-                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-              >
-                {t('common.cancel')}
-              </button>
-              <button
-                onClick={handleCompleteInterview}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-              >
-                {t('pipeline.complete')}
-              </button>
-            </div>
-          </div>
-        </div>
+        <PipelineCompleteModal
+          interviewOutcome={interviewOutcome}
+          setInterviewOutcome={setInterviewOutcome}
+          onComplete={handleCompleteInterview}
+          onClose={() => {
+            setShowCompleteModal(false);
+            setSelectedInterview(null);
+          }}
+        />
       )}
 
       {/* History Modal */}
       {showHistoryModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4 max-h-[80vh] overflow-y-auto">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              {t('pipeline.historyTitle')}
-            </h3>
-
-            {history.length === 0 ? (
-              <p className="text-gray-500 dark:text-gray-400 text-center py-4">
-                {t('pipeline.noHistory')}
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {history.map((entry) => {
-                  const fromStage = entry.from_stage ? getStageInfo(entry.from_stage) : null;
-                  const toStage = getStageInfo(entry.to_stage);
-
-                  return (
-                    <div
-                      key={entry.id}
-                      className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
-                    >
-                      <div className="flex items-center gap-2 text-sm">
-                        {fromStage && (
-                          <>
-                            <span
-                              className="px-2 py-0.5 rounded text-white text-xs"
-                              style={{ backgroundColor: fromStage.color }}
-                            >
-                              {isEnglish ? fromStage.labelEn : fromStage.label}
-                            </span>
-                            <span className="text-gray-400">→</span>
-                          </>
-                        )}
-                        <span
-                          className="px-2 py-0.5 rounded text-white text-xs"
-                          style={{ backgroundColor: toStage.color }}
-                        >
-                          {isEnglish ? toStage.labelEn : toStage.label}
-                        </span>
-                      </div>
-                      <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                        {entry.changed_by_name && <span>{entry.changed_by_name} • </span>}
-                        {formatDate(entry.created_at)}
-                      </div>
-                      {entry.notes && (
-                        <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
-                          {entry.notes}
-                        </p>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            <div className="flex justify-end mt-6">
-              <button
-                onClick={() => setShowHistoryModal(false)}
-                className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"
-              >
-                {t('common.close')}
-              </button>
-            </div>
-          </div>
-        </div>
+        <PipelineHistoryModal
+          history={history}
+          stages={stages}
+          isEnglish={isEnglish}
+          formatDate={formatDate}
+          onClose={() => setShowHistoryModal(false)}
+        />
       )}
     </div>
   );
