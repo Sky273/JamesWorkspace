@@ -3,8 +3,7 @@
  * Collapsible accordion sections for each deal + unassigned resumes
  */
 
-import { useState, useEffect, useCallback, useRef, useMemo, memo } from 'react';
-import { createPortal } from 'react-dom';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -13,296 +12,34 @@ import {
   ChevronDownIcon,
   ChevronRightIcon,
   DocumentTextIcon,
-  CalendarIcon,
-  EyeIcon,
   ArrowDownTrayIcon,
   BuildingOfficeIcon,
   FolderOpenIcon,
   UserIcon,
   ChartBarIcon,
-  TrashIcon,
   XMarkIcon
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../../context/AuthContext';
 import { useResume } from '../../context/ResumeContext';
 import { useAuthFetch } from '../../hooks/useAuthFetch';
-import { fetchWithAuth, createAuthOptionsWithCsrf } from '../../utils/apiInterceptor';
-import toast from 'react-hot-toast';
 import logger from '../../utils/logger.frontend';
-import { formatDate } from '../../utils/dateFormatter';
 import { SkeletonResumeList } from '../ui/Skeleton';
-import ConsentBadge, { ConsentStatus } from '../ConsentBadge';
-import ManageResumeDealsModal from './AddToDealMenu';
 import SearchAndActions from './SearchAndActions';
 import DealExportModal from './DealExportModal';
-
-interface ResumeBasic {
-  id: string;
-  name: string;
-  title?: string;
-  status: string;
-  global_rating?: number;
-  improved_global_rating?: number;
-  created_at: string;
-  file_name?: string;
-  original_name?: string;
-  relative_path?: string;
-  firm_name?: string;
-  candidate_name?: string;
-  candidate_email?: string;
-  consent_status?: string;
-  consent_token_expires_at?: string;
-  retention_until?: string;
-  skills_cleaned?: string;
-  industries_cleaned?: string;
-  tools_cleaned?: string;
-  soft_skills_cleaned?: string;
-  skills?: string;
-  industries?: string;
-  tools?: string;
-  soft_skills?: string;
-  deal_added_at?: string;
-  deal_resume_status?: string;
-}
-
-interface MissionAdaptation {
-  id: string;
-  resume_id: string;
-  resume_name: string;
-  candidate_name?: string;
-  adapted_title?: string;
-  match_score?: number;
-  status: string;
-  created_at: string;
-}
-
-interface DealMission {
-  id: string;
-  title: string;
-  status: string;
-  created_at: string;
-  adaptations_count: number;
-  adaptations: MissionAdaptation[];
-}
-
-interface DealGroup {
-  id: string;
-  title: string;
-  status: string;
-  priority: string;
-  client_name?: string;
-  client_type?: string;
-  contact_name?: string;
-  resumes_count: number;
-  resumes: ResumeBasic[];
-  missions: DealMission[];
-}
-
-interface GroupedData {
-  deals: DealGroup[];
-  unassigned: ResumeBasic[];
-  totalDeals: number;
-  totalAssigned: number;
-  totalUnassigned: number;
-}
-
-interface TagsByCategory {
-  Skills: string[];
-  Industries: string[];
-  Tools: string[];
-  'Soft Skills': string[];
-  [key: string]: string[];
-}
-
-interface DealsGroupedViewProps {
-  allTags: TagsByCategory;
-}
-
-const STATUS_COLORS: Record<string, string> = {
-  open: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-  won: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-  lost: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
-  on_hold: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  open: 'En cours',
-  won: 'Gagnée',
-  lost: 'Perdue',
-  on_hold: 'En attente'
-};
-
-const PRIORITY_ICONS: Record<string, { icon: string; color: string }> = {
-  low: { icon: '○', color: 'text-gray-400' },
-  medium: { icon: '●', color: 'text-blue-500' },
-  high: { icon: '●●', color: 'text-orange-500' },
-  urgent: { icon: '●●●', color: 'text-red-500' }
-};
-
-const tagColorMap: Record<string, string> = {
-  skills: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
-  industries: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300',
-  tools: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-  soft_skills: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'
-};
-
-const tagFilterColors: Record<string, { selected: string; unselected: string }> = {
-  Skills: {
-    selected: 'bg-blue-500 text-white ring-2 ring-blue-300 dark:ring-blue-700',
-    unselected: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50'
-  },
-  Industries: {
-    selected: 'bg-purple-500 text-white ring-2 ring-purple-300 dark:ring-purple-700',
-    unselected: 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50'
-  },
-  Tools: {
-    selected: 'bg-green-500 text-white ring-2 ring-green-300 dark:ring-green-700',
-    unselected: 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/50'
-  },
-  'Soft Skills': {
-    selected: 'bg-yellow-500 text-white ring-2 ring-yellow-300 dark:ring-yellow-700',
-    unselected: 'bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300 hover:bg-yellow-100 dark:hover:bg-yellow-900/50'
-  }
-};
-
-const filterContentVariants = {
-  expanded: {
-    height: 'auto',
-    opacity: 1,
-    marginBottom: '1rem',
-    transition: {
-      height: { duration: 0.3 },
-      opacity: { duration: 0.2 }
-    }
-  },
-  collapsed: {
-    height: 0,
-    opacity: 0,
-    marginBottom: 0,
-    transition: {
-      height: { duration: 0.3 },
-      opacity: { duration: 0.2 }
-    }
-  }
-};
-
-/**
- * TagsWithTooltip - Displays tags with a hover tooltip that renders via portal
- * to avoid being clipped by parent overflow constraints
- */
-interface TagsWithTooltipProps {
-  skills: string[];
-  industries: string[];
-  resumeTags: Record<string, string[]>;
-  hasAnyTags: boolean;
-  tagColorMap: Record<string, string>;
-  t: ReturnType<typeof useTranslation>['t'];
-}
-
-const TagsWithTooltip = memo(({ skills, industries, resumeTags, hasAnyTags, tagColorMap, t }: TagsWithTooltipProps) => {
-  const [isHovered, setIsHovered] = useState(false);
-  const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
-  const triggerRef = useRef<HTMLDivElement>(null);
-
-  const handleMouseEnter = () => {
-    if (triggerRef.current && hasAnyTags) {
-      const rect = triggerRef.current.getBoundingClientRect();
-      // Position tooltip above the trigger, aligned to the right
-      setTooltipPosition({
-        top: rect.top - 8, // 8px gap above
-        left: Math.max(16, rect.right - 350) // Align right edge, but keep 16px from left edge
-      });
-      setIsHovered(true);
-    }
-  };
-
-  const handleMouseLeave = () => {
-    setIsHovered(false);
-  };
-
-  return (
-    <div 
-      ref={triggerRef}
-      className="relative"
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-    >
-      <div className="flex flex-wrap gap-1 cursor-pointer">
-        {skills.map((tag, i) => (
-          <span key={`s-${i}`} className={`text-xs px-1.5 py-0.5 rounded-full ${tagColorMap.skills}`}>{tag}</span>
-        ))}
-        {industries.map((tag, i) => (
-          <span key={`i-${i}`} className={`text-xs px-1.5 py-0.5 rounded-full ${tagColorMap.industries}`}>{tag}</span>
-        ))}
-      </div>
-      {isHovered && hasAnyTags && createPortal(
-        <div 
-          className="fixed z-[9999] pointer-events-none"
-          style={{ 
-            top: tooltipPosition.top,
-            left: tooltipPosition.left,
-            transform: 'translateY(-100%)'
-          }}
-        >
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 p-3 min-w-[280px] max-w-[350px]">
-            <div className="space-y-2">
-              {(resumeTags.skills?.length || 0) > 0 && (
-                <div>
-                  <div className="text-xs font-semibold text-blue-700 dark:text-blue-300 mb-1">{t('resumes.filters.skills', 'Compétences')}</div>
-                  <div className="flex flex-wrap gap-1">
-                    {resumeTags.skills.map((tag, i) => (
-                      <span key={`ts-${i}`} className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{tag}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {(resumeTags.industries?.length || 0) > 0 && (
-                <div>
-                  <div className="text-xs font-semibold text-purple-700 dark:text-purple-300 mb-1">{t('resumes.filters.industries', 'Secteurs')}</div>
-                  <div className="flex flex-wrap gap-1">
-                    {resumeTags.industries.map((tag, i) => (
-                      <span key={`ti-${i}`} className="text-xs px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">{tag}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {(resumeTags.tools?.length || 0) > 0 && (
-                <div>
-                  <div className="text-xs font-semibold text-green-700 dark:text-green-300 mb-1">{t('resumes.filters.tools', 'Outils')}</div>
-                  <div className="flex flex-wrap gap-1">
-                    {resumeTags.tools.map((tag, i) => (
-                      <span key={`tt-${i}`} className="text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300">{tag}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {(resumeTags.soft_skills?.length || 0) > 0 && (
-                <div>
-                  <div className="text-xs font-semibold text-yellow-700 dark:text-yellow-300 mb-1">{t('resumes.filters.softskills', 'Soft Skills')}</div>
-                  <div className="flex flex-wrap gap-1">
-                    {resumeTags.soft_skills.map((tag, i) => (
-                      <span key={`tss-${i}`} className="text-xs px-2 py-0.5 rounded-full bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300">{tag}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-            <div className="absolute bottom-0 right-4 translate-y-full">
-              <div className="w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-white dark:border-t-gray-800"></div>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
-    </div>
-  );
-});
-
-// Display name for debugging
-TagsWithTooltip.displayName = 'TagsWithTooltip';
-
-// Maximum CVs to show per section before "Show more"
-const INITIAL_RESUMES_LIMIT = 10;
+import DealResumeCard from './DealResumeCard';
+import { useDealDragDrop } from './useDealDragDrop';
+import {
+  type ResumeBasic,
+  type DealGroup,
+  type GroupedData,
+  type DealsGroupedViewProps,
+  STATUS_COLORS,
+  STATUS_LABELS,
+  PRIORITY_ICONS,
+  TAG_FILTER_COLORS,
+  FILTER_CONTENT_VARIANTS,
+  INITIAL_RESUMES_LIMIT
+} from './dealsGrouped.types';
 
 const DealsGroupedView = ({ allTags }: DealsGroupedViewProps): JSX.Element => {
   const { t } = useTranslation();
@@ -325,11 +62,6 @@ const DealsGroupedView = ({ allTags }: DealsGroupedViewProps): JSX.Element => {
   // Deal export modal state
   const [exportingDeal, setExportingDeal] = useState<{ id: string; title: string; resumeCount: number; adaptationCount: number } | null>(null);
 
-  // Drag & Drop state
-  const [draggedResume, setDraggedResume] = useState<{ resumeId: string; sourceDealId: string | null } | null>(null);
-  const [dragOverDealId, setDragOverDealId] = useState<string | null>(null);
-  const [dropping, setDropping] = useState(false);
-  const dragCounterRef = useRef<Record<string, number>>({});
   const isInitialLoadRef = useRef(true);
 
   // "Show more" state for each deal section (key: deal id or 'unassigned')
@@ -418,119 +150,18 @@ const DealsGroupedView = ({ allTags }: DealsGroupedViewProps): JSX.Element => {
     });
   };
 
-  // ============================================
-  // DRAG & DROP HANDLERS
-  // ============================================
-
-  const handleDragStart = (e: React.DragEvent, resumeId: string, sourceDealId: string | null) => {
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', resumeId);
-    setDraggedResume({ resumeId, sourceDealId });
-    // Capture the element reference before the async callback (React pools synthetic events)
-    const el = e.currentTarget as HTMLElement;
-    requestAnimationFrame(() => {
-      if (el) el.style.opacity = '0.4';
-    });
-  };
-
-  const handleDragEnd = (e: React.DragEvent) => {
-    const el = e.currentTarget as HTMLElement;
-    if (el) el.style.opacity = '1';
-    setDraggedResume(null);
-    setDragOverDealId(null);
-    dragCounterRef.current = {};
-  };
-
-  const handleDragEnterDeal = (e: React.DragEvent, dealId: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!dragCounterRef.current[dealId]) dragCounterRef.current[dealId] = 0;
-    dragCounterRef.current[dealId]++;
-    // Don't highlight the source deal
-    if (draggedResume && draggedResume.sourceDealId !== dealId) {
-      setDragOverDealId(dealId);
-    }
-  };
-
-  const handleDragLeaveDeal = (e: React.DragEvent, dealId: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!dragCounterRef.current[dealId]) dragCounterRef.current[dealId] = 0;
-    dragCounterRef.current[dealId]--;
-    if (dragCounterRef.current[dealId] <= 0) {
-      dragCounterRef.current[dealId] = 0;
-      if (dragOverDealId === dealId) {
-        setDragOverDealId(null);
-      }
-    }
-  };
-
-  const handleDragOverDeal = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  };
-
-  const handleDropOnDeal = async (e: React.DragEvent, targetDealId: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragOverDealId(null);
-    dragCounterRef.current = {};
-
-    if (!draggedResume || dropping) return;
-    const { resumeId, sourceDealId } = draggedResume;
-    
-    // Don't drop on the same deal
-    if (sourceDealId === targetDealId) {
-      setDraggedResume(null);
-      return;
-    }
-
-    setDropping(true);
-    const toastId = toast.loading(t('resumes.groupedView.moving', 'Déplacement du CV...'));
-
-    try {
-      // 1. Add to target deal
-      const addOptions = await createAuthOptionsWithCsrf({
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ resumeId })
-      });
-      const addResponse = await fetchWithAuth(`/api/deals/${targetDealId}/resumes`, addOptions);
-      
-      if (!addResponse.ok) {
-        const error = await addResponse.json();
-        throw new Error(error.error || 'Failed to add resume to deal');
-      }
-
-      // 2. Remove from source deal (if it was in one)
-      if (sourceDealId) {
-        const removeOptions = await createAuthOptionsWithCsrf({ method: 'DELETE' });
-        const removeResponse = await fetchWithAuth(`/api/deals/${sourceDealId}/resumes/${resumeId}`, removeOptions);
-        if (!removeResponse.ok) {
-          logger.warn('Failed to remove resume from source deal, but it was added to target');
-        }
-      }
-
-      // Find target deal name for toast
-      const targetDeal = data?.deals.find(d => d.id === targetDealId);
-      toast.success(
-        sourceDealId 
-          ? t('resumes.groupedView.moved', 'CV déplacé vers « {{deal}} »').replace('{{deal}}', targetDeal?.title || '')
-          : t('resumes.groupedView.added', 'CV ajouté à « {{deal}} »').replace('{{deal}}', targetDeal?.title || ''),
-        { id: toastId }
-      );
-
-      // Refresh data
-      await fetchGroupedData();
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Erreur';
-      logger.error('Drag & drop error:', error);
-      toast.error(t('resumes.groupedView.dropError', 'Erreur lors du déplacement') + ': ' + msg, { id: toastId });
-    } finally {
-      setDropping(false);
-      setDraggedResume(null);
-    }
-  };
+  // Drag & Drop (extracted hook)
+  const {
+    draggedResume,
+    dragOverDealId,
+    dropping,
+    handleDragStart,
+    handleDragEnd,
+    handleDragEnterDeal,
+    handleDragLeaveDeal,
+    handleDragOverDeal,
+    handleDropOnDeal
+  } = useDealDragDrop({ data, fetchGroupedData });
 
   const handleResumeClick = (resumeId: string) => {
     saveViewState();
@@ -727,125 +358,23 @@ const DealsGroupedView = ({ allTags }: DealsGroupedViewProps): JSX.Element => {
     return lines.join('\n');
   };
 
-  const renderResumeCard = (resume: ResumeBasic, sourceDealId: string | null) => {
-    const rating = resume.improved_global_rating || resume.global_rating;
-    const statusClass =
-      resume.status === 'improved' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
-      resume.status === 'analyzed' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' :
-      resume.status === 'processing' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' :
-      'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
-
-    const resumeTags = getResumeTags(resume);
-    const skills = (resumeTags.skills || []).slice(0, 2);
-    const industries = (resumeTags.industries || []).slice(0, 2);
-    const isDragging = draggedResume?.resumeId === resume.id;
-
-    // Check if there are any tags to show in tooltip
-    const hasAnyTags = (resumeTags.skills?.length || 0) > 0 || 
-                       (resumeTags.industries?.length || 0) > 0 || 
-                       (resumeTags.tools?.length || 0) > 0 || 
-                       (resumeTags.soft_skills?.length || 0) > 0;
-
-    return (
-      <motion.div
-        key={resume.id}
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        draggable={!dropping}
-        onDragStart={(e) => handleDragStart(e as unknown as React.DragEvent, resume.id, sourceDealId)}
-        onDragEnd={(e) => handleDragEnd(e as unknown as React.DragEvent)}
-        className={`bg-white dark:bg-gray-800 rounded-lg border hover:shadow-md transition-all cursor-grab active:cursor-grabbing ${
-          isDragging
-            ? 'border-purple-400 dark:border-purple-500 opacity-50'
-            : 'border-gray-200 dark:border-gray-700'
-        }`}
-        onClick={() => handleResumeClick(resume.id)}
-      >
-        <div className="p-3">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <DocumentTextIcon className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                <h4 className="font-medium text-sm text-gray-900 dark:text-white truncate">
-                  {resume.name || t('resumes.untitled')}
-                </h4>
-              </div>
-              {resume.title && (
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate pl-6">{resume.title}</p>
-              )}
-              {resume.firm_name && (
-                <div className="flex items-center gap-1 pl-6 mt-1 text-xs text-gray-500 dark:text-gray-400 min-w-0">
-                  <BuildingOfficeIcon className="w-3 h-3 flex-shrink-0" />
-                  <span className="truncate">{resume.firm_name}</span>
-                </div>
-              )}
-            </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
-              {rating != null && (
-                <span className="text-sm font-bold text-gray-900 dark:text-white">{rating}%</span>
-              )}
-              <span className={`px-1.5 py-0.5 rounded-full text-xs font-medium ${statusClass}`}>
-                {t(`resumes.status.${resume.status || 'new'}`)}
-              </span>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between mt-2">
-            <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
-              <div className="flex items-center gap-1">
-                <CalendarIcon className="w-3 h-3" />
-                {formatDate(resume.created_at, 'medium')}
-              </div>
-              {resume.consent_status && (
-                <ConsentBadge
-                  status={resume.consent_status as ConsentStatus}
-                  candidateName={resume.candidate_name}
-                  candidateEmail={resume.candidate_email}
-                  consentTokenExpiresAt={resume.consent_token_expires_at}
-                  retentionUntil={resume.retention_until}
-                  compact={true}
-                />
-              )}
-            </div>
-            <div className="flex items-center gap-1 overflow-visible">
-              <TagsWithTooltip
-                skills={skills}
-                industries={industries}
-                resumeTags={resumeTags}
-                hasAnyTags={hasAnyTags}
-                tagColorMap={tagColorMap}
-                t={t}
-              />
-              <button
-                onClick={(e) => { e.stopPropagation(); handleResumeClick(resume.id); }}
-                className="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors rounded"
-                title={t('resumes.view')}
-              >
-                <EyeIcon className="w-4 h-4" />
-              </button>
-              <button
-                onClick={(e) => handleDownload(resume, e)}
-                className="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors rounded"
-                title={getDownloadTitle(resume)}
-              >
-                <ArrowDownTrayIcon className="w-4 h-4" />
-              </button>
-              <div onClick={(e) => e.stopPropagation()}>
-                <ManageResumeDealsModal resumeId={resume.id} onSuccess={fetchGroupedData} />
-              </div>
-              <button
-                onClick={(e) => openDeleteConfirm(resume, e)}
-                className="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors rounded"
-                title={t('resumes.deleteResume')}
-              >
-                <TrashIcon className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </motion.div>
-    );
-  };
+  const renderResumeCard = (resume: ResumeBasic, sourceDealId: string | null) => (
+    <DealResumeCard
+      key={resume.id}
+      resume={resume}
+      sourceDealId={sourceDealId}
+      isDragging={draggedResume?.resumeId === resume.id}
+      dropping={dropping}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onClick={handleResumeClick}
+      onDownload={handleDownload}
+      onDelete={openDeleteConfirm}
+      onDealChange={fetchGroupedData}
+      getResumeTags={getResumeTags}
+      getDownloadTitle={getDownloadTitle}
+    />
+  );
 
   if (loading) {
     return <SkeletonResumeList count={6} />;
@@ -879,7 +408,7 @@ const DealsGroupedView = ({ allTags }: DealsGroupedViewProps): JSX.Element => {
         <AnimatePresence>
           {isFilterExpanded && (visibleData.totalAssigned > 0 || visibleData.totalUnassigned > 0 || Object.values(allTags).some(tags => tags.length > 0)) && (
             <motion.div
-              variants={filterContentVariants}
+              variants={FILTER_CONTENT_VARIANTS}
               initial="collapsed"
               animate="expanded"
               exit="collapsed"
@@ -892,7 +421,7 @@ const DealsGroupedView = ({ allTags }: DealsGroupedViewProps): JSX.Element => {
                     <div className="flex flex-wrap gap-2">
                       {selectedTags.map(tag => {
                         const category = getTagCategory(tag);
-                        const colorClass = tagFilterColors[category]?.selected || 'bg-blue-500 text-white';
+                        const colorClass = TAG_FILTER_COLORS[category]?.selected || 'bg-blue-500 text-white';
                         return (
                           <span key={tag} className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-sm ${colorClass}`}>
                             {tag}
@@ -923,8 +452,8 @@ const DealsGroupedView = ({ allTags }: DealsGroupedViewProps): JSX.Element => {
                             onClick={() => handleTagClick(tag)}
                             className={`inline-flex items-center px-3 py-1 rounded-full text-sm transition-all ${
                               selectedTags.includes(tag)
-                                ? tagFilterColors[category]?.selected || 'bg-blue-500 text-white'
-                                : tagFilterColors[category]?.unselected || 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                                ? TAG_FILTER_COLORS[category]?.selected || 'bg-blue-500 text-white'
+                                : TAG_FILTER_COLORS[category]?.unselected || 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
                             }`}
                           >
                             {tag}
