@@ -1,8 +1,8 @@
-import { metrics } from '../services/metrics.service.js';
+/**
+ * Metrics Tracking Middleware
+ */
 
-// ============================================
-// METRICS TRACKING MIDDLEWARE
-// ============================================
+import { metrics } from '../services/metrics.service.js';
 
 /**
  * Middleware to track all requests and responses
@@ -13,7 +13,7 @@ export function metricsMiddleware(req, res, next) {
     // Track request
     metrics.trackRequest(req.method, req.path);
     
-    // Track response when finished - use 'finish' event which fires for all response types
+    // Track response when finished
     const finishHandler = () => {
         const responseTime = Date.now() - startTime;
         metrics.trackResponse(res.statusCode, responseTime);
@@ -32,13 +32,6 @@ export function metricsMiddleware(req, res, next) {
     res.on('finish', finishHandler);
     
     next();
-}
-
-/**
- * Wrapper for error handling that tracks errors
- */
-export function trackError(error, req) {
-    metrics.trackError(error, req.path);
 }
 
 export default metricsMiddleware;

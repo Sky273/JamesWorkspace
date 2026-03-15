@@ -318,7 +318,7 @@ router.get('/scheduler-status', async (req, res) => {
     try {
         const status = getSchedulerStatus();
         res.json(status);
-    } catch (error) {
+    } catch (_error) {
         res.status(500).json({ error: 'Failed to get scheduler status' });
     }
 });

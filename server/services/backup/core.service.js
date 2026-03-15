@@ -395,13 +395,13 @@ export async function cleanupAllLocalBackups() {
                             DELETE FROM backup_history 
                             WHERE filename = $1
                         `, [file.name]);
-                    } catch (e) {
-                        safeLog('error', 'Failed to delete backup file', { file: file.name, error: e.message });
+                    } catch (delErr) {
+                        safeLog('error', 'Failed to delete backup file', { file: file.name, error: delErr.message });
                     }
                 }
             }
-        } catch (e) {
-            safeLog('error', `Failed to cleanup ${type} backups`, { error: e.message });
+        } catch (cleanupErr) {
+            safeLog('error', `Failed to cleanup ${type} backups`, { error: cleanupErr.message });
         }
     }
     

@@ -63,7 +63,7 @@ router.get('/', async (req, res) => {
     // 2. Check PostgreSQL connectivity with detailed stats
     try {
         const dbStart = Date.now();
-        const [connResult, statsResult] = await Promise.race([
+        const [_connResult, statsResult] = await Promise.race([
             Promise.all([
                 dbQuery('SELECT 1 as connected'),
                 dbQuery(`

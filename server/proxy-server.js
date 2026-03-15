@@ -13,7 +13,7 @@ process.on('uncaughtException', (error) => {
     safeLog('error', 'UNCAUGHT EXCEPTION', { message: error.message, stack: error.stack });
 });
 
-process.on('unhandledRejection', (reason, promise) => {
+process.on('unhandledRejection', (reason, _promise) => {
     safeLog('error', 'UNHANDLED REJECTION', { reason: String(reason) });
 });
 
@@ -144,7 +144,7 @@ app.use((req, res) => {
 });
 
 // Global error handler
-app.use((err, req, res, next) => {
+app.use((err, req, res, _next) => {
     const statusCode = err.statusCode || err.status || 500;
     const isProduction = process.env.NODE_ENV === 'production';
     

@@ -3,7 +3,6 @@ import { metrics } from '../services/metrics.service.js';
 import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { query as dbQuery } from '../config/database.js';
-import { getAPMStats, getSlowRequests, clearSlowRequests } from '../middleware/apm.middleware.js';
 
 const router = express.Router();
 

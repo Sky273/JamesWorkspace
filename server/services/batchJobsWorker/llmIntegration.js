@@ -15,7 +15,7 @@ let activeLLMRequests = 0;
 const llmQueue = [];
 
 // Track queue health for debugging
-let lastLLMActivity = Date.now();
+let _lastLLMActivity = Date.now();
 
 /**
  * Acquire a slot for LLM request (rate limiting)
@@ -40,7 +40,7 @@ export async function acquireLLMSlot() {
  */
 export function releaseLLMSlot() {
     activeLLMRequests = Math.max(0, activeLLMRequests - 1); // Prevent negative count
-    lastLLMActivity = Date.now();
+    _lastLLMActivity = Date.now();
     if (llmQueue.length > 0) {
         const next = llmQueue.shift();
         next();

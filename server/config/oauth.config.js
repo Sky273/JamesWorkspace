@@ -83,7 +83,7 @@ export const googleOAuthConfig = {
 
 const ENCRYPTION_ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 16;
-const AUTH_TAG_LENGTH = 16;
+const _AUTH_TAG_LENGTH = 16; // eslint: prefixed with _ to indicate intentionally unused
 
 /**
  * Get encryption key from environment

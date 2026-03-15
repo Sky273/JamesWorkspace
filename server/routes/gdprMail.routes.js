@@ -74,7 +74,7 @@ router.get('/callback', async (req, res) => {
         let stateData;
         try {
             stateData = JSON.parse(Buffer.from(state, 'base64').toString());
-        } catch (e) {
+        } catch (_e) {
             return res.status(400).send('Invalid state parameter');
         }
 

@@ -4,8 +4,6 @@
  * Updated to match current database schema and routes
  */
 
-import { swaggerPaths } from './swagger.paths.js';
-
 export const swaggerDocument = {
     openapi: '3.0.3',
     info: {
@@ -619,7 +617,7 @@ export const swaggerDocument = {
             }
         }
     },
-    paths: swaggerPaths
+    paths: {}
 };
 
 export default swaggerDocument;

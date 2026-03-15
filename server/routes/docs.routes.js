@@ -37,7 +37,6 @@ router.get('/ui', (req, res) => {
             SwaggerUIBundle({
                 url: '/api/docs',
                 dom_id: '#swagger-ui',
-                deepLinking: true,
                 presets: [
                     SwaggerUIBundle.presets.apis,
                     SwaggerUIBundle.SwaggerUIStandalonePreset

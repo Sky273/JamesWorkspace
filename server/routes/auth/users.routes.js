@@ -1,0 +1,218 @@
+/**
+ * User Management Routes - Admin CRUD operations
+ */
+
+import express from 'express';
+import bcrypt from 'bcryptjs';
+import { SALT_ROUNDS } from '../../config/constants.js';
+import { authenticateToken, requireAdmin } from '../../middleware/auth.middleware.js';
+import { validateBody, validateParams, createUserSchema } from '../../utils/validation.js';
+import { securityLog, getRequestMetadata, LOG_LEVELS, SECURITY_EVENTS } from '../../services/security.service.js';
+import { safeLog } from '../../utils/logger.backend.js';
+import { selectWithTimeout, createWithTimeout, updateWithTimeout, destroyWithTimeout } from '../../utils/postgresHelpers.js';
+
+const router = express.Router();
+
+// POST /api/auth/users - Create user (admin only)
+router.post('/users', authenticateToken, requireAdmin, validateBody(createUserSchema), async (req, res) => {
+    try {
+        const { email, password, name, jobTitle, phone, status, firm, FirmName, customer, CustomerName, role } = req.body;
+        const normalizedEmail = email.toLowerCase();
+        const metadata = getRequestMetadata(req);
+
+        const existingUsers = await selectWithTimeout('users', {
+            where: 'LOWER(email) = $1',
+            params: [normalizedEmail],
+            limit: 1
+        });
+
+        if (existingUsers.length > 0) {
+            return res.status(409).json({ error: 'User with this email already exists' });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+
+        const normalizedRole = (role || 'user').toLowerCase();
+        const validRole = ['admin', 'user'].includes(normalizedRole) ? normalizedRole : 'user';
+
+        const userData = {
+            email: normalizedEmail,
+            password: hashedPassword,
+            name: name,
+            job_title: jobTitle || null,
+            phone: phone || null,
+            role: validRole,
+            status: (status || 'active').toLowerCase()
+        };
+
+        const firmName = firm || FirmName || customer || CustomerName;
+        if (firmName) {
+            const firms = await selectWithTimeout('firms', {
+                where: 'name = $1',
+                params: [firmName],
+                limit: 1
+            });
+            
+            if (firms.length > 0) {
+                userData.firm_id = firms[0].id;
+                userData.firm_name = firms[0].name;
+            } else {
+                return res.status(400).json({ 
+                    error: `Firm '${firmName}' not found` 
+                });
+            }
+        }
+
+        const records = await createWithTimeout('users', [{
+            fields: userData
+        }]);
+
+        const newUser = records[0];
+
+        securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.USER_CREATED, {
+            ...metadata,
+            email: newUser.email,
+            userId: newUser.id,
+            role: newUser.role,
+            createdBy: req.user.id,
+            statusCode: 201,
+            action: 'USER_CREATED_BY_ADMIN',
+            message: 'New user created by admin'
+        });
+
+        res.status(201).json({
+            id: newUser.id,
+            email: newUser.email,
+            name: newUser.name,
+            role: newUser.role,
+            status: newUser.status
+        });
+    } catch (error) {
+        safeLog('error', 'Create user error', { error: error.message });
+        res.status(500).json({ error: 'Failed to create user' });
+    }
+});
+
+// PUT /api/auth/users/:id - Update user (admin only)
+router.put('/users/:id', authenticateToken, requireAdmin, validateParams('id'), async (req, res) => {
+    try {
+        const { id } = req.params;
+        const updateData = {};
+
+        const currentUsers = await selectWithTimeout('users', {
+            where: 'id = $1',
+            params: [id],
+            limit: 1
+        });
+        
+        if (currentUsers.length === 0) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        const currentUser = currentUsers[0];
+
+        const name = req.body.name || req.body.Name;
+        const email = req.body.email || req.body.Email;
+        const status = req.body.status || req.body.Status;
+        const role = req.body.role || req.body.Role;
+        const jobTitle = req.body.jobTitle || req.body.job_title;
+        const phone = req.body.phone;
+
+        if (name && name !== currentUser.name) updateData.name = name;
+        if (email && email.toLowerCase() !== currentUser.email.toLowerCase()) {
+            updateData.email = email.toLowerCase();
+        }
+        if (status) updateData.status = status.toLowerCase();
+        if (role) updateData.role = role.toLowerCase();
+        if (jobTitle !== undefined) updateData.job_title = jobTitle || null;
+        if (phone !== undefined) updateData.phone = phone || null;
+        if (req.body.password) {
+            updateData.password = await bcrypt.hash(req.body.password, SALT_ROUNDS);
+        }
+        
+        if (req.body.firm || req.body.FirmName || req.body.customer || req.body.CustomerName) {
+            const firmName = req.body.firm || req.body.FirmName || req.body.customer || req.body.CustomerName;
+            
+            const firms = await selectWithTimeout('firms', {
+                where: 'name = $1',
+                params: [firmName],
+                limit: 1
+            });
+            
+            if (firms.length > 0) {
+                updateData.firm_id = firms[0].id;
+                updateData.firm_name = firms[0].name;
+            } else {
+                return res.status(400).json({ 
+                    error: `Firm '${firmName}' not found` 
+                });
+            }
+        }
+
+        if (Object.keys(updateData).length === 0) {
+            return res.status(400).json({ error: 'No fields to update' });
+        }
+
+        const records = await updateWithTimeout('users', [{
+            id: id,
+            fields: updateData
+        }]);
+
+        const updatedUser = records[0];
+
+        securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.USER_UPDATED, {
+            ...getRequestMetadata(req),
+            userId: id,
+            updatedBy: req.user.id,
+            statusCode: 200,
+            action: 'USER_UPDATED_BY_ADMIN',
+            message: 'User updated by admin'
+        });
+
+        res.json({
+            id: updatedUser.id,
+            email: updatedUser.email,
+            name: updatedUser.name,
+            role: updatedUser.role,
+            status: updatedUser.status
+        });
+    } catch (error) {
+        if (error.statusCode === 404) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        safeLog('error', 'Update user error', { error: error.message });
+        res.status(500).json({ error: 'Failed to update user' });
+    }
+});
+
+// DELETE /api/auth/users/:id - Delete user (admin only)
+router.delete('/users/:id', authenticateToken, requireAdmin, validateParams('id'), async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (id === req.user.id) {
+            return res.status(400).json({ error: 'Cannot delete your own account' });
+        }
+
+        await destroyWithTimeout('users', [id]);
+
+        securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.USER_DELETED, {
+            ...getRequestMetadata(req),
+            userId: id,
+            deletedBy: req.user.id,
+            statusCode: 200,
+            action: 'USER_DELETED_BY_ADMIN',
+            message: 'User deleted by admin'
+        });
+
+        res.json({ message: 'User deleted successfully' });
+    } catch (error) {
+        if (error.statusCode === 404) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        safeLog('error', 'Delete user error', { error: error.message });
+        res.status(500).json({ error: 'Failed to delete user' });
+    }
+});
+
+export default router;

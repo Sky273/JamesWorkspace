@@ -3,24 +3,15 @@
  * Tracks slow requests, provides detailed timing breakdowns, and alerts on performance issues
  */
 
-import { safeLog, createModuleLogger } from '../utils/logger.backend.js';
-
-const log = createModuleLogger('apm');
+import { safeLog } from '../utils/logger.backend.js';
 
 // Configuration
 const APM_CONFIG = {
-    // Thresholds in milliseconds
     slowRequestThreshold: parseInt(process.env.APM_SLOW_THRESHOLD || '1000', 10),
     verySlowRequestThreshold: parseInt(process.env.APM_VERY_SLOW_THRESHOLD || '5000', 10),
     criticalRequestThreshold: parseInt(process.env.APM_CRITICAL_THRESHOLD || '30000', 10),
-    
-    // Sampling rate for detailed traces (1 = 100%, 0.1 = 10%)
     traceSamplingRate: parseFloat(process.env.APM_TRACE_SAMPLING || '1.0'),
-    
-    // Max slow requests to keep in memory
     maxSlowRequests: parseInt(process.env.APM_MAX_SLOW_REQUESTS || '100', 10),
-    
-    // Endpoints to exclude from APM tracking
     excludedPaths: ['/health', '/health/memory', '/api/metrics', '/favicon.ico']
 };
 
@@ -28,82 +19,32 @@ const APM_CONFIG = {
 const slowRequestsBuffer = [];
 
 /**
- * Get slow requests history
- * @param {number} limit - Maximum number of requests to return
- * @returns {Array} Slow requests sorted by duration (slowest first)
+ * Normalize endpoint path (replace UUIDs and IDs with :id)
  */
-export function getSlowRequests(limit = 50) {
-    return [...slowRequestsBuffer]
-        .sort((a, b) => b.duration - a.duration)
-        .slice(0, limit);
+function normalizeEndpoint(path) {
+    return path
+        .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, ':id')
+        .replace(/\/\d+/g, '/:id');
 }
 
 /**
- * Get APM statistics
- * @returns {Object} APM statistics
+ * Get severity level based on duration
  */
-export function getAPMStats() {
-    const requests = getSlowRequests(APM_CONFIG.maxSlowRequests);
-    
-    const stats = {
-        totalSlowRequests: slowRequestsBuffer.length,
-        thresholds: {
-            slow: `${APM_CONFIG.slowRequestThreshold}ms`,
-            verySlow: `${APM_CONFIG.verySlowRequestThreshold}ms`,
-            critical: `${APM_CONFIG.criticalRequestThreshold}ms`
-        },
-        breakdown: {
-            slow: 0,
-            verySlow: 0,
-            critical: 0
-        },
-        topSlowEndpoints: {},
-        recentSlowRequests: requests.slice(0, 10)
-    };
-    
-    for (const req of requests) {
-        if (req.duration >= APM_CONFIG.criticalRequestThreshold) {
-            stats.breakdown.critical++;
-        } else if (req.duration >= APM_CONFIG.verySlowRequestThreshold) {
-            stats.breakdown.verySlow++;
-        } else {
-            stats.breakdown.slow++;
-        }
-        
-        // Track by endpoint
-        const endpoint = req.endpoint;
-        if (!stats.topSlowEndpoints[endpoint]) {
-            stats.topSlowEndpoints[endpoint] = { count: 0, avgDuration: 0, maxDuration: 0 };
-        }
-        stats.topSlowEndpoints[endpoint].count++;
-        stats.topSlowEndpoints[endpoint].maxDuration = Math.max(
-            stats.topSlowEndpoints[endpoint].maxDuration, 
-            req.duration
-        );
-    }
-    
-    // Calculate averages
-    for (const endpoint of Object.keys(stats.topSlowEndpoints)) {
-        const endpointRequests = requests.filter(r => r.endpoint === endpoint);
-        const totalDuration = endpointRequests.reduce((sum, r) => sum + r.duration, 0);
-        stats.topSlowEndpoints[endpoint].avgDuration = Math.round(totalDuration / endpointRequests.length);
-    }
-    
-    // Sort endpoints by count
-    stats.topSlowEndpoints = Object.entries(stats.topSlowEndpoints)
-        .sort(([, a], [, b]) => b.count - a.count)
-        .slice(0, 10)
-        .reduce((obj, [key, value]) => ({ ...obj, [key]: value }), {});
-    
-    return stats;
+function getSeverity(duration) {
+    if (duration >= APM_CONFIG.criticalRequestThreshold) return 'critical';
+    if (duration >= APM_CONFIG.verySlowRequestThreshold) return 'very_slow';
+    if (duration >= APM_CONFIG.slowRequestThreshold) return 'slow';
+    return 'normal';
 }
 
 /**
- * Clear slow requests buffer
+ * Add slow request to buffer
  */
-export function clearSlowRequests() {
-    slowRequestsBuffer.length = 0;
-    log.info('Slow requests buffer cleared');
+function addSlowRequest(requestData) {
+    slowRequestsBuffer.push(requestData);
+    if (slowRequestsBuffer.length > APM_CONFIG.maxSlowRequests) {
+        slowRequestsBuffer.shift();
+    }
 }
 
 /**
@@ -111,107 +52,133 @@ export function clearSlowRequests() {
  */
 export function apmMiddleware(req, res, next) {
     // Skip excluded paths
-    if (APM_CONFIG.excludedPaths.some(path => req.path.startsWith(path))) {
+    if (APM_CONFIG.excludedPaths.some(p => req.path.startsWith(p))) {
         return next();
     }
-    
-    // Sampling: only trace a percentage of requests for detailed analysis
-    const shouldTrace = Math.random() < APM_CONFIG.traceSamplingRate;
-    
-    const startTime = process.hrtime.bigint();
-    const startTimestamp = new Date().toISOString();
-    
-    // Store timing marks for detailed breakdown
-    const timings = {
-        start: startTime,
-        marks: {}
-    };
-    
-    // Attach timing function to request for use in route handlers
-    req.apmMark = (name) => {
-        if (shouldTrace) {
-            timings.marks[name] = process.hrtime.bigint();
-        }
-    };
-    
-    // Track response
-    const finishHandler = () => {
-        const endTime = process.hrtime.bigint();
-        const durationNs = Number(endTime - startTime);
-        const durationMs = Math.round(durationNs / 1_000_000);
-        
-        // Check if request is slow
-        if (durationMs >= APM_CONFIG.slowRequestThreshold) {
-            const severity = durationMs >= APM_CONFIG.criticalRequestThreshold ? 'critical' :
-                           durationMs >= APM_CONFIG.verySlowRequestThreshold ? 'very_slow' : 'slow';
-            
-            // Normalize endpoint for grouping
-            const normalizedEndpoint = normalizeEndpoint(req.path);
-            
-            // Build timing breakdown
-            const breakdown = {};
-            if (shouldTrace && Object.keys(timings.marks).length > 0) {
-                let prevTime = startTime;
-                for (const [name, time] of Object.entries(timings.marks)) {
-                    breakdown[name] = Math.round(Number(time - prevTime) / 1_000_000);
-                    prevTime = time;
-                }
-                breakdown['_remaining'] = Math.round(Number(endTime - prevTime) / 1_000_000);
-            }
-            
-            const slowRequest = {
-                timestamp: startTimestamp,
+
+    const startTime = Date.now();
+    const startHrTime = process.hrtime();
+
+    // Track when response finishes
+    res.on('finish', () => {
+        const duration = Date.now() - startTime;
+        const severity = getSeverity(duration);
+
+        if (severity !== 'normal') {
+            const [seconds, nanoseconds] = process.hrtime(startHrTime);
+            const preciseMs = (seconds * 1000 + nanoseconds / 1e6).toFixed(2);
+
+            const requestData = {
+                timestamp: new Date().toISOString(),
                 method: req.method,
-                path: req.path,
-                endpoint: normalizedEndpoint,
-                duration: durationMs,
+                path: req.originalUrl || req.path,
+                endpoint: normalizeEndpoint(req.path),
+                duration: parseInt(preciseMs),
                 severity,
                 statusCode: res.statusCode,
                 userId: req.user?.id || null,
-                userAgent: req.headers['user-agent']?.substring(0, 100) || null,
-                breakdown: Object.keys(breakdown).length > 0 ? breakdown : undefined
+                userAgent: req.get('user-agent')?.substring(0, 100) || null
             };
-            
-            // Add to buffer
-            slowRequestsBuffer.push(slowRequest);
-            
-            // Enforce max size
-            while (slowRequestsBuffer.length > APM_CONFIG.maxSlowRequests) {
-                slowRequestsBuffer.shift();
+
+            addSlowRequest(requestData);
+
+            if (severity === 'critical') {
+                safeLog('warn', 'Critical slow request detected', requestData);
             }
-            
-            // Log slow request
-            const logLevel = severity === 'critical' ? 'error' : severity === 'very_slow' ? 'warn' : 'info';
-            safeLog(logLevel, `Slow request detected (${severity})`, {
-                method: req.method,
-                path: req.path,
-                duration: `${durationMs}ms`,
-                statusCode: res.statusCode,
-                userId: req.user?.id
-            });
         }
-        
-        // Remove listener to prevent memory leak
-        res.removeListener('finish', finishHandler);
-    };
-    
-    res.on('finish', finishHandler);
+    });
+
     next();
 }
 
 /**
- * Normalize endpoint path for grouping
+ * Get APM statistics
  */
-function normalizeEndpoint(path) {
-    return path
-        // Remove UUIDs
-        .replace(/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '/:id')
-        // Remove Airtable IDs
-        .replace(/\/rec[a-zA-Z0-9]{14}/g, '/:id')
-        // Remove numeric IDs
-        .replace(/\/\d+/g, '/:id')
-        // Remove long alphanumeric strings
-        .replace(/\/[a-zA-Z0-9]{20,}/g, '/:id');
+export function getAPMStats() {
+    const now = Date.now();
+    const last5min = slowRequestsBuffer.filter(r => 
+        new Date(r.timestamp).getTime() > now - 5 * 60 * 1000
+    );
+    const last1h = slowRequestsBuffer.filter(r => 
+        new Date(r.timestamp).getTime() > now - 60 * 60 * 1000
+    );
+
+    const severityCounts = {
+        slow: 0,
+        very_slow: 0,
+        critical: 0
+    };
+
+    slowRequestsBuffer.forEach(r => {
+        if (severityCounts[r.severity] !== undefined) {
+            severityCounts[r.severity]++;
+        }
+    });
+
+    const avgDuration = slowRequestsBuffer.length > 0
+        ? Math.round(slowRequestsBuffer.reduce((sum, r) => sum + r.duration, 0) / slowRequestsBuffer.length)
+        : 0;
+
+    // Top slow endpoints
+    const endpointStats = {};
+    slowRequestsBuffer.forEach(r => {
+        const key = `${r.method} ${r.endpoint}`;
+        if (!endpointStats[key]) {
+            endpointStats[key] = { count: 0, totalDuration: 0, maxDuration: 0 };
+        }
+        endpointStats[key].count++;
+        endpointStats[key].totalDuration += r.duration;
+        endpointStats[key].maxDuration = Math.max(endpointStats[key].maxDuration, r.duration);
+    });
+
+    const topSlowEndpoints = Object.entries(endpointStats)
+        .map(([endpoint, stats]) => ({
+            endpoint,
+            count: stats.count,
+            avgDuration: Math.round(stats.totalDuration / stats.count),
+            maxDuration: stats.maxDuration
+        }))
+        .sort((a, b) => b.avgDuration - a.avgDuration)
+        .slice(0, 10);
+
+    return {
+        config: {
+            slowThreshold: APM_CONFIG.slowRequestThreshold,
+            verySlowThreshold: APM_CONFIG.verySlowRequestThreshold,
+            criticalThreshold: APM_CONFIG.criticalRequestThreshold
+        },
+        summary: {
+            totalTracked: slowRequestsBuffer.length,
+            last5min: last5min.length,
+            last1h: last1h.length,
+            avgDuration,
+            severityCounts
+        },
+        topSlowEndpoints,
+        timestamp: new Date().toISOString()
+    };
 }
 
-export default apmMiddleware;
+/**
+ * Get slow requests list
+ */
+export function getSlowRequests(limit = 50) {
+    return slowRequestsBuffer
+        .slice(-limit)
+        .reverse();
+}
+
+/**
+ * Clear slow requests buffer
+ */
+export function clearSlowRequests() {
+    slowRequestsBuffer.length = 0;
+    safeLog('info', 'APM slow requests buffer cleared');
+}
+
+export default {
+    apmMiddleware,
+    getAPMStats,
+    getSlowRequests,
+    clearSlowRequests
+};
