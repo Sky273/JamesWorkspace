@@ -3,22 +3,15 @@
  * Displays a single adaptation by ID from URL parameter
  */
 
-import { useEffect, useState, useRef, useCallback, ChangeEvent } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { 
   ArrowLeftIcon, 
   DocumentTextIcon,
-  BriefcaseIcon,
-  CalendarIcon,
-  ChartBarIcon,
   ArrowDownTrayIcon,
-  EnvelopeIcon,
-  UserIcon,
-  PencilIcon,
-  CheckIcon,
-  XMarkIcon
+  EnvelopeIcon
 } from '@heroicons/react/24/outline';
 import { useAuthFetch } from '../hooks/useAuthFetch';
 import { createSafeHtml } from '../utils/sanitizer.frontend';
@@ -32,6 +25,8 @@ import logger from '../utils/logger.frontend';
 import { formatDate } from '../utils/dateFormatter';
 import i18n from '../i18n';
 import { removeSuggestionMarkers } from '../utils/tinymceSuggestionsPlugin';
+import AdaptationHeader from './AdaptationHeader';
+import AdaptationExportModal from './AdaptationExportModal';
 
 interface Template {
   id: string;
@@ -346,22 +341,6 @@ const AdaptationViewPage = (): JSX.Element => {
     }
   };
 
-  const getStatusColor = (status?: string) => {
-    switch (status) {
-      case 'Completed': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
-      case 'Processing': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
-      case 'Failed': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
-      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
-    }
-  };
-
-  const getScoreColor = (score?: number) => {
-    if (!score) return 'text-gray-500';
-    if (score >= 80) return 'text-green-600 dark:text-green-400';
-    if (score >= 60) return 'text-blue-600 dark:text-blue-400';
-    if (score >= 40) return 'text-yellow-600 dark:text-yellow-400';
-    return 'text-red-600 dark:text-red-400';
-  };
 
   const formatAdaptationDate = (dateString?: string) => {
     const locale = i18n.language === 'fr' ? 'fr-FR' : 'en-US';
@@ -436,114 +415,22 @@ const AdaptationViewPage = (): JSX.Element => {
           className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden"
         >
           {/* Header - Candidate Name + Adapted Title */}
-          <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-            <div className="flex items-start justify-between">
-              <div className="flex-1 min-w-0">
-                {/* Candidate name */}
-                <div className="flex items-center gap-2 mb-1">
-                  <UserIcon className="w-5 h-5 text-blue-500 flex-shrink-0" />
-                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white truncate">
-                    {adaptation['Candidate Name'] || adaptation['Resume Name'] || adaptation.ResumeName || t('adaptations.card.noName')}
-                  </h1>
-                </div>
-
-                {/* Adapted professional title - editable */}
-                <div className="flex items-center gap-2 ml-7 mb-3">
-                  {editingTitle ? (
-                    <div className="flex items-center gap-2 flex-1">
-                      <input
-                        type="text"
-                        value={editedTitle}
-                        onChange={(e) => setEditedTitle(e.target.value)}
-                        className="flex-1 px-3 py-1.5 text-base font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-blue-300 dark:border-blue-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                        placeholder={t('adaptations.adaptedTitlePlaceholder', 'Titre professionnel adapté...')}
-                        autoFocus
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') handleSaveTitle();
-                          if (e.key === 'Escape') setEditingTitle(false);
-                        }}
-                      />
-                      <button
-                        onClick={handleSaveTitle}
-                        disabled={savingTitle}
-                        className="p-1.5 text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 transition-colors"
-                        title={t('common.save')}
-                      >
-                        <CheckIcon className="w-5 h-5" />
-                      </button>
-                      <button
-                        onClick={() => setEditingTitle(false)}
-                        className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                        title={t('common.cancel')}
-                      >
-                        <XMarkIcon className="w-5 h-5" />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2 group">
-                      <span className="text-base font-medium text-gray-600 dark:text-gray-300 italic">
-                        {adaptation['Adapted Title'] || t('adaptations.noAdaptedTitle', 'Aucun titre adapté')}
-                      </span>
-                      <button
-                        onClick={() => {
-                          setEditedTitle(adaptation['Adapted Title'] || '');
-                          setEditingTitle(true);
-                        }}
-                        className="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 opacity-0 group-hover:opacity-100 transition-all"
-                        title={t('adaptations.editAdaptedTitle', 'Modifier le titre adapté')}
-                      >
-                        <PencilIcon className="w-4 h-4" />
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Metadata row */}
-                <div className="flex flex-wrap items-center gap-4 text-sm">
-                  {/* Resume info */}
-                  <button
-                    onClick={handleViewResume}
-                    className="flex items-center gap-1 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                  >
-                    <DocumentTextIcon className="w-4 h-4" />
-                    {adaptation['Resume Name'] || adaptation.ResumeName || t('adaptations.card.noName')}
-                  </button>
-                  
-                  {/* Mission info */}
-                  <button
-                    onClick={handleViewMission}
-                    className="flex items-center gap-1 text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300"
-                  >
-                    <BriefcaseIcon className="w-4 h-4" />
-                    {adaptation['Mission Title'] || t('adaptations.card.unknownMission')}
-                  </button>
-
-                  {/* Date */}
-                  {adaptation['Created At'] && (
-                    <span className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
-                      <CalendarIcon className="w-4 h-4" />
-                      {formatAdaptationDate(adaptation['Created At'])}
-                    </span>
-                  )}
-
-                  {/* Status */}
-                  {adaptation.Status && (
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(adaptation.Status)}`}>
-                      {t(`adaptations.status.${adaptation.Status.toLowerCase()}`, adaptation.Status)}
-                    </span>
-                  )}
-
-                  {/* Score */}
-                  {adaptation['Match Score'] !== undefined && (
-                    <span className={`flex items-center gap-1 font-semibold ${getScoreColor(adaptation['Match Score'])}`}>
-                      <ChartBarIcon className="w-4 h-4" />
-                      {adaptation['Match Score']}%
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
+          <AdaptationHeader
+            adaptation={adaptation}
+            editingTitle={editingTitle}
+            editedTitle={editedTitle}
+            savingTitle={savingTitle}
+            onEditedTitleChange={setEditedTitle}
+            onStartEditTitle={() => {
+              setEditedTitle(adaptation['Adapted Title'] as string || '');
+              setEditingTitle(true);
+            }}
+            onSaveTitle={handleSaveTitle}
+            onCancelEditTitle={() => setEditingTitle(false)}
+            onViewResume={handleViewResume}
+            onViewMission={handleViewMission}
+            formatAdaptationDate={formatAdaptationDate}
+          />
 
           {/* Tabs */}
           <div className="border-b border-gray-200 dark:border-gray-700">
@@ -673,55 +560,15 @@ const AdaptationViewPage = (): JSX.Element => {
 
       {/* Export Modal */}
       {showExportModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black bg-opacity-50 p-4">
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }} 
-            animate={{ opacity: 1, scale: 1 }} 
-            className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6"
-          >
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              {t('adaptations.exportPDF')}
-            </h3>
-            
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('export.selectTemplate')}
-              </label>
-              {loadingTemplates ? (
-                <p className="text-sm text-gray-500">{t('export.loadingTemplates')}</p>
-              ) : templates.length === 0 ? (
-                <p className="text-sm text-red-500">{t('export.noTemplates')}</p>
-              ) : (
-                <select 
-                  value={selectedTemplate} 
-                  onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedTemplate(e.target.value)} 
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                >
-                  {templates.map(template => (
-                    <option key={template.id} value={template.id}>{template.Name}</option>
-                  ))}
-                </select>
-              )}
-            </div>
-
-            <div className="flex justify-end gap-3">
-              <button 
-                onClick={() => setShowExportModal(false)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
-              >
-                {t('common.cancel')}
-              </button>
-              <button 
-                onClick={handleExportToPDF}
-                disabled={exportLoading || loadingTemplates || !selectedTemplate}
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-              >
-                <ArrowDownTrayIcon className="w-4 h-4" />
-                {exportLoading ? t('resume.actions.exporting') : t('common.export')}
-              </button>
-            </div>
-          </motion.div>
-        </div>
+        <AdaptationExportModal
+          templates={templates}
+          selectedTemplate={selectedTemplate}
+          setSelectedTemplate={setSelectedTemplate}
+          loadingTemplates={loadingTemplates}
+          exportLoading={exportLoading}
+          onExport={handleExportToPDF}
+          onClose={() => setShowExportModal(false)}
+        />
       )}
 
       {/* Email Modal */}
