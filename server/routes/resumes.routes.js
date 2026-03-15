@@ -352,7 +352,9 @@ router.get('/grouped-by-deal', authenticateToken, async (req, res) => {
         for (const deal of dealsResult.rows) {
             const resumesResult = await query(`
                 SELECT r.id, r.name, r.title, r.status, r.global_rating, r.improved_global_rating,
-                       r.created_at, r.file_name, r.original_name, r.firm_name, r.candidate_name, r.candidate_email,
+                       r.created_at, r.file_name, r.original_name, 
+                       COALESCE(r.firm_name, f.name) as firm_name,
+                       r.candidate_name, r.candidate_email,
                        r.consent_status, r.consent_token_expires_at, r.retention_until,
                        r.skills_cleaned, r.industries_cleaned, r.tools_cleaned, r.soft_skills_cleaned,
                        r.skills, r.industries, r.tools, r.soft_skills,
@@ -360,6 +362,7 @@ router.get('/grouped-by-deal', authenticateToken, async (req, res) => {
                        dr.added_at as deal_added_at, dr.status as deal_resume_status
                 FROM resumes r
                 INNER JOIN deal_resumes dr ON r.id = dr.resume_id
+                LEFT JOIN firms f ON r.firm_id = f.id
                 LEFT JOIN LATERAL (
                     SELECT bji.relative_path
                     FROM batch_job_items bji
@@ -426,12 +429,15 @@ router.get('/grouped-by-deal', authenticateToken, async (req, res) => {
 
         const unassignedResult = await query(`
             SELECT r.id, r.name, r.title, r.status, r.global_rating, r.improved_global_rating,
-                   r.created_at, r.file_name, r.original_name, r.firm_name, r.candidate_name, r.candidate_email,
+                   r.created_at, r.file_name, r.original_name, 
+                   COALESCE(r.firm_name, f.name) as firm_name,
+                   r.candidate_name, r.candidate_email,
                    r.consent_status, r.consent_token_expires_at, r.retention_until,
                    r.skills_cleaned, r.industries_cleaned, r.tools_cleaned, r.soft_skills_cleaned,
                    r.skills, r.industries, r.tools, r.soft_skills,
                    COALESCE(r.relative_path, latest_item.relative_path) as relative_path
             FROM resumes r
+            LEFT JOIN firms f ON r.firm_id = f.id
             LEFT JOIN LATERAL (
                 SELECT bji.relative_path
                 FROM batch_job_items bji

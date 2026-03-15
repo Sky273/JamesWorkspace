@@ -597,11 +597,9 @@ const DealsGroupedView = ({ allTags }: DealsGroupedViewProps): JSX.Element => {
     const lines = [t('resumes.downloadResume')];
 
     if (resume.relative_path) {
-      lines.push(`${t('batchJobs.sourceRelativePath', 'Chemin relatif source')} : ${resume.relative_path}`);
-    }
-
-    if (resume.original_name) {
-      lines.push(`${t('batchJobs.sourceFile', 'Fichier source')} : ${resume.original_name}`);
+      lines.push(resume.relative_path);
+    } else if (resume.original_name) {
+      lines.push(resume.original_name);
     }
 
     return lines.join('\n');
