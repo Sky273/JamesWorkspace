@@ -50,10 +50,14 @@ export function configureHelmet(app) {
                 defaultSrc: ["'none'"],
                 scriptSrc: [
                     "'self'",
-                    "https://basemaps.cartocdn.com", // MapLibre GL scripts from style
+                    "'unsafe-inline'",  // Required: TinyMCE dynamically injects inline scripts
+                    "'unsafe-eval'",    // Required: TinyMCE uses new Function() / eval()
+                    "blob:",            // Required: PDF.js worker scripts
+                    "https://unpkg.com",              // Swagger UI scripts
+                    "https://basemaps.cartocdn.com",  // MapLibre GL scripts from style
                     "https://*.basemaps.cartocdn.com" // MapLibre GL scripts from tiles
                 ],
-                scriptSrcAttr: ["'none'"], // Block inline event handlers (not used in app)
+                scriptSrcAttr: ["'unsafe-inline'"], // Required: Swagger UI inline event handlers
                 styleSrc: [
                     "'self'",
                     "'unsafe-inline'", // Required: TinyMCE dynamic styles (cannot be removed per TinyMCE docs)
