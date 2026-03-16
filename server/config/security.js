@@ -64,7 +64,8 @@ export function configureHelmet(app) {
                     // Cloudflare injects inline scripts (Rocket Loader, Email Obfuscation, etc.)
                     // These hashes allow the specific Cloudflare-injected scripts without 'unsafe-inline'
                     "'sha256-A1+e72bQn7hPqkdKAAlQSbFpetfFWJBOj5vG34ZrAxU='",  // Cloudflare injected script
-                    "'sha256-P5AT03Ewswrka26JysiPTKxr4GXeRKQKbPiV4tBCy2k='"   // Cloudflare injected script (variant)
+                    "'sha256-P5AT03Ewswrka26JysiPTKxr4GXeRKQKbPiV4tBCy2k='",  // Cloudflare injected script (variant)
+                    "'sha256-yZlHOZ5xtWE8Evaf3HFDtJxWosKnkweYfd1MWFsufuI='"   // Cloudflare injected script (variant 2)
                 ],
                 scriptSrcAttr: ["'none'"], // No inline event handlers allowed
                 styleSrc: [
