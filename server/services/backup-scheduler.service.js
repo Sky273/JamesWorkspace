@@ -82,9 +82,6 @@ async function executeBackup(type) {
             code: error.code,
             durationSeconds: duration
         });
-        // Also log to console.error to ensure visibility
-        console.error(`[BackupScheduler] BACKUP FAILED: ${type} - ${error.message}`);
-        console.error(error.stack);
     }
 }
 

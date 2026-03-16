@@ -184,7 +184,6 @@ export async function createBackup(type = 'manual') {
                     host: settings.host,
                     protocol: settings.protocol
                 });
-                console.error(`[Backup] UPLOAD FAILED: ${uploadError.message}`);
             }
         } else {
             safeLog('info', 'Backup stored locally', { 

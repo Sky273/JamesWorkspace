@@ -50,3 +50,8 @@ coverage/
 
 # SSL Certificates (sensitive)
 certificates/
+
+# Audit & temp artifacts
+audit.json
+logs_temp.txt
+*.txt.tmp

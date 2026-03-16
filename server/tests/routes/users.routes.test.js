@@ -1,0 +1,280 @@
+/**
+ * Tests for User Management routes (auth/users.routes.js)
+ * POST /users, PUT /users/:id, DELETE /users/:id
+ */
+
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import express from 'express';
+import cookieParser from 'cookie-parser';
+import request from 'supertest';
+
+// Mock constants
+vi.mock('../../config/constants.js', () => ({
+    JWT_SECRET: 'test-jwt-secret-for-vitest-minimum-32-chars-long',
+    REFRESH_TOKEN_SECRET: 'test-refresh-secret-for-vitest-min-32-chars',
+    CSRF_SECRET: 'test-csrf-secret-for-vitest-minimum-32-chars',
+    SALT_ROUNDS: 10,
+    MAX_TEXT_LENGTH: 50000,
+    MAX_PROMPT_LENGTH: 100000,
+    MAX_STRING_FIELD_LENGTH: 1000,
+    RATE_LIMIT: { AUTH: { windowMs: 900000, max: 20 }, USER: { windowMs: 900000, max: 50 } }
+}));
+
+// Mock bcryptjs
+vi.mock('bcryptjs', () => ({
+    default: {
+        hash: vi.fn().mockResolvedValue('hashed-password'),
+        compare: vi.fn().mockResolvedValue(true)
+    }
+}));
+
+// Mock postgresHelpers
+const mockSelectWithTimeout = vi.fn();
+const mockCreateWithTimeout = vi.fn();
+const mockUpdateWithTimeout = vi.fn();
+const mockDestroyWithTimeout = vi.fn();
+vi.mock('../../utils/postgresHelpers.js', () => ({
+    selectWithTimeout: (...args) => mockSelectWithTimeout(...args),
+    createWithTimeout: (...args) => mockCreateWithTimeout(...args),
+    updateWithTimeout: (...args) => mockUpdateWithTimeout(...args),
+    destroyWithTimeout: (...args) => mockDestroyWithTimeout(...args)
+}));
+
+// Mock security service
+vi.mock('../../services/security.service.js', () => ({
+    securityLog: vi.fn(),
+    getRequestMetadata: vi.fn(() => ({ ip: '127.0.0.1', userAgent: 'test' })),
+    LOG_LEVELS: { SECURITY: 'security' },
+    SECURITY_EVENTS: { USER_CREATED: 'USER_CREATED', USER_UPDATED: 'USER_UPDATED', USER_DELETED: 'USER_DELETED' }
+}));
+
+// Mock logger
+vi.mock('../../utils/logger.backend.js', () => ({
+    safeLog: vi.fn(),
+    createModuleLogger: vi.fn(() => vi.fn())
+}));
+
+// Mock validation
+vi.mock('../../utils/validation.js', () => ({
+    validateBody: () => (req, res, next) => next(),
+    validateParams: () => (req, res, next) => next(),
+    createUserSchema: {}
+}));
+
+// Mock auth middleware
+vi.mock('../../middleware/auth.middleware.js', () => ({
+    authenticateToken: (req, res, next) => {
+        if (req.headers.authorization === 'Bearer valid-token') {
+            req.user = {
+                id: 'admin-123',
+                email: 'admin@example.com',
+                role: req.headers['x-test-role'] || 'admin',
+                firm: 'Test Firm'
+            };
+            next();
+        } else {
+            res.status(401).json({ error: 'Unauthorized' });
+        }
+    },
+    requireAdmin: (req, res, next) => {
+        if (req.user?.role?.toLowerCase() === 'admin') {
+            next();
+        } else {
+            res.status(403).json({ error: 'Admin access required' });
+        }
+    }
+}));
+
+import usersRoutes from '../../routes/auth/users.routes.js';
+
+function createTestApp() {
+    const app = express();
+    app.use(express.json());
+    app.use(cookieParser());
+    app.use('/api/auth', usersRoutes);
+    return app;
+}
+
+describe('Users Routes', () => {
+    let app;
+    const authHeader = { Authorization: 'Bearer valid-token' };
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        app = createTestApp();
+    });
+
+    describe('POST /api/auth/users', () => {
+        it('should create a user', async () => {
+            mockSelectWithTimeout.mockResolvedValueOnce([]); // no existing user
+            mockCreateWithTimeout.mockResolvedValue([{
+                id: 'u-new',
+                email: 'new@example.com',
+                name: 'New User',
+                role: 'user',
+                status: 'active'
+            }]);
+
+            const res = await request(app)
+                .post('/api/auth/users')
+                .set(authHeader)
+                .send({ email: 'new@example.com', password: 'Password123!', name: 'New User' });
+
+            expect(res.status).toBe(201);
+            expect(res.body.email).toBe('new@example.com');
+        });
+
+        it('should return 409 if user already exists', async () => {
+            mockSelectWithTimeout.mockResolvedValueOnce([{ id: 'u-existing' }]);
+
+            const res = await request(app)
+                .post('/api/auth/users')
+                .set(authHeader)
+                .send({ email: 'existing@example.com', password: 'Password123!', name: 'Existing' });
+
+            expect(res.status).toBe(409);
+            expect(res.body.error).toContain('already exists');
+        });
+
+        it('should create user with firm association', async () => {
+            mockSelectWithTimeout
+                .mockResolvedValueOnce([]) // no existing user
+                .mockResolvedValueOnce([{ id: 'f-1', name: 'Acme Corp' }]); // firm lookup
+            mockCreateWithTimeout.mockResolvedValue([{
+                id: 'u-new',
+                email: 'new@example.com',
+                name: 'New User',
+                role: 'user',
+                status: 'active'
+            }]);
+
+            const res = await request(app)
+                .post('/api/auth/users')
+                .set(authHeader)
+                .send({ email: 'new@example.com', password: 'Pass123!', name: 'New User', firm: 'Acme Corp' });
+
+            expect(res.status).toBe(201);
+        });
+
+        it('should return 400 if firm not found', async () => {
+            mockSelectWithTimeout
+                .mockResolvedValueOnce([]) // no existing user
+                .mockResolvedValueOnce([]); // firm not found
+
+            const res = await request(app)
+                .post('/api/auth/users')
+                .set(authHeader)
+                .send({ email: 'new@example.com', password: 'Pass123!', name: 'New User', firm: 'Nonexistent' });
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toContain('not found');
+        });
+
+        it('should return 403 for non-admin', async () => {
+            const res = await request(app)
+                .post('/api/auth/users')
+                .set({ ...authHeader, 'x-test-role': 'user' })
+                .send({ email: 'new@example.com', password: 'Pass123!', name: 'New User' });
+
+            expect(res.status).toBe(403);
+        });
+
+        it('should return 500 on DB error', async () => {
+            mockSelectWithTimeout.mockResolvedValueOnce([]);
+            mockCreateWithTimeout.mockRejectedValue(new Error('DB error'));
+
+            const res = await request(app)
+                .post('/api/auth/users')
+                .set(authHeader)
+                .send({ email: 'new@example.com', password: 'Pass123!', name: 'New User' });
+
+            expect(res.status).toBe(500);
+        });
+    });
+
+    describe('PUT /api/auth/users/:id', () => {
+        it('should update a user', async () => {
+            mockSelectWithTimeout.mockResolvedValueOnce([{
+                id: 'u-1', email: 'old@example.com', name: 'Old Name', role: 'user', status: 'active'
+            }]);
+            mockUpdateWithTimeout.mockResolvedValue([{
+                id: 'u-1', email: 'old@example.com', name: 'New Name', role: 'user', status: 'active'
+            }]);
+
+            const res = await request(app)
+                .put('/api/auth/users/u-1')
+                .set(authHeader)
+                .send({ name: 'New Name' });
+
+            expect(res.status).toBe(200);
+            expect(res.body.name).toBe('New Name');
+        });
+
+        it('should return 404 if user not found', async () => {
+            mockSelectWithTimeout.mockResolvedValueOnce([]);
+
+            const res = await request(app)
+                .put('/api/auth/users/nonexistent')
+                .set(authHeader)
+                .send({ name: 'Test' });
+
+            expect(res.status).toBe(404);
+        });
+
+        it('should return 400 if no fields to update', async () => {
+            mockSelectWithTimeout.mockResolvedValueOnce([{
+                id: 'u-1', email: 'test@example.com', name: 'Test', role: 'user', status: 'active'
+            }]);
+
+            const res = await request(app)
+                .put('/api/auth/users/u-1')
+                .set(authHeader)
+                .send({});
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toContain('No fields');
+        });
+    });
+
+    describe('DELETE /api/auth/users/:id', () => {
+        it('should delete a user', async () => {
+            mockDestroyWithTimeout.mockResolvedValue(['u-1']);
+
+            const res = await request(app)
+                .delete('/api/auth/users/u-1')
+                .set(authHeader);
+
+            expect(res.status).toBe(200);
+            expect(res.body.message).toContain('deleted');
+        });
+
+        it('should prevent self-deletion', async () => {
+            const res = await request(app)
+                .delete('/api/auth/users/admin-123')
+                .set(authHeader);
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toContain('own account');
+        });
+
+        it('should return 404 if user not found', async () => {
+            const err = new Error('Record not found');
+            err.statusCode = 404;
+            mockDestroyWithTimeout.mockRejectedValue(err);
+
+            const res = await request(app)
+                .delete('/api/auth/users/nonexistent')
+                .set(authHeader);
+
+            expect(res.status).toBe(404);
+        });
+
+        it('should return 403 for non-admin', async () => {
+            const res = await request(app)
+                .delete('/api/auth/users/u-1')
+                .set({ ...authHeader, 'x-test-role': 'user' });
+
+            expect(res.status).toBe(403);
+        });
+    });
+});

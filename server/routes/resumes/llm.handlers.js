@@ -10,6 +10,7 @@ import { getRequestMetadata } from '../../services/security.service.js';
 import { getLLMSettings, calculateWeightedGlobalRating } from '../../services/settings.service.js';
 import { getAcceptedIndustriesString } from '../../services/industry.service.js';
 import { DEFAULT_IMPROVEMENT_PROMPT, DEFAULT_ANALYSIS_PROMPT, DEFAULT_MATCH_ANALYSIS_PROMPT, DEFAULT_ADAPTATION_PROMPT, ANONYMIZATION_RULES_ANONYMOUS, ANONYMIZATION_RULES_NOMINATIVE } from '../../config/prompts.backend.js';
+import { generateTrigram } from '../../utils/trigram.js';
 
 /**
  * Handle LLM errors consistently
@@ -21,45 +22,6 @@ function handleLLMError(error, res, operation) {
         ? { error: error.message, estimatedTokens: error.estimatedTokens }
         : { error: error.response?.data?.error || error.message || `Failed to ${operation}` };
     res.status(statusCode).json(errorMessage);
-}
-
-/**
- * Generate trigram from candidate name
- * Format: 1st letter of first name + 2 first letters of last name
- * Example: "Jean Dupont" -> "JDU"
- * @param {string} name - Full name of the candidate (first name + last name)
- * @returns {string} - 3-letter trigram in uppercase
- */
-function generateTrigram(name) {
-    if (!name || name.trim().length === 0) {
-        return 'XXX';
-    }
-    
-    // Split name into parts (handle multiple spaces)
-    const parts = name.trim().split(/\s+/).filter(part => part.length > 0);
-    
-    if (parts.length === 0) {
-        return 'XXX';
-    }
-    
-    // Clean each part (keep only letters)
-    const cleanParts = parts.map(part => part.replace(/[^a-zA-Z]/g, '').toUpperCase());
-    
-    if (parts.length === 1) {
-        // Only one name part: take first 3 letters
-        const singleName = cleanParts[0];
-        return (singleName + 'XXX').substring(0, 3);
-    }
-    
-    // First name is the first part, last name is the last part
-    const firstName = cleanParts[0];
-    const lastName = cleanParts[cleanParts.length - 1];
-    
-    // 1st letter of first name + 2 first letters of last name
-    const firstInitial = firstName.length > 0 ? firstName.charAt(0) : 'X';
-    const lastInitials = lastName.length >= 2 ? lastName.substring(0, 2) : (lastName + 'XX').substring(0, 2);
-    
-    return firstInitial + lastInitials;
 }
 
 /**
