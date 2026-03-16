@@ -13,7 +13,7 @@ import { callOpenAI } from './apiClient.js';
  * @param {string} missionContent - Mission content
  * @param {string} model - OpenAI model to use
  * @param {string} matchAnalysisPrompt - Match analysis prompt template
- * @returns {Promise<Object>} - Parsed match analysis result
+ * @returns {Promise<Object>} - Parsed match analysis result (normalized for frontend compatibility)
  */
 export async function matchResumeWithMission(resumeText, missionTitle, missionContent, model, matchAnalysisPrompt, userMetadata = null) {
     const prompt = matchAnalysisPrompt
@@ -27,7 +27,7 @@ export async function matchResumeWithMission(resumeText, missionTitle, missionCo
             { role: 'system', content: 'You are a JSON-only resume-mission matching API. Respond with valid JSON only.' },
             { role: 'user', content: prompt }
         ],
-        maxTokens: 2048,
+        maxTokens: 4096,
         temperature: 0.3,
         responseFormat: { type: "json_object" },
         userMetadata,
@@ -35,7 +35,9 @@ export async function matchResumeWithMission(resumeText, missionTitle, missionCo
     });
 
     try {
-        return JSON.parse(response.choices[0].message.content);
+        const rawAnalysis = JSON.parse(response.choices[0].message.content);
+        // Normalize the response to ensure frontend compatibility while preserving full data
+        return normalizeMatchAnalysis(rawAnalysis);
     } catch (parseError) {
         safeLog('error', 'Failed to parse LLM matching response as JSON', {
             error: parseError.message,
@@ -43,6 +45,94 @@ export async function matchResumeWithMission(resumeText, missionTitle, missionCo
         });
         throw new Error('Le modèle LLM a retourné une réponse invalide pour le matching. Veuillez réessayer ou contacter le support si le problème persiste.');
     }
+}
+
+/**
+ * Normalize match analysis response to ensure frontend compatibility
+ * Handles both old format (simple arrays) and new format (structured objects)
+ * @param {Object} analysis - Raw LLM analysis response
+ * @returns {Object} - Normalized analysis with both legacy and new fields
+ */
+function normalizeMatchAnalysis(analysis) {
+    const normalized = { ...analysis };
+    
+    // Normalize matchScore (ensure it's a number)
+    if (typeof normalized.matchScore === 'string') {
+        normalized.matchScore = parseInt(normalized.matchScore.replace('%', ''), 10) || 0;
+    }
+    
+    // Normalize strengths: convert [{item, evidence, coverage}] to string[] for frontend
+    if (Array.isArray(normalized.strengths) && normalized.strengths.length > 0) {
+        if (typeof normalized.strengths[0] === 'object' && normalized.strengths[0].item) {
+            // New format: preserve original and create legacy format
+            normalized._strengthsDetailed = normalized.strengths;
+            normalized.strengths = normalized.strengths.map(s => {
+                const coverage = s.coverage === 'explicit' ? '✓' : s.coverage === 'partial' ? '~' : '';
+                return `${coverage} ${s.item}${s.evidence ? ` (${s.evidence})` : ''}`.trim();
+            });
+        }
+    }
+    
+    // Normalize gaps: convert [{item, reason, severity}] to string[] for frontend
+    if (Array.isArray(normalized.gaps) && normalized.gaps.length > 0) {
+        if (typeof normalized.gaps[0] === 'object' && normalized.gaps[0].item) {
+            // New format: preserve original and create legacy format
+            normalized._gapsDetailed = normalized.gaps;
+            normalized.gaps = normalized.gaps.map(g => {
+                const severity = g.severity === 'high' ? '⚠️' : g.severity === 'medium' ? '⚡' : '';
+                return `${severity} ${g.item}${g.reason ? ` - ${g.reason}` : ''}`.trim();
+            });
+        }
+    }
+    
+    // Normalize keywordAnalysis to legacy keywordMatches/missingKeywords
+    if (normalized.keywordAnalysis) {
+        normalized._keywordAnalysisDetailed = normalized.keywordAnalysis;
+        
+        // Extract matched keywords
+        if (normalized.keywordAnalysis.matchedKeywords) {
+            normalized.keywordMatches = normalized.keywordAnalysis.matchedKeywords.map(k => 
+                typeof k === 'string' ? k : k.keyword
+            );
+        }
+        
+        // Extract partial keywords and add to matches with indicator
+        if (normalized.keywordAnalysis.partialKeywords) {
+            const partialKeywords = normalized.keywordAnalysis.partialKeywords.map(k => 
+                typeof k === 'string' ? `~${k}` : `~${k.keyword}`
+            );
+            normalized.keywordMatches = [...(normalized.keywordMatches || []), ...partialKeywords];
+        }
+        
+        // Extract missing keywords
+        if (normalized.keywordAnalysis.missingKeywords) {
+            normalized.missingKeywords = normalized.keywordAnalysis.missingKeywords.map(k => 
+                typeof k === 'string' ? k : k.keyword
+            );
+        }
+    }
+    
+    // Normalize recommendations to legacy format if needed
+    if (normalized.recommendations && typeof normalized.recommendations === 'object') {
+        // New format has executiveSummary, title, skills, experience, education, atsOptimization, priorityActions
+        // Legacy format expects executiveSummary, skills, experience, education, atsOptimization
+        // Keep as-is since frontend already handles object format
+        normalized._recommendationsDetailed = normalized.recommendations;
+    }
+    
+    // Preserve summary, scoreBreakdown, requirementsAnalysis, rewriteGuardrails for detailed views
+    // These are new fields that the frontend can optionally display
+    
+    safeLog('debug', 'Normalized match analysis', {
+        hasScoreBreakdown: !!normalized.scoreBreakdown,
+        hasSummary: !!normalized.summary,
+        strengthsCount: normalized.strengths?.length || 0,
+        gapsCount: normalized.gaps?.length || 0,
+        keywordMatchesCount: normalized.keywordMatches?.length || 0,
+        missingKeywordsCount: normalized.missingKeywords?.length || 0
+    });
+    
+    return normalized;
 }
 
 /**
@@ -74,14 +164,10 @@ export async function adaptResumeToMission({
         .replace('{MISSION_CONTENT}', missionContent)
         .replace('{MATCH_ANALYSIS}', JSON.stringify(matchAnalysis, null, 2));
 
-    const systemPrompt = `You are an expert HR consultant. You must respond with a valid JSON object containing exactly two fields:
-1. "adaptedTitle": A professional title (in the same language as the resume) adapted/optimized for the target mission. This should be a concise job title (e.g. "Développeur Full Stack Senior", "Chef de Projet Digital") that best positions the candidate for this specific mission. Maximum 100 characters.
-2. "adaptedText": The full adapted resume in clean HTML format.
-
-Example response format:
-{"adaptedTitle": "Consultant Data Engineer Senior", "adaptedText": "<h2>...</h2><p>...</p>"}
-
-Do NOT wrap your response in markdown code blocks. Return ONLY the JSON object.`;
+    const systemPrompt = `You are an expert HR consultant specialized in CV adaptation. 
+You must respond with a valid JSON object following the exact structure specified in the user prompt.
+Do NOT wrap your response in markdown code blocks. Return ONLY the JSON object.
+Respond in the same language as the resume.`;
 
     const response = await callOpenAI({
         model,
@@ -89,26 +175,48 @@ Do NOT wrap your response in markdown code blocks. Return ONLY the JSON object.`
             { role: 'system', content: systemPrompt },
             { role: 'user', content: prompt }
         ],
-        maxTokens: 4096,
+        maxTokens: 8192,
         temperature: 0.4,
         timeout: 120000,
+        responseFormat: { type: "json_object" },
         userMetadata,
         operationType: 'Resume Adaptation'
     });
 
     // Clean markdown code blocks if present
     let content = response.choices[0].message.content;
-    content = content.replace(/^```json\s*/i, '').replace(/^```html\s*/i, '').replace(/```\s*$/i, '').trim();
+    content = content.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
     
-    // Try to parse as JSON to extract adaptedTitle and adaptedText
+    // Parse the structured JSON response
     try {
         const parsed = JSON.parse(content);
+        
+        // New structured format with targetedTitle, professionalSummary, etc.
+        if (parsed.targetedTitle !== undefined) {
+            // Convert structured JSON to HTML for display
+            const adaptedText = convertAdaptationToHtml(parsed);
+            return {
+                adaptedText,
+                adaptedTitle: parsed.targetedTitle || null,
+                structuredData: parsed // Keep the full structured data
+            };
+        }
+        
+        // Legacy format support: {adaptedTitle, adaptedText}
         if (parsed.adaptedText && parsed.adaptedTitle) {
             return {
                 adaptedText: parsed.adaptedText,
                 adaptedTitle: parsed.adaptedTitle
             };
         }
+        
+        // If JSON but unknown format, return as-is
+        safeLog('warn', 'adaptResumeToMission: Unknown JSON format, returning raw content');
+        return {
+            adaptedText: content,
+            adaptedTitle: null,
+            structuredData: parsed
+        };
     } catch {
         // If JSON parsing fails, fall back to treating the whole content as adaptedText
         safeLog('warn', 'adaptResumeToMission: Could not parse JSON response, falling back to plain text');
@@ -118,4 +226,64 @@ Do NOT wrap your response in markdown code blocks. Return ONLY the JSON object.`
         adaptedText: content,
         adaptedTitle: null
     };
+}
+
+/**
+ * Convert structured adaptation JSON to HTML for display
+ * @param {Object} data - Structured adaptation data
+ * @returns {string} - HTML representation
+ */
+function convertAdaptationToHtml(data) {
+    const sections = [];
+    
+    // Professional Summary
+    if (data.professionalSummary) {
+        sections.push(`<h2>Résumé Professionnel</h2>\n<p>${data.professionalSummary}</p>`);
+    }
+    
+    // Key Skills
+    if (data.keySkills && data.keySkills.length > 0) {
+        sections.push(`<h2>Compétences Clés</h2>\n<ul>\n${data.keySkills.map(s => `  <li>${s}</li>`).join('\n')}\n</ul>`);
+    }
+    
+    // Tools and Technologies
+    if (data.toolsAndTechnologies && data.toolsAndTechnologies.length > 0) {
+        sections.push(`<h2>Outils et Technologies</h2>\n<p>${data.toolsAndTechnologies.join(', ')}</p>`);
+    }
+    
+    // Professional Experience
+    if (data.professionalExperience && data.professionalExperience.length > 0) {
+        const expHtml = data.professionalExperience.map(exp => {
+            const header = `<h3>${exp.jobTitle || ''}${exp.company ? ` - ${exp.company}` : ''}${exp.dates ? ` (${exp.dates})` : ''}</h3>`;
+            const context = exp.context ? `<p><em>${exp.context}</em></p>` : '';
+            const missions = exp.missions && exp.missions.length > 0 
+                ? `<ul>\n${exp.missions.map(m => `  <li>${m}</li>`).join('\n')}\n</ul>` 
+                : '';
+            const techs = exp.technologies && exp.technologies.length > 0 
+                ? `<p><strong>Technologies:</strong> ${exp.technologies.join(', ')}</p>` 
+                : '';
+            return `${header}\n${context}${missions}${techs}`;
+        }).join('\n\n');
+        sections.push(`<h2>Expérience Professionnelle</h2>\n${expHtml}`);
+    }
+    
+    // Education
+    if (data.education && data.education.length > 0) {
+        const eduItems = Array.isArray(data.education) 
+            ? data.education.map(e => typeof e === 'string' ? e : `${e.degree || ''} - ${e.institution || ''} ${e.year || ''}`).join('</li>\n  <li>')
+            : data.education;
+        sections.push(`<h2>Formation</h2>\n<ul>\n  <li>${eduItems}</li>\n</ul>`);
+    }
+    
+    // Certifications
+    if (data.certifications && data.certifications.length > 0) {
+        sections.push(`<h2>Certifications</h2>\n<ul>\n${data.certifications.map(c => `  <li>${c}</li>`).join('\n')}\n</ul>`);
+    }
+    
+    // Languages
+    if (data.languages && data.languages.length > 0) {
+        sections.push(`<h2>Langues</h2>\n<ul>\n${data.languages.map(l => `  <li>${l}</li>`).join('\n')}\n</ul>`);
+    }
+    
+    return sections.join('\n\n');
 }

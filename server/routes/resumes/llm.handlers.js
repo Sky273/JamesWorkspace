@@ -457,9 +457,10 @@ export async function adaptHandler(req, res) {
             userMetadata
         });
         
-        // Extract adaptedText and adaptedTitle from result (new format returns object)
+        // Extract adaptedText, adaptedTitle, and structuredData from result
         const adaptedText = typeof adaptationResult === 'string' ? adaptationResult : adaptationResult.adaptedText;
         const adaptedTitle = typeof adaptationResult === 'string' ? null : (adaptationResult.adaptedTitle || null);
+        const structuredData = typeof adaptationResult === 'string' ? null : (adaptationResult.structuredData || null);
 
         // Parse match score (can be "32%" or 32 or null)
         let matchScoreNum = null;
@@ -471,6 +472,11 @@ export async function adaptHandler(req, res) {
             }
         }
 
+        // Extract adaptation notes from structured data for storage
+        const adaptationNotes = structuredData?.adaptationNotes 
+            ? JSON.stringify(structuredData.adaptationNotes) 
+            : null;
+
         // Save adaptation to database
         safeLog('debug', 'Creating adaptation with data', {
             resumeId: resumeRecord.id,
@@ -479,7 +485,8 @@ export async function adaptHandler(req, res) {
             adaptedTitle: adaptedTitle,
             missionId: missionRecord.id,
             missionTitle: missionTitle,
-            firm: resumeRecord.firm_name
+            firm: resumeRecord.firm_name,
+            hasStructuredData: !!structuredData
         });
 
         const adaptationData = {
@@ -492,6 +499,7 @@ export async function adaptHandler(req, res) {
             mission_content: missionContent || null,
             firm: resumeRecord.firm_name || null,
             adapted_text: adaptedText,
+            adaptation_notes: adaptationNotes,
             match_score: matchScoreNum,
             match_analysis: matchAnalysis ? JSON.stringify(matchAnalysis) : null,
             status: 'completed'
@@ -499,11 +507,15 @@ export async function adaptHandler(req, res) {
 
         const adaptationRecord = await createWithTimeout('resume_adaptations', adaptationData);
 
+        // Return full response with structured data for frontend
         res.json({
             adaptedText,
             adaptedTitle,
             matchAnalysis,
-            adaptationId: adaptationRecord.id
+            adaptationId: adaptationRecord.id,
+            // Include structured data for enhanced frontend display
+            structuredAdaptation: structuredData,
+            adaptationNotes: structuredData?.adaptationNotes || null
         });
     } catch (error) {
         handleLLMError(error, res, 'adapting resume to mission');
