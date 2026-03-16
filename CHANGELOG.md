@@ -1,3 +1,23 @@
+## v1.8.5 - 2026-03-16
+### 🧪 Tests Routes Backend Complets
+
+#### Nouveaux Tests Routes
+- **missions.routes.test.js** : 34 tests couvrant GET /, GET /:id, POST /, PUT /:id, DELETE /:id, GET /:missionId/adaptations
+- **Suite complète** : 10 fichiers de tests, 197 tests passent
+
+#### Corrections Tests Existants
+- **batchJobs.routes.test.js** : Correction des mocks (`vi.resetAllMocks` au lieu de `clearAllMocks`), mock multer pour `req.body`, alignement avec les vraies routes
+- **clients.routes.test.js** : Correction réponse `data` vs `clients`, ajout mocks multi-requêtes (contacts, submissions)
+- **deals.routes.test.js** : Ajout mock pour vérification firm du resume dans POST /:id/resumes
+- **adaptations.routes.test.js** : Correction `data` vs `records`, `findWithTimeout` lance une erreur 404 au lieu de retourner `null`
+
+#### Améliorations Techniques
+- **Mocks factory functions** : `userRateLimit` correctement mocké comme factory `() => middleware`
+- **Isolation des tests** : `vi.resetAllMocks()` pour éviter les fuites de mocks entre tests
+- **Couverture routes critiques** : auth, resumes, missions, clients, deals, adaptations, batchJobs, health
+
+---
+
 ## v1.8.4 - 2026-03-12
 ### 📦 Export Multi-Format & Qualité Code
 
