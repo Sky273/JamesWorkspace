@@ -53,9 +53,10 @@ export function configureHelmet(app) {
                     "'unsafe-inline'",  // Required: TinyMCE dynamically injects inline scripts
                     "'unsafe-eval'",    // Required: TinyMCE uses new Function() / eval()
                     "blob:",            // Required: PDF.js worker scripts
-                    "https://unpkg.com",              // Swagger UI scripts
-                    "https://basemaps.cartocdn.com",  // MapLibre GL scripts from style
-                    "https://*.basemaps.cartocdn.com" // MapLibre GL scripts from tiles
+                    "https://unpkg.com",                      // Swagger UI scripts
+                    "https://static.cloudflareinsights.com",  // Cloudflare Web Analytics beacon
+                    "https://basemaps.cartocdn.com",          // MapLibre GL scripts from style
+                    "https://*.basemaps.cartocdn.com"         // MapLibre GL scripts from tiles
                 ],
                 scriptSrcAttr: ["'unsafe-inline'"], // Required: Swagger UI inline event handlers
                 styleSrc: [
