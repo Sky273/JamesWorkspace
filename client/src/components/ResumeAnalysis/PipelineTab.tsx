@@ -60,7 +60,7 @@ interface PipelineTabProps {
   resumeName: string;
 }
 
-export default function PipelineTab({ resumeId, resumeName }: PipelineTabProps) {
+export default function PipelineTab({ resumeId, resumeName: _resumeName }: PipelineTabProps) {
   const { t, i18n } = useTranslation();
   const isEnglish = i18n.language === 'en';
 

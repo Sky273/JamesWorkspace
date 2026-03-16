@@ -63,7 +63,7 @@ export default function TwoFactorSettings() {
       } else {
         toast.error(data.message || 'Code invalide');
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error('Erreur lors de la désactivation');
     } finally {
       setActionLoading(false);
@@ -89,7 +89,7 @@ export default function TwoFactorSettings() {
       } else {
         toast.error(data.message || 'Code invalide');
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error('Erreur lors de la régénération');
     } finally {
       setActionLoading(false);
@@ -100,7 +100,7 @@ export default function TwoFactorSettings() {
     try {
       await navigator.clipboard.writeText(newBackupCodes.join('\n'));
       toast.success('Codes copiés !');
-    } catch (error) {
+    } catch (_error) {
       toast.error('Erreur lors de la copie');
     }
   };

@@ -64,7 +64,7 @@ interface SendEmailModalProps {
 
 type ModalStep = 'connect' | 'select' | 'sending' | 'success' | 'error';
 
-const SendEmailModal = ({ isOpen, onClose, resumeName, resumeId, resumeTitle, currentVersion, onGenerateAttachment, attachmentFormat = 'pdf', prefilledClientId, prefilledContactId, missionTitle, isAdaptation }: SendEmailModalProps): JSX.Element | null => {
+const SendEmailModal = ({ isOpen, onClose, resumeName, resumeId, resumeTitle, currentVersion, onGenerateAttachment, attachmentFormat = 'pdf', prefilledClientId, prefilledContactId, missionTitle: _missionTitle, isAdaptation: _isAdaptation }: SendEmailModalProps): JSX.Element | null => {
   const { t } = useTranslation();
   const { user } = useAuth();
   

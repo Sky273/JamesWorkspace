@@ -46,7 +46,7 @@ const DealFilter = ({ selectedDealId, onDealChange, t }: DealFilterProps): JSX.E
     fetchDeals();
   }, [fetchDeals]);
 
-  const selectedDeal = deals.find(d => d.id === selectedDealId);
+  const _selectedDeal = deals.find(d => d.id === selectedDealId);
 
   return (
     <div className="flex items-center gap-2">

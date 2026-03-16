@@ -8,11 +8,11 @@ interface TwoFactorVerifyProps {
   userId: string;
   email: string;
   password: string;
-  onSuccess: (user: any) => void;
+  onSuccess: (user: unknown) => void;
   onCancel: () => void;
 }
 
-export default function TwoFactorVerify({ userId, email, password, onSuccess, onCancel }: TwoFactorVerifyProps) {
+export default function TwoFactorVerify({ userId: _userId, email, password, onSuccess, onCancel }: TwoFactorVerifyProps) {
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');

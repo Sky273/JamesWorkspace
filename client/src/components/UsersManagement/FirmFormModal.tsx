@@ -47,7 +47,7 @@ const FirmFormModal = ({ isOpen, onClose, onSubmit, firm, t }: FirmFormModalProp
         setUploading(true);
         await userService.uploadFirmLogo(firm.id, selectedFile);
         toast.success(t('users.management.messages.logoUploaded'));
-      } catch (error) {
+      } catch (_error) {
         toast.error(t('users.management.messages.logoUploadFailed'));
         setUploading(false);
         return;
@@ -97,7 +97,7 @@ const FirmFormModal = ({ isOpen, onClose, onSubmit, firm, t }: FirmFormModalProp
         setLogoUrl('');
         setLogoPreview('');
         toast.success(t('users.management.messages.logoDeleted'));
-      } catch (error) {
+      } catch (_error) {
         toast.error(t('users.management.messages.logoDeleteFailed'));
       }
       setUploading(false);

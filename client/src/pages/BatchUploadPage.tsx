@@ -2,6 +2,10 @@
  * BatchUploadPage Component
  * Allows uploading multiple CVs at once with optional improvement
  * CVs are treated as internal (employee) without candidate name for GDPR
+ * 
+ * Processing logic extracted to:
+ * - ./batchUpload/useBatchProcessing.ts
+ * - ./batchUpload/useBatchExport.ts
  */
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
@@ -17,14 +21,14 @@ import {
 } from '@heroicons/react/24/outline';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { useAuth } from '../context/AuthContext';
-import { fetchWithAuth, createAuthOptionsWithCsrf, attemptTokenRefresh } from '../utils/apiInterceptor';
-import { extractResumeText } from '../utils/resumeProcessing';
 import logger from '../utils/logger.frontend';
 import toast from 'react-hot-toast';
 import { templateService, Template } from '../utils/templateService';
 import { type FileWithPath, type FileStatus, type ExportFormats, getFilesFromEvent } from './batchUpload.utils';
 import BatchUploadOptions from './BatchUploadOptions';
 import BatchUploadFileList from './BatchUploadFileList';
+import { useBatchExport } from './batchUpload/useBatchExport';
+import { useBatchProcessing } from './batchUpload/useBatchProcessing';
 
 const BatchUploadPage = (): JSX.Element => {
   const { t } = useTranslation();
@@ -111,6 +115,77 @@ const BatchUploadPage = (): JSX.Element => {
       };
     }
   }, [exportOption, templates.length]);
+
+  // --- File management callbacks ---
+
+  const updateFileStatus = useCallback((index: number, updates: Partial<FileStatus>) => {
+    if (!isMountedRef.current) return; // Guard against unmount
+    setFiles(prev => {
+      const updated = prev.map((f, i) => i === index ? { ...f, ...updates } : f);
+      filesRef.current = updated;
+      return updated;
+    });
+  }, []);
+
+  const removeFile = (index: number) => {
+    setFiles(prev => {
+      const updated = prev.filter((_, i) => i !== index);
+      filesRef.current = updated;
+      return updated;
+    });
+  };
+
+  const clearAllFiles = () => {
+    setFiles([]);
+    filesRef.current = [];
+    setShowClearConfirm(false);
+  };
+  
+  // Retry a failed file
+  const retryFile = (index: number) => {
+    setFiles(prev => {
+      const updated = prev.map((f, i) => i === index ? { ...f, status: 'pending' as const, progress: 0, error: undefined } : f);
+      filesRef.current = updated;
+      return updated;
+    });
+  };
+
+  // --- Hooks for processing and export ---
+
+  const { startBatchExport, deleteProcessedResumes } = useBatchExport({
+    filesRef,
+    isMountedRef,
+    processedResumeIdsRef,
+    selectedTemplate,
+    exportFormats,
+    setIsExporting,
+    setIsDeleting,
+    setResumesDeleted,
+  });
+
+  const { startProcessing, getEstimatedTime } = useBatchProcessing({
+    filesRef,
+    isMountedRef,
+    abortControllerRef,
+    processedResumeIdsRef,
+    keepAliveIntervalRef,
+    timeoutRefs,
+    isAdmin,
+    selectedFirmId,
+    improveOption,
+    exportOption,
+    exportFormats,
+    selectedTemplate,
+    deleteAfterExport,
+    isProcessing,
+    setFiles,
+    setIsProcessing,
+    updateFileStatus,
+    startBatchExport,
+    deleteProcessedResumes,
+  });
+
+  // --- Dropzone ---
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     // Show loading animation immediately
@@ -211,569 +286,6 @@ const BatchUploadPage = (): JSX.Element => {
     maxSize: 50 * 1024 * 1024, // 50MB
     disabled: isProcessing
   });
-
-  const removeFile = (index: number) => {
-    setFiles(prev => {
-      const updated = prev.filter((_, i) => i !== index);
-      filesRef.current = updated;
-      return updated;
-    });
-  };
-
-  const clearAllFiles = () => {
-    setFiles([]);
-    filesRef.current = [];
-    setShowClearConfirm(false);
-  };
-
-  const updateFileStatus = (index: number, updates: Partial<FileStatus>) => {
-    if (!isMountedRef.current) return; // Guard against unmount
-    setFiles(prev => {
-      const updated = prev.map((f, i) => i === index ? { ...f, ...updates } : f);
-      filesRef.current = updated;
-      return updated;
-    });
-  };
-  
-  // Retry a failed file
-  const retryFile = (index: number) => {
-    setFiles(prev => {
-      const updated = prev.map((f, i) => i === index ? { ...f, status: 'pending' as const, progress: 0, error: undefined } : f);
-      filesRef.current = updated;
-      return updated;
-    });
-  };
-
-  const processFile = async (fileStatus: FileStatus, index: number, signal: AbortSignal): Promise<void> => {
-    try {
-      // Step 1: Upload
-      updateFileStatus(index, { status: 'uploading', progress: 10 });
-      
-      const formData = new FormData();
-      formData.append('file', fileStatus.file);
-      formData.append('name', fileStatus.file.name);
-      formData.append('title', '');
-      // RGPD: CVs internes sans nom renseigné
-      formData.append('profile_type', 'employee');
-      formData.append('candidate_name', ''); // Pas de nom pour les imports par lot
-      
-      if (isAdmin && selectedFirmId) {
-        formData.append('firm_id', selectedFirmId);
-      }
-      
-      const uploadOptions = await createAuthOptionsWithCsrf({
-        method: 'POST',
-        body: formData
-      });
-      
-      if (uploadOptions.headers) {
-        delete uploadOptions.headers['Content-Type'];
-      }
-      
-      const uploadResponse = await fetchWithAuth('/api/resumes/upload', {
-        ...uploadOptions,
-        signal
-      });
-      
-      if (!uploadResponse.ok) {
-        const errorData = await uploadResponse.json().catch(() => ({ error: 'Échec de l\'upload' }));
-        throw new Error(errorData.error || 'Échec de l\'upload');
-      }
-      
-      const uploadedResume = await uploadResponse.json();
-      updateFileStatus(index, { 
-        resumeId: uploadedResume.id, 
-        resumeName: uploadedResume.Name,
-        progress: 25 
-      });
-      
-      // Track this resume ID for potential deletion later
-      if (uploadedResume.id) {
-        processedResumeIdsRef.current.push(uploadedResume.id);
-      }
-      
-      // Step 2: Extract text
-      updateFileStatus(index, { status: 'extracting', progress: 35 });
-      const text = await extractResumeText(fileStatus.file);
-      
-      if (!text || text.length === 0) {
-        throw new Error('Impossible d\'extraire le texte du CV');
-      }
-      
-      updateFileStatus(index, { progress: 50 });
-      
-      // Step 3: Analyze
-      updateFileStatus(index, { status: 'analyzing', progress: 55 });
-      
-      const analysisOptions = await createAuthOptionsWithCsrf({
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text })
-      });
-      
-      const analysisResponse = await fetchWithAuth('/api/resumes/analyze-text', {
-        ...analysisOptions,
-        signal
-      });
-      
-      if (!analysisResponse.ok) {
-        const errorData = await analysisResponse.json().catch(() => ({ error: 'Échec de l\'analyse' }));
-        throw new Error(errorData.error || 'Échec de l\'analyse');
-      }
-      
-      const analysis = await analysisResponse.json();
-      updateFileStatus(index, { progress: 70 });
-      
-      // Step 4: Update resume with analysis
-      const tags = analysis.tags || { skills: [], industries: [], tools: [], softSkills: [] };
-      const suggestions = analysis.suggestions || {};
-      const originalText = analysis.structuredText || text;
-      
-      const updateOptions = await createAuthOptionsWithCsrf({
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          'Original Text': originalText,
-          'Global Rating': analysis.globalRating,
-          'Skills Score': analysis.skillsRating,
-          'Experience Score': analysis.experiencesRating,
-          'Education Score': analysis.educationRating,
-          'ATS Score': analysis.atsOptimizationRating,
-          'Executive Summary Score': analysis.executiveSummaryRating,
-          'Hobbies Languages Score': analysis.hobbiesLanguagesRating,
-          'Skills': tags.skills || [],
-          'Industries': tags.industries || [],
-          'Tools': tags.tools || [],
-          'Soft Skills': tags.softSkills || [],
-          'Key Improvements': JSON.stringify(suggestions),
-          'Name': analysis.name,
-          'Original Name': analysis.originalName || analysis.name,
-          'Title': analysis.title,
-          'Status': 'Analyzed',
-          'Analysis Date': new Date().toISOString()
-        })
-      });
-      
-      await fetchWithAuth(`/api/resumes/${uploadedResume.id}`, {
-        ...updateOptions,
-        signal
-      });
-      
-      updateFileStatus(index, { progress: 80 });
-      
-      // Step 5: Improve (if option selected)
-      if (improveOption) {
-        updateFileStatus(index, { status: 'improving', progress: 85 });
-        
-        // Build analysis object like improveCurrentResume does
-        const currentAnalysis = {
-          globalRating: analysis.globalRating,
-          skillsRating: analysis.skillsRating,
-          experiencesRating: analysis.experiencesRating,
-          educationRating: analysis.educationRating,
-          atsOptimizationRating: analysis.atsOptimizationRating,
-          executiveSummaryRating: analysis.executiveSummaryRating,
-          hobbiesLanguagesRating: analysis.hobbiesLanguagesRating,
-          suggestions: suggestions,
-          name: analysis.name,
-          originalName: analysis.originalName || analysis.name,
-          title: analysis.title
-        };
-        
-        const improveOptions = await createAuthOptionsWithCsrf({
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            text: originalText,
-            analysis: currentAnalysis
-          })
-        });
-        
-        // Use /api/resumes/improve (same as improveCurrentResume) for full post-improvement analysis
-        const improveResponse = await fetchWithAuth('/api/resumes/improve', {
-          ...improveOptions,
-          signal
-        });
-        
-        if (improveResponse.ok) {
-          const { text: improvedText, analysis: improvedAnalysis } = await improveResponse.json();
-          
-          // Helper to get score value (handles 0 as valid value)
-          const getScore = (primary: number | string | undefined, fallback: number | string | undefined): number => {
-            if (primary !== undefined && primary !== null) return typeof primary === 'number' ? primary : parseInt(String(primary).replace('%', ''), 10) || 0;
-            if (fallback !== undefined && fallback !== null) return typeof fallback === 'number' ? fallback : parseInt(String(fallback).replace('%', ''), 10) || 0;
-            return 0;
-          };
-          
-          // Save improved text and all improved scores (same as improveCurrentResume)
-          const improvedSuggestions = improvedAnalysis?.suggestions || improvedAnalysis?.['Key Improvements'] || {};
-          
-          const saveImprovedOptions = await createAuthOptionsWithCsrf({
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              'Improved Text': improvedText,
-              'Improved Global Rating': String(getScore(improvedAnalysis?.globalRating, improvedAnalysis?.['Global Rating'])),
-              'Improved Skills Score': String(getScore(improvedAnalysis?.skillsRating, improvedAnalysis?.['Skills'])),
-              'Improved Experience Score': String(getScore(improvedAnalysis?.experiencesRating, improvedAnalysis?.['Experience'])),
-              'Improved Education Score': String(getScore(improvedAnalysis?.educationRating, improvedAnalysis?.['Education'])),
-              'Improved ATS Score': String(getScore(improvedAnalysis?.atsOptimizationRating, improvedAnalysis?.['ATS Compatibility'])),
-              'Improved Executive Summary Score': String(getScore(improvedAnalysis?.executiveSummaryRating, improvedAnalysis?.['Executive Summary'])),
-              'Improved Hobbies Languages Score': String(getScore(improvedAnalysis?.hobbiesLanguagesRating, improvedAnalysis?.['Hobbies Languages'])),
-              'Improved Skills': JSON.stringify(improvedAnalysis?.tags?.skills || []),
-              'Improved Industries': JSON.stringify(improvedAnalysis?.tags?.industries || []),
-              'Improved Tools': JSON.stringify(improvedAnalysis?.tags?.tools || []),
-              'Improved Soft Skills': JSON.stringify(improvedAnalysis?.tags?.softSkills || []),
-              'Improved Key Improvements': JSON.stringify(improvedSuggestions),
-              'Status': 'Improved',
-              'Last Improved': new Date().toISOString()
-            })
-          });
-          
-          await fetchWithAuth(`/api/resumes/${uploadedResume.id}`, {
-            ...saveImprovedOptions,
-            signal
-          });
-        }
-        // Don't fail if improvement fails, just log it
-        else {
-          logger.warn(`[BatchUpload] Improvement failed for ${fileStatus.file.name}, continuing...`);
-        }
-      }
-      
-      updateFileStatus(index, { status: 'success', progress: 100 });
-      
-    } catch (error) {
-      if (error instanceof Error && error.name === 'AbortError') {
-        updateFileStatus(index, { status: 'error', error: 'Annulé' });
-      } else {
-        const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
-        logger.error(`[BatchUpload] Error processing ${fileStatus.file.name}:`, error);
-        updateFileStatus(index, { status: 'error', error: errorMessage });
-      }
-    }
-  };
-
-  const startProcessing = async () => {
-    const currentFiles = filesRef.current;
-    if (currentFiles.length === 0) {
-      toast.error(t('batchUpload.noFiles', 'Aucun fichier à traiter'));
-      return;
-    }
-    
-    setIsProcessing(true);
-    
-    try {
-      // Create a batch job with all files - backend will process in parallel
-      const formData = new FormData();
-      const relativePaths: (string | null)[] = [];
-      
-      currentFiles.forEach((fileStatus) => {
-        formData.append('files', fileStatus.file);
-        relativePaths.push(fileStatus.relativePath || null);
-      });
-      
-      // Add relative paths to preserve folder structure
-      formData.append('relativePaths', JSON.stringify(relativePaths));
-      
-      // Add options as individual form fields
-      formData.append('improve', String(improveOption));
-      formData.append('export', String(exportOption));
-      formData.append('exportFormats', JSON.stringify(exportFormats));
-      if (selectedTemplate) {
-        formData.append('templateId', selectedTemplate);
-      }
-      formData.append('deleteAfterExport', String(deleteAfterExport));
-      
-      // Mark all files as uploading
-      currentFiles.forEach((_, index) => {
-        updateFileStatus(index, { status: 'uploading', progress: 10 });
-      });
-      
-      // Create the job - get CSRF token and send with FormData
-      // IMPORTANT: Don't set Content-Type header - browser will set it with correct boundary for multipart/form-data
-      const csrfOptions = await createAuthOptionsWithCsrf({ method: 'POST' });
-      const response = await fetchWithAuth('/api/batch-jobs', {
-        method: 'POST',
-        headers: {
-          'x-csrf-token': (csrfOptions.headers as Record<string, string>)?.['x-csrf-token'] || ''
-        },
-        credentials: 'include',
-        body: formData
-      });
-      
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Erreur lors de la création du job');
-      }
-      
-      const job = await response.json();
-      logger.info('[BatchUpload] Job created', { jobId: job.id, itemCount: job.total_items });
-      
-      // Mark all files as processing (backend handles the rest)
-      currentFiles.forEach((_, index) => {
-        updateFileStatus(index, { status: 'analyzing', progress: 50 });
-      });
-      
-      toast.success(t('batchJobs.jobCreated', { count: job.total_items }));
-      
-      // Clear files and redirect to the dedicated Jobs page
-      setFiles([]);
-      navigate('/batch-jobs');
-      
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
-      logger.error('[BatchUpload] Error creating job:', error);
-      toast.error(errorMessage);
-      
-      // Mark all files as error
-      currentFiles.forEach((_, index) => {
-        updateFileStatus(index, { status: 'error', error: errorMessage });
-      });
-    } finally {
-      if (isMountedRef.current) {
-        setIsProcessing(false);
-      }
-    }
-  };
-
-  // Legacy sequential processing (kept for reference but not used)
-  const startProcessingLegacy = async () => {
-    const currentFiles = filesRef.current;
-    if (currentFiles.length === 0) {
-      toast.error(t('batchUpload.noFiles', 'Aucun fichier à traiter'));
-      return;
-    }
-    
-    setIsProcessing(true);
-    abortControllerRef.current = new AbortController();
-    processedResumeIdsRef.current = []; // Reset the list of processed resume IDs
-    
-    // Start session keep-alive interval (refresh token every 2 minutes)
-    // This prevents session expiration during long batch processing
-    const KEEP_ALIVE_INTERVAL = 2 * 60 * 1000; // 2 minutes
-    keepAliveIntervalRef.current = setInterval(async () => {
-      if (!isMountedRef.current || !isProcessing) {
-        if (keepAliveIntervalRef.current) {
-          clearInterval(keepAliveIntervalRef.current);
-          keepAliveIntervalRef.current = null;
-        }
-        return;
-      }
-      
-      logger.info('[BatchUpload] Session keep-alive: refreshing token...');
-      const success = await attemptTokenRefresh();
-      if (!success) {
-        logger.warn('[BatchUpload] Session keep-alive: token refresh failed');
-      } else {
-        logger.debug('[BatchUpload] Session keep-alive: token refreshed successfully');
-      }
-    }, KEEP_ALIVE_INTERVAL);
-    
-    // Process files sequentially to avoid overwhelming the server
-    for (let i = 0; i < currentFiles.length; i++) {
-      if (abortControllerRef.current.signal.aborted) break;
-      
-      // Use filesRef to get current status (avoids stale closure)
-      if (filesRef.current[i]?.status === 'pending') {
-        await processFile(filesRef.current[i], i, abortControllerRef.current.signal);
-      }
-    }
-    
-    // Stop keep-alive interval when processing is done
-    if (keepAliveIntervalRef.current) {
-      clearInterval(keepAliveIntervalRef.current);
-      keepAliveIntervalRef.current = null;
-    }
-    
-    if (isMountedRef.current) {
-      setIsProcessing(false);
-    }
-    
-    // Use filesRef to get accurate counts (avoids stale closure issue)
-    const updatedFiles = filesRef.current;
-    const finalSuccessCount = updatedFiles.filter(f => f.status === 'success').length;
-    const finalErrorCount = updatedFiles.filter(f => f.status === 'error').length;
-    
-    if (finalSuccessCount > 0) {
-      toast.success(t('batchUpload.successCount', `${finalSuccessCount} CV(s) traité(s) avec succès`));
-      
-      // Auto-trigger batch export if option is enabled, then delete if requested
-      if (exportOption && selectedTemplate) {
-        // Small delay to ensure state is updated - track timeout for cleanup
-        const exportTimeout = setTimeout(async () => {
-          if (!isMountedRef.current) return; // Guard against unmount
-          
-          await startBatchExport();
-          
-          // Delete resumes after export (regardless of export success) if option is enabled
-          if (deleteAfterExport && isMountedRef.current) {
-            await deleteProcessedResumes();
-          }
-        }, 500);
-        timeoutRefs.current.push(exportTimeout);
-      } else if (deleteAfterExport) {
-        // Delete without export if only delete option is enabled - track timeout
-        const deleteTimeout = setTimeout(async () => {
-          if (!isMountedRef.current) return; // Guard against unmount
-          await deleteProcessedResumes();
-        }, 500);
-        timeoutRefs.current.push(deleteTimeout);
-      }
-    }
-    if (finalErrorCount > 0) {
-      toast.error(t('batchUpload.errorCount', `${finalErrorCount} CV(s) en erreur`));
-    }
-  };
-  
-  // Estimate processing time based on options
-  const getEstimatedTime = (): string => {
-    const pending = filesRef.current.filter(f => f.status === 'pending').length;
-    if (pending === 0) return '';
-    
-    // Base time: ~10s per file for upload+extract+analyze
-    // Improve adds ~45s per file
-    let secondsPerFile = 10;
-    if (improveOption) secondsPerFile += 45;
-    
-    const totalSeconds = pending * secondsPerFile;
-    const minutes = Math.ceil(totalSeconds / 60);
-    
-    if (minutes < 1) return t('batchUpload.estimatedTime', '< 1 minute');
-    if (minutes === 1) return t('batchUpload.estimatedTime1min', '~1 minute');
-    return t('batchUpload.estimatedTimeMinutes', `~${minutes} minutes`);
-  };
-
-  const cancelProcessing = () => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-    }
-    // Stop keep-alive interval
-    if (keepAliveIntervalRef.current) {
-      clearInterval(keepAliveIntervalRef.current);
-      keepAliveIntervalRef.current = null;
-    }
-    if (isMountedRef.current) {
-      setIsProcessing(false);
-      toast(t('batchUpload.processingCancelled', 'Traitement annulé'), { icon: '⚠️' });
-    }
-  };
-
-  // Batch export function - generates ZIP with all successful resumes
-  const startBatchExport = async () => {
-    // Use filesRef to avoid stale closure issue
-    const successfulFiles = filesRef.current.filter(f => f.status === 'success' && f.resumeId);
-    
-    if (successfulFiles.length === 0) {
-      toast.error(t('batchUpload.noFilesToExport', 'Aucun CV traité à exporter'));
-      return false;
-    }
-    
-    if (!selectedTemplate) {
-      toast.error(t('batchUpload.selectTemplate', 'Veuillez sélectionner un modèle'));
-      return false;
-    }
-    
-    setIsExporting(true);
-    
-    try {
-      const resumeIds = successfulFiles.map(f => f.resumeId).filter(Boolean);
-      
-      const options = await createAuthOptionsWithCsrf({
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          resumeIds,
-          templateId: selectedTemplate,
-          formats: exportFormats
-        })
-      });
-      
-      const response = await fetchWithAuth('/api/batch-export', options);
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Erreur d\'export' }));
-        throw new Error(errorData.error || 'Erreur lors de l\'export');
-      }
-      
-      // Download ZIP file
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `export_cvs_${new Date().toISOString().split('T')[0]}.zip`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-      
-      toast.success(`${resumeIds.length} CV(s) exporté(s) avec succès`);
-      
-      // Return true to indicate successful export (for delete after export flow)
-      return true;
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
-      logger.error('[BatchUpload] Export error:', error);
-      toast.error(errorMessage);
-      return false;
-    } finally {
-      if (isMountedRef.current) {
-        setIsExporting(false);
-      }
-    }
-  };
-
-  // Delete all successfully processed resumes using the ref (avoids closure issues)
-  const deleteProcessedResumes = async () => {
-    if (!isMountedRef.current) return;
-    
-    const resumeIdsToDelete = processedResumeIdsRef.current;
-    
-    if (resumeIdsToDelete.length === 0) {
-      logger.warn('[BatchUpload] No resume IDs to delete');
-      return;
-    }
-    
-    logger.info(`[BatchUpload] Deleting ${resumeIdsToDelete.length} resumes`);
-    setIsDeleting(true);
-    let deletedCount = 0;
-    
-    try {
-      for (const resumeId of resumeIdsToDelete) {
-        try {
-          const options = await createAuthOptionsWithCsrf({
-            method: 'DELETE'
-          });
-          
-          const response = await fetchWithAuth(`/api/resumes/${resumeId}`, options);
-          
-          if (response.ok) {
-            deletedCount++;
-            logger.debug(`[BatchUpload] Deleted resume ${resumeId}`);
-          } else {
-            logger.warn(`[BatchUpload] Failed to delete resume ${resumeId}`);
-          }
-        } catch (err) {
-          logger.error(`[BatchUpload] Error deleting resume ${resumeId}:`, err);
-        }
-      }
-      
-      // Clear the ref after deletion
-      processedResumeIdsRef.current = [];
-      
-      if (deletedCount > 0) {
-        toast.success(`${deletedCount} CV(s) supprimé(s) de la base de données`);
-        if (isMountedRef.current) {
-          setResumesDeleted(true); // Mark that resumes have been deleted
-        }
-      }
-    } finally {
-      if (isMountedRef.current) {
-        setIsDeleting(false);
-      }
-    }
-  };
 
   // Memoize counters to avoid recalculating on every render
   const { pendingCount, successCount, errorCount } = useMemo(() => ({

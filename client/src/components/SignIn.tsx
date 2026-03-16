@@ -92,7 +92,7 @@ const SignIn = (): JSX.Element => {
     }
   };
 
-  const handle2FASuccess = (user: unknown): void => {
+  const handle2FASuccess = (_user: unknown): void => {
     // User is now authenticated, navigate to home
     navigate('/');
     window.location.reload(); // Refresh to update auth state

@@ -44,9 +44,9 @@ export default function MarketTrendsTab({ className = '' }: { className?: string
   const [summary, setSummary] = useState<TrendsSummary | null>(null);
   const [metiers, setMetiers] = useState<Metier[]>([]);
   const [loading, setLoading] = useState(true);
-  const [collecting, setCollecting] = useState(false);
+  const [_collecting, _setCollecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [collectionResult, setCollectionResult] = useState<{ stored: number; created: number; updated: number; duration: number } | null>(null);
+  const [_collectionResult, _setCollectionResult] = useState<{ stored: number; created: number; updated: number; duration: number } | null>(null);
   const [filtersLoading, setFiltersLoading] = useState(true);
   
   // Server-side filters - empty means all types
@@ -77,7 +77,7 @@ export default function MarketTrendsTab({ className = '' }: { className?: string
         ]);
         setSummary(summaryResponse.summary);
         setMetiers(metiersData);
-      } catch (err) {
+      } catch (_err) {
         // Set empty filters as fallback
         setFilters({ types: [], regions: [], romeCodes: [] });
       } finally {

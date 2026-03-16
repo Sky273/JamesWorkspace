@@ -73,8 +73,7 @@ function parseMjmlToBlocks(mjml: string): EditorBlock[] {
   
   // First, detect mj-image tags for logo blocks
   const imageRegex = /<mj-image[^>]*src="[^"]*\{\{firm\.logo\}\}"[^>]*\/>/g;
-  let imageMatch;
-  while ((imageMatch = imageRegex.exec(mjml)) !== null) {
+  while (imageRegex.exec(mjml) !== null) {
     blocks.push({
       id: generateId(),
       type: 'logo',
