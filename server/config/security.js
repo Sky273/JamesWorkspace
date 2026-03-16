@@ -37,7 +37,9 @@ const isProduction = process.env.NODE_ENV === 'production';
 // RECOMMENDATIONS FOR FUTURE:
 // 1. Monitor TinyMCE updates for CSP-safe eval alternatives
 // 2. Consider server-side PDF text extraction to reduce client-side PDF.js usage
-// 3. Implement Subresource Integrity (SRI) for external scripts
+//
+// IMPLEMENTED:
+// - Subresource Integrity (SRI) for Swagger UI external scripts/styles (routeRegistry.js)
 // ============================================
 
 export function configureHelmet(app) {
@@ -84,8 +86,9 @@ export function configureHelmet(app) {
                     "'self'",
                     "data:",
                     "blob:",
-                    "https:",  // Allow images from any HTTPS source (for resume attachments)
-                    "https://unpkg.com"  // Swagger UI favicon
+                    "https://unpkg.com",                     // Swagger UI favicon
+                    "https://basemaps.cartocdn.com",         // MapLibre GL map tiles
+                    "https://*.basemaps.cartocdn.com"        // MapLibre GL map tiles from subdomains
                 ],
                 connectSrc: [
                     "'self'",

@@ -160,5 +160,3 @@ export function requireFirmAccess(getResourceFirm) {
     };
 }
 
-// Backward compatibility alias
-export const requireCustomerAccess = requireFirmAccess;

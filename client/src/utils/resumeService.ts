@@ -44,7 +44,4 @@ export const resumeService = {
     }
 };
 
-// Backward compatibility alias
-export const airtableService = resumeService;
-
 export default resumeService;

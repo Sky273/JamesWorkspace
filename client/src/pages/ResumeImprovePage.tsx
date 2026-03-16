@@ -220,13 +220,13 @@ const ResumeImprovePage = (): JSX.Element => {
   const handleVersionRestored = useCallback(async (newVersion: number) => {
     if (!currentResume) return;
     try {
-      const updatedResumeData = await resumeService.getResume(currentResume.id);
+      const updatedResumeData = await resumeService.getResume(currentResume.id) as Record<string, unknown>;
       if (updatedResumeData) {
         const updatedResume = { ...localResume, ...updatedResumeData, 'Current Version': newVersion };
         setLocalResume(updatedResume as Resume);
         setCurrentResume(updatedResume as Resume);
         
-        const restoredText = updatedResumeData['Improved Text'] || updatedResumeData['improved_text'] || '';
+        const restoredText = (updatedResumeData['Improved Text'] || updatedResumeData['improved_text'] || '') as string;
         if (editorRef.current && restoredText) {
           editorRef.current.setContent(restoredText);
         }
