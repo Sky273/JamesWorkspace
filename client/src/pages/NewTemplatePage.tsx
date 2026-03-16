@@ -175,7 +175,7 @@ const NewTemplatePage = (): JSX.Element => {
           };
           reader.onerror = (error) => reject(error);
         }
-      } catch (error) {
+      } catch {
         reject('Image upload failed');
       }
     });

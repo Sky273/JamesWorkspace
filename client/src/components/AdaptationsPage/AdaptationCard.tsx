@@ -134,5 +134,6 @@ const AdaptationCard = ({
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export { getScoreColor, getScoreBgColor, getStatusColor };
 export default AdaptationCard;

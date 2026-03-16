@@ -209,7 +209,7 @@ export default function FactsPage() {
   }, {} as Record<string, string>);
 
   // Group facts by source for display (using server-paginated facts)
-  const groupedFacts = facts.reduce((acc, fact) => {
+  const _groupedFacts = facts.reduce((acc, fact) => {
     const key = fact.Source || 'other';
     if (!acc[key]) acc[key] = [];
     acc[key].push(fact);

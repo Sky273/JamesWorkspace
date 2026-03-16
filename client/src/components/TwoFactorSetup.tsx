@@ -37,7 +37,7 @@ export default function TwoFactorSetup({ onClose, onSuccess }: TwoFactorSetupPro
       const data = await response.json();
       setSetupData(data);
       setStep('setup');
-    } catch (_error) {
+    } catch {
       toast.error('Erreur lors de l\'initialisation du 2FA');
     } finally {
       setLoading(false);
@@ -63,7 +63,7 @@ export default function TwoFactorSetup({ onClose, onSuccess }: TwoFactorSetupPro
       
       toast.success('2FA activé avec succès !');
       setStep('backup');
-    } catch (_error) {
+    } catch {
       toast.error('Erreur lors de la vérification');
     } finally {
       setLoading(false);
@@ -81,7 +81,7 @@ export default function TwoFactorSetup({ onClose, onSuccess }: TwoFactorSetupPro
         setTimeout(() => setCopiedBackup(false), 2000);
       }
       toast.success('Copié !');
-    } catch (_error) {
+    } catch {
       toast.error('Erreur lors de la copie');
     }
   };

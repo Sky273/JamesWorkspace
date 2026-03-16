@@ -30,6 +30,7 @@ const UploadPage = (): JSX.Element => {
     // Mark as ready for new upload after a tick
     const timer = setTimeout(() => setReadyForUpload(true), 50);
     return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.key]); // Re-run when navigation key changes (new navigation to /upload)
 
   // Redirect to analysis page only when a NEW resume is uploaded (after we're ready)

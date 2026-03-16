@@ -294,7 +294,8 @@ export function useRegionData({ trends, dataSource, selectedMetier }: UseRegionD
   const currentRegionData = useMemo(() => {
     if (dataSource === 'all') return combinedRegionData;
     return dataSource === 'offres' ? jobRegionData : trendRegionData;
-  }, [dataSource, jobRegionData, trendRegionData, combinedRegionData, selectedMetier]);
+   
+  }, [dataSource, jobRegionData, trendRegionData, combinedRegionData]);
 
   // Calculate max value for scaling (recalculates when selectedMetier changes via jobRegionData/trendRegionData)
   const maxValue = useMemo(() => {
@@ -305,7 +306,8 @@ export function useRegionData({ trends, dataSource, selectedMetier }: UseRegionD
       return Math.max(...jobRegionData.map(r => r.totalJobs), 1);
     }
     return Math.max(...trendRegionData.map(r => r.value), 1);
-  }, [jobRegionData, trendRegionData, combinedRegionData, dataSource, selectedMetier]);
+   
+  }, [jobRegionData, trendRegionData, combinedRegionData, dataSource]);
 
   // Calculate totals based on data source
   // For embauche, demandeur, demandeur_entrant: sum (these are counts)

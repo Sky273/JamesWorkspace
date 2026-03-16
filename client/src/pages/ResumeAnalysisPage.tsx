@@ -33,7 +33,7 @@ const ResumeAnalysisPage = (): JSX.Element => {
   const fromDealsView = (location.state as { from?: string } | null)?.from === 'dealsGroupedView'
     || sessionStorage.getItem('dealsGroupedViewState') !== null;
   const { t } = useTranslation();
-  const { currentResume, setCurrentResume, resumes, improveCurrentResume, loading: contextLoading, processingStep } = useResume();
+  const { currentResume, setCurrentResume, resumes, improveCurrentResume, loading: _contextLoading, processingStep } = useResume();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'skills' | 'original' | 'pipeline'>('overview');

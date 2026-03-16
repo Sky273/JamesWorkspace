@@ -34,7 +34,7 @@ interface Template {
 
 const ResumeExportPage = (): JSX.Element => {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  const _navigate = useNavigate();
   const { t } = useTranslation();
   const { currentResume, setCurrentResume, resumes } = useResume();
   const [loading, setLoading] = useState(true);
@@ -134,7 +134,7 @@ const ResumeExportPage = (): JSX.Element => {
       // Determine endpoint and file extension based on format
       const endpoint = selectedFormat === 'pdf' ? '/generate-pdf' : '/generate-docx';
       const fileExtension = selectedFormat === 'pdf' ? 'pdf' : selectedFormat;
-      const mimeType = selectedFormat === 'pdf' 
+      const _mimeType = selectedFormat === 'pdf' 
         ? 'application/pdf' 
         : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 

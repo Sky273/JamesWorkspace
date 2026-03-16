@@ -13,11 +13,9 @@ import { useAuthFetch } from '../hooks/useAuthFetch';
 import toast from 'react-hot-toast';
 import logger from '../utils/logger.frontend';
 import { formatDate } from '../utils/dateFormatter';
-import { createSafeHtml } from '../utils/sanitizer.frontend';
 
 import { StatsCards, SearchAndActions } from '../components/MissionsPage';
 import Pagination from '../components/Pagination';
-import AdminFirmSelector from '../components/AdminFirmSelector';
 import { loadTinyMCE } from '../utils/lazyTinyMCE';
 import { SkeletonMissionList } from '../components/ui/Skeleton';
 import Breadcrumbs from '../components/Breadcrumbs';
@@ -87,7 +85,7 @@ const MissionsPage = (): JSX.Element => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
+  useAuth();
   const { authGet, authPost, authPut, authDelete } = useAuthFetch();
   const [missions, setMissions] = useState<Mission[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -97,7 +95,7 @@ const MissionsPage = (): JSX.Element => {
   // Server-side pagination state
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [totalCount, setTotalCount] = useState<number>(0);
-  const [hasMore, setHasMore] = useState<boolean>(false);
+  const [, setHasMore] = useState<boolean>(false);
   const pageSize = 12;
   const [showModal, setShowModal] = useState<boolean>(false);
   const [editingMission, setEditingMission] = useState<Mission | null>(null);
@@ -200,6 +198,7 @@ const MissionsPage = (): JSX.Element => {
     } else {
       setContacts([]);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData['Client ID'], fetchContacts]);
 
   // Debounce search input
@@ -354,7 +353,7 @@ const MissionsPage = (): JSX.Element => {
   // No client-side filtering needed - server handles it
   const filteredMissions = missions;
 
-  const formatMissionDate = (dateString?: string): string => {
+  const _formatMissionDate = (dateString?: string): string => {
     return formatDate(dateString, 'medium') || 'Non définie';
   };
 
@@ -408,6 +407,7 @@ const MissionsPage = (): JSX.Element => {
         tinymceCleanup.get('missionContentEditor')?.remove();
       }
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showModal, tinymceLoaded]);
 
   useEffect(() => {

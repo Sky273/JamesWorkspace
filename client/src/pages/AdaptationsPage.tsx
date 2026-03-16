@@ -95,14 +95,14 @@ const AdaptationsPage = (): JSX.Element => {
   // Server-side pagination state
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [totalCount, setTotalCount] = useState<number>(0);
-  const [hasMore, setHasMore] = useState<boolean>(false);
+  const [, setHasMore] = useState<boolean>(false);
   const pageSize = 12;
   const [selectedAdaptation, setSelectedAdaptation] = useState<Adaptation | null>(null);
   const [showDetailModal, setShowDetailModal] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<string>('analysis');
   const [editedAdaptedText, setEditedAdaptedText] = useState<string>('');
   const [isSaving, setIsSaving] = useState<boolean>(false);
-  const editorRef = useRef<any>(null);
+  const editorRef = useRef<{ on: (event: string, callback: () => void) => void; getContent: () => string; setContent: (content: string) => void; remove: () => void } | null>(null);
   const [editorReady, setEditorReady] = useState<boolean>(false);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
@@ -132,6 +132,7 @@ const AdaptationsPage = (): JSX.Element => {
     setCurrentPage(1);
   }, [filterStatus]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchData/fetchTemplates use deps that match the effect array
   useEffect(() => { fetchData(); fetchTemplates(); }, [currentPage, debouncedSearch, filterStatus]);
 
   const fetchTemplates = async (): Promise<void> => {
@@ -224,7 +225,7 @@ const AdaptationsPage = (): JSX.Element => {
     }
   };
 
-  const handleView = (adaptation: Adaptation): void => {
+  const _handleView = (adaptation: Adaptation): void => {
     setSelectedAdaptation(adaptation);
     setEditedAdaptedText(adaptation['Adapted Text'] || '');
     setShowDetailModal(true);
@@ -369,7 +370,7 @@ const AdaptationsPage = (): JSX.Element => {
           plugins: 'advlist autolink lists link charmap preview code fullscreen table wordcount',
           toolbar: 'undo redo | formatselect | bold italic | alignleft aligncenter alignright | bullist numlist | link | code fullscreen',
           content_style: 'body { font-family: Arial, sans-serif; font-size: 14px; }',
-          setup: (editor: { on: (event: string, callback: () => void) => void; setContent: (content: string) => void; getContent: () => string }) => {
+          setup: (editor: { on: (event: string, callback: () => void) => void; setContent: (content: string) => void; getContent: () => string; remove: () => void }) => {
             editorRef.current = editor;
             editor.on('init', () => { setEditorReady(true); editor.setContent(editedAdaptedText || ''); });
             editor.on('change', () => { setEditedAdaptedText(editor.getContent()); });

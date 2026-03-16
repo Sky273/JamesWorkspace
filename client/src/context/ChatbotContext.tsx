@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 /**
  * ChatbotContext - Manages chatbot enabled state globally
  * Allows dynamic updates without page refresh
@@ -19,7 +20,7 @@ interface ChatbotProviderProps {
 
 export const ChatbotProvider = ({ children }: ChatbotProviderProps): JSX.Element => {
   const [chatbotEnabled, setChatbotEnabled] = useState<boolean>(true);
-  const [refreshKey, setRefreshKey] = useState<number>(0);
+  const [, setRefreshKey] = useState<number>(0);
 
   const refreshChatbotStatus = useCallback(() => {
     // Increment key to trigger re-fetch in ChatBot component

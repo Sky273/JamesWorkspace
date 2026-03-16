@@ -101,7 +101,7 @@ export default function WebGLBackground({ className = '' }: WebGLBackgroundProps
     particlesRef.current = particles;
 
     // Store velocities for animation
-    (particles as any).velocities = velocities;
+    (particles.userData).velocities = velocities;
 
     // Animation loop
     let time = 0;
@@ -118,7 +118,7 @@ export default function WebGLBackground({ className = '' }: WebGLBackgroundProps
       // Animate particles floating with more visible movement
       if (particlesRef.current) {
         const positions = particlesRef.current.geometry.attributes.position.array as Float32Array;
-        const vels = (particlesRef.current as any).velocities as Float32Array;
+        const vels = (particlesRef.current.userData).velocities as Float32Array;
 
         for (let i = 0; i < particleCount; i++) {
           const i3 = i * 3;
@@ -166,12 +166,13 @@ export default function WebGLBackground({ className = '' }: WebGLBackgroundProps
     window.addEventListener('resize', handleResize);
 
     // Cleanup
+    const containerEl = containerRef.current;
     return () => {
       window.removeEventListener('resize', handleResize);
       cancelAnimationFrame(frameIdRef.current);
       
-      if (rendererRef.current && containerRef.current) {
-        containerRef.current.removeChild(rendererRef.current.domElement);
+      if (rendererRef.current && containerEl) {
+        containerEl.removeChild(rendererRef.current.domElement);
         rendererRef.current.dispose();
       }
 

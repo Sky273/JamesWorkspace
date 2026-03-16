@@ -77,7 +77,7 @@ export default function MarketTrendsTab({ className = '' }: { className?: string
         ]);
         setSummary(summaryResponse.summary);
         setMetiers(metiersData);
-      } catch (_err) {
+      } catch {
         // Set empty filters as fallback
         setFilters({ types: [], regions: [], romeCodes: [] });
       } finally {

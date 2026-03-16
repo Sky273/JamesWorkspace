@@ -70,13 +70,14 @@ const ConsentResponsePage = (): JSX.Element => {
                 if (actionFromUrl === 'accept' || actionFromUrl === 'refuse') {
                     handleSubmit(actionFromUrl === 'accept');
                 }
-            } catch (err) {
+            } catch {
                 setError(t('consent.response.errors.network'));
                 setPageState('error');
             }
         };
 
         fetchConsentInfo();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [token, t]);
 
     const handleSubmit = async (accept: boolean) => {
@@ -107,7 +108,7 @@ const ConsentResponsePage = (): JSX.Element => {
             }
 
             setPageState('success');
-        } catch (err) {
+        } catch {
             setError(t('consent.response.errors.network'));
             setPageState('error');
         }

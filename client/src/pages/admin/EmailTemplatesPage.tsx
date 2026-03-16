@@ -56,7 +56,7 @@ const EmailTemplatesPage = (): JSX.Element => {
       ]);
       setTemplates(templatesData);
       setKeywords(keywordsData);
-    } catch (error) {
+    } catch {
       toast.error(t('emailTemplates.errors.loadFailed'));
     } finally {
       setLoading(false);
@@ -94,7 +94,7 @@ const EmailTemplatesPage = (): JSX.Element => {
       setFormMjml(fullTemplate.mjml_content);
       setFormIsDefault(fullTemplate.is_default);
       setModalMode('edit');
-    } catch (error) {
+    } catch {
       toast.error(t('emailTemplates.errors.loadFailed'));
     }
   };
@@ -109,7 +109,7 @@ const EmailTemplatesPage = (): JSX.Element => {
       const result = await emailTemplateService.previewTemplate(template.id);
       setPreviewHtml(result.html);
       setPreviewSubject(result.subject);
-    } catch (error) {
+    } catch {
       toast.error(t('emailTemplates.errors.previewFailed'));
     } finally {
       setPreviewLoading(false);
@@ -122,7 +122,7 @@ const EmailTemplatesPage = (): JSX.Element => {
       await emailTemplateService.duplicateTemplate(template.id);
       toast.success(t('emailTemplates.success.duplicated'));
       loadData();
-    } catch (error) {
+    } catch {
       toast.error(t('emailTemplates.errors.duplicateFailed'));
     }
   };
@@ -142,7 +142,7 @@ const EmailTemplatesPage = (): JSX.Element => {
       await emailTemplateService.deleteTemplate(template.id);
       toast.success(t('emailTemplates.success.deleted'));
       loadData();
-    } catch (error) {
+    } catch {
       toast.error(t('emailTemplates.errors.deleteFailed'));
     }
   };
@@ -174,7 +174,7 @@ const EmailTemplatesPage = (): JSX.Element => {
       
       setModalMode(null);
       loadData();
-    } catch (error) {
+    } catch {
       toast.error(modalMode === 'create' 
         ? t('emailTemplates.errors.createFailed')
         : t('emailTemplates.errors.updateFailed')
@@ -193,7 +193,7 @@ const EmailTemplatesPage = (): JSX.Element => {
       const result = await emailTemplateService.compileMjml(formMjml, formSubject);
       setPreviewHtml(result.html);
       setPreviewSubject(result.subject);
-    } catch (error) {
+    } catch {
       toast.error(t('emailTemplates.errors.compileFailed'));
     } finally {
       setPreviewLoading(false);

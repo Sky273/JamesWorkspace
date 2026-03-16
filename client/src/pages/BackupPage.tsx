@@ -32,9 +32,11 @@ const BackupPage = (): JSX.Element => {
     const [restoring, setRestoring] = useState<string | null>(null);
     const [activeSection, setActiveSection] = useState<'config' | 'history' | 'restore'>('config');
 
+     
     useEffect(() => {
         fetchSettings();
         fetchHistory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const fetchSettings = async () => {

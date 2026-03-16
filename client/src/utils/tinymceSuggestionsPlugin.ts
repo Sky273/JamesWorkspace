@@ -200,7 +200,7 @@ function findSectionPositions(content: string): Map<string, number> {
 /**
  * Create suggestion marker HTML
  */
-function createSuggestionMarker(suggestion: string, type: 'warning' | 'error' | 'info' = 'warning'): string {
+function _createSuggestionMarker(suggestion: string, type: 'warning' | 'error' | 'info' = 'warning'): string {
   const icon = ICONS[type];
   // Use simple span with inline styles (TinyMCE may strip classes)
   const color = type === 'error' ? '#DC2626' : type === 'info' ? '#2563EB' : '#D97706';
@@ -297,7 +297,7 @@ function insertSuggestionsIntoContent(content: string, suggestions: SuggestionsB
  * Create a suggestions panel to display at the top of the content
  * Displays suggestions grouped by section with improved styling
  */
-function createSuggestionsPanel(suggestions: string[], sectionKey?: string): string {
+function _createSuggestionsPanel(suggestions: string[], sectionKey?: string): string {
   // Display ALL suggestions
   const items = suggestions.map((s, index) => 
     `<li style="display: flex; align-items: flex-start; gap: 10px; padding: 8px 12px; margin-bottom: 6px; background: rgba(255, 255, 255, 0.6); border-radius: 8px; color: #78350F; font-size: 13px; line-height: 1.4;">

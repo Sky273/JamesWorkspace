@@ -163,7 +163,7 @@ const TemplatesPage = (): JSX.Element => {
   // Server-side pagination state
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [totalCount, setTotalCount] = useState<number>(0);
-  const [hasMore, setHasMore] = useState<boolean>(false);
+  const [, setHasMore] = useState<boolean>(false);
   const pageSize = 12;
 
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
@@ -207,6 +207,7 @@ const TemplatesPage = (): JSX.Element => {
     }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchTemplates(); }, [currentPage, debouncedSearch]);
 
   // Calculate total pages (minimum 1 to avoid NaN)

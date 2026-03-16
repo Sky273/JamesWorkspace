@@ -4,6 +4,10 @@
  * Extracted from BatchUploadPage.tsx
  */
 
+import { createLogger } from '../utils/logger.frontend';
+
+const log = createLogger('BatchUpload');
+
 // Extended File type with custom path property
 export type FileWithPath = File & {
   customRelativePath?: string;
@@ -69,30 +73,30 @@ export const getFilesFromEvent = async (event: Event | DragEvent | FileSystemFil
   
   // Handle FileSystemFileHandle[] (new API in react-dropzone v15)
   if (Array.isArray(event)) {
-    console.log('[getFilesFromEvent] Received FileSystemFileHandle array:', event.length);
+    log.debug('Received FileSystemFileHandle array: ' + event.length);
     for (const handle of event) {
       if ('getFile' in handle && typeof handle.getFile === 'function') {
         try {
           const file = await (handle as FileSystemFileHandle).getFile();
           files.push(file as FileWithPath);
         } catch (error) {
-          console.error('[getFilesFromEvent] Error getting file from handle:', error);
+          log.error('Error getting file from handle', error);
         }
       }
     }
-    console.log('[getFilesFromEvent] Files from handles:', files.length);
+    log.debug('Files from handles: ' + files.length);
     return files;
   }
   
   // Handle DragEvent
   const dragEvent = event as DragEvent;
-  console.log('[getFilesFromEvent] Event type:', dragEvent.type, 'Has dataTransfer:', !!dragEvent.dataTransfer);
+  log.debug('Event type: ' + dragEvent.type + ', Has dataTransfer: ' + !!dragEvent.dataTransfer);
   
   if (dragEvent.dataTransfer) {
     const items = dragEvent.dataTransfer.items;
     const dataTransferFiles = dragEvent.dataTransfer.files;
     
-    console.log('[getFilesFromEvent] items length:', items?.length, 'files length:', dataTransferFiles?.length);
+    log.debug('items length: ' + items?.length + ', files length: ' + dataTransferFiles?.length);
     
     // IMPORTANT: Collect entries synchronously before any async operations
     // because dataTransfer.items is cleared by the browser after the event handler returns
@@ -102,17 +106,17 @@ export const getFilesFromEvent = async (event: Event | DragEvent | FileSystemFil
       // Collect all entries SYNCHRONOUSLY first
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
-        console.log('[getFilesFromEvent] Item', i, 'kind:', item.kind, 'type:', item.type);
+        log.debug('Item ' + i + ' kind: ' + item.kind + ', type: ' + item.type);
         if (item.kind === 'file') {
           const entry = item.webkitGetAsEntry?.();
-          console.log('[getFilesFromEvent] Entry:', entry?.name, 'isFile:', entry?.isFile, 'isDirectory:', entry?.isDirectory);
+          log.debug('Entry: ' + entry?.name + ', isFile: ' + entry?.isFile + ', isDirectory: ' + entry?.isDirectory);
           if (entry) {
             entries.push(entry);
           }
         }
       }
       
-      console.log('[getFilesFromEvent] Collected entries:', entries.length);
+      log.debug('Collected entries: ' + entries.length);
       
       // Now process entries asynchronously
       if (entries.length > 0) {
@@ -120,16 +124,16 @@ export const getFilesFromEvent = async (event: Event | DragEvent | FileSystemFil
           const filePromises = entries.map(entry => traverseFileTree(entry));
           const fileArrays = await Promise.all(filePromises);
           files.push(...fileArrays.flat());
-          console.log('[getFilesFromEvent] Files from entries:', files.length);
+          log.debug('Files from entries: ' + files.length);
         } catch (error) {
-          console.error('[getFilesFromEvent] Error traversing file tree:', error);
+          log.error('Error traversing file tree', error);
         }
       }
     }
     
     // Fallback to regular files if no entries found or traversal failed
     if (files.length === 0 && dataTransferFiles && dataTransferFiles.length > 0) {
-      console.log('[getFilesFromEvent] Using fallback dataTransfer.files');
+      log.debug('Using fallback dataTransfer.files');
       for (let i = 0; i < dataTransferFiles.length; i++) {
         files.push(dataTransferFiles[i] as FileWithPath);
       }
@@ -141,13 +145,13 @@ export const getFilesFromEvent = async (event: Event | DragEvent | FileSystemFil
   if ('target' in inputEvent && inputEvent.target) {
     const input = inputEvent.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
-      console.log('[getFilesFromEvent] Files from input:', input.files.length);
+      log.debug('Files from input: ' + input.files.length);
       for (let i = 0; i < input.files.length; i++) {
         files.push(input.files[i] as FileWithPath);
       }
     }
   }
   
-  console.log('[getFilesFromEvent] Returning files:', files.length);
+  log.debug('Returning files: ' + files.length);
   return files;
 };

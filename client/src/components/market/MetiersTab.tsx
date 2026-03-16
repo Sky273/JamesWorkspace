@@ -69,6 +69,7 @@ export default function MetiersTab({ className = '' }: MetiersTabProps) {
   // Load stored métiers when page or search changes
   useEffect(() => {
     loadMetiers();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- loadMetiers deps match the effect deps
   }, [currentPage, searchQuery]);
 
   const loadGlobalStats = async () => {

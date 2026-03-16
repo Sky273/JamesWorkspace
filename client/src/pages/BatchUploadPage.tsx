@@ -45,7 +45,7 @@ const BatchUploadPage = (): JSX.Element => {
   const [exportFormats, setExportFormats] = useState<ExportFormats>(['pdf']);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [isExporting, setIsExporting] = useState<boolean>(false);
-  const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  const [, setIsDeleting] = useState<boolean>(false);
   const [resumesDeleted, setResumesDeleted] = useState<boolean>(false); // Track if resumes were deleted
   const [selectedFirmId, setSelectedFirmId] = useState<string>('');
   const [showClearConfirm, setShowClearConfirm] = useState<boolean>(false);

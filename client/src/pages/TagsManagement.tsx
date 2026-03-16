@@ -131,7 +131,7 @@ function cleanTag(tag: string): string[] {
   if (!normalized) return [];
   
   // Split on common separators (NOT on spaces - keep multi-word tags intact)
-  const parts = normalized.split(/[\/,;|]+/).map(p => p.trim()).filter(p => p.length > 0);
+  const parts = normalized.split(/[/,;|]+/).map(p => p.trim()).filter(p => p.length > 0);
   
   const result: string[] = [];
   
@@ -154,7 +154,7 @@ function cleanTag(tag: string): string[] {
  * @param tags - Array of tags to clean
  * @param softClean - If true, only lowercase (for soft skills)
  */
-function cleanTagsForCategory(tags: string[], softClean = false): string[] {
+function _cleanTagsForCategory(tags: string[], softClean = false): string[] {
   const allCleaned: string[] = [];
   
   for (const tag of tags) {
@@ -208,6 +208,7 @@ const TagsManagement = (): JSX.Element => {
     }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchTags(); }, []);
 
   // Display cleaned tags directly from server (no frontend cleaning logic)

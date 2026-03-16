@@ -31,7 +31,7 @@ interface UserProfile {
 }
 
 const UserProfilePage = (): JSX.Element => {
-  const { t } = useTranslation();
+  useTranslation();
   const { user } = useAuth();
   const { authGet, authPut } = useAuthFetch();
   const [activeTab, setActiveTab] = useState<'profile' | 'security'>('profile');
@@ -44,8 +44,10 @@ const UserProfilePage = (): JSX.Element => {
     phone: ''
   });
 
+   
   useEffect(() => {
     fetchProfile();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchProfile = async () => {
@@ -82,7 +84,7 @@ const UserProfilePage = (): JSX.Element => {
       } else {
         toast.error('Erreur lors de la mise à jour');
       }
-    } catch (error) {
+    } catch {
       toast.error('Erreur lors de la mise à jour');
     } finally {
       setSaving(false);

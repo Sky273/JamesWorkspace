@@ -14,7 +14,6 @@ import {
   DocumentTextIcon,
   SparklesIcon
 } from '@heroicons/react/24/outline';
-import { useResume } from '../context/ResumeContext';
 import { findMatchingProfiles, getMissions, clearMissionKeywordsCache, analyzeProfileForMission } from '../utils/profileMatchingService';
 import type { 
   Mission, 
@@ -38,7 +37,7 @@ const DEFAULT_WEIGHTS: ProfileMatchWeights = {
 const ProfileMatchingPage = (): JSX.Element => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { setCurrentResume, resumes } = useResume();
+
 
   // State
   const [missions, setMissions] = useState<Mission[]>([]);

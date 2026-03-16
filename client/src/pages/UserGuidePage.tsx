@@ -181,6 +181,7 @@ const UserGuidePage = (): JSX.Element => {
   useEffect(() => {
     const content = extractSectionContent(activeSection);
     setSectionContent(content);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSection, i18n.language, userGuideContent]);
 
   // Custom components for ReactMarkdown

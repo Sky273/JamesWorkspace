@@ -33,7 +33,7 @@ export default function MetiersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedMetier, setSelectedMetier] = useState<Metier | null>(null);
+  const [, _setSelectedMetier] = useState<Metier | null>(null);
   const [expandedMetiers, setExpandedMetiers] = useState<Set<string>>(new Set());
   
   // Collection state

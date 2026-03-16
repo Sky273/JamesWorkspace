@@ -2,7 +2,7 @@
  * Tests for dateFormatter utility
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { formatDate, formatDateTime, formatDateSmart, formatPeriod } from './dateFormatter';
 
 describe('dateFormatter', () => {

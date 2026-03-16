@@ -11,7 +11,7 @@ export const resumeService = {
      * @param resumeId - The resume ID
      * @param fields - Object with fields to update
      */
-    async updateResume(resumeId: string, fields: Record<string, any>): Promise<any> {
+    async updateResume(resumeId: string, fields: Record<string, unknown>): Promise<unknown> {
         const response = await authPut(`/api/resumes/${resumeId}`, fields);
         if (!response.ok) {
             throw new Error('Failed to update resume');
@@ -23,7 +23,7 @@ export const resumeService = {
      * Get a resume by ID
      * @param resumeId - The resume ID
      */
-    async getResume(resumeId: string): Promise<any> {
+    async getResume(resumeId: string): Promise<unknown> {
         const response = await authGet(`/api/resumes/${resumeId}`);
         if (!response.ok) {
             throw new Error('Failed to fetch resume');
@@ -34,7 +34,7 @@ export const resumeService = {
     /**
      * Get all resumes
      */
-    async getResumes(): Promise<any[]> {
+    async getResumes(): Promise<unknown[]> {
         const response = await authGet('/api/resumes');
         if (!response.ok) {
             throw new Error('Failed to fetch resumes');

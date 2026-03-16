@@ -87,12 +87,12 @@ const UsersManagement = (): JSX.Element => {
   // Server-side pagination state for users
   const [usersPage, setUsersPage] = useState<number>(1);
   const [usersTotalCount, setUsersTotalCount] = useState<number>(0);
-  const [usersHasMore, setUsersHasMore] = useState<boolean>(false);
+  const [, setUsersHasMore] = useState<boolean>(false);
   
   // Server-side pagination state for firms
   const [firmsPage, setFirmsPage] = useState<number>(1);
   const [firmsTotalCount, setFirmsTotalCount] = useState<number>(0);
-  const [firmsHasMore, setFirmsHasMore] = useState<boolean>(false);
+  const [, setFirmsHasMore] = useState<boolean>(false);
   
   const pageSize = 12;
   
@@ -152,6 +152,7 @@ const UsersManagement = (): JSX.Element => {
 
   useEffect(() => {
     fetchData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [usersPage, firmsPage, debouncedSearch]);
 
   // Calculate total pages

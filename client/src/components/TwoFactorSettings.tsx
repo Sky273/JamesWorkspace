@@ -41,6 +41,7 @@ export default function TwoFactorSettings() {
 
   useEffect(() => {
     fetchStatus();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleDisable = async () => {
@@ -63,7 +64,7 @@ export default function TwoFactorSettings() {
       } else {
         toast.error(data.message || 'Code invalide');
       }
-    } catch (_error) {
+    } catch {
       toast.error('Erreur lors de la désactivation');
     } finally {
       setActionLoading(false);
@@ -89,7 +90,7 @@ export default function TwoFactorSettings() {
       } else {
         toast.error(data.message || 'Code invalide');
       }
-    } catch (_error) {
+    } catch {
       toast.error('Erreur lors de la régénération');
     } finally {
       setActionLoading(false);
@@ -100,7 +101,7 @@ export default function TwoFactorSettings() {
     try {
       await navigator.clipboard.writeText(newBackupCodes.join('\n'));
       toast.success('Codes copiés !');
-    } catch (_error) {
+    } catch {
       toast.error('Erreur lors de la copie');
     }
   };

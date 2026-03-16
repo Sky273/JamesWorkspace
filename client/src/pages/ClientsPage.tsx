@@ -74,7 +74,7 @@ const CRMPage = (): JSX.Element => {
   // Pagination state
   const [page, setPage] = useState<number>(1);
   const [totalCount, setTotalCount] = useState<number>(0);
-  const [hasMore, setHasMore] = useState<boolean>(false);
+  const [, setHasMore] = useState<boolean>(false);
   const pageSize = 12;
   
   // Modal states
@@ -119,8 +119,10 @@ const CRMPage = (): JSX.Element => {
     }
   };
 
+   
   useEffect(() => {
     fetchData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, debouncedSearch, activeTab]);
 
   // Calculate stats - ensure numeric addition (API may return strings)

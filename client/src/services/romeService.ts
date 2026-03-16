@@ -238,7 +238,7 @@ export async function getDomaines(codeGrandDomaine?: string): Promise<Domaine[]>
 /**
  * Get IT métiers from Rome API (live query)
  */
-export async function getITMetiersFromAPI(): Promise<any[]> {
+export async function getITMetiersFromAPI(): Promise<unknown[]> {
   const response = await fetchWithAuth(`${API_BASE}/api/metiers/it`);
 
   if (!response.ok) {
@@ -253,7 +253,7 @@ export async function getITMetiersFromAPI(): Promise<any[]> {
 /**
  * Get métier details from Rome API (live query)
  */
-export async function getMetierFromAPI(codeRome: string): Promise<any> {
+export async function getMetierFromAPI(codeRome: string): Promise<unknown> {
   const response = await fetchWithAuth(`${API_BASE}/api/metiers/${codeRome}`);
 
   if (!response.ok) {
@@ -283,7 +283,7 @@ export async function getCompetencesFromAPI(codeRome: string): Promise<Competenc
 /**
  * Search métiers by keyword
  */
-export async function searchMetiers(query: string): Promise<any[]> {
+export async function searchMetiers(query: string): Promise<unknown[]> {
   const response = await fetchWithAuth(`${API_BASE}/api/search?q=${encodeURIComponent(query)}`);
 
   if (!response.ok) {

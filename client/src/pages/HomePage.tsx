@@ -192,9 +192,9 @@ interface NavSection {
 
 function HomePage(): JSX.Element {
   const navigate = useNavigate();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [activeSection, setActiveSection] = useState<string>('hero');
-  const [isScrolled, setIsScrolled] = useState<boolean>(false);
+  const [, setIsScrolled] = useState<boolean>(false);
   const [featuresRef] = useInView({
     triggerOnce: true,
     threshold: 0.1
@@ -205,7 +205,8 @@ function HomePage(): JSX.Element {
     { id: 'dashboard', label: t('home.nav.dashboard', 'Tableau de bord') },
     { id: 'how-it-works', label: t('home.nav.howItWorks', 'Comment ça marche') },
     { id: 'features', label: t('home.nav.features', 'Fonctionnalités clés') }
-  ], [t, i18n.language]);
+   
+  ], [t]);
 
   const handleScrollSpy = useCallback(() => {
     const scrollPosition = window.scrollY + 150;

@@ -116,7 +116,7 @@ const ResumesPage = (): JSX.Element => {
   const [loading, setLoading] = useState<boolean>(true);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [totalCount, setTotalCount] = useState<number>(0);
-  const [hasMore, setHasMore] = useState<boolean>(false);
+  const [, setHasMore] = useState<boolean>(false);
   const pageSize = 20;
 
   // Global stats from backend

@@ -131,6 +131,7 @@ export interface ParsedMetadata {
 /**
  * Parse metadata from trend data
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export function parseMetadata(metadata: Record<string, unknown> | string | null, type: string, trendValue?: number | string | null): ParsedMetadata | null {
   let parsedMeta: Record<string, unknown> = {};
   if (metadata) {

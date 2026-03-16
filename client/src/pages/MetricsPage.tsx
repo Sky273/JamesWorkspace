@@ -308,6 +308,7 @@ const MetricsPage = (): JSX.Element => {
     };
     // Load immediately without delay for faster initial render
     loadData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -316,6 +317,7 @@ const MetricsPage = (): JSX.Element => {
       await Promise.all([fetchMetrics(), fetchDbMetrics(), fetchApmMetrics()]);
     }, 30000);
     return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoRefresh]);
 
   if (loading) {

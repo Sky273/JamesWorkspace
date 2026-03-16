@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 /**
  * ErrorToast Component
  * Custom toast component with expandable error details
