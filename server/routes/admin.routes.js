@@ -5,6 +5,15 @@ import { getSecurityLogs, getSecurityLogsCount } from '../services/security.serv
 import { getProxyLogs, getProxyLogsCount, getProxyLogsStats, safeLog } from '../utils/logger.backend.js';
 import { selectWithTimeout } from '../utils/postgresHelpers.js';
 
+// Import cache stats functions
+import { getBlacklistStats } from '../services/tokenBlacklist.service.js';
+import { getSettingsCacheStats } from '../services/settings.service.js';
+import { getFactsCacheStats } from '../services/marketFacts.service.js';
+import { getTrendsCacheStats } from '../services/marketTrends.service.js';
+import { getMetiersCacheStats } from '../services/rome.service.js';
+import { getTagsCacheStats } from './tags.routes.js';
+import { getEscoCacheStats } from '../services/escoService.js';
+
 const router = express.Router();
 
 // ============================================
@@ -187,6 +196,36 @@ router.get('/security-stats', authenticateToken, requireAdmin, (req, res) => {
     } catch (error) {
         safeLog('error', 'Error fetching security stats', { error: error.message });
         res.status(500).json({ error: 'Failed to fetch security stats' });
+    }
+});
+
+// GET /api/admin/cache-stats - Get unified cache statistics (admin only)
+router.get('/cache-stats', authenticateToken, requireAdmin, (req, res) => {
+    try {
+        const memUsage = process.memoryUsage();
+        const stats = {
+            timestamp: new Date().toISOString(),
+            memory: {
+                rss: Math.round(memUsage.rss / 1024 / 1024),
+                heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024),
+                heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024),
+                external: Math.round(memUsage.external / 1024 / 1024)
+            },
+            caches: {
+                tokenBlacklist: getBlacklistStats(),
+                settings: getSettingsCacheStats(),
+                marketFacts: getFactsCacheStats(),
+                marketTrends: getTrendsCacheStats(),
+                metiers: getMetiersCacheStats(),
+                tags: getTagsCacheStats(),
+                esco: getEscoCacheStats()
+            }
+        };
+        
+        res.json(stats);
+    } catch (error) {
+        safeLog('error', 'Error fetching cache stats', { error: error.message });
+        res.status(500).json({ error: 'Failed to fetch cache stats' });
     }
 });
 

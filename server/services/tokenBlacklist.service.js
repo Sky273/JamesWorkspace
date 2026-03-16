@@ -31,6 +31,10 @@ const userCache = new Map();
 const CACHE_TTL = 5 * 60 * 1000;
 let lastCacheRefresh = 0;
 
+// Maximum cache sizes to prevent memory leaks
+const MAX_TOKEN_CACHE_SIZE = 10000;
+const MAX_USER_CACHE_SIZE = 1000;
+
 // Cleanup interval reference
 let cleanupInterval = null;
 
@@ -48,12 +52,20 @@ async function refreshCache() {
         );
         
         tokenCache.clear();
-        for (const row of tokenResult.rows) {
+        // Limit to MAX_TOKEN_CACHE_SIZE most recent entries
+        const tokenRows = tokenResult.rows.slice(0, MAX_TOKEN_CACHE_SIZE);
+        for (const row of tokenRows) {
             tokenCache.set(row.token_jti, {
                 expiresAt: new Date(row.expires_at).getTime(),
                 reason: row.reason,
                 userId: row.user_id,
                 blacklistedAt: new Date(row.created_at).getTime()
+            });
+        }
+        if (tokenResult.rows.length > MAX_TOKEN_CACHE_SIZE) {
+            safeLog('warn', 'Token blacklist cache truncated due to size limit', {
+                total: tokenResult.rows.length,
+                cached: MAX_TOKEN_CACHE_SIZE
             });
         }
         
@@ -63,10 +75,18 @@ async function refreshCache() {
         );
         
         userCache.clear();
-        for (const row of userResult.rows) {
+        // Limit to MAX_USER_CACHE_SIZE entries
+        const userRows = userResult.rows.slice(0, MAX_USER_CACHE_SIZE);
+        for (const row of userRows) {
             userCache.set(row.user_id, {
                 blacklistedAt: new Date(row.created_at).getTime(),
                 reason: row.reason
+            });
+        }
+        if (userResult.rows.length > MAX_USER_CACHE_SIZE) {
+            safeLog('warn', 'User blacklist cache truncated due to size limit', {
+                total: userResult.rows.length,
+                cached: MAX_USER_CACHE_SIZE
             });
         }
         
@@ -236,7 +256,11 @@ export async function isTokenBlacklistedAsync(tokenId, userId = null, tokenIssue
 export function getBlacklistStats() {
     return {
         blacklistedTokens: tokenCache.size,
-        blacklistedUsers: userCache.size
+        blacklistedUsers: userCache.size,
+        maxTokenCacheSize: MAX_TOKEN_CACHE_SIZE,
+        maxUserCacheSize: MAX_USER_CACHE_SIZE,
+        cacheAgeMs: lastCacheRefresh ? Date.now() - lastCacheRefresh : null,
+        cacheTtlMs: CACHE_TTL
     };
 }
 

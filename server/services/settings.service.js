@@ -112,6 +112,27 @@ export function invalidateSettingsCache() {
 }
 
 /**
+ * Destroy settings cache (for graceful shutdown)
+ * Alias for invalidateSettingsCache for consistency with other cache services
+ */
+export function destroySettingsCache() {
+    settingsCache = null;
+    cacheTimestamp = null;
+    safeLog('info', 'Settings cache destroyed');
+}
+
+/**
+ * Get settings cache statistics
+ */
+export function getSettingsCacheStats() {
+    return {
+        hasCache: !!settingsCache,
+        ageMs: cacheTimestamp ? Date.now() - cacheTimestamp : null,
+        ttlMs: CACHE_TTL
+    };
+}
+
+/**
  * Get all prompts from settings
  * @returns {Promise<Object>} Object containing all prompts
  */

@@ -36,6 +36,7 @@ import { destroyMailStatesCleanup } from '../routes/mail.routes.js';
 import { destroyGoogleapis } from '../services/mail/gmailProvider.js';
 import { destroyMjml } from '../services/emailTemplates.service.js';
 import { metrics } from '../services/metrics.service.js';
+import { destroySettingsCache } from '../services/settings.service.js';
 
 // ============================================
 // MEMORY MONITORING
@@ -304,6 +305,7 @@ export function startServer(app, serverDir) {
             destroyCalendarService();
             await stopBatchJobsWorker();
             destroyMjml();
+            destroySettingsCache();
             stopScheduler();
             stopBackupScheduler();
             safeLog('info', 'All caches destroyed');

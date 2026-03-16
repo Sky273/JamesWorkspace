@@ -15,23 +15,30 @@ const router = express.Router();
 // Cache configuration
 const TAGS_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
 
-// In-memory cache for cleaned tags (per-firm cache: { firm_id: result, admin: result })
-let cleanedTagsCache = {};
-let cleanedTagsCacheTime = {};
+// In-memory cache for cleaned tags (per-firm cache: Map<firm_id|'admin', result>)
+const cleanedTagsCache = new Map();
+const cleanedTagsCacheTime = new Map();
 // In-memory cache for ESCO tags
 let escoTagsCache = null;
 let escoTagsCacheTime = 0;
 
+// Maximum cache entries to prevent memory leaks
+const MAX_TAGS_CACHE_ENTRIES = 100;
+
 // Periodic cache cleanup - auto-expire if not accessed for 2x TTL
 const tagsCacheCleanupInterval = setInterval(() => {
     const now = Date.now();
+    let expiredCount = 0;
     // Clean up per-firm cleaned tags cache
-    for (const key of Object.keys(cleanedTagsCacheTime)) {
-        if (now - cleanedTagsCacheTime[key] > TAGS_CACHE_TTL * 2) {
-            delete cleanedTagsCache[key];
-            delete cleanedTagsCacheTime[key];
-            safeLog('debug', `Tags: Cleaned tags cache auto-expired for ${key}`);
+    for (const [key, timestamp] of cleanedTagsCacheTime.entries()) {
+        if (now - timestamp > TAGS_CACHE_TTL * 2) {
+            cleanedTagsCache.delete(key);
+            cleanedTagsCacheTime.delete(key);
+            expiredCount++;
         }
+    }
+    if (expiredCount > 0) {
+        safeLog('debug', `Tags: Cleaned tags cache auto-expired`, { expiredCount });
     }
     if (escoTagsCacheTime && now - escoTagsCacheTime > TAGS_CACHE_TTL * 2) {
         escoTagsCache = null;
@@ -44,8 +51,8 @@ const tagsCacheCleanupInterval = setInterval(() => {
  * Invalidate tags cache
  */
 function invalidateTagsCache() {
-    cleanedTagsCache = {};
-    cleanedTagsCacheTime = {};
+    cleanedTagsCache.clear();
+    cleanedTagsCacheTime.clear();
     escoTagsCache = null;
     escoTagsCacheTime = 0;
     safeLog('debug', 'Tags: Cache invalidated');
@@ -58,8 +65,8 @@ function destroyTagsCache() {
     if (tagsCacheCleanupInterval) {
         clearInterval(tagsCacheCleanupInterval);
     }
-    cleanedTagsCache = null;
-    cleanedTagsCacheTime = 0;
+    cleanedTagsCache.clear();
+    cleanedTagsCacheTime.clear();
     escoTagsCache = null;
     escoTagsCacheTime = 0;
     safeLog('info', 'Tags: Cache destroyed');
@@ -71,8 +78,9 @@ function destroyTagsCache() {
 function getTagsCacheStats() {
     return {
         cleanedTags: {
-            hasData: !!cleanedTagsCache,
-            ageMs: cleanedTagsCacheTime ? Date.now() - cleanedTagsCacheTime : null
+            size: cleanedTagsCache.size,
+            maxSize: MAX_TAGS_CACHE_ENTRIES,
+            keys: [...cleanedTagsCache.keys()]
         },
         escoTags: {
             hasData: !!escoTagsCache,
@@ -180,9 +188,10 @@ router.get('/cleaned', authenticateToken, async (req, res) => {
             : `firm_${userFirmId}_${scope}`;
         
         // Return cached cleaned tags if available and not expired (per-firm cache)
-        if (cleanedTagsCache?.[cacheKey] && cleanedTagsCacheTime?.[cacheKey] && 
-            (Date.now() - cleanedTagsCacheTime[cacheKey]) < TAGS_CACHE_TTL) {
-            return res.json(cleanedTagsCache[cacheKey]);
+        const cachedResult = cleanedTagsCache.get(cacheKey);
+        const cachedTime = cleanedTagsCacheTime.get(cacheKey);
+        if (cachedResult && cachedTime && (Date.now() - cachedTime) < TAGS_CACHE_TTL) {
+            return res.json(cachedResult);
         }
         
         let aggregateQuery = '';
@@ -316,11 +325,15 @@ router.get('/cleaned', authenticateToken, async (req, res) => {
             'Soft Skills': row.soft_skills || []
         };
         
-        // Update per-firm cache with timestamp
-        if (!cleanedTagsCache) cleanedTagsCache = {};
-        if (!cleanedTagsCacheTime) cleanedTagsCacheTime = {};
-        cleanedTagsCache[cacheKey] = result;
-        cleanedTagsCacheTime[cacheKey] = Date.now();
+        // Update per-firm cache with timestamp (enforce max size)
+        if (cleanedTagsCache.size >= MAX_TAGS_CACHE_ENTRIES) {
+            // Remove oldest entry
+            const oldestKey = cleanedTagsCache.keys().next().value;
+            cleanedTagsCache.delete(oldestKey);
+            cleanedTagsCacheTime.delete(oldestKey);
+        }
+        cleanedTagsCache.set(cacheKey, result);
+        cleanedTagsCacheTime.set(cacheKey, Date.now());
         
         res.json(result);
     } catch (error) {
@@ -634,7 +647,8 @@ router.put('/rename', authenticateToken, async (req, res) => {
         const updatedCount = result.length;
 
         // Clear caches
-        cleanedTagsCache = null;
+        cleanedTagsCache.clear();
+        cleanedTagsCacheTime.clear();
         escoTagsCache = null;
 
         safeLog('info', 'Tag renamed via SQL', { 
