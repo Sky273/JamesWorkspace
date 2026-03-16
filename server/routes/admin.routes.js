@@ -13,6 +13,7 @@ import { getTrendsCacheStats } from '../services/marketTrends.service.js';
 import { getMetiersCacheStats } from '../services/rome.service.js';
 import { getTagsCacheStats } from './tags.routes.js';
 import { getEscoCacheStats } from '../services/escoService.js';
+import { getStatsCacheStats } from './resumes/stats.routes.js';
 
 const router = express.Router();
 
@@ -214,6 +215,7 @@ router.get('/cache-stats', authenticateToken, requireAdmin, (req, res) => {
             caches: {
                 tokenBlacklist: getBlacklistStats(),
                 settings: getSettingsCacheStats(),
+                resumeStats: getStatsCacheStats(),
                 marketFacts: getFactsCacheStats(),
                 marketTrends: getTrendsCacheStats(),
                 metiers: getMetiersCacheStats(),

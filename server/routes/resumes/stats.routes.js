@@ -11,7 +11,68 @@ import { getUserFirmId } from '../../utils/firmHelpers.js';
 
 const router = express.Router();
 
+// ============================================
+// STATS CACHE (30 seconds TTL per firm)
+// ============================================
+const statsCache = new Map();
+const STATS_CACHE_TTL = 30 * 1000; // 30 seconds
+const MAX_STATS_CACHE_ENTRIES = 100;
+
+/**
+ * Get cached stats for a firm
+ * @param {string} cacheKey - Cache key (firm_id or 'admin')
+ * @returns {Object|null} Cached stats or null if expired/missing
+ */
+function getCachedStats(cacheKey) {
+    const cached = statsCache.get(cacheKey);
+    if (!cached) return null;
+    if (Date.now() - cached.timestamp > STATS_CACHE_TTL) {
+        statsCache.delete(cacheKey);
+        return null;
+    }
+    return cached.data;
+}
+
+/**
+ * Set cached stats for a firm
+ * @param {string} cacheKey - Cache key
+ * @param {Object} data - Stats data to cache
+ */
+function setCachedStats(cacheKey, data) {
+    // Enforce max size
+    if (statsCache.size >= MAX_STATS_CACHE_ENTRIES) {
+        const oldestKey = statsCache.keys().next().value;
+        statsCache.delete(oldestKey);
+    }
+    statsCache.set(cacheKey, { data, timestamp: Date.now() });
+}
+
+/**
+ * Invalidate stats cache (call after resume changes)
+ */
+export function invalidateStatsCache(firmId = null) {
+    if (firmId) {
+        statsCache.delete(firmId);
+        statsCache.delete('admin'); // Also invalidate admin cache
+    } else {
+        statsCache.clear();
+    }
+    safeLog('debug', 'Stats cache invalidated', { firmId: firmId || 'all' });
+}
+
+/**
+ * Get stats cache statistics
+ */
+export function getStatsCacheStats() {
+    return {
+        size: statsCache.size,
+        maxSize: MAX_STATS_CACHE_ENTRIES,
+        ttlSeconds: STATS_CACHE_TTL / 1000
+    };
+}
+
 // GET /api/resumes/grouped-by-deal - Get resumes grouped by deal for the "Par affaire" view
+// OPTIMIZED: Uses batch queries instead of N+1 pattern (reduced from ~150 queries to 5)
 router.get('/grouped-by-deal', authenticateToken, async (req, res) => {
     try {
         const isAdmin = req.user.role?.toLowerCase() === 'admin';
@@ -21,7 +82,7 @@ router.get('/grouped-by-deal', authenticateToken, async (req, res) => {
             return res.status(403).json({ error: 'No firm association' });
         }
 
-        // 1. Get all deals for this firm with resume counts
+        // Query 1: Get all deals for this firm with resume counts
         const dealsResult = await query(`
             SELECT d.id, d.title, d.status, d.priority,
                    c.name as client_name, c.type as client_type,
@@ -36,9 +97,11 @@ router.get('/grouped-by-deal', authenticateToken, async (req, res) => {
                 d.title ASC
         `, [userFirmId]);
 
-        // 2. For each deal, get associated resumes and missions
-        const deals = [];
-        for (const deal of dealsResult.rows) {
+        const dealIds = dealsResult.rows.map(d => d.id);
+        
+        // Query 2: Batch fetch ALL resumes for ALL deals in one query
+        let allResumesMap = new Map();
+        if (dealIds.length > 0) {
             const resumesResult = await query(`
                 SELECT r.id, r.name, r.title, r.status, r.global_rating, r.improved_global_rating,
                        r.created_at, r.file_name, r.original_name, 
@@ -48,6 +111,7 @@ router.get('/grouped-by-deal', authenticateToken, async (req, res) => {
                        r.skills_cleaned, r.industries_cleaned, r.tools_cleaned, r.soft_skills_cleaned,
                        r.skills, r.industries, r.tools, r.soft_skills,
                        COALESCE(r.relative_path, latest_item.relative_path) as relative_path,
+                       dr.deal_id,
                        dr.added_at as deal_added_at, dr.status as deal_resume_status
                 FROM resumes r
                 INNER JOIN deal_resumes dr ON r.id = dr.resume_id
@@ -72,44 +136,89 @@ router.get('/grouped-by-deal', authenticateToken, async (req, res) => {
                         bji.created_at DESC
                     LIMIT 1
                 ) latest_item ON TRUE
-                WHERE dr.deal_id = $1
-                ORDER BY LOWER(r.name) ASC
-            `, [deal.id]);
-
-            // Get missions associated with this deal
-            const missionsResult = await query(`
-                SELECT m.id, m.title, m.status, m.created_at
-                FROM missions m
-                WHERE m.deal_id = $1
-                ORDER BY m.created_at DESC
-            `, [deal.id]);
-
-            // For each mission, get its adaptations
-            const missions = [];
-            for (const mission of missionsResult.rows) {
-                const adaptationsResult = await query(`
-                    SELECT ra.id, ra.resume_id, ra.resume_name, ra.candidate_name, ra.adapted_title,
-                           ra.match_score, ra.status, ra.created_at
-                    FROM resume_adaptations ra
-                    WHERE ra.mission_id = $1
-                    ORDER BY ra.created_at DESC
-                `, [mission.id]);
-                missions.push({
-                    ...mission,
-                    adaptations_count: adaptationsResult.rows.length,
-                    adaptations: adaptationsResult.rows
-                });
-            }
+                WHERE dr.deal_id = ANY($1)
+                ORDER BY dr.deal_id, LOWER(r.name) ASC
+            `, [dealIds]);
             
-            deals.push({
-                ...deal,
-                resumes: resumesResult.rows,
-                missions
-            });
+            // Group resumes by deal_id
+            for (const resume of resumesResult.rows) {
+                const dealId = resume.deal_id;
+                if (!allResumesMap.has(dealId)) {
+                    allResumesMap.set(dealId, []);
+                }
+                // Remove deal_id from resume object before adding
+                const { deal_id: _, ...resumeWithoutDealId } = resume;
+                allResumesMap.get(dealId).push(resumeWithoutDealId);
+            }
         }
 
-        // 3. Get unassigned resumes (not in any deal)
-        let unassignedCondition = 'WHERE r.id NOT IN (SELECT DISTINCT resume_id FROM deal_resumes)';
+        // Query 3: Batch fetch ALL missions for ALL deals in one query
+        let allMissionsMap = new Map();
+        if (dealIds.length > 0) {
+            const missionsResult = await query(`
+                SELECT m.id, m.title, m.status, m.created_at, m.deal_id
+                FROM missions m
+                WHERE m.deal_id = ANY($1)
+                ORDER BY m.deal_id, m.created_at DESC
+            `, [dealIds]);
+            
+            // Group missions by deal_id
+            for (const mission of missionsResult.rows) {
+                const dealId = mission.deal_id;
+                if (!allMissionsMap.has(dealId)) {
+                    allMissionsMap.set(dealId, []);
+                }
+                const { deal_id: _, ...missionWithoutDealId } = mission;
+                allMissionsMap.get(dealId).push(missionWithoutDealId);
+            }
+        }
+
+        // Query 4: Batch fetch ALL adaptations for ALL missions in one query
+        const allMissionIds = [];
+        for (const missions of allMissionsMap.values()) {
+            for (const mission of missions) {
+                allMissionIds.push(mission.id);
+            }
+        }
+        
+        let allAdaptationsMap = new Map();
+        if (allMissionIds.length > 0) {
+            const adaptationsResult = await query(`
+                SELECT ra.id, ra.resume_id, ra.resume_name, ra.candidate_name, ra.adapted_title,
+                       ra.match_score, ra.status, ra.created_at, ra.mission_id
+                FROM resume_adaptations ra
+                WHERE ra.mission_id = ANY($1)
+                ORDER BY ra.mission_id, ra.created_at DESC
+            `, [allMissionIds]);
+            
+            // Group adaptations by mission_id
+            for (const adaptation of adaptationsResult.rows) {
+                const missionId = adaptation.mission_id;
+                if (!allAdaptationsMap.has(missionId)) {
+                    allAdaptationsMap.set(missionId, []);
+                }
+                const { mission_id: _, ...adaptationWithoutMissionId } = adaptation;
+                allAdaptationsMap.get(missionId).push(adaptationWithoutMissionId);
+            }
+        }
+
+        // Assemble deals with their resumes and missions
+        const deals = dealsResult.rows.map(deal => {
+            const missions = (allMissionsMap.get(deal.id) || []).map(mission => ({
+                ...mission,
+                adaptations_count: (allAdaptationsMap.get(mission.id) || []).length,
+                adaptations: allAdaptationsMap.get(mission.id) || []
+            }));
+            
+            return {
+                ...deal,
+                resumes: allResumesMap.get(deal.id) || [],
+                missions
+            };
+        });
+
+        // Query 5: Get unassigned resumes (not in any deal)
+        let unassignedCondition = 'WHERE r.id NOT IN (SELECT DISTINCT resume_id FROM deal_resumes WHERE resume_id IS NOT NULL)';
         const unassignedParams = [];
         if (!isAdmin) {
             unassignedCondition += ' AND r.firm_id = $1';
@@ -165,16 +274,25 @@ router.get('/grouped-by-deal', authenticateToken, async (req, res) => {
 });
 
 // GET /api/resumes/stats - Get statistics for dashboard KPIs
+// OPTIMIZED: Uses 30s cache per firm to reduce DB load
 router.get('/stats', authenticateToken, async (req, res) => {
     try {
         const userFirm = req.user.firm || req.user.customer;
         const isAdmin = req.user.role?.toLowerCase() === 'admin';
+        const userFirmId = isAdmin ? null : await getUserFirmId(req);
+        
+        // Check cache first
+        const cacheKey = isAdmin ? 'admin' : (userFirmId || userFirm || 'unknown');
+        const cachedStats = getCachedStats(cacheKey);
+        if (cachedStats) {
+            safeLog('debug', 'Stats cache hit', { cacheKey });
+            return res.json(cachedStats);
+        }
 
         // Build WHERE clause based on user role - use firm_id for consistency with other queries
         let whereClause = '';
         const params = [];
         if (!isAdmin) {
-            const userFirmId = await getUserFirmId(req);
             if (userFirmId) {
                 whereClause = 'WHERE r.firm_id = $1';
                 params.push(userFirmId);
@@ -288,6 +406,10 @@ router.get('/stats', authenticateToken, async (req, res) => {
             },
             customer: isAdmin ? null : userFirm
         };
+
+        // Cache the stats
+        setCachedStats(cacheKey, stats);
+        safeLog('debug', 'Stats cached', { cacheKey });
 
         res.json(stats);
     } catch (error) {
