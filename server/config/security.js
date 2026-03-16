@@ -16,22 +16,26 @@ const isProduction = process.env.NODE_ENV === 'production';
 // ============================================
 // 
 // SECURITY TRADE-OFFS:
-// - 'unsafe-inline' and 'unsafe-eval' are required by TinyMCE rich text editor
-//   TinyMCE dynamically generates and executes scripts for its functionality.
-//   Alternative: Use nonce-based CSP, but TinyMCE doesn't support it natively.
+// - 'unsafe-eval' is required by TinyMCE rich text editor
+//   TinyMCE uses new Function() / eval() internally for its plugin system.
+//   This CANNOT be removed without replacing TinyMCE entirely.
 //   Risk mitigation: All user input is sanitized with DOMPurify before rendering.
 //
-// - PDF.js requires blob: and eval for its worker functionality
+// - 'unsafe-inline' in styleSrc is required by TinyMCE for dynamic styles.
+//   This has NO XSS risk (styles cannot execute scripts).
+//
+// - PDF.js requires blob: for its worker functionality.
 //   Risk mitigation: PDF files are processed server-side when possible.
 //
-// SECURITY ENHANCEMENTS:
-// - 'strict-dynamic' allows trusted scripts to load other scripts (modern browsers)
+// CSP HARDENING (achieved):
+// - NO 'unsafe-inline' in scriptSrc (Swagger UI script externalized)
+// - NO 'unsafe-inline' in scriptSrcAttr (no inline event handlers)
 // - object-src 'none' blocks plugins like Flash
 // - base-uri 'self' prevents base tag hijacking
 // - frame-ancestors 'self' prevents clickjacking
 //
 // RECOMMENDATIONS FOR FUTURE:
-// 1. Monitor TinyMCE updates for nonce/hash CSP support
+// 1. Monitor TinyMCE updates for CSP-safe eval alternatives
 // 2. Consider server-side PDF text extraction to reduce client-side PDF.js usage
 // 3. Implement Subresource Integrity (SRI) for external scripts
 // ============================================
@@ -50,15 +54,17 @@ export function configureHelmet(app) {
                 defaultSrc: ["'none'"],
                 scriptSrc: [
                     "'self'",
-                    "'unsafe-inline'",  // Required: TinyMCE dynamically injects inline scripts
                     "'unsafe-eval'",    // Required: TinyMCE uses new Function() / eval()
                     "blob:",            // Required: PDF.js worker scripts
                     "https://unpkg.com",                      // Swagger UI scripts
-                    "https://static.cloudflareinsights.com",  // Cloudflare Web Analytics beacon
                     "https://basemaps.cartocdn.com",          // MapLibre GL scripts from style
-                    "https://*.basemaps.cartocdn.com"         // MapLibre GL scripts from tiles
+                    "https://*.basemaps.cartocdn.com",        // MapLibre GL scripts from tiles
+                    // Cloudflare injects inline scripts (Rocket Loader, Email Obfuscation, etc.)
+                    // These hashes allow the specific Cloudflare-injected scripts without 'unsafe-inline'
+                    "'sha256-A1+e72bQn7hPqkdKAAlQSbFpetfFWJBOj5vG34ZrAxU='",  // Cloudflare injected script
+                    "'sha256-P5AT03Ewswrka26JysiPTKxr4GXeRKQKbPiV4tBCy2k='"   // Cloudflare injected script (variant)
                 ],
-                scriptSrcAttr: ["'unsafe-inline'"], // Required: Swagger UI inline event handlers
+                scriptSrcAttr: ["'none'"], // No inline event handlers allowed
                 styleSrc: [
                     "'self'",
                     "'unsafe-inline'", // Required: TinyMCE dynamic styles (cannot be removed per TinyMCE docs)

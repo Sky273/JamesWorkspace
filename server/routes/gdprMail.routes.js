@@ -85,15 +85,12 @@ router.get('/callback', async (req, res) => {
         // Exchange code for GLOBAL token (no firmId needed)
         await gdprMailService.handleOAuthCallback(code);
 
-        // Close popup with success message
+        // Close popup with success message (no inline scripts for CSP compliance)
         res.send(`
             <html>
-                <body>
-                    <script>
-                        window.opener && window.opener.postMessage({ type: 'gdpr-oauth-success' }, '*');
-                        window.close();
-                    </script>
+                <body data-callback-type="gdpr-oauth-success">
                     <p>Gmail RGPD connecté avec succès ! Ce compte sera utilisé pour tous les emails de consentement RGPD.</p>
+                    <script src="/api/docs/static/oauth-callback.js"></script>
                 </body>
             </html>
         `);
@@ -101,12 +98,9 @@ router.get('/callback', async (req, res) => {
         safeLog('error', 'Error in GDPR OAuth callback', { error: error.message });
         res.send(`
             <html>
-                <body>
-                    <script>
-                        window.opener && window.opener.postMessage({ type: 'gdpr-oauth-error', error: '${error.message}' }, '*');
-                        window.close();
-                    </script>
+                <body data-callback-type="gdpr-oauth-error" data-callback-error="${error.message}">
                     <p>Erreur de connexion Gmail: ${error.message}</p>
+                    <script src="/api/docs/static/oauth-callback.js"></script>
                 </body>
             </html>
         `);

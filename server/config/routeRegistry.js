@@ -3,8 +3,14 @@
  * Registers all API routes and proxy endpoints on the Express app
  */
 
+import path from 'path';
+import { fileURLToPath } from 'url';
+import express from 'express';
 import { safeLog } from '../utils/logger.backend.js';
 import { swaggerDocument } from './swagger.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Import routes
 import healthRoutes from '../routes/health.routes.js';
@@ -56,7 +62,13 @@ export function registerSwaggerRoutes(app) {
         res.json(swaggerDocument);
     });
 
-    // Swagger UI HTML page
+    // Serve Swagger UI static assets (externalized JS for CSP compliance)
+    app.use('/api/docs/static', express.static(
+        path.join(__dirname, '..', 'public'),
+        { maxAge: '1d', etag: true }
+    ));
+
+    // Swagger UI HTML page (no inline scripts - CSP compliant)
     app.get('/api/docs/ui', (req, res) => {
         res.set({
             'Content-Type': 'text/html',
@@ -173,52 +185,7 @@ export function registerSwaggerRoutes(app) {
     </div>
     <script src="https://unpkg.com/swagger-ui-dist@5.18.2/swagger-ui-bundle.js" charset="UTF-8"></script>
     <script src="https://unpkg.com/swagger-ui-dist@5.18.2/swagger-ui-standalone-preset.js" charset="UTF-8"></script>
-    <script>
-        window.onload = () => {
-            try {
-                window.ui = SwaggerUIBundle({
-                    url: window.location.origin + '/api/docs',
-                    dom_id: '#swagger-ui',
-                    deepLinking: true,
-                    presets: [
-                        SwaggerUIBundle.presets.apis,
-                        SwaggerUIStandalonePreset
-                    ],
-                    plugins: [
-                        SwaggerUIBundle.plugins.DownloadUrl
-                    ],
-                    layout: 'StandaloneLayout',
-                    docExpansion: 'list',
-                    filter: true,
-                    showExtensions: true,
-                    showCommonExtensions: true,
-                    syntaxHighlight: {
-                        activate: true,
-                        theme: 'monokai'
-                    },
-                    requestInterceptor: (req) => {
-                        // Add credentials for authenticated endpoints
-                        req.credentials = 'include';
-                        return req;
-                    },
-                    onComplete: () => {
-                        console.log('Swagger UI loaded successfully');
-                    },
-                    onFailure: (err) => {
-                        console.error('Swagger UI failed to load:', err);
-                        document.getElementById('swagger-ui').innerHTML = 
-                            '<div class="loading-container" style="color: #f93e3e;">' +
-                            '<span>Failed to load API documentation. Please refresh the page.</span></div>';
-                    }
-                });
-            } catch (err) {
-                console.error('Error initializing Swagger UI:', err);
-                document.getElementById('swagger-ui').innerHTML = 
-                    '<div class="loading-container" style="color: #f93e3e;">' +
-                    '<span>Error loading API documentation: ' + err.message + '</span></div>';
-            }
-        };
-    </script>
+    <script src="/api/docs/static/swagger-init.js"></script>
 </body>
 </html>
         `);

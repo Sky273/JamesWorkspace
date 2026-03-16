@@ -69,15 +69,12 @@ router.get('/callback', async (req, res) => {
         
         await exchangeCalendarCode(code, userId);
         
-        // Close popup and notify parent
+        // Close popup and notify parent (no inline scripts for CSP compliance)
         res.send(`
             <html>
-                <body>
-                    <script>
-                        window.opener && window.opener.postMessage({ type: 'calendar-connected' }, '*');
-                        window.close();
-                    </script>
+                <body data-callback-type="calendar-connected">
                     <p>Calendar connected! You can close this window.</p>
+                    <script src="/api/docs/static/oauth-callback.js"></script>
                 </body>
             </html>
         `);
@@ -85,12 +82,9 @@ router.get('/callback', async (req, res) => {
         safeLog('error', 'Calendar OAuth callback failed', { error: error.message });
         res.status(500).send(`
             <html>
-                <body>
-                    <script>
-                        window.opener && window.opener.postMessage({ type: 'calendar-error', error: 'Connection failed' }, '*');
-                        window.close();
-                    </script>
+                <body data-callback-type="calendar-error" data-callback-error="Connection failed">
                     <p>Failed to connect calendar. You can close this window.</p>
+                    <script src="/api/docs/static/oauth-callback.js"></script>
                 </body>
             </html>
         `);

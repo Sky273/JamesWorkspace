@@ -1,6 +1,10 @@
 /**
  * API Documentation Routes
  * Serves OpenAPI/Swagger documentation
+ * 
+ * Note: The Swagger UI HTML page is served by registerSwaggerRoutes() in routeRegistry.js
+ * with externalized scripts for CSP compliance. This router only handles the JSON endpoint
+ * as a fallback (the primary JSON endpoint is also in registerSwaggerRoutes).
  */
 
 import express from 'express';
@@ -13,42 +17,13 @@ router.get('/', (req, res) => {
     res.json(swaggerDocument);
 });
 
-// GET /api/docs/ui - Serve Swagger UI HTML
+// GET /api/docs/ui - Redirect to the CSP-compliant Swagger UI
+// The actual Swagger UI is served by registerSwaggerRoutes() in routeRegistry.js
+// which uses externalized scripts (no inline scripts) for CSP compliance
 router.get('/ui', (req, res) => {
-    const html = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ResumeConverter API Documentation</title>
-    <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css">
-    <style>
-        body { margin: 0; padding: 0; }
-        .swagger-ui .topbar { display: none; }
-        .swagger-ui .info { margin: 20px 0; }
-    </style>
-</head>
-<body>
-    <div id="swagger-ui"></div>
-    <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
-    <script>
-        window.onload = function() {
-            SwaggerUIBundle({
-                url: '/api/docs',
-                dom_id: '#swagger-ui',
-                presets: [
-                    SwaggerUIBundle.presets.apis,
-                    SwaggerUIBundle.SwaggerUIStandalonePreset
-                ],
-                layout: "BaseLayout"
-            });
-        };
-    </script>
-</body>
-</html>
-    `;
-    res.type('html').send(html);
+    // registerSwaggerRoutes already handles this route before this router,
+    // but if somehow reached, redirect to ensure CSP compliance
+    res.redirect('/api/docs/ui');
 });
 
 export default router;
