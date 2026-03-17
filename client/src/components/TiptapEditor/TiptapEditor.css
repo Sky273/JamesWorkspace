@@ -728,3 +728,293 @@
 .tiptap-editor-content .tiptap th[style*="background"] {
   transition: background-color 0.15s;
 }
+
+/* ============================================
+   SUGGESTION DECORATIONS (ProseMirror)
+   ============================================ */
+
+/* --- Section heading highlight --- */
+.suggestion-deco-highlight {
+  position: relative;
+  border-left: 4px solid #f59e0b;
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.08) 0%, transparent 100%);
+  padding-left: 12px !important;
+  border-radius: 0 6px 6px 0;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.dark .suggestion-deco-highlight {
+  border-left-color: #d97706;
+  background: linear-gradient(90deg, rgba(217, 119, 6, 0.12) 0%, transparent 100%);
+}
+
+/* --- Badge widget (inline pill + tooltip) --- */
+.suggestion-deco-badge {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  vertical-align: middle;
+  z-index: 10;
+}
+
+.suggestion-deco-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #92400e;
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  border-radius: 12px;
+  cursor: default;
+  white-space: nowrap;
+  transition: background 0.15s, transform 0.15s;
+}
+
+.suggestion-deco-badge:hover .suggestion-deco-pill {
+  background: #fde68a;
+  transform: scale(1.05);
+}
+
+.dark .suggestion-deco-pill {
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.dark .suggestion-deco-badge:hover .suggestion-deco-pill {
+  background: rgba(245, 158, 11, 0.25);
+}
+
+/* --- Tooltip (shown on hover) --- */
+.suggestion-deco-tooltip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 280px;
+  max-width: 420px;
+  width: max-content;
+  padding: 12px 14px;
+  background: #1f2937;
+  color: #f3f4f6;
+  border: 1px solid #374151;
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+  font-size: 13px;
+  line-height: 1.5;
+  z-index: 100;
+  pointer-events: none;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+}
+
+.suggestion-deco-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: #1f2937;
+}
+
+.suggestion-deco-badge:hover .suggestion-deco-tooltip {
+  display: block;
+}
+
+.suggestion-deco-tooltip-title {
+  font-weight: 600;
+  font-size: 13px;
+  color: #fbbf24;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #374151;
+}
+
+.suggestion-deco-tooltip-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.suggestion-deco-tooltip-list li {
+  position: relative;
+  padding: 4px 0 4px 16px;
+  font-size: 12px;
+  color: #d1d5db;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+}
+
+.suggestion-deco-tooltip-list li::before {
+  content: '→';
+  position: absolute;
+  left: 0;
+  color: #fbbf24;
+  font-weight: 600;
+}
+
+.suggestion-deco-tooltip-list li + li {
+  border-top: 1px solid rgba(55, 65, 81, 0.5);
+}
+
+/* --- Global suggestions panel (widget at doc top) --- */
+.suggestion-deco-panel {
+  margin: 0 0 16px;
+  padding: 0;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: 10px;
+  overflow: visible;
+  font-size: 13px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.dark .suggestion-deco-panel {
+  background: rgba(245, 158, 11, 0.08);
+  border-color: rgba(245, 158, 11, 0.25);
+}
+
+.suggestion-deco-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(245, 158, 11, 0.12);
+  font-weight: 600;
+  font-size: 14px;
+  color: #92400e;
+  border-radius: 9px 9px 0 0;
+}
+
+.dark .suggestion-deco-panel-header {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+}
+
+.suggestion-deco-panel-icon {
+  font-size: 16px;
+}
+
+.suggestion-deco-panel-count {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  background: #f59e0b;
+  border-radius: 11px;
+}
+
+.dark .suggestion-deco-panel-count {
+  background: #d97706;
+}
+
+.suggestion-deco-panel-section {
+  padding: 8px 14px;
+  border-top: 1px solid rgba(252, 211, 77, 0.4);
+}
+
+.suggestion-deco-panel-section:last-child {
+  border-radius: 0 0 9px 9px;
+}
+
+.dark .suggestion-deco-panel-section {
+  border-top-color: rgba(245, 158, 11, 0.15);
+}
+
+.suggestion-deco-panel-section-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #b45309;
+  margin-bottom: 4px;
+}
+
+.dark .suggestion-deco-panel-section-title {
+  color: #fbbf24;
+}
+
+.suggestion-deco-panel-section-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #92400e;
+  background: rgba(245, 158, 11, 0.2);
+  border-radius: 9px;
+}
+
+.dark .suggestion-deco-panel-section-count {
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.2);
+}
+
+.suggestion-deco-panel-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.suggestion-deco-panel-list li {
+  position: relative;
+  padding: 3px 0 3px 16px;
+  font-size: 13px;
+  color: #78350f;
+  line-height: 1.5;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+}
+
+.dark .suggestion-deco-panel-list li {
+  color: #d1d5db;
+}
+
+.suggestion-deco-panel-list li::before {
+  content: '→';
+  position: absolute;
+  left: 0;
+  color: #d97706;
+  font-weight: 600;
+}
+
+/* --- Toggle button in toolbar --- */
+.suggestion-toggle-btn {
+  font-size: 14px !important;
+  min-width: 32px;
+}
+
+.suggestion-toggle-btn.is-active {
+  background: #fef3c7 !important;
+  color: #92400e !important;
+  border-color: #fcd34d !important;
+}
+
+.dark .suggestion-toggle-btn.is-active {
+  background: rgba(245, 158, 11, 0.2) !important;
+  color: #fbbf24 !important;
+  border-color: rgba(245, 158, 11, 0.3) !important;
+}

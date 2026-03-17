@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { UserIcon, BriefcaseIcon } from '@heroicons/react/24/outline';
 import { useResume } from '../../context/ResumeContext';
 import { removeSuggestionMarkers } from '../../utils/tinymceSuggestionsPlugin';
-import { TiptapEditor } from '../TiptapEditor';
+import { TiptapEditor, parseSuggestions } from '../TiptapEditor';
 import type { TiptapEditorRef } from '../TiptapEditor';
 import toast from 'react-hot-toast';
 import logger from '../../utils/logger.frontend';
@@ -193,6 +193,7 @@ const OriginalTextTab = ({ resume }: OriginalTextTabProps): JSX.Element => {
         onChange={(html) => setHasChanges(html !== initialContentRef.current)}
         onReady={() => setEditorReady(true)}
         height={500}
+        suggestions={parseSuggestions(resume['Key Improvements'])}
       />
     </div>
   );

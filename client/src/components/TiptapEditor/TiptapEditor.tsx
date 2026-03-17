@@ -33,6 +33,8 @@ import {
 
 import { EditorToolbar } from './EditorToolbar';
 import { BubbleToolbar } from './BubbleToolbar';
+import { SuggestionsExtension } from './SuggestionsExtension';
+import type { SuggestionsBySection } from './SuggestionsExtension';
 import './TiptapEditor.css';
 
 const lowlight = createLowlight(common);
@@ -60,6 +62,8 @@ export interface TiptapEditorProps {
   extraToolbarContent?: React.ReactNode;
   /** Class for the outer wrapper */
   className?: string;
+  /** Improvement suggestions to display as ProseMirror decorations */
+  suggestions?: SuggestionsBySection;
 }
 
 // ============================================
@@ -78,11 +82,13 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
       minimal = false,
       extraToolbarContent,
       className = '',
+      suggestions,
     },
     ref
   ) => {
     const [ready, setReady] = useState(false);
     const contentSetRef = useRef(false);
+    const [suggestionsVisible, setSuggestionsVisible] = useState(true);
 
     const editor = useEditor({
       extensions: [
@@ -113,6 +119,7 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
         CodeBlockLowlight.configure({ lowlight }),
         CharacterCount,
         Placeholder.configure({ placeholder }),
+        SuggestionsExtension.configure({ suggestions: suggestions || {} }),
       ],
       editable,
       content,
@@ -124,6 +131,13 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
         onChange?.(e.getHTML());
       },
     });
+
+    // Sync suggestions when prop changes
+    useEffect(() => {
+      if (editor && suggestions) {
+        editor.commands.setSuggestions(suggestions);
+      }
+    }, [editor, suggestions]);
 
     // Set initial content when it arrives after editor creation
     useEffect(() => {
@@ -203,6 +217,17 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
       [editor]
     );
 
+    // Toggle suggestions visibility
+    const handleToggleSuggestions = useCallback(() => {
+      if (!editor) return;
+      editor.commands.toggleSuggestions();
+      setSuggestionsVisible((v) => !v);
+    }, [editor]);
+
+    const hasSuggestions =
+      suggestions &&
+      Object.values(suggestions).flat().filter(Boolean).length > 0;
+
     if (!editor) return null;
 
     return (
@@ -224,7 +249,24 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
           onAddImage={addImage}
           onUploadImage={triggerImageUpload}
           minimal={minimal}
-          extraContent={extraToolbarContent}
+          extraContent={
+            <>
+              {hasSuggestions && (
+                <>
+                  <button
+                    type="button"
+                    className={`tiptap-toolbar-btn suggestion-toggle-btn ${suggestionsVisible ? 'is-active' : ''}`}
+                    onClick={handleToggleSuggestions}
+                    title={suggestionsVisible ? 'Masquer les suggestions' : 'Afficher les suggestions'}
+                  >
+                    💡
+                  </button>
+                  <div className="tiptap-toolbar-divider" />
+                </>
+              )}
+              {extraToolbarContent}
+            </>
+          }
         />
 
         {/* Bubble menu on text selection */}

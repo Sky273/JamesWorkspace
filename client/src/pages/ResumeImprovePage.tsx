@@ -26,7 +26,7 @@ import PipelineTab from '../components/ResumeAnalysis/PipelineTab';
 import ResumeComments from '../components/ResumeComments';
 import { fetchWithAuth, createAuthOptionsWithCsrf } from '../utils/apiInterceptor';
 import { removeSuggestionMarkers } from '../utils/tinymceSuggestionsPlugin';
-import { TiptapEditor } from '../components/TiptapEditor';
+import { TiptapEditor, parseSuggestions } from '../components/TiptapEditor';
 import type { TiptapEditorRef } from '../components/TiptapEditor';
 
 const ResumeImprovePage = (): JSX.Element => {
@@ -448,6 +448,10 @@ const ResumeImprovePage = (): JSX.Element => {
                         content={localResume?.['Improved Text'] || ''}
                         onReady={() => setEditorReady(true)}
                         height={500}
+                        suggestions={parseSuggestions(
+                          localResume?.['Improved Key Improvements'] ||
+                          localResume?.['Key Improvements']
+                        )}
                       />
                     }
                   />
