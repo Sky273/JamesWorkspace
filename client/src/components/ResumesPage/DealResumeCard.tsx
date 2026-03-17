@@ -3,12 +3,14 @@
  * Extracted from DealsGroupedView.tsx
  */
 
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   DocumentTextIcon,
   CalendarIcon,
   EyeIcon,
+  EyeSlashIcon,
   ArrowDownTrayIcon,
   BuildingOfficeIcon,
   TrashIcon
@@ -18,6 +20,7 @@ import ConsentBadge, { ConsentStatus } from '../ConsentBadge';
 import ManageResumeDealsModal from './AddToDealMenu';
 import TagsWithTooltip from './TagsWithTooltip';
 import { TAG_COLOR_MAP, type ResumeBasic } from './dealsGrouped.types';
+import ResumePreviewPanel from './ResumePreviewPanel';
 
 interface DealResumeCardProps {
   resume: ResumeBasic;
@@ -49,6 +52,7 @@ export default function DealResumeCard({
   getDownloadTitle
 }: DealResumeCardProps) {
   const { t } = useTranslation();
+  const [showPreview, setShowPreview] = useState(false);
 
   const rating = resume.improved_global_rating || resume.global_rating;
   const statusClass =
@@ -138,11 +142,15 @@ export default function DealResumeCard({
               t={t}
             />
             <button
-              onClick={(e) => { e.stopPropagation(); onClick(resume.id); }}
-              className="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors rounded"
-              title={t('resumes.view')}
+              onClick={(e) => { e.stopPropagation(); setShowPreview(prev => !prev); }}
+              className={`p-1 transition-colors rounded ${
+                showPreview
+                  ? 'text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20'
+                  : 'text-gray-400 hover:text-blue-600 dark:hover:text-blue-400'
+              }`}
+              title={showPreview ? t('resumes.preview.close', 'Fermer l\'aperçu') : t('resumes.preview.open', 'Aperçu rapide')}
             >
-              <EyeIcon className="w-4 h-4" />
+              {showPreview ? <EyeSlashIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
             </button>
             <button
               onClick={(e) => onDownload(resume, e)}
@@ -164,6 +172,16 @@ export default function DealResumeCard({
           </div>
         </div>
       </div>
+
+      <AnimatePresence>
+        {showPreview && (
+          <ResumePreviewPanel
+            resumeId={resume.id}
+            onClose={() => setShowPreview(false)}
+            onOpenFull={(id) => { setShowPreview(false); onClick(id); }}
+          />
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
