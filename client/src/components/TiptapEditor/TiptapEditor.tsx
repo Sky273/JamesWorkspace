@@ -28,6 +28,7 @@ import {
   forwardRef,
   useState,
   useRef,
+  type ChangeEvent,
 } from 'react';
 
 import { EditorToolbar } from './EditorToolbar';
@@ -87,10 +88,12 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
       extensions: [
         StarterKit.configure({
           codeBlock: false, // replaced by CodeBlockLowlight
+          heading: { levels: [1, 2, 3, 4, 5] },
         }),
         Underline,
         TextAlign.configure({
           types: ['heading', 'paragraph'],
+          alignments: ['left', 'center', 'right', 'justify'],
         }),
         Link.configure({
           openOnClick: false,
@@ -164,24 +167,62 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
       editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
     }, [editor]);
 
-    // Image insertion
+    // Image insertion by URL
     const addImage = useCallback(() => {
       if (!editor) return;
-      const url = window.prompt('Image URL');
+      const url = window.prompt('URL de l\'image');
       if (url) {
         editor.chain().focus().setImage({ src: url }).run();
       }
     }, [editor]);
 
+    // Image upload via file input
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const triggerImageUpload = useCallback(() => {
+      fileInputRef.current?.click();
+    }, []);
+    const handleImageUpload = useCallback(
+      (e: ChangeEvent<HTMLInputElement>) => {
+        if (!editor) return;
+        const files = e.target.files;
+        if (!files?.length) return;
+        Array.from(files).forEach((file) => {
+          if (!file.type.startsWith('image/')) return;
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            const src = ev.target?.result as string;
+            if (src) {
+              editor.chain().focus().setImage({ src }).run();
+            }
+          };
+          reader.readAsDataURL(file);
+        });
+        // Reset so same file can be re-selected
+        e.target.value = '';
+      },
+      [editor]
+    );
+
     if (!editor) return null;
 
     return (
       <div className={`tiptap-editor-wrapper ${className}`}>
+        {/* Hidden file input for image upload */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          style={{ display: 'none' }}
+          onChange={handleImageUpload}
+        />
+
         {/* Toolbar */}
         <EditorToolbar
           editor={editor}
           onSetLink={setLink}
           onAddImage={addImage}
+          onUploadImage={triggerImageUpload}
           minimal={minimal}
           extraContent={extraToolbarContent}
         />

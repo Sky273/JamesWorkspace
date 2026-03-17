@@ -1,14 +1,21 @@
 /**
  * EditorToolbar - Full toolbar for TiptapEditor
+ * Features: heading dropdown H1-H5, image upload + URL, detailed table management,
+ * image properties, table properties, color pickers, justify alignment
  */
 
 import type { Editor } from '@tiptap/react';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+
+// ============================================
+// TYPES
+// ============================================
 
 interface EditorToolbarProps {
   editor: Editor;
   onSetLink: () => void;
   onAddImage: () => void;
+  onUploadImage: () => void;
   minimal?: boolean;
   extraContent?: React.ReactNode;
 }
@@ -23,21 +30,101 @@ interface TBProps {
   disabled?: boolean;
   title: string;
   children: React.ReactNode;
+  className?: string;
 }
 
-const TB = ({ onClick, isActive, disabled, title, children }: TBProps) => (
+const TB = ({ onClick, isActive, disabled, title, children, className = '' }: TBProps) => (
   <button
     type="button"
     onClick={onClick}
     disabled={disabled}
     title={title}
-    className={`tiptap-toolbar-btn ${isActive ? 'is-active' : ''}`}
+    className={`tiptap-toolbar-btn ${isActive ? 'is-active' : ''} ${className}`}
   >
     {children}
   </button>
 );
 
 const Divider = () => <div className="tiptap-toolbar-divider" />;
+
+// ============================================
+// DROPDOWN (generic)
+// ============================================
+
+interface DropdownProps {
+  trigger: React.ReactNode;
+  title: string;
+  children: React.ReactNode;
+  isActive?: boolean;
+}
+
+const Dropdown = ({ trigger, title, children, isActive }: DropdownProps) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  return (
+    <div className="tiptap-dropdown-wrapper" ref={ref}>
+      <button
+        type="button"
+        className={`tiptap-toolbar-btn tiptap-dropdown-trigger ${isActive ? 'is-active' : ''}`}
+        title={title}
+        onClick={() => setOpen(!open)}
+      >
+        {trigger}
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginLeft: 2 }}><path d="m6 9 6 6 6-6" /></svg>
+      </button>
+      {open && (
+        <div className="tiptap-dropdown-menu" onClick={() => setOpen(false)}>
+          {children}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ============================================
+// HEADING DROPDOWN
+// ============================================
+
+const HEADING_LEVELS = [1, 2, 3, 4, 5] as const;
+const HEADING_LABELS: Record<number, string> = { 1: 'Titre 1', 2: 'Titre 2', 3: 'Titre 3', 4: 'Titre 4', 5: 'Titre 5' };
+const HEADING_SIZES: Record<number, string> = { 1: '1.4em', 2: '1.2em', 3: '1.05em', 4: '0.95em', 5: '0.85em' };
+
+const HeadingDropdown = ({ editor }: { editor: Editor }) => {
+  const activeLevel = HEADING_LEVELS.find((l) => editor.isActive('heading', { level: l }));
+  const label = activeLevel ? `H${activeLevel}` : '¶';
+
+  return (
+    <Dropdown trigger={<span style={{ minWidth: 22, textAlign: 'center' }}>{label}</span>} title="Type de bloc" isActive={!!activeLevel}>
+      <button
+        type="button"
+        className={`tiptap-dropdown-item ${!activeLevel ? 'is-active' : ''}`}
+        onClick={() => editor.chain().focus().setParagraph().run()}
+      >
+        <span style={{ fontSize: '0.9em' }}>¶</span> Paragraphe
+      </button>
+      {HEADING_LEVELS.map((level) => (
+        <button
+          key={level}
+          type="button"
+          className={`tiptap-dropdown-item ${editor.isActive('heading', { level }) ? 'is-active' : ''}`}
+          onClick={() => editor.chain().focus().toggleHeading({ level }).run()}
+        >
+          <span style={{ fontSize: HEADING_SIZES[level], fontWeight: 700 }}>H{level}</span> {HEADING_LABELS[level]}
+        </button>
+      ))}
+    </Dropdown>
+  );
+};
 
 // ============================================
 // COLOR PICKER
@@ -47,6 +134,7 @@ const COLORS = [
   '#000000', '#434343', '#666666', '#999999', '#b7b7b7', '#cccccc', '#d9d9d9', '#efefef', '#f3f3f3', '#ffffff',
   '#980000', '#ff0000', '#ff9900', '#ffff00', '#00ff00', '#00ffff', '#4a86e8', '#0000ff', '#9900ff', '#ff00ff',
   '#e6b8af', '#f4cccc', '#fce5cd', '#fff2cc', '#d9ead3', '#d0e0e3', '#c9daf8', '#cfe2f3', '#d9d2e9', '#ead1dc',
+  '#dd7e6b', '#ea9999', '#f9cb9c', '#ffe599', '#b6d7a8', '#a2c4c9', '#a4c2f4', '#9fc5e8', '#b4a7d6', '#d5a6bd',
 ];
 
 interface ColorPickerProps {
@@ -57,6 +145,15 @@ interface ColorPickerProps {
 const ColorPicker = ({ editor, type }: ColorPickerProps) => {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
 
   const applyColor = useCallback(
     (color: string) => {
@@ -101,24 +198,17 @@ const ColorPicker = ({ editor, type }: ColorPickerProps) => {
               onClick={() => applyColor(c)}
             />
           ))}
-          {type === 'text' && (
-            <button
-              type="button"
-              className="tiptap-color-reset"
-              onClick={() => { editor.chain().focus().unsetColor().run(); setOpen(false); }}
-            >
-              Réinitialiser
-            </button>
-          )}
-          {type === 'highlight' && (
-            <button
-              type="button"
-              className="tiptap-color-reset"
-              onClick={() => { editor.chain().focus().unsetHighlight().run(); setOpen(false); }}
-            >
-              Supprimer
-            </button>
-          )}
+          <button
+            type="button"
+            className="tiptap-color-reset"
+            onClick={() => {
+              if (type === 'text') editor.chain().focus().unsetColor().run();
+              else editor.chain().focus().unsetHighlight().run();
+              setOpen(false);
+            }}
+          >
+            {type === 'text' ? 'Réinitialiser' : 'Supprimer'}
+          </button>
         </div>
       )}
     </div>
@@ -126,10 +216,135 @@ const ColorPicker = ({ editor, type }: ColorPickerProps) => {
 };
 
 // ============================================
+// TABLE MENU (dropdown with all table actions)
+// ============================================
+
+const TableMenu = ({ editor }: { editor: Editor }) => {
+  const inTable = editor.isActive('table');
+
+  return (
+    <Dropdown
+      trigger={
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+      }
+      title="Tableau"
+      isActive={inTable}
+    >
+      {!inTable ? (
+        <>
+          <button type="button" className="tiptap-dropdown-item" onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            Insérer tableau 3×3
+          </button>
+          <button type="button" className="tiptap-dropdown-item" onClick={() => editor.chain().focus().insertTable({ rows: 2, cols: 2, withHeaderRow: true }).run()}>
+            Insérer tableau 2×2
+          </button>
+          <button type="button" className="tiptap-dropdown-item" onClick={() => editor.chain().focus().insertTable({ rows: 4, cols: 4, withHeaderRow: true }).run()}>
+            Insérer tableau 4×4
+          </button>
+          <button type="button" className="tiptap-dropdown-item" onClick={() => editor.chain().focus().insertTable({ rows: 5, cols: 5, withHeaderRow: true }).run()}>
+            Insérer tableau 5×5
+          </button>
+        </>
+      ) : (
+        <>
+          <div className="tiptap-dropdown-section">Lignes</div>
+          <button type="button" className="tiptap-dropdown-item" onClick={() => editor.chain().focus().addRowBefore().run()}>
+            ↑ Ajouter ligne au-dessus
+          </button>
+          <button type="button" className="tiptap-dropdown-item" onClick={() => editor.chain().focus().addRowAfter().run()}>
+            ↓ Ajouter ligne en-dessous
+          </button>
+          <button type="button" className="tiptap-dropdown-item tiptap-dropdown-danger" onClick={() => editor.chain().focus().deleteRow().run()}>
+            ✕ Supprimer la ligne
+          </button>
+
+          <div className="tiptap-dropdown-section">Colonnes</div>
+          <button type="button" className="tiptap-dropdown-item" onClick={() => editor.chain().focus().addColumnBefore().run()}>
+            ← Ajouter colonne à gauche
+          </button>
+          <button type="button" className="tiptap-dropdown-item" onClick={() => editor.chain().focus().addColumnAfter().run()}>
+            → Ajouter colonne à droite
+          </button>
+          <button type="button" className="tiptap-dropdown-item tiptap-dropdown-danger" onClick={() => editor.chain().focus().deleteColumn().run()}>
+            ✕ Supprimer la colonne
+          </button>
+
+          <div className="tiptap-dropdown-section">Cellules</div>
+          <button type="button" className="tiptap-dropdown-item" onClick={() => editor.chain().focus().mergeCells().run()}>
+            ⊞ Fusionner les cellules
+          </button>
+          <button type="button" className="tiptap-dropdown-item" onClick={() => editor.chain().focus().splitCell().run()}>
+            ⊟ Diviser la cellule
+          </button>
+          <button type="button" className="tiptap-dropdown-item" onClick={() => editor.chain().focus().toggleHeaderRow().run()}>
+            ≡ Basculer ligne d'en-tête
+          </button>
+          <button type="button" className="tiptap-dropdown-item" onClick={() => editor.chain().focus().toggleHeaderColumn().run()}>
+            ‖ Basculer colonne d'en-tête
+          </button>
+
+          <div className="tiptap-dropdown-section">Couleur de cellule</div>
+          <div className="tiptap-dropdown-colors">
+            {['#ffffff', '#f3f4f6', '#dbeafe', '#dcfce7', '#fef9c3', '#fee2e2', '#f3e8ff', '#e0e7ff'].map((c) => (
+              <button
+                key={c}
+                type="button"
+                className="tiptap-color-swatch"
+                style={{ background: c, width: 20, height: 20 }}
+                title={c}
+                onClick={() => editor.chain().focus().setCellAttribute('backgroundColor', c).run()}
+              />
+            ))}
+            <button
+              type="button"
+              className="tiptap-color-swatch"
+              style={{ background: 'linear-gradient(135deg, #fff 45%, #ef4444 50%, #fff 55%)', width: 20, height: 20, border: '1px solid #d1d5db' }}
+              title="Supprimer la couleur"
+              onClick={() => editor.chain().focus().setCellAttribute('backgroundColor', null).run()}
+            />
+          </div>
+
+          <div className="tiptap-dropdown-section" />
+          <button type="button" className="tiptap-dropdown-item tiptap-dropdown-danger" onClick={() => editor.chain().focus().deleteTable().run()}>
+            🗑 Supprimer le tableau
+          </button>
+        </>
+      )}
+    </Dropdown>
+  );
+};
+
+// ============================================
+// IMAGE MENU (dropdown: URL + upload)
+// ============================================
+
+const ImageMenu = ({ editor, onAddImage, onUploadImage }: { editor: Editor; onAddImage: () => void; onUploadImage: () => void }) => {
+  return (
+    <Dropdown
+      trigger={
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      }
+      title="Image"
+      isActive={editor.isActive('image')}
+    >
+      <button type="button" className="tiptap-dropdown-item" onClick={onAddImage}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        Insérer depuis une URL
+      </button>
+      <button type="button" className="tiptap-dropdown-item" onClick={onUploadImage}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Téléverser depuis l'ordinateur
+      </button>
+    </Dropdown>
+  );
+};
+
+// ============================================
 // MAIN TOOLBAR
 // ============================================
 
-export const EditorToolbar = ({ editor, onSetLink, onAddImage, minimal, extraContent }: EditorToolbarProps) => {
+export const EditorToolbar = ({ editor, onSetLink, onAddImage, onUploadImage, minimal, extraContent }: EditorToolbarProps) => {
   return (
     <div className="tiptap-toolbar">
       {extraContent}
@@ -144,16 +359,8 @@ export const EditorToolbar = ({ editor, onSetLink, onAddImage, minimal, extraCon
 
       <Divider />
 
-      {/* Headings */}
-      <TB onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} isActive={editor.isActive('heading', { level: 1 })} title="Titre 1">
-        H1
-      </TB>
-      <TB onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} isActive={editor.isActive('heading', { level: 2 })} title="Titre 2">
-        H2
-      </TB>
-      <TB onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} isActive={editor.isActive('heading', { level: 3 })} title="Titre 3">
-        H3
-      </TB>
+      {/* Heading dropdown */}
+      <HeadingDropdown editor={editor} />
 
       <Divider />
 
@@ -182,6 +389,9 @@ export const EditorToolbar = ({ editor, onSetLink, onAddImage, minimal, extraCon
       </TB>
       <TB onClick={() => editor.chain().focus().setTextAlign('right').run()} isActive={editor.isActive({ textAlign: 'right' })} title="Aligner à droite">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="21" y1="10" x2="7" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="21" y1="18" x2="7" y2="18"/></svg>
+      </TB>
+      <TB onClick={() => editor.chain().focus().setTextAlign('justify').run()} isActive={editor.isActive({ textAlign: 'justify' })} title="Justifier">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="21" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="21" y1="18" x2="3" y2="18"/></svg>
       </TB>
 
       <Divider />
@@ -218,31 +428,25 @@ export const EditorToolbar = ({ editor, onSetLink, onAddImage, minimal, extraCon
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
       </TB>
 
+      {/* Unlink (visible when link is active) */}
+      {editor.isActive('link') && (
+        <TB onClick={() => editor.chain().focus().unsetLink().run()} title="Supprimer le lien">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m18.84 12.25 1.72-1.71a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="m5.16 11.75-1.72 1.71a5 5 0 0 0 7.07 7.07l1.72-1.71"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
+        </TB>
+      )}
+
       {/* Image */}
       {!minimal && (
-        <TB onClick={onAddImage} title="Image">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-        </TB>
+        <>
+          <ImageMenu editor={editor} onAddImage={onAddImage} onUploadImage={onUploadImage} />
+        </>
       )}
 
       {/* Table */}
       {!minimal && (
         <>
           <Divider />
-          <TB onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} title="Insérer tableau">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
-          </TB>
-          {editor.isActive('table') && (
-            <>
-              <TB onClick={() => editor.chain().focus().addColumnAfter().run()} title="Ajouter colonne">+Col</TB>
-              <TB onClick={() => editor.chain().focus().addRowAfter().run()} title="Ajouter ligne">+Lig</TB>
-              <TB onClick={() => editor.chain().focus().deleteColumn().run()} title="Supprimer colonne">-Col</TB>
-              <TB onClick={() => editor.chain().focus().deleteRow().run()} title="Supprimer ligne">-Lig</TB>
-              <TB onClick={() => editor.chain().focus().deleteTable().run()} title="Supprimer tableau">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-              </TB>
-            </>
-          )}
+          <TableMenu editor={editor} />
         </>
       )}
 
