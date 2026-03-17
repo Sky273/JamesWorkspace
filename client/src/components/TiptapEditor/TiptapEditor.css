@@ -730,6 +730,302 @@
 }
 
 /* ============================================
+   TABLE GRID PICKER
+   ============================================ */
+.tiptap-grid-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px;
+}
+
+.tiptap-grid-row {
+  display: flex;
+  gap: 2px;
+}
+
+.tiptap-grid-cell {
+  width: 18px;
+  height: 18px;
+  border: 1px solid #d1d5db;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s;
+}
+
+.tiptap-grid-cell:hover,
+.tiptap-grid-cell.is-selected {
+  background: #3b82f6;
+  border-color: #2563eb;
+}
+
+.dark .tiptap-grid-cell {
+  border-color: #4b5563;
+}
+
+.dark .tiptap-grid-cell:hover,
+.dark .tiptap-grid-cell.is-selected {
+  background: #2563eb;
+  border-color: #1d4ed8;
+}
+
+/* ============================================
+   TAB BAR (for table menu)
+   ============================================ */
+.tiptap-tab-bar {
+  display: flex;
+  gap: 0;
+  padding: 4px 4px 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.dark .tiptap-tab-bar {
+  border-bottom-color: #374151;
+}
+
+.tiptap-tab-btn {
+  flex: 1;
+  padding: 6px 10px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.tiptap-tab-btn:hover {
+  color: #111827;
+  background: #f3f4f6;
+}
+
+.tiptap-tab-btn.is-active {
+  color: #2563eb;
+  border-bottom-color: #2563eb;
+  font-weight: 600;
+}
+
+.dark .tiptap-tab-btn {
+  color: #9ca3af;
+}
+
+.dark .tiptap-tab-btn:hover {
+  color: #e5e7eb;
+  background: #374151;
+}
+
+.dark .tiptap-tab-btn.is-active {
+  color: #60a5fa;
+  border-bottom-color: #60a5fa;
+}
+
+/* ============================================
+   PROPERTIES PANEL (table cell/table props)
+   ============================================ */
+.tiptap-props-panel {
+  padding: 4px;
+}
+
+.tiptap-props-section {
+  padding: 6px 6px 8px;
+  border-top: 1px solid #f3f4f6;
+}
+
+.tiptap-props-section:first-child {
+  border-top: none;
+}
+
+.dark .tiptap-props-section {
+  border-top-color: #374151;
+}
+
+.tiptap-props-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #9ca3af;
+  margin-bottom: 6px;
+}
+
+.dark .tiptap-props-label {
+  color: #6b7280;
+}
+
+.tiptap-props-btn-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.tiptap-props-btn {
+  padding: 4px 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  background: #fff;
+  color: #374151;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.1s;
+  white-space: nowrap;
+}
+
+.tiptap-props-btn:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.tiptap-props-btn.is-active {
+  background: #dbeafe;
+  border-color: #3b82f6;
+  color: #1d4ed8;
+  font-weight: 500;
+}
+
+.dark .tiptap-props-btn {
+  border-color: #4b5563;
+  background: #1f2937;
+  color: #d1d5db;
+}
+
+.dark .tiptap-props-btn:hover {
+  background: #374151;
+  border-color: #6b7280;
+}
+
+.dark .tiptap-props-btn.is-active {
+  background: #1e3a5f;
+  border-color: #2563eb;
+  color: #60a5fa;
+}
+
+/* ============================================
+   ENHANCED IMAGE BUBBLE
+   ============================================ */
+.tiptap-bubble-image-enhanced {
+  flex-wrap: wrap;
+  max-width: 420px;
+}
+
+.tiptap-bubble-props-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #e5e7eb;
+}
+
+.tiptap-bubble-props-back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 4px;
+  background: #374151;
+  color: #d1d5db;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.tiptap-bubble-props-back:hover {
+  background: #4b5563;
+  color: #fff;
+}
+
+.tiptap-bubble-props-sublabel {
+  font-size: 11px;
+  font-weight: 500;
+  color: #9ca3af;
+  margin: 6px 0 4px;
+}
+
+.tiptap-bubble-props-btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin: 4px 0;
+}
+
+.tiptap-bubble-select {
+  flex: 1;
+  padding: 3px 6px;
+  border: 1px solid #4b5563;
+  border-radius: 4px;
+  background: #374151;
+  color: #e5e7eb;
+  font-size: 12px;
+  outline: none;
+  cursor: pointer;
+}
+
+.tiptap-bubble-select:focus {
+  border-color: #3b82f6;
+}
+
+.tiptap-bubble-color-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+
+.tiptap-bubble-color-input {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid #4b5563;
+  border-radius: 4px;
+  cursor: pointer;
+  background: none;
+}
+
+.tiptap-bubble-color-input::-webkit-color-swatch-wrapper {
+  padding: 2px;
+}
+
+.tiptap-bubble-color-input::-webkit-color-swatch {
+  border-radius: 2px;
+  border: none;
+}
+
+/* ============================================
+   STRIPED TABLE ROWS
+   ============================================ */
+.tiptap-editor-content .tiptap table.tiptap-striped-table tr:nth-child(even) td {
+  background: #f9fafb;
+}
+
+.dark .tiptap-editor-content .tiptap table.tiptap-striped-table tr:nth-child(even) td {
+  background: #1f2937;
+}
+
+/* ============================================
+   IMAGE FLOAT CLEAR
+   ============================================ */
+.tiptap-editor-content .tiptap img[style*="float"]  {
+  clear: none;
+}
+
+.tiptap-editor-content .tiptap img[style*="float"] + * {
+  overflow: hidden;
+}
+
+/* ============================================
+   IMAGE ALIGNMENT (block-level)
+   ============================================ */
+.tiptap-editor-content .tiptap img[style*="display: block"] {
+  max-width: 100%;
+}
+
+/* ============================================
    SUGGESTION DECORATIONS (ProseMirror)
    ============================================ */
 

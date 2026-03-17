@@ -29,52 +29,131 @@ const TB = ({ onClick, isActive, title, children, className = '' }: {
 );
 
 // ============================================
+// IMAGE BUBBLE - HELPERS
+// ============================================
+
+type ImagePanel = 'quick' | 'dimensions' | 'style' | 'advanced';
+
+const SHADOW_PRESETS = [
+  { label: 'Aucune', value: null },
+  { label: 'Légère', value: '0 1px 3px rgba(0,0,0,0.12)' },
+  { label: 'Moyenne', value: '0 4px 12px rgba(0,0,0,0.15)' },
+  { label: 'Forte', value: '0 8px 24px rgba(0,0,0,0.2)' },
+] as const;
+
+const BORDER_STYLES = [
+  { label: 'Aucune', value: null },
+  { label: 'Plein', value: 'solid' },
+  { label: 'Tirets', value: 'dashed' },
+  { label: 'Points', value: 'dotted' },
+] as const;
+
+// ============================================
 // IMAGE BUBBLE (shown when image is selected)
 // ============================================
 
 const ImageBubble = ({ editor }: { editor: Editor }) => {
   const attrs = editor.getAttributes('image');
-  const [showProps, setShowProps] = useState(false);
+  const [panel, setPanel] = useState<ImagePanel>('quick');
+
+  // Form state for properties
   const [width, setWidth] = useState(attrs.width || '');
   const [height, setHeight] = useState(attrs.height || '');
   const [alt, setAlt] = useState(attrs.alt || '');
+  const [title, setTitle] = useState(attrs.title || '');
+  const [borderWidth, setBorderWidth] = useState(attrs.borderWidth || '');
+  const [borderStyle, setBorderStyle] = useState(attrs.borderStyle || '');
+  const [borderColor, setBorderColor] = useState(attrs.borderColor || '');
+  const [borderRadius, setBorderRadius] = useState(attrs.borderRadius || '');
+  const [margin, setMargin] = useState(attrs.margin || '');
+  const [padding, setPadding] = useState(attrs.padding || '');
 
-  const applySize = useCallback(() => {
-    const src = attrs.src as string;
-    if (!src) return;
-    editor.chain().focus().setImage({
-      src,
-      ...(width ? { width: width as unknown as number } : {}),
-      ...(height ? { height: height as unknown as number } : {}),
-      ...(alt ? { alt } : {}),
-    }).run();
-    setShowProps(false);
-  }, [editor, attrs.src, width, height, alt]);
+  const updateAttr = useCallback((key: string, value: unknown) => {
+    editor.chain().focus().updateAttributes('image', { [key]: value || null }).run();
+  }, [editor]);
+
+  const updateMultipleAttrs = useCallback((updates: Record<string, unknown>) => {
+    const cleaned: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(updates)) {
+      cleaned[k] = v || null;
+    }
+    editor.chain().focus().updateAttributes('image', cleaned).run();
+  }, [editor]);
 
   const setImageWidth = useCallback((w: string) => {
-    const src = attrs.src as string;
-    if (!src) return;
-    editor.chain().focus().setImage({ src, width: w as unknown as number, ...(attrs.alt ? { alt: attrs.alt as string } : {}) }).run();
-  }, [editor, attrs.src, attrs.alt]);
+    editor.chain().focus().updateAttributes('image', { width: w }).run();
+  }, [editor]);
+
+  const setAlignment = useCallback((align: string | null) => {
+    editor.chain().focus().updateAttributes('image', { alignment: align, float: null }).run();
+  }, [editor]);
+
+  const setFloat = useCallback((f: string | null) => {
+    editor.chain().focus().updateAttributes('image', { float: f, alignment: null }).run();
+  }, [editor]);
 
   return (
-    <div className="tiptap-bubble-menu tiptap-bubble-image">
-      {!showProps ? (
+    <div className="tiptap-bubble-menu tiptap-bubble-image-enhanced">
+      {/* ---- Quick Actions Panel ---- */}
+      {panel === 'quick' && (
         <>
-          <TB onClick={() => setImageWidth('25%')} title="25%">25%</TB>
-          <TB onClick={() => setImageWidth('50%')} title="50%">50%</TB>
-          <TB onClick={() => setImageWidth('75%')} title="75%">75%</TB>
-          <TB onClick={() => setImageWidth('100%')} title="100%">100%</TB>
+          {/* Size presets */}
+          <TB onClick={() => setImageWidth('25%')} isActive={attrs.width === '25%'} title="25%">25%</TB>
+          <TB onClick={() => setImageWidth('50%')} isActive={attrs.width === '50%'} title="50%">50%</TB>
+          <TB onClick={() => setImageWidth('75%')} isActive={attrs.width === '75%'} title="75%">75%</TB>
+          <TB onClick={() => setImageWidth('100%')} isActive={attrs.width === '100%'} title="100%">100%</TB>
+
           <span className="tiptap-bubble-divider" />
-          <TB onClick={() => setShowProps(true)} title="Propriétés de l'image">
+
+          {/* Alignment */}
+          <TB onClick={() => setAlignment('left')} isActive={attrs.alignment === 'left'} title="Aligner à gauche">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="17" y1="18" x2="3" y2="18"/></svg>
+          </TB>
+          <TB onClick={() => setAlignment('center')} isActive={attrs.alignment === 'center'} title="Centrer">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="10" x2="6" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="18" y1="18" x2="6" y2="18"/></svg>
+          </TB>
+          <TB onClick={() => setAlignment('right')} isActive={attrs.alignment === 'right'} title="Aligner à droite">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="21" y1="10" x2="7" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="21" y1="18" x2="7" y2="18"/></svg>
+          </TB>
+
+          <span className="tiptap-bubble-divider" />
+
+          {/* Float */}
+          <TB onClick={() => setFloat(attrs.float === 'left' ? null : 'left')} isActive={attrs.float === 'left'} title="Flottant gauche">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="8" height="8" rx="1"/><line x1="14" y1="4" x2="21" y2="4"/><line x1="14" y1="8" x2="21" y2="8"/><line x1="3" y1="16" x2="21" y2="16"/><line x1="3" y1="20" x2="21" y2="20"/></svg>
+          </TB>
+          <TB onClick={() => setFloat(attrs.float === 'right' ? null : 'right')} isActive={attrs.float === 'right'} title="Flottant droite">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="13" y="3" width="8" height="8" rx="1"/><line x1="3" y1="4" x2="10" y2="4"/><line x1="3" y1="8" x2="10" y2="8"/><line x1="3" y1="16" x2="21" y2="16"/><line x1="3" y1="20" x2="21" y2="20"/></svg>
+          </TB>
+
+          <span className="tiptap-bubble-divider" />
+
+          {/* Panel toggles */}
+          <TB onClick={() => setPanel('dimensions')} title="Dimensions & texte alt">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 15l4-4 3 3 4-4 7 7"/></svg>
+          </TB>
+          <TB onClick={() => setPanel('style')} title="Bordure & ombre">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" strokeDasharray="4 2"/></svg>
+          </TB>
+          <TB onClick={() => setPanel('advanced')} title="Marges & espacement">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           </TB>
+
+          <span className="tiptap-bubble-divider" />
+
           <TB onClick={() => editor.chain().focus().deleteSelection().run()} title="Supprimer l'image" className="tiptap-bubble-danger">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
           </TB>
         </>
-      ) : (
+      )}
+
+      {/* ---- Dimensions & Alt Panel ---- */}
+      {panel === 'dimensions' && (
         <div className="tiptap-bubble-props">
+          <div className="tiptap-bubble-props-header">
+            <span>Dimensions & texte</span>
+            <button type="button" className="tiptap-bubble-props-back" onClick={() => setPanel('quick')}>←</button>
+          </div>
           <label>
             <span>Largeur</span>
             <input type="text" value={width} onChange={(e) => setWidth(e.target.value)} placeholder="ex: 300px, 50%" />
@@ -85,11 +164,117 @@ const ImageBubble = ({ editor }: { editor: Editor }) => {
           </label>
           <label>
             <span>Alt</span>
-            <input type="text" value={alt} onChange={(e) => setAlt(e.target.value)} placeholder="Description" />
+            <input type="text" value={alt} onChange={(e) => setAlt(e.target.value)} placeholder="Description de l'image" />
+          </label>
+          <label>
+            <span>Titre</span>
+            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Titre au survol" />
           </label>
           <div className="tiptap-bubble-props-actions">
-            <button type="button" className="tiptap-bubble-props-apply" onClick={applySize}>Appliquer</button>
-            <button type="button" className="tiptap-bubble-props-cancel" onClick={() => setShowProps(false)}>Annuler</button>
+            <button type="button" className="tiptap-bubble-props-apply" onClick={() => {
+              updateMultipleAttrs({ width, height, alt, title });
+              setPanel('quick');
+            }}>Appliquer</button>
+            <button type="button" className="tiptap-bubble-props-cancel" onClick={() => setPanel('quick')}>Annuler</button>
+          </div>
+        </div>
+      )}
+
+      {/* ---- Border & Shadow Panel ---- */}
+      {panel === 'style' && (
+        <div className="tiptap-bubble-props">
+          <div className="tiptap-bubble-props-header">
+            <span>Bordure & ombre</span>
+            <button type="button" className="tiptap-bubble-props-back" onClick={() => setPanel('quick')}>←</button>
+          </div>
+
+          <label>
+            <span>Style</span>
+            <select
+              value={borderStyle}
+              onChange={(e) => setBorderStyle(e.target.value)}
+              className="tiptap-bubble-select"
+            >
+              {BORDER_STYLES.map((opt) => (
+                <option key={opt.label} value={opt.value ?? ''}>{opt.label}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span>Épaisseur</span>
+            <input type="text" value={borderWidth} onChange={(e) => setBorderWidth(e.target.value)} placeholder="ex: 2px" />
+          </label>
+          <label>
+            <span>Couleur</span>
+            <div className="tiptap-bubble-color-row">
+              <input type="color" value={borderColor || '#000000'} onChange={(e) => setBorderColor(e.target.value)} className="tiptap-bubble-color-input" />
+              <input type="text" value={borderColor} onChange={(e) => setBorderColor(e.target.value)} placeholder="#000000" style={{ flex: 1 }} />
+            </div>
+          </label>
+          <label>
+            <span>Arrondi</span>
+            <input type="text" value={borderRadius} onChange={(e) => setBorderRadius(e.target.value)} placeholder="ex: 8px, 50%" />
+          </label>
+
+          <div className="tiptap-bubble-props-sublabel">Ombre</div>
+          <div className="tiptap-bubble-props-btn-row">
+            {SHADOW_PRESETS.map((opt) => (
+              <button
+                key={opt.label}
+                type="button"
+                className={`tiptap-props-btn ${attrs.shadow === opt.value ? 'is-active' : ''}`}
+                onClick={() => updateAttr('shadow', opt.value)}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="tiptap-bubble-props-actions">
+            <button type="button" className="tiptap-bubble-props-apply" onClick={() => {
+              updateMultipleAttrs({ borderWidth, borderStyle, borderColor, borderRadius });
+              setPanel('quick');
+            }}>Appliquer</button>
+            <button type="button" className="tiptap-bubble-props-cancel" onClick={() => setPanel('quick')}>Annuler</button>
+          </div>
+        </div>
+      )}
+
+      {/* ---- Advanced (Margin/Padding) Panel ---- */}
+      {panel === 'advanced' && (
+        <div className="tiptap-bubble-props">
+          <div className="tiptap-bubble-props-header">
+            <span>Marges & espacement</span>
+            <button type="button" className="tiptap-bubble-props-back" onClick={() => setPanel('quick')}>←</button>
+          </div>
+          <label>
+            <span>Marge</span>
+            <input type="text" value={margin} onChange={(e) => setMargin(e.target.value)} placeholder="ex: 8px, 0 auto" />
+          </label>
+          <div className="tiptap-bubble-props-btn-row">
+            {[['0', '0'], ['8px', '8px'], ['16px', '16px'], ['0 auto', 'Centré']].map(([v, l]) => (
+              <button key={v} type="button" className="tiptap-props-btn" onClick={() => { setMargin(v); updateAttr('margin', v); }}>
+                {l}
+              </button>
+            ))}
+          </div>
+          <label>
+            <span>Padding</span>
+            <input type="text" value={padding} onChange={(e) => setPadding(e.target.value)} placeholder="ex: 4px" />
+          </label>
+          <div className="tiptap-bubble-props-btn-row">
+            {[['0', '0'], ['4px', '4px'], ['8px', '8px'], ['12px', '12px']].map(([v, l]) => (
+              <button key={v} type="button" className="tiptap-props-btn" onClick={() => { setPadding(v); updateAttr('padding', v); }}>
+                {l}
+              </button>
+            ))}
+          </div>
+          <div className="tiptap-bubble-props-actions">
+            <button type="button" className="tiptap-bubble-props-apply" onClick={() => {
+              updateMultipleAttrs({ margin, padding });
+              setPanel('quick');
+            }}>Appliquer</button>
+            <button type="button" className="tiptap-bubble-props-cancel" onClick={() => setPanel('quick')}>Annuler</button>
           </div>
         </div>
       )}

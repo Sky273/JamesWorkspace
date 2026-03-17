@@ -9,10 +9,10 @@ import { StarterKit } from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
 import Link from '@tiptap/extension-link';
-import Image from '@tiptap/extension-image';
-import { Table } from '@tiptap/extension-table';
+import { CustomImage } from './CustomImage';
+import { CustomTable } from './CustomTable';
 import { TableRow } from '@tiptap/extension-table-row';
-import { TableCell } from '@tiptap/extension-table-cell';
+import { CustomTableCell } from './CustomTableCell';
 import { TableHeader } from '@tiptap/extension-table-header';
 import Highlight from '@tiptap/extension-highlight';
 import { Color } from '@tiptap/extension-color';
@@ -105,13 +105,13 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
           openOnClick: false,
           HTMLAttributes: { rel: 'noopener noreferrer', target: '_blank' },
         }),
-        Image.configure({
+        CustomImage.configure({
           inline: true,
           allowBase64: true,
         }),
-        Table.configure({ resizable: true }),
+        CustomTable.configure({ resizable: true }),
         TableRow,
-        TableCell,
+        CustomTableCell,
         TableHeader,
         Highlight.configure({ multicolor: true }),
         TextStyle,
