@@ -35,6 +35,7 @@ import {
 import { EditorToolbar } from './EditorToolbar';
 import { BubbleToolbar } from './BubbleToolbar';
 import { ImageToolbar } from './ImageToolbar';
+import { TableToolbar } from './TableToolbar';
 import { SuggestionsExtension } from './SuggestionsExtension';
 import type { SuggestionsBySection } from './SuggestionsExtension';
 import './TiptapEditor.css';
@@ -317,6 +318,9 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
 
         {/* Image toolbar (contextual - appears when image selected) */}
         <ImageToolbar editor={editor} />
+
+        {/* Table toolbar (contextual - appears when cursor is in a table) */}
+        <TableToolbar editor={editor} />
 
         {/* Editor content */}
         <div

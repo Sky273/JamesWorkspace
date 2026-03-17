@@ -1635,3 +1635,120 @@
   background: #374151;
   color: #d1d5db;
 }
+
+/* ============================================
+   TABLE TOOLBAR (contextual, below main toolbar)
+   ============================================ */
+.tiptap-table-toolbar {
+  border-bottom: 1px solid #d1fae5;
+  background: linear-gradient(180deg, #f0fdf4 0%, #f0fdf9 100%);
+  padding: 4px 8px;
+  animation: tiptap-image-toolbar-in 0.15s ease-out;
+}
+
+.dark .tiptap-table-toolbar {
+  border-bottom-color: #134e4a;
+  background: linear-gradient(180deg, #0d1f17 0%, #0f2018 100%);
+}
+
+/* Tab switcher */
+.tiptap-table-toolbar-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-bottom: 4px;
+}
+
+.tiptap-table-toolbar-tab {
+  padding: 2px 10px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: #6b7280;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.tiptap-table-toolbar-tab:hover {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.tiptap-table-toolbar-tab.is-active {
+  background: #bbf7d0;
+  color: #166534;
+  border-color: #86efac;
+}
+
+.dark .tiptap-table-toolbar-tab {
+  color: #9ca3af;
+}
+
+.dark .tiptap-table-toolbar-tab:hover {
+  background: rgba(34, 197, 94, 0.12);
+  color: #86efac;
+}
+
+.dark .tiptap-table-toolbar-tab.is-active {
+  background: rgba(34, 197, 94, 0.18);
+  color: #86efac;
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+/* Structure row (quick actions) */
+.tiptap-table-toolbar-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+}
+
+/* Props layout (cell & table tabs) */
+.tiptap-table-toolbar-props {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 4px 8px;
+}
+
+.tiptap-table-toolbar-prop-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Color swatches */
+.tiptap-table-toolbar-colors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+
+.tiptap-table-toolbar-swatch {
+  width: 16px;
+  height: 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 3px;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.1s;
+}
+
+.tiptap-table-toolbar-swatch:hover {
+  transform: scale(1.25);
+  z-index: 1;
+}
+
+.dark .tiptap-table-toolbar-swatch {
+  border-color: #4b5563;
+}
+
+.tiptap-table-toolbar-swatch-reset {
+  background: linear-gradient(135deg, #fff 45%, #ef4444 50%, #fff 55%) !important;
+}
+
+.dark .tiptap-table-toolbar-swatch-reset {
+  background: linear-gradient(135deg, #374151 45%, #ef4444 50%, #374151 55%) !important;
+}
