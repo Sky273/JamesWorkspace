@@ -18,6 +18,8 @@ interface EditorToolbarProps {
   onUploadImage: () => void;
   minimal?: boolean;
   extraContent?: React.ReactNode;
+  isHtmlMode?: boolean;
+  onToggleHtmlMode?: () => void;
 }
 
 // ============================================
@@ -677,7 +679,7 @@ const ImageMenu = ({ editor, onAddImage, onUploadImage }: { editor: Editor; onAd
 // MAIN TOOLBAR
 // ============================================
 
-export const EditorToolbar = ({ editor, onSetLink, onAddImage, onUploadImage, minimal, extraContent }: EditorToolbarProps) => {
+export const EditorToolbar = ({ editor, onSetLink, onAddImage, onUploadImage, minimal, extraContent, isHtmlMode, onToggleHtmlMode }: EditorToolbarProps) => {
   return (
     <div className="tiptap-toolbar">
       {extraContent}
@@ -800,6 +802,17 @@ export const EditorToolbar = ({ editor, onSetLink, onAddImage, onUploadImage, mi
       <TB onClick={() => editor.chain().focus().clearNodes().unsetAllMarks().run()} title="Effacer le formatage">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 7h16"/><path d="m5 7 4 12"/><path d="M15 7l-2.5 7.5"/><path d="m2 17 4 4"/><path d="m18 13 4 4"/><path d="m2 21 4-4"/><path d="m18 17 4-4"/></svg>
       </TB>
+
+      {/* HTML source toggle */}
+      {onToggleHtmlMode && (
+        <>
+          <Divider />
+          <TB onClick={onToggleHtmlMode} isActive={isHtmlMode} title={isHtmlMode ? 'Retour au rendu visuel' : 'Éditer le code HTML'}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+            <span style={{ fontSize: 9, marginLeft: 2, fontWeight: 600 }}>HTML</span>
+          </TB>
+        </>
+      )}
     </div>
   );
 };

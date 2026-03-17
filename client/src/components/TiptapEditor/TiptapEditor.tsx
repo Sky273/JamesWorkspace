@@ -5,7 +5,7 @@
 
 import { useEditor, EditorContent } from '@tiptap/react';
 import { BubbleMenu } from '@tiptap/react/menus';
-import { isTextSelection, isNodeSelection } from '@tiptap/core';
+import { isTextSelection } from '@tiptap/core';
 import { StarterKit } from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
@@ -34,6 +34,7 @@ import {
 
 import { EditorToolbar } from './EditorToolbar';
 import { BubbleToolbar } from './BubbleToolbar';
+import { ImageToolbar } from './ImageToolbar';
 import { SuggestionsExtension } from './SuggestionsExtension';
 import type { SuggestionsBySection } from './SuggestionsExtension';
 import './TiptapEditor.css';
@@ -90,6 +91,8 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
     const [_ready, setReady] = useState(false);
     const contentSetRef = useRef(false);
     const [suggestionsVisible, setSuggestionsVisible] = useState(true);
+    const [htmlMode, setHtmlMode] = useState(false);
+    const [htmlSource, setHtmlSource] = useState('');
 
     const editor = useEditor({
       extensions: [
@@ -225,6 +228,19 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
       setSuggestionsVisible((v) => !v);
     }, [editor]);
 
+    // Toggle HTML source mode
+    const handleToggleHtmlMode = useCallback(() => {
+      if (!editor) return;
+      if (!htmlMode) {
+        // Switching TO html mode: capture current editor HTML
+        setHtmlSource(editor.getHTML());
+      } else {
+        // Switching BACK to WYSIWYG: apply edited HTML
+        editor.commands.setContent(htmlSource, { emitUpdate: true });
+      }
+      setHtmlMode((v) => !v);
+    }, [editor, htmlMode, htmlSource]);
+
     const hasSuggestions =
       suggestions &&
       Object.values(suggestions).flat().filter(Boolean).length > 0;
@@ -250,6 +266,8 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
           onAddImage={addImage}
           onUploadImage={triggerImageUpload}
           minimal={minimal}
+          isHtmlMode={htmlMode}
+          onToggleHtmlMode={handleToggleHtmlMode}
           extraContent={
             <>
               {hasSuggestions && (
@@ -282,8 +300,8 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
 
               const { selection } = state;
 
-              // Show for image node selections
-              if (isNodeSelection(selection) && e.isActive('image')) return true;
+              // Images are handled by ImageToolbar (outside overflow container)
+              if (e.isActive('image')) return false;
 
               // Default text selection behavior
               if (selection.empty) return false;
@@ -297,12 +315,25 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
           </BubbleMenu>
         )}
 
+        {/* Image toolbar (contextual - appears when image selected) */}
+        <ImageToolbar editor={editor} />
+
         {/* Editor content */}
         <div
           className="tiptap-editor-content"
           style={{ minHeight: height, maxHeight: height, overflowY: 'auto' }}
         >
-          <EditorContent editor={editor} />
+          {htmlMode ? (
+            <textarea
+              className="tiptap-html-source"
+              value={htmlSource}
+              onChange={(e) => setHtmlSource(e.target.value)}
+              spellCheck={false}
+              style={{ minHeight: height - 8, maxHeight: height - 8 }}
+            />
+          ) : (
+            <EditorContent editor={editor} />
+          )}
         </div>
 
         {/* Word count footer */}
