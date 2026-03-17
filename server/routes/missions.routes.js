@@ -162,6 +162,165 @@ router.get('/', authenticateToken, async (req, res) => {
     }
 });
 
+// GET /api/missions/grouped-by-deal - Get missions grouped by deal for the "Par affaire" view
+router.get('/grouped-by-deal', authenticateToken, async (req, res) => {
+    try {
+        const isAdmin = req.user.role?.toLowerCase() === 'admin';
+        const userFirmId = await getUserFirmId(req);
+
+        if (!userFirmId && !isAdmin) {
+            return res.status(403).json({ error: 'No firm association' });
+        }
+
+        // Query 1: Get all deals for this firm
+        const dealsResult = await query(`
+            SELECT d.id, d.title, d.status, d.priority,
+                   c.name as client_name, c.type as client_type,
+                   cc.name as contact_name
+            FROM deals d
+            LEFT JOIN clients c ON d.client_id = c.id
+            LEFT JOIN client_contacts cc ON d.contact_id = cc.id
+            WHERE d.firm_id = $1
+            ORDER BY
+                CASE d.priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 WHEN 'low' THEN 3 ELSE 4 END,
+                d.title ASC
+        `, [userFirmId]);
+
+        const dealIds = dealsResult.rows.map(d => d.id);
+
+        // Query 2: Batch fetch ALL missions for ALL deals
+        let allMissionsMap = new Map();
+        if (dealIds.length > 0) {
+            const missionsResult = await query(`
+                SELECT m.id, m.title, m.content, m.status, m.keywords,
+                       m.required_skills, m.preferred_skills,
+                       m.created_at, m.updated_at, m.deal_id, m.firm,
+                       m.client_id, m.contact_id,
+                       c.name as client_name, c.type as client_type,
+                       cc.name as contact_name, cc.email as contact_email, cc.role as contact_role
+                FROM missions m
+                LEFT JOIN clients c ON m.client_id = c.id
+                LEFT JOIN client_contacts cc ON m.contact_id = cc.id
+                WHERE m.deal_id = ANY($1)
+                ORDER BY m.deal_id, m.created_at DESC
+            `, [dealIds]);
+
+            for (const mission of missionsResult.rows) {
+                const dealId = mission.deal_id;
+                if (!allMissionsMap.has(dealId)) {
+                    allMissionsMap.set(dealId, []);
+                }
+                const { deal_id: _, ...missionWithoutDealId } = mission;
+                allMissionsMap.get(dealId).push(missionWithoutDealId);
+            }
+        }
+
+        // Query 3: Batch fetch adaptation counts for all missions
+        const allMissionIds = [];
+        for (const missions of allMissionsMap.values()) {
+            for (const mission of missions) {
+                allMissionIds.push(mission.id);
+            }
+        }
+
+        let adaptationsCountMap = new Map();
+        if (allMissionIds.length > 0) {
+            const adaptResult = await query(`
+                SELECT mission_id, COUNT(*) as count
+                FROM resume_adaptations
+                WHERE mission_id = ANY($1)
+                GROUP BY mission_id
+            `, [allMissionIds]);
+
+            for (const row of adaptResult.rows) {
+                adaptationsCountMap.set(row.mission_id, parseInt(row.count));
+            }
+        }
+
+        // Query 4: Count resumes per deal (for display)
+        let resumeCountMap = new Map();
+        if (dealIds.length > 0) {
+            const rcResult = await query(`
+                SELECT deal_id, COUNT(*) as count
+                FROM deal_resumes
+                WHERE deal_id = ANY($1)
+                GROUP BY deal_id
+            `, [dealIds]);
+            for (const row of rcResult.rows) {
+                resumeCountMap.set(row.deal_id, parseInt(row.count));
+            }
+        }
+
+        // Assemble deals with their missions
+        const deals = dealsResult.rows.map(deal => {
+            const missions = (allMissionsMap.get(deal.id) || []).map(mission => ({
+                ...mission,
+                adaptations_count: adaptationsCountMap.get(mission.id) || 0
+            }));
+
+            return {
+                ...deal,
+                missions,
+                missions_count: missions.length,
+                resumes_count: resumeCountMap.get(deal.id) || 0
+            };
+        });
+
+        // Query 5: Get unassigned missions (no deal_id)
+        const unassignedConditions = ['m.deal_id IS NULL'];
+        const unassignedParams = [];
+        if (!isAdmin) {
+            unassignedConditions.push('m.firm_id = $1');
+            unassignedParams.push(userFirmId);
+        }
+
+        const unassignedResult = await query(`
+            SELECT m.id, m.title, m.content, m.status, m.keywords,
+                   m.required_skills, m.preferred_skills,
+                   m.created_at, m.updated_at, m.firm,
+                   m.client_id, m.contact_id,
+                   c.name as client_name, c.type as client_type,
+                   cc.name as contact_name, cc.email as contact_email, cc.role as contact_role
+            FROM missions m
+            LEFT JOIN clients c ON m.client_id = c.id
+            LEFT JOIN client_contacts cc ON m.contact_id = cc.id
+            WHERE ${unassignedConditions.join(' AND ')}
+            ORDER BY m.created_at DESC
+        `, unassignedParams);
+
+        // Get adaptation counts for unassigned missions
+        const unassignedMissionIds = unassignedResult.rows.map(m => m.id);
+        let unassignedAdaptMap = new Map();
+        if (unassignedMissionIds.length > 0) {
+            const uaResult = await query(`
+                SELECT mission_id, COUNT(*) as count
+                FROM resume_adaptations
+                WHERE mission_id = ANY($1)
+                GROUP BY mission_id
+            `, [unassignedMissionIds]);
+            for (const row of uaResult.rows) {
+                unassignedAdaptMap.set(row.mission_id, parseInt(row.count));
+            }
+        }
+
+        const unassignedMissions = unassignedResult.rows.map(m => ({
+            ...m,
+            adaptations_count: unassignedAdaptMap.get(m.id) || 0
+        }));
+
+        return res.json({
+            deals,
+            unassigned: unassignedMissions,
+            totalDeals: deals.length,
+            totalAssigned: deals.reduce((sum, d) => sum + d.missions_count, 0),
+            totalUnassigned: unassignedMissions.length
+        });
+    } catch (error) {
+        safeLog('error', 'Error fetching missions grouped by deal', { error: error.message });
+        return res.status(500).json({ error: 'Failed to fetch grouped missions' });
+    }
+});
+
 // GET /api/missions/:id - Get mission by ID
 router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => {
     try {

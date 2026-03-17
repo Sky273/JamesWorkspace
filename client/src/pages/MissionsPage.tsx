@@ -7,14 +7,14 @@ import { useState, useEffect, useRef, useCallback, FormEvent } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { BriefcaseIcon } from '@heroicons/react/24/outline';
+import { BriefcaseIcon, FolderIcon, ListBulletIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '../context/AuthContext';
 import { useAuthFetch } from '../hooks/useAuthFetch';
 import toast from 'react-hot-toast';
 import logger from '../utils/logger.frontend';
 import { formatDate } from '../utils/dateFormatter';
 
-import { StatsCards, SearchAndActions } from '../components/MissionsPage';
+import { StatsCards, SearchAndActions, MissionsDealsGroupedView } from '../components/MissionsPage';
 import Pagination from '../components/Pagination';
 import { TiptapEditor } from '../components/TiptapEditor';
 import type { TiptapEditorRef } from '../components/TiptapEditor';
@@ -116,6 +116,9 @@ const MissionsPage = (): JSX.Element => {
   const [loadingContacts, setLoadingContacts] = useState<boolean>(false);
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loadingDeals, setLoadingDeals] = useState<boolean>(false);
+  const [viewMode, setViewMode] = useState<'list' | 'byDeal'>(
+    (location.state as { viewMode?: string } | null)?.viewMode === 'list' ? 'list' : 'byDeal'
+  );
 
 
   // Fetch clients when modal opens
@@ -366,6 +369,39 @@ const MissionsPage = (): JSX.Element => {
 
       <StatsCards stats={stats} missionsCount={totalCount} t={t} />
 
+      {/* View mode toggle */}
+      <div className="flex items-center gap-2 mb-4">
+        <span className="text-sm text-gray-600 dark:text-gray-400">{t('missions.viewMode', 'Affichage')} :</span>
+        <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
+          <button
+            onClick={() => setViewMode('byDeal')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              viewMode === 'byDeal'
+                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}
+          >
+            <FolderIcon className="w-4 h-4" />
+            {t('missions.viewByDeal', 'Par affaire')}
+          </button>
+          <button
+            onClick={() => setViewMode('list')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              viewMode === 'list'
+                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}
+          >
+            <ListBulletIcon className="w-4 h-4" />
+            {t('missions.viewList', 'Liste')}
+          </button>
+        </div>
+      </div>
+
+      {viewMode === 'byDeal' ? (
+        <MissionsDealsGroupedView onAddMission={() => { resetForm(); setShowModal(true); }} />
+      ) : (
+      <>
       <SearchAndActions
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
@@ -422,6 +458,9 @@ const MissionsPage = (): JSX.Element => {
         loading={loading}
         itemName={t('missions.results')}
       />
+
+      </>
+      )}
 
       {previewMission && (
         <MissionPreviewModal
