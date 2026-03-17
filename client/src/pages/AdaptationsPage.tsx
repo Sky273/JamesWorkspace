@@ -7,7 +7,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { SparklesIcon, EyeIcon, ArrowDownTrayIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { SparklesIcon, EyeIcon, ArrowDownTrayIcon, TrashIcon, FolderIcon, ListBulletIcon } from '@heroicons/react/24/outline';
 import { useAuthFetch } from '../hooks/useAuthFetch';
 import resumeAdaptationService from '../utils/resumeAdaptationService';
 import { templateService } from '../utils/templateService';
@@ -19,7 +19,7 @@ import { createAuthOptionsWithCsrf, fetchWithAuth } from '../utils/apiIntercepto
 import logger from '../utils/logger.frontend';
 import { formatDateTime } from '../utils/dateFormatter';
 
-import { StatsCards, SearchAndFilters } from '../components/AdaptationsPage';
+import { StatsCards, SearchAndFilters, AdaptationsDealsGroupedView } from '../components/AdaptationsPage';
 import Pagination from '../components/Pagination';
 import { TiptapEditor } from '../components/TiptapEditor';
 import type { TiptapEditorRef } from '../components/TiptapEditor';
@@ -89,6 +89,7 @@ const AdaptationsPage = (): JSX.Element => {
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [missions, setMissions] = useState<Mission[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [viewMode, setViewMode] = useState<'list' | 'byDeal'>('byDeal');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [debouncedSearch, setDebouncedSearch] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -402,6 +403,40 @@ const AdaptationsPage = (): JSX.Element => {
       </div>
 
       <StatsCards stats={stats} t={t} />
+
+      {/* View mode toggle */}
+      <div className="flex items-center gap-2 mb-4">
+        <span className="text-sm text-gray-600 dark:text-gray-400">{t('adaptations.viewMode', 'Affichage')} :</span>
+        <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
+          <button
+            onClick={() => setViewMode('byDeal')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              viewMode === 'byDeal'
+                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}
+          >
+            <FolderIcon className="w-4 h-4" />
+            {t('adaptations.viewByDeal', 'Par affaire')}
+          </button>
+          <button
+            onClick={() => setViewMode('list')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              viewMode === 'list'
+                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}
+          >
+            <ListBulletIcon className="w-4 h-4" />
+            {t('adaptations.viewList', 'Liste')}
+          </button>
+        </div>
+      </div>
+
+      {viewMode === 'byDeal' ? (
+        <AdaptationsDealsGroupedView />
+      ) : (
+      <>
       <SearchAndFilters searchTerm={searchTerm} onSearchChange={setSearchTerm} filterStatus={filterStatus} onFilterChange={setFilterStatus} onRefresh={fetchData} onReset={() => { setSearchTerm(''); setFilterStatus('all'); }} t={t} />
 
       {/* Top pagination */}
@@ -539,6 +574,8 @@ const AdaptationsPage = (): JSX.Element => {
       )}
 
       <ExportModal show={showExportModal} onClose={() => { setShowExportModal(false); setAdaptationToExport(null); }} templates={templates} selectedTemplate={selectedTemplate} setSelectedTemplate={setSelectedTemplate} onConfirm={handleConfirmExport} loading={exportLoading} loadingTemplates={loadingTemplates} />
+      </>
+      )}
     </motion.div>
   );
 };
