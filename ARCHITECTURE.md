@@ -4,7 +4,7 @@
 
 1. [Vue d'Ensemble](#vue-densemble)
 2. [Architecture Globale](#architecture-globale)
-3. [Frontend (React/TypeScript)](#frontend-reacttypescript)
+3. [Frontend (React 19/TypeScript)](#frontend-react-19--typescript)
 4. [Backend (Node.js/Express)](#backend-nodejsexpress)
 5. [Base de Données (PostgreSQL)](#base-de-données-postgresql)
 6. [Intégrations LLM](#intégrations-llm)
@@ -29,7 +29,7 @@
 
 | Couche | Technologies |
 |--------|-------------|
-| **Frontend** | React 18, TypeScript, Vite, TailwindCSS, Framer Motion |
+| **Frontend** | React 19, TypeScript, Vite 8 (Rolldown), TailwindCSS 4, Framer Motion |
 | **Backend** | Node.js, Express.js |
 | **Base de données** | PostgreSQL 18 avec pg (node-postgres) |
 | **IA/LLM** | OpenAI (GPT-4/5), Anthropic (Claude) |
@@ -49,7 +49,7 @@
 ┌─────────────────────────────────────────────────────────────────────┐
 │                         CLIENT (Browser)                             │
 │  ┌─────────────────────────────────────────────────────────────┐    │
-│  │                    React SPA (Vite)                          │    │
+│  │                React SPA (Vite 8 / Rolldown)                  │    │
 │  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐    │    │
 │  │  │  Pages   │  │Components│  │ Contexts │  │  Hooks   │    │    │
 │  │  └──────────┘  └──────────┘  └──────────┘  └──────────┘    │    │
@@ -87,7 +87,44 @@
 
 ---
 
-## Frontend (React/TypeScript)
+## Frontend (React 19 / TypeScript)
+
+### Build Tooling (Vite 8)
+
+Vite 8 remplace **Rollup** et **esbuild** par **Rolldown** (bundler Rust) et **OXC** (minificateur) :
+
+| Composant | Avant (Vite 5) | Après (Vite 8) |
+|-----------|----------------|-----------------|
+| **Bundler** | Rollup | Rolldown |
+| **Dependency optimizer** | esbuild | Rolldown |
+| **Minificateur** | esbuild | OXC (`minify: true`) |
+| **CommonJS** | `@rollup/plugin-commonjs` | Natif Rolldown |
+| **Config optimizeDeps** | `esbuildOptions` | `rolldownOptions` |
+| **Treeshake** | `tryCatchDeoptimization` | Supprimé (inutile) |
+
+### TailwindCSS 4 (CSS-first)
+
+TailwindCSS 4 utilise une configuration **CSS-first** via `@theme`, `@plugin` et `@variant` directement dans le CSS. Les fichiers `tailwind.config.js` et `postcss.config.js` sont supprimés.
+
+```css
+/* src/styles/index.css */
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@theme {
+  --color-primary-500: #6366f1;
+  --color-primary-600: #4f46e5;
+  /* ... tokens de design */
+}
+```
+
+| Changement | Avant (v3) | Après (v4) |
+|------------|------------|------------|
+| **Config** | `tailwind.config.js` + `postcss.config.js` | CSS-first (`@theme`, `@plugin`) |
+| **Plugin Vite** | `postcss` pipeline | `@tailwindcss/vite` (natif) |
+| **Ring** | `ring` = 3px | `ring` = 1px (expliciter `ring-3`) |
+| **Couleurs** | `bg-opacity-50` | `bg-primary-500/50` |
+| **Autoprefixer** | Requis | Intégré |
 
 ### Structure des Dossiers
 
@@ -142,7 +179,7 @@ src/
 │   └── sanitizer.frontend.ts
 ├── i18n/                # Internationalisation (FR/EN)
 ├── types/               # Types TypeScript
-└── styles/              # Styles CSS/Tailwind
+└── styles/              # Styles CSS (TailwindCSS 4 CSS-first config)
 ```
 
 ### Composants Clés
@@ -164,7 +201,7 @@ src/
 - **useState/useEffect** : État local des composants
 - **Pas de Redux** : Simplicité privilégiée pour cette taille de projet
 
-### Routing
+### Routing (React Router 7)
 
 ```typescript
 // Routes protégées par authentification
@@ -813,15 +850,9 @@ export const httpsAgent = new https.Agent({ keepAlive: true, maxSockets: 50 });
 ### 📄 Lazy Loading
 
 ```javascript
-// Chargement différé des librairies lourdes
-// src/utils/lazyPdfjs.js
-export async function loadPdfjs() {
-  const pdfjs = await import('pdfjs-dist');
-  return pdfjs;
-}
-
-// src/utils/lazyTesseract.js (OCR)
-// src/utils/lazyTiptap.js (Éditeur WYSIWYG Tiptap)
+// Chargement différé des librairies lourdes via React.lazy() et dynamic imports
+// Les libs PDF (pdfjs-dist) et OCR (Tesseract) sont extraites côté serveur uniquement
+// Les composants lourds (TiptapEditor, MapLibre, Three.js) sont lazy-loaded via React.lazy()
 ```
 
 ### 🧹 Cleanup Automatique
@@ -1013,9 +1044,9 @@ export const resumeSchema = z.object({
 ### Tests
 
 ```bash
-npm run test        # Vitest
+npm run test        # Vitest 4 (892 tests, 45 fichiers)
 npm run test:watch  # Mode watch
-npm run test:coverage
+npm run test:coverage # Couverture v8
 ```
 
 ### Linting
@@ -1443,3 +1474,21 @@ L'architecture actuelle est **adaptée pour un usage PME/ESN** et peut supporter
 
 *Document mis à jour le 17 mars 2026*
 *Version: 1.8.6*
+
+### Changelog technique récent
+
+| Package | Avant | Après | Notes |
+|---------|-------|-------|-------|
+| Vite | 5.x | 8.0 | Rolldown remplace Rollup/esbuild, OXC pour minification |
+| @vitejs/plugin-react | 4.x | 6.0 | |
+| TailwindCSS | 3.x | 4.2 | CSS-first config (@theme, @plugin, @variant), suppression tailwind.config.js et postcss.config.js, nouveau plugin @tailwindcss/vite |
+| React Router | 6.x | 7.13 | Suppression des future flags v7 |
+| Vitest | 2.x | 4.1 | |
+| @vitest/coverage-v8 | 2.x | 4.1 | |
+| pdfjs-dist | 4.x | 5.5 | |
+| multer | 1.x | 2.1 | |
+| jsdom | 28.x | 29.0 | |
+| three | 0.182 | 0.183 | |
+| dotenv | 16.x | 17.3 | |
+| autoprefixer | 10.x | — | Supprimé (intégré dans TailwindCSS 4) |
+| @rollup/plugin-commonjs | 28.x | — | Supprimé (Rolldown gère CJS nativement) |
