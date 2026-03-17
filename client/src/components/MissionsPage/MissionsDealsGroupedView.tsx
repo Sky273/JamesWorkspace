@@ -20,6 +20,7 @@ import {
   ArrowPathIcon,
   PlusIcon,
   XMarkIcon,
+  ClipboardDocumentListIcon,
 } from '@heroicons/react/24/outline';
 import { useAuthFetch } from '../../hooks/useAuthFetch';
 import { createSafeHtml } from '../../utils/sanitizer.frontend';
@@ -121,7 +122,7 @@ const MissionCardInDeal = ({ mission }: { mission: GroupedMission }) => {
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       onClick={() => navigate(`/missions/${mission.id}`)}
-      className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden cursor-pointer hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-600 transition-all group"
+      className="border border-gray-100 dark:border-gray-700/60 rounded-xl overflow-hidden cursor-pointer hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-600 transition-all group"
     >
       <div className="px-4 py-3">
         <div className="flex items-start justify-between gap-3">
@@ -187,7 +188,7 @@ const DealSection = ({
   const hiddenCount = deal.missions.length - INITIAL_MISSIONS_LIMIT;
 
   return (
-    <div className="rounded-lg shadow overflow-hidden bg-white dark:bg-gray-800 transition-all duration-200">
+    <div className="rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 overflow-hidden bg-white dark:bg-gray-800 transition-all duration-200">
       {/* Deal header */}
       <button
         onClick={onToggle}
@@ -195,14 +196,14 @@ const DealSection = ({
       >
         <div className="flex items-center gap-3 min-w-0">
           {isExpanded ? (
-            <ChevronDownIcon className="w-5 h-5 text-gray-400 flex-shrink-0" />
+            <ChevronDownIcon className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
           ) : (
-            <ChevronRightIcon className="w-5 h-5 text-gray-400 flex-shrink-0" />
+            <ChevronRightIcon className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
           )}
-          <BriefcaseIcon className="w-5 h-5 text-purple-500 flex-shrink-0" />
+          <BriefcaseIcon className="w-5 h-5 text-purple-500 flex-shrink-0 mt-0.5" />
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">{deal.title}</h3>
+              <h3 className="font-bold text-gray-900 dark:text-gray-100 truncate">{deal.title}</h3>
               <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[deal.status] || STATUS_COLORS.open}`}>
                 {t(`crm.deals.statuses.${deal.status}`, STATUS_LABELS[deal.status] || deal.status)}
               </span>
@@ -373,7 +374,7 @@ const MissionsDealsGroupedView = ({ onAddMission }: MissionsDealsGroupedViewProp
   return (
     <div className="space-y-4">
       {/* Search bar */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between p-4 gap-4">
           <div className="relative flex-1 max-w-md">
             <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -413,16 +414,26 @@ const MissionsDealsGroupedView = ({ onAddMission }: MissionsDealsGroupedViewProp
       </div>
 
       {/* Summary bar */}
-      <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400 px-1">
-        <span className="font-medium">
-          {totalMissions} mission{totalMissions !== 1 ? 's' : ''}
-        </span>
-        <span>•</span>
-        <span>{filteredDeals.length} {t('missions.grouped.deals', 'affaire(s)')}</span>
+      <div className="flex items-center gap-3 text-sm bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 px-4 py-2.5">
+        <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
+          <ClipboardDocumentListIcon className="w-4 h-4 text-indigo-500" />
+          <span className="font-semibold text-gray-900 dark:text-gray-100">{totalMissions}</span>
+          <span>mission{totalMissions !== 1 ? 's' : ''}</span>
+        </div>
+        <div className="w-px h-4 bg-gray-200 dark:bg-gray-700" />
+        <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
+          <BriefcaseIcon className="w-4 h-4 text-purple-500" />
+          <span className="font-semibold text-gray-900 dark:text-gray-100">{filteredDeals.length}</span>
+          <span>{t('missions.grouped.deals', 'affaire(s)')}</span>
+        </div>
         {filteredUnassigned.length > 0 && (
           <>
-            <span>•</span>
-            <span>{filteredUnassigned.length} {t('missions.grouped.unassigned', 'sans affaire')}</span>
+            <div className="w-px h-4 bg-gray-200 dark:bg-gray-700" />
+            <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
+              <FolderOpenIcon className="w-4 h-4 text-amber-500" />
+              <span className="font-semibold text-gray-900 dark:text-gray-100">{filteredUnassigned.length}</span>
+              <span>{t('missions.grouped.unassigned', 'sans affaire')}</span>
+            </div>
           </>
         )}
       </div>
@@ -439,7 +450,7 @@ const MissionsDealsGroupedView = ({ onAddMission }: MissionsDealsGroupedViewProp
 
       {/* Unassigned missions */}
       {filteredUnassigned.length > 0 && (
-        <div className="rounded-lg shadow overflow-hidden bg-white dark:bg-gray-800">
+        <div className="rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 overflow-hidden bg-white dark:bg-gray-800">
           <button
             onClick={() => setUnassignedExpanded(!unassignedExpanded)}
             className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/60 transition-colors text-left"
@@ -450,8 +461,8 @@ const MissionsDealsGroupedView = ({ onAddMission }: MissionsDealsGroupedViewProp
               ) : (
                 <ChevronRightIcon className="w-5 h-5 text-gray-400 flex-shrink-0" />
               )}
-              <FolderOpenIcon className="w-5 h-5 text-gray-400 flex-shrink-0" />
-              <h3 className="font-semibold text-gray-600 dark:text-gray-300">
+              <FolderOpenIcon className="w-5 h-5 text-amber-500 flex-shrink-0" />
+              <h3 className="font-bold text-gray-700 dark:text-gray-300">
                 {t('missions.grouped.unassignedTitle', 'Missions sans affaire')}
               </h3>
             </div>
@@ -482,7 +493,7 @@ const MissionsDealsGroupedView = ({ onAddMission }: MissionsDealsGroupedViewProp
 
       {/* Empty state */}
       {totalMissions === 0 && !loading && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 p-12 text-center">
           <BriefcaseIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />
           <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
             {debouncedSearch
