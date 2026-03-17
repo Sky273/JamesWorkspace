@@ -1442,4 +1442,4 @@ L'architecture actuelle est **adaptée pour un usage PME/ESN** et peut supporter
 ---
 
 *Document mis à jour le 17 mars 2026*
-*Version: 1.8.5*
+*Version: 1.8.6*

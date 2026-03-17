@@ -1,3 +1,37 @@
+## v1.8.6 - 2026-03-17
+### ✏️ Éditeur Tiptap, Vues Groupées par Affaire & Prompts LLM
+
+#### Migration Éditeur TinyMCE → Tiptap/ProseMirror
+- **Nouvel éditeur** : Remplacement complet de TinyMCE par Tiptap v3 (ProseMirror)
+- **Toolbar contextuelle** : Bubble toolbar avec modes image, lien et texte
+- **Toolbar principale** : Menu déroulant titres (H1-H4), menu tableau, boutons formatage
+- **Système de suggestions** : Extension ProseMirror avec badges par section, scoring de correspondance et panneau global
+- **Nettoyage** : Suppression des fichiers statiques TinyMCE et du script tag HTML
+
+#### Vues Groupées par Affaire
+- **Missions par affaire** : Nouveau composant `MissionsDealsGroupedView` avec sections dépliables par deal, cartes mission et compteurs d'adaptations
+- **Adaptations par affaire** : Nouveau composant `AdaptationsDealsGroupedView` avec hiérarchie Deal → Mission → Adaptations, recherche intégrée et navigation vers les détails
+- **API backend** : Nouvel endpoint `GET /api/adaptations/grouped-by-deal` avec requêtes batch optimisées
+- **Toggle vue** : Sélecteur "Par affaire" / "Liste" sur les pages Missions et Adaptations
+
+#### Prompts LLM Restructurés
+- **Prompt d'analyse/matching** : Format markdown structuré avec règles anti-hallucination strictes
+- **Prompt d'adaptation** : Directives par section, conservation du contenu original, suppression des inventions
+- **Prompt d'amélioration** : Formatage backtick, règles de résumé impersonnel, vérification d'existence des sections
+
+#### Améliorations UI/UX
+- **Animation d'amélioration** : Nouveau design avec carte inline, spinner multi-anneau et messages d'état cycliques
+- **Stepper de progression** : Spinners animés et fonds dégradés pour les états de chargement
+- **Preview CV inline** : Panneau de prévisualisation avec chargement paresseux sur les cartes CV par affaire
+- **Priorité d'affichage** : Inversion Nom du CV / Nom du candidat dans les adaptations
+
+#### Documentation
+- **SECURITY.md** : Mise à jour complète (circuit breakers LLM, APM, métriques, endpoints publics, validation environnement, 9 nouvelles entrées checklist, table de référence fichiers corrigée)
+- **ARCHITECTURE.md** : Mise à jour pour refléter la migration Tiptap, le routage modulaire et les nouvelles fonctionnalités
+- **INSTALL.md** : Mise à jour de la documentation d'installation
+
+---
+
 ## v1.8.5 - 2026-03-16
 ### 🧪 Tests Routes Backend Complets
 
