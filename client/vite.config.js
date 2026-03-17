@@ -412,7 +412,6 @@ export default defineConfig(({ mode }) => {
       treeshake: {
         moduleSideEffects: true,
         propertyReadSideEffects: false,
-        tryCatchDeoptimization: false,
       },
     }
   }
