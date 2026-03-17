@@ -5,13 +5,14 @@
 
 import { useEffect, useState, useRef, useCallback, ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { UserIcon, BriefcaseIcon } from '@heroicons/react/24/outline';
+import { UserIcon, BriefcaseIcon, SparklesIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { useResume } from '../../context/ResumeContext';
 import { removeSuggestionMarkers } from '../../utils/tinymceSuggestionsPlugin';
 import { TiptapEditor, parseSuggestions } from '../TiptapEditor';
 import type { TiptapEditorRef } from '../TiptapEditor';
 import toast from 'react-hot-toast';
 import logger from '../../utils/logger.frontend';
+import { fetchWithAuth, createAuthOptionsWithCsrf } from '../../utils/apiInterceptor';
 
 interface Resume {
   id: string;
@@ -25,9 +26,10 @@ interface Resume {
 
 interface OriginalTextTabProps {
   resume: Resume;
+  onAIModify?: (instructions: string) => Promise<string>;
 }
 
-const OriginalTextTab = ({ resume }: OriginalTextTabProps): JSX.Element => {
+const OriginalTextTab = ({ resume, onAIModify }: OriginalTextTabProps): JSX.Element => {
   const { t } = useTranslation();
   const { updateOriginalContent, updateResumeAnalysis } = useResume();
   const [editorReady, setEditorReady] = useState(false);
@@ -35,6 +37,34 @@ const OriginalTextTab = ({ resume }: OriginalTextTabProps): JSX.Element => {
   const [hasChanges, setHasChanges] = useState(false);
   const editorRef = useRef<TiptapEditorRef | null>(null);
   const initialContentRef = useRef<string>('');
+  const [aiInstructions, setAiInstructions] = useState<string>('');
+  const [isAIModifying, setIsAIModifying] = useState<boolean>(false);
+  const [aiResponseMessage, setAiResponseMessage] = useState<string>('');
+
+  // Internal AI modify handler that uses the editor's current content
+  const handleAIModifyInternal = useCallback(async (instructions: string): Promise<string> => {
+    if (!resume?.id) return '';
+    const currentContent = editorRef.current?.getContent() || resume['Original Text'] || '';
+    
+    const authOptions = await createAuthOptionsWithCsrf({
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: currentContent, instructions })
+    });
+    
+    const response = await fetchWithAuth(`/api/resumes/${resume.id}/ai-modify`, authOptions);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Failed to modify resume' }));
+      throw new Error(errorData.error || 'Failed to modify resume with AI');
+    }
+
+    const { modifiedContent, message } = await response.json();
+    if (editorRef.current && modifiedContent) {
+      editorRef.current.setContent(modifiedContent);
+      setHasChanges(true);
+    }
+    return message || 'CV modifié avec succès par l\'IA';
+  }, [resume]);
   
   // Name and Title state
   const [candidateName, setCandidateName] = useState<string>(resume['Name'] || '');
@@ -195,6 +225,87 @@ const OriginalTextTab = ({ resume }: OriginalTextTabProps): JSX.Element => {
         height={500}
         suggestions={parseSuggestions(resume['Key Improvements'])}
       />
+
+      {/* AI Modification Section */}
+      <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
+          <div className="flex items-center gap-2 mb-3">
+            <SparklesIcon className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+            <h4 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+              Modifier par IA
+            </h4>
+          </div>
+          
+          {/* Warning message */}
+          <div className="mb-4 flex items-start gap-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+            <ExclamationTriangleIcon className="h-5 w-5 text-yellow-600 dark:text-yellow-500 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-yellow-800 dark:text-yellow-200">
+              Attention : Les modifications générées par l&apos;IA peuvent parfois dégrader la qualité du CV. Vérifiez toujours le résultat avant de sauvegarder.
+            </p>
+          </div>
+
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+            Utilisez l&apos;IA pour modifier le texte original selon vos instructions spécifiques
+          </p>
+          
+          <textarea
+            value={aiInstructions}
+            onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setAiInstructions(e.target.value)}
+            placeholder="Exemple : Reformuler le résumé, corriger les fautes d'orthographe, restructurer les expériences professionnelles..."
+            rows={4}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+            disabled={isAIModifying}
+          />
+          
+          <button
+            onClick={async () => {
+              const aiHandler = onAIModify || handleAIModifyInternal;
+              if (!aiInstructions.trim()) return;
+              setIsAIModifying(true);
+              setAiResponseMessage('');
+              try {
+                const message = await aiHandler(aiInstructions);
+                if (message) {
+                  setAiResponseMessage(message);
+                }
+                setAiInstructions('');
+              } catch {
+                setAiResponseMessage('');
+              } finally {
+                setIsAIModifying(false);
+              }
+            }}
+            disabled={isAIModifying || !aiInstructions.trim()}
+            className={`mt-3 inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg text-white transition-colors ${
+              isAIModifying || !aiInstructions.trim()
+                ? 'bg-gray-400 cursor-not-allowed'
+                : 'bg-indigo-600 hover:bg-indigo-700'
+            }`}
+          >
+            {isAIModifying ? (
+              <>
+                <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Modification en cours...
+              </>
+            ) : (
+              <>
+                <SparklesIcon className="h-4 w-4" />
+                Appliquer
+              </>
+            )}
+          </button>
+          
+          {/* AI Response Message */}
+          {aiResponseMessage && (
+            <div className="mt-3 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+              <p className="text-sm text-green-800 dark:text-green-200">
+                {aiResponseMessage}
+              </p>
+            </div>
+          )}
+      </div>
     </div>
   );
 };
