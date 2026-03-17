@@ -4,6 +4,7 @@
  */
 
 import Image from '@tiptap/extension-image';
+import { Plugin, PluginKey, NodeSelection } from '@tiptap/pm/state';
 
 export interface CustomImageOptions {
   inline: boolean;
@@ -170,5 +171,26 @@ export const CustomImage = Image.extend({
           return chain().updateAttributes('image', attributes).run();
         },
     };
+  },
+
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        key: new PluginKey('customImageClick'),
+        props: {
+          handleClickOn: (view, pos, node, nodePos, event, direct) => {
+            if (node.type.name === 'image' && direct) {
+              // Force NodeSelection on the clicked image
+              const tr = view.state.tr.setSelection(
+                NodeSelection.create(view.state.doc, nodePos),
+              );
+              view.dispatch(tr);
+              return true;
+            }
+            return false;
+          },
+        },
+      }),
+    ];
   },
 });
