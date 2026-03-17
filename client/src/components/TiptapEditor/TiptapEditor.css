@@ -748,7 +748,7 @@
   background: linear-gradient(90deg, rgba(217, 119, 6, 0.12) 0%, transparent 100%);
 }
 
-/* --- Badge widget (inline pill + tooltip) --- */
+/* --- Badge widget (inline pill + click dropdown) --- */
 .suggestion-deco-badge {
   position: relative;
   display: inline-flex;
@@ -770,12 +770,13 @@
   background: #fef3c7;
   border: 1px solid #fcd34d;
   border-radius: 12px;
-  cursor: default;
+  cursor: pointer;
   white-space: nowrap;
   transition: background 0.15s, transform 0.15s;
+  user-select: none;
 }
 
-.suggestion-deco-badge:hover .suggestion-deco-pill {
+.suggestion-deco-pill:hover {
   background: #fde68a;
   transform: scale(1.05);
 }
@@ -786,75 +787,118 @@
   border-color: rgba(245, 158, 11, 0.3);
 }
 
-.dark .suggestion-deco-badge:hover .suggestion-deco-pill {
+.dark .suggestion-deco-pill:hover {
   background: rgba(245, 158, 11, 0.25);
 }
 
-/* --- Tooltip (shown on hover) --- */
-.suggestion-deco-tooltip {
+/* --- Dropdown (click-to-toggle) --- */
+.suggestion-deco-dropdown {
   display: none;
   position: absolute;
-  bottom: calc(100% + 10px);
-  left: 50%;
-  transform: translateX(-50%);
-  min-width: 280px;
+  top: calc(100% + 8px);
+  left: 0;
+  min-width: 300px;
   max-width: 420px;
-  width: max-content;
-  padding: 12px 14px;
+  padding: 0;
   background: #1f2937;
   color: #f3f4f6;
   border: 1px solid #374151;
   border-radius: 10px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
   font-size: 13px;
   line-height: 1.5;
-  z-index: 100;
-  pointer-events: none;
+  z-index: 200;
   word-wrap: break-word;
   overflow-wrap: break-word;
   white-space: normal;
 }
 
-.suggestion-deco-tooltip::after {
-  content: '';
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 6px solid transparent;
-  border-top-color: #1f2937;
-}
-
-.suggestion-deco-badge:hover .suggestion-deco-tooltip {
+.suggestion-deco-dropdown.is-open {
   display: block;
 }
 
-.suggestion-deco-tooltip-title {
-  font-weight: 600;
-  font-size: 13px;
-  color: #fbbf24;
-  margin-bottom: 8px;
-  padding-bottom: 6px;
+/* Arrow pointing up toward the pill */
+.suggestion-deco-dropdown::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 14px;
+  border: 7px solid transparent;
+  border-bottom-color: #374151;
+}
+
+.suggestion-deco-dropdown::after {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 15px;
+  border: 6px solid transparent;
+  border-bottom-color: #1f2937;
+}
+
+.suggestion-deco-dropdown-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
   border-bottom: 1px solid #374151;
 }
 
-.suggestion-deco-tooltip-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.suggestion-deco-dropdown-title {
+  font-weight: 600;
+  font-size: 13px;
+  color: #fbbf24;
+  flex: 1;
 }
 
-.suggestion-deco-tooltip-list li {
+.suggestion-deco-dropdown-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  background: #f59e0b;
+  border-radius: 10px;
+}
+
+.suggestion-deco-dropdown-close {
+  background: none;
+  border: none;
+  color: #9ca3af;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  line-height: 1;
+  transition: color 0.15s, background 0.15s;
+}
+
+.suggestion-deco-dropdown-close:hover {
+  color: #f3f4f6;
+  background: #374151;
+}
+
+.suggestion-deco-dropdown-list {
+  list-style: none;
+  margin: 0;
+  padding: 8px 14px 12px;
+}
+
+.suggestion-deco-dropdown-list li {
   position: relative;
-  padding: 4px 0 4px 16px;
-  font-size: 12px;
+  padding: 5px 0 5px 18px;
+  font-size: 13px;
   color: #d1d5db;
   word-wrap: break-word;
   overflow-wrap: break-word;
   white-space: normal;
 }
 
-.suggestion-deco-tooltip-list li::before {
+.suggestion-deco-dropdown-list li::before {
   content: '→';
   position: absolute;
   left: 0;
@@ -862,8 +906,10 @@
   font-weight: 600;
 }
 
-.suggestion-deco-tooltip-list li + li {
+.suggestion-deco-dropdown-list li + li {
   border-top: 1px solid rgba(55, 65, 81, 0.5);
+  margin-top: 2px;
+  padding-top: 7px;
 }
 
 /* --- Global suggestions panel (widget at doc top) --- */

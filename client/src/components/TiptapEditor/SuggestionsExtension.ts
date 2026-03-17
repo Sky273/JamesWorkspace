@@ -259,31 +259,67 @@ function createBadgeWidget(
   wrapper.className = 'suggestion-deco-badge';
   wrapper.setAttribute('contenteditable', 'false');
 
-  // Pill
+  // Pill (clickable)
   const pill = document.createElement('span');
   pill.className = 'suggestion-deco-pill';
   pill.textContent = `💡 ${suggestions.length}`;
   wrapper.appendChild(pill);
 
-  // Tooltip (shown on hover via CSS)
-  const tooltip = document.createElement('div');
-  tooltip.className = 'suggestion-deco-tooltip';
+  // Dropdown panel (click‑to‑toggle, replaces hover tooltip)
+  const dropdown = document.createElement('div');
+  dropdown.className = 'suggestion-deco-dropdown';
 
-  const title = document.createElement('div');
-  title.className = 'suggestion-deco-tooltip-title';
-  title.textContent = `${SECTION_LABELS[sectionKey] || 'Suggestions'} (${suggestions.length})`;
-  tooltip.appendChild(title);
+  // Header row
+  const header = document.createElement('div');
+  header.className = 'suggestion-deco-dropdown-header';
 
+  const titleEl = document.createElement('span');
+  titleEl.className = 'suggestion-deco-dropdown-title';
+  titleEl.textContent = SECTION_LABELS[sectionKey] || 'Suggestions';
+
+  const countEl = document.createElement('span');
+  countEl.className = 'suggestion-deco-dropdown-count';
+  countEl.textContent = String(suggestions.length);
+
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'suggestion-deco-dropdown-close';
+  closeBtn.textContent = '✕';
+  closeBtn.type = 'button';
+
+  header.append(titleEl, countEl, closeBtn);
+  dropdown.appendChild(header);
+
+  // Suggestion list
   const list = document.createElement('ul');
-  list.className = 'suggestion-deco-tooltip-list';
+  list.className = 'suggestion-deco-dropdown-list';
   suggestions.forEach((s) => {
     const li = document.createElement('li');
     li.textContent = s;
     list.appendChild(li);
   });
-  tooltip.appendChild(list);
+  dropdown.appendChild(list);
+  wrapper.appendChild(dropdown);
 
-  wrapper.appendChild(tooltip);
+  // --- Interactions ---
+
+  pill.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Close every other open dropdown first
+    document
+      .querySelectorAll('.suggestion-deco-dropdown.is-open')
+      .forEach((el) => {
+        if (el !== dropdown) el.classList.remove('is-open');
+      });
+    dropdown.classList.toggle('is-open');
+  });
+
+  closeBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dropdown.classList.remove('is-open');
+  });
+
   return wrapper;
 }
 

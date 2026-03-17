@@ -110,21 +110,33 @@ This document describes the security measures implemented in the ResumeConverter
 ```javascript
 scriptSrc: [
     "'self'",
-    "'unsafe-inline'",  // Required by TinyMCE
-    "'unsafe-eval'",    // Required by TinyMCE and PDF.js
-    "https://cdnjs.cloudflare.com",
-    "https://unpkg.com",
-    "blob:"
+    "blob:",            // PDF.js worker scripts
+    "https://unpkg.com", // Swagger UI
+    "https://basemaps.cartocdn.com",   // MapLibre GL
+    "https://*.basemaps.cartocdn.com", // MapLibre GL tiles
+    // + specific sha256 hashes for known injected inline scripts
 ]
 ```
 
-### Trade-offs & Risks
+### CSP Hardening (achieved)
+
+| Hardening | Status | Details |
+|-----------|--------|---------|
+| NO `unsafe-eval` in scriptSrc | ✅ | TinyMCE (which required eval) replaced by Tiptap/ProseMirror |
+| NO `unsafe-inline` in scriptSrc | ✅ | Swagger UI script externalized; inline scripts whitelisted by hash |
+| NO `unsafe-inline` in scriptSrcAttr | ✅ | No inline event handlers |
+| `object-src 'none'` | ✅ | Blocks plugins (Flash, Java, etc.) |
+| `base-uri 'self'` | ✅ | Prevents base tag hijacking |
+| `frame-ancestors 'self'` | ✅ | Prevents clickjacking |
+| SRI for external scripts | ✅ | Swagger UI loaded with integrity hashes |
+
+### Remaining Trade-offs
 
 | Directive | Risk | Reason Required | Mitigation |
 |-----------|------|-----------------|------------|
-| `unsafe-inline` | XSS via inline scripts | TinyMCE uses inline event handlers | All user content sanitized with DOMPurify |
-| `unsafe-eval` | Code injection via eval() | TinyMCE and PDF.js dynamic code | Limited to trusted libraries only |
-| `blob:` | Blob URL attacks | PDF.js worker functionality | PDF processing limited to trusted sources |
+| `unsafe-inline` in **style-src-elem** | Minimal (no XSS) | UI libraries dynamically inject `<style>` elements | Styles cannot execute scripts |
+| `unsafe-inline` in **style-src-attr** | Minimal (no XSS) | Tiptap/ProseMirror sets inline `style` attributes | Styles cannot execute scripts |
+| `blob:` in scriptSrc | Blob URL attacks | PDF.js worker functionality | PDF processing limited to trusted sources |
 
 ### Mitigations
 
@@ -135,14 +147,12 @@ scriptSrc: [
 2. **Output Encoding**: React's JSX automatically escapes content
 
 3. **Trusted Libraries Only**: External scripts limited to:
-   - cdnjs.cloudflare.com (PDF.js worker)
-   - unpkg.com (PDF.js fallback)
+   - unpkg.com (Swagger UI)
+   - basemaps.cartocdn.com (MapLibre GL)
 
 ### Future Improvements
 
-- Monitor TinyMCE updates for nonce-based CSP support
 - Consider server-side PDF text extraction to reduce client-side PDF.js usage
-- Implement Subresource Integrity (SRI) for external scripts
 
 ---
 

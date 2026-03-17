@@ -16,18 +16,16 @@ const isProduction = process.env.NODE_ENV === 'production';
 // ============================================
 // 
 // SECURITY TRADE-OFFS:
-// - 'unsafe-eval' is required by TinyMCE rich text editor
-//   TinyMCE uses new Function() / eval() internally for its plugin system.
-//   This CANNOT be removed without replacing TinyMCE entirely.
-//   Risk mitigation: All user input is sanitized with DOMPurify before rendering.
-//
-// - 'unsafe-inline' in styleSrc is required by TinyMCE for dynamic styles.
+// - 'unsafe-inline' in style-src-elem and style-src-attr is required by
+//   Tiptap/ProseMirror and UI libraries for dynamic styles.
+//   Removed from the broad style-src directive for stricter auditing.
 //   This has NO XSS risk (styles cannot execute scripts).
 //
 // - PDF.js requires blob: for its worker functionality.
 //   Risk mitigation: PDF files are processed server-side when possible.
 //
 // CSP HARDENING (achieved):
+// - NO 'unsafe-eval' in scriptSrc (TinyMCE replaced by Tiptap which does not use eval)
 // - NO 'unsafe-inline' in scriptSrc (Swagger UI script externalized)
 // - NO 'unsafe-inline' in scriptSrcAttr (no inline event handlers)
 // - object-src 'none' blocks plugins like Flash
@@ -35,8 +33,7 @@ const isProduction = process.env.NODE_ENV === 'production';
 // - frame-ancestors 'self' prevents clickjacking
 //
 // RECOMMENDATIONS FOR FUTURE:
-// 1. Monitor TinyMCE updates for CSP-safe eval alternatives
-// 2. Consider server-side PDF text extraction to reduce client-side PDF.js usage
+// 1. Consider server-side PDF text extraction to reduce client-side PDF.js usage
 //
 // IMPLEMENTED:
 // - Subresource Integrity (SRI) for Swagger UI external scripts/styles (routeRegistry.js)
@@ -56,25 +53,39 @@ export function configureHelmet(app) {
                 defaultSrc: ["'none'"],
                 scriptSrc: [
                     "'self'",
-                    "'unsafe-eval'",    // Required: TinyMCE uses new Function() / eval()
                     "blob:",            // Required: PDF.js worker scripts
                     "https://unpkg.com",                      // Swagger UI scripts
                     "https://basemaps.cartocdn.com",          // MapLibre GL scripts from style
                     "https://*.basemaps.cartocdn.com",        // MapLibre GL scripts from tiles
                     // Cloudflare injects inline scripts (Rocket Loader, Email Obfuscation, etc.)
-                    // These hashes allow the specific Cloudflare-injected scripts without 'unsafe-inline'
+                    // These hashes allow the specific Cloudflare-injected scripts without 'unsafe-inline'.
+                    // ⚠️  Cloudflare can change these at any time — if new CSP violations appear for
+                    //    inline scripts, add the hash from the browser error or disable Rocket Loader
+                    //    and Email Obfuscation in the Cloudflare dashboard for a permanent fix.
                     "'sha256-A1+e72bQn7hPqkdKAAlQSbFpetfFWJBOj5vG34ZrAxU='",  // Cloudflare injected script
                     "'sha256-P5AT03Ewswrka26JysiPTKxr4GXeRKQKbPiV4tBCy2k='",  // Cloudflare injected script (variant)
-                    "'sha256-yZlHOZ5xtWE8Evaf3HFDtJxWosKnkweYfd1MWFsufuI='"   // Cloudflare injected script (variant 2)
+                    "'sha256-yZlHOZ5xtWE8Evaf3HFDtJxWosKnkweYfd1MWFsufuI='",  // Cloudflare injected script (variant 2)
+                    "'sha256-OJ/4e+qcd2xOGOLtsh+uuewAvle/9b2F/3/WwzgLXoE='"  // Cloudflare injected script (variant 3)
                 ],
                 scriptSrcAttr: ["'none'"], // No inline event handlers allowed
                 styleSrc: [
                     "'self'",
-                    "'unsafe-inline'", // Required: TinyMCE dynamic styles (cannot be removed per TinyMCE docs)
                     "https://fonts.googleapis.com",
                     "https://unpkg.com",  // Swagger UI styles
                     "https://basemaps.cartocdn.com", // MapLibre GL styles
                     "https://*.basemaps.cartocdn.com" // MapLibre GL styles from subdomains
+                ],
+                // CSP Level 3: granular style directives replace broad 'unsafe-inline' in styleSrc
+                styleSrcElem: [
+                    "'self'",
+                    "'unsafe-inline'", // Required: UI libraries dynamically inject <style> elements
+                    "https://fonts.googleapis.com",
+                    "https://unpkg.com",
+                    "https://basemaps.cartocdn.com",
+                    "https://*.basemaps.cartocdn.com"
+                ],
+                styleSrcAttr: [
+                    "'unsafe-inline'" // Required: Tiptap/ProseMirror sets inline style attributes
                 ],
                 fontSrc: [
                     "'self'",
@@ -93,7 +104,7 @@ export function configureHelmet(app) {
                 ],
                 connectSrc: [
                     "'self'",
-                    "blob:", // Required for TinyMCE and MapLibre GL
+                    "blob:", // Required for MapLibre GL
                     "https://api.openai.com",
                     "https://api.anthropic.com",
                     "https://basemaps.cartocdn.com",     // MapLibre GL - base domain
