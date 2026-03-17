@@ -212,35 +212,92 @@ const ResumeAdaptPage = (): JSX.Element => {
 
         {/* Progress Steps */}
         <div className="mb-8">
-          <div className="flex items-center justify-center gap-4">
-            <div className={`flex items-center gap-2 ${step === 'select-mission' ? 'text-blue-600' : 'text-gray-400'}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                step === 'select-mission' ? 'bg-blue-100 text-blue-600' : 
-                ['analyzing', 'show-analysis', 'adapting', 'show-result'].includes(step) ? 'bg-green-100 text-green-600' : 'bg-gray-100'
-              }`}>
-                {['analyzing', 'show-analysis', 'adapting', 'show-result'].includes(step) ? <CheckCircleIcon className="w-5 h-5" /> : '1'}
+          <div className="flex items-start justify-center">
+            {[
+              {
+                key: 'select',
+                label: t('adaptation.steps.selectMission', 'Sélectionner'),
+                icon: BriefcaseIcon,
+                completed: ['analyzing', 'show-analysis', 'adapting', 'show-result'].includes(step),
+                active: step === 'select-mission',
+              },
+              {
+                key: 'analyze',
+                label: t('adaptation.steps.analyze', 'Analyser'),
+                icon: DocumentTextIcon,
+                completed: ['adapting', 'show-result'].includes(step),
+                active: ['analyzing', 'show-analysis'].includes(step),
+              },
+              {
+                key: 'adapt',
+                label: t('adaptation.steps.adapt', 'Adapter'),
+                icon: SparklesIcon,
+                completed: step === 'show-result',
+                active: step === 'adapting',
+              },
+            ].map((s, i, arr) => (
+              <div key={s.key} className="flex items-start">
+                {/* Step circle + label */}
+                <div className="flex flex-col items-center">
+                  <div className="relative">
+                    {/* Pulse ring for active step */}
+                    {s.active && (
+                      <motion.div
+                        className="absolute -inset-2 rounded-full"
+                        style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%)' }}
+                        animate={{ scale: [1, 1.6, 1], opacity: [0.8, 0, 0.8] }}
+                        transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                      />
+                    )}
+                    <motion.div
+                      className={`relative w-11 h-11 rounded-full flex items-center justify-center transition-shadow duration-500 ${
+                        s.completed
+                          ? 'bg-gradient-to-br from-emerald-400 to-green-600 shadow-lg shadow-green-500/25'
+                          : s.active
+                            ? 'bg-gradient-to-br from-blue-400 to-indigo-600 shadow-lg shadow-indigo-500/30'
+                            : 'bg-gray-200 dark:bg-gray-700'
+                      }`}
+                      animate={s.active ? { scale: [1, 1.07, 1] } : { scale: 1 }}
+                      transition={s.active ? { duration: 2.5, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.3 }}
+                    >
+                      {s.completed ? (
+                        <motion.div
+                          initial={{ scale: 0, rotate: -90 }}
+                          animate={{ scale: 1, rotate: 0 }}
+                          transition={{ type: 'spring', stiffness: 300, damping: 15, delay: 0.1 }}
+                        >
+                          <CheckCircleIcon className="w-6 h-6 text-white" />
+                        </motion.div>
+                      ) : (
+                        <s.icon className={`w-5 h-5 ${s.active ? 'text-white' : 'text-gray-400 dark:text-gray-500'}`} />
+                      )}
+                    </motion.div>
+                  </div>
+                  <motion.span
+                    className={`mt-2.5 text-xs font-semibold tracking-wide ${
+                      s.completed ? 'text-emerald-600 dark:text-emerald-400' :
+                      s.active ? 'text-indigo-600 dark:text-blue-400' :
+                      'text-gray-400 dark:text-gray-500'
+                    }`}
+                    animate={s.active ? { opacity: [0.7, 1, 0.7] } : { opacity: 1 }}
+                    transition={s.active ? { duration: 2, repeat: Infinity } : {}}
+                  >
+                    {s.label}
+                  </motion.span>
+                </div>
+                {/* Connector line */}
+                {i < arr.length - 1 && (
+                  <div className="w-20 sm:w-32 h-[3px] mx-3 sm:mx-5 mt-[20px] bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <motion.div
+                      className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-green-500"
+                      initial={false}
+                      animate={{ width: s.completed ? '100%' : s.active ? '40%' : '0%' }}
+                      transition={{ duration: 0.6, ease: 'easeOut' }}
+                    />
+                  </div>
+                )}
               </div>
-              <span className="text-sm font-medium">{t('adaptation.steps.selectMission', 'Sélectionner')}</span>
-            </div>
-            <div className="w-12 h-0.5 bg-gray-200 dark:bg-gray-700" />
-            <div className={`flex items-center gap-2 ${['analyzing', 'show-analysis'].includes(step) ? 'text-blue-600' : 'text-gray-400'}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                ['analyzing', 'show-analysis'].includes(step) ? 'bg-blue-100 text-blue-600' : 
-                ['adapting', 'show-result'].includes(step) ? 'bg-green-100 text-green-600' : 'bg-gray-100'
-              }`}>
-                {['adapting', 'show-result'].includes(step) ? <CheckCircleIcon className="w-5 h-5" /> : '2'}
-              </div>
-              <span className="text-sm font-medium">{t('adaptation.steps.analyze', 'Analyser')}</span>
-            </div>
-            <div className="w-12 h-0.5 bg-gray-200 dark:bg-gray-700" />
-            <div className={`flex items-center gap-2 ${['adapting', 'show-result'].includes(step) ? 'text-blue-600' : 'text-gray-400'}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                ['adapting', 'show-result'].includes(step) ? 'bg-blue-100 text-blue-600' : 'bg-gray-100'
-              }`}>
-                {step === 'show-result' ? <CheckCircleIcon className="w-5 h-5" /> : '3'}
-              </div>
-              <span className="text-sm font-medium">{t('adaptation.steps.adapt', 'Adapter')}</span>
-            </div>
+            ))}
           </div>
         </div>
 
@@ -268,15 +325,63 @@ const ResumeAdaptPage = (): JSX.Element => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="flex flex-col items-center justify-center py-20"
+                className="relative flex flex-col items-center justify-center py-20 overflow-hidden"
               >
-                <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500 mb-4"></div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                {/* Gradient background */}
+                <div className="absolute inset-0 bg-gradient-to-b from-blue-50/60 via-transparent to-indigo-50/40 dark:from-blue-950/30 dark:via-transparent dark:to-indigo-950/20" />
+
+                {/* Multi-ring animated spinner */}
+                <div className="relative w-28 h-28 mb-8">
+                  {/* Outer ring - slow rotation */}
+                  <motion.div
+                    className="absolute inset-0 rounded-full border-[3px] border-blue-200/60 dark:border-blue-800/40"
+                    style={{ borderTopColor: 'rgb(99, 102, 241)', borderRightColor: 'rgb(99, 102, 241)' }}
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
+                  />
+                  {/* Middle ring - opposite rotation */}
+                  <motion.div
+                    className="absolute inset-3 rounded-full border-[3px] border-indigo-200/40 dark:border-indigo-800/30"
+                    style={{ borderBottomColor: 'rgb(79, 70, 229)', borderLeftColor: 'rgb(79, 70, 229)' }}
+                    animate={{ rotate: -360 }}
+                    transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+                  />
+                  {/* Inner ring - fast rotation */}
+                  <motion.div
+                    className="absolute inset-6 rounded-full border-[2px] border-purple-200/30 dark:border-purple-800/20"
+                    style={{ borderTopColor: 'rgb(147, 51, 234)', borderRightColor: 'rgb(147, 51, 234)' }}
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
+                  />
+                  {/* Central icon */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <motion.div
+                      animate={{ scale: [1, 1.15, 1] }}
+                      transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                    >
+                      <DocumentTextIcon className="w-9 h-9 text-indigo-500 dark:text-indigo-400" />
+                    </motion.div>
+                  </div>
+                </div>
+
+                <h3 className="relative text-xl font-semibold text-gray-900 dark:text-white mb-2">
                   {t('adaptation.analyzing', 'Analyse en cours...')}
                 </h3>
-                <p className="text-gray-600 dark:text-gray-400 text-center max-w-md">
+                <p className="relative text-gray-500 dark:text-gray-400 text-center max-w-md mb-6">
                   {t('adaptation.analyzingDescription', 'Analyse de l\'adéquation entre le CV et la mission sélectionnée')}
                 </p>
+
+                {/* Bouncing dots */}
+                <div className="relative flex items-center gap-2">
+                  {[0, 1, 2, 3].map(i => (
+                    <motion.div
+                      key={i}
+                      className="w-2 h-2 rounded-full bg-indigo-500 dark:bg-indigo-400"
+                      animate={{ y: [0, -8, 0], opacity: [0.4, 1, 0.4] }}
+                      transition={{ duration: 1, repeat: Infinity, delay: i * 0.15, ease: 'easeInOut' }}
+                    />
+                  ))}
+                </div>
               </motion.div>
             )}
 
@@ -311,16 +416,65 @@ const ResumeAdaptPage = (): JSX.Element => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="flex flex-col items-center justify-center py-20"
+                className="relative flex flex-col items-center justify-center py-20 overflow-hidden"
               >
-                <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500 mb-4"></div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                {/* Gradient background */}
+                <div className="absolute inset-0 bg-gradient-to-b from-purple-50/60 via-transparent to-fuchsia-50/40 dark:from-purple-950/30 dark:via-transparent dark:to-fuchsia-950/20" />
+
+                {/* Animated icon with orbiting particles */}
+                <div className="relative w-28 h-28 mb-8 flex items-center justify-center">
+                  {/* Orbiting particles */}
+                  {[0, 1, 2].map(i => (
+                    <motion.div
+                      key={i}
+                      className="absolute inset-0"
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 4 + i * 1.5, repeat: Infinity, ease: 'linear', delay: i * 0.6 }}
+                    >
+                      <motion.div
+                        className={`absolute w-2.5 h-2.5 rounded-full ${
+                          i === 0 ? 'bg-purple-400' : i === 1 ? 'bg-fuchsia-400' : 'bg-indigo-400'
+                        }`}
+                        style={{ top: `${4 + i * 6}px`, left: '50%', marginLeft: '-5px' }}
+                        animate={{ scale: [0.6, 1.2, 0.6], opacity: [0.4, 1, 0.4] }}
+                        transition={{ duration: 2, repeat: Infinity, delay: i * 0.4 }}
+                      />
+                    </motion.div>
+                  ))}
+
+                  {/* Central icon card */}
+                  <motion.div
+                    className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow-xl shadow-purple-500/30"
+                    animate={{ rotate: [0, 3, -3, 0], scale: [1, 1.04, 1] }}
+                    transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+                  >
+                    <SparklesIcon className="w-8 h-8 text-white" />
+                    {/* Shimmer overlay */}
+                    <motion.div
+                      className="absolute inset-0 rounded-2xl bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                      animate={{ x: ['-100%', '200%'] }}
+                      transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut', repeatDelay: 1 }}
+                    />
+                  </motion.div>
+                </div>
+
+                <h3 className="relative text-xl font-semibold text-gray-900 dark:text-white mb-2">
                   {t('adaptation.generating', 'Génération du CV adapté...')}
                 </h3>
-                <p className="text-gray-600 dark:text-gray-400 text-center max-w-md">
+                <p className="relative text-gray-500 dark:text-gray-400 text-center max-w-md mb-6">
                   {t('adaptation.generatingDescription', 'Optimisation du CV pour maximiser la correspondance avec la mission')}
                 </p>
-                <p className="text-sm text-gray-500 dark:text-gray-500 mt-4">
+
+                {/* Shimmer progress bar */}
+                <div className="relative w-64 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mb-5">
+                  <motion.div
+                    className="absolute inset-y-0 w-1/2 bg-gradient-to-r from-purple-500 via-fuchsia-500 to-purple-500 rounded-full"
+                    animate={{ left: ['-50%', '100%'] }}
+                    transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+                  />
+                </div>
+
+                <p className="relative text-sm text-gray-400 dark:text-gray-500">
                   {t('adaptation.generatingTime', 'Cela peut prendre 30-90 secondes')}
                 </p>
               </motion.div>
