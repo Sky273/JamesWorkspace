@@ -4,6 +4,7 @@
  */
 
 import https from 'https';
+import crypto from 'crypto';
 import path from 'path';
 import fs from 'fs';
 import { safeLog } from '../utils/logger.backend.js';
@@ -238,10 +239,19 @@ export function startServer(app, serverDir) {
         const httpsOptions = {
             key: privateKey,
             cert: certificate,
-            // Minimum TLS 1.2 (TLS 1.0 and 1.1 are deprecated)
+            // Minimum TLS 1.2 (TLS 1.0 and 1.1 are deprecated - RFC 8996)
             minVersion: 'TLSv1.2',
+            // Belt-and-suspenders: explicitly disable deprecated protocols via OpenSSL flags
+            // This guards against any OpenSSL fallback behavior
+            secureOptions:
+                crypto.constants.SSL_OP_NO_SSLv2 |
+                crypto.constants.SSL_OP_NO_SSLv3 |
+                crypto.constants.SSL_OP_NO_TLSv1 |
+                crypto.constants.SSL_OP_NO_TLSv1_1 |
+                crypto.constants.SSL_OP_NO_TICKET,  // Disable session tickets for forward secrecy
             // Strong cipher suites only (Mozilla Intermediate compatibility)
             // Ordered by preference: ECDHE > DHE, AES-GCM > AES-CBC, SHA384 > SHA256
+            // Explicit exclusions prevent any OpenSSL defaults from leaking weak ciphers
             ciphers: [
                 'ECDHE-ECDSA-AES128-GCM-SHA256',
                 'ECDHE-RSA-AES128-GCM-SHA256',
@@ -250,13 +260,12 @@ export function startServer(app, serverDir) {
                 'ECDHE-ECDSA-CHACHA20-POLY1305',
                 'ECDHE-RSA-CHACHA20-POLY1305',
                 'DHE-RSA-AES128-GCM-SHA256',
-                'DHE-RSA-AES256-GCM-SHA384'
+                'DHE-RSA-AES256-GCM-SHA384',
+                '!aNULL', '!eNULL', '!EXPORT', '!DES', '!RC4',
+                '!3DES', '!MD5', '!PSK', '!SRP', '!CAMELLIA'
             ].join(':'),
             // Prefer server cipher order
             honorCipherOrder: true,
-            // Disable session tickets for forward secrecy
-            // (optional, can be enabled if session resumption is needed)
-            // secureOptions: require('constants').SSL_OP_NO_TICKET
         };
         
         server = https.createServer(httpsOptions, app);

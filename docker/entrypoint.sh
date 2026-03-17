@@ -21,11 +21,11 @@ KEY_FILE="$CERT_DIR/private.key"
 
 if [ ! -f "$CERT_FILE" ] || [ ! -f "$KEY_FILE" ]; then
     echo "Generating self-signed SSL certificate..."
-    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+    openssl req -x509 -nodes -days 365 -newkey rsa:4096 -sha256 \
         -keyout "$KEY_FILE" \
         -out "$CERT_FILE" \
         -subj "/C=FR/ST=IDF/L=Paris/O=ResumeConverter/CN=localhost"
-    echo "SSL certificate generated!"
+    echo "SSL certificate generated (RSA 4096 + SHA-256)!"
 else
     echo "SSL certificates found, using existing."
 fi
