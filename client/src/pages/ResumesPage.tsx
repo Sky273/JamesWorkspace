@@ -81,6 +81,13 @@ const tagColorMap: Record<string, string> = {
   'Soft Skills': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'
 };
 
+const categoryHeaderColors: Record<string, { dot: string; text: string; border: string }> = {
+  'Skills': { dot: 'bg-blue-500', text: 'text-blue-700 dark:text-blue-300', border: 'border-blue-400 dark:border-blue-500' },
+  'Industries': { dot: 'bg-purple-500', text: 'text-purple-700 dark:text-purple-300', border: 'border-purple-400 dark:border-purple-500' },
+  'Tools': { dot: 'bg-green-500', text: 'text-green-700 dark:text-green-300', border: 'border-green-400 dark:border-green-500' },
+  'Soft Skills': { dot: 'bg-yellow-500', text: 'text-yellow-700 dark:text-yellow-300', border: 'border-yellow-400 dark:border-yellow-500' }
+};
+
 const tagFilterColors: Record<string, { selected: string; unselected: string }> = {
   'Skills': {
     selected: 'bg-blue-500 text-white ring-2 ring-blue-300 dark:ring-blue-700',
@@ -378,11 +385,14 @@ const ResumesPage = (): JSX.Element => {
     >
       <Breadcrumbs className="mb-4" />
       
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-          {t('resumes.title')}
-        </h1>
-        <p className="text-gray-600 dark:text-gray-400">
+      <div className="mb-8">
+        <div className="flex items-center gap-3 mb-1">
+          <div className="w-1 h-8 rounded-full bg-primary-500" />
+          <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-gray-100">
+            {t('resumes.title')}
+          </h1>
+        </div>
+        <p className="text-gray-500 dark:text-gray-400 ml-[1.75rem]">
           {t('resumes.subtitle')}
         </p>
       </div>
@@ -422,7 +432,7 @@ const ResumesPage = (): JSX.Element => {
         <DealsGroupedView allTags={allTags} />
       ) : (
       <>
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 mb-6">
         <SearchAndActions
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
@@ -471,7 +481,8 @@ const ResumesPage = (): JSX.Element => {
                   
                   return tags.length > 0 && (
                     <div key={category}>
-                      <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      <h3 className={`flex items-center gap-2 text-sm font-semibold mb-2.5 pl-2 border-l-2 ${categoryHeaderColors[category]?.border || 'border-gray-400'} ${categoryHeaderColors[category]?.text || 'text-gray-700 dark:text-gray-300'}`}>
+                        <span className={`w-2 h-2 rounded-full ${categoryHeaderColors[category]?.dot || 'bg-gray-400'}`} />
                         {t(`resumes.filters.${category.toLowerCase().replace(' ', '')}`)}
                       </h3>
                       <div className="flex flex-wrap gap-2">
@@ -520,7 +531,7 @@ const ResumesPage = (): JSX.Element => {
       {loading ? (
         <SkeletonResumeList count={6} />
       ) : filteredResumes.length === 0 ? (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 p-12 text-center">
           <DocumentTextIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />
           <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
             {t('resumes.noResults')}
@@ -537,7 +548,7 @@ const ResumesPage = (): JSX.Element => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
-              className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow overflow-hidden cursor-pointer"
+              className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 hover:shadow-md transition-shadow overflow-hidden cursor-pointer"
               onClick={() => handleResumeClick(resume)}
             >
               <div className="p-4 border-b border-gray-200 dark:border-gray-700">

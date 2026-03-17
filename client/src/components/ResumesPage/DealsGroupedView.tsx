@@ -37,6 +37,7 @@ import {
   type DealGroup,
   type DealsGroupedViewProps,
   TAG_FILTER_COLORS,
+  CATEGORY_HEADER_COLORS,
   FILTER_CONTENT_VARIANTS,
   INITIAL_RESUMES_LIMIT
 } from './dealsGrouped.types';
@@ -182,7 +183,7 @@ const DealsGroupedView = ({ allTags }: DealsGroupedViewProps): JSX.Element => {
 
   if (!data || !visibleData) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 p-12 text-center">
         <BriefcaseIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />
         <p className="text-gray-600 dark:text-gray-400">{t('resumes.groupedView.errorLoading', 'Erreur lors du chargement')}</p>
       </div>
@@ -191,7 +192,7 @@ const DealsGroupedView = ({ allTags }: DealsGroupedViewProps): JSX.Element => {
 
   return (
     <div className="space-y-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60">
         <SearchAndActions
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
@@ -242,7 +243,8 @@ const DealsGroupedView = ({ allTags }: DealsGroupedViewProps): JSX.Element => {
 
                   return tags.length > 0 ? (
                     <div key={category}>
-                      <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      <h3 className={`flex items-center gap-2 text-sm font-semibold mb-2.5 pl-2 border-l-2 ${CATEGORY_HEADER_COLORS[category]?.border || 'border-gray-400'} ${CATEGORY_HEADER_COLORS[category]?.text || 'text-gray-700 dark:text-gray-300'}`}>
+                        <span className={`w-2 h-2 rounded-full ${CATEGORY_HEADER_COLORS[category]?.dot || 'bg-gray-400'}`} />
                         {t(`resumes.filters.${category.toLowerCase().replace(' ', '')}`)}
                       </h3>
                       <div className="flex flex-wrap gap-2">
@@ -278,20 +280,23 @@ const DealsGroupedView = ({ allTags }: DealsGroupedViewProps): JSX.Element => {
       </div>
 
       {/* Summary bar */}
-      <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 rounded-lg shadow px-4 py-3">
-        <div className="flex items-center gap-1.5">
-          <BriefcaseIcon className="w-4 h-4" />
-          <span><strong>{visibleData.totalDeals}</strong> {t('resumes.groupedView.deals', 'affaires')}</span>
+      <div className="flex items-center gap-3 text-sm bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 px-4 py-2.5">
+        <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
+          <BriefcaseIcon className="w-4 h-4 text-purple-500" />
+          <span className="font-semibold text-gray-900 dark:text-gray-100">{visibleData.totalDeals}</span>
+          <span>{t('resumes.groupedView.deals', 'affaires')}</span>
         </div>
-        <span className="text-gray-300 dark:text-gray-600">|</span>
-        <div className="flex items-center gap-1.5">
-          <DocumentTextIcon className="w-4 h-4" />
-          <span><strong>{visibleData.totalAssigned}</strong> {t('resumes.groupedView.assigned', 'CVs affectés')}</span>
+        <div className="w-px h-4 bg-gray-200 dark:bg-gray-700" />
+        <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
+          <DocumentTextIcon className="w-4 h-4 text-blue-500" />
+          <span className="font-semibold text-gray-900 dark:text-gray-100">{visibleData.totalAssigned}</span>
+          <span>{t('resumes.groupedView.assigned', 'CVs affectés')}</span>
         </div>
-        <span className="text-gray-300 dark:text-gray-600">|</span>
-        <div className="flex items-center gap-1.5">
-          <FolderOpenIcon className="w-4 h-4" />
-          <span><strong>{visibleData.totalUnassigned}</strong> {t('resumes.groupedView.unassigned', 'non affectés')}</span>
+        <div className="w-px h-4 bg-gray-200 dark:bg-gray-700" />
+        <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
+          <FolderOpenIcon className="w-4 h-4 text-amber-500" />
+          <span className="font-semibold text-gray-900 dark:text-gray-100">{visibleData.totalUnassigned}</span>
+          <span>{t('resumes.groupedView.unassigned', 'non affectés')}</span>
         </div>
       </div>
 
@@ -333,14 +338,14 @@ const DealsGroupedView = ({ allTags }: DealsGroupedViewProps): JSX.Element => {
 
       {/* Empty deals message */}
       {visibleData.deals.length === 0 && !hasActiveFilters && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 p-8 text-center">
           <BriefcaseIcon className="w-12 h-12 mx-auto text-gray-400 mb-3" />
           <p className="text-gray-600 dark:text-gray-400">{t('resumes.groupedView.noDeals', 'Aucune affaire créée')}</p>
         </div>
       )}
 
       {visibleData.deals.length === 0 && visibleData.unassigned.length === 0 && hasActiveFilters && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 p-12 text-center">
           <DocumentTextIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />
           <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
             {t('resumes.noResults')}
@@ -353,7 +358,7 @@ const DealsGroupedView = ({ allTags }: DealsGroupedViewProps): JSX.Element => {
 
       {/* Unassigned resumes section */}
       {visibleData.unassigned.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 overflow-hidden">
           <button
             onClick={() => {
               if (!hasActiveFilters) {

@@ -40,15 +40,15 @@ const StatCard = ({ icon: Icon, iconBgColor, iconColor, label, value, delay = 0 
     initial={{ opacity: 0, scale: 0.9 }} 
     animate={{ opacity: 1, scale: 1 }} 
     transition={{ delay }}
-    className="bg-white dark:bg-gray-800 rounded-lg shadow p-4"
+    className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 p-4 hover:shadow-md transition-shadow"
   >
     <div className="flex items-center gap-3">
-      <div className={`p-2 ${iconBgColor} rounded-lg`}>
-        <Icon className={`w-6 h-6 ${iconColor}`} />
+      <div className={`p-2.5 ${iconBgColor} rounded-xl`}>
+        <Icon className={`w-5 h-5 ${iconColor}`} />
       </div>
       <div>
-        <div className="text-sm text-gray-600 dark:text-gray-400">{label}</div>
-        <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{value}</div>
+        <div className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{label}</div>
+        <div className="text-2xl font-extrabold text-gray-900 dark:text-gray-100 tracking-tight">{value}</div>
       </div>
     </div>
   </motion.div>

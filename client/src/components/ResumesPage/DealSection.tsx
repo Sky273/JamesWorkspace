@@ -108,12 +108,12 @@ const DealSection = ({
 
   return (
     <div
-      className={`rounded-lg shadow overflow-hidden transition-all duration-200 ${
+      className={`rounded-xl shadow-sm border overflow-hidden transition-all duration-200 ${
         isDragOver
-          ? 'bg-purple-50 dark:bg-purple-900/20 ring-2 ring-purple-400 dark:ring-purple-500 ring-offset-1'
+          ? 'bg-purple-50 dark:bg-purple-900/20 ring-2 ring-purple-400 dark:ring-purple-500 ring-offset-1 border-purple-300 dark:border-purple-600'
           : isSourceDeal && isDragging
-            ? 'bg-white dark:bg-gray-800 opacity-60'
-            : 'bg-white dark:bg-gray-800'
+            ? 'bg-white dark:bg-gray-800 opacity-60 border-gray-100 dark:border-gray-700/60'
+            : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700/60'
       }`}
       onDragEnter={(e) => onDragEnter(e, deal.id)}
       onDragLeave={(e) => onDragLeave(e, deal.id)}
@@ -138,7 +138,7 @@ const DealSection = ({
           <BriefcaseIcon className="w-5 h-5 text-purple-500 flex-shrink-0" />
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">{deal.title}</h3>
+              <h3 className="font-bold text-gray-900 dark:text-gray-100 truncate">{deal.title}</h3>
               <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[deal.status] || STATUS_COLORS.open}`}>
                 {t(`crm.deals.statuses.${deal.status}`, STATUS_LABELS[deal.status] || deal.status)}
               </span>

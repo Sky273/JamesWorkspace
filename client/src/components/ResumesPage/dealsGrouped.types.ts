@@ -113,6 +113,13 @@ export const TAG_COLOR_MAP: Record<string, string> = {
   soft_skills: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'
 };
 
+export const CATEGORY_HEADER_COLORS: Record<string, { dot: string; text: string; border: string }> = {
+  Skills: { dot: 'bg-blue-500', text: 'text-blue-700 dark:text-blue-300', border: 'border-blue-400 dark:border-blue-500' },
+  Industries: { dot: 'bg-purple-500', text: 'text-purple-700 dark:text-purple-300', border: 'border-purple-400 dark:border-purple-500' },
+  Tools: { dot: 'bg-green-500', text: 'text-green-700 dark:text-green-300', border: 'border-green-400 dark:border-green-500' },
+  'Soft Skills': { dot: 'bg-yellow-500', text: 'text-yellow-700 dark:text-yellow-300', border: 'border-yellow-400 dark:border-yellow-500' }
+};
+
 export const TAG_FILTER_COLORS: Record<string, { selected: string; unselected: string }> = {
   Skills: {
     selected: 'bg-blue-500 text-white ring-2 ring-blue-300 dark:ring-blue-700',
