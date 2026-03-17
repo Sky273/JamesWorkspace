@@ -22,6 +22,10 @@ declare module '@tiptap/react' {
 export const CustomImage = Image.extend({
   name: 'image',
 
+  // Ensure clicking on the image creates a NodeSelection
+  atom: true,
+  selectable: true,
+
   addAttributes() {
     return {
       ...this.parent?.(),

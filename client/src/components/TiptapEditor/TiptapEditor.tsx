@@ -5,6 +5,7 @@
 
 import { useEditor, EditorContent } from '@tiptap/react';
 import { BubbleMenu } from '@tiptap/react/menus';
+import { isTextSelection, isNodeSelection } from '@tiptap/core';
 import { StarterKit } from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
@@ -269,9 +270,29 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
           }
         />
 
-        {/* Bubble menu on text selection */}
+        {/* Bubble menu on text selection and image node selection */}
         {editor && (
-          <BubbleMenu editor={editor}>
+          <BubbleMenu
+            editor={editor}
+            shouldShow={({ editor: e, element, view, state, from, to }) => {
+              // Check focus (editor or inside the bubble menu itself)
+              const isChildOfMenu = element.contains(document.activeElement);
+              const hasEditorFocus = view.hasFocus() || isChildOfMenu;
+              if (!hasEditorFocus || !e.isEditable) return false;
+
+              const { selection } = state;
+
+              // Show for image node selections
+              if (isNodeSelection(selection) && e.isActive('image')) return true;
+
+              // Default text selection behavior
+              if (selection.empty) return false;
+              const isEmptyTextBlock = !state.doc.textBetween(from, to).length && isTextSelection(selection);
+              if (isEmptyTextBlock) return false;
+
+              return true;
+            }}
+          >
             <BubbleToolbar editor={editor} onSetLink={setLink} />
           </BubbleMenu>
         )}
