@@ -30,34 +30,213 @@ interface SuggestionsStorage {
 }
 
 // ============================================
-// SECTION DETECTION
+// SECTION DETECTION (v2 — scored matching)
 // ============================================
 
-const SECTION_MARKERS: Record<string, string[]> = {
+/**
+ * Each marker carries a specificity score (higher = more distinctive)
+ * and an optional `generic` flag. Generic markers are only matched
+ * against headings or very short paragraphs to avoid false positives
+ * in body text.  All marker texts are pre-normalised (lowercase, no
+ * diacritics) so they can be compared with normalizeText() output.
+ */
+interface MarkerDef {
+  text: string;
+  specificity: number;
+  generic?: boolean;
+}
+
+const SECTION_DEFS: Record<string, MarkerDef[]> = {
   executiveSummary: [
-    'profil', 'résumé', 'summary', 'profile', 'présentation',
-    'introduction', 'objectif', 'sommaire', 'à propos', 'about',
+    { text: 'resume executif', specificity: 18 },
+    { text: 'profil professionnel', specificity: 18 },
+    { text: 'synthese professionnelle', specificity: 18 },
+    { text: 'executive summary', specificity: 18 },
+    { text: 'a propos de moi', specificity: 15 },
+    { text: 'a propos', specificity: 12 },
+    { text: 'summary', specificity: 10 },
+    { text: 'profile', specificity: 8 },
+    { text: 'profil', specificity: 8 },
+    { text: 'resume', specificity: 6 },
+    { text: 'presentation', specificity: 6 },
+    { text: 'synthese', specificity: 6 },
+    { text: 'introduction', specificity: 5, generic: true },
+    { text: 'objectif', specificity: 5 },
+    { text: 'sommaire', specificity: 5, generic: true },
+    { text: 'about', specificity: 5 },
   ],
   skills: [
-    'compétences', 'skills', 'technologies', 'outils', 'expertise',
-    'savoir-faire', 'compétences techniques', 'technical skills',
-    'stack technique', 'environnement technique',
+    { text: 'competences techniques', specificity: 18 },
+    { text: 'competences cles', specificity: 18 },
+    { text: 'technical skills', specificity: 18 },
+    { text: 'stack technique', specificity: 18 },
+    { text: 'environnement technique', specificity: 18 },
+    { text: "domaines d'expertise", specificity: 15 },
+    { text: 'savoir-faire', specificity: 12 },
+    { text: 'competences', specificity: 10 },
+    { text: 'skills', specificity: 10 },
+    { text: 'expertise', specificity: 8 },
+    { text: 'technologies', specificity: 6, generic: true },
+    { text: 'outils', specificity: 4, generic: true },
   ],
   experiences: [
-    'expérience', 'experience', 'parcours', 'missions', 'postes',
-    'emplois', 'expériences professionnelles', 'professional experience',
-    'work experience', 'historique',
+    { text: 'experiences professionnelles', specificity: 18 },
+    { text: 'experience professionnelle', specificity: 18 },
+    { text: 'professional experience', specificity: 18 },
+    { text: 'work experience', specificity: 18 },
+    { text: 'parcours professionnel', specificity: 18 },
+    { text: 'experiences', specificity: 10 },
+    { text: 'experience', specificity: 10 },
+    { text: 'parcours', specificity: 8 },
+    { text: 'postes', specificity: 5, generic: true },
+    { text: 'emplois', specificity: 5, generic: true },
+    { text: 'missions', specificity: 4, generic: true },
+    { text: 'historique', specificity: 3, generic: true },
   ],
   education: [
-    'formation', 'education', 'diplômes', 'études', 'certifications',
-    'académique', 'cursus', 'scolarité', 'diplôme',
+    { text: 'formations et certifications', specificity: 18 },
+    { text: 'formation academique', specificity: 18 },
+    { text: 'diplomes et certifications', specificity: 18 },
+    { text: 'formation professionnelle', specificity: 15 },
+    { text: 'formation', specificity: 10 },
+    { text: 'education', specificity: 10 },
+    { text: 'diplomes', specificity: 10 },
+    { text: 'diplome', specificity: 8 },
+    { text: 'certifications', specificity: 8 },
+    { text: 'cursus', specificity: 8 },
+    { text: 'scolarite', specificity: 8 },
+    { text: 'etudes', specificity: 6 },
+    { text: 'academique', specificity: 5, generic: true },
   ],
   hobbiesLanguages: [
-    'langues', 'languages', 'loisirs', 'hobbies', "centres d'intérêt",
-    'interests', 'activités', 'divers', 'autres',
+    { text: "centres d'interet", specificity: 18 },
+    { text: 'langues et loisirs', specificity: 18 },
+    { text: 'informations complementaires', specificity: 15 },
+    { text: 'langues', specificity: 10 },
+    { text: 'languages', specificity: 10 },
+    { text: 'loisirs', specificity: 10 },
+    { text: 'hobbies', specificity: 10 },
+    { text: 'interests', specificity: 8 },
+    { text: 'activites', specificity: 4, generic: true },
+    { text: 'divers', specificity: 3, generic: true },
+    { text: 'autres', specificity: 2, generic: true },
   ],
   atsOptimization: [], // Global — shown in top panel only
 };
+
+/** Minimum score a candidate must reach to be considered a valid match. */
+const MIN_MATCH_SCORE = 20;
+
+// ============================================
+// TEXT NORMALISATION
+// ============================================
+
+/**
+ * Lowercase, strip diacritics, normalise apostrophes.
+ * "Compétences Techniques" → "competences techniques"
+ */
+function normalizeText(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[''ʼ`]/g, "'")
+    .trim();
+}
+
+// ============================================
+// SCORING ENGINE
+// ============================================
+
+interface CandidateMatch {
+  pos: number;
+  node: ProseMirrorNode;
+  sectionKey: string;
+  score: number;
+}
+
+/**
+ * Check whether the first direct‐child text node of a paragraph
+ * carries a bold mark — a common pattern for section headers
+ * in CVs that don't use proper heading tags.
+ */
+function startsWithBold(node: ProseMirrorNode): boolean {
+  if (node.type.name !== 'paragraph' || node.childCount === 0) return false;
+  const first = node.child(0);
+  return first.isText && first.marks.some((m) => m.type.name === 'bold');
+}
+
+/**
+ * Score how well a document node matches a given section.
+ * Returns -1 if no marker matches at all.
+ */
+function scoreMatch(
+  node: ProseMirrorNode,
+  normalizedText: string,
+  textLength: number,
+  markers: MarkerDef[],
+): number {
+  if (!markers.length) return -1;
+
+  const isHeading = node.type.name === 'heading';
+  const headingLevel: number = isHeading
+    ? ((node.attrs as Record<string, number>).level ?? 6)
+    : 99;
+  const isParagraph = node.type.name === 'paragraph';
+
+  // Long paragraphs are body text, never section headers
+  if (isParagraph && textLength > 80) return -1;
+
+  let bestScore = -1;
+
+  for (const marker of markers) {
+    // Generic markers only match headings or very short paragraphs
+    if (marker.generic && isParagraph && textLength > 40) continue;
+
+    if (!normalizedText.includes(marker.text)) continue;
+
+    let score = 0;
+
+    // ── Match quality ──────────────────────────────────────
+    if (normalizedText === marker.text) {
+      score += 50; // exact match
+    } else if (normalizedText.startsWith(marker.text)) {
+      score += 42; // starts with marker
+    } else {
+      const coverage = marker.text.length / normalizedText.length;
+      if (coverage > 0.6) {
+        score += 35; // marker is most of the text
+      } else {
+        // word-boundary check — marker appears as a distinct phrase
+        const esc = marker.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const wb = new RegExp(
+          `(?:^|[\\s,;:.!?/()\\[\\]|–—\\-])${esc}(?:[\\s,;:.!?/()\\[\\]|–—\\-]|$)`,
+        );
+        score += wb.test(normalizedText) ? 20 : 8;
+      }
+    }
+
+    // ── Node type bonus ────────────────────────────────────
+    if (isHeading) {
+      score += headingLevel <= 3 ? 50 : 35;
+    } else if (isParagraph) {
+      // Bold short paragraphs behave like headings in many CVs
+      score += startsWithBold(node) ? 25 : 10;
+    }
+
+    // ── Text brevity bonus (short text = likely a title) ───
+    if (textLength < 30) score += 15;
+    else if (textLength < 50) score += 8;
+    else if (textLength < 80) score += 2;
+
+    // ── Marker specificity ─────────────────────────────────
+    score += marker.specificity;
+
+    if (score > bestScore) bestScore = score;
+  }
+
+  return bestScore;
+}
 
 const SECTION_LABELS: Record<string, string> = {
   executiveSummary: 'Résumé exécutif',
@@ -198,57 +377,72 @@ function buildDecorations(
     .filter(Boolean).length;
   if (totalCount === 0) return DecorationSet.empty;
 
-  const decorations: Decoration[] = [];
-  const matchedSections = new Set<string>();
+  // ── Pass 1: collect scored candidates ────────────────────
+  const candidates: CandidateMatch[] = [];
 
-  // Walk document to find section headings
   doc.descendants((node, pos) => {
     if (!node.isBlock) return;
     if (node.type.name !== 'heading' && node.type.name !== 'paragraph') return;
 
-    const text = node.textContent.toLowerCase().trim();
-    if (!text) return;
+    const rawText = node.textContent.trim();
+    if (!rawText) return;
 
-    for (const [sectionKey, markers] of Object.entries(SECTION_MARKERS)) {
-      if (matchedSections.has(sectionKey)) continue;
-      if (!markers.length) continue; // skip marker-less sections (ATS)
+    const normalized = normalizeText(rawText);
+    if (!normalized) return;
 
+    for (const [sectionKey, markers] of Object.entries(SECTION_DEFS)) {
       const sectionSuggestions =
         suggestions[sectionKey as keyof SuggestionsBySection];
       if (!sectionSuggestions?.length) continue;
 
-      const matched = markers.some((m) => text.includes(m));
-      if (!matched) continue;
-
-      matchedSections.add(sectionKey);
-
-      // Node decoration: highlight the heading
-      decorations.push(
-        Decoration.node(pos, pos + node.nodeSize, {
-          class: 'suggestion-deco-highlight',
-        }),
-      );
-
-      // Widget decoration: badge at end of heading content
-      const widget = createBadgeWidget(sectionKey, sectionSuggestions);
-      decorations.push(
-        Decoration.widget(pos + node.nodeSize - 1, () => widget, {
-          side: 1,
-          key: `suggestion-badge-${sectionKey}`,
-        }),
-      );
-
-      break; // one match per node
+      const score = scoreMatch(node, normalized, rawText.length, markers);
+      if (score >= MIN_MATCH_SCORE) {
+        candidates.push({ pos, node, sectionKey, score });
+      }
     }
   });
 
-  // Global panel for unmatched / ATS suggestions
+  // ── Pass 2: greedy assignment (highest scores first) ─────
+  candidates.sort((a, b) => b.score - a.score);
+
+  const assignedSections = new Set<string>();
+  const assignedPositions = new Set<number>();
+  const decorations: Decoration[] = [];
+
+  for (const c of candidates) {
+    if (assignedSections.has(c.sectionKey)) continue;
+    if (assignedPositions.has(c.pos)) continue;
+
+    assignedSections.add(c.sectionKey);
+    assignedPositions.add(c.pos);
+
+    const sectionSuggestions =
+      suggestions[c.sectionKey as keyof SuggestionsBySection]!;
+
+    // Node decoration: highlight the heading / paragraph
+    decorations.push(
+      Decoration.node(c.pos, c.pos + c.node.nodeSize, {
+        class: 'suggestion-deco-highlight',
+      }),
+    );
+
+    // Widget decoration: badge at end of node content
+    const widget = createBadgeWidget(c.sectionKey, sectionSuggestions);
+    decorations.push(
+      Decoration.widget(c.pos + c.node.nodeSize - 1, () => widget, {
+        side: 1,
+        key: `suggestion-badge-${c.sectionKey}`,
+      }),
+    );
+  }
+
+  // ── Global panel for unmatched / ATS suggestions ─────────
   const unmatchedSuggestions: SuggestionsBySection = {};
   let hasUnmatched = false;
 
   for (const [key, items] of Object.entries(suggestions)) {
     if (!items?.length) continue;
-    if (!matchedSections.has(key) || key === 'atsOptimization') {
+    if (!assignedSections.has(key) || key === 'atsOptimization') {
       (unmatchedSuggestions as Record<string, string[]>)[key] =
         items as string[];
       hasUnmatched = true;
@@ -257,7 +451,7 @@ function buildDecorations(
 
   if (hasUnmatched) {
     const panelData =
-      matchedSections.size === 0 ? suggestions : unmatchedSuggestions;
+      assignedSections.size === 0 ? suggestions : unmatchedSuggestions;
     const panel = createGlobalPanel(panelData);
     if (panel) {
       decorations.push(
