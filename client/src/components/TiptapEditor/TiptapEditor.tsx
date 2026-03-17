@@ -100,6 +100,8 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
         StarterKit.configure({
           codeBlock: false, // replaced by CodeBlockLowlight
           heading: { levels: [1, 2, 3, 4, 5] },
+          link: false,      // configured explicitly below
+          underline: false,  // configured explicitly below
         }),
         Underline,
         TextAlign.configure({
