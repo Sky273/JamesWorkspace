@@ -3,7 +3,6 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import path from 'path';
 import fs from 'fs';
-import commonjs from '@rollup/plugin-commonjs';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import compression from 'vite-plugin-compression';
 import zlib from 'zlib';
@@ -331,8 +330,7 @@ export default defineConfig(({ mode }) => {
   build: {
     // Output directory (inside client/)
     outDir: 'dist',
-    // Use esbuild for minification (faster and more stable than terser)
-    minify: 'esbuild',
+    minify: true,
     // Enable source maps for debugging
     sourcemap: true,
     // Chunk size warning limit (in kB)
@@ -348,16 +346,8 @@ export default defineConfig(({ mode }) => {
     commonjsOptions: {
       include: [/node_modules/],
       transformMixedEsModules: true,
-      // Fix for void-elements and html-parse-stringify in Vite 7
-      esmExternals: true,
     },
     rollupOptions: {
-      plugins: [
-        commonjs({
-          include: /node_modules/,
-          transformMixedEsModules: true,
-        }),
-      ],
       output: {
         // Manual chunk splitting for better caching
         manualChunks(id) {
