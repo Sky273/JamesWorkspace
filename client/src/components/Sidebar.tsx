@@ -78,7 +78,7 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
 
   // GESTION section - visible to all users
   const gestionSection: NavSection = {
-    title: t('navigation.sectionGestion'),
+    title: null,
     items: [
       { name: t('navigation.resumes'), href: '/resumes', icon: DocumentTextIcon },
       { name: t('navigation.missions'), href: '/missions', icon: BriefcaseIcon },
@@ -91,7 +91,7 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
 
   // ADMIN section - only visible to admins
   const adminSection: NavSection = {
-    title: t('navigation.sectionAdmin'),
+    title: null,
     items: [
       { name: t('navigation.templates'), href: '/templates', icon: DocumentDuplicateIcon },
       { name: t('navigation.emailTemplates'), href: '/dashboard/email-templates', icon: EnvelopeIcon },
