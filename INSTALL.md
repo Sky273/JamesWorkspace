@@ -114,8 +114,7 @@ POSTGRES_RETRY_DELAY=1000
 #   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
 JWT_SECRET=REMPLACEZ_PAR_UN_SECRET_DE_64_CARACTERES_HEXADECIMAUX
-JWT_REFRESH_SECRET=REMPLACEZ_PAR_UN_AUTRE_SECRET_DE_64_CARACTERES
-REFRESH_TOKEN_SECRET=REMPLACEZ_PAR_ENCORE_UN_AUTRE_SECRET_64_CHARS
+REFRESH_TOKEN_SECRET=REMPLACEZ_PAR_UN_AUTRE_SECRET_DE_64_CARACTERES
 CSRF_SECRET=REMPLACEZ_PAR_UN_SECRET_CSRF_DE_64_CARACTERES_HEX
 
 # ==============================================================================
@@ -455,8 +454,7 @@ La configuration complète du fichier `.env` est détaillée dans la section [In
 |----------|-------------|-----------------|
 | `POSTGRES_PASSWORD` | Mot de passe PostgreSQL | Choisir un mot de passe sécurisé |
 | `JWT_SECRET` | Secret JWT (min 32 car.) | `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
-| `JWT_REFRESH_SECRET` | Secret refresh token | Même commande |
-| `REFRESH_TOKEN_SECRET` | Secret token additionnel | Même commande |
+| `REFRESH_TOKEN_SECRET` | Secret refresh token (min 32 car.) | Même commande |
 | `CSRF_SECRET` | Secret CSRF | Même commande |
 
 #### Variables recommandées (fonctionnalités IA)

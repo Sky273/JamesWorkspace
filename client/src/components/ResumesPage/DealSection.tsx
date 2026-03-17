@@ -269,7 +269,7 @@ const DealSection = ({
                                   <div className="flex items-center gap-2 min-w-0 flex-1">
                                     <DocumentTextIcon className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
                                     <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                                      {adaptation.candidate_name || adaptation.resume_name || t('adaptations.card.noName', 'Sans nom')}
+                                      {adaptation.resume_name || adaptation.candidate_name || t('adaptations.card.noName', 'Sans nom')}
                                     </span>
                                     {adaptation.adapted_title && (
                                       <span className="text-xs text-blue-600 dark:text-blue-400 italic truncate max-w-[200px]">

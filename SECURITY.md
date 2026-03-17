@@ -1,7 +1,7 @@
 # Security Documentation
 
-**Version**: 1.8.4  
-**Last Updated**: March 2026
+**Version**: 1.8.5  
+**Last Updated**: Mars 2026
 
 ## Overview
 
@@ -152,7 +152,7 @@ scriptSrc: [
 
 ### Future Improvements
 
-- Consider server-side PDF text extraction to reduce client-side PDF.js usage
+- ~~Server-side PDF text extraction~~ ✅ Implemented (`POST /api/resumes/extract-pdf`)
 
 ---
 
@@ -366,9 +366,9 @@ All LLM requests are tracked in `llm_metrics` table:
    - Mitigation: Log rotation (10MB, 5 files)
    - Future: External log aggregation service (ELK, Datadog)
 
-3. **CSP Relaxations**: Required for TinyMCE
+3. **CSP Relaxations**: `unsafe-inline` in style-src for Tiptap/ProseMirror
    - Mitigation: Strict input sanitization
-   - Future: Nonce-based CSP when supported
+   - Future: Nonce-based CSP for inline styles
 
 4. **Single Instance**: Rate limits not shared across instances
    - Mitigation: Sticky sessions in load balancer
@@ -415,14 +415,19 @@ All LLM requests are tracked in `llm_metrics` table:
 - [x] Admin rate limit bonus (3x)
 - [x] Log file rotation (10MB, 5 files)
 - [x] Automatic rate limit store cleanup
+- [x] Two-factor authentication (TOTP with encrypted secrets)
+- [x] Google OAuth2 SSO
+- [x] GDPR audit logging
+- [x] GDPR consent management (candidates)
+- [x] Server-side PDF text extraction (CSP hardening)
+- [x] Database backup/restore with FTP/SFTP
 
 ### Planned 📋
 
 - [ ] Redis-based token blacklist (multi-instance support)
 - [ ] Redis-based rate limiting (shared across instances)
 - [ ] External log aggregation (ELK, Datadog)
-- [ ] Nonce-based CSP (pending TinyMCE support)
-- [ ] Two-factor authentication (2FA)
+- [ ] Nonce-based CSP for inline styles
 - [ ] Password complexity requirements
 - [ ] Account lockout after failed attempts
 

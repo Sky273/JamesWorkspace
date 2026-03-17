@@ -32,11 +32,9 @@ const isProduction = process.env.NODE_ENV === 'production';
 // - base-uri 'self' prevents base tag hijacking
 // - frame-ancestors 'self' prevents clickjacking
 //
-// RECOMMENDATIONS FOR FUTURE:
-// 1. Consider server-side PDF text extraction to reduce client-side PDF.js usage
-//
 // IMPLEMENTED:
-// - Subresource Integrity (SRI) for Swagger UI external scripts/styles (routeRegistry.js)
+// 1. Server-side PDF text extraction (POST /api/resumes/extract-pdf) reduces client-side PDF.js usage
+// 2. Subresource Integrity (SRI) for Swagger UI external scripts/styles (routeRegistry.js)
 // ============================================
 
 export function configureHelmet(app) {

@@ -35,8 +35,9 @@
 | **IA/LLM** | OpenAI (GPT-4/5), Anthropic (Claude) |
 | **APIs Externes** | France Travail, Adzuna, ROME 4.0, ESCO |
 | **Génération PDF** | Puppeteer (html-pdf-node) |
-| **Éditeur WYSIWYG** | TinyMCE 8.3 |
+| **Éditeur WYSIWYG** | Tiptap 3.x (ProseMirror) |
 | **Cartographie** | MapLibre GL JS |
+| **Calendrier** | Google Calendar API (OAuth2) |
 | **Authentification** | JWT (Access + Refresh Tokens) |
 | **Sécurité** | Helmet, CSRF (Double Submit), Rate Limiting, SQL Injection Protection |
 
@@ -92,24 +93,37 @@
 
 ```
 src/
-├── components/          # Composants réutilisables (60+ fichiers)
+├── components/          # Composants réutilisables (80+ fichiers)
 │   ├── ChatBot.tsx      # Assistant IA avec Markdown
 │   ├── Layout.tsx       # Layout principal avec sidebar
 │   ├── ResumeAnalysis/  # Composants d'analyse de CV (8 sous-composants)
 │   ├── HealthIndicator.tsx # Monitoring santé serveur (admin)
 │   ├── Pagination.tsx   # Pagination réutilisable
 │   ├── WebGLBackground.tsx # Animation 3D page d'accueil
+│   ├── ProcessingScreen.tsx # Animation des étapes d'upload/analyse
+│   ├── ImprovementAnimation.tsx # Animation des étapes d'amélioration
+│   ├── TiptapEditor.tsx # Éditeur WYSIWYG Tiptap
 │   ├── market/          # Composants Market Radar (carte France)
+│   ├── ui/              # Composants UI réutilisables (Skeleton, etc.)
 │   └── ...
-├── pages/               # Pages de l'application (21 fichiers)
+├── pages/               # Pages de l'application (33 fichiers)
 │   ├── ResumesPage.tsx  # CVthèque avec pagination serveur
+│   ├── ResumeAnalysisPage.tsx # Analyse de CV détaillée
+│   ├── ResumeImprovePage.tsx  # Amélioration de CV
+│   ├── ResumeExportPage.tsx   # Export de CV
+│   ├── ResumeAdaptPage.tsx    # Adaptation CV/Mission
 │   ├── MissionsPage.tsx # Gestion des missions
 │   ├── AdaptationsPage.tsx # Adaptations CV/Mission
+│   ├── ClientsPage.tsx  # Gestion CRM clients
+│   ├── BatchUploadPage.tsx  # Import batch de CV
+│   ├── BatchJobsPage.tsx    # Suivi des jobs batch
 │   ├── ProfileMatchingPage.tsx # Matching profils/missions
 │   ├── FactsPage.tsx    # Market Radar - Données marché
 │   ├── MetiersPage.tsx  # Référentiel ROME 4.0
-│   ├── SecurityLogs.tsx # Logs de sécurité (admin)
+│   ├── GdprAuditPage.tsx # Journal RGPD
+│   ├── BackupPage.tsx   # Configuration sauvegardes (admin)
 │   ├── MetricsPage.tsx  # Métriques système (admin)
+│   ├── admin/EmailTemplatesPage.tsx # Templates email (admin)
 │   └── ...
 ├── context/             # Contextes React (3 fichiers)
 │   ├── AuthContext.tsx  # Authentification globale
@@ -120,9 +134,11 @@ src/
 │   └── useDebounce.ts   # Debounce pour recherche
 ├── services/            # Services frontend
 │   └── authService.ts   # Gestion authentification
-├── utils/               # Utilitaires (25 fichiers)
+├── utils/               # Utilitaires (30+ fichiers)
 │   ├── apiInterceptor.ts # Interception des requêtes
 │   ├── validation.ts    # Validation Zod
+│   ├── templateService.ts # Gestion templates export
+│   ├── resumeService.ts   # Service CV (CRUD, export)
 │   └── sanitizer.frontend.ts
 ├── i18n/                # Internationalisation (FR/EN)
 ├── types/               # Types TypeScript
@@ -180,23 +196,50 @@ Le backend est un **serveur proxy** (`proxy-server.js`) qui :
 
 ```
 server/routes/
-├── auth.routes.js       # Login, logout, refresh, register
-├── resumes.routes.js    # CRUD CV, upload, analyse, pagination
-├── missions.routes.js   # CRUD missions
-├── adaptations.routes.js # Adaptations CV/Mission
-├── llm.routes.js        # Appels LLM (analyse, amélioration)
-├── chatbot.routes.js    # Assistant IA contextuel
-├── settings.routes.js   # Configuration application
-├── templates.routes.js  # Templates d'export Word/PDF
-├── users.routes.js      # Gestion utilisateurs (admin)
-├── customers.routes.js  # Gestion clients/entreprises
-├── tags.routes.js       # Gestion des tags avec cache
-├── metrics.routes.js    # Métriques et monitoring
-├── health.routes.js     # Health check + memory stats
-├── admin.routes.js      # Routes administration (security logs, filters)
-├── marketRadar.routes.js # Données marché France Travail/Adzuna
-├── rome.routes.js       # Référentiel ROME 4.0 métiers
-└── docs.routes.js       # Documentation Swagger
+├── auth/                    # Authentification (modulaire)
+│   ├── signin.routes.js     # Login, 2FA, password
+│   ├── google.routes.js     # Google OAuth SSO
+│   └── users.routes.js      # Gestion utilisateurs (admin)
+├── resumes/                 # CV (modulaire)
+│   ├── crud.routes.js       # CRUD CV, pagination, filtres
+│   ├── upload.routes.js     # Upload fichier + RGPD
+│   ├── llm.handlers.js      # Analyse, amélioration, adaptation
+│   ├── versions.routes.js   # Historique des versions
+│   └── stats.routes.js      # Statistiques CV
+├── adaptations.routes.js    # Adaptations CV/Mission
+├── missions.routes.js       # CRUD missions
+├── clients.routes.js        # CRM clients/prospects
+├── resumeComments.routes.js # Commentaires sur CV
+├── resumeSubmissions.routes.js # Envoi de CV à des clients
+├── pipeline.routes.js       # Pipeline de recrutement
+├── deals.routes.js          # Affaires commerciales
+├── batchJobs.routes.js      # Import batch de CV
+├── batchExport.routes.js    # Export batch (ZIP)
+├── templates/crud.routes.js # Templates d'export PDF
+├── llm.routes.js            # Proxy LLM (OpenAI/Anthropic)
+├── chatbot.routes.js        # Assistant IA contextuel
+├── settings.routes.js       # Configuration application
+├── firms.routes.js          # Gestion des cabinets
+├── tags.routes.js           # Gestion des tags avec cache
+├── consent.routes.js        # Consentement RGPD candidats
+├── gdprAudit.routes.js      # Journal d'audit RGPD
+├── gdprMail.routes.js       # Envoi emails RGPD
+├── mail.routes.js           # Envoi emails (Gmail/SMTP)
+├── emailTemplates.routes.js # Templates email MJML
+├── calendar.routes.js       # Google Calendar (entretiens)
+├── share.routes.js          # Partage public de CV (QR code)
+├── backup.routes.js         # Sauvegarde/restauration
+├── marketRadar/             # Données marché (modulaire)
+│   ├── facts.routes.js      # Statistiques marché
+│   ├── trends.routes.js     # Tendances salariales
+│   ├── search.routes.js     # Recherche offres
+│   ├── collection.routes.js # Collecte données
+│   └── reference.routes.js  # Référentiels ROME/ESCO
+├── rome.routes.js           # Référentiel ROME 4.0 métiers
+├── metrics.routes.js        # Métriques et monitoring
+├── health.routes.js         # Health check + memory stats
+├── admin.routes.js          # Routes administration (security logs)
+└── docs.routes.js           # Documentation Swagger
 ```
 
 ### Services Backend
@@ -206,21 +249,28 @@ server/routes/
 | `jwt.service.js` | Génération/vérification JWT, révocation |
 | `llm.service.js` | Abstraction OpenAI/Anthropic, gestion modèles |
 | `cache.service.js` | Cache en mémoire avec TTL et cleanup |
-| `metrics.service.js` | Collecte métriques, persistance fichier |
-| `security.service.js` | Logging sécurité, rotation fichiers |
+| `database.service.js` | Pool PostgreSQL avec retry |
 | `tokenBlacklist.service.js` | Révocation tokens, blacklist users |
-| `settings.service.js` | Configuration LLM centralisée |
-| `retry.service.js` | Retry automatique avec backoff |
+| `googleAuth.service.js` | Google OAuth SSO |
+| `consent.service.js` | Consentement RGPD candidats |
+| `gdprAudit.service.js` | Journal d'audit RGPD |
+| `mail/mailService.js` | Envoi emails (Gmail OAuth / SMTP) |
+| `mail/gdprMailService.js` | Emails RGPD automatiques |
+| `emailTemplates.service.js` | Templates email MJML |
+| `calendar.service.js` | Google Calendar (entretiens) |
+| `deals.service.js` | Affaires commerciales |
+| `candidatePipeline.service.js` | Pipeline de recrutement |
+| `batchJobs.service.js` | Import batch de CV |
+| `batchJobsWorker/` | Worker d'exécution batch (extraction, LLM, export) |
+| `backup.service.js` | Sauvegarde/restauration PostgreSQL |
+| `backup-scheduler.service.js` | Planification sauvegardes automatiques |
+| `industry.service.js` | Gestion des secteurs d'activité |
 | `franceTravail.service.js` | API France Travail (offres, stats) |
 | `adzuna.service.js` | API Adzuna (offres emploi) |
 | `marketFacts.service.js` | Agrégation données marché |
-| `marketTrends.service.js` | Tendances salariales par région |
-| `rome.service.js` | Référentiel ROME 4.0 métiers IT |
+| `marketTrends/` | Tendances salariales (collector, cache, API) |
 | `escoService.js` | Classification ESCO compétences |
-| `profileMatching.service.js` | Matching CV/Mission par tags |
-| `openai.service.js` | Appels OpenAI avec streaming |
-| `database.service.js` | Pool PostgreSQL avec retry |
-| `shutdown.service.js` | Graceful shutdown |
+| `resumeVersions.service.js` | Historique des versions de CV |
 
 ### Middleware Chain
 
@@ -250,18 +300,55 @@ PostgreSQL est utilisé comme base de données relationnelle :
 
 ### Schéma Principal
 
+#### Tables Principales
+
 | Table | Contenu |
 |-------|---------|
-| `users` | Utilisateurs, rôles, statuts, mots de passe hashés |
-| `customers` | Entreprises clientes |
-| `resumes` | CV, analyses, scores, tags (JSON) |
-| `missions` | Offres d'emploi, descriptions |
-| `resume_adaptations` | CV adaptés pour missions |
-| `templates` | Templates d'export Word/PDF |
-| `llm_settings` | Configuration LLM, prompts |
+| `firms` | Cabinets/organisations, statut, logo |
+| `users` | Utilisateurs, rôles, statuts, mots de passe hashés, 2FA (TOTP) |
+| `resumes` | CV, analyses, scores, tags (JSON), consentement RGPD |
+| `resume_versions` | Historique des versions de CV améliorés |
+| `resume_comments` | Commentaires sur les CV (privés/publics) |
+| `missions` | Offres d'emploi, descriptions, compétences requises |
+| `resume_adaptations` | CV adaptés pour missions, score de matching |
+| `templates` | Templates d'export PDF (HTML/CSS) |
+
+#### Tables CRM
+
+| Table | Contenu |
+|-------|---------|
+| `clients` | Clients/prospects (type, statut, secteur) |
+| `client_contacts` | Contacts des clients (email, téléphone) |
+| `resume_submissions` | Historique d'envoi de CV aux clients |
+| `candidate_pipeline` | Pipeline de recrutement (stages) |
+| `pipeline_history` | Historique des changements de stage |
+| `pipeline_interviews` | Entretiens planifiés (Google Calendar) |
+
+#### Tables Market Data
+
+| Table | Contenu |
+|-------|---------|
+| `rome_metiers` | Référentiel ROME 4.0 des métiers IT |
 | `market_facts` | Données marché (France Travail, Adzuna) |
 | `market_trends` | Tendances salariales par région/métier |
-| `metiers` | Référentiel ROME 4.0 des métiers IT |
+| `industry_aliases` | Alias de secteurs d'activité |
+
+#### Tables Configuration & Sécurité
+
+| Table | Contenu |
+|-------|---------|
+| `llm_settings` | Configuration LLM, prompts, mode CV, DPO |
+| `email_templates` | Templates email MJML par cabinet |
+| `backup_settings` | Configuration sauvegarde FTP/SFTP |
+| `backup_history` | Historique des sauvegardes |
+| `token_blacklist` | Tokens JWT révoqués |
+| `user_blacklist` | Utilisateurs bloqués |
+| `user_mail_tokens` | Tokens OAuth Gmail/Outlook |
+| `user_calendar_tokens` | Tokens OAuth Google Calendar |
+| `firm_gdpr_mail_tokens` | Tokens email RGPD par cabinet |
+| `global_gdpr_mail_token` | Token email RGPD global |
+| `gdpr_audit_log` | Journal d'audit RGPD |
+| `schema_migrations` | Suivi des migrations de schéma |
 
 ### Configuration PostgreSQL
 
@@ -511,7 +598,7 @@ app.use(helmet({
 | `default-src` | `'none'` | ✅ Strict - tout bloqué par défaut |
 | `script-src` | `'self'` | ✅ Pas de `'unsafe-inline'` ni `'unsafe-eval'` |
 | `script-src-attr` | `'none'` | ✅ Bloque les event handlers inline |
-| `style-src` | `'self' 'unsafe-inline'` | ⚠️ Requis par TinyMCE (voir note) |
+| `style-src` | `'self' 'unsafe-inline'` | ⚠️ Requis par Tiptap/ProseMirror (voir note) |
 | `object-src` | `'none'` | ✅ Bloque plugins dangereux |
 | `frame-ancestors` | `'self'` | ✅ Protection clickjacking |
 | `base-uri` | `'self'` | ✅ Prévient base tag hijacking |
@@ -537,10 +624,7 @@ Client (avant)                    Serveur (après)
 
 #### Note sur `'unsafe-inline'` dans `style-src`
 
-TinyMCE 8.x nécessite `'unsafe-inline'` dans `style-src` pour le formatage inline (gras, couleurs, etc.). C'est une limitation documentée par TinyMCE :
-
-> *"TinyMCE currently requires the `unsafe-inline` value in the `style-src` directive to present content other than plain-text."*
-> — [Documentation TinyMCE CSP](https://www.tiny.cloud/docs/tinymce/latest/tinymce-and-csp/)
+Tiptap/ProseMirror nécessite `'unsafe-inline'` dans `style-src` pour le formatage inline (gras, couleurs, alignement, etc.) car l'éditeur applique des styles directement sur les éléments DOM.
 
 **Mitigations :**
 - Sanitization côté client avec DOMPurify
@@ -737,7 +821,7 @@ export async function loadPdfjs() {
 }
 
 // src/utils/lazyTesseract.js (OCR)
-// src/utils/lazyTinyMCE.js (Éditeur WYSIWYG)
+// src/utils/lazyTiptap.js (Éditeur WYSIWYG Tiptap)
 ```
 
 ### 🧹 Cleanup Automatique
@@ -1018,7 +1102,7 @@ const logger = {
 
 | Point Faible | Impact | Amélioration Suggérée |
 |--------------|--------|----------------------|
-| **CSP permissive** | `unsafe-inline/eval` pour TinyMCE | Évaluer alternatives à TinyMCE ou nonce-based CSP |
+| **CSP permissive** | `unsafe-inline` dans style-src pour Tiptap | Évaluer nonce-based CSP pour les styles inline |
 | **Secrets en .env** | Gestion manuelle | Vault (HashiCorp) ou AWS Secrets Manager |
 
 ### Performance
@@ -1357,5 +1441,5 @@ L'architecture actuelle est **adaptée pour un usage PME/ESN** et peut supporter
 
 ---
 
-*Document mis à jour le 12 mars 2026*
-*Version: 1.7.9*
+*Document mis à jour le 17 mars 2026*
+*Version: 1.8.5*
