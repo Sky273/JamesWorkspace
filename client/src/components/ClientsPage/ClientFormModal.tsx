@@ -112,7 +112,7 @@ const ClientFormModal = ({ isOpen, onClose, onSubmit, client, t }: ClientFormMod
               type="text"
               value={name}
               onChange={(e: ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
               required
             />
           </div>
@@ -124,7 +124,7 @@ const ClientFormModal = ({ isOpen, onClose, onSubmit, client, t }: ClientFormMod
             <select
               value={type}
               onChange={(e: ChangeEvent<HTMLSelectElement>) => setType(e.target.value as ClientType)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
             >
               <option value="prospect">{t('clients.types.prospect')}</option>
               <option value="client">{t('clients.types.client')}</option>
@@ -138,7 +138,7 @@ const ClientFormModal = ({ isOpen, onClose, onSubmit, client, t }: ClientFormMod
             <select
               value={status}
               onChange={(e: ChangeEvent<HTMLSelectElement>) => setStatus(e.target.value as ClientStatus)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
             >
               <option value="active">{t('clients.status.active')}</option>
               <option value="inactive">{t('clients.status.inactive')}</option>
@@ -152,7 +152,7 @@ const ClientFormModal = ({ isOpen, onClose, onSubmit, client, t }: ClientFormMod
             <select
               value={industry}
               onChange={(e: ChangeEvent<HTMLSelectElement>) => setIndustry(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
               disabled={loadingIndustries}
             >
               <option value="">{loadingIndustries ? t('common.loading') : t('clients.modal.selectIndustry')}</option>
@@ -172,7 +172,7 @@ const ClientFormModal = ({ isOpen, onClose, onSubmit, client, t }: ClientFormMod
               type="url"
               value={website}
               onChange={(e: ChangeEvent<HTMLInputElement>) => setWebsite(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
               placeholder="https://"
             />
           </div>
@@ -185,7 +185,7 @@ const ClientFormModal = ({ isOpen, onClose, onSubmit, client, t }: ClientFormMod
               type="text"
               value={address}
               onChange={(e: ChangeEvent<HTMLInputElement>) => setAddress(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
               placeholder={t('clients.modal.addressPlaceholder')}
             />
           </div>
@@ -198,7 +198,7 @@ const ClientFormModal = ({ isOpen, onClose, onSubmit, client, t }: ClientFormMod
               value={notes}
               onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setNotes(e.target.value)}
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
               placeholder={t('clients.modal.notesPlaceholder')}
             />
           </div>

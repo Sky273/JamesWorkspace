@@ -97,7 +97,7 @@ const UserFormModal = ({ isOpen, onClose, onSubmit, user, firms, t }: UserFormMo
             type="text"
             value={formData.name}
             onChange={handleInputChange('name')}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
             required
           />
         </div>
@@ -109,7 +109,7 @@ const UserFormModal = ({ isOpen, onClose, onSubmit, user, firms, t }: UserFormMo
             type="email"
             value={formData.email}
             onChange={handleInputChange('email')}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
             required
           />
         </div>
@@ -123,7 +123,7 @@ const UserFormModal = ({ isOpen, onClose, onSubmit, user, firms, t }: UserFormMo
               value={formData.jobTitle}
               onChange={handleInputChange('jobTitle')}
               placeholder={t('users.management.modal.jobTitlePlaceholder')}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
             />
           </div>
           <div>
@@ -135,7 +135,7 @@ const UserFormModal = ({ isOpen, onClose, onSubmit, user, firms, t }: UserFormMo
               value={formData.phone}
               onChange={handleInputChange('phone')}
               placeholder={t('users.management.modal.phonePlaceholder')}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
             />
           </div>
         </div>
@@ -148,7 +148,7 @@ const UserFormModal = ({ isOpen, onClose, onSubmit, user, firms, t }: UserFormMo
               type="password"
               value={formData.password}
               onChange={handleInputChange('password')}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
               required={!isEdit}
               minLength={8}
             />
@@ -161,7 +161,7 @@ const UserFormModal = ({ isOpen, onClose, onSubmit, user, firms, t }: UserFormMo
           <select
             value={formData.firm}
             onChange={handleInputChange('firm')}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
           >
             <option value="">{t('users.management.modal.selectFirm')}</option>
             {firms.map(c => (
@@ -177,7 +177,7 @@ const UserFormModal = ({ isOpen, onClose, onSubmit, user, firms, t }: UserFormMo
             <select
               value={formData.role}
               onChange={handleInputChange('role')}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
             >
               <option value="user">{t('users.management.roles.user')}</option>
               <option value="admin">{t('users.management.roles.admin')}</option>
@@ -190,7 +190,7 @@ const UserFormModal = ({ isOpen, onClose, onSubmit, user, firms, t }: UserFormMo
             <select
               value={formData.status}
               onChange={handleInputChange('status')}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
             >
               <option value="Active">{t('users.management.status.active')}</option>
               <option value="Inactive">{t('users.management.status.inactive')}</option>

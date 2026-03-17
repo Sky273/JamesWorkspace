@@ -78,7 +78,7 @@ export default function MissionFormModal({
         className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden"
       >
         <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
             {isEditing ? t('missions.editMission') : t('missions.addMission')}
           </h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
@@ -106,7 +106,7 @@ export default function MissionFormModal({
                 value={formData.Title}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, Title: e.target.value })}
                 placeholder={t('missions.titlePlaceholder')}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div>
@@ -116,7 +116,7 @@ export default function MissionFormModal({
               <select
                 value={formData.Status}
                 onChange={(e: ChangeEvent<HTMLSelectElement>) => setFormData({ ...formData, Status: e.target.value as 'Active' | 'Closed' | 'Draft' })}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
               >
                 <option value="Active">{t('missions.status.Active')}</option>
                 <option value="Draft">{t('missions.status.Draft')}</option>
@@ -133,7 +133,7 @@ export default function MissionFormModal({
             <select
               value={formData['Deal ID']}
               onChange={(e: ChangeEvent<HTMLSelectElement>) => setFormData({ ...formData, 'Deal ID': e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
               disabled={loadingDeals}
             >
               <option value="">{loadingDeals ? t('common.loading', 'Chargement...') : t('missions.selectDeal', 'Aucune affaire (optionnel)')}</option>
@@ -156,7 +156,7 @@ export default function MissionFormModal({
                 onChange={(e: ChangeEvent<HTMLSelectElement>) => {
                   setFormData({ ...formData, 'Client ID': e.target.value, 'Contact ID': '' });
                 }}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
                 disabled={loadingClients}
               >
                 <option value="">{loadingClients ? t('common.loading', 'Chargement...') : t('missions.selectClient', 'Sélectionner un client')}</option>
@@ -174,7 +174,7 @@ export default function MissionFormModal({
               <select
                 value={formData['Contact ID']}
                 onChange={(e: ChangeEvent<HTMLSelectElement>) => setFormData({ ...formData, 'Contact ID': e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
                 disabled={!formData['Client ID'] || loadingContacts}
               >
                 <option value="">

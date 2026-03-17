@@ -46,7 +46,7 @@ const StatCard = ({ icon: Icon, iconBgColor, iconColor, label, value, delay = 0 
       </div>
       <div>
         <div className="text-sm text-gray-600 dark:text-gray-400">{label}</div>
-        <div className="text-2xl font-bold text-gray-900 dark:text-white">{value}</div>
+        <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{value}</div>
       </div>
     </div>
   </motion.div>

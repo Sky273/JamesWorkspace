@@ -286,7 +286,7 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
             <select
               value={statusFilter}
               onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm"
             >
               <option value="all">{t('crm.deals.allStatuses', 'Tous les statuts')}</option>
               <option value="open">{STATUS_CONFIG.open.label}</option>
@@ -299,7 +299,7 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
             <select
               value={clientFilter}
               onChange={(e) => { setClientFilter(e.target.value); setPage(1); }}
-              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm min-w-[200px]"
+              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm min-w-[200px]"
             >
               <option value="">{t('crm.deals.allClients', 'Tous les clients')}</option>
               {clients.map(client => (
@@ -312,7 +312,7 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
             {(statusFilter !== 'all' || clientFilter) && (
               <button
                 onClick={() => { setStatusFilter('all'); setClientFilter(''); setPage(1); }}
-                className="inline-flex items-center gap-1 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                className="inline-flex items-center gap-1 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
               >
                 <XMarkIcon className="w-4 h-4" />
                 {t('common.resetFilters', 'Réinitialiser')}
@@ -347,7 +347,7 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
               placeholder={t('crm.deals.searchPlaceholder', 'Rechercher une affaire...')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
             />
           </div>
         </div>

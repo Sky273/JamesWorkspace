@@ -380,7 +380,7 @@ export default function MissionPipelineKanban({
         <div className="flex items-center gap-3">
           <DocumentTextIcon className="w-6 h-6 text-blue-500" />
           <div>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
               {t('pipeline.title')}
             </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -432,7 +432,7 @@ export default function MissionPipelineKanban({
                   style={{ borderLeftColor: stage.color, borderLeftWidth: '4px' }}
                 >
                   <div className="flex items-center gap-2">
-                    <span className="font-medium text-gray-900 dark:text-white text-sm">
+                    <span className="font-medium text-gray-900 dark:text-gray-100 text-sm">
                       {isEnglish ? stage.labelEn : stage.label}
                     </span>
                     <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 rounded-full text-xs text-gray-600 dark:text-gray-400">
@@ -461,7 +461,7 @@ export default function MissionPipelineKanban({
                         <div className="flex items-start justify-between mb-2">
                           <Link
                             to={`/resumes/${entry.resume_id}/analysis`}
-                            className="font-medium text-gray-900 dark:text-white text-sm hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1"
+                            className="font-medium text-gray-900 dark:text-gray-100 text-sm hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1"
                           >
                             <UserIcon className="w-4 h-4" />
                             {entry.resume_name || t('pipeline.unknownCandidate')}

@@ -379,7 +379,7 @@ const ResumesPage = (): JSX.Element => {
       <Breadcrumbs className="mb-4" />
       
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
           {t('resumes.title')}
         </h1>
         <p className="text-gray-600 dark:text-gray-400">
@@ -397,7 +397,7 @@ const ResumesPage = (): JSX.Element => {
             onClick={() => setViewMode('byDeal')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
               viewMode === 'byDeal'
-                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
                 : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
             }`}
           >
@@ -408,7 +408,7 @@ const ResumesPage = (): JSX.Element => {
             onClick={() => setViewMode('list')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
               viewMode === 'list'
-                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
                 : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
             }`}
           >
@@ -522,7 +522,7 @@ const ResumesPage = (): JSX.Element => {
       ) : filteredResumes.length === 0 ? (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">
           <DocumentTextIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
             {t('resumes.noResults')}
           </h3>
           <p className="text-gray-600 dark:text-gray-400">
@@ -545,7 +545,7 @@ const ResumesPage = (): JSX.Element => {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <DocumentTextIcon className="w-5 h-5 text-gray-400 flex-shrink-0" />
-                      <h3 className="font-semibold text-gray-900 dark:text-white truncate">
+                      <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">
                         {resume.Name || resume['Resume File']?.[0]?.filename || t('resumes.untitled')}
                       </h3>
                     </div>
@@ -587,7 +587,7 @@ const ResumesPage = (): JSX.Element => {
                         <span className="text-lg font-bold text-green-600 dark:text-green-400">{resume['Improved Global Rating'] != null ? `${resume['Improved Global Rating']}%` : '0%'}</span>
                       </>
                     ) : (
-                      <span className="text-lg font-bold text-gray-900 dark:text-white">{resume['Global Rating'] != null ? `${resume['Global Rating']}%` : '0%'}</span>
+                      <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{resume['Global Rating'] != null ? `${resume['Global Rating']}%` : '0%'}</span>
                     )}
                   </div>
                 </div>
@@ -706,7 +706,7 @@ const ResumesPage = (): JSX.Element => {
             className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full"
           >
             <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white">{t('resumes.confirmDeleteTitle')}</h3>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">{t('resumes.confirmDeleteTitle')}</h3>
               <button onClick={closeDeleteConfirm} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                 <XMarkIcon className="w-6 h-6" />
               </button>

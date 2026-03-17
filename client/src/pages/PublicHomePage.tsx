@@ -134,7 +134,7 @@ function PublicHeader(): JSX.Element {
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
             <SparklesIcon className="w-8 h-8 text-primary-500" />
-            <span className="text-xl font-bold text-gray-900 dark:text-white">ResumeConverter</span>
+            <span className="text-xl font-bold text-gray-900 dark:text-gray-100">ResumeConverter</span>
           </Link>
           
           {/* Auth Links */}
@@ -185,7 +185,7 @@ function PublicHomePage(): JSX.Element {
                   className="text-5xl font-bold mb-6"
                   variants={stagger}
                 >
-                  <span className="block text-gray-900 dark:text-white">{t('home.hero.title1')}</span>
+                  <span className="block text-gray-900 dark:text-gray-100">{t('home.hero.title1')}</span>
                   <span className="block text-primary-600 dark:text-primary-500">
                     {t('home.hero.title2')}
                   </span>

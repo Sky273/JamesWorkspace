@@ -342,7 +342,7 @@ const DealsGroupedView = ({ allTags }: DealsGroupedViewProps): JSX.Element => {
       {visibleData.deals.length === 0 && visibleData.unassigned.length === 0 && hasActiveFilters && (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">
           <DocumentTextIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
             {t('resumes.noResults')}
           </h3>
           <p className="text-gray-600 dark:text-gray-400">
@@ -455,7 +455,7 @@ const DealsGroupedView = ({ allTags }: DealsGroupedViewProps): JSX.Element => {
             className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full"
           >
             <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 {t('resumes.confirmDelete')}
               </h3>
             </div>

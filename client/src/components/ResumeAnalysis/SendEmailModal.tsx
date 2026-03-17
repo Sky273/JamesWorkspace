@@ -403,7 +403,7 @@ const SendEmailModal = ({ isOpen, onClose, resumeName, resumeId, resumeTitle, cu
           <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center gap-2">
               <EnvelopeIcon className="w-5 h-5 text-blue-500" />
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 {t('mail.modal.title')}
               </h3>
             </div>
@@ -424,7 +424,7 @@ const SendEmailModal = ({ isOpen, onClose, resumeName, resumeId, resumeTitle, cu
             ) : step === 'connect' ? (
               <div className="text-center py-6">
                 <EnvelopeIcon className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-                <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                <h4 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
                   {t('mail.modal.connectTitle')}
                 </h4>
                 <p className="text-gray-500 dark:text-gray-400 mb-6">
@@ -484,7 +484,7 @@ const SendEmailModal = ({ isOpen, onClose, resumeName, resumeId, resumeTitle, cu
                   <select
                     value={selectedClientId}
                     onChange={(e) => setSelectedClientId(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
                     disabled={loadingClients}
                   >
                     <option value="">{loadingClients ? t('common.loading') : t('mail.modal.chooseClient')}</option>
@@ -505,7 +505,7 @@ const SendEmailModal = ({ isOpen, onClose, resumeName, resumeId, resumeTitle, cu
                     <select
                       value={selectedContactId}
                       onChange={(e) => setSelectedContactId(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="">{t('mail.modal.chooseContact')}</option>
                       {selectedClient.contacts?.map((contact) => (
@@ -526,7 +526,7 @@ const SendEmailModal = ({ isOpen, onClose, resumeName, resumeId, resumeTitle, cu
                     <select
                       value={selectedTemplateId}
                       onChange={(e) => setSelectedTemplateId(e.target.value)}
-                      className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                      className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
                       disabled={loadingTemplates}
                     >
                       <option value="" disabled>{loadingTemplates ? t('common.loading') : t('mail.modal.chooseTemplate', 'Choisir un template')}</option>
@@ -577,7 +577,7 @@ const SendEmailModal = ({ isOpen, onClose, resumeName, resumeId, resumeTitle, cu
             ) : step === 'success' ? (
               <div className="text-center py-6">
                 <CheckCircleIcon className="w-12 h-12 mx-auto text-green-500 mb-4" />
-                <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                <h4 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
                   {t('mail.modal.successTitle')}
                 </h4>
                 <p className="text-gray-500 dark:text-gray-400 mb-6">
@@ -603,7 +603,7 @@ const SendEmailModal = ({ isOpen, onClose, resumeName, resumeId, resumeTitle, cu
             ) : step === 'error' ? (
               <div className="text-center py-6">
                 <ExclamationCircleIcon className="w-12 h-12 mx-auto text-red-500 mb-4" />
-                <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                <h4 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
                   {t('mail.modal.errorTitle')}
                 </h4>
                 <p className="text-gray-500 dark:text-gray-400 mb-6">
@@ -662,7 +662,7 @@ const SendEmailModal = ({ isOpen, onClose, resumeName, resumeId, resumeTitle, cu
             <div className="fixed inset-0 bg-black/50" onClick={() => setShowPreview(false)} />
             <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-3xl max-h-[80vh] overflow-hidden">
               <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                   {t('mail.modal.templatePreview')}
                 </h3>
                 <button

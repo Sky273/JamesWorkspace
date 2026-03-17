@@ -62,7 +62,7 @@ const MatchAnalysisDisplay = ({ analysis, onContinue, onCancel, hideActions = fa
       <div className={`p-6 rounded-lg ${getScoreBgColor(matchScore)}`}>
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Score de Correspondance</h3>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">Score de Correspondance</h3>
             <p className="text-sm text-gray-600 dark:text-gray-400">Analyse de l'adéquation CV-Mission</p>
           </div>
           <div className="text-right">
@@ -79,13 +79,13 @@ const MatchAnalysisDisplay = ({ analysis, onContinue, onCancel, hideActions = fa
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {analysis.strengths && analysis.strengths.length > 0 && (
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center gap-2 mb-4"><CheckCircleIcon className="w-6 h-6 text-green-500" /><h4 className="font-semibold text-gray-900 dark:text-white">Points Forts</h4></div>
+            <div className="flex items-center gap-2 mb-4"><CheckCircleIcon className="w-6 h-6 text-green-500" /><h4 className="font-semibold text-gray-900 dark:text-gray-100">Points Forts</h4></div>
             <ul className="space-y-2">{analysis.strengths.map((strength, index) => (<li key={index} className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300"><span className="text-green-500 mt-0.5">✓</span><span>{strength}</span></li>))}</ul>
           </div>
         )}
         {analysis.gaps && analysis.gaps.length > 0 && (
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center gap-2 mb-4"><ExclamationTriangleIcon className="w-6 h-6 text-yellow-500" /><h4 className="font-semibold text-gray-900 dark:text-white">Lacunes Identifiées</h4></div>
+            <div className="flex items-center gap-2 mb-4"><ExclamationTriangleIcon className="w-6 h-6 text-yellow-500" /><h4 className="font-semibold text-gray-900 dark:text-gray-100">Lacunes Identifiées</h4></div>
             <ul className="space-y-2">{analysis.gaps.map((gap, index) => (<li key={index} className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300"><span className="text-yellow-500 mt-0.5">⚠</span><span>{gap}</span></li>))}</ul>
           </div>
         )}
@@ -94,13 +94,13 @@ const MatchAnalysisDisplay = ({ analysis, onContinue, onCancel, hideActions = fa
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {analysis.keywordMatches && analysis.keywordMatches.length > 0 && (
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center gap-2 mb-4"><ChartBarIcon className="w-6 h-6 text-blue-500" /><h4 className="font-semibold text-gray-900 dark:text-white">Mots-clés Présents</h4></div>
+            <div className="flex items-center gap-2 mb-4"><ChartBarIcon className="w-6 h-6 text-blue-500" /><h4 className="font-semibold text-gray-900 dark:text-gray-100">Mots-clés Présents</h4></div>
             <div className="flex flex-wrap gap-2">{analysis.keywordMatches.map((keyword, index) => (<span key={index} className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-sm">{keyword}</span>))}</div>
           </div>
         )}
         {analysis.missingKeywords && analysis.missingKeywords.length > 0 && (
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center gap-2 mb-4"><SparklesIcon className="w-6 h-6 text-purple-500" /><h4 className="font-semibold text-gray-900 dark:text-white">Mots-clés Manquants</h4></div>
+            <div className="flex items-center gap-2 mb-4"><SparklesIcon className="w-6 h-6 text-purple-500" /><h4 className="font-semibold text-gray-900 dark:text-gray-100">Mots-clés Manquants</h4></div>
             <div className="flex flex-wrap gap-2">{analysis.missingKeywords.map((keyword, index) => (<span key={index} className="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-sm">{keyword}</span>))}</div>
           </div>
         )}
@@ -108,7 +108,7 @@ const MatchAnalysisDisplay = ({ analysis, onContinue, onCancel, hideActions = fa
 
       {analysis.recommendations && (Array.isArray(analysis.recommendations) ? analysis.recommendations.length > 0 : Object.keys(analysis.recommendations).length > 0) && (
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
-          <h4 className="font-semibold text-gray-900 dark:text-white mb-4">💡 Recommandations d'Adaptation</h4>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-4">💡 Recommandations d'Adaptation</h4>
           <div className="space-y-4">
             {Array.isArray(analysis.recommendations) ? (
               <ul className="space-y-1 ml-4">

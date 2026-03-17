@@ -89,7 +89,7 @@ export default function TwoFactorVerify({ userId: _userId, email, password, onSu
           <div className="mx-auto h-16 w-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
             <ShieldCheckIcon className="h-8 w-8 text-blue-600 dark:text-blue-400" />
           </div>
-          <h2 className="mt-6 text-2xl font-bold text-gray-900 dark:text-white">
+          <h2 className="mt-6 text-2xl font-bold text-gray-900 dark:text-gray-100">
             Vérification 2FA
           </h2>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
@@ -113,7 +113,7 @@ export default function TwoFactorVerify({ userId: _userId, email, password, onSu
               }}
               onKeyDown={handleKeyPress}
               placeholder="000000"
-              className="w-full text-center text-3xl font-mono tracking-widest px-4 py-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full text-center text-3xl font-mono tracking-widest px-4 py-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               maxLength={8}
               autoFocus
               autoComplete="one-time-code"

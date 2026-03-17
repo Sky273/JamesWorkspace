@@ -209,7 +209,7 @@ const ImprovementAnimation = ({ currentStep = 'improving' }: ImprovementAnimatio
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="text-xl font-semibold text-gray-900 dark:text-white mb-2 text-center"
+            className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2 text-center"
           >
             {isImproving
               ? t('improvementAnimation.steps.improving.label', 'Amélioration du CV en cours…')

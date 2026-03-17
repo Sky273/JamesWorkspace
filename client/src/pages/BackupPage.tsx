@@ -240,7 +240,7 @@ const BackupPage = (): JSX.Element => {
             <div className="mb-6">
                 <div className="flex items-center gap-3 mb-2">
                     <ServerStackIcon className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                         {t('backup.pageTitle')}
                     </h1>
                 </div>

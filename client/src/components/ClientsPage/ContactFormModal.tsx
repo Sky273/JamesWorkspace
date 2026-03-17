@@ -63,7 +63,7 @@ const ContactFormModal = ({ isOpen, onClose, onSubmit, contact, t }: ContactForm
             type="text"
             value={name}
             onChange={(e: ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
             required
           />
         </div>
@@ -76,7 +76,7 @@ const ContactFormModal = ({ isOpen, onClose, onSubmit, contact, t }: ContactForm
             type="text"
             value={role}
             onChange={(e: ChangeEvent<HTMLInputElement>) => setRole(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
             placeholder={t('clients.modal.rolePlaceholder')}
           />
         </div>
@@ -89,7 +89,7 @@ const ContactFormModal = ({ isOpen, onClose, onSubmit, contact, t }: ContactForm
             type="email"
             value={email}
             onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
             placeholder="email@example.com"
           />
         </div>
@@ -102,7 +102,7 @@ const ContactFormModal = ({ isOpen, onClose, onSubmit, contact, t }: ContactForm
             type="tel"
             value={phone}
             onChange={(e: ChangeEvent<HTMLInputElement>) => setPhone(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
             placeholder="+33 1 23 45 67 89"
           />
         </div>

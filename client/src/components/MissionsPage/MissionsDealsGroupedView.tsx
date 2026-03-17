@@ -128,7 +128,7 @@ const MissionCardInDeal = ({ mission }: { mission: GroupedMission }) => {
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <BriefcaseIcon className="w-4 h-4 text-indigo-500 flex-shrink-0" />
-              <h4 className="font-medium text-gray-900 dark:text-white truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+              <h4 className="font-medium text-gray-900 dark:text-gray-100 truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                 {mission.title}
               </h4>
             </div>
@@ -202,7 +202,7 @@ const DealSection = ({
           <BriefcaseIcon className="w-5 h-5 text-purple-500 flex-shrink-0" />
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="font-semibold text-gray-900 dark:text-white truncate">{deal.title}</h3>
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">{deal.title}</h3>
               <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[deal.status] || STATUS_COLORS.open}`}>
                 {t(`crm.deals.statuses.${deal.status}`, STATUS_LABELS[deal.status] || deal.status)}
               </span>
@@ -382,7 +382,7 @@ const MissionsDealsGroupedView = ({ onAddMission }: MissionsDealsGroupedViewProp
               placeholder={t('missions.searchPlaceholder', 'Rechercher une mission...')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
             />
           </div>
           <div className="flex items-center gap-3">
@@ -484,7 +484,7 @@ const MissionsDealsGroupedView = ({ onAddMission }: MissionsDealsGroupedViewProp
       {totalMissions === 0 && !loading && (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">
           <BriefcaseIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
             {debouncedSearch
               ? t('missions.noResults', 'Aucun résultat')
               : t('missions.noMissions', 'Aucune mission')}

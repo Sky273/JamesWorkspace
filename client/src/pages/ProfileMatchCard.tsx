@@ -79,7 +79,7 @@ export default function ProfileMatchCard({
                 #{index + 1}
               </div>
               <div>
-                <h3 className="font-semibold text-gray-900 dark:text-white">{profile.name}</h3>
+                <h3 className="font-semibold text-gray-900 dark:text-gray-100">{profile.name}</h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400">{profile.title || t('profileMatching.noTitle')}</p>
               </div>
             </div>
@@ -325,7 +325,7 @@ export default function ProfileMatchCard({
               {detailedAnalysis && (
                 <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg p-4 space-y-4">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                    <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                       <SparklesIcon className="w-4 h-4 text-purple-500" />
                       {t('profileMatching.detailedAnalysis.title')}
                     </h4>
@@ -337,7 +337,7 @@ export default function ProfileMatchCard({
                   {/* Verdict */}
                   <div className="text-sm">
                     <span className="font-medium text-gray-700 dark:text-gray-300">{t('profileMatching.detailedAnalysis.verdict')}: </span>
-                    <span className="text-gray-900 dark:text-white">{detailedAnalysis.analysis.verdict}</span>
+                    <span className="text-gray-900 dark:text-gray-100">{detailedAnalysis.analysis.verdict}</span>
                   </div>
                   
                   {/* Summary */}

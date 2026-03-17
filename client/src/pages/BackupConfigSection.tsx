@@ -46,7 +46,7 @@ export default function BackupConfigSection({
         <div className="space-y-6">
             {/* Backup Target Selection */}
             <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 space-y-4">
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
                     {t('backup.targetTitle', 'Backup Target')}
                 </h3>
                 
@@ -90,7 +90,7 @@ export default function BackupConfigSection({
             {/* Connection Settings - only show for remote target */}
             {settings.backup_target === 'remote' && (
             <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 space-y-4">
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
                     {t('backup.connectionTitle')}
                 </h3>
                 
@@ -102,7 +102,7 @@ export default function BackupConfigSection({
                         <select
                             value={settings.protocol}
                             onChange={(e) => onInputChange('protocol', e.target.value as 'ftp' | 'ftps' | 'sftp')}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                         >
                             <option value="ftp">FTP</option>
                             <option value="ftps">FTPS (FTP over TLS)</option>
@@ -119,7 +119,7 @@ export default function BackupConfigSection({
                             <select
                                 value={settings.tls_mode}
                                 onChange={(e) => onInputChange('tls_mode', e.target.value as 'none' | 'explicit' | 'implicit')}
-                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                             >
                                 <option value="explicit">{t('backup.tlsExplicit')}</option>
                                 <option value="implicit">{t('backup.tlsImplicit')}</option>
@@ -140,7 +140,7 @@ export default function BackupConfigSection({
                             value={settings.host}
                             onChange={(e) => onInputChange('host', e.target.value)}
                             placeholder="ftp.example.com"
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                             required
                         />
                     </div>
@@ -153,7 +153,7 @@ export default function BackupConfigSection({
                             type="number"
                             value={settings.port}
                             onChange={(e) => onInputChange('port', parseInt(e.target.value) || 21)}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                         />
                     </div>
                     
@@ -165,7 +165,7 @@ export default function BackupConfigSection({
                             type="text"
                             value={settings.username}
                             onChange={(e) => onInputChange('username', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                         />
                     </div>
                     
@@ -183,7 +183,7 @@ export default function BackupConfigSection({
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             placeholder={settings.hasPassword ? '••••••••' : ''}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                         />
                     </div>
                     
@@ -196,7 +196,7 @@ export default function BackupConfigSection({
                             value={settings.remote_path}
                             onChange={(e) => onInputChange('remote_path', e.target.value)}
                             placeholder="/backups"
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                         />
                     </div>
                 </div>
@@ -220,7 +220,7 @@ export default function BackupConfigSection({
 
             {/* Schedule Settings */}
             <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 space-y-4">
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
                     {t('backup.scheduleTitle')}
                 </h3>
                 
@@ -232,7 +232,7 @@ export default function BackupConfigSection({
                         onChange={(e) => onInputChange('daily_enabled', e.target.checked)}
                         className="w-4 h-4 text-blue-600 rounded"
                     />
-                    <span className="font-medium text-gray-900 dark:text-white w-24">
+                    <span className="font-medium text-gray-900 dark:text-gray-100 w-24">
                         {t('backup.daily')}
                     </span>
                     <input
@@ -240,7 +240,7 @@ export default function BackupConfigSection({
                         value={settings.daily_time}
                         onChange={(e) => onInputChange('daily_time', e.target.value)}
                         disabled={!settings.daily_enabled}
-                        className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50"
+                        className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 disabled:opacity-50"
                     />
                     <span className="text-sm text-gray-600 dark:text-gray-400">
                         {t('backup.retention')}:
@@ -252,7 +252,7 @@ export default function BackupConfigSection({
                         value={settings.daily_retention}
                         onChange={(e) => onInputChange('daily_retention', parseInt(e.target.value) || 7)}
                         disabled={!settings.daily_enabled}
-                        className="w-16 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50"
+                        className="w-16 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 disabled:opacity-50"
                     />
                     {settings.schedulerStatus?.daily && (
                         <CheckCircleIcon className="w-5 h-5 text-green-500" title={t('backup.scheduled')} />
@@ -267,14 +267,14 @@ export default function BackupConfigSection({
                         onChange={(e) => onInputChange('weekly_enabled', e.target.checked)}
                         className="w-4 h-4 text-blue-600 rounded"
                     />
-                    <span className="font-medium text-gray-900 dark:text-white w-24">
+                    <span className="font-medium text-gray-900 dark:text-gray-100 w-24">
                         {t('backup.weekly')}
                     </span>
                     <select
                         value={settings.weekly_day}
                         onChange={(e) => onInputChange('weekly_day', parseInt(e.target.value))}
                         disabled={!settings.weekly_enabled}
-                        className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50"
+                        className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 disabled:opacity-50"
                     >
                         {dayNames.map((day, index) => (
                             <option key={index} value={index}>{day}</option>
@@ -285,7 +285,7 @@ export default function BackupConfigSection({
                         value={settings.weekly_time}
                         onChange={(e) => onInputChange('weekly_time', e.target.value)}
                         disabled={!settings.weekly_enabled}
-                        className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50"
+                        className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 disabled:opacity-50"
                     />
                     <span className="text-sm text-gray-600 dark:text-gray-400">
                         {t('backup.retention')}:
@@ -297,7 +297,7 @@ export default function BackupConfigSection({
                         value={settings.weekly_retention}
                         onChange={(e) => onInputChange('weekly_retention', parseInt(e.target.value) || 4)}
                         disabled={!settings.weekly_enabled}
-                        className="w-16 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50"
+                        className="w-16 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 disabled:opacity-50"
                     />
                     {settings.schedulerStatus?.weekly && (
                         <CheckCircleIcon className="w-5 h-5 text-green-500" title={t('backup.scheduled')} />
@@ -312,7 +312,7 @@ export default function BackupConfigSection({
                         onChange={(e) => onInputChange('monthly_enabled', e.target.checked)}
                         className="w-4 h-4 text-blue-600 rounded"
                     />
-                    <span className="font-medium text-gray-900 dark:text-white w-24">
+                    <span className="font-medium text-gray-900 dark:text-gray-100 w-24">
                         {t('backup.monthly')}
                     </span>
                     <span className="text-sm text-gray-600 dark:text-gray-400">
@@ -325,14 +325,14 @@ export default function BackupConfigSection({
                         value={settings.monthly_day}
                         onChange={(e) => onInputChange('monthly_day', parseInt(e.target.value) || 1)}
                         disabled={!settings.monthly_enabled}
-                        className="w-16 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50"
+                        className="w-16 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 disabled:opacity-50"
                     />
                     <input
                         type="time"
                         value={settings.monthly_time}
                         onChange={(e) => onInputChange('monthly_time', e.target.value)}
                         disabled={!settings.monthly_enabled}
-                        className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50"
+                        className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 disabled:opacity-50"
                     />
                     <span className="text-sm text-gray-600 dark:text-gray-400">
                         {t('backup.retention')}:
@@ -344,7 +344,7 @@ export default function BackupConfigSection({
                         value={settings.monthly_retention}
                         onChange={(e) => onInputChange('monthly_retention', parseInt(e.target.value) || 12)}
                         disabled={!settings.monthly_enabled}
-                        className="w-16 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50"
+                        className="w-16 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 disabled:opacity-50"
                     />
                     {settings.schedulerStatus?.monthly && (
                         <CheckCircleIcon className="w-5 h-5 text-green-500" title={t('backup.scheduled')} />

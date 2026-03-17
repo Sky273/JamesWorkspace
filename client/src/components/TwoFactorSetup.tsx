@@ -98,7 +98,7 @@ export default function TwoFactorSetup({ onClose, onSuccess }: TwoFactorSetupPro
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-3">
             <ShieldCheckIcon className="h-6 w-6 text-blue-600" />
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
               Authentification à deux facteurs
             </h2>
           </div>
@@ -199,7 +199,7 @@ export default function TwoFactorSetup({ onClose, onSuccess }: TwoFactorSetupPro
                 value={verificationCode}
                 onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                 placeholder="000000"
-                className="w-full text-center text-3xl font-mono tracking-widest px-4 py-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                className="w-full text-center text-3xl font-mono tracking-widest px-4 py-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
                 maxLength={6}
                 autoFocus
               />

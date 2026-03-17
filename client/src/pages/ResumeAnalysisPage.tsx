@@ -204,7 +204,7 @@ const ResumeAnalysisPage = (): JSX.Element => {
         {fromDealsView && (
           <button
             onClick={() => navigate('/resumes', { state: { viewMode: 'byDeal' } })}
-            className="inline-flex items-center gap-2 px-3 py-1.5 mb-3 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+            className="inline-flex items-center gap-2 px-3 py-1.5 mb-3 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
           >
             <ArrowLeftIcon className="w-4 h-4" />
             {t('resumes.backToDealsView', 'Retour à la vue par affaire')}
@@ -223,7 +223,7 @@ const ResumeAnalysisPage = (): JSX.Element => {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <div className="flex items-center gap-3">
-                <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate max-w-[250px] sm:max-w-none">
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 truncate max-w-[250px] sm:max-w-none">
                   {resumeName}
                 </h1>
                 {currentResume?.consent_status && (

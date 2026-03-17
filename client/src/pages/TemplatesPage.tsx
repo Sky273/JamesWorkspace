@@ -104,7 +104,7 @@ const TemplateCard = ({ template, onDeleteClick, onPreviewClick, index }: Templa
       <div className="p-4">
         <div className="mb-3">
           <div className="flex items-center justify-between gap-2">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">{template.Name}</h3>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">{template.Name}</h3>
             <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
               template.Status?.toLowerCase() === 'active' 
                 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' 
@@ -273,7 +273,7 @@ const TemplatesPage = (): JSX.Element => {
       <Breadcrumbs className="mb-4" />
       
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{t('templates.title')}</h1>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">{t('templates.title')}</h1>
         <p className="text-gray-600 dark:text-gray-400">{t('templates.subtitle')}</p>
       </div>
 
@@ -281,19 +281,19 @@ const TemplatesPage = (): JSX.Element => {
         <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg"><DocumentTextIcon className="w-6 h-6 text-blue-600 dark:text-blue-400" /></div>
-            <div><div className="text-sm text-gray-600 dark:text-gray-400">{t('templates.stats.total')}</div><div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total}</div></div>
+            <div><div className="text-sm text-gray-600 dark:text-gray-400">{t('templates.stats.total')}</div><div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.total}</div></div>
           </div>
         </motion.div>
         <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1 }} className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg"><StarIcon className="w-6 h-6 text-yellow-600 dark:text-yellow-400" /></div>
-            <div><div className="text-sm text-gray-600 dark:text-gray-400">{t('templates.stats.popular')}</div><div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.popular}</div></div>
+            <div><div className="text-sm text-gray-600 dark:text-gray-400">{t('templates.stats.popular')}</div><div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.popular}</div></div>
           </div>
         </motion.div>
         <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }} className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg"><DocumentDuplicateIcon className="w-6 h-6 text-green-600 dark:text-green-400" /></div>
-            <div><div className="text-sm text-gray-600 dark:text-gray-400">{t('templates.stats.active')}</div><div className="text-2xl font-bold text-gray-900 dark:text-white">{templates.length}</div></div>
+            <div><div className="text-sm text-gray-600 dark:text-gray-400">{t('templates.stats.active')}</div><div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{templates.length}</div></div>
           </div>
         </motion.div>
       </div>
@@ -302,7 +302,7 @@ const TemplatesPage = (): JSX.Element => {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between p-4 gap-4">
           <div className="relative flex-1 max-w-md">
             <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input type="text" placeholder={t('templates.searchPlaceholder')} value={searchTerm} onChange={(e: ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" />
+            <input type="text" placeholder={t('templates.searchPlaceholder')} value={searchTerm} onChange={(e: ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500" />
           </div>
           <div className="flex items-center gap-3">
             <div className="relative">
@@ -338,7 +338,7 @@ const TemplatesPage = (): JSX.Element => {
       ) : filteredTemplates.length === 0 ? (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">
           <DocumentTextIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">{t('templates.status.empty')}</h3>
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">{t('templates.status.empty')}</h3>
           <p className="text-gray-600 dark:text-gray-400">{searchTerm ? t('templates.noResults') : t('templates.createFirst')}</p>
         </div>
       ) : (
@@ -364,7 +364,7 @@ const TemplatesPage = (): JSX.Element => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
           <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
             <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white">{t('templates.delete.title')}</h3>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">{t('templates.delete.title')}</h3>
               <button onClick={closeDeleteConfirmModal} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"><XMarkIcon className="w-6 h-6" /></button>
             </div>
             <div className="p-4">
@@ -382,7 +382,7 @@ const TemplatesPage = (): JSX.Element => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
           <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
             <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-              <div><h3 className="text-xl font-bold text-gray-900 dark:text-white">{previewTemplate.Name}</h3><p className="text-sm text-gray-500 dark:text-gray-400">{previewTemplate.Description}</p></div>
+              <div><h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">{previewTemplate.Name}</h3><p className="text-sm text-gray-500 dark:text-gray-400">{previewTemplate.Description}</p></div>
               <button onClick={() => setPreviewTemplate(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"><XMarkIcon className="w-6 h-6" /></button>
             </div>
             <div className="p-6 overflow-auto max-h-[70vh] bg-gray-50 dark:bg-gray-900">

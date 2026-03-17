@@ -52,7 +52,7 @@ export default function DealFormModal({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-6">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
                 {isEditing 
                   ? t('crm.deals.editTitle', 'Modifier l\'affaire')
                   : t('crm.deals.createTitle', 'Nouvelle affaire')
@@ -69,7 +69,7 @@ export default function DealFormModal({
                     type="text"
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                     required
                   />
                 </div>
@@ -85,7 +85,7 @@ export default function DealFormModal({
                       setFormData({ ...formData, client_id: e.target.value, contact_id: '' });
                       onClientChange(e.target.value);
                     }}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   >
                     <option value="">{t('crm.deals.selectClient', 'Sélectionner...')}</option>
                     {clients.map(client => (
@@ -104,7 +104,7 @@ export default function DealFormModal({
                   <select
                     value={formData.contact_id || ''}
                     onChange={(e) => setFormData({ ...formData, contact_id: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                     disabled={!formData.client_id}
                   >
                     <option value="">{t('crm.deals.selectContact', 'Sélectionner...')}</option>
@@ -130,7 +130,7 @@ export default function DealFormModal({
                     <select
                       value={formData.status}
                       onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                     >
                       <option value="open">{STATUS_CONFIG.open.label}</option>
                       <option value="won">{STATUS_CONFIG.won.label}</option>
@@ -145,7 +145,7 @@ export default function DealFormModal({
                     <select
                       value={formData.priority}
                       onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                     >
                       <option value="low">{PRIORITY_CONFIG.low.label}</option>
                       <option value="medium">{PRIORITY_CONFIG.medium.label}</option>
@@ -165,7 +165,7 @@ export default function DealFormModal({
                       type="date"
                       value={formData.expected_start_date || ''}
                       onChange={(e) => setFormData({ ...formData, expected_start_date: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                     />
                   </div>
                   <div>
@@ -176,7 +176,7 @@ export default function DealFormModal({
                       type="date"
                       value={formData.expected_end_date || ''}
                       onChange={(e) => setFormData({ ...formData, expected_end_date: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                     />
                   </div>
                 </div>
@@ -190,7 +190,7 @@ export default function DealFormModal({
                     value={formData.description || ''}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   />
                 </div>
 

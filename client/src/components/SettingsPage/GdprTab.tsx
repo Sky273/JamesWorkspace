@@ -156,7 +156,7 @@ export const GdprTab = ({ t }: GdprTabProps): JSX.Element => {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2 flex items-center gap-2">
           <ShieldCheckIcon className="w-6 h-6 text-green-600" />
           {t('settings.gdpr.title')}
         </h2>
@@ -167,7 +167,7 @@ export const GdprTab = ({ t }: GdprTabProps): JSX.Element => {
 
       {/* Gmail Connection Status */}
       <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
           <EnvelopeIcon className="w-5 h-5" />
           {t('settings.gdpr.emailConfig')}
         </h3>
@@ -182,7 +182,7 @@ export const GdprTab = ({ t }: GdprTabProps): JSX.Element => {
                 <XCircleIcon className="w-8 h-8 text-gray-400" />
               )}
               <div>
-                <p className="font-medium text-gray-900 dark:text-white">
+                <p className="font-medium text-gray-900 dark:text-gray-100">
                   {mailStatus?.connected 
                     ? t('settings.gdpr.connected') 
                     : t('settings.gdpr.notConnected')}
@@ -258,22 +258,22 @@ export const GdprTab = ({ t }: GdprTabProps): JSX.Element => {
 
       {/* Consent Settings */}
       <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
           {t('settings.gdpr.consentSettings')}
         </h3>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600">
             <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings.gdpr.tokenExpiry')}</p>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">14 {t('settings.gdpr.days')}</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">14 {t('settings.gdpr.days')}</p>
           </div>
           <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600">
             <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings.gdpr.retention')}</p>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">2 {t('settings.gdpr.years')}</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">2 {t('settings.gdpr.years')}</p>
           </div>
           <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600">
             <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings.gdpr.reminder')}</p>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">7 {t('settings.gdpr.days')}</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">7 {t('settings.gdpr.days')}</p>
           </div>
         </div>
       </div>

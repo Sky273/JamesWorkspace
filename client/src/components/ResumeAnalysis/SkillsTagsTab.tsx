@@ -105,7 +105,7 @@ const SkillsTagsTab = ({ resume }: SkillsTagsTabProps): JSX.Element => {
       {Object.entries(skillsAndTags).map(([category, { tags, source }]) => (
         <div key={category} className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
               {t(`resume.analysis.categories.${category.toLowerCase().replace(/\s+/g, '')}`)}
             </h3>
             {tags.length > 0 && (

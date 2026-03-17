@@ -97,7 +97,7 @@ export default function TrendCard({ trend, type, parsed, romeLabel }: TrendCardP
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1 min-w-0">
           {(romeLabel || trend.CodeRome) && (
-            <div className="text-sm font-semibold text-gray-900 dark:text-white truncate" title={romeLabel || trend.CodeRome}>
+            <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate" title={romeLabel || trend.CodeRome}>
               {romeLabel || trend.CodeRome}
             </div>
           )}
@@ -161,7 +161,7 @@ export default function TrendCard({ trend, type, parsed, romeLabel }: TrendCardP
                   {c.label}
                 </span>
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  <span className="font-medium text-gray-900 dark:text-white">
+                  <span className="font-medium text-gray-900 dark:text-gray-100">
                     {getCharValue(c)}
                   </span>
                   {c.pourcentage !== undefined && (
@@ -260,13 +260,13 @@ function SalaireContent({ parsed }: { parsed: ParsedMetadata }) {
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
           <div>
             <span className="text-gray-500 dark:text-gray-400">Min: </span>
-            <span className="font-medium text-gray-900 dark:text-white">
+            <span className="font-medium text-gray-900 dark:text-gray-100">
               {parsed.typeSpecific.salaireMin.toLocaleString('fr-FR')} €
             </span>
           </div>
           <div>
             <span className="text-gray-500 dark:text-gray-400">Max: </span>
-            <span className="font-medium text-gray-900 dark:text-white">
+            <span className="font-medium text-gray-900 dark:text-gray-100">
               {parsed.typeSpecific.salaireMax.toLocaleString('fr-FR')} €
             </span>
           </div>

@@ -35,7 +35,7 @@ export default function DealDeleteModal({ open, deal, saving, onDelete, onClose 
             className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">
               {t('crm.deals.confirmDelete', 'Confirmer la suppression')}
             </h3>
             <p className="text-gray-600 dark:text-gray-400 mb-4">

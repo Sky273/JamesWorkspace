@@ -81,7 +81,7 @@ const EmailTemplatePreview = ({ html, subject, loading }: EmailTemplatePreviewPr
           <span className="text-xs text-gray-500 dark:text-gray-400 block mb-1">
             {t('emailTemplates.subjectLabel')}
           </span>
-          <span className="text-sm font-medium text-gray-900 dark:text-white">
+          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
             {subject}
           </span>
         </div>

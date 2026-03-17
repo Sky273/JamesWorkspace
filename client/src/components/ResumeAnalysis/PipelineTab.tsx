@@ -344,7 +344,7 @@ export default function PipelineTab({ resumeId, resumeName: _resumeName }: Pipel
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
             {t('pipeline.title')}
           </h3>
           <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -407,7 +407,7 @@ export default function PipelineTab({ resumeId, resumeName: _resumeName }: Pipel
                       {/* Mission/Client info */}
                       <div>
                         {pipeline.mission_title && (
-                          <span className="text-gray-900 dark:text-white font-medium">
+                          <span className="text-gray-900 dark:text-gray-100 font-medium">
                             {pipeline.mission_title}
                           </span>
                         )}
@@ -499,7 +499,7 @@ export default function PipelineTab({ resumeId, resumeName: _resumeName }: Pipel
                             updatePipelineNotes(pipeline.id, pipeline.notes || '');
                           }
                         }}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                         rows={2}
                         placeholder={t('pipeline.notesPlaceholder')}
                       />
@@ -539,7 +539,7 @@ export default function PipelineTab({ resumeId, resumeName: _resumeName }: Pipel
                             >
                               <div className="flex items-start justify-between">
                                 <div>
-                                  <h4 className="font-medium text-gray-900 dark:text-white">
+                                  <h4 className="font-medium text-gray-900 dark:text-gray-100">
                                     {interview.title}
                                   </h4>
                                   <div className="flex items-center gap-4 mt-1 text-sm text-gray-500 dark:text-gray-400">
@@ -625,7 +625,7 @@ export default function PipelineTab({ resumeId, resumeName: _resumeName }: Pipel
                     <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
                       <button
                         onClick={() => handleViewHistory(pipeline)}
-                        className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                        className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
                       >
                         {t('pipeline.viewHistory')}
                       </button>

@@ -45,7 +45,7 @@ export default function PipelineAddModal({
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
           {t('pipeline.addToProcessTitle')}
         </h3>
 
@@ -58,7 +58,7 @@ export default function PipelineAddModal({
             <select
               value={newPipeline.missionId}
               onChange={(e) => setNewPipeline({ ...newPipeline, missionId: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
             >
               <option value="">{t('pipeline.noMission')}</option>
               {missions.map((mission) => (
@@ -77,7 +77,7 @@ export default function PipelineAddModal({
             <select
               value={newPipeline.clientId}
               onChange={(e) => setNewPipeline({ ...newPipeline, clientId: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
             >
               <option value="">{t('pipeline.noClient')}</option>
               {clients.map((client) => (
@@ -96,7 +96,7 @@ export default function PipelineAddModal({
             <textarea
               value={newPipeline.notes}
               onChange={(e) => setNewPipeline({ ...newPipeline, notes: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
               rows={3}
               placeholder={t('pipeline.notesPlaceholder')}
             />

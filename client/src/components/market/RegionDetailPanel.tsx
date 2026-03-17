@@ -55,7 +55,7 @@ export default function RegionDetailPanel({
   return (
     <div className="lg:w-80 border-t lg:border-t-0 lg:border-l border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-4 overflow-y-auto max-h-[600px]">
       <div className="flex items-center justify-between mb-4">
-        <h4 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+        <h4 className="font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
           <MapPinIcon className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
           {selectedRegion.name}
         </h4>
@@ -99,7 +99,7 @@ export default function RegionDetailPanel({
               placeholder={t('marketRadar.map.searchMetier')}
               value={metierFilter}
               onChange={(e) => onMetierFilterChange(e.target.value)}
-              className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+              className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
             />
           </div>
 
@@ -155,7 +155,7 @@ export default function RegionDetailPanel({
                           <span className={`font-semibold whitespace-nowrap ${
                             selectedMetier === rome 
                               ? 'text-indigo-700 dark:text-indigo-300' 
-                              : 'text-gray-900 dark:text-white'
+                              : 'text-gray-900 dark:text-gray-100'
                           }`}>
                             {(count as number).toLocaleString()}
                           </span>
@@ -225,7 +225,7 @@ export default function RegionDetailPanel({
                         <span className={`font-semibold whitespace-nowrap ${
                           selectedMetier === rome 
                             ? 'text-indigo-700 dark:text-indigo-300' 
-                            : 'text-gray-900 dark:text-white'
+                            : 'text-gray-900 dark:text-gray-100'
                         }`}>
                           {formatValue(displayValue)}
                         </span>

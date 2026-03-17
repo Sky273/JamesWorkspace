@@ -206,7 +206,7 @@ export default function MarketTrendsTab({ className = '' }: { className?: string
       {/* Header with refresh and collect buttons */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
             {t('marketRadar.trends.title')}
           </h2>
           
@@ -322,7 +322,7 @@ export default function MarketTrendsTab({ className = '' }: { className?: string
                     {TREND_TYPE_LABELS[type] || type}
                   </span>
                 </div>
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">{count}</div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{count}</div>
                 <div className="text-sm font-medium text-indigo-600 dark:text-indigo-400 mt-1">
                   {aggregatedLabel}: {formattedValue}
                 </div>
@@ -354,7 +354,7 @@ export default function MarketTrendsTab({ className = '' }: { className?: string
               <select
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value)}
-                className="w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+                className="w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
               >
                 <option value="">{t('marketRadar.trends.filters.allTypes')}</option>
                 {(filters?.types || []).map(type => (
@@ -370,7 +370,7 @@ export default function MarketTrendsTab({ className = '' }: { className?: string
               <select
                 value={regionFilter}
                 onChange={(e) => setRegionFilter(e.target.value)}
-                className="w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+                className="w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
               >
                 <option value="">{t('marketRadar.trends.filters.allRegions')}</option>
                 {(filters?.regions || []).map(r => (
@@ -386,7 +386,7 @@ export default function MarketTrendsTab({ className = '' }: { className?: string
               <select
                 value={romeFilter}
                 onChange={(e) => setRomeFilter(e.target.value)}
-                className="w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+                className="w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
               >
                 <option value="">{t('marketRadar.facts.filters.allMetiers')}</option>
                 {(filters?.romeCodes || []).map(code => (
@@ -413,7 +413,7 @@ export default function MarketTrendsTab({ className = '' }: { className?: string
       {(trends.length === 0 && Object.keys(trendsByType).length === 0) ? (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-12 text-center">
           <ChartBarIcon className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">{t('marketRadar.trends.noData')}</h3>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">{t('marketRadar.trends.noData')}</h3>
           <p className="text-gray-500 dark:text-gray-400">
             {t('marketRadar.facts.collection.startCollection')}
           </p>
@@ -441,7 +441,7 @@ export default function MarketTrendsTab({ className = '' }: { className?: string
             return (
               <div key={type} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
                 <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                     <Icon className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
                     {TREND_TYPE_LABELS[type] || type}
                     <span className="text-sm font-normal text-gray-500 dark:text-gray-400">

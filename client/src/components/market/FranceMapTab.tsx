@@ -403,7 +403,7 @@ export default function FranceMapTab({ className = '' }: { className?: string })
           <select
             value={dataSource}
             onChange={(e) => setDataSource(e.target.value as DataSourceType)}
-            className="w-full md:w-64 rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+            className="w-full md:w-64 rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
           >
             {DATA_SOURCE_OPTIONS.map(option => (
               <option key={option.value} value={option.value}>{option.label}</option>
@@ -413,7 +413,7 @@ export default function FranceMapTab({ className = '' }: { className?: string })
         
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-12 text-center">
           <MapPinIcon className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">{t('marketRadar.map.noData')}</h3>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">{t('marketRadar.map.noData')}</h3>
           <p className="text-gray-500 dark:text-gray-400">
             {dataSource === 'offres' 
               ? t('marketRadar.map.noDataOffres')
@@ -434,7 +434,7 @@ export default function FranceMapTab({ className = '' }: { className?: string })
             <select
               value={dataSource}
               onChange={(e) => setDataSource(e.target.value as DataSourceType)}
-              className="w-full md:w-64 rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+              className="w-full md:w-64 rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
             >
               {DATA_SOURCE_OPTIONS.map(option => (
                 <option key={option.value} value={option.value}>{t(`marketRadar.dataTypes.${option.value}`)}</option>
@@ -577,7 +577,7 @@ export default function FranceMapTab({ className = '' }: { className?: string })
           currentSourceOption?.color === 'violet' ? 'bg-violet-50 dark:bg-violet-900/30 border-violet-100 dark:border-violet-800' :
           'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-100 dark:border-indigo-800'
         }`}>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
             <SourceIcon className="h-5 w-5" />
             {t(`marketRadar.dataTypes.${dataSource}`)} {t('marketRadar.map.title').toLowerCase().replace('données ', '')}
           </h3>

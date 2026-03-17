@@ -187,7 +187,7 @@ const UserGuidePage = (): JSX.Element => {
   // Custom components for ReactMarkdown
   const markdownComponents: Components = {
     h2: ({ children }) => (
-      <h2 className="text-2xl font-bold text-gray-900 dark:text-white border-b-2 border-blue-500 pb-3 mb-6 mt-2">
+      <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 border-b-2 border-blue-500 pb-3 mb-6 mt-2">
         {children}
       </h2>
     ),
@@ -229,7 +229,7 @@ const UserGuidePage = (): JSX.Element => {
       </li>
     ),
     strong: ({ children }) => (
-      <strong className="font-semibold text-gray-900 dark:text-white">
+      <strong className="font-semibold text-gray-900 dark:text-gray-100">
         {children}
       </strong>
     ),
@@ -288,7 +288,7 @@ const UserGuidePage = (): JSX.Element => {
       </tr>
     ),
     th: ({ children }) => (
-      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white border-b border-gray-300 dark:border-gray-600">
+      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100 border-b border-gray-300 dark:border-gray-600">
         {children}
       </th>
     ),
@@ -322,7 +322,7 @@ const UserGuidePage = (): JSX.Element => {
       <Breadcrumbs className="mb-4" />
       
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
           {t('userGuide.title')}
         </h1>
         <p className="text-gray-600 dark:text-gray-400">

@@ -257,7 +257,7 @@ const SettingsPage = (): JSX.Element => {
       <Breadcrumbs className="mb-4" />
       
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
           {t('settings.title')}
         </h1>
         <p className="text-gray-600 dark:text-gray-400">
@@ -322,7 +322,7 @@ const SettingsPage = (): JSX.Element => {
         {activeTab === 'swagger' && (
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
                 {t('settings.apiDocs.title')}
               </h3>
               <p className="text-gray-600 dark:text-gray-400 mb-4">
@@ -333,7 +333,7 @@ const SettingsPage = (): JSX.Element => {
             <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="font-medium text-gray-900 dark:text-white">{t('settings.apiDocs.swaggerUi')}</h4>
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100">{t('settings.apiDocs.swaggerUi')}</h4>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                     {t('settings.apiDocs.swaggerUiDescription')}
                   </p>
@@ -351,7 +351,7 @@ const SettingsPage = (): JSX.Element => {
             <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="font-medium text-gray-900 dark:text-white">{t('settings.apiDocs.openApiJson')}</h4>
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100">{t('settings.apiDocs.openApiJson')}</h4>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                     {t('settings.apiDocs.openApiJsonDescription')}
                   </p>
@@ -370,7 +370,7 @@ const SettingsPage = (): JSX.Element => {
         <div className="mt-8 flex items-center justify-between pt-6 border-t border-gray-200 dark:border-gray-700">
           <button
             onClick={resetToDefaults}
-            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
           >
             {t('settings.reset')}
           </button>

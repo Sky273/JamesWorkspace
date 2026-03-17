@@ -304,7 +304,7 @@ const BatchUploadPage = (): JSX.Element => {
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-8"
         >
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100 mb-2">
             {t('batchUpload.title', 'Import par lot')}
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-400">
@@ -319,7 +319,7 @@ const BatchUploadPage = (): JSX.Element => {
           transition={{ delay: 0.1 }}
           className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-6"
         >
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
             {t('batchUpload.processingOptions', 'Options de traitement')}
           </h2>
           

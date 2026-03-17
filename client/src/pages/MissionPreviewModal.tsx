@@ -34,7 +34,7 @@ export default function MissionPreviewModal({ mission, onClose, onEdit }: Missio
       >
         <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
           <div>
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
               {mission.Title}
             </h3>
             {mission.Firm && (

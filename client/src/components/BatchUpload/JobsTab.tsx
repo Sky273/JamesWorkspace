@@ -357,7 +357,7 @@ const JobsTab = (): JSX.Element => {
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
           {t('batchJobs.title', 'Jobs de traitement')}
         </h2>
         <button
@@ -411,7 +411,7 @@ const JobsTab = (): JSX.Element => {
                     <div>
                       <div className="flex items-center gap-2">
                         {getJobTypeIcon(job.job_type)}
-                        <span className="font-medium text-gray-900 dark:text-white">
+                        <span className="font-medium text-gray-900 dark:text-gray-100">
                           {getJobTypeText(job)}
                         </span>
                         <span className={`px-2 py-0.5 text-xs rounded-full ${getStatusBadgeClass(job.status)}`}>
@@ -428,7 +428,7 @@ const JobsTab = (): JSX.Element => {
                   <div className="flex items-center gap-4">
                     {/* Progress */}
                     <div className="text-right min-w-[80px]">
-                      <div className="text-sm font-medium text-gray-900 dark:text-white">
+                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
                         {job.processed_items} / {job.total_items}
                       </div>
                       <div className="text-xs text-gray-500 dark:text-gray-400">
@@ -603,7 +603,7 @@ const JobsTab = (): JSX.Element => {
                                     onChange={(e) => setPendingNameInputs(prev => ({ ...prev, [item.id]: e.target.value }))}
                                     onKeyDown={(e) => e.key === 'Enter' && handleProvideName(item.id)}
                                     placeholder={t('batchJobs.enterCandidateName', 'Nom du candidat...')}
-                                    className="w-40 px-2 py-1 text-sm border border-orange-300 dark:border-orange-600 rounded focus:ring-2 focus:ring-orange-500 focus:border-orange-500 dark:bg-gray-700 dark:text-white"
+                                    className="w-40 px-2 py-1 text-sm border border-orange-300 dark:border-orange-600 rounded focus:ring-2 focus:ring-orange-500 focus:border-orange-500 dark:bg-gray-700 dark:text-gray-100"
                                     disabled={submittingName === item.id}
                                   />
                                   <button

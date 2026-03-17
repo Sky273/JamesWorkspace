@@ -123,7 +123,7 @@ const DealExportModal = ({ dealId, dealTitle, resumeCount, adaptationCount, onCl
               <ArrowDownTrayIcon className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 {t('dealExport.title', 'Exporter l\'affaire')}
               </h2>
               <p className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-[300px]">{dealTitle}</p>
@@ -161,7 +161,7 @@ const DealExportModal = ({ dealId, dealTitle, resumeCount, adaptationCount, onCl
               <select
                 value={selectedTemplateId}
                 onChange={(e) => setSelectedTemplateId(e.target.value)}
-                className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               >
                 {templates.map((tmpl) => (
                   <option key={tmpl.id} value={tmpl.id}>{tmpl.Name}</option>

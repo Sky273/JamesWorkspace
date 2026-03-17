@@ -26,7 +26,7 @@ export const DpoTab = ({ formData, onInputChange, t }: DpoTabProps): JSX.Element
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2 flex items-center gap-2">
           <UserCircleIcon className="w-6 h-6 text-blue-600" />
           {t('settings.dpo.title')}
         </h2>
@@ -41,7 +41,7 @@ export const DpoTab = ({ formData, onInputChange, t }: DpoTabProps): JSX.Element
         animate={{ opacity: 1, y: 0 }}
         className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6"
       >
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
           <UserCircleIcon className="w-5 h-5" />
           {t('settings.dpo.dpoSection')}
         </h3>
@@ -58,7 +58,7 @@ export const DpoTab = ({ formData, onInputChange, t }: DpoTabProps): JSX.Element
                 value={formData['DPO Name'] || ''}
                 onChange={(e) => onInputChange('DPO Name', e.target.value)}
                 placeholder={t('settings.dpo.dpoNamePlaceholder')}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
           </div>
@@ -74,7 +74,7 @@ export const DpoTab = ({ formData, onInputChange, t }: DpoTabProps): JSX.Element
                 value={formData['DPO Email'] || ''}
                 onChange={(e) => onInputChange('DPO Email', e.target.value)}
                 placeholder="dpo@example.com"
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
           </div>
@@ -90,7 +90,7 @@ export const DpoTab = ({ formData, onInputChange, t }: DpoTabProps): JSX.Element
                 value={formData['DPO Phone'] || ''}
                 onChange={(e) => onInputChange('DPO Phone', e.target.value)}
                 placeholder="+33 1 23 45 67 89"
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
           </div>

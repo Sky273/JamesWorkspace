@@ -103,7 +103,7 @@ export default function BatchUploadOptions({
               value={selectedTemplate}
               onChange={(e) => setSelectedTemplate(e.target.value)}
               disabled={isProcessing || templates.length === 0}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500"
             >
               {templates.length === 0 ? (
                 <option value="">{t('batchUpload.loadingTemplates', 'Chargement des modèles...')}</option>

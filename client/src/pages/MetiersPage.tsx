@@ -105,7 +105,7 @@ export default function MetiersPage() {
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-8 max-w-md mx-4 text-center">
             <ArrowPathIcon className="h-16 w-16 text-indigo-600 dark:text-indigo-400 animate-spin mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
               Collecte en cours...
             </h3>
             <p className="text-gray-600 dark:text-gray-400 mb-4">
@@ -126,7 +126,7 @@ export default function MetiersPage() {
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-3">
                 <BriefcaseIcon className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
                 Métiers et Compétences
               </h1>
@@ -200,7 +200,7 @@ export default function MetiersPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Rechercher un métier (code ROME ou libellé)..."
-                className="w-full pl-10 pr-10 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full pl-10 pr-10 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               />
               {searchQuery && (
                 <button
@@ -230,7 +230,7 @@ export default function MetiersPage() {
               </div>
               <div>
                 <p className="text-sm text-gray-500 dark:text-gray-400">Métiers IT</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{metiers.length}</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{metiers.length}</p>
               </div>
             </div>
           </div>
@@ -242,7 +242,7 @@ export default function MetiersPage() {
               </div>
               <div>
                 <p className="text-sm text-gray-500 dark:text-gray-400">Compétences totales</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                   {metiers.reduce((acc, m) => acc + (m.CompetencesDetaillees?.length || 0) + (m.MacroSavoirFaire?.length || 0), 0)}
                 </p>
               </div>
@@ -256,7 +256,7 @@ export default function MetiersPage() {
               </div>
               <div>
                 <p className="text-sm text-gray-500 dark:text-gray-400">Dernière MAJ</p>
-                <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                   {formatDateTime(metiers[0]?.LastUpdated) || '-'}
                 </p>
               </div>
@@ -273,7 +273,7 @@ export default function MetiersPage() {
         ) : metiers.length === 0 ? (
           <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
             <BriefcaseIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
               Aucun métier trouvé
             </h3>
             <p className="text-gray-500 dark:text-gray-400 mb-4">
@@ -311,7 +311,7 @@ export default function MetiersPage() {
                         {metier.CodeRome}
                       </span>
                       <div className="text-left">
-                        <h3 className="font-semibold text-gray-900 dark:text-white">
+                        <h3 className="font-semibold text-gray-900 dark:text-gray-100">
                           {metier.Libelle}
                         </h3>
                         {metier.Enjeux && metier.Enjeux.length > 0 && (

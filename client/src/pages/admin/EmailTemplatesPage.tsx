@@ -215,7 +215,7 @@ const EmailTemplatesPage = (): JSX.Element => {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
             {t('emailTemplates.title')}
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -255,7 +255,7 @@ const EmailTemplatesPage = (): JSX.Element => {
                   {template.is_system && (
                     <LockClosedIcon className="w-4 h-4 text-gray-400" title={t('emailTemplates.systemTemplate')} />
                   )}
-                  <h3 className="font-medium text-gray-900 dark:text-white">
+                  <h3 className="font-medium text-gray-900 dark:text-gray-100">
                     {template.name}
                   </h3>
                 </div>
@@ -328,7 +328,7 @@ const EmailTemplatesPage = (): JSX.Element => {
             <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-6xl max-h-[85vh] overflow-hidden flex flex-col">
               {/* Modal Header */}
               <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                   {modalMode === 'create' 
                     ? t('emailTemplates.createNew')
                     : t('emailTemplates.editTemplate')
@@ -353,7 +353,7 @@ const EmailTemplatesPage = (): JSX.Element => {
                         type="text"
                         value={formName}
                         onChange={(e) => setFormName(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                         placeholder={t('emailTemplates.namePlaceholder')}
                       />
                     </div>
@@ -367,7 +367,7 @@ const EmailTemplatesPage = (): JSX.Element => {
                         value={formDescription}
                         onChange={(e) => setFormDescription(e.target.value)}
                         rows={2}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 resize-none"
                         placeholder={t('emailTemplates.descriptionPlaceholder')}
                       />
                     </div>
@@ -449,7 +449,7 @@ const EmailTemplatesPage = (): JSX.Element => {
             <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
               {/* Modal Header */}
               <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                   {selectedTemplate.name}
                 </h2>
                 <button onClick={closeModal} className="text-gray-400 hover:text-gray-600">

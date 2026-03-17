@@ -136,7 +136,7 @@ const ExtractTemplateModal = ({ isOpen, onClose }: ExtractTemplateModalProps): J
                 <SparklesIcon className="w-6 h-6 text-purple-600 dark:text-purple-400" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
                   {t('templates.extract.title')}
                 </h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -173,7 +173,7 @@ const ExtractTemplateModal = ({ isOpen, onClose }: ExtractTemplateModalProps): J
                     <div className="space-y-3">
                       <CheckCircleIcon className="w-12 h-12 mx-auto text-green-500" />
                       <div>
-                        <p className="text-lg font-medium text-gray-900 dark:text-white">
+                        <p className="text-lg font-medium text-gray-900 dark:text-gray-100">
                           {selectedFile.name}
                         </p>
                         <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -188,7 +188,7 @@ const ExtractTemplateModal = ({ isOpen, onClose }: ExtractTemplateModalProps): J
                     <div className="space-y-3">
                       <DocumentArrowUpIcon className="w-12 h-12 mx-auto text-gray-400" />
                       <div>
-                        <p className="text-lg font-medium text-gray-900 dark:text-white">
+                        <p className="text-lg font-medium text-gray-900 dark:text-gray-100">
                           {isDragActive
                             ? t('templates.extract.dropHere')
                             : t('templates.extract.dragDrop')}
@@ -223,7 +223,7 @@ const ExtractTemplateModal = ({ isOpen, onClose }: ExtractTemplateModalProps): J
                   <SparklesIcon className="w-8 h-8 text-purple-600 dark:text-purple-400 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
                 </div>
                 <div className="text-center">
-                  <p className="text-lg font-medium text-gray-900 dark:text-white">
+                  <p className="text-lg font-medium text-gray-900 dark:text-gray-100">
                     {t('templates.extract.analyzing')}
                   </p>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -265,7 +265,7 @@ const ExtractTemplateModal = ({ isOpen, onClose }: ExtractTemplateModalProps): J
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         {t('templates.editor.name.label')}
                       </label>
-                      <p className="text-gray-900 dark:text-white font-medium">
+                      <p className="text-gray-900 dark:text-gray-100 font-medium">
                         {extractedTemplate.name}
                       </p>
                     </div>
@@ -371,7 +371,7 @@ const ExtractTemplateModal = ({ isOpen, onClose }: ExtractTemplateModalProps): J
                   <ExclamationTriangleIcon className="w-12 h-12 text-red-600 dark:text-red-400" />
                 </div>
                 <div className="text-center">
-                  <p className="text-lg font-medium text-gray-900 dark:text-white">
+                  <p className="text-lg font-medium text-gray-900 dark:text-gray-100">
                     {t('templates.extract.errorTitle')}
                   </p>
                   <p className="text-sm text-red-600 dark:text-red-400 mt-2 max-w-md">

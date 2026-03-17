@@ -91,7 +91,7 @@ export function PipelineInterviewsListModal({
         {/* Header */}
         <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
               {t('pipeline.manageInterviews')}
             </h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -131,7 +131,7 @@ export function PipelineInterviewsListModal({
                 >
                   <div className="flex items-start justify-between mb-2">
                     <div>
-                      <h4 className="font-medium text-gray-900 dark:text-white">
+                      <h4 className="font-medium text-gray-900 dark:text-gray-100">
                         {interview.title}
                       </h4>
                       <span className={`inline-block px-2 py-0.5 rounded text-xs mt-1 ${getInterviewTypeColor(interview.interview_type)}`}>
@@ -273,7 +273,7 @@ export function PipelineScheduleInterviewModal({
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg mx-4">
         {/* Header */}
         <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
             {t('pipeline.scheduleInterviewTitle')}
           </h3>
           <button
@@ -295,7 +295,7 @@ export function PipelineScheduleInterviewModal({
               type="text"
               value={newInterview.title}
               onChange={(e) => setNewInterview({ ...newInterview, title: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500"
               placeholder={t('pipeline.interviewTitlePlaceholder')}
             />
           </div>
@@ -308,7 +308,7 @@ export function PipelineScheduleInterviewModal({
             <select
               value={newInterview.interviewType}
               onChange={(e) => setNewInterview({ ...newInterview, interviewType: e.target.value as 'client' | 'partner' | 'technical' | 'hr' })}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500"
             >
               <option value="client">{t('pipeline.types.client')}</option>
               <option value="partner">{t('pipeline.types.partner')}</option>
@@ -334,7 +334,7 @@ export function PipelineScheduleInterviewModal({
                 type="datetime-local"
                 value={newInterview.scheduledAt}
                 onChange={(e) => setNewInterview({ ...newInterview, scheduledAt: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500"
               />
             </div>
             <div>
@@ -344,7 +344,7 @@ export function PipelineScheduleInterviewModal({
               <select
                 value={newInterview.durationMinutes}
                 onChange={(e) => setNewInterview({ ...newInterview, durationMinutes: parseInt(e.target.value) })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500"
               >
                 <option value={30}>30 min</option>
                 <option value={45}>45 min</option>
@@ -364,7 +364,7 @@ export function PipelineScheduleInterviewModal({
               type="text"
               value={newInterview.location}
               onChange={(e) => setNewInterview({ ...newInterview, location: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500"
               placeholder={t('pipeline.locationPlaceholder')}
             />
           </div>
@@ -378,7 +378,7 @@ export function PipelineScheduleInterviewModal({
               type="url"
               value={newInterview.meetingLink}
               onChange={(e) => setNewInterview({ ...newInterview, meetingLink: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500"
               placeholder="https://meet.google.com/..."
             />
           </div>
@@ -392,7 +392,7 @@ export function PipelineScheduleInterviewModal({
               value={newInterview.description}
               onChange={(e) => setNewInterview({ ...newInterview, description: e.target.value })}
               rows={2}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500"
               placeholder={t('pipeline.interviewDescriptionPlaceholder')}
             />
           </div>

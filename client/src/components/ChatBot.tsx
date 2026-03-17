@@ -446,7 +446,7 @@ const ChatBot = (): JSX.Element | null => {
                       className={`px-4 py-2 rounded-2xl ${
                         message.role === 'user'
                           ? 'bg-indigo-700 dark:bg-indigo-600 rounded-br-md shadow-sm'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-bl-md'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-bl-md'
                       }`}
                     >
                       {message.role === 'user' ? (
@@ -588,7 +588,7 @@ const ChatBot = (): JSX.Element | null => {
                   onKeyDown={handleKeyPress}
                   placeholder={t('chatbot.placeholder')}
                   disabled={isLoading}
-                  className="flex-1 px-4 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-full text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50"
+                  className="flex-1 px-4 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-full text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50"
                 />
                 <button
                   onClick={sendMessage}

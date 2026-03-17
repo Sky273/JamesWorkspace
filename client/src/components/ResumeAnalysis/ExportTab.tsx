@@ -46,7 +46,7 @@ const ExportTab = ({ resume, templates, selectedTemplate, onTemplateChange, load
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
             {t('resume.analysis.exportOptions.title')}
           </h3>
           <div className="space-y-4">
@@ -58,7 +58,7 @@ const ExportTab = ({ resume, templates, selectedTemplate, onTemplateChange, load
                 id="template"
                 value={selectedTemplate}
                 onChange={(e: ChangeEvent<HTMLSelectElement>) => onTemplateChange(e.target.value)}
-                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
               >
                 <option value="">{t('resume.analysis.exportOptions.selectTemplate')}</option>
                 {loadingTemplates ? (
@@ -80,7 +80,7 @@ const ExportTab = ({ resume, templates, selectedTemplate, onTemplateChange, load
                 id="format"
                 value={selectedFormat}
                 onChange={(e: ChangeEvent<HTMLSelectElement>) => onFormatChange?.(e.target.value as ExportFormat)}
-                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
               >
                 {formatOptions.map((option) => (
                   <option key={option.value} value={option.value}>{option.label}</option>
@@ -121,7 +121,7 @@ const ExportTab = ({ resume, templates, selectedTemplate, onTemplateChange, load
         </div>
 
         <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
             {t('resume.analysis.exportOptions.preview')}
           </h3>
           <div className="prose prose-sm max-w-none dark:prose-invert max-h-96 overflow-y-auto">

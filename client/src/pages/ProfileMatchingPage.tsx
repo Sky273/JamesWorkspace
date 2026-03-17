@@ -208,7 +208,7 @@ const ProfileMatchingPage = (): JSX.Element => {
                 <div className="w-16 h-16 border-4 border-blue-200 dark:border-blue-900 rounded-full"></div>
                 <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 {loading ? t('profileMatching.searchingProfiles') : t('profileMatching.analyzingProfile')}
               </h3>
               <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
@@ -226,7 +226,7 @@ const ProfileMatchingPage = (): JSX.Element => {
       
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-3">
           <UserGroupIcon className="w-8 h-8 text-blue-600" />
           {t('profileMatching.title')}
         </h1>
@@ -261,7 +261,7 @@ const ProfileMatchingPage = (): JSX.Element => {
         <div className="space-y-6">
           {/* Mission keywords */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
               <SparklesIcon className="w-5 h-5 text-yellow-500" />
               {t('profileMatching.extractedKeywords')}
             </h2>
@@ -273,7 +273,7 @@ const ProfileMatchingPage = (): JSX.Element => {
 
           {/* Profile list */}
           <div>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
               <DocumentTextIcon className="w-5 h-5 text-blue-500" />
               {t('profileMatching.results')} ({results.profiles.length})
             </h2>
@@ -308,7 +308,7 @@ const ProfileMatchingPage = (): JSX.Element => {
       {!results && !loading && (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-12 text-center">
           <MagnifyingGlassIcon className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
             {t('profileMatching.emptyState.title')}
           </h3>
           <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">

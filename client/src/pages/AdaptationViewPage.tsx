@@ -322,7 +322,7 @@ const AdaptationViewPage = (): JSX.Element => {
           >
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
               <DocumentTextIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
                 {t('errors.adaptationNotFound')}
               </h2>
               <p className="text-gray-600 dark:text-gray-400 mb-6">
@@ -353,7 +353,7 @@ const AdaptationViewPage = (): JSX.Element => {
         >
           <button
             onClick={handleBack}
-            className="inline-flex items-center gap-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
           >
             <ArrowLeftIcon className="w-5 h-5" />
             {t('common.back')}
@@ -486,7 +486,7 @@ const AdaptationViewPage = (): JSX.Element => {
 
             {activeTab === 'mission' && (
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
                   {adaptation['Mission Title'] || t('adaptations.card.unknownMission')}
                 </h3>
                 {adaptation['Mission Content'] ? (

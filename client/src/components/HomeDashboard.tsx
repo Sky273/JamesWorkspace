@@ -118,7 +118,7 @@ function QuickAction({ icon: Icon, label, description, onClick, color, delay }: 
         <Icon className="w-6 h-6 text-white" />
       </div>
       <div>
-        <p className="font-semibold text-gray-900 dark:text-white">{label}</p>
+        <p className="font-semibold text-gray-900 dark:text-gray-100">{label}</p>
         <p className="text-sm text-gray-500 dark:text-gray-400">{description}</p>
       </div>
     </motion.button>
@@ -207,7 +207,7 @@ function HomeDashboard(): JSX.Element | null {
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
             {t('home.dashboard.title')}
           </h2>
           {stats.customer && (
@@ -274,15 +274,15 @@ function HomeDashboard(): JSX.Element | null {
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-500 dark:text-gray-400">{t('home.dashboard.today')}</span>
-                <span className="font-semibold text-gray-900 dark:text-white">{stats.resumes.today} CV</span>
+                <span className="font-semibold text-gray-900 dark:text-gray-100">{stats.resumes.today} CV</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-500 dark:text-gray-400">{t('home.dashboard.thisWeek')}</span>
-                <span className="font-semibold text-gray-900 dark:text-white">{stats.resumes.thisWeek} CV</span>
+                <span className="font-semibold text-gray-900 dark:text-gray-100">{stats.resumes.thisWeek} CV</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-500 dark:text-gray-400">{t('home.dashboard.thisMonth')}</span>
-                <span className="font-semibold text-gray-900 dark:text-white">{stats.resumes.thisMonth} CV</span>
+                <span className="font-semibold text-gray-900 dark:text-gray-100">{stats.resumes.thisMonth} CV</span>
               </div>
             </div>
           </motion.div>
@@ -302,11 +302,11 @@ function HomeDashboard(): JSX.Element | null {
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-500 dark:text-gray-400">{t('home.dashboard.improved')}</span>
-                <span className="font-semibold text-gray-900 dark:text-white">{stats.resumes.improved}</span>
+                <span className="font-semibold text-gray-900 dark:text-gray-100">{stats.resumes.improved}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-500 dark:text-gray-400">{t('home.dashboard.avgBefore')}</span>
-                <span className="font-semibold text-gray-900 dark:text-white">{stats.scores.averageOriginal}%</span>
+                <span className="font-semibold text-gray-900 dark:text-gray-100">{stats.scores.averageOriginal}%</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-500 dark:text-gray-400">{t('home.dashboard.avgAfter')}</span>
@@ -330,11 +330,11 @@ function HomeDashboard(): JSX.Element | null {
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-500 dark:text-gray-400">{t('home.dashboard.totalAdaptations')}</span>
-                <span className="font-semibold text-gray-900 dark:text-white">{stats.adaptations.total}</span>
+                <span className="font-semibold text-gray-900 dark:text-gray-100">{stats.adaptations.total}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-500 dark:text-gray-400">{t('home.dashboard.missions')}</span>
-                <span className="font-semibold text-gray-900 dark:text-white">{stats.missions.total}</span>
+                <span className="font-semibold text-gray-900 dark:text-gray-100">{stats.missions.total}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-500 dark:text-gray-400">{t('home.dashboard.active')}</span>
@@ -352,7 +352,7 @@ function HomeDashboard(): JSX.Element | null {
           transition={{ delay: 0.7 }}
           className="scroll-mt-32"
         >
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
             {t('home.dashboard.quickActions')}
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

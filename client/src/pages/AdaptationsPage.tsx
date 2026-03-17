@@ -398,7 +398,7 @@ const AdaptationsPage = (): JSX.Element => {
       <Breadcrumbs className="mb-4" />
       
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{t('adaptations.title')}</h1>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">{t('adaptations.title')}</h1>
         <p className="text-gray-600 dark:text-gray-400">{t('adaptations.subtitle')}</p>
       </div>
 
@@ -412,7 +412,7 @@ const AdaptationsPage = (): JSX.Element => {
             onClick={() => setViewMode('byDeal')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
               viewMode === 'byDeal'
-                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
                 : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
             }`}
           >
@@ -423,7 +423,7 @@ const AdaptationsPage = (): JSX.Element => {
             onClick={() => setViewMode('list')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
               viewMode === 'list'
-                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
                 : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
             }`}
           >
@@ -455,7 +455,7 @@ const AdaptationsPage = (): JSX.Element => {
       ) : filteredAdaptations.length === 0 ? (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">
           <SparklesIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">{t('adaptations.noAdaptations')}</h3>
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">{t('adaptations.noAdaptations')}</h3>
           <p className="text-gray-600 dark:text-gray-400">{searchTerm || filterStatus !== 'all' ? t('adaptations.noAdaptationsFiltered') : t('adaptations.noAdaptationsPrompt')}</p>
         </div>
       ) : (
@@ -476,7 +476,7 @@ const AdaptationsPage = (): JSX.Element => {
                   }`}>{t(`adaptations.status.${adaptation.Status?.toLowerCase() || 'unknown'}`, adaptation.Status || 'N/A')}</span>
                 </div>
                 <div className="mb-4">
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-1 line-clamp-1">{getResumeName(adaptation) || adaptation['Candidate Name']}</h3>
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-1 line-clamp-1">{getResumeName(adaptation) || adaptation['Candidate Name']}</h3>
                   {adaptation['Adapted Title'] && (
                     <p className="text-sm font-medium text-blue-600 dark:text-blue-400 mb-1 line-clamp-1 italic">{adaptation['Adapted Title']}</p>
                   )}
@@ -510,7 +510,7 @@ const AdaptationsPage = (): JSX.Element => {
           <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
               <div>
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('adaptations.modal.title')}</h2>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('adaptations.modal.title')}</h2>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{getResumeName(selectedAdaptation)} → {getMissionTitle(selectedAdaptation)}</p>
               </div>
               <button onClick={() => { setShowDetailModal(false); setActiveTab('mission'); }} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
@@ -536,12 +536,12 @@ const AdaptationsPage = (): JSX.Element => {
                 return (
                   <div className="space-y-6">
                     <div>
-                      <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">{missionTitle}</h3>
+                      <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">{missionTitle}</h3>
                       {missionClient && <div className="mb-4"><span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t('adaptations.modal.mission.client')} : </span><span className="text-sm text-gray-600 dark:text-gray-400">{missionClient}</span></div>}
                       {missionLocation && <div className="mb-4"><span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t('adaptations.modal.mission.location')} : </span><span className="text-sm text-gray-600 dark:text-gray-400">{missionLocation}</span></div>}
                     </div>
                     {missionContent ? (
-                      <div><h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">{t('adaptations.modal.mission.description')}</h4><div className="prose prose-sm dark:prose-invert max-w-none" dangerouslySetInnerHTML={createSafeHtml(missionContent)} /></div>
+                      <div><h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">{t('adaptations.modal.mission.description')}</h4><div className="prose prose-sm dark:prose-invert max-w-none" dangerouslySetInnerHTML={createSafeHtml(missionContent)} /></div>
                     ) : (
                       <div className="text-center py-8"><p className="text-gray-500 dark:text-gray-400">{t('adaptations.modal.mission.noDescription')}</p></div>
                     )}

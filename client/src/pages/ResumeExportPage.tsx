@@ -213,7 +213,7 @@ const ResumeExportPage = (): JSX.Element => {
         >
           <div>
               <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                   {resumeName}
                 </h1>
                 {currentResume?.consent_status && (

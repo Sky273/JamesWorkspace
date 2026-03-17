@@ -88,7 +88,7 @@ const AdaptationCard = ({
           </span>
         </div>
 
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1 truncate">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1 truncate">
           {candidateName || resumeName}
         </h3>
 

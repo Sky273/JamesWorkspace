@@ -119,7 +119,7 @@ export default function TwoFactorSettings() {
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
       <div className="flex items-center gap-3 mb-4">
         <ShieldCheckIcon className="h-6 w-6 text-blue-600" />
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
           {t('twoFactor.title')}
         </h3>
       </div>
@@ -211,7 +211,7 @@ export default function TwoFactorSettings() {
       {showDisableModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
               Désactiver 2FA
             </h3>
             <p className="text-gray-600 dark:text-gray-400 mb-4">
@@ -222,7 +222,7 @@ export default function TwoFactorSettings() {
               value={disableCode}
               onChange={(e) => setDisableCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
               placeholder="000000"
-              className="w-full text-center text-2xl font-mono tracking-widest px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white mb-4"
+              className="w-full text-center text-2xl font-mono tracking-widest px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 mb-4"
               maxLength={6}
               autoFocus
             />
@@ -254,7 +254,7 @@ export default function TwoFactorSettings() {
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full p-6">
             {newBackupCodes.length === 0 ? (
               <>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
                   Régénérer les codes de secours
                 </h3>
                 <p className="text-gray-600 dark:text-gray-400 mb-4">
@@ -266,7 +266,7 @@ export default function TwoFactorSettings() {
                   value={regenerateCode}
                   onChange={(e) => setRegenerateCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                   placeholder="000000"
-                  className="w-full text-center text-2xl font-mono tracking-widest px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white mb-4"
+                  className="w-full text-center text-2xl font-mono tracking-widest px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 mb-4"
                   maxLength={6}
                   autoFocus
                 />
@@ -291,7 +291,7 @@ export default function TwoFactorSettings() {
               </>
             ) : (
               <>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
                   Nouveaux codes de secours
                 </h3>
                 <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3 mb-4">

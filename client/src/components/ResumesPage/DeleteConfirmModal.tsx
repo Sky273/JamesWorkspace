@@ -47,7 +47,7 @@ const DeleteConfirmModal = ({
           onClick={handleContentClick}
         >
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
               {t('resumes.deleteConfirm.title')}
             </h3>
             <button

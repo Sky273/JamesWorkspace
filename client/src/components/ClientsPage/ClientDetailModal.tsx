@@ -85,7 +85,7 @@ const ClientDetailModal = ({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">{client.name}</h2>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">{client.name}</h2>
                 <span className={`px-2 py-1 text-xs font-medium rounded-full ${getTypeColor(client.type)}`}>
                   {t(`clients.types.${client.type}`)}
                 </span>
@@ -176,7 +176,7 @@ const ClientDetailModal = ({
         {activeTab === 'contacts' && (
           <div>
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
                 {t('clients.contactsTitle')}
               </h3>
               <button
@@ -201,7 +201,7 @@ const ClientDetailModal = ({
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="font-medium text-gray-900 dark:text-white">{contact.name}</span>
+                          <span className="font-medium text-gray-900 dark:text-gray-100">{contact.name}</span>
                           {contact.is_primary && (
                             <StarIconSolid className="w-4 h-4 text-yellow-500" title={t('clients.primaryContact')} />
                           )}
@@ -254,7 +254,7 @@ const ClientDetailModal = ({
         {/* Submissions Tab */}
         {activeTab === 'submissions' && (
           <div>
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
               {t('clients.submissionsTitle')}
             </h3>
 
@@ -267,7 +267,7 @@ const ClientDetailModal = ({
                   >
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-gray-900 dark:text-white">
+                        <span className="font-medium text-gray-900 dark:text-gray-100">
                           {submission.resume_name}
                         </span>
                         <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${getStatusColor(submission.status)}`}>

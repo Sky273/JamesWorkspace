@@ -32,13 +32,13 @@ const ExportModal = ({ show, onClose, templates, selectedTemplate, setSelectedTe
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t('adaptations.exportPDF')}</h2>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">{t('adaptations.exportPDF')}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"><XMarkIcon className="w-6 h-6" /></button>
         </div>
 
         <div className="p-6">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('resume.analysis.exportOptions.selectTemplate')}</label>
-          <select value={selectedTemplate} onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedTemplate(e.target.value)} disabled={loadingTemplates} className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
+          <select value={selectedTemplate} onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedTemplate(e.target.value)} disabled={loadingTemplates} className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500">
             {templates.map(template => (<option key={template.id} value={template.id}>{template.Name}</option>))}
           </select>
           <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">{t('adaptations.exportModal.description')}</p>

@@ -95,7 +95,7 @@ const RatingBar = ({ label, percentage, improved }: RatingBarProps): JSX.Element
           </div>
         </div>
         <div className="flex items-center gap-2 min-w-[80px] justify-end">
-          <span className="text-sm font-bold text-gray-900 dark:text-white">{displayPercentage}%</span>
+          <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{displayPercentage}%</span>
           {hasImprovement && (
             <span className={`text-xs font-semibold ${isNegativeImprovement ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
               ({isNegativeImprovement ? '' : '+'}{improvementDiff}%)
@@ -184,7 +184,7 @@ const AnalysisPanel = ({ globalScore, sections, t, showComparison = false, compa
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-6 border border-gray-200 dark:border-gray-700 w-full">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-6">
             {t('resume.analysis.globalRating')}
           </h3>
           <div className="flex flex-col md:flex-row items-center justify-center gap-8 w-full">
@@ -250,7 +250,7 @@ const AnalysisPanel = ({ globalScore, sections, t, showComparison = false, compa
 
         <div>
           <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
               {t('resume.analysis.sectionScores')}
             </h3>
             <div className="space-y-4">
@@ -414,7 +414,7 @@ const OverviewTab = ({ resume, t }: OverviewTabProps): JSX.Element => {
           className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
             activeSubTab === 'initial'
               ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border-b-2 border-indigo-500'
-              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800'
           }`}
         >
           {t('resume.analysis.tabs.initialAnalysis') || 'Analyse initiale'}
@@ -424,7 +424,7 @@ const OverviewTab = ({ resume, t }: OverviewTabProps): JSX.Element => {
           className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
             activeSubTab === 'postImprovement'
               ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border-b-2 border-indigo-500'
-              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800'
           }`}
         >
           {t('resume.analysis.tabs.postImprovementAnalysis') || 'Analyse post-amélioration'}

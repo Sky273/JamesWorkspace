@@ -197,7 +197,7 @@ const ResumeAdaptPage = (): JSX.Element => {
         <div className="max-w-4xl mx-auto px-4">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 text-center">
             <DocumentTextIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
               {t('errors.resumeNotFound', 'CV non trouvé')}
             </h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6">{error}</p>
@@ -228,12 +228,12 @@ const ResumeAdaptPage = (): JSX.Element => {
           <div className="flex items-center gap-4">
             <button
               onClick={handleBack}
-              className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+              className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
             >
               <ArrowLeftIcon className="w-5 h-5" />
             </button>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                 {t('adaptation.title', 'Adapter le CV à une Mission')}
               </h1>
               <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -423,7 +423,7 @@ const ResumeAdaptPage = (): JSX.Element => {
                   </div>
                 </div>
 
-                <h3 className="relative text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                <h3 className="relative text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
                   {t('adaptation.analyzing', 'Analyse d\'adéquation en cours…')}
                 </h3>
 
@@ -475,12 +475,12 @@ const ResumeAdaptPage = (): JSX.Element => {
                 className="p-6"
               >
                 <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2 flex items-center gap-2">
                     <BriefcaseIcon className="w-5 h-5 text-blue-500" />
                     {t('adaptation.selectedMission', 'Mission Sélectionnée')}
                   </h3>
                   <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg">
-                    <p className="font-medium text-gray-900 dark:text-white">{selectedMission?.Title || 'Sans titre'}</p>
+                    <p className="font-medium text-gray-900 dark:text-gray-100">{selectedMission?.Title || 'Sans titre'}</p>
                   </div>
                 </div>
                 <MatchAnalysisDisplay 
@@ -579,7 +579,7 @@ const ResumeAdaptPage = (): JSX.Element => {
                   </div>
                 </div>
 
-                <h3 className="relative text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                <h3 className="relative text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
                   {t('adaptation.generating', 'Génération du CV adapté…')}
                 </h3>
 
@@ -635,7 +635,7 @@ const ResumeAdaptPage = (): JSX.Element => {
                 className="p-6"
               >
                 <div className="mb-6 flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                     <SparklesIcon className="w-5 h-5 text-green-500" />
                     {t('adaptation.result', 'Résultat de l\'adaptation')}
                   </h3>

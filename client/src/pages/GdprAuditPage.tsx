@@ -257,7 +257,7 @@ const GdprAuditPage = () => {
             <div className="flex items-center space-x-3">
               <ShieldCheckIcon className="h-8 w-8 text-primary-600" />
               <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                   {t('gdprAudit.title', 'Journal RGPD')}
                 </h1>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -295,7 +295,7 @@ const GdprAuditPage = () => {
               <div className="text-sm text-gray-500 dark:text-gray-400">
                 {t('gdprAudit.totalActions', 'Actions (30j)')}
               </div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
+              <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                 {stats.total}
               </div>
             </div>
@@ -339,7 +339,7 @@ const GdprAuditPage = () => {
                 <select
                   value={filters.firmId}
                   onChange={(e) => handleFilterChange('firmId', e.target.value)}
-                  className="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                  className="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
                 >
                   <option value="">{t('gdprAudit.allFirms', 'Tous les cabinets')}</option>
                   {firms.map((firm) => (
@@ -358,7 +358,7 @@ const GdprAuditPage = () => {
                 <select
                   value={filters.category}
                   onChange={(e) => handleFilterChange('category', e.target.value)}
-                  className="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                  className="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
                 >
                   <option value="">{t('gdprAudit.allCategories', 'Toutes')}</option>
                   {categories.map((cat) => (
@@ -377,7 +377,7 @@ const GdprAuditPage = () => {
                 <select
                   value={filters.action}
                   onChange={(e) => handleFilterChange('action', e.target.value)}
-                  className="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                  className="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
                 >
                   <option value="">{t('gdprAudit.allActions', 'Toutes')}</option>
                   {actionTypes.map((action) => (
@@ -397,7 +397,7 @@ const GdprAuditPage = () => {
                 <select
                   value={filters.isAutomated}
                   onChange={(e) => handleFilterChange('isAutomated', e.target.value)}
-                  className="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                  className="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
                 >
                   <option value="">{t('gdprAudit.all', 'Tous')}</option>
                   <option value="true">{t('gdprAudit.automated', 'Automatisé')}</option>
@@ -415,7 +415,7 @@ const GdprAuditPage = () => {
                   value={filters.targetEmail}
                   onChange={(e) => handleFilterChange('targetEmail', e.target.value)}
                   placeholder="email@example.com"
-                  className="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                  className="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
                 />
               </div>
 
@@ -428,7 +428,7 @@ const GdprAuditPage = () => {
                   type="date"
                   value={filters.startDate}
                   onChange={(e) => handleFilterChange('startDate', e.target.value)}
-                  className="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                  className="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
                 />
               </div>
 
@@ -441,7 +441,7 @@ const GdprAuditPage = () => {
                   type="date"
                   value={filters.endDate}
                   onChange={(e) => handleFilterChange('endDate', e.target.value)}
-                  className="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+                  className="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
                 />
               </div>
 
@@ -449,7 +449,7 @@ const GdprAuditPage = () => {
               <div className="flex items-end">
                 <button
                   onClick={clearFilters}
-                  className="w-full px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  className="w-full px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >
                   {t('gdprAudit.clearFilters', 'Effacer les filtres')}
                 </button>
@@ -517,7 +517,7 @@ const GdprAuditPage = () => {
                         <div className="flex items-center space-x-2">
                           {getActionIcon(log.action, log.category)}
                           <div>
-                            <div className="text-sm font-medium text-gray-900 dark:text-white">
+                            <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
                               {formatAction(log.action)}
                             </div>
                             <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getCategoryColor(log.category)}`}>
@@ -530,7 +530,7 @@ const GdprAuditPage = () => {
                         {log.firm_name ? (
                           <div className="flex items-center">
                             <BuildingOfficeIcon className="h-4 w-4 text-gray-400 mr-1" />
-                            <span className="text-sm text-gray-900 dark:text-white">{log.firm_name}</span>
+                            <span className="text-sm text-gray-900 dark:text-gray-100">{log.firm_name}</span>
                           </div>
                         ) : (
                           <span className="text-sm text-gray-400">-</span>
@@ -540,7 +540,7 @@ const GdprAuditPage = () => {
                         {log.target_name || log.target_email ? (
                           <div>
                             {log.target_name && (
-                              <div className="text-sm font-medium text-gray-900 dark:text-white">
+                              <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
                                 {log.target_name}
                               </div>
                             )}

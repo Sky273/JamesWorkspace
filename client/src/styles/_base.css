@@ -28,7 +28,7 @@ body {
 .dark body,
 html.dark body {
   background-color: #111827; /* gray-900 */
-  color: #ffffff;
+  color: #e5e7eb; /* gray-200 — softer than pure white */
 }
 
 
@@ -98,7 +98,7 @@ img {
 
 .dark ::selection {
   background-color: var(--color-primary-700);
-  color: white;
+  color: #f3f4f6; /* gray-100 */
 }
 
 /* --- Scrollbar --- */

@@ -83,7 +83,7 @@
 
 /* --- Dark Mode Theme --- */
 .dark {
-  --text-primary: #ffffff;
+  --text-primary: #f3f4f6; /* gray-100 — softer than pure white */
   --text-secondary: var(--color-gray-400);
   --text-muted: var(--color-gray-500);
 }

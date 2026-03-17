@@ -249,7 +249,7 @@ const Breadcrumbs = ({ items, className = '' }: BreadcrumbsProps): JSX.Element |
                 <HomeIcon className="w-4 h-4" />
               </Link>
             ) : item.current || !item.href ? (
-              <span className="text-gray-900 dark:text-white font-medium truncate max-w-[200px]">
+              <span className="text-gray-900 dark:text-gray-100 font-medium truncate max-w-[200px]">
                 {item.label}
               </span>
             ) : (

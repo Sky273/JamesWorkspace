@@ -149,7 +149,7 @@ export default function MetiersTab({ className = '' }: MetiersTabProps) {
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-8 max-w-md mx-4 text-center">
             <ArrowPathIcon className="h-16 w-16 text-indigo-600 dark:text-indigo-400 animate-spin mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
               {t('marketRadar.metiers.collection.title')}
             </h3>
             <p className="text-gray-600 dark:text-gray-400 mb-4">
@@ -182,7 +182,7 @@ export default function MetiersTab({ className = '' }: MetiersTabProps) {
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                 <BriefcaseIcon className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
                 {t('marketRadar.metiers.title')}
               </h2>
@@ -273,7 +273,7 @@ export default function MetiersTab({ className = '' }: MetiersTabProps) {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t('marketRadar.metiers.searchPlaceholder')}
-                className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+                className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
               />
               {searchQuery && (
                 <button
@@ -312,7 +312,7 @@ export default function MetiersTab({ className = '' }: MetiersTabProps) {
               </div>
               <div>
                 <p className="text-sm text-gray-500 dark:text-gray-400">{t('marketRadar.metiers.stats.totalMetiers')}</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                   {globalStats?.totalMetiers ?? totalCount}
                 </p>
               </div>
@@ -326,7 +326,7 @@ export default function MetiersTab({ className = '' }: MetiersTabProps) {
               </div>
               <div>
                 <p className="text-sm text-gray-500 dark:text-gray-400">{t('marketRadar.metiers.stats.totalCompetences')}</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                   {globalStats?.totalCompetences ?? '-'}
                 </p>
               </div>
@@ -340,7 +340,7 @@ export default function MetiersTab({ className = '' }: MetiersTabProps) {
               </div>
               <div>
                 <p className="text-sm text-gray-500 dark:text-gray-400">{t('marketRadar.metiers.stats.lastUpdate')}</p>
-                <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                   {formatDateTime(globalStats?.lastUpdated || metiers[0]?.LastUpdated) || '-'}
                 </p>
               </div>
@@ -357,7 +357,7 @@ export default function MetiersTab({ className = '' }: MetiersTabProps) {
         ) : metiers.length === 0 ? (
           <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
             <BriefcaseIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
               {t('marketRadar.metiers.noData')}
             </h3>
             <p className="text-gray-500 dark:text-gray-400 mb-4">
@@ -406,7 +406,7 @@ export default function MetiersTab({ className = '' }: MetiersTabProps) {
                         {metier.CodeRome}
                       </span>
                       <div className="text-left">
-                        <h3 className="font-semibold text-gray-900 dark:text-white">
+                        <h3 className="font-semibold text-gray-900 dark:text-gray-100">
                           {metier.Libelle}
                         </h3>
                         {metier.Enjeux && metier.Enjeux.length > 0 && (

@@ -150,7 +150,7 @@ const SharedFilePage = (): JSX.Element => {
       <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center p-4">
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 max-w-md w-full text-center">
           <ExclamationTriangleIcon className="h-16 w-16 text-red-500 mx-auto mb-4" />
-          <h1 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+          <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
             {t('share.errorTitle', 'Unable to load CV')}
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
@@ -180,7 +180,7 @@ const SharedFilePage = (): JSX.Element => {
       <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center p-4">
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 max-w-md w-full text-center">
           <DocumentArrowDownIcon className="h-16 w-16 text-blue-500 mx-auto mb-4" />
-          <h1 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+          <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
             {filename}
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mb-6">
@@ -212,7 +212,7 @@ const SharedFilePage = (): JSX.Element => {
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center p-4">
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 max-w-md w-full text-center">
         <DocumentArrowDownIcon className="h-16 w-16 text-green-500 mx-auto mb-4" />
-        <h1 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+        <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
           {t('share.downloadStarted', 'Download started')}
         </h1>
         <p className="text-gray-600 dark:text-gray-400">

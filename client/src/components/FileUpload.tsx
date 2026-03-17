@@ -167,7 +167,7 @@ const FileUpload = (): JSX.Element => {
       transition={{ duration: 0.4, ease: "easeOut" }}
       className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8"
     >
-      <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
+      <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-6">
         {t('fileUpload.gdpr.title', 'Informations du candidat')}
       </h2>
       
@@ -229,7 +229,7 @@ const FileUpload = (): JSX.Element => {
                 formErrors.name 
                   ? 'border-red-500 focus:ring-red-500' 
                   : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-              } bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2`}
+              } bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2`}
               placeholder={t('fileUpload.gdpr.namePlaceholder', 'Ex: Jean Dupont')}
             />
           </div>
@@ -262,7 +262,7 @@ const FileUpload = (): JSX.Element => {
                   formErrors.email 
                     ? 'border-red-500 focus:ring-red-500' 
                     : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                } bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2`}
+                } bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2`}
                 placeholder={t('fileUpload.gdpr.emailPlaceholder', 'candidat@email.com')}
               />
             </div>
@@ -314,7 +314,7 @@ const FileUpload = (): JSX.Element => {
             <UserIcon className="h-5 w-5 text-green-500" />
           )}
           <div>
-            <p className="font-medium text-gray-900 dark:text-white">{candidateInfo.candidateName}</p>
+            <p className="font-medium text-gray-900 dark:text-gray-100">{candidateInfo.candidateName}</p>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               {candidateInfo.profileType === 'employee' 
                 ? t('fileUpload.gdpr.employee', 'Collaborateur')
@@ -358,7 +358,7 @@ const FileUpload = (): JSX.Element => {
           </div>
           
           <div className="space-y-2">
-            <p className="text-lg font-medium text-gray-900 dark:text-white">
+            <p className="text-lg font-medium text-gray-900 dark:text-gray-100">
               {isDragActive 
                 ? t('fileUpload.dropYourResumeHere') 
                 : t('fileUpload.dragAndDropYourResumeHere')}

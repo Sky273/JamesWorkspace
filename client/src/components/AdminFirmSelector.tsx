@@ -109,7 +109,7 @@ const AdminFirmSelector = ({
         value={displayValue}
         onChange={(e) => handleChange(e.target.value)}
         disabled={disabled || loading}
-        className="w-full px-3 py-2 border border-purple-300 dark:border-purple-600 rounded-lg bg-purple-50 dark:bg-purple-900/20 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+        className="w-full px-3 py-2 border border-purple-300 dark:border-purple-600 rounded-lg bg-purple-50 dark:bg-purple-900/20 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
       >
         <option value={MY_FIRM_VALUE}>
           {loading 

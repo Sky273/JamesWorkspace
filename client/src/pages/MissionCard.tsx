@@ -54,7 +54,7 @@ export default function MissionCard({ mission, index, onEdit, onDelete }: Missio
         <div className="flex justify-between items-start">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">
                 {mission.Title}
               </h3>
               <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${

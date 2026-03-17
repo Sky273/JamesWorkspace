@@ -29,7 +29,7 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }: ModalProps): J
         <div className="fixed inset-0 bg-black/50 transition-opacity" onClick={onClose} />
         <div className={`relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full ${sizeClasses[size]} transform transition-all`}>
           <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h3>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
             <button
               onClick={onClose}
               className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"

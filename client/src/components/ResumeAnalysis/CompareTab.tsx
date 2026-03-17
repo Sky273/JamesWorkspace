@@ -38,7 +38,7 @@ const CompareTab = ({ resume }: CompareTabProps): JSX.Element => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
               {t('resume.analysis.originalResume')}
             </h3>
             <span className="px-2 py-1 text-sm font-medium text-blue-700 bg-blue-100 rounded-full dark:text-blue-400 dark:bg-blue-900/30">
@@ -56,7 +56,7 @@ const CompareTab = ({ resume }: CompareTabProps): JSX.Element => {
 
         <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
               {t('resume.analysis.improvedResume')}
             </h3>
             <span className="px-2 py-1 text-sm font-medium text-green-700 bg-green-100 rounded-full dark:text-green-400 dark:bg-green-900/30">

@@ -129,7 +129,7 @@ const MissionViewPage = (): JSX.Element => {
           >
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
               <BriefcaseIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
                 {t('errors.missionNotFound')}
               </h2>
               <p className="text-gray-600 dark:text-gray-400 mb-6">
@@ -170,7 +170,7 @@ const MissionViewPage = (): JSX.Element => {
         >
           <button
             onClick={handleBack}
-            className="inline-flex items-center gap-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
           >
             <ArrowLeftIcon className="w-5 h-5" />
             {t('common.back')}
@@ -189,7 +189,7 @@ const MissionViewPage = (): JSX.Element => {
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
                   <BriefcaseIcon className="w-8 h-8 text-blue-600" />
-                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                  <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                     {mission.Title || t('missions.noTitle')}
                   </h1>
                 </div>
@@ -237,7 +237,7 @@ const MissionViewPage = (): JSX.Element => {
 
           {/* Content */}
           <div className="p-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
               {t('missions.description')}
             </h2>
             {mission.Content ? (
@@ -255,7 +255,7 @@ const MissionViewPage = (): JSX.Element => {
           {/* Keywords section */}
           {keywords && (
             <div className="p-6 border-t border-gray-200 dark:border-gray-700">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
                 <TagIcon className="w-5 h-5" />
                 {t('missions.extractedKeywords')}
               </h2>

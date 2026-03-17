@@ -232,7 +232,7 @@ const CRMPage = (): JSX.Element => {
       
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
           {t('crm.title', 'CRM')}
         </h1>
         <p className="text-gray-600 dark:text-gray-400">
@@ -291,7 +291,7 @@ const CRMPage = (): JSX.Element => {
           </div>
           <div>
             <div className="text-sm text-gray-600 dark:text-gray-400">{t('clients.stats.clients')}</div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalClients}</div>
+            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.totalClients}</div>
           </div>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 flex items-center gap-3">
@@ -300,7 +300,7 @@ const CRMPage = (): JSX.Element => {
           </div>
           <div>
             <div className="text-sm text-gray-600 dark:text-gray-400">{t('clients.stats.prospects')}</div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalProspects}</div>
+            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.totalProspects}</div>
           </div>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 flex items-center gap-3">
@@ -309,7 +309,7 @@ const CRMPage = (): JSX.Element => {
           </div>
           <div>
             <div className="text-sm text-gray-600 dark:text-gray-400">{t('clients.stats.contacts')}</div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalContacts}</div>
+            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.totalContacts}</div>
           </div>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 flex items-center gap-3">
@@ -318,7 +318,7 @@ const CRMPage = (): JSX.Element => {
           </div>
           <div>
             <div className="text-sm text-gray-600 dark:text-gray-400">{t('clients.stats.submissions')}</div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalSubmissions}</div>
+            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.totalSubmissions}</div>
           </div>
         </div>
       </div>
@@ -391,7 +391,7 @@ const CRMPage = (): JSX.Element => {
                 placeholder={t('clients.searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
               />
             </div>
             {searchTerm && (
@@ -444,7 +444,7 @@ const CRMPage = (): JSX.Element => {
                       <BuildingOfficeIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-gray-900 dark:text-white">{client.name}</h3>
+                      <h3 className="font-semibold text-gray-900 dark:text-gray-100">{client.name}</h3>
                       {client.industry && (
                         <p className="text-sm text-gray-500 dark:text-gray-400">{client.industry}</p>
                       )}

@@ -178,8 +178,8 @@ const NewTemplatePage = (): JSX.Element => {
     <div className="container mx-auto px-4 py-8">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t(id ? 'templates.editor.title.edit' : 'templates.editor.title.new')}</h1>
-          <button onClick={() => navigate('/templates')} className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">{t('common.cancel')}</button>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{t(id ? 'templates.editor.title.edit' : 'templates.editor.title.new')}</h1>
+          <button onClick={() => navigate('/templates')} className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100">{t('common.cancel')}</button>
         </div>
 
         {loading ? (
@@ -196,7 +196,7 @@ const NewTemplatePage = (): JSX.Element => {
 
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('templates.editor.name.label')}</label>
-              <input type="text" id="name" name="name" required value={formData.name} onChange={handleChange} placeholder={t('templates.editor.name.placeholder')} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+              <input type="text" id="name" name="name" required value={formData.name} onChange={handleChange} placeholder={t('templates.editor.name.placeholder')} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100" />
             </div>
 
             <div>
@@ -206,7 +206,7 @@ const NewTemplatePage = (): JSX.Element => {
                 name="status" 
                 value={formData.status} 
                 onChange={handleChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
               >
                 <option value="Active">{t('templates.editor.statusField.active')}</option>
                 <option value="Inactive">{t('templates.editor.statusField.inactive')}</option>
@@ -215,12 +215,12 @@ const NewTemplatePage = (): JSX.Element => {
 
             <div>
               <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('templates.editor.description.label')}</label>
-              <textarea id="description" name="description" rows={3} required value={formData.description} onChange={handleChange} placeholder={t('templates.editor.description.placeholder')} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+              <textarea id="description" name="description" rows={3} required value={formData.description} onChange={handleChange} placeholder={t('templates.editor.description.placeholder')} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100" />
             </div>
 
             <div className="mt-4">
               <label htmlFor="stylesheet" className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('templates.editor.stylesheet.label')}</label>
-              <textarea id="stylesheet" name="stylesheet" rows={4} placeholder={t('templates.editor.stylesheet.placeholder')} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white" value={formData.stylesheet || ''} onChange={(e) => setFormData({ ...formData, stylesheet: e.target.value })} />
+              <textarea id="stylesheet" name="stylesheet" rows={4} placeholder={t('templates.editor.stylesheet.placeholder')} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100" value={formData.stylesheet || ''} onChange={(e) => setFormData({ ...formData, stylesheet: e.target.value })} />
             </div>
 
             {/* Header Editor */}
@@ -280,7 +280,7 @@ const NewTemplatePage = (): JSX.Element => {
                 max="250" 
                 value={formData.footerHeight} 
                 onChange={(e) => setFormData({ ...formData, footerHeight: parseInt(e.target.value) || 25 })} 
-                className="mt-1 block w-32 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white" 
+                className="mt-1 block w-32 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100" 
               />
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{t('templates.editor.footerHeight.hint', 'Hauteur réservée pour le footer dans le PDF (10-250mm)')}</p>
             </div>

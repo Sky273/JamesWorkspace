@@ -94,7 +94,7 @@ const Layout = (): JSX.Element => {
             </div>
             {/* User info - hidden on small mobile */}
             <div className="hidden xs:flex flex-col">
-              <span className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white leading-tight truncate max-w-[100px] sm:max-w-[150px]">
+              <span className="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 leading-tight truncate max-w-[100px] sm:max-w-[150px]">
                 {user?.name || user?.Name || t('userProfile.anonymous')}
               </span>
               <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 leading-tight truncate max-w-[100px] sm:max-w-[150px]">
@@ -105,7 +105,7 @@ const Layout = (): JSX.Element => {
           {/* Sign out button */}
           <button 
             onClick={handleSignOut} 
-            className="ml-1 sm:ml-2 p-1 sm:p-1.5 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-600/50 transition-colors"
+            className="ml-1 sm:ml-2 p-1 sm:p-1.5 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-600/50 transition-colors"
             title={t('common.signOut')}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

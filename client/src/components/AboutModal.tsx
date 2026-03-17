@@ -99,7 +99,7 @@ const AboutModal = ({ isOpen, onClose }: AboutModalProps): JSX.Element => {
                 <div className="px-6 py-4">
                   <div className="flex items-center space-x-2 mb-3">
                     <DocumentTextIcon className="h-5 w-5 text-primary-500" />
-                    <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
+                    <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                       {t('about.changelog')}
                     </h4>
                   </div>
@@ -120,7 +120,7 @@ const AboutModal = ({ isOpen, onClose }: AboutModalProps): JSX.Element => {
                             </h1>
                           ),
                           h2: ({ children }) => (
-                            <h2 className="text-base font-semibold text-gray-900 dark:text-white mt-4 mb-2 flex items-center">
+                            <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100 mt-4 mb-2 flex items-center">
                               <span className="w-2 h-2 bg-primary-500 rounded-full mr-2"></span>
                               {children}
                             </h2>
@@ -143,7 +143,7 @@ const AboutModal = ({ isOpen, onClose }: AboutModalProps): JSX.Element => {
                             </li>
                           ),
                           strong: ({ children }) => (
-                            <strong className="font-semibold text-gray-900 dark:text-white">{children}</strong>
+                            <strong className="font-semibold text-gray-900 dark:text-gray-100">{children}</strong>
                           ),
                           em: ({ children }) => (
                             <em className="italic text-gray-500 dark:text-gray-400">{children}</em>

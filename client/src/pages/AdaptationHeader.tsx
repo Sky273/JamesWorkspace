@@ -83,7 +83,7 @@ export default function AdaptationHeader({
           {/* Candidate name */}
           <div className="flex items-center gap-2 mb-1">
             <UserIcon className="w-5 h-5 text-blue-500 flex-shrink-0" />
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white truncate">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 truncate">
               {adaptation['Resume Name'] || adaptation['Candidate Name'] || adaptation.ResumeName || t('adaptations.card.noName')}
             </h1>
           </div>

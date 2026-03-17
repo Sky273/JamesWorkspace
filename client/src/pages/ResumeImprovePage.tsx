@@ -304,7 +304,7 @@ const ResumeImprovePage = (): JSX.Element => {
           <div className="flex items-start justify-between">
               <div>
                 <div className="flex items-center gap-3">
-                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                  <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                     {resumeName}
                   </h1>
                   {localResume?.consent_status && (
@@ -444,7 +444,7 @@ const ResumeImprovePage = (): JSX.Element => {
                 />
               </motion.div>
 
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
                 {t('resume.improve.notYetImproved')}
               </h2>
               <p className="text-gray-500 dark:text-gray-400 mb-8 max-w-md mx-auto text-center">

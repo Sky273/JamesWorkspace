@@ -339,7 +339,7 @@ const TagsManagement = (): JSX.Element => {
       <Breadcrumbs className="mb-4" />
       
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{t('tags.title')}</h1>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">{t('tags.title')}</h1>
         <p className="text-gray-600 dark:text-gray-400">{t('tags.subtitle')}</p>
       </div>
 
@@ -347,7 +347,7 @@ const TagsManagement = (): JSX.Element => {
         <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg"><TagIcon className="w-6 h-6 text-blue-600 dark:text-blue-400" /></div>
-            <div><div className="text-sm text-gray-600 dark:text-gray-400">{t('tags.stats.totalTags')}</div><div className="text-2xl font-bold text-gray-900 dark:text-white">{totalTags}</div></div>
+            <div><div className="text-sm text-gray-600 dark:text-gray-400">{t('tags.stats.totalTags')}</div><div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{totalTags}</div></div>
           </div>
         </motion.div>
         {Object.entries(categoryConfig).map(([category, config], index) => {
@@ -357,7 +357,7 @@ const TagsManagement = (): JSX.Element => {
             <motion.div key={category} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1 * (index + 1) }} className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
               <div className="flex items-center gap-3">
                 <div className={`p-2 ${config.bgLight} rounded-lg`}><IconComponent className={`w-6 h-6 ${config.textColor}`} /></div>
-                <div><div className="text-sm text-gray-600 dark:text-gray-400">{category}</div><div className="text-2xl font-bold text-gray-900 dark:text-white">{count}</div></div>
+                <div><div className="text-sm text-gray-600 dark:text-gray-400">{category}</div><div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{count}</div></div>
               </div>
             </motion.div>
           );
@@ -415,7 +415,7 @@ const TagsManagement = (): JSX.Element => {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between p-4 gap-4">
           <div className="relative flex-1 max-w-md">
             <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input type="text" placeholder={t('tags.searchPlaceholder')} value={searchTerm} onChange={(e: ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500" />
+            <input type="text" placeholder={t('tags.searchPlaceholder')} value={searchTerm} onChange={(e: ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500" />
           </div>
           <div className="flex gap-2">
             {activeTab === 'cleaned' && (
@@ -484,7 +484,7 @@ const TagsManagement = (): JSX.Element => {
               <div className={`flex items-center gap-3 p-4 border-b ${borderClass}`}>
                 <div className={`p-2 ${config.bgLight} rounded-lg`}><IconComponent className={`w-5 h-5 ${config.textColor}`} /></div>
                 <div>
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{translatedCategory}</h2>
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{translatedCategory}</h2>
                   <p className="text-sm text-gray-500 dark:text-gray-400">{tagList?.length || 0} {t('tags.tagsCount')}</p>
                 </div>
                 {isCleanedTab && (
@@ -531,7 +531,7 @@ const TagsManagement = (): JSX.Element => {
               <div className={`flex items-center gap-3 p-4 border-b ${borderClass}`}>
                 <div className={`p-2 ${config.bgLight} rounded-lg`}><IconComponent className={`w-5 h-5 ${config.textColor}`} /></div>
                 <div>
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{translatedCategory}</h2>
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{translatedCategory}</h2>
                   <p className="text-sm text-gray-500 dark:text-gray-400">{tagList?.length || 0} {t('tags.tagsCount')}</p>
                 </div>
                 <span className="ml-auto px-2 py-1 text-xs font-medium bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded">
@@ -573,13 +573,13 @@ const TagsManagement = (): JSX.Element => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
           <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
             <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white">{t('tags.editTag')}</h3>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">{t('tags.editTag')}</h3>
               <button onClick={closeEditModal} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"><XMarkIcon className="w-6 h-6" /></button>
             </div>
             <div className="p-4">
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{t('tags.editingIn')} <span className="font-medium">{editingTag.category}</span></p>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('tags.tagName')}</label>
-              <input type="text" className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 mb-4" value={newTagName} onChange={(e: ChangeEvent<HTMLInputElement>) => setNewTagName(e.target.value)} onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && handleEditConfirm()} autoFocus />
+              <input type="text" className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 mb-4" value={newTagName} onChange={(e: ChangeEvent<HTMLInputElement>) => setNewTagName(e.target.value)} onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && handleEditConfirm()} autoFocus />
               <div className="flex justify-end gap-3">
                 <button onClick={closeEditModal} className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">{t('tags.cancel')}</button>
                 <button onClick={handleEditConfirm} disabled={!newTagName.trim()} className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">{t('tags.save')}</button>

@@ -196,7 +196,7 @@ const SecurityLogs = (): JSX.Element => {
       <Breadcrumbs className="mb-4" />
       
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{t('security.title')}</h1>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">{t('security.title')}</h1>
         <p className="text-gray-600 dark:text-gray-400">{t('security.subtitle')}</p>
       </div>
 
@@ -209,7 +209,7 @@ const SecurityLogs = (): JSX.Element => {
             onClick={() => handleFilterChange({ level: '', event: '', source: '' })}
           >
             <div className="text-sm text-gray-600 dark:text-gray-400">{t('security.totalLogs')}</div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total}</div>
+            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.total}</div>
           </motion.div>
           <motion.div 
             initial={{ opacity: 0, scale: 0.9 }} 
@@ -245,7 +245,7 @@ const SecurityLogs = (): JSX.Element => {
         <div className="flex flex-wrap gap-4 items-center">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('security.filters.level')}</label>
-            <select value={filters.level} onChange={(e: ChangeEvent<HTMLSelectElement>) => handleFilterChange({ level: e.target.value })} className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+            <select value={filters.level} onChange={(e: ChangeEvent<HTMLSelectElement>) => handleFilterChange({ level: e.target.value })} className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
               <option value="">{t('security.filters.all')}</option>
               {filterOptions.levels.map(level => (
                 <option key={level} value={level}>{level}</option>
@@ -254,7 +254,7 @@ const SecurityLogs = (): JSX.Element => {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('security.filters.event')}</label>
-            <select value={filters.event} onChange={(e: ChangeEvent<HTMLSelectElement>) => handleFilterChange({ event: e.target.value })} className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+            <select value={filters.event} onChange={(e: ChangeEvent<HTMLSelectElement>) => handleFilterChange({ event: e.target.value })} className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
               <option value="">{t('security.filters.all')}</option>
               {filterOptions.events.map(event => (
                 <option key={event} value={event}>{event}</option>
@@ -263,7 +263,7 @@ const SecurityLogs = (): JSX.Element => {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('security.filters.source')}</label>
-            <select value={filters.source} onChange={(e: ChangeEvent<HTMLSelectElement>) => handleFilterChange({ source: e.target.value })} className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+            <select value={filters.source} onChange={(e: ChangeEvent<HTMLSelectElement>) => handleFilterChange({ source: e.target.value })} className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
               <option value="">{t('security.filters.allSources')}</option>
               {filterOptions.sources.map(source => (
                 <option key={source} value={source}>{source}</option>

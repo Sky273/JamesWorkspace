@@ -91,7 +91,7 @@ export default function DealResumeCard({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <DocumentTextIcon className="w-4 h-4 text-gray-400 flex-shrink-0" />
-              <h4 className="font-medium text-sm text-gray-900 dark:text-white truncate">
+              <h4 className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate">
                 {resume.name || t('resumes.untitled')}
               </h4>
             </div>
@@ -107,7 +107,7 @@ export default function DealResumeCard({
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             {rating != null && (
-              <span className="text-sm font-bold text-gray-900 dark:text-white">{rating}%</span>
+              <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{rating}%</span>
             )}
             <span className={`px-1.5 py-0.5 rounded-full text-xs font-medium ${statusClass}`}>
               {t(`resumes.status.${resume.status || 'new'}`)}

@@ -46,7 +46,7 @@ export default function BackupRestoreSection({
             </div>
             
             <div className="flex justify-between items-center">
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
                     {t('backup.remoteBackups')}
                 </h3>
                 <button

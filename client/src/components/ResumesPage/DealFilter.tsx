@@ -55,7 +55,7 @@ const DealFilter = ({ selectedDealId, onDealChange, t }: DealFilterProps): JSX.E
         value={selectedDealId}
         onChange={(e) => onDealChange(e.target.value)}
         disabled={loading}
-        className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm min-w-[200px]"
+        className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm min-w-[200px]"
       >
         <option value="">{t('resumes.allDeals') || 'Toutes les affaires'}</option>
         {deals.map(deal => (

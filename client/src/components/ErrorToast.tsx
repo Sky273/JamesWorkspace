@@ -26,7 +26,7 @@ const ErrorToast = ({ message, details, toastId }: ErrorToastProps): JSX.Element
             <ExclamationTriangleIcon className="h-6 w-6 text-red-500" />
           </div>
           <div className="ml-3 flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-900 dark:text-white">
+            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
               Erreur
             </p>
             <p className="mt-1 text-sm text-gray-600 dark:text-gray-400 break-words">

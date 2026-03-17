@@ -87,7 +87,7 @@ export default function BatchUploadFileList({
       className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-6"
     >
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
           {t('batchUpload.filesCount', `Fichiers (${files.length}/${maxFiles})`)}
         </h2>
         {!isProcessing && (
@@ -165,7 +165,7 @@ export default function BatchUploadFileList({
               {getStatusIcon(fileStatus.status)}
               
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 dark:text-white truncate" title={fileStatus.relativePath || fileStatus.file.name}>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate" title={fileStatus.relativePath || fileStatus.file.name}>
                   {fileStatus.relativePath ? (
                     <>
                       <span className="text-gray-400 dark:text-gray-500">

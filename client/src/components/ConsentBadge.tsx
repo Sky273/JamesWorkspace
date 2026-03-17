@@ -177,7 +177,7 @@ const ConsentBadge = ({
                             <span className="text-gray-500 dark:text-gray-400">
                                 {t('consent.badge.candidateName')}
                             </span>
-                            <span className="text-gray-900 dark:text-white font-medium">
+                            <span className="text-gray-900 dark:text-gray-100 font-medium">
                                 {candidateName}
                             </span>
                         </div>
@@ -187,7 +187,7 @@ const ConsentBadge = ({
                             <span className="text-gray-500 dark:text-gray-400">
                                 {t('consent.badge.candidateEmail')}
                             </span>
-                            <span className="text-gray-900 dark:text-white font-medium">
+                            <span className="text-gray-900 dark:text-gray-100 font-medium">
                                 {candidateEmail}
                             </span>
                         </div>
@@ -197,7 +197,7 @@ const ConsentBadge = ({
                             <span className="text-gray-500 dark:text-gray-400">
                                 {t('consent.badge.retentionUntil')}
                             </span>
-                            <span className="text-gray-900 dark:text-white font-medium">
+                            <span className="text-gray-900 dark:text-gray-100 font-medium">
                                 {formatDate(retentionUntil)}
                             </span>
                         </div>
@@ -276,7 +276,7 @@ const ConsentBadge = ({
                                     <span className="text-gray-500 dark:text-gray-400">
                                         {t('consent.badge.profileType')}
                                     </span>
-                                    <span className="text-gray-900 dark:text-white font-medium">
+                                    <span className="text-gray-900 dark:text-gray-100 font-medium">
                                         {profileType === 'employee' 
                                             ? t('consent.form.profileType.employee')
                                             : t('consent.form.profileType.external')
@@ -291,7 +291,7 @@ const ConsentBadge = ({
                                     <span className="text-gray-500 dark:text-gray-400">
                                         {t('consent.badge.candidateName')}
                                     </span>
-                                    <span className="text-gray-900 dark:text-white font-medium">
+                                    <span className="text-gray-900 dark:text-gray-100 font-medium">
                                         {candidateName}
                                     </span>
                                 </div>
@@ -303,7 +303,7 @@ const ConsentBadge = ({
                                     <span className="text-gray-500 dark:text-gray-400">
                                         {t('consent.badge.candidateEmail')}
                                     </span>
-                                    <span className="text-gray-900 dark:text-white font-medium">
+                                    <span className="text-gray-900 dark:text-gray-100 font-medium">
                                         {candidateEmail}
                                     </span>
                                 </div>
@@ -315,7 +315,7 @@ const ConsentBadge = ({
                                     <span className="text-gray-500 dark:text-gray-400">
                                         {t('consent.badge.requestedAt')}
                                     </span>
-                                    <span className="text-gray-900 dark:text-white">
+                                    <span className="text-gray-900 dark:text-gray-100">
                                         {formatDate(consentRequestedAt)}
                                     </span>
                                 </div>
@@ -327,7 +327,7 @@ const ConsentBadge = ({
                                     <span className="text-gray-500 dark:text-gray-400">
                                         {t('consent.badge.respondedAt')}
                                     </span>
-                                    <span className="text-gray-900 dark:text-white">
+                                    <span className="text-gray-900 dark:text-gray-100">
                                         {formatDate(consentRespondedAt)}
                                     </span>
                                 </div>
@@ -339,7 +339,7 @@ const ConsentBadge = ({
                                     <span className="text-gray-500 dark:text-gray-400">
                                         {t('consent.badge.retentionUntil')}
                                     </span>
-                                    <span className="text-gray-900 dark:text-white">
+                                    <span className="text-gray-900 dark:text-gray-100">
                                         {formatDate(retentionUntil)}
                                     </span>
                                 </div>

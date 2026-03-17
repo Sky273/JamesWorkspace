@@ -553,7 +553,7 @@ export default function TrendMetadataDisplay({ metadata, type, value, compact = 
     return (
       <div className={`text-xs space-y-2 ${className}`}>
         {parsed.indicateur && (
-          <div className="font-medium text-gray-900 dark:text-white truncate">{parsed.indicateur}</div>
+          <div className="font-medium text-gray-900 dark:text-gray-100 truncate">{parsed.indicateur}</div>
         )}
         
         {/* Valeur principale et pourcentage du total */}
@@ -715,7 +715,7 @@ export default function TrendMetadataDisplay({ metadata, type, value, compact = 
       )}
       
       {parsed.valeurPrincipale !== undefined && (
-        <div className="text-2xl font-bold text-gray-900 dark:text-white">
+        <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
           {formatNumber(parsed.valeurPrincipale, parsed.valeurPrincipaleType)}
         </div>
       )}

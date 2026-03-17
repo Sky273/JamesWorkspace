@@ -138,7 +138,7 @@ const ImprovedTextTab = ({ resume, onSave, onUpdateField, editorReady = false, o
     <div className="space-y-4">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
             {t('resume.analysis.improvedText')}
           </h3>
           <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -235,7 +235,7 @@ const ImprovedTextTab = ({ resume, onSave, onUpdateField, editorReady = false, o
             onChange={(e: ChangeEvent<HTMLInputElement>) => setCandidateName(e.target.value)}
             onBlur={handleNameBlur}
             placeholder={t('resume.analysis.candidateNamePlaceholder')}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
         <div>
@@ -249,7 +249,7 @@ const ImprovedTextTab = ({ resume, onSave, onUpdateField, editorReady = false, o
             onChange={(e: ChangeEvent<HTMLInputElement>) => setProfessionalTitle(e.target.value)}
             onBlur={handleTitleBlur}
             placeholder={t('resume.analysis.professionalTitlePlaceholder')}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
       </div>
@@ -263,7 +263,7 @@ const ImprovedTextTab = ({ resume, onSave, onUpdateField, editorReady = false, o
         <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
           <div className="flex items-center gap-2 mb-3">
             <SparklesIcon className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-            <h4 className="text-base font-semibold text-gray-900 dark:text-white">
+            <h4 className="text-base font-semibold text-gray-900 dark:text-gray-100">
               Modifier par IA
             </h4>
           </div>
@@ -285,7 +285,7 @@ const ImprovedTextTab = ({ resume, onSave, onUpdateField, editorReady = false, o
             onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setAiInstructions(e.target.value)}
             placeholder="Exemple : Rendre le résumé plus concis, ajouter plus de détails techniques sur les projets Docker, mettre l'accent sur les compétences en leadership..."
             rows={4}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
             disabled={isAIModifying}
           />
           

@@ -212,7 +212,7 @@ const StepRow = ({ step, index, currentIdx, totalSteps }: { step: StepDef; index
         <div className="flex-1 min-w-0">
           <h3
             className={`text-base font-semibold transition-colors duration-300 ${
-              isActive ? 'text-gray-900 dark:text-white' : isPast ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400 dark:text-gray-500'
+              isActive ? 'text-gray-900 dark:text-gray-100' : isPast ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400 dark:text-gray-500'
             }`}
             style={isActive ? { color: step.colors.primary } : isPast ? { color: step.colors.primary } : undefined}
           >
@@ -315,7 +315,7 @@ const ProcessingScreen = ({ currentStep, error, fullscreen = false }: Processing
             key={currentStep}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-lg font-semibold text-gray-900 dark:text-white"
+            className="text-lg font-semibold text-gray-900 dark:text-gray-100"
           >
             {t('processing.title', 'Traitement du CV en cours…')}
           </motion.h2>

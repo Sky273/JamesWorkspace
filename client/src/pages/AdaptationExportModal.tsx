@@ -42,7 +42,7 @@ export default function AdaptationExportModal({
         animate={{ opacity: 1, scale: 1 }} 
         className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6"
       >
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
           {t('adaptations.exportPDF')}
         </h3>
         
@@ -58,7 +58,7 @@ export default function AdaptationExportModal({
             <select 
               value={selectedTemplate} 
               onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedTemplate(e.target.value)} 
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
             >
               {templates.map(template => (
                 <option key={template.id} value={template.id}>{template.Name}</option>

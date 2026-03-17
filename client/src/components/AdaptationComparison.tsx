@@ -134,11 +134,11 @@ const AdaptationComparison = ({ originalText, adaptedText, matchScore, candidate
     <div className="space-y-4">
       {!simplified && (
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Résultat de l'Adaptation</h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Résultat de l'Adaptation</h3>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Template:</label>
-              <select value={selectedTemplate} onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedTemplate(e.target.value)} disabled={loadingTemplates} className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
+              <select value={selectedTemplate} onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedTemplate(e.target.value)} disabled={loadingTemplates} className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500">
                 {templates.map(template => (<option key={template.id} value={template.id}>{template.Name}</option>))}
               </select>
               <button onClick={handleExportToPDF} disabled={exportLoading || loadingTemplates || !selectedTemplate} className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors">
@@ -168,13 +168,13 @@ const AdaptationComparison = ({ originalText, adaptedText, matchScore, candidate
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div className="bg-gray-100 dark:bg-gray-700 px-4 py-3 border-b border-gray-200 dark:border-gray-600">
-              <div className="flex items-center gap-2"><DocumentTextIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" /><h4 className="font-semibold text-gray-900 dark:text-white">CV Original</h4></div>
+              <div className="flex items-center gap-2"><DocumentTextIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" /><h4 className="font-semibold text-gray-900 dark:text-gray-100">CV Original</h4></div>
             </div>
             <div className="p-6 max-h-[600px] overflow-y-auto"><div className="prose dark:prose-invert max-w-none text-sm" dangerouslySetInnerHTML={renderHTML(originalText)} /></div>
           </motion.div>
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="bg-white dark:bg-gray-800 rounded-lg border-2 border-blue-500 overflow-hidden">
             <div className="bg-blue-50 dark:bg-blue-900/20 px-4 py-3 border-b border-blue-200 dark:border-blue-800">
-              <div className="flex items-center gap-2"><SparklesIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" /><h4 className="font-semibold text-gray-900 dark:text-white">CV Adapté</h4><span className="ml-auto px-2 py-1 bg-blue-500 text-white text-xs font-medium rounded">Nouveau</span></div>
+              <div className="flex items-center gap-2"><SparklesIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" /><h4 className="font-semibold text-gray-900 dark:text-gray-100">CV Adapté</h4><span className="ml-auto px-2 py-1 bg-blue-500 text-white text-xs font-medium rounded">Nouveau</span></div>
             </div>
             <div className="p-6 max-h-[600px] overflow-y-auto"><div className="prose dark:prose-invert max-w-none text-sm" dangerouslySetInnerHTML={renderHTML(adaptedText)} /></div>
           </motion.div>
@@ -182,7 +182,7 @@ const AdaptationComparison = ({ originalText, adaptedText, matchScore, candidate
       ) : (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white dark:bg-gray-800 rounded-lg border-2 border-blue-500 overflow-hidden">
           <div className="bg-blue-50 dark:bg-blue-900/20 px-4 py-3 border-b border-blue-200 dark:border-blue-800">
-            <div className="flex items-center gap-2"><SparklesIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" /><h4 className="font-semibold text-gray-900 dark:text-white">CV Adapté à la Mission</h4></div>
+            <div className="flex items-center gap-2"><SparklesIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" /><h4 className="font-semibold text-gray-900 dark:text-gray-100">CV Adapté à la Mission</h4></div>
           </div>
           <div className="p-8 max-h-[800px] overflow-y-auto"><div className="prose dark:prose-invert max-w-none" dangerouslySetInnerHTML={renderHTML(adaptedText)} /></div>
         </motion.div>
@@ -220,7 +220,7 @@ const AdaptationComparison = ({ originalText, adaptedText, matchScore, candidate
             animate={{ opacity: 1, scale: 1 }} 
             className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6"
           >
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
               {t('adaptations.exportPDF')}
             </h3>
             
@@ -232,7 +232,7 @@ const AdaptationComparison = ({ originalText, adaptedText, matchScore, candidate
                 value={selectedTemplate} 
                 onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedTemplate(e.target.value)} 
                 disabled={loadingTemplates}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
               >
                 {templates.map(template => (
                   <option key={template.id} value={template.id}>{template.Name}</option>
