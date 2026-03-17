@@ -230,11 +230,19 @@ Rate limit stores are automatically cleaned every hour to prevent memory leaks.
 
 ### Required Secrets
 
-| Secret | Min Length | Purpose |
-|--------|------------|---------|
-| `JWT_SECRET` | 32 chars | Access token signing |
-| `CSRF_SECRET` | 32 chars | CSRF token generation |
-| `REFRESH_TOKEN_SECRET` | 32 chars | Refresh token signing |
+| Secret | Min Length | Required | Purpose |
+|--------|------------|----------|---------|
+| `JWT_SECRET` | 32 chars | **Required** | Access token signing |
+| `REFRESH_TOKEN_SECRET` | 32 chars | **Required** | Refresh token signing |
+| `CSRF_SECRET` | 32 chars | Recommended | CSRF token generation (falls back to JWT_SECRET) |
+
+### Environment Validation
+
+On startup, `server/config/envValidation.js` validates:
+- All **required** secrets exist and meet minimum length
+- **Recommended** variables are checked with warnings if missing
+- PostgreSQL connection parameters are present
+- Summary report logged at startup with validation status
 
 ### Best Practices
 
@@ -343,14 +351,83 @@ openaiRequestSchema = z.object({
 - Maximum prompt length: Configurable via `MAX_PROMPT_LENGTH`
 - Prevents abuse and excessive API costs
 
+### LLM Circuit Breakers
+
+- **Pattern**: Circuit breaker pattern via `retry.service.js` protects against cascading failures
+- **States**: CLOSED → OPEN (after 5 failures) → HALF_OPEN (after 60s cooldown) → CLOSED
+- **Retry strategy**: Exponential backoff with jitter, configurable max retries (default 3)
+- **Retryable errors**: Timeout, connection reset, 429/5xx HTTP status codes
+- **Admin monitoring**: `GET /api/llm/circuit-breakers` (admin only) exposes circuit breaker states
+
+### Additional LLM Endpoints
+
+| Endpoint | Method | Auth | Purpose |
+|----------|--------|------|---------|
+| `/api/llm/openai` | POST | JWT + Zod | OpenAI proxy (validated) |
+| `/api/llm/anthropic` | POST | JWT + Zod | Anthropic proxy (validated) |
+| `/api/llm/chat/completions` | POST | JWT | OpenAI chat completions (direct) |
+| `/api/llm/messages` | POST | JWT | Anthropic messages (direct) |
+| `/api/llm/circuit-breakers` | GET | Admin | Circuit breaker states |
+
+All LLM endpoints are rate-limited to **20 requests per hour per user**.
+
 ### LLM Metrics Tracking
 
-All LLM requests are tracked in `llm_metrics` table:
-- Model used
-- Tokens consumed (input/output)
-- Response time
-- Cost estimation
-- User/endpoint attribution
+LLM requests are tracked via in-memory `metrics.service.js`:
+- Request counts per endpoint
+- Response times
+- Error rates
+- Accessible via `/api/metrics` (admin only)
+
+---
+
+## Public Endpoints (Unauthenticated)
+
+The following endpoints are intentionally accessible without authentication:
+
+| Endpoint | Purpose | Protection |
+|----------|---------|------------|
+| `GET /api/consent/respond/:token` | Display GDPR consent form | Token-based access, time-limited tokens |
+| `POST /api/consent/respond/:token` | Record consent response | Token validation, action whitelist (accept/refuse) |
+| `GET /api/share/pdf/:token` | Serve shared PDF | Cryptographic token, time-limited |
+| `GET /api/share/file/:token` | Serve shared original file | Cryptographic token, time-limited |
+| `GET /api/chatbot/status` | Check chatbot availability | Read-only, no sensitive data |
+| `GET /health` | Health check | Read-only, skipped by rate limiter |
+
+**Mitigations for public endpoints**:
+- All token-based endpoints use cryptographically secure random tokens
+- Tokens are time-limited and single-purpose
+- Global rate limiter still applies to all public endpoints
+- No sensitive data exposed without valid token
+
+---
+
+## Observability & Monitoring
+
+### Application Performance Monitoring (APM)
+
+`server/middleware/apm.middleware.js` tracks request performance:
+- **Slow requests**: >1s (configurable via `APM_SLOW_THRESHOLD`)
+- **Very slow requests**: >5s (configurable via `APM_VERY_SLOW_THRESHOLD`)
+- **Critical requests**: >30s (configurable via `APM_CRITICAL_THRESHOLD`)
+- Circular buffer stores last N slow requests for admin review
+- Path normalization (UUIDs → `:id`) for aggregation
+
+### Metrics Middleware
+
+`server/middleware/metrics.middleware.js` tracks:
+- Request counts by method and path
+- Response status code distribution
+- Response time tracking
+- Error tracking (4xx/5xx)
+- Accessible via `GET /api/metrics` (admin only)
+
+### Global Error Handler
+
+`server/middleware/asyncHandler.middleware.js` provides:
+- Centralized async error catching for all route handlers
+- Production-safe error responses (no stack traces leaked)
+- Security-level logging for unhandled errors
 
 ---
 
@@ -396,7 +473,7 @@ All LLM requests are tracked in `llm_metrics` table:
 
 ## Security Checklist
 
-### Implemented ✅
+### Implemented 
 
 - [x] JWT with explicit algorithm (HS256)
 - [x] Separate access/refresh token secrets
@@ -421,8 +498,16 @@ All LLM requests are tracked in `llm_metrics` table:
 - [x] GDPR consent management (candidates)
 - [x] Server-side PDF text extraction (CSP hardening)
 - [x] Database backup/restore with FTP/SFTP
+- [x] LLM circuit breakers and retry with exponential backoff
+- [x] Application Performance Monitoring (APM) middleware
+- [x] Request/response metrics middleware
+- [x] Global async error handler (no stack trace leaks in production)
+- [x] Environment validation on startup
+- [x] Token-based secure resume sharing (time-limited)
+- [x] Public consent endpoints with token validation
+- [x] Chatbot with authenticated access and Zod-validated input
 
-### Planned 📋
+### Planned 
 
 - [ ] Redis-based token blacklist (multi-instance support)
 - [ ] Redis-based rate limiting (shared across instances)
@@ -461,9 +546,16 @@ All LLM requests are tracked in `llm_metrics` table:
 |------|---------|
 | `server/middleware/auth.middleware.js` | JWT authentication, role/firm access |
 | `server/middleware/rateLimit.middleware.js` | All rate limiting logic |
-| `server/middleware/csrf.middleware.js` | CSRF protection |
+| `server/middleware/apm.middleware.js` | Application performance monitoring |
+| `server/middleware/metrics.middleware.js` | Request/response metrics tracking |
+| `server/middleware/asyncHandler.middleware.js` | Global async error handler |
+| `server/config/security.js` | CSP, CORS, CSRF protection |
+| `server/config/constants.js` | Security constants |
+| `server/config/envValidation.js` | Startup environment validation |
 | `server/services/tokenBlacklist.service.js` | Token/user blacklisting |
 | `server/services/security.service.js` | Security logging |
 | `server/services/jwt.service.js` | JWT creation/verification |
+| `server/services/retry.service.js` | LLM retry + circuit breaker |
+| `server/services/metrics.service.js` | In-memory metrics store |
+| `server/services/shareResume.service.js` | Token-based resume sharing |
 | `server/utils/validation.js` | Zod schemas |
-| `server/config/constants.js` | Security constants |
