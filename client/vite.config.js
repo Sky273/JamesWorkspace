@@ -312,9 +312,9 @@ export default defineConfig(({ mode }) => {
       optimizeDeps: {
     // Force pre-bundling of problematic ESM packages for Vite 7
     force: true,
-    esbuildOptions: {
+    rolldownOptions: {
       // Fix for React exports not being recognized
-      mainFields: ['module', 'main'],
+      resolve: { mainFields: ['module', 'main'] },
           },
     // Exclude .env files from optimization
     exclude: ['.env', '.env.local', '.env.development', '.env.production'],
