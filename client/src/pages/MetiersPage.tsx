@@ -126,11 +126,13 @@ export default function MetiersPage() {
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-3">
-                <BriefcaseIcon className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
-                Métiers et Compétences
-              </h1>
-              <p className="mt-2 text-gray-600 dark:text-gray-400">
+              <div className="flex items-center gap-3 mb-1">
+                <div className="w-1 h-8 rounded-full bg-primary-500" />
+                <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-gray-100">
+                  Métiers et Compétences
+                </h1>
+              </div>
+              <p className="text-gray-500 dark:text-gray-400 ml-[1.75rem]">
                 Référentiel ROME 4.0 - Informatique et Télécommunications
               </p>
             </div>

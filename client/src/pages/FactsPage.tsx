@@ -252,12 +252,14 @@ export default function FactsPage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-          <ChartBarIcon className="h-7 w-7 text-indigo-600 dark:text-indigo-400" />
-          {t('marketRadar.title')}
-        </h1>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+      <div className="mb-8">
+        <div className="flex items-center gap-3 mb-1">
+          <div className="w-1 h-8 rounded-full bg-primary-500" />
+          <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-gray-100">
+            {t('marketRadar.title')}
+          </h1>
+        </div>
+        <p className="text-gray-500 dark:text-gray-400 ml-[1.75rem]">
           {t('marketRadar.subtitle')}
         </p>
       </div>

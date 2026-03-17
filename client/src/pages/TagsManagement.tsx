@@ -338,9 +338,12 @@ const TagsManagement = (): JSX.Element => {
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="p-6 max-w-7xl mx-auto">
       <Breadcrumbs className="mb-4" />
       
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">{t('tags.title')}</h1>
-        <p className="text-gray-600 dark:text-gray-400">{t('tags.subtitle')}</p>
+      <div className="mb-8">
+        <div className="flex items-center gap-3 mb-1">
+          <div className="w-1 h-8 rounded-full bg-primary-500" />
+          <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-gray-100">{t('tags.title')}</h1>
+        </div>
+        <p className="text-gray-500 dark:text-gray-400 ml-[1.75rem]">{t('tags.subtitle')}</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">

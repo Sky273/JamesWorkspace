@@ -16,10 +16,13 @@ const BatchJobsPage = (): JSX.Element => {
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-            {t('batchJobs.title', 'Jobs de traitement')}
-          </h1>
-          <p className="text-lg text-gray-600 dark:text-gray-400">
+          <div className="flex items-center gap-3 mb-1">
+            <div className="w-1 h-8 rounded-full bg-primary-500" />
+            <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-gray-100">
+              {t('batchJobs.title', 'Jobs de traitement')}
+            </h1>
+          </div>
+          <p className="text-gray-500 dark:text-gray-400 ml-[1.75rem]">
             {t('batchJobs.subtitle', 'Suivez les imports, améliorations et exports lancés en arrière-plan.')}
           </p>
         </motion.div>

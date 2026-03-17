@@ -332,11 +332,14 @@ const MetricsPage = (): JSX.Element => {
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="p-6">
       <Breadcrumbs className="mb-4" />
       
-      <div className="mb-6">
+      <div className="mb-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">{t('metrics.title')}</h1>
-            <p className="text-gray-600 dark:text-gray-400">{t('metrics.subtitle')}</p>
+            <div className="flex items-center gap-3 mb-1">
+              <div className="w-1 h-8 rounded-full bg-primary-500" />
+              <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-gray-100">{t('metrics.title')}</h1>
+            </div>
+            <p className="text-gray-500 dark:text-gray-400 ml-[1.75rem]">{t('metrics.subtitle')}</p>
           </div>
           <div className="flex items-center gap-4">
             <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
