@@ -201,6 +201,10 @@ describe('TOTP Service', () => {
 });
 
 describe('Encryption/Decryption', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
     // Test encryption by generating a secret and verifying it can be stored/retrieved
     it('should encrypt secrets in a recoverable format', async () => {
         const userId = 'encryption-test-user';
