@@ -239,7 +239,7 @@ const AdaptationViewPage = (): JSX.Element => {
       // Clean suggestion markers from content before export
       const rawContent = editorRef.current?.getContent() || adaptation['Adapted Text'] || '';
       const content = removeSuggestionMarkers(rawContent);
-      const name = adaptation['Candidate Name'] || adaptation['Resume Name'] || 'Candidat';
+      const name = adaptation['Resume Name'] || adaptation['Candidate Name'] || 'Candidat';
       const title = adaptation['Adapted Title'] || adaptation['Mission Title'] || 'CV Adapté';
 
       let processedBody = template.TemplateContent || '';

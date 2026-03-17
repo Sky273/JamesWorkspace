@@ -241,7 +241,7 @@ const AdaptationsPage = (): JSX.Element => {
 
       const resumeId = adaptationToExport.Resume?.[0];
       const resume = resumes.find(r => r.id === resumeId);
-      const candidateName = adaptationToExport['Candidate Name'] || resume?.Name || 'Candidat';
+      const candidateName = adaptationToExport['Resume Name'] || resume?.Name || adaptationToExport['Candidate Name'] || 'Candidat';
       const candidateTitle = adaptationToExport['Adapted Title'] || resume?.Title || 'Titre Professionnel';
       const customerName = resume?.CustomerName || '';
       // Clean suggestion markers from content before export
@@ -441,7 +441,7 @@ const AdaptationsPage = (): JSX.Element => {
                   }`}>{t(`adaptations.status.${adaptation.Status?.toLowerCase() || 'unknown'}`, adaptation.Status || 'N/A')}</span>
                 </div>
                 <div className="mb-4">
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-1 line-clamp-1">{adaptation['Candidate Name'] || getResumeName(adaptation)}</h3>
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-1 line-clamp-1">{getResumeName(adaptation) || adaptation['Candidate Name']}</h3>
                   {adaptation['Adapted Title'] && (
                     <p className="text-sm font-medium text-blue-600 dark:text-blue-400 mb-1 line-clamp-1 italic">{adaptation['Adapted Title']}</p>
                   )}
