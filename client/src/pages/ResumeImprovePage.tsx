@@ -6,9 +6,9 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useResume } from '../context/ResumeContext';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { ArrowRightIcon, SparklesIcon, ShareIcon } from '@heroicons/react/24/outline';
+import { ArrowRightIcon, SparklesIcon, ShareIcon, MagnifyingGlassIcon, CheckCircleIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 import Breadcrumbs from '../components/Breadcrumbs';
 import ShareQRCodeModal from '../components/ShareQRCodeModal';
 import { templateService } from '../utils/templateService';
@@ -336,54 +336,136 @@ const ResumeImprovePage = (): JSX.Element => {
         </motion.div>
 
         {/* Step indicator */}
-        <div className="mb-6">
-          <div className="flex items-center gap-2 text-sm">
-            <Link 
-              to={`/resumes/${id}/analysis`}
-              className="px-3 py-1 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
-            >
-              {t('resume.steps.analysis')}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="mb-6"
+        >
+          <div className="flex items-center">
+            {/* Step 1 — Analysis (past) */}
+            <Link to={`/resumes/${id}/analysis`} className="flex items-center gap-2 group">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-green-600 flex items-center justify-center shadow-sm shadow-green-500/20">
+                <CheckCircleIcon className="w-4 h-4 text-white" />
+              </div>
+              <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400 group-hover:underline">
+                {t('resume.steps.analysis')}
+              </span>
             </Link>
-            <ArrowRightIcon className="w-4 h-4 text-gray-400" />
-            <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full font-medium">
-              {t('resume.steps.improve')}
-            </span>
-            <ArrowRightIcon className="w-4 h-4 text-gray-400" />
-            {hasImprovedText ? (
-              <Link 
-                to={`/resumes/${id}/export`}
-                className="px-3 py-1 text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 hover:underline"
+
+            {/* Connector 1→2 */}
+            <div className="w-10 sm:w-16 h-[3px] mx-2 bg-gradient-to-r from-emerald-400 to-indigo-500 rounded-full" />
+
+            {/* Step 2 — Improve (active) */}
+            <div className="flex items-center gap-2">
+              <motion.div
+                className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center shadow-md shadow-indigo-500/25"
+                animate={{ scale: [1, 1.1, 1] }}
+                transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
               >
-                {t('resume.steps.export')}
+                <SparklesIcon className="w-4 h-4 text-white" />
+              </motion.div>
+              <span className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">
+                {t('resume.steps.improve')}
+              </span>
+            </div>
+
+            {/* Connector 2→3 */}
+            <div className="w-10 sm:w-16 h-[3px] mx-2 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700">
+              <motion.div
+                className="h-full rounded-full bg-gradient-to-r from-indigo-400 to-purple-500"
+                initial={false}
+                animate={{ width: hasImprovedText ? '100%' : '30%' }}
+                transition={{ duration: 0.6, ease: 'easeOut' }}
+              />
+            </div>
+
+            {/* Step 3 — Export */}
+            {hasImprovedText ? (
+              <Link to={`/resumes/${id}/export`} className="flex items-center gap-2 group">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-400 to-fuchsia-600 flex items-center justify-center shadow-sm shadow-purple-500/20">
+                  <ArrowDownTrayIcon className="w-4 h-4 text-white" />
+                </div>
+                <span className="text-sm font-medium text-purple-600 dark:text-purple-400 group-hover:underline">
+                  {t('resume.steps.export')}
+                </span>
               </Link>
             ) : (
-              <span className="px-3 py-1 text-gray-400 dark:text-gray-500">
-                {t('resume.steps.export')}
-              </span>
+              <div className="flex items-center gap-2 opacity-50">
+                <div className="w-8 h-8 rounded-full border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center">
+                  <ArrowDownTrayIcon className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                </div>
+                <span className="text-sm text-gray-400 dark:text-gray-500">
+                  {t('resume.steps.export')}
+                </span>
+              </div>
             )}
           </div>
-        </div>
+        </motion.div>
 
         {/* Content */}
         {isImproving || contextLoading ? (
           <ImprovementAnimation currentStep={processingStep || 'improving'} />
         ) : !hasImprovedText ? (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-12 text-center">
-            <SparklesIcon className="w-16 h-16 mx-auto text-blue-500 mb-4" />
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-              {t('resume.improve.notYetImproved')}
-            </h2>
-            <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
-              {t('resume.improve.description')}
-            </p>
-            <button
-              onClick={handleImprove}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
-            >
-              <SparklesIcon className="w-5 h-5" />
-              {t('resume.actions.improveNow')}
-            </button>
-          </div>
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="relative bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden"
+          >
+            {/* Gradient background */}
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-50/60 via-transparent to-indigo-50/40 dark:from-blue-950/20 dark:via-transparent dark:to-indigo-950/15" />
+
+            {/* Floating sparkles */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+              {Array.from({ length: 8 }, (_, i) => (
+                <motion.div
+                  key={i}
+                  className="absolute rounded-full bg-indigo-400/25"
+                  style={{ left: `${12 + i * 11}%`, top: `${20 + (i % 3) * 25}%`, width: 3 + (i % 3), height: 3 + (i % 3) }}
+                  animate={{ y: [0, -14, 0], opacity: [0, 0.6, 0], scale: [0.5, 1.3, 0.5] }}
+                  transition={{ duration: 3 + i * 0.4, delay: i * 0.3, repeat: Infinity, ease: 'easeInOut' }}
+                />
+              ))}
+            </div>
+
+            <div className="relative flex flex-col items-center py-16 px-6">
+              {/* Animated icon */}
+              <motion.div
+                className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-xl shadow-indigo-500/30 mb-6"
+                animate={{ scale: [1, 1.06, 1], rotate: [0, 2, -2, 0] }}
+                transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+              >
+                <SparklesIcon className="w-10 h-10 text-white" />
+                <motion.div
+                  className="absolute inset-0 rounded-2xl bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                  animate={{ x: ['-100%', '200%'] }}
+                  transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut', repeatDelay: 1 }}
+                />
+              </motion.div>
+
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                {t('resume.improve.notYetImproved')}
+              </h2>
+              <p className="text-gray-500 dark:text-gray-400 mb-8 max-w-md mx-auto text-center">
+                {t('resume.improve.description')}
+              </p>
+
+              <motion.button
+                onClick={handleImprove}
+                className="inline-flex items-center gap-2.5 px-7 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-semibold shadow-lg shadow-indigo-500/25 transition-all"
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+              >
+                <SparklesIcon className="w-5 h-5" />
+                {t('resume.actions.improveNow')}
+              </motion.button>
+
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-4">
+                {t('resume.improve.duration', 'Environ 30–90 secondes')}
+              </p>
+            </div>
+          </motion.div>
         ) : (
           <>
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">

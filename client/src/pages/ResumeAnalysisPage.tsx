@@ -8,7 +8,7 @@ import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import { useResume } from '../context/ResumeContext';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { ArrowRightIcon, ArrowLeftIcon, SparklesIcon, CheckCircleIcon, ShareIcon } from '@heroicons/react/24/outline';
+import { ArrowRightIcon, ArrowLeftIcon, SparklesIcon, CheckCircleIcon, ShareIcon, ArrowDownTrayIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import Breadcrumbs from '../components/Breadcrumbs';
 import ShareQRCodeModal from '../components/ShareQRCodeModal';
 import { fetchWithAuth } from '../utils/apiInterceptor';
@@ -188,7 +188,7 @@ const ResumeAnalysisPage = (): JSX.Element => {
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
         <div className="max-w-7xl mx-auto px-4">
           <Breadcrumbs className="mb-4" />
-          <ImprovementAnimation currentStep={processingStep || 'improving'} isVisible={true} />
+          <ImprovementAnimation currentStep={processingStep || 'improving'} />
         </div>
       </div>
     );
@@ -286,36 +286,79 @@ const ResumeAnalysisPage = (): JSX.Element => {
         </motion.div>
 
         {/* Step indicator */}
-        <div className="mb-6">
-          <div className="flex items-center gap-2 text-sm">
-            <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full font-medium">
-              {t('resume.steps.analysis')}
-            </span>
-            <ArrowRightIcon className="w-4 h-4 text-gray-400" />
-            {hasImprovedText ? (
-              <Link 
-                to={`/resumes/${id}/improve`}
-                className="px-3 py-1 text-green-600 dark:text-green-400 hover:underline"
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="mb-6"
+        >
+          <div className="flex items-center">
+            {/* Step 1 — Analysis (active) */}
+            <div className="flex items-center gap-2">
+              <motion.div
+                className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center shadow-md shadow-indigo-500/25"
+                animate={{ scale: [1, 1.1, 1] }}
+                transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
               >
-                {t('resume.steps.improve')} ✓
+                <MagnifyingGlassIcon className="w-4 h-4 text-white" />
+              </motion.div>
+              <span className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">
+                {t('resume.steps.analysis')}
+              </span>
+            </div>
+
+            {/* Connector 1→2 */}
+            <div className="w-10 sm:w-16 h-[3px] mx-2 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700">
+              <motion.div
+                className="h-full rounded-full bg-gradient-to-r from-indigo-400 to-emerald-500"
+                initial={false}
+                animate={{ width: hasImprovedText ? '100%' : '30%' }}
+                transition={{ duration: 0.6, ease: 'easeOut' }}
+              />
+            </div>
+
+            {/* Step 2 — Improve */}
+            {hasImprovedText ? (
+              <Link to={`/resumes/${id}/improve`} className="flex items-center gap-2 group">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-green-600 flex items-center justify-center shadow-sm shadow-green-500/20">
+                  <CheckCircleIcon className="w-4 h-4 text-white" />
+                </div>
+                <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400 group-hover:underline">
+                  {t('resume.steps.improve')} ✓
+                </span>
               </Link>
             ) : (
-              <button
-                onClick={handleImprove}
-                className="px-3 py-1 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
-              >
-                {t('resume.steps.improve')}
+              <button onClick={handleImprove} className="flex items-center gap-2 group">
+                <div className="w-8 h-8 rounded-full border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center group-hover:border-indigo-400 transition-colors">
+                  <SparklesIcon className="w-4 h-4 text-gray-400 dark:text-gray-500 group-hover:text-indigo-500 transition-colors" />
+                </div>
+                <span className="text-sm text-gray-500 dark:text-gray-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                  {t('resume.steps.improve')}
+                </span>
               </button>
             )}
-            <ArrowRightIcon className="w-4 h-4 text-gray-400" />
-            <Link 
-              to={`/resumes/${id}/export`}
-              className="px-3 py-1 text-gray-700 dark:text-gray-300 hover:underline"
-            >
-              {t('resume.steps.export')}
+
+            {/* Connector 2→3 */}
+            <div className="w-10 sm:w-16 h-[3px] mx-2 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700">
+              <motion.div
+                className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-purple-500"
+                initial={false}
+                animate={{ width: hasImprovedText ? '60%' : '0%' }}
+                transition={{ duration: 0.6, ease: 'easeOut' }}
+              />
+            </div>
+
+            {/* Step 3 — Export */}
+            <Link to={`/resumes/${id}/export`} className="flex items-center gap-2 group">
+              <div className="w-8 h-8 rounded-full border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center group-hover:border-purple-400 transition-colors">
+                <ArrowDownTrayIcon className="w-4 h-4 text-gray-400 dark:text-gray-500 group-hover:text-purple-500 transition-colors" />
+              </div>
+              <span className="text-sm text-gray-500 dark:text-gray-400 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+                {t('resume.steps.export')}
+              </span>
             </Link>
           </div>
-        </div>
+        </motion.div>
 
         {/* Tabs */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">

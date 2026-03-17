@@ -3,7 +3,7 @@
  * Page for adapting a resume to a specific mission
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -63,6 +63,39 @@ const ResumeAdaptPage = (): JSX.Element => {
   const [adaptation, setAdaptation] = useState<Adaptation | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'analysis' | 'adapted'>('analysis');
+  const [cycleIndex, setCycleIndex] = useState(0);
+
+  // Cycling messages for loading states
+  const ANALYZING_MSGS = useMemo(() => [
+    'Comparaison des compétences requises…',
+    'Évaluation de l\'expérience pertinente…',
+    'Analyse des mots-clés de la mission…',
+    'Calcul du score d\'adéquation…',
+    'Identification des points forts…',
+    'Détection des écarts de compétences…',
+  ], []);
+
+  const ADAPTING_MSGS = useMemo(() => [
+    'Reformulation du résumé professionnel…',
+    'Mise en avant des compétences clés…',
+    'Adaptation de l\'expérience à la mission…',
+    'Optimisation pour les mots-clés cibles…',
+    'Renforcement de la pertinence ATS…',
+    'Harmonisation du profil candidat…',
+    'Ajustement du vocabulaire sectoriel…',
+    'Polissage final du CV adapté…',
+  ], []);
+
+  const cycleMessages = step === 'adapting' ? ADAPTING_MSGS : ANALYZING_MSGS;
+
+  useEffect(() => {
+    if (step !== 'analyzing' && step !== 'adapting') return;
+    setCycleIndex(0);
+    const interval = setInterval(() => {
+      setCycleIndex(prev => (prev + 1) % (step === 'adapting' ? ADAPTING_MSGS.length : ANALYZING_MSGS.length));
+    }, 3500);
+    return () => clearInterval(interval);
+  }, [step, ANALYZING_MSGS.length, ADAPTING_MSGS.length]);
 
   // Load resume data
   const loadResume = useCallback(async () => {
@@ -328,56 +361,104 @@ const ResumeAdaptPage = (): JSX.Element => {
                 className="relative flex flex-col items-center justify-center py-20 overflow-hidden"
               >
                 {/* Gradient background */}
-                <div className="absolute inset-0 bg-gradient-to-b from-blue-50/60 via-transparent to-indigo-50/40 dark:from-blue-950/30 dark:via-transparent dark:to-indigo-950/20" />
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-50/60 via-transparent to-indigo-50/40 dark:from-blue-950/30 dark:via-transparent dark:to-indigo-950/20" />
+
+                {/* Floating particles */}
+                <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                  {Array.from({ length: 10 }, (_, i) => (
+                    <motion.div
+                      key={i}
+                      className="absolute rounded-full bg-indigo-400/30"
+                      style={{ left: `${10 + i * 9}%`, top: `${15 + (i % 3) * 25}%`, width: 3 + (i % 4), height: 3 + (i % 4) }}
+                      animate={{ y: [0, -18, 0], x: [0, i % 2 === 0 ? 6 : -6, 0], opacity: [0, 0.6, 0], scale: [0.5, 1.3, 0.5] }}
+                      transition={{ duration: 3 + i * 0.4, delay: i * 0.25, repeat: Infinity, ease: 'easeInOut' }}
+                    />
+                  ))}
+                </div>
 
                 {/* Multi-ring animated spinner */}
-                <div className="relative w-28 h-28 mb-8">
+                <div className="relative w-32 h-32 mb-8">
+                  {/* Outer glow */}
+                  <motion.div
+                    className="absolute -inset-4 rounded-full bg-gradient-to-br from-blue-400/10 to-indigo-500/10"
+                    animate={{ scale: [1, 1.15, 1], opacity: [0.4, 0.8, 0.4] }}
+                    transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                  />
                   {/* Outer ring - slow rotation */}
                   <motion.div
-                    className="absolute inset-0 rounded-full border-[3px] border-blue-200/60 dark:border-blue-800/40"
+                    className="absolute inset-0 rounded-full border-[3px] border-blue-200/50 dark:border-blue-800/30"
                     style={{ borderTopColor: 'rgb(99, 102, 241)', borderRightColor: 'rgb(99, 102, 241)' }}
                     animate={{ rotate: 360 }}
-                    transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
+                    transition={{ duration: 3.5, repeat: Infinity, ease: 'linear' }}
                   />
                   {/* Middle ring - opposite rotation */}
                   <motion.div
-                    className="absolute inset-3 rounded-full border-[3px] border-indigo-200/40 dark:border-indigo-800/30"
+                    className="absolute inset-3 rounded-full border-[3px] border-indigo-200/30 dark:border-indigo-800/20"
                     style={{ borderBottomColor: 'rgb(79, 70, 229)', borderLeftColor: 'rgb(79, 70, 229)' }}
                     animate={{ rotate: -360 }}
-                    transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+                    transition={{ duration: 2.2, repeat: Infinity, ease: 'linear' }}
                   />
                   {/* Inner ring - fast rotation */}
                   <motion.div
-                    className="absolute inset-6 rounded-full border-[2px] border-purple-200/30 dark:border-purple-800/20"
+                    className="absolute inset-6 rounded-full border-[2px] border-purple-200/20 dark:border-purple-800/15"
                     style={{ borderTopColor: 'rgb(147, 51, 234)', borderRightColor: 'rgb(147, 51, 234)' }}
                     animate={{ rotate: 360 }}
-                    transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
+                    transition={{ duration: 1.4, repeat: Infinity, ease: 'linear' }}
                   />
                   {/* Central icon */}
                   <div className="absolute inset-0 flex items-center justify-center">
                     <motion.div
-                      animate={{ scale: [1, 1.15, 1] }}
-                      transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                      className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/30"
+                      animate={{ scale: [1, 1.08, 1], rotate: [0, 2, -2, 0] }}
+                      transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
                     >
-                      <DocumentTextIcon className="w-9 h-9 text-indigo-500 dark:text-indigo-400" />
+                      <DocumentTextIcon className="w-7 h-7 text-white" />
+                      {/* Shimmer overlay */}
+                      <motion.div
+                        className="absolute inset-0 rounded-2xl bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                        animate={{ x: ['-100%', '200%'] }}
+                        transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut', repeatDelay: 1 }}
+                      />
                     </motion.div>
                   </div>
                 </div>
 
                 <h3 className="relative text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                  {t('adaptation.analyzing', 'Analyse en cours...')}
+                  {t('adaptation.analyzing', 'Analyse d\'adéquation en cours…')}
                 </h3>
-                <p className="relative text-gray-500 dark:text-gray-400 text-center max-w-md mb-6">
-                  {t('adaptation.analyzingDescription', 'Analyse de l\'adéquation entre le CV et la mission sélectionnée')}
-                </p>
+
+                {/* Cycling sub-message */}
+                <div className="relative h-6 mb-6">
+                  <AnimatePresence mode="wait">
+                    <motion.p
+                      key={cycleIndex}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      transition={{ duration: 0.3 }}
+                      className="text-sm text-gray-500 dark:text-gray-400 text-center"
+                    >
+                      {cycleMessages[cycleIndex]}
+                    </motion.p>
+                  </AnimatePresence>
+                </div>
+
+                {/* Shimmer progress bar */}
+                <div className="relative w-64 h-1.5 bg-indigo-100 dark:bg-indigo-900/30 rounded-full overflow-hidden mb-5">
+                  <motion.div
+                    className="absolute inset-y-0 w-1/2 bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-500 rounded-full"
+                    animate={{ left: ['-50%', '100%'] }}
+                    transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+                  />
+                </div>
 
                 {/* Bouncing dots */}
-                <div className="relative flex items-center gap-2">
+                <div className="relative flex items-center gap-1.5 mt-2">
                   {[0, 1, 2, 3].map(i => (
                     <motion.div
                       key={i}
-                      className="w-2 h-2 rounded-full bg-indigo-500 dark:bg-indigo-400"
-                      animate={{ y: [0, -8, 0], opacity: [0.4, 1, 0.4] }}
+                      className="w-1.5 h-1.5 rounded-full bg-indigo-400 dark:bg-indigo-400"
+                      animate={{ y: [0, -6, 0], opacity: [0.3, 1, 0.3] }}
                       transition={{ duration: 1, repeat: Infinity, delay: i * 0.15, ease: 'easeInOut' }}
                     />
                   ))}
@@ -419,54 +500,107 @@ const ResumeAdaptPage = (): JSX.Element => {
                 className="relative flex flex-col items-center justify-center py-20 overflow-hidden"
               >
                 {/* Gradient background */}
-                <div className="absolute inset-0 bg-gradient-to-b from-purple-50/60 via-transparent to-fuchsia-50/40 dark:from-purple-950/30 dark:via-transparent dark:to-fuchsia-950/20" />
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-50/60 via-transparent to-fuchsia-50/40 dark:from-purple-950/30 dark:via-transparent dark:to-fuchsia-950/20" />
 
-                {/* Animated icon with orbiting particles */}
-                <div className="relative w-28 h-28 mb-8 flex items-center justify-center">
+                {/* Floating particles */}
+                <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                  {Array.from({ length: 10 }, (_, i) => (
+                    <motion.div
+                      key={i}
+                      className="absolute rounded-full bg-purple-400/30"
+                      style={{ left: `${8 + i * 9}%`, top: `${10 + (i % 4) * 22}%`, width: 3 + (i % 3), height: 3 + (i % 3) }}
+                      animate={{ y: [0, -16, 0], x: [0, i % 2 === 0 ? 7 : -7, 0], opacity: [0, 0.5, 0], scale: [0.4, 1.2, 0.4] }}
+                      transition={{ duration: 3.5 + i * 0.3, delay: i * 0.2, repeat: Infinity, ease: 'easeInOut' }}
+                    />
+                  ))}
+                </div>
+
+                {/* Multi-ring spinner with orbiting particles */}
+                <div className="relative w-32 h-32 mb-8">
+                  {/* Outer glow */}
+                  <motion.div
+                    className="absolute -inset-4 rounded-full bg-gradient-to-br from-purple-400/10 to-fuchsia-500/10"
+                    animate={{ scale: [1, 1.15, 1], opacity: [0.4, 0.8, 0.4] }}
+                    transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                  />
+                  {/* Outer ring */}
+                  <motion.div
+                    className="absolute inset-0 rounded-full border-[3px] border-purple-200/50 dark:border-purple-800/30"
+                    style={{ borderTopColor: 'rgb(147, 51, 234)', borderRightColor: 'rgb(147, 51, 234)' }}
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 3.5, repeat: Infinity, ease: 'linear' }}
+                  />
+                  {/* Middle ring */}
+                  <motion.div
+                    className="absolute inset-3 rounded-full border-[3px] border-fuchsia-200/30 dark:border-fuchsia-800/20"
+                    style={{ borderBottomColor: 'rgb(192, 38, 211)', borderLeftColor: 'rgb(192, 38, 211)' }}
+                    animate={{ rotate: -360 }}
+                    transition={{ duration: 2.2, repeat: Infinity, ease: 'linear' }}
+                  />
+                  {/* Inner ring */}
+                  <motion.div
+                    className="absolute inset-6 rounded-full border-[2px] border-indigo-200/20 dark:border-indigo-800/15"
+                    style={{ borderTopColor: 'rgb(99, 102, 241)', borderRightColor: 'rgb(99, 102, 241)' }}
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1.4, repeat: Infinity, ease: 'linear' }}
+                  />
                   {/* Orbiting particles */}
                   {[0, 1, 2].map(i => (
                     <motion.div
                       key={i}
                       className="absolute inset-0"
                       animate={{ rotate: 360 }}
-                      transition={{ duration: 4 + i * 1.5, repeat: Infinity, ease: 'linear', delay: i * 0.6 }}
+                      transition={{ duration: 4 + i * 1.5, repeat: Infinity, ease: 'linear', delay: i * 0.5 }}
                     >
                       <motion.div
-                        className={`absolute w-2.5 h-2.5 rounded-full ${
+                        className={`absolute w-2 h-2 rounded-full ${
                           i === 0 ? 'bg-purple-400' : i === 1 ? 'bg-fuchsia-400' : 'bg-indigo-400'
                         }`}
-                        style={{ top: `${4 + i * 6}px`, left: '50%', marginLeft: '-5px' }}
-                        animate={{ scale: [0.6, 1.2, 0.6], opacity: [0.4, 1, 0.4] }}
+                        style={{ top: `-4px`, left: '50%', marginLeft: '-4px' }}
+                        animate={{ scale: [0.6, 1.3, 0.6], opacity: [0.3, 1, 0.3] }}
                         transition={{ duration: 2, repeat: Infinity, delay: i * 0.4 }}
                       />
                     </motion.div>
                   ))}
-
                   {/* Central icon card */}
-                  <motion.div
-                    className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow-xl shadow-purple-500/30"
-                    animate={{ rotate: [0, 3, -3, 0], scale: [1, 1.04, 1] }}
-                    transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-                  >
-                    <SparklesIcon className="w-8 h-8 text-white" />
-                    {/* Shimmer overlay */}
+                  <div className="absolute inset-0 flex items-center justify-center">
                     <motion.div
-                      className="absolute inset-0 rounded-2xl bg-gradient-to-r from-transparent via-white/20 to-transparent"
-                      animate={{ x: ['-100%', '200%'] }}
-                      transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut', repeatDelay: 1 }}
-                    />
-                  </motion.div>
+                      className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-purple-500/30"
+                      animate={{ scale: [1, 1.08, 1], rotate: [0, 3, -3, 0] }}
+                      transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                    >
+                      <SparklesIcon className="w-7 h-7 text-white" />
+                      <motion.div
+                        className="absolute inset-0 rounded-2xl bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                        animate={{ x: ['-100%', '200%'] }}
+                        transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut', repeatDelay: 1 }}
+                      />
+                    </motion.div>
+                  </div>
                 </div>
 
                 <h3 className="relative text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                  {t('adaptation.generating', 'Génération du CV adapté...')}
+                  {t('adaptation.generating', 'Génération du CV adapté…')}
                 </h3>
-                <p className="relative text-gray-500 dark:text-gray-400 text-center max-w-md mb-6">
-                  {t('adaptation.generatingDescription', 'Optimisation du CV pour maximiser la correspondance avec la mission')}
-                </p>
+
+                {/* Cycling sub-message */}
+                <div className="relative h-6 mb-6">
+                  <AnimatePresence mode="wait">
+                    <motion.p
+                      key={cycleIndex}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      transition={{ duration: 0.3 }}
+                      className="text-sm text-gray-500 dark:text-gray-400 text-center"
+                    >
+                      {cycleMessages[cycleIndex]}
+                    </motion.p>
+                  </AnimatePresence>
+                </div>
 
                 {/* Shimmer progress bar */}
-                <div className="relative w-64 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mb-5">
+                <div className="relative w-64 h-1.5 bg-purple-100 dark:bg-purple-900/30 rounded-full overflow-hidden mb-5">
                   <motion.div
                     className="absolute inset-y-0 w-1/2 bg-gradient-to-r from-purple-500 via-fuchsia-500 to-purple-500 rounded-full"
                     animate={{ left: ['-50%', '100%'] }}
@@ -474,9 +608,21 @@ const ResumeAdaptPage = (): JSX.Element => {
                   />
                 </div>
 
-                <p className="relative text-sm text-gray-400 dark:text-gray-500">
-                  {t('adaptation.generatingTime', 'Cela peut prendre 30-90 secondes')}
+                <p className="relative text-xs text-gray-400 dark:text-gray-500">
+                  {t('adaptation.generatingTime', 'Cela peut prendre 30–90 secondes')}
                 </p>
+
+                {/* Bouncing dots */}
+                <div className="relative flex items-center gap-1.5 mt-3">
+                  {[0, 1, 2, 3].map(i => (
+                    <motion.div
+                      key={i}
+                      className="w-1.5 h-1.5 rounded-full bg-purple-400"
+                      animate={{ y: [0, -6, 0], opacity: [0.3, 1, 0.3] }}
+                      transition={{ duration: 1, repeat: Infinity, delay: i * 0.15, ease: 'easeInOut' }}
+                    />
+                  ))}
+                </div>
               </motion.div>
             )}
 

@@ -8,7 +8,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useResume } from '../context/ResumeContext';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { ArrowRightIcon, DocumentArrowDownIcon } from '@heroicons/react/24/outline';
+import { ArrowRightIcon, DocumentArrowDownIcon, CheckCircleIcon, SparklesIcon, MagnifyingGlassIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { Resume } from '../types/entities';
 import { resumeService } from '../utils/resumeService';
@@ -258,36 +258,72 @@ const ResumeExportPage = (): JSX.Element => {
         </div>
 
         {/* Step indicator */}
-        <div className="mb-6">
-          <div className="flex items-center gap-2 text-sm">
-            <Link
-              to={`/resumes/${id}/analysis`}
-              className="px-3 py-1 text-green-600 dark:text-green-400 hover:underline"
-            >
-              {t('resume.steps.analysis')} ✓
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="mb-6"
+        >
+          <div className="flex items-center">
+            {/* Step 1 — Analysis (past) */}
+            <Link to={`/resumes/${id}/analysis`} className="flex items-center gap-2 group">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-green-600 flex items-center justify-center shadow-sm shadow-green-500/20">
+                <CheckCircleIcon className="w-4 h-4 text-white" />
+              </div>
+              <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400 group-hover:underline">
+                {t('resume.steps.analysis')}
+              </span>
             </Link>
-            <ArrowRightIcon className="w-4 h-4 text-gray-400" />
+
+            {/* Connector 1→2 */}
+            <div className="w-10 sm:w-16 h-[3px] mx-2 bg-gradient-to-r from-emerald-400 to-green-500 rounded-full" />
+
+            {/* Step 2 — Improve */}
             {hasImprovedText ? (
-              <Link
-                to={`/resumes/${id}/improve`}
-                className="px-3 py-1 text-green-600 dark:text-green-400 hover:underline"
-              >
-                {t('resume.steps.improve')} ✓
+              <Link to={`/resumes/${id}/improve`} className="flex items-center gap-2 group">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-green-600 flex items-center justify-center shadow-sm shadow-green-500/20">
+                  <CheckCircleIcon className="w-4 h-4 text-white" />
+                </div>
+                <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400 group-hover:underline">
+                  {t('resume.steps.improve')}
+                </span>
               </Link>
             ) : (
-              <Link
-                to={`/resumes/${id}/analysis`}
-                className="px-3 py-1 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
-              >
-                {t('resume.steps.improve')}
+              <Link to={`/resumes/${id}/analysis`} className="flex items-center gap-2 group">
+                <div className="w-8 h-8 rounded-full border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center group-hover:border-indigo-400 transition-colors">
+                  <SparklesIcon className="w-4 h-4 text-gray-400 dark:text-gray-500 group-hover:text-indigo-500 transition-colors" />
+                </div>
+                <span className="text-sm text-gray-500 dark:text-gray-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                  {t('resume.steps.improve')}
+                </span>
               </Link>
             )}
-            <ArrowRightIcon className="w-4 h-4 text-gray-400" />
-            <span className="px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full font-medium">
-              {t('resume.steps.export')}
-            </span>
+
+            {/* Connector 2→3 */}
+            <div className="w-10 sm:w-16 h-[3px] mx-2 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700">
+              <motion.div
+                className="h-full rounded-full bg-gradient-to-r from-green-400 to-purple-500"
+                initial={false}
+                animate={{ width: hasImprovedText ? '100%' : '40%' }}
+                transition={{ duration: 0.6, ease: 'easeOut' }}
+              />
+            </div>
+
+            {/* Step 3 — Export (active) */}
+            <div className="flex items-center gap-2">
+              <motion.div
+                className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-400 to-fuchsia-600 flex items-center justify-center shadow-md shadow-purple-500/25"
+                animate={{ scale: [1, 1.1, 1] }}
+                transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+              >
+                <ArrowDownTrayIcon className="w-4 h-4 text-white" />
+              </motion.div>
+              <span className="text-sm font-semibold text-purple-600 dark:text-purple-400">
+                {t('resume.steps.export')}
+              </span>
+            </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Export options */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
