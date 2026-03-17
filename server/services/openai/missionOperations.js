@@ -139,17 +139,15 @@ function normalizeMatchAnalysis(analysis) {
  * Adapt resume to mission using OpenAI
  * @param {Object} params - Adaptation parameters
  * @param {string} params.resumeText - Resume text
- * @param {string} params.resumeAnalysis - Resume analysis
  * @param {string} params.missionTitle - Mission title
  * @param {string} params.missionContent - Mission content
  * @param {Object} params.matchAnalysis - Match analysis result
  * @param {string} params.model - OpenAI model to use
- * @param {string} params.adaptationPrompt - Adaptation prompt template
- * @returns {Promise<string>} - Adapted resume text
+ * @param {string} params.adaptationPrompt - Adaptation prompt template (with {ACCEPTED_INDUSTRIES}, {ANONYMIZATION_RULES}, {FILENAME} already injected)
+ * @returns {Promise<Object>} - { adaptedText, adaptedTitle, structuredData }
  */
 export async function adaptResumeToMission({
     resumeText,
-    resumeAnalysis,
     missionTitle,
     missionContent,
     matchAnalysis,
@@ -157,12 +155,15 @@ export async function adaptResumeToMission({
     adaptationPrompt,
     userMetadata = null
 }) {
+    const matchAnalysisStr = JSON.stringify(matchAnalysis, null, 2);
     const prompt = adaptationPrompt
         .replace('{RESUME_TEXT}', resumeText)
-        .replace('{RESUME_ANALYSIS}', resumeAnalysis || 'No analysis available')
         .replace('{MISSION_TITLE}', missionTitle)
         .replace('{MISSION_CONTENT}', missionContent)
-        .replace('{MATCH_ANALYSIS}', JSON.stringify(matchAnalysis, null, 2));
+        // New placeholder name used by the updated default prompt
+        .replace('{MATCH_ANALYSIS_JSON}', matchAnalysisStr)
+        // Legacy placeholder for backward-compatibility with user-customized prompts
+        .replace('{MATCH_ANALYSIS}', matchAnalysisStr);
 
     const systemPrompt = `You are an expert HR consultant specialized in CV adaptation. 
 You must respond with a valid JSON object following the exact structure specified in the user prompt.
@@ -191,14 +192,24 @@ Respond in the same language as the resume.`;
     try {
         const parsed = JSON.parse(content);
         
-        // New structured format with targetedTitle, professionalSummary, etc.
+        // New format: { name, summary, improvedText, improvements }
+        if (parsed.improvedText !== undefined) {
+            const adaptedTitle = parsed.summary?.title || parsed.summary?.targetRole || null;
+            return {
+                adaptedText: parsed.improvedText,
+                adaptedTitle: adaptedTitle,
+                structuredData: parsed
+            };
+        }
+
+        // Legacy structured format with targetedTitle, professionalSummary, etc.
         if (parsed.targetedTitle !== undefined) {
             // Convert structured JSON to HTML for display
             const adaptedText = convertAdaptationToHtml(parsed);
             return {
                 adaptedText,
                 adaptedTitle: parsed.targetedTitle || null,
-                structuredData: parsed // Keep the full structured data
+                structuredData: parsed
             };
         }
         

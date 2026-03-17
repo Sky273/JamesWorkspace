@@ -436,11 +436,34 @@ export async function adaptHandler(req, res) {
 
         const settings = await getLLMSettings();
         const model = settings.llmModel;
+        const cvMode = settings.cvMode || 'nominative';
         let adaptationPrompt = settings['Adaptation Prompt'] || DEFAULT_ADAPTATION_PROMPT;
 
         if (!model) {
             return res.status(500).json({ error: 'LLM model not configured in Settings.' });
         }
+
+        // Get original filename for injection
+        const originalFileName = resumeRecord.original_file_name || resumeRecord.name || null;
+        const fileNameValue = originalFileName || 'Non disponible';
+
+        // Inject accepted industries into the adaptation prompt
+        const acceptedIndustries = await getAcceptedIndustriesString();
+        adaptationPrompt = adaptationPrompt.replace('{ACCEPTED_INDUSTRIES}', acceptedIndustries);
+
+        // Inject anonymization rules based on cvMode (with FILENAME replaced)
+        let anonymizationRules = cvMode === 'anonymous' ? ANONYMIZATION_RULES_ANONYMOUS : ANONYMIZATION_RULES_NOMINATIVE;
+        anonymizationRules = anonymizationRules.replace(/{FILENAME}/g, fileNameValue);
+        adaptationPrompt = adaptationPrompt.replace('{ANONYMIZATION_RULES}', anonymizationRules);
+
+        // Inject filename into adaptation prompt
+        adaptationPrompt = adaptationPrompt.replace('{FILENAME}', fileNameValue);
+
+        safeLog('debug', 'Injected industries, anonymization rules and filename into adaptation prompt', {
+            industriesCount: acceptedIndustries.split(',').length,
+            cvMode,
+            fileName: fileNameValue
+        });
 
         // First do match analysis
         let matchPrompt = settings['Match Analysis Prompt'] || DEFAULT_MATCH_ANALYSIS_PROMPT;
@@ -448,7 +471,6 @@ export async function adaptHandler(req, res) {
 
         const adaptationResult = await adaptResumeToMission({
             resumeText,
-            resumeAnalysis: null,
             missionTitle,
             missionContent,
             matchAnalysis,
