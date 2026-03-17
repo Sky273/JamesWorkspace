@@ -18,7 +18,7 @@ interface Firm {
 interface FirmFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: { name: string }) => void;
+  onSubmit: (data: { name: string; logoFile?: File | null }) => void;
   firm: Firm | null;
   t: (key: string) => string;
 }
@@ -40,22 +40,7 @@ const FirmFormModal = ({ isOpen, onClose, onSubmit, firm, t }: FirmFormModalProp
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
-    
-    // If editing and a new file is selected, upload it first
-    if (firm?.id && selectedFile) {
-      try {
-        setUploading(true);
-        await userService.uploadFirmLogo(firm.id, selectedFile);
-        toast.success(t('users.management.messages.logoUploaded'));
-      } catch {
-        toast.error(t('users.management.messages.logoUploadFailed'));
-        setUploading(false);
-        return;
-      }
-      setUploading(false);
-    }
-    
-    onSubmit({ name });
+    onSubmit({ name, logoFile: selectedFile });
   };
 
   const handleNameChange = (e: ChangeEvent<HTMLInputElement>): void => {
@@ -127,9 +112,8 @@ const FirmFormModal = ({ isOpen, onClose, onSubmit, firm, t }: FirmFormModalProp
           />
         </div>
         
-        {/* Logo upload section - only show when editing */}
-        {firm?.id && (
-          <div>
+        {/* Logo upload section */}
+        <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               {t('users.management.modal.logo')}
             </label>
@@ -180,8 +164,7 @@ const FirmFormModal = ({ isOpen, onClose, onSubmit, firm, t }: FirmFormModalProp
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
               {t('users.management.modal.logoHint')}
             </p>
-          </div>
-        )}
+        </div>
         
         <div className="flex justify-end gap-3 pt-4">
           <button

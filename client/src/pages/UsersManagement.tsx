@@ -66,6 +66,7 @@ interface UserFormData {
 
 interface FirmFormData {
   name: string;
+  logoFile?: File | null;
 }
 
 interface Stats {
@@ -233,12 +234,25 @@ const UsersManagement = (): JSX.Element => {
 
   const handleFirmSubmit = async (formData: FirmFormData): Promise<void> => {
     try {
+      let firmId: string | undefined;
       if (selectedFirm) {
         await userService.updateCustomer(selectedFirm.id, { Name: formData.name });
+        firmId = selectedFirm.id;
         toast.success(t('users.management.messages.firmUpdated'));
       } else {
-        await userService.createCustomer({ Name: formData.name });
+        const newFirm = await userService.createCustomer({ Name: formData.name });
+        firmId = newFirm?.id;
         toast.success(t('users.management.messages.firmCreated'));
+      }
+      // Upload logo if a file was selected
+      if (firmId && formData.logoFile) {
+        try {
+          await userService.uploadFirmLogo(firmId, formData.logoFile);
+          toast.success(t('users.management.messages.logoUploaded'));
+        } catch (logoError) {
+          logger.error('Error uploading logo:', logoError);
+          toast.error(t('users.management.messages.logoUploadFailed'));
+        }
       }
       setFirmModalOpen(false);
       setSelectedFirm(null);
