@@ -3,7 +3,7 @@
  * TypeScript version
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -21,7 +21,8 @@ import { formatDateTime } from '../utils/dateFormatter';
 
 import { StatsCards, SearchAndFilters } from '../components/AdaptationsPage';
 import Pagination from '../components/Pagination';
-import { loadTinyMCE } from '../utils/lazyTinyMCE';
+import { TiptapEditor } from '../components/TiptapEditor';
+import type { TiptapEditorRef } from '../components/TiptapEditor';
 import { SkeletonAdaptationList } from '../components/ui/Skeleton';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { removeSuggestionMarkers } from '../utils/tinymceSuggestionsPlugin';
@@ -102,7 +103,7 @@ const AdaptationsPage = (): JSX.Element => {
   const [activeTab, setActiveTab] = useState<string>('analysis');
   const [editedAdaptedText, setEditedAdaptedText] = useState<string>('');
   const [isSaving, setIsSaving] = useState<boolean>(false);
-  const editorRef = useRef<{ on: (event: string, callback: () => void) => void; getContent: () => string; setContent: (content: string) => void; remove: () => void } | null>(null);
+  const editorRef = useRef<TiptapEditorRef | null>(null);
   const [editorReady, setEditorReady] = useState<boolean>(false);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
@@ -110,13 +111,6 @@ const AdaptationsPage = (): JSX.Element => {
   const [exportLoading, setExportLoading] = useState<boolean>(false);
   const [showExportModal, setShowExportModal] = useState<boolean>(false);
   const [adaptationToExport, setAdaptationToExport] = useState<Adaptation | null>(null);
-  const [tinymceLoaded, setTinymceLoaded] = useState<boolean>(false);
-
-  useEffect(() => {
-    let mounted = true;
-    loadTinyMCE().then(() => { if (mounted) setTinymceLoaded(true); }).catch((err) => { logger.error('Failed to load TinyMCE:', err); });
-    return () => { mounted = false; };
-  }, []);
 
   // Debounce search input
   useEffect(() => {
@@ -355,45 +349,6 @@ const AdaptationsPage = (): JSX.Element => {
     return missions.find(m => m.id === missionId) || null;
   };
 
-  const initEditor = useCallback((): void => {
-    const tinymce = window.tinymce as unknown as { init: (config: Record<string, unknown>) => void; get: (id: string) => { remove: () => void; getContent: () => string; setContent: (content: string) => void; on: (event: string, callback: () => void) => void } | null } | undefined;
-    if (tinymceLoaded && tinymce && activeTab === 'adapted' && showDetailModal) {
-      try {
-        const existingEditor = tinymce.get('adaptedCVEditor');
-        if (existingEditor) existingEditor.remove();
-        
-        tinymce.init({
-          selector: '#adaptedCVEditor',
-          license_key: 'gpl',
-          height: 500,
-          menubar: true,
-          plugins: 'advlist autolink lists link charmap preview code fullscreen table wordcount',
-          toolbar: 'undo redo | formatselect | bold italic | alignleft aligncenter alignright | bullist numlist | link | code fullscreen',
-          content_style: 'body { font-family: Arial, sans-serif; font-size: 14px; }',
-          setup: (editor: { on: (event: string, callback: () => void) => void; setContent: (content: string) => void; getContent: () => string; remove: () => void }) => {
-            editorRef.current = editor;
-            editor.on('init', () => { setEditorReady(true); editor.setContent(editedAdaptedText || ''); });
-            editor.on('change', () => { setEditedAdaptedText(editor.getContent()); });
-          }
-        });
-      } catch (error) {
-        logger.error('Error initializing TinyMCE:', error);
-      }
-    }
-  }, [tinymceLoaded, activeTab, showDetailModal, editedAdaptedText]);
-
-  useEffect(() => {
-    if (activeTab === 'adapted' && showDetailModal) {
-      const timer = setTimeout(() => { initEditor(); }, 100);
-      return () => clearTimeout(timer);
-    }
-    return () => {
-      const tinymce = window.tinymce as unknown as { init: (config: Record<string, unknown>) => void; get: (id: string) => { remove: () => void; getContent: () => string; setContent: (content: string) => void; on: (event: string, callback: () => void) => void } | null } | undefined;
-      if (tinymce) { const editor = tinymce.get('adaptedCVEditor'); if (editor) editor.remove(); }
-      editorRef.current = null;
-      setEditorReady(false);
-    };
-  }, [activeTab, showDetailModal, initEditor]);
 
   const handleSaveAdaptedCV = async (): Promise<void> => {
     if (!selectedAdaptation || !editorRef.current) return;
@@ -559,7 +514,15 @@ const AdaptationsPage = (): JSX.Element => {
                 );
               })()}
               {activeTab === 'analysis' && <AdaptationAnalysisView adaptation={selectedAdaptation} />}
-              {activeTab === 'adapted' && <div><textarea id="adaptedCVEditor" defaultValue={editedAdaptedText} className="hidden" /></div>}
+              {activeTab === 'adapted' && (
+                <TiptapEditor
+                  ref={editorRef}
+                  content={editedAdaptedText}
+                  onChange={(html) => setEditedAdaptedText(html)}
+                  onReady={() => setEditorReady(true)}
+                  height={500}
+                />
+              )}
             </div>
 
             <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 dark:border-gray-700">

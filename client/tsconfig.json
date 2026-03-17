@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
@@ -29,7 +29,15 @@
       "@hooks/*": ["src/hooks/*"],
       "@context/*": ["src/context/*"],
       "@types/*": ["src/types/*"],
-      "@root/*": ["../*"]
+      "@root/*": ["../*"],
+      "@tiptap/react": ["../node_modules/@tiptap/react/src/index.ts"],
+      "@tiptap/react/*": ["../node_modules/@tiptap/react/src/*/index.ts"],
+      "@tiptap/pm/*": ["../node_modules/@tiptap/pm/*/index.ts"],
+      "@tiptap/core": ["../node_modules/@tiptap/core/src/index.ts"],
+      "@tiptap/core/*": ["../node_modules/@tiptap/core/src/*/index.ts"],
+      "@tiptap/starter-kit": ["../node_modules/@tiptap/starter-kit/src/index.ts"],
+      "@tiptap/extensions": ["../node_modules/@tiptap/extensions/src/index.ts"],
+      "@tiptap/extension-*": ["../node_modules/@tiptap/extension-*/src/index.ts"]
     },
     
     "esModuleInterop": true,

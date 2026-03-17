@@ -1,5 +1,5 @@
 /**
- * MissionFormModal - Create/edit mission modal with TinyMCE
+ * MissionFormModal - Create/edit mission modal with Tiptap
  * Extracted from MissionsPage.tsx
  */
 
@@ -51,6 +51,7 @@ interface MissionFormModalProps {
   loadingDeals: boolean;
   onSubmit: (e: FormEvent<HTMLFormElement>) => void;
   onClose: () => void;
+  editorSlot?: React.ReactNode;
 }
 
 export default function MissionFormModal({
@@ -64,7 +65,8 @@ export default function MissionFormModal({
   loadingContacts,
   loadingDeals,
   onSubmit,
-  onClose
+  onClose,
+  editorSlot
 }: MissionFormModalProps) {
   const { t } = useTranslation();
 
@@ -195,7 +197,7 @@ export default function MissionFormModal({
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               {t('missions.missionContent')} *
             </label>
-            <div id="missionContentEditor" className="border border-gray-300 dark:border-gray-600 rounded-lg"></div>
+            {editorSlot || <div className="border border-gray-300 dark:border-gray-600 rounded-lg min-h-[400px]"></div>}
             <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
               {t('missions.editorHelp')}
             </p>

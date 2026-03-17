@@ -3,7 +3,7 @@
  * Displays a single adaptation by ID from URL parameter
  */
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -17,7 +17,8 @@ import { useAuthFetch } from '../hooks/useAuthFetch';
 import { createSafeHtml } from '../utils/sanitizer.frontend';
 import { createAuthOptionsWithCsrf, fetchWithAuth } from '../utils/apiInterceptor';
 import { templateService } from '../utils/templateService';
-import { loadTinyMCE } from '../utils/lazyTinyMCE';
+import { TiptapEditor } from '../components/TiptapEditor';
+import type { TiptapEditorRef } from '../components/TiptapEditor';
 import AdaptationAnalysisView from '../components/AdaptationAnalysisView';
 import SendEmailModal from '../components/ResumeAnalysis/SendEmailModal';
 import toast from 'react-hot-toast';
@@ -75,10 +76,9 @@ const AdaptationViewPage = (): JSX.Element => {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'adapted' | 'analysis' | 'mission'>('adapted');
   
-  // TinyMCE state
-  const [tinymceLoaded, setTinymceLoaded] = useState(false);
+  // Editor state
   const [editorReady, setEditorReady] = useState(false);
-  const editorRef = useRef<{ getContent: () => string; setContent: (content: string) => void } | null>(null);
+  const editorRef = useRef<TiptapEditorRef | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
   const [saving, setSaving] = useState(false);
   
@@ -148,10 +148,6 @@ const AdaptationViewPage = (): JSX.Element => {
     }
   };
 
-  // Load TinyMCE
-  useEffect(() => {
-    loadTinyMCE().then(() => setTinymceLoaded(true));
-  }, []);
 
   // Load templates
   useEffect(() => {
@@ -177,50 +173,6 @@ const AdaptationViewPage = (): JSX.Element => {
     fetchTemplates();
   }, []);
 
-  // Initialize TinyMCE editor
-  const initEditor = useCallback((): void => {
-    const tinymce = window.tinymce as unknown as { 
-      init: (config: Record<string, unknown>) => void; 
-      get: (id: string) => { remove: () => void; getContent: () => string; setContent: (content: string) => void; on: (event: string, callback: () => void) => void } | null 
-    } | undefined;
-    
-    if (tinymceLoaded && tinymce && activeTab === 'adapted' && adaptation?.['Adapted Text']) {
-      const existingEditor = tinymce.get('adaptation-editor');
-      if (existingEditor) {
-        existingEditor.remove();
-      }
-
-      tinymce.init({
-        selector: '#adaptation-editor',
-        license_key: 'gpl',
-        height: 500,
-        menubar: false,
-        plugins: 'lists link table code fullscreen',
-        toolbar: 'undo redo | formatselect | bold italic underline | alignleft aligncenter alignright | bullist numlist | link table | code fullscreen',
-        content_style: 'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 14px; }',
-        branding: false,
-        promotion: false,
-        skin: document.documentElement.classList.contains('dark') ? 'oxide-dark' : 'oxide',
-        content_css: document.documentElement.classList.contains('dark') ? 'dark' : 'default',
-        setup: (editor: { on: (event: string, callback: () => void) => void; getContent: () => string; setContent: (content: string) => void }) => {
-          editor.on('init', () => {
-            editor.setContent(adaptation?.['Adapted Text'] || '');
-            editorRef.current = editor;
-            setEditorReady(true);
-          });
-          editor.on('change', () => setHasChanges(true));
-          editor.on('keyup', () => setHasChanges(true));
-        }
-      });
-    }
-  }, [tinymceLoaded, activeTab, adaptation]);
-
-  useEffect(() => {
-    if (activeTab === 'adapted' && tinymceLoaded && adaptation) {
-      const timer = setTimeout(initEditor, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [activeTab, tinymceLoaded, adaptation, initEditor]);
 
   // Save adaptation
   const handleSave = async (): Promise<void> => {
@@ -503,19 +455,14 @@ const AdaptationViewPage = (): JSX.Element => {
                       </button>
                     </div>
                     
-                    {/* TinyMCE Editor */}
-                    <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-                      {!editorReady && (
-                        <div className="flex items-center justify-center h-[500px] bg-gray-50 dark:bg-gray-800">
-                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-                        </div>
-                      )}
-                      <textarea 
-                        id="adaptation-editor" 
-                        defaultValue={adaptation['Adapted Text']}
-                        style={{ visibility: editorReady ? 'visible' : 'hidden' }}
-                      />
-                    </div>
+                    {/* Tiptap Editor */}
+                    <TiptapEditor
+                      ref={editorRef}
+                      content={adaptation['Adapted Text']}
+                      onChange={() => setHasChanges(true)}
+                      onReady={() => setEditorReady(true)}
+                      height={500}
+                    />
                   </>
                 ) : (
                   <p className="text-gray-500 dark:text-gray-400 italic">

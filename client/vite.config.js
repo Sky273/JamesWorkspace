@@ -7,6 +7,55 @@ import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import compression from 'vite-plugin-compression';
 import zlib from 'zlib';
 
+// Tiptap v3 ships source-only (no dist/). This plugin resolves @tiptap/* to their TS source.
+const tiptapV3SourcePlugin = () => {
+  const tiptapDir = path.resolve(__dirname, '../node_modules/@tiptap');
+  return {
+    name: 'tiptap-v3-source',
+    enforce: 'pre',
+    resolveId(source, importer) {
+      // Handle @tiptap/* bare specifiers
+      if (source.startsWith('@tiptap/')) {
+        const match = source.match(/^@tiptap\/([^/]+)(?:\/(.+))?$/);
+        if (!match) return null;
+        const [, pkgName, subpath] = match;
+        const pkgDir = path.join(tiptapDir, pkgName);
+
+        // @tiptap/pm: subpath re-exports at root level (e.g. @tiptap/pm/state -> state/index.ts)
+        if (pkgName === 'pm' && subpath) {
+          const file = path.join(pkgDir, subpath, 'index.ts');
+          if (fs.existsSync(file)) return file;
+          return null;
+        }
+
+        // Subpath imports: try src/<subpath>.ts then src/<subpath>/index.ts
+        if (subpath) {
+          const srcFile = path.join(pkgDir, 'src', `${subpath}.ts`);
+          if (fs.existsSync(srcFile)) return srcFile;
+          const srcDir = path.join(pkgDir, 'src', subpath, 'index.ts');
+          if (fs.existsSync(srcDir)) return srcDir;
+          return null;
+        }
+
+        // Main entry: src/index.ts
+        const srcEntry = path.join(pkgDir, 'src', 'index.ts');
+        if (fs.existsSync(srcEntry)) return srcEntry;
+        return null;
+      }
+
+      // Handle relative imports from within @tiptap source that reference ../dist/
+      if (importer && importer.includes(path.join('node_modules', '@tiptap')) && source.includes('/dist/')) {
+        // Rewrite ../dist/foo/bar.js → ../src/foo.ts (strip directory from filename)
+        const rewritten = source.replace(/\/dist\//, '/src/').replace(/\.js$/, '.ts');
+        const resolved = path.resolve(path.dirname(importer), rewritten);
+        if (fs.existsSync(resolved)) return resolved;
+      }
+
+      return null;
+    }
+  };
+};
+
 // Plugin to configure HTTP server timeouts, compression, and diagnose 400 errors
 const httpConfigPlugin = () => ({
   name: 'http-config',
@@ -150,6 +199,7 @@ export default defineConfig(({ mode }) => {
   
   return {
   plugins: [
+    tiptapV3SourcePlugin(),
     react(),
     nodePolyfills({
       globals: {
@@ -252,7 +302,6 @@ export default defineConfig(({ mode }) => {
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      '/tinymce': path.resolve(__dirname, '../node_modules/tinymce'),
       '@root': path.resolve(__dirname, '..'),
       // Fix for html-parse-stringify ESM issue in Vite 7 - use UMD version
       'html-parse-stringify': path.resolve(__dirname, '../node_modules/html-parse-stringify/dist/html-parse-stringify.umd.js'),
@@ -274,28 +323,7 @@ export default defineConfig(({ mode }) => {
       'react-i18next',
       'i18next',
       'i18next-browser-languagedetector',
-      'html-parse-stringify',
-      'tinymce/tinymce',
-      'tinymce/icons/default',
-      'tinymce/themes/silver',
-      'tinymce/models/dom/model',
-      'tinymce/plugins/advlist',
-      'tinymce/plugins/autolink',
-      'tinymce/plugins/lists',
-      'tinymce/plugins/link',
-      'tinymce/plugins/image',
-      'tinymce/plugins/charmap',
-      'tinymce/plugins/preview',
-      'tinymce/plugins/anchor',
-      'tinymce/plugins/searchreplace',
-      'tinymce/plugins/visualblocks',
-      'tinymce/plugins/code',
-      'tinymce/plugins/fullscreen',
-      'tinymce/plugins/insertdatetime',
-      'tinymce/plugins/media',
-      'tinymce/plugins/table',
-      'tinymce/plugins/help',
-      'tinymce/plugins/wordcount'
+      'html-parse-stringify'
     ]
   },
   build: {
@@ -306,7 +334,7 @@ export default defineConfig(({ mode }) => {
     // Enable source maps for debugging
     sourcemap: true,
     // Chunk size warning limit (in kB)
-    // Increased to 1500 to suppress warnings for necessary large libs (TinyMCE, maplibre, Three.js)
+    // Increased to 1500 to suppress warnings for necessary large libs (maplibre, Three.js)
     // These libs are already lazy-loaded, so they don't affect initial page load
     chunkSizeWarningLimit: 1500,
     // Target modern browsers for smaller output
@@ -316,7 +344,7 @@ export default defineConfig(({ mode }) => {
       polyfill: false
     },
     commonjsOptions: {
-      include: [/tinymce/, /node_modules/],
+      include: [/node_modules/],
       transformMixedEsModules: true,
       // Fix for void-elements and html-parse-stringify in Vite 7
       esmExternals: true,
@@ -332,8 +360,12 @@ export default defineConfig(({ mode }) => {
         // Manual chunk splitting for better caching
         manualChunks(id) {
           if (id.includes('node_modules')) {
-            // React core
-            if (id.includes('react-dom') || id.includes('react-router') || id.includes('/react/')) {
+            // Tiptap & ProseMirror (MUST be before React check: @tiptap/react contains '/react/')
+            if (id.includes('@tiptap') || id.includes('prosemirror')) {
+              return 'vendor-tiptap';
+            }
+            // React core (includes react-i18next to avoid circular with vendor-i18n)
+            if (id.includes('react-dom') || id.includes('react-router') || id.includes('/react/') || id.includes('react-i18next')) {
               return 'vendor-react';
             }
             // UI libraries
@@ -352,11 +384,7 @@ export default defineConfig(({ mode }) => {
             if (id.includes('pdfjs-dist') || id.includes('html2pdf') || id.includes('jspdf')) {
               return 'vendor-pdf';
             }
-            // TinyMCE
-            if (id.includes('tinymce')) {
-              return 'vendor-tinymce';
-            }
-            // i18n
+            // i18n (pure i18next only; react-i18next is in vendor-react)
             if (id.includes('i18next')) {
               return 'vendor-i18n';
             }

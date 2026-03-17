@@ -1,15 +1,15 @@
 /**
  * Original Text Tab Component
- * TypeScript version with TinyMCE editor for editing
+ * TypeScript version with Tiptap editor for editing
  */
 
 import { useEffect, useState, useRef, useCallback, ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { UserIcon, BriefcaseIcon } from '@heroicons/react/24/outline';
 import { useResume } from '../../context/ResumeContext';
-import { loadTinyMCE } from '../../utils/lazyTinyMCE';
-import { TinyMCEEditor } from '../../types/tinymce.d';
-import { registerSuggestionsPlugin, parseSuggestions, removeSuggestionMarkers } from '../../utils/tinymceSuggestionsPlugin';
+import { removeSuggestionMarkers } from '../../utils/tinymceSuggestionsPlugin';
+import { TiptapEditor } from '../TiptapEditor';
+import type { TiptapEditorRef } from '../TiptapEditor';
 import toast from 'react-hot-toast';
 import logger from '../../utils/logger.frontend';
 
@@ -30,12 +30,10 @@ interface OriginalTextTabProps {
 const OriginalTextTab = ({ resume }: OriginalTextTabProps): JSX.Element => {
   const { t } = useTranslation();
   const { updateOriginalContent, updateResumeAnalysis } = useResume();
-  const [tinymceLoaded, setTinymceLoaded] = useState(false);
   const [editorReady, setEditorReady] = useState(false);
   const [saving, setSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
-  const editorRef = useRef<TinyMCEEditor | null>(null);
-  const initializationInProgress = useRef(false);
+  const editorRef = useRef<TiptapEditorRef | null>(null);
   const initialContentRef = useRef<string>('');
   
   // Name and Title state
@@ -74,74 +72,12 @@ const OriginalTextTab = ({ resume }: OriginalTextTabProps): JSX.Element => {
     }
   }, [professionalTitle, resume, updateResumeAnalysis, t]);
 
-  // Load TinyMCE
+  // Store initial content for change detection
   useEffect(() => {
-    let mounted = true;
-    loadTinyMCE()
-      .then(() => { if (mounted) setTinymceLoaded(true); })
-      .catch((err) => { logger.error('Failed to load TinyMCE:', err); });
-    return () => { mounted = false; };
-  }, []);
-
-  // Initialize TinyMCE editor
-  useEffect(() => {
-    const tinymce = window.tinymce;
-    if (!tinymceLoaded || !tinymce || initializationInProgress.current) return;
-    if (!resume?.['Original Text']) return;
-
-    const init = async (): Promise<void> => {
-      try {
-        initializationInProgress.current = true;
-        const existingEditor = tinymce.get('originalTextEditor');
-        if (existingEditor) existingEditor.remove();
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        // Store initial content for change detection
-        initialContentRef.current = resume['Original Text'] || '';
-
-        await tinymce.init({
-          selector: '#originalTextEditor',
-          height: 500,
-          menubar: true,
-          plugins: ['advlist', 'autolink', 'lists', 'link', 'charmap', 'preview', 'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen', 'insertdatetime', 'table', 'help', 'wordcount'],
-          toolbar: 'undo redo | blocks | bold italic backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | suggestions | help',
-          content_style: `body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; padding-left: 30px !important; }`,
-          branding: false,
-          promotion: false,
-          license_key: 'gpl',
-          setup: (editor: TinyMCEEditor) => {
-            editorRef.current = editor;
-            
-            // Register suggestions plugin with parsed suggestions from original analysis
-            const suggestions = parseSuggestions(resume['Key Improvements']);
-            registerSuggestionsPlugin(editor, { suggestions });
-            
-            editor.on('init', () => {
-              setEditorReady(true);
-              editor.setContent(resume['Original Text'] || '');
-            });
-
-            // Track changes
-            editor.on('change keyup', () => {
-              const currentContent = editor.getContent();
-              setHasChanges(currentContent !== initialContentRef.current);
-            });
-          }
-        });
-      } catch (err) {
-        logger.error('Failed to initialize TinyMCE:', err);
-      } finally {
-        initializationInProgress.current = false;
-      }
-    };
-
-    init();
-
-    return () => {
-      const editor = tinymce.get('originalTextEditor');
-      if (editor) editor.remove();
-    };
-  }, [tinymceLoaded, resume]);
+    if (resume?.['Original Text']) {
+      initialContentRef.current = resume['Original Text'];
+    }
+  }, [resume]);
 
   // Handle save
   const handleSave = useCallback(async () => {
@@ -250,25 +186,14 @@ const OriginalTextTab = ({ resume }: OriginalTextTabProps): JSX.Element => {
         </div>
       </div>
 
-      {/* TinyMCE Editor */}
-      <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-        {!editorReady && (
-          <div className="flex items-center justify-center h-[500px] bg-gray-50 dark:bg-gray-900/50">
-            <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
-              <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              {t('common.loading', 'Loading editor...')}
-            </div>
-          </div>
-        )}
-        <textarea 
-          id="originalTextEditor" 
-          defaultValue={resume['Original Text'] || ''} 
-          style={{ visibility: editorReady ? 'visible' : 'hidden' }}
-        />
-      </div>
+      {/* Tiptap Editor */}
+      <TiptapEditor
+        ref={editorRef}
+        content={resume['Original Text'] || ''}
+        onChange={(html) => setHasChanges(html !== initialContentRef.current)}
+        onReady={() => setEditorReady(true)}
+        height={500}
+      />
     </div>
   );
 };

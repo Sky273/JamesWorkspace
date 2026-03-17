@@ -16,7 +16,8 @@ import { formatDate } from '../utils/dateFormatter';
 
 import { StatsCards, SearchAndActions } from '../components/MissionsPage';
 import Pagination from '../components/Pagination';
-import { loadTinyMCE } from '../utils/lazyTinyMCE';
+import { TiptapEditor } from '../components/TiptapEditor';
+import type { TiptapEditorRef } from '../components/TiptapEditor';
 import { SkeletonMissionList } from '../components/ui/Skeleton';
 import Breadcrumbs from '../components/Breadcrumbs';
 import MissionCard from './MissionCard';
@@ -79,8 +80,6 @@ interface Stats {
   firms: number;
 }
 
-// TinyMCE types are declared in src/types/tinymce.d.ts
-
 const MissionsPage = (): JSX.Element => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -108,9 +107,8 @@ const MissionsPage = (): JSX.Element => {
     'Firm ID': '',
     'Deal ID': ''
   });
-  const editorRef = useRef<{ setContent: (content: string) => void; getContent: () => string } | null>(null);
+  const editorRef = useRef<TiptapEditorRef | null>(null);
   const [editorReady, setEditorReady] = useState<boolean>(false);
-  const [tinymceLoaded, setTinymceLoaded] = useState<boolean>(false);
   const [previewMission, setPreviewMission] = useState<Mission | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -119,17 +117,6 @@ const MissionsPage = (): JSX.Element => {
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loadingDeals, setLoadingDeals] = useState<boolean>(false);
 
-  useEffect(() => {
-    let mounted = true;
-    loadTinyMCE()
-      .then(() => {
-        if (mounted) setTinymceLoaded(true);
-      })
-      .catch((err) => {
-        logger.error('Failed to load TinyMCE:', err);
-      });
-    return () => { mounted = false; };
-  }, []);
 
   // Fetch clients when modal opens
   const fetchClients = useCallback(async (): Promise<void> => {
@@ -343,10 +330,6 @@ const MissionsPage = (): JSX.Element => {
     setEditingMission(null);
     setFormData({ Title: '', Content: '', Status: 'Active', 'Client ID': '', 'Contact ID': '', 'Firm ID': '', 'Deal ID': '' });
     setContacts([]);
-    const tinymce = window.tinymce as unknown as { init: (config: Record<string, unknown>) => void; get: (id: string) => { remove: () => void; getContent: () => string; setContent: (content: string) => void } | null } | undefined;
-    if (tinymce && tinymce.get('missionContentEditor')) {
-      tinymce.get('missionContentEditor')?.remove();
-    }
     setEditorReady(false);
   };
 
@@ -357,67 +340,6 @@ const MissionsPage = (): JSX.Element => {
     return formatDate(dateString, 'medium') || 'Non définie';
   };
 
-  useEffect(() => {
-    const tinymce = window.tinymce as unknown as { init: (config: Record<string, unknown>) => void; get: (id: string) => { remove: () => void; getContent: () => string; setContent: (content: string) => void } | null } | undefined;
-    if (!showModal || !tinymceLoaded || !tinymce) return;
-
-    const initEditor = async (): Promise<void> => {
-      try {
-        if (tinymce.get('missionContentEditor')) {
-          tinymce.get('missionContentEditor')?.remove();
-        }
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        await tinymce.init({
-          selector: '#missionContentEditor',
-          height: 400,
-          menubar: false,
-          plugins: [
-            'advlist', 'autolink', 'lists', 'link', 'charmap', 'preview',
-            'searchreplace', 'visualblocks', 'code', 'fullscreen',
-            'table', 'help', 'wordcount'
-          ],
-          toolbar: 'undo redo | formatselect | bold italic underline | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link | removeformat | code | help',
-          content_style: 'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-size: 14px; }',
-          branding: false,
-          promotion: false,
-          license_key: 'gpl',
-          setup: (editor: { on: (event: string, callback: () => void) => void; setContent: (content: string) => void; getContent: () => string }) => {
-            editorRef.current = editor;
-            editor.on('init', () => {
-              setEditorReady(true);
-              editor.setContent(formData.Content || '');
-            });
-            editor.on('change', () => {
-              setFormData(prev => ({ ...prev, Content: editor.getContent() }));
-            });
-          }
-        });
-      } catch (error) {
-        logger.error('TinyMCE initialization error:', error);
-        toast.error('Erreur lors de l\'initialisation de l\'éditeur');
-      }
-    };
-
-    initEditor();
-
-    return () => {
-      const tinymceCleanup = window.tinymce as unknown as { get: (id: string) => { remove: () => void } | null } | undefined;
-      if (tinymceCleanup && tinymceCleanup.get('missionContentEditor')) {
-        tinymceCleanup.get('missionContentEditor')?.remove();
-      }
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showModal, tinymceLoaded]);
-
-  useEffect(() => {
-    if (editorReady && editorRef.current && showModal) {
-      const currentContent = editorRef.current.getContent();
-      if (currentContent !== formData.Content) {
-        editorRef.current.setContent(formData.Content || '');
-      }
-    }
-  }, [formData.Content, editorReady, showModal]);
 
   const stats: Stats = {
     total: missions.length,
@@ -522,6 +444,15 @@ const MissionsPage = (): JSX.Element => {
           loadingDeals={loadingDeals}
           onSubmit={handleSubmit}
           onClose={() => { setShowModal(false); resetForm(); }}
+          editorSlot={
+            <TiptapEditor
+              ref={editorRef}
+              content={formData.Content}
+              onChange={(html) => setFormData({ ...formData, Content: html })}
+              onReady={() => setEditorReady(true)}
+              height={400}
+            />
+          }
         />
       )}
     </motion.div>

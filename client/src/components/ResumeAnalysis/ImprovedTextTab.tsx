@@ -39,9 +39,10 @@ interface ImprovedTextTabProps {
   onAIModify?: (instructions: string) => Promise<string>;
   onVersionRestored?: (newVersion: number) => void;
   onAdaptToMission?: () => void;
+  editorSlot?: React.ReactNode;
 }
 
-const ImprovedTextTab = ({ resume, onSave, onUpdateField, editorReady = false, onAIModify, onVersionRestored, onAdaptToMission }: ImprovedTextTabProps): JSX.Element => {
+const ImprovedTextTab = ({ resume, onSave, onUpdateField, editorReady = false, onAIModify, onVersionRestored, onAdaptToMission, editorSlot }: ImprovedTextTabProps): JSX.Element => {
   const { t } = useTranslation();
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [candidateName, setCandidateName] = useState<string>(resume['Name'] || '');
@@ -254,7 +255,7 @@ const ImprovedTextTab = ({ resume, onSave, onUpdateField, editorReady = false, o
       </div>
 
       <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-        <div id="templateEditor" className="min-h-[500px]"></div>
+        {editorSlot || <div className="min-h-[500px]"></div>}
       </div>
 
       {/* AI Modification Section */}

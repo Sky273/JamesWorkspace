@@ -24,10 +24,10 @@ import CompareTab from '../components/ResumeAnalysis/CompareTab';
 import OverviewTab from '../components/ResumeAnalysis/OverviewTab';
 import PipelineTab from '../components/ResumeAnalysis/PipelineTab';
 import ResumeComments from '../components/ResumeComments';
-import { loadTinyMCE } from '../utils/lazyTinyMCE';
 import { fetchWithAuth, createAuthOptionsWithCsrf } from '../utils/apiInterceptor';
-import { TinyMCEEditor } from '../types/tinymce.d';
-import { registerSuggestionsPlugin, parseSuggestions, removeSuggestionMarkers } from '../utils/tinymceSuggestionsPlugin';
+import { removeSuggestionMarkers } from '../utils/tinymceSuggestionsPlugin';
+import { TiptapEditor } from '../components/TiptapEditor';
+import type { TiptapEditorRef } from '../components/TiptapEditor';
 
 const ResumeImprovePage = (): JSX.Element => {
   const { id } = useParams<{ id: string }>();
@@ -39,10 +39,8 @@ const ResumeImprovePage = (): JSX.Element => {
   const [isImproving, setIsImproving] = useState(false);
   const [activeTab, setActiveTab] = useState<'improved' | 'compare' | 'analysis' | 'pipeline'>('improved');
   const [localResume, setLocalResume] = useState<Resume | null>(null);
-  const [tinymceLoaded, setTinymceLoaded] = useState(false);
   const [editorReady, setEditorReady] = useState(false);
-  const editorRef = useRef<TinyMCEEditor | null>(null);
-  const initializationInProgress = useRef(false);
+  const editorRef = useRef<TiptapEditorRef | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareUrl, setShareUrl] = useState<string>('');
   const [shareLoading, setShareLoading] = useState(false);
@@ -89,65 +87,6 @@ const ResumeImprovePage = (): JSX.Element => {
     }
   }, [currentResume]);
 
-  // Load TinyMCE
-  useEffect(() => {
-    let mounted = true;
-    loadTinyMCE()
-      .then(() => { if (mounted) setTinymceLoaded(true); })
-      .catch((err) => { logger.error('Failed to load TinyMCE:', err); });
-    return () => { mounted = false; };
-  }, []);
-
-  // Initialize TinyMCE editor when on improved tab with improved text
-  useEffect(() => {
-    const tinymce = window.tinymce;
-    if (!tinymceLoaded || !tinymce || initializationInProgress.current) return;
-    if (activeTab !== 'improved' || !localResume?.['Improved Text']) return;
-
-    const init = async (): Promise<void> => {
-      try {
-        initializationInProgress.current = true;
-        const existingEditor = tinymce.get('templateEditor');
-        if (existingEditor) existingEditor.remove();
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        await tinymce.init({
-          selector: '#templateEditor',
-          height: 500,
-          menubar: true,
-          plugins: ['advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview', 'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen', 'insertdatetime', 'media', 'table', 'help', 'wordcount'],
-          toolbar: 'undo redo | formatselect | bold italic backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | suggestions | help',
-          content_style: `body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 14px; padding-left: 30px !important; }`,
-          branding: false,
-          promotion: false,
-          license_key: 'gpl',
-          setup: (editor: TinyMCEEditor) => {
-            editorRef.current = editor;
-            
-            // Register suggestions plugin with parsed suggestions
-            const suggestions = parseSuggestions(localResume['Improved Key Improvements'] || localResume['Key Improvements']);
-            registerSuggestionsPlugin(editor, { suggestions });
-            
-            editor.on('init', () => {
-              setEditorReady(true);
-              editor.setContent(localResume['Improved Text'] || '');
-            });
-          }
-        });
-      } catch (err) {
-        logger.error('Failed to initialize TinyMCE:', err);
-      } finally {
-        initializationInProgress.current = false;
-      }
-    };
-
-    init();
-
-    return () => {
-      const editor = tinymce.get('templateEditor');
-      if (editor) editor.remove();
-    };
-  }, [tinymceLoaded, activeTab, localResume]);
 
   const handleImprove = useCallback(async () => {
     if (!currentResume || isImproving) return;
@@ -189,9 +128,7 @@ const ResumeImprovePage = (): JSX.Element => {
   const handleAIModify = useCallback(async (instructions: string): Promise<string> => {
     if (!currentResume) return '';
     try {
-      const tinymce = window.tinymce;
-      const editor = tinymce?.get('templateEditor');
-      const currentContent = editor?.getContent() || localResume?.['Improved Text'] || '';
+      const currentContent = editorRef.current?.getContent() || localResume?.['Improved Text'] || '';
       
       const authOptions = await createAuthOptionsWithCsrf({
         method: 'POST',
@@ -206,8 +143,8 @@ const ResumeImprovePage = (): JSX.Element => {
       }
 
       const { modifiedContent, message } = await response.json();
-      if (editor && modifiedContent) {
-        editor.setContent(modifiedContent);
+      if (editorRef.current && modifiedContent) {
+        editorRef.current.setContent(modifiedContent);
       }
       return message || 'CV modifié avec succès par l\'IA';
     } catch (error) {
@@ -505,6 +442,14 @@ const ResumeImprovePage = (): JSX.Element => {
                     onAIModify={handleAIModify}
                     onVersionRestored={handleVersionRestored}
                     onAdaptToMission={() => navigate(`/resumes/${id}/adapt`)}
+                    editorSlot={
+                      <TiptapEditor
+                        ref={editorRef}
+                        content={localResume?.['Improved Text'] || ''}
+                        onReady={() => setEditorReady(true)}
+                        height={500}
+                      />
+                    }
                   />
                 )}
                 {activeTab === 'compare' && <CompareTab resume={localResume} />}

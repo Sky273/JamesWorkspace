@@ -12,7 +12,8 @@ import { useTranslation } from 'react-i18next';
 import logger from '../utils/logger.frontend';
 import AdminFirmSelector from '../components/AdminFirmSelector';
 
-import { loadTinyMCE } from '../utils/lazyTinyMCE';
+import { TiptapEditor } from '../components/TiptapEditor';
+import type { TiptapEditorRef } from '../components/TiptapEditor';
 
 interface FormData {
   name: string;
@@ -28,28 +29,23 @@ interface FormData {
   firmId: string;
 }
 
-// TinyMCE types are declared in src/types/tinymce.d.ts
-
 const NewTemplatePage = (): JSX.Element => {
   const navigate = useNavigate();
   const { id } = useParams<{ id?: string }>();
-  const headerEditorRef = useRef<{ setContent: (content: string) => void; getContent: () => string } | null>(null);
-  const bodyEditorRef = useRef<{ setContent: (content: string) => void; getContent: () => string } | null>(null);
-  const footerEditorRef = useRef<{ setContent: (content: string) => void; getContent: () => string } | null>(null);
-  const initialContentRef = useRef<{ header: string; body: string; footer: string }>({ header: '', body: '', footer: '' });
-  const editorsInitializedRef = useRef<boolean>(false);
+  const headerEditorRef = useRef<TiptapEditorRef | null>(null);
+  const bodyEditorRef = useRef<TiptapEditorRef | null>(null);
+  const footerEditorRef = useRef<TiptapEditorRef | null>(null);
+  const editorsReadyCount = useRef<number>(0);
   const [editorReady, setEditorReady] = useState<boolean>(false);
-  const [tinymceLoaded, setTinymceLoaded] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [dataReady, setDataReady] = useState<boolean>(false);
   const { t } = useTranslation();
 
-  useEffect(() => {
-    let mounted = true;
-    loadTinyMCE()
-      .then(() => { if (mounted) setTinymceLoaded(true); })
-      .catch((err) => { logger.error('Failed to load TinyMCE:', err); toast.error('Failed to load editor'); });
-    return () => { mounted = false; };
+  const handleEditorReady = useCallback(() => {
+    editorsReadyCount.current++;
+    if (editorsReadyCount.current >= 3) {
+      setEditorReady(true);
+    }
   }, []);
 
   const [formData, setFormData] = useState<FormData>({
@@ -87,12 +83,6 @@ const NewTemplatePage = (): JSX.Element => {
             firmId: ''
           };
           setFormData(newFormData);
-          // Store initial content for editors
-          initialContentRef.current = {
-            header: newFormData.headerContent,
-            body: newFormData.templateContent,
-            footer: newFormData.footerContent
-          };
           // Clear sessionStorage after loading
           sessionStorage.removeItem('extractedTemplate');
           toast.success(t('templates.extract.templateLoaded'));
@@ -126,12 +116,6 @@ const NewTemplatePage = (): JSX.Element => {
           firmId: template.FirmId || template.firm_id || ''
         };
         setFormData(newFormData);
-        // Store initial content for editors
-        initialContentRef.current = {
-          header: newFormData.headerContent,
-          body: newFormData.templateContent,
-          footer: newFormData.footerContent
-        };
         setDataReady(true);
       } catch (error) {
         logger.error('Error fetching template:', error);
@@ -181,128 +165,6 @@ const NewTemplatePage = (): JSX.Element => {
     });
   };
 
-  // Configuration commune pour les éditeurs
-  const baseEditorConfig = {
-    skin: 'oxide',
-    content_css: 'default',
-    promotion: false,
-    branding: false,
-    license_key: 'gpl',
-    convert_urls: false,
-    relative_urls: false,
-    remove_script_host: false,
-    base_url: '/tinymce',
-    document_base_url: window.location.origin,
-    content_style: `body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; line-height: 1.4; margin: 1rem; }`,
-    images_upload_handler: handleImageUpload,
-    file_picker_callback: handleFilePicker,
-  };
-
-  // Configuration complète pour tous les éditeurs
-  const fullEditorConfig = {
-    ...baseEditorConfig,
-    menubar: true,
-    file_picker_types: 'file image media',
-    plugins: 'advlist autolink lists link image charmap preview anchor searchreplace visualblocks code fullscreen insertdatetime media table help wordcount',
-    toolbar1: 'undo redo | blocks | bold italic | alignleft aligncenter alignright alignjustify | bullist numlist | link image',
-    toolbar2: 'formatselect | forecolor backcolor | table | fullscreen code help',
-    toolbar_mode: 'sliding',
-    toolbar_sticky: true,
-  };
-
-  const initEditors = useCallback((): void => {
-    const tinymce = window.tinymce;
-    if (!tinymce || editorsInitializedRef.current) return;
-
-    editorsInitializedRef.current = true;
-    let editorsReady = 0;
-    const totalEditors = 3;
-
-    const checkAllEditorsReady = () => {
-      editorsReady++;
-      if (editorsReady === totalEditors) {
-        setEditorReady(true);
-      }
-    };
-
-    try {
-      // Header Editor (complet)
-      tinymce.init({
-        ...fullEditorConfig,
-        height: 250,
-        selector: '#headerEditor',
-        setup: (editor: { on: (event: string, callback: () => void) => void; setContent: (content: string) => void; getContent: () => string }) => {
-          editor.on('init', () => {
-            headerEditorRef.current = editor;
-            editor.setContent(initialContentRef.current.header || '');
-            checkAllEditorsReady();
-          });
-          editor.on('change', () => {
-            const content = editor.getContent();
-            setFormData(prev => ({ ...prev, headerContent: content }));
-          });
-        },
-      });
-
-      // Body Editor (complet)
-      tinymce.init({
-        ...fullEditorConfig,
-        height: 400,
-        selector: '#bodyEditor',
-        setup: (editor: { on: (event: string, callback: () => void) => void; setContent: (content: string) => void; getContent: () => string }) => {
-          editor.on('init', () => {
-            bodyEditorRef.current = editor;
-            editor.setContent(initialContentRef.current.body || '');
-            checkAllEditorsReady();
-          });
-          editor.on('change', () => {
-            const content = editor.getContent();
-            setFormData(prev => ({ ...prev, templateContent: content }));
-          });
-        },
-      });
-
-      // Footer Editor (complet)
-      tinymce.init({
-        ...fullEditorConfig,
-        height: 250,
-        selector: '#footerEditor',
-        setup: (editor: { on: (event: string, callback: () => void) => void; setContent: (content: string) => void; getContent: () => string }) => {
-          editor.on('init', () => {
-            footerEditorRef.current = editor;
-            editor.setContent(initialContentRef.current.footer || '');
-            checkAllEditorsReady();
-          });
-          editor.on('change', () => {
-            const content = editor.getContent();
-            setFormData(prev => ({ ...prev, footerContent: content }));
-          });
-        },
-      });
-    } catch (error) {
-      logger.error('Error initializing TinyMCE editors:', error);
-      editorsInitializedRef.current = false;
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    if (!loading && tinymceLoaded && dataReady && !editorsInitializedRef.current) {
-      initEditors();
-    }
-    return () => {
-      const tinymce = window.tinymce;
-      if (tinymce) {
-        tinymce.remove('#headerEditor');
-        tinymce.remove('#bodyEditor');
-        tinymce.remove('#footerEditor');
-        headerEditorRef.current = null;
-        bodyEditorRef.current = null;
-        footerEditorRef.current = null;
-        editorsInitializedRef.current = false;
-      }
-    };
-  }, [loading, tinymceLoaded, dataReady, initEditors]);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
@@ -399,34 +261,46 @@ const NewTemplatePage = (): JSX.Element => {
 
             {/* Header Editor */}
             <div>
-              <label htmlFor="headerEditor" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 {t('templates.editor.header.label')}
                 <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">({t('templates.editor.header.hint')})</span>
               </label>
-              <div className="min-h-[250px] border rounded-md bg-white dark:bg-gray-800">
-                <textarea id="headerEditor" defaultValue={formData.headerContent} className="hidden" />
-              </div>
+              <TiptapEditor
+                ref={headerEditorRef}
+                content={formData.headerContent}
+                onChange={(html) => setFormData(prev => ({ ...prev, headerContent: html }))}
+                onReady={handleEditorReady}
+                height={250}
+              />
             </div>
 
             {/* Body Editor */}
             <div>
-              <label htmlFor="bodyEditor" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 {t('templates.editor.content.label')}
               </label>
-              <div className="min-h-[400px] border rounded-md bg-white dark:bg-gray-800">
-                <textarea id="bodyEditor" defaultValue={formData.templateContent} className="hidden" />
-              </div>
+              <TiptapEditor
+                ref={bodyEditorRef}
+                content={formData.templateContent}
+                onChange={(html) => setFormData(prev => ({ ...prev, templateContent: html }))}
+                onReady={handleEditorReady}
+                height={400}
+              />
             </div>
 
             {/* Footer Editor */}
             <div>
-              <label htmlFor="footerEditor" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 {t('templates.editor.footer.label')}
                 <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">({t('templates.editor.footer.hint')})</span>
               </label>
-              <div className="min-h-[250px] border rounded-md bg-white dark:bg-gray-800">
-                <textarea id="footerEditor" defaultValue={formData.footerContent} className="hidden" />
-              </div>
+              <TiptapEditor
+                ref={footerEditorRef}
+                content={formData.footerContent}
+                onChange={(html) => setFormData(prev => ({ ...prev, footerContent: html }))}
+                onReady={handleEditorReady}
+                height={250}
+              />
             </div>
 
             {/* Footer Height */}

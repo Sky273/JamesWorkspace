@@ -209,23 +209,6 @@ export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
     // Set user to null first to trigger component unmounts
     setUser(null);
     
-    // Clean up TinyMCE editors to prevent "isUnsaved" errors
-    try {
-      const tinymce = (window as unknown as { tinymce?: { editors?: Array<{ remove: () => void }> } }).tinymce;
-      if (tinymce?.editors) {
-        // Remove all TinyMCE editors before redirect
-        [...tinymce.editors].forEach(editor => {
-          try {
-            editor.remove();
-          } catch {
-            // Ignore errors during cleanup
-          }
-        });
-      }
-    } catch {
-      // Ignore TinyMCE cleanup errors
-    }
-    
     // Sign out (clears tokens)
     authService.signOut();
     

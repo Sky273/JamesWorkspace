@@ -19,13 +19,6 @@ declare global {
   }
 }
 
-// TinyMCE global
-declare global {
-  interface Window {
-    tinymce: typeof import('tinymce');
-  }
-}
-
 // Modules without types
 declare module 'word-extractor' {
   interface Document {
