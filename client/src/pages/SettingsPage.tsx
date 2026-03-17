@@ -161,7 +161,13 @@ const SettingsPage = (): JSX.Element => {
       const chatbotValue = formData.chatbotEnabled;
       const dataToSave = {
         ...formData,
-        chatbotEnabled: chatbotValue === 'on' || (chatbotValue as unknown) === true ? 'on' : 'off'
+        chatbotEnabled: chatbotValue === 'on' || (chatbotValue as unknown) === true ? 'on' : 'off',
+        'Executive Summary Weight': Number(formData['Executive Summary Weight']),
+        'Skills Weight': Number(formData['Skills Weight']),
+        'Experience Weight': Number(formData['Experience Weight']),
+        'Education Weight': Number(formData['Education Weight']),
+        'ATS Weight': Number(formData['ATS Weight']),
+        'Hobbies Languages Weight': Number(formData['Hobbies Languages Weight'])
       };
 
       logger.log('[SettingsPage] Saving settings with data:', JSON.stringify(dataToSave, null, 2));
