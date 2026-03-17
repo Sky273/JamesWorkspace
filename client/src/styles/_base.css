@@ -133,6 +133,32 @@ img {
   background: var(--color-gray-500);
 }
 
+/* --- Sidebar Scrollbar --- */
+.sidebar-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--color-gray-300);
+  border-radius: var(--radius-full);
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--color-gray-400);
+}
+
+.dark .sidebar-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--color-gray-700);
+}
+
+.dark .sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--color-gray-600);
+}
+
 /* --- Utility Classes --- */
 /* Note: .sr-only, .truncate, .text-center, .text-left, .text-right 
    are provided by Tailwind and have been removed to avoid duplication. */

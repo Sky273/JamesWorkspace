@@ -112,7 +112,7 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
     { name: t('navigation.userGuide'), href: '/guide', icon: BookOpenIcon },
   ];
 
-  const renderNavItem = (item: NavItem) => {
+  const renderNavItem = (item: NavItem, isBottomItem = false) => {
     const isActive = location.pathname === item.href;
     const IconComponent = item.icon;
     return (
@@ -120,18 +120,22 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
         key={item.name}
         to={item.href}
         className={classNames(
+          'group relative flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200',
           isActive
-            ? 'bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-white'
-            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white',
-          'group flex items-center px-2 py-1.5 text-xs font-medium rounded-md'
+            ? 'bg-primary-50 text-primary-700 dark:bg-primary-500/15 dark:text-primary-300 shadow-sm'
+            : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-200'
         )}
       >
+        {/* Active indicator bar */}
+        {isActive && (
+          <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-primary-500 dark:bg-primary-400 rounded-r-full" />
+        )}
         <IconComponent
           className={classNames(
+            'flex-shrink-0 h-[18px] w-[18px] transition-colors duration-200',
             isActive
-              ? 'text-gray-500 dark:text-gray-300'
-              : 'text-gray-400 group-hover:text-gray-500 dark:text-gray-400 dark:group-hover:text-gray-300',
-            'mr-2 flex-shrink-0 h-4 w-4'
+              ? 'text-primary-600 dark:text-primary-400'
+              : 'text-gray-400 group-hover:text-gray-600 dark:text-gray-500 dark:group-hover:text-gray-300'
           )}
           aria-hidden={true}
         />
@@ -147,14 +151,18 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
     if (visibleItems.length === 0) return null;
 
     return (
-      <div key={section.title} className="mt-3">
+      <div key={section.title} className="mt-5">
         {section.title && (
-          <h3 className="px-2 text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">
-            {section.title}
-          </h3>
+          <div className="flex items-center gap-2 px-3 mb-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary-400 dark:bg-primary-500" />
+            <h3 className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">
+              {section.title}
+            </h3>
+            <span className="flex-1 h-px bg-gradient-to-r from-gray-200 dark:from-gray-700 to-transparent" />
+          </div>
         )}
-        <div className="space-y-1">
-          {visibleItems.map(renderNavItem)}
+        <div className="space-y-0.5">
+          {visibleItems.map(item => renderNavItem(item))}
         </div>
       </div>
     );
@@ -165,22 +173,22 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
   };
 
   const sidebarContent = (
-    <div className="flex-1 flex flex-col min-h-0 bg-app border-r border-gray-200 dark:border-gray-700">
-      <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
-        <div className="flex items-center justify-between flex-shrink-0 px-2 py-2">
-          <img src={isDarkMode ? resumeConverterLogoDark : resumeConverterLogoLight} alt="Resume Converter" className="max-w-[200px] h-auto object-contain" />
+    <div className="flex-1 flex flex-col min-h-0 bg-white dark:bg-gray-900 border-r border-gray-200/80 dark:border-gray-800">
+      <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto sidebar-scrollbar">
+        <div className="flex items-center justify-between flex-shrink-0 px-4 pb-4 border-b border-gray-100 dark:border-gray-800">
+          <img src={isDarkMode ? resumeConverterLogoDark : resumeConverterLogoLight} alt="Resume Converter" className="max-w-[180px] h-auto object-contain" />
           {/* Close button - only visible on mobile */}
           <button
             onClick={onClose}
-            className="md:hidden p-2 rounded-md text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+            className="md:hidden p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           >
-            <XMarkIcon className="h-6 w-6" />
+            <XMarkIcon className="h-5 w-5" />
           </button>
         </div>
         
-        <nav className="mt-5 flex-1 px-2 flex flex-col" onClick={handleNavClick}>
+        <nav className="mt-4 flex-1 px-3 flex flex-col" onClick={handleNavClick}>
           {/* Home - no section header */}
-          <div className="space-y-1">
+          <div className="space-y-0.5">
             {renderNavItem(homeItem)}
           </div>
 
@@ -191,13 +199,14 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
           {isAdmin && renderSection(adminSection)}
 
           {/* Spacer to push bottom items down */}
-          <div className="flex-1" />
+          <div className="flex-1 min-h-4" />
 
           {/* Bottom items: Settings and User Guide */}
-          <div className="border-t border-gray-200 dark:border-gray-700 pt-3 mt-3 space-y-0.5">
+          <div className="relative pt-4 mt-3 space-y-0.5">
+            <span className="absolute top-0 left-3 right-3 h-px bg-gradient-to-r from-transparent via-gray-200 dark:via-gray-700 to-transparent" />
             {bottomItems
               .filter(item => !item.adminOnly || isAdmin)
-              .map(renderNavItem)}
+              .map(item => renderNavItem(item, true))}
           </div>
         </nav>
       </div>
@@ -215,7 +224,7 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
             onClick={onClose}
           />
           {/* Sidebar panel - solid background for readability */}
-          <div className="fixed inset-y-0 left-0 flex w-64 flex-col bg-white dark:bg-gray-800 shadow-xl">
+          <div className="fixed inset-y-0 left-0 flex w-64 flex-col bg-white dark:bg-gray-900 shadow-2xl">
             {sidebarContent}
           </div>
         </div>
