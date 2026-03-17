@@ -180,7 +180,6 @@ const DealSection = ({
   onToggle: () => void;
 }) => {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const priorityInfo = PRIORITY_ICONS[deal.priority] || PRIORITY_ICONS.medium;
   const [showAll, setShowAll] = useState(false);
 

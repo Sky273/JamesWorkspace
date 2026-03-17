@@ -77,7 +77,7 @@ const AdaptationViewPage = (): JSX.Element => {
   const [activeTab, setActiveTab] = useState<'adapted' | 'analysis' | 'mission'>('adapted');
   
   // Editor state
-  const [editorReady, setEditorReady] = useState(false);
+  const [_editorReady, setEditorReady] = useState(false);
   const editorRef = useRef<TiptapEditorRef | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
   const [saving, setSaving] = useState(false);

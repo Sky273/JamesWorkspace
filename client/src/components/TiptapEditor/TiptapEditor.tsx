@@ -86,7 +86,7 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
     },
     ref
   ) => {
-    const [ready, setReady] = useState(false);
+    const [_ready, setReady] = useState(false);
     const contentSetRef = useRef(false);
     const [suggestionsVisible, setSuggestionsVisible] = useState(true);
 

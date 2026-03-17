@@ -8,7 +8,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useResume } from '../context/ResumeContext';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { ArrowRightIcon, DocumentArrowDownIcon, CheckCircleIcon, SparklesIcon, MagnifyingGlassIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
+import { DocumentArrowDownIcon, CheckCircleIcon, SparklesIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { Resume } from '../types/entities';
 import { resumeService } from '../utils/resumeService';

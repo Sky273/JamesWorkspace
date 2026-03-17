@@ -32,6 +32,18 @@ vi.mock('../../utils/postgresHelpers.js', () => ({
     destroyWithTimeout: (...args) => mockDestroyWithTimeout(...args)
 }));
 
+// Mock database
+const mockQuery = vi.fn();
+vi.mock('../../config/database.js', () => ({
+    query: (...args) => mockQuery(...args)
+}));
+
+// Mock firmHelpers
+const mockGetUserFirmId = vi.fn();
+vi.mock('../../utils/firmHelpers.js', () => ({
+    getUserFirmId: (...args) => mockGetUserFirmId(...args)
+}));
+
 // Mock logger
 vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn(),

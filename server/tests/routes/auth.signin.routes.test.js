@@ -3,13 +3,13 @@
  * Uses supertest for HTTP integration testing
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import request from 'supertest';
 
 // Mock constants module FIRST (before any imports that use it)
-vi.mock('../../config/constants.js', async (importOriginal) => {
+vi.mock('../../config/constants.js', async (_importOriginal) => {
     return {
         JWT_SECRET: 'test-jwt-secret-for-vitest-minimum-32-chars-long',
         REFRESH_TOKEN_SECRET: 'test-refresh-secret-for-vitest-min-32-chars',

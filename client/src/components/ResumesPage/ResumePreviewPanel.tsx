@@ -10,7 +10,6 @@ import {
   XMarkIcon,
   ArrowTopRightOnSquareIcon,
   DocumentTextIcon,
-  StarIcon,
   ChartBarIcon,
 } from '@heroicons/react/24/outline';
 import { useAuthFetch } from '../../hooks/useAuthFetch';

@@ -38,7 +38,7 @@ const NewTemplatePage = (): JSX.Element => {
   const editorsReadyCount = useRef<number>(0);
   const [editorReady, setEditorReady] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
-  const [dataReady, setDataReady] = useState<boolean>(false);
+  const [_dataReady, setDataReady] = useState<boolean>(false);
   const { t } = useTranslation();
 
   const handleEditorReady = useCallback(() => {
@@ -128,42 +128,6 @@ const NewTemplatePage = (): JSX.Element => {
     fetchTemplate();
   }, [id, navigate, t]);
 
-  const handleFilePicker = (callback: (url: string, meta: { title: string; alt: string }) => void): void => {
-    const input = document.createElement('input');
-    input.setAttribute('type', 'file');
-    input.setAttribute('accept', 'image/*');
-    input.addEventListener('change', function () {
-      const file = input.files?.[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = function () {
-        callback(reader.result as string, { title: file.name, alt: file.name });
-      };
-    });
-    input.click();
-  };
-
-  const handleImageUpload = (blobInfo: { base64: () => string; blob: () => Blob }): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      try {
-        if (blobInfo.base64()) {
-          resolve('data:' + blobInfo.blob().type + ';base64,' + blobInfo.base64());
-        } else {
-          const reader = new FileReader();
-          reader.readAsDataURL(blobInfo.blob());
-          reader.onload = () => {
-            const result = reader.result as string;
-            const base64data = result.split(',')[1];
-            resolve('data:' + blobInfo.blob().type + ';base64,' + base64data);
-          };
-          reader.onerror = (error) => reject(error);
-        }
-      } catch {
-        reject('Image upload failed');
-      }
-    });
-  };
 
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {

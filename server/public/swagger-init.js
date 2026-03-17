@@ -1,3 +1,4 @@
+/* global SwaggerUIBundle, SwaggerUIStandalonePreset */
 /**
  * Swagger UI Initialization Script
  * Externalized from inline <script> to comply with strict CSP (no unsafe-inline)

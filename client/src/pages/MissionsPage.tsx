@@ -108,7 +108,7 @@ const MissionsPage = (): JSX.Element => {
     'Deal ID': ''
   });
   const editorRef = useRef<TiptapEditorRef | null>(null);
-  const [editorReady, setEditorReady] = useState<boolean>(false);
+  const [_editorReady, setEditorReady] = useState<boolean>(false);
   const [previewMission, setPreviewMission] = useState<Mission | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);

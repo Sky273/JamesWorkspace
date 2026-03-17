@@ -411,7 +411,8 @@ router.post('/cleaned/recalculate', authenticateToken, async (req, res) => {
         }
         
         // Clear cache to force refresh
-        cleanedTagsCache = null;
+        cleanedTagsCache.clear();
+        cleanedTagsCacheTime.clear();
         
         safeLog('info', 'Cleaned tags recalculated', { 
             totalResumes: totalProcessed,
