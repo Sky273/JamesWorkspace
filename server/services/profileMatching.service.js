@@ -277,8 +277,8 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
     const missionKeywords = await getMissionKeywords(missionId, missionRecord, userMetadata);
     
     // 3. Build query for resumes
-    // Use LOWER() for case-insensitive status comparison (PostgreSQL stores lowercase)
-    const conditions = ["(LOWER(r.status) = 'analyzed' OR LOWER(r.status) = 'improved')"];
+    // Include all resumes regardless of status so every CV gets scored
+    const conditions = [];
     const params = [];
     let paramIndex = 1;
     
@@ -302,7 +302,7 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
         paramIndex++;
     }
     
-    const whereClause = conditions.join(' AND ');
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     
     // 4. Fetch all resumes
     // Use cleaned tags (skills_cleaned, etc.) for better matching accuracy
@@ -314,7 +314,7 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
                r.firm_name, r.created_at
         FROM resumes r
         ${dealJoin}
-        WHERE ${whereClause}
+        ${whereClause}
     `;
     
     const resumeRecords = await selectWithTimeout('resumes', {
