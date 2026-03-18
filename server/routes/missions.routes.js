@@ -779,7 +779,7 @@ router.post('/:missionId/find-profiles', authenticateToken, validateParams('miss
         
         // Find matching profiles
         const results = await findMatchingProfiles(missionId, {
-            limit: Math.min(limit, 50),
+            limit: Math.max(0, limit),
             minScore: Math.max(0, Math.min(100, minScore)),
             status,
             firm: isAdmin ? null : userFirm,

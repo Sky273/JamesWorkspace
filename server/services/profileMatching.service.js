@@ -362,15 +362,12 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
         };
     });
     
-    // 6. Limit profiles sent to LLM for cost control (take first N profiles)
-    // In production, you may want to add other criteria (e.g., most recent, highest rated)
-    const maxProfilesToScore = Math.min(limit * 5, 60);
-    const profilesToScore = allProfiles.slice(0, maxProfilesToScore);
+    // 6. Score all profiles (limit=0 means all)
+    const profilesToScore = limit > 0 ? allProfiles.slice(0, limit * 5) : allProfiles;
     
     safeLog('info', 'Sending profiles to LLM for scoring', {
         totalProfiles: allProfiles.length,
-        profilesToScore: profilesToScore.length,
-        maxLimit: maxProfilesToScore
+        profilesToScore: profilesToScore.length
     });
     
     // 7. Score profiles using LLM for intelligent semantic matching
@@ -425,10 +422,10 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
     
     // 9. Final filter and sort
     // Always include profiles even with score 0 when minScore is 0
-    const filteredProfiles = finalProfiles
+    const sortedProfiles = finalProfiles
         .filter(p => minScore === 0 ? true : p.matchScore >= minScore)
-        .sort((a, b) => b.matchScore - a.matchScore)
-        .slice(0, limit);
+        .sort((a, b) => b.matchScore - a.matchScore);
+    const filteredProfiles = limit > 0 ? sortedProfiles.slice(0, limit) : sortedProfiles;
     
     safeLog('info', 'Profile matching completed', {
         totalResumes: resumeRecords.length,

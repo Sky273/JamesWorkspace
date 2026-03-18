@@ -27,6 +27,7 @@ import logger from '../utils/logger.frontend';
 import Breadcrumbs from '../components/Breadcrumbs';
 import ProfileMatchCard from './ProfileMatchCard';
 import ProfileMatchSearchPanel from './ProfileMatchSearchPanel';
+import ProfileMatchingOverlay from '../components/ProfileMatchingOverlay';
 
 const DEFAULT_WEIGHTS: ProfileMatchWeights = {
   skills: 40,
@@ -56,7 +57,7 @@ const ProfileMatchingPage = (): JSX.Element => {
   const [detailedAnalysis, setDetailedAnalysis] = useState<Record<string, DetailedProfileAnalysisResponse>>({});
 
   // Search options
-  const [limit, setLimit] = useState(10);
+  const [limit, setLimit] = useState(0); // 0 = all CVs
   const [minScore, setMinScore] = useState(0);
   const [weights, setWeights] = useState<ProfileMatchWeights>(DEFAULT_WEIGHTS);
 
@@ -217,31 +218,10 @@ const ProfileMatchingPage = (): JSX.Element => {
       animate={{ opacity: 1, y: 0 }}
       className="p-6 max-w-6xl mx-auto relative"
     >
-      {/* Blur overlay during processing */}
+      {/* Polished overlay during processing */}
       <AnimatePresence>
         {isProcessing && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 backdrop-blur-sm"
-          >
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-8 flex flex-col items-center gap-4 max-w-md mx-4">
-              <div className="relative">
-                <div className="w-16 h-16 border-4 border-blue-200 dark:border-blue-900 rounded-full"></div>
-                <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                {loading ? t('profileMatching.searchingProfiles') : t('profileMatching.analyzingProfile')}
-              </h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
-                {loading 
-                  ? t('profileMatching.searchingProfilesDescription')
-                  : t('profileMatching.analyzingProfileDescription')
-                }
-              </p>
-            </div>
-          </motion.div>
+          <ProfileMatchingOverlay mode={loading ? 'searching' : 'analyzing'} />
         )}
       </AnimatePresence>
 

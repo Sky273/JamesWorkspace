@@ -36,7 +36,7 @@ export async function findMatchingProfiles(
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        limit: options.limit || 10,
+        limit: options.limit ?? 0,
         minScore: options.minScore || 0,
         status: options.status,
         weights: options.weights,

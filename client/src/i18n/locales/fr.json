@@ -1365,6 +1365,15 @@
     "analyzingProfile": "Analyse du profil en cours…",
     "analyzingProfileDescription": "L'IA génère une analyse détaillée de l'adéquation entre ce profil et l'affaire.",
     "analyzingLoadingSteps": ["Lecture approfondie du CV…", "Comparaison avec les exigences…", "Évaluation des compétences clés…", "Rédaction de la synthèse IA…"],
+    "overlay": {
+      "stepKeywords": "Mots-clés",
+      "stepScan": "Scan CVs",
+      "stepScoring": "Scoring IA",
+      "stepRanking": "Classement",
+      "stepReading": "Lecture CV",
+      "stepEvaluation": "Évaluation",
+      "stepSynthesis": "Synthèse"
+    },
     "titleAdjustment": "Ajustement titre",
     "llmScored": "Score IA",
     "confidence": {

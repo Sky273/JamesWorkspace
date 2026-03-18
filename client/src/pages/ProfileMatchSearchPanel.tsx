@@ -156,11 +156,11 @@ export default function ProfileMatchSearchPanel({
                   </label>
                   <input
                     type="number"
-                    min={1}
-                    max={50}
+                    min={0}
                     value={limit}
-                    onChange={(e) => setLimit(Math.min(50, Math.max(1, parseInt(e.target.value) || 10)))}
+                    onChange={(e) => setLimit(Math.max(0, parseInt(e.target.value) || 0))}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    placeholder="0 = tous"
                   />
                 </div>
                 <div>
