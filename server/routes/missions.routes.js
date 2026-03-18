@@ -745,8 +745,6 @@ router.get('/:missionId/adaptations', authenticateToken, validateParams('mission
         res.status(500).json({ error: 'Failed to fetch mission adaptations' });
     }
 });
-
-// ============================================
 // PROFILE MATCHING ROUTES
 // ============================================
 
@@ -754,7 +752,7 @@ router.get('/:missionId/adaptations', authenticateToken, validateParams('mission
 router.post('/:missionId/find-profiles', authenticateToken, validateParams('missionId'), async (req, res) => {
     try {
         const { missionId } = req.params;
-        const { limit = 10, minScore = 0, status, weights, dealId } = req.body;
+        const { limit = 0, minScore = 0, status, weights, dealId } = req.body;
         
         const userRole = (req.user?.role || req.user?.Role || '').toLowerCase();
         const isAdmin = userRole === 'admin';
