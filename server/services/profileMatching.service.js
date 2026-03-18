@@ -155,6 +155,7 @@ async function scoreBatchWithLLM(profiles, missionKeywords, missionRecord, userM
     }
 
     const BATCH_SIZE = 12; // Optimal batch size for token efficiency
+    const MAX_CONCURRENCY = 5; // Process up to 5 batches in parallel
     const batches = chunkArray(profiles, BATCH_SIZE);
     const allScores = {};
     let hasErrors = false;
@@ -162,13 +163,12 @@ async function scoreBatchWithLLM(profiles, missionKeywords, missionRecord, userM
     safeLog('info', 'Starting LLM batch scoring', { 
         totalProfiles: profiles.length, 
         batchCount: batches.length,
-        batchSize: BATCH_SIZE 
+        batchSize: BATCH_SIZE,
+        maxConcurrency: MAX_CONCURRENCY
     });
 
-    for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
-        const batch = batches[batchIndex];
-        
-        // Prepare compact candidate data for the prompt
+    // Process a single batch and return its scores
+    async function processBatch(batch, batchIndex) {
         const candidatesData = batch.map(p => ({
             id: p.resumeId,
             title: p.title || 'Non spécifié',
@@ -180,7 +180,6 @@ async function scoreBatchWithLLM(profiles, missionKeywords, missionRecord, userM
 
         const candidatesJson = JSON.stringify(candidatesData, null, 2);
 
-        // Build the prompt
         const prompt = BATCH_PROFILE_SCORING_PROMPT
             .replace('{MISSION_TITLE}', missionRecord.title || '')
             .replace('{MISSION_SKILLS}', (missionKeywords.skills || []).join(', ') || 'Non spécifié')
@@ -190,51 +189,52 @@ async function scoreBatchWithLLM(profiles, missionKeywords, missionRecord, userM
             .replace('{EXPERIENCE_LEVEL}', missionKeywords.experienceLevel || 'Non spécifié')
             .replace('{CANDIDATES_JSON}', candidatesJson);
 
-        try {
-            const response = await callOpenAI({
-                model,
-                messages: [
-                    { role: 'system', content: 'You are a JSON-only HR analysis API specialized in IT/IS profile matching. Respond with valid JSON only.' },
-                    { role: 'user', content: prompt }
-                ],
-                maxTokens: 2048,
-                temperature: 0.3,
-                responseFormat: { type: "json_object" },
-                userMetadata,
-                operationType: 'Batch Profile Scoring'
-            });
+        const response = await callOpenAI({
+            model,
+            messages: [
+                { role: 'system', content: 'You are a JSON-only HR analysis API specialized in IT/IS profile matching. Respond with valid JSON only.' },
+                { role: 'user', content: prompt }
+            ],
+            maxTokens: 2048,
+            temperature: 0.3,
+            responseFormat: { type: "json_object" },
+            userMetadata,
+            operationType: 'Batch Profile Scoring'
+        });
 
-            let result;
-            try {
-                result = JSON.parse(response.choices[0].message.content);
-            } catch (parseError) {
-                safeLog('error', 'Failed to parse LLM scoring response', { 
-                    batchIndex, 
-                    error: parseError.message,
-                    content: response.choices[0].message.content?.substring(0, 200)
+        const result = JSON.parse(response.choices[0].message.content);
+        safeLog('debug', 'Batch scoring completed', { 
+            batchIndex: batchIndex + 1, 
+            totalBatches: batches.length,
+            scoresReturned: Object.keys(result.scores || {}).length
+        });
+        return result.scores || {};
+    }
+
+    // Process batches in waves of MAX_CONCURRENCY
+    for (let waveStart = 0; waveStart < batches.length; waveStart += MAX_CONCURRENCY) {
+        const wave = batches.slice(waveStart, waveStart + MAX_CONCURRENCY);
+        const wavePromises = wave.map((batch, i) => 
+            processBatch(batch, waveStart + i).catch(error => {
+                safeLog('error', 'LLM scoring batch failed', { 
+                    batchIndex: waveStart + i, 
+                    error: error.message 
                 });
                 hasErrors = true;
-                continue;
-            }
+                return {}; // Return empty scores on failure
+            })
+        );
 
-            // Merge batch scores into allScores
-            if (result.scores) {
-                Object.assign(allScores, result.scores);
-            }
-
-            safeLog('debug', 'Batch scoring completed', { 
-                batchIndex: batchIndex + 1, 
-                totalBatches: batches.length,
-                scoresReturned: Object.keys(result.scores || {}).length
-            });
-
-        } catch (error) {
-            safeLog('error', 'LLM scoring batch failed', { 
-                batchIndex, 
-                error: error.message 
-            });
-            hasErrors = true;
+        const waveResults = await Promise.all(wavePromises);
+        for (const scores of waveResults) {
+            Object.assign(allScores, scores);
         }
+
+        safeLog('info', 'Scoring wave completed', {
+            waveStart,
+            waveSize: wave.length,
+            totalScored: Object.keys(allScores).length
+        });
     }
 
     safeLog('info', 'LLM batch scoring completed', { 
