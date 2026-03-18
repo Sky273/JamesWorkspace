@@ -311,6 +311,7 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
         SELECT r.id, r.name, r.title, r.status, r.global_rating, 
                r.skills, r.tools, r.industries, r.soft_skills,
                r.skills_cleaned, r.tools_cleaned, r.industries_cleaned, r.soft_skills_cleaned,
+               r.improved_skills, r.improved_tools, r.improved_industries, r.improved_soft_skills,
                r.firm_name, r.created_at
         FROM resumes r
         ${dealJoin}
@@ -343,7 +344,14 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
     // 5. Prepare all profiles for LLM scoring (no text-based pre-filtering)
     // Prioritize cleaned tags over raw tags for better matching accuracy
     const allProfiles = resumeRecords.map(record => {
-        const resumeTags = {
+        // Use improved tags when status is 'improved', otherwise use original/analyzed tags
+        const isImproved = record.status && record.status.toLowerCase() === 'improved';
+        const resumeTags = isImproved ? {
+            skills: parseJsonField(record.improved_skills) || parseJsonField(record.skills_cleaned) || parseJsonField(record.skills),
+            tools: parseJsonField(record.improved_tools) || parseJsonField(record.tools_cleaned) || parseJsonField(record.tools),
+            industries: parseJsonField(record.improved_industries) || parseJsonField(record.industries_cleaned) || parseJsonField(record.industries),
+            softSkills: parseJsonField(record.improved_soft_skills) || parseJsonField(record.soft_skills_cleaned) || parseJsonField(record.soft_skills)
+        } : {
             skills: parseJsonField(record.skills_cleaned) || parseJsonField(record.skills),
             tools: parseJsonField(record.tools_cleaned) || parseJsonField(record.tools),
             industries: parseJsonField(record.industries_cleaned) || parseJsonField(record.industries),
