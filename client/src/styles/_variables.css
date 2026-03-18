@@ -76,6 +76,11 @@
   --transition-slow: 300ms ease;
 
   /* --- Light Mode Theme --- */
+  --app-bg: #f4f7fb;
+  --surface-primary: #ffffff;
+  --surface-elevated: #f8fbff;
+  --surface-muted: #eef3fb;
+  --border-subtle: rgba(148, 163, 184, 0.22);
   --text-primary: var(--color-gray-900);
   --text-secondary: var(--color-gray-600);
   --text-muted: var(--color-gray-500);
@@ -83,7 +88,12 @@
 
 /* --- Dark Mode Theme --- */
 .dark {
-  --text-primary: #f3f4f6; /* gray-100 — softer than pure white */
-  --text-secondary: var(--color-gray-400);
-  --text-muted: var(--color-gray-500);
+  --app-bg: #111827;
+  --surface-primary: #1b2434;
+  --surface-elevated: #243044;
+  --surface-muted: #2e3a4f;
+  --border-subtle: rgba(148, 163, 184, 0.18);
+  --text-primary: #dbe7fb;
+  --text-secondary: #9eb0cf;
+  --text-muted: #7c8da9;
 }

@@ -255,7 +255,7 @@ async function scoreBatchWithLLM(profiles, missionKeywords, missionRecord, userM
  */
 export async function findMatchingProfiles(missionId, options = {}, userMetadata = null) {
     const {
-        limit = 10,
+        limit = 0,
         minScore = 0,
         status = null,
         firm = null,
@@ -371,7 +371,7 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
     });
     
     // 6. Score all profiles (limit=0 means all)
-    const profilesToScore = limit > 0 ? allProfiles.slice(0, limit * 5) : allProfiles;
+    const profilesToScore = allProfiles;
     
     safeLog('info', 'Sending profiles to LLM for scoring', {
         totalProfiles: allProfiles.length,
