@@ -14,9 +14,10 @@ import {
   DocumentTextIcon,
   SparklesIcon
 } from '@heroicons/react/24/outline';
-import { findMatchingProfiles, getMissions, clearMissionKeywordsCache, analyzeProfileForMission } from '../utils/profileMatchingService';
+import { findMatchingProfiles, getMissions, getDeals, clearMissionKeywordsCache, analyzeProfileForMission } from '../utils/profileMatchingService';
 import type { 
   Mission, 
+  Deal,
   ProfileMatchingResponse, 
   ProfileMatchWeights,
   MissionKeywords,
@@ -41,6 +42,8 @@ const ProfileMatchingPage = (): JSX.Element => {
 
   // State
   const [missions, setMissions] = useState<Mission[]>([]);
+  const [deals, setDeals] = useState<Deal[]>([]);
+  const [selectedDealId, setSelectedDealId] = useState<string>('');
   const [selectedMissionId, setSelectedMissionId] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [loadingMissions, setLoadingMissions] = useState(true);
@@ -57,15 +60,19 @@ const ProfileMatchingPage = (): JSX.Element => {
   const [minScore, setMinScore] = useState(0);
   const [weights, setWeights] = useState<ProfileMatchWeights>(DEFAULT_WEIGHTS);
 
-  // Load missions on mount
+  // Load missions and deals on mount
   useEffect(() => {
-    const loadMissions = async () => {
+    const loadData = async () => {
       try {
         setLoadingMissions(true);
-        const data = await getMissions();
-        // Ensure data is always an array
-        const missionsArray = Array.isArray(data) ? data : [];
+        const [missionsData, dealsData] = await Promise.all([
+          getMissions(),
+          getDeals().catch(() => [] as Deal[])
+        ]);
+        const missionsArray = Array.isArray(missionsData) ? missionsData : [];
+        const dealsArray = Array.isArray(dealsData) ? dealsData : [];
         setMissions(missionsArray);
+        setDeals(dealsArray);
         if (missionsArray.length > 0) {
           setSelectedMissionId(missionsArray[0].id);
         }
@@ -76,13 +83,28 @@ const ProfileMatchingPage = (): JSX.Element => {
         setLoadingMissions(false);
       }
     };
-    loadMissions();
+    loadData();
   }, [t]);
 
+  // Filter missions by selected deal
+  const filteredMissions = useMemo(() => {
+    if (!selectedDealId) return missions;
+    return missions.filter(m => m['Deal ID'] === selectedDealId);
+  }, [missions, selectedDealId]);
+
   const selectedMission = useMemo(() => 
-    Array.isArray(missions) ? missions.find(m => m.id === selectedMissionId) : undefined,
-    [missions, selectedMissionId]
+    filteredMissions.find(m => m.id === selectedMissionId),
+    [filteredMissions, selectedMissionId]
   );
+
+  // Auto-select first mission when filtered list changes
+  useEffect(() => {
+    if (filteredMissions.length > 0 && !filteredMissions.find(m => m.id === selectedMissionId)) {
+      setSelectedMissionId(filteredMissions[0].id);
+    } else if (filteredMissions.length === 0) {
+      setSelectedMissionId('');
+    }
+  }, [filteredMissions, selectedMissionId]);
 
   const handleSearch = async () => {
     if (!selectedMissionId) {
@@ -97,7 +119,8 @@ const ProfileMatchingPage = (): JSX.Element => {
       const data = await findMatchingProfiles(selectedMissionId, {
         limit,
         minScore,
-        weights
+        weights,
+        dealId: selectedDealId || undefined
       });
       
       setResults(data);
@@ -239,7 +262,10 @@ const ProfileMatchingPage = (): JSX.Element => {
 
       {/* Search Panel */}
       <ProfileMatchSearchPanel
-        missions={missions}
+        deals={deals}
+        selectedDealId={selectedDealId}
+        setSelectedDealId={setSelectedDealId}
+        missions={filteredMissions}
         selectedMissionId={selectedMissionId}
         setSelectedMissionId={setSelectedMissionId}
         selectedMission={selectedMission}

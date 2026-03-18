@@ -154,9 +154,26 @@ export interface Mission {
   'Keywords'?: string;
   'Created At'?: string;
   'Updated At'?: string;
+  'Deal ID'?: string | null;
+  'Deal Title'?: string | null;
 }
 
 export type MissionStatus = 'Active' | 'Completed' | 'Archived';
+
+// ============================================
+// DEAL TYPES
+// ============================================
+
+export interface Deal {
+  id: string;
+  title: string;
+  description?: string;
+  status?: string;
+  client_id?: string;
+  client_name?: string;
+  firm_id?: string;
+  created_at?: string;
+}
 
 // ============================================
 // PROFILE MATCHING TYPES

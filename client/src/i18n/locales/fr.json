@@ -1307,7 +1307,9 @@
   },
   "profileMatching": {
     "title": "Matching Profils",
-    "subtitle": "Trouvez les meilleurs CVs correspondant à une mission",
+    "subtitle": "Trouvez les meilleurs CVs correspondant à une affaire",
+    "selectDeal": "Filtrer par affaire",
+    "allDeals": "Toutes les affaires",
     "selectMission": "Sélectionnez une mission",
     "loadingMissions": "Chargement des missions...",
     "noMissions": "Aucune mission disponible",
@@ -1323,7 +1325,7 @@
     "resultsFound": "{{count}} profil(s) trouvé(s)",
     "results": "Profils correspondants",
     "matchScore": "Score",
-    "extractedKeywords": "Mots-clés extraits de la mission",
+    "extractedKeywords": "Mots-clés extraits de l'affaire",
     "scannedResumes": "{{count}} CVs analysés",
     "matchedTags": "Compétences correspondantes",
     "missingTags": "Compétences manquantes",
@@ -1332,8 +1334,8 @@
     "viewResume": "Voir le CV",
     "noTitle": "Sans titre",
     "noProfilesFound": "Aucun profil trouvé avec ces critères",
-    "keywordsRefreshed": "Mots-clés de la mission actualisés",
-    "refreshKeywordsTooltip": "Actualiser les mots-clés de la mission",
+    "keywordsRefreshed": "Mots-clés de l'affaire actualisés",
+    "refreshKeywordsTooltip": "Actualiser les mots-clés de l'affaire",
     "categories": {
       "skills": "Compétences",
       "tools": "Outils",
@@ -1342,7 +1344,7 @@
     },
     "emptyState": {
       "title": "Recherchez des profils",
-      "description": "Sélectionnez une mission et lancez la recherche pour trouver les CVs les plus adaptés."
+      "description": "Sélectionnez une affaire et lancez la recherche pour trouver les CVs les plus adaptés."
     },
     "errors": {
       "loadMissions": "Erreur lors du chargement des missions",
@@ -1356,10 +1358,13 @@
     "viewAnalysis": "Voir l'analyse",
     "analyzing": "Analyse en cours...",
     "analysisComplete": "Analyse détaillée terminée",
-    "searchingProfiles": "Recherche de profils en cours...",
-    "searchingProfilesDescription": "L'IA analyse les CVs de votre base pour trouver les meilleurs candidats pour cette mission.",
-    "analyzingProfile": "Analyse du profil en cours...",
-    "analyzingProfileDescription": "L'IA génère une analyse détaillée de l'adéquation entre ce profil et la mission.",
+    "searchingProfiles": "Recherche de profils en cours…",
+    "searchingProfilesDescription": "L'IA analyse les CVs de votre base pour trouver les meilleurs profils pour cette affaire.",
+    "searchingLoadingSteps": ["Extraction des mots-clés de l'affaire…", "Analyse des compétences requises…", "Parcours de la base de CVs…", "Scoring intelligent par l'IA…", "Comparaison des profils…", "Classement des meilleurs matchs…"],
+    "searchingEstimatedTime": "Cela peut prendre 1 à 5 minutes selon le nombre de CVs",
+    "analyzingProfile": "Analyse du profil en cours…",
+    "analyzingProfileDescription": "L'IA génère une analyse détaillée de l'adéquation entre ce profil et l'affaire.",
+    "analyzingLoadingSteps": ["Lecture approfondie du CV…", "Comparaison avec les exigences…", "Évaluation des compétences clés…", "Rédaction de la synthèse IA…"],
     "titleAdjustment": "Ajustement titre",
     "llmScored": "Score IA",
     "confidence": {

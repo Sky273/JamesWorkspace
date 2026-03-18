@@ -259,11 +259,12 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
         minScore = 0,
         status = null,
         firm = null,
-        weights = DEFAULT_WEIGHTS
+        weights = DEFAULT_WEIGHTS,
+        dealId = null
     } = options;
     
     const firmFilter = firm;
-    safeLog('info', 'Finding matching profiles', { missionId, limit, minScore, status, firm: firmFilter });
+    safeLog('info', 'Finding matching profiles', { missionId, limit, minScore, status, firm: firmFilter, dealId });
     
     // 1. Get mission record
     const missionRecord = await findWithTimeout('missions', missionId);
@@ -277,19 +278,27 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
     
     // 3. Build query for resumes
     // Use LOWER() for case-insensitive status comparison (PostgreSQL stores lowercase)
-    const conditions = ["(LOWER(status) = 'analyzed' OR LOWER(status) = 'improved')"];
+    const conditions = ["(LOWER(r.status) = 'analyzed' OR LOWER(r.status) = 'improved')"];
     const params = [];
     let paramIndex = 1;
     
     if (status) {
-        conditions.push(`LOWER(status) = LOWER($${paramIndex})`);
+        conditions.push(`LOWER(r.status) = LOWER($${paramIndex})`);
         params.push(status);
         paramIndex++;
     }
     
     if (firmFilter) {
-        conditions.push(`firm_name = $${paramIndex}`);
+        conditions.push(`r.firm_name = $${paramIndex}`);
         params.push(firmFilter);
+        paramIndex++;
+    }
+    
+    // Filter by deal: only consider resumes linked to this deal via deal_resumes
+    let dealJoin = '';
+    if (dealId) {
+        dealJoin = `INNER JOIN deal_resumes dr ON r.id = dr.resume_id AND dr.deal_id = $${paramIndex}`;
+        params.push(dealId);
         paramIndex++;
     }
     
@@ -299,11 +308,12 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
     // Use cleaned tags (skills_cleaned, etc.) for better matching accuracy
     // Fall back to raw tags if cleaned are not available
     const query = `
-        SELECT id, name, title, status, global_rating, 
-               skills, tools, industries, soft_skills,
-               skills_cleaned, tools_cleaned, industries_cleaned, soft_skills_cleaned,
-               firm_name, created_at
-        FROM resumes
+        SELECT r.id, r.name, r.title, r.status, r.global_rating, 
+               r.skills, r.tools, r.industries, r.soft_skills,
+               r.skills_cleaned, r.tools_cleaned, r.industries_cleaned, r.soft_skills_cleaned,
+               r.firm_name, r.created_at
+        FROM resumes r
+        ${dealJoin}
         WHERE ${whereClause}
     `;
     

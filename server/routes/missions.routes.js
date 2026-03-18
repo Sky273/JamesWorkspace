@@ -754,7 +754,7 @@ router.get('/:missionId/adaptations', authenticateToken, validateParams('mission
 router.post('/:missionId/find-profiles', authenticateToken, validateParams('missionId'), async (req, res) => {
     try {
         const { missionId } = req.params;
-        const { limit = 10, minScore = 0, status, weights } = req.body;
+        const { limit = 10, minScore = 0, status, weights, dealId } = req.body;
         
         const userRole = (req.user?.role || req.user?.Role || '').toLowerCase();
         const isAdmin = userRole === 'admin';
@@ -783,7 +783,8 @@ router.post('/:missionId/find-profiles', authenticateToken, validateParams('miss
             minScore: Math.max(0, Math.min(100, minScore)),
             status,
             firm: isAdmin ? null : userFirm,
-            weights
+            weights,
+            dealId: dealId || null
         }, userMetadata);
         
         res.json(results);

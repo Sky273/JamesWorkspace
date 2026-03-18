@@ -13,7 +13,7 @@ import {
   ArrowPathIcon,
   BriefcaseIcon
 } from '@heroicons/react/24/outline';
-import type { Mission, ProfileMatchWeights } from '../types/entities';
+import type { Mission, Deal, ProfileMatchWeights } from '../types/entities';
 
 const DEFAULT_WEIGHTS: ProfileMatchWeights = {
   skills: 40,
@@ -23,6 +23,9 @@ const DEFAULT_WEIGHTS: ProfileMatchWeights = {
 };
 
 interface ProfileMatchSearchPanelProps {
+  deals: Deal[];
+  selectedDealId: string;
+  setSelectedDealId: (id: string) => void;
   missions: Mission[];
   selectedMissionId: string;
   setSelectedMissionId: (id: string) => void;
@@ -43,6 +46,9 @@ interface ProfileMatchSearchPanelProps {
 }
 
 export default function ProfileMatchSearchPanel({
+  deals,
+  selectedDealId,
+  setSelectedDealId,
   missions,
   selectedMissionId,
   setSelectedMissionId,
@@ -66,6 +72,29 @@ export default function ProfileMatchSearchPanel({
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
       <div className="space-y-4">
+        {/* Deal selector */}
+        {deals.length > 0 && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <BriefcaseIcon className="w-4 h-4 inline mr-2" />
+              {t('profileMatching.selectDeal')}
+            </label>
+            <select
+              value={selectedDealId}
+              onChange={(e) => setSelectedDealId(e.target.value)}
+              disabled={loadingMissions}
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">{t('profileMatching.allDeals')}</option>
+              {deals.map(deal => (
+                <option key={deal.id} value={deal.id}>
+                  {deal.title}{deal.client_name ? ` — ${deal.client_name}` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         {/* Mission selector */}
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">

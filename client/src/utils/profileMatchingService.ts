@@ -10,6 +10,7 @@ import type {
   ProfileMatchingResponse, 
   ProfileMatchWeights,
   Mission,
+  Deal,
   DetailedProfileAnalysisResponse
 } from '../types/entities';
 
@@ -18,6 +19,7 @@ export interface FindProfilesOptions {
   minScore?: number;
   status?: 'Analyzed' | 'Improved';
   weights?: ProfileMatchWeights;
+  dealId?: string;
 }
 
 /**
@@ -37,14 +39,15 @@ export async function findMatchingProfiles(
         limit: options.limit || 10,
         minScore: options.minScore || 0,
         status: options.status,
-        weights: options.weights
+        weights: options.weights,
+        dealId: options.dealId || undefined
       })
     });
 
     const response = await fetchWithAuth(
       `/api/missions/${missionId}/find-profiles`,
       authOptions,
-      120000 // 2 minute timeout for LLM keyword extraction
+      600000 // 10 minute timeout for LLM keyword extraction + scoring
     );
 
     if (!response.ok) {
@@ -129,7 +132,7 @@ export async function analyzeProfileForMission(
     const response = await fetchWithAuth(
       `/api/missions/${missionId}/analyze-profile/${resumeId}`,
       authOptions,
-      120000 // 2 minute timeout for LLM analysis
+      600000 // 10 minute timeout for LLM analysis
     );
 
     if (!response.ok) {
@@ -145,9 +148,39 @@ export async function analyzeProfileForMission(
   }
 }
 
+/**
+ * Get all deals for the dropdown
+ */
+export async function getDeals(): Promise<Deal[]> {
+  try {
+    const response = await fetchWithAuth('/api/deals?limit=100', createAuthOptions({
+      method: 'GET'
+    }));
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch deals');
+    }
+
+    const data = await response.json();
+    
+    // Handle paginated response
+    if (data.data && Array.isArray(data.data)) {
+      return data.data;
+    }
+    
+    // Fallback for non-paginated response
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    logger.error('Error fetching deals:', error);
+    showCaughtError(error);
+    throw error;
+  }
+}
+
 export default {
   findMatchingProfiles,
   clearMissionKeywordsCache,
   getMissions,
+  getDeals,
   analyzeProfileForMission
 };

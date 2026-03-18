@@ -1307,7 +1307,9 @@
   },
   "profileMatching": {
     "title": "Profile Matching",
-    "subtitle": "Find the best CVs matching a mission",
+    "subtitle": "Find the best CVs matching a deal",
+    "selectDeal": "Filter by deal",
+    "allDeals": "All deals",
     "selectMission": "Select a mission",
     "loadingMissions": "Loading missions...",
     "noMissions": "No missions available",
@@ -1323,7 +1325,7 @@
     "resultsFound": "{{count}} profile(s) found",
     "results": "Matching profiles",
     "matchScore": "Score",
-    "extractedKeywords": "Keywords extracted from mission",
+    "extractedKeywords": "Keywords extracted from deal",
     "scannedResumes": "{{count}} CVs scanned",
     "matchedTags": "Matching skills",
     "missingTags": "Missing skills",
@@ -1332,8 +1334,8 @@
     "viewResume": "View CV",
     "noTitle": "No title",
     "noProfilesFound": "No profiles found with these criteria",
-    "keywordsRefreshed": "Mission keywords refreshed",
-    "refreshKeywordsTooltip": "Refresh mission keywords",
+    "keywordsRefreshed": "Deal keywords refreshed",
+    "refreshKeywordsTooltip": "Refresh deal keywords",
     "categories": {
       "skills": "Skills",
       "tools": "Tools",
@@ -1342,7 +1344,7 @@
     },
     "emptyState": {
       "title": "Search for profiles",
-      "description": "Select a mission and start the search to find the most suitable CVs."
+      "description": "Select a deal and start the search to find the most suitable CVs."
     },
     "errors": {
       "loadMissions": "Error loading missions",
@@ -1356,10 +1358,13 @@
     "viewAnalysis": "View analysis",
     "analyzing": "Analyzing...",
     "analysisComplete": "Detailed analysis complete",
-    "searchingProfiles": "Searching profiles...",
-    "searchingProfilesDescription": "AI is analyzing CVs in your database to find the best candidates for this mission.",
-    "analyzingProfile": "Analyzing profile...",
-    "analyzingProfileDescription": "AI is generating a detailed analysis of the match between this profile and the mission.",
+    "searchingProfiles": "Searching profiles…",
+    "searchingProfilesDescription": "AI is analyzing CVs in your database to find the best profiles for this deal.",
+    "searchingLoadingSteps": ["Extracting deal keywords…", "Analyzing required skills…", "Scanning the CV database…", "Intelligent AI scoring…", "Comparing profiles…", "Ranking the best matches…"],
+    "searchingEstimatedTime": "This may take 1 to 5 minutes depending on the number of CVs",
+    "analyzingProfile": "Analyzing profile…",
+    "analyzingProfileDescription": "AI is generating a detailed analysis of the match between this profile and the deal.",
+    "analyzingLoadingSteps": ["Deep reading the CV…", "Comparing with requirements…", "Evaluating key skills…", "Writing the AI summary…"],
     "titleAdjustment": "Title adjustment",
     "llmScored": "AI Score",
     "confidence": {
