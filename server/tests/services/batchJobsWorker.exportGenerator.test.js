@@ -1,0 +1,224 @@
+/**
+ * Tests for Batch Jobs Worker - Export Generator
+ * generateJobExport: ZIP creation, template processing, format handling
+ */
+
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+vi.mock('../../utils/logger.backend.js', () => ({ safeLog: vi.fn() }));
+
+const mockQuery = vi.fn();
+vi.mock('../../config/database.js', () => ({
+    query: (...args) => mockQuery(...args)
+}));
+
+const mockGetJob = vi.fn();
+const mockGetJobItems = vi.fn();
+const mockUpdateJobItemStatus = vi.fn();
+const mockUpdateJobExportFile = vi.fn();
+
+vi.mock('../../services/batchJobs.service.js', () => ({
+    ITEM_STATUS: { PENDING: 'pending', PROCESSING: 'processing', SUCCESS: 'success', ERROR: 'error' },
+    getJob: (...args) => mockGetJob(...args),
+    getJobItems: (...args) => mockGetJobItems(...args),
+    updateJobItemStatus: (...args) => mockUpdateJobItemStatus(...args),
+    updateJobExportFile: (...args) => mockUpdateJobExportFile(...args)
+}));
+
+vi.mock('../../services/batchJobsWorker/helpers.js', () => ({
+    removeSuggestionMarkers: vi.fn(text => text)
+}));
+
+// Mock jszip - must be a constructor that tracks added files
+const mockZipGenerateAsync = vi.fn(() => Buffer.from('zipdata'));
+let zipInstance = null;
+
+class MockJSZip {
+    constructor() {
+        this.files = {};
+        zipInstance = this;
+    }
+    folder() {
+        // Return self so folder().file() works
+        return this;
+    }
+    file(name, data) {
+        if (name && data !== undefined) {
+            this.files[name] = { dir: false, name };
+        }
+        return this;
+    }
+    generateAsync(...args) { return mockZipGenerateAsync(...args); }
+}
+
+vi.mock('jszip', () => ({
+    default: MockJSZip
+}));
+
+// Mock fs
+vi.mock('fs', async () => {
+    const actual = await vi.importActual('fs');
+    return {
+        ...actual,
+        default: {
+            ...actual,
+            existsSync: vi.fn(() => true),
+            mkdirSync: vi.fn(),
+            writeFileSync: vi.fn()
+        },
+        existsSync: vi.fn(() => true),
+        mkdirSync: vi.fn(),
+        writeFileSync: vi.fn()
+    };
+});
+
+// Mock fetch for PDF server
+const mockFetch = vi.fn();
+global.fetch = mockFetch;
+
+import { generateJobExport } from '../../services/batchJobsWorker/exportGenerator.js';
+
+describe('Batch Jobs Worker - Export Generator', () => {
+    beforeEach(() => {
+        vi.resetAllMocks();
+        mockZipGenerateAsync.mockResolvedValue(Buffer.from('zipdata'));
+    });
+
+    const template = {
+        id: 'tpl-1',
+        name: 'Modern CV',
+        template_content: '<div>-name- -title- -content-</div>',
+        header_content: '<h1>-name-</h1>',
+        footer_content: '<p>Page</p>',
+        stylesheet: 'body { font: sans-serif; }',
+        footer_height: 30
+    };
+
+    it('should return early when no successful items', async () => {
+        mockGetJob.mockResolvedValueOnce({ id: 'j1' });
+        mockGetJobItems.mockResolvedValueOnce([
+            { id: 'i1', status: 'error', resume_id: null }
+        ]);
+        mockQuery.mockResolvedValueOnce({ rows: [template] }); // template query
+
+        // Should not throw, just return
+        await generateJobExport('j1', { templateId: 'tpl-1', exportFormats: ['pdf'] });
+
+        // No export file update since no items to export
+        expect(mockUpdateJobExportFile).not.toHaveBeenCalled();
+    });
+
+    it('should throw when template not found', async () => {
+        mockGetJob.mockResolvedValueOnce({ id: 'j1' });
+        mockGetJobItems.mockResolvedValueOnce([
+            { id: 'i1', status: 'success', resume_id: 'r1' }
+        ]);
+        mockQuery.mockResolvedValueOnce({ rows: [] }); // no template
+
+        await expect(
+            generateJobExport('j1', { templateId: 'tpl-bad', exportFormats: ['pdf'] })
+        ).rejects.toThrow('Template not found');
+    });
+
+    it('should return early when only failed items exist', async () => {
+        mockGetJob.mockResolvedValueOnce({ id: 'j1' });
+        mockGetJobItems.mockResolvedValueOnce([
+            { id: 'i1', status: 'error', resume_id: null }
+        ]);
+
+        // No template query needed since it returns early
+        await generateJobExport('j1', { templateId: 'tpl-1', exportFormats: ['pdf'] });
+        expect(mockUpdateJobExportFile).not.toHaveBeenCalled();
+    });
+
+    it('should generate PDF export for successful items', async () => {
+        mockGetJob.mockResolvedValueOnce({ id: 'j1' });
+        mockGetJobItems.mockResolvedValueOnce([
+            { id: 'i1', status: 'success', resume_id: 'r1', file_name: 'cv.pdf' }
+        ]);
+        mockQuery
+            .mockResolvedValueOnce({ rows: [template] }) // template
+            .mockResolvedValueOnce({ rows: [{ id: 'r1', improved_text: '<p>Good CV</p>', name: 'Alice', title: 'Dev', trigram: 'ALI' }] }); // resume
+
+        // Mock fetch for PDF server
+        mockFetch.mockResolvedValueOnce({
+            ok: true,
+            arrayBuffer: () => Promise.resolve(new ArrayBuffer(100))
+        });
+
+        await generateJobExport('j1', { templateId: 'tpl-1', exportFormats: ['pdf'] });
+
+        expect(mockFetch).toHaveBeenCalledWith(
+            expect.stringContaining('/generate-pdf'),
+            expect.objectContaining({ method: 'POST' })
+        );
+        expect(mockUpdateJobExportFile).toHaveBeenCalledWith('j1', expect.any(String), expect.stringContaining('export_j1'));
+    });
+
+    it('should handle single exportFormat string', async () => {
+        mockGetJob.mockResolvedValueOnce({ id: 'j1' });
+        mockGetJobItems.mockResolvedValueOnce([
+            { id: 'i1', status: 'success', resume_id: 'r1' }
+        ]);
+        mockQuery
+            .mockResolvedValueOnce({ rows: [template] })
+            .mockResolvedValueOnce({ rows: [{ id: 'r1', improved_text: '<p>CV</p>', name: 'Bob', title: 'PM', trigram: 'BOB' }] });
+
+        mockFetch.mockResolvedValueOnce({
+            ok: true,
+            arrayBuffer: () => Promise.resolve(new ArrayBuffer(50))
+        });
+
+        // exportFormat (singular) should also work
+        await generateJobExport('j1', { templateId: 'tpl-1', exportFormat: 'docx' });
+
+        expect(mockFetch).toHaveBeenCalledWith(
+            expect.stringContaining('/generate-docx'),
+            expect.any(Object)
+        );
+    });
+
+    it('should mark items as error when PDF generation fails', async () => {
+        mockGetJob.mockResolvedValueOnce({ id: 'j1' });
+        mockGetJobItems.mockResolvedValueOnce([
+            { id: 'i1', status: 'success', resume_id: 'r1' }
+        ]);
+        mockQuery
+            .mockResolvedValueOnce({ rows: [template] })
+            .mockResolvedValueOnce({ rows: [{ id: 'r1', improved_text: '<p>CV</p>', name: 'Eve', title: 'QA', trigram: 'EVE' }] });
+
+        // All 3 retry attempts fail
+        mockFetch
+            .mockResolvedValueOnce({ ok: false, status: 500, text: () => Promise.resolve('Server error') })
+            .mockResolvedValueOnce({ ok: false, status: 500, text: () => Promise.resolve('Server error') })
+            .mockResolvedValueOnce({ ok: false, status: 500, text: () => Promise.resolve('Server error') });
+
+        // Should throw "No files generated" since the only item failed
+        await expect(
+            generateJobExport('j1', { templateId: 'tpl-1', exportFormats: ['pdf'] })
+        ).rejects.toThrow('No files generated');
+
+        expect(mockUpdateJobItemStatus).toHaveBeenCalledWith('i1', 'error', expect.objectContaining({
+            error_message: expect.any(String)
+        }));
+    });
+
+    it('should handle adaptation items', async () => {
+        mockGetJob.mockResolvedValueOnce({ id: 'j1' });
+        mockGetJobItems.mockResolvedValueOnce([
+            { id: 'i1', status: 'success', resume_id: 'r1', adaptation_id: 'a1', source_type: 'adaptation', file_name: 'mission' }
+        ]);
+        mockQuery
+            .mockResolvedValueOnce({ rows: [template] }) // template
+            .mockResolvedValueOnce({ rows: [{ adapted_text: '<p>Adapted CV</p>', candidate_name: 'Carol', adapted_title: 'Adapted Dev', mission_title: 'Mission X' }] }); // adaptation
+
+        mockFetch.mockResolvedValueOnce({
+            ok: true,
+            arrayBuffer: () => Promise.resolve(new ArrayBuffer(80))
+        });
+
+        await generateJobExport('j1', { templateId: 'tpl-1', exportFormats: ['pdf'] });
+
+        expect(mockUpdateJobExportFile).toHaveBeenCalled();
+    });
+});

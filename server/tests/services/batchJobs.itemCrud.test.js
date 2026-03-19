@@ -1,0 +1,249 @@
+/**
+ * Tests for Batch Jobs - Item CRUD Operations
+ * Tests addJobItems, addJobResumeIds, addJobExportItems, getJobItems,
+ * updateJobItemStatus, getJobItem, resumeItemWithName, getItemsPendingName, getPendingItems
+ */
+
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+vi.mock('../../config/database.js', () => ({
+    query: vi.fn()
+}));
+
+vi.mock('../../utils/logger.backend.js', () => ({
+    safeLog: vi.fn()
+}));
+
+import { query } from '../../config/database.js';
+import {
+    addJobItems,
+    addJobResumeIds,
+    addJobExportItems,
+    getJobItems,
+    updateJobItemStatus,
+    getJobItem,
+    resumeItemWithName,
+    getItemsPendingName,
+    getPendingItems
+} from '../../services/batchJobs/itemCrud.js';
+
+describe('Batch Jobs - Item CRUD', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    describe('addJobItems', () => {
+        it('should insert items and update total count', async () => {
+            // Each item insert + final total_items update
+            query.mockResolvedValue({ rows: [] });
+
+            const items = [
+                { fileName: 'cv1.pdf', fileData: Buffer.from('data1'), fileMimeType: 'application/pdf' },
+                { fileName: 'cv2.pdf', fileData: Buffer.from('data2'), fileMimeType: 'application/pdf', relativePath: '/docs/cv2.pdf' }
+            ];
+
+            const count = await addJobItems('j1', items);
+
+            expect(count).toBe(2);
+            // 2 inserts + 1 update total_items
+            expect(query).toHaveBeenCalledTimes(3);
+            expect(query.mock.calls[0][0]).toContain('INSERT INTO batch_job_items');
+            expect(query.mock.calls[2][0]).toContain('UPDATE batch_jobs');
+        });
+
+        it('should throw on DB error', async () => {
+            query.mockRejectedValueOnce(new Error('DB error'));
+            await expect(addJobItems('j1', [{ fileName: 'cv.pdf' }])).rejects.toThrow();
+        });
+    });
+
+    describe('addJobResumeIds', () => {
+        it('should look up resume names and insert items', async () => {
+            // First call: SELECT Name for resume 1
+            query.mockResolvedValueOnce({ rows: [{ Name: 'John Doe' }] });
+            // Second call: INSERT item
+            query.mockResolvedValueOnce({ rows: [] });
+            // Third call: UPDATE total_items
+            query.mockResolvedValueOnce({ rows: [] });
+
+            const count = await addJobResumeIds('j1', ['r1']);
+
+            expect(count).toBe(1);
+            expect(query.mock.calls[0][0]).toContain('SELECT "Name" FROM resumes');
+            expect(query.mock.calls[1][0]).toContain('INSERT INTO batch_job_items');
+        });
+
+        it('should use fallback name if resume not found', async () => {
+            query.mockResolvedValueOnce({ rows: [] }); // no resume found
+            query.mockResolvedValueOnce({ rows: [] }); // insert
+            query.mockResolvedValueOnce({ rows: [] }); // update total
+
+            await addJobResumeIds('j1', ['r1']);
+
+            // fileName should be fallback
+            expect(query.mock.calls[1][1][2]).toContain('Resume');
+        });
+    });
+
+    describe('addJobExportItems', () => {
+        it('should insert export items with source type', async () => {
+            query.mockResolvedValue({ rows: [] });
+
+            const items = [{
+                resumeId: 'r1',
+                adaptationId: null,
+                sourceType: 'resume',
+                fileName: 'cv.pdf',
+                relativePath: '/exports/cv.pdf',
+                originalName: 'John Doe'
+            }];
+
+            const count = await addJobExportItems('j1', items);
+
+            expect(count).toBe(1);
+            expect(query.mock.calls[0][0]).toContain('source_type');
+            expect(query.mock.calls[0][1]).toContain('resume');
+        });
+    });
+
+    describe('getJobItems', () => {
+        it('should return items for a job ordered by created_at', async () => {
+            query.mockResolvedValueOnce({ rows: [{ id: 'i1' }, { id: 'i2' }] });
+
+            const result = await getJobItems('j1');
+
+            expect(result).toHaveLength(2);
+            expect(query.mock.calls[0][0]).toContain('ORDER BY created_at ASC');
+            expect(query.mock.calls[0][1]).toEqual(['j1']);
+        });
+
+        it('should throw on error', async () => {
+            query.mockRejectedValueOnce(new Error('DB error'));
+            await expect(getJobItems('j1')).rejects.toThrow();
+        });
+    });
+
+    describe('updateJobItemStatus', () => {
+        it('should update status', async () => {
+            query.mockResolvedValueOnce({ rows: [] });
+
+            await updateJobItemStatus('i1', 'success');
+
+            expect(query.mock.calls[0][0]).toContain('status = $2');
+            expect(query.mock.calls[0][0]).toContain('processed_at = NOW()');
+        });
+
+        it('should include progress if provided', async () => {
+            query.mockResolvedValueOnce({ rows: [] });
+
+            await updateJobItemStatus('i1', 'processing', { progress: 50 });
+
+            expect(query.mock.calls[0][0]).toContain('progress');
+            expect(query.mock.calls[0][1]).toContain(50);
+        });
+
+        it('should include error_message if provided', async () => {
+            query.mockResolvedValueOnce({ rows: [] });
+
+            await updateJobItemStatus('i1', 'error', { error_message: 'parse failed' });
+
+            expect(query.mock.calls[0][0]).toContain('error_message');
+            expect(query.mock.calls[0][1]).toContain('parse failed');
+        });
+
+        it('should include resume_id, original_name, display_name', async () => {
+            query.mockResolvedValueOnce({ rows: [] });
+
+            await updateJobItemStatus('i1', 'success', {
+                resume_id: 'r1',
+                original_name: 'John',
+                display_name: 'John Doe'
+            });
+
+            expect(query.mock.calls[0][0]).toContain('resume_id');
+            expect(query.mock.calls[0][0]).toContain('original_name');
+            expect(query.mock.calls[0][0]).toContain('display_name');
+        });
+
+        it('should store pending_data for pending_name items', async () => {
+            query.mockResolvedValueOnce({ rows: [] });
+
+            await updateJobItemStatus('i1', 'pending_name', {
+                pending_analysis: '{"skills":["js"]}',
+                pending_text: 'some text',
+                pending_improve: true
+            });
+
+            expect(query.mock.calls[0][0]).toContain('pending_data');
+        });
+    });
+
+    describe('getJobItem', () => {
+        it('should return item with job info', async () => {
+            query.mockResolvedValueOnce({ rows: [{ id: 'i1', firm_id: 'f1', options: '{}' }] });
+
+            const result = await getJobItem('i1');
+
+            expect(result.id).toBe('i1');
+            expect(query.mock.calls[0][0]).toContain('JOIN batch_jobs');
+        });
+
+        it('should return null if not found', async () => {
+            query.mockResolvedValueOnce({ rows: [] });
+            expect(await getJobItem('missing')).toBeNull();
+        });
+    });
+
+    describe('resumeItemWithName', () => {
+        it('should update item from pending_name to pending with name', async () => {
+            // getJobItem query
+            query.mockResolvedValueOnce({ rows: [{ id: 'i1', status: 'pending_name', firm_id: 'f1', options: '{}' }] });
+            // update query
+            query.mockResolvedValueOnce({ rows: [] });
+
+            const result = await resumeItemWithName('i1', 'Jane Doe');
+
+            expect(result.status).toBe('pending');
+            expect(result.original_name).toBe('Jane Doe');
+            expect(query.mock.calls[1][1]).toContain('Jane Doe');
+        });
+
+        it('should throw if item not found', async () => {
+            query.mockResolvedValueOnce({ rows: [] });
+            await expect(resumeItemWithName('missing', 'Name')).rejects.toThrow('Item not found');
+        });
+
+        it('should throw if item is not in pending_name status', async () => {
+            query.mockResolvedValueOnce({ rows: [{ id: 'i1', status: 'success', firm_id: 'f1', options: '{}' }] });
+            await expect(resumeItemWithName('i1', 'Name')).rejects.toThrow('not waiting for name');
+        });
+    });
+
+    describe('getItemsPendingName', () => {
+        it('should return items with pending_name status', async () => {
+            query.mockResolvedValueOnce({ rows: [{ id: 'i1', file_name: 'cv.pdf' }] });
+
+            const result = await getItemsPendingName('j1');
+
+            expect(result).toHaveLength(1);
+            expect(query.mock.calls[0][1]).toContain('pending_name');
+        });
+    });
+
+    describe('getPendingItems', () => {
+        it('should return pending items limited by BATCH_SIZE', async () => {
+            query.mockResolvedValueOnce({ rows: [{ id: 'i1' }] });
+
+            const result = await getPendingItems('j1');
+
+            expect(result).toHaveLength(1);
+            expect(query.mock.calls[0][0]).toContain('LIMIT $3');
+            expect(query.mock.calls[0][1][1]).toBe('pending');
+        });
+
+        it('should return empty array on error', async () => {
+            query.mockRejectedValueOnce(new Error('DB error'));
+            expect(await getPendingItems('j1')).toEqual([]);
+        });
+    });
+});
