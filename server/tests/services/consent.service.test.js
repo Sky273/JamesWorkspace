@@ -10,6 +10,14 @@ vi.mock('../../config/database.js', () => ({
     query: vi.fn()
 }));
 
+vi.mock('../../utils/postgresHelpers.js', () => ({
+    transaction: vi.fn(async (callback) => {
+        const { query } = await import('../../config/database.js');
+        const fakeClient = { query: (...args) => query(...args) };
+        return callback(fakeClient);
+    })
+}));
+
 vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));

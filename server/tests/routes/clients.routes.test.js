@@ -27,6 +27,11 @@ vi.mock('../../config/database.js', () => ({
     query: (...args) => mockQuery(...args)
 }));
 
+// Mock postgresHelpers
+vi.mock('../../utils/postgresHelpers.js', () => ({
+    escapeLike: (str) => str.replace(/[%_\\]/g, '\\$&')
+}));
+
 // Mock firmHelpers
 const mockGetUserFirmId = vi.fn();
 vi.mock('../../utils/firmHelpers.js', () => ({

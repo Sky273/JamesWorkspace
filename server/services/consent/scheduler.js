@@ -4,6 +4,7 @@
  */
 
 import { query } from '../../config/database.js';
+import { transaction } from '../../utils/postgresHelpers.js';
 import { safeLog } from '../../utils/logger.backend.js';
 import { gdprMailService } from '../mail/gdprMailService.js';
 import { logGdprAction, GDPR_ACTIONS } from '../gdprAudit.service.js';
@@ -157,17 +158,20 @@ export async function purgeResume(resumeId, auditInfo = null) {
         resumeInfo = infoResult.rows[0];
     }
 
-    // Delete versions first (foreign key constraint)
-    await query(`DELETE FROM resume_versions WHERE resume_id = $1`, [resumeId]);
+    // Wrap all deletes in a transaction to prevent partial purge
+    const result = await transaction(async (client) => {
+        // Delete versions first (foreign key constraint)
+        await client.query(`DELETE FROM resume_versions WHERE resume_id = $1`, [resumeId]);
 
-    // Delete adaptations
-    await query(`DELETE FROM resume_adaptations WHERE resume_id = $1`, [resumeId]);
+        // Delete adaptations
+        await client.query(`DELETE FROM resume_adaptations WHERE resume_id = $1`, [resumeId]);
 
-    // Delete submissions
-    await query(`DELETE FROM resume_submissions WHERE resume_id = $1`, [resumeId]);
+        // Delete submissions
+        await client.query(`DELETE FROM resume_submissions WHERE resume_id = $1`, [resumeId]);
 
-    // Delete the resume
-    const result = await query(`DELETE FROM resumes WHERE id = $1 RETURNING id`, [resumeId]);
+        // Delete the resume
+        return await client.query(`DELETE FROM resumes WHERE id = $1 RETURNING id`, [resumeId]);
+    });
 
     if (result.rows.length > 0) {
         safeLog('info', 'Resume purged successfully', { resumeId });
