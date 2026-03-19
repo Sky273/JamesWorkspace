@@ -58,7 +58,11 @@ vi.mock('../../config/database.js', () => ({
 
 // Mock auth config
 vi.mock('../../routes/auth/config.js', () => ({
-    useSecureCookies: false
+    useSecureCookies: false,
+    ACCESS_TOKEN_COOKIE: { httpOnly: true, secure: false, sameSite: 'lax', path: '/', maxAge: 3600000 },
+    REFRESH_TOKEN_COOKIE: { httpOnly: true, secure: false, sameSite: 'lax', path: '/api/auth', maxAge: 604800000 },
+    CLEAR_ACCESS_TOKEN: { httpOnly: true, secure: false, sameSite: 'lax', path: '/' },
+    CLEAR_REFRESH_TOKEN: { httpOnly: true, secure: false, sameSite: 'lax', path: '/api/auth' }
 }));
 
 // Mock rate limit

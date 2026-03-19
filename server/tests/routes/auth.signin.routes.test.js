@@ -395,8 +395,9 @@ describe('Auth Routes - POST /api/auth/refresh', () => {
         expect(res.body.error).toContain('inactive');
     });
 
-    it('should issue new access token for valid refresh', async () => {
+    it('should issue new access token and rotate refresh token', async () => {
         mockVerifyRefreshToken.mockReturnValueOnce({ id: 'user-123' });
+        mockRevokeToken.mockResolvedValueOnce(true);
         // fetchUserWithFirm uses selectWithTimeout which returns an array
         mockSelectWithTimeout.mockResolvedValueOnce([{ 
             id: 'user-123',
@@ -416,8 +417,16 @@ describe('Auth Routes - POST /api/auth/refresh', () => {
         expect(res.body.user).toBeDefined();
         expect(res.body.user.id).toBe('user-123');
         
+        // Verify both cookies are set (token rotation)
         const cookies = res.headers['set-cookie'];
         expect(cookies.some(c => c.includes('accessToken'))).toBe(true);
+        expect(cookies.some(c => c.includes('refreshToken'))).toBe(true);
+        
+        // Verify old refresh token was revoked
+        expect(mockRevokeToken).toHaveBeenCalledWith('valid-refresh-token');
+        
+        // Verify new refresh token was generated
+        expect(mockGenerateRefreshToken).toHaveBeenCalled();
     });
 });
 

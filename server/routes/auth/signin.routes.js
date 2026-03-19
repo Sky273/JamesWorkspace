@@ -14,7 +14,7 @@ import { safeLog } from '../../utils/logger.backend.js';
 import { selectWithTimeout, createWithTimeout } from '../../utils/postgresHelpers.js';
 import { query } from '../../config/database.js';
 import { is2FAEnabled, verifyTotpCode } from '../../services/totp.service.js';
-import { useSecureCookies } from './config.js';
+import { useSecureCookies, ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE, CLEAR_ACCESS_TOKEN, CLEAR_REFRESH_TOKEN } from './config.js';
 
 const router = express.Router();
 
@@ -190,21 +190,8 @@ router.post('/signin', authLimiter, validateBody(signInSchema), async (req, res)
         const accessToken = generateAccessToken(userData);
         const refreshToken = generateRefreshToken(userData);
 
-        res.cookie('accessToken', accessToken, {
-            httpOnly: true,
-            secure: useSecureCookies,
-            sameSite: 'lax',
-            path: '/',
-            maxAge: 60 * 60 * 1000
-        });
-
-        res.cookie('refreshToken', refreshToken, {
-            httpOnly: true,
-            secure: useSecureCookies,
-            sameSite: 'lax',
-            path: '/',
-            maxAge: 7 * 24 * 60 * 60 * 1000
-        });
+        res.cookie('accessToken', accessToken, ACCESS_TOKEN_COOKIE);
+        res.cookie('refreshToken', refreshToken, REFRESH_TOKEN_COOKIE);
 
         securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.AUTH_SUCCESS, {
             ...metadata,
@@ -303,7 +290,7 @@ router.post('/register', authLimiter, validateBody(registerSchema), async (req, 
     }
 });
 
-// POST /api/auth/refresh - Refresh access token
+// POST /api/auth/refresh - Refresh access token (with token rotation)
 router.post('/refresh', async (req, res) => {
     try {
         const refreshToken = req.cookies.refreshToken;
@@ -326,13 +313,12 @@ router.post('/refresh', async (req, res) => {
         const userData = formatUserResponse(user);
         const newAccessToken = generateAccessToken(userData);
 
-        res.cookie('accessToken', newAccessToken, {
-            httpOnly: true,
-            secure: useSecureCookies,
-            sameSite: 'lax',
-            path: '/',
-            maxAge: 60 * 60 * 1000
-        });
+        // Refresh token rotation: issue new refresh token and blacklist the old one
+        const newRefreshToken = generateRefreshToken(userData);
+        await revokeToken(refreshToken);
+
+        res.cookie('accessToken', newAccessToken, ACCESS_TOKEN_COOKIE);
+        res.cookie('refreshToken', newRefreshToken, REFRESH_TOKEN_COOKIE);
 
         res.json({ user: userData });
     } catch (error) {
@@ -365,8 +351,8 @@ const logoutHandler = async (req, res) => {
             message: 'User signed out'
         });
 
-        res.clearCookie('accessToken', { path: '/' });
-        res.clearCookie('refreshToken', { path: '/' });
+        res.clearCookie('accessToken', CLEAR_ACCESS_TOKEN);
+        res.clearCookie('refreshToken', CLEAR_REFRESH_TOKEN);
         res.json({ message: 'Signed out successfully' });
     } catch (error) {
         safeLog('error', 'Sign out error', { error: error.message });

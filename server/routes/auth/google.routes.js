@@ -11,7 +11,7 @@ import { securityLog, getRequestMetadata, LOG_LEVELS, SECURITY_EVENTS } from '..
 import { safeLog } from '../../utils/logger.backend.js';
 import { query } from '../../config/database.js';
 import * as googleAuthService from '../../services/googleAuth.service.js';
-import { useSecureCookies } from './config.js';
+import { useSecureCookies, ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE } from './config.js';
 
 const router = express.Router();
 
@@ -221,21 +221,8 @@ router.get('/google/callback', async (req, res) => {
         const accessToken = generateAccessToken(userData);
         const refreshToken = generateRefreshToken(userData);
         
-        res.cookie('accessToken', accessToken, {
-            httpOnly: true,
-            secure: useSecureCookies,
-            sameSite: 'lax',
-            path: '/',
-            maxAge: 60 * 60 * 1000
-        });
-        
-        res.cookie('refreshToken', refreshToken, {
-            httpOnly: true,
-            secure: useSecureCookies,
-            sameSite: 'lax',
-            path: '/',
-            maxAge: 7 * 24 * 60 * 60 * 1000
-        });
+        res.cookie('accessToken', accessToken, ACCESS_TOKEN_COOKIE);
+        res.cookie('refreshToken', refreshToken, REFRESH_TOKEN_COOKIE);
         
         if (googleUser.accessToken) {
             await googleAuthService.saveGmailTokens(
@@ -329,21 +316,8 @@ router.post('/google/token', authLimiter, async (req, res) => {
         const accessToken = generateAccessToken(userData);
         const refreshToken = generateRefreshToken(userData);
         
-        res.cookie('accessToken', accessToken, {
-            httpOnly: true,
-            secure: useSecureCookies,
-            sameSite: 'lax',
-            path: '/',
-            maxAge: 60 * 60 * 1000
-        });
-        
-        res.cookie('refreshToken', refreshToken, {
-            httpOnly: true,
-            secure: useSecureCookies,
-            sameSite: 'lax',
-            path: '/',
-            maxAge: 7 * 24 * 60 * 60 * 1000
-        });
+        res.cookie('accessToken', accessToken, ACCESS_TOKEN_COOKIE);
+        res.cookie('refreshToken', refreshToken, REFRESH_TOKEN_COOKIE);
         
         securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.AUTH_SUCCESS, {
             ...metadata,
