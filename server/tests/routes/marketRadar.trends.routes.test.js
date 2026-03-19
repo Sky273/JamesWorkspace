@@ -23,6 +23,7 @@ const mockGetTrendsSummary = vi.fn();
 const mockInvalidateTrendsCache = vi.fn();
 const mockLoadTrendsCache = vi.fn();
 const mockGetStatDynamiqueEmploi = vi.fn();
+const mockGetTrendsAuditReport = vi.fn();
 vi.mock('../../services/marketTrends.service.js', () => ({
     collectMarketTrends: (...args) => mockCollectMarketTrends(...args),
     getStoredTrends: (...args) => mockGetStoredTrends(...args),
@@ -34,7 +35,8 @@ vi.mock('../../services/marketTrends.service.js', () => ({
     getTrendsSummary: (...args) => mockGetTrendsSummary(...args),
     invalidateTrendsCache: (...args) => mockInvalidateTrendsCache(...args),
     loadTrendsCache: (...args) => mockLoadTrendsCache(...args),
-    getStatDynamiqueEmploi: (...args) => mockGetStatDynamiqueEmploi(...args)
+    getStatDynamiqueEmploi: (...args) => mockGetStatDynamiqueEmploi(...args),
+    getTrendsAuditReport: (...args) => mockGetTrendsAuditReport(...args)
 }));
 
 // Mock franceTravail service
@@ -45,11 +47,6 @@ vi.mock('../../services/franceTravail.service.js', () => ({
     ]
 }));
 
-// Mock database (for audit route)
-const mockDbQuery = vi.fn();
-vi.mock('../../config/database.js', () => ({
-    query: (...args) => mockDbQuery(...args)
-}));
 
 // Mock logger
 vi.mock('../../utils/logger.backend.js', () => ({
@@ -435,31 +432,28 @@ describe('Market Radar - Trends Routes', () => {
     // ==========================================
     describe('GET /trends/audit', () => {
         it('should return audit report', async () => {
-            mockDbQuery
-                .mockResolvedValueOnce({
-                    rows: [{
-                        type: 'tension',
-                        total_records: '100',
-                        oldest_collection: '2025-06-01',
-                        newest_collection: '2026-01-15',
-                        fresh_count: '80',
-                        recent_count: '15',
-                        stale_count: '5',
-                        updated_records: '30',
-                        avg_change_percent: '12.5'
-                    }]
-                })
-                .mockResolvedValueOnce({ rows: [] })
-                .mockResolvedValueOnce({
-                    rows: [{
-                        total_records: '100',
-                        total_types: '3',
-                        total_regions: '13',
-                        total_rome_codes: '50',
-                        oldest_data: '2025-06-01',
-                        newest_data: '2026-01-15'
-                    }]
-                });
+            mockGetTrendsAuditReport.mockResolvedValueOnce({
+                freshness: [{
+                    type: 'tension',
+                    total_records: '100',
+                    oldest_collection: '2025-06-01',
+                    newest_collection: '2026-01-15',
+                    fresh_count: '80',
+                    recent_count: '15',
+                    stale_count: '5',
+                    updated_records: '30',
+                    avg_change_percent: '12.5'
+                }],
+                significantChanges: [],
+                overall: {
+                    total_records: '100',
+                    total_types: '3',
+                    total_regions: '13',
+                    total_rome_codes: '50',
+                    oldest_data: '2025-06-01',
+                    newest_data: '2026-01-15'
+                }
+            });
 
             const res = await request(app)
                 .get('/api/market-radar/trends/audit')
@@ -481,7 +475,7 @@ describe('Market Radar - Trends Routes', () => {
         });
 
         it('should return 500 on error', async () => {
-            mockDbQuery.mockRejectedValueOnce(new Error('DB error'));
+            mockGetTrendsAuditReport.mockRejectedValueOnce(new Error('DB error'));
 
             const res = await request(app)
                 .get('/api/market-radar/trends/audit')

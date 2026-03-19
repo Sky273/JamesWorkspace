@@ -20,11 +20,10 @@ vi.mock('../../config/constants.js', () => ({
     RATE_LIMIT: { AUTH: { windowMs: 900000, max: 20 }, USER: { windowMs: 900000, max: 50 } }
 }));
 
-// Mock database
-const mockQuery = vi.fn();
-vi.mock('../../config/database.js', () => ({
-    query: (...args) => mockQuery(...args)
-}));
+// Mock deal-export service functions (added to batchJobs.service.js)
+const mockGetDealForExport = vi.fn();
+const mockGetResumesForDeal = vi.fn();
+const mockGetAdaptationsForDeal = vi.fn();
 
 // Mock fs (used by route for file availability checks)
 vi.mock('fs', () => ({
@@ -78,6 +77,9 @@ vi.mock('../../services/batchJobs.service.js', () => ({
     getJobItem: (...args) => mockGetJobItem(...args),
     resumeItemWithName: (...args) => mockResumeItemWithName(...args),
     getItemsPendingName: (...args) => mockGetItemsPendingName(...args),
+    getDealForExport: (...args) => mockGetDealForExport(...args),
+    getResumesForDeal: (...args) => mockGetResumesForDeal(...args),
+    getAdaptationsForDeal: (...args) => mockGetAdaptationsForDeal(...args),
     JOB_STATUS: { PENDING: 'pending', PROCESSING: 'processing', COMPLETED: 'completed', FAILED: 'failed', PAUSED: 'paused', CANCELLED: 'cancelled' },
     ITEM_STATUS: { PENDING: 'pending', PROCESSING: 'processing', SUCCESS: 'success', ERROR: 'error', SKIPPED: 'skipped', PENDING_NAME: 'pending_name' }
 }));

@@ -14,7 +14,8 @@ import {
     validateConsentToken,
     recordConsentResponse,
     getConsentStatus,
-    resendConsentRequest
+    resendConsentRequest,
+    markConsentError
 } from '../services/consent.service.js';
 import { runAllChecks } from '../services/scheduler.service.js';
 
@@ -79,12 +80,7 @@ router.post('/:resumeId/send', authenticateToken, validateParams('resumeId'), as
         
         // Mark consent as error if email sending fails
         try {
-            const { query } = await import('../config/database.js');
-            await query(`
-                UPDATE resumes 
-                SET consent_status = 'error', updated_at = CURRENT_TIMESTAMP
-                WHERE id = $1 AND consent_status = 'pending_consent'
-            `, [req.params.resumeId]);
+            await markConsentError(req.params.resumeId);
             safeLog('info', 'Consent status set to error after send failure', { resumeId: req.params.resumeId });
         } catch (updateError) {
             safeLog('error', 'Failed to update consent status to error', { error: updateError.message });

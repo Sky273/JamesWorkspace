@@ -8,6 +8,8 @@
  * - ./consent/scheduler.js      : Automated tasks (expiry, reminders, purge)
  */
 
+import { query } from '../config/database.js';
+
 // Operations
 export {
     initializeConsent,
@@ -17,6 +19,19 @@ export {
     getConsentStatus,
     resendConsentRequest
 } from './consent/operations.js';
+
+/**
+ * Mark consent status as error after send failure
+ * @param {string} resumeId
+ * @returns {Promise<void>}
+ */
+export async function markConsentError(resumeId) {
+    await query(`
+        UPDATE resumes 
+        SET consent_status = 'error', updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1 AND consent_status = 'pending_consent'
+    `, [resumeId]);
+}
 
 // Scheduler tasks
 export {
@@ -40,5 +55,6 @@ export default {
     checkExpiredConsents,
     sendConsentReminders,
     purgeResume,
-    purgeExpiredResumes
+    purgeExpiredResumes,
+    markConsentError
 };

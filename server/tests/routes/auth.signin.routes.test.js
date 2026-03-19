@@ -33,21 +33,18 @@ vi.mock('../../config/constants.js', async (_importOriginal) => {
     };
 });
 
-// Mock database
-const mockQuery = vi.fn();
-vi.mock('../../config/database.js', () => ({
-    query: (...args) => mockQuery(...args)
-}));
-
-// Mock postgresHelpers
-const mockSelectWithTimeout = vi.fn();
-const mockFindWithTimeout = vi.fn();
-const mockCreateWithTimeout = vi.fn();
-vi.mock('../../utils/postgresHelpers.js', () => ({
-    selectWithTimeout: (...args) => mockSelectWithTimeout(...args),
-    findWithTimeout: (...args) => mockFindWithTimeout(...args),
-    createWithTimeout: (...args) => mockCreateWithTimeout(...args),
-    validatePromptSize: vi.fn(() => true)
+// Mock auth service
+const mockFindUserWithFirmByEmail = vi.fn();
+const mockFindUserWithFirmById = vi.fn();
+const mockUpdateLastLogin = vi.fn();
+const mockFindExistingUserByEmail = vi.fn();
+const mockCreateUser = vi.fn();
+vi.mock('../../services/auth.service.js', () => ({
+    findUserWithFirmByEmail: (...args) => mockFindUserWithFirmByEmail(...args),
+    findUserWithFirmById: (...args) => mockFindUserWithFirmById(...args),
+    updateLastLogin: (...args) => mockUpdateLastLogin(...args),
+    findExistingUserByEmail: (...args) => mockFindExistingUserByEmail(...args),
+    createUser: (...args) => mockCreateUser(...args)
 }));
 
 // Mock bcrypt
@@ -171,7 +168,7 @@ describe('Auth Routes - POST /api/auth/signin', () => {
 
     describe('Authentication Flow', () => {
         it('should return 401 for non-existent user', async () => {
-            mockSelectWithTimeout.mockResolvedValueOnce([]);
+            mockFindUserWithFirmByEmail.mockResolvedValueOnce(null);
 
             const res = await request(app)
                 .post('/api/auth/signin')
@@ -182,13 +179,13 @@ describe('Auth Routes - POST /api/auth/signin', () => {
         });
 
         it('should return 401 for wrong password', async () => {
-            mockSelectWithTimeout.mockResolvedValueOnce([{
+            mockFindUserWithFirmByEmail.mockResolvedValueOnce({
                 id: 'user-123',
                 email: 'test@example.com',
                 password: '$2a$10$hashedpassword',
                 status: 'active',
                 role: 'user'
-            }]);
+            });
             mockBcryptCompare.mockResolvedValueOnce(false);
 
             const res = await request(app)
@@ -200,13 +197,13 @@ describe('Auth Routes - POST /api/auth/signin', () => {
         });
 
         it('should return 403 for inactive user', async () => {
-            mockSelectWithTimeout.mockResolvedValueOnce([{
+            mockFindUserWithFirmByEmail.mockResolvedValueOnce({
                 id: 'user-123',
                 email: 'inactive@example.com',
                 password: '$2a$10$hashedpassword',
                 status: 'inactive',
                 role: 'user'
-            }]);
+            });
             mockBcryptCompare.mockResolvedValueOnce(true);
 
             const res = await request(app)
@@ -218,7 +215,7 @@ describe('Auth Routes - POST /api/auth/signin', () => {
         });
 
         it('should return user data and set cookies on successful login', async () => {
-            mockSelectWithTimeout.mockResolvedValueOnce([{
+            mockFindUserWithFirmByEmail.mockResolvedValueOnce({
                 id: 'user-123',
                 email: 'test@example.com',
                 password: '$2a$10$hashedpassword',
@@ -227,9 +224,9 @@ describe('Auth Routes - POST /api/auth/signin', () => {
                 role: 'user',
                 firm_id: 'firm-123',
                 firm_name: 'Test Firm'
-            }]);
+            });
             mockBcryptCompare.mockResolvedValueOnce(true);
-            mockQuery.mockResolvedValueOnce({ rows: [] }); // UPDATE last_login
+            mockUpdateLastLogin.mockResolvedValueOnce();
 
             const res = await request(app)
                 .post('/api/auth/signin')
@@ -248,24 +245,22 @@ describe('Auth Routes - POST /api/auth/signin', () => {
         });
 
         it('should normalize email to lowercase', async () => {
-            mockSelectWithTimeout.mockResolvedValueOnce([{
+            mockFindUserWithFirmByEmail.mockResolvedValueOnce({
                 id: 'user-123',
                 email: 'test@example.com',
                 password: '$2a$10$hashedpassword',
                 status: 'active',
                 role: 'user'
-            }]);
+            });
             mockBcryptCompare.mockResolvedValueOnce(true);
-            mockQuery.mockResolvedValueOnce({ rows: [] });
+            mockUpdateLastLogin.mockResolvedValueOnce();
 
             await request(app)
                 .post('/api/auth/signin')
                 .send({ email: 'TEST@EXAMPLE.COM', password: 'password123' });
 
-            // Check that selectWithTimeout was called with lowercase email
-            expect(mockSelectWithTimeout).toHaveBeenCalled();
-            const callArgs = mockSelectWithTimeout.mock.calls[0];
-            expect(callArgs[1].rawParams[0]).toBe('test@example.com');
+            // Check that findUserWithFirmByEmail was called with lowercase email
+            expect(mockFindUserWithFirmByEmail).toHaveBeenCalledWith('test@example.com');
         });
     });
 });
@@ -279,7 +274,7 @@ describe('Auth Routes - POST /api/auth/register', () => {
     });
 
     it('should reject registration with existing email', async () => {
-        mockSelectWithTimeout.mockResolvedValueOnce([{ id: 'existing-user' }]);
+        mockFindExistingUserByEmail.mockResolvedValueOnce({ id: 'existing-user' });
 
         const res = await request(app)
             .post('/api/auth/register')
@@ -294,15 +289,15 @@ describe('Auth Routes - POST /api/auth/register', () => {
     });
 
     it('should create new user with valid data', async () => {
-        mockSelectWithTimeout.mockResolvedValueOnce([]); // No existing user
+        mockFindExistingUserByEmail.mockResolvedValueOnce(null);
         mockBcryptHash.mockResolvedValueOnce('$2a$10$hashedpassword');
-        mockCreateWithTimeout.mockResolvedValueOnce([{
+        mockCreateUser.mockResolvedValueOnce({
             id: 'new-user-123',
             email: 'newuser@example.com',
             name: 'New User',
             role: 'user',
             status: 'pending'
-        }]);
+        });
 
         const res = await request(app)
             .post('/api/auth/register')
@@ -319,14 +314,14 @@ describe('Auth Routes - POST /api/auth/register', () => {
     });
 
     it('should hash password before storing', async () => {
-        mockSelectWithTimeout.mockResolvedValueOnce([]);
+        mockFindExistingUserByEmail.mockResolvedValueOnce(null);
         mockBcryptHash.mockResolvedValueOnce('$2a$10$hashedpassword');
-        mockCreateWithTimeout.mockResolvedValueOnce([{
+        mockCreateUser.mockResolvedValueOnce({
             id: 'new-user-123',
             email: 'newuser@example.com',
             name: 'New User',
             role: 'user'
-        }]);
+        });
 
         await request(app)
             .post('/api/auth/register')
@@ -381,11 +376,10 @@ describe('Auth Routes - POST /api/auth/refresh', () => {
 
     it('should return 401 for inactive user', async () => {
         mockVerifyRefreshToken.mockReturnValueOnce({ id: 'user-123' });
-        // fetchUserWithFirm uses selectWithTimeout which returns an array
-        mockSelectWithTimeout.mockResolvedValueOnce([{ 
+        mockFindUserWithFirmById.mockResolvedValueOnce({ 
             id: 'user-123', 
             status: 'inactive' 
-        }]);
+        });
 
         const res = await request(app)
             .post('/api/auth/refresh')
@@ -398,8 +392,7 @@ describe('Auth Routes - POST /api/auth/refresh', () => {
     it('should issue new access token and rotate refresh token', async () => {
         mockVerifyRefreshToken.mockReturnValueOnce({ id: 'user-123' });
         mockRevokeToken.mockResolvedValueOnce(true);
-        // fetchUserWithFirm uses selectWithTimeout which returns an array
-        mockSelectWithTimeout.mockResolvedValueOnce([{ 
+        mockFindUserWithFirmById.mockResolvedValueOnce({ 
             id: 'user-123',
             email: 'test@example.com',
             name: 'Test User',
@@ -407,7 +400,7 @@ describe('Auth Routes - POST /api/auth/refresh', () => {
             role: 'user',
             firm_id: 'firm-123',
             firm_name: 'Test Firm'
-        }]);
+        });
 
         const res = await request(app)
             .post('/api/auth/refresh')
@@ -478,7 +471,7 @@ describe('Auth Routes - GET /api/auth/me', () => {
     });
 
     it('should return current user data', async () => {
-        mockSelectWithTimeout.mockResolvedValueOnce([{
+        mockFindUserWithFirmById.mockResolvedValueOnce({
             id: 'user-123',
             email: 'test@example.com',
             name: 'Test User',
@@ -489,7 +482,7 @@ describe('Auth Routes - GET /api/auth/me', () => {
             firm_id: 'firm-123',
             firm_name: 'Test Firm',
             firm_logo: 'logo.png'
-        }]);
+        });
 
         const res = await request(app)
             .get('/api/auth/me')
@@ -503,7 +496,7 @@ describe('Auth Routes - GET /api/auth/me', () => {
     });
 
     it('should return 404 if user not found', async () => {
-        mockSelectWithTimeout.mockResolvedValueOnce([]);
+        mockFindUserWithFirmById.mockResolvedValueOnce(null);
 
         const res = await request(app)
             .get('/api/auth/me')

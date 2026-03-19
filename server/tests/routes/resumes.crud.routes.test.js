@@ -20,21 +20,23 @@ vi.mock('../../config/constants.js', () => ({
     RATE_LIMIT: { AUTH: { windowMs: 900000, max: 20 }, USER: { windowMs: 900000, max: 50 } }
 }));
 
-// Mock database
-const mockQuery = vi.fn();
-vi.mock('../../config/database.js', () => ({
-    query: (...args) => mockQuery(...args)
-}));
-
-// Mock postgresHelpers
-const mockSelectWithTimeout = vi.fn();
-const mockUpdateWithTimeout = vi.fn();
-const mockDestroyWithTimeout = vi.fn();
-vi.mock('../../utils/postgresHelpers.js', () => ({
-    selectWithTimeout: (...args) => mockSelectWithTimeout(...args),
-    updateWithTimeout: (...args) => mockUpdateWithTimeout(...args),
-    destroyWithTimeout: (...args) => mockDestroyWithTimeout(...args),
-    escapeLike: (str) => str.replace(/[%_\\]/g, '\\$&')
+// Mock resumes service
+const mockCountResumes = vi.fn();
+const mockListResumes = vi.fn();
+const mockGetResumeById = vi.fn();
+const mockGetResumeFileForDownload = vi.fn();
+const mockUpdateResume = vi.fn();
+const mockDeleteResume = vi.fn();
+const mockGetResumeForAccessCheck = vi.fn();
+vi.mock('../../services/resumes.service.js', () => ({
+    countResumes: (...args) => mockCountResumes(...args),
+    listResumes: (...args) => mockListResumes(...args),
+    getResumeById: (...args) => mockGetResumeById(...args),
+    getResumeFileForDownload: (...args) => mockGetResumeFileForDownload(...args),
+    updateResume: (...args) => mockUpdateResume(...args),
+    deleteResume: (...args) => mockDeleteResume(...args),
+    getResumeForAccessCheck: (...args) => mockGetResumeForAccessCheck(...args),
+    RESUME_SELECT_COLUMNS: 'id, name, title, status, firm_id, created_at'
 }));
 
 // Mock firmHelpers
@@ -58,7 +60,7 @@ vi.mock('../../utils/tagCleaner.js', () => ({
 }));
 
 // Mock tags.routes
-vi.mock('../tags.routes.js', () => ({
+vi.mock('../../routes/tags.routes.js', () => ({
     invalidateTagsCache: vi.fn()
 }));
 
@@ -138,8 +140,8 @@ describe('Resume Routes - GET /api/resumes', () => {
 
     it('should return paginated resumes for authenticated user', async () => {
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
-        mockQuery.mockResolvedValueOnce({ rows: [{ total: '5' }] }); // count query
-        mockSelectWithTimeout.mockResolvedValueOnce([
+        mockCountResumes.mockResolvedValueOnce(5);
+        mockListResumes.mockResolvedValueOnce([
             { id: 'resume-1', name: 'Resume 1', status: 'analyzed', firm_id: 'firm-123' },
             { id: 'resume-2', name: 'Resume 2', status: 'pending', firm_id: 'firm-123' }
         ]);
@@ -168,8 +170,8 @@ describe('Resume Routes - GET /api/resumes', () => {
 
     it('should filter by status', async () => {
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
-        mockQuery.mockResolvedValueOnce({ rows: [{ total: '2' }] });
-        mockSelectWithTimeout.mockResolvedValueOnce([
+        mockCountResumes.mockResolvedValueOnce(2);
+        mockListResumes.mockResolvedValueOnce([
             { id: 'resume-1', name: 'Resume 1', status: 'analyzed', firm_id: 'firm-123' }
         ]);
 
@@ -182,8 +184,8 @@ describe('Resume Routes - GET /api/resumes', () => {
 
     it('should filter by search term', async () => {
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
-        mockQuery.mockResolvedValueOnce({ rows: [{ total: '1' }] });
-        mockSelectWithTimeout.mockResolvedValueOnce([
+        mockCountResumes.mockResolvedValueOnce(1);
+        mockListResumes.mockResolvedValueOnce([
             { id: 'resume-1', name: 'John Doe', status: 'analyzed', firm_id: 'firm-123' }
         ]);
 
@@ -196,8 +198,8 @@ describe('Resume Routes - GET /api/resumes', () => {
 
     it('should support pagination parameters', async () => {
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
-        mockQuery.mockResolvedValueOnce({ rows: [{ total: '100' }] });
-        mockSelectWithTimeout.mockResolvedValueOnce([
+        mockCountResumes.mockResolvedValueOnce(100);
+        mockListResumes.mockResolvedValueOnce([
             { id: 'resume-51', name: 'Resume 51', status: 'analyzed', firm_id: 'firm-123' }
         ]);
 
@@ -211,8 +213,8 @@ describe('Resume Routes - GET /api/resumes', () => {
     });
 
     it('should allow admin to see all resumes', async () => {
-        mockQuery.mockResolvedValueOnce({ rows: [{ total: '10' }] });
-        mockSelectWithTimeout.mockResolvedValueOnce([
+        mockCountResumes.mockResolvedValueOnce(10);
+        mockListResumes.mockResolvedValueOnce([
             { id: 'resume-1', name: 'Resume 1', status: 'analyzed', firm_id: 'firm-other' }
         ]);
 
@@ -243,7 +245,7 @@ describe('Resume Routes - GET /api/resumes/:id', () => {
     });
 
     it('should return 404 for non-existent resume', async () => {
-        mockQuery.mockResolvedValueOnce({ rows: [] });
+        mockGetResumeById.mockResolvedValueOnce(null);
 
         const res = await request(app)
             .get('/api/resumes/123e4567-e89b-12d3-a456-426614174000')
@@ -255,13 +257,11 @@ describe('Resume Routes - GET /api/resumes/:id', () => {
     it('should return resume for authorized user', async () => {
         mockIsUserAdmin.mockReturnValueOnce(false);
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
-        mockQuery.mockResolvedValueOnce({ 
-            rows: [{ 
-                id: '123e4567-e89b-12d3-a456-426614174000', 
-                name: 'Test Resume',
-                status: 'analyzed',
-                firm_id: 'firm-123'
-            }] 
+        mockGetResumeById.mockResolvedValueOnce({ 
+            id: '123e4567-e89b-12d3-a456-426614174000', 
+            name: 'Test Resume',
+            status: 'analyzed',
+            firm_id: 'firm-123'
         });
 
         const res = await request(app)
@@ -275,12 +275,10 @@ describe('Resume Routes - GET /api/resumes/:id', () => {
     it('should return 403 for resume from different firm', async () => {
         mockIsUserAdmin.mockReturnValueOnce(false);
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
-        mockQuery.mockResolvedValueOnce({ 
-            rows: [{ 
-                id: '123e4567-e89b-12d3-a456-426614174000', 
-                name: 'Other Firm Resume',
-                firm_id: 'firm-other'
-            }] 
+        mockGetResumeById.mockResolvedValueOnce({ 
+            id: '123e4567-e89b-12d3-a456-426614174000', 
+            name: 'Other Firm Resume',
+            firm_id: 'firm-other'
         });
 
         const res = await request(app)
@@ -292,12 +290,10 @@ describe('Resume Routes - GET /api/resumes/:id', () => {
 
     it('should allow admin to access any resume', async () => {
         mockIsUserAdmin.mockReturnValueOnce(true);
-        mockQuery.mockResolvedValueOnce({ 
-            rows: [{ 
-                id: '123e4567-e89b-12d3-a456-426614174000', 
-                name: 'Other Firm Resume',
-                firm_id: 'firm-other'
-            }] 
+        mockGetResumeById.mockResolvedValueOnce({ 
+            id: '123e4567-e89b-12d3-a456-426614174000', 
+            name: 'Other Firm Resume',
+            firm_id: 'firm-other'
         });
 
         const res = await request(app)
@@ -318,7 +314,7 @@ describe('Resume Routes - GET /api/resumes/:id/download', () => {
     });
 
     it('should return 404 for non-existent resume', async () => {
-        mockQuery.mockResolvedValueOnce({ rows: [] });
+        mockGetResumeFileForDownload.mockResolvedValueOnce(null);
 
         const res = await request(app)
             .get('/api/resumes/123e4567-e89b-12d3-a456-426614174000/download')
@@ -328,13 +324,11 @@ describe('Resume Routes - GET /api/resumes/:id/download', () => {
     });
 
     it('should return 404 if file data is missing', async () => {
-        mockQuery.mockResolvedValueOnce({ 
-            rows: [{ 
-                id: '123e4567-e89b-12d3-a456-426614174000',
-                file_name: 'resume.pdf',
-                resume_file_data: null,
-                firm_name: 'Test Firm'
-            }] 
+        mockGetResumeFileForDownload.mockResolvedValueOnce({ 
+            id: '123e4567-e89b-12d3-a456-426614174000',
+            file_name: 'resume.pdf',
+            resume_file_data: null,
+            firm_name: 'Test Firm'
         });
 
         const res = await request(app)
@@ -346,13 +340,11 @@ describe('Resume Routes - GET /api/resumes/:id/download', () => {
     });
 
     it('should return 403 for resume from different firm', async () => {
-        mockQuery.mockResolvedValueOnce({ 
-            rows: [{ 
-                id: '123e4567-e89b-12d3-a456-426614174000',
-                file_name: 'resume.pdf',
-                resume_file_data: Buffer.from('test'),
-                firm_name: 'Other Firm'
-            }] 
+        mockGetResumeFileForDownload.mockResolvedValueOnce({ 
+            id: '123e4567-e89b-12d3-a456-426614174000',
+            file_name: 'resume.pdf',
+            resume_file_data: Buffer.from('test'),
+            firm_name: 'Other Firm'
         });
 
         const res = await request(app)
@@ -364,15 +356,13 @@ describe('Resume Routes - GET /api/resumes/:id/download', () => {
 
     it('should download file for authorized user', async () => {
         const fileContent = Buffer.from('PDF content here');
-        mockQuery.mockResolvedValueOnce({ 
-            rows: [{ 
-                id: '123e4567-e89b-12d3-a456-426614174000',
-                file_name: 'resume.pdf',
-                resume_file_data: fileContent,
-                resume_file_type: 'application/pdf',
-                resume_file_size: fileContent.length,
-                firm_name: 'Test Firm'
-            }] 
+        mockGetResumeFileForDownload.mockResolvedValueOnce({ 
+            id: '123e4567-e89b-12d3-a456-426614174000',
+            file_name: 'resume.pdf',
+            resume_file_data: fileContent,
+            resume_file_type: 'application/pdf',
+            resume_file_size: fileContent.length,
+            firm_name: 'Test Firm'
         });
 
         const res = await request(app)

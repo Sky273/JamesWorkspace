@@ -7,10 +7,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import express from 'express';
 import request from 'supertest';
 
-// Mock database
-const mockQuery = vi.fn();
-vi.mock('../../config/database.js', () => ({
-    query: (...args) => mockQuery(...args)
+// Mock batchExport service
+const mockGetTemplateById = vi.fn();
+const mockGetResumeById = vi.fn();
+vi.mock('../../services/batchExport.service.js', () => ({
+    getTemplateById: (...args) => mockGetTemplateById(...args),
+    getResumeById: (...args) => mockGetResumeById(...args)
 }));
 
 // Mock JSZip
@@ -117,7 +119,7 @@ describe('Batch Export Routes', () => {
 
         it('should return 404 if template not found', async () => {
             mockFetch.mockResolvedValueOnce({ ok: true }); // health check
-            mockQuery.mockResolvedValueOnce({ rows: [] }); // template query
+            mockGetTemplateById.mockResolvedValueOnce(null); // template not found
 
             const res = await request(app)
                 .post('/api/batch-export')
@@ -131,14 +133,14 @@ describe('Batch Export Routes', () => {
         it('should generate ZIP with PDFs', async () => {
             // Health check
             mockFetch.mockResolvedValueOnce({ ok: true });
-            // Template query
-            mockQuery.mockResolvedValueOnce({
-                rows: [{ id: 't-1', template_content: '<div>-content-</div>', header_content: '', footer_content: '', stylesheet: '', footer_height: 25 }]
-            });
-            // Resume query
-            mockQuery.mockResolvedValueOnce({
-                rows: [{ id: 'r-1', name: 'John Doe', title: 'Dev', improved_text: 'CV content' }]
-            });
+            // Template
+            mockGetTemplateById.mockResolvedValueOnce(
+                { id: 't-1', template_content: '<div>-content-</div>', header_content: '', footer_content: '', stylesheet: '', footer_height: 25 }
+            );
+            // Resume
+            mockGetResumeById.mockResolvedValueOnce(
+                { id: 'r-1', name: 'John Doe', title: 'Dev', improved_text: 'CV content' }
+            );
             // PDF generation
             mockFetch.mockResolvedValueOnce({
                 ok: true,
@@ -158,11 +160,11 @@ describe('Batch Export Routes', () => {
 
         it('should return 500 if no files generated', async () => {
             mockFetch.mockResolvedValueOnce({ ok: true }); // health
-            mockQuery.mockResolvedValueOnce({
-                rows: [{ id: 't-1', template_content: '<div></div>' }]
-            });
+            mockGetTemplateById.mockResolvedValueOnce(
+                { id: 't-1', template_content: '<div></div>' }
+            );
             // Resume not found
-            mockQuery.mockResolvedValueOnce({ rows: [] });
+            mockGetResumeById.mockResolvedValueOnce(null);
             // ZIP has no files - mockFile is never called, so files is empty
 
             const res = await request(app)
@@ -176,13 +178,13 @@ describe('Batch Export Routes', () => {
 
         it('should handle PDF generation failure gracefully', async () => {
             mockFetch.mockResolvedValueOnce({ ok: true }); // health
-            mockQuery.mockResolvedValueOnce({
-                rows: [{ id: 't-1', template_content: '<div>-content-</div>' }]
-            });
+            mockGetTemplateById.mockResolvedValueOnce(
+                { id: 't-1', template_content: '<div>-content-</div>' }
+            );
             // Resume found
-            mockQuery.mockResolvedValueOnce({
-                rows: [{ id: 'r-1', name: 'John', title: 'Dev', improved_text: 'text' }]
-            });
+            mockGetResumeById.mockResolvedValueOnce(
+                { id: 'r-1', name: 'John', title: 'Dev', improved_text: 'text' }
+            );
             // PDF generation fails
             mockFetch.mockResolvedValueOnce({
                 ok: false,

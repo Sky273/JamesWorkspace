@@ -10,8 +10,8 @@ import crypto from 'crypto';
 import { UPLOAD_DIR } from '../../config/constants.js';
 import { authenticateToken } from '../../middleware/auth.middleware.js';
 import { safeLog } from '../../utils/logger.backend.js';
-import { query } from '../../config/database.js';
 import { getUserFirmId, isValidUUID, getFirmById } from '../../utils/firmHelpers.js';
+import * as resumesService from '../../services/resumes.service.js';
 
 const router = express.Router();
 
@@ -315,44 +315,29 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
             : new Date(Date.now() + 2 * 365 * 24 * 60 * 60 * 1000); // 2 years for external
 
         // Insert resume with file data and GDPR fields
-        const result = await query(
-            `INSERT INTO resumes (
-                name, title, file_name, resume_file_data, resume_file_size, resume_file_type, 
-                resume_file_url, status, firm_id, firm_name,
-                profile_type, candidate_name, candidate_email, consent_status,
-                consent_token, consent_token_expires_at, consent_requested_at, retention_until
-            )
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
-             RETURNING *`,
-            [
-                name || req.file.originalname,
-                title || '',
-                req.file.originalname,
-                fileBuffer,
-                req.file.size,
-                req.file.mimetype,
-                `/api/resumes/${null}/download`, // Will be updated after insert
-                'active',
-                firmId,
-                firmName,
-                profileType,
-                candidate_name || null,
-                candidate_email || null,
-                consentStatus,
-                consentToken,
-                tokenExpiresAt,
-                profileType === 'external' ? new Date() : null,
-                retentionUntil
-            ]
-        );
-
-        const newResume = result.rows[0];
+        const newResume = await resumesService.insertResume({
+            name: name || req.file.originalname,
+            title: title || '',
+            fileName: req.file.originalname,
+            fileBuffer,
+            fileSize: req.file.size,
+            mimeType: req.file.mimetype,
+            fileUrl: `/api/resumes/${null}/download`,
+            status: 'active',
+            firmId,
+            firmName,
+            profileType,
+            candidateName: candidate_name || null,
+            candidateEmail: candidate_email || null,
+            consentStatus,
+            consentToken,
+            tokenExpiresAt,
+            consentRequestedAt: profileType === 'external' ? new Date() : null,
+            retentionUntil
+        });
 
         // Update the resume_file_url with the correct ID
-        await query(
-            `UPDATE resumes SET resume_file_url = $1 WHERE id = $2`,
-            [`/api/resumes/${newResume.id}/download`, newResume.id]
-        );
+        await resumesService.updateResumeFileUrl(newResume.id, `/api/resumes/${newResume.id}/download`);
         newResume.resume_file_url = `/api/resumes/${newResume.id}/download`;
 
         // Delete temp file from uploads directory
@@ -383,11 +368,7 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
                 });
                 // Update consent_status to 'error' to indicate email sending failed
                 try {
-                    await query(`
-                        UPDATE resumes 
-                        SET consent_status = 'error', updated_at = CURRENT_TIMESTAMP
-                        WHERE id = $1
-                    `, [newResume.id]);
+                    await resumesService.updateConsentStatus(newResume.id, 'error');
                     newResume.consent_status = 'error';
                     safeLog('info', 'Consent status set to error', { resumeId: newResume.id });
                 } catch (updateError) {

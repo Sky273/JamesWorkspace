@@ -9,8 +9,8 @@ import { authLimiter } from '../../middleware/rateLimit.middleware.js';
 import { generateAccessToken, generateRefreshToken } from '../../services/jwt.service.js';
 import { securityLog, getRequestMetadata, LOG_LEVELS, SECURITY_EVENTS } from '../../services/security.service.js';
 import { safeLog } from '../../utils/logger.backend.js';
-import { query } from '../../config/database.js';
 import * as googleAuthService from '../../services/googleAuth.service.js';
+import * as authService from '../../services/auth.service.js';
 import { useSecureCookies, ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE } from './config.js';
 
 const router = express.Router();
@@ -145,22 +145,12 @@ router.get('/google/callback', async (req, res) => {
         if (!user) {
             if (stateData.action === 'register') {
                 try {
-                    const newUserResult = await query(
-                        `INSERT INTO users (email, password, name, role, status, google_id, google_email, google_linked_at)
-                         VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)
-                         RETURNING *`,
-                        [
-                            googleUser.email,
-                            '',
-                            googleUser.name,
-                            'user',
-                            'pending',
-                            googleUser.googleId,
-                            googleUser.email
-                        ]
-                    );
-                    
-                    user = newUserResult.rows[0];
+                    user = await authService.registerGoogleUser({
+                        email: googleUser.email,
+                        name: googleUser.name,
+                        googleId: googleUser.googleId,
+                        googleEmail: googleUser.email
+                    });
                     
                     securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.USER_CREATED, {
                         ...metadata,
@@ -199,10 +189,7 @@ router.get('/google/callback', async (req, res) => {
             return res.redirect('/signin?error=account_inactive');
         }
         
-        await query(
-            'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1',
-            [user.id]
-        );
+        await authService.updateLastLogin(user.id);
         
         const userData = {
             id: user.id,
@@ -294,10 +281,7 @@ router.post('/google/token', authLimiter, async (req, res) => {
             return res.status(403).json({ error: 'Account is inactive' });
         }
         
-        await query(
-            'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1',
-            [user.id]
-        );
+        await authService.updateLastLogin(user.id);
         
         const userData = {
             id: user.id,

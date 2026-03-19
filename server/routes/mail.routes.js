@@ -9,7 +9,6 @@ import { authenticateToken } from '../middleware/auth.middleware.js';
 import { safeLog } from '../utils/logger.backend.js';
 import * as mailService from '../services/mail/mailService.js';
 import * as emailTemplatesService from '../services/emailTemplates.service.js';
-import { query } from '../config/database.js';
 
 const router = express.Router();
 
@@ -180,16 +179,9 @@ router.post('/draft', authenticateToken, async (req, res) => {
         if (templateId && templateContext) {
             try {
                 // Enrich user context with fresh data from database
-                const userResult = await query(
-                    `SELECT u.*, f.logo_url as firm_logo, f.name as firm_name
-                     FROM users u
-                     LEFT JOIN firms f ON u.firm_id = f.id
-                     WHERE u.id = $1`,
-                    [userId]
-                );
+                const dbUser = await mailService.getUserWithFirmData(userId);
                 
-                if (userResult.rows.length > 0) {
-                    const dbUser = userResult.rows[0];
+                if (dbUser) {
                     // Merge database user data into context
                     templateContext.user = {
                         ...templateContext.user,
@@ -258,35 +250,22 @@ router.post('/draft', authenticateToken, async (req, res) => {
         });
         if (resumeId && clientId && contactId) {
             try {
-                // Get firm_id from client and current version from resume if not provided
-                const clientResult = await query(
-                    'SELECT firm_id FROM clients WHERE id = $1',
-                    [clientId]
-                );
+                // Get firm_id from client
+                const firmId = await mailService.getClientFirmId(clientId);
                 
                 // Get current version number if not provided
                 let currentVersion = versionNumber;
                 if (!currentVersion) {
-                    const versionResult = await query(
-                        'SELECT MAX(version_number) as max_version FROM resume_versions WHERE resume_id = $1',
-                        [resumeId]
-                    );
-                    currentVersion = versionResult.rows[0]?.max_version || null;
+                    currentVersion = await mailService.getResumeCurrentVersion(resumeId);
                 }
                 
-                if (clientResult.rows.length > 0) {
-                    const firmId = clientResult.rows[0].firm_id;
-                    
-                    // Insert submission record with version number, template info and email HTML
-                    const submissionResult = await query(
-                        `INSERT INTO resume_submissions 
-                         (resume_id, client_id, contact_id, mission_id, firm_id, sent_by, status, notes, version_number, email_template_id, email_html_sent)
-                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-                         RETURNING id`,
-                        [resumeId, clientId, contactId, missionId || null, firmId, userId, 'sent', `Email draft created via ${provider}`, currentVersion, templateId || null, emailHtmlSent]
-                    );
-                    
-                    submissionId = submissionResult.rows[0]?.id;
+                if (firmId) {
+                    // Record submission
+                    submissionId = await mailService.recordSubmission({
+                        resumeId, clientId, contactId, missionId,
+                        firmId, sentBy: userId, versionNumber: currentVersion,
+                        templateId, emailHtmlSent
+                    });
                     safeLog('info', 'Resume submission recorded', { submissionId, resumeId, clientId, contactId, versionNumber: currentVersion, templateId: templateId || null });
                 }
             } catch (submissionError) {

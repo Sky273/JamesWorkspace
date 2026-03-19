@@ -4,15 +4,7 @@ import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.j
 import { validateBody, validateParams, createFirmSchema } from '../utils/validation.js';
 import { firmsCache } from '../services/cache.service.js';
 import { safeLog } from '../utils/logger.backend.js';
-import { 
-    selectWithTimeout, 
-    findWithTimeout, 
-    createWithTimeout, 
-    updateWithTimeout, 
-    destroyWithTimeout,
-    escapeLike
-} from '../utils/postgresHelpers.js';
-import { query } from '../config/database.js';
+import * as firmsService from '../services/firms.service.js';
 
 const router = express.Router();
 
@@ -39,44 +31,11 @@ router.get('/', authenticateToken, async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 100;
-        const offset = (page - 1) * limit;
         const { search } = req.query;
 
-        // Build WHERE clause
-        let whereClause = '';
-        let params = [];
-        
-        if (search) {
-            whereClause = 'LOWER(name) LIKE $1';
-            params = [`%${escapeLike(search.toLowerCase())}%`];
-        }
+        const { firms, hasMore, totalCount } = await firmsService.listFirms({ search, page, limit });
 
-        // Fetch firms with pagination
-        const firms = await selectWithTimeout('firms', {
-            where: whereClause,
-            params: params,
-            orderBy: 'name ASC',
-            limit: limit + 1, // Fetch one extra to check if there are more
-            offset: offset
-        });
-
-        // Check if there are more records
-        const hasMore = firms.length > limit;
-        if (hasMore) {
-            firms.pop(); // Remove the extra record
-        }
-
-        // Get total count (only on first page for performance)
-        let totalCount = null;
-        if (page === 1) {
-            const countQuery = search 
-                ? 'SELECT COUNT(*) as count FROM firms WHERE LOWER(name) LIKE $1'
-                : 'SELECT COUNT(*) as count FROM firms';
-            const countResult = await query(countQuery, search ? [`%${escapeLike(search.toLowerCase())}%`] : []);
-            totalCount = parseInt(countResult.rows[0].count);
-        }
-
-        const response = {
+        return res.json({
             data: firms,
             pagination: {
                 page,
@@ -85,9 +44,7 @@ router.get('/', authenticateToken, async (req, res) => {
                 totalCount,
                 nextPage: hasMore ? page + 1 : null
             }
-        };
-
-        return res.json(response);
+        });
     } catch (error) {
         safeLog('error', 'Error fetching firms', { error: error.message });
         return res.status(500).json({ 
@@ -100,7 +57,7 @@ router.get('/', authenticateToken, async (req, res) => {
 router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => {
     try {
         const { id } = req.params;
-        const firm = await findWithTimeout('firms', id);
+        const firm = await firmsService.getFirmById(id);
         res.json(firm);
     } catch (error) {
         if (error.statusCode === 404) {
@@ -128,9 +85,8 @@ router.post('/', authenticateToken, requireAdmin, validateBody(createFirmSchema)
             firmData.logo_url = req.body.logo_url || req.body.logoUrl;
         }
 
-        const records = await createWithTimeout('firms', [{ fields: firmData }]);
-        
-        res.json(records[0]);
+        const firm = await firmsService.createFirm(firmData);
+        res.json(firm);
     } catch (error) {
         // Check for unique constraint violation
         if (error.code === '23505') {
@@ -161,12 +117,8 @@ router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), async 
             firmData.logo_url = req.body.logo_url || req.body.logoUrl || null;
         }
 
-        const records = await updateWithTimeout('firms', [{
-            id: id,
-            fields: firmData
-        }]);
-        
-        res.json(records[0]);
+        const firm = await firmsService.updateFirm(id, firmData);
+        res.json(firm);
     } catch (error) {
         if (error.statusCode === 404) {
             return res.status(404).json({ error: 'Firm not found' });
@@ -190,20 +142,16 @@ router.delete('/:id', authenticateToken, requireAdmin, validateParams('id'), asy
         const { id } = req.params;
         
         // Check if any users are associated with this firm
-        const associatedUsers = await selectWithTimeout('users', {
-            where: 'firm_id = $1',
-            params: [id]
-        });
-        
-        if (associatedUsers.length > 0) {
+        const usersCount = await firmsService.getAssociatedUsersCount(id);
+        if (usersCount > 0) {
             return res.status(400).json({ 
                 error: 'Cannot delete firm with associated users',
-                associatedUsers: associatedUsers.length
+                associatedUsers: usersCount
             });
         }
         
         firmsCache.invalidate('all_firms');
-        await destroyWithTimeout('firms', [id]);
+        await firmsService.deleteFirm(id);
         
         res.json({ message: 'Firm deleted successfully' });
     } catch (error) {
@@ -227,20 +175,13 @@ router.post('/:id/logo', authenticateToken, requireAdmin, validateParams('id'), 
         }
         
         // Verify firm exists
-        const firm = await findWithTimeout('firms', id);
-        if (!firm) {
-            return res.status(404).json({ error: 'Firm not found' });
-        }
+        await firmsService.getFirmById(id);
         
         // Store logo data directly in database
         const logoData = req.file.buffer;
         const logoMimeType = req.file.mimetype;
         
-        // Update firm with logo data in database
-        await query(
-            'UPDATE firms SET logo_data = $1, logo_mime_type = $2, logo_url = $3 WHERE id = $4',
-            [logoData, logoMimeType, `/api/firms/${id}/logo/image`, id]
-        );
+        const logoUrl = await firmsService.uploadFirmLogo(id, logoData, logoMimeType);
         
         firmsCache.invalidate('all_firms');
         
@@ -248,10 +189,13 @@ router.post('/:id/logo', authenticateToken, requireAdmin, validateParams('id'), 
         
         res.json({ 
             success: true, 
-            logo_url: `/api/firms/${id}/logo/image`,
+            logo_url: logoUrl,
             message: 'Logo uploaded successfully' 
         });
     } catch (error) {
+        if (error.statusCode === 404) {
+            return res.status(404).json({ error: 'Firm not found' });
+        }
         safeLog('error', 'Error uploading firm logo', { error: error.message, firmId: req.params.id });
         return res.status(500).json({ 
             error: 'Failed to upload logo' 
@@ -264,20 +208,14 @@ router.get('/:id/logo/image', validateParams('id'), async (req, res) => {
     try {
         const { id } = req.params;
         
-        const result = await query(
-            'SELECT logo_data, logo_mime_type FROM firms WHERE id = $1',
-            [id]
-        );
-        
-        if (result.rows.length === 0 || !result.rows[0].logo_data) {
+        const logoResult = await firmsService.getFirmLogo(id);
+        if (!logoResult) {
             return res.status(404).json({ error: 'Logo not found' });
         }
         
-        const { logo_data, logo_mime_type } = result.rows[0];
-        
-        res.set('Content-Type', logo_mime_type || 'image/png');
+        res.set('Content-Type', logoResult.logo_mime_type || 'image/png');
         res.set('Cache-Control', 'public, max-age=86400'); // Cache for 1 day
-        res.send(logo_data);
+        res.send(logoResult.logo_data);
     } catch (error) {
         safeLog('error', 'Error serving firm logo', { error: error.message, firmId: req.params.id });
         return res.status(500).json({ error: 'Failed to serve logo' });
@@ -289,17 +227,10 @@ router.delete('/:id/logo', authenticateToken, requireAdmin, validateParams('id')
     try {
         const { id } = req.params;
         
-        // Get firm to verify it exists
-        const firm = await findWithTimeout('firms', id);
-        if (!firm) {
-            return res.status(404).json({ error: 'Firm not found' });
-        }
+        // Verify firm exists
+        await firmsService.getFirmById(id);
         
-        // Clear logo data from database
-        await query(
-            'UPDATE firms SET logo_data = NULL, logo_mime_type = NULL, logo_url = NULL WHERE id = $1',
-            [id]
-        );
+        await firmsService.deleteFirmLogo(id);
         
         firmsCache.invalidate('all_firms');
         
@@ -307,6 +238,9 @@ router.delete('/:id/logo', authenticateToken, requireAdmin, validateParams('id')
         
         res.json({ success: true, message: 'Logo deleted successfully' });
     } catch (error) {
+        if (error.statusCode === 404) {
+            return res.status(404).json({ error: 'Firm not found' });
+        }
         safeLog('error', 'Error deleting firm logo', { error: error.message, firmId: req.params.id });
         return res.status(500).json({ 
             error: 'Failed to delete logo' 

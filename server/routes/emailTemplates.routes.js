@@ -7,7 +7,6 @@ import express from 'express';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { validateParams } from '../utils/validation.js';
 import { safeLog } from '../utils/logger.backend.js';
-import { query } from '../config/database.js';
 import * as emailTemplatesService from '../services/emailTemplates.service.js';
 
 /**
@@ -23,25 +22,15 @@ async function getFirmIdForUser(user) {
     // Look up from database using user ID
     const userId = user.id || user.userId;
     if (userId) {
-        const result = await query(
-            'SELECT firm_id FROM users WHERE id = $1',
-            [userId]
-        );
-        if (result.rows.length > 0 && result.rows[0].firm_id) {
-            return result.rows[0].firm_id;
-        }
+        const firmId = await emailTemplatesService.getUserFirmId(userId);
+        if (firmId) return firmId;
     }
     
     // Look up by firm name
     const firmName = user.firm || user.customer;
     if (firmName) {
-        const result = await query(
-            'SELECT id FROM firms WHERE name = $1',
-            [firmName]
-        );
-        if (result.rows.length > 0) {
-            return result.rows[0].id;
-        }
+        const firmId = await emailTemplatesService.getFirmIdByName(firmName);
+        if (firmId) return firmId;
     }
     
     return null;

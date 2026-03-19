@@ -7,10 +7,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import express from 'express';
 import request from 'supertest';
 
-// Mock database
-const mockQuery = vi.fn();
-vi.mock('../../config/database.js', () => ({
-    query: (...args) => mockQuery(...args)
+// Mock resumes service
+const mockInsertResume = vi.fn();
+const mockUpdateResumeFileUrl = vi.fn();
+const mockUpdateConsentStatus = vi.fn();
+vi.mock('../../services/resumes.service.js', () => ({
+    insertResume: (...args) => mockInsertResume(...args),
+    updateResumeFileUrl: (...args) => mockUpdateResumeFileUrl(...args),
+    updateConsentStatus: (...args) => mockUpdateConsentStatus(...args)
 }));
 
 // Mock constants
@@ -171,24 +175,21 @@ describe('Resume Upload Routes', () => {
             const fileBuffer = Buffer.from('fake pdf content');
             mockReadFile.mockResolvedValue(fileBuffer);
             
-            mockQuery
-                .mockResolvedValueOnce({
-                    rows: [{
-                        id: 'r-1',
-                        name: 'resume.pdf',
-                        title: '',
-                        file_name: 'resume.pdf',
-                        resume_file_size: 1024,
-                        resume_file_type: 'application/pdf',
-                        resume_file_url: '/api/resumes/null/download',
-                        firm_name: 'Test Firm',
-                        profile_type: 'external',
-                        candidate_name: null,
-                        candidate_email: null,
-                        consent_status: 'pending_consent'
-                    }]
-                })
-                .mockResolvedValueOnce({ rows: [] }); // UPDATE url
+            mockInsertResume.mockResolvedValueOnce({
+                id: 'r-1',
+                name: 'resume.pdf',
+                title: '',
+                file_name: 'resume.pdf',
+                resume_file_size: 1024,
+                resume_file_type: 'application/pdf',
+                resume_file_url: '/api/resumes/null/download',
+                firm_name: 'Test Firm',
+                profile_type: 'external',
+                candidate_name: null,
+                candidate_email: null,
+                consent_status: 'pending_consent'
+            });
+            mockUpdateResumeFileUrl.mockResolvedValueOnce();
 
             const res = await request(app)
                 .post('/api/resumes/upload')
@@ -203,24 +204,21 @@ describe('Resume Upload Routes', () => {
         it('should handle employee profile type', async () => {
             const fileBuffer = Buffer.from('content');
             mockReadFile.mockResolvedValue(fileBuffer);
-            mockQuery
-                .mockResolvedValueOnce({
-                    rows: [{
-                        id: 'r-2',
-                        name: 'test',
-                        title: 'Dev',
-                        file_name: 'test.pdf',
-                        resume_file_size: 512,
-                        resume_file_type: 'application/pdf',
-                        resume_file_url: '/api/resumes/null/download',
-                        firm_name: 'Test Firm',
-                        profile_type: 'employee',
-                        candidate_name: 'John',
-                        candidate_email: null,
-                        consent_status: 'not_required'
-                    }]
-                })
-                .mockResolvedValueOnce({ rows: [] });
+            mockInsertResume.mockResolvedValueOnce({
+                id: 'r-2',
+                name: 'test',
+                title: 'Dev',
+                file_name: 'test.pdf',
+                resume_file_size: 512,
+                resume_file_type: 'application/pdf',
+                resume_file_url: '/api/resumes/null/download',
+                firm_name: 'Test Firm',
+                profile_type: 'employee',
+                candidate_name: 'John',
+                candidate_email: null,
+                consent_status: 'not_required'
+            });
+            mockUpdateResumeFileUrl.mockResolvedValueOnce();
 
             const res = await request(app)
                 .post('/api/resumes/upload')
@@ -233,7 +231,7 @@ describe('Resume Upload Routes', () => {
 
         it('should return 500 on DB error', async () => {
             mockReadFile.mockResolvedValue(Buffer.from('content'));
-            mockQuery.mockRejectedValueOnce(new Error('DB error'));
+            mockInsertResume.mockRejectedValueOnce(new Error('DB error'));
 
             const res = await request(app)
                 .post('/api/resumes/upload')

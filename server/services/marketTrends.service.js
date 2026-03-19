@@ -32,5 +32,6 @@ export {
     loadTrendsCache,
     cleanupTrendsCache,
     destroyTrendsCache,
-    getTrendsCacheStats
+    getTrendsCacheStats,
+    getTrendsAuditReport
 } from './marketTrends/index.js';

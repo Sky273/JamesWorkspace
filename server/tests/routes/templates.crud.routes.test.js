@@ -20,25 +20,20 @@ vi.mock('../../config/constants.js', () => ({
     RATE_LIMIT: { AUTH: { windowMs: 900000, max: 20 }, USER: { windowMs: 900000, max: 50 } }
 }));
 
-// Mock postgresHelpers
-const mockSelectWithTimeout = vi.fn();
-const mockFindWithTimeout = vi.fn();
-const mockCreateWithTimeout = vi.fn();
-const mockUpdateWithTimeout = vi.fn();
-const mockDestroyWithTimeout = vi.fn();
-vi.mock('../../utils/postgresHelpers.js', () => ({
-    selectWithTimeout: (...args) => mockSelectWithTimeout(...args),
-    findWithTimeout: (...args) => mockFindWithTimeout(...args),
-    createWithTimeout: (...args) => mockCreateWithTimeout(...args),
-    updateWithTimeout: (...args) => mockUpdateWithTimeout(...args),
-    destroyWithTimeout: (...args) => mockDestroyWithTimeout(...args),
-    escapeLike: (str) => str.replace(/[%_\\]/g, '\\$&')
-}));
-
-// Mock database query
-const mockQuery = vi.fn();
-vi.mock('../../config/database.js', () => ({
-    query: (...args) => mockQuery(...args)
+// Mock templates service
+const mockListTemplates = vi.fn();
+const mockGetTemplateById = vi.fn();
+const mockGetFirmIfExists = vi.fn();
+const mockCreateTemplate = vi.fn();
+const mockUpdateTemplate = vi.fn();
+const mockDeleteTemplate = vi.fn();
+vi.mock('../../services/templates.service.js', () => ({
+    listTemplates: (...args) => mockListTemplates(...args),
+    getTemplateById: (...args) => mockGetTemplateById(...args),
+    getFirmIfExists: (...args) => mockGetFirmIfExists(...args),
+    createTemplate: (...args) => mockCreateTemplate(...args),
+    updateTemplate: (...args) => mockUpdateTemplate(...args),
+    deleteTemplate: (...args) => mockDeleteTemplate(...args)
 }));
 
 // Mock cache service
@@ -145,11 +140,10 @@ describe('Templates CRUD Routes', () => {
         });
 
         it('should return paginated templates', async () => {
-            // Count query
-            mockSelectWithTimeout.mockResolvedValueOnce([{ total: '2' }]);
-            // Data query
-            mockQuery.mockResolvedValueOnce({
-                rows: [sampleTemplateRow, { ...sampleTemplateRow, id: 'tpl-456', name: 'Classic CV' }]
+            mockListTemplates.mockResolvedValueOnce({
+                templates: [sampleTemplateRow, { ...sampleTemplateRow, id: 'tpl-456', name: 'Classic CV' }],
+                totalCount: 2,
+                hasMore: false
             });
 
             const res = await request(app)
@@ -163,8 +157,11 @@ describe('Templates CRUD Routes', () => {
         });
 
         it('should map DB rows to PascalCase frontend format', async () => {
-            mockSelectWithTimeout.mockResolvedValueOnce([{ total: '1' }]);
-            mockQuery.mockResolvedValueOnce({ rows: [sampleTemplateRow] });
+            mockListTemplates.mockResolvedValueOnce({
+                templates: [sampleTemplateRow],
+                totalCount: 1,
+                hasMore: false
+            });
 
             const res = await request(app)
                 .get('/api/templates')
@@ -188,22 +185,28 @@ describe('Templates CRUD Routes', () => {
         });
 
         it('should filter by search term', async () => {
-            mockSelectWithTimeout.mockResolvedValueOnce([{ total: '1' }]);
-            mockQuery.mockResolvedValueOnce({ rows: [sampleTemplateRow] });
+            mockListTemplates.mockResolvedValueOnce({
+                templates: [sampleTemplateRow],
+                totalCount: 1,
+                hasMore: false
+            });
 
             const res = await request(app)
                 .get('/api/templates?search=modern')
                 .set('Authorization', 'Bearer valid-token');
 
             expect(res.status).toBe(200);
-            // Verify escapeLike was applied in the query params
-            const queryCall = mockQuery.mock.calls[0];
-            expect(queryCall[1]).toContain('%modern%');
+            expect(mockListTemplates).toHaveBeenCalledWith(
+                expect.objectContaining({ search: 'modern' })
+            );
         });
 
         it('should filter by status', async () => {
-            mockSelectWithTimeout.mockResolvedValueOnce([{ total: '1' }]);
-            mockQuery.mockResolvedValueOnce({ rows: [sampleTemplateRow] });
+            mockListTemplates.mockResolvedValueOnce({
+                templates: [sampleTemplateRow],
+                totalCount: 1,
+                hasMore: false
+            });
 
             const res = await request(app)
                 .get('/api/templates?status=active')
@@ -213,8 +216,11 @@ describe('Templates CRUD Routes', () => {
         });
 
         it('should support pagination params', async () => {
-            mockSelectWithTimeout.mockResolvedValueOnce([{ total: '50' }]);
-            mockQuery.mockResolvedValueOnce({ rows: [] });
+            mockListTemplates.mockResolvedValueOnce({
+                templates: [],
+                totalCount: 50,
+                hasMore: false
+            });
 
             const res = await request(app)
                 .get('/api/templates?page=3&limit=10')
@@ -226,12 +232,14 @@ describe('Templates CRUD Routes', () => {
         });
 
         it('should handle hasMore pagination correctly', async () => {
-            // Return limit+1 rows to trigger hasMore
-            const rows = Array.from({ length: 11 }, (_, i) => ({
+            const rows = Array.from({ length: 10 }, (_, i) => ({
                 ...sampleTemplateRow, id: `tpl-${i}`
             }));
-            mockSelectWithTimeout.mockResolvedValueOnce([{ total: '50' }]);
-            mockQuery.mockResolvedValueOnce({ rows });
+            mockListTemplates.mockResolvedValueOnce({
+                templates: rows,
+                totalCount: 50,
+                hasMore: true
+            });
 
             const res = await request(app)
                 .get('/api/templates?limit=10')
@@ -244,7 +252,7 @@ describe('Templates CRUD Routes', () => {
         });
 
         it('should return 500 on database error', async () => {
-            mockSelectWithTimeout.mockRejectedValueOnce(new Error('DB error'));
+            mockListTemplates.mockRejectedValueOnce(new Error('DB error'));
 
             const res = await request(app)
                 .get('/api/templates')
@@ -265,7 +273,7 @@ describe('Templates CRUD Routes', () => {
         });
 
         it('should return template by ID', async () => {
-            mockFindWithTimeout.mockResolvedValueOnce(sampleTemplateRow);
+            mockGetTemplateById.mockResolvedValueOnce(sampleTemplateRow);
 
             const res = await request(app)
                 .get('/api/templates/tpl-123')
@@ -280,7 +288,7 @@ describe('Templates CRUD Routes', () => {
         it('should return 404 for non-existent template', async () => {
             const notFoundError = new Error('Not found');
             notFoundError.statusCode = 404;
-            mockFindWithTimeout.mockRejectedValueOnce(notFoundError);
+            mockGetTemplateById.mockRejectedValueOnce(notFoundError);
 
             const res = await request(app)
                 .get('/api/templates/nonexistent')
@@ -291,7 +299,7 @@ describe('Templates CRUD Routes', () => {
         });
 
         it('should return 500 on unexpected error', async () => {
-            mockFindWithTimeout.mockRejectedValueOnce(new Error('Connection lost'));
+            mockGetTemplateById.mockRejectedValueOnce(new Error('Connection lost'));
 
             const res = await request(app)
                 .get('/api/templates/tpl-123')
@@ -342,7 +350,7 @@ describe('Templates CRUD Routes', () => {
                 name: 'New Template',
                 description: 'A brand new template'
             };
-            mockCreateWithTimeout.mockResolvedValueOnce([createdRow]);
+            mockCreateTemplate.mockResolvedValueOnce(createdRow);
 
             const res = await request(app)
                 .post('/api/templates')
@@ -351,18 +359,18 @@ describe('Templates CRUD Routes', () => {
 
             expect(res.status).toBe(200);
             expect(res.body.Name).toBe('New Template');
-            expect(mockCreateWithTimeout).toHaveBeenCalledWith('templates', expect.any(Array));
+            expect(mockCreateTemplate).toHaveBeenCalled();
         });
 
-        it('should pass mapped snake_case fields to createWithTimeout', async () => {
-            mockCreateWithTimeout.mockResolvedValueOnce([sampleTemplateRow]);
+        it('should pass mapped snake_case fields to createTemplate', async () => {
+            mockCreateTemplate.mockResolvedValueOnce(sampleTemplateRow);
 
             await request(app)
                 .post('/api/templates')
                 .set('Authorization', 'Bearer valid-token')
                 .send(newTemplateBody);
 
-            const createArgs = mockCreateWithTimeout.mock.calls[0][1][0].fields;
+            const createArgs = mockCreateTemplate.mock.calls[0][0];
             expect(createArgs.name).toBe('New Template');
             expect(createArgs.description).toBe('A brand new template');
             expect(createArgs.header_content).toBe('<header>New</header>');
@@ -375,7 +383,7 @@ describe('Templates CRUD Routes', () => {
             // Route uses: req.body.firm_id || req.body['Firm ID']
             // Then checks: requestedFirmId === '' || requestedFirmId === null
             // To hit the empty-string path, use 'Firm ID' key directly (avoids || short-circuit)
-            mockCreateWithTimeout.mockResolvedValueOnce([{ ...sampleTemplateRow, firm_id: null }]);
+            mockCreateTemplate.mockResolvedValueOnce({ ...sampleTemplateRow, firm_id: null });
 
             const res = await request(app)
                 .post('/api/templates')
@@ -383,12 +391,12 @@ describe('Templates CRUD Routes', () => {
                 .send({ ...newTemplateBody, 'Firm ID': '' });
 
             expect(res.status).toBe(200);
-            const createArgs = mockCreateWithTimeout.mock.calls[0][1][0].fields;
+            const createArgs = mockCreateTemplate.mock.calls[0][0];
             expect(createArgs.firm_id).toBeNull();
         });
 
         it('should validate firm exists when admin specifies another firm', async () => {
-            mockQuery.mockResolvedValueOnce({ rows: [] }); // firm not found
+            mockGetFirmIfExists.mockResolvedValueOnce(null); // firm not found
 
             const res = await request(app)
                 .post('/api/templates')
@@ -402,7 +410,7 @@ describe('Templates CRUD Routes', () => {
         it('should return 400 on duplicate name', async () => {
             const dupError = new Error('duplicate key');
             dupError.code = '23505';
-            mockCreateWithTimeout.mockRejectedValueOnce(dupError);
+            mockCreateTemplate.mockRejectedValueOnce(dupError);
 
             const res = await request(app)
                 .post('/api/templates')
@@ -415,7 +423,7 @@ describe('Templates CRUD Routes', () => {
 
         it('should invalidate cache on create', async () => {
             const { templatesCache } = await import('../../services/cache.service.js');
-            mockCreateWithTimeout.mockResolvedValueOnce([sampleTemplateRow]);
+            mockCreateTemplate.mockResolvedValueOnce(sampleTemplateRow);
 
             await request(app)
                 .post('/api/templates')
@@ -452,9 +460,9 @@ describe('Templates CRUD Routes', () => {
         });
 
         it('should update template with valid data', async () => {
-            mockFindWithTimeout.mockResolvedValueOnce(sampleTemplateRow);
+            mockGetTemplateById.mockResolvedValueOnce(sampleTemplateRow);
             const updatedRow = { ...sampleTemplateRow, name: 'Updated Template', description: 'Updated description' };
-            mockUpdateWithTimeout.mockResolvedValueOnce([updatedRow]);
+            mockUpdateTemplate.mockResolvedValueOnce(updatedRow);
 
             const res = await request(app)
                 .put('/api/templates/tpl-123')
@@ -469,7 +477,7 @@ describe('Templates CRUD Routes', () => {
         it('should return 404 when template does not exist', async () => {
             const notFoundError = new Error('Not found');
             notFoundError.statusCode = 404;
-            mockFindWithTimeout.mockRejectedValueOnce(notFoundError);
+            mockGetTemplateById.mockRejectedValueOnce(notFoundError);
 
             const res = await request(app)
                 .put('/api/templates/nonexistent')
@@ -481,10 +489,10 @@ describe('Templates CRUD Routes', () => {
         });
 
         it('should return 400 on duplicate name conflict', async () => {
-            mockFindWithTimeout.mockResolvedValueOnce(sampleTemplateRow);
+            mockGetTemplateById.mockResolvedValueOnce(sampleTemplateRow);
             const dupError = new Error('duplicate key');
             dupError.code = '23505';
-            mockUpdateWithTimeout.mockRejectedValueOnce(dupError);
+            mockUpdateTemplate.mockRejectedValueOnce(dupError);
 
             const res = await request(app)
                 .put('/api/templates/tpl-123')
@@ -496,9 +504,9 @@ describe('Templates CRUD Routes', () => {
         });
 
         it('should allow admin to change firm_id', async () => {
-            mockFindWithTimeout.mockResolvedValueOnce(sampleTemplateRow);
-            mockQuery.mockResolvedValueOnce({ rows: [{ id: 'firm-other', name: 'Other Firm' }] }); // firm check
-            mockUpdateWithTimeout.mockResolvedValueOnce([{ ...sampleTemplateRow, firm_id: 'firm-other' }]);
+            mockGetTemplateById.mockResolvedValueOnce(sampleTemplateRow);
+            mockGetFirmIfExists.mockResolvedValueOnce({ id: 'firm-other', name: 'Other Firm' });
+            mockUpdateTemplate.mockResolvedValueOnce({ ...sampleTemplateRow, firm_id: 'firm-other' });
 
             const res = await request(app)
                 .put('/api/templates/tpl-123')
@@ -506,13 +514,13 @@ describe('Templates CRUD Routes', () => {
                 .send({ ...updateBody, FirmId: 'firm-other' });
 
             expect(res.status).toBe(200);
-            const updateArgs = mockUpdateWithTimeout.mock.calls[0][1][0].fields;
-            expect(updateArgs.firm_id).toBe('firm-other');
+            const updateArgs = mockUpdateTemplate.mock.calls[0];
+            expect(updateArgs[1].firm_id).toBe('firm-other');
         });
 
         it('should allow admin to make template global', async () => {
-            mockFindWithTimeout.mockResolvedValueOnce(sampleTemplateRow);
-            mockUpdateWithTimeout.mockResolvedValueOnce([{ ...sampleTemplateRow, firm_id: null }]);
+            mockGetTemplateById.mockResolvedValueOnce(sampleTemplateRow);
+            mockUpdateTemplate.mockResolvedValueOnce({ ...sampleTemplateRow, firm_id: null });
 
             const res = await request(app)
                 .put('/api/templates/tpl-123')
@@ -520,14 +528,14 @@ describe('Templates CRUD Routes', () => {
                 .send({ ...updateBody, FirmId: null });
 
             expect(res.status).toBe(200);
-            const updateArgs = mockUpdateWithTimeout.mock.calls[0][1][0].fields;
-            expect(updateArgs.firm_id).toBeNull();
+            const updateArgs = mockUpdateTemplate.mock.calls[0];
+            expect(updateArgs[1].firm_id).toBeNull();
         });
 
         it('should invalidate cache on update', async () => {
             const { templatesCache } = await import('../../services/cache.service.js');
-            mockFindWithTimeout.mockResolvedValueOnce(sampleTemplateRow);
-            mockUpdateWithTimeout.mockResolvedValueOnce([sampleTemplateRow]);
+            mockGetTemplateById.mockResolvedValueOnce(sampleTemplateRow);
+            mockUpdateTemplate.mockResolvedValueOnce(sampleTemplateRow);
 
             await request(app)
                 .put('/api/templates/tpl-123')
@@ -556,7 +564,7 @@ describe('Templates CRUD Routes', () => {
         });
 
         it('should delete template successfully', async () => {
-            mockDestroyWithTimeout.mockResolvedValueOnce(true);
+            mockDeleteTemplate.mockResolvedValueOnce(true);
 
             const res = await request(app)
                 .delete('/api/templates/tpl-123')
@@ -564,13 +572,13 @@ describe('Templates CRUD Routes', () => {
 
             expect(res.status).toBe(200);
             expect(res.body.message).toBe('Template deleted successfully');
-            expect(mockDestroyWithTimeout).toHaveBeenCalledWith('templates', ['tpl-123']);
+            expect(mockDeleteTemplate).toHaveBeenCalledWith('tpl-123');
         });
 
         it('should return 404 for non-existent template', async () => {
             const notFoundError = new Error('Not found');
             notFoundError.statusCode = 404;
-            mockDestroyWithTimeout.mockRejectedValueOnce(notFoundError);
+            mockDeleteTemplate.mockRejectedValueOnce(notFoundError);
 
             const res = await request(app)
                 .delete('/api/templates/nonexistent')
@@ -581,7 +589,7 @@ describe('Templates CRUD Routes', () => {
         });
 
         it('should return 500 on unexpected error', async () => {
-            mockDestroyWithTimeout.mockRejectedValueOnce(new Error('DB failure'));
+            mockDeleteTemplate.mockRejectedValueOnce(new Error('DB failure'));
 
             const res = await request(app)
                 .delete('/api/templates/tpl-123')
@@ -593,7 +601,7 @@ describe('Templates CRUD Routes', () => {
 
         it('should invalidate cache on delete', async () => {
             const { templatesCache } = await import('../../services/cache.service.js');
-            mockDestroyWithTimeout.mockResolvedValueOnce(true);
+            mockDeleteTemplate.mockResolvedValueOnce(true);
 
             await request(app)
                 .delete('/api/templates/tpl-123')
@@ -608,7 +616,7 @@ describe('Templates CRUD Routes', () => {
     // ==========================================
     describe('Error message safety', () => {
         it('should not leak internal error details in GET list response', async () => {
-            mockSelectWithTimeout.mockRejectedValueOnce(new Error('relation "templates" does not exist'));
+            mockListTemplates.mockRejectedValueOnce(new Error('relation "templates" does not exist'));
 
             const res = await request(app)
                 .get('/api/templates')
@@ -620,7 +628,7 @@ describe('Templates CRUD Routes', () => {
         });
 
         it('should not leak internal error details in POST response', async () => {
-            mockCreateWithTimeout.mockRejectedValueOnce(new Error('column "bad_col" does not exist'));
+            mockCreateTemplate.mockRejectedValueOnce(new Error('column "bad_col" does not exist'));
 
             const res = await request(app)
                 .post('/api/templates')

@@ -50,10 +50,12 @@ vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));
 
-// Mock database
-const mockQuery = vi.fn();
-vi.mock('../../config/database.js', () => ({
-    query: (...args) => mockQuery(...args)
+// Mock auth service
+const mockUpdateLastLogin = vi.fn();
+const mockRegisterGoogleUser = vi.fn();
+vi.mock('../../services/auth.service.js', () => ({
+    updateLastLogin: (...args) => mockUpdateLastLogin(...args),
+    registerGoogleUser: (...args) => mockRegisterGoogleUser(...args)
 }));
 
 // Mock auth config
@@ -172,7 +174,7 @@ describe('Google OAuth Routes', () => {
                 firm_id: 'f-1',
                 firm_name: 'Acme'
             });
-            mockQuery.mockResolvedValueOnce({ rows: [] }); // UPDATE last_login
+            mockUpdateLastLogin.mockResolvedValueOnce();
 
             const res = await request(app)
                 .post('/api/auth/google/token')
@@ -198,7 +200,7 @@ describe('Google OAuth Routes', () => {
                 role: 'user'
             });
             mockLinkGoogleAccount.mockResolvedValueOnce();
-            mockQuery.mockResolvedValueOnce({ rows: [] });
+            mockUpdateLastLogin.mockResolvedValueOnce();
 
             const res = await request(app)
                 .post('/api/auth/google/token')

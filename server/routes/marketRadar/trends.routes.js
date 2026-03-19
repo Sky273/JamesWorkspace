@@ -18,7 +18,8 @@ import {
     getTrendFilterOptions,
     getTrendsSummary,
     invalidateTrendsCache,
-    loadTrendsCache
+    loadTrendsCache,
+    getTrendsAuditReport
 } from '../../services/marketTrends.service.js';
 
 const router = express.Router();
@@ -583,64 +584,13 @@ router.get('/trends/verify/:type/:regionCode/:codeRome', authenticateToken, requ
  */
 router.get('/trends/audit', authenticateToken, requireAdmin, async (req, res) => {
     try {
-        const { query } = await import('../../config/database.js');
-        
-        // Get freshness statistics
-        const freshnessQuery = `
-            SELECT 
-                type,
-                COUNT(*) as total_records,
-                MIN(collected_at) as oldest_collection,
-                MAX(collected_at) as newest_collection,
-                COUNT(CASE WHEN collected_at > NOW() - INTERVAL '7 days' THEN 1 END) as fresh_count,
-                COUNT(CASE WHEN collected_at > NOW() - INTERVAL '30 days' AND collected_at <= NOW() - INTERVAL '7 days' THEN 1 END) as recent_count,
-                COUNT(CASE WHEN collected_at <= NOW() - INTERVAL '30 days' OR collected_at IS NULL THEN 1 END) as stale_count,
-                COUNT(CASE WHEN previous_value IS NOT NULL THEN 1 END) as updated_records,
-                AVG(CASE WHEN previous_value IS NOT NULL AND previous_value != 0 
-                    THEN ABS((value - previous_value) / previous_value) * 100 
-                    ELSE NULL END) as avg_change_percent
-            FROM market_trends
-            GROUP BY type
-            ORDER BY type
-        `;
-        
-        const freshnessResult = await query(freshnessQuery);
-        
-        // Get significant changes (>50%)
-        const changesQuery = `
-            SELECT type, region_code, code_rome, rome_label, 
-                   previous_value, value,
-                   ROUND(ABS((value - previous_value) / NULLIF(previous_value, 0)) * 100, 1) as change_percent,
-                   collected_at
-            FROM market_trends
-            WHERE previous_value IS NOT NULL 
-              AND previous_value != 0
-              AND ABS((value - previous_value) / previous_value) > 0.5
-            ORDER BY ABS((value - previous_value) / previous_value) DESC
-            LIMIT 20
-        `;
-        
-        const changesResult = await query(changesQuery);
-        
-        // Get overall stats
-        const overallQuery = `
-            SELECT 
-                COUNT(*) as total_records,
-                COUNT(DISTINCT type) as total_types,
-                COUNT(DISTINCT region_code) as total_regions,
-                COUNT(DISTINCT code_rome) as total_rome_codes,
-                MIN(collected_at) as oldest_data,
-                MAX(collected_at) as newest_data
-            FROM market_trends
-        `;
-        
-        const overallResult = await query(overallQuery);
+        const { freshness, significantChanges, overall } = await getTrendsAuditReport();
         
         res.json({
             success: true,
             audit: {
-                overall: overallResult.rows[0],
-                byType: freshnessResult.rows.map(row => ({
+                overall,
+                byType: freshness.map(row => ({
                     type: row.type,
                     totalRecords: parseInt(row.total_records),
                     oldestCollection: row.oldest_collection,
@@ -653,7 +603,7 @@ router.get('/trends/audit', authenticateToken, requireAdmin, async (req, res) =>
                     updatedRecords: parseInt(row.updated_records),
                     avgChangePercent: row.avg_change_percent ? parseFloat(row.avg_change_percent).toFixed(1) : null
                 })),
-                significantChanges: changesResult.rows.map(row => ({
+                significantChanges: significantChanges.map(row => ({
                     type: row.type,
                     regionCode: row.region_code,
                     codeRome: row.code_rome,

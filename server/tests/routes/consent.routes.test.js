@@ -16,24 +16,21 @@ const mockValidateConsentToken = vi.fn();
 const mockRecordConsentResponse = vi.fn();
 const mockGetConsentStatus = vi.fn();
 const mockResendConsentRequest = vi.fn();
+const mockMarkConsentError = vi.fn();
 vi.mock('../../services/consent.service.js', () => ({
     initializeConsent: (...args) => mockInitializeConsent(...args),
     sendConsentRequest: (...args) => mockSendConsentRequest(...args),
     validateConsentToken: (...args) => mockValidateConsentToken(...args),
     recordConsentResponse: (...args) => mockRecordConsentResponse(...args),
     getConsentStatus: (...args) => mockGetConsentStatus(...args),
-    resendConsentRequest: (...args) => mockResendConsentRequest(...args)
+    resendConsentRequest: (...args) => mockResendConsentRequest(...args),
+    markConsentError: (...args) => mockMarkConsentError(...args)
 }));
 
 // Mock scheduler service
 const mockRunAllChecks = vi.fn();
 vi.mock('../../services/scheduler.service.js', () => ({
     runAllChecks: (...args) => mockRunAllChecks(...args)
-}));
-
-// Mock database (used in error path of send route)
-vi.mock('../../config/database.js', () => ({
-    query: vi.fn().mockResolvedValue({ rows: [] })
 }));
 
 // Mock logger

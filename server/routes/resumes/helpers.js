@@ -3,9 +3,9 @@
  * Contains utility functions used across resume route modules
  */
 
-import { query } from '../../config/database.js';
 import { safeLog } from '../../utils/logger.backend.js';
 import { getUserFirmId, isUserAdmin } from '../../utils/firmHelpers.js';
+import * as resumesService from '../../services/resumes.service.js';
 
 /**
  * Check if user has access to a specific resume
@@ -17,16 +17,11 @@ import { getUserFirmId, isUserAdmin } from '../../utils/firmHelpers.js';
 export async function checkResumeAccess(req, resumeId) {
     try {
         // Fetch resume with firm_id
-        const result = await query(
-            'SELECT id, firm_id, name FROM resumes WHERE id = $1',
-            [resumeId]
-        );
+        const resume = await resumesService.getResumeForAccessCheck(resumeId);
         
-        if (result.rows.length === 0) {
+        if (!resume) {
             return { hasAccess: false, resume: null, error: 'Resume not found' };
         }
-        
-        const resume = result.rows[0];
         
         // Admins can access all resumes
         if (isUserAdmin(req)) {
@@ -178,18 +173,5 @@ export function mapResumeToFrontend(record) {
 /**
  * SQL columns to select for resume queries (excludes binary resume_file_data)
  */
-export const RESUME_SELECT_COLUMNS = `
-    id, name, title, file_name, resume_file_url, resume_file_size, resume_file_type,
-    status, firm_id, firm_name, skills, industries, tools, soft_skills,
-    skills_cleaned, industries_cleaned, tools_cleaned, soft_skills_cleaned,
-    skills_esco, industries_esco, tools_esco, soft_skills_esco,
-    key_improvements, summary, experience_years, education_level, certifications, languages,
-    created_at, updated_at, analyzed_at, original_text, improved_text, original_name,
-    global_rating, skills_score, experience_score, education_score, ats_score,
-    executive_summary_score, hobbies_languages_score,
-    improved_global_rating, improved_skills_score, improved_experience_score, improved_education_score,
-    improved_ats_score, improved_executive_summary_score, improved_hobbies_languages_score,
-    template_id, template_name, improvement_suggestions, analysis_details, improvement_date,
-    trigram, improved_key_improvements, improved_skills, improved_industries, improved_tools, improved_soft_skills,
-    profile_type, candidate_name, candidate_email, consent_status, consent_requested_at, consent_responded_at, consent_token_expires_at, retention_until
-`.trim();
+// Re-export from service for backward compatibility
+export { RESUME_SELECT_COLUMNS } from '../../services/resumes.service.js';

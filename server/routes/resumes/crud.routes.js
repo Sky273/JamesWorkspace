@@ -6,19 +6,17 @@
 import express from 'express';
 import { authenticateToken } from '../../middleware/auth.middleware.js';
 import { validateParams, validateBody, updateResumeSchema } from '../../utils/validation.js';
-import { selectWithTimeout, updateWithTimeout, destroyWithTimeout, escapeLike } from '../../utils/postgresHelpers.js';
 import { safeLog } from '../../utils/logger.backend.js';
-import { query } from '../../config/database.js';
 import { getUserFirmId, isUserAdmin } from '../../utils/firmHelpers.js';
 import { processAnalysisTags } from '../../utils/tagCleaner.js';
 import { invalidateTagsCache } from '../tags.routes.js';
 import { createVersion, hasImprovedTextChanged } from '../../services/resumeVersions.service.js';
+import * as resumesService from '../../services/resumes.service.js';
 import { 
     checkResumeAccess, 
     parseScore, 
     stringifyIfNeeded, 
-    mapResumeToFrontend,
-    RESUME_SELECT_COLUMNS 
+    mapResumeToFrontend
 } from './helpers.js';
 
 const router = express.Router();
@@ -70,8 +68,9 @@ router.get('/', authenticateToken, async (req, res) => {
         
         // Search filter (searches in name, title, file_name)
         if (search) {
+            const escaped = search.toLowerCase().replace(/[%_\\]/g, '\\$&');
             conditions.push(`(LOWER(name) LIKE $${paramIndex} OR LOWER(title) LIKE $${paramIndex} OR LOWER(file_name) LIKE $${paramIndex})`);
-            params.push(`%${escapeLike(search.toLowerCase())}%`);
+            params.push(`%${escaped}%`);
             paramIndex++;
         }
 
@@ -80,59 +79,14 @@ router.get('/', authenticateToken, async (req, res) => {
             needsJoin = true;
         }
 
-        const whereClause = conditions.length > 0 ? conditions.join(' AND ') : '';
-
         // Get total count for pagination
-        let countSql;
-        let countParams = [...params];
-        
-        if (needsJoin) {
-            // With JOIN for deal filter
-            countSql = `SELECT COUNT(DISTINCT r.id) as total FROM resumes r 
-                        INNER JOIN deal_resumes dr ON r.id = dr.resume_id 
-                        WHERE dr.deal_id = $${paramIndex}`;
-            countParams.push(dealId);
-            if (whereClause) {
-                countSql = countSql.replace('WHERE dr.deal_id', `WHERE ${whereClause.replace(/\b(firm_id|status|name|title|file_name)\b/g, 'r.$1')} AND dr.deal_id`);
-            }
-        } else {
-            // Simple count without JOIN
-            countSql = 'SELECT COUNT(*) as total FROM resumes';
-            if (whereClause) {
-                countSql += ` WHERE ${whereClause}`;
-            }
-        }
-        
-        const countResult = await query(countSql, countParams);
-        const totalCount = parseInt(countResult.rows[0]?.total || '0', 10);
+        const totalCount = await resumesService.countResumes({
+            conditions, params, dealId, dealParamIndex: paramIndex
+        });
 
-        // Fetch resumes with pagination using raw query to exclude resume_file_data (binary)
-        let rawSql;
-        let queryParams = [...params];
-        
-        if (needsJoin) {
-            // With JOIN for deal filter
-            rawSql = `SELECT DISTINCT r.${RESUME_SELECT_COLUMNS.split(',').map(c => c.trim()).join(', r.')}
-                FROM resumes r
-                INNER JOIN deal_resumes dr ON r.id = dr.resume_id
-                WHERE dr.deal_id = $${paramIndex}`;
-            queryParams.push(dealId);
-            if (whereClause) {
-                rawSql = rawSql.replace('WHERE dr.deal_id', `WHERE ${whereClause.replace(/\b(firm_id|status|name|title|file_name)\b/g, 'r.$1')} AND dr.deal_id`);
-            }
-            rawSql += ` ORDER BY LOWER(r.name) ASC, r.created_at DESC LIMIT ${limit + 1} OFFSET ${offset}`;
-        } else {
-            // Simple query without JOIN
-            rawSql = `SELECT ${RESUME_SELECT_COLUMNS} FROM resumes`;
-            if (whereClause) {
-                rawSql += ` WHERE ${whereClause}`;
-            }
-            rawSql += ` ORDER BY LOWER(name) ASC, created_at DESC LIMIT ${limit + 1} OFFSET ${offset}`;
-        }
-        
-        const resumes = await selectWithTimeout('resumes', {
-            rawQuery: rawSql,
-            rawParams: queryParams
+        // Fetch resumes with pagination
+        const resumes = await resumesService.listResumes({
+            conditions, params, dealId, dealParamIndex: paramIndex, limit, offset
         });
 
         // Check if there are more records
@@ -174,17 +128,11 @@ router.get('/:id/download', authenticateToken, validateParams('id'), async (req,
         const isAdmin = req.user?.role === 'admin';
 
         // Fetch resume with file data
-        const result = await query(
-            `SELECT id, file_name, resume_file_data, resume_file_type, resume_file_size, firm_name
-             FROM resumes WHERE id = $1`,
-            [id]
-        );
+        const resume = await resumesService.getResumeFileForDownload(id);
 
-        if (result.rows.length === 0) {
+        if (!resume) {
             return res.status(404).json({ error: 'Resume not found' });
         }
-
-        const resume = result.rows[0];
 
         // Check access rights (non-admin can only access their customer's resumes)
         if (!isAdmin && userFirm && resume.firm_name !== userFirm) {
@@ -213,17 +161,12 @@ router.get('/:id/download', authenticateToken, validateParams('id'), async (req,
 router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => {
     try {
         const { id } = req.params;
-        // Use raw query to exclude resume_file_data (binary) - select all other columns
-        const result = await query(
-            `SELECT ${RESUME_SELECT_COLUMNS} FROM resumes WHERE id = $1`,
-            [id]
-        );
+        // Fetch resume (excluding binary file data)
+        const resume = await resumesService.getResumeById(id);
         
-        if (result.rows.length === 0) {
+        if (!resume) {
             return res.status(404).json({ error: 'Resume not found' });
         }
-        
-        const resume = result.rows[0];
         
         // Verify user has access to this resume (firm-based access control using firm_id)
         if (!isUserAdmin(req)) {
@@ -408,12 +351,7 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateR
             });
         }
 
-        const records = await updateWithTimeout('resumes', [{
-            id: id,
-            fields: updateData
-        }]);
-
-        const updatedResume = records[0];
+        const updatedResume = await resumesService.updateResume(id, updateData);
 
         // Create a new version if improved text was changed
         if (shouldCreateVersion && updateData.improved_text) {
@@ -543,7 +481,7 @@ router.delete('/:id', authenticateToken, validateParams('id'), async (req, res) 
             return res.status(statusCode).json({ error: accessError });
         }
         
-        await destroyWithTimeout('resumes', [id]);
+        await resumesService.deleteResume(id);
         
         safeLog('info', 'Resume deleted', { resumeId: id, userId: req.user?.id });
         res.json({ message: 'Resume deleted successfully' });

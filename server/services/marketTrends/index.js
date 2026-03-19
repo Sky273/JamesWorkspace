@@ -31,7 +31,8 @@ export {
     getStoredTrendsLight,
     getStoredTrendsWithMetadata,
     getTrendMetadata,
-    fetchMetadataForIds
+    fetchMetadataForIds,
+    getTrendsAuditReport
 } from './queries.js';
 
 // Cache-based queries & management

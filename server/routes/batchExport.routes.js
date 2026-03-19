@@ -6,8 +6,8 @@
 import express from 'express';
 import JSZip from 'jszip';
 import { authenticateToken } from '../middleware/auth.middleware.js';
-import { query } from '../config/database.js';
 import { safeLog } from '../utils/logger.backend.js';
+import * as batchExportService from '../services/batchExport.service.js';
 
 const router = express.Router();
 
@@ -96,11 +96,10 @@ router.post('/', authenticateToken, async (req, res) => {
         }
         
         // Fetch template
-        const templateResult = await query('SELECT * FROM templates WHERE id = $1', [templateId]);
-        if (templateResult.rows.length === 0) {
+        const template = await batchExportService.getTemplateById(templateId);
+        if (!template) {
             return res.status(404).json({ error: 'Template not found' });
         }
-        const template = templateResult.rows[0];
         
         // Create ZIP archive
         const zip = new JSZip();
@@ -110,12 +109,11 @@ router.post('/', authenticateToken, async (req, res) => {
         for (const resumeId of resumeIds) {
             try {
                 // Fetch resume
-                const resumeResult = await query('SELECT * FROM resumes WHERE id = $1', [resumeId]);
-                if (resumeResult.rows.length === 0) {
+                const resume = await batchExportService.getResumeById(resumeId);
+                if (!resume) {
                     errors.push({ resumeId, error: 'Resume not found' });
                     continue;
                 }
-                const resume = resumeResult.rows[0];
                 
                 // Prepare content
                 const content = resume.improved_text || resume.original_text || '';

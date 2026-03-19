@@ -2,8 +2,7 @@ import express from 'express';
 import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
 import { validateParams } from '../utils/validation.js';
 import { safeLog } from '../utils/logger.backend.js';
-import { selectWithTimeout, escapeLike } from '../utils/postgresHelpers.js';
-import { query } from '../config/database.js';
+import * as usersService from '../services/users.service.js';
 
 const router = express.Router();
 
@@ -16,48 +15,9 @@ router.get('/', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 100;
-        const offset = (page - 1) * limit;
         const { search, role, status } = req.query;
 
-        // Build WHERE clause
-        const conditions = [];
-        const params = [];
-        let paramIndex = 1;
-
-        if (search) {
-            conditions.push(`(LOWER(name) LIKE $${paramIndex} OR LOWER(email) LIKE $${paramIndex})`);
-            params.push(`%${escapeLike(search.toLowerCase())}%`);
-            paramIndex++;
-        }
-
-        if (role && role !== 'all') {
-            conditions.push(`role = $${paramIndex}`);
-            params.push(role.toLowerCase());
-            paramIndex++;
-        }
-
-        if (status && status !== 'all') {
-            conditions.push(`status = $${paramIndex}`);
-            params.push(status.toLowerCase());
-            paramIndex++;
-        }
-
-        const whereClause = conditions.length > 0 ? conditions.join(' AND ') : '';
-
-        // Fetch users with pagination
-        const users = await selectWithTimeout('users', {
-            where: whereClause,
-            params: params,
-            orderBy: 'name ASC',
-            limit: limit + 1,
-            offset: offset
-        });
-
-        // Check if there are more records
-        const hasMore = users.length > limit;
-        if (hasMore) {
-            users.pop();
-        }
+        const { users, hasMore } = await usersService.listUsers({ search, role, status, page, limit });
 
         // Map to frontend format (exclude password)
         const mappedUsers = users.map(user => ({
@@ -109,64 +69,15 @@ router.put('/:id', authenticateToken, validateParams('id'), async (req, res) => 
 
         const { name, jobTitle, phone, role, status, firm_id } = req.body;
 
-        // Build update query dynamically
-        const updates = [];
-        const params = [];
-        let paramIndex = 1;
+        const updatedUser = await usersService.updateUserProfile(id, { name, jobTitle, phone, role, status, firm_id }, isAdmin);
 
-        if (name !== undefined) {
-            updates.push(`name = $${paramIndex++}`);
-            params.push(name);
-        }
-
-        if (jobTitle !== undefined) {
-            updates.push(`job_title = $${paramIndex++}`);
-            params.push(jobTitle);
-        }
-
-        if (phone !== undefined) {
-            updates.push(`phone = $${paramIndex++}`);
-            params.push(phone);
-        }
-
-        // Admin-only fields
-        if (isAdmin) {
-            if (role !== undefined) {
-                updates.push(`role = $${paramIndex++}`);
-                params.push(role.toLowerCase());
-            }
-
-            if (status !== undefined) {
-                updates.push(`status = $${paramIndex++}`);
-                params.push(status.toLowerCase());
-            }
-
-            if (firm_id !== undefined) {
-                updates.push(`firm_id = $${paramIndex++}`);
-                params.push(firm_id);
-            }
-        }
-
-        if (updates.length === 0) {
+        if (updatedUser && updatedUser.noFields) {
             return res.status(400).json({ error: 'No fields to update' });
         }
 
-        // Add updated_at
-        updates.push(`updated_at = CURRENT_TIMESTAMP`);
-
-        // Add user ID to params
-        params.push(id);
-
-        const result = await query(
-            `UPDATE users SET ${updates.join(', ')} WHERE id = $${paramIndex} RETURNING *`,
-            params
-        );
-
-        if (result.rows.length === 0) {
+        if (!updatedUser) {
             return res.status(404).json({ error: 'User not found' });
         }
-
-        const updatedUser = result.rows[0];
 
         safeLog('info', 'User profile updated', { 
             userId: id, 

@@ -204,6 +204,60 @@ export async function getTrendMetadata(trendId) {
  * @param {string[]} ids - Array of trend IDs to fetch metadata for
  * @returns {Object} - Map of id -> metadata
  */
+/**
+ * Get trends audit report (freshness, significant changes, overall stats)
+ * @returns {Promise<Object>} { freshness, significantChanges, overall }
+ */
+export async function getTrendsAuditReport() {
+    const freshnessResult = await dbQuery(`
+        SELECT 
+            type,
+            COUNT(*) as total_records,
+            MIN(collected_at) as oldest_collection,
+            MAX(collected_at) as newest_collection,
+            COUNT(CASE WHEN collected_at > NOW() - INTERVAL '7 days' THEN 1 END) as fresh_count,
+            COUNT(CASE WHEN collected_at > NOW() - INTERVAL '30 days' AND collected_at <= NOW() - INTERVAL '7 days' THEN 1 END) as recent_count,
+            COUNT(CASE WHEN collected_at <= NOW() - INTERVAL '30 days' OR collected_at IS NULL THEN 1 END) as stale_count,
+            COUNT(CASE WHEN previous_value IS NOT NULL THEN 1 END) as updated_records,
+            AVG(CASE WHEN previous_value IS NOT NULL AND previous_value != 0 
+                THEN ABS((value - previous_value) / previous_value) * 100 
+                ELSE NULL END) as avg_change_percent
+        FROM ${MARKET_TRENDS_TABLE}
+        GROUP BY type
+        ORDER BY type
+    `);
+
+    const changesResult = await dbQuery(`
+        SELECT type, region_code, code_rome, rome_label, 
+               previous_value, value,
+               ROUND(ABS((value - previous_value) / NULLIF(previous_value, 0)) * 100, 1) as change_percent,
+               collected_at
+        FROM ${MARKET_TRENDS_TABLE}
+        WHERE previous_value IS NOT NULL 
+          AND previous_value != 0
+          AND ABS((value - previous_value) / previous_value) > 0.5
+        ORDER BY ABS((value - previous_value) / previous_value) DESC
+        LIMIT 20
+    `);
+
+    const overallResult = await dbQuery(`
+        SELECT 
+            COUNT(*) as total_records,
+            COUNT(DISTINCT type) as total_types,
+            COUNT(DISTINCT region_code) as total_regions,
+            COUNT(DISTINCT code_rome) as total_rome_codes,
+            MIN(collected_at) as oldest_data,
+            MAX(collected_at) as newest_data
+        FROM ${MARKET_TRENDS_TABLE}
+    `);
+
+    return {
+        freshness: freshnessResult.rows,
+        significantChanges: changesResult.rows,
+        overall: overallResult.rows[0]
+    };
+}
+
 export async function fetchMetadataForIds(ids) {
     if (!ids || ids.length === 0) return {};
     

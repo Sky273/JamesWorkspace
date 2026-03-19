@@ -507,6 +507,32 @@ export async function previewTemplate(mjmlContent, subjectTemplate, context = nu
     return { subject, html: body };
 }
 
+/**
+ * Get firm_id for a user by user ID
+ * @param {string} userId
+ * @returns {Promise<string|null>}
+ */
+export async function getUserFirmId(userId) {
+    const result = await query(
+        'SELECT firm_id FROM users WHERE id = $1',
+        [userId]
+    );
+    return result.rows.length > 0 ? result.rows[0].firm_id : null;
+}
+
+/**
+ * Get firm ID by firm name
+ * @param {string} firmName
+ * @returns {Promise<string|null>}
+ */
+export async function getFirmIdByName(firmName) {
+    const result = await query(
+        'SELECT id FROM firms WHERE name = $1',
+        [firmName]
+    );
+    return result.rows.length > 0 ? result.rows[0].id : null;
+}
+
 export default {
     TEMPLATE_KEYWORDS,
     getTemplates,
@@ -519,5 +545,7 @@ export default {
     compileMjml,
     substituteKeywords,
     renderTemplate,
-    previewTemplate
+    previewTemplate,
+    getUserFirmId,
+    getFirmIdByName
 };

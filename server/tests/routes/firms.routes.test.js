@@ -20,25 +20,27 @@ vi.mock('../../config/constants.js', () => ({
     RATE_LIMIT: { AUTH: { windowMs: 900000, max: 20 }, USER: { windowMs: 900000, max: 50 } }
 }));
 
-// Mock postgresHelpers
-const mockSelectWithTimeout = vi.fn();
-const mockFindWithTimeout = vi.fn();
-const mockCreateWithTimeout = vi.fn();
-const mockUpdateWithTimeout = vi.fn();
-const mockDestroyWithTimeout = vi.fn();
-vi.mock('../../utils/postgresHelpers.js', () => ({
-    selectWithTimeout: (...args) => mockSelectWithTimeout(...args),
-    findWithTimeout: (...args) => mockFindWithTimeout(...args),
-    createWithTimeout: (...args) => mockCreateWithTimeout(...args),
-    escapeLike: (str) => str.replace(/[%_\\]/g, '\\$&'),
-    updateWithTimeout: (...args) => mockUpdateWithTimeout(...args),
-    destroyWithTimeout: (...args) => mockDestroyWithTimeout(...args)
-}));
+// Mock firms service
+const mockListFirms = vi.fn();
+const mockGetFirmById = vi.fn();
+const mockCreateFirm = vi.fn();
+const mockUpdateFirm = vi.fn();
+const mockDeleteFirm = vi.fn();
+const mockGetAssociatedUsersCount = vi.fn();
+const mockUploadFirmLogo = vi.fn();
+const mockGetFirmLogo = vi.fn();
+const mockDeleteFirmLogo = vi.fn();
 
-// Mock database query
-const mockQuery = vi.fn();
-vi.mock('../../config/database.js', () => ({
-    query: (...args) => mockQuery(...args)
+vi.mock('../../services/firms.service.js', () => ({
+    listFirms: (...args) => mockListFirms(...args),
+    getFirmById: (...args) => mockGetFirmById(...args),
+    createFirm: (...args) => mockCreateFirm(...args),
+    updateFirm: (...args) => mockUpdateFirm(...args),
+    deleteFirm: (...args) => mockDeleteFirm(...args),
+    getAssociatedUsersCount: (...args) => mockGetAssociatedUsersCount(...args),
+    uploadFirmLogo: (...args) => mockUploadFirmLogo(...args),
+    getFirmLogo: (...args) => mockGetFirmLogo(...args),
+    deleteFirmLogo: (...args) => mockDeleteFirmLogo(...args)
 }));
 
 // Mock cache service
@@ -108,11 +110,14 @@ describe('Firms Routes', () => {
 
     describe('GET /api/firms', () => {
         it('should return firms with pagination', async () => {
-            mockSelectWithTimeout.mockResolvedValue([
-                { id: 'f-1', name: 'Firm A', status: 'active' },
-                { id: 'f-2', name: 'Firm B', status: 'active' }
-            ]);
-            mockQuery.mockResolvedValue({ rows: [{ count: '2' }] });
+            mockListFirms.mockResolvedValue({
+                firms: [
+                    { id: 'f-1', name: 'Firm A', status: 'active' },
+                    { id: 'f-2', name: 'Firm B', status: 'active' }
+                ],
+                hasMore: false,
+                totalCount: 2
+            });
 
             const res = await request(app).get('/api/firms').set(authHeader);
 
@@ -123,22 +128,27 @@ describe('Firms Routes', () => {
         });
 
         it('should support search parameter', async () => {
-            mockSelectWithTimeout.mockResolvedValue([{ id: 'f-1', name: 'Acme Corp' }]);
-            mockQuery.mockResolvedValue({ rows: [{ count: '1' }] });
+            mockListFirms.mockResolvedValue({
+                firms: [{ id: 'f-1', name: 'Acme Corp' }],
+                hasMore: false,
+                totalCount: 1
+            });
 
             const res = await request(app).get('/api/firms?search=acme').set(authHeader);
 
             expect(res.status).toBe(200);
-            expect(mockSelectWithTimeout).toHaveBeenCalledWith('firms', expect.objectContaining({
-                where: expect.stringContaining('LOWER(name) LIKE')
-            }));
+            expect(mockListFirms).toHaveBeenCalledWith(
+                expect.objectContaining({ search: 'acme' })
+            );
         });
 
         it('should handle hasMore flag', async () => {
-            // Return limit+1 items to indicate more exist (default limit=100, so 101 items)
-            const firms = Array.from({ length: 101 }, (_, i) => ({ id: `f-${i}`, name: `Firm ${i}` }));
-            mockSelectWithTimeout.mockResolvedValue(firms);
-            mockQuery.mockResolvedValue({ rows: [{ count: '200' }] });
+            const firms = Array.from({ length: 100 }, (_, i) => ({ id: `f-${i}`, name: `Firm ${i}` }));
+            mockListFirms.mockResolvedValue({
+                firms,
+                hasMore: true,
+                totalCount: 200
+            });
 
             const res = await request(app).get('/api/firms').set(authHeader);
 
@@ -153,7 +163,7 @@ describe('Firms Routes', () => {
         });
 
         it('should return 500 on DB error', async () => {
-            mockSelectWithTimeout.mockRejectedValue(new Error('DB error'));
+            mockListFirms.mockRejectedValue(new Error('DB error'));
 
             const res = await request(app).get('/api/firms').set(authHeader);
             expect(res.status).toBe(500);
@@ -162,7 +172,7 @@ describe('Firms Routes', () => {
 
     describe('GET /api/firms/:id', () => {
         it('should return firm by ID', async () => {
-            mockFindWithTimeout.mockResolvedValue({ id: 'f-1', name: 'Acme', status: 'active' });
+            mockGetFirmById.mockResolvedValue({ id: 'f-1', name: 'Acme', status: 'active' });
 
             const res = await request(app).get('/api/firms/f-1').set(authHeader);
 
@@ -171,9 +181,9 @@ describe('Firms Routes', () => {
         });
 
         it('should return 404 if not found', async () => {
-            const err = new Error('Record not found');
+            const err = new Error('Firm not found');
             err.statusCode = 404;
-            mockFindWithTimeout.mockRejectedValue(err);
+            mockGetFirmById.mockRejectedValue(err);
 
             const res = await request(app).get('/api/firms/nonexistent').set(authHeader);
             expect(res.status).toBe(404);
@@ -182,7 +192,7 @@ describe('Firms Routes', () => {
 
     describe('POST /api/firms', () => {
         it('should create a firm', async () => {
-            mockCreateWithTimeout.mockResolvedValue([{ id: 'f-new', name: 'New Firm', status: 'active' }]);
+            mockCreateFirm.mockResolvedValue({ id: 'f-new', name: 'New Firm', status: 'active' });
 
             const res = await request(app)
                 .post('/api/firms')
@@ -196,7 +206,7 @@ describe('Firms Routes', () => {
         it('should return 400 on duplicate name', async () => {
             const err = new Error('duplicate');
             err.code = '23505';
-            mockCreateWithTimeout.mockRejectedValue(err);
+            mockCreateFirm.mockRejectedValue(err);
 
             const res = await request(app)
                 .post('/api/firms')
@@ -219,7 +229,7 @@ describe('Firms Routes', () => {
 
     describe('PUT /api/firms/:id', () => {
         it('should update a firm', async () => {
-            mockUpdateWithTimeout.mockResolvedValue([{ id: 'f-1', name: 'Updated', status: 'active' }]);
+            mockUpdateFirm.mockResolvedValue({ id: 'f-1', name: 'Updated', status: 'active' });
 
             const res = await request(app)
                 .put('/api/firms/f-1')
@@ -231,9 +241,9 @@ describe('Firms Routes', () => {
         });
 
         it('should return 404 if not found', async () => {
-            const err = new Error('Record not found');
+            const err = new Error('Firm not found');
             err.statusCode = 404;
-            mockUpdateWithTimeout.mockRejectedValue(err);
+            mockUpdateFirm.mockRejectedValue(err);
 
             const res = await request(app)
                 .put('/api/firms/nonexistent')
@@ -246,7 +256,7 @@ describe('Firms Routes', () => {
         it('should return 400 on duplicate name', async () => {
             const err = new Error('duplicate');
             err.code = '23505';
-            mockUpdateWithTimeout.mockRejectedValue(err);
+            mockUpdateFirm.mockRejectedValue(err);
 
             const res = await request(app)
                 .put('/api/firms/f-1')
@@ -259,8 +269,8 @@ describe('Firms Routes', () => {
 
     describe('DELETE /api/firms/:id', () => {
         it('should delete a firm with no associated users', async () => {
-            mockSelectWithTimeout.mockResolvedValue([]);
-            mockDestroyWithTimeout.mockResolvedValue(['f-1']);
+            mockGetAssociatedUsersCount.mockResolvedValue(0);
+            mockDeleteFirm.mockResolvedValue(true);
 
             const res = await request(app).delete('/api/firms/f-1').set(authHeader);
 
@@ -269,7 +279,7 @@ describe('Firms Routes', () => {
         });
 
         it('should return 400 if firm has associated users', async () => {
-            mockSelectWithTimeout.mockResolvedValue([{ id: 'u-1' }]);
+            mockGetAssociatedUsersCount.mockResolvedValue(1);
 
             const res = await request(app).delete('/api/firms/f-1').set(authHeader);
 
@@ -289,8 +299,8 @@ describe('Firms Routes', () => {
     describe('GET /api/firms/:id/logo/image', () => {
         it('should serve logo image', async () => {
             const logoBuffer = Buffer.from('fake-image-data');
-            mockQuery.mockResolvedValue({
-                rows: [{ logo_data: logoBuffer, logo_mime_type: 'image/png' }]
+            mockGetFirmLogo.mockResolvedValue({
+                logo_data: logoBuffer, logo_mime_type: 'image/png'
             });
 
             const res = await request(app).get('/api/firms/f-1/logo/image');
@@ -300,14 +310,14 @@ describe('Firms Routes', () => {
         });
 
         it('should return 404 if no logo', async () => {
-            mockQuery.mockResolvedValue({ rows: [{ logo_data: null }] });
+            mockGetFirmLogo.mockResolvedValue(null);
 
             const res = await request(app).get('/api/firms/f-1/logo/image');
             expect(res.status).toBe(404);
         });
 
         it('should return 404 if firm not found', async () => {
-            mockQuery.mockResolvedValue({ rows: [] });
+            mockGetFirmLogo.mockResolvedValue(null);
 
             const res = await request(app).get('/api/firms/nonexistent/logo/image');
             expect(res.status).toBe(404);

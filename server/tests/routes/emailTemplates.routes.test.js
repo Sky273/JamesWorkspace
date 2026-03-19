@@ -8,12 +8,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import express from 'express';
 import request from 'supertest';
 
-// Mock database
-const mockQuery = vi.fn();
-vi.mock('../../config/database.js', () => ({
-    query: (...args) => mockQuery(...args)
-}));
-
 // Mock emailTemplates service
 const mockGetTemplates = vi.fn();
 const mockGetTemplate = vi.fn();
@@ -34,11 +28,17 @@ vi.mock('../../services/emailTemplates.service.js', () => ({
     duplicateTemplate: (...args) => mockDuplicateTemplate(...args),
     renderTemplate: (...args) => mockRenderTemplate(...args),
     previewTemplate: (...args) => mockPreviewTemplate(...args),
+    getUserFirmId: (...args) => mockGetUserFirmId(...args),
+    getFirmIdByName: (...args) => mockGetFirmIdByName(...args),
     TEMPLATE_KEYWORDS: [
         { key: '{{candidate_name}}', description: 'Candidate name' },
         { key: '{{firm_name}}', description: 'Firm name' }
     ]
 }));
+
+// Mock firm lookup helpers (declared after vi.mock references them)
+const mockGetUserFirmId = vi.fn();
+const mockGetFirmIdByName = vi.fn();
 
 // Mock logger
 vi.mock('../../utils/logger.backend.js', () => ({
@@ -97,8 +97,9 @@ describe('Email Templates Routes', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         app = createTestApp();
-        // Default: getFirmIdForUser resolves via user.firm_id
-        mockQuery.mockResolvedValue({ rows: [] });
+        // Default: getFirmIdForUser resolves via user.firm_id (no DB fallback needed)
+        mockGetUserFirmId.mockResolvedValue(null);
+        mockGetFirmIdByName.mockResolvedValue(null);
     });
 
     // ==========================================
@@ -124,7 +125,8 @@ describe('Email Templates Routes', () => {
 
         it('should return empty list for non-admin without firm', async () => {
             // Simulate no firm found for any DB lookup strategy
-            mockQuery.mockResolvedValue({ rows: [] });
+            mockGetUserFirmId.mockResolvedValueOnce(null);
+            mockGetFirmIdByName.mockResolvedValueOnce(null);
 
             const res = await request(app)
                 .get('/api/email-templates')

@@ -11,9 +11,8 @@ import { validateBody, signInSchema, registerSchema, isValidEmail } from '../../
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken, revokeToken } from '../../services/jwt.service.js';
 import { securityLog, getRequestMetadata, LOG_LEVELS, SECURITY_EVENTS } from '../../services/security.service.js';
 import { safeLog } from '../../utils/logger.backend.js';
-import { selectWithTimeout, createWithTimeout } from '../../utils/postgresHelpers.js';
-import { query } from '../../config/database.js';
 import { is2FAEnabled, verifyTotpCode } from '../../services/totp.service.js';
+import * as authService from '../../services/auth.service.js';
 import { useSecureCookies, ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE, CLEAR_ACCESS_TOKEN, CLEAR_REFRESH_TOKEN } from './config.js';
 
 const router = express.Router();
@@ -47,17 +46,7 @@ function formatUserResponse(user) {
  * Fetch a user with firm logo by user ID
  */
 async function fetchUserWithFirm(userId) {
-    const users = await selectWithTimeout('users', {
-        rawQuery: `
-            SELECT u.*, f.logo_url as firm_logo
-            FROM users u
-            LEFT JOIN firms f ON u.firm_id = f.id
-            WHERE u.id = $1
-            LIMIT 1
-        `,
-        rawParams: [userId]
-    });
-    return users.length > 0 ? users[0] : null;
+    return authService.findUserWithFirmById(userId);
 }
 
 // ============================================
@@ -85,18 +74,9 @@ router.post('/signin', authLimiter, validateBody(signInSchema), async (req, res)
         const metadata = getRequestMetadata(req);
         
         // Fetch user with firm logo
-        const users = await selectWithTimeout('users', {
-            rawQuery: `
-                SELECT u.*, f.logo_url as firm_logo
-                FROM users u
-                LEFT JOIN firms f ON u.firm_id = f.id
-                WHERE LOWER(u.email) = $1
-                LIMIT 1
-            `,
-            rawParams: [normalizedEmail]
-        });
+        const user = await authService.findUserWithFirmByEmail(normalizedEmail);
 
-        if (users.length === 0) {
+        if (!user) {
             securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.AUTH_FAILURE, {
                 ...metadata,
                 email: normalizedEmail,
@@ -108,7 +88,6 @@ router.post('/signin', authLimiter, validateBody(signInSchema), async (req, res)
             return res.status(401).json({ error: 'Invalid email or password' });
         }
 
-        const user = users[0];
         const isValidPassword = await bcrypt.compare(password, user.password);
 
         if (!isValidPassword) {
@@ -175,10 +154,7 @@ router.post('/signin', authLimiter, validateBody(signInSchema), async (req, res)
         }
 
         // Update last login timestamp
-        await query(
-            'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1',
-            [user.id]
-        );
+        await authService.updateLastLogin(user.id);
 
         const userData = formatUserResponse(user);
         
@@ -226,13 +202,9 @@ router.post('/register', authLimiter, validateBody(registerSchema), async (req, 
         const normalizedEmail = email.toLowerCase();
         const metadata = getRequestMetadata(req);
 
-        const existingUsers = await selectWithTimeout('users', {
-            where: 'LOWER(email) = $1',
-            params: [normalizedEmail],
-            limit: 1
-        });
+        const existingUser = await authService.findExistingUserByEmail(normalizedEmail);
 
-        if (existingUsers.length > 0) {
+        if (existingUser) {
             securityLog(LOG_LEVELS.WARNING, SECURITY_EVENTS.AUTH_FAILURE, {
                 ...metadata,
                 email: normalizedEmail,
@@ -254,11 +226,7 @@ router.post('/register', authLimiter, validateBody(registerSchema), async (req, 
             status: 'pending'
         };
 
-        const records = await createWithTimeout('users', [{
-            fields: userData
-        }]);
-
-        const newUser = records[0];
+        const newUser = await authService.createUser(userData);
 
         securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.USER_CREATED, {
             ...metadata,

@@ -13,19 +13,17 @@ const mockStoreSharedPdf = vi.fn();
 const mockGetShareStatus = vi.fn();
 const mockGetOriginalFileInfo = vi.fn();
 const mockGetSharedPdfByToken = vi.fn();
+const mockGetOrCreateShareToken = vi.fn();
+const mockGetResumeFileByToken = vi.fn();
 vi.mock('../../services/shareResume.service.js', () => ({
     default: {
         storeSharedPdf: (...args) => mockStoreSharedPdf(...args),
         getShareStatus: (...args) => mockGetShareStatus(...args),
         getOriginalFileInfo: (...args) => mockGetOriginalFileInfo(...args),
-        getSharedPdfByToken: (...args) => mockGetSharedPdfByToken(...args)
+        getSharedPdfByToken: (...args) => mockGetSharedPdfByToken(...args),
+        getOrCreateShareToken: (...args) => mockGetOrCreateShareToken(...args),
+        getResumeFileByToken: (...args) => mockGetResumeFileByToken(...args)
     }
-}));
-
-// Mock database
-const mockQuery = vi.fn();
-vi.mock('../../config/database.js', () => ({
-    query: (...args) => mockQuery(...args)
 }));
 
 // Mock fs
@@ -191,9 +189,7 @@ describe('Share Routes', () => {
 
         it('should return token for existing file with token', async () => {
             mockGetOriginalFileInfo.mockResolvedValueOnce({ filename: 'john-cv.pdf' });
-            mockQuery.mockResolvedValueOnce({
-                rows: [{ shared_pdf_token: 'existing-token-abc' }]
-            });
+            mockGetOrCreateShareToken.mockResolvedValueOnce('existing-token-abc');
 
             const res = await request(app)
                 .get('/api/share/resume/res-1/original')
@@ -207,9 +203,7 @@ describe('Share Routes', () => {
 
         it('should generate new token if none exists', async () => {
             mockGetOriginalFileInfo.mockResolvedValueOnce({ filename: 'cv.pdf' });
-            mockQuery
-                .mockResolvedValueOnce({ rows: [{ shared_pdf_token: null }] })
-                .mockResolvedValueOnce({ rows: [] }); // UPDATE query
+            mockGetOrCreateShareToken.mockResolvedValueOnce('b'.repeat(64));
 
             const res = await request(app)
                 .get('/api/share/resume/res-1/original')
@@ -286,15 +280,15 @@ describe('Share Routes', () => {
         });
 
         it('should return 404 if no resume found', async () => {
-            mockQuery.mockResolvedValueOnce({ rows: [] });
+            mockGetResumeFileByToken.mockResolvedValueOnce(null);
 
             const res = await request(app).get(`/api/share/file/${VALID_TOKEN}`);
             expect(res.status).toBe(404);
         });
 
         it('should return 404 if file data missing', async () => {
-            mockQuery.mockResolvedValueOnce({
-                rows: [{ id: 'r-1', file_name: 'cv.pdf', resume_file_data: null }]
+            mockGetResumeFileByToken.mockResolvedValueOnce({
+                id: 'r-1', file_name: 'cv.pdf', resume_file_data: null
             });
 
             const res = await request(app).get(`/api/share/file/${VALID_TOKEN}`);
@@ -304,15 +298,13 @@ describe('Share Routes', () => {
 
         it('should serve original file', async () => {
             const fileData = Buffer.from('file content');
-            mockQuery.mockResolvedValueOnce({
-                rows: [{
-                    id: 'r-1',
-                    file_name: 'resume.docx',
-                    name: 'John',
-                    resume_file_data: fileData,
-                    resume_file_type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                    resume_file_size: fileData.length
-                }]
+            mockGetResumeFileByToken.mockResolvedValueOnce({
+                id: 'r-1',
+                file_name: 'resume.docx',
+                name: 'John',
+                resume_file_data: fileData,
+                resume_file_type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                resume_file_size: fileData.length
             });
 
             const res = await request(app).get(`/api/share/file/${VALID_TOKEN}`);
@@ -322,7 +314,7 @@ describe('Share Routes', () => {
         });
 
         it('should return 500 on error', async () => {
-            mockQuery.mockRejectedValueOnce(new Error('DB error'));
+            mockGetResumeFileByToken.mockRejectedValueOnce(new Error('DB error'));
 
             const res = await request(app).get(`/api/share/file/${VALID_TOKEN}`);
             expect(res.status).toBe(500);

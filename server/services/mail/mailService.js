@@ -298,6 +298,64 @@ export async function disconnect(userId, providerName = 'gmail') {
     safeLog('info', 'Mail provider disconnected', { userId, provider: providerName });
 }
 
+/**
+ * Get user with firm data for template context enrichment
+ * @param {string} userId
+ * @returns {Promise<Object|null>}
+ */
+export async function getUserWithFirmData(userId) {
+    const result = await query(
+        `SELECT u.*, f.logo_url as firm_logo, f.name as firm_name
+         FROM users u
+         LEFT JOIN firms f ON u.firm_id = f.id
+         WHERE u.id = $1`,
+        [userId]
+    );
+    return result.rows.length > 0 ? result.rows[0] : null;
+}
+
+/**
+ * Get firm_id from a client record
+ * @param {string} clientId
+ * @returns {Promise<string|null>}
+ */
+export async function getClientFirmId(clientId) {
+    const result = await query(
+        'SELECT firm_id FROM clients WHERE id = $1',
+        [clientId]
+    );
+    return result.rows.length > 0 ? result.rows[0].firm_id : null;
+}
+
+/**
+ * Get current (max) version number for a resume
+ * @param {string} resumeId
+ * @returns {Promise<number|null>}
+ */
+export async function getResumeCurrentVersion(resumeId) {
+    const result = await query(
+        'SELECT MAX(version_number) as max_version FROM resume_versions WHERE resume_id = $1',
+        [resumeId]
+    );
+    return result.rows[0]?.max_version || null;
+}
+
+/**
+ * Record a resume submission after email draft creation
+ * @param {Object} params
+ * @returns {Promise<string|null>} submission ID
+ */
+export async function recordSubmission({ resumeId, clientId, contactId, missionId, firmId, sentBy, versionNumber, templateId, emailHtmlSent }) {
+    const result = await query(
+        `INSERT INTO resume_submissions 
+         (resume_id, client_id, contact_id, mission_id, firm_id, sent_by, status, notes, version_number, email_template_id, email_html_sent)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+         RETURNING id`,
+        [resumeId, clientId, contactId, missionId || null, firmId, sentBy, 'sent', 'Email draft created via gmail', versionNumber, templateId || null, emailHtmlSent]
+    );
+    return result.rows[0]?.id || null;
+}
+
 export default {
     getProvider,
     getAuthUrl,
@@ -305,5 +363,9 @@ export default {
     getConnectionStatus,
     getAccessToken,
     createDraft,
-    disconnect
+    disconnect,
+    getUserWithFirmData,
+    getClientFirmId,
+    getResumeCurrentVersion,
+    recordSubmission
 };

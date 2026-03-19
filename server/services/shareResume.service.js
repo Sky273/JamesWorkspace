@@ -204,10 +204,52 @@ export async function getShareStatus(resumeId) {
     }
 }
 
+/**
+ * Get or create a share token for a resume
+ * @param {string} resumeId
+ * @returns {Promise<string>} token
+ */
+export async function getOrCreateShareToken(resumeId) {
+    const result = await query(`
+        SELECT shared_pdf_token FROM resumes WHERE id = $1
+    `, [resumeId]);
+
+    let token = result.rows[0]?.shared_pdf_token;
+
+    if (!token) {
+        token = crypto.randomBytes(32).toString('hex');
+        await query(`
+            UPDATE resumes SET shared_pdf_token = $1 WHERE id = $2
+        `, [token, resumeId]);
+    }
+
+    return token;
+}
+
+/**
+ * Get resume file data by share token
+ * @param {string} token
+ * @returns {Promise<Object|null>}
+ */
+export async function getResumeFileByToken(token) {
+    const result = await query(`
+        SELECT id, file_name, name, resume_file_data, resume_file_type, resume_file_size
+        FROM resumes 
+        WHERE shared_pdf_token = $1
+    `, [token]);
+
+    if (result.rows.length === 0) {
+        return null;
+    }
+    return result.rows[0];
+}
+
 export default {
     initShareResumeTable,
     storeSharedPdf,
     getSharedPdfByToken,
     getOriginalFileInfo,
-    getShareStatus
+    getShareStatus,
+    getOrCreateShareToken,
+    getResumeFileByToken
 };

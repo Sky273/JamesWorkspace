@@ -14,23 +14,25 @@ const mockGetAuthUrl = vi.fn();
 const mockHandleOAuthCallback = vi.fn();
 const mockCreateDraft = vi.fn();
 const mockDisconnect = vi.fn();
+const mockGetUserWithFirmData = vi.fn();
+const mockGetClientFirmId = vi.fn();
+const mockGetResumeCurrentVersion = vi.fn();
+const mockRecordSubmission = vi.fn();
 vi.mock('../../services/mail/mailService.js', () => ({
     getConnectionStatus: (...args) => mockGetConnectionStatus(...args),
     getAuthUrl: (...args) => mockGetAuthUrl(...args),
     handleOAuthCallback: (...args) => mockHandleOAuthCallback(...args),
     createDraft: (...args) => mockCreateDraft(...args),
-    disconnect: (...args) => mockDisconnect(...args)
+    disconnect: (...args) => mockDisconnect(...args),
+    getUserWithFirmData: (...args) => mockGetUserWithFirmData(...args),
+    getClientFirmId: (...args) => mockGetClientFirmId(...args),
+    getResumeCurrentVersion: (...args) => mockGetResumeCurrentVersion(...args),
+    recordSubmission: (...args) => mockRecordSubmission(...args)
 }));
 
 // Mock email templates service
 vi.mock('../../services/emailTemplates.service.js', () => ({
     renderTemplate: vi.fn().mockResolvedValue({ subject: 'Rendered', html: '<p>Rendered</p>' })
-}));
-
-// Mock database
-const mockQuery = vi.fn();
-vi.mock('../../config/database.js', () => ({
-    query: (...args) => mockQuery(...args)
 }));
 
 // Mock logger
@@ -191,13 +193,9 @@ describe('Mail Routes', () => {
 
         it('should record submission if resumeId/clientId/contactId provided', async () => {
             mockCreateDraft.mockResolvedValueOnce({ draftId: 'd-1', webLink: 'link' });
-            // User query for template enrichment is skipped (no templateId)
-            // Client query
-            mockQuery.mockResolvedValueOnce({ rows: [{ firm_id: 'f-1' }] });
-            // Version query
-            mockQuery.mockResolvedValueOnce({ rows: [{ max_version: 3 }] });
-            // Insert submission
-            mockQuery.mockResolvedValueOnce({ rows: [{ id: 'sub-1' }] });
+            mockGetClientFirmId.mockResolvedValueOnce('f-1');
+            mockGetResumeCurrentVersion.mockResolvedValueOnce(3);
+            mockRecordSubmission.mockResolvedValueOnce('sub-1');
 
             const res = await request(app)
                 .post('/api/mail/draft')
@@ -213,6 +211,9 @@ describe('Mail Routes', () => {
 
             expect(res.status).toBe(200);
             expect(res.body.submissionId).toBe('sub-1');
+            expect(mockRecordSubmission).toHaveBeenCalledWith(
+                expect.objectContaining({ resumeId: 'r-1', clientId: 'c-1', contactId: 'ct-1' })
+            );
         });
 
         it('should return 401 on auth error from provider', async () => {

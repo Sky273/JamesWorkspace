@@ -9,7 +9,6 @@ import { authenticateToken } from '../middleware/auth.middleware.js';
 import { validateParams } from '../utils/validation.js';
 import shareResumeService from '../services/shareResume.service.js';
 import { safeLog } from '../utils/logger.backend.js';
-import { query } from '../config/database.js';
 
 const router = Router();
 
@@ -124,21 +123,7 @@ router.get('/resume/:resumeId/original', authenticateToken, validateParams('resu
         }
 
         // For original files, we serve them directly via a token-based URL
-        // First check if we already have a token, otherwise create one
-        const result = await query(`
-            SELECT shared_pdf_token FROM resumes WHERE id = $1
-        `, [resumeId]);
-
-        let token = result.rows[0]?.shared_pdf_token;
-        
-        if (!token) {
-            // Generate a token for the original file
-            const crypto = await import('crypto');
-            token = crypto.randomBytes(32).toString('hex');
-            await query(`
-                UPDATE resumes SET shared_pdf_token = $1 WHERE id = $2
-            `, [token, resumeId]);
-        }
+        const token = await shareResumeService.getOrCreateShareToken(resumeId);
 
         // Return token - frontend will build the URL using its origin
         res.json({
@@ -220,20 +205,14 @@ router.get('/file/:token', async (req, res) => {
         }
 
         // Find resume by token and get file data from database
-        const result = await query(`
-            SELECT id, file_name, name, resume_file_data, resume_file_type, resume_file_size
-            FROM resumes 
-            WHERE shared_pdf_token = $1
-        `, [token]);
+        const resume = await shareResumeService.getResumeFileByToken(token);
 
-        if (result.rows.length === 0) {
+        if (!resume) {
             return res.status(404).json({
                 success: false,
                 error: 'File not found'
             });
         }
-
-        const resume = result.rows[0];
 
         if (!resume.resume_file_data) {
             return res.status(404).json({

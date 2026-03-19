@@ -23,9 +23,11 @@ import {
     deleteJob,
     getJobItem,
     resumeItemWithName,
-    getItemsPendingName
+    getItemsPendingName,
+    getDealForExport,
+    getResumesForDeal,
+    getAdaptationsForDeal
 } from '../services/batchJobs.service.js';
-import { query } from '../config/database.js';
 
 const router = express.Router();
 
@@ -230,83 +232,22 @@ router.post('/deal-export', authenticateToken, async (req, res) => {
         }
 
         // Verify deal exists and user has access
-        const dealResult = await query(
-            'SELECT id, title, firm_id FROM deals WHERE id = $1',
-            [dealId]
-        );
-        if (dealResult.rows.length === 0) {
+        const deal = await getDealForExport(dealId);
+        if (!deal) {
             return res.status(404).json({ error: 'Affaire non trouvée' });
         }
-        const deal = dealResult.rows[0];
 
         if (!isAdmin && deal.firm_id !== userFirmId) {
             return res.status(403).json({ error: 'Accès non autorisé' });
         }
 
         // 1. Get resumes linked to the deal
-        const resumesResult = await query(`
-            SELECT r.id, r.name, r.title, r.file_name as source_file_name,
-                   COALESCE(r.relative_path, latest_item.relative_path) as relative_path
-            FROM resumes r
-            INNER JOIN deal_resumes dr ON r.id = dr.resume_id
-            LEFT JOIN LATERAL (
-                SELECT bji.relative_path
-                FROM batch_job_items bji
-                INNER JOIN batch_jobs bj ON bj.id = bji.job_id
-                WHERE bji.relative_path IS NOT NULL
-                  AND bj.job_type = 'import'
-                  AND (
-                      bji.resume_id = r.id
-                      OR (
-                          bji.resume_id IS NULL
-                          AND r.file_name IS NOT NULL
-                          AND bji.file_name = r.file_name
-                          AND bj.firm_id = r.firm_id
-                      )
-                  )
-                ORDER BY
-                    CASE WHEN bji.resume_id = r.id THEN 0 ELSE 1 END,
-                    bji.created_at DESC
-                LIMIT 1
-            ) latest_item ON TRUE
-            WHERE dr.deal_id = $1
-            ORDER BY LOWER(r.name) ASC
-        `, [dealId]);
+        const dealResumes = await getResumesForDeal(dealId);
 
         // 2. Get adaptations linked to missions of this deal
-        const adaptationsResult = await query(`
-            SELECT ra.id, ra.resume_id, ra.candidate_name, ra.adapted_title, ra.mission_title,
-                   COALESCE(r.relative_path, latest_item.relative_path) as relative_path,
-                   m.title as mission_name,
-                   r.file_name as source_file_name
-            FROM resume_adaptations ra
-            INNER JOIN missions m ON ra.mission_id = m.id
-            INNER JOIN resumes r ON r.id = ra.resume_id
-            LEFT JOIN LATERAL (
-                SELECT bji.relative_path
-                FROM batch_job_items bji
-                INNER JOIN batch_jobs bj ON bj.id = bji.job_id
-                WHERE bji.relative_path IS NOT NULL
-                  AND bj.job_type = 'import'
-                  AND (
-                      bji.resume_id = ra.resume_id
-                      OR (
-                          bji.resume_id IS NULL
-                          AND r.file_name IS NOT NULL
-                          AND bji.file_name = r.file_name
-                          AND bj.firm_id = r.firm_id
-                      )
-                  )
-                ORDER BY
-                    CASE WHEN bji.resume_id = ra.resume_id THEN 0 ELSE 1 END,
-                    bji.created_at DESC
-                LIMIT 1
-            ) latest_item ON TRUE
-            WHERE m.deal_id = $1
-            ORDER BY m.title ASC, ra.candidate_name ASC
-        `, [dealId]);
+        const dealAdaptations = await getAdaptationsForDeal(dealId);
 
-        const totalItems = resumesResult.rows.length + adaptationsResult.rows.length;
+        const totalItems = dealResumes.length + dealAdaptations.length;
         if (totalItems === 0) {
             return res.status(400).json({ error: 'Aucun CV ni adaptation à exporter pour cette affaire' });
         }
@@ -328,7 +269,7 @@ router.post('/deal-export', authenticateToken, async (req, res) => {
         // Build export items
         const exportItems = [];
 
-        for (const resume of resumesResult.rows) {
+        for (const resume of dealResumes) {
             exportItems.push({
                 resumeId: resume.id,
                 adaptationId: null,
@@ -339,7 +280,7 @@ router.post('/deal-export', authenticateToken, async (req, res) => {
             });
         }
 
-        for (const adaptation of adaptationsResult.rows) {
+        for (const adaptation of dealAdaptations) {
             exportItems.push({
                 resumeId: adaptation.resume_id,
                 adaptationId: adaptation.id,
@@ -358,15 +299,15 @@ router.post('/deal-export', authenticateToken, async (req, res) => {
             jobId: job.id,
             dealId,
             dealTitle: deal.title,
-            resumeCount: resumesResult.rows.length,
-            adaptationCount: adaptationsResult.rows.length,
+            resumeCount: dealResumes.length,
+            adaptationCount: dealAdaptations.length,
             exportFormats
         });
 
         res.status(201).json({
             ...updatedJob,
-            resumeCount: resumesResult.rows.length,
-            adaptationCount: adaptationsResult.rows.length
+            resumeCount: dealResumes.length,
+            adaptationCount: dealAdaptations.length
         });
     } catch (error) {
         safeLog('error', 'Failed to create deal export job', { error: error.message });
