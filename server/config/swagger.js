@@ -4,6 +4,8 @@
  * Updated to match current database schema and routes
  */
 
+import { swaggerPaths } from './swaggerPaths.js';
+
 export const swaggerDocument = {
     openapi: '3.0.3',
     info: {
@@ -21,6 +23,10 @@ export const swaggerDocument = {
         {
             url: '/api',
             description: 'API Server'
+        },
+        {
+            url: '/',
+            description: 'Root Server (for /health endpoints)'
         }
     ],
     tags: [
@@ -617,7 +623,7 @@ export const swaggerDocument = {
             }
         }
     },
-    paths: {}
+    paths: swaggerPaths
 };
 
 export default swaggerDocument;
