@@ -71,7 +71,10 @@ Application professionnelle de gestion et d'analyse de CVs avec intelligence art
 ```bash
 git clone <repository-url>
 cd ResumeConverter
+git checkout develop
 ```
+
+> **Note** : La branche active de développement est `develop`.
 
 ### 2. Installer les dépendances
 

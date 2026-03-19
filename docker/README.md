@@ -19,11 +19,35 @@ This Docker setup creates a **single, fully autonomous container** that includes
 
 ## 🚀 Quick Start
 
-### Windows (PowerShell)
+> **Important**: The active development branch is `develop`. After cloning, run `git checkout develop`.
+
+### Windows - .bat scripts (recommended)
+
+Simple batch scripts are available at the project root:
+
+```batch
+git clone https://github.com/votre-repo/ResumeConverter.git
+cd ResumeConverter
+git checkout develop
+
+docker-build.bat   # Build the Docker image
+docker-run.bat     # Start the container (⚠️ requires Administrator terminal)
+```
+
+> ⚠️ **Administrator terminal required**: `docker-run.bat` automatically configures a port forwarding rule (`netsh interface portproxy`) for external access via Cloudflare (port 443 → localhost:3443). This `netsh` command requires Administrator privileges.
+>
+> **To open an Administrator terminal:**
+> - Right-click **CMD** or **PowerShell** → **Run as administrator**
+> - Or: Windows key → type `cmd` → `Ctrl+Shift+Enter`
+>
+> If run without admin rights, the container will start normally but port forwarding for external access (internet/Cloudflare) will not be configured. Local access via `https://localhost:3443` will work regardless.
+
+### Windows (PowerShell - advanced)
 
 ```powershell
 # Navigate to project root
 cd C:\path\to\ResumeConverter
+git checkout develop
 
 # Build and run
 .\docker\docker-build.ps1 -Run
@@ -38,6 +62,7 @@ cd C:\path\to\ResumeConverter
 ```bash
 # Navigate to project root
 cd /path/to/ResumeConverter
+git checkout develop
 
 # Make script executable
 chmod +x docker/docker-build.sh
@@ -62,7 +87,17 @@ After starting the container:
 
 ## 📝 Available Commands
 
-### Windows (PowerShell)
+### Windows - .bat scripts (simple)
+
+| Script | Description |
+|--------|-------------|
+| `docker-build.bat` | Build the Docker image |
+| `docker-run.bat` | Start the container (⚠️ Admin terminal) |
+| `docker-stop.bat` | Stop and remove the container |
+| `docker-logs.bat` | View logs in real-time |
+| `docker-shell.bat` | Open a shell in the container |
+
+### Windows (PowerShell - advanced)
 
 | Command | Description |
 |---------|-------------|

@@ -47,7 +47,10 @@ Ce guide détaille les procédures d'installation et de lancement de ResumeConve
 ```bash
 git clone https://github.com/votre-repo/ResumeConverter.git
 cd ResumeConverter
+git checkout develop
 ```
+
+> **Note** : La branche active de développement est `develop`. Assurez-vous de bien basculer sur cette branche après le clonage.
 
 ### Étape 2 : Installer les dépendances
 
@@ -303,7 +306,10 @@ npm run dev
 ```bash
 git clone https://github.com/votre-repo/ResumeConverter.git
 cd ResumeConverter
+git checkout develop
 ```
+
+> **Note** : La branche active de développement est `develop`. Assurez-vous de bien basculer sur cette branche après le clonage.
 
 ### Étape 2 : Construire et lancer (méthode simple)
 
@@ -313,8 +319,16 @@ Des scripts simples sont disponibles à la racine du projet :
 
 ```batch
 docker-build.bat   # Construire l'image Docker
-docker-run.bat     # Démarrer le conteneur
+docker-run.bat     # Démarrer le conteneur (⚠️ nécessite un terminal Administrateur)
 ```
+
+> ⚠️ **Terminal Administrateur requis** : Le script `docker-run.bat` configure automatiquement une règle de redirection de port (`netsh interface portproxy`) pour l'accès externe via Cloudflare (port 443 → localhost:3443). Cette commande `netsh` nécessite les droits Administrateur.
+>
+> **Pour ouvrir un terminal Administrateur :**
+> - Clic droit sur **CMD** ou **PowerShell** → **Exécuter en tant qu'administrateur**
+> - Ou : touche Windows → taper `cmd` → `Ctrl+Shift+Entrée`
+>
+> Si le script est lancé sans droits admin, le conteneur démarrera normalement mais la redirection de port pour l'accès externe (internet/Cloudflare) ne sera pas configurée. L'accès local via `https://localhost:3443` fonctionnera dans tous les cas.
 
 C'est tout ! L'application sera accessible sur https://localhost:3443
 
@@ -356,7 +370,7 @@ chmod +x docker/docker-build.sh
 | Script | Description |
 |--------|-------------|
 | `docker-build.bat` | Construire l'image Docker |
-| `docker-run.bat` | Démarrer le conteneur |
+| `docker-run.bat` | Démarrer le conteneur (⚠️ terminal Admin) |
 | `docker-stop.bat` | Arrêter et supprimer le conteneur |
 | `docker-logs.bat` | Voir les logs en temps réel |
 | `docker-shell.bat` | Ouvrir un shell dans le conteneur |
@@ -604,7 +618,10 @@ curl -fsSL https://get.docker.com | sh
 # Cloner le dépôt
 git clone https://github.com/votre-repo/ResumeConverter.git
 cd ResumeConverter
+git checkout develop
 ```
+
+> **Note** : La branche active est `develop`.
 
 #### Étape 2 : Restaurer la configuration
 
@@ -814,4 +831,4 @@ Pour toute question ou problème :
 
 ---
 
-*Dernière mise à jour : Mars 2026*
+*Dernière mise à jour : 19 Mars 2026*
