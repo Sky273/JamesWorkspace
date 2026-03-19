@@ -131,7 +131,7 @@ export function useBatchProcessing({
       const analysisResponse = await fetchWithAuth('/api/resumes/analyze-text', {
         ...analysisOptions,
         signal
-      });
+      }, 300000); // 5 minutes for LLM analysis
       
       if (!analysisResponse.ok) {
         const errorData = await analysisResponse.json().catch(() => ({ error: 'Échec de l\'analyse' }));
@@ -210,7 +210,7 @@ export function useBatchProcessing({
         const improveResponse = await fetchWithAuth('/api/resumes/improve', {
           ...improveOptions,
           signal
-        });
+        }, 300000); // 5 minutes for LLM improvement
         
         if (improveResponse.ok) {
           const { text: improvedText, analysis: improvedAnalysis } = await improveResponse.json();

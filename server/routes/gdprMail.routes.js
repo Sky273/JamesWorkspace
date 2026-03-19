@@ -16,6 +16,7 @@ const router = express.Router();
 // Server-side OAuth state store (prevents state forgery)
 const gdprOauthStates = new Map();
 const GDPR_STATE_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
+const MAX_GDPR_OAUTH_STATES = 100; // Prevent memory exhaustion from abuse
 
 function cleanupExpiredGdprStates() {
     const now = Date.now();
@@ -23,6 +24,11 @@ function cleanupExpiredGdprStates() {
         if (now - data.createdAt > GDPR_STATE_EXPIRY_MS) {
             gdprOauthStates.delete(state);
         }
+    }
+    // Evict oldest entries if still over limit
+    while (gdprOauthStates.size > MAX_GDPR_OAUTH_STATES) {
+        const oldestKey = gdprOauthStates.keys().next().value;
+        gdprOauthStates.delete(oldestKey);
     }
 }
 

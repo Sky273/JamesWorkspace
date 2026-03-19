@@ -150,7 +150,7 @@ const ResumeExportPage = (): JSX.Element => {
           footerHeight: template.FooterHeight || 25,
           format: selectedFormat
         })
-      });
+      }, 300000); // 5 minutes for PDF/DOCX generation
 
       if (!response.ok) throw new Error(`Failed to generate ${selectedFormat.toUpperCase()}`);
 
@@ -397,7 +397,7 @@ const ResumeExportPage = (): JSX.Element => {
                 footerHeight: template.FooterHeight || 25,
                 format: format
               })
-            });
+            }, 300000); // 5 minutes for PDF/DOCX generation
             
             if (!response.ok) throw new Error(`Failed to generate ${format.toUpperCase()}`);
             return await response.blob();

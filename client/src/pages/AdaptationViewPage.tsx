@@ -270,7 +270,7 @@ const AdaptationViewPage = (): JSX.Element => {
           footerContent: processedFooter || undefined,
           footerHeight: template.FooterHeight || 25
         })
-      });
+      }, 300000); // 5 minutes for PDF generation
 
       if (!response.ok) throw new Error('Failed to generate PDF');
 
@@ -584,7 +584,7 @@ const AdaptationViewPage = (): JSX.Element => {
               })
             });
 
-            const response = await fetchWithAuth(endpoint, options);
+            const response = await fetchWithAuth(endpoint, options, 300000); // 5 minutes for PDF/DOCX generation
             if (!response.ok) throw new Error(`Failed to generate ${format.toUpperCase()}`);
             return await response.blob();
           }}

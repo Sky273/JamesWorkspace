@@ -25,12 +25,13 @@ export async function cleanupOldJobs(maxAgeDays = 7) {
         const clearedFileData = clearResult.rowCount || 0;
 
         // Delete old completed/failed/cancelled jobs
+        const safeDays = Math.max(1, Math.floor(Number(maxAgeDays) || 7));
         const deleteResult = await query(`
             DELETE FROM batch_jobs 
             WHERE status IN ('completed', 'failed', 'cancelled')
-            AND completed_at < NOW() - INTERVAL '${maxAgeDays} days'
+            AND completed_at < NOW() - INTERVAL '1 day' * $1
             RETURNING id
-        `);
+        `, [safeDays]);
         const deletedJobs = deleteResult.rowCount || 0;
 
         if (clearedFileData > 0 || deletedJobs > 0) {

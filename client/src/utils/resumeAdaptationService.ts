@@ -55,7 +55,8 @@ export const resumeAdaptationService = {
             });
             const response = await fetchWithAuth(
                 `/api/resumes/${resumeId}/match`,
-                authOptions
+                authOptions,
+                180000 // 3 minutes for LLM match analysis
             );
 
             if (!response.ok) {

@@ -18,6 +18,7 @@ const router = express.Router();
 // In-memory store for OAuth states (short-lived)
 const oauthStates = new Map();
 const STATE_EXPIRY = 10 * 60 * 1000; // 10 minutes
+const MAX_OAUTH_STATES = 100; // Prevent memory exhaustion from abuse
 
 // Cleanup expired states periodically
 let authOauthStatesCleanupInterval = setInterval(() => {
@@ -26,6 +27,11 @@ let authOauthStatesCleanupInterval = setInterval(() => {
         if (now - data.createdAt > STATE_EXPIRY) {
             oauthStates.delete(state);
         }
+    }
+    // Evict oldest entries if still over limit
+    while (oauthStates.size > MAX_OAUTH_STATES) {
+        const oldestKey = oauthStates.keys().next().value;
+        oauthStates.delete(oldestKey);
     }
 }, 60 * 1000);
 

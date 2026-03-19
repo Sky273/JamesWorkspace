@@ -136,7 +136,7 @@ const ResumeImprovePage = (): JSX.Element => {
         body: JSON.stringify({ content: currentContent, instructions })
       });
       
-      const response = await fetchWithAuth(`/api/resumes/${currentResume.id}/ai-modify`, authOptions);
+      const response = await fetchWithAuth(`/api/resumes/${currentResume.id}/ai-modify`, authOptions, 300000); // 5 minutes for LLM operation
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Failed to modify resume' }));
         throw new Error(errorData.error || 'Failed to modify resume with AI');

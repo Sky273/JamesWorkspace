@@ -496,7 +496,12 @@ export async function getUpcomingInterviews(filters = {}) {
         }
 
         if (filters.days) {
-            whereClause += ` AND pi.scheduled_at <= NOW() + INTERVAL '${parseInt(filters.days)} days'`;
+            const daysInt = parseInt(filters.days, 10);
+            if (!Number.isFinite(daysInt) || daysInt < 0) {
+                throw new Error('Invalid days filter');
+            }
+            whereClause += ` AND pi.scheduled_at <= NOW() + INTERVAL '1 day' * $${paramIndex++}`;
+            params.push(daysInt);
         }
 
         const result = await query(`

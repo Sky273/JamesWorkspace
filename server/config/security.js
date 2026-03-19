@@ -181,7 +181,7 @@ export function configureCsrf(app) {
 
     // Configure CSRF protection
     const csrfProtection = doubleCsrf({
-        getSecret: () => process.env.CSRF_SECRET || JWT_SECRET || 'default-csrf-secret',
+        getSecret: () => process.env.CSRF_SECRET || JWT_SECRET,
         cookieName: 'x-csrf-token',
         cookieOptions: {
             httpOnly: true,
@@ -219,14 +219,6 @@ export function configureCsrf(app) {
             safeLog('error', 'Error generating CSRF token', { error: error.message });
             res.status(500).json({ error: 'Failed to generate CSRF token' });
         }
-    });
-
-    // Debug middleware to log requests before CSRF
-    app.use((req, res, next) => {
-        if (req.path.includes('/api/adaptations')) {
-            safeLog('debug', 'Before CSRF', { path: req.path, method: req.method });
-        }
-        next();
     });
 
     // ============================================

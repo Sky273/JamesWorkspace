@@ -127,22 +127,31 @@ window.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => 
     return;
   }
   
-  // List of patterns to suppress
-  const suppressPatterns = [
+  // Extension-related patterns (suppress completely)
+  const extensionPatterns = [
     'message channel closed',
     'A listener indicated an asynchronous response',
     'Extension context invalidated',
-    'Could not establish connection',
+    'Could not establish connection'
+  ];
+  
+  // Network error patterns (log as warning, don't display to user)
+  const networkPatterns = [
     'Failed to fetch',
     'NetworkError'
   ];
   
-  // Check if this is an extension-related error
-  const isExtensionError = suppressPatterns.some(pattern => combinedReason.includes(pattern.toLowerCase()));
-  
-  if (isExtensionError) {
+  // Check if this is an extension-related error (suppress completely)
+  if (extensionPatterns.some(pattern => combinedReason.includes(pattern.toLowerCase()))) {
     event.preventDefault();
     event.stopImmediatePropagation();
+    return;
+  }
+  
+  // Network errors: log for debugging but don't show browser error overlay
+  if (networkPatterns.some(pattern => combinedReason.includes(pattern.toLowerCase()))) {
+    console.warn('[Network Error]', event.reason);
+    event.preventDefault();
     return;
   }
   

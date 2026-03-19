@@ -85,7 +85,7 @@ export const setSessionExpiredHandler = (callback: SessionExpiredHandler): void 
 const fetchWithTimeout = async (
   url: string, 
   options: FetchOptions = {}, 
-  timeout: number = 600000, // Default 10 minutes timeout
+  timeout: number = 120000, // Default 2 minutes timeout (long operations should pass explicit timeout)
   retryCount: number = 0
 ): Promise<Response> => {
   const controller = new AbortController();
@@ -177,7 +177,7 @@ export const attemptTokenRefresh = async (): Promise<boolean> => {
 export const fetchWithAuth = async (
   url: string, 
   options: FetchOptions = {}, 
-  timeout: number = 600000 // Default 10 minutes timeout
+  timeout: number = 120000 // Default 2 minutes timeout (long operations should pass explicit timeout)
 ): Promise<Response> => {
   // If session is expiring, don't make new requests
   if (isSessionExpiring) {
@@ -362,7 +362,7 @@ export const createAuthOptionsWithCsrf = async (options: FetchOptions = {}, forc
 export const fetchWithCsrfRetry = async (
   url: string,
   options: FetchOptions = {},
-  timeout: number = 600000 // Default 10 minutes timeout
+  timeout: number = 120000 // Default 2 minutes timeout (long operations should pass explicit timeout)
 ): Promise<Response> => {
   // First attempt
   let response = await fetchWithAuth(url, options, timeout);

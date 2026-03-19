@@ -4,7 +4,7 @@
  * TypeScript version with full type safety
  */
 
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useRef, ReactNode } from 'react';
 import { extractResumeText } from '../utils/resumeProcessing';
 import { useAuth } from './AuthContext';
 import { createAuthOptionsWithCsrf, fetchWithAuth } from '../utils/apiInterceptor';
@@ -79,11 +79,11 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
   const [currentResume, setCurrentResume] = useState<Resume | null>(null);
   const [processingStep, setProcessingStep] = useState<ProcessingStep>(null);
   const [processingError, setProcessingError] = useState<string | null>(null);
-  const [abortController, setAbortController] = useState<AbortController>(new AbortController());
+  const abortControllerRef = useRef<AbortController>(new AbortController());
   const [deleting, setDeleting] = useState<boolean>(false);
 
   const updateResumeAnalysis = useCallback(async (resumeId: string, analysisData: Partial<Resume>): Promise<Resume> => {
-    if (abortController.signal.aborted) throw new Error('Operation aborted');
+    if (abortControllerRef.current.signal.aborted) throw new Error('Operation aborted');
     
     try {
       const updateOptions = await createAuthOptionsWithCsrf({
@@ -100,7 +100,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
       
       const updatedResume = await response.json();
 
-      if (!abortController.signal.aborted) {
+      if (!abortControllerRef.current.signal.aborted) {
         setResumes(prev =>
           prev.map(resume =>
             resume.id === resumeId ? updatedResume : resume
@@ -111,16 +111,16 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
 
       return updatedResume;
     } catch (error) {
-      if (!abortController.signal.aborted) {
+      if (!abortControllerRef.current.signal.aborted) {
         logger.error('Error updating resume analysis:', error);
       }
       throw error;
     }
-  }, [abortController]);
+  }, []);
 
   const fetchResumes = useCallback(async (): Promise<void> => {
     const controller = new AbortController();
-    setAbortController(controller);
+    abortControllerRef.current = controller;
 
     try {
       setLoading(true);
@@ -152,7 +152,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
 
   const uploadResume = useCallback(async (file: File, candidateInfo?: CandidateInfo): Promise<Resume | undefined> => {
     const controller = new AbortController();
-    setAbortController(controller);
+    abortControllerRef.current = controller;
     
     let initialRecord: Resume | null = null;
 
@@ -239,7 +239,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
       const analysisResponse = await fetchWithAuth('/api/resumes/analyze-text', {
         ...analysisOptions,
         signal: controller.signal
-      });
+      }, 300000); // 5 minutes for LLM analysis
       
       if (!analysisResponse.ok) {
         const errorData = await analysisResponse.json().catch(() => ({ error: 'Failed to analyze resume' }));
@@ -386,7 +386,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
         response = await fetchWithAuth('/api/resumes/improve', {
           ...authOptions,
           signal: controller.signal
-        });
+        }, 300000); // 5 minutes for LLM improvement
         clearTimeout(timeoutId);
       } catch (fetchError) {
         clearTimeout(timeoutId);
@@ -525,7 +525,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
 
   const deleteResume = useCallback(async (resumeId: string): Promise<void> => {
     const controller = new AbortController();
-    setAbortController(controller);
+    abortControllerRef.current = controller;
     setDeleting(true);
     try {
       const deleteOptions = await createAuthOptionsWithCsrf({ method: 'DELETE' });
