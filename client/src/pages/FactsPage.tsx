@@ -54,7 +54,7 @@ type TabType = 'map' | 'data' | 'trends' | 'metiers';
 export default function FactsPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const isAdmin = ((user?.role || user?.Role || '') as string).toLowerCase() === 'admin';
+  const isAdmin = user?.role === 'admin';
   
   // Active tab state
   const [activeTab, setActiveTab] = useState<TabType>('map');

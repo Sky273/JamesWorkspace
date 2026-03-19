@@ -25,19 +25,14 @@ export interface User {
   jobTitle?: string;
   phone?: string;
   role: 'admin' | 'user' | 'viewer';
-  status: 'Active' | 'Inactive' | 'Pending' | 'active' | 'inactive' | 'pending';
+  status: 'active' | 'inactive' | 'pending';
   firm?: string;
-  FirmName?: string;
-  FirmLogo?: string;
+  firmLogo?: string;
+  firm_id?: string;
+  customer?: string;
   // Google SSO fields
   google_id?: string;
   google_email?: string;
-  // Legacy uppercase properties for backward compatibility
-  Name?: string;
-  Email?: string;
-  Role?: 'admin' | 'user' | 'viewer';
-  Status?: 'Active' | 'Inactive' | 'Pending';
-  Firm?: string;
 }
 
 export interface RegisterData {

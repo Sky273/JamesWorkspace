@@ -31,9 +31,10 @@ describe('JWT Service', () => {
     id: 'recABCDEFGHIJKLMN',
     email: 'test@example.com',
     name: 'Test User',
-    status: 'Active',
+    status: 'active',
     role: 'user',
-    CustomerName: 'Test Company'
+    firm: 'Test Company',
+    customer: 'Test Company'
   };
 
   describe('generateAccessToken', () => {

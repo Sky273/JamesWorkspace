@@ -273,8 +273,7 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
             return res.status(400).json({ error: 'No file uploaded' });
         }
 
-        const userRole = (req.user?.role || req.user?.Role || '').toLowerCase();
-        const isAdmin = userRole === 'admin';
+        const isAdmin = req.user?.role === 'admin';
         const { name, title, profile_type, candidate_name, candidate_email, firm_id: requestedFirmId } = req.body;
 
         // Read file content from temp location

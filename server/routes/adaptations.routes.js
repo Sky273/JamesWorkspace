@@ -21,8 +21,7 @@ const router = express.Router();
 router.get('/', authenticateToken, async (req, res) => {
     try {
         const { resumeId, missionId, status, search } = req.query;
-        const userRole = (req.user?.role || req.user?.Role || '').toLowerCase();
-        const isAdmin = userRole === 'admin';
+        const isAdmin = req.user?.role === 'admin';
         const userFirm = req.user?.firm || req.user?.customer;
         
         // Extract pagination parameters
@@ -135,7 +134,7 @@ router.get('/', authenticateToken, async (req, res) => {
 // GET /api/adaptations/grouped-by-deal - Get adaptations grouped by deal > mission
 router.get('/grouped-by-deal', authenticateToken, async (req, res) => {
     try {
-        const isAdmin = (req.user?.role || req.user?.Role || '').toLowerCase() === 'admin';
+        const isAdmin = req.user?.role === 'admin';
         const userFirmId = await getUserFirmId(req);
 
         if (!userFirmId && !isAdmin) {
@@ -306,8 +305,7 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
         const { id } = req.params;
         const record = await findWithTimeout('resume_adaptations', id);
         
-        const userRole = (req.user?.role || req.user?.Role || '').toLowerCase();
-        const isAdmin = userRole === 'admin';
+        const isAdmin = req.user?.role === 'admin';
         const userFirm = req.user?.firm || req.user?.customer;
         
         if (!isAdmin && record.firm !== userFirm) {
@@ -365,8 +363,7 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
 router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateAdaptationSchema), async (req, res) => {
     try {
         const { id } = req.params;
-        const userRole = (req.user?.role || req.user?.Role || '').toLowerCase();
-        const isAdmin = userRole === 'admin';
+        const isAdmin = req.user?.role === 'admin';
         const userFirm = req.user?.firm || req.user?.customer;
 
         // Check permissions
@@ -427,8 +424,7 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateA
 router.delete('/:id', authenticateToken, validateParams('id'), async (req, res) => {
     try {
         const { id } = req.params;
-        const userRole = (req.user?.role || req.user?.Role || '').toLowerCase();
-        const isAdmin = userRole === 'admin';
+        const isAdmin = req.user?.role === 'admin';
         const userFirm = req.user?.firm || req.user?.customer;
 
         // Check permissions

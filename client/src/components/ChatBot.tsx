@@ -250,7 +250,7 @@ const ChatBot = (): JSX.Element | null => {
       const response = await authPost('/api/chatbot/message', {
         message: userMessage.content,
         userId: user?.id,
-        userName: user?.name || user?.Name,
+        userName: user?.name,
         conversationHistory: messages.map(m => ({
           role: m.role,
           content: m.content,

@@ -79,7 +79,7 @@ const HealthIndicator = ({ showAlways = false }: HealthIndicatorProps): JSX.Elem
   const [isExpanded, setIsExpanded] = useState(false);
 
   // Check if user is admin
-  const isAdmin = user?.role?.toLowerCase() === 'admin' || user?.Role?.toLowerCase() === 'admin';
+  const isAdmin = user?.role === 'admin';
 
   const fetchMemoryStats = async (): Promise<void> => {
     try {

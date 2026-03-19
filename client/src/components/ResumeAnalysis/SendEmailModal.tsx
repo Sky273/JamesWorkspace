@@ -224,8 +224,8 @@ const SendEmailModal = ({ isOpen, onClose, resumeName, resumeId, resumeTitle, cu
         version: currentVersion || 1
       },
       firm: {
-        name: user?.FirmName || '',
-        logo: user?.FirmLogo || ''
+        name: user?.firm || '',
+        logo: user?.firmLogo || ''
       },
       user: {
         name: user?.name || '',

@@ -242,13 +242,7 @@ router.get('/users', authenticateToken, requireAdmin, async (req, res) => {
             firm: record.firm_name,
             customer: record.firm_name,
             role: record.role || 'user',
-            status: record.status || 'Active',
-            Name: record.name,
-            Email: record.email,
-            FirmName: record.firm_name,
-            CustomerName: record.firm_name,
-            Role: record.role,
-            Status: record.status
+            status: record.status || 'active'
         }));
         res.json(users);
     } catch (error) {

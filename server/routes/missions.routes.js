@@ -22,9 +22,8 @@ const router = express.Router();
 // GET /api/missions - Get all missions (with server-side pagination and filters)
 router.get('/', authenticateToken, async (req, res) => {
     try {
-        const userRole = (req.user?.role || req.user?.Role || '').toLowerCase();
-        const isAdmin = userRole === 'admin';
-        const _userFirmName = req.user?.firm || req.user?.Firm;
+        const isAdmin = req.user?.role === 'admin';
+        const _userFirmName = req.user?.firm;
         
         // Extract pagination and filter parameters
         const page = parseInt(req.query.page) || 1;
@@ -345,9 +344,8 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
         
         const record = result.rows[0];
         
-        const userRole = (req.user?.role || req.user?.Role || '').toLowerCase();
-        const isAdmin = userRole === 'admin';
-        const userFirm = req.user?.firm || req.user?.Firm;
+        const isAdmin = req.user?.role === 'admin';
+        const userFirm = req.user?.firm;
         const userFirmId = await getUserFirmId(req);
         
         if (!isAdmin && record.firm !== userFirm && record.firm_id !== userFirmId) {
@@ -387,10 +385,9 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
 router.post('/', authenticateToken, validateBody(createMissionSchema), async (req, res) => {
     try {
         const missionData = req.body;
-        const userFirm = req.user?.firm || req.user?.Firm;
+        const userFirm = req.user?.firm;
         const userFirmId = await getUserFirmId(req);
-        const userRole = (req.user?.role || req.user?.Role || '').toLowerCase();
-        const isAdmin = userRole === 'admin';
+        const isAdmin = req.user?.role === 'admin';
         
         // Determine target firm_id: admin can specify any firm
         let targetFirmId = userFirmId;
@@ -529,9 +526,8 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateM
     try {
         const { id } = req.params;
         const updateData = req.body;
-        const userRole = (req.user?.role || req.user?.Role || '').toLowerCase();
-        const isAdmin = userRole === 'admin';
-        const userFirm = req.user?.firm || req.user?.Firm;
+        const isAdmin = req.user?.role === 'admin';
+        const userFirm = req.user?.firm;
         const userFirmId = await getUserFirmId(req);
 
         const existingMission = await findWithTimeout('missions', id);
@@ -678,9 +674,8 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateM
 router.delete('/:id', authenticateToken, validateParams('id'), async (req, res) => {
     try {
         const { id } = req.params;
-        const userRole = (req.user?.role || req.user?.Role || '').toLowerCase();
-        const isAdmin = userRole === 'admin';
-        const userFirm = req.user?.firm || req.user?.Firm;
+        const isAdmin = req.user?.role === 'admin';
+        const userFirm = req.user?.firm;
         const userFirmId = await getUserFirmId(req);
 
         if (!isAdmin) {
@@ -705,9 +700,8 @@ router.delete('/:id', authenticateToken, validateParams('id'), async (req, res) 
 router.get('/:missionId/adaptations', authenticateToken, validateParams('missionId'), async (req, res) => {
     try {
         const { missionId } = req.params;
-        const userRole = (req.user?.role || req.user?.Role || '').toLowerCase();
-        const isAdmin = userRole === 'admin';
-        const userFirm = req.user?.firm || req.user?.Firm;
+        const isAdmin = req.user?.role === 'admin';
+        const userFirm = req.user?.firm;
         const userFirmId = await getUserFirmId(req);
         
         // Verify mission belongs to user's firm
@@ -754,8 +748,7 @@ router.post('/:missionId/find-profiles', authenticateToken, validateParams('miss
         const { missionId } = req.params;
         const { limit = 0, minScore = 0, status, weights, dealId } = req.body;
         
-        const userRole = (req.user?.role || req.user?.Role || '').toLowerCase();
-        const isAdmin = userRole === 'admin';
+        const isAdmin = req.user?.role === 'admin';
         const userFirm = req.user?.firm || req.user?.firm_id;
         
         // Verify mission access
@@ -768,7 +761,7 @@ router.post('/:missionId/find-profiles', authenticateToken, validateParams('miss
         // Build user metadata for LLM calls
         const userMetadata = {
             userId: req.user?.id,
-            userName: req.user?.name || req.user?.Name,
+            userName: req.user?.name,
             firm: userFirm
         };
         
@@ -797,8 +790,7 @@ router.delete('/:missionId/keywords-cache', authenticateToken, validateParams('m
     try {
         const { missionId } = req.params;
         
-        const userRole = (req.user?.role || req.user?.Role || '').toLowerCase();
-        const isAdmin = userRole === 'admin';
+        const isAdmin = req.user?.role === 'admin';
         const userFirm = req.user?.firm || req.user?.firm_id;
         
         // Verify mission access
@@ -824,8 +816,7 @@ router.post('/:missionId/analyze-profile/:resumeId', authenticateToken, async (r
     try {
         const { missionId, resumeId } = req.params;
         
-        const userRole = (req.user?.role || req.user?.Role || '').toLowerCase();
-        const isAdmin = userRole === 'admin';
+        const isAdmin = req.user?.role === 'admin';
         const userFirm = req.user?.firm || req.user?.firm_id;
         
         // Verify mission access
@@ -838,7 +829,7 @@ router.post('/:missionId/analyze-profile/:resumeId', authenticateToken, async (r
         // Build user metadata for LLM calls
         const userMetadata = {
             userId: req.user?.id,
-            userName: req.user?.name || req.user?.Name,
+            userName: req.user?.name,
             firm: userFirm
         };
         

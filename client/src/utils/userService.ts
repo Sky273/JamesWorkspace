@@ -30,7 +30,6 @@ interface User {
   status?: string;
   firm?: string;
   firm_name?: string;
-  FirmName?: string;
 }
 
 interface Pagination {
@@ -54,9 +53,7 @@ interface PaginatedUsersResponse {
 
 interface FirmFormData {
   name?: string;
-  Name?: string;
   status?: string;
-  Status?: string;
   logo_url?: string;
 }
 
@@ -69,7 +66,6 @@ interface UserFormData {
   role?: string;
   status?: string;
   firm?: string;
-  FirmName?: string;
 }
 
 interface UploadLogoResponse {

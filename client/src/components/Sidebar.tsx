@@ -58,7 +58,7 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
   const { user } = useAuth();
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
 
-  const isAdmin = ((user?.role || user?.Role || '') as string).toLowerCase() === 'admin';
+  const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
     const checkDarkMode = (): void => {

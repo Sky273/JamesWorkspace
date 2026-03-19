@@ -417,14 +417,14 @@ describe('Zod Schemas', () => {
     describe('createFirmSchema', () => {
         it('should accept valid firm data', () => {
             const data = {
-                Name: 'Test Firm'
+                name: 'Test Firm'
             };
             expect(() => createFirmSchema.parse(data)).not.toThrow();
         });
 
         it('should reject empty name', () => {
             const data = {
-                Name: ''
+                name: ''
             };
             expect(() => createFirmSchema.parse(data)).toThrow();
         });

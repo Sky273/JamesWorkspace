@@ -45,7 +45,7 @@ export const getUserFirmId = async (req) => {
  * @returns {string|null} - firm name or null
  */
 export const getUserFirmName = (req) => {
-    return req.user?.firm || req.user?.Firm || null;
+    return req.user?.firm || null;
 };
 
 /**
@@ -76,6 +76,5 @@ export const getFirmById = async (firmId) => {
  * @returns {boolean}
  */
 export const isUserAdmin = (req) => {
-    const userRole = (req.user?.role || req.user?.Role || '').toLowerCase();
-    return userRole === 'admin';
+    return req.user?.role === 'admin';
 };

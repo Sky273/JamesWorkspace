@@ -226,9 +226,6 @@ export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
     };
   }, [handleSessionExpired]);
 
-  // Handle both 'status' (backend) and 'Status' (legacy) property names
-  const userStatus = user?.status || user?.Status || '';
-  
   const value: AuthContextType = {
     user,
     loading,
@@ -236,7 +233,7 @@ export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
     signIn,
     signOut,
     register,
-    isAuthenticated: !!user && (userStatus === 'Active' || userStatus === 'active')
+    isAuthenticated: !!user && user.status === 'active'
   };
 
   // Don't render children until we've checked authentication status

@@ -196,7 +196,7 @@ function HomeDashboard(): JSX.Element | null {
     return null;
   }
 
-  const _isAdmin = user?.role?.toLowerCase() === 'admin' || user?.Role?.toLowerCase() === 'admin';
+  const _isAdmin = user?.role === 'admin';
 
   return (
     <section className="py-12 bg-gray-50 dark:bg-gray-900">

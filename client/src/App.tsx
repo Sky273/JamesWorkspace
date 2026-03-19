@@ -100,8 +100,7 @@ const AdminRoute = ({ children }: RouteProps): JSX.Element => {
     return <Navigate to="/signin" replace />;
   }
 
-  const userRole = (user?.role || user?.Role || '').toLowerCase();
-  if (userRole !== 'admin') {
+  if (user?.role !== 'admin') {
     return <Navigate to="/" replace />;
   }
 

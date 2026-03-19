@@ -16,7 +16,7 @@ const router = express.Router();
 // POST /api/auth/users - Create user (admin only)
 router.post('/users', authenticateToken, requireAdmin, validateBody(createUserSchema), async (req, res) => {
     try {
-        const { email, password, name, jobTitle, phone, status, firm, FirmName, customer, CustomerName, role } = req.body;
+        const { email, password, name, jobTitle, phone, status, firm, customer, role } = req.body;
         const normalizedEmail = email.toLowerCase();
         const metadata = getRequestMetadata(req);
 
@@ -45,7 +45,7 @@ router.post('/users', authenticateToken, requireAdmin, validateBody(createUserSc
             status: (status || 'active').toLowerCase()
         };
 
-        const firmName = firm || FirmName || customer || CustomerName;
+        const firmName = firm || customer;
         if (firmName) {
             const firms = await selectWithTimeout('firms', {
                 where: 'name = $1',
@@ -111,10 +111,10 @@ router.put('/users/:id', authenticateToken, requireAdmin, validateParams('id'), 
         
         const currentUser = currentUsers[0];
 
-        const name = req.body.name || req.body.Name;
-        const email = req.body.email || req.body.Email;
-        const status = req.body.status || req.body.Status;
-        const role = req.body.role || req.body.Role;
+        const name = req.body.name;
+        const email = req.body.email;
+        const status = req.body.status;
+        const role = req.body.role;
         const jobTitle = req.body.jobTitle || req.body.job_title;
         const phone = req.body.phone;
 
@@ -130,8 +130,8 @@ router.put('/users/:id', authenticateToken, requireAdmin, validateParams('id'), 
             updateData.password = await bcrypt.hash(req.body.password, SALT_ROUNDS);
         }
         
-        if (req.body.firm || req.body.FirmName || req.body.customer || req.body.CustomerName) {
-            const firmName = req.body.firm || req.body.FirmName || req.body.customer || req.body.CustomerName;
+        if (req.body.firm || req.body.customer) {
+            const firmName = req.body.firm || req.body.customer;
             
             const firms = await selectWithTimeout('firms', {
                 where: 'name = $1',

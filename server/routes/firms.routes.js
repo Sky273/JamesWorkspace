@@ -120,8 +120,8 @@ router.post('/', authenticateToken, requireAdmin, validateBody(createFirmSchema)
         firmsCache.invalidate('all_firms');
         
         const firmData = {
-            name: req.body.name || req.body.Name,
-            status: (req.body.status || req.body.Status || 'active').toLowerCase()
+            name: req.body.name,
+            status: (req.body.status || 'active').toLowerCase()
         };
         
         // Add logo_url if provided
@@ -154,8 +154,8 @@ router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), async 
         
         const { id } = req.params;
         const firmData = {
-            name: req.body.name || req.body.Name,
-            status: (req.body.status || req.body.Status || 'active').toLowerCase()
+            name: req.body.name,
+            status: (req.body.status || 'active').toLowerCase()
         };
         
         // Add logo_url if provided

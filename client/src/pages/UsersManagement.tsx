@@ -236,11 +236,11 @@ const UsersManagement = (): JSX.Element => {
     try {
       let firmId: string | undefined;
       if (selectedFirm) {
-        await userService.updateCustomer(selectedFirm.id, { Name: formData.name });
+        await userService.updateCustomer(selectedFirm.id, { name: formData.name });
         firmId = selectedFirm.id;
         toast.success(t('users.management.messages.firmUpdated'));
       } else {
-        const newFirm = await userService.createCustomer({ Name: formData.name });
+        const newFirm = await userService.createCustomer({ name: formData.name });
         firmId = newFirm?.id;
         toast.success(t('users.management.messages.firmCreated'));
       }

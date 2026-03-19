@@ -24,9 +24,8 @@ export function generateAccessToken(user) {
         status: user.status,
         role: user.role || 'user',
         firmId: user.firm_id || user.firmId,
-        firm: user.FirmName || user.firm,
-        // Backward compatibility - keep customer as alias
-        customer: user.FirmName || user.firm || user.CustomerName || user.customer,
+        firm: user.firm,
+        customer: user.firm || user.customer,
         jti // Unique token ID for blacklist support
     };
     
@@ -149,7 +148,7 @@ export async function revokeToken(token) {
 }
 
 export function extractRoleFromUser(fields) {
-    const roleField = fields.Role || fields.role;
+    const roleField = fields.role || fields.Role;
     
     if (!roleField) {
         return 'user';

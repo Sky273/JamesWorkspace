@@ -160,31 +160,6 @@ describe('firmHelpers', () => {
             expect(result).toBe('Acme Corp');
         });
 
-        it('should return firm name from user.Firm (capitalized)', () => {
-            const req = {
-                user: {
-                    Firm: 'Acme Corp'
-                }
-            };
-
-            const result = getUserFirmName(req);
-
-            expect(result).toBe('Acme Corp');
-        });
-
-        it('should prefer firm over Firm', () => {
-            const req = {
-                user: {
-                    firm: 'First Corp',
-                    Firm: 'Second Corp'
-                }
-            };
-
-            const result = getUserFirmName(req);
-
-            expect(result).toBe('First Corp');
-        });
-
         it('should return null when no firm name', () => {
             const req = {
                 user: {}
@@ -262,34 +237,14 @@ describe('firmHelpers', () => {
             expect(isUserAdmin(req)).toBe(true);
         });
 
-        it('should return true for Admin role (capitalized)', () => {
+        it('should return false for non-lowercase admin role', () => {
             const req = {
                 user: {
                     role: 'Admin'
                 }
             };
 
-            expect(isUserAdmin(req)).toBe(true);
-        });
-
-        it('should return true for ADMIN role (uppercase)', () => {
-            const req = {
-                user: {
-                    role: 'ADMIN'
-                }
-            };
-
-            expect(isUserAdmin(req)).toBe(true);
-        });
-
-        it('should return true for Role property (capitalized)', () => {
-            const req = {
-                user: {
-                    Role: 'admin'
-                }
-            };
-
-            expect(isUserAdmin(req)).toBe(true);
+            expect(isUserAdmin(req)).toBe(false);
         });
 
         it('should return false for user role', () => {

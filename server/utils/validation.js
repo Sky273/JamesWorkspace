@@ -48,9 +48,7 @@ export const createUserSchema = z.object({
   role: z.enum(['admin', 'Admin', 'user', 'User']).optional(),
   status: z.enum(['Active', 'Inactive', 'Pending', 'active', 'inactive', 'pending']).optional(),
   customer: z.string().optional(),
-  CustomerName: z.string().optional(),
-  firm: z.string().optional(),
-  FirmName: z.string().optional()
+  firm: z.string().optional()
 });
 
 // Mission schemas
@@ -99,8 +97,9 @@ export const createTemplateSchema = z.object({
 
 // Firm schemas
 export const createFirmSchema = z.object({
-  Name: z.string().min(1).max(255),
-  FirmName: z.string().min(1).max(255).optional()
+  name: z.string().min(1).max(255),
+  status: z.string().optional(),
+  logo_url: z.string().optional()
 });
 
 

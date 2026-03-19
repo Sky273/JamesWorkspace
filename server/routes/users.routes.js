@@ -67,17 +67,10 @@ router.get('/', authenticateToken, async (req, res) => {
             phone: user.phone || '',
             firm: user.firm_name,
             firmId: user.firm_id,
-            // Backward compatibility
             customer: user.firm_name,
             customerId: user.firm_id,
             role: user.role || 'user',
             status: user.status || 'active',
-            Name: user.name,
-            Email: user.email,
-            FirmName: user.firm_name,
-            CustomerName: user.firm_name,
-            Role: user.role,
-            Status: user.status,
             createdAt: user.created_at,
             lastLogin: user.last_login
         }));

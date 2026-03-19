@@ -24,7 +24,6 @@ const router = express.Router();
 
 /**
  * Format a raw DB user row into a consistent API response shape.
- * Includes legacy uppercase fields for backward compatibility.
  */
 function formatUserResponse(user) {
     return {
@@ -37,17 +36,10 @@ function formatUserResponse(user) {
         role: user.role,
         firm_id: user.firm_id,
         firm: user.firm_name,
-        FirmName: user.firm_name,
-        FirmLogo: user.firm_logo || '',
-        google_id: user.google_id || null,
-        google_email: user.google_email || null,
-        // Legacy uppercase aliases (used across 100+ frontend files)
+        firmLogo: user.firm_logo || '',
         customer: user.firm_name,
-        CustomerName: user.firm_name,
-        Name: user.name,
-        Email: user.email,
-        Status: user.status === 'active' ? 'Active' : 'Inactive',
-        Role: user.role
+        google_id: user.google_id || null,
+        google_email: user.google_email || null
     };
 }
 
@@ -218,7 +210,7 @@ router.post('/signin', authLimiter, validateBody(signInSchema), async (req, res)
             ...metadata,
             email: userData.email,
             userId: userData.id,
-            customer: userData.CustomerName,
+            customer: userData.customer,
             role: userData.role,
             statusCode: 200,
             action: 'LOGIN_SUCCESS',

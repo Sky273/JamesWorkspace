@@ -202,14 +202,8 @@ router.get('/google/callback', async (req, res) => {
             role: user.role,
             firm_id: user.firm_id,
             firm: user.firm_name,
-            FirmName: user.firm_name,
-            FirmLogo: user.firm_logo || '',
-            customer: user.firm_name,
-            CustomerName: user.firm_name,
-            Name: user.name,
-            Email: user.email,
-            Status: user.status === 'active' ? 'Active' : 'Inactive',
-            Role: user.role
+            firmLogo: user.firm_logo || '',
+            customer: user.firm_name
         };
         
         const accessToken = generateAccessToken(userData);
@@ -316,14 +310,8 @@ router.post('/google/token', authLimiter, async (req, res) => {
             role: user.role,
             firm_id: user.firm_id,
             firm: user.firm_name,
-            FirmName: user.firm_name,
-            FirmLogo: user.firm_logo || '',
-            customer: user.firm_name,
-            CustomerName: user.firm_name,
-            Name: user.name,
-            Email: user.email,
-            Status: user.status === 'active' ? 'Active' : 'Inactive',
-            Role: user.role
+            firmLogo: user.firm_logo || '',
+            customer: user.firm_name
         };
         
         const accessToken = generateAccessToken(userData);
