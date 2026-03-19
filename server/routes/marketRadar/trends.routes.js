@@ -453,8 +453,8 @@ router.get('/trends/:id/metadata', authenticateToken, async (req, res) => {
         if (!trend) {
             return res.status(404).json({
                 success: false,
-                error: 'No stored trend found for this combination',
-                params: { type, regionCode, codeRome }
+                error: 'No stored trend found for this ID',
+                params: { id }
             });
         }
         
