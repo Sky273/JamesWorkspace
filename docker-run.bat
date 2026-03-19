@@ -4,6 +4,27 @@ echo   ResumeConverter - Starting Container
 echo ============================================
 echo.
 
+REM ============================================
+REM Port Proxy Setup for Cloudflare/External Access
+REM Cloudflare (Full SSL) connects to origin on port 443.
+REM Freebox NAT forwards WAN:443 to LAN:443.
+REM Portproxy forwards port 443 to localhost:3443 (Docker).
+REM This avoids conflicts with Docker's own port 3443 binding.
+REM Requires: Freebox NAT WAN 443 -> LAN 443 (not 3443)
+REM ============================================
+echo Configuring port forwarding (443 -^> localhost:3443)...
+netsh interface portproxy delete v4tov4 listenport=3443 listenaddress=0.0.0.0 >nul 2>&1
+netsh interface portproxy delete v4tov4 listenport=443 listenaddress=0.0.0.0 >nul 2>&1
+netsh interface portproxy add v4tov4 listenport=443 listenaddress=0.0.0.0 connectport=3443 connectaddress=127.0.0.1
+if errorlevel 1 goto :portproxy_fail
+echo   Port proxy: 0.0.0.0:443 -^> 127.0.0.1:3443
+goto :portproxy_done
+:portproxy_fail
+echo   WARNING: Port proxy failed. Run this script as Administrator
+echo   for external access via Cloudflare/internet.
+:portproxy_done
+echo.
+
 REM Stop and remove existing container if running
 docker stop resumeconverter-app 2>nul
 docker rm resumeconverter-app 2>nul

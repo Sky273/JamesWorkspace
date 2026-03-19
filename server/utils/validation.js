@@ -30,6 +30,15 @@ export const registerSchema = z.object({
   name: nameSchema
 });
 
+export const forgotPasswordSchema = z.object({
+  email: emailSchema
+});
+
+export const resetPasswordSchema = z.object({
+  token: z.string().min(32).max(256),
+  password: passwordSchema
+});
+
 export const createUserSchema = z.object({
   email: emailSchema,
   password: passwordSchema,
