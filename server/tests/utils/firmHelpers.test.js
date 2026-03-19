@@ -237,14 +237,14 @@ describe('firmHelpers', () => {
             expect(isUserAdmin(req)).toBe(true);
         });
 
-        it('should return false for non-lowercase admin role', () => {
+        it('should return true for non-lowercase admin role (case-insensitive)', () => {
             const req = {
                 user: {
                     role: 'Admin'
                 }
             };
 
-            expect(isUserAdmin(req)).toBe(false);
+            expect(isUserAdmin(req)).toBe(true);
         });
 
         it('should return false for user role', () => {

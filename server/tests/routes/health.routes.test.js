@@ -28,6 +28,47 @@ vi.mock('../../utils/fileCleanup.js', () => ({
     getFileCleanupStats: vi.fn().mockReturnValue({ timerActive: false, cleanupStats: {} })
 }));
 
+// Mock jwt.service.js for admin detection in health route
+vi.mock('../../services/jwt.service.js', () => ({
+    verifyToken: vi.fn((token) => {
+        if (token === 'valid-admin-token') {
+            return { id: 'admin-1', role: 'admin', email: 'admin@test.com' };
+        }
+        return null;
+    })
+}));
+
+// Mock logger
+vi.mock('../../utils/logger.backend.js', () => ({
+    safeLog: vi.fn()
+}));
+
+// Mock auth middleware
+vi.mock('../../middleware/auth.middleware.js', () => ({
+    authenticateToken: (req, res, next) => next(),
+    requireAdmin: (req, res, next) => next()
+}));
+
+// Mock market/cache services used by /memory endpoint
+vi.mock('../../services/marketTrends.service.js', () => ({
+    getTrendsCacheStats: vi.fn(() => ({ size: 0 }))
+}));
+vi.mock('../../services/marketFacts.service.js', () => ({
+    getFactsCacheStats: vi.fn(() => ({ size: 0 }))
+}));
+vi.mock('../../services/rome.service.js', () => ({
+    getMetiersCacheStats: vi.fn(() => ({ size: 0 }))
+}));
+vi.mock('../../services/escoService.js', () => ({
+    getEscoCacheStats: vi.fn(() => ({ size: 0 }))
+}));
+vi.mock('../../routes/tags.routes.js', () => ({
+    getTagsCacheStats: vi.fn(() => ({}))
+}));
+vi.mock('../../services/tokenBlacklist.service.js', () => ({
+    getBlacklistStats: vi.fn(() => ({ blacklistedTokens: 0, blacklistedUsers: 0 }))
+}));
+
 import { query as dbQuery } from '../../config/database.js';
 
 describe('Health Routes', () => {
@@ -38,7 +79,8 @@ describe('Health Routes', () => {
         vi.clearAllMocks();
         
         mockReq = {
-            query: {}
+            query: {},
+            cookies: { accessToken: 'valid-admin-token' }
         };
         mockRes = {
             status: vi.fn().mockReturnThis(),
@@ -80,8 +122,8 @@ describe('Health Routes', () => {
         });
 
         it('should return unhealthy status when database fails', async () => {
-            // Mock DB failure
-            dbQuery.mockRejectedValueOnce(new Error('Connection refused'));
+            // Mock DB failure - Promise.all inside Promise.race rejects
+            dbQuery.mockRejectedValue(new Error('Connection refused'));
 
             const healthRouter = (await import('../../routes/health.routes.js')).default;
             const routeHandler = healthRouter.stack.find(r => r.route?.path === '/').route.stack[0].handle;
@@ -93,6 +135,27 @@ describe('Health Routes', () => {
             const response = mockRes.json.mock.calls[0][0];
             expect(response.status).toBe('unhealthy');
             expect(response.checks.database.status).toBe('error');
+        });
+
+        it('should return minimal response for non-admin users', async () => {
+            // Non-admin: no cookies
+            mockReq.cookies = {};
+            
+            dbQuery.mockResolvedValueOnce({ rows: [{ connected: 1 }] });
+            dbQuery.mockResolvedValueOnce({ 
+                rows: [{ resumes_count: '10', users_count: '2', missions_count: '5', db_size: '1048576' }] 
+            });
+
+            const healthRouter = (await import('../../routes/health.routes.js')).default;
+            const routeHandler = healthRouter.stack.find(r => r.route?.path === '/').route.stack[0].handle;
+            
+            await routeHandler(mockReq, mockRes);
+
+            const response = mockRes.json.mock.calls[0][0];
+            expect(response.status).toBe('healthy');
+            expect(response.responseTime).toBeDefined();
+            // Non-admin should NOT see checks
+            expect(response.checks).toBeUndefined();
         });
 
         it('should include memory usage information', async () => {

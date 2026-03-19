@@ -1,0 +1,635 @@
+/**
+ * Comprehensive tests for Templates CRUD routes
+ * GET /, GET /:id, POST /, PUT /:id, DELETE /:id
+ */
+
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import express from 'express';
+import cookieParser from 'cookie-parser';
+import request from 'supertest';
+
+// Mock constants
+vi.mock('../../config/constants.js', () => ({
+    JWT_SECRET: 'test-jwt-secret-for-vitest-minimum-32-chars-long',
+    REFRESH_TOKEN_SECRET: 'test-refresh-secret-for-vitest-min-32-chars',
+    CSRF_SECRET: 'test-csrf-secret-for-vitest-minimum-32-chars',
+    SALT_ROUNDS: 10,
+    MAX_TEXT_LENGTH: 50000,
+    MAX_PROMPT_LENGTH: 100000,
+    MAX_STRING_FIELD_LENGTH: 1000,
+    RATE_LIMIT: { AUTH: { windowMs: 900000, max: 20 }, USER: { windowMs: 900000, max: 50 } }
+}));
+
+// Mock postgresHelpers
+const mockSelectWithTimeout = vi.fn();
+const mockFindWithTimeout = vi.fn();
+const mockCreateWithTimeout = vi.fn();
+const mockUpdateWithTimeout = vi.fn();
+const mockDestroyWithTimeout = vi.fn();
+vi.mock('../../utils/postgresHelpers.js', () => ({
+    selectWithTimeout: (...args) => mockSelectWithTimeout(...args),
+    findWithTimeout: (...args) => mockFindWithTimeout(...args),
+    createWithTimeout: (...args) => mockCreateWithTimeout(...args),
+    updateWithTimeout: (...args) => mockUpdateWithTimeout(...args),
+    destroyWithTimeout: (...args) => mockDestroyWithTimeout(...args),
+    escapeLike: (str) => str.replace(/[%_\\]/g, '\\$&')
+}));
+
+// Mock database query
+const mockQuery = vi.fn();
+vi.mock('../../config/database.js', () => ({
+    query: (...args) => mockQuery(...args)
+}));
+
+// Mock cache service
+vi.mock('../../services/cache.service.js', () => ({
+    templatesCache: {
+        get: vi.fn(() => null),
+        set: vi.fn(),
+        invalidate: vi.fn()
+    }
+}));
+
+// Mock firmHelpers
+const mockGetUserFirmId = vi.fn();
+vi.mock('../../utils/firmHelpers.js', () => ({
+    getUserFirmId: (...args) => mockGetUserFirmId(...args)
+}));
+
+// Mock logger
+vi.mock('../../utils/logger.backend.js', () => ({
+    safeLog: vi.fn(),
+    createModuleLogger: vi.fn(() => vi.fn())
+}));
+
+// Mock validation middleware
+vi.mock('../../utils/validation.js', () => ({
+    validateBody: () => (req, res, next) => next(),
+    validateParams: () => (req, res, next) => next(),
+    createTemplateSchema: {}
+}));
+
+// Mock auth middleware
+vi.mock('../../middleware/auth.middleware.js', () => ({
+    authenticateToken: (req, res, next) => {
+        if (req.headers.authorization === 'Bearer valid-token') {
+            req.user = {
+                id: 'user-123',
+                email: 'test@example.com',
+                role: req.headers['x-test-role'] || 'admin',
+                firm: 'Test Firm',
+                firm_id: 'firm-123'
+            };
+            next();
+        } else {
+            res.status(401).json({ error: 'Unauthorized' });
+        }
+    },
+    requireAdmin: (req, res, next) => {
+        if (req.user?.role === 'admin') {
+            next();
+        } else {
+            res.status(403).json({ error: 'Admin access required' });
+        }
+    },
+    isUserAdmin: (req) => req.user?.role === 'admin'
+}));
+
+// Import routes after mocks
+import templateRoutes from '../../routes/templates/crud.routes.js';
+
+function createTestApp() {
+    const app = express();
+    app.use(express.json());
+    app.use(cookieParser());
+    app.use('/api/templates', templateRoutes);
+    return app;
+}
+
+// Helper: a sample DB row in snake_case
+const sampleTemplateRow = {
+    id: 'tpl-123',
+    name: 'Modern CV',
+    description: 'A modern template',
+    popular: true,
+    status: 'active',
+    tags: ['modern', 'clean'],
+    preview_image_url: 'https://example.com/preview.png',
+    header_content: '<header>Test</header>',
+    template_content: '<main>{{content}}</main>',
+    footer_content: '<footer>Page {{page}}</footer>',
+    footer_height: 30,
+    stylesheet: 'body { font-family: sans-serif; }',
+    firm_id: 'firm-123',
+    firm_name: 'Test Firm',
+    updated_at: '2026-01-15T10:00:00Z',
+    created_at: '2026-01-01T10:00:00Z'
+};
+
+describe('Templates CRUD Routes', () => {
+    let app;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        app = createTestApp();
+        mockGetUserFirmId.mockResolvedValue('firm-123');
+    });
+
+    // ==========================================
+    // GET /api/templates
+    // ==========================================
+    describe('GET /api/templates', () => {
+        it('should return 401 without authentication', async () => {
+            const res = await request(app).get('/api/templates');
+            expect(res.status).toBe(401);
+        });
+
+        it('should return paginated templates', async () => {
+            // Count query
+            mockSelectWithTimeout.mockResolvedValueOnce([{ total: '2' }]);
+            // Data query
+            mockQuery.mockResolvedValueOnce({
+                rows: [sampleTemplateRow, { ...sampleTemplateRow, id: 'tpl-456', name: 'Classic CV' }]
+            });
+
+            const res = await request(app)
+                .get('/api/templates')
+                .set('Authorization', 'Bearer valid-token');
+
+            expect(res.status).toBe(200);
+            expect(res.body.data).toHaveLength(2);
+            expect(res.body.pagination).toBeDefined();
+            expect(res.body.pagination.totalCount).toBe(2);
+        });
+
+        it('should map DB rows to PascalCase frontend format', async () => {
+            mockSelectWithTimeout.mockResolvedValueOnce([{ total: '1' }]);
+            mockQuery.mockResolvedValueOnce({ rows: [sampleTemplateRow] });
+
+            const res = await request(app)
+                .get('/api/templates')
+                .set('Authorization', 'Bearer valid-token');
+
+            expect(res.status).toBe(200);
+            const tpl = res.body.data[0];
+            expect(tpl.id).toBe('tpl-123');
+            expect(tpl.Name).toBe('Modern CV');
+            expect(tpl.Description).toBe('A modern template');
+            expect(tpl.Popular).toBe(true);
+            expect(tpl.Status).toBe('active');
+            expect(tpl.Tags).toEqual(['modern', 'clean']);
+            expect(tpl.HeaderContent).toBe('<header>Test</header>');
+            expect(tpl.TemplateContent).toBe('<main>{{content}}</main>');
+            expect(tpl.FooterContent).toBe('<footer>Page {{page}}</footer>');
+            expect(tpl.FooterHeight).toBe(30);
+            expect(tpl.Stylesheet).toBe('body { font-family: sans-serif; }');
+            expect(tpl.FirmId).toBe('firm-123');
+            expect(tpl.FirmName).toBe('Test Firm');
+        });
+
+        it('should filter by search term', async () => {
+            mockSelectWithTimeout.mockResolvedValueOnce([{ total: '1' }]);
+            mockQuery.mockResolvedValueOnce({ rows: [sampleTemplateRow] });
+
+            const res = await request(app)
+                .get('/api/templates?search=modern')
+                .set('Authorization', 'Bearer valid-token');
+
+            expect(res.status).toBe(200);
+            // Verify escapeLike was applied in the query params
+            const queryCall = mockQuery.mock.calls[0];
+            expect(queryCall[1]).toContain('%modern%');
+        });
+
+        it('should filter by status', async () => {
+            mockSelectWithTimeout.mockResolvedValueOnce([{ total: '1' }]);
+            mockQuery.mockResolvedValueOnce({ rows: [sampleTemplateRow] });
+
+            const res = await request(app)
+                .get('/api/templates?status=active')
+                .set('Authorization', 'Bearer valid-token');
+
+            expect(res.status).toBe(200);
+        });
+
+        it('should support pagination params', async () => {
+            mockSelectWithTimeout.mockResolvedValueOnce([{ total: '50' }]);
+            mockQuery.mockResolvedValueOnce({ rows: [] });
+
+            const res = await request(app)
+                .get('/api/templates?page=3&limit=10')
+                .set('Authorization', 'Bearer valid-token');
+
+            expect(res.status).toBe(200);
+            expect(res.body.pagination.page).toBe(3);
+            expect(res.body.pagination.limit).toBe(10);
+        });
+
+        it('should handle hasMore pagination correctly', async () => {
+            // Return limit+1 rows to trigger hasMore
+            const rows = Array.from({ length: 11 }, (_, i) => ({
+                ...sampleTemplateRow, id: `tpl-${i}`
+            }));
+            mockSelectWithTimeout.mockResolvedValueOnce([{ total: '50' }]);
+            mockQuery.mockResolvedValueOnce({ rows });
+
+            const res = await request(app)
+                .get('/api/templates?limit=10')
+                .set('Authorization', 'Bearer valid-token');
+
+            expect(res.status).toBe(200);
+            expect(res.body.data).toHaveLength(10);
+            expect(res.body.pagination.hasMore).toBe(true);
+            expect(res.body.pagination.nextPage).toBe(2);
+        });
+
+        it('should return 500 on database error', async () => {
+            mockSelectWithTimeout.mockRejectedValueOnce(new Error('DB error'));
+
+            const res = await request(app)
+                .get('/api/templates')
+                .set('Authorization', 'Bearer valid-token');
+
+            expect(res.status).toBe(500);
+            expect(res.body.error).toBe('Failed to fetch templates');
+        });
+    });
+
+    // ==========================================
+    // GET /api/templates/:id
+    // ==========================================
+    describe('GET /api/templates/:id', () => {
+        it('should return 401 without authentication', async () => {
+            const res = await request(app).get('/api/templates/tpl-123');
+            expect(res.status).toBe(401);
+        });
+
+        it('should return template by ID', async () => {
+            mockFindWithTimeout.mockResolvedValueOnce(sampleTemplateRow);
+
+            const res = await request(app)
+                .get('/api/templates/tpl-123')
+                .set('Authorization', 'Bearer valid-token');
+
+            expect(res.status).toBe(200);
+            expect(res.body.id).toBe('tpl-123');
+            expect(res.body.Name).toBe('Modern CV');
+            expect(res.body.HeaderContent).toBe('<header>Test</header>');
+        });
+
+        it('should return 404 for non-existent template', async () => {
+            const notFoundError = new Error('Not found');
+            notFoundError.statusCode = 404;
+            mockFindWithTimeout.mockRejectedValueOnce(notFoundError);
+
+            const res = await request(app)
+                .get('/api/templates/nonexistent')
+                .set('Authorization', 'Bearer valid-token');
+
+            expect(res.status).toBe(404);
+            expect(res.body.error).toBe('Template not found');
+        });
+
+        it('should return 500 on unexpected error', async () => {
+            mockFindWithTimeout.mockRejectedValueOnce(new Error('Connection lost'));
+
+            const res = await request(app)
+                .get('/api/templates/tpl-123')
+                .set('Authorization', 'Bearer valid-token');
+
+            expect(res.status).toBe(500);
+            expect(res.body.error).toBe('Failed to fetch template');
+        });
+    });
+
+    // ==========================================
+    // POST /api/templates
+    // ==========================================
+    describe('POST /api/templates', () => {
+        const newTemplateBody = {
+            Name: 'New Template',
+            Description: 'A brand new template',
+            Popular: false,
+            Status: 'active',
+            Tags: ['new'],
+            HeaderContent: '<header>New</header>',
+            TemplateContent: '<main>New content</main>',
+            FooterContent: '<footer></footer>',
+            FooterHeight: 25,
+            Stylesheet: 'body {}'
+        };
+
+        it('should return 401 without authentication', async () => {
+            const res = await request(app)
+                .post('/api/templates')
+                .send(newTemplateBody);
+            expect(res.status).toBe(401);
+        });
+
+        it('should return 403 for non-admin users', async () => {
+            const res = await request(app)
+                .post('/api/templates')
+                .set('Authorization', 'Bearer valid-token')
+                .set('x-test-role', 'user')
+                .send(newTemplateBody);
+            expect(res.status).toBe(403);
+        });
+
+        it('should create template with valid data', async () => {
+            const createdRow = {
+                ...sampleTemplateRow,
+                id: 'tpl-new',
+                name: 'New Template',
+                description: 'A brand new template'
+            };
+            mockCreateWithTimeout.mockResolvedValueOnce([createdRow]);
+
+            const res = await request(app)
+                .post('/api/templates')
+                .set('Authorization', 'Bearer valid-token')
+                .send(newTemplateBody);
+
+            expect(res.status).toBe(200);
+            expect(res.body.Name).toBe('New Template');
+            expect(mockCreateWithTimeout).toHaveBeenCalledWith('templates', expect.any(Array));
+        });
+
+        it('should pass mapped snake_case fields to createWithTimeout', async () => {
+            mockCreateWithTimeout.mockResolvedValueOnce([sampleTemplateRow]);
+
+            await request(app)
+                .post('/api/templates')
+                .set('Authorization', 'Bearer valid-token')
+                .send(newTemplateBody);
+
+            const createArgs = mockCreateWithTimeout.mock.calls[0][1][0].fields;
+            expect(createArgs.name).toBe('New Template');
+            expect(createArgs.description).toBe('A brand new template');
+            expect(createArgs.header_content).toBe('<header>New</header>');
+            expect(createArgs.template_content).toBe('<main>New content</main>');
+            expect(createArgs.stylesheet).toBe('body {}');
+            expect(createArgs.firm_id).toBe('firm-123');
+        });
+
+        it('should create global template when admin sets firm_id to empty string', async () => {
+            // Route uses: req.body.firm_id || req.body['Firm ID']
+            // Then checks: requestedFirmId === '' || requestedFirmId === null
+            // To hit the empty-string path, use 'Firm ID' key directly (avoids || short-circuit)
+            mockCreateWithTimeout.mockResolvedValueOnce([{ ...sampleTemplateRow, firm_id: null }]);
+
+            const res = await request(app)
+                .post('/api/templates')
+                .set('Authorization', 'Bearer valid-token')
+                .send({ ...newTemplateBody, 'Firm ID': '' });
+
+            expect(res.status).toBe(200);
+            const createArgs = mockCreateWithTimeout.mock.calls[0][1][0].fields;
+            expect(createArgs.firm_id).toBeNull();
+        });
+
+        it('should validate firm exists when admin specifies another firm', async () => {
+            mockQuery.mockResolvedValueOnce({ rows: [] }); // firm not found
+
+            const res = await request(app)
+                .post('/api/templates')
+                .set('Authorization', 'Bearer valid-token')
+                .send({ ...newTemplateBody, firm_id: 'other-firm' });
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toBe('Specified firm not found');
+        });
+
+        it('should return 400 on duplicate name', async () => {
+            const dupError = new Error('duplicate key');
+            dupError.code = '23505';
+            mockCreateWithTimeout.mockRejectedValueOnce(dupError);
+
+            const res = await request(app)
+                .post('/api/templates')
+                .set('Authorization', 'Bearer valid-token')
+                .send(newTemplateBody);
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toBe('Template with this name already exists');
+        });
+
+        it('should invalidate cache on create', async () => {
+            const { templatesCache } = await import('../../services/cache.service.js');
+            mockCreateWithTimeout.mockResolvedValueOnce([sampleTemplateRow]);
+
+            await request(app)
+                .post('/api/templates')
+                .set('Authorization', 'Bearer valid-token')
+                .send(newTemplateBody);
+
+            expect(templatesCache.invalidate).toHaveBeenCalledWith('all_templates');
+        });
+    });
+
+    // ==========================================
+    // PUT /api/templates/:id
+    // ==========================================
+    describe('PUT /api/templates/:id', () => {
+        const updateBody = {
+            Name: 'Updated Template',
+            Description: 'Updated description'
+        };
+
+        it('should return 401 without authentication', async () => {
+            const res = await request(app)
+                .put('/api/templates/tpl-123')
+                .send(updateBody);
+            expect(res.status).toBe(401);
+        });
+
+        it('should return 403 for non-admin users', async () => {
+            const res = await request(app)
+                .put('/api/templates/tpl-123')
+                .set('Authorization', 'Bearer valid-token')
+                .set('x-test-role', 'user')
+                .send(updateBody);
+            expect(res.status).toBe(403);
+        });
+
+        it('should update template with valid data', async () => {
+            mockFindWithTimeout.mockResolvedValueOnce(sampleTemplateRow);
+            const updatedRow = { ...sampleTemplateRow, name: 'Updated Template', description: 'Updated description' };
+            mockUpdateWithTimeout.mockResolvedValueOnce([updatedRow]);
+
+            const res = await request(app)
+                .put('/api/templates/tpl-123')
+                .set('Authorization', 'Bearer valid-token')
+                .send(updateBody);
+
+            expect(res.status).toBe(200);
+            expect(res.body.Name).toBe('Updated Template');
+            expect(res.body.Description).toBe('Updated description');
+        });
+
+        it('should return 404 when template does not exist', async () => {
+            const notFoundError = new Error('Not found');
+            notFoundError.statusCode = 404;
+            mockFindWithTimeout.mockRejectedValueOnce(notFoundError);
+
+            const res = await request(app)
+                .put('/api/templates/nonexistent')
+                .set('Authorization', 'Bearer valid-token')
+                .send(updateBody);
+
+            expect(res.status).toBe(404);
+            expect(res.body.error).toBe('Template not found');
+        });
+
+        it('should return 400 on duplicate name conflict', async () => {
+            mockFindWithTimeout.mockResolvedValueOnce(sampleTemplateRow);
+            const dupError = new Error('duplicate key');
+            dupError.code = '23505';
+            mockUpdateWithTimeout.mockRejectedValueOnce(dupError);
+
+            const res = await request(app)
+                .put('/api/templates/tpl-123')
+                .set('Authorization', 'Bearer valid-token')
+                .send({ Name: 'Existing Template Name' });
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toBe('Template with this name already exists');
+        });
+
+        it('should allow admin to change firm_id', async () => {
+            mockFindWithTimeout.mockResolvedValueOnce(sampleTemplateRow);
+            mockQuery.mockResolvedValueOnce({ rows: [{ id: 'firm-other', name: 'Other Firm' }] }); // firm check
+            mockUpdateWithTimeout.mockResolvedValueOnce([{ ...sampleTemplateRow, firm_id: 'firm-other' }]);
+
+            const res = await request(app)
+                .put('/api/templates/tpl-123')
+                .set('Authorization', 'Bearer valid-token')
+                .send({ ...updateBody, FirmId: 'firm-other' });
+
+            expect(res.status).toBe(200);
+            const updateArgs = mockUpdateWithTimeout.mock.calls[0][1][0].fields;
+            expect(updateArgs.firm_id).toBe('firm-other');
+        });
+
+        it('should allow admin to make template global', async () => {
+            mockFindWithTimeout.mockResolvedValueOnce(sampleTemplateRow);
+            mockUpdateWithTimeout.mockResolvedValueOnce([{ ...sampleTemplateRow, firm_id: null }]);
+
+            const res = await request(app)
+                .put('/api/templates/tpl-123')
+                .set('Authorization', 'Bearer valid-token')
+                .send({ ...updateBody, FirmId: null });
+
+            expect(res.status).toBe(200);
+            const updateArgs = mockUpdateWithTimeout.mock.calls[0][1][0].fields;
+            expect(updateArgs.firm_id).toBeNull();
+        });
+
+        it('should invalidate cache on update', async () => {
+            const { templatesCache } = await import('../../services/cache.service.js');
+            mockFindWithTimeout.mockResolvedValueOnce(sampleTemplateRow);
+            mockUpdateWithTimeout.mockResolvedValueOnce([sampleTemplateRow]);
+
+            await request(app)
+                .put('/api/templates/tpl-123')
+                .set('Authorization', 'Bearer valid-token')
+                .send(updateBody);
+
+            expect(templatesCache.invalidate).toHaveBeenCalledWith('all_templates');
+        });
+    });
+
+    // ==========================================
+    // DELETE /api/templates/:id
+    // ==========================================
+    describe('DELETE /api/templates/:id', () => {
+        it('should return 401 without authentication', async () => {
+            const res = await request(app).delete('/api/templates/tpl-123');
+            expect(res.status).toBe(401);
+        });
+
+        it('should return 403 for non-admin users', async () => {
+            const res = await request(app)
+                .delete('/api/templates/tpl-123')
+                .set('Authorization', 'Bearer valid-token')
+                .set('x-test-role', 'user');
+            expect(res.status).toBe(403);
+        });
+
+        it('should delete template successfully', async () => {
+            mockDestroyWithTimeout.mockResolvedValueOnce(true);
+
+            const res = await request(app)
+                .delete('/api/templates/tpl-123')
+                .set('Authorization', 'Bearer valid-token');
+
+            expect(res.status).toBe(200);
+            expect(res.body.message).toBe('Template deleted successfully');
+            expect(mockDestroyWithTimeout).toHaveBeenCalledWith('templates', ['tpl-123']);
+        });
+
+        it('should return 404 for non-existent template', async () => {
+            const notFoundError = new Error('Not found');
+            notFoundError.statusCode = 404;
+            mockDestroyWithTimeout.mockRejectedValueOnce(notFoundError);
+
+            const res = await request(app)
+                .delete('/api/templates/nonexistent')
+                .set('Authorization', 'Bearer valid-token');
+
+            expect(res.status).toBe(404);
+            expect(res.body.error).toBe('Template not found');
+        });
+
+        it('should return 500 on unexpected error', async () => {
+            mockDestroyWithTimeout.mockRejectedValueOnce(new Error('DB failure'));
+
+            const res = await request(app)
+                .delete('/api/templates/tpl-123')
+                .set('Authorization', 'Bearer valid-token');
+
+            expect(res.status).toBe(500);
+            expect(res.body.error).toBe('Failed to delete template');
+        });
+
+        it('should invalidate cache on delete', async () => {
+            const { templatesCache } = await import('../../services/cache.service.js');
+            mockDestroyWithTimeout.mockResolvedValueOnce(true);
+
+            await request(app)
+                .delete('/api/templates/tpl-123')
+                .set('Authorization', 'Bearer valid-token');
+
+            expect(templatesCache.invalidate).toHaveBeenCalledWith('all_templates');
+        });
+    });
+
+    // ==========================================
+    // Error message safety
+    // ==========================================
+    describe('Error message safety', () => {
+        it('should not leak internal error details in GET list response', async () => {
+            mockSelectWithTimeout.mockRejectedValueOnce(new Error('relation "templates" does not exist'));
+
+            const res = await request(app)
+                .get('/api/templates')
+                .set('Authorization', 'Bearer valid-token');
+
+            expect(res.status).toBe(500);
+            expect(res.body.error).toBe('Failed to fetch templates');
+            expect(res.body.message).toBeUndefined();
+        });
+
+        it('should not leak internal error details in POST response', async () => {
+            mockCreateWithTimeout.mockRejectedValueOnce(new Error('column "bad_col" does not exist'));
+
+            const res = await request(app)
+                .post('/api/templates')
+                .set('Authorization', 'Bearer valid-token')
+                .send({ Name: 'Test', TemplateContent: '<p>test</p>' });
+
+            expect(res.status).toBe(500);
+            expect(res.body.error).toBe('Failed to create template');
+            expect(res.body.message).toBeUndefined();
+        });
+    });
+});

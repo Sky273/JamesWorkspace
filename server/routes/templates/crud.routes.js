@@ -17,6 +17,7 @@ import {
     escapeLike 
 } from '../../utils/postgresHelpers.js';
 import { query } from '../../config/database.js';
+import { mapTemplateToFrontend, mapTemplateFromFrontend } from '../../utils/mappers.js';
 import { getUserFirmId } from '../../utils/firmHelpers.js';
 
 const router = express.Router();
@@ -99,23 +100,7 @@ router.get('/', authenticateToken, async (req, res) => {
         const totalPages = Math.ceil(totalCount / limit);
 
         // Map to frontend format (using PascalCase for compatibility)
-        const mappedTemplates = templates.map(template => ({
-            id: template.id,
-            Name: template.name,
-            Description: template.description,
-            Popular: template.popular || false,
-            Status: template.status || 'active',
-            Tags: template.tags || [],
-            previewImage: template.preview_image_url || null,
-            HeaderContent: template.header_content || '',
-            TemplateContent: template.template_content,
-            FooterContent: template.footer_content || '',
-            FooterHeight: template.footer_height || 25,
-            Stylesheet: template.stylesheet || '',
-            FirmId: template.firm_id || null,
-            FirmName: template.firm_name || null,
-            lastUpdated: template.updated_at
-        }));
+        const mappedTemplates = templates.map(mapTemplateToFrontend);
 
         const response = {
             data: mappedTemplates,
@@ -145,24 +130,7 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
         const template = await findWithTimeout('templates', id);
         
         // Map to frontend format (using PascalCase for compatibility)
-        const mappedTemplate = {
-            id: template.id,
-            Name: template.name,
-            Description: template.description,
-            Popular: template.popular || false,
-            Status: template.status || 'active',
-            Tags: template.tags || [],
-            previewImage: template.preview_image_url || null,
-            HeaderContent: template.header_content || '',
-            TemplateContent: template.template_content || '',
-            FooterContent: template.footer_content || '',
-            FooterHeight: template.footer_height || 25,
-            Stylesheet: template.stylesheet || '',
-            FirmId: template.firm_id || null,
-            lastUpdated: template.updated_at
-        };
-        
-        res.json(mappedTemplate);
+        res.json(mapTemplateToFrontend(template));
     } catch (error) {
         if (error.statusCode === 404) {
             return res.status(404).json({ error: 'Template not found' });
@@ -206,17 +174,7 @@ router.post('/', authenticateToken, requireAdmin, validateBody(createTemplateSch
         }
         
         const templateData = {
-            name: req.body.Name,
-            description: req.body.Description || null,
-            popular: req.body.Popular || false,
-            status: (req.body.Status || 'active').toLowerCase(),
-            tags: req.body.Tags || [],
-            preview_image_url: req.body.PreviewImage || null,
-            header_content: req.body.HeaderContent || '',
-            template_content: req.body.TemplateContent,
-            footer_content: req.body.FooterContent || '',
-            footer_height: req.body.FooterHeight || 25,
-            stylesheet: req.body.Stylesheet || '',
+            ...mapTemplateFromFrontend(req.body),
             firm_id: targetFirmId
         };
 
@@ -225,22 +183,7 @@ router.post('/', authenticateToken, requireAdmin, validateBody(createTemplateSch
         }]);
         
         // Map back to frontend format
-        const result = records[0];
-        res.json({
-            id: result.id,
-            Name: result.name,
-            Description: result.description,
-            Popular: result.popular,
-            Status: result.status,
-            Tags: result.tags,
-            PreviewImage: result.preview_image_url,
-            HeaderContent: result.header_content,
-            TemplateContent: result.template_content,
-            FooterContent: result.footer_content,
-            FooterHeight: result.footer_height,
-            Stylesheet: result.stylesheet,
-            LastUpdated: result.updated_at
-        });
+        res.json(mapTemplateToFrontend(records[0]));
     } catch (error) {
         if (error.code === '23505') {
             return res.status(400).json({ 
@@ -290,26 +233,9 @@ router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), async 
         }
         
         const templateData = {
-            name: req.body.Name,
-            description: req.body.Description,
-            popular: req.body.Popular,
-            status: req.body.Status ? req.body.Status.toLowerCase() : undefined,
-            tags: req.body.Tags,
-            preview_image_url: req.body.PreviewImage,
-            header_content: req.body.HeaderContent,
-            template_content: req.body.TemplateContent,
-            footer_content: req.body.FooterContent,
-            footer_height: req.body.FooterHeight,
-            stylesheet: req.body.Stylesheet,
+            ...mapTemplateFromFrontend(req.body),
             firm_id: targetFirmId
         };
-
-        // Remove undefined values (but keep null for firm_id)
-        Object.keys(templateData).forEach(key => {
-            if (templateData[key] === undefined) {
-                delete templateData[key];
-            }
-        });
 
         const records = await updateWithTimeout('templates', [{
             id: id,
@@ -317,23 +243,7 @@ router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), async 
         }]);
         
         // Map back to frontend format
-        const result = records[0];
-        res.json({
-            id: result.id,
-            Name: result.name,
-            Description: result.description,
-            Popular: result.popular,
-            Status: result.status,
-            Tags: result.tags,
-            PreviewImage: result.preview_image_url,
-            HeaderContent: result.header_content,
-            TemplateContent: result.template_content,
-            FooterContent: result.footer_content,
-            FooterHeight: result.footer_height,
-            Stylesheet: result.stylesheet,
-            FirmId: result.firm_id,
-            LastUpdated: result.updated_at
-        });
+        res.json(mapTemplateToFrontend(records[0]));
     } catch (error) {
         if (error.statusCode === 404) {
             return res.status(404).json({ error: 'Template not found' });

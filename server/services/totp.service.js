@@ -2,40 +2,41 @@
  * TOTP (Time-based One-Time Password) Service
  * Implements 2FA using RFC 6238 TOTP algorithm
  * 
- * Uses speakeasy for reliable TOTP generation/verification
+ * Uses otpauth for reliable TOTP generation/verification
  * Uses qrcode for QR code generation
  */
 
-import speakeasy from 'speakeasy';
+import { TOTP, Secret } from 'otpauth';
 import QRCode from 'qrcode';
 import crypto from 'crypto';
 import { query } from '../config/database.js';
 import { safeLog } from '../utils/logger.backend.js';
 
 /**
- * Generate a random base32 secret using speakeasy
+ * Generate a random base32 secret using otpauth
  * @returns {string} Base32 secret
  */
 function generateSecret() {
-    const secret = speakeasy.generateSecret({ length: 20 });
+    const secret = new Secret({ size: 20 });
     return secret.base32;
 }
 
 /**
- * Verify a TOTP token against a secret using speakeasy
+ * Verify a TOTP token against a secret using otpauth
  * @param {string} token - The 6-digit token
  * @param {string} secret - The base32 secret
  * @returns {boolean} Whether the token is valid
  */
 function verifyToken(token, secret) {
     try {
-        const isValid = speakeasy.totp.verify({
-            secret: secret,
-            encoding: 'base32',
-            token: token,
-            window: 2 // Allow 2 steps before/after for clock drift (60 seconds)
+        const totp = new TOTP({
+            secret: Secret.fromBase32(secret),
+            digits: 6,
+            period: 30
         });
-        return isValid;
+        // validate returns null if invalid, or an integer (time step delta) if valid
+        const delta = totp.validate({ token, window: 2 });
+        return delta !== null;
     } catch (error) {
         safeLog('error', 'TOTP verification error', { 
             error: error.message,
@@ -161,7 +162,7 @@ export async function verifyAndEnable2FA(userId, code) {
         return { success: false, message: 'Aucune configuration 2FA en attente' };
     }
     
-    // Decrypt and verify using speakeasy
+    // Decrypt and verify using otpauth
     const secret = decryptSecret(totp_pending_secret);
     const isValid = verifyToken(code, secret);
     
