@@ -1,0 +1,182 @@
+/**
+ * Tests for Resume Stats routes
+ * GET /grouped-by-deal, GET /stats
+ */
+
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import express from 'express';
+import request from 'supertest';
+
+// Mock database
+const mockQuery = vi.fn();
+vi.mock('../../config/database.js', () => ({
+    query: (...args) => mockQuery(...args)
+}));
+
+// Mock firmHelpers
+vi.mock('../../utils/firmHelpers.js', () => ({
+    getUserFirmId: vi.fn().mockResolvedValue('firm-1')
+}));
+
+// Mock logger
+vi.mock('../../utils/logger.backend.js', () => ({
+    safeLog: vi.fn()
+}));
+
+// Mock auth middleware
+vi.mock('../../middleware/auth.middleware.js', () => ({
+    authenticateToken: (req, res, next) => {
+        if (req.headers.authorization === 'Bearer valid-token') {
+            req.user = {
+                id: 'user-123',
+                role: req.headers['x-test-role'] || 'user',
+                firm: 'Test Firm',
+                customer: 'Test Firm'
+            };
+            next();
+        } else {
+            res.status(401).json({ error: 'Unauthorized' });
+        }
+    }
+}));
+
+import statsRoutes from '../../routes/resumes/stats.routes.js';
+
+function createTestApp() {
+    const app = express();
+    app.use(express.json());
+    app.use('/api/resumes', statsRoutes);
+    return app;
+}
+
+const AUTH = { Authorization: 'Bearer valid-token' };
+
+describe('Resume Stats Routes', () => {
+    let app;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        app = createTestApp();
+    });
+
+    describe('GET /grouped-by-deal', () => {
+        it('should return 401 without auth', async () => {
+            const res = await request(app).get('/api/resumes/grouped-by-deal');
+            expect(res.status).toBe(401);
+        });
+
+        it('should return deals with resumes', async () => {
+            // Deals query
+            mockQuery.mockResolvedValueOnce({
+                rows: [{
+                    id: 'd-1',
+                    title: 'Deal A',
+                    status: 'active',
+                    client_name: 'Client A',
+                    resumes_count: '1'
+                }]
+            });
+            // Resumes for deals
+            mockQuery.mockResolvedValueOnce({
+                rows: [{
+                    id: 'r-1',
+                    name: 'John',
+                    deal_id: 'd-1',
+                    status: 'active'
+                }]
+            });
+            // Missions for deals
+            mockQuery.mockResolvedValueOnce({ rows: [] });
+            // Unassigned resumes
+            mockQuery.mockResolvedValueOnce({ rows: [] });
+
+            const res = await request(app)
+                .get('/api/resumes/grouped-by-deal')
+                .set(AUTH);
+
+            expect(res.status).toBe(200);
+            expect(res.body.deals).toHaveLength(1);
+            expect(res.body.totalDeals).toBe(1);
+            expect(res.body.unassigned).toBeDefined();
+        });
+
+        it('should return empty deals and unassigned', async () => {
+            mockQuery.mockResolvedValueOnce({ rows: [] }); // no deals
+            mockQuery.mockResolvedValueOnce({ rows: [{ id: 'r-1', name: 'Orphan' }] }); // unassigned
+
+            const res = await request(app)
+                .get('/api/resumes/grouped-by-deal')
+                .set(AUTH);
+
+            expect(res.status).toBe(200);
+            expect(res.body.deals).toHaveLength(0);
+            expect(res.body.totalUnassigned).toBe(1);
+        });
+
+        it('should return 500 on error', async () => {
+            mockQuery.mockRejectedValueOnce(new Error('DB error'));
+
+            const res = await request(app)
+                .get('/api/resumes/grouped-by-deal')
+                .set(AUTH);
+
+            expect(res.status).toBe(500);
+        });
+    });
+
+    describe('GET /stats', () => {
+        it('should return 401 without auth', async () => {
+            const res = await request(app).get('/api/resumes/stats');
+            expect(res.status).toBe(401);
+        });
+
+        it('should return dashboard stats', async () => {
+            // Resume stats query
+            mockQuery.mockResolvedValueOnce({
+                rows: [{
+                    total: '100',
+                    analyzed: '80',
+                    improved: '50',
+                    today: '5',
+                    this_week: '20',
+                    this_month: '60',
+                    avg_original_score: '62.5',
+                    avg_improved_score: '82.3'
+                }]
+            });
+            // Mission stats query
+            mockQuery.mockResolvedValueOnce({
+                rows: [{ total: '10', active: '5' }]
+            });
+            // Adaptation stats query
+            mockQuery.mockResolvedValueOnce({
+                rows: [{ total: '30' }]
+            });
+
+            const res = await request(app)
+                .get('/api/resumes/stats')
+                .set(AUTH);
+
+            expect(res.status).toBe(200);
+            expect(res.body.resumes.total).toBe(100);
+            expect(res.body.resumes.analyzed).toBe(80);
+            expect(res.body.resumes.improved).toBe(50);
+            expect(res.body.missions.total).toBe(10);
+            expect(res.body.adaptations.total).toBe(30);
+            expect(res.body.scores.averageOriginal).toBe(63);
+            expect(res.body.scores.averageImproved).toBe(82);
+            expect(res.body.scores.improvement).toBe(20);
+        });
+
+        it('should return cached stats on subsequent request', async () => {
+            // Previous test populated the cache, so this should return cached data
+            const res = await request(app)
+                .get('/api/resumes/stats')
+                .set(AUTH);
+
+            expect(res.status).toBe(200);
+            // No DB calls needed due to cache
+            expect(mockQuery).not.toHaveBeenCalled();
+        });
+    });
+});
