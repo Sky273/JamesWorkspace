@@ -26,12 +26,14 @@ vi.mock('fs', () => ({
     }
 }));
 
+import fs from 'fs';
 import {
     LOG_LEVELS,
     SECURITY_EVENTS,
     getSecurityLogs,
     getSecurityLogsCount,
     securityLog,
+    securityLogs,
     getRequestMetadata
 } from '../../services/security.service.js';
 
@@ -89,6 +91,71 @@ describe('Security Service', () => {
         });
     });
 
+    describe('securityLogs (legacy proxy)', () => {
+        it('should expose length via getter', () => {
+            expect(securityLogs.length).toBe(getSecurityLogsCount());
+        });
+
+        it('should support forEach', () => {
+            const items = [];
+            securityLogs.forEach(log => items.push(log));
+            expect(items.length).toBe(getSecurityLogsCount());
+        });
+
+        it('should support filter', () => {
+            securityLog(LOG_LEVELS.ERROR, SECURITY_EVENTS.AUTH_FAILURE, { ip: '9.9.9.9' });
+            const errors = securityLogs.filter(l => l.level === LOG_LEVELS.ERROR);
+            expect(errors.length).toBeGreaterThan(0);
+        });
+
+        it('should support map', () => {
+            const events = securityLogs.map(l => l.event);
+            expect(Array.isArray(events)).toBe(true);
+        });
+    });
+
+    describe('file persistence', () => {
+        it('should persist critical security events to file', () => {
+            fs.appendFileSync.mockClear();
+
+            securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.AUTH_BLOCKED, {
+                ip: '5.5.5.5', email: 'hacker@evil.com'
+            });
+
+            expect(fs.appendFileSync).toHaveBeenCalled();
+        });
+
+        it('should persist ERROR level to file', () => {
+            fs.appendFileSync.mockClear();
+
+            securityLog(LOG_LEVELS.ERROR, SECURITY_EVENTS.AUTH_FAILURE, {
+                ip: '6.6.6.6'
+            });
+
+            expect(fs.appendFileSync).toHaveBeenCalled();
+        });
+
+        it('should persist RATE_LIMIT_HIT events to file', () => {
+            fs.appendFileSync.mockClear();
+
+            securityLog(LOG_LEVELS.WARNING, SECURITY_EVENTS.RATE_LIMIT_HIT, {
+                ip: '7.7.7.7'
+            });
+
+            expect(fs.appendFileSync).toHaveBeenCalled();
+        });
+
+        it('should not persist INFO level non-critical events to file', () => {
+            fs.appendFileSync.mockClear();
+
+            securityLog(LOG_LEVELS.INFO, SECURITY_EVENTS.DATA_ACCESS, {
+                ip: '8.8.8.8'
+            });
+
+            expect(fs.appendFileSync).not.toHaveBeenCalled();
+        });
+    });
+
     describe('getRequestMetadata', () => {
         it('should extract metadata from request', () => {
             const req = {
@@ -121,6 +188,22 @@ describe('Security Service', () => {
 
             expect(meta.userId).toBeNull();
             expect(meta.email).toBeNull();
+        });
+
+        it('should fallback to connection.remoteAddress when ip is missing', () => {
+            const req = {
+                ip: undefined,
+                path: '/api/data',
+                method: 'DELETE',
+                get: vi.fn(() => 'curl/7.0'),
+                user: { id: 'u2', email: 'del@test.com' },
+                connection: { remoteAddress: '192.168.1.1' }
+            };
+
+            const meta = getRequestMetadata(req);
+
+            expect(meta.ip).toBe('192.168.1.1');
+            expect(meta.userAgent).toBe('curl/7.0');
         });
     });
 });
