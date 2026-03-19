@@ -381,10 +381,11 @@ describe('Auth Routes - POST /api/auth/refresh', () => {
 
     it('should return 401 for inactive user', async () => {
         mockVerifyRefreshToken.mockReturnValueOnce({ id: 'user-123' });
-        mockFindWithTimeout.mockResolvedValueOnce({ 
+        // fetchUserWithFirm uses selectWithTimeout which returns an array
+        mockSelectWithTimeout.mockResolvedValueOnce([{ 
             id: 'user-123', 
             status: 'inactive' 
-        });
+        }]);
 
         const res = await request(app)
             .post('/api/auth/refresh')
@@ -396,7 +397,8 @@ describe('Auth Routes - POST /api/auth/refresh', () => {
 
     it('should issue new access token for valid refresh', async () => {
         mockVerifyRefreshToken.mockReturnValueOnce({ id: 'user-123' });
-        mockFindWithTimeout.mockResolvedValueOnce({ 
+        // fetchUserWithFirm uses selectWithTimeout which returns an array
+        mockSelectWithTimeout.mockResolvedValueOnce([{ 
             id: 'user-123',
             email: 'test@example.com',
             name: 'Test User',
@@ -404,14 +406,15 @@ describe('Auth Routes - POST /api/auth/refresh', () => {
             role: 'user',
             firm_id: 'firm-123',
             firm_name: 'Test Firm'
-        });
+        }]);
 
         const res = await request(app)
             .post('/api/auth/refresh')
             .set('Cookie', 'refreshToken=valid-refresh-token');
 
         expect(res.status).toBe(200);
-        expect(res.body.message).toContain('refreshed');
+        expect(res.body.user).toBeDefined();
+        expect(res.body.user.id).toBe('user-123');
         
         const cookies = res.headers['set-cookie'];
         expect(cookies.some(c => c.includes('accessToken'))).toBe(true);

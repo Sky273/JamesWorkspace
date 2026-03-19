@@ -1,7 +1,13 @@
 import { defineConfig } from 'vitest/config';
+import { resolve } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
 export default defineConfig({
+  root: resolve(__dirname, '..'),
   test: {
+    name: 'server',
     globals: true,
     environment: 'node',
     include: ['server/tests/**/*.test.js'],
