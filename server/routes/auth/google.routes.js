@@ -48,10 +48,16 @@ router.get('/google', authLimiter, async (req, res) => {
         
         const state = crypto.randomBytes(32).toString('hex');
         
+        // Sanitize returnUrl: only allow relative paths (prevents open redirect)
+        let safeReturnUrl = '/';
+        if (returnUrl && typeof returnUrl === 'string' && returnUrl.startsWith('/') && !returnUrl.startsWith('//')) {
+            safeReturnUrl = returnUrl;
+        }
+        
         oauthStates.set(state, {
             action: action || 'signin',
             userId: req.cookies.accessToken ? req.user?.id : null,
-            returnUrl: returnUrl || '/',
+            returnUrl: safeReturnUrl,
             createdAt: Date.now()
         });
         

@@ -1,7 +1,7 @@
 import express from 'express';
 import axios from 'axios';
 import { OPENAI_API_KEY, ANTHROPIC_API_KEY, MAX_PROMPT_LENGTH } from '../config/constants.js';
-import { authenticateToken } from '../middleware/auth.middleware.js';
+import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
 import { userRateLimit } from '../middleware/rateLimit.middleware.js';
 import { metrics } from '../services/metrics.service.js';
 import { securityLog, getRequestMetadata, LOG_LEVELS, SECURITY_EVENTS } from '../services/security.service.js';
@@ -294,7 +294,7 @@ router.post('/anthropic', authenticateToken, validateBody(anthropicRequestSchema
 });
 
 // POST /api/openai/chat/completions - OpenAI chat completions
-router.post('/chat/completions', authenticateToken, userRateLimit(20, 60 * 60 * 1000), async (req, res) => {
+router.post('/chat/completions', authenticateToken, validateBody(openaiRequestSchema), userRateLimit(20, 60 * 60 * 1000), async (req, res) => {
     const metadata = getRequestMetadata(req);
     const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
     const model = req.body.model || 'openai';
@@ -339,7 +339,7 @@ router.post('/chat/completions', authenticateToken, userRateLimit(20, 60 * 60 * 
 });
 
 // POST /api/anthropic/messages - Anthropic messages
-router.post('/messages', authenticateToken, userRateLimit(20, 60 * 60 * 1000), async (req, res) => {
+router.post('/messages', authenticateToken, validateBody(anthropicRequestSchema), userRateLimit(20, 60 * 60 * 1000), async (req, res) => {
     const metadata = getRequestMetadata(req);
     const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
     const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20241022';
@@ -391,11 +391,7 @@ router.post('/messages', authenticateToken, userRateLimit(20, 60 * 60 * 1000), a
 });
 
 // GET /api/llm/circuit-breakers - Get circuit breaker states (admin only)
-router.get('/circuit-breakers', authenticateToken, (req, res) => {
-    if (req.user?.role !== 'admin') {
-        return res.status(403).json({ error: 'Admin access required' });
-    }
-    
+router.get('/circuit-breakers', authenticateToken, requireAdmin, (req, res) => {
     res.json(getCircuitBreakerStates());
 });
 

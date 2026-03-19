@@ -10,13 +10,24 @@ import { getTagsCacheStats } from './tags.routes.js';
 import { getBlacklistStats } from '../services/tokenBlacklist.service.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { getStorageStats, getFileCleanupStats } from '../utils/fileCleanup.js';
-import { authenticateToken } from '../middleware/auth.middleware.js';
+import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
 
 const router = express.Router();
 
 // Comprehensive health check endpoint
 router.get('/', async (req, res) => {
     const startTime = Date.now();
+
+    // Minimal public response: only overall status + uptime
+    // Detailed checks require admin authentication
+    const isAdmin = req.cookies?.accessToken ? await (async () => {
+        try {
+            const { verifyToken } = await import('../services/jwt.service.js');
+            const decoded = verifyToken(req.cookies.accessToken);
+            return decoded?.role === 'admin';
+        } catch { return false; }
+    })() : false;
+
     const checks = {
         server: { status: 'ok' },
         database: { status: 'unknown' },
@@ -219,11 +230,21 @@ router.get('/', async (req, res) => {
     };
     
     const statusCode = overallStatus === 'healthy' ? 200 : overallStatus === 'degraded' ? 200 : 503;
+
+    // Non-admin: return minimal info only
+    if (!isAdmin) {
+        return res.status(statusCode).json({
+            status: overallStatus,
+            timestamp: new Date().toISOString(),
+            responseTime: `${responseTime}ms`
+        });
+    }
+
     res.status(statusCode).json(response);
 });
 
-// Detailed memory and cache statistics endpoint
-router.get('/memory', async (req, res) => {
+// Detailed memory and cache statistics endpoint (admin only)
+router.get('/memory', authenticateToken, requireAdmin, async (req, res) => {
     const memoryUsage = process.memoryUsage();
     
     // Get all cache stats
@@ -306,13 +327,8 @@ router.get('/memory', async (req, res) => {
  * Get storage usage statistics for all managed directories
  * Requires admin authentication
  */
-router.get('/storage', authenticateToken, async (req, res) => {
+router.get('/storage', authenticateToken, requireAdmin, async (req, res) => {
     try {
-        // Check if user is admin
-        if (req.user?.role !== 'admin') {
-            return res.status(403).json({ error: 'Admin access required' });
-        }
-
         const storageStats = await getStorageStats();
         const cleanupStats = getFileCleanupStats();
 

@@ -6,19 +6,34 @@
  */
 
 import express from 'express';
-import { authenticateToken } from '../middleware/auth.middleware.js';
-// Note: query import removed - no longer needed for GLOBAL token approach
+import crypto from 'crypto';
+import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { gdprMailService } from '../services/mail/gdprMailService.js';
 
 const router = express.Router();
+
+// Server-side OAuth state store (prevents state forgery)
+const gdprOauthStates = new Map();
+const GDPR_STATE_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
+
+function cleanupExpiredGdprStates() {
+    const now = Date.now();
+    for (const [state, data] of gdprOauthStates.entries()) {
+        if (now - data.createdAt > GDPR_STATE_EXPIRY_MS) {
+            gdprOauthStates.delete(state);
+        }
+    }
+}
+
+setInterval(cleanupExpiredGdprStates, 5 * 60 * 1000);
 
 /**
  * @route GET /api/gdpr/mail/status
  * @desc Get GLOBAL GDPR mail connection status
  * @access Private (Admin)
  */
-router.get('/status', authenticateToken, async (req, res) => {
+router.get('/status', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const status = await gdprMailService.getConnectionStatus();
         res.json(status);
@@ -33,21 +48,15 @@ router.get('/status', authenticateToken, async (req, res) => {
  * @desc Get Gmail OAuth URL for GLOBAL GDPR mail configuration
  * @access Private (Admin)
  */
-router.get('/auth-url', authenticateToken, async (req, res) => {
+router.get('/auth-url', authenticateToken, requireAdmin, async (req, res) => {
     try {
-        // Check if user is admin
-        if (req.user?.role !== 'admin') {
-            return res.status(403).json({ 
-                error: 'Only administrators can configure GDPR mail.',
-                code: 'ADMIN_REQUIRED'
-            });
-        }
-
-        // Generate state for callback (no firmId needed - GLOBAL token)
-        const state = Buffer.from(JSON.stringify({ 
+        // Generate cryptographic nonce for state (prevents forgery)
+        const state = crypto.randomBytes(32).toString('hex');
+        gdprOauthStates.set(state, {
             userId: req.user.id,
-            type: 'gdpr'
-        })).toString('base64');
+            type: 'gdpr',
+            createdAt: Date.now()
+        });
 
         const authUrl = await gdprMailService.getAuthUrl(state);
         res.json({ authUrl });
@@ -70,16 +79,18 @@ router.get('/callback', async (req, res) => {
             return res.status(400).send('Missing code or state parameter');
         }
 
-        // Decode state
-        let stateData;
-        try {
-            stateData = JSON.parse(Buffer.from(state, 'base64').toString());
-        } catch (_e) {
-            return res.status(400).send('Invalid state parameter');
+        // Validate state against server-side store (prevents forgery)
+        if (!gdprOauthStates.has(state)) {
+            safeLog('warn', 'Invalid GDPR OAuth state - possible forgery attempt');
+            return res.status(400).send('Invalid or expired state parameter');
         }
 
-        if (stateData.type !== 'gdpr') {
-            return res.status(400).send('Invalid state type');
+        const stateData = gdprOauthStates.get(state);
+        gdprOauthStates.delete(state);
+
+        // Check state expiry
+        if (Date.now() - stateData.createdAt > GDPR_STATE_EXPIRY_MS) {
+            return res.status(400).send('OAuth state expired, please try again');
         }
 
         // Exchange code for GLOBAL token (no firmId needed)
@@ -112,15 +123,8 @@ router.get('/callback', async (req, res) => {
  * @desc Disconnect GLOBAL Gmail for GDPR mail
  * @access Private (Admin)
  */
-router.post('/disconnect', authenticateToken, async (req, res) => {
+router.post('/disconnect', authenticateToken, requireAdmin, async (req, res) => {
     try {
-        // Check if user is admin
-        if (req.user?.role !== 'admin') {
-            return res.status(403).json({ 
-                error: 'Only administrators can disconnect GDPR mail.',
-                code: 'ADMIN_REQUIRED'
-            });
-        }
 
         await gdprMailService.disconnect();
         res.json({ success: true });
@@ -135,12 +139,18 @@ router.post('/disconnect', authenticateToken, async (req, res) => {
  * @desc Send a test email via GLOBAL GDPR Gmail
  * @access Private (Admin)
  */
-router.post('/test', authenticateToken, async (req, res) => {
+router.post('/test', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const { email } = req.body;
 
-        if (!email) {
+        if (!email || typeof email !== 'string') {
             return res.status(400).json({ error: 'Email address required' });
+        }
+
+        // Basic email format validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email) || email.length > 254) {
+            return res.status(400).json({ error: 'Invalid email address format' });
         }
 
         await gdprMailService.sendTestEmail(email);

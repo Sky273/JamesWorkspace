@@ -5,7 +5,8 @@
  */
 
 import express from 'express';
-import { authenticateToken } from '../middleware/auth.middleware.js';
+import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
+import { validateParams } from '../utils/validation.js';
 import { safeLog } from '../utils/logger.backend.js';
 import {
     initializeConsent,
@@ -62,7 +63,7 @@ router.post('/initialize', authenticateToken, async (req, res) => {
  * POST /api/consent/:resumeId/send
  * Send consent request email
  */
-router.post('/:resumeId/send', authenticateToken, async (req, res) => {
+router.post('/:resumeId/send', authenticateToken, validateParams('resumeId'), async (req, res) => {
     try {
         const { resumeId } = req.params;
 
@@ -97,7 +98,7 @@ router.post('/:resumeId/send', authenticateToken, async (req, res) => {
  * POST /api/consent/:resumeId/resend
  * Resend consent request email with new token
  */
-router.post('/:resumeId/resend', authenticateToken, async (req, res) => {
+router.post('/:resumeId/resend', authenticateToken, validateParams('resumeId'), async (req, res) => {
     try {
         const { resumeId } = req.params;
 
@@ -119,7 +120,7 @@ router.post('/:resumeId/resend', authenticateToken, async (req, res) => {
  * GET /api/consent/:resumeId/status
  * Get consent status for a resume
  */
-router.get('/:resumeId/status', authenticateToken, async (req, res) => {
+router.get('/:resumeId/status', authenticateToken, validateParams('resumeId'), async (req, res) => {
     try {
         const { resumeId } = req.params;
 
@@ -139,13 +140,8 @@ router.get('/:resumeId/status', authenticateToken, async (req, res) => {
  * POST /api/consent/run-checks
  * Manually trigger consent checks (admin only)
  */
-router.post('/run-checks', authenticateToken, async (req, res) => {
+router.post('/run-checks', authenticateToken, requireAdmin, async (req, res) => {
     try {
-        // Check if user is admin
-        if (req.user?.role !== 'admin') {
-            return res.status(403).json({ error: 'Admin access required' });
-        }
-
         const results = await runAllChecks();
 
         res.json({
@@ -155,7 +151,7 @@ router.post('/run-checks', authenticateToken, async (req, res) => {
         });
     } catch (error) {
         safeLog('error', 'Error running consent checks', { error: error.message });
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: 'Failed to run consent checks' });
     }
 });
 

@@ -302,12 +302,12 @@ router.post('/draft', authenticateToken, async (req, res) => {
         // Check if it's an auth error
         if (error.message.includes('connect') || error.message.includes('token')) {
             return res.status(401).json({ 
-                error: error.message,
+                error: 'Mail provider authentication required',
                 needsReauth: true 
             });
         }
         
-        return res.status(500).json({ error: error.message || 'Failed to create draft' });
+        return res.status(500).json({ error: 'Failed to create draft' });
     }
 });
 

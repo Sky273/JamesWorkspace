@@ -116,9 +116,9 @@ const isPublicHomeEnabled = import.meta.env.VITE_PUBLIC_HOME === 'true';
 const PublicHomeRoute = (): JSX.Element => {
   const { isAuthenticated } = useAuth();
   
-  // If user is authenticated, redirect to protected home
+  // If user is authenticated, redirect to protected home (index route)
   if (isAuthenticated) {
-    return <Navigate to="/home" replace />;
+    return <Navigate to="/" replace />;
   }
   
   // If public home is enabled, show public page

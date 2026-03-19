@@ -79,7 +79,7 @@ router.post('/', authenticateToken, userRateLimit(), validateBody(createPipeline
  * GET /api/pipeline/:id
  * Get a specific pipeline entry
  */
-router.get('/:id', authenticateToken, async (req, res) => {
+router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => {
     try {
         const pipeline = await getPipelineById(req.params.id);
         
@@ -98,7 +98,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
  * GET /api/pipeline/resume/:resumeId
  * Get all pipeline entries for a resume
  */
-router.get('/resume/:resumeId', authenticateToken, async (req, res) => {
+router.get('/resume/:resumeId', authenticateToken, validateParams('resumeId'), async (req, res) => {
     try {
         const pipelines = await getPipelineByResumeId(req.params.resumeId);
         res.json(pipelines);
@@ -112,7 +112,7 @@ router.get('/resume/:resumeId', authenticateToken, async (req, res) => {
  * GET /api/pipeline/mission/:missionId
  * Get all pipeline entries for a mission (Kanban view)
  */
-router.get('/mission/:missionId', authenticateToken, async (req, res) => {
+router.get('/mission/:missionId', authenticateToken, validateParams('missionId'), async (req, res) => {
     try {
         const pipelines = await getPipelineByMissionId(req.params.missionId);
         res.json(pipelines);
@@ -141,7 +141,7 @@ router.get('/overview', authenticateToken, async (req, res) => {
  * PATCH /api/pipeline/:id/stage
  * Move a candidate to a different stage
  */
-router.patch('/:id/stage', authenticateToken, async (req, res) => {
+router.patch('/:id/stage', authenticateToken, validateParams('id'), async (req, res) => {
     try {
         const { stage, notes } = req.body;
 
@@ -172,7 +172,7 @@ router.patch('/:id/stage', authenticateToken, async (req, res) => {
  * PATCH /api/pipeline/:id/notes
  * Update pipeline notes
  */
-router.patch('/:id/notes', authenticateToken, async (req, res) => {
+router.patch('/:id/notes', authenticateToken, validateParams('id'), async (req, res) => {
     try {
         const { notes } = req.body;
         const pipeline = await updatePipelineNotes({
@@ -191,7 +191,7 @@ router.patch('/:id/notes', authenticateToken, async (req, res) => {
  * DELETE /api/pipeline/:id
  * Remove from pipeline
  */
-router.delete('/:id', authenticateToken, async (req, res) => {
+router.delete('/:id', authenticateToken, validateParams('id'), async (req, res) => {
     try {
         await removeFromPipeline(req.params.id);
         res.json({ success: true });
@@ -205,7 +205,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
  * GET /api/pipeline/:id/history
  * Get pipeline history
  */
-router.get('/:id/history', authenticateToken, async (req, res) => {
+router.get('/:id/history', authenticateToken, validateParams('id'), async (req, res) => {
     try {
         const history = await getPipelineHistory(req.params.id);
         res.json(history);
@@ -268,7 +268,7 @@ router.post('/:id/interviews', authenticateToken, userRateLimit(), validateParam
  * GET /api/pipeline/:id/interviews
  * Get interviews for a pipeline entry
  */
-router.get('/:id/interviews', authenticateToken, async (req, res) => {
+router.get('/:id/interviews', authenticateToken, validateParams('id'), async (req, res) => {
     try {
         const interviews = await getInterviews(req.params.id);
         res.json(interviews);
@@ -300,7 +300,7 @@ router.get('/interviews/upcoming', authenticateToken, async (req, res) => {
  * PATCH /api/pipeline/interviews/:interviewId
  * Update an interview
  */
-router.patch('/interviews/:interviewId', authenticateToken, async (req, res) => {
+router.patch('/interviews/:interviewId', authenticateToken, validateParams('interviewId'), async (req, res) => {
     try {
         const interview = await updateInterview(req.params.interviewId, req.body);
         res.json(interview);
@@ -314,7 +314,7 @@ router.patch('/interviews/:interviewId', authenticateToken, async (req, res) => 
  * POST /api/pipeline/interviews/:interviewId/complete
  * Complete an interview with outcome
  */
-router.post('/interviews/:interviewId/complete', authenticateToken, async (req, res) => {
+router.post('/interviews/:interviewId/complete', authenticateToken, validateParams('interviewId'), async (req, res) => {
     try {
         const { outcome, outcomeNotes } = req.body;
 
@@ -340,7 +340,7 @@ router.post('/interviews/:interviewId/complete', authenticateToken, async (req, 
  * POST /api/pipeline/interviews/:interviewId/cancel
  * Cancel an interview
  */
-router.post('/interviews/:interviewId/cancel', authenticateToken, async (req, res) => {
+router.post('/interviews/:interviewId/cancel', authenticateToken, validateParams('interviewId'), async (req, res) => {
     try {
         const interview = await cancelInterview(req.params.interviewId);
         res.json(interview);
@@ -354,7 +354,7 @@ router.post('/interviews/:interviewId/cancel', authenticateToken, async (req, re
  * DELETE /api/pipeline/interviews/:interviewId
  * Delete an interview
  */
-router.delete('/interviews/:interviewId', authenticateToken, async (req, res) => {
+router.delete('/interviews/:interviewId', authenticateToken, validateParams('interviewId'), async (req, res) => {
     try {
         await deleteInterview(req.params.interviewId);
         res.json({ success: true });

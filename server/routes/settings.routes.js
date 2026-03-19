@@ -83,8 +83,7 @@ router.get('/', authenticateToken, async (req, res) => {
     } catch (error) {
         safeLog('error', 'Error fetching settings', { error: error.message });
         return res.status(500).json({ 
-            error: 'Failed to fetch settings',
-            message: error.message 
+            error: 'Failed to fetch settings'
         });
     }
 });
@@ -193,14 +192,13 @@ router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), valida
     } catch (error) {
         safeLog('error', 'Error updating settings', { error: error.message });
         return res.status(500).json({ 
-            error: 'Failed to update settings',
-            message: error.message 
+            error: 'Failed to update settings'
         });
     }
 });
 
 // POST /api/settings - Create settings
-router.post('/', authenticateToken, requireAdmin, async (req, res) => {
+router.post('/', authenticateToken, requireAdmin, validateBody(updateSettingsSchema), async (req, res) => {
     try {
         let settingsData = req.body;
         
@@ -259,8 +257,7 @@ router.post('/', authenticateToken, requireAdmin, async (req, res) => {
     } catch (error) {
         safeLog('error', 'Error creating settings', { error: error.message });
         return res.status(500).json({ 
-            error: 'Failed to create settings',
-            message: error.message 
+            error: 'Failed to create settings'
         });
     }
 });

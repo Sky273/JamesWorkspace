@@ -265,7 +265,7 @@ router.post('/:id/logo', authenticateToken, requireAdmin, validateParams('id'), 
 });
 
 // GET /api/firms/:id/logo/image - Serve firm logo from database
-router.get('/:id/logo/image', async (req, res) => {
+router.get('/:id/logo/image', validateParams('id'), async (req, res) => {
     try {
         const { id } = req.params;
         

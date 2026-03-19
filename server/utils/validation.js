@@ -443,10 +443,11 @@ export function validateParams(...paramNames) {
         return;
       }
       
-      if (paramName === 'id' && !isValidAirtableId(value)) {
+      // Validate ID format for 'id' and all '*Id' params (resumeId, missionId, etc.)
+      if ((paramName === 'id' || paramName.endsWith('Id')) && !isValidAirtableId(value)) {
         res.status(400).json({
           error: 'Validation failed',
-          details: [{ field: paramName, message: 'Invalid Airtable record ID format' }]
+          details: [{ field: paramName, message: 'Invalid record ID format' }]
         });
         return;
       }

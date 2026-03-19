@@ -197,7 +197,7 @@ Réponds toujours en français, sauf si l'utilisateur pose sa question en anglai
  * GET /api/chatbot/status
  * Check if chatbot service is configured and available
  */
-router.get('/status', (req, res) => {
+router.get('/status', authenticateToken, (req, res) => {
     const isConfigured = userGuideContent.length > 0;
     res.json({
         configured: isConfigured,

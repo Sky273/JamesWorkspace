@@ -6,6 +6,7 @@
 import { Router, json } from 'express';
 import fs from 'fs/promises';
 import { authenticateToken } from '../middleware/auth.middleware.js';
+import { validateParams } from '../utils/validation.js';
 import shareResumeService from '../services/shareResume.service.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { query } from '../config/database.js';
@@ -20,7 +21,7 @@ router.use(json());
  * Generate a shareable PDF for an improved resume
  * Requires authentication
  */
-router.post('/resume/:resumeId/generate', authenticateToken, async (req, res) => {
+router.post('/resume/:resumeId/generate', authenticateToken, validateParams('resumeId'), async (req, res) => {
     try {
         const { resumeId } = req.params;
         const { htmlContent, filename, stylesheet, headerContent, footerContent, footerHeight } = req.body;
@@ -83,7 +84,7 @@ router.post('/resume/:resumeId/generate', authenticateToken, async (req, res) =>
  * Get share status for a resume
  * Requires authentication
  */
-router.get('/resume/:resumeId/status', authenticateToken, async (req, res) => {
+router.get('/resume/:resumeId/status', authenticateToken, validateParams('resumeId'), async (req, res) => {
     try {
         const { resumeId } = req.params;
         const status = await shareResumeService.getShareStatus(resumeId);
@@ -110,7 +111,7 @@ router.get('/resume/:resumeId/status', authenticateToken, async (req, res) => {
  * Get the original file share URL
  * Requires authentication
  */
-router.get('/resume/:resumeId/original', authenticateToken, async (req, res) => {
+router.get('/resume/:resumeId/original', authenticateToken, validateParams('resumeId'), async (req, res) => {
     try {
         const { resumeId } = req.params;
         const fileInfo = await shareResumeService.getOriginalFileInfo(resumeId);
