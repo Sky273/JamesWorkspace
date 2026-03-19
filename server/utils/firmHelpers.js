@@ -5,6 +5,7 @@
 
 import { query } from '../config/database.js';
 import { safeLog } from './logger.backend.js';
+import { isUserAdmin } from '../middleware/auth.middleware.js';
 
 // Helper to validate UUID format
 export const isValidUUID = (str) => {
@@ -70,11 +71,5 @@ export const getFirmById = async (firmId) => {
     return null;
 };
 
-/**
- * Check if user is admin
- * @param {Object} req - Express request object
- * @returns {boolean}
- */
-export const isUserAdmin = (req) => {
-    return req.user?.role === 'admin';
-};
+// Re-export isUserAdmin from auth.middleware.js for backward compatibility
+export { isUserAdmin };

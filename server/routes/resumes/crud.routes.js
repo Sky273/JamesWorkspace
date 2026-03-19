@@ -26,7 +26,7 @@ const router = express.Router();
 // GET /api/resumes - Get all resumes (with server-side pagination and filters)
 router.get('/', authenticateToken, async (req, res) => {
     try {
-        const isAdmin = req.user.role?.toLowerCase() === 'admin';
+        const isAdmin = req.user?.role === 'admin';
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 50;
         const offset = (page - 1) * limit;
@@ -172,7 +172,7 @@ router.get('/:id/download', authenticateToken, validateParams('id'), async (req,
     try {
         const { id } = req.params;
         const userFirm = req.user.firm || req.user.customer;
-        const isAdmin = req.user.role?.toLowerCase() === 'admin';
+        const isAdmin = req.user?.role === 'admin';
 
         // Fetch resume with file data
         const result = await query(

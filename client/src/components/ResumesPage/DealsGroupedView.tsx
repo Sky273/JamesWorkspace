@@ -201,7 +201,7 @@ const DealsGroupedView = ({ allTags }: DealsGroupedViewProps): JSX.Element => {
           selectedTagsCount={selectedTags.length}
           onRefresh={fetchGroupedData}
           onUpload={() => navigate('/upload?new')}
-          onBatchUpload={authUser?.role?.toLowerCase() === 'admin' ? () => navigate('/batch-upload') : undefined}
+          onBatchUpload={authUser?.role === 'admin' ? () => navigate('/batch-upload') : undefined}
           onReset={clearFilters}
           t={t}
         />

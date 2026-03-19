@@ -36,7 +36,7 @@ router.get('/status', authenticateToken, async (req, res) => {
 router.get('/auth-url', authenticateToken, async (req, res) => {
     try {
         // Check if user is admin
-        if (req.user.role !== 'admin') {
+        if (req.user?.role !== 'admin') {
             return res.status(403).json({ 
                 error: 'Only administrators can configure GDPR mail.',
                 code: 'ADMIN_REQUIRED'
@@ -115,7 +115,7 @@ router.get('/callback', async (req, res) => {
 router.post('/disconnect', authenticateToken, async (req, res) => {
     try {
         // Check if user is admin
-        if (req.user.role !== 'admin') {
+        if (req.user?.role !== 'admin') {
             return res.status(403).json({ 
                 error: 'Only administrators can disconnect GDPR mail.',
                 code: 'ADMIN_REQUIRED'

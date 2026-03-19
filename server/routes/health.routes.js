@@ -309,8 +309,7 @@ router.get('/memory', async (req, res) => {
 router.get('/storage', authenticateToken, async (req, res) => {
     try {
         // Check if user is admin
-        const userRole = (req.user?.role || '').toLowerCase();
-        if (userRole !== 'admin') {
+        if (req.user?.role !== 'admin') {
             return res.status(403).json({ error: 'Admin access required' });
         }
 

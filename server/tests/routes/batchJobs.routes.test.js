@@ -86,7 +86,7 @@ vi.mock('../../services/batchJobs.service.js', () => ({
 const mockGetUserFirmId = vi.fn();
 vi.mock('../../utils/firmHelpers.js', () => ({
     getUserFirmId: (...args) => mockGetUserFirmId(...args),
-    isUserAdmin: (req) => req.user?.role?.toLowerCase() === 'admin'
+    isUserAdmin: (req) => req.user?.role === 'admin'
 }));
 
 // Mock logger

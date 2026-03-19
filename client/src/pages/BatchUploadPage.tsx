@@ -34,7 +34,7 @@ const BatchUploadPage = (): JSX.Element => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const isAdmin = user?.role?.toLowerCase() === 'admin';
+  const isAdmin = user?.role === 'admin';
   
   const [files, setFiles] = useState<FileStatus[]>([]);
   const [improveOption, setImproveOption] = useState<boolean>(false);

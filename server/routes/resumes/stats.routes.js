@@ -75,7 +75,7 @@ export function getStatsCacheStats() {
 // OPTIMIZED: Uses batch queries instead of N+1 pattern (reduced from ~150 queries to 5)
 router.get('/grouped-by-deal', authenticateToken, async (req, res) => {
     try {
-        const isAdmin = req.user.role?.toLowerCase() === 'admin';
+        const isAdmin = req.user?.role === 'admin';
         const userFirmId = await getUserFirmId(req);
         
         if (!userFirmId && !isAdmin) {
@@ -278,7 +278,7 @@ router.get('/grouped-by-deal', authenticateToken, async (req, res) => {
 router.get('/stats', authenticateToken, async (req, res) => {
     try {
         const userFirm = req.user.firm || req.user.customer;
-        const isAdmin = req.user.role?.toLowerCase() === 'admin';
+        const isAdmin = req.user?.role === 'admin';
         const userFirmId = isAdmin ? null : await getUserFirmId(req);
         
         // Check cache first

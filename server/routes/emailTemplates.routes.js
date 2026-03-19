@@ -56,7 +56,7 @@ const router = express.Router();
 router.get('/', authenticateToken, async (req, res) => {
     try {
         const firmId = await getFirmIdForUser(req.user);
-        const isAdmin = req.user.role === 'admin';
+        const isAdmin = req.user?.role === 'admin';
         
         if (!firmId) {
             safeLog('warn', 'Firm ID not found for user', { userId: req.user.id, firm: req.user.firm });

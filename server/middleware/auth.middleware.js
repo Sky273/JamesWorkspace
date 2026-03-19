@@ -97,9 +97,7 @@ export function authenticateToken(req, res, next) {
  * Require admin role
  */
 export function requireAdmin(req, res, next) {
-    const userRole = (req.user?.role || '').toLowerCase();
-    
-    if (userRole !== 'admin') {
+    if (req.user?.role !== 'admin') {
         return res.status(403).json({ 
             error: 'Access denied. Admin privileges required.' 
         });
@@ -116,8 +114,7 @@ export function requireAdmin(req, res, next) {
  * Check if user is admin
  */
 export function isUserAdmin(req) {
-    const userRole = (req.user?.role || '').toLowerCase();
-    return userRole === 'admin';
+    return req.user?.role === 'admin';
 }
 
 /**

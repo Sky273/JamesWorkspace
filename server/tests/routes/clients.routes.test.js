@@ -70,7 +70,7 @@ vi.mock('../../middleware/auth.middleware.js', () => ({
             res.status(401).json({ error: 'Unauthorized' });
         }
     },
-    isUserAdmin: (req) => req.user?.role?.toLowerCase() === 'admin'
+    isUserAdmin: (req) => req.user?.role === 'admin'
 }));
 
 // Import routes after mocks

@@ -100,7 +100,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
         const userId = req.user.id;
-        const isAdmin = req.user.role === 'admin';
+        const isAdmin = req.user?.role === 'admin';
 
         // Users can only update their own profile, admins can update anyone
         if (id !== userId && !isAdmin) {

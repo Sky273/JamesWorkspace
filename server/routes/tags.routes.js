@@ -173,9 +173,8 @@ router.get('/', authenticateToken, async (req, res) => {
 // GET /api/tags/cleaned - Get cleaned tags (aggregated from resumes - filtered by firm for non-admins)
 router.get('/cleaned', authenticateToken, async (req, res) => {
     try {
-        const userRole = req.user?.role?.toLowerCase();
+        const isAdmin = req.user?.role === 'admin';
         const userFirmId = await getUserFirmId(req);
-        const isAdmin = userRole === 'admin';
         const scope = req.query.scope === 'grouped-by-deal' ? 'grouped-by-deal' : 'default';
         
         if (scope === 'grouped-by-deal' && !userFirmId && !isAdmin) {

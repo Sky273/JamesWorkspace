@@ -142,7 +142,7 @@ router.get('/:resumeId/status', authenticateToken, async (req, res) => {
 router.post('/run-checks', authenticateToken, async (req, res) => {
     try {
         // Check if user is admin
-        if (req.user.role?.toLowerCase() !== 'admin') {
+        if (req.user?.role !== 'admin') {
             return res.status(403).json({ error: 'Admin access required' });
         }
 

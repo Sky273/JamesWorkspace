@@ -67,7 +67,7 @@ const UserFormModal = ({ isOpen, onClose, onSubmit, user, firms, t }: UserFormMo
         jobTitle: user.jobTitle || '',
         phone: user.phone || '',
         firm: user.firm || '',
-        role: user.role?.toLowerCase() || 'user',
+        role: user.role || 'user',
         status: capitalizedStatus
       });
     } else {

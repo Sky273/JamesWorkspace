@@ -42,7 +42,7 @@ const AdminFirmSelector = ({
   const [userFirmId, setUserFirmId] = useState<string>('');
 
   // Only show for admin users
-  const isAdmin = user?.role?.toLowerCase() === 'admin';
+  const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
     const loadFirms = async () => {

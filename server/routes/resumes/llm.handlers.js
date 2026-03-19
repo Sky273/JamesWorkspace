@@ -34,8 +34,7 @@ export async function analyzeHandler(req, res) {
         const resumeRecord = await findWithTimeout('resumes', id);
         
         // Check firm access
-        const userRole = (req.user?.role || '').toLowerCase();
-        const isAdmin = userRole === 'admin';
+        const isAdmin = req.user?.role === 'admin';
         const userFirm = req.user?.firm || req.user?.customer;
         
         if (!isAdmin && resumeRecord.firm_name !== userFirm) {
@@ -289,8 +288,7 @@ export async function improveByIdHandler(req, res) {
         const resumeRecord = await findWithTimeout('resumes', id);
         
         // Check firm access
-        const userRole = (req.user?.role || '').toLowerCase();
-        const isAdmin = userRole === 'admin';
+        const isAdmin = req.user?.role === 'admin';
         const userFirm = req.user?.firm || req.user?.customer;
         
         if (!isAdmin && resumeRecord.firm_name !== userFirm) {
@@ -377,8 +375,7 @@ export async function matchHandler(req, res) {
         const missionRecord = await findWithTimeout('missions', missionId);
         
         // Check firm access
-        const userRole = (req.user?.role || '').toLowerCase();
-        const isAdmin = userRole === 'admin';
+        const isAdmin = req.user?.role === 'admin';
         const userFirm = req.user?.firm || req.user?.customer;
         
         if (!isAdmin && resumeRecord.firm_name !== userFirm) {
@@ -422,8 +419,7 @@ export async function adaptHandler(req, res) {
         const missionRecord = await findWithTimeout('missions', missionId);
         
         // Check firm access
-        const userRole = (req.user?.role || '').toLowerCase();
-        const isAdmin = userRole === 'admin';
+        const isAdmin = req.user?.role === 'admin';
         const userFirm = req.user?.firm || req.user?.customer;
         
         if (!isAdmin && resumeRecord.firm_name !== userFirm) {

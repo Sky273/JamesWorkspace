@@ -392,8 +392,7 @@ router.post('/messages', authenticateToken, userRateLimit(20, 60 * 60 * 1000), a
 
 // GET /api/llm/circuit-breakers - Get circuit breaker states (admin only)
 router.get('/circuit-breakers', authenticateToken, (req, res) => {
-    const userRole = (req.user?.role || '').toLowerCase();
-    if (userRole !== 'admin') {
+    if (req.user?.role !== 'admin') {
         return res.status(403).json({ error: 'Admin access required' });
     }
     

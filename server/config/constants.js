@@ -34,16 +34,6 @@ export const JWT_EXPIRES_IN = '1h';
 export const REFRESH_TOKEN_EXPIRES_IN = '7d';
 export const SALT_ROUNDS = 10;
 
-// Table names (PostgreSQL)
-export const RESUME_TABLE = 'resumes';
-export const USERS_TABLE = 'Users';
-export const SETTINGS_TABLE = 'LLMSettings';
-export const MISSIONS_TABLE = 'Offers';
-export const ADAPTATIONS_TABLE = 'ResumeAdaptations';
-export const TEMPLATES_TABLE = 'Templates';
-export const FIRMS_TABLE = 'Firms';
-export const MARKET_FACTS_TABLE = 'MarketFacts';
-
 // LLM API Keys
 export const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 export const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
@@ -63,9 +53,6 @@ export const FRANCE_TRAVAIL_API_URL = process.env.FRANCE_TRAVAIL_API_URL || 'htt
 export const ROME_COMPETENCES_API_URL = 'https://api.francetravail.io/partenaire/rome-competences/v1';
 // 2. ROME 4.0 - Fiches Métiers : pour récupérer les fiches métiers détaillées
 export const ROME_FICHES_METIERS_API_URL = 'https://api.francetravail.io/partenaire/rome-fiches-metiers/v1';
-export const ROME_METIERS_TABLE = 'RomeMetiers';
-export const INDUSTRY_ALIASES_TABLE = 'industry_aliases';
-
 // Market Radar - Adzuna API
 // Register at: https://developer.adzuna.com/signup
 export const ADZUNA_APP_ID = process.env.ADZUNA_APP_ID;

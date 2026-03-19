@@ -441,7 +441,7 @@ const ResumesPage = (): JSX.Element => {
           selectedTagsCount={selectedTags.length}
           onRefresh={fetchResumes}
           onUpload={() => navigate('/upload?new')}
-          onBatchUpload={authUser?.role?.toLowerCase() === 'admin' ? () => navigate('/batch-upload') : undefined}
+          onBatchUpload={authUser?.role === 'admin' ? () => navigate('/batch-upload') : undefined}
           onReset={clearFilters}
           t={t}
         />

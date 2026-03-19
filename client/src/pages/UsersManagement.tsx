@@ -288,12 +288,12 @@ const UsersManagement = (): JSX.Element => {
   const stats: Stats = {
     totalUsers: usersTotalCount,
     totalFirms: firmsTotalCount,
-    activeUsers: users.filter(u => u.status?.toLowerCase() === 'active').length,
-    admins: users.filter(u => u.role?.toLowerCase() === 'admin').length
+    activeUsers: users.filter(u => u.status === 'active').length,
+    admins: users.filter(u => u.role === 'admin').length
   };
 
   const getRoleBadge = (role?: string): JSX.Element => {
-    const isAdmin = role?.toLowerCase() === 'admin';
+    const isAdmin = role === 'admin';
     return (
       <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full ${
         isAdmin 
@@ -307,16 +307,14 @@ const UsersManagement = (): JSX.Element => {
   };
 
   const getStatusBadge = (status?: string): JSX.Element => {
-    // Normalize status to handle both lowercase (from DB) and capitalized versions
-    const normalizedStatus = status?.toLowerCase();
     const colors: Record<string, string> = {
       'active': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
       'inactive': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
       'pending': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
     };
     return (
-      <span className={`px-2 py-1 text-xs font-medium rounded-full ${colors[normalizedStatus || ''] || colors['pending']}`}>
-        {t(`users.management.status.${normalizedStatus}`) || status}
+      <span className={`px-2 py-1 text-xs font-medium rounded-full ${colors[status || ''] || colors['pending']}`}>
+        {t(`users.management.status.${status}`) || status}
       </span>
     );
   };

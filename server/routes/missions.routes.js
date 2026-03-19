@@ -164,7 +164,7 @@ router.get('/', authenticateToken, async (req, res) => {
 // GET /api/missions/grouped-by-deal - Get missions grouped by deal for the "Par affaire" view
 router.get('/grouped-by-deal', authenticateToken, async (req, res) => {
     try {
-        const isAdmin = req.user.role?.toLowerCase() === 'admin';
+        const isAdmin = req.user?.role === 'admin';
         const userFirmId = await getUserFirmId(req);
 
         if (!userFirmId && !isAdmin) {

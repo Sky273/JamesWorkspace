@@ -57,9 +57,8 @@ const upload = multer({
 router.post('/', authenticateToken, upload.array('files', 200), async (req, res) => {
     try {
         const userId = req.user?.id;
-        const userRole = req.user?.role?.toLowerCase();
+        const isAdmin = req.user?.role === 'admin';
         const userFirmId = req.user?.firmId || req.user?.firm_id; // JWT uses firmId
-        const isAdmin = userRole === 'admin';
 
         // Get firm_id from request or use user's firm
         let firmId = userFirmId;
@@ -163,9 +162,8 @@ router.post('/', authenticateToken, upload.array('files', 200), async (req, res)
 router.post('/improve', authenticateToken, async (req, res) => {
     try {
         const userId = req.user?.id;
-        const userRole = req.user?.role?.toLowerCase();
+        const isAdmin = req.user?.role === 'admin';
         const userFirmId = req.user?.firmId || req.user?.firm_id;
-        const isAdmin = userRole === 'admin';
 
         const { resumeIds, options: jobOptions = {} } = req.body;
 
@@ -219,9 +217,8 @@ router.post('/improve', authenticateToken, async (req, res) => {
 router.post('/deal-export', authenticateToken, async (req, res) => {
     try {
         const userId = req.user?.id;
-        const userRole = req.user?.role?.toLowerCase();
+        const isAdmin = req.user?.role === 'admin';
         const userFirmId = req.user?.firmId || req.user?.firm_id;
-        const isAdmin = userRole === 'admin';
 
         const { dealId, templateId, exportFormats = ['pdf'] } = req.body;
 
@@ -383,9 +380,8 @@ router.post('/deal-export', authenticateToken, async (req, res) => {
  */
 router.get('/', authenticateToken, async (req, res) => {
     try {
-        const userRole = req.user?.role?.toLowerCase();
+        const isAdmin = req.user?.role === 'admin';
         const userFirmId = req.user?.firmId || req.user?.firm_id;
-        const isAdmin = userRole === 'admin';
 
         const { limit = 50, offset = 0, status } = req.query;
 
@@ -424,9 +420,8 @@ router.get('/', authenticateToken, async (req, res) => {
 router.get('/:id', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
-        const userRole = req.user?.role?.toLowerCase();
+        const isAdmin = req.user?.role === 'admin';
         const userFirmId = req.user?.firmId || req.user?.firm_id;
-        const isAdmin = userRole === 'admin';
 
         const job = await getJob(id);
 
@@ -457,9 +452,8 @@ router.get('/:id', authenticateToken, async (req, res) => {
 router.post('/:id/cancel', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
-        const userRole = req.user?.role?.toLowerCase();
+        const isAdmin = req.user?.role === 'admin';
         const userFirmId = req.user?.firmId || req.user?.firm_id;
-        const isAdmin = userRole === 'admin';
 
         const job = await getJob(id);
 
@@ -494,9 +488,8 @@ router.post('/:id/cancel', authenticateToken, async (req, res) => {
 router.delete('/:id', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
-        const userRole = req.user?.role?.toLowerCase();
+        const isAdmin = req.user?.role === 'admin';
         const userFirmId = req.user?.firmId || req.user?.firm_id;
-        const isAdmin = userRole === 'admin';
 
         const job = await getJob(id);
 
@@ -530,9 +523,8 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 router.get('/:id/download', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
-        const userRole = req.user?.role?.toLowerCase();
+        const isAdmin = req.user?.role === 'admin';
         const userFirmId = req.user?.firmId || req.user?.firm_id;
-        const isAdmin = userRole === 'admin';
 
         const job = await getJob(id);
 
@@ -592,9 +584,8 @@ router.get('/:id/download', authenticateToken, async (req, res) => {
 router.get('/:id/pending-names', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
-        const userRole = req.user?.role?.toLowerCase();
+        const isAdmin = req.user?.role === 'admin';
         const userFirmId = req.user?.firmId || req.user?.firm_id;
-        const isAdmin = userRole === 'admin';
 
         const job = await getJob(id);
         if (!job) {
@@ -622,9 +613,8 @@ router.post('/items/:itemId/provide-name', authenticateToken, async (req, res) =
     try {
         const { itemId } = req.params;
         const { name } = req.body;
-        const userRole = req.user?.role?.toLowerCase();
+        const isAdmin = req.user?.role === 'admin';
         const userFirmId = req.user?.firmId || req.user?.firm_id;
-        const isAdmin = userRole === 'admin';
 
         if (!name || typeof name !== 'string' || name.trim().length === 0) {
             return res.status(400).json({ error: 'Le nom du candidat est requis' });
