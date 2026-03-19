@@ -311,14 +311,58 @@ git checkout develop
 
 > **Note** : La branche active de développement est `develop`. Assurez-vous de bien basculer sur cette branche après le clonage.
 
-### Étape 2 : Construire et lancer (méthode simple)
+### Étape 2 : Placer le fichier `.env.docker`
+
+⚠️ **Étape obligatoire** : Le fichier `.env.docker` doit être présent à la racine du projet **avant** de construire l'image Docker. Ce fichier est utilisé par le `Dockerfile` comme fichier de configuration (`.env`) à l'intérieur du conteneur.
+
+Ce fichier n'est **pas versionné** (il est dans `.gitignore`) car il contient des secrets (clés API, mots de passe). Vous devez le créer manuellement ou le récupérer auprès de l'administrateur du projet.
+
+```bash
+# Vérifier que le fichier existe
+ls .env.docker    # Linux/Mac
+dir .env.docker   # Windows
+```
+
+Le fichier `.env.docker` a la même structure que le fichier `.env` décrit dans la section [Installation hors Docker > Étape 3](#étape-3--configurer-lenvironnement), avec les valeurs adaptées à l'environnement Docker :
+
+```env
+# Valeurs spécifiques Docker (la base de données est locale au conteneur)
+POSTGRES_HOST=127.0.0.1
+POSTGRES_PORT=5432
+POSTGRES_DB=resumeconverter
+POSTGRES_USER=resumeconverter
+POSTGRES_PASSWORD=votre_mot_de_passe
+
+# Sécurité (minimum 32 caractères chacun)
+JWT_SECRET=votre-secret-jwt-min-32-caracteres
+REFRESH_TOKEN_SECRET=votre-secret-refresh-min-32-caracteres
+CSRF_SECRET=votre-secret-csrf-min-32-caracteres
+
+# Mode production
+NODE_ENV=production
+HTTPS_ENABLED=true
+HTTPS_PORT=3443
+
+# APIs LLM (optionnel)
+OPENAI_API_KEY=sk-...
+ANTHROPIC_API_KEY=sk-ant-...
+
+# Google OAuth (optionnel)
+GOOGLE_CLIENT_ID=votre-client-id
+GOOGLE_CLIENT_SECRET=votre-client-secret
+MAIL_TOKEN_ENCRYPTION_KEY=votre-cle-64-hex
+```
+
+> **Sans ce fichier, la commande `docker-build.bat` échouera** avec une erreur `COPY .env.docker ./.env` car le Dockerfile s'attend à trouver ce fichier.
+
+### Étape 3 : Construire et lancer (méthode simple)
 
 #### Windows - Scripts .bat (recommandé)
 
 Des scripts simples sont disponibles à la racine du projet :
 
 ```batch
-docker-build.bat   # Construire l'image Docker
+docker-build.bat   # Construire l'image Docker (⚠️ nécessite .env.docker)
 docker-run.bat     # Démarrer le conteneur (⚠️ nécessite un terminal Administrateur)
 ```
 
@@ -350,7 +394,7 @@ chmod +x docker/docker-build.sh
 ./docker/docker-build.sh run
 ```
 
-### Étape 3 : Accéder à l'application
+### Étape 4 : Accéder à l'application
 
 | Service | URL |
 |---------|-----|

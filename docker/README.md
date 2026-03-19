@@ -14,8 +14,45 @@ This Docker setup creates a **single, fully autonomous container** that includes
 ## 📋 Prerequisites
 
 - Docker installed and running
+- **`.env.docker` file** at the project root (required — see below)
 - (Optional) OpenAI API key for AI features
 - (Optional) Anthropic API key for Claude integration
+
+### ⚠️ Required: `.env.docker` file
+
+The `.env.docker` file must be present at the project root **before building** the Docker image. The `Dockerfile` copies it as `.env` inside the container (`COPY .env.docker ./.env`).
+
+This file is **not versioned** (listed in `.gitignore`) because it contains secrets. You must create it manually or obtain it from the project administrator.
+
+```env
+# Docker-specific values (database is local to container)
+POSTGRES_HOST=127.0.0.1
+POSTGRES_PORT=5432
+POSTGRES_DB=resumeconverter
+POSTGRES_USER=resumeconverter
+POSTGRES_PASSWORD=your_password
+
+# Security (minimum 32 characters each)
+JWT_SECRET=your-jwt-secret-min-32-chars
+REFRESH_TOKEN_SECRET=your-refresh-secret-min-32-chars
+CSRF_SECRET=your-csrf-secret-min-32-chars
+
+# Production mode
+NODE_ENV=production
+HTTPS_ENABLED=true
+HTTPS_PORT=3443
+
+# LLM APIs (optional)
+OPENAI_API_KEY=sk-...
+ANTHROPIC_API_KEY=sk-ant-...
+
+# Google OAuth (optional)
+GOOGLE_CLIENT_ID=your-client-id
+GOOGLE_CLIENT_SECRET=your-client-secret
+MAIL_TOKEN_ENCRYPTION_KEY=your-64-hex-key
+```
+
+> **Without this file, `docker-build.bat` will fail** with a `COPY .env.docker ./.env` error.
 
 ## 🚀 Quick Start
 
@@ -30,7 +67,7 @@ git clone https://github.com/votre-repo/ResumeConverter.git
 cd ResumeConverter
 git checkout develop
 
-docker-build.bat   # Build the Docker image
+docker-build.bat   # Build the Docker image (⚠️ requires .env.docker)
 docker-run.bat     # Start the container (⚠️ requires Administrator terminal)
 ```
 
