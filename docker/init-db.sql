@@ -521,6 +521,23 @@ CREATE TABLE public.user_blacklist (
 
 COMMENT ON TABLE public.user_blacklist IS 'Blacklisted users - all their tokens are invalid';
 
+-- Password Reset Tokens
+CREATE TABLE public.password_reset_tokens (
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    user_id uuid NOT NULL,
+    token_hash text NOT NULL,
+    expires_at timestamp with time zone NOT NULL,
+    used_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT password_reset_tokens_pkey PRIMARY KEY (id),
+    CONSTRAINT password_reset_tokens_hash_key UNIQUE (token_hash)
+);
+
+COMMENT ON TABLE public.password_reset_tokens IS 'Password reset tokens for forgot password flow';
+COMMENT ON COLUMN public.password_reset_tokens.token_hash IS 'SHA-256 hash of the reset token (plain token sent via email)';
+COMMENT ON COLUMN public.password_reset_tokens.expires_at IS 'Token expiry (1 hour after creation)';
+COMMENT ON COLUMN public.password_reset_tokens.used_at IS 'Timestamp when token was used (one-time use)';
+
 -- User Mail Tokens
 CREATE TABLE public.user_mail_tokens (
     id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
@@ -927,6 +944,11 @@ CREATE INDEX idx_token_blacklist_expires ON public.token_blacklist USING btree (
 -- User Blacklist indexes
 CREATE INDEX idx_user_blacklist_user_id ON public.user_blacklist USING btree (user_id);
 
+-- Password Reset Tokens indexes
+CREATE INDEX idx_password_reset_tokens_hash ON public.password_reset_tokens USING btree (token_hash);
+CREATE INDEX idx_password_reset_tokens_user ON public.password_reset_tokens USING btree (user_id);
+CREATE INDEX idx_password_reset_tokens_expires ON public.password_reset_tokens USING btree (expires_at);
+
 -- User Mail Tokens indexes
 CREATE INDEX idx_user_mail_tokens_user_id ON public.user_mail_tokens USING btree (user_id);
 
@@ -1036,6 +1058,10 @@ ALTER TABLE ONLY public.email_templates
 -- User Blacklist FK
 ALTER TABLE ONLY public.user_blacklist
     ADD CONSTRAINT user_blacklist_user_fk FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+-- Password Reset Tokens FK
+ALTER TABLE ONLY public.password_reset_tokens
+    ADD CONSTRAINT password_reset_tokens_user_fk FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 
 -- User Mail Tokens FK
 ALTER TABLE ONLY public.user_mail_tokens

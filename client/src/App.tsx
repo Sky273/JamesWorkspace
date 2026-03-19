@@ -42,6 +42,8 @@ const ClientsPage = lazy(() => import('./pages/ClientsPage'));
 const EmailTemplatesPage = lazy(() => import('./pages/admin/EmailTemplatesPage'));
 const SignIn = lazy(() => import('./components/SignIn'));
 const Register = lazy(() => import('./components/Register'));
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
 const ConsentResponsePage = lazy(() => import('./pages/ConsentResponsePage'));
 const UserProfilePage = lazy(() => import('./pages/UserProfilePage'));
 const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'));
@@ -138,6 +140,8 @@ const App = (): JSX.Element => {
               <Routes>
                 <Route path="/signin" element={<SignIn />} />
                 <Route path="/register" element={<Register />} />
+                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
                 {/* Public consent response page (no auth required) */}
                 <Route path="/consent/:token" element={<ConsentResponsePage />} />
                 {/* Public legal pages (no auth required) */}

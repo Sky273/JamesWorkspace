@@ -14,6 +14,7 @@ import {
     purgeExpiredResumes 
 } from './consent.service.js';
 import { proactiveTokenRefresh } from './mail/gdprMailService.js';
+import { cleanupExpiredTokens } from './passwordReset.service.js';
 
 // Scheduler intervals
 let consentCheckInterval = null;
@@ -70,6 +71,20 @@ async function runPurgeCheck() {
 }
 
 /**
+ * Run cleanup of expired/used password reset tokens
+ */
+async function runPasswordResetCleanup() {
+    try {
+        const deletedCount = await cleanupExpiredTokens();
+        if (deletedCount > 0) {
+            safeLog('info', '[Scheduler] Password reset token cleanup completed', { deletedCount });
+        }
+    } catch (error) {
+        safeLog('error', '[Scheduler] Password reset token cleanup failed', { error: error.message });
+    }
+}
+
+/**
  * Run proactive GDPR token refresh
  * This keeps the Google OAuth refresh token active and prevents expiration
  */
@@ -100,6 +115,7 @@ export function startScheduler() {
         safeLog('info', '[Scheduler] Running initial consent checks');
         await runConsentCheck();
         await runPurgeCheck();
+        await runPasswordResetCleanup();
         // Also run token refresh on startup to ensure token is valid
         await runTokenRefresh();
     }, 30000); // 30 seconds after startup
@@ -201,6 +217,12 @@ export async function runAllChecks() {
     } catch (error) {
         safeLog('error', '[Scheduler] Manual token refresh failed', { error: error.message });
         results.tokenRefresh = { success: false, message: error.message };
+    }
+
+    try {
+        results.resetTokensCleanup = await cleanupExpiredTokens();
+    } catch (error) {
+        safeLog('error', '[Scheduler] Manual reset token cleanup failed', { error: error.message });
     }
 
     safeLog('info', '[Scheduler] Manual checks completed', results);

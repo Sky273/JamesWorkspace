@@ -287,6 +287,58 @@ export const authService = {
   },
 
   /**
+   * Request a password reset email (forgot password flow)
+   */
+  async forgotPassword(email: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const csrfToken = await getCsrfToken();
+      const response = await fetchWithAuth('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-csrf-token': csrfToken || ''
+        },
+        body: JSON.stringify({ email })
+      });
+
+      const data = await response.json();
+      return { success: true, message: data.message };
+    } catch (error) {
+      logger.error('Forgot password error:', error);
+      // Always return success to prevent email enumeration on client side too
+      return { success: true, message: 'Si un compte existe avec cette adresse email, un lien de réinitialisation a été envoyé.' };
+    }
+  },
+
+  /**
+   * Reset password using a valid token
+   */
+  async resetPassword(token: string, password: string): Promise<{ success: boolean; message: string; code?: string }> {
+    try {
+      const csrfToken = await getCsrfToken();
+      const response = await fetchWithAuth('/api/auth/reset-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-csrf-token': csrfToken || ''
+        },
+        body: JSON.stringify({ token, password })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return { success: false, message: data.error || 'Erreur lors de la réinitialisation.', code: data.code };
+      }
+
+      return { success: true, message: data.message };
+    } catch (error) {
+      logger.error('Reset password error:', error);
+      throw new Error('Erreur lors de la réinitialisation du mot de passe.');
+    }
+  },
+
+  /**
    * Admin: Delete user — uses fetchWithCsrfRetry for auth + CSRF retry.
    */
   async deleteUser(userId: string): Promise<{ message: string }> {

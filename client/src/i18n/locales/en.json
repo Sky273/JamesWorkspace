@@ -102,6 +102,41 @@
       "googleAuthFailed": "Google authentication failed. Please try again.",
       "registeredPending": "Registration successful! Your account is pending approval by an administrator."
     },
+    "forgotPassword": {
+      "title": "Forgot your password",
+      "subtitle": "Enter your email address and we'll send you a reset link.",
+      "emailLabel": "Email address",
+      "emailPlaceholder": "your@email.com",
+      "submitButton": "Send reset link",
+      "backToSignIn": "Back to sign in",
+      "successTitle": "Email sent!",
+      "successMessage": "If an account exists with this email address, a reset link has been sent. The link is valid for 1 hour.",
+      "checkSpam": "Check your spam folder if you don't receive the email.",
+      "error": "An error occurred. Please try again."
+    },
+    "resetPassword": {
+      "title": "New password",
+      "subtitle": "Choose a new password for your account.",
+      "newPasswordLabel": "New password",
+      "newPasswordPlaceholder": "Minimum 8 characters",
+      "confirmPasswordLabel": "Confirm password",
+      "confirmPasswordPlaceholder": "Retype your password",
+      "passwordHint": "Password must be at least 8 characters long.",
+      "passwordMismatch": "Passwords do not match.",
+      "passwordMinLength": "Password must be at least 8 characters.",
+      "submitButton": "Reset password",
+      "backToSignIn": "Back to sign in",
+      "goToSignIn": "Sign in",
+      "successTitle": "Password reset!",
+      "successMessage": "Your password has been changed successfully. You can now sign in.",
+      "error": "An error occurred. Please try again.",
+      "errors": {
+        "invalid_token": "This reset link is invalid.",
+        "token_used": "This link has already been used. Please request a new one.",
+        "token_expired": "This link has expired. Please request a new one.",
+        "account_inactive": "This account is disabled. Contact an administrator."
+      }
+    },
     "register": {
       "title": "Create your account",
       "nameLabel": "Full name",
