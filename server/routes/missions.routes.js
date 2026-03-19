@@ -9,7 +9,7 @@ import { validateBody, validateParams, createMissionSchema, updateMissionSchema 
 import { sanitizeHtmlContent } from '../utils/sanitizer.backend.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { sanitizeErrorMessage } from '../utils/errors.js';
-import { selectWithTimeout, findWithTimeout, createWithTimeout, updateWithTimeout, destroyWithTimeout } from '../utils/postgresHelpers.js';
+import { selectWithTimeout, findWithTimeout, createWithTimeout, updateWithTimeout, destroyWithTimeout, escapeLike } from '../utils/postgresHelpers.js';
 import { query } from '../config/database.js';
 import { getUserFirmId } from '../utils/firmHelpers.js';
 
@@ -67,7 +67,7 @@ router.get('/', authenticateToken, async (req, res) => {
         // Search filter (searches in title, content, firm)
         if (search) {
             conditions.push(`(m.title ILIKE $${paramIndex} OR m.firm ILIKE $${paramIndex})`);
-            params.push(`%${search}%`);
+            params.push(`%${escapeLike(search)}%`);
             paramIndex++;
         }
 

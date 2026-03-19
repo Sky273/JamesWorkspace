@@ -70,8 +70,7 @@ router.post('/extract-from-cv', authenticateToken, requireAdmin, upload.single('
             stack: error.stack
         });
         return res.status(500).json({ 
-            error: 'Failed to extract template from CV',
-            message: error.message 
+            error: 'Failed to extract template from CV' 
         });
     }
 });

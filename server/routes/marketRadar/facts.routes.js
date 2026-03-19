@@ -49,10 +49,9 @@ router.get('/facts/all', authenticateToken, async (req, res) => {
             duration
         });
     } catch (error) {
-        safeLog('error', 'Market Radar: Failed to get all facts', { error: error.message });
+        safeLog('error', 'Market Radar: Failed to get all facts');
         res.status(500).json({ 
-            error: 'Failed to get all facts', 
-            message: error.message 
+            error: 'Failed to get all facts' 
         });
     }
 });
@@ -74,10 +73,9 @@ router.get('/facts/filters', authenticateToken, async (req, res) => {
             filters
         });
     } catch (error) {
-        safeLog('error', 'Market Radar: Failed to get facts filters', { error: error.message });
+        safeLog('error', 'Market Radar: Failed to get facts filters');
         res.status(500).json({ 
-            error: 'Failed to get facts filters', 
-            message: error.message 
+            error: 'Failed to get facts filters' 
         });
     }
 });
@@ -94,10 +92,9 @@ router.get('/facts/summary', authenticateToken, async (req, res) => {
             summary
         });
     } catch (error) {
-        safeLog('error', 'Market Radar: Failed to get facts summary', { error: error.message });
+        safeLog('error', 'Market Radar: Failed to get facts summary');
         res.status(500).json({ 
-            error: 'Failed to get facts summary', 
-            message: error.message 
+            error: 'Failed to get facts summary' 
         });
     }
 });
@@ -122,10 +119,9 @@ router.post('/facts/cache/refresh', authenticateToken, requireAdmin, async (req,
             duration
         });
     } catch (error) {
-        safeLog('error', 'Market Radar: Facts cache refresh failed', { error: error.message });
+        safeLog('error', 'Market Radar: Facts cache refresh failed');
         res.status(500).json({ 
-            error: 'Facts cache refresh failed', 
-            message: error.message 
+            error: 'Facts cache refresh failed' 
         });
     }
 });
@@ -165,10 +161,9 @@ router.get('/facts', authenticateToken, async (req, res) => {
             pagination: result.pagination
         });
     } catch (error) {
-        safeLog('error', 'Market Radar: Failed to get facts', { error: error.message });
+        safeLog('error', 'Market Radar: Failed to get facts');
         res.status(500).json({ 
-            error: 'Failed to retrieve facts', 
-            message: error.message 
+            error: 'Failed to retrieve facts' 
         });
     }
 });
@@ -192,10 +187,9 @@ router.get('/latest/:type', authenticateToken, async (req, res) => {
             facts
         });
     } catch (error) {
-        safeLog('error', 'Market Radar: Failed to get latest facts', { error: error.message });
+        safeLog('error', 'Market Radar: Failed to get latest facts');
         res.status(500).json({ 
-            error: 'Failed to retrieve facts', 
-            message: error.message 
+            error: 'Failed to retrieve facts' 
         });
     }
 });
@@ -216,10 +210,9 @@ router.get('/trend/:keyword', authenticateToken, async (req, res) => {
             ...trend
         });
     } catch (error) {
-        safeLog('error', 'Market Radar: Failed to get trend', { error: error.message });
+        safeLog('error', 'Market Radar: Failed to get trend');
         res.status(500).json({ 
-            error: 'Failed to retrieve trend', 
-            message: error.message 
+            error: 'Failed to retrieve trend' 
         });
     }
 });
@@ -243,10 +236,9 @@ router.get('/regional', authenticateToken, async (req, res) => {
             regions: data
         });
     } catch (error) {
-        safeLog('error', 'Market Radar: Failed to get regional data', { error: error.message });
+        safeLog('error', 'Market Radar: Failed to get regional data');
         res.status(500).json({ 
-            error: 'Failed to retrieve regional data', 
-            message: error.message 
+            error: 'Failed to retrieve regional data' 
         });
     }
 });

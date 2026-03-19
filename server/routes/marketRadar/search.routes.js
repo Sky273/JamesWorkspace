@@ -40,8 +40,7 @@ router.get('/search/france-travail', authenticateToken, async (req, res) => {
     } catch (error) {
         safeLog('error', 'Market Radar: France Travail search failed', { error: error.message });
         res.status(500).json({ 
-            error: 'Search failed', 
-            message: error.message 
+            error: 'Search failed' 
         });
     }
 });
@@ -72,8 +71,7 @@ router.get('/search/adzuna', authenticateToken, async (req, res) => {
     } catch (error) {
         safeLog('error', 'Market Radar: Adzuna search failed', { error: error.message });
         res.status(500).json({ 
-            error: 'Search failed', 
-            message: error.message 
+            error: 'Search failed' 
         });
     }
 });
@@ -96,8 +94,7 @@ router.get('/salary-histogram', authenticateToken, async (req, res) => {
     } catch (error) {
         safeLog('error', 'Market Radar: Salary histogram failed', { error: error.message });
         res.status(500).json({ 
-            error: 'Failed to get salary data', 
-            message: error.message 
+            error: 'Failed to get salary data' 
         });
     }
 });
@@ -120,8 +117,7 @@ router.get('/top-companies', authenticateToken, async (req, res) => {
     } catch (error) {
         safeLog('error', 'Market Radar: Top companies failed', { error: error.message });
         res.status(500).json({ 
-            error: 'Failed to get company data', 
-            message: error.message 
+            error: 'Failed to get company data' 
         });
     }
 });

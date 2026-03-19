@@ -13,7 +13,8 @@ import {
     findWithTimeout, 
     createWithTimeout, 
     updateWithTimeout, 
-    destroyWithTimeout 
+    destroyWithTimeout,
+    escapeLike 
 } from '../../utils/postgresHelpers.js';
 import { query } from '../../config/database.js';
 import { getUserFirmId } from '../../utils/firmHelpers.js';
@@ -50,7 +51,7 @@ router.get('/', authenticateToken, async (req, res) => {
         
         if (search) {
             conditions.push(`(LOWER(t.name) LIKE $${paramIndex} OR LOWER(t.description) LIKE $${paramIndex})`);
-            params.push(`%${search.toLowerCase()}%`);
+            params.push(`%${escapeLike(search.toLowerCase())}%`);
             paramIndex++;
         }
         
@@ -132,8 +133,7 @@ router.get('/', authenticateToken, async (req, res) => {
     } catch (error) {
         safeLog('error', 'Error fetching templates', { error: error.message });
         return res.status(500).json({ 
-            error: 'Failed to fetch templates',
-            message: error.message 
+            error: 'Failed to fetch templates' 
         });
     }
 });
@@ -169,8 +169,7 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
         }
         safeLog('error', 'Error fetching template', { error: error.message, templateId: req.params.id });
         return res.status(500).json({ 
-            error: 'Failed to fetch template',
-            message: error.message 
+            error: 'Failed to fetch template' 
         });
     }
 });
@@ -250,8 +249,7 @@ router.post('/', authenticateToken, requireAdmin, validateBody(createTemplateSch
         }
         safeLog('error', 'Error creating template', { error: error.message });
         return res.status(500).json({ 
-            error: 'Failed to create template',
-            message: error.message 
+            error: 'Failed to create template' 
         });
     }
 });
@@ -347,8 +345,7 @@ router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), async 
         }
         safeLog('error', 'Error updating template', { error: error.message, templateId: req.params.id });
         return res.status(500).json({ 
-            error: 'Failed to update template',
-            message: error.message 
+            error: 'Failed to update template' 
         });
     }
 });
@@ -368,8 +365,7 @@ router.delete('/:id', authenticateToken, requireAdmin, validateParams('id'), asy
         }
         safeLog('error', 'Error deleting template', { error: error.message, templateId: req.params.id });
         return res.status(500).json({ 
-            error: 'Failed to delete template',
-            message: error.message 
+            error: 'Failed to delete template' 
         });
     }
 });

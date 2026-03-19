@@ -12,14 +12,14 @@ const REQUIRED_VARS = [
     { name: 'POSTGRES_HOST', description: 'PostgreSQL host' },
     { name: 'POSTGRES_DB', description: 'PostgreSQL database name' },
     { name: 'POSTGRES_USER', description: 'PostgreSQL user' },
-    { name: 'POSTGRES_PASSWORD', description: 'PostgreSQL password' }
+    { name: 'POSTGRES_PASSWORD', description: 'PostgreSQL password' },
+    { name: 'CSRF_SECRET', minLength: 32, description: 'CSRF protection secret' }
 ];
 
 // Optional but recommended variables
 const RECOMMENDED_VARS = [
     { name: 'OPENAI_API_KEY', description: 'OpenAI API key for LLM features' },
     { name: 'ANTHROPIC_API_KEY', description: 'Anthropic API key for Claude' },
-    { name: 'CSRF_SECRET', minLength: 32, description: 'CSRF protection secret' },
     { name: 'NODE_ENV', description: 'Environment (development/production)' }
 ];
 

@@ -6,7 +6,7 @@
 import express from 'express';
 import { authenticateToken } from '../../middleware/auth.middleware.js';
 import { validateParams, validateBody, updateResumeSchema } from '../../utils/validation.js';
-import { selectWithTimeout, updateWithTimeout, destroyWithTimeout } from '../../utils/postgresHelpers.js';
+import { selectWithTimeout, updateWithTimeout, destroyWithTimeout, escapeLike } from '../../utils/postgresHelpers.js';
 import { safeLog } from '../../utils/logger.backend.js';
 import { query } from '../../config/database.js';
 import { getUserFirmId, isUserAdmin } from '../../utils/firmHelpers.js';
@@ -71,7 +71,7 @@ router.get('/', authenticateToken, async (req, res) => {
         // Search filter (searches in name, title, file_name)
         if (search) {
             conditions.push(`(LOWER(name) LIKE $${paramIndex} OR LOWER(title) LIKE $${paramIndex} OR LOWER(file_name) LIKE $${paramIndex})`);
-            params.push(`%${search.toLowerCase()}%`);
+            params.push(`%${escapeLike(search.toLowerCase())}%`);
             paramIndex++;
         }
 
@@ -160,8 +160,7 @@ router.get('/', authenticateToken, async (req, res) => {
     } catch (error) {
         safeLog('error', 'Error fetching resumes', { error: error.message });
         return res.status(500).json({ 
-            error: 'Failed to fetch resumes',
-            message: error.message 
+            error: 'Failed to fetch resumes' 
         });
     }
 });
@@ -248,8 +247,7 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
         }
         safeLog('error', 'Error fetching resume', { error: error.message, resumeId: req.params.id });
         return res.status(500).json({ 
-            error: 'Failed to fetch resume',
-            message: error.message 
+            error: 'Failed to fetch resume' 
         });
     }
 });

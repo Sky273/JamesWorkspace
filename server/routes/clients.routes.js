@@ -5,6 +5,7 @@ import { validateBody, validateParams, createClientSchema, updateClientSchema, c
 import { safeLog } from '../utils/logger.backend.js';
 import { query } from '../config/database.js';
 import { getUserFirmId } from '../utils/firmHelpers.js';
+import { escapeLike } from '../utils/postgresHelpers.js';
 
 const router = express.Router();
 
@@ -37,7 +38,7 @@ router.get('/', authenticateToken, async (req, res) => {
         // Search filter
         if (search) {
             whereConditions.push(`(LOWER(name) LIKE $${paramIndex} OR LOWER(industry) LIKE $${paramIndex})`);
-            params.push(`%${search.toLowerCase()}%`);
+            params.push(`%${escapeLike(search.toLowerCase())}%`);
             paramIndex++;
         }
 
@@ -94,8 +95,7 @@ router.get('/', authenticateToken, async (req, res) => {
     } catch (error) {
         safeLog('error', 'Error fetching clients', { error: error.message });
         return res.status(500).json({ 
-            error: 'Failed to fetch clients',
-            message: error.message 
+            error: 'Failed to fetch clients' 
         });
     }
 });
@@ -120,8 +120,7 @@ router.get('/industries/list', authenticateToken, async (req, res) => {
     } catch (error) {
         safeLog('error', 'Error fetching industries', { error: error.message });
         return res.status(500).json({ 
-            error: 'Failed to fetch industries',
-            message: error.message 
+            error: 'Failed to fetch industries' 
         });
     }
 });
@@ -183,8 +182,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
     } catch (error) {
         safeLog('error', 'Error fetching client', { error: error.message, clientId: req.params.id });
         return res.status(500).json({ 
-            error: 'Failed to fetch client',
-            message: error.message 
+            error: 'Failed to fetch client' 
         });
     }
 });
@@ -246,8 +244,7 @@ router.post('/', authenticateToken, userRateLimit(), validateBody(createClientSc
         }
         safeLog('error', 'Error creating client', { error: error.message });
         return res.status(500).json({ 
-            error: 'Failed to create client',
-            message: error.message 
+            error: 'Failed to create client' 
         });
     }
 });
@@ -311,8 +308,7 @@ router.put('/:id', authenticateToken, userRateLimit(), validateParams('id'), val
         }
         safeLog('error', 'Error updating client', { error: error.message, clientId: req.params.id });
         return res.status(500).json({ 
-            error: 'Failed to update client',
-            message: error.message 
+            error: 'Failed to update client' 
         });
     }
 });
@@ -353,8 +349,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     } catch (error) {
         safeLog('error', 'Error deleting client', { error: error.message, clientId: req.params.id });
         return res.status(500).json({ 
-            error: 'Failed to delete client',
-            message: error.message 
+            error: 'Failed to delete client' 
         });
     }
 });
@@ -389,8 +384,7 @@ router.get('/:clientId/contacts', authenticateToken, async (req, res) => {
     } catch (error) {
         safeLog('error', 'Error fetching contacts', { error: error.message, clientId: req.params.clientId });
         return res.status(500).json({ 
-            error: 'Failed to fetch contacts',
-            message: error.message 
+            error: 'Failed to fetch contacts' 
         });
     }
 });
@@ -434,8 +428,7 @@ router.post('/:clientId/contacts', authenticateToken, userRateLimit(), validateB
     } catch (error) {
         safeLog('error', 'Error creating contact', { error: error.message, clientId: req.params.clientId });
         return res.status(500).json({ 
-            error: 'Failed to create contact',
-            message: error.message 
+            error: 'Failed to create contact' 
         });
     }
 });
@@ -485,8 +478,7 @@ router.put('/:clientId/contacts/:id', authenticateToken, userRateLimit(), valida
     } catch (error) {
         safeLog('error', 'Error updating contact', { error: error.message, contactId: req.params.id });
         return res.status(500).json({ 
-            error: 'Failed to update contact',
-            message: error.message 
+            error: 'Failed to update contact' 
         });
     }
 });
@@ -533,8 +525,7 @@ router.delete('/:clientId/contacts/:id', authenticateToken, async (req, res) => 
     } catch (error) {
         safeLog('error', 'Error deleting contact', { error: error.message, contactId: req.params.id });
         return res.status(500).json({ 
-            error: 'Failed to delete contact',
-            message: error.message 
+            error: 'Failed to delete contact' 
         });
     }
 });

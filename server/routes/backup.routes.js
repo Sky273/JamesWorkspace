@@ -185,7 +185,7 @@ router.post('/test-connection', validateBody(testBackupConnectionSchema), async 
         res.json(result);
     } catch (error) {
         safeLog('error', 'Connection test failed', { error: error.message });
-        res.status(500).json({ success: false, message: error.message });
+        res.status(500).json({ success: false, message: 'Connection test failed' });
     }
 });
 
@@ -267,11 +267,10 @@ router.get('/list-remote', async (req, res) => {
         
         res.json(result);
     } catch (error) {
-        safeLog('error', 'Failed to list remote backups', { error: error.message });
+        safeLog('error', 'Failed to list remote backups', { error: 'Failed to list remote backups' });
         res.status(500).json({ 
             success: false, 
-            files: [], 
-            message: error.message 
+            files: [] 
         });
     }
 });
@@ -302,10 +301,9 @@ router.post('/restore', async (req, res) => {
         
         res.json(result);
     } catch (error) {
-        safeLog('error', 'Database restore failed', { error: error.message });
+        safeLog('error', 'Database restore failed', { error: 'Database restore failed' });
         res.status(500).json({ 
-            success: false, 
-            message: error.message 
+            success: false 
         });
     }
 });

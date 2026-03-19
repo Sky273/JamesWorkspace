@@ -27,8 +27,7 @@ router.get('/', authenticateToken, requireAdmin, (req, res) => {
     } catch (error) {
         safeLog('error', 'Error fetching metrics', { error: error.message });
         res.status(500).json({ 
-            error: 'Failed to fetch metrics',
-            message: error.message 
+            error: 'Failed to fetch metrics'
         });
     }
 });
@@ -62,8 +61,7 @@ router.get('/summary', authenticateToken, requireAdmin, (req, res) => {
     } catch (error) {
         safeLog('error', 'Error fetching metrics summary', { error: error.message });
         res.status(500).json({ 
-            error: 'Failed to fetch metrics summary',
-            message: error.message 
+            error: 'Failed to fetch metrics summary' 
         });
     }
 });
@@ -90,8 +88,7 @@ router.get('/performance', authenticateToken, requireAdmin, (req, res) => {
     } catch (error) {
         safeLog('error', 'Error fetching performance metrics', { error: error.message });
         res.status(500).json({ 
-            error: 'Failed to fetch performance metrics',
-            message: error.message 
+            error: 'Failed to fetch performance metrics' 
         });
     }
 });
@@ -107,8 +104,7 @@ router.get('/errors', authenticateToken, requireAdmin, (req, res) => {
     } catch (error) {
         safeLog('error', 'Error fetching error metrics', { error: error.message });
         res.status(500).json({ 
-            error: 'Failed to fetch error metrics',
-            message: error.message 
+            error: 'Failed to fetch error metrics' 
         });
     }
 });
@@ -124,8 +120,7 @@ router.get('/cache', authenticateToken, requireAdmin, (req, res) => {
     } catch (error) {
         safeLog('error', 'Error fetching cache metrics', { error: error.message });
         res.status(500).json({ 
-            error: 'Failed to fetch cache metrics',
-            message: error.message 
+            error: 'Failed to fetch cache metrics' 
         });
     }
 });
@@ -141,8 +136,7 @@ router.get('/llm', authenticateToken, requireAdmin, (req, res) => {
     } catch (error) {
         safeLog('error', 'Error fetching LLM metrics', { error: error.message });
         res.status(500).json({ 
-            error: 'Failed to fetch LLM metrics',
-            message: error.message 
+            error: 'Failed to fetch LLM metrics' 
         });
     }
 });
@@ -161,8 +155,7 @@ router.post('/reset', authenticateToken, requireAdmin, (req, res) => {
     } catch (error) {
         safeLog('error', 'Error resetting metrics', { error: error.message });
         res.status(500).json({ 
-            error: 'Failed to reset metrics',
-            message: error.message 
+            error: 'Failed to reset metrics' 
         });
     }
 });
@@ -248,8 +241,7 @@ router.get('/database', authenticateToken, requireAdmin, async (req, res) => {
     } catch (error) {
         safeLog('error', 'Error fetching database metrics', { error: error.message });
         res.status(500).json({ 
-            error: 'Failed to fetch database metrics',
-            message: error.message 
+            error: 'Failed to fetch database metrics' 
         });
     }
 });
@@ -265,8 +257,7 @@ router.get('/apm', authenticateToken, requireAdmin, (req, res) => {
     } catch (error) {
         safeLog('error', 'Error fetching APM stats', { error: error.message });
         res.status(500).json({ 
-            error: 'Failed to fetch APM stats',
-            message: error.message 
+            error: 'Failed to fetch APM stats' 
         });
     }
 });
@@ -286,8 +277,7 @@ router.get('/apm/slow-requests', authenticateToken, requireAdmin, (req, res) => 
     } catch (error) {
         safeLog('error', 'Error fetching slow requests', { error: error.message });
         res.status(500).json({ 
-            error: 'Failed to fetch slow requests',
-            message: error.message 
+            error: 'Failed to fetch slow requests' 
         });
     }
 });
@@ -306,8 +296,7 @@ router.delete('/apm/slow-requests', authenticateToken, requireAdmin, (req, res) 
     } catch (error) {
         safeLog('error', 'Error clearing slow requests', { error: error.message });
         res.status(500).json({ 
-            error: 'Failed to clear slow requests',
-            message: error.message 
+            error: 'Failed to clear slow requests' 
         });
     }
 });

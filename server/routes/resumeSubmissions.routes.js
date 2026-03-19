@@ -1,5 +1,6 @@
 import express from 'express';
 import { authenticateToken, isUserAdmin } from '../middleware/auth.middleware.js';
+import { validateParams } from '../utils/validation.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { query } from '../config/database.js';
 import { getUserFirmId } from '../utils/firmHelpers.js';
@@ -112,14 +113,13 @@ router.get('/', authenticateToken, async (req, res) => {
     } catch (error) {
         safeLog('error', 'Error fetching submissions', { error: error.message });
         return res.status(500).json({ 
-            error: 'Failed to fetch submissions',
-            message: error.message 
+            error: 'Failed to fetch submissions' 
         });
     }
 });
 
 // GET /api/submissions/:id - Get submission by ID
-router.get('/:id', authenticateToken, async (req, res) => {
+router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => {
     try {
         const { id } = req.params;
         const userFirmId = await getUserFirmId(req);
@@ -159,8 +159,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
     } catch (error) {
         safeLog('error', 'Error fetching submission', { error: error.message, submissionId: req.params.id });
         return res.status(500).json({ 
-            error: 'Failed to fetch submission',
-            message: error.message 
+            error: 'Failed to fetch submission' 
         });
     }
 });
@@ -256,14 +255,13 @@ router.post('/', authenticateToken, async (req, res) => {
     } catch (error) {
         safeLog('error', 'Error creating submission', { error: error.message });
         return res.status(500).json({ 
-            error: 'Failed to create submission',
-            message: error.message 
+            error: 'Failed to create submission' 
         });
     }
 });
 
 // PUT /api/submissions/:id - Update submission status
-router.put('/:id', authenticateToken, async (req, res) => {
+router.put('/:id', authenticateToken, validateParams('id'), async (req, res) => {
     try {
         const { id } = req.params;
         const userFirmId = await getUserFirmId(req);
@@ -295,14 +293,13 @@ router.put('/:id', authenticateToken, async (req, res) => {
     } catch (error) {
         safeLog('error', 'Error updating submission', { error: error.message, submissionId: req.params.id });
         return res.status(500).json({ 
-            error: 'Failed to update submission',
-            message: error.message 
+            error: 'Failed to update submission' 
         });
     }
 });
 
 // DELETE /api/submissions/:id - Delete submission
-router.delete('/:id', authenticateToken, async (req, res) => {
+router.delete('/:id', authenticateToken, validateParams('id'), async (req, res) => {
     try {
         const { id } = req.params;
         const userFirmId = await getUserFirmId(req);
@@ -325,8 +322,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     } catch (error) {
         safeLog('error', 'Error deleting submission', { error: error.message, submissionId: req.params.id });
         return res.status(500).json({ 
-            error: 'Failed to delete submission',
-            message: error.message 
+            error: 'Failed to delete submission' 
         });
     }
 });
@@ -365,8 +361,7 @@ router.get('/stats/summary', authenticateToken, async (req, res) => {
     } catch (error) {
         safeLog('error', 'Error fetching submission stats', { error: error.message });
         return res.status(500).json({ 
-            error: 'Failed to fetch submission stats',
-            message: error.message 
+            error: 'Failed to fetch submission stats' 
         });
     }
 });

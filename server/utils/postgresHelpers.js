@@ -82,8 +82,10 @@ async function queryWithTimeout(sql, params, timeout = 30000) {
     const client = await getClientWithRetry();
     
     try {
-        // Set statement timeout for this session
-        await client.query(`SET statement_timeout = ${timeout}`);
+        // Set statement timeout for this session (explicit numeric coercion to prevent injection)
+        const safeTimeout = Math.max(0, Math.floor(Number(timeout)));
+        if (!Number.isFinite(safeTimeout)) throw new Error('Invalid timeout value');
+        await client.query(`SET statement_timeout = ${safeTimeout}`);
         
         // Execute the actual query
         const result = await client.query(sql, params);
@@ -179,11 +181,15 @@ export async function selectWithTimeout(table, options = {}, timeout = 30000) {
     }
     
     if (limit !== null) {
-        sql += ` LIMIT ${limit}`;
+        const safeLimit = Math.max(0, Math.floor(Number(limit)));
+        if (!Number.isFinite(safeLimit)) throw new Error('Invalid limit value');
+        sql += ` LIMIT ${safeLimit}`;
     }
     
     if (offset !== null) {
-        sql += ` OFFSET ${offset}`;
+        const safeOffset = Math.max(0, Math.floor(Number(offset)));
+        if (!Number.isFinite(safeOffset)) throw new Error('Invalid offset value');
+        sql += ` OFFSET ${safeOffset}`;
     }
 
     try {
@@ -508,7 +514,7 @@ export async function fetchPaginatedRecords(table, options = {}, timeout = 30000
         SELECT * FROM ${validatedTable}
         ${whereClause ? `WHERE ${whereClause}` : ''}
         ${orderBy}
-        LIMIT ${pageSize + 1}
+        LIMIT ${Math.max(0, Math.floor(Number(pageSize))) + 1}
     `;
 
     try {

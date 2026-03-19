@@ -40,8 +40,7 @@ router.post('/collect', authenticateToken, requireAdmin, async (req, res) => {
     } catch (error) {
         safeLog('error', 'Market Radar: Collection failed', { error: error.message });
         res.status(500).json({ 
-            error: 'Collection failed', 
-            message: error.message 
+            error: 'Collection failed' 
         });
     }
 });
@@ -84,8 +83,7 @@ router.post('/collect/:source', authenticateToken, requireAdmin, async (req, res
             error: error.message 
         });
         res.status(500).json({ 
-            error: 'Collection failed', 
-            message: error.message 
+            error: 'Collection failed' 
         });
     }
 });

@@ -5,6 +5,7 @@
 
 import express from 'express';
 import { authenticateToken } from '../middleware/auth.middleware.js';
+import { validateBody, totpCodeSchema } from '../utils/validation.js';
 import { safeLog } from '../utils/logger.backend.js';
 import {
     generateTotpSecret,
@@ -60,7 +61,7 @@ router.post('/setup', authenticateToken, async (req, res) => {
  * @desc Verify TOTP code and enable 2FA
  * @access Private
  */
-router.post('/verify', authenticateToken, async (req, res) => {
+router.post('/verify', authenticateToken, validateBody(totpCodeSchema), async (req, res) => {
     try {
         const { code } = req.body;
         
@@ -89,7 +90,7 @@ router.post('/verify', authenticateToken, async (req, res) => {
  * @desc Disable 2FA for current user
  * @access Private
  */
-router.post('/disable', authenticateToken, async (req, res) => {
+router.post('/disable', authenticateToken, validateBody(totpCodeSchema), async (req, res) => {
     try {
         const { code } = req.body;
         
@@ -115,7 +116,7 @@ router.post('/disable', authenticateToken, async (req, res) => {
  * @desc Regenerate backup codes
  * @access Private
  */
-router.post('/backup-codes/regenerate', authenticateToken, async (req, res) => {
+router.post('/backup-codes/regenerate', authenticateToken, validateBody(totpCodeSchema), async (req, res) => {
     try {
         const { code } = req.body;
         

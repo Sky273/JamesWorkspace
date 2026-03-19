@@ -181,7 +181,12 @@ export function configureCsrf(app) {
 
     // Configure CSRF protection
     const csrfProtection = doubleCsrf({
-        getSecret: () => process.env.CSRF_SECRET || JWT_SECRET,
+        getSecret: () => {
+            if (!process.env.CSRF_SECRET) {
+                throw new Error('CSRF_SECRET environment variable is required');
+            }
+            return process.env.CSRF_SECRET;
+        },
         cookieName: 'x-csrf-token',
         cookieOptions: {
             httpOnly: true,

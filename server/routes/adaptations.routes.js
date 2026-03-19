@@ -7,7 +7,7 @@ import express from 'express';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { validateParams, validateBody, updateAdaptationSchema } from '../utils/validation.js';
 import { safeLog } from '../utils/logger.backend.js';
-import { selectWithTimeout, findWithTimeout, updateWithTimeout, destroyWithTimeout } from '../utils/postgresHelpers.js';
+import { selectWithTimeout, findWithTimeout, updateWithTimeout, destroyWithTimeout, escapeLike } from '../utils/postgresHelpers.js';
 import { query } from '../config/database.js';
 import { getUserFirmId } from '../utils/firmHelpers.js';
 
@@ -65,7 +65,7 @@ router.get('/', authenticateToken, async (req, res) => {
         // Search filter
         if (search) {
             conditions.push(`(mission_title ILIKE $${paramIndex} OR adapted_text ILIKE $${paramIndex})`);
-            params.push(`%${search}%`);
+            params.push(`%${escapeLike(search)}%`);
             paramIndex++;
         }
 

@@ -34,6 +34,10 @@ export const forgotPasswordSchema = z.object({
   email: emailSchema
 });
 
+export const totpCodeSchema = z.object({
+  code: z.string().min(6).max(8)
+});
+
 export const resetPasswordSchema = z.object({
   token: z.string().min(32).max(256),
   password: passwordSchema

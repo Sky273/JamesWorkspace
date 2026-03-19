@@ -38,8 +38,7 @@ router.get('/referentiel/:type', authenticateToken, async (req, res) => {
     } catch (error) {
         safeLog('error', 'Market Radar: Referentiel failed', { error: error.message });
         res.status(500).json({ 
-            error: 'Failed to get reference data', 
-            message: error.message 
+            error: 'Failed to get reference data' 
         });
     }
 });
@@ -61,8 +60,7 @@ router.get('/categories', authenticateToken, async (req, res) => {
     } catch (error) {
         safeLog('error', 'Market Radar: Categories failed', { error: error.message });
         res.status(500).json({ 
-            error: 'Failed to get categories', 
-            message: error.message 
+            error: 'Failed to get categories' 
         });
     }
 });

@@ -29,6 +29,7 @@ vi.mock('../../utils/postgresHelpers.js', () => ({
     selectWithTimeout: (...args) => mockSelectWithTimeout(...args),
     findWithTimeout: (...args) => mockFindWithTimeout(...args),
     updateWithTimeout: (...args) => mockUpdateWithTimeout(...args),
+    escapeLike: (str) => str.replace(/[%_\\]/g, '\\$&'),
     destroyWithTimeout: (...args) => mockDestroyWithTimeout(...args)
 }));
 

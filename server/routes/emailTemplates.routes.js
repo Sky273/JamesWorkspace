@@ -5,6 +5,7 @@
 
 import express from 'express';
 import { authenticateToken } from '../middleware/auth.middleware.js';
+import { validateParams } from '../utils/validation.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { query } from '../config/database.js';
 import * as emailTemplatesService from '../services/emailTemplates.service.js';
@@ -112,7 +113,7 @@ router.get('/default', authenticateToken, async (req, res) => {
  * GET /api/email-templates/:id
  * Get a single template by ID
  */
-router.get('/:id', authenticateToken, async (req, res) => {
+router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => {
     try {
         const { id } = req.params;
         const firmId = await getFirmIdForUser(req.user);
@@ -165,7 +166,7 @@ router.post('/', authenticateToken, async (req, res) => {
         return res.status(201).json({ template });
     } catch (error) {
         safeLog('error', 'Error creating email template', { error: error.message });
-        return res.status(500).json({ error: error.message || 'Failed to create email template' });
+        return res.status(500).json({ error: 'Failed to create email template' });
     }
 });
 
@@ -173,7 +174,7 @@ router.post('/', authenticateToken, async (req, res) => {
  * PUT /api/email-templates/:id
  * Update a template
  */
-router.put('/:id', authenticateToken, async (req, res) => {
+router.put('/:id', authenticateToken, validateParams('id'), async (req, res) => {
     try {
         const { id } = req.params;
         const firmId = await getFirmIdForUser(req.user);
@@ -207,7 +208,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
         return res.json({ template });
     } catch (error) {
         safeLog('error', 'Error updating email template', { error: error.message });
-        return res.status(500).json({ error: error.message || 'Failed to update email template' });
+        return res.status(500).json({ error: 'Failed to update email template' });
     }
 });
 
@@ -215,7 +216,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
  * DELETE /api/email-templates/:id
  * Delete a template
  */
-router.delete('/:id', authenticateToken, async (req, res) => {
+router.delete('/:id', authenticateToken, validateParams('id'), async (req, res) => {
     try {
         const { id } = req.params;
         const firmId = await getFirmIdForUser(req.user);

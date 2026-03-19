@@ -109,7 +109,7 @@ router.get('/', async (req, res) => {
     } catch (error) {
         checks.database = { 
             status: 'error', 
-            message: error.message === 'Timeout' ? 'Connection timeout' : 'Connection failed'
+            message: 'Connection failed'
         };
         overallStatus = 'unhealthy';
     }

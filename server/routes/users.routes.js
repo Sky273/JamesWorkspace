@@ -2,7 +2,7 @@ import express from 'express';
 import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
 import { validateParams } from '../utils/validation.js';
 import { safeLog } from '../utils/logger.backend.js';
-import { selectWithTimeout } from '../utils/postgresHelpers.js';
+import { selectWithTimeout, escapeLike } from '../utils/postgresHelpers.js';
 import { query } from '../config/database.js';
 
 const router = express.Router();
@@ -26,7 +26,7 @@ router.get('/', authenticateToken, requireAdmin, async (req, res) => {
 
         if (search) {
             conditions.push(`(LOWER(name) LIKE $${paramIndex} OR LOWER(email) LIKE $${paramIndex})`);
-            params.push(`%${search.toLowerCase()}%`);
+            params.push(`%${escapeLike(search.toLowerCase())}%`);
             paramIndex++;
         }
 

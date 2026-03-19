@@ -5,6 +5,7 @@
 
 import express from 'express';
 import { authenticateToken } from '../middleware/auth.middleware.js';
+import { validateParams } from '../utils/validation.js';
 import { userRateLimit } from '../middleware/rateLimit.middleware.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { getUserFirmId, isUserAdmin } from '../utils/firmHelpers.js';
@@ -120,7 +121,7 @@ router.get('/resume-statuses', authenticateToken, (req, res) => {
 });
 
 // GET /api/deals/:id - Get a single deal
-router.get('/:id', authenticateToken, async (req, res) => {
+router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => {
     try {
         const { id } = req.params;
         const access = await checkDealAccess(req, id);
@@ -139,7 +140,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
 });
 
 // GET /api/deals/:id/missions - Get missions associated with a deal
-router.get('/:id/missions', authenticateToken, async (req, res) => {
+router.get('/:id/missions', authenticateToken, validateParams('id'), async (req, res) => {
     try {
         const { id } = req.params;
         const access = await checkDealAccess(req, id);
@@ -214,12 +215,12 @@ router.post('/', authenticateToken, userRateLimit(), async (req, res) => {
         return res.status(201).json(deal);
     } catch (error) {
         safeLog('error', 'Error creating deal', { error: error.message, stack: error.stack });
-        return res.status(500).json({ error: 'Failed to create deal', details: error.message });
+        return res.status(500).json({ error: 'Failed to create deal' });
     }
 });
 
 // PUT /api/deals/:id - Update a deal
-router.put('/:id', authenticateToken, userRateLimit(), async (req, res) => {
+router.put('/:id', authenticateToken, validateParams('id'), userRateLimit(), async (req, res) => {
     try {
         const { id } = req.params;
         const access = await checkDealAccess(req, id);
@@ -252,7 +253,7 @@ router.put('/:id', authenticateToken, userRateLimit(), async (req, res) => {
 });
 
 // DELETE /api/deals/:id - Delete a deal
-router.delete('/:id', authenticateToken, userRateLimit(), async (req, res) => {
+router.delete('/:id', authenticateToken, validateParams('id'), userRateLimit(), async (req, res) => {
     try {
         const { id } = req.params;
         const access = await checkDealAccess(req, id);
@@ -275,7 +276,7 @@ router.delete('/:id', authenticateToken, userRateLimit(), async (req, res) => {
 // ============================================
 
 // GET /api/deals/:id/resumes - Get all resumes for a deal
-router.get('/:id/resumes', authenticateToken, async (req, res) => {
+router.get('/:id/resumes', authenticateToken, validateParams('id'), async (req, res) => {
     try {
         const { id } = req.params;
         const access = await checkDealAccess(req, id);
@@ -294,7 +295,7 @@ router.get('/:id/resumes', authenticateToken, async (req, res) => {
 });
 
 // POST /api/deals/:id/resumes - Add a resume to a deal
-router.post('/:id/resumes', authenticateToken, userRateLimit(), async (req, res) => {
+router.post('/:id/resumes', authenticateToken, validateParams('id'), userRateLimit(), async (req, res) => {
     try {
         const { id } = req.params;
         const { resumeId, notes, status } = req.body;
@@ -331,7 +332,7 @@ router.post('/:id/resumes', authenticateToken, userRateLimit(), async (req, res)
 });
 
 // PUT /api/deals/:id/resumes/:resumeId - Update resume status in deal
-router.put('/:id/resumes/:resumeId', authenticateToken, userRateLimit(), async (req, res) => {
+router.put('/:id/resumes/:resumeId', authenticateToken, validateParams('id', 'resumeId'), userRateLimit(), async (req, res) => {
     try {
         const { id, resumeId } = req.params;
         const { status, notes } = req.body;
@@ -351,14 +352,14 @@ router.put('/:id/resumes/:resumeId', authenticateToken, userRateLimit(), async (
     } catch (error) {
         safeLog('error', 'Error updating deal resume status', { error: error.message });
         if (error.message === 'Resume not found in deal') {
-            return res.status(404).json({ error: error.message });
+            return res.status(404).json({ error: 'Resume not found in deal' });
         }
         return res.status(500).json({ error: 'Failed to update resume status' });
     }
 });
 
 // DELETE /api/deals/:id/resumes/:resumeId - Remove a resume from a deal
-router.delete('/:id/resumes/:resumeId', authenticateToken, userRateLimit(), async (req, res) => {
+router.delete('/:id/resumes/:resumeId', authenticateToken, validateParams('id', 'resumeId'), userRateLimit(), async (req, res) => {
     try {
         const { id, resumeId } = req.params;
         
@@ -384,7 +385,7 @@ router.delete('/:id/resumes/:resumeId', authenticateToken, userRateLimit(), asyn
 // ============================================
 
 // GET /api/deals/by-resume/:resumeId - Get all deals for a specific resume
-router.get('/by-resume/:resumeId', authenticateToken, async (req, res) => {
+router.get('/by-resume/:resumeId', authenticateToken, validateParams('resumeId'), async (req, res) => {
     try {
         const { resumeId } = req.params;
         const userFirmId = await getUserFirmId(req);

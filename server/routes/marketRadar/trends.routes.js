@@ -136,10 +136,9 @@ router.post('/trends/collect', authenticateToken, requireAdmin, async (req, res)
             }
         });
     } catch (error) {
-        safeLog('error', 'Market Radar: Failed to start collection', { error: error.message });
+        safeLog('error', 'Market Radar: Failed to start collection');
         res.status(500).json({ 
-            error: 'Failed to start collection', 
-            message: error.message 
+            error: 'Failed to start collection' 
         });
     }
 });
@@ -248,14 +247,12 @@ router.post('/trends/collect-dynamics', authenticateToken, requireAdmin, async (
                             } else if (result.action === 'failed') {
                                 failedCount++;
                                 safeLog('warn', 'Market Radar: Failed to store DYN_1 trend', { 
-                                    error: result.error,
                                     regionCode: region.code
                                 });
                             }
                         } catch (storeError) {
                             failedCount++;
                             safeLog('error', 'Market Radar: Exception storing DYN_1 trend', {
-                                error: storeError.message,
                                 regionCode: region.code
                             });
                         }
@@ -264,7 +261,6 @@ router.post('/trends/collect-dynamics', authenticateToken, requireAdmin, async (
                         safeLog('warn', 'MarketTrends: Failed to collect DYN_1 for region', {
                             region: region.name,
                             regionCode: region.code,
-                            error: error.message,
                             progress: `${processedCount}/${totalRegions}`
                         });
                     }
@@ -295,8 +291,6 @@ router.post('/trends/collect-dynamics', authenticateToken, requireAdmin, async (
             } catch (error) {
                 const errorMemUsage = process.memoryUsage();
                 safeLog('error', 'Market Radar: DYN_1 collection failed', { 
-                    error: error.message,
-                    stack: error.stack,
                     processed: processedCount,
                     created: createdCount,
                     updated: updatedCount,
@@ -313,10 +307,9 @@ router.post('/trends/collect-dynamics', authenticateToken, requireAdmin, async (
             }
         });
     } catch (error) {
-        safeLog('error', 'Market Radar: Failed to start DYN_1 collection', { error: error.message });
+        safeLog('error', 'Market Radar: Failed to start DYN_1 collection');
         res.status(500).json({ 
-            error: 'Failed to start DYN_1 collection', 
-            message: error.message 
+            error: 'Failed to start DYN_1 collection' 
         });
     }
 });
@@ -360,10 +353,9 @@ router.get('/trends/all', authenticateToken, async (req, res) => {
             duration
         });
     } catch (error) {
-        safeLog('error', 'Market Radar: Failed to get map trends', { error: error.message });
+        safeLog('error', 'Market Radar: Failed to get map trends');
         res.status(500).json({ 
-            error: 'Failed to get map trends', 
-            message: error.message 
+            error: 'Failed to get map trends' 
         });
     }
 });
@@ -414,10 +406,9 @@ router.get('/trends', authenticateToken, async (req, res) => {
             pagination: result.pagination
         });
     } catch (error) {
-        safeLog('error', 'Market Radar: Failed to get trends', { error: error.message });
+        safeLog('error', 'Market Radar: Failed to get trends');
         res.status(500).json({ 
-            error: 'Failed to get trends', 
-            message: error.message 
+            error: 'Failed to get trends' 
         });
     }
 });
@@ -435,10 +426,9 @@ router.get('/trends/summary', authenticateToken, async (req, res) => {
             summary
         });
     } catch (error) {
-        safeLog('error', 'Market Radar: Failed to get trends summary', { error: error.message });
+        safeLog('error', 'Market Radar: Failed to get trends summary');
         res.status(500).json({ 
-            error: 'Failed to get trends summary', 
-            message: error.message 
+            error: 'Failed to get trends summary' 
         });
     }
 });
@@ -461,21 +451,23 @@ router.get('/trends/:id/metadata', authenticateToken, async (req, res) => {
         const trend = await getTrendMetadata(id);
         
         if (!trend) {
-            return res.status(404).json({ 
-                error: 'Trend not found',
-                message: `No trend found with ID: ${id}`
+            return res.status(404).json({
+                success: false,
+                error: 'No stored trend found for this combination',
+                params: { type, regionCode, codeRome }
             });
         }
         
+        // Note: Live API verification would require calling the appropriate API
+        // For now, return stored data with audit info
         res.json({
             success: true,
             trend
         });
     } catch (error) {
-        safeLog('error', 'Market Radar: Failed to get trend metadata', { error: error.message, id: req.params.id });
+        safeLog('error', 'Market Radar: Failed to get trend metadata', { id: req.params.id });
         res.status(500).json({ 
-            error: 'Failed to get trend metadata', 
-            message: error.message 
+            error: 'Failed to get trend metadata' 
         });
     }
 });
@@ -497,10 +489,9 @@ router.get('/trends/filters', authenticateToken, async (req, res) => {
             filters
         });
     } catch (error) {
-        safeLog('error', 'Market Radar: Failed to get trend filters', { error: error.message });
+        safeLog('error', 'Market Radar: Failed to get trend filters');
         res.status(500).json({ 
-            error: 'Failed to get trend filters', 
-            message: error.message 
+            error: 'Failed to get trend filters' 
         });
     }
 });
@@ -525,10 +516,9 @@ router.post('/trends/cache/refresh', authenticateToken, requireAdmin, async (req
             duration
         });
     } catch (error) {
-        safeLog('error', 'Market Radar: Cache refresh failed', { error: error.message });
+        safeLog('error', 'Market Radar: Cache refresh failed');
         res.status(500).json({ 
-            error: 'Cache refresh failed', 
-            message: error.message 
+            error: 'Cache refresh failed' 
         });
     }
 });
@@ -580,10 +570,9 @@ router.get('/trends/verify/:type/:regionCode/:codeRome', authenticateToken, requ
             recommendation: 'To verify against live API, trigger a new collection and compare values'
         });
     } catch (error) {
-        safeLog('error', 'Market Radar: Verification failed', { error: error.message });
+        safeLog('error', 'Market Radar: Verification failed');
         res.status(500).json({ 
-            error: 'Verification failed', 
-            message: error.message 
+            error: 'Verification failed' 
         });
     }
 });
@@ -678,10 +667,9 @@ router.get('/trends/audit', authenticateToken, requireAdmin, async (req, res) =>
             generatedAt: new Date().toISOString()
         });
     } catch (error) {
-        safeLog('error', 'Market Radar: Audit report failed', { error: error.message });
+        safeLog('error', 'Market Radar: Audit report failed');
         res.status(500).json({ 
-            error: 'Audit report failed', 
-            message: error.message 
+            error: 'Audit report failed' 
         });
     }
 });

@@ -9,7 +9,8 @@ import {
     findWithTimeout, 
     createWithTimeout, 
     updateWithTimeout, 
-    destroyWithTimeout
+    destroyWithTimeout,
+    escapeLike
 } from '../utils/postgresHelpers.js';
 import { query } from '../config/database.js';
 
@@ -47,7 +48,7 @@ router.get('/', authenticateToken, async (req, res) => {
         
         if (search) {
             whereClause = 'LOWER(name) LIKE $1';
-            params = [`%${search.toLowerCase()}%`];
+            params = [`%${escapeLike(search.toLowerCase())}%`];
         }
 
         // Fetch firms with pagination
@@ -71,7 +72,7 @@ router.get('/', authenticateToken, async (req, res) => {
             const countQuery = search 
                 ? 'SELECT COUNT(*) as count FROM firms WHERE LOWER(name) LIKE $1'
                 : 'SELECT COUNT(*) as count FROM firms';
-            const countResult = await query(countQuery, search ? [`%${search.toLowerCase()}%`] : []);
+            const countResult = await query(countQuery, search ? [`%${escapeLike(search.toLowerCase())}%`] : []);
             totalCount = parseInt(countResult.rows[0].count);
         }
 
@@ -90,8 +91,7 @@ router.get('/', authenticateToken, async (req, res) => {
     } catch (error) {
         safeLog('error', 'Error fetching firms', { error: error.message });
         return res.status(500).json({ 
-            error: 'Failed to fetch firms',
-            message: error.message 
+            error: 'Failed to fetch firms' 
         });
     }
 });
@@ -108,8 +108,7 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
         }
         safeLog('error', 'Error fetching firm', { error: error.message, firmId: req.params.id });
         return res.status(500).json({ 
-            error: 'Failed to fetch firm',
-            message: error.message 
+            error: 'Failed to fetch firm' 
         });
     }
 });
@@ -141,8 +140,7 @@ router.post('/', authenticateToken, requireAdmin, validateBody(createFirmSchema)
         }
         safeLog('error', 'Error creating firm', { error: error.message });
         return res.status(500).json({ 
-            error: 'Failed to create firm',
-            message: error.message 
+            error: 'Failed to create firm' 
         });
     }
 });
@@ -181,8 +179,7 @@ router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), async 
         }
         safeLog('error', 'Error updating firm', { error: error.message, firmId: req.params.id });
         return res.status(500).json({ 
-            error: 'Failed to update firm',
-            message: error.message 
+            error: 'Failed to update firm' 
         });
     }
 });
@@ -215,8 +212,7 @@ router.delete('/:id', authenticateToken, requireAdmin, validateParams('id'), asy
         }
         safeLog('error', 'Error deleting firm', { error: error.message, firmId: req.params.id });
         return res.status(500).json({ 
-            error: 'Failed to delete firm',
-            message: error.message 
+            error: 'Failed to delete firm' 
         });
     }
 });
@@ -258,8 +254,7 @@ router.post('/:id/logo', authenticateToken, requireAdmin, validateParams('id'), 
     } catch (error) {
         safeLog('error', 'Error uploading firm logo', { error: error.message, firmId: req.params.id });
         return res.status(500).json({ 
-            error: 'Failed to upload logo',
-            message: error.message 
+            error: 'Failed to upload logo' 
         });
     }
 });
@@ -314,8 +309,7 @@ router.delete('/:id/logo', authenticateToken, requireAdmin, validateParams('id')
     } catch (error) {
         safeLog('error', 'Error deleting firm logo', { error: error.message, firmId: req.params.id });
         return res.status(500).json({ 
-            error: 'Failed to delete logo',
-            message: error.message 
+            error: 'Failed to delete logo' 
         });
     }
 });
