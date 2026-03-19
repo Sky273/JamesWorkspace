@@ -220,20 +220,21 @@ router.delete('/:id', authenticateToken, validateParams('id'), async (req, res) 
     try {
         const { id } = req.params;
         const firmId = await getFirmIdForUser(req.user);
+        const isAdmin = req.user?.role === 'admin';
         
         // Check ownership
         const existing = await emailTemplatesService.getTemplate(id);
         if (!existing) {
             return res.status(404).json({ error: 'Template not found' });
         }
-        if (existing.is_system) {
+        if (existing.is_system && !isAdmin) {
             return res.status(403).json({ error: 'Cannot delete system template' });
         }
-        if (existing.firm_id !== firmId) {
+        if (!existing.is_system && existing.firm_id !== firmId) {
             return res.status(403).json({ error: 'Access denied to this template' });
         }
         
-        await emailTemplatesService.deleteTemplate(id);
+        await emailTemplatesService.deleteTemplate(id, { isAdmin });
         
         return res.json({ success: true, message: 'Template deleted successfully' });
     } catch (error) {

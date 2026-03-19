@@ -382,12 +382,25 @@ describe('Email Templates Routes', () => {
             expect(res.status).toBe(404);
         });
 
-        it('should return 403 for system template', async () => {
-            mockGetTemplate.mockResolvedValueOnce({ ...sampleTemplate, is_system: true });
+        it('should allow admin to delete system template', async () => {
+            mockGetTemplate.mockResolvedValueOnce({ ...sampleTemplate, is_system: true, is_default: true });
+            mockDeleteTemplate.mockResolvedValueOnce(true);
 
             const res = await request(app)
                 .delete('/api/email-templates/et-sys')
                 .set('Authorization', 'Bearer valid-token');
+
+            expect(res.status).toBe(200);
+            expect(res.body.success).toBe(true);
+            expect(mockDeleteTemplate).toHaveBeenCalledWith('et-sys', { isAdmin: true });
+        });
+
+        it('should return 403 for non-admin deleting system template', async () => {
+            mockGetTemplate.mockResolvedValueOnce({ ...sampleTemplate, is_system: true });
+
+            const res = await request(app)
+                .delete('/api/email-templates/et-sys')
+                .set({ 'Authorization': 'Bearer valid-token', 'x-test-role': 'user' });
 
             expect(res.status).toBe(403);
             expect(res.body.error).toBe('Cannot delete system template');

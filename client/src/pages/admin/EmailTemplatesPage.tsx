@@ -129,12 +129,11 @@ const EmailTemplatesPage = (): JSX.Element => {
 
   // Delete template
   const handleDelete = async (template: EmailTemplate) => {
-    if (template.is_system) {
-      toast.error(t('emailTemplates.errors.cannotDeleteSystem'));
-      return;
-    }
+    const confirmMsg = template.is_system || template.is_default
+      ? t('emailTemplates.confirmDeleteDefault')
+      : t('emailTemplates.confirmDelete');
     
-    if (!confirm(t('emailTemplates.confirmDelete'))) {
+    if (!confirm(confirmMsg)) {
       return;
     }
     
@@ -307,15 +306,13 @@ const EmailTemplatesPage = (): JSX.Element => {
                   <DocumentDuplicateIcon className="w-4 h-4" />
                 </button>
                 
-                {!template.is_system && (
-                  <button
-                    onClick={() => handleDelete(template)}
-                    className="flex items-center gap-1 px-2 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 ml-auto"
-                    title={t('common.delete')}
-                  >
-                    <TrashIcon className="w-4 h-4" />
-                  </button>
-                )}
+                <button
+                  onClick={() => handleDelete(template)}
+                  className="flex items-center gap-1 px-2 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 ml-auto"
+                  title={t('common.delete')}
+                >
+                  <TrashIcon className="w-4 h-4" />
+                </button>
               </div>
             </div>
           ))}

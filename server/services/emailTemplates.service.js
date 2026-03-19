@@ -292,21 +292,23 @@ export async function updateTemplate(id, data) {
 /**
  * Delete a template
  * @param {string} id - Template ID
+ * @param {Object} [options] - Options
+ * @param {boolean} [options.isAdmin=false] - Whether the caller is an admin (can delete system templates)
  * @returns {Promise<boolean>}
  */
-export async function deleteTemplate(id) {
+export async function deleteTemplate(id, { isAdmin = false } = {}) {
     // Check if template is system template
     const existing = await getTemplate(id);
     if (!existing) {
         throw new Error('Template not found');
     }
-    if (existing.is_system) {
+    if (existing.is_system && !isAdmin) {
         throw new Error('Cannot delete system template');
     }
     
     await query(`DELETE FROM email_templates WHERE id = $1`, [id]);
     
-    safeLog('info', 'Email template deleted', { templateId: id });
+    safeLog('info', 'Email template deleted', { templateId: id, wasSystem: existing.is_system });
     
     return true;
 }

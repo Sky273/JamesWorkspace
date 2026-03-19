@@ -1649,6 +1649,7 @@
     "defaultTemplate": "Template par défaut",
     "duplicate": "Dupliquer",
     "confirmDelete": "Êtes-vous sûr de vouloir supprimer ce template ?",
+    "confirmDeleteDefault": "⚠️ Ce template est le template par défaut. Sa suppression affectera l'envoi d'emails. Êtes-vous sûr de vouloir continuer ?",
     "setAsDefault": "Définir comme template par défaut",
     "preview": "Aperçu",
     "desktopView": "Vue bureau",
