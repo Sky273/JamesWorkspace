@@ -11,12 +11,66 @@ import { validateBody, signInSchema, registerSchema, isValidEmail } from '../../
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken, revokeToken } from '../../services/jwt.service.js';
 import { securityLog, getRequestMetadata, LOG_LEVELS, SECURITY_EVENTS } from '../../services/security.service.js';
 import { safeLog } from '../../utils/logger.backend.js';
-import { selectWithTimeout, findWithTimeout, createWithTimeout } from '../../utils/postgresHelpers.js';
+import { selectWithTimeout, createWithTimeout } from '../../utils/postgresHelpers.js';
 import { query } from '../../config/database.js';
 import { is2FAEnabled, verifyTotpCode } from '../../services/totp.service.js';
 import { useSecureCookies } from './config.js';
 
 const router = express.Router();
+
+// ============================================
+// SHARED HELPERS
+// ============================================
+
+/**
+ * Format a raw DB user row into a consistent API response shape.
+ * Includes legacy uppercase fields for backward compatibility.
+ */
+function formatUserResponse(user) {
+    return {
+        id: user.id,
+        email: user.email,
+        name: user.name || '',
+        jobTitle: user.job_title || '',
+        phone: user.phone || '',
+        status: user.status,
+        role: user.role,
+        firm_id: user.firm_id,
+        firm: user.firm_name,
+        FirmName: user.firm_name,
+        FirmLogo: user.firm_logo || '',
+        google_id: user.google_id || null,
+        google_email: user.google_email || null,
+        // Legacy uppercase aliases (used across 100+ frontend files)
+        customer: user.firm_name,
+        CustomerName: user.firm_name,
+        Name: user.name,
+        Email: user.email,
+        Status: user.status === 'active' ? 'Active' : 'Inactive',
+        Role: user.role
+    };
+}
+
+/**
+ * Fetch a user with firm logo by user ID
+ */
+async function fetchUserWithFirm(userId) {
+    const users = await selectWithTimeout('users', {
+        rawQuery: `
+            SELECT u.*, f.logo_url as firm_logo
+            FROM users u
+            LEFT JOIN firms f ON u.firm_id = f.id
+            WHERE u.id = $1
+            LIMIT 1
+        `,
+        rawParams: [userId]
+    });
+    return users.length > 0 ? users[0] : null;
+}
+
+// ============================================
+// ROUTES
+// ============================================
 
 // POST /api/auth/signin - User login
 router.post('/signin', authLimiter, validateBody(signInSchema), async (req, res) => {
@@ -134,25 +188,7 @@ router.post('/signin', authLimiter, validateBody(signInSchema), async (req, res)
             [user.id]
         );
 
-        const userData = {
-            id: user.id,
-            email: user.email,
-            name: user.name || '',
-            jobTitle: user.job_title || '',
-            phone: user.phone || '',
-            status: user.status,
-            role: user.role,
-            firm_id: user.firm_id,
-            firm: user.firm_name,
-            FirmName: user.firm_name,
-            FirmLogo: user.firm_logo || '',
-            customer: user.firm_name,
-            CustomerName: user.firm_name,
-            Name: user.name,
-            Email: user.email,
-            Status: user.status === 'active' ? 'Active' : 'Inactive',
-            Role: user.role
-        };
+        const userData = formatUserResponse(user);
         
         safeLog('debug', 'User data prepared for signin', { 
             userId: userData.id, 
@@ -289,25 +325,13 @@ router.post('/refresh', async (req, res) => {
             return res.status(401).json({ error: 'Invalid refresh token' });
         }
 
-        const user = await findWithTimeout('users', decoded.id);
+        const user = await fetchUserWithFirm(decoded.id);
         
         if (!user || user.status === 'inactive') {
             return res.status(401).json({ error: 'User not found or inactive' });
         }
 
-        const userData = {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            status: user.status,
-            role: user.role,
-            firm_id: user.firm_id,
-            firm: user.firm_name,
-            FirmName: user.firm_name,
-            customer: user.firm_name,
-            CustomerName: user.firm_name
-        };
-
+        const userData = formatUserResponse(user);
         const newAccessToken = generateAccessToken(userData);
 
         res.cookie('accessToken', newAccessToken, {
@@ -318,7 +342,7 @@ router.post('/refresh', async (req, res) => {
             maxAge: 60 * 60 * 1000
         });
 
-        res.json({ message: 'Token refreshed successfully' });
+        res.json({ user: userData });
     } catch (error) {
         safeLog('error', 'Token refresh error', { error: error.message });
         res.status(500).json({ error: 'Failed to refresh token' });
@@ -364,45 +388,13 @@ router.post('/logout', authenticateToken, logoutHandler);
 // GET /api/auth/me - Get current user
 router.get('/me', authenticateToken, async (req, res) => {
     try {
-        const users = await selectWithTimeout('users', {
-            rawQuery: `
-                SELECT u.*, f.logo_url as firm_logo
-                FROM users u
-                LEFT JOIN firms f ON u.firm_id = f.id
-                WHERE u.id = $1
-                LIMIT 1
-            `,
-            rawParams: [req.user.id]
-        });
+        const user = await fetchUserWithFirm(req.user.id);
         
-        if (users.length === 0) {
+        if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        const user = users[0];
-
-        res.json({
-            user: {
-                id: user.id,
-                email: user.email,
-                name: user.name,
-                jobTitle: user.job_title || '',
-                phone: user.phone || '',
-                role: user.role,
-                status: user.status,
-                firm: user.firm_name,
-                FirmName: user.firm_name,
-                FirmLogo: user.firm_logo || '',
-                google_id: user.google_id || null,
-                google_email: user.google_email || null,
-                customer: user.firm_name,
-                CustomerName: user.firm_name,
-                Name: user.name,
-                Email: user.email,
-                Status: user.status === 'active' ? 'Active' : 'Inactive',
-                Role: user.role
-            }
-        });
+        res.json({ user: formatUserResponse(user) });
     } catch (error) {
         safeLog('error', 'Get current user error', { error: error.message });
         res.status(500).json({ error: 'Failed to get user information' });

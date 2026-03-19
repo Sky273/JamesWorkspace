@@ -8,9 +8,8 @@ import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-hot-toast';
-import { resetSessionState } from '../utils/apiInterceptor';
+import { resetSessionState, fetchWithCsrfRetry } from '../utils/apiInterceptor';
 import logger from '../utils/logger.frontend';
-import { fetchWithCsrfRetry } from '../utils/apiInterceptor';
 import TwoFactorVerify from './TwoFactorVerify';
 import Footer from './Footer';
 
@@ -93,9 +92,9 @@ const SignIn = (): JSX.Element => {
   };
 
   const handle2FASuccess = (_user: unknown): void => {
-    // User is now authenticated, navigate to home
+    // User is now authenticated — authService.signIn already cached the user
+    // and cookies are set. Navigate to home; AuthContext picks up the session.
     navigate('/');
-    window.location.reload(); // Refresh to update auth state
   };
 
   const handle2FACancel = (): void => {

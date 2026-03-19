@@ -1,45 +1,37 @@
 /**
- * API Interceptor for handling session expiration and automatic logout
- * TypeScript version with full type safety
+ * API Interceptor for handling session expiration and automatic logout.
+ * Orchestrates session management, token refresh, and fetch wrappers.
+ *
+ * Types & constants: ./auth.types.ts
+ * CSRF management:   ./csrfManager.ts
  */
 
 import logger from './logger.frontend';
 
-// ============================================
-// TYPES
-// ============================================
+// Re-export types, error classes, and constants so existing imports don't break
+export {
+  SessionRedirectError,
+  isSessionRedirectError,
+  AUTH_ERROR_PATTERNS,
+  isAuthErrorMessage,
+} from './auth.types';
+export type { SessionExpiredHandler, FetchOptions } from './auth.types';
 
-export type SessionExpiredHandler = (() => void) | null;
+// Re-export CSRF functions so existing imports don't break
+export {
+  getCsrfToken,
+  refreshCsrfToken,
+  fetchCsrfToken,
+  clearCsrfToken,
+} from './csrfManager';
 
-export interface FetchOptions extends RequestInit {
-  headers?: Record<string, string>;
-}
-
-// ============================================
-// SESSION REDIRECT ERROR
-// ============================================
-
-/**
- * Special error class for session expiration redirects
- * This error should be caught and ignored - it indicates a redirect is in progress
- */
-export class SessionRedirectError extends Error {
-  constructor() {
-    super('Session expired - redirecting to login');
-    this.name = 'SessionRedirectError';
-  }
-}
-
-/**
- * Check if an error is a SessionRedirectError
- */
-export const isSessionRedirectError = (error: unknown): boolean => {
-  return error instanceof SessionRedirectError || 
-    (error instanceof Error && error.name === 'SessionRedirectError');
-};
+// Import what we need internally
+import { SessionRedirectError, isAuthErrorMessage } from './auth.types';
+import type { SessionExpiredHandler, FetchOptions } from './auth.types';
+import { getCsrfToken, refreshCsrfToken, resetCsrfState, isCsrfError } from './csrfManager';
 
 // ============================================
-// STATE
+// SESSION STATE
 // ============================================
 
 const API_BASE_URL = '';
@@ -47,37 +39,12 @@ const API_BASE_URL = '';
 let onSessionExpired: SessionExpiredHandler = null;
 let isRefreshing = false;
 let refreshPromise: Promise<boolean> | null = null;
-let csrfTokenCache: string | null = null;
-let csrfTokenFetchPromise: Promise<string | null> | null = null;
-let csrfTokenLastFetch: number = 0;
-const CSRF_TOKEN_MAX_AGE = 2 * 60 * 1000; // 2 minutes (reduced to avoid desync with server cookie)
 
 // Flag to prevent requests during session expiration redirect
 let isSessionExpiring = false;
 
 // Flag to track if proactive refresh is in progress
 let isProactiveRefreshing = false;
-
-// Authentication-related error patterns that indicate session issues
-const AUTH_ERROR_PATTERNS = [
-  'kid_malformed',
-  'Mal_wellFormed',
-  'jwt malformed',
-  'jwt expired',
-  'invalid token',
-  'token expired',
-  'invalid signature',
-  'token_missing',
-  'token_invalid'
-];
-
-/**
- * Check if an error message indicates an authentication problem
- */
-const isAuthErrorMessage = (message: string): boolean => {
-  const lowerMessage = message.toLowerCase();
-  return AUTH_ERROR_PATTERNS.some(pattern => lowerMessage.includes(pattern.toLowerCase()));
-};
 
 /**
  * Proactively refresh token when it's about to expire
@@ -341,96 +308,12 @@ export const fetchWithAuth = async (
   }
 };
 
-// ============================================
-// CSRF TOKEN
-// ============================================
-
 /**
- * Get CSRF token with smart caching and deduplication
- * - Caches token for 5 minutes
- * - Deduplicates concurrent requests
- * - Forces refresh if token is stale or on demand
- */
-const getCsrfToken = async (forceRefresh: boolean = false): Promise<string | null> => {
-  const now = Date.now();
-  const isStale = (now - csrfTokenLastFetch) > CSRF_TOKEN_MAX_AGE;
-  
-  // Return cached token if valid and not forcing refresh
-  if (csrfTokenCache && !isStale && !forceRefresh) {
-    return csrfTokenCache;
-  }
-  
-  // If already fetching, wait for that promise
-  if (csrfTokenFetchPromise) {
-    return csrfTokenFetchPromise;
-  }
-  
-  // Fetch new token
-  csrfTokenFetchPromise = (async () => {
-    try {
-      logger.log('[CSRF] Fetching new CSRF token...');
-      const response = await fetch('/api/csrf-token', {
-        method: 'GET',
-        credentials: 'include',
-        headers: {
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
-        }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        csrfTokenCache = data.csrfToken;
-        csrfTokenLastFetch = Date.now();
-        logger.log('[CSRF] Token fetched successfully');
-        return csrfTokenCache;
-      } else {
-        logger.warn('[CSRF] Failed to fetch token, status:', response.status);
-      }
-    } catch (error) {
-      logger.error('[CSRF] Failed to fetch CSRF token:', error);
-    } finally {
-      csrfTokenFetchPromise = null;
-    }
-    return null;
-  })();
-  
-  return csrfTokenFetchPromise;
-};
-
-/**
- * Force refresh the CSRF token
- */
-export const refreshCsrfToken = async (): Promise<string | null> => {
-  csrfTokenCache = null;
-  csrfTokenLastFetch = 0;
-  return getCsrfToken(true);
-};
-
-/**
- * Get CSRF token for use in custom requests (e.g., file uploads)
- */
-export const fetchCsrfToken = async (): Promise<string> => {
-  const token = await getCsrfToken(false);
-  return token || '';
-};
-
-/**
- * Clear CSRF token cache (call on logout)
- */
-export const clearCsrfToken = (): void => {
-  csrfTokenCache = null;
-  csrfTokenLastFetch = 0;
-  csrfTokenFetchPromise = null;
-};
-
-/**
- * Reset session expiring flag (call on successful login)
+ * Reset session expiring flag and CSRF state (call on successful login)
  */
 export const resetSessionState = (): void => {
   isSessionExpiring = false;
-  csrfTokenCache = null;
-  csrfTokenLastFetch = 0;
-  csrfTokenFetchPromise = null;
+  resetCsrfState();
 };
 
 // ============================================
@@ -470,41 +353,6 @@ export const createAuthOptionsWithCsrf = async (options: FetchOptions = {}, forc
     headers: mergedHeaders,
     credentials: 'include'
   };
-};
-
-/**
- * Check if an error response is a CSRF error
- */
-const isCsrfError = async (response: Response): Promise<boolean> => {
-  if (response.status !== 403) return false;
-  
-  try {
-    const clonedResponse = response.clone();
-    const text = await clonedResponse.text();
-    const lowerText = text.toLowerCase();
-    
-    // Check for CSRF-related keywords in the response
-    if (lowerText.includes('csrf') || lowerText.includes('token')) {
-      return true;
-    }
-    
-    // Try to parse as JSON for more specific check
-    try {
-      const data = JSON.parse(text);
-      if (data.error?.toLowerCase().includes('csrf') || 
-          data.message?.toLowerCase().includes('csrf') ||
-          data.error?.toLowerCase().includes('invalid') && data.error?.toLowerCase().includes('token')) {
-        return true;
-      }
-    } catch {
-      // Not JSON, use text-based detection above
-    }
-  } catch {
-    // If we can't read the response, assume it might be CSRF
-    return true;
-  }
-  
-  return false;
 };
 
 /**
@@ -560,6 +408,9 @@ export const fetchWithCsrfRetry = async (
 
 // ============================================
 // CONVENIENCE METHODS
+// For use in non-React service files that can't use hooks.
+// React components should prefer the useAuthFetch() hook.
+// All mutating methods use fetchWithCsrfRetry for automatic CSRF retry.
 // ============================================
 
 /**
@@ -570,84 +421,49 @@ export const authGet = (url: string, options: FetchOptions = {}): Promise<Respon
 };
 
 /**
- * Convenience method for POST requests with auth and CSRF
+ * Convenience method for POST requests with auth, CSRF, and automatic CSRF retry
  */
 export const authPost = async <T = unknown>(
   url: string, 
   body: T, 
   options: FetchOptions = {}
 ): Promise<Response> => {
-  logger.log('[authPost] Starting request to:', url);
-  
-  // CRITICAL: Get CSRF token FIRST, completely separately
-  logger.log('[authPost] Fetching CSRF token...');
-  const csrfToken = await getCsrfToken(false);
-  logger.log('[authPost] CSRF token obtained:', csrfToken ? 'present' : 'MISSING');
-  
-  if (!csrfToken) {
-    logger.error('[authPost] No CSRF token available!');
-  }
-  
-  // Now build the options with the token we already have
-  const authOptions: FetchOptions = {
+  const authOptions = await createAuthOptionsWithCsrf({
     ...options,
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       ...options.headers,
-      'x-csrf-token': csrfToken || ''
     },
     body: JSON.stringify(body),
-    credentials: 'include'
-  };
-  
-  logger.log('[authPost] Making request with x-csrf-token:', !!(authOptions.headers as Record<string, string>)?.['x-csrf-token']);
-  
-  return fetchWithAuth(url, authOptions);
+  });
+  return fetchWithCsrfRetry(url, authOptions);
 };
 
 /**
- * Convenience method for PUT requests with auth and CSRF
+ * Convenience method for PUT requests with auth, CSRF, and automatic CSRF retry
  */
 export const authPut = async <T = unknown>(
   url: string, 
   body: T, 
   options: FetchOptions = {}
 ): Promise<Response> => {
-  // CRITICAL: Get CSRF token FIRST
-  const csrfToken = await getCsrfToken(false);
-  
-  const authOptions: FetchOptions = {
+  const authOptions = await createAuthOptionsWithCsrf({
     ...options,
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
       ...options.headers,
-      'x-csrf-token': csrfToken || ''
     },
     body: JSON.stringify(body),
-    credentials: 'include'
-  };
-  
-  return fetchWithAuth(url, authOptions);
+  });
+  return fetchWithCsrfRetry(url, authOptions);
 };
 
 /**
- * Convenience method for DELETE requests with auth and CSRF
+ * Convenience method for DELETE requests with auth, CSRF, and automatic CSRF retry
  */
 export const authDelete = async (url: string, options: FetchOptions = {}): Promise<Response> => {
-  // CRITICAL: Get CSRF token FIRST
-  const csrfToken = await getCsrfToken(false);
-  
-  const authOptions: FetchOptions = {
-    ...options,
-    method: 'DELETE',
-    headers: {
-      ...options.headers,
-      'x-csrf-token': csrfToken || ''
-    },
-    credentials: 'include'
-  };
-  
-  return fetchWithAuth(url, authOptions);
+  const authOptions = await createAuthOptionsWithCsrf({ ...options, method: 'DELETE' });
+  return fetchWithCsrfRetry(url, authOptions);
 };

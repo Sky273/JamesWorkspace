@@ -3,7 +3,15 @@
  * TypeScript version with full type safety
  */
 
-import { clearCsrfToken, resetSessionState } from '../utils/apiInterceptor';
+import { 
+  fetchWithAuth, 
+  fetchWithCsrfRetry, 
+  getCsrfToken, 
+  clearCsrfToken, 
+  resetSessionState,
+  createAuthOptionsWithCsrf,
+  isSessionRedirectError
+} from '../utils/apiInterceptor';
 import logger from '../utils/logger.frontend';
 
 // ============================================
@@ -91,41 +99,28 @@ class AuthenticationError extends Error {
 let cachedUser: User | null = null;
 
 export const authService = {
-  async getCsrfToken(): Promise<string> {
-    try {
-      const response = await fetch('/api/csrf-token', {
-        method: 'GET',
-        credentials: 'include'
-      });
-      if (!response.ok) {
-        throw new Error('Failed to fetch CSRF token');
-      }
-      const data = await response.json();
-      return data.csrfToken;
-    } catch (error) {
-      logger.error('Error fetching CSRF token:', error);
-      throw error;
-    }
-  },
-
+  /**
+   * Sign in — uses fetchWithAuth for timeout/cache-busting.
+   * CSRF token comes from the shared interceptor cache.
+   * Bug fix: check !response.ok BEFORE checking requires2FA.
+   */
   async signIn(email: string, password: string, totpCode?: string): Promise<User | SignInResponse> {
     try {
-      const csrfToken = await this.getCsrfToken();
+      const csrfToken = await getCsrfToken();
 
-      const response = await fetch('/api/auth/signin', {
+      const response = await fetchWithAuth('/api/auth/signin', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken
+          'x-csrf-token': csrfToken || ''
         },
-        credentials: 'include',
         body: JSON.stringify({ email, password, totpCode })
       });
 
       const data = await response.json();
 
-      // Check if 2FA is required
-      if (data.requires2FA) {
+      // Check if 2FA is required (server returns 200 with requires2FA flag)
+      if (response.ok && data.requires2FA) {
         return {
           requires2FA: true,
           userId: data.userId,
@@ -144,6 +139,7 @@ export const authService = {
       
       return cachedUser;
     } catch (error) {
+      if (isSessionRedirectError(error)) throw error;
       if (!(error instanceof AuthenticationError)) {
         logger.error('Unexpected error during sign in:', error);
       }
@@ -151,17 +147,19 @@ export const authService = {
     }
   },
 
+  /**
+   * Register — uses fetchWithAuth for timeout/cache-busting.
+   */
   async register(userData: RegisterData): Promise<RegisterResponse> {
     try {
-      const csrfToken = await this.getCsrfToken();
+      const csrfToken = await getCsrfToken();
 
-      const response = await fetch('/api/auth/register', {
+      const response = await fetchWithAuth('/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken
+          'x-csrf-token': csrfToken || ''
         },
-        credentials: 'include',
         body: JSON.stringify({
           email: userData.email,
           password: userData.password,
@@ -180,41 +178,39 @@ export const authService = {
         message: data.message || 'Registration successful. Please wait for admin approval to access your account.'
       };
     } catch (error) {
-      if (error instanceof AuthenticationError) {
-        throw error;
-      }
+      if (error instanceof AuthenticationError) throw error;
+      if (isSessionRedirectError(error)) throw error;
       logger.error('Registration error:', error);
       throw new Error('Failed to register user');
     }
   },
 
+  /**
+   * Sign out — uses fetchWithCsrfRetry for automatic CSRF retry.
+   * Always clears local state, even if the API call fails.
+   */
   async signOut(): Promise<void> {
     try {
-      const csrfToken = await this.getCsrfToken();
-
-      await fetch('/api/auth/logout', {
-        method: 'POST',
-        headers: {
-          'X-CSRF-Token': csrfToken
-        },
-        credentials: 'include'
-      });
+      const options = await createAuthOptionsWithCsrf({ method: 'POST' });
+      await fetchWithCsrfRetry('/api/auth/logout', options);
     } catch (error) {
-      logger.error('Logout error:', error);
+      if (!isSessionRedirectError(error)) {
+        logger.error('Logout error:', error);
+      }
     } finally {
       cachedUser = null;
       clearCsrfToken();
     }
   },
 
+  /**
+   * Refresh the access token. Backend now returns { user } on success.
+   */
   async refreshToken(): Promise<boolean> {
     try {
-      const response = await fetch('/api/auth/refresh', {
+      const response = await fetchWithAuth('/api/auth/refresh', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include'
+        headers: { 'Content-Type': 'application/json' }
       });
 
       if (!response.ok) {
@@ -222,17 +218,15 @@ export const authService = {
       }
 
       const data = await response.json();
-      cachedUser = data.user as User;
+      if (data.user) {
+        cachedUser = data.user as User;
+      }
       return true;
     } catch (error) {
       logger.error('Token refresh error:', error);
       this.signOut();
       throw error;
     }
-  },
-
-  getAuthHeader(): Record<string, string> {
-    return {};
   },
 
   getCurrentUser(): User | null {
@@ -247,19 +241,17 @@ export const authService = {
     return !!this.getCurrentUser();
   },
 
+  /**
+   * Admin: Create user — uses fetchWithCsrfRetry for auth + CSRF retry.
+   */
   async createUser(userData: CreateUserData): Promise<User> {
     try {
-      const csrfToken = await this.getCsrfToken();
-
-      const response = await fetch('/api/auth/users', {
+      const options = await createAuthOptionsWithCsrf({
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken
-        },
-        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(userData)
       });
+      const response = await fetchWithCsrfRetry('/api/auth/users', options);
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -268,24 +260,23 @@ export const authService = {
 
       return await response.json();
     } catch (error) {
+      if (isSessionRedirectError(error)) throw error;
       logger.error('Create user error:', error);
       throw error;
     }
   },
 
+  /**
+   * Admin: Update user — uses fetchWithCsrfRetry for auth + CSRF retry.
+   */
   async updateUser(userId: string, updateData: UpdateUserData): Promise<User> {
     try {
-      const csrfToken = await this.getCsrfToken();
-
-      const response = await fetch(`/api/auth/users/${userId}`, {
+      const options = await createAuthOptionsWithCsrf({
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken
-        },
-        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updateData)
       });
+      const response = await fetchWithCsrfRetry(`/api/auth/users/${userId}`, options);
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -294,22 +285,19 @@ export const authService = {
 
       return await response.json();
     } catch (error) {
+      if (isSessionRedirectError(error)) throw error;
       logger.error('Update user error:', error);
       throw error;
     }
   },
 
+  /**
+   * Admin: Delete user — uses fetchWithCsrfRetry for auth + CSRF retry.
+   */
   async deleteUser(userId: string): Promise<{ message: string }> {
     try {
-      const csrfToken = await this.getCsrfToken();
-
-      const response = await fetch(`/api/auth/users/${userId}`, {
-        method: 'DELETE',
-        headers: {
-          'X-CSRF-Token': csrfToken
-        },
-        credentials: 'include'
-      });
+      const options = await createAuthOptionsWithCsrf({ method: 'DELETE' });
+      const response = await fetchWithCsrfRetry(`/api/auth/users/${userId}`, options);
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -318,6 +306,7 @@ export const authService = {
 
       return await response.json();
     } catch (error) {
+      if (isSessionRedirectError(error)) throw error;
       logger.error('Delete user error:', error);
       throw error;
     }

@@ -6,7 +6,7 @@
 
 import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
 import { authService, User, RegisterData, RegisterResponse, SignInResponse } from '../services/authService';
-import { setSessionExpiredHandler, resetSessionState } from '../utils/apiInterceptor';
+import { setSessionExpiredHandler, resetSessionState, AUTH_ERROR_PATTERNS } from '../utils/apiInterceptor';
 import toast from 'react-hot-toast';
 import logger from '../utils/logger.frontend';
 
@@ -98,7 +98,7 @@ export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
           }
           
           const errorMessage = (errorData.error || errorData.message || '').toLowerCase();
-          const isJwtError = ['kid_malformed', 'jwt malformed', 'jwt expired', 'invalid token', 'invalid signature']
+          const isJwtError = AUTH_ERROR_PATTERNS
             .some(pattern => errorMessage.includes(pattern.toLowerCase()));
           
           // If it's a JWT error, don't try to refresh - just clear state

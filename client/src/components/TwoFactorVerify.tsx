@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ShieldCheckIcon, KeyIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
-import { authService } from '../services/authService';
+import { authService, User } from '../services/authService';
 import toast from 'react-hot-toast';
 import logger from '../utils/logger.frontend';
 
@@ -8,7 +8,7 @@ interface TwoFactorVerifyProps {
   userId: string;
   email: string;
   password: string;
-  onSuccess: (user: unknown) => void;
+  onSuccess: (user: User) => void;
   onCancel: () => void;
 }
 
@@ -31,34 +31,16 @@ export default function TwoFactorVerify({ userId: _userId, email, password, onSu
     toast.loading('Vérification en cours...', { id: '2fa-verify' });
 
     try {
-      const csrfToken = await authService.getCsrfToken();
-      
-      const response = await fetch('/api/auth/signin', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken
-        },
-        credentials: 'include',
-        body: JSON.stringify({ email, password, totpCode: code })
-      });
+      // Re-use authService.signIn with the TOTP code — it handles
+      // CSRF, fetchWithAuth, timeout, caching, and session state.
+      const result = await authService.signIn(email, password, code);
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        const errorMsg = data.error || 'Code 2FA invalide';
-        setError(errorMsg);
-        setStatus('error');
-        toast.error(errorMsg, { id: '2fa-verify' });
-        return;
-      }
-
-      if (data.user) {
+      // If signIn returns a User (not a SignInResponse), authentication succeeded
+      if (result && 'id' in result) {
         setStatus('success');
         toast.success('Connexion réussie !', { id: '2fa-verify' });
-        // Small delay to show success state
         setTimeout(() => {
-          onSuccess(data.user);
+          onSuccess(result as User);
         }, 500);
       } else {
         setError('Réponse inattendue du serveur');
@@ -67,7 +49,7 @@ export default function TwoFactorVerify({ userId: _userId, email, password, onSu
       }
     } catch (err) {
       logger.error('[2FA] Verification error:', err);
-      const errorMsg = 'Erreur de connexion au serveur';
+      const errorMsg = err instanceof Error ? err.message : 'Erreur de connexion au serveur';
       setError(errorMsg);
       setStatus('error');
       toast.error(errorMsg, { id: '2fa-verify' });

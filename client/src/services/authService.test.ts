@@ -1,13 +1,29 @@
 /**
  * Tests for authService
+ * After refactoring: authService uses apiInterceptor functions (fetchWithAuth,
+ * fetchWithCsrfRetry, getCsrfToken, createAuthOptionsWithCsrf) instead of raw fetch.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+// Create mock functions
+const mockFetchWithAuth = vi.fn();
+const mockFetchWithCsrfRetry = vi.fn();
+const mockGetCsrfToken = vi.fn();
+const mockCreateAuthOptionsWithCsrf = vi.fn();
+const mockClearCsrfToken = vi.fn();
+const mockResetSessionState = vi.fn();
+const mockIsSessionRedirectError = vi.fn((_err: unknown) => false);
+
 // Mock apiInterceptor
 vi.mock('../utils/apiInterceptor', () => ({
-    clearCsrfToken: vi.fn(),
-    resetSessionState: vi.fn(),
+    fetchWithAuth: (url: string, opts?: unknown, timeout?: number) => mockFetchWithAuth(url, opts, timeout),
+    fetchWithCsrfRetry: (url: string, opts?: unknown, timeout?: number) => mockFetchWithCsrfRetry(url, opts, timeout),
+    getCsrfToken: (force?: boolean) => mockGetCsrfToken(force),
+    createAuthOptionsWithCsrf: (opts?: unknown, force?: boolean) => mockCreateAuthOptionsWithCsrf(opts, force),
+    clearCsrfToken: () => mockClearCsrfToken(),
+    resetSessionState: () => mockResetSessionState(),
+    isSessionRedirectError: (err: unknown) => mockIsSessionRedirectError(err),
 }));
 
 // Mock logger
@@ -22,103 +38,80 @@ vi.mock('../utils/logger.frontend', () => ({
 
 import { authService } from './authService';
 
+// Helper to create a mock Response
+const mockResponse = (ok: boolean, data: unknown, status = ok ? 200 : 400): Response => ({
+    ok,
+    status,
+    json: () => Promise.resolve(data),
+    clone: () => mockResponse(ok, data, status),
+} as unknown as Response);
+
 describe('authService', () => {
     beforeEach(() => {
         vi.resetAllMocks();
         authService.setCurrentUser(null);
-    });
-
-    describe('getCsrfToken', () => {
-        it('should fetch CSRF token from API', async () => {
-            (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-                ok: true,
-                json: () => Promise.resolve({ csrfToken: 'test-csrf-token' }),
-            });
-
-            const token = await authService.getCsrfToken();
-            expect(token).toBe('test-csrf-token');
-            expect(global.fetch).toHaveBeenCalledWith('/api/csrf-token', {
-                method: 'GET',
-                credentials: 'include',
-            });
-        });
-
-        it('should throw on failed CSRF fetch', async () => {
-            (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-                ok: false,
-            });
-
-            await expect(authService.getCsrfToken()).rejects.toThrow('Failed to fetch CSRF token');
-        });
+        mockGetCsrfToken.mockResolvedValue('csrf-123');
+        mockCreateAuthOptionsWithCsrf.mockImplementation(async (opts) => ({
+            ...opts,
+            headers: { ...opts?.headers, 'x-csrf-token': 'csrf-123' },
+            credentials: 'include',
+        }));
     });
 
     describe('signIn', () => {
         it('should sign in successfully and return user', async () => {
             const mockUser = { id: '1', name: 'Test User', email: 'test@test.com', role: 'user', status: 'Active' };
 
-            (global.fetch as ReturnType<typeof vi.fn>)
-                // getCsrfToken call
-                .mockResolvedValueOnce({
-                    ok: true,
-                    json: () => Promise.resolve({ csrfToken: 'csrf-123' }),
-                })
-                // signIn call
-                .mockResolvedValueOnce({
-                    ok: true,
-                    json: () => Promise.resolve({ user: mockUser }),
-                });
+            mockFetchWithAuth.mockResolvedValueOnce(
+                mockResponse(true, { user: mockUser })
+            );
 
             const result = await authService.signIn('test@test.com', 'password123');
             expect(result).toEqual(mockUser);
             expect(authService.getCurrentUser()).toEqual(mockUser);
+            expect(mockGetCsrfToken).toHaveBeenCalled();
+            expect(mockResetSessionState).toHaveBeenCalled();
         });
 
         it('should return 2FA response when required', async () => {
-            (global.fetch as ReturnType<typeof vi.fn>)
-                .mockResolvedValueOnce({
-                    ok: true,
-                    json: () => Promise.resolve({ csrfToken: 'csrf-123' }),
+            mockFetchWithAuth.mockResolvedValueOnce(
+                mockResponse(true, {
+                    requires2FA: true,
+                    userId: 'user-1',
+                    message: 'Enter TOTP code',
                 })
-                .mockResolvedValueOnce({
-                    ok: true,
-                    json: () => Promise.resolve({
-                        requires2FA: true,
-                        userId: 'user-1',
-                        message: 'Enter TOTP code',
-                    }),
-                });
+            );
 
             const result = await authService.signIn('test@test.com', 'password123');
             expect(result).toHaveProperty('requires2FA', true);
             expect(result).toHaveProperty('userId', 'user-1');
+            // User should NOT be cached for 2FA response
+            expect(authService.getCurrentUser()).toBeNull();
         });
 
         it('should throw on failed sign in', async () => {
-            (global.fetch as ReturnType<typeof vi.fn>)
-                .mockResolvedValueOnce({
-                    ok: true,
-                    json: () => Promise.resolve({ csrfToken: 'csrf-123' }),
-                })
-                .mockResolvedValueOnce({
-                    ok: false,
-                    json: () => Promise.resolve({ error: 'Invalid credentials' }),
-                });
+            mockFetchWithAuth.mockResolvedValueOnce(
+                mockResponse(false, { error: 'Invalid credentials' })
+            );
 
             await expect(authService.signIn('test@test.com', 'wrong')).rejects.toThrow('Invalid credentials');
+        });
+
+        it('should check !response.ok before requires2FA', async () => {
+            // Even if requires2FA is present, a non-ok response should throw
+            mockFetchWithAuth.mockResolvedValueOnce(
+                mockResponse(false, { requires2FA: true, error: 'Rate limited' }, 429)
+            );
+
+            await expect(authService.signIn('test@test.com', 'pass')).rejects.toThrow('Rate limited');
         });
     });
 
     describe('register', () => {
         it('should register successfully', async () => {
-            (global.fetch as ReturnType<typeof vi.fn>)
-                .mockResolvedValueOnce({
-                    ok: true,
-                    json: () => Promise.resolve({ csrfToken: 'csrf-123' }),
-                })
-                .mockResolvedValueOnce({
-                    ok: true,
-                    json: () => Promise.resolve({ message: 'Registration successful' }),
-                });
+            mockFetchWithAuth.mockResolvedValueOnce(
+                mockResponse(true, { message: 'Registration successful' })
+            );
 
             const result = await authService.register({
                 email: 'new@test.com',
@@ -131,15 +124,9 @@ describe('authService', () => {
         });
 
         it('should throw on registration failure', async () => {
-            (global.fetch as ReturnType<typeof vi.fn>)
-                .mockResolvedValueOnce({
-                    ok: true,
-                    json: () => Promise.resolve({ csrfToken: 'csrf-123' }),
-                })
-                .mockResolvedValueOnce({
-                    ok: false,
-                    json: () => Promise.resolve({ error: 'Email already exists' }),
-                });
+            mockFetchWithAuth.mockResolvedValueOnce(
+                mockResponse(false, { error: 'Email already exists' })
+            );
 
             await expect(
                 authService.register({ email: 'dup@test.com', password: 'pass', name: 'Dup' })
@@ -152,27 +139,21 @@ describe('authService', () => {
             authService.setCurrentUser({ id: '1', name: 'Test', email: 'test@test.com', role: 'user', status: 'Active' });
             expect(authService.getCurrentUser()).not.toBeNull();
 
-            (global.fetch as ReturnType<typeof vi.fn>)
-                .mockResolvedValueOnce({
-                    ok: true,
-                    json: () => Promise.resolve({ csrfToken: 'csrf-123' }),
-                })
-                .mockResolvedValueOnce({
-                    ok: true,
-                    json: () => Promise.resolve({}),
-                });
+            mockFetchWithCsrfRetry.mockResolvedValueOnce(mockResponse(true, {}));
 
             await authService.signOut();
             expect(authService.getCurrentUser()).toBeNull();
+            expect(mockClearCsrfToken).toHaveBeenCalled();
         });
 
         it('should clear user even if logout API fails', async () => {
             authService.setCurrentUser({ id: '1', name: 'Test', email: 'test@test.com', role: 'user', status: 'Active' });
 
-            (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('Network error'));
+            mockFetchWithCsrfRetry.mockRejectedValueOnce(new Error('Network error'));
 
             await authService.signOut();
             expect(authService.getCurrentUser()).toBeNull();
+            expect(mockClearCsrfToken).toHaveBeenCalled();
         });
     });
 
@@ -180,10 +161,9 @@ describe('authService', () => {
         it('should refresh token and update user', async () => {
             const updatedUser = { id: '1', name: 'Test', email: 'test@test.com', role: 'user', status: 'Active' };
 
-            (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-                ok: true,
-                json: () => Promise.resolve({ user: updatedUser }),
-            });
+            mockFetchWithAuth.mockResolvedValueOnce(
+                mockResponse(true, { user: updatedUser })
+            );
 
             const result = await authService.refreshToken();
             expect(result).toBe(true);
@@ -191,10 +171,11 @@ describe('authService', () => {
         });
 
         it('should throw and sign out on refresh failure', async () => {
-            (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-                ok: false,
-                json: () => Promise.resolve({ error: 'Refresh failed' }),
-            });
+            mockFetchWithAuth.mockResolvedValueOnce(
+                mockResponse(false, { error: 'Refresh failed' })
+            );
+            // signOut will also call fetchWithCsrfRetry
+            mockFetchWithCsrfRetry.mockResolvedValueOnce(mockResponse(true, {}));
 
             await expect(authService.refreshToken()).rejects.toThrow();
         });
@@ -221,25 +202,13 @@ describe('authService', () => {
         });
     });
 
-    describe('getAuthHeader', () => {
-        it('should return empty object (cookie-based auth)', () => {
-            expect(authService.getAuthHeader()).toEqual({});
-        });
-    });
-
     describe('createUser', () => {
         it('should create user via API', async () => {
             const newUser = { id: '2', name: 'Created', email: 'created@test.com', role: 'user', status: 'Active' };
 
-            (global.fetch as ReturnType<typeof vi.fn>)
-                .mockResolvedValueOnce({
-                    ok: true,
-                    json: () => Promise.resolve({ csrfToken: 'csrf-123' }),
-                })
-                .mockResolvedValueOnce({
-                    ok: true,
-                    json: () => Promise.resolve(newUser),
-                });
+            mockFetchWithCsrfRetry.mockResolvedValueOnce(
+                mockResponse(true, newUser)
+            );
 
             const result = await authService.createUser({
                 email: 'created@test.com',
@@ -248,18 +217,13 @@ describe('authService', () => {
             });
 
             expect(result.email).toBe('created@test.com');
+            expect(mockCreateAuthOptionsWithCsrf).toHaveBeenCalled();
         });
 
         it('should throw on create failure', async () => {
-            (global.fetch as ReturnType<typeof vi.fn>)
-                .mockResolvedValueOnce({
-                    ok: true,
-                    json: () => Promise.resolve({ csrfToken: 'csrf-123' }),
-                })
-                .mockResolvedValueOnce({
-                    ok: false,
-                    json: () => Promise.resolve({ error: 'Forbidden' }),
-                });
+            mockFetchWithCsrfRetry.mockResolvedValueOnce(
+                mockResponse(false, { error: 'Forbidden' })
+            );
 
             await expect(
                 authService.createUser({ email: 'x@x.com', password: 'p', name: 'X' })
@@ -271,15 +235,9 @@ describe('authService', () => {
         it('should update user via API', async () => {
             const updated = { id: '1', name: 'Updated', email: 'test@test.com', role: 'user', status: 'Active' };
 
-            (global.fetch as ReturnType<typeof vi.fn>)
-                .mockResolvedValueOnce({
-                    ok: true,
-                    json: () => Promise.resolve({ csrfToken: 'csrf-123' }),
-                })
-                .mockResolvedValueOnce({
-                    ok: true,
-                    json: () => Promise.resolve(updated),
-                });
+            mockFetchWithCsrfRetry.mockResolvedValueOnce(
+                mockResponse(true, updated)
+            );
 
             const result = await authService.updateUser('1', { name: 'Updated' });
             expect(result.name).toBe('Updated');
@@ -288,30 +246,18 @@ describe('authService', () => {
 
     describe('deleteUser', () => {
         it('should delete user via API', async () => {
-            (global.fetch as ReturnType<typeof vi.fn>)
-                .mockResolvedValueOnce({
-                    ok: true,
-                    json: () => Promise.resolve({ csrfToken: 'csrf-123' }),
-                })
-                .mockResolvedValueOnce({
-                    ok: true,
-                    json: () => Promise.resolve({ message: 'User deleted' }),
-                });
+            mockFetchWithCsrfRetry.mockResolvedValueOnce(
+                mockResponse(true, { message: 'User deleted' })
+            );
 
             const result = await authService.deleteUser('user-123');
             expect(result.message).toBe('User deleted');
         });
 
         it('should throw on delete failure', async () => {
-            (global.fetch as ReturnType<typeof vi.fn>)
-                .mockResolvedValueOnce({
-                    ok: true,
-                    json: () => Promise.resolve({ csrfToken: 'csrf-123' }),
-                })
-                .mockResolvedValueOnce({
-                    ok: false,
-                    json: () => Promise.resolve({ error: 'Not found' }),
-                });
+            mockFetchWithCsrfRetry.mockResolvedValueOnce(
+                mockResponse(false, { error: 'Not found' })
+            );
 
             await expect(authService.deleteUser('bad-id')).rejects.toThrow('Not found');
         });
