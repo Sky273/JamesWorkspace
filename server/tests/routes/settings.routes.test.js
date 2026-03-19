@@ -20,15 +20,6 @@ vi.mock('../../config/constants.js', () => ({
     RATE_LIMIT: { AUTH: { windowMs: 900000, max: 20 }, USER: { windowMs: 900000, max: 50 } }
 }));
 
-// Mock postgresHelpers
-const mockSelectWithTimeout = vi.fn();
-const mockUpdateWithTimeout = vi.fn();
-const mockCreateWithTimeout = vi.fn();
-vi.mock('../../utils/postgresHelpers.js', () => ({
-    selectWithTimeout: (...args) => mockSelectWithTimeout(...args),
-    updateWithTimeout: (...args) => mockUpdateWithTimeout(...args),
-    createWithTimeout: (...args) => mockCreateWithTimeout(...args)
-}));
 
 // Mock cache service
 vi.mock('../../services/cache.service.js', () => ({
@@ -48,8 +39,14 @@ vi.mock('../../services/metrics.service.js', () => ({
 }));
 
 // Mock settings service
+const mockGetSettings = vi.fn();
+const mockUpsertSettings = vi.fn();
+const mockCreateSettings = vi.fn();
 vi.mock('../../services/settings.service.js', () => ({
-    invalidateSettingsCache: vi.fn()
+    invalidateSettingsCache: vi.fn(),
+    getSettings: (...args) => mockGetSettings(...args),
+    upsertSettings: (...args) => mockUpsertSettings(...args),
+    createSettings: (...args) => mockCreateSettings(...args)
 }));
 
 // Mock prompts
@@ -119,7 +116,7 @@ describe('Settings Routes', () => {
 
     describe('GET /api/settings', () => {
         it('should return settings from DB', async () => {
-            mockSelectWithTimeout.mockResolvedValue([{
+            mockGetSettings.mockResolvedValue({
                 id: 'set-1',
                 llm_model: 'gpt-4',
                 cv_mode: 'nominative',
@@ -137,7 +134,7 @@ describe('Settings Routes', () => {
                 dpo_name: 'John',
                 dpo_email: 'dpo@test.com',
                 dpo_phone: '+33123456789'
-            }]);
+            });
 
             const res = await request(app).get('/api/settings').set(authHeader);
 
@@ -149,7 +146,7 @@ describe('Settings Routes', () => {
         });
 
         it('should return defaults when no settings exist', async () => {
-            mockSelectWithTimeout.mockResolvedValue([]);
+            mockGetSettings.mockResolvedValue(null);
 
             const res = await request(app).get('/api/settings').set(authHeader);
 
@@ -165,7 +162,7 @@ describe('Settings Routes', () => {
         });
 
         it('should return 500 on DB error', async () => {
-            mockSelectWithTimeout.mockRejectedValue(new Error('DB error'));
+            mockGetSettings.mockRejectedValue(new Error('DB error'));
 
             const res = await request(app).get('/api/settings').set(authHeader);
             expect(res.status).toBe(500);
@@ -193,7 +190,7 @@ describe('Settings Routes', () => {
                 dpo_email: '',
                 dpo_phone: ''
             };
-            mockUpdateWithTimeout.mockResolvedValue([updatedRecord]);
+            mockUpsertSettings.mockResolvedValue(updatedRecord);
 
             const res = await request(app)
                 .put('/api/settings/set-1')
@@ -215,11 +212,7 @@ describe('Settings Routes', () => {
         });
 
         it('should handle not found by creating new', async () => {
-            const err = new Error('Record not found');
-            err.statusCode = 404;
-            mockUpdateWithTimeout.mockRejectedValueOnce(err);
-            mockSelectWithTimeout.mockResolvedValue([]);
-            mockCreateWithTimeout.mockResolvedValue([{
+            mockUpsertSettings.mockResolvedValue({
                 id: 'set-new',
                 llm_model: 'gpt-4',
                 cv_mode: 'nominative',
@@ -237,7 +230,7 @@ describe('Settings Routes', () => {
                 dpo_name: '',
                 dpo_email: '',
                 dpo_phone: ''
-            }]);
+            });
 
             const res = await request(app)
                 .put('/api/settings/nonexistent')
@@ -245,11 +238,10 @@ describe('Settings Routes', () => {
                 .send({ llmModel: 'gpt-4' });
 
             expect(res.status).toBe(200);
-            expect(mockCreateWithTimeout).toHaveBeenCalled();
         });
 
         it('should return 500 on unexpected error', async () => {
-            mockUpdateWithTimeout.mockRejectedValue(new Error('Unexpected'));
+            mockUpsertSettings.mockRejectedValue(new Error('Unexpected'));
 
             const res = await request(app)
                 .put('/api/settings/set-1')
@@ -262,7 +254,7 @@ describe('Settings Routes', () => {
 
     describe('POST /api/settings', () => {
         it('should create settings', async () => {
-            mockCreateWithTimeout.mockResolvedValue([{
+            mockCreateSettings.mockResolvedValue({
                 id: 'set-new',
                 llm_model: 'gpt-4',
                 cv_mode: 'nominative',
@@ -280,7 +272,7 @@ describe('Settings Routes', () => {
                 dpo_name: '',
                 dpo_email: '',
                 dpo_phone: ''
-            }]);
+            });
 
             const res = await request(app)
                 .post('/api/settings')
@@ -301,7 +293,7 @@ describe('Settings Routes', () => {
         });
 
         it('should return 500 on error', async () => {
-            mockCreateWithTimeout.mockRejectedValue(new Error('DB error'));
+            mockCreateSettings.mockRejectedValue(new Error('DB error'));
 
             const res = await request(app)
                 .post('/api/settings')

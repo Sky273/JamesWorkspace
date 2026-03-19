@@ -3,10 +3,9 @@ import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.j
 import { validateParams, validateBody, updateSettingsSchema } from '../utils/validation.js';
 import { settingsCache } from '../services/cache.service.js';
 import { metrics } from '../services/metrics.service.js';
-import { invalidateSettingsCache } from '../services/settings.service.js';
+import { invalidateSettingsCache, getSettings, upsertSettings, createSettings } from '../services/settings.service.js';
 import { normalizeWeights, DEFAULT_ANALYSIS_PROMPT, DEFAULT_IMPROVEMENT_PROMPT, DEFAULT_MATCH_ANALYSIS_PROMPT, DEFAULT_ADAPTATION_PROMPT } from '../config/prompts.backend.js';
 import { safeLog } from '../utils/logger.backend.js';
-import { selectWithTimeout, updateWithTimeout, createWithTimeout } from '../utils/postgresHelpers.js';
 import { mapSettingsToFrontend, mapSettingsFromFrontend } from '../utils/mappers.js';
 
 const router = express.Router();
@@ -28,12 +27,9 @@ router.get('/', authenticateToken, async (req, res) => {
         metrics.trackCacheMiss();
         safeLog('debug', 'Cache miss - fetching settings from PostgreSQL');
         
-        const records = await selectWithTimeout('llm_settings', {
-            limit: 1,
-            orderBy: 'created_at DESC'
-        });
+        const settings = await getSettings();
 
-        if (records.length === 0) {
+        if (!settings) {
             safeLog('info', 'No settings found, returning defaults');
             
             const defaultSettings = {
@@ -56,8 +52,6 @@ router.get('/', authenticateToken, async (req, res) => {
             return res.json(defaultSettings);
         }
 
-        const settings = records[0];
-        
         const responseData = mapSettingsToFrontend(settings);
         
         settingsCache.set('settings', responseData);
@@ -90,45 +84,7 @@ router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), valida
         // Map frontend fields to PostgreSQL columns
         const fieldsToUpdate = mapSettingsFromFrontend(updateData);
 
-        // Try to update first, if not found, get the first record and update it
-        let records;
-        try {
-            records = await updateWithTimeout('llm_settings', [{
-                id: id,
-                fields: fieldsToUpdate
-            }]);
-        } catch (error) {
-            if (error.statusCode === 404 || error.message.includes('not found')) {
-                // Record not found, get the first existing record or create one
-                const existing = await selectWithTimeout('llm_settings', {
-                    limit: 1,
-                    orderBy: 'created_at DESC'
-                });
-                
-                if (existing.length > 0) {
-                    // Update the existing record
-                    records = await updateWithTimeout('llm_settings', [{
-                        id: existing[0].id,
-                        fields: fieldsToUpdate
-                    }]);
-                } else {
-                    // Create a new record
-                    const fieldsToCreate = {
-                        name: 'Default Settings',
-                        ...fieldsToUpdate,
-                        status: 'active'
-                    };
-                    records = await createWithTimeout('llm_settings', [{
-                        fields: fieldsToCreate
-                    }]);
-                }
-            } else {
-                throw error;
-            }
-        }
-
-        // Map back to frontend format
-        const result = records[0];
+        const result = await upsertSettings(id, fieldsToUpdate);
         res.json(mapSettingsToFrontend(result));
     } catch (error) {
         safeLog('error', 'Error updating settings', { error: error.message });
@@ -155,12 +111,7 @@ router.post('/', authenticateToken, requireAdmin, validateBody(updateSettingsSch
             status: 'active'
         };
 
-        const records = await createWithTimeout('llm_settings', [{
-            fields: fieldsToCreate
-        }]);
-
-        // Map back to frontend format
-        const result = records[0];
+        const result = await createSettings(fieldsToCreate);
         res.status(201).json(mapSettingsToFrontend(result));
     } catch (error) {
         safeLog('error', 'Error creating settings', { error: error.message });

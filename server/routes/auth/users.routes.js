@@ -9,7 +9,7 @@ import { authenticateToken, requireAdmin } from '../../middleware/auth.middlewar
 import { validateBody, validateParams, createUserSchema } from '../../utils/validation.js';
 import { securityLog, getRequestMetadata, LOG_LEVELS, SECURITY_EVENTS } from '../../services/security.service.js';
 import { safeLog } from '../../utils/logger.backend.js';
-import { selectWithTimeout, createWithTimeout, updateWithTimeout, destroyWithTimeout } from '../../utils/postgresHelpers.js';
+import * as usersService from '../../services/users.service.js';
 
 const router = express.Router();
 
@@ -20,13 +20,9 @@ router.post('/users', authenticateToken, requireAdmin, validateBody(createUserSc
         const normalizedEmail = email.toLowerCase();
         const metadata = getRequestMetadata(req);
 
-        const existingUsers = await selectWithTimeout('users', {
-            where: 'LOWER(email) = $1',
-            params: [normalizedEmail],
-            limit: 1
-        });
+        const existingUser = await usersService.findUserByEmail(normalizedEmail);
 
-        if (existingUsers.length > 0) {
+        if (existingUser) {
             return res.status(409).json({ error: 'User with this email already exists' });
         }
 
@@ -47,15 +43,11 @@ router.post('/users', authenticateToken, requireAdmin, validateBody(createUserSc
 
         const firmName = firm || customer;
         if (firmName) {
-            const firms = await selectWithTimeout('firms', {
-                where: 'name = $1',
-                params: [firmName],
-                limit: 1
-            });
+            const foundFirm = await usersService.findFirmByName(firmName);
             
-            if (firms.length > 0) {
-                userData.firm_id = firms[0].id;
-                userData.firm_name = firms[0].name;
+            if (foundFirm) {
+                userData.firm_id = foundFirm.id;
+                userData.firm_name = foundFirm.name;
             } else {
                 return res.status(400).json({ 
                     error: `Firm '${firmName}' not found` 
@@ -63,11 +55,7 @@ router.post('/users', authenticateToken, requireAdmin, validateBody(createUserSc
             }
         }
 
-        const records = await createWithTimeout('users', [{
-            fields: userData
-        }]);
-
-        const newUser = records[0];
+        const newUser = await usersService.createAdminUser(userData);
 
         securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.USER_CREATED, {
             ...metadata,
@@ -99,17 +87,11 @@ router.put('/users/:id', authenticateToken, requireAdmin, validateParams('id'), 
         const { id } = req.params;
         const updateData = {};
 
-        const currentUsers = await selectWithTimeout('users', {
-            where: 'id = $1',
-            params: [id],
-            limit: 1
-        });
+        const currentUser = await usersService.findUserById(id);
         
-        if (currentUsers.length === 0) {
+        if (!currentUser) {
             return res.status(404).json({ error: 'User not found' });
         }
-        
-        const currentUser = currentUsers[0];
 
         const name = req.body.name;
         const email = req.body.email;
@@ -132,16 +114,11 @@ router.put('/users/:id', authenticateToken, requireAdmin, validateParams('id'), 
         
         if (req.body.firm || req.body.customer) {
             const firmName = req.body.firm || req.body.customer;
+            const foundFirm = await usersService.findFirmByName(firmName);
             
-            const firms = await selectWithTimeout('firms', {
-                where: 'name = $1',
-                params: [firmName],
-                limit: 1
-            });
-            
-            if (firms.length > 0) {
-                updateData.firm_id = firms[0].id;
-                updateData.firm_name = firms[0].name;
+            if (foundFirm) {
+                updateData.firm_id = foundFirm.id;
+                updateData.firm_name = foundFirm.name;
             } else {
                 return res.status(400).json({ 
                     error: `Firm '${firmName}' not found` 
@@ -153,12 +130,7 @@ router.put('/users/:id', authenticateToken, requireAdmin, validateParams('id'), 
             return res.status(400).json({ error: 'No fields to update' });
         }
 
-        const records = await updateWithTimeout('users', [{
-            id: id,
-            fields: updateData
-        }]);
-
-        const updatedUser = records[0];
+        const updatedUser = await usersService.updateAdminUser(id, updateData);
 
         securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.USER_UPDATED, {
             ...getRequestMetadata(req),
@@ -194,7 +166,7 @@ router.delete('/users/:id', authenticateToken, requireAdmin, validateParams('id'
             return res.status(400).json({ error: 'Cannot delete your own account' });
         }
 
-        await destroyWithTimeout('users', [id]);
+        await usersService.deleteUser(id);
 
         securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.USER_DELETED, {
             ...getRequestMetadata(req),

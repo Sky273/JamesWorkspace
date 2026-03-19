@@ -3,7 +3,7 @@ import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.j
 import { validateQuery, validators } from '../utils/validation.js';
 import { getSecurityLogs, getSecurityLogsCount } from '../services/security.service.js';
 import { getProxyLogs, getProxyLogsCount, getProxyLogsStats, safeLog } from '../utils/logger.backend.js';
-import { selectWithTimeout } from '../utils/postgresHelpers.js';
+import { listAllUsers } from '../services/users.service.js';
 
 // Import cache stats functions
 import { getBlacklistStats } from '../services/tokenBlacklist.service.js';
@@ -234,7 +234,7 @@ router.get('/cache-stats', authenticateToken, requireAdmin, (req, res) => {
 // GET /api/admin/users - Get all users (admin only) - alias for /api/auth/users
 router.get('/users', authenticateToken, requireAdmin, async (req, res) => {
     try {
-        const records = await selectWithTimeout('users', {});
+        const records = await listAllUsers();
         const users = records.map(record => ({
             id: record.id,
             name: record.name,

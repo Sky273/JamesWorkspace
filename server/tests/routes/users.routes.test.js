@@ -28,17 +28,20 @@ vi.mock('bcryptjs', () => ({
     }
 }));
 
-// Mock postgresHelpers
-const mockSelectWithTimeout = vi.fn();
-const mockCreateWithTimeout = vi.fn();
-const mockUpdateWithTimeout = vi.fn();
-const mockDestroyWithTimeout = vi.fn();
-vi.mock('../../utils/postgresHelpers.js', () => ({
-    selectWithTimeout: (...args) => mockSelectWithTimeout(...args),
-    createWithTimeout: (...args) => mockCreateWithTimeout(...args),
-    updateWithTimeout: (...args) => mockUpdateWithTimeout(...args),
-    escapeLike: (str) => str.replace(/[%_\\]/g, '\\$&'),
-    destroyWithTimeout: (...args) => mockDestroyWithTimeout(...args)
+// Mock users service
+const mockFindUserByEmail = vi.fn();
+const mockFindFirmByName = vi.fn();
+const mockCreateAdminUser = vi.fn();
+const mockFindUserById = vi.fn();
+const mockUpdateAdminUser = vi.fn();
+const mockDeleteUser = vi.fn();
+vi.mock('../../services/users.service.js', () => ({
+    findUserByEmail: (...args) => mockFindUserByEmail(...args),
+    findFirmByName: (...args) => mockFindFirmByName(...args),
+    createAdminUser: (...args) => mockCreateAdminUser(...args),
+    findUserById: (...args) => mockFindUserById(...args),
+    updateAdminUser: (...args) => mockUpdateAdminUser(...args),
+    deleteUser: (...args) => mockDeleteUser(...args)
 }));
 
 // Mock security service
@@ -107,14 +110,14 @@ describe('Users Routes', () => {
 
     describe('POST /api/auth/users', () => {
         it('should create a user', async () => {
-            mockSelectWithTimeout.mockResolvedValueOnce([]); // no existing user
-            mockCreateWithTimeout.mockResolvedValue([{
+            mockFindUserByEmail.mockResolvedValueOnce(null); // no existing user
+            mockCreateAdminUser.mockResolvedValue({
                 id: 'u-new',
                 email: 'new@example.com',
                 name: 'New User',
                 role: 'user',
                 status: 'active'
-            }]);
+            });
 
             const res = await request(app)
                 .post('/api/auth/users')
@@ -126,7 +129,7 @@ describe('Users Routes', () => {
         });
 
         it('should return 409 if user already exists', async () => {
-            mockSelectWithTimeout.mockResolvedValueOnce([{ id: 'u-existing' }]);
+            mockFindUserByEmail.mockResolvedValueOnce({ id: 'u-existing' });
 
             const res = await request(app)
                 .post('/api/auth/users')
@@ -138,16 +141,15 @@ describe('Users Routes', () => {
         });
 
         it('should create user with firm association', async () => {
-            mockSelectWithTimeout
-                .mockResolvedValueOnce([]) // no existing user
-                .mockResolvedValueOnce([{ id: 'f-1', name: 'Acme Corp' }]); // firm lookup
-            mockCreateWithTimeout.mockResolvedValue([{
+            mockFindUserByEmail.mockResolvedValueOnce(null); // no existing user
+            mockFindFirmByName.mockResolvedValueOnce({ id: 'f-1', name: 'Acme Corp' }); // firm lookup
+            mockCreateAdminUser.mockResolvedValue({
                 id: 'u-new',
                 email: 'new@example.com',
                 name: 'New User',
                 role: 'user',
                 status: 'active'
-            }]);
+            });
 
             const res = await request(app)
                 .post('/api/auth/users')
@@ -158,9 +160,8 @@ describe('Users Routes', () => {
         });
 
         it('should return 400 if firm not found', async () => {
-            mockSelectWithTimeout
-                .mockResolvedValueOnce([]) // no existing user
-                .mockResolvedValueOnce([]); // firm not found
+            mockFindUserByEmail.mockResolvedValueOnce(null); // no existing user
+            mockFindFirmByName.mockResolvedValueOnce(null); // firm not found
 
             const res = await request(app)
                 .post('/api/auth/users')
@@ -181,8 +182,8 @@ describe('Users Routes', () => {
         });
 
         it('should return 500 on DB error', async () => {
-            mockSelectWithTimeout.mockResolvedValueOnce([]);
-            mockCreateWithTimeout.mockRejectedValue(new Error('DB error'));
+            mockFindUserByEmail.mockResolvedValueOnce(null);
+            mockCreateAdminUser.mockRejectedValue(new Error('DB error'));
 
             const res = await request(app)
                 .post('/api/auth/users')
@@ -195,12 +196,12 @@ describe('Users Routes', () => {
 
     describe('PUT /api/auth/users/:id', () => {
         it('should update a user', async () => {
-            mockSelectWithTimeout.mockResolvedValueOnce([{
+            mockFindUserById.mockResolvedValueOnce({
                 id: 'u-1', email: 'old@example.com', name: 'Old Name', role: 'user', status: 'active'
-            }]);
-            mockUpdateWithTimeout.mockResolvedValue([{
+            });
+            mockUpdateAdminUser.mockResolvedValue({
                 id: 'u-1', email: 'old@example.com', name: 'New Name', role: 'user', status: 'active'
-            }]);
+            });
 
             const res = await request(app)
                 .put('/api/auth/users/u-1')
@@ -212,7 +213,7 @@ describe('Users Routes', () => {
         });
 
         it('should return 404 if user not found', async () => {
-            mockSelectWithTimeout.mockResolvedValueOnce([]);
+            mockFindUserById.mockResolvedValueOnce(null);
 
             const res = await request(app)
                 .put('/api/auth/users/nonexistent')
@@ -223,9 +224,9 @@ describe('Users Routes', () => {
         });
 
         it('should return 400 if no fields to update', async () => {
-            mockSelectWithTimeout.mockResolvedValueOnce([{
+            mockFindUserById.mockResolvedValueOnce({
                 id: 'u-1', email: 'test@example.com', name: 'Test', role: 'user', status: 'active'
-            }]);
+            });
 
             const res = await request(app)
                 .put('/api/auth/users/u-1')
@@ -239,7 +240,7 @@ describe('Users Routes', () => {
 
     describe('DELETE /api/auth/users/:id', () => {
         it('should delete a user', async () => {
-            mockDestroyWithTimeout.mockResolvedValue(['u-1']);
+            mockDeleteUser.mockResolvedValue(['u-1']);
 
             const res = await request(app)
                 .delete('/api/auth/users/u-1')
@@ -261,7 +262,7 @@ describe('Users Routes', () => {
         it('should return 404 if user not found', async () => {
             const err = new Error('Record not found');
             err.statusCode = 404;
-            mockDestroyWithTimeout.mockRejectedValue(err);
+            mockDeleteUser.mockRejectedValue(err);
 
             const res = await request(app)
                 .delete('/api/auth/users/nonexistent')

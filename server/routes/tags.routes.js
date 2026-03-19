@@ -6,7 +6,7 @@
 import express from 'express';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { safeLog } from '../utils/logger.backend.js';
-import { selectWithTimeout, updateWithTimeout } from '../utils/postgresHelpers.js';
+import { aggregateRawTags, aggregateCleanedTags, aggregateEscoTags, fetchResumeBatch, updateResumeTags, renameTag } from '../services/tags.service.js';
 import { processCleanedTagsToEsco } from '../services/escoService.js';
 import { getUserFirmId } from '../utils/firmHelpers.js';
 
@@ -113,51 +113,7 @@ function parseJsonField(value) {
 // GET /api/tags - Get all tags from resumes (optimized SQL aggregation)
 router.get('/', authenticateToken, async (req, res) => {
     try {
-        // Use PostgreSQL to aggregate and deduplicate tags directly in the database
-        // This avoids loading all resumes into memory
-        // Note: PostgreSQL doesn't allow ORDER BY in jsonb_agg(DISTINCT ...), so we use subqueries
-        const aggregateQuery = `
-            SELECT 
-                COALESCE(
-                    (SELECT jsonb_agg(tag ORDER BY tag) FROM (
-                        SELECT DISTINCT tag 
-                        FROM resumes, jsonb_array_elements_text(COALESCE(skills, '[]'::jsonb)) AS tag 
-                        WHERE tag IS NOT NULL AND tag != ''
-                    ) AS distinct_tags),
-                    '[]'::jsonb
-                ) AS skills,
-                COALESCE(
-                    (SELECT jsonb_agg(tag ORDER BY tag) FROM (
-                        SELECT DISTINCT tag 
-                        FROM resumes, jsonb_array_elements_text(COALESCE(industries, '[]'::jsonb)) AS tag 
-                        WHERE tag IS NOT NULL AND tag != ''
-                    ) AS distinct_tags),
-                    '[]'::jsonb
-                ) AS industries,
-                COALESCE(
-                    (SELECT jsonb_agg(tag ORDER BY tag) FROM (
-                        SELECT DISTINCT tag 
-                        FROM resumes, jsonb_array_elements_text(COALESCE(tools, '[]'::jsonb)) AS tag 
-                        WHERE tag IS NOT NULL AND tag != ''
-                    ) AS distinct_tags),
-                    '[]'::jsonb
-                ) AS tools,
-                COALESCE(
-                    (SELECT jsonb_agg(tag ORDER BY tag) FROM (
-                        SELECT DISTINCT tag 
-                        FROM resumes, jsonb_array_elements_text(COALESCE(soft_skills, '[]'::jsonb)) AS tag 
-                        WHERE tag IS NOT NULL AND tag != ''
-                    ) AS distinct_tags),
-                    '[]'::jsonb
-                ) AS soft_skills
-        `;
-        
-        const result = await selectWithTimeout('resumes', {
-            rawQuery: aggregateQuery,
-            rawParams: []
-        });
-        
-        const row = result[0] || {};
+        const row = await aggregateRawTags();
         res.json({
             'Skills': row.skills || [],
             'Industries': row.industries || [],
@@ -193,130 +149,7 @@ router.get('/cleaned', authenticateToken, async (req, res) => {
             return res.json(cachedResult);
         }
         
-        let aggregateQuery = '';
-        let queryParams = [];
-
-        if (scope === 'grouped-by-deal') {
-            // For grouped-by-deal view:
-            // - Admin: all resumes (linked to any deal OR unassigned)
-            // - User: resumes linked to their firm's deals OR unassigned resumes from their firm
-            // Use COALESCE to fallback to raw tags if cleaned tags are not available
-            const firmCondition = isAdmin
-                ? ''
-                : `WHERE (
-                        r.id IN (
-                            SELECT dr.resume_id
-                            FROM deal_resumes dr
-                            INNER JOIN deals d ON d.id = dr.deal_id
-                            WHERE d.firm_id = $1
-                        )
-                        OR (
-                            r.firm_id = $1
-                            AND r.id NOT IN (
-                                SELECT DISTINCT resume_id
-                                FROM deal_resumes
-                                WHERE resume_id IS NOT NULL
-                            )
-                        )
-                    )`;
-            
-            aggregateQuery = `
-                WITH visible_resumes AS (
-                    SELECT DISTINCT
-                        COALESCE(r.skills_cleaned, r.skills) as skills_data,
-                        COALESCE(r.industries_cleaned, r.industries) as industries_data,
-                        COALESCE(r.tools_cleaned, r.tools) as tools_data,
-                        COALESCE(r.soft_skills_cleaned, r.soft_skills) as soft_skills_data
-                    FROM resumes r
-                    ${firmCondition}
-                )
-                SELECT 
-                    COALESCE(
-                        (SELECT jsonb_agg(tag ORDER BY tag) FROM (
-                            SELECT DISTINCT tag
-                            FROM visible_resumes, jsonb_array_elements_text(COALESCE(skills_data, '[]'::jsonb)) AS tag
-                            WHERE tag IS NOT NULL AND tag != ''
-                        ) AS distinct_tags),
-                        '[]'::jsonb
-                    ) AS skills,
-                    COALESCE(
-                        (SELECT jsonb_agg(tag ORDER BY tag) FROM (
-                            SELECT DISTINCT tag
-                            FROM visible_resumes, jsonb_array_elements_text(COALESCE(industries_data, '[]'::jsonb)) AS tag
-                            WHERE tag IS NOT NULL AND tag != ''
-                        ) AS distinct_tags),
-                        '[]'::jsonb
-                    ) AS industries,
-                    COALESCE(
-                        (SELECT jsonb_agg(tag ORDER BY tag) FROM (
-                            SELECT DISTINCT tag
-                            FROM visible_resumes, jsonb_array_elements_text(COALESCE(tools_data, '[]'::jsonb)) AS tag
-                            WHERE tag IS NOT NULL AND tag != ''
-                        ) AS distinct_tags),
-                        '[]'::jsonb
-                    ) AS tools,
-                    COALESCE(
-                        (SELECT jsonb_agg(tag ORDER BY tag) FROM (
-                            SELECT DISTINCT tag
-                            FROM visible_resumes, jsonb_array_elements_text(COALESCE(soft_skills_data, '[]'::jsonb)) AS tag
-                            WHERE tag IS NOT NULL AND tag != ''
-                        ) AS distinct_tags),
-                        '[]'::jsonb
-                    ) AS soft_skills
-            `;
-            queryParams = isAdmin ? [] : [userFirmId];
-        } else {
-            // Default scope: use COALESCE to fallback to raw tags if cleaned tags are not available
-            const firmFilter = isAdmin ? '' : 'WHERE firm_id = $1';
-            const firmParams = isAdmin ? [] : [userFirmId];
-            aggregateQuery = `
-                SELECT 
-                    COALESCE(
-                        (SELECT jsonb_agg(tag ORDER BY tag) FROM (
-                            SELECT DISTINCT tag 
-                            FROM resumes, jsonb_array_elements_text(COALESCE(COALESCE(skills_cleaned, skills), '[]'::jsonb)) AS tag 
-                            ${firmFilter}
-                            ${firmFilter ? 'AND' : 'WHERE'} tag IS NOT NULL AND tag != ''
-                        ) AS distinct_tags),
-                        '[]'::jsonb
-                    ) AS skills,
-                    COALESCE(
-                        (SELECT jsonb_agg(tag ORDER BY tag) FROM (
-                            SELECT DISTINCT tag 
-                            FROM resumes, jsonb_array_elements_text(COALESCE(COALESCE(industries_cleaned, industries), '[]'::jsonb)) AS tag 
-                            ${firmFilter}
-                            ${firmFilter ? 'AND' : 'WHERE'} tag IS NOT NULL AND tag != ''
-                        ) AS distinct_tags),
-                        '[]'::jsonb
-                    ) AS industries,
-                    COALESCE(
-                        (SELECT jsonb_agg(tag ORDER BY tag) FROM (
-                            SELECT DISTINCT tag 
-                            FROM resumes, jsonb_array_elements_text(COALESCE(COALESCE(tools_cleaned, tools), '[]'::jsonb)) AS tag 
-                            ${firmFilter}
-                            ${firmFilter ? 'AND' : 'WHERE'} tag IS NOT NULL AND tag != ''
-                        ) AS distinct_tags),
-                        '[]'::jsonb
-                    ) AS tools,
-                    COALESCE(
-                        (SELECT jsonb_agg(tag ORDER BY tag) FROM (
-                            SELECT DISTINCT tag 
-                            FROM resumes, jsonb_array_elements_text(COALESCE(COALESCE(soft_skills_cleaned, soft_skills), '[]'::jsonb)) AS tag 
-                            ${firmFilter}
-                            ${firmFilter ? 'AND' : 'WHERE'} tag IS NOT NULL AND tag != ''
-                        ) AS distinct_tags),
-                        '[]'::jsonb
-                    ) AS soft_skills
-            `;
-            queryParams = firmParams;
-        }
-        
-        const queryResult = await selectWithTimeout('resumes', {
-            rawQuery: aggregateQuery,
-            rawParams: queryParams
-        });
-        
-        const row = queryResult[0] || {};
+        const row = await aggregateCleanedTags({ isAdmin, userFirmId, scope });
         const result = {
             'Skills': row.skills || [],
             'Industries': row.industries || [],
@@ -357,12 +190,10 @@ router.post('/cleaned/recalculate', authenticateToken, async (req, res) => {
         // Process in batches to avoid memory issues
         while (true) {
             // Fetch batch of resumes
-            const records = await selectWithTimeout('resumes', {
-                columns: ['id', 'skills', 'industries', 'tools', 'soft_skills'],
-                orderBy: 'id ASC',
-                limit: BATCH_SIZE,
-                offset: offset
-            });
+            const records = await fetchResumeBatch(
+                ['id', 'skills', 'industries', 'tools', 'soft_skills'],
+                BATCH_SIZE, offset
+            );
             
             if (records.length === 0) break;
             
@@ -385,7 +216,7 @@ router.post('/cleaned/recalculate', authenticateToken, async (req, res) => {
                     const { cleanedTags } = processAnalysisTags({ tags: rawTags });
                     
                     // Update the resume with cleaned tags (stringify for JSONB columns)
-                    await updateWithTimeout('resumes', record.id, {
+                    await updateResumeTags(record.id, {
                         skills_cleaned: cleanedTags.skills.length > 0 ? JSON.stringify(cleanedTags.skills) : null,
                         industries_cleaned: cleanedTags.industries.length > 0 ? JSON.stringify(cleanedTags.industries) : null,
                         tools_cleaned: cleanedTags.tools.length > 0 ? JSON.stringify(cleanedTags.tools) : null,
@@ -444,52 +275,7 @@ router.get('/esco', authenticateToken, async (req, res) => {
         // ESCO tags are stored as JSONB arrays of objects {label, uri}
         // Note: PostgreSQL doesn't allow ORDER BY in jsonb_agg(DISTINCT ...), so we use subqueries
         // For ESCO tags (objects), we deduplicate by uri and order by label
-        const aggregateQuery = `
-            SELECT 
-                COALESCE(
-                    (SELECT jsonb_agg(tag ORDER BY tag->>'label') FROM (
-                        SELECT DISTINCT ON (tag->>'uri') tag 
-                        FROM resumes, jsonb_array_elements(COALESCE(skills_esco, '[]'::jsonb)) AS tag 
-                        WHERE tag IS NOT NULL AND tag->>'label' IS NOT NULL AND tag->>'label' != ''
-                        ORDER BY tag->>'uri', tag->>'label'
-                    ) AS distinct_tags),
-                    '[]'::jsonb
-                ) AS skills,
-                COALESCE(
-                    (SELECT jsonb_agg(tag ORDER BY tag->>'label') FROM (
-                        SELECT DISTINCT ON (tag->>'uri') tag 
-                        FROM resumes, jsonb_array_elements(COALESCE(industries_esco, '[]'::jsonb)) AS tag 
-                        WHERE tag IS NOT NULL AND tag->>'label' IS NOT NULL AND tag->>'label' != ''
-                        ORDER BY tag->>'uri', tag->>'label'
-                    ) AS distinct_tags),
-                    '[]'::jsonb
-                ) AS industries,
-                COALESCE(
-                    (SELECT jsonb_agg(tag ORDER BY tag->>'label') FROM (
-                        SELECT DISTINCT ON (tag->>'uri') tag 
-                        FROM resumes, jsonb_array_elements(COALESCE(tools_esco, '[]'::jsonb)) AS tag 
-                        WHERE tag IS NOT NULL AND tag->>'label' IS NOT NULL AND tag->>'label' != ''
-                        ORDER BY tag->>'uri', tag->>'label'
-                    ) AS distinct_tags),
-                    '[]'::jsonb
-                ) AS tools,
-                COALESCE(
-                    (SELECT jsonb_agg(tag ORDER BY tag->>'label') FROM (
-                        SELECT DISTINCT ON (tag->>'uri') tag 
-                        FROM resumes, jsonb_array_elements(COALESCE(soft_skills_esco, '[]'::jsonb)) AS tag 
-                        WHERE tag IS NOT NULL AND tag->>'label' IS NOT NULL AND tag->>'label' != ''
-                        ORDER BY tag->>'uri', tag->>'label'
-                    ) AS distinct_tags),
-                    '[]'::jsonb
-                ) AS soft_skills
-        `;
-        
-        const queryResult = await selectWithTimeout('resumes', {
-            rawQuery: aggregateQuery,
-            rawParams: []
-        });
-        
-        const row = queryResult[0] || {};
+        const row = await aggregateEscoTags();
         const result = {
             skills: row.skills || [],
             industries: row.industries || [],
@@ -524,12 +310,10 @@ router.post('/esco/recalculate', authenticateToken, async (req, res) => {
         // Process in batches to avoid memory issues
         while (true) {
             // Fetch batch of resumes
-            const records = await selectWithTimeout('resumes', {
-                columns: ['id', 'skills_cleaned', 'industries_cleaned', 'tools_cleaned', 'soft_skills_cleaned'],
-                orderBy: 'id ASC',
-                limit: BATCH_SIZE,
-                offset: offset
-            });
+            const records = await fetchResumeBatch(
+                ['id', 'skills_cleaned', 'industries_cleaned', 'tools_cleaned', 'soft_skills_cleaned'],
+                BATCH_SIZE, offset
+            );
             
             if (records.length === 0) break;
             
@@ -552,7 +336,7 @@ router.post('/esco/recalculate', authenticateToken, async (req, res) => {
                     const escoTags = await processCleanedTagsToEsco(cleanedTags, language);
                     
                     // Update the resume with ESCO tags (stringify for JSONB columns)
-                    await updateWithTimeout('resumes', record.id, {
+                    await updateResumeTags(record.id, {
                         skills_esco: escoTags.skills.length > 0 ? JSON.stringify(escoTags.skills) : null,
                         industries_esco: escoTags.industries.length > 0 ? JSON.stringify(escoTags.industries) : null,
                         tools_esco: escoTags.tools.length > 0 ? JSON.stringify(escoTags.tools) : null,
@@ -620,30 +404,7 @@ router.put('/rename', authenticateToken, async (req, res) => {
             return res.status(400).json({ error: 'Invalid category' });
         }
 
-        // Use PostgreSQL to update tags directly in the database
-        // This replaces the old tag with the new tag in the JSONB array
-        // Much more efficient than loading all records into memory
-        const updateQuery = `
-            UPDATE resumes 
-            SET ${dbField} = (
-                SELECT jsonb_agg(
-                    CASE 
-                        WHEN elem = $1::text THEN $2::text 
-                        ELSE elem 
-                    END
-                )
-                FROM jsonb_array_elements_text(COALESCE(${dbField}, '[]'::jsonb)) AS elem
-            ),
-            updated_at = CURRENT_TIMESTAMP
-            WHERE ${dbField} @> $3::jsonb
-            RETURNING id
-        `;
-        
-        const result = await selectWithTimeout('resumes', {
-            rawQuery: updateQuery,
-            rawParams: [oldName, newName, JSON.stringify([oldName])]
-        });
-        
+        const result = await renameTag(dbField, oldName, newName);
         const updatedCount = result.length;
 
         // Clear caches

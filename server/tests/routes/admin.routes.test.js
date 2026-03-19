@@ -53,10 +53,10 @@ vi.mock('./../../routes/resumes/stats.routes.js', () => ({
     getStatsCacheStats: () => ({ entries: 10 })
 }));
 
-// Mock postgresHelpers
-const mockSelectWithTimeout = vi.fn();
-vi.mock('../../utils/postgresHelpers.js', () => ({
-    selectWithTimeout: (...args) => mockSelectWithTimeout(...args)
+// Mock users service
+const mockListAllUsers = vi.fn();
+vi.mock('../../services/users.service.js', () => ({
+    listAllUsers: (...args) => mockListAllUsers(...args)
 }));
 
 // Mock validation
@@ -247,7 +247,7 @@ describe('Admin Routes', () => {
 
     describe('GET /users', () => {
         it('should return mapped user list', async () => {
-            mockSelectWithTimeout.mockResolvedValueOnce([
+            mockListAllUsers.mockResolvedValueOnce([
                 { id: 'u-1', name: 'John', email: 'john@test.com', firm_name: 'Acme', role: 'admin', status: 'active' },
                 { id: 'u-2', name: 'Jane', email: 'jane@test.com', firm_name: 'Acme', role: 'user', status: 'active' }
             ]);
@@ -270,7 +270,7 @@ describe('Admin Routes', () => {
         });
 
         it('should default role and status for missing fields', async () => {
-            mockSelectWithTimeout.mockResolvedValueOnce([
+            mockListAllUsers.mockResolvedValueOnce([
                 { id: 'u-3', name: 'No Role', email: 'nr@test.com', firm_name: null }
             ]);
 
@@ -284,7 +284,7 @@ describe('Admin Routes', () => {
         });
 
         it('should return 500 on DB error', async () => {
-            mockSelectWithTimeout.mockRejectedValueOnce(new Error('DB fail'));
+            mockListAllUsers.mockRejectedValueOnce(new Error('DB fail'));
 
             const res = await request(app)
                 .get('/api/admin/users')

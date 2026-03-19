@@ -3,7 +3,7 @@
  * Handles analyze, improve, match, and adapt operations
  */
 
-import { findWithTimeout, createWithTimeout } from '../../utils/postgresHelpers.js';
+import { findResumeRecord, findMissionRecord, createAdaptation } from '../../services/resumes.service.js';
 import { safeLog } from '../../utils/logger.backend.js';
 import { analyzeResume, improveResume, matchResumeWithMission, adaptResumeToMission, cleanupText } from '../../services/openai.service.js';
 import { getRequestMetadata } from '../../services/security.service.js';
@@ -31,7 +31,7 @@ export async function analyzeHandler(req, res) {
     try {
         const { id } = req.params;
         const userMetadata = getRequestMetadata(req);
-        const resumeRecord = await findWithTimeout('resumes', id);
+        const resumeRecord = await findResumeRecord(id);
         
         // Check firm access
         const isAdmin = req.user?.role === 'admin';
@@ -285,7 +285,7 @@ export async function improveByIdHandler(req, res) {
     try {
         const { id } = req.params;
         const userMetadata = getRequestMetadata(req);
-        const resumeRecord = await findWithTimeout('resumes', id);
+        const resumeRecord = await findResumeRecord(id);
         
         // Check firm access
         const isAdmin = req.user?.role === 'admin';
@@ -371,8 +371,8 @@ export async function matchHandler(req, res) {
             return res.status(400).json({ error: 'Mission ID is required' });
         }
 
-        const resumeRecord = await findWithTimeout('resumes', id);
-        const missionRecord = await findWithTimeout('missions', missionId);
+        const resumeRecord = await findResumeRecord(id);
+        const missionRecord = await findMissionRecord(missionId);
         
         // Check firm access
         const isAdmin = req.user?.role === 'admin';
@@ -415,8 +415,8 @@ export async function adaptHandler(req, res) {
             return res.status(400).json({ error: 'Mission ID is required' });
         }
 
-        const resumeRecord = await findWithTimeout('resumes', id);
-        const missionRecord = await findWithTimeout('missions', missionId);
+        const resumeRecord = await findResumeRecord(id);
+        const missionRecord = await findMissionRecord(missionId);
         
         // Check firm access
         const isAdmin = req.user?.role === 'admin';
@@ -523,7 +523,7 @@ export async function adaptHandler(req, res) {
             status: 'completed'
         };
 
-        const adaptationRecord = await createWithTimeout('resume_adaptations', adaptationData);
+        const adaptationRecord = await createAdaptation(adaptationData);
 
         // Return full response with structured data for frontend
         res.json({

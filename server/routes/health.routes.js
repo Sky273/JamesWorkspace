@@ -1,7 +1,7 @@
 import express from 'express';
 import { OPENAI_API_KEY, ANTHROPIC_API_KEY } from '../config/constants.js';
 import { settingsCache, templatesCache, firmsCache } from '../services/cache.service.js';
-import { query as dbQuery } from '../config/database.js';
+import { checkDatabaseHealth } from '../services/health.service.js';
 import { getTrendsCacheStats } from '../services/marketTrends.service.js';
 import { getFactsCacheStats } from '../services/marketFacts.service.js';
 import { getMetiersCacheStats } from '../services/rome.service.js';
@@ -73,22 +73,7 @@ router.get('/', async (req, res) => {
     
     // 2. Check PostgreSQL connectivity with detailed stats
     try {
-        const dbStart = Date.now();
-        const [_connResult, statsResult] = await Promise.race([
-            Promise.all([
-                dbQuery('SELECT 1 as connected'),
-                dbQuery(`
-                    SELECT 
-                        (SELECT count(*) FROM resumes) as resumes_count,
-                        (SELECT count(*) FROM users) as users_count,
-                        (SELECT count(*) FROM missions) as missions_count,
-                        pg_database_size(current_database()) as db_size
-                `)
-            ]),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
-        ]);
-        const dbLatency = Date.now() - dbStart;
-        const stats = statsResult.rows[0];
+        const { latency: dbLatency, stats } = await checkDatabaseHealth();
         const dbSizeMB = Math.round(parseInt(stats.db_size) / 1024 / 1024);
         
         checks.database = { 

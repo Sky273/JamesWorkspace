@@ -5,6 +5,7 @@
  */
 
 import { query } from '../config/database.js';
+import { findWithTimeout, createWithTimeout } from '../utils/postgresHelpers.js';
 import { safeLog } from '../utils/logger.backend.js';
 
 /**
@@ -236,4 +237,35 @@ export async function updateConsentStatus(id, status) {
         SET consent_status = $1, updated_at = CURRENT_TIMESTAMP
         WHERE id = $2
     `, [status, id]);
+}
+
+// ============================================
+// LLM handler helpers (from resumes/llm.handlers.js)
+// ============================================
+
+/**
+ * Find a resume record by ID (full record via findWithTimeout)
+ * @param {string} id
+ * @returns {Promise<Object>} Resume record (throws if not found)
+ */
+export async function findResumeRecord(id) {
+    return findWithTimeout('resumes', id);
+}
+
+/**
+ * Find a mission record by ID
+ * @param {string} id
+ * @returns {Promise<Object>} Mission record (throws if not found)
+ */
+export async function findMissionRecord(id) {
+    return findWithTimeout('missions', id);
+}
+
+/**
+ * Create a resume adaptation record
+ * @param {Object} data - Adaptation fields
+ * @returns {Promise<Object>} Created adaptation record
+ */
+export async function createAdaptation(data) {
+    return createWithTimeout('resume_adaptations', data);
 }

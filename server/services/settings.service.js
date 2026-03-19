@@ -3,7 +3,7 @@
  * Provides a single source of truth for LLM settings
  */
 
-import { selectWithTimeout } from '../utils/postgresHelpers.js';
+import { selectWithTimeout, updateWithTimeout, createWithTimeout } from '../utils/postgresHelpers.js';
 import { safeLog } from '../utils/logger.backend.js';
 
 // Cache settings for 5 minutes to reduce database calls
@@ -167,6 +167,82 @@ function parseRating(rating) {
  * @param {Object} settings - Optional settings object (will be fetched if not provided)
  * @returns {Promise<Object>} - Analysis object with recalculated globalRating
  */
+/**
+ * Get the latest settings record from database
+ * @returns {Promise<Object|null>} Raw settings record or null
+ */
+export async function getSettings() {
+    const records = await selectWithTimeout('llm_settings', {
+        limit: 1,
+        orderBy: 'created_at DESC'
+    });
+    return records.length > 0 ? records[0] : null;
+}
+
+/**
+ * Update settings by ID
+ * @param {string} id - Settings record ID
+ * @param {Object} fields - Fields to update (already mapped to DB columns)
+ * @returns {Promise<Object>} Updated record
+ */
+export async function updateSettings(id, fields) {
+    const records = await updateWithTimeout('llm_settings', [{
+        id,
+        fields
+    }]);
+    return records[0];
+}
+
+/**
+ * Update settings by ID, with fallback to existing record or create new
+ * @param {string} id - Settings record ID to try first
+ * @param {Object} fields - Fields to update (already mapped to DB columns)
+ * @returns {Promise<Object>} Updated or created record
+ */
+export async function upsertSettings(id, fields) {
+    try {
+        return await updateSettings(id, fields);
+    } catch (error) {
+        if (error.statusCode === 404 || error.message.includes('not found')) {
+            const existing = await selectWithTimeout('llm_settings', {
+                limit: 1,
+                orderBy: 'created_at DESC'
+            });
+
+            if (existing.length > 0) {
+                const records = await updateWithTimeout('llm_settings', [{
+                    id: existing[0].id,
+                    fields
+                }]);
+                return records[0];
+            } else {
+                const fieldsToCreate = {
+                    name: 'Default Settings',
+                    ...fields,
+                    status: 'active'
+                };
+                const records = await createWithTimeout('llm_settings', [{
+                    fields: fieldsToCreate
+                }]);
+                return records[0];
+            }
+        }
+        throw error;
+    }
+}
+
+/**
+ * Create a new settings record
+ * @param {Object} fields - Fields for the new record (already mapped to DB columns)
+ * @returns {Promise<Object>} Created record
+ */
+export async function createSettings(fields) {
+    const records = await createWithTimeout('llm_settings', [{
+        fields
+    }]);
+    return records[0];
+}
+
 export async function calculateWeightedGlobalRating(analysis, settings = null) {
     try {
         // Get settings if not provided

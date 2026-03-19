@@ -2,7 +2,7 @@ import express from 'express';
 import { metrics } from '../services/metrics.service.js';
 import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
 import { safeLog } from '../utils/logger.backend.js';
-import { query as dbQuery } from '../config/database.js';
+import { getDatabaseMetrics } from '../services/health.service.js';
 import { getAPMStats, getSlowRequests, clearSlowRequests } from '../middleware/apm.middleware.js';
 
 const router = express.Router();
@@ -178,38 +178,7 @@ router.get('/database', authenticateToken, requireAdmin, async (req, res) => {
             });
         }
         
-        const startTime = Date.now();
-        
-        // Get database size and table stats
-        const [sizeResult, tableStatsResult, connectionStatsResult] = await Promise.all([
-            dbQuery(`
-                SELECT 
-                    pg_database_size(current_database()) as db_size,
-                    pg_size_pretty(pg_database_size(current_database())) as db_size_pretty
-            `),
-            dbQuery(`
-                SELECT 
-                    relname as table_name,
-                    n_live_tup as row_count,
-                    n_dead_tup as dead_rows,
-                    last_vacuum,
-                    last_autovacuum,
-                    last_analyze
-                FROM pg_stat_user_tables
-                ORDER BY n_live_tup DESC
-                LIMIT 10
-            `),
-            dbQuery(`
-                SELECT 
-                    count(*) as total_connections,
-                    count(*) FILTER (WHERE state = 'active') as active_connections,
-                    count(*) FILTER (WHERE state = 'idle') as idle_connections
-                FROM pg_stat_activity
-                WHERE datname = current_database()
-            `)
-        ]);
-        
-        const queryTime = Date.now() - startTime;
+        const { sizeResult, tableStatsResult, connectionStatsResult, queryTime } = await getDatabaseMetrics();
         
         const result = {
             database: {
