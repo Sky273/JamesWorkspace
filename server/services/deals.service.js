@@ -572,6 +572,57 @@ export async function getDealStats(firmId) {
 }
 
 /**
+ * Get a deal's firm_id (for access checks)
+ * @param {string} dealId - Deal ID
+ * @returns {Promise<string|null>} firm_id or null if not found
+ */
+export async function getDealFirmId(dealId) {
+    const result = await query('SELECT firm_id FROM deals WHERE id = $1', [dealId]);
+    return result.rows.length > 0 ? result.rows[0].firm_id : null;
+}
+
+/**
+ * Get a client's firm_id (for validation)
+ * @param {string} clientId - Client ID
+ * @returns {Promise<string|null>} firm_id or null if not found
+ */
+export async function getClientFirmId(clientId) {
+    const result = await query('SELECT firm_id FROM clients WHERE id = $1', [clientId]);
+    return result.rows.length > 0 ? result.rows[0].firm_id : null;
+}
+
+/**
+ * Get a resume's firm_id (for validation)
+ * @param {string} resumeId - Resume ID
+ * @returns {Promise<string|null>} firm_id or null if not found
+ */
+export async function getResumeFirmId(resumeId) {
+    const result = await query('SELECT firm_id FROM resumes WHERE id = $1', [resumeId]);
+    return result.rows.length > 0 ? result.rows[0].firm_id : null;
+}
+
+/**
+ * Get missions for a deal with client/contact joins
+ * @param {string} dealId - Deal ID
+ * @returns {Promise<Array>} List of missions
+ */
+export async function getMissionsForDeal(dealId) {
+    const result = await query(`
+        SELECT m.id, m.title, m.status, m.created_at, m.updated_at,
+               m.client_id, m.contact_id, m.deal_id,
+               c.name as client_name,
+               cc.name as contact_name,
+               (SELECT COUNT(*) FROM resume_adaptations ra WHERE ra.mission_id = m.id) as adaptations_count
+        FROM missions m
+        LEFT JOIN clients c ON m.client_id = c.id
+        LEFT JOIN client_contacts cc ON m.contact_id = cc.id
+        WHERE m.deal_id = $1
+        ORDER BY m.created_at DESC
+    `, [dealId]);
+    return result.rows;
+}
+
+/**
  * Get deals count for a client
  * @param {string} clientId - Client ID
  * @returns {Promise<number>} Count

@@ -20,23 +20,21 @@ vi.mock('../../config/constants.js', () => ({
     RATE_LIMIT: { AUTH: { windowMs: 900000, max: 20 }, USER: { windowMs: 900000, max: 50 } }
 }));
 
-// Mock postgresHelpers
-const mockSelectWithTimeout = vi.fn();
-const mockFindWithTimeout = vi.fn();
-const mockUpdateWithTimeout = vi.fn();
-const mockDestroyWithTimeout = vi.fn();
-vi.mock('../../utils/postgresHelpers.js', () => ({
-    selectWithTimeout: (...args) => mockSelectWithTimeout(...args),
-    findWithTimeout: (...args) => mockFindWithTimeout(...args),
-    updateWithTimeout: (...args) => mockUpdateWithTimeout(...args),
-    escapeLike: (str) => str.replace(/[%_\\]/g, '\\$&'),
-    destroyWithTimeout: (...args) => mockDestroyWithTimeout(...args)
-}));
+// Mock adaptations service
+const mockListAdaptations = vi.fn();
+const mockGetAdaptationsGroupedByDeal = vi.fn();
+const mockGetAdaptationById = vi.fn();
+const mockGetMissionClientContact = vi.fn();
+const mockUpdateAdaptation = vi.fn();
+const mockDeleteAdaptation = vi.fn();
 
-// Mock database
-const mockQuery = vi.fn();
-vi.mock('../../config/database.js', () => ({
-    query: (...args) => mockQuery(...args)
+vi.mock('../../services/adaptations.service.js', () => ({
+    listAdaptations: (...args) => mockListAdaptations(...args),
+    getAdaptationsGroupedByDeal: (...args) => mockGetAdaptationsGroupedByDeal(...args),
+    getAdaptationById: (...args) => mockGetAdaptationById(...args),
+    getMissionClientContact: (...args) => mockGetMissionClientContact(...args),
+    updateAdaptation: (...args) => mockUpdateAdaptation(...args),
+    deleteAdaptation: (...args) => mockDeleteAdaptation(...args)
 }));
 
 // Mock firmHelpers
@@ -105,9 +103,8 @@ describe('Adaptations Routes - GET /api/adaptations', () => {
     });
 
     it('should return paginated adaptations for authenticated user', async () => {
-        mockSelectWithTimeout
-            .mockResolvedValueOnce([{ total: '5' }]) // count query
-            .mockResolvedValueOnce([
+        mockListAdaptations.mockResolvedValueOnce({
+            records: [
                 { 
                     id: 'adapt-1', 
                     resume_id: 'resume-1', 
@@ -126,7 +123,9 @@ describe('Adaptations Routes - GET /api/adaptations', () => {
                     status: 'pending',
                     firm: 'Test Firm'
                 }
-            ]);
+            ],
+            totalCount: 5
+        });
 
         const res = await request(app)
             .get('/api/adaptations')
@@ -138,26 +137,29 @@ describe('Adaptations Routes - GET /api/adaptations', () => {
     });
 
     it('should filter by resumeId', async () => {
-        mockSelectWithTimeout
-            .mockResolvedValueOnce([{ total: '1' }])
-            .mockResolvedValueOnce([
-                { id: 'adapt-1', resume_id: 'resume-123', firm: 'Test Firm' }
-            ]);
+        mockListAdaptations.mockResolvedValueOnce({
+            records: [{ id: 'adapt-1', resume_id: 'resume-123', firm: 'Test Firm' }],
+            totalCount: 1
+        });
 
         const res = await request(app)
             .get('/api/adaptations?resumeId=resume-123')
             .set('Authorization', 'Bearer valid-token');
 
         expect(res.status).toBe(200);
+        expect(mockListAdaptations).toHaveBeenCalledWith(
+            expect.objectContaining({ resumeId: 'resume-123' })
+        );
     });
 
     it('should filter by missionId', async () => {
-        mockSelectWithTimeout
-            .mockResolvedValueOnce([{ total: '2' }])
-            .mockResolvedValueOnce([
+        mockListAdaptations.mockResolvedValueOnce({
+            records: [
                 { id: 'adapt-1', mission_id: 'mission-123', firm: 'Test Firm' },
                 { id: 'adapt-2', mission_id: 'mission-123', firm: 'Test Firm' }
-            ]);
+            ],
+            totalCount: 2
+        });
 
         const res = await request(app)
             .get('/api/adaptations?missionId=mission-123')
@@ -167,11 +169,10 @@ describe('Adaptations Routes - GET /api/adaptations', () => {
     });
 
     it('should filter by status', async () => {
-        mockSelectWithTimeout
-            .mockResolvedValueOnce([{ total: '1' }])
-            .mockResolvedValueOnce([
-                { id: 'adapt-1', status: 'completed', firm: 'Test Firm' }
-            ]);
+        mockListAdaptations.mockResolvedValueOnce({
+            records: [{ id: 'adapt-1', status: 'completed', firm: 'Test Firm' }],
+            totalCount: 1
+        });
 
         const res = await request(app)
             .get('/api/adaptations?status=completed')
@@ -181,11 +182,10 @@ describe('Adaptations Routes - GET /api/adaptations', () => {
     });
 
     it('should filter by search term', async () => {
-        mockSelectWithTimeout
-            .mockResolvedValueOnce([{ total: '1' }])
-            .mockResolvedValueOnce([
-                { id: 'adapt-1', mission_title: 'React Developer', firm: 'Test Firm' }
-            ]);
+        mockListAdaptations.mockResolvedValueOnce({
+            records: [{ id: 'adapt-1', mission_title: 'React Developer', firm: 'Test Firm' }],
+            totalCount: 1
+        });
 
         const res = await request(app)
             .get('/api/adaptations?search=react')
@@ -195,9 +195,10 @@ describe('Adaptations Routes - GET /api/adaptations', () => {
     });
 
     it('should support pagination parameters', async () => {
-        mockSelectWithTimeout
-            .mockResolvedValueOnce([{ total: '50' }])
-            .mockResolvedValueOnce([]);
+        mockListAdaptations.mockResolvedValueOnce({
+            records: [],
+            totalCount: 50
+        });
 
         const res = await request(app)
             .get('/api/adaptations?page=2&limit=10')
@@ -208,9 +209,10 @@ describe('Adaptations Routes - GET /api/adaptations', () => {
     });
 
     it('should limit max results to 100', async () => {
-        mockSelectWithTimeout
-            .mockResolvedValueOnce([{ total: '200' }])
-            .mockResolvedValueOnce([]);
+        mockListAdaptations.mockResolvedValueOnce({
+            records: [],
+            totalCount: 200
+        });
 
         const res = await request(app)
             .get('/api/adaptations?limit=500')
@@ -221,11 +223,10 @@ describe('Adaptations Routes - GET /api/adaptations', () => {
     });
 
     it('should allow admin to see all adaptations', async () => {
-        mockSelectWithTimeout
-            .mockResolvedValueOnce([{ total: '10' }])
-            .mockResolvedValueOnce([
-                { id: 'adapt-1', firm: 'Other Firm' }
-            ]);
+        mockListAdaptations.mockResolvedValueOnce({
+            records: [{ id: 'adapt-1', firm: 'Other Firm' }],
+            totalCount: 10
+        });
 
         const res = await request(app)
             .get('/api/adaptations')
@@ -233,6 +234,9 @@ describe('Adaptations Routes - GET /api/adaptations', () => {
             .set('x-test-role', 'admin');
 
         expect(res.status).toBe(200);
+        expect(mockListAdaptations).toHaveBeenCalledWith(
+            expect.objectContaining({ userFirm: null })
+        );
     });
 });
 
@@ -252,9 +256,9 @@ describe('Adaptations Routes - GET /api/adaptations/:id', () => {
     });
 
     it('should return 404 for non-existent adaptation', async () => {
-        const notFoundError = new Error('Record not found');
+        const notFoundError = new Error('Adaptation not found');
         notFoundError.statusCode = 404;
-        mockFindWithTimeout.mockRejectedValueOnce(notFoundError);
+        mockGetAdaptationById.mockRejectedValueOnce(notFoundError);
 
         const res = await request(app)
             .get('/api/adaptations/adapt-123')
@@ -264,7 +268,7 @@ describe('Adaptations Routes - GET /api/adaptations/:id', () => {
     });
 
     it('should return adaptation for authorized user', async () => {
-        mockFindWithTimeout.mockResolvedValueOnce({ 
+        mockGetAdaptationById.mockResolvedValueOnce({ 
             id: 'adapt-123', 
             resume_id: 'resume-1',
             mission_id: 'mission-1',
@@ -274,6 +278,7 @@ describe('Adaptations Routes - GET /api/adaptations/:id', () => {
             adapted_text: 'Adapted resume content...',
             firm: 'Test Firm'
         });
+        mockGetMissionClientContact.mockResolvedValueOnce({ client_id: 'c-1', contact_id: 'cc-1' });
 
         const res = await request(app)
             .get('/api/adaptations/adapt-123')
@@ -284,7 +289,7 @@ describe('Adaptations Routes - GET /api/adaptations/:id', () => {
     });
 
     it('should return 403 for adaptation from different firm', async () => {
-        mockFindWithTimeout.mockResolvedValueOnce({ 
+        mockGetAdaptationById.mockResolvedValueOnce({ 
             id: 'adapt-123', 
             firm: 'Other Firm'
         });
@@ -297,7 +302,7 @@ describe('Adaptations Routes - GET /api/adaptations/:id', () => {
     });
 
     it('should allow admin to access any adaptation', async () => {
-        mockFindWithTimeout.mockResolvedValueOnce({ 
+        mockGetAdaptationById.mockResolvedValueOnce({ 
             id: 'adapt-123', 
             firm: 'Other Firm'
         });
@@ -328,9 +333,9 @@ describe('Adaptations Routes - PUT /api/adaptations/:id', () => {
     });
 
     it('should return 404 for non-existent adaptation', async () => {
-        const notFoundError = new Error('Record not found');
+        const notFoundError = new Error('Adaptation not found');
         notFoundError.statusCode = 404;
-        mockFindWithTimeout.mockRejectedValueOnce(notFoundError);
+        mockGetAdaptationById.mockRejectedValueOnce(notFoundError);
 
         const res = await request(app)
             .put('/api/adaptations/adapt-123')
@@ -341,16 +346,16 @@ describe('Adaptations Routes - PUT /api/adaptations/:id', () => {
     });
 
     it('should update adaptation for authorized user', async () => {
-        mockFindWithTimeout.mockResolvedValueOnce({ 
+        mockGetAdaptationById.mockResolvedValueOnce({ 
             id: 'adapt-123',
             status: 'pending',
             firm: 'Test Firm'
         });
-        mockUpdateWithTimeout.mockResolvedValueOnce([{
+        mockUpdateAdaptation.mockResolvedValueOnce({
             id: 'adapt-123',
             status: 'completed',
             firm: 'Test Firm'
-        }]);
+        });
 
         const res = await request(app)
             .put('/api/adaptations/adapt-123')
@@ -361,7 +366,7 @@ describe('Adaptations Routes - PUT /api/adaptations/:id', () => {
     });
 
     it('should return 403 for adaptation from different firm', async () => {
-        mockFindWithTimeout.mockResolvedValueOnce({ 
+        mockGetAdaptationById.mockResolvedValueOnce({ 
             id: 'adapt-123',
             firm: 'Other Firm'
         });
@@ -391,9 +396,9 @@ describe('Adaptations Routes - DELETE /api/adaptations/:id', () => {
     });
 
     it('should return 404 for non-existent adaptation', async () => {
-        const notFoundError = new Error('Record not found');
+        const notFoundError = new Error('Adaptation not found');
         notFoundError.statusCode = 404;
-        mockFindWithTimeout.mockRejectedValueOnce(notFoundError);
+        mockGetAdaptationById.mockRejectedValueOnce(notFoundError);
 
         const res = await request(app)
             .delete('/api/adaptations/adapt-123')
@@ -403,11 +408,11 @@ describe('Adaptations Routes - DELETE /api/adaptations/:id', () => {
     });
 
     it('should delete adaptation for authorized user', async () => {
-        mockFindWithTimeout.mockResolvedValueOnce({ 
+        mockGetAdaptationById.mockResolvedValueOnce({ 
             id: 'adapt-123',
             firm: 'Test Firm'
         });
-        mockDestroyWithTimeout.mockResolvedValueOnce(true);
+        mockDeleteAdaptation.mockResolvedValueOnce(true);
 
         const res = await request(app)
             .delete('/api/adaptations/adapt-123')
@@ -418,7 +423,7 @@ describe('Adaptations Routes - DELETE /api/adaptations/:id', () => {
     });
 
     it('should return 403 for adaptation from different firm', async () => {
-        mockFindWithTimeout.mockResolvedValueOnce({ 
+        mockGetAdaptationById.mockResolvedValueOnce({ 
             id: 'adapt-123',
             firm: 'Other Firm'
         });
@@ -431,11 +436,7 @@ describe('Adaptations Routes - DELETE /api/adaptations/:id', () => {
     });
 
     it('should allow admin to delete any adaptation', async () => {
-        mockFindWithTimeout.mockResolvedValueOnce({ 
-            id: 'adapt-123',
-            firm: 'Other Firm'
-        });
-        mockDestroyWithTimeout.mockResolvedValueOnce(true);
+        mockDeleteAdaptation.mockResolvedValueOnce(true);
 
         const res = await request(app)
             .delete('/api/adaptations/adapt-123')

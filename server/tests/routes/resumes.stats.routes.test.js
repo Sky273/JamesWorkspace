@@ -7,10 +7,25 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import express from 'express';
 import request from 'supertest';
 
-// Mock database
-const mockQuery = vi.fn();
-vi.mock('../../config/database.js', () => ({
-    query: (...args) => mockQuery(...args)
+// Mock resumeStats service
+const mockGetResumesGroupedByDeal = vi.fn();
+const mockGetCachedStats = vi.fn();
+const mockSetCachedStats = vi.fn();
+const mockGetResumeStats = vi.fn();
+const mockGetMissionStats = vi.fn();
+const mockGetAdaptationStats = vi.fn();
+const mockInvalidateStatsCache = vi.fn();
+const mockGetStatsCacheStats = vi.fn();
+
+vi.mock('../../services/resumeStats.service.js', () => ({
+    getResumesGroupedByDeal: (...args) => mockGetResumesGroupedByDeal(...args),
+    getCachedStats: (...args) => mockGetCachedStats(...args),
+    setCachedStats: (...args) => mockSetCachedStats(...args),
+    getResumeStats: (...args) => mockGetResumeStats(...args),
+    getMissionStats: (...args) => mockGetMissionStats(...args),
+    getAdaptationStats: (...args) => mockGetAdaptationStats(...args),
+    invalidateStatsCache: (...args) => mockInvalidateStatsCache(...args),
+    getStatsCacheStats: (...args) => mockGetStatsCacheStats(...args)
 }));
 
 // Mock firmHelpers
@@ -57,6 +72,8 @@ describe('Resume Stats Routes', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         app = createTestApp();
+        // Default: no cache hit
+        mockGetCachedStats.mockReturnValue(null);
     });
 
     describe('GET /grouped-by-deal', () => {
@@ -66,29 +83,21 @@ describe('Resume Stats Routes', () => {
         });
 
         it('should return deals with resumes', async () => {
-            // Deals query
-            mockQuery.mockResolvedValueOnce({
-                rows: [{
+            mockGetResumesGroupedByDeal.mockResolvedValueOnce({
+                deals: [{
                     id: 'd-1',
                     title: 'Deal A',
                     status: 'active',
                     client_name: 'Client A',
-                    resumes_count: '1'
-                }]
+                    resumes_count: '1',
+                    resumes: [{ id: 'r-1', name: 'John', status: 'active' }],
+                    missions: []
+                }],
+                unassigned: [],
+                totalDeals: 1,
+                totalAssigned: 1,
+                totalUnassigned: 0
             });
-            // Resumes for deals
-            mockQuery.mockResolvedValueOnce({
-                rows: [{
-                    id: 'r-1',
-                    name: 'John',
-                    deal_id: 'd-1',
-                    status: 'active'
-                }]
-            });
-            // Missions for deals
-            mockQuery.mockResolvedValueOnce({ rows: [] });
-            // Unassigned resumes
-            mockQuery.mockResolvedValueOnce({ rows: [] });
 
             const res = await request(app)
                 .get('/api/resumes/grouped-by-deal')
@@ -101,8 +110,13 @@ describe('Resume Stats Routes', () => {
         });
 
         it('should return empty deals and unassigned', async () => {
-            mockQuery.mockResolvedValueOnce({ rows: [] }); // no deals
-            mockQuery.mockResolvedValueOnce({ rows: [{ id: 'r-1', name: 'Orphan' }] }); // unassigned
+            mockGetResumesGroupedByDeal.mockResolvedValueOnce({
+                deals: [],
+                unassigned: [{ id: 'r-1', name: 'Orphan' }],
+                totalDeals: 0,
+                totalAssigned: 0,
+                totalUnassigned: 1
+            });
 
             const res = await request(app)
                 .get('/api/resumes/grouped-by-deal')
@@ -114,7 +128,7 @@ describe('Resume Stats Routes', () => {
         });
 
         it('should return 500 on error', async () => {
-            mockQuery.mockRejectedValueOnce(new Error('DB error'));
+            mockGetResumesGroupedByDeal.mockRejectedValueOnce(new Error('DB error'));
 
             const res = await request(app)
                 .get('/api/resumes/grouped-by-deal')
@@ -131,27 +145,18 @@ describe('Resume Stats Routes', () => {
         });
 
         it('should return dashboard stats', async () => {
-            // Resume stats query
-            mockQuery.mockResolvedValueOnce({
-                rows: [{
-                    total: '100',
-                    analyzed: '80',
-                    improved: '50',
-                    today: '5',
-                    this_week: '20',
-                    this_month: '60',
-                    avg_original_score: '62.5',
-                    avg_improved_score: '82.3'
-                }]
+            mockGetResumeStats.mockResolvedValueOnce({
+                total: '100',
+                analyzed: '80',
+                improved: '50',
+                today: '5',
+                this_week: '20',
+                this_month: '60',
+                avg_original_score: '62.5',
+                avg_improved_score: '82.3'
             });
-            // Mission stats query
-            mockQuery.mockResolvedValueOnce({
-                rows: [{ total: '10', active: '5' }]
-            });
-            // Adaptation stats query
-            mockQuery.mockResolvedValueOnce({
-                rows: [{ total: '30' }]
-            });
+            mockGetMissionStats.mockResolvedValueOnce({ total: '10', active: '5' });
+            mockGetAdaptationStats.mockResolvedValueOnce({ total: '30' });
 
             const res = await request(app)
                 .get('/api/resumes/stats')
@@ -166,17 +171,29 @@ describe('Resume Stats Routes', () => {
             expect(res.body.scores.averageOriginal).toBe(63);
             expect(res.body.scores.averageImproved).toBe(82);
             expect(res.body.scores.improvement).toBe(20);
+            expect(mockSetCachedStats).toHaveBeenCalled();
         });
 
-        it('should return cached stats on subsequent request', async () => {
-            // Previous test populated the cache, so this should return cached data
+        it('should return cached stats on cache hit', async () => {
+            const cachedData = {
+                resumes: { total: 50 },
+                missions: { total: 5 },
+                adaptations: { total: 10 },
+                scores: { averageOriginal: 60, averageImproved: 80, improvement: 20 },
+                customer: 'Test Firm'
+            };
+            mockGetCachedStats.mockReturnValueOnce(cachedData);
+
             const res = await request(app)
                 .get('/api/resumes/stats')
                 .set(AUTH);
 
             expect(res.status).toBe(200);
-            // No DB calls needed due to cache
-            expect(mockQuery).not.toHaveBeenCalled();
+            expect(res.body).toEqual(cachedData);
+            // No DB service calls needed due to cache
+            expect(mockGetResumeStats).not.toHaveBeenCalled();
+            expect(mockGetMissionStats).not.toHaveBeenCalled();
+            expect(mockGetAdaptationStats).not.toHaveBeenCalled();
         });
     });
 });

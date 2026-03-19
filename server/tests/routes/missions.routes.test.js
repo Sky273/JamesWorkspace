@@ -20,26 +20,44 @@ vi.mock('../../config/constants.js', () => ({
     RATE_LIMIT: { AUTH: { windowMs: 900000, max: 20 }, USER: { windowMs: 900000, max: 50 } }
 }));
 
-// Mock database
-const mockQuery = vi.fn();
-vi.mock('../../config/database.js', () => ({
-    query: (...args) => mockQuery(...args)
+// Mock missions service
+const mockListMissions = vi.fn();
+const mockGetMissionsGroupedByDeal = vi.fn();
+const mockGetMissionWithJoins = vi.fn();
+const mockMapMissionRecord = vi.fn((r) => ({
+    id: r.id, Title: r.title, Content: r.content, Firm: r.firm,
+    'Firm ID': r.firm_id, Status: r.status, Keywords: r.keywords,
+    'Required Skills': r.required_skills, 'Preferred Skills': r.preferred_skills,
+    'Created At': r.created_at, 'Updated At': r.updated_at,
+    'Client ID': r.client_id, 'Client Name': r.client_name, 'Client Type': r.client_type,
+    'Contact ID': r.contact_id, 'Contact Name': r.contact_name,
+    'Contact Email': r.contact_email, 'Contact Role': r.contact_role,
+    'Deal ID': r.deal_id, 'Deal Title': r.deal_title, 'Deal Status': r.deal_status
 }));
+const mockValidateFirm = vi.fn();
+const mockValidateClient = vi.fn();
+const mockValidateContact = vi.fn();
+const mockValidateDeal = vi.fn();
+const mockCreateMission = vi.fn();
+const mockFindMission = vi.fn();
+const mockUpdateMission = vi.fn();
+const mockDeleteMission = vi.fn();
+const mockListMissionAdaptations = vi.fn();
 
-// Mock postgres helpers
-const mockSelectWithTimeout = vi.fn();
-const mockFindWithTimeout = vi.fn();
-const mockCreateWithTimeout = vi.fn();
-const mockUpdateWithTimeout = vi.fn();
-const mockDestroyWithTimeout = vi.fn();
-
-vi.mock('../../utils/postgresHelpers.js', () => ({
-    selectWithTimeout: (...args) => mockSelectWithTimeout(...args),
-    findWithTimeout: (...args) => mockFindWithTimeout(...args),
-    createWithTimeout: (...args) => mockCreateWithTimeout(...args),
-    updateWithTimeout: (...args) => mockUpdateWithTimeout(...args),
-    destroyWithTimeout: (...args) => mockDestroyWithTimeout(...args),
-    escapeLike: (str) => str.replace(/[%_\\]/g, '\\$&')
+vi.mock('../../services/missions.service.js', () => ({
+    listMissions: (...args) => mockListMissions(...args),
+    getMissionsGroupedByDeal: (...args) => mockGetMissionsGroupedByDeal(...args),
+    getMissionWithJoins: (...args) => mockGetMissionWithJoins(...args),
+    mapMissionRecord: (...args) => mockMapMissionRecord(...args),
+    validateFirm: (...args) => mockValidateFirm(...args),
+    validateClient: (...args) => mockValidateClient(...args),
+    validateContact: (...args) => mockValidateContact(...args),
+    validateDeal: (...args) => mockValidateDeal(...args),
+    createMission: (...args) => mockCreateMission(...args),
+    findMission: (...args) => mockFindMission(...args),
+    updateMission: (...args) => mockUpdateMission(...args),
+    deleteMission: (...args) => mockDeleteMission(...args),
+    listMissionAdaptations: (...args) => mockListMissionAdaptations(...args)
 }));
 
 // Mock firmHelpers
@@ -148,12 +166,12 @@ describe('Missions Routes - GET /api/missions', () => {
 
     it('should return paginated missions for authenticated user', async () => {
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
-        mockSelectWithTimeout.mockResolvedValueOnce([{ total: '2' }]);
-        mockQuery.mockResolvedValueOnce({
-            rows: [
-                makeMissionRow({ id: 'mission-1', title: 'Mission A' }),
-                makeMissionRow({ id: 'mission-2', title: 'Mission B' })
-            ]
+        mockListMissions.mockResolvedValueOnce({
+            data: [
+                { id: 'mission-1', Title: 'Mission A' },
+                { id: 'mission-2', Title: 'Mission B' }
+            ],
+            pagination: { page: 1, limit: 20, totalCount: 2, totalPages: 1, hasMore: false }
         });
 
         const res = await request(app)
@@ -165,6 +183,7 @@ describe('Missions Routes - GET /api/missions', () => {
         expect(res.body.data.length).toBe(2);
         expect(res.body.pagination).toBeDefined();
         expect(res.body.pagination.totalCount).toBe(2);
+        expect(mockListMissions).toHaveBeenCalledWith(expect.objectContaining({ firmId: 'firm-123' }));
     });
 
     it('should return empty results for user without firm', async () => {
@@ -181,9 +200,9 @@ describe('Missions Routes - GET /api/missions', () => {
 
     it('should filter by status', async () => {
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
-        mockSelectWithTimeout.mockResolvedValueOnce([{ total: '1' }]);
-        mockQuery.mockResolvedValueOnce({
-            rows: [makeMissionRow({ status: 'active' })]
+        mockListMissions.mockResolvedValueOnce({
+            data: [{ id: 'mission-1', Title: 'Active Mission' }],
+            pagination: { page: 1, limit: 20, totalCount: 1, totalPages: 1, hasMore: false }
         });
 
         const res = await request(app)
@@ -191,13 +210,14 @@ describe('Missions Routes - GET /api/missions', () => {
             .set('Authorization', 'Bearer valid-token');
 
         expect(res.status).toBe(200);
+        expect(mockListMissions).toHaveBeenCalledWith(expect.objectContaining({ status: 'active' }));
     });
 
     it('should filter by search term', async () => {
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
-        mockSelectWithTimeout.mockResolvedValueOnce([{ total: '1' }]);
-        mockQuery.mockResolvedValueOnce({
-            rows: [makeMissionRow({ title: 'React Developer' })]
+        mockListMissions.mockResolvedValueOnce({
+            data: [{ id: 'mission-1', Title: 'React Developer' }],
+            pagination: { page: 1, limit: 20, totalCount: 1, totalPages: 1, hasMore: false }
         });
 
         const res = await request(app)
@@ -205,13 +225,14 @@ describe('Missions Routes - GET /api/missions', () => {
             .set('Authorization', 'Bearer valid-token');
 
         expect(res.status).toBe(200);
+        expect(mockListMissions).toHaveBeenCalledWith(expect.objectContaining({ search: 'react' }));
     });
 
     it('should filter by dealId', async () => {
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
-        mockSelectWithTimeout.mockResolvedValueOnce([{ total: '1' }]);
-        mockQuery.mockResolvedValueOnce({
-            rows: [makeMissionRow({ deal_id: 'deal-1' })]
+        mockListMissions.mockResolvedValueOnce({
+            data: [{ id: 'mission-1' }],
+            pagination: { page: 1, limit: 20, totalCount: 1, totalPages: 1, hasMore: false }
         });
 
         const res = await request(app)
@@ -219,12 +240,15 @@ describe('Missions Routes - GET /api/missions', () => {
             .set('Authorization', 'Bearer valid-token');
 
         expect(res.status).toBe(200);
+        expect(mockListMissions).toHaveBeenCalledWith(expect.objectContaining({ dealId: 'deal-1' }));
     });
 
     it('should support pagination parameters', async () => {
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
-        mockSelectWithTimeout.mockResolvedValueOnce([{ total: '50' }]);
-        mockQuery.mockResolvedValueOnce({ rows: [] });
+        mockListMissions.mockResolvedValueOnce({
+            data: [],
+            pagination: { page: 3, limit: 10, totalCount: 50, totalPages: 5, hasMore: true }
+        });
 
         const res = await request(app)
             .get('/api/missions?page=3&limit=10')
@@ -237,24 +261,26 @@ describe('Missions Routes - GET /api/missions', () => {
 
     it('should cap limit at 100', async () => {
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
-        mockSelectWithTimeout.mockResolvedValueOnce([{ total: '0' }]);
-        mockQuery.mockResolvedValueOnce({ rows: [] });
+        mockListMissions.mockResolvedValueOnce({
+            data: [],
+            pagination: { page: 1, limit: 100, totalCount: 0, totalPages: 0, hasMore: false }
+        });
 
         const res = await request(app)
             .get('/api/missions?limit=500')
             .set('Authorization', 'Bearer valid-token');
 
         expect(res.status).toBe(200);
-        expect(res.body.pagination.limit).toBeLessThanOrEqual(100);
+        expect(mockListMissions).toHaveBeenCalledWith(expect.objectContaining({ limit: 100 }));
     });
 
     it('should allow admin to see all missions without firm filter', async () => {
-        mockSelectWithTimeout.mockResolvedValueOnce([{ total: '3' }]);
-        mockQuery.mockResolvedValueOnce({
-            rows: [
-                makeMissionRow({ id: 'mission-1', firm: 'Firm A', firm_id: 'firm-a' }),
-                makeMissionRow({ id: 'mission-2', firm: 'Firm B', firm_id: 'firm-b' })
-            ]
+        mockListMissions.mockResolvedValueOnce({
+            data: [
+                { id: 'mission-1', Firm: 'Firm A' },
+                { id: 'mission-2', Firm: 'Firm B' }
+            ],
+            pagination: { page: 1, limit: 20, totalCount: 2, totalPages: 1, hasMore: false }
         });
 
         const res = await request(app)
@@ -264,6 +290,7 @@ describe('Missions Routes - GET /api/missions', () => {
 
         expect(res.status).toBe(200);
         expect(mockGetUserFirmId).not.toHaveBeenCalled();
+        expect(mockListMissions).toHaveBeenCalledWith(expect.objectContaining({ firmId: null }));
     });
 });
 
@@ -284,7 +311,7 @@ describe('Missions Routes - GET /api/missions/:id', () => {
     });
 
     it('should return 404 for non-existent mission', async () => {
-        mockQuery.mockResolvedValueOnce({ rows: [] });
+        mockGetMissionWithJoins.mockResolvedValueOnce(null);
 
         const res = await request(app)
             .get('/api/missions/mission-999')
@@ -294,7 +321,7 @@ describe('Missions Routes - GET /api/missions/:id', () => {
     });
 
     it('should return mission for authorized user', async () => {
-        mockQuery.mockResolvedValueOnce({ rows: [makeMissionRow()] });
+        mockGetMissionWithJoins.mockResolvedValueOnce(makeMissionRow());
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
 
         const res = await request(app)
@@ -307,9 +334,9 @@ describe('Missions Routes - GET /api/missions/:id', () => {
     });
 
     it('should return 403 for mission from different firm', async () => {
-        mockQuery.mockResolvedValueOnce({
-            rows: [makeMissionRow({ firm: 'Other Firm', firm_id: 'firm-other' })]
-        });
+        mockGetMissionWithJoins.mockResolvedValueOnce(
+            makeMissionRow({ firm: 'Other Firm', firm_id: 'firm-other' })
+        );
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
 
         const res = await request(app)
@@ -320,9 +347,9 @@ describe('Missions Routes - GET /api/missions/:id', () => {
     });
 
     it('should allow admin to access any mission', async () => {
-        mockQuery.mockResolvedValueOnce({
-            rows: [makeMissionRow({ firm: 'Other Firm', firm_id: 'firm-other' })]
-        });
+        mockGetMissionWithJoins.mockResolvedValueOnce(
+            makeMissionRow({ firm: 'Other Firm', firm_id: 'firm-other' })
+        );
 
         const res = await request(app)
             .get('/api/missions/mission-123')
@@ -333,19 +360,17 @@ describe('Missions Routes - GET /api/missions/:id', () => {
     });
 
     it('should return mission with client and deal data', async () => {
-        mockQuery.mockResolvedValueOnce({
-            rows: [makeMissionRow({
-                client_id: 'client-1',
-                client_name: 'Acme Corp',
-                client_type: 'client',
-                contact_id: 'contact-1',
-                contact_name: 'John Doe',
-                contact_email: 'john@acme.com',
-                deal_id: 'deal-1',
-                deal_title: 'Big Deal',
-                deal_status: 'open'
-            })]
-        });
+        mockGetMissionWithJoins.mockResolvedValueOnce(makeMissionRow({
+            client_id: 'client-1',
+            client_name: 'Acme Corp',
+            client_type: 'client',
+            contact_id: 'contact-1',
+            contact_name: 'John Doe',
+            contact_email: 'john@acme.com',
+            deal_id: 'deal-1',
+            deal_title: 'Big Deal',
+            deal_status: 'open'
+        }));
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
 
         const res = await request(app)
@@ -380,14 +405,8 @@ describe('Missions Routes - POST /api/missions', () => {
 
     it('should create mission with valid data', async () => {
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
-        mockCreateWithTimeout.mockResolvedValueOnce({ id: 'new-mission-1' });
-        mockQuery.mockResolvedValueOnce({
-            rows: [makeMissionRow({
-                id: 'new-mission-1',
-                title: 'Dev Full Stack',
-                status: 'active'
-            })]
-        });
+        const created = makeMissionRow({ id: 'new-mission-1', title: 'Dev Full Stack', status: 'active' });
+        mockCreateMission.mockResolvedValueOnce(created);
 
         const res = await request(app)
             .post('/api/missions')
@@ -405,24 +424,14 @@ describe('Missions Routes - POST /api/missions', () => {
 
     it('should create mission with client and deal associations', async () => {
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
-        // client validation query
-        mockQuery.mockResolvedValueOnce({ rows: [{ firm_id: 'firm-123' }] });
-        // contact validation query
-        mockQuery.mockResolvedValueOnce({ rows: [{ id: 'contact-1' }] });
-        // deal validation query
-        mockQuery.mockResolvedValueOnce({ rows: [{ firm_id: 'firm-123' }] });
-        // createWithTimeout
-        mockCreateWithTimeout.mockResolvedValueOnce({ id: 'new-mission-2' });
-        // fetch with joins query
-        mockQuery.mockResolvedValueOnce({
-            rows: [makeMissionRow({
-                id: 'new-mission-2',
-                client_id: 'client-1',
-                client_name: 'Acme',
-                contact_id: 'contact-1',
-                deal_id: 'deal-1'
-            })]
+        mockValidateClient.mockResolvedValueOnce({ exists: true, firmMatch: true });
+        mockValidateContact.mockResolvedValueOnce(true);
+        mockValidateDeal.mockResolvedValueOnce({ exists: true, firmMatch: true });
+        const created = makeMissionRow({
+            id: 'new-mission-2', client_id: 'client-1', client_name: 'Acme',
+            contact_id: 'contact-1', deal_id: 'deal-1'
         });
+        mockCreateMission.mockResolvedValueOnce(created);
 
         const res = await request(app)
             .post('/api/missions')
@@ -440,8 +449,7 @@ describe('Missions Routes - POST /api/missions', () => {
 
     it('should reject if client belongs to different firm', async () => {
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
-        // client validation query - different firm
-        mockQuery.mockResolvedValueOnce({ rows: [{ firm_id: 'firm-other' }] });
+        mockValidateClient.mockResolvedValueOnce({ exists: true, firmMatch: false });
 
         const res = await request(app)
             .post('/api/missions')
@@ -456,8 +464,7 @@ describe('Missions Routes - POST /api/missions', () => {
 
     it('should reject if client not found', async () => {
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
-        // client validation query - not found
-        mockQuery.mockResolvedValueOnce({ rows: [] });
+        mockValidateClient.mockResolvedValueOnce({ exists: false, firmMatch: false });
 
         const res = await request(app)
             .post('/api/missions')
@@ -493,7 +500,7 @@ describe('Missions Routes - PUT /api/missions/:id', () => {
     it('should return 404 for non-existent mission', async () => {
         const notFoundError = new Error('Record not found');
         notFoundError.statusCode = 404;
-        mockFindWithTimeout.mockRejectedValueOnce(notFoundError);
+        mockFindMission.mockRejectedValueOnce(notFoundError);
 
         const res = await request(app)
             .put('/api/missions/mission-999')
@@ -504,14 +511,10 @@ describe('Missions Routes - PUT /api/missions/:id', () => {
     });
 
     it('should update mission for authorized user', async () => {
-        mockFindWithTimeout.mockResolvedValueOnce(
-            makeMissionRow({ firm: 'Test Firm', firm_id: 'firm-123' })
-        );
+        mockFindMission.mockResolvedValueOnce(makeMissionRow({ firm: 'Test Firm', firm_id: 'firm-123' }));
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
-        mockUpdateWithTimeout.mockResolvedValueOnce({ id: 'mission-123' });
-        mockQuery.mockResolvedValueOnce({
-            rows: [makeMissionRow({ title: 'Updated Title', status: 'closed' })]
-        });
+        const updated = makeMissionRow({ title: 'Updated Title', status: 'closed' });
+        mockUpdateMission.mockResolvedValueOnce(updated);
 
         const res = await request(app)
             .put('/api/missions/mission-123')
@@ -523,9 +526,7 @@ describe('Missions Routes - PUT /api/missions/:id', () => {
     });
 
     it('should return 403 for mission from different firm', async () => {
-        mockFindWithTimeout.mockResolvedValueOnce(
-            makeMissionRow({ firm: 'Other Firm', firm_id: 'firm-other' })
-        );
+        mockFindMission.mockResolvedValueOnce(makeMissionRow({ firm: 'Other Firm', firm_id: 'firm-other' }));
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
 
         const res = await request(app)
@@ -537,14 +538,10 @@ describe('Missions Routes - PUT /api/missions/:id', () => {
     });
 
     it('should allow admin to update any mission', async () => {
-        mockFindWithTimeout.mockResolvedValueOnce(
-            makeMissionRow({ firm: 'Other Firm', firm_id: 'firm-other' })
-        );
+        mockFindMission.mockResolvedValueOnce(makeMissionRow({ firm: 'Other Firm', firm_id: 'firm-other' }));
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
-        mockUpdateWithTimeout.mockResolvedValueOnce({ id: 'mission-123' });
-        mockQuery.mockResolvedValueOnce({
-            rows: [makeMissionRow({ title: 'Admin Updated' })]
-        });
+        const updated = makeMissionRow({ title: 'Admin Updated' });
+        mockUpdateMission.mockResolvedValueOnce(updated);
 
         const res = await request(app)
             .put('/api/missions/mission-123')
@@ -575,7 +572,7 @@ describe('Missions Routes - DELETE /api/missions/:id', () => {
     it('should return 404 for non-existent mission', async () => {
         const notFoundError = new Error('Record not found');
         notFoundError.statusCode = 404;
-        mockFindWithTimeout.mockRejectedValueOnce(notFoundError);
+        mockFindMission.mockRejectedValueOnce(notFoundError);
 
         const res = await request(app)
             .delete('/api/missions/mission-999')
@@ -585,11 +582,9 @@ describe('Missions Routes - DELETE /api/missions/:id', () => {
     });
 
     it('should delete mission for authorized user', async () => {
-        mockFindWithTimeout.mockResolvedValueOnce(
-            makeMissionRow({ firm: 'Test Firm', firm_id: 'firm-123' })
-        );
+        mockFindMission.mockResolvedValueOnce(makeMissionRow({ firm: 'Test Firm', firm_id: 'firm-123' }));
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
-        mockDestroyWithTimeout.mockResolvedValueOnce(true);
+        mockDeleteMission.mockResolvedValueOnce(undefined);
 
         const res = await request(app)
             .delete('/api/missions/mission-123')
@@ -597,12 +592,11 @@ describe('Missions Routes - DELETE /api/missions/:id', () => {
 
         expect(res.status).toBe(200);
         expect(res.body.message).toContain('deleted');
+        expect(mockDeleteMission).toHaveBeenCalledWith('mission-123');
     });
 
     it('should return 403 for mission from different firm', async () => {
-        mockFindWithTimeout.mockResolvedValueOnce(
-            makeMissionRow({ firm: 'Other Firm', firm_id: 'firm-other' })
-        );
+        mockFindMission.mockResolvedValueOnce(makeMissionRow({ firm: 'Other Firm', firm_id: 'firm-other' }));
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
 
         const res = await request(app)
@@ -613,7 +607,7 @@ describe('Missions Routes - DELETE /api/missions/:id', () => {
     });
 
     it('should allow admin to delete any mission', async () => {
-        mockDestroyWithTimeout.mockResolvedValueOnce(true);
+        mockDeleteMission.mockResolvedValueOnce(undefined);
 
         const res = await request(app)
             .delete('/api/missions/mission-123')
@@ -621,7 +615,7 @@ describe('Missions Routes - DELETE /api/missions/:id', () => {
             .set('x-test-role', 'admin');
 
         expect(res.status).toBe(200);
-        expect(mockFindWithTimeout).not.toHaveBeenCalled();
+        expect(mockFindMission).not.toHaveBeenCalled();
     });
 });
 
@@ -642,24 +636,16 @@ describe('Missions Routes - GET /api/missions/:missionId/adaptations', () => {
     });
 
     it('should return adaptations for authorized user', async () => {
-        mockFindWithTimeout.mockResolvedValueOnce(
-            makeMissionRow({ firm: 'Test Firm', firm_id: 'firm-123' })
-        );
+        mockFindMission.mockResolvedValueOnce(makeMissionRow({ firm: 'Test Firm', firm_id: 'firm-123' }));
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
-        mockSelectWithTimeout.mockResolvedValueOnce([
+        mockListMissionAdaptations.mockResolvedValueOnce([
             {
                 id: 'adapt-1',
-                resume_id: 'resume-1',
-                mission_id: 'mission-123',
-                resume_name: 'John Doe',
-                candidate_name: 'John Doe',
-                adapted_title: 'Adapted CV',
-                mission_title: 'Dev React',
-                adapted_text: 'Adapted content',
-                match_score: 85,
-                status: 'completed',
-                created_at: '2024-01-01',
-                updated_at: '2024-01-01'
+                'Resume ID': 'resume-1',
+                'Mission ID': 'mission-123',
+                'Resume Name': 'John Doe',
+                'Match Score': 85,
+                Status: 'completed'
             }
         ]);
 
@@ -674,9 +660,7 @@ describe('Missions Routes - GET /api/missions/:missionId/adaptations', () => {
     });
 
     it('should return 403 for mission from different firm', async () => {
-        mockFindWithTimeout.mockResolvedValueOnce(
-            makeMissionRow({ firm: 'Other Firm', firm_id: 'firm-other' })
-        );
+        mockFindMission.mockResolvedValueOnce(makeMissionRow({ firm: 'Other Firm', firm_id: 'firm-other' }));
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
 
         const res = await request(app)
@@ -687,10 +671,7 @@ describe('Missions Routes - GET /api/missions/:missionId/adaptations', () => {
     });
 
     it('should allow admin to view adaptations for any mission', async () => {
-        mockFindWithTimeout.mockResolvedValueOnce(
-            makeMissionRow({ firm: 'Other Firm', firm_id: 'firm-other' })
-        );
-        mockSelectWithTimeout.mockResolvedValueOnce([]);
+        mockListMissionAdaptations.mockResolvedValueOnce([]);
 
         const res = await request(app)
             .get('/api/missions/mission-123/adaptations')

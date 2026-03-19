@@ -7,10 +7,31 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import express from 'express';
 import request from 'supertest';
 
-// Mock database
-const mockQuery = vi.fn();
-vi.mock('../../config/database.js', () => ({
-    query: (...args) => mockQuery(...args)
+// Mock submissions service
+const mockListSubmissions = vi.fn();
+const mockGetSubmissionById = vi.fn();
+const mockValidateResume = vi.fn();
+const mockValidateClient = vi.fn();
+const mockValidateContact = vi.fn();
+const mockValidateMission = vi.fn();
+const mockCreateSubmission = vi.fn();
+const mockFindSubmission = vi.fn();
+const mockUpdateSubmission = vi.fn();
+const mockDeleteSubmission = vi.fn();
+const mockGetStatsSummary = vi.fn();
+
+vi.mock('../../services/resumeSubmissions.service.js', () => ({
+    listSubmissions: (...args) => mockListSubmissions(...args),
+    getSubmissionById: (...args) => mockGetSubmissionById(...args),
+    validateResume: (...args) => mockValidateResume(...args),
+    validateClient: (...args) => mockValidateClient(...args),
+    validateContact: (...args) => mockValidateContact(...args),
+    validateMission: (...args) => mockValidateMission(...args),
+    createSubmission: (...args) => mockCreateSubmission(...args),
+    findSubmission: (...args) => mockFindSubmission(...args),
+    updateSubmission: (...args) => mockUpdateSubmission(...args),
+    deleteSubmission: (...args) => mockDeleteSubmission(...args),
+    getStatsSummary: (...args) => mockGetStatsSummary(...args)
 }));
 
 // Mock logger
@@ -96,9 +117,10 @@ describe('Resume Submissions Routes', () => {
         });
 
         it('should return paginated submissions', async () => {
-            mockQuery
-                .mockResolvedValueOnce({ rows: [sampleSubmission] }) // data query
-                .mockResolvedValueOnce({ rows: [{ count: '1' }] }); // count query (page 1)
+            mockListSubmissions.mockResolvedValueOnce({
+                data: [sampleSubmission],
+                pagination: { page: 1, limit: 20, hasMore: false, totalCount: 1, nextPage: null }
+            });
 
             const res = await request(app)
                 .get('/api/submissions')
@@ -112,36 +134,38 @@ describe('Resume Submissions Routes', () => {
         });
 
         it('should filter by clientId', async () => {
-            mockQuery
-                .mockResolvedValueOnce({ rows: [] })
-                .mockResolvedValueOnce({ rows: [{ count: '0' }] });
+            mockListSubmissions.mockResolvedValueOnce({
+                data: [],
+                pagination: { page: 1, limit: 20, hasMore: false, totalCount: 0, nextPage: null }
+            });
 
             const res = await request(app)
                 .get('/api/submissions?clientId=cli-1')
                 .set('Authorization', 'Bearer valid-token');
 
             expect(res.status).toBe(200);
-            // Verify the client_id param was included
-            const queryCall = mockQuery.mock.calls[0];
-            expect(queryCall[1]).toContain('cli-1');
+            expect(mockListSubmissions).toHaveBeenCalledWith(expect.objectContaining({ clientId: 'cli-1' }));
         });
 
         it('should filter by resumeId', async () => {
-            mockQuery
-                .mockResolvedValueOnce({ rows: [] })
-                .mockResolvedValueOnce({ rows: [{ count: '0' }] });
+            mockListSubmissions.mockResolvedValueOnce({
+                data: [],
+                pagination: { page: 1, limit: 20, hasMore: false, totalCount: 0, nextPage: null }
+            });
 
             const res = await request(app)
                 .get('/api/submissions?resumeId=res-1')
                 .set('Authorization', 'Bearer valid-token');
 
             expect(res.status).toBe(200);
-            const queryCall = mockQuery.mock.calls[0];
-            expect(queryCall[1]).toContain('res-1');
+            expect(mockListSubmissions).toHaveBeenCalledWith(expect.objectContaining({ resumeId: 'res-1' }));
         });
 
         it('should support pagination params', async () => {
-            mockQuery.mockResolvedValueOnce({ rows: [] });
+            mockListSubmissions.mockResolvedValueOnce({
+                data: [],
+                pagination: { page: 3, limit: 5, hasMore: false, totalCount: 0, nextPage: null }
+            });
 
             const res = await request(app)
                 .get('/api/submissions?page=3&limit=5')
@@ -152,13 +176,11 @@ describe('Resume Submissions Routes', () => {
             expect(res.body.pagination.limit).toBe(5);
         });
 
-        it('should detect hasMore with limit+1 rows', async () => {
-            const rows = Array.from({ length: 21 }, (_, i) => ({
-                ...sampleSubmission, id: `sub-${i}`
-            }));
-            mockQuery
-                .mockResolvedValueOnce({ rows })
-                .mockResolvedValueOnce({ rows: [{ count: '50' }] });
+        it('should detect hasMore', async () => {
+            mockListSubmissions.mockResolvedValueOnce({
+                data: Array.from({ length: 20 }, (_, i) => ({ ...sampleSubmission, id: `sub-${i}` })),
+                pagination: { page: 1, limit: 20, hasMore: true, totalCount: 50, nextPage: 2 }
+            });
 
             const res = await request(app)
                 .get('/api/submissions?limit=20')
@@ -171,7 +193,7 @@ describe('Resume Submissions Routes', () => {
         });
 
         it('should return 500 on error', async () => {
-            mockQuery.mockRejectedValueOnce(new Error('DB error'));
+            mockListSubmissions.mockRejectedValueOnce(new Error('DB error'));
 
             const res = await request(app)
                 .get('/api/submissions')
@@ -187,7 +209,7 @@ describe('Resume Submissions Routes', () => {
     // ==========================================
     describe('GET /:id', () => {
         it('should return submission by ID', async () => {
-            mockQuery.mockResolvedValueOnce({ rows: [sampleSubmission] });
+            mockGetSubmissionById.mockResolvedValueOnce(sampleSubmission);
 
             const res = await request(app)
                 .get('/api/submissions/sub-123')
@@ -198,7 +220,7 @@ describe('Resume Submissions Routes', () => {
         });
 
         it('should return 404 if not found', async () => {
-            mockQuery.mockResolvedValueOnce({ rows: [] });
+            mockGetSubmissionById.mockResolvedValueOnce(null);
 
             const res = await request(app)
                 .get('/api/submissions/sub-missing')
@@ -208,9 +230,7 @@ describe('Resume Submissions Routes', () => {
         });
 
         it('should return 403 for non-admin accessing another firm', async () => {
-            mockQuery.mockResolvedValueOnce({
-                rows: [{ ...sampleSubmission, firm_id: 'other-firm' }]
-            });
+            mockGetSubmissionById.mockResolvedValueOnce({ ...sampleSubmission, firm_id: 'other-firm' });
 
             const res = await request(app)
                 .get('/api/submissions/sub-other')
@@ -222,9 +242,7 @@ describe('Resume Submissions Routes', () => {
         });
 
         it('should allow admin to access any firm submission', async () => {
-            mockQuery.mockResolvedValueOnce({
-                rows: [{ ...sampleSubmission, firm_id: 'other-firm' }]
-            });
+            mockGetSubmissionById.mockResolvedValueOnce({ ...sampleSubmission, firm_id: 'other-firm' });
 
             const res = await request(app)
                 .get('/api/submissions/sub-other')
@@ -246,13 +264,11 @@ describe('Resume Submissions Routes', () => {
         };
 
         it('should create submission with valid data', async () => {
-            mockQuery
-                .mockResolvedValueOnce({ rows: [{ id: 'res-1' }] }) // resume check
-                .mockResolvedValueOnce({ rows: [{ firm_id: 'firm-123' }] }) // client check
-                .mockResolvedValueOnce({ rows: [{ id: 'con-1' }] }) // contact check
-                .mockResolvedValueOnce({ rows: [{ id: 'mis-1' }] }) // mission check
-                .mockResolvedValueOnce({ rows: [{ id: 'sub-new' }] }) // INSERT
-                .mockResolvedValueOnce({ rows: [{ ...sampleSubmission, id: 'sub-new' }] }); // full fetch
+            mockValidateResume.mockResolvedValueOnce(true);
+            mockValidateClient.mockResolvedValueOnce({ exists: true, firmMatch: true });
+            mockValidateContact.mockResolvedValueOnce(true);
+            mockValidateMission.mockResolvedValueOnce(true);
+            mockCreateSubmission.mockResolvedValueOnce({ ...sampleSubmission, id: 'sub-new' });
 
             const res = await request(app)
                 .post('/api/submissions')
@@ -294,7 +310,7 @@ describe('Resume Submissions Routes', () => {
         });
 
         it('should return 400 if resume not found', async () => {
-            mockQuery.mockResolvedValueOnce({ rows: [] }); // resume not found
+            mockValidateResume.mockResolvedValueOnce(false);
 
             const res = await request(app)
                 .post('/api/submissions')
@@ -306,9 +322,8 @@ describe('Resume Submissions Routes', () => {
         });
 
         it('should return 403 if client belongs to another firm', async () => {
-            mockQuery
-                .mockResolvedValueOnce({ rows: [{ id: 'res-1' }] }) // resume exists
-                .mockResolvedValueOnce({ rows: [{ firm_id: 'other-firm' }] }); // client wrong firm
+            mockValidateResume.mockResolvedValueOnce(true);
+            mockValidateClient.mockResolvedValueOnce({ exists: true, firmMatch: false });
 
             const res = await request(app)
                 .post('/api/submissions')
@@ -320,10 +335,9 @@ describe('Resume Submissions Routes', () => {
         });
 
         it('should return 400 if contact does not belong to client', async () => {
-            mockQuery
-                .mockResolvedValueOnce({ rows: [{ id: 'res-1' }] }) // resume
-                .mockResolvedValueOnce({ rows: [{ firm_id: 'firm-123' }] }) // client
-                .mockResolvedValueOnce({ rows: [] }); // contact not found for client
+            mockValidateResume.mockResolvedValueOnce(true);
+            mockValidateClient.mockResolvedValueOnce({ exists: true, firmMatch: true });
+            mockValidateContact.mockResolvedValueOnce(false);
 
             const res = await request(app)
                 .post('/api/submissions')
@@ -352,9 +366,8 @@ describe('Resume Submissions Routes', () => {
     // ==========================================
     describe('PUT /:id', () => {
         it('should update submission status', async () => {
-            mockQuery
-                .mockResolvedValueOnce({ rows: [sampleSubmission] }) // existing check
-                .mockResolvedValueOnce({ rows: [{ ...sampleSubmission, status: 'viewed' }] }); // update
+            mockFindSubmission.mockResolvedValueOnce(sampleSubmission);
+            mockUpdateSubmission.mockResolvedValueOnce({ ...sampleSubmission, status: 'viewed' });
 
             const res = await request(app)
                 .put('/api/submissions/sub-123')
@@ -366,7 +379,7 @@ describe('Resume Submissions Routes', () => {
         });
 
         it('should return 404 if not found', async () => {
-            mockQuery.mockResolvedValueOnce({ rows: [] });
+            mockFindSubmission.mockResolvedValueOnce(null);
 
             const res = await request(app)
                 .put('/api/submissions/sub-missing')
@@ -377,9 +390,7 @@ describe('Resume Submissions Routes', () => {
         });
 
         it('should return 403 for non-admin on another firms submission', async () => {
-            mockQuery.mockResolvedValueOnce({
-                rows: [{ ...sampleSubmission, firm_id: 'other-firm' }]
-            });
+            mockFindSubmission.mockResolvedValueOnce({ ...sampleSubmission, firm_id: 'other-firm' });
 
             const res = await request(app)
                 .put('/api/submissions/sub-other')
@@ -396,9 +407,8 @@ describe('Resume Submissions Routes', () => {
     // ==========================================
     describe('DELETE /:id', () => {
         it('should delete submission', async () => {
-            mockQuery
-                .mockResolvedValueOnce({ rows: [sampleSubmission] }) // existing check
-                .mockResolvedValueOnce({ rows: [] }); // delete
+            mockFindSubmission.mockResolvedValueOnce(sampleSubmission);
+            mockDeleteSubmission.mockResolvedValueOnce(undefined);
 
             const res = await request(app)
                 .delete('/api/submissions/sub-123')
@@ -406,10 +416,11 @@ describe('Resume Submissions Routes', () => {
 
             expect(res.status).toBe(200);
             expect(res.body.message).toBe('Submission deleted successfully');
+            expect(mockDeleteSubmission).toHaveBeenCalledWith('sub-123');
         });
 
         it('should return 404 if not found', async () => {
-            mockQuery.mockResolvedValueOnce({ rows: [] });
+            mockFindSubmission.mockResolvedValueOnce(null);
 
             const res = await request(app)
                 .delete('/api/submissions/sub-missing')
@@ -419,9 +430,7 @@ describe('Resume Submissions Routes', () => {
         });
 
         it('should return 403 for non-admin on another firms submission', async () => {
-            mockQuery.mockResolvedValueOnce({
-                rows: [{ ...sampleSubmission, firm_id: 'other-firm' }]
-            });
+            mockFindSubmission.mockResolvedValueOnce({ ...sampleSubmission, firm_id: 'other-firm' });
 
             const res = await request(app)
                 .delete('/api/submissions/sub-other')
@@ -437,17 +446,15 @@ describe('Resume Submissions Routes', () => {
     // ==========================================
     describe('GET /stats/summary', () => {
         it('should return submission statistics', async () => {
-            mockQuery.mockResolvedValueOnce({
-                rows: [{
-                    total_submissions: '42',
-                    sent: '20',
-                    viewed: '10',
-                    accepted: '5',
-                    rejected: '3',
-                    pending: '4',
-                    unique_clients: '8',
-                    unique_resumes: '15'
-                }]
+            mockGetStatsSummary.mockResolvedValueOnce({
+                total_submissions: '42',
+                sent: '20',
+                viewed: '10',
+                accepted: '5',
+                rejected: '3',
+                pending: '4',
+                unique_clients: '8',
+                unique_resumes: '15'
             });
 
             const res = await request(app)
@@ -460,7 +467,7 @@ describe('Resume Submissions Routes', () => {
         });
 
         it('should return 500 on error', async () => {
-            mockQuery.mockRejectedValueOnce(new Error('DB error'));
+            mockGetStatsSummary.mockRejectedValueOnce(new Error('DB error'));
 
             const res = await request(app)
                 .get('/api/submissions/stats/summary')
@@ -476,7 +483,7 @@ describe('Resume Submissions Routes', () => {
     // ==========================================
     describe('Error message safety', () => {
         it('should not leak SQL errors in responses', async () => {
-            mockQuery.mockRejectedValueOnce(new Error('column "bad" does not exist'));
+            mockListSubmissions.mockRejectedValueOnce(new Error('column "bad" does not exist'));
 
             const res = await request(app)
                 .get('/api/submissions')

@@ -21,12 +21,6 @@ vi.mock('../../config/constants.js', () => ({
     RATE_LIMIT: { AUTH: { windowMs: 900000, max: 20 }, USER: { windowMs: 900000, max: 50 } }
 }));
 
-// Mock database
-const mockQuery = vi.fn();
-vi.mock('../../config/database.js', () => ({
-    query: (...args) => mockQuery(...args)
-}));
-
 // Mock firmHelpers
 const mockGetUserFirmId = vi.fn();
 const mockIsUserAdmin = vi.fn();
@@ -53,6 +47,10 @@ const mockUpdateDealResumeStatus = vi.fn();
 const mockGetDealsForResume = vi.fn();
 const mockGetResumesForDeal = vi.fn();
 const mockGetDealStats = vi.fn();
+const mockGetDealFirmId = vi.fn();
+const mockGetClientFirmId = vi.fn();
+const mockGetResumeFirmId = vi.fn();
+const mockGetMissionsForDeal = vi.fn();
 
 vi.mock('../../services/deals.service.js', () => ({
     createDeal: (...args) => mockCreateDeal(...args),
@@ -66,6 +64,10 @@ vi.mock('../../services/deals.service.js', () => ({
     getDealsForResume: (...args) => mockGetDealsForResume(...args),
     getResumesForDeal: (...args) => mockGetResumesForDeal(...args),
     getDealStats: (...args) => mockGetDealStats(...args),
+    getDealFirmId: (...args) => mockGetDealFirmId(...args),
+    getClientFirmId: (...args) => mockGetClientFirmId(...args),
+    getResumeFirmId: (...args) => mockGetResumeFirmId(...args),
+    getMissionsForDeal: (...args) => mockGetMissionsForDeal(...args),
     DEAL_STATUS: { OPEN: 'open', WON: 'won', LOST: 'lost', PENDING: 'pending' },
     DEAL_PRIORITY: { LOW: 'low', MEDIUM: 'medium', HIGH: 'high' },
     DEAL_RESUME_STATUS: { PENDING: 'pending', SUBMITTED: 'submitted', ACCEPTED: 'accepted', REJECTED: 'rejected' }
@@ -302,7 +304,7 @@ describe('Deals Routes - GET /api/deals/:id', () => {
     });
 
     it('should return 404 for non-existent deal', async () => {
-        mockQuery.mockResolvedValueOnce({ rows: [] });
+        mockGetDealFirmId.mockResolvedValueOnce(null);
 
         const res = await request(app)
             .get('/api/deals/deal-123')
@@ -312,7 +314,7 @@ describe('Deals Routes - GET /api/deals/:id', () => {
     });
 
     it('should return 403 for deal from different firm', async () => {
-        mockQuery.mockResolvedValueOnce({ rows: [{ firm_id: 'firm-other' }] });
+        mockGetDealFirmId.mockResolvedValueOnce('firm-other');
         mockIsUserAdmin.mockReturnValue(false);
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
 
@@ -324,7 +326,7 @@ describe('Deals Routes - GET /api/deals/:id', () => {
     });
 
     it('should return deal for authorized user', async () => {
-        mockQuery.mockResolvedValueOnce({ rows: [{ firm_id: 'firm-123' }] });
+        mockGetDealFirmId.mockResolvedValueOnce('firm-123');
         mockIsUserAdmin.mockReturnValue(false);
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
         mockGetDealById.mockResolvedValueOnce({
@@ -343,7 +345,7 @@ describe('Deals Routes - GET /api/deals/:id', () => {
     });
 
     it('should allow admin to access any deal', async () => {
-        mockQuery.mockResolvedValueOnce({ rows: [{ firm_id: 'firm-other' }] });
+        mockGetDealFirmId.mockResolvedValueOnce('firm-other');
         mockIsUserAdmin.mockReturnValue(true);
         mockGetDealById.mockResolvedValueOnce({
             id: 'deal-123',
@@ -430,7 +432,7 @@ describe('Deals Routes - PUT /api/deals/:id', () => {
     });
 
     it('should return 404 for non-existent deal', async () => {
-        mockQuery.mockResolvedValueOnce({ rows: [] });
+        mockGetDealFirmId.mockResolvedValueOnce(null);
 
         const res = await request(app)
             .put('/api/deals/deal-123')
@@ -441,7 +443,7 @@ describe('Deals Routes - PUT /api/deals/:id', () => {
     });
 
     it('should update deal for authorized user', async () => {
-        mockQuery.mockResolvedValueOnce({ rows: [{ firm_id: 'firm-123' }] });
+        mockGetDealFirmId.mockResolvedValueOnce('firm-123');
         mockIsUserAdmin.mockReturnValue(false);
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
         mockUpdateDeal.mockResolvedValueOnce({
@@ -461,7 +463,7 @@ describe('Deals Routes - PUT /api/deals/:id', () => {
     });
 
     it('should return 403 for deal from different firm', async () => {
-        mockQuery.mockResolvedValueOnce({ rows: [{ firm_id: 'firm-other' }] });
+        mockGetDealFirmId.mockResolvedValueOnce('firm-other');
         mockIsUserAdmin.mockReturnValue(false);
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
 
@@ -490,7 +492,7 @@ describe('Deals Routes - DELETE /api/deals/:id', () => {
     });
 
     it('should return 404 for non-existent deal', async () => {
-        mockQuery.mockResolvedValueOnce({ rows: [] });
+        mockGetDealFirmId.mockResolvedValueOnce(null);
 
         const res = await request(app)
             .delete('/api/deals/deal-123')
@@ -500,7 +502,7 @@ describe('Deals Routes - DELETE /api/deals/:id', () => {
     });
 
     it('should delete deal for authorized user', async () => {
-        mockQuery.mockResolvedValueOnce({ rows: [{ firm_id: 'firm-123' }] });
+        mockGetDealFirmId.mockResolvedValueOnce('firm-123');
         mockIsUserAdmin.mockReturnValue(false);
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
         mockDeleteDeal.mockResolvedValueOnce(true);
@@ -514,7 +516,7 @@ describe('Deals Routes - DELETE /api/deals/:id', () => {
     });
 
     it('should return 403 for deal from different firm', async () => {
-        mockQuery.mockResolvedValueOnce({ rows: [{ firm_id: 'firm-other' }] });
+        mockGetDealFirmId.mockResolvedValueOnce('firm-other');
         mockIsUserAdmin.mockReturnValue(false);
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
 
@@ -544,9 +546,8 @@ describe('Deals Routes - Deal-Resume Associations', () => {
         });
 
         it('should add resume to deal', async () => {
-            mockQuery
-                .mockResolvedValueOnce({ rows: [{ firm_id: 'firm-123' }] }) // checkDealAccess query
-                .mockResolvedValueOnce({ rows: [{ firm_id: 'firm-123' }] }); // resume firm check query
+            mockGetDealFirmId.mockResolvedValueOnce('firm-123');
+            mockGetResumeFirmId.mockResolvedValueOnce('firm-123');
             mockIsUserAdmin.mockReturnValue(false);
             mockGetUserFirmId.mockResolvedValueOnce('firm-123');
             mockAddResumeToDeal.mockResolvedValueOnce({
@@ -564,7 +565,7 @@ describe('Deals Routes - Deal-Resume Associations', () => {
         });
 
         it('should return 403 for deal from different firm', async () => {
-            mockQuery.mockResolvedValueOnce({ rows: [{ firm_id: 'firm-other' }] });
+            mockGetDealFirmId.mockResolvedValueOnce('firm-other');
             mockIsUserAdmin.mockReturnValue(false);
             mockGetUserFirmId.mockResolvedValueOnce('firm-123');
 
@@ -586,7 +587,7 @@ describe('Deals Routes - Deal-Resume Associations', () => {
         });
 
         it('should remove resume from deal', async () => {
-            mockQuery.mockResolvedValueOnce({ rows: [{ firm_id: 'firm-123' }] });
+            mockGetDealFirmId.mockResolvedValueOnce('firm-123');
             mockIsUserAdmin.mockReturnValue(false);
             mockGetUserFirmId.mockResolvedValueOnce('firm-123');
             mockRemoveResumeFromDeal.mockResolvedValueOnce(true);
@@ -601,7 +602,7 @@ describe('Deals Routes - Deal-Resume Associations', () => {
 
     describe('GET /api/deals/:id/resumes', () => {
         it('should return resumes for deal', async () => {
-            mockQuery.mockResolvedValueOnce({ rows: [{ firm_id: 'firm-123' }] });
+            mockGetDealFirmId.mockResolvedValueOnce('firm-123');
             mockIsUserAdmin.mockReturnValue(false);
             mockGetUserFirmId.mockResolvedValueOnce('firm-123');
             mockGetResumesForDeal.mockResolvedValueOnce([

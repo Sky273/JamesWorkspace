@@ -9,7 +9,6 @@ import { validateParams } from '../utils/validation.js';
 import { userRateLimit } from '../middleware/rateLimit.middleware.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { getUserFirmId, isUserAdmin } from '../utils/firmHelpers.js';
-import { query } from '../config/database.js';
 import {
     createDeal,
     updateDeal,
@@ -22,6 +21,10 @@ import {
     getDealsForResume,
     getResumesForDeal,
     getDealStats,
+    getDealFirmId,
+    getClientFirmId,
+    getResumeFirmId,
+    getMissionsForDeal,
     DEAL_STATUS,
     DEAL_PRIORITY,
     DEAL_RESUME_STATUS
@@ -34,17 +37,17 @@ const router = express.Router();
  */
 async function checkDealAccess(req, dealId) {
     try {
-        const result = await query('SELECT firm_id FROM deals WHERE id = $1', [dealId]);
-        if (result.rows.length === 0) {
+        const dealFirmId = await getDealFirmId(dealId);
+        if (!dealFirmId) {
             return { hasAccess: false, error: 'Deal not found' };
         }
 
         if (isUserAdmin(req)) {
-            return { hasAccess: true, firmId: result.rows[0].firm_id };
+            return { hasAccess: true, firmId: dealFirmId };
         }
 
         const userFirmId = await getUserFirmId(req);
-        if (result.rows[0].firm_id !== userFirmId) {
+        if (dealFirmId !== userFirmId) {
             return { hasAccess: false, error: 'Access denied' };
         }
 
@@ -150,20 +153,8 @@ router.get('/:id/missions', authenticateToken, validateParams('id'), async (req,
                 .json({ error: access.error });
         }
 
-        const result = await query(`
-            SELECT m.id, m.title, m.status, m.created_at, m.updated_at,
-                   m.client_id, m.contact_id, m.deal_id,
-                   c.name as client_name,
-                   cc.name as contact_name,
-                   (SELECT COUNT(*) FROM resume_adaptations ra WHERE ra.mission_id = m.id) as adaptations_count
-            FROM missions m
-            LEFT JOIN clients c ON m.client_id = c.id
-            LEFT JOIN client_contacts cc ON m.contact_id = cc.id
-            WHERE m.deal_id = $1
-            ORDER BY m.created_at DESC
-        `, [id]);
-
-        return res.json(result.rows);
+        const missions = await getMissionsForDeal(id);
+        return res.json(missions);
     } catch (error) {
         safeLog('error', 'Error fetching deal missions', { error: error.message, dealId: req.params.id });
         return res.status(500).json({ error: 'Failed to fetch deal missions' });
@@ -197,14 +188,11 @@ router.post('/', authenticateToken, userRateLimit(), async (req, res) => {
 
         // If client_id is provided, verify it belongs to the same firm
         if (req.body.client_id) {
-            const clientCheck = await query(
-                'SELECT firm_id FROM clients WHERE id = $1',
-                [req.body.client_id]
-            );
-            if (clientCheck.rows.length === 0) {
+            const clientFirmId = await getClientFirmId(req.body.client_id);
+            if (!clientFirmId) {
                 return res.status(400).json({ error: 'Client not found' });
             }
-            if (clientCheck.rows[0].firm_id !== userFirmId) {
+            if (clientFirmId !== userFirmId) {
                 return res.status(403).json({ error: 'Client belongs to different firm' });
             }
         }
@@ -232,14 +220,11 @@ router.put('/:id', authenticateToken, validateParams('id'), userRateLimit(), asy
 
         // If client_id is being updated, verify it belongs to the same firm
         if (req.body.client_id) {
-            const clientCheck = await query(
-                'SELECT firm_id FROM clients WHERE id = $1',
-                [req.body.client_id]
-            );
-            if (clientCheck.rows.length === 0) {
+            const clientFirmId = await getClientFirmId(req.body.client_id);
+            if (!clientFirmId) {
                 return res.status(400).json({ error: 'Client not found' });
             }
-            if (clientCheck.rows[0].firm_id !== access.firmId) {
+            if (clientFirmId !== access.firmId) {
                 return res.status(403).json({ error: 'Client belongs to different firm' });
             }
         }
@@ -311,14 +296,11 @@ router.post('/:id/resumes', authenticateToken, validateParams('id'), userRateLim
         }
 
         // Verify resume exists and belongs to same firm
-        const resumeCheck = await query(
-            'SELECT firm_id FROM resumes WHERE id = $1',
-            [resumeId]
-        );
-        if (resumeCheck.rows.length === 0) {
+        const resumeFirmId = await getResumeFirmId(resumeId);
+        if (!resumeFirmId) {
             return res.status(400).json({ error: 'Resume not found' });
         }
-        if (resumeCheck.rows[0].firm_id !== access.firmId) {
+        if (resumeFirmId !== access.firmId) {
             return res.status(403).json({ error: 'Resume belongs to different firm' });
         }
 
@@ -395,18 +377,15 @@ router.get('/by-resume/:resumeId', authenticateToken, validateParams('resumeId')
         }
 
         // Verify resume exists and user has access
-        const resumeCheck = await query(
-            'SELECT firm_id FROM resumes WHERE id = $1',
-            [resumeId]
-        );
-        if (resumeCheck.rows.length === 0) {
+        const resumeFirmId = await getResumeFirmId(resumeId);
+        if (!resumeFirmId) {
             return res.status(404).json({ error: 'Resume not found' });
         }
-        if (!isUserAdmin(req) && resumeCheck.rows[0].firm_id !== userFirmId) {
+        if (!isUserAdmin(req) && resumeFirmId !== userFirmId) {
             return res.status(403).json({ error: 'Access denied' });
         }
 
-        const firmId = isUserAdmin(req) ? resumeCheck.rows[0].firm_id : userFirmId;
+        const firmId = isUserAdmin(req) ? resumeFirmId : userFirmId;
         const deals = await getDealsForResume(resumeId, firmId);
         return res.json({ data: deals });
     } catch (error) {
@@ -430,14 +409,11 @@ router.post('/add-resume-to-multiple', authenticateToken, userRateLimit(), async
         }
 
         // Verify resume exists and belongs to user's firm
-        const resumeCheck = await query(
-            'SELECT firm_id FROM resumes WHERE id = $1',
-            [resumeId]
-        );
-        if (resumeCheck.rows.length === 0) {
+        const resumeFirmId = await getResumeFirmId(resumeId);
+        if (!resumeFirmId) {
             return res.status(404).json({ error: 'Resume not found' });
         }
-        if (resumeCheck.rows[0].firm_id !== userFirmId) {
+        if (resumeFirmId !== userFirmId) {
             return res.status(403).json({ error: 'Access denied' });
         }
 

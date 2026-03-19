@@ -9,9 +9,8 @@ import { validateBody, validateParams, createMissionSchema, updateMissionSchema 
 import { sanitizeHtmlContent } from '../utils/sanitizer.backend.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { sanitizeErrorMessage } from '../utils/errors.js';
-import { selectWithTimeout, findWithTimeout, createWithTimeout, updateWithTimeout, destroyWithTimeout, escapeLike } from '../utils/postgresHelpers.js';
-import { query } from '../config/database.js';
 import { getUserFirmId } from '../utils/firmHelpers.js';
+import * as missionsService from '../services/missions.service.js';
 
 const router = express.Router();
 
@@ -23,32 +22,15 @@ const router = express.Router();
 router.get('/', authenticateToken, async (req, res) => {
     try {
         const isAdmin = req.user?.role === 'admin';
-        const _userFirmName = req.user?.firm;
-        
-        // Extract pagination and filter parameters
         const page = parseInt(req.query.page) || 1;
         const limit = Math.min(parseInt(req.query.limit) || 20, 100);
-        const offset = (page - 1) * limit;
         const { search, status, dealId } = req.query;
 
-        // Build WHERE conditions
-        const conditions = [];
-        const params = [];
-        let paramIndex = 1;
-
-        // Firm filter (non-admin users) - filter by firm_id only
+        let firmId = null;
         if (!isAdmin) {
-            const userFirmId = await getUserFirmId(req);
-            safeLog('info', 'Missions GET - user firm filter', { 
-                userFirmId, 
-                userId: req.user?.id 
-            });
-            if (userFirmId) {
-                conditions.push(`m.firm_id = $${paramIndex}`);
-                params.push(userFirmId);
-                paramIndex++;
-            } else {
-                // No valid firm_id - return empty results for security
+            firmId = await getUserFirmId(req);
+            safeLog('info', 'Missions GET - user firm filter', { userFirmId: firmId, userId: req.user?.id });
+            if (!firmId) {
                 safeLog('warn', 'User has no valid firm_id, returning empty results', { userId: req.user?.id });
                 return res.json({
                     records: [],
@@ -57,104 +39,8 @@ router.get('/', authenticateToken, async (req, res) => {
             }
         }
 
-        // Status filter
-        if (status && status !== 'all') {
-            conditions.push(`m.status = $${paramIndex}`);
-            params.push(status);
-            paramIndex++;
-        }
-
-        // Search filter (searches in title, content, firm)
-        if (search) {
-            conditions.push(`(m.title ILIKE $${paramIndex} OR m.firm ILIKE $${paramIndex})`);
-            params.push(`%${escapeLike(search)}%`);
-            paramIndex++;
-        }
-
-        // Deal filter
-        if (dealId) {
-            if (dealId === 'none') {
-                conditions.push(`m.deal_id IS NULL`);
-            } else {
-                conditions.push(`m.deal_id = $${paramIndex}`);
-                params.push(dealId);
-                paramIndex++;
-            }
-        }
-
-        const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-        
-        // Debug: log the WHERE clause and params
-        safeLog('info', 'Missions GET - query debug', { 
-            whereClause, 
-            params,
-            conditions 
-        });
-
-        // Count total records - use m alias for consistency
-        const countQuery = `SELECT COUNT(*) as total FROM missions m ${whereClause}`;
-        const countResult = await selectWithTimeout('missions', {
-            rawQuery: countQuery,
-            rawParams: params
-        });
-        const totalCount = parseInt(countResult[0]?.total || 0);
-
-        // Fetch paginated records with client, contact, and deal joins
-        const dataQuery = `
-            SELECT m.*, 
-                   c.name as client_name, c.type as client_type,
-                   cc.name as contact_name, cc.email as contact_email, cc.role as contact_role,
-                   d.title as deal_title, d.status as deal_status
-            FROM missions m
-            LEFT JOIN clients c ON m.client_id = c.id
-            LEFT JOIN client_contacts cc ON m.contact_id = cc.id
-            LEFT JOIN deals d ON m.deal_id = d.id
-            ${whereClause}
-            ORDER BY m.created_at DESC
-            LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
-        `;
-        const dataParams = [...params, limit, offset];
-        
-        const result = await query(dataQuery, dataParams);
-        const records = result.rows;
-
-        const missions = records.map(record => ({
-            id: record.id,
-            Title: record.title,
-            Content: record.content,
-            Firm: record.firm,
-            'Firm ID': record.firm_id,
-            Status: record.status,
-            Keywords: record.keywords,
-            'Required Skills': record.required_skills,
-            'Preferred Skills': record.preferred_skills,
-            'Created At': record.created_at,
-            'Updated At': record.updated_at,
-            'Client ID': record.client_id,
-            'Client Name': record.client_name,
-            'Client Type': record.client_type,
-            'Contact ID': record.contact_id,
-            'Contact Name': record.contact_name,
-            'Contact Email': record.contact_email,
-            'Contact Role': record.contact_role,
-            'Deal ID': record.deal_id,
-            'Deal Title': record.deal_title,
-            'Deal Status': record.deal_status
-        }));
-
-        const totalPages = Math.ceil(totalCount / limit);
-        const hasMore = page < totalPages;
-
-        return res.json({
-            data: missions,
-            pagination: {
-                page,
-                limit,
-                totalCount,
-                totalPages,
-                hasMore
-            }
-        });
+        const result = await missionsService.listMissions({ page, limit, search, status, dealId, firmId });
+        return res.json(result);
     } catch (error) {
         safeLog('error', 'Error fetching missions', { error: error.message });
         res.status(500).json({ error: 'Failed to fetch missions' });
@@ -171,149 +57,8 @@ router.get('/grouped-by-deal', authenticateToken, async (req, res) => {
             return res.status(403).json({ error: 'No firm association' });
         }
 
-        // Query 1: Get all deals for this firm
-        const dealsResult = await query(`
-            SELECT d.id, d.title, d.status, d.priority,
-                   c.name as client_name, c.type as client_type,
-                   cc.name as contact_name
-            FROM deals d
-            LEFT JOIN clients c ON d.client_id = c.id
-            LEFT JOIN client_contacts cc ON d.contact_id = cc.id
-            WHERE d.firm_id = $1
-            ORDER BY
-                CASE d.priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 WHEN 'low' THEN 3 ELSE 4 END,
-                d.title ASC
-        `, [userFirmId]);
-
-        const dealIds = dealsResult.rows.map(d => d.id);
-
-        // Query 2: Batch fetch ALL missions for ALL deals
-        let allMissionsMap = new Map();
-        if (dealIds.length > 0) {
-            const missionsResult = await query(`
-                SELECT m.id, m.title, m.content, m.status, m.keywords,
-                       m.required_skills, m.preferred_skills,
-                       m.created_at, m.updated_at, m.deal_id, m.firm,
-                       m.client_id, m.contact_id,
-                       c.name as client_name, c.type as client_type,
-                       cc.name as contact_name, cc.email as contact_email, cc.role as contact_role
-                FROM missions m
-                LEFT JOIN clients c ON m.client_id = c.id
-                LEFT JOIN client_contacts cc ON m.contact_id = cc.id
-                WHERE m.deal_id = ANY($1)
-                ORDER BY m.deal_id, m.created_at DESC
-            `, [dealIds]);
-
-            for (const mission of missionsResult.rows) {
-                const dealId = mission.deal_id;
-                if (!allMissionsMap.has(dealId)) {
-                    allMissionsMap.set(dealId, []);
-                }
-                const { deal_id: _, ...missionWithoutDealId } = mission;
-                allMissionsMap.get(dealId).push(missionWithoutDealId);
-            }
-        }
-
-        // Query 3: Batch fetch adaptation counts for all missions
-        const allMissionIds = [];
-        for (const missions of allMissionsMap.values()) {
-            for (const mission of missions) {
-                allMissionIds.push(mission.id);
-            }
-        }
-
-        let adaptationsCountMap = new Map();
-        if (allMissionIds.length > 0) {
-            const adaptResult = await query(`
-                SELECT mission_id, COUNT(*) as count
-                FROM resume_adaptations
-                WHERE mission_id = ANY($1)
-                GROUP BY mission_id
-            `, [allMissionIds]);
-
-            for (const row of adaptResult.rows) {
-                adaptationsCountMap.set(row.mission_id, parseInt(row.count));
-            }
-        }
-
-        // Query 4: Count resumes per deal (for display)
-        let resumeCountMap = new Map();
-        if (dealIds.length > 0) {
-            const rcResult = await query(`
-                SELECT deal_id, COUNT(*) as count
-                FROM deal_resumes
-                WHERE deal_id = ANY($1)
-                GROUP BY deal_id
-            `, [dealIds]);
-            for (const row of rcResult.rows) {
-                resumeCountMap.set(row.deal_id, parseInt(row.count));
-            }
-        }
-
-        // Assemble deals with their missions
-        const deals = dealsResult.rows.map(deal => {
-            const missions = (allMissionsMap.get(deal.id) || []).map(mission => ({
-                ...mission,
-                adaptations_count: adaptationsCountMap.get(mission.id) || 0
-            }));
-
-            return {
-                ...deal,
-                missions,
-                missions_count: missions.length,
-                resumes_count: resumeCountMap.get(deal.id) || 0
-            };
-        });
-
-        // Query 5: Get unassigned missions (no deal_id)
-        const unassignedConditions = ['m.deal_id IS NULL'];
-        const unassignedParams = [];
-        if (!isAdmin) {
-            unassignedConditions.push('m.firm_id = $1');
-            unassignedParams.push(userFirmId);
-        }
-
-        const unassignedResult = await query(`
-            SELECT m.id, m.title, m.content, m.status, m.keywords,
-                   m.required_skills, m.preferred_skills,
-                   m.created_at, m.updated_at, m.firm,
-                   m.client_id, m.contact_id,
-                   c.name as client_name, c.type as client_type,
-                   cc.name as contact_name, cc.email as contact_email, cc.role as contact_role
-            FROM missions m
-            LEFT JOIN clients c ON m.client_id = c.id
-            LEFT JOIN client_contacts cc ON m.contact_id = cc.id
-            WHERE ${unassignedConditions.join(' AND ')}
-            ORDER BY m.created_at DESC
-        `, unassignedParams);
-
-        // Get adaptation counts for unassigned missions
-        const unassignedMissionIds = unassignedResult.rows.map(m => m.id);
-        let unassignedAdaptMap = new Map();
-        if (unassignedMissionIds.length > 0) {
-            const uaResult = await query(`
-                SELECT mission_id, COUNT(*) as count
-                FROM resume_adaptations
-                WHERE mission_id = ANY($1)
-                GROUP BY mission_id
-            `, [unassignedMissionIds]);
-            for (const row of uaResult.rows) {
-                unassignedAdaptMap.set(row.mission_id, parseInt(row.count));
-            }
-        }
-
-        const unassignedMissions = unassignedResult.rows.map(m => ({
-            ...m,
-            adaptations_count: unassignedAdaptMap.get(m.id) || 0
-        }));
-
-        return res.json({
-            deals,
-            unassigned: unassignedMissions,
-            totalDeals: deals.length,
-            totalAssigned: deals.reduce((sum, d) => sum + d.missions_count, 0),
-            totalUnassigned: unassignedMissions.length
-        });
+        const result = await missionsService.getMissionsGroupedByDeal({ firmId: userFirmId, isAdmin });
+        return res.json(result);
     } catch (error) {
         safeLog('error', 'Error fetching missions grouped by deal', { error: error.message });
         return res.status(500).json({ error: 'Failed to fetch grouped missions' });
@@ -325,24 +70,11 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
     try {
         const { id } = req.params;
         
-        // Fetch mission with client, contact, and deal joins
-        const result = await query(`
-            SELECT m.*, 
-                   c.name as client_name, c.type as client_type,
-                   cc.name as contact_name, cc.email as contact_email, cc.role as contact_role,
-                   d.title as deal_title, d.status as deal_status
-            FROM missions m
-            LEFT JOIN clients c ON m.client_id = c.id
-            LEFT JOIN client_contacts cc ON m.contact_id = cc.id
-            LEFT JOIN deals d ON m.deal_id = d.id
-            WHERE m.id = $1
-        `, [id]);
+        const record = await missionsService.getMissionWithJoins(id);
         
-        if (result.rows.length === 0) {
+        if (!record) {
             return res.status(404).json({ error: 'Mission not found' });
         }
-        
-        const record = result.rows[0];
         
         const isAdmin = req.user?.role === 'admin';
         const userFirm = req.user?.firm;
@@ -352,29 +84,7 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
             return res.status(403).json({ error: 'Access denied: You can only view missions from your firm' });
         }
         
-        res.json({
-            id: record.id,
-            Title: record.title,
-            Content: record.content,
-            Firm: record.firm,
-            'Firm ID': record.firm_id,
-            Status: record.status,
-            Keywords: record.keywords,
-            'Required Skills': record.required_skills,
-            'Preferred Skills': record.preferred_skills,
-            'Created At': record.created_at,
-            'Updated At': record.updated_at,
-            'Client ID': record.client_id,
-            'Client Name': record.client_name,
-            'Client Type': record.client_type,
-            'Contact ID': record.contact_id,
-            'Contact Name': record.contact_name,
-            'Contact Email': record.contact_email,
-            'Contact Role': record.contact_role,
-            'Deal ID': record.deal_id,
-            'Deal Title': record.deal_title,
-            'Deal Status': record.deal_status
-        });
+        res.json(missionsService.mapMissionRecord(record));
     } catch (error) {
         safeLog('error', 'Error fetching mission', { error: error.message, missionId: req.params.id });
         res.status(500).json({ error: 'Failed to fetch mission' });
@@ -394,19 +104,16 @@ router.post('/', authenticateToken, validateBody(createMissionSchema), async (re
         let targetFirmName = userFirm;
         const requestedFirmId = missionData.firm_id || missionData['Firm ID'];
         
-        // If admin sends a firm_id, always use it (validate it exists)
         if (isAdmin && requestedFirmId) {
-            const firmResult = await query('SELECT id, name FROM firms WHERE id = $1', [requestedFirmId]);
-            if (firmResult.rows.length === 0) {
+            const firm = await missionsService.validateFirm(requestedFirmId);
+            if (!firm) {
                 return res.status(400).json({ error: 'Specified firm not found' });
             }
-            targetFirmId = firmResult.rows[0].id;
-            targetFirmName = firmResult.rows[0].name;
+            targetFirmId = firm.id;
+            targetFirmName = firm.name;
             if (requestedFirmId !== userFirmId) {
                 safeLog('info', 'Admin creating mission for another firm', { 
-                    adminId: req.user?.id, 
-                    targetFirmId, 
-                    targetFirmName 
+                    adminId: req.user?.id, targetFirmId, targetFirmName 
                 });
             }
         }
@@ -419,16 +126,12 @@ router.post('/', authenticateToken, validateBody(createMissionSchema), async (re
         // Validate client_id if provided
         const clientId = missionData['Client ID'] || missionData.client_id || null;
         if (clientId) {
-            const clientResult = await query('SELECT firm_id FROM clients WHERE id = $1', [clientId]);
-            if (clientResult.rows.length === 0) {
+            const clientCheck = await missionsService.validateClient(clientId, targetFirmId);
+            if (!clientCheck.exists) {
                 return res.status(400).json({ error: 'Client not found' });
             }
-            if (clientResult.rows[0].firm_id !== targetFirmId) {
-                safeLog('warn', 'Client firm mismatch', { 
-                    clientFirmId: clientResult.rows[0].firm_id, 
-                    targetFirmId,
-                    userId: req.user?.id 
-                });
+            if (!clientCheck.firmMatch) {
+                safeLog('warn', 'Client firm mismatch', { targetFirmId, userId: req.user?.id });
                 return res.status(403).json({ error: 'Client does not belong to the target firm' });
             }
         }
@@ -436,8 +139,8 @@ router.post('/', authenticateToken, validateBody(createMissionSchema), async (re
         // Validate contact_id if provided
         const contactId = missionData['Contact ID'] || missionData.contact_id || null;
         if (contactId && clientId) {
-            const contactResult = await query('SELECT id FROM client_contacts WHERE id = $1 AND client_id = $2', [contactId, clientId]);
-            if (contactResult.rows.length === 0) {
+            const contactValid = await missionsService.validateContact(contactId, clientId);
+            if (!contactValid) {
                 return res.status(400).json({ error: 'Contact not found or does not belong to this client' });
             }
         }
@@ -445,25 +148,20 @@ router.post('/', authenticateToken, validateBody(createMissionSchema), async (re
         // Validate deal_id if provided
         const dealId = missionData['Deal ID'] || missionData.deal_id || null;
         if (dealId) {
-            const dealResult = await query('SELECT firm_id FROM deals WHERE id = $1', [dealId]);
-            if (dealResult.rows.length === 0) {
+            const dealCheck = await missionsService.validateDeal(dealId, targetFirmId);
+            if (!dealCheck.exists) {
                 return res.status(400).json({ error: 'Deal not found' });
             }
-            if (dealResult.rows[0].firm_id !== targetFirmId) {
+            if (!dealCheck.firmMatch) {
                 return res.status(403).json({ error: 'Deal does not belong to the target firm' });
             }
         }
         
-        // Debug: log what we're about to save
         safeLog('info', 'Creating mission with firm data', {
-            targetFirmId,
-            targetFirmName,
-            requestedFirmId,
-            userFirmId,
-            isAdmin
+            targetFirmId, targetFirmName, requestedFirmId, userFirmId, isAdmin
         });
         
-        const newMission = await createWithTimeout('missions', {
+        const record = await missionsService.createMission({
             title: missionData.Title || missionData.title,
             content: content,
             firm: targetFirmName || missionData.Firm || missionData.firm || null,
@@ -477,44 +175,7 @@ router.post('/', authenticateToken, validateBody(createMissionSchema), async (re
             deal_id: dealId
         });
 
-        // Fetch with joins to return full data
-        const result = await query(`
-            SELECT m.*, 
-                   c.name as client_name, c.type as client_type,
-                   cc.name as contact_name, cc.email as contact_email, cc.role as contact_role,
-                   d.title as deal_title, d.status as deal_status
-            FROM missions m
-            LEFT JOIN clients c ON m.client_id = c.id
-            LEFT JOIN client_contacts cc ON m.contact_id = cc.id
-            LEFT JOIN deals d ON m.deal_id = d.id
-            WHERE m.id = $1
-        `, [newMission.id]);
-        
-        const record = result.rows[0];
-
-        res.json({
-            id: record.id,
-            Title: record.title,
-            Content: record.content,
-            Firm: record.firm,
-            'Firm ID': record.firm_id,
-            Status: record.status,
-            Keywords: record.keywords,
-            'Required Skills': record.required_skills,
-            'Preferred Skills': record.preferred_skills,
-            'Created At': record.created_at,
-            'Updated At': record.updated_at,
-            'Client ID': record.client_id,
-            'Client Name': record.client_name,
-            'Client Type': record.client_type,
-            'Contact ID': record.contact_id,
-            'Contact Name': record.contact_name,
-            'Contact Email': record.contact_email,
-            'Contact Role': record.contact_role,
-            'Deal ID': record.deal_id,
-            'Deal Title': record.deal_title,
-            'Deal Status': record.deal_status
-        });
+        res.json(missionsService.mapMissionRecord(record));
     } catch (error) {
         safeLog('error', 'Error creating mission', { error: error.message });
         res.status(500).json({ error: 'Failed to create mission' });
@@ -530,7 +191,7 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateM
         const userFirm = req.user?.firm;
         const userFirmId = await getUserFirmId(req);
 
-        const existingMission = await findWithTimeout('missions', id);
+        const existingMission = await missionsService.findMission(id);
 
         if (!isAdmin && existingMission.firm !== userFirm && existingMission.firm_id !== userFirmId) {
             return res.status(403).json({ error: 'Not authorized to update this mission' });
@@ -562,11 +223,11 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateM
         if (updateData['Client ID'] !== undefined || updateData.client_id !== undefined) {
             const clientId = updateData['Client ID'] || updateData.client_id;
             if (clientId) {
-                const clientResult = await query('SELECT firm_id FROM clients WHERE id = $1', [clientId]);
-                if (clientResult.rows.length === 0) {
+                const clientCheck = await missionsService.validateClient(clientId, userFirmId);
+                if (!clientCheck.exists) {
                     return res.status(400).json({ error: 'Client not found' });
                 }
-                if (clientResult.rows[0].firm_id !== userFirmId) {
+                if (!clientCheck.firmMatch) {
                     return res.status(403).json({ error: 'Client does not belong to your firm' });
                 }
             }
@@ -578,8 +239,8 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateM
             const contactId = updateData['Contact ID'] || updateData.contact_id;
             const clientId = updates.client_id || existingMission.client_id;
             if (contactId && clientId) {
-                const contactResult = await query('SELECT id FROM client_contacts WHERE id = $1 AND client_id = $2', [contactId, clientId]);
-                if (contactResult.rows.length === 0) {
+                const contactValid = await missionsService.validateContact(contactId, clientId);
+                if (!contactValid) {
                     return res.status(400).json({ error: 'Contact not found or does not belong to this client' });
                 }
             }
@@ -590,11 +251,11 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateM
         if (updateData['Deal ID'] !== undefined || updateData.deal_id !== undefined) {
             const newDealId = updateData['Deal ID'] || updateData.deal_id;
             if (newDealId) {
-                const dealResult = await query('SELECT firm_id FROM deals WHERE id = $1', [newDealId]);
-                if (dealResult.rows.length === 0) {
+                const dealCheck = await missionsService.validateDeal(newDealId, userFirmId);
+                if (!dealCheck.exists) {
                     return res.status(400).json({ error: 'Deal not found' });
                 }
-                if (dealResult.rows[0].firm_id !== userFirmId) {
+                if (!dealCheck.firmMatch) {
                     return res.status(403).json({ error: 'Deal does not belong to your firm' });
                 }
             }
@@ -604,13 +265,12 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateM
         // Handle firm_id update (admin only)
         if (isAdmin && (updateData.firm_id || updateData['Firm ID'])) {
             const newFirmId = updateData.firm_id || updateData['Firm ID'];
-            // Always validate and use the provided firm_id
-            const firmResult = await query('SELECT id, name FROM firms WHERE id = $1', [newFirmId]);
-            if (firmResult.rows.length === 0) {
+            const firm = await missionsService.validateFirm(newFirmId);
+            if (!firm) {
                 return res.status(400).json({ error: 'Specified firm not found' });
             }
-            updates.firm_id = firmResult.rows[0].id;
-            updates.firm = firmResult.rows[0].name;
+            updates.firm_id = firm.id;
+            updates.firm = firm.name;
             if (newFirmId !== existingMission.firm_id) {
                 safeLog('info', 'Admin changing mission firm', { 
                     adminId: req.user?.id, 
@@ -621,46 +281,8 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateM
             }
         }
 
-        const updatedMission = await updateWithTimeout('missions', id, updates);
-
-        // Fetch with joins to return full data
-        const result = await query(`
-            SELECT m.*, 
-                   c.name as client_name, c.type as client_type,
-                   cc.name as contact_name, cc.email as contact_email, cc.role as contact_role,
-                   d.title as deal_title, d.status as deal_status
-            FROM missions m
-            LEFT JOIN clients c ON m.client_id = c.id
-            LEFT JOIN client_contacts cc ON m.contact_id = cc.id
-            LEFT JOIN deals d ON m.deal_id = d.id
-            WHERE m.id = $1
-        `, [updatedMission.id]);
-        
-        const record = result.rows[0];
-
-        res.json({
-            id: record.id,
-            Title: record.title,
-            Content: record.content,
-            Firm: record.firm,
-            'Firm ID': record.firm_id,
-            Status: record.status,
-            Keywords: record.keywords,
-            'Required Skills': record.required_skills,
-            'Preferred Skills': record.preferred_skills,
-            'Created At': record.created_at,
-            'Updated At': record.updated_at,
-            'Client ID': record.client_id,
-            'Client Name': record.client_name,
-            'Client Type': record.client_type,
-            'Contact ID': record.contact_id,
-            'Contact Name': record.contact_name,
-            'Contact Email': record.contact_email,
-            'Contact Role': record.contact_role,
-            'Deal ID': record.deal_id,
-            'Deal Title': record.deal_title,
-            'Deal Status': record.deal_status
-        });
+        const record = await missionsService.updateMission(id, updates);
+        res.json(missionsService.mapMissionRecord(record));
     } catch (error) {
         safeLog('error', 'Error updating mission', { error: error.message, missionId: req.params.id });
         if (error.statusCode === 404) {
@@ -679,13 +301,13 @@ router.delete('/:id', authenticateToken, validateParams('id'), async (req, res) 
         const userFirmId = await getUserFirmId(req);
 
         if (!isAdmin) {
-            const existingRecord = await findWithTimeout('missions', id);
+            const existingRecord = await missionsService.findMission(id);
             if (existingRecord.firm !== userFirm && existingRecord.firm_id !== userFirmId) {
                 return res.status(403).json({ error: 'You can only delete missions from your firm' });
             }
         }
 
-        await destroyWithTimeout('missions', id);
+        await missionsService.deleteMission(id);
         res.json({ message: 'Mission deleted successfully' });
     } catch (error) {
         safeLog('error', 'Error deleting mission', { error: error.message, missionId: req.params.id });
@@ -706,33 +328,13 @@ router.get('/:missionId/adaptations', authenticateToken, validateParams('mission
         
         // Verify mission belongs to user's firm
         if (!isAdmin) {
-            const mission = await findWithTimeout('missions', missionId);
+            const mission = await missionsService.findMission(missionId);
             if (mission.firm !== userFirm && mission.firm_id !== userFirmId) {
                 return res.status(403).json({ error: 'Access denied: You can only view adaptations for missions from your firm' });
             }
         }
         
-        const records = await selectWithTimeout('resume_adaptations', {
-            where: { mission_id: missionId },
-            orderBy: 'created_at DESC'
-        });
-
-        const adaptations = records.map(record => ({
-            id: record.id,
-            'Resume ID': record.resume_id,
-            'Mission ID': record.mission_id,
-            'Resume Name': record.resume_name,
-            'Candidate Name': record.candidate_name,
-            'Adapted Title': record.adapted_title,
-            'Mission Title': record.mission_title,
-            'Adapted Text': record.adapted_text,
-            'Match Score': record.match_score,
-            'Match Analysis': record.match_analysis,
-            Status: record.status,
-            'Created At': record.created_at,
-            'Updated At': record.updated_at
-        }));
-
+        const adaptations = await missionsService.listMissionAdaptations(missionId);
         res.json(adaptations);
     } catch (error) {
         safeLog('error', 'Error fetching mission adaptations', { error: error.message, missionId: req.params.missionId });
@@ -752,7 +354,7 @@ router.post('/:missionId/find-profiles', authenticateToken, validateParams('miss
         const userFirm = req.user?.firm || req.user?.firm_id;
         
         // Verify mission access
-        const missionRecord = await findWithTimeout('missions', missionId);
+        const missionRecord = await missionsService.findMission(missionId);
         
         if (!isAdmin && missionRecord.firm !== userFirm) {
             return res.status(403).json({ error: 'Access denied: You can only search profiles for your missions' });
@@ -794,7 +396,7 @@ router.delete('/:missionId/keywords-cache', authenticateToken, validateParams('m
         const userFirm = req.user?.firm || req.user?.firm_id;
         
         // Verify mission access
-        const missionRecord = await findWithTimeout('missions', missionId);
+        const missionRecord = await missionsService.findMission(missionId);
         
         if (!isAdmin && missionRecord.firm !== userFirm) {
             return res.status(403).json({ error: 'Access denied' });
@@ -820,7 +422,7 @@ router.post('/:missionId/analyze-profile/:resumeId', authenticateToken, async (r
         const userFirm = req.user?.firm || req.user?.firm_id;
         
         // Verify mission access
-        const missionRecord = await findWithTimeout('missions', missionId);
+        const missionRecord = await missionsService.findMission(missionId);
         
         if (!isAdmin && missionRecord.firm !== userFirm) {
             return res.status(403).json({ error: 'Access denied: You can only analyze profiles for your missions' });
