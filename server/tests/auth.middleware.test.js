@@ -21,7 +21,9 @@ import {
   authenticateToken,
   requireAdmin,
   isUserAdmin,
-  hasCustomerAccess
+  hasFirmAccess,
+  hasCustomerAccess,
+  requireFirmAccess
 } from '../middleware/auth.middleware.js';
 import { generateAccessToken } from '../services/jwt.service.js';
 
@@ -136,6 +138,60 @@ describe('Auth Middleware', () => {
     });
   });
 
+  describe('authenticateToken - branch coverage', () => {
+    it('should return 403 for token with missing id or email', () => {
+      // Token with id but no email
+      const user = { id: 'user-123', email: '', name: 'Test', status: 'Active', role: 'user' };
+      const token = generateAccessToken(user);
+      mockReq.cookies.accessToken = token;
+
+      authenticateToken(mockReq, mockRes, nextFn);
+
+      expect(mockRes.status).toHaveBeenCalledWith(403);
+      expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({
+        error: 'Invalid token payload'
+      }));
+      expect(nextFn).not.toHaveBeenCalled();
+    });
+
+    it('should return 403 for inactive user', () => {
+      const user = {
+        id: 'user-123',
+        email: 'test@example.com',
+        name: 'Test User',
+        status: 'Inactive',
+        role: 'user'
+      };
+      const token = generateAccessToken(user);
+      mockReq.cookies.accessToken = token;
+
+      authenticateToken(mockReq, mockRes, nextFn);
+
+      expect(mockRes.status).toHaveBeenCalledWith(403);
+      expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({
+        error: 'Account is inactive'
+      }));
+      expect(nextFn).not.toHaveBeenCalled();
+    });
+
+    it('should set X-Token-Expires-In header on valid token', () => {
+      const user = {
+        id: 'user-123',
+        email: 'test@example.com',
+        name: 'Test User',
+        status: 'Active',
+        role: 'user'
+      };
+      const token = generateAccessToken(user);
+      mockReq.cookies.accessToken = token;
+
+      authenticateToken(mockReq, mockRes, nextFn);
+
+      expect(mockRes.setHeader).toHaveBeenCalledWith('X-Token-Expires-In', expect.any(String));
+      expect(nextFn).toHaveBeenCalled();
+    });
+  });
+
   describe('hasCustomerAccess (alias for hasFirmAccess)', () => {
     it('should return true for admin regardless of firm', () => {
       mockReq.user = { role: 'admin', firm: 'Company A' };
@@ -156,6 +212,84 @@ describe('Auth Middleware', () => {
       mockReq.user = { role: 'user', firm: null };
       // Returns falsy when userFirm is null due to short-circuit evaluation
       expect(hasCustomerAccess(mockReq, 'Company A')).toBeFalsy();
+    });
+  });
+
+  describe('hasFirmAccess', () => {
+    it('should return true for admin accessing any firm', () => {
+      mockReq.user = { role: 'admin', firm: 'Firm A' };
+      expect(hasFirmAccess(mockReq, 'Firm B')).toBe(true);
+    });
+
+    it('should return true for user accessing own firm', () => {
+      mockReq.user = { role: 'user', firm: 'Firm A' };
+      expect(hasFirmAccess(mockReq, 'Firm A')).toBe(true);
+    });
+
+    it('should return false for user accessing different firm', () => {
+      mockReq.user = { role: 'user', firm: 'Firm A' };
+      expect(hasFirmAccess(mockReq, 'Firm B')).toBe(false);
+    });
+
+    it('should return falsy when user has no firm', () => {
+      mockReq.user = { role: 'user' };
+      expect(hasFirmAccess(mockReq, 'Firm A')).toBeFalsy();
+    });
+  });
+
+  describe('requireFirmAccess', () => {
+    it('should call next() when user has firm access', async () => {
+      mockReq.user = { role: 'admin', firm: 'Firm A' };
+      const getResourceFirm = vi.fn().mockResolvedValue('Firm B');
+      const middleware = requireFirmAccess(getResourceFirm);
+
+      await middleware(mockReq, mockRes, nextFn);
+
+      expect(nextFn).toHaveBeenCalled();
+      expect(mockRes.status).not.toHaveBeenCalled();
+    });
+
+    it('should return 403 when user lacks firm access', async () => {
+      mockReq.user = { role: 'user', firm: 'Firm A' };
+      const getResourceFirm = vi.fn().mockResolvedValue('Firm B');
+      const middleware = requireFirmAccess(getResourceFirm);
+
+      await middleware(mockReq, mockRes, nextFn);
+
+      expect(mockRes.status).toHaveBeenCalledWith(403);
+      expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({
+        error: 'Access denied'
+      }));
+      expect(nextFn).not.toHaveBeenCalled();
+    });
+
+    it('should return 500 when getResourceFirm throws', async () => {
+      mockReq.user = { role: 'user', firm: 'Firm A' };
+      const getResourceFirm = vi.fn().mockRejectedValue(new Error('DB error'));
+      const middleware = requireFirmAccess(getResourceFirm);
+
+      await middleware(mockReq, mockRes, nextFn);
+
+      expect(mockRes.status).toHaveBeenCalledWith(500);
+      expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({
+        error: 'Authorization check failed'
+      }));
+      expect(nextFn).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('requireAdmin - edge cases', () => {
+    it('should return 403 if user is null', () => {
+      mockReq.user = null;
+      requireAdmin(mockReq, mockRes, nextFn);
+      expect(mockRes.status).toHaveBeenCalledWith(403);
+      expect(nextFn).not.toHaveBeenCalled();
+    });
+
+    it('should return 403 if user has no role', () => {
+      mockReq.user = { id: 'user-123' };
+      requireAdmin(mockReq, mockRes, nextFn);
+      expect(mockRes.status).toHaveBeenCalledWith(403);
     });
   });
 });

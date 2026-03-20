@@ -93,6 +93,23 @@ describe('TOTP Service', () => {
             expect(result.success).toBe(false);
             expect(result.message).toContain('en attente');
         });
+
+        it('should return error for invalid TOTP code', async () => {
+            // First generate a real secret to get properly encrypted data
+            query.mockResolvedValueOnce({ rows: [], rowCount: 1 });
+            await totpService.generateTotpSecret('test-user', 'test@example.com');
+            const encryptedSecret = query.mock.calls[0][1][0];
+            const encryptedBackup = query.mock.calls[0][1][1];
+
+            query.mockResolvedValueOnce({
+                rows: [{ totp_pending_secret: encryptedSecret, totp_pending_backup_codes: encryptedBackup }]
+            });
+
+            const result = await totpService.verifyAndEnable2FA('test-user', '000000');
+
+            expect(result.success).toBe(false);
+            expect(result.message).toContain('invalide');
+        });
     });
 
     describe('verifyTotpCode', () => {
@@ -113,6 +130,65 @@ describe('TOTP Service', () => {
             const result = await totpService.verifyTotpCode('test-user', '123456');
 
             expect(result.valid).toBe(false);
+        });
+
+        it('should return invalid if totp_secret is null', async () => {
+            query.mockResolvedValueOnce({
+                rows: [{ totp_enabled: true, totp_secret: null, totp_backup_codes: null }]
+            });
+
+            const result = await totpService.verifyTotpCode('test-user', '123456');
+
+            expect(result.valid).toBe(false);
+            expect(result.usedBackupCode).toBe(false);
+        });
+
+        it('should return invalid for wrong TOTP code with real encrypted secret', async () => {
+            // Generate a real secret
+            query.mockResolvedValueOnce({ rows: [], rowCount: 1 });
+            await totpService.generateTotpSecret('test-user', 'test@example.com');
+            const encryptedSecret = query.mock.calls[0][1][0];
+            const encryptedBackup = query.mock.calls[0][1][1];
+
+            query.mockResolvedValueOnce({
+                rows: [{
+                    totp_enabled: true,
+                    totp_secret: encryptedSecret,
+                    totp_backup_codes: encryptedBackup
+                }]
+            });
+            // Mock the update query for backup code consumption (won't be called for wrong code)
+
+            const result = await totpService.verifyTotpCode('test-user', '000000');
+
+            expect(result.valid).toBe(false);
+            expect(result.usedBackupCode).toBe(false);
+        });
+
+        it('should validate with backup code', async () => {
+            // Generate a real secret to get encrypted backup codes
+            query.mockResolvedValueOnce({ rows: [], rowCount: 1 });
+            const generated = await totpService.generateTotpSecret('test-user', 'test@example.com');
+            const encryptedSecret = query.mock.calls[0][1][0];
+            const encryptedBackup = query.mock.calls[0][1][1];
+
+            // Use one of the real backup codes
+            const backupCode = generated.backupCodes[0];
+
+            query.mockResolvedValueOnce({
+                rows: [{
+                    totp_enabled: true,
+                    totp_secret: encryptedSecret,
+                    totp_backup_codes: encryptedBackup
+                }]
+            });
+            // Mock the UPDATE query for backup code removal
+            query.mockResolvedValueOnce({ rows: [], rowCount: 1 });
+
+            const result = await totpService.verifyTotpCode('test-user', backupCode);
+
+            expect(result.valid).toBe(true);
+            expect(result.usedBackupCode).toBe(true);
         });
     });
 
@@ -169,6 +245,55 @@ describe('TOTP Service', () => {
             expect(result.enabledAt).toEqual(enabledAt);
             expect(result.backupCodesRemaining).toBe(0);
         });
+
+        it('should count encrypted backup codes correctly', async () => {
+            // Generate real encrypted backup codes
+            query.mockResolvedValueOnce({ rows: [], rowCount: 1 });
+            await totpService.generateTotpSecret('test-user', 'test@example.com');
+            const encryptedBackup = query.mock.calls[0][1][1];
+
+            query.mockResolvedValueOnce({
+                rows: [{
+                    totp_enabled: true,
+                    totp_enabled_at: new Date(),
+                    totp_backup_codes: encryptedBackup
+                }]
+            });
+
+            const result = await totpService.get2FAStatus('test-user');
+
+            expect(result.enabled).toBe(true);
+            expect(result.backupCodesRemaining).toBe(8);
+        });
+
+        it('should return 0 backup codes on decryption error', async () => {
+            query.mockResolvedValueOnce({
+                rows: [{
+                    totp_enabled: true,
+                    totp_enabled_at: new Date(),
+                    totp_backup_codes: 'corrupted:data:here'
+                }]
+            });
+
+            const result = await totpService.get2FAStatus('test-user');
+
+            expect(result.enabled).toBe(true);
+            expect(result.backupCodesRemaining).toBe(0);
+        });
+
+        it('should return false for disabled user', async () => {
+            query.mockResolvedValueOnce({
+                rows: [{
+                    totp_enabled: false,
+                    totp_enabled_at: null,
+                    totp_backup_codes: null
+                }]
+            });
+
+            const result = await totpService.get2FAStatus('test-user');
+
+            expect(result.enabled).toBe(false);
+        });
     });
 
     describe('disable2FA', () => {
@@ -183,6 +308,32 @@ describe('TOTP Service', () => {
             expect(result.success).toBe(false);
             expect(result.message).toContain('invalide');
         });
+
+        it('should disable 2FA with valid backup code', async () => {
+            // Generate real secret and backup codes
+            query.mockResolvedValueOnce({ rows: [], rowCount: 1 });
+            const generated = await totpService.generateTotpSecret('test-user', 'test@example.com');
+            const encryptedSecret = query.mock.calls[0][1][0];
+            const encryptedBackup = query.mock.calls[0][1][1];
+
+            // Mock verifyTotpCode query - returns enabled user with secret
+            query.mockResolvedValueOnce({
+                rows: [{
+                    totp_enabled: true,
+                    totp_secret: encryptedSecret,
+                    totp_backup_codes: encryptedBackup
+                }]
+            });
+            // Mock backup code update query
+            query.mockResolvedValueOnce({ rows: [], rowCount: 1 });
+            // Mock disable2FA UPDATE query
+            query.mockResolvedValueOnce({ rows: [], rowCount: 1 });
+
+            const result = await totpService.disable2FA('test-user', generated.backupCodes[0]);
+
+            expect(result.success).toBe(true);
+            expect(result.message).toContain('désactivé');
+        });
     });
 
     describe('regenerateBackupCodes', () => {
@@ -196,6 +347,35 @@ describe('TOTP Service', () => {
 
             expect(result.success).toBe(false);
             expect(result.message).toContain('invalide');
+        });
+
+        it('should regenerate backup codes with valid backup code', async () => {
+            // Generate real secret and backup codes
+            query.mockResolvedValueOnce({ rows: [], rowCount: 1 });
+            const generated = await totpService.generateTotpSecret('test-user', 'test@example.com');
+            const encryptedSecret = query.mock.calls[0][1][0];
+            const encryptedBackup = query.mock.calls[0][1][1];
+
+            // Mock verifyTotpCode query
+            query.mockResolvedValueOnce({
+                rows: [{
+                    totp_enabled: true,
+                    totp_secret: encryptedSecret,
+                    totp_backup_codes: encryptedBackup
+                }]
+            });
+            // Mock backup code update (from verifyTotpCode)
+            query.mockResolvedValueOnce({ rows: [], rowCount: 1 });
+            // Mock regeneration UPDATE query
+            query.mockResolvedValueOnce({ rows: [], rowCount: 1 });
+
+            const result = await totpService.regenerateBackupCodes('test-user', generated.backupCodes[0]);
+
+            expect(result.success).toBe(true);
+            expect(result.backupCodes).toHaveLength(8);
+            expect(result.message).toContain('codes de secours');
+            // Ensure new codes are different from old ones
+            expect(result.backupCodes).not.toEqual(generated.backupCodes);
         });
     });
 });

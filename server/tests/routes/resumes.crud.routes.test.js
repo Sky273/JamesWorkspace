@@ -414,6 +414,215 @@ describe('Resume Routes - PUT /api/resumes/:id', () => {
 
         expect(res.status).toBe(403);
     });
+
+    it('should successfully update resume with Name and Title', async () => {
+        const updatedRow = {
+            id: '123e4567-e89b-12d3-a456-426614174000',
+            name: 'Updated Name',
+            title: 'Senior Dev',
+            status: 'analyzed',
+            firm_name: 'Test Firm',
+            created_at: '2026-01-01',
+            updated_at: '2026-03-20'
+        };
+        mockUpdateResume.mockResolvedValueOnce(updatedRow);
+
+        const res = await request(app)
+            .put('/api/resumes/123e4567-e89b-12d3-a456-426614174000')
+            .set('Authorization', 'Bearer valid-token')
+            .send({ Name: 'Updated Name', Title: 'Senior Dev' });
+
+        expect(res.status).toBe(200);
+        expect(mockUpdateResume).toHaveBeenCalledWith(
+            '123e4567-e89b-12d3-a456-426614174000',
+            expect.objectContaining({ name: 'Updated Name', title: 'Senior Dev' })
+        );
+    });
+
+    it('should map Status to lowercase', async () => {
+        mockUpdateResume.mockResolvedValueOnce({
+            id: '123e4567-e89b-12d3-a456-426614174000',
+            status: 'improved'
+        });
+
+        await request(app)
+            .put('/api/resumes/123e4567-e89b-12d3-a456-426614174000')
+            .set('Authorization', 'Bearer valid-token')
+            .send({ Status: 'Improved' });
+
+        expect(mockUpdateResume).toHaveBeenCalledWith(
+            expect.any(String),
+            expect.objectContaining({ status: 'improved' })
+        );
+    });
+
+    it('should parse score fields with % format', async () => {
+        mockUpdateResume.mockResolvedValueOnce({
+            id: '123e4567-e89b-12d3-a456-426614174000',
+            global_rating: 85
+        });
+
+        await request(app)
+            .put('/api/resumes/123e4567-e89b-12d3-a456-426614174000')
+            .set('Authorization', 'Bearer valid-token')
+            .send({ 'Global Rating': '85%', 'Skills Score': 72 });
+
+        expect(mockUpdateResume).toHaveBeenCalledWith(
+            expect.any(String),
+            expect.objectContaining({ global_rating: 85, skills_score: 72 })
+        );
+    });
+
+    it('should handle JSONB fields (Skills_cleaned, Industries_cleaned)', async () => {
+        mockUpdateResume.mockResolvedValueOnce({
+            id: '123e4567-e89b-12d3-a456-426614174000',
+            skills_cleaned: '["JavaScript","Python"]'
+        });
+
+        await request(app)
+            .put('/api/resumes/123e4567-e89b-12d3-a456-426614174000')
+            .set('Authorization', 'Bearer valid-token')
+            .send({ Skills_cleaned: ['JavaScript', 'Python'], Industries_cleaned: ['Tech'] });
+
+        expect(mockUpdateResume).toHaveBeenCalledWith(
+            expect.any(String),
+            expect.objectContaining({
+                skills_cleaned: expect.any(String),
+                industries_cleaned: expect.any(String)
+            })
+        );
+    });
+
+    it('should return 400 when no fields to update', async () => {
+        const res = await request(app)
+            .put('/api/resumes/123e4567-e89b-12d3-a456-426614174000')
+            .set('Authorization', 'Bearer valid-token')
+            .send({});
+
+        expect(res.status).toBe(400);
+        expect(res.body.error).toBe('No fields to update');
+    });
+
+    it('should handle Key Improvements as object', async () => {
+        mockUpdateResume.mockResolvedValueOnce({
+            id: '123e4567-e89b-12d3-a456-426614174000',
+            key_improvements: '{"summary":"Better"}'
+        });
+
+        await request(app)
+            .put('/api/resumes/123e4567-e89b-12d3-a456-426614174000')
+            .set('Authorization', 'Bearer valid-token')
+            .send({ 'Key Improvements': { summary: 'Better' } });
+
+        expect(mockUpdateResume).toHaveBeenCalledWith(
+            expect.any(String),
+            expect.objectContaining({
+                key_improvements: JSON.stringify({ summary: 'Better' })
+            })
+        );
+    });
+
+    it('should handle Key Improvements as string', async () => {
+        mockUpdateResume.mockResolvedValueOnce({
+            id: '123e4567-e89b-12d3-a456-426614174000',
+            key_improvements: 'Improved formatting'
+        });
+
+        await request(app)
+            .put('/api/resumes/123e4567-e89b-12d3-a456-426614174000')
+            .set('Authorization', 'Bearer valid-token')
+            .send({ 'Key Improvements': 'Improved formatting' });
+
+        expect(mockUpdateResume).toHaveBeenCalledWith(
+            expect.any(String),
+            expect.objectContaining({
+                key_improvements: 'Improved formatting'
+            })
+        );
+    });
+
+    it('should return 500 on service error', async () => {
+        mockCheckResumeAccess.mockResolvedValueOnce({ hasAccess: true, error: null });
+        mockUpdateResume.mockRejectedValueOnce(new Error('DB connection lost'));
+
+        const res = await request(app)
+            .put('/api/resumes/123e4567-e89b-12d3-a456-426614174000')
+            .set('Authorization', 'Bearer valid-token')
+            .send({ Name: 'Test' });
+
+        expect(res.status).toBe(500);
+        expect(res.body.error).toBe('Failed to update resume');
+    });
+
+    it('should handle 404 statusCode error from service', async () => {
+        mockCheckResumeAccess.mockResolvedValueOnce({ hasAccess: true, error: null });
+        const notFoundError = new Error('Not found');
+        notFoundError.statusCode = 404;
+        mockUpdateResume.mockRejectedValueOnce(notFoundError);
+
+        const res = await request(app)
+            .put('/api/resumes/123e4567-e89b-12d3-a456-426614174000')
+            .set('Authorization', 'Bearer valid-token')
+            .send({ Name: 'Test' });
+
+        expect(res.status).toBe(404);
+    });
+
+    it('should map additional text fields', async () => {
+        mockUpdateResume.mockResolvedValueOnce({
+            id: '123e4567-e89b-12d3-a456-426614174000',
+            summary: 'Test summary',
+            experience_years: '5',
+            education_level: 'Master'
+        });
+
+        await request(app)
+            .put('/api/resumes/123e4567-e89b-12d3-a456-426614174000')
+            .set('Authorization', 'Bearer valid-token')
+            .send({
+                Summary: 'Test summary',
+                'Experience Years': '5',
+                'Education Level': 'Master',
+                Certifications: 'AWS',
+                Languages: 'French, English'
+            });
+
+        expect(mockUpdateResume).toHaveBeenCalledWith(
+            expect.any(String),
+            expect.objectContaining({
+                summary: 'Test summary',
+                experience_years: '5',
+                education_level: 'Master',
+                certifications: 'AWS',
+                languages: 'French, English'
+            })
+        );
+    });
+
+    it('should map improved scores', async () => {
+        mockUpdateResume.mockResolvedValueOnce({
+            id: '123e4567-e89b-12d3-a456-426614174000',
+            improved_global_rating: 90
+        });
+
+        await request(app)
+            .put('/api/resumes/123e4567-e89b-12d3-a456-426614174000')
+            .set('Authorization', 'Bearer valid-token')
+            .send({
+                'Improved Global Rating': 90,
+                'Improved Skills Score': '88%',
+                'Improved Experience Score': 92
+            });
+
+        expect(mockUpdateResume).toHaveBeenCalledWith(
+            expect.any(String),
+            expect.objectContaining({
+                improved_global_rating: 90,
+                improved_skills_score: 88,
+                improved_experience_score: 92
+            })
+        );
+    });
 });
 
 describe('Resume Routes - DELETE /api/resumes/:id', () => {
@@ -429,6 +638,204 @@ describe('Resume Routes - DELETE /api/resumes/:id', () => {
             .delete('/api/resumes/123e4567-e89b-12d3-a456-426614174000');
 
         expect(res.status).toBe(401);
+    });
+
+    it('should successfully delete resume', async () => {
+        mockCheckResumeAccess.mockResolvedValueOnce({ hasAccess: true, error: null });
+        mockDeleteResume.mockResolvedValueOnce(true);
+
+        const res = await request(app)
+            .delete('/api/resumes/123e4567-e89b-12d3-a456-426614174000')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(200);
+        expect(res.body.message).toBe('Resume deleted successfully');
+        expect(mockDeleteResume).toHaveBeenCalledWith('123e4567-e89b-12d3-a456-426614174000');
+    });
+
+    it('should return 404 for non-existent resume', async () => {
+        mockCheckResumeAccess.mockResolvedValueOnce({ hasAccess: false, error: 'Resume not found' });
+
+        const res = await request(app)
+            .delete('/api/resumes/123e4567-e89b-12d3-a456-426614174000')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(404);
+    });
+
+    it('should return 403 for unauthorized access', async () => {
+        mockCheckResumeAccess.mockResolvedValueOnce({ hasAccess: false, error: 'Access denied' });
+
+        const res = await request(app)
+            .delete('/api/resumes/123e4567-e89b-12d3-a456-426614174000')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(403);
+    });
+
+    it('should return 404 on statusCode 404 from service', async () => {
+        mockCheckResumeAccess.mockResolvedValueOnce({ hasAccess: true, error: null });
+        const notFoundError = new Error('Not found');
+        notFoundError.statusCode = 404;
+        mockDeleteResume.mockRejectedValueOnce(notFoundError);
+
+        const res = await request(app)
+            .delete('/api/resumes/123e4567-e89b-12d3-a456-426614174000')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(404);
+    });
+
+    it('should return 500 on service error', async () => {
+        mockCheckResumeAccess.mockResolvedValueOnce({ hasAccess: true, error: null });
+        mockDeleteResume.mockRejectedValueOnce(new Error('DB error'));
+
+        const res = await request(app)
+            .delete('/api/resumes/123e4567-e89b-12d3-a456-426614174000')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(500);
+        expect(res.body.error).toBe('Failed to delete resume');
+    });
+});
+
+describe('Resume Routes - GET /api/resumes - error paths', () => {
+    let app;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        app = createTestApp();
+    });
+
+    it('should return 500 on service error for list', async () => {
+        mockGetUserFirmId.mockResolvedValueOnce('firm-123');
+        mockCountResumes.mockRejectedValueOnce(new Error('DB error'));
+
+        const res = await request(app)
+            .get('/api/resumes')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(500);
+        expect(res.body.error).toBe('Failed to fetch resumes');
+    });
+
+    it('should handle hasMore with extra records', async () => {
+        mockGetUserFirmId.mockResolvedValueOnce('firm-123');
+        mockCountResumes.mockResolvedValueOnce(100);
+        // Return limit+1 records to trigger hasMore
+        const resumes = Array.from({ length: 51 }, (_, i) => ({
+            id: `resume-${i}`, name: `Resume ${i}`, status: 'analyzed', firm_id: 'firm-123'
+        }));
+        mockListResumes.mockResolvedValueOnce(resumes);
+
+        const res = await request(app)
+            .get('/api/resumes?limit=50')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(200);
+        expect(res.body.pagination.hasMore).toBe(true);
+        expect(res.body.pagination.nextPage).toBe(2);
+    });
+
+    it('should filter by dealId', async () => {
+        mockGetUserFirmId.mockResolvedValueOnce('firm-123');
+        mockCountResumes.mockResolvedValueOnce(1);
+        mockListResumes.mockResolvedValueOnce([
+            { id: 'resume-1', name: 'Resume 1', status: 'analyzed', firm_id: 'firm-123' }
+        ]);
+
+        const res = await request(app)
+            .get('/api/resumes?dealId=deal-abc')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(200);
+    });
+});
+
+describe('Resume Routes - GET /api/resumes/:id - error paths', () => {
+    let app;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        app = createTestApp();
+    });
+
+    it('should return 500 on unexpected service error', async () => {
+        mockGetResumeById.mockRejectedValueOnce(new Error('Connection refused'));
+
+        const res = await request(app)
+            .get('/api/resumes/123e4567-e89b-12d3-a456-426614174000')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(500);
+        expect(res.body.error).toBe('Failed to fetch resume');
+    });
+
+    it('should return 404 on statusCode 404 error', async () => {
+        const notFoundError = new Error('Not found');
+        notFoundError.statusCode = 404;
+        mockGetResumeById.mockRejectedValueOnce(notFoundError);
+
+        const res = await request(app)
+            .get('/api/resumes/123e4567-e89b-12d3-a456-426614174000')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(404);
+    });
+
+    it('should return 403 when user has no firm_id', async () => {
+        mockIsUserAdmin.mockReturnValueOnce(false);
+        mockGetUserFirmId.mockResolvedValueOnce(null);
+        mockGetResumeById.mockResolvedValueOnce({
+            id: '123e4567-e89b-12d3-a456-426614174000',
+            name: 'Test',
+            firm_id: 'firm-123'
+        });
+
+        const res = await request(app)
+            .get('/api/resumes/123e4567-e89b-12d3-a456-426614174000')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(403);
+    });
+});
+
+describe('Resume Routes - GET /api/resumes/:id/download - error paths', () => {
+    let app;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        app = createTestApp();
+    });
+
+    it('should allow admin to download any resume', async () => {
+        const fileContent = Buffer.from('admin download');
+        mockGetResumeFileForDownload.mockResolvedValueOnce({
+            id: '123e4567-e89b-12d3-a456-426614174000',
+            file_name: 'resume.pdf',
+            resume_file_data: fileContent,
+            resume_file_type: 'application/pdf',
+            resume_file_size: fileContent.length,
+            firm_name: 'Other Firm'
+        });
+
+        const res = await request(app)
+            .get('/api/resumes/123e4567-e89b-12d3-a456-426614174000/download')
+            .set('Authorization', 'Bearer valid-token')
+            .set('x-test-role', 'admin');
+
+        expect(res.status).toBe(200);
+    });
+
+    it('should return 500 on service error', async () => {
+        mockGetResumeFileForDownload.mockRejectedValueOnce(new Error('DB error'));
+
+        const res = await request(app)
+            .get('/api/resumes/123e4567-e89b-12d3-a456-426614174000/download')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(500);
+        expect(res.body.error).toBe('Failed to download file');
     });
 });
 
