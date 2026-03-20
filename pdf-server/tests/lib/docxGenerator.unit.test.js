@@ -18,7 +18,8 @@ const {
     extractImagesFromHtml, buildImageDrawing,
     parseBorderStyle, buildBorderXml,
     convertTableToOoxml, convertBlocksToOoxml, buildFlexParagraph,
-    htmlToOoxml, buildPandocHtml
+    htmlToOoxml, buildPandocHtml,
+    extractHeaderBorder, injectHeaderBorderIntoDocx
   }
 } = require('../../lib/docxGenerator.cjs');
 
@@ -1035,6 +1036,27 @@ describe('convertBlocksToOoxml()', () => {
     expect(result).toContain('w:color="auto"');
   });
 
+  it('should convert <div> with background and small height to border paragraph', () => {
+    const result = convertBlocksToOoxml('<div style="height: 4px; background: #993366; margin: 0 0 5px 0;">&nbsp;</div>');
+    expect(result).toContain('<w:pBdr>');
+    expect(result).toContain('w:color="993366"');
+    expect(result).toContain('w:sz="16"');
+  });
+
+  it('should convert <div> with background-color and small height to border paragraph', () => {
+    const result = convertBlocksToOoxml('<div style="height: 3px; background-color: #a01c5c;">&nbsp;</div>');
+    expect(result).toContain('<w:pBdr>');
+    expect(result).toContain('w:color="A01C5C"');
+    expect(result).toContain('w:sz="12"');
+  });
+
+  it('should NOT convert <div> with background but large height to border paragraph', () => {
+    const result = convertBlocksToOoxml('<div style="height: 50px; background: #993366;">Content</div>');
+    // Should be treated as a regular paragraph, not a border
+    expect(result).not.toContain('<w:pBdr>');
+    expect(result).toContain('Content');
+  });
+
   it('should create paragraphs from block elements', () => {
     const result = convertBlocksToOoxml('<p>Line 1</p><p>Line 2</p>');
     expect((result.match(/<w:p>/g) || []).length).toBe(2);
@@ -1290,5 +1312,122 @@ describe('buildPandocHtml()', () => {
   it('should set Arial as base font family', () => {
     const result = buildPandocHtml({ htmlContent: '<p>X</p>', stylesheet: '' });
     expect(result).toContain('font-family: Arial');
+  });
+
+  it('should inject __HDRBDR__ marker when stylesheet has header border-bottom', () => {
+    const css = '.pdf-header { border-bottom: 3px solid #a01c5c; }';
+    const result = buildPandocHtml({ htmlContent: '<p>X</p>', stylesheet: css, headerContent: '<div>H</div>' });
+    expect(result).toContain('__HDRBDR__');
+  });
+
+  it('should NOT inject __HDRBDR__ marker when no border in stylesheet', () => {
+    const result = buildPandocHtml({ htmlContent: '<p>X</p>', stylesheet: 'body{color:red}', headerContent: '<div>H</div>' });
+    expect(result).not.toContain('__HDRBDR__');
+  });
+
+  it('should NOT inject __HDRBDR__ marker when no header content', () => {
+    const css = '.pdf-header { border-bottom: 3px solid #a01c5c; }';
+    const result = buildPandocHtml({ htmlContent: '<p>X</p>', stylesheet: css });
+    expect(result).not.toContain('__HDRBDR__');
+  });
+});
+
+// ========================================================
+// extractHeaderBorder
+// ========================================================
+describe('extractHeaderBorder()', () => {
+  it('should return null for null/empty stylesheet', () => {
+    expect(extractHeaderBorder(null)).toBeNull();
+    expect(extractHeaderBorder('')).toBeNull();
+  });
+
+  it('should extract border from .pdf-header selector', () => {
+    const css = '.pdf-header { border-bottom: 3px solid #a01c5c; padding: 10px; }';
+    const result = extractHeaderBorder(css);
+    expect(result).toEqual({ color: 'A01C5C', size: 12 });
+  });
+
+  it('should extract border from header selector', () => {
+    const css = 'header { border-bottom: 2px solid #993366; }';
+    const result = extractHeaderBorder(css);
+    expect(result).toEqual({ color: '993366', size: 8 });
+  });
+
+  it('should extract border from .document-header selector', () => {
+    const css = '.document-header { border-bottom: 4px solid rgb(160, 28, 92); }';
+    const result = extractHeaderBorder(css);
+    expect(result).toEqual({ color: 'A01C5C', size: 16 });
+  });
+
+  it('should fall back to any border-bottom if no header selector', () => {
+    const css = '.separator { border-bottom: 2px solid #0000ff; }';
+    const result = extractHeaderBorder(css);
+    expect(result).toEqual({ color: '0000FF', size: 8 });
+  });
+
+  it('should return null when no border-bottom in stylesheet', () => {
+    const css = 'body { color: #333; font-size: 11pt; }';
+    expect(extractHeaderBorder(css)).toBeNull();
+  });
+
+  it('should handle named colors', () => {
+    const css = '.pdf-header { border-bottom: 2px solid red; }';
+    const result = extractHeaderBorder(css);
+    expect(result).toEqual({ color: 'FF0000', size: 8 });
+  });
+
+  it('should use default width when 0px specified', () => {
+    const css = 'header { border-bottom: 0px solid #000; }';
+    const result = extractHeaderBorder(css);
+    // 0 → default 2 (via || 2), 2 * 4 = 8
+    expect(result.size).toBe(8);
+  });
+});
+
+// ========================================================
+// injectHeaderBorderIntoDocx
+// ========================================================
+describe('injectHeaderBorderIntoDocx()', () => {
+  // Helper to create a minimal valid DOCX with a marker paragraph
+  async function createDocxWithMarker() {
+    const { default: JSZip } = await import('jszip');
+    const zip = new JSZip();
+    zip.file('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>');
+    zip.file('_rels/.rels', '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
+    zip.file('word/document.xml', `<?xml version="1.0" encoding="UTF-8"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+<w:body>
+<w:p><w:r><w:t>Header text</w:t></w:r></w:p>
+<w:p><w:r><w:t>__HDRBDR__</w:t></w:r></w:p>
+<w:p><w:r><w:t>Body content</w:t></w:r></w:p>
+<w:sectPr/>
+</w:body>
+</w:document>`);
+    return zip.generateAsync({ type: 'nodebuffer' });
+  }
+
+  it('should replace __HDRBDR__ marker with a colored border paragraph', async () => {
+    const docxBuffer = await createDocxWithMarker();
+    const result = await injectHeaderBorderIntoDocx(docxBuffer, { color: 'A01C5C', size: 12 });
+    const { default: JSZip } = await import('jszip');
+    const zip = await JSZip.loadAsync(result);
+    const docXml = await zip.file('word/document.xml').async('string');
+    expect(docXml).not.toContain('__HDRBDR__');
+    expect(docXml).toContain('<w:pBdr>');
+    expect(docXml).toContain('w:color="A01C5C"');
+    expect(docXml).toContain('w:sz="12"');
+    expect(docXml).toContain('w:after="120"');
+  });
+
+  it('should return unchanged buffer when marker is not found', async () => {
+    const { default: JSZip } = await import('jszip');
+    const zip = new JSZip();
+    zip.file('[Content_Types].xml', '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"></Types>');
+    zip.file('_rels/.rels', '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>');
+    zip.file('word/document.xml', '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>No marker here</w:t></w:r></w:p></w:body></w:document>');
+    const buf = await zip.generateAsync({ type: 'nodebuffer' });
+    const result = await injectHeaderBorderIntoDocx(buf, { color: 'FF0000', size: 8 });
+    // Should return the original buffer unchanged
+    expect(result).toEqual(buf);
   });
 });

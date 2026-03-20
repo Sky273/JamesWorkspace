@@ -124,6 +124,33 @@ function cssColorToHex(color) {
 }
 
 /**
+ * Extract header border info from stylesheet CSS.
+ * Looks for border-bottom on header-related selectors.
+ * @param {string} stylesheet - Template CSS stylesheet
+ * @returns {{ color: string, size: number } | null} Border info or null
+ */
+function extractHeaderBorder(stylesheet) {
+  if (!stylesheet) return null;
+  // Try header-specific selectors first
+  let match = stylesheet.match(
+    /[^{}]*header[^{}]*\{[^}]*border-bottom:\s*(\d+)(?:px)?\s+solid\s+([^;}"]+)/i
+  );
+  // Fall back to any border-bottom with solid color (common separator pattern)
+  if (!match) {
+    match = stylesheet.match(
+      /border-bottom:\s*(\d+)(?:px)?\s+solid\s+([^;}"]+)/i
+    );
+  }
+  if (!match) return null;
+  const width = parseInt(match[1]) || 2;
+  const rawColor = match[2].trim();
+  const color = cssColorToHex(rawColor);
+  if (!color) return null;
+  // size in OOXML eighth-points (1px ≈ 4 eighth-points)
+  return { color, size: Math.max(4, width * 4) };
+}
+
+/**
  * Convert a CSS size value to OOXML half-points (1pt = 2 half-points).
  * Handles px, pt, em, rem, %, and named sizes.
  */
@@ -639,6 +666,20 @@ function convertBlocksToOoxml(html, defaultAlign, defaultStyle) {
 
     const blocks = part.split(/<\/(?:div|p)>/gi);
     for (const block of blocks) {
+      // Detect <div> with background color and small height → separator bar (like <hr>)
+      const bgBarStyle = block.match(/<(?:div|p)[^>]*style="([^"]*)"/i);
+      if (bgBarStyle) {
+        const barStyle = bgBarStyle[1];
+        const barHeight = (barStyle.match(/height:\s*(\d+)/i) || [])[1];
+        const barBg = (barStyle.match(/(?:background-color|background):\s*([^;"]+)/i) || [])[1];
+        if (barHeight && parseInt(barHeight) <= 10 && barBg) {
+          const barColor = cssColorToHex(barBg.trim()) || 'auto';
+          const barSz = Math.max(4, parseInt(barHeight) * 4);
+          ooxml += `<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="${barSz}" w:space="1" w:color="${barColor}"/></w:pBdr></w:pPr></w:p>`;
+          continue;
+        }
+      }
+
       const stripped = block.replace(/<[^>]+>/g, '').replace(/\uFFF1[^\uFFF1]*\uFFF1/g, '').trim();
       if (!stripped && !/-pageNumber-/i.test(block) && !/-totalPages-/i.test(block) && !/\uFFF1IMGF:/.test(block)) continue;
 
@@ -872,6 +913,11 @@ function buildPandocHtml({ htmlContent, stylesheet, headerContent }) {
   
   if (headerContent && headerContent.trim()) {
     bodyContent += `<div class="document-header">${headerContent}</div>\n`;
+    // Inject marker for header border (post-processed into colored OOXML border)
+    const border = extractHeaderBorder(stylesheet);
+    if (border) {
+      bodyContent += '<p>__HDRBDR__</p>\n';
+    }
   }
   
   bodyContent += `<div class="document-body">${htmlContent}</div>\n`;
@@ -892,6 +938,29 @@ function buildPandocHtml({ htmlContent, stylesheet, headerContent }) {
   ${bodyContent}
 </body>
 </html>`;
+}
+
+/**
+ * Post-process a Pandoc DOCX to replace __HDRBDR__ marker with a colored border paragraph.
+ * @param {Buffer} docxBuffer - DOCX buffer from Pandoc
+ * @param {{ color: string, size: number }} borderInfo - Border color and size
+ * @returns {Promise<Buffer>} Modified DOCX buffer
+ */
+async function injectHeaderBorderIntoDocx(docxBuffer, borderInfo) {
+  const JSZipClass = await getJSZip();
+  const zip = await JSZipClass.loadAsync(docxBuffer);
+  const docXml = await zip.file('word/document.xml').async('string');
+
+  // Find the paragraph containing __HDRBDR__ and replace it with a border paragraph
+  const markerRegex = /<w:p\b[^>]*>(?:<w:pPr>[\s\S]*?<\/w:pPr>)?\s*<w:r[^>]*>(?:<w:rPr>[\s\S]*?<\/w:rPr>)?\s*<w:t[^>]*>__HDRBDR__<\/w:t>\s*<\/w:r>\s*<\/w:p>/;
+  if (!markerRegex.test(docXml)) {
+    return docxBuffer; // marker not found, return unchanged
+  }
+
+  const borderParagraph = `<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="${borderInfo.size}" w:space="1" w:color="${borderInfo.color}"/></w:pBdr><w:spacing w:after="120"/></w:pPr></w:p>`;
+  const newDocXml = docXml.replace(markerRegex, borderParagraph);
+  zip.file('word/document.xml', newDocXml);
+  return zip.generateAsync({ type: 'nodebuffer' });
 }
 
 /**
@@ -939,6 +1008,17 @@ async function generateDocxViaPandoc({ htmlContent, stylesheet, headerContent, f
     }
 
     let docxBuffer = fs.readFileSync(docxFilePath);
+
+    // Post-process: inject header border if stylesheet defines one
+    const headerBorder = extractHeaderBorder(stylesheet);
+    if (headerBorder && headerContent) {
+      try {
+        docxBuffer = await injectHeaderBorderIntoDocx(docxBuffer, headerBorder);
+        log('debug', 'Header border injected into DOCX', { color: headerBorder.color });
+      } catch (borderError) {
+        log('warn', 'Failed to inject header border into DOCX', { error: borderError.message });
+      }
+    }
 
     // Post-process: inject footer into the generated DOCX
     if (hasFooter) {
@@ -1090,6 +1170,7 @@ module.exports = {
     buildRunProps, buildRuns, parseInlineHtml, INLINE_TAGS,
     extractImagesFromHtml, buildImageDrawing, parseBorderStyle, buildBorderXml,
     convertTableToOoxml, convertBlocksToOoxml, buildFlexParagraph,
-    htmlToOoxml, injectFooterIntoDocx, buildPandocHtml
+    htmlToOoxml, injectFooterIntoDocx, buildPandocHtml,
+    extractHeaderBorder, injectHeaderBorderIntoDocx
   }
 };
