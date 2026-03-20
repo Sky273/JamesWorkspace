@@ -1,8 +1,8 @@
 /**
  * DOCX/DOC Generator - Hybrid approach
  * 
- * DOCX: HTML → Pandoc → DOCX with reference.docx (clean text, editable, footer on every page)
- *       Footer is injected into a dynamically created reference.docx template
+ * DOCX: HTML → Pandoc → DOCX, then post-process to inject native Word footer
+ *       (clean text, editable, footer on every page via section properties)
  * DOC:  HTML → Puppeteer → PDF → LibreOffice → DOC (visual fidelity with PDF)
  */
 
@@ -22,119 +22,201 @@ async function getJSZip() {
   return JSZip;
 }
 
+// ============================================
+// OOXML FOOTER HELPERS
+// ============================================
+
 /**
- * Convert HTML to simple OOXML paragraphs for Word footer
- * Handles basic HTML tags: p, div, br, img, span, strong, em, hr
- * @param {string} html - HTML content
+ * Escape special XML characters
+ */
+function escapeXml(str) {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/**
+ * Build OOXML run properties
+ */
+function buildRunProps(options = {}) {
+  let rPr = '<w:sz w:val="16"/><w:szCs w:val="16"/>';
+  if (options.bold) rPr += '<w:b/>';
+  if (options.italic) rPr += '<w:i/>';
+  if (options.color) {
+    let c = options.color.replace('#', '').toUpperCase();
+    if (c.length === 3) c = c.split('').map(ch => ch + ch).join('');
+    if (/^[0-9A-F]{6}$/.test(c)) rPr += `<w:color w:val="${c}"/>`;
+  }
+  return `<w:rPr>${rPr}</w:rPr>`;
+}
+
+/**
+ * Build OOXML runs from text, handling PAGE / NUMPAGES field codes
+ */
+function buildRuns(text, runProps) {
+  if (!text) return '';
+  const parts = text.split(/(\uFFF0PAGE\uFFF0|\uFFF0NUMPAGES\uFFF0)/);
+  let runs = '';
+  for (const part of parts) {
+    if (part === '\uFFF0PAGE\uFFF0' || part === '\uFFF0NUMPAGES\uFFF0') {
+      const field = part === '\uFFF0PAGE\uFFF0' ? 'PAGE' : 'NUMPAGES';
+      runs += `<w:r>${runProps}<w:fldChar w:fldCharType="begin"/></w:r>`;
+      runs += `<w:r>${runProps}<w:instrText xml:space="preserve"> ${field} </w:instrText></w:r>`;
+      runs += `<w:r>${runProps}<w:fldChar w:fldCharType="end"/></w:r>`;
+    } else if (part) {
+      runs += `<w:r>${runProps}<w:t xml:space="preserve">${escapeXml(part)}</w:t></w:r>`;
+    }
+  }
+  return runs;
+}
+
+/**
+ * Parse inline HTML into OOXML runs
+ * Handles <strong>, <b>, <em>, <i>, <span style="color:...">
+ */
+function parseInlineHtml(html, defaultStyle) {
+  if (!html) return '';
+  const defaultColorMatch = (defaultStyle || '').match(/color:\s*([^;"]+)/i);
+  const defaultColor = defaultColorMatch ? defaultColorMatch[1].trim() : null;
+
+  let content = html
+    .replace(/-pageNumber-/gi, '\uFFF0PAGE\uFFF0')
+    .replace(/-totalPages-/gi, '\uFFF0NUMPAGES\uFFF0')
+    .replace(/<img[^>]*>/gi, '');
+
+  const tokens = content.split(/(<\/?(?:strong|b|em|i|span)[^>]*>)/gi).filter(Boolean);
+  let runs = '';
+  let bold = false, italic = false;
+  let colorStack = defaultColor ? [defaultColor] : [];
+
+  for (const token of tokens) {
+    if (/^<(strong|b)>/i.test(token)) { bold = true; continue; }
+    if (/^<\/(strong|b)>/i.test(token)) { bold = false; continue; }
+    if (/^<(em|i)>/i.test(token)) { italic = true; continue; }
+    if (/^<\/(em|i)>/i.test(token)) { italic = false; continue; }
+    if (/^<span/i.test(token)) {
+      const cm = token.match(/color:\s*([^;"]+)/i);
+      if (cm) colorStack.push(cm[1].trim());
+      continue;
+    }
+    if (/^<\/span>/i.test(token)) {
+      if (colorStack.length > (defaultColor ? 1 : 0)) colorStack.pop();
+      continue;
+    }
+    if (/^<[^>]+>$/.test(token)) continue;
+
+    let text = token
+      .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+    if (!text) continue;
+
+    const color = colorStack.length > 0 ? colorStack[colorStack.length - 1] : null;
+    runs += buildRuns(text, buildRunProps({ bold, italic, color }));
+  }
+  return runs;
+}
+
+/**
+ * Build a flex-layout paragraph (space-between) using Word tab stops
+ * Produces left / right (or left / center / right) aligned content
+ */
+function buildFlexParagraph(html) {
+  const children = [];
+  const regex = /<(?:span|div)[^>]*?(?:style="([^"]*)")?[^>]*>([\s\S]*?)<\/(?:span|div)>/gi;
+  let m;
+  while ((m = regex.exec(html)) !== null) {
+    children.push({ style: m[1] || '', content: m[2] });
+  }
+  if (children.length === 0) return '';
+
+  // A4 usable width in twips: 11906 - 2×1440 = 9026
+  const tabStops = children.length >= 3
+    ? '<w:tabs><w:tab w:val="center" w:pos="4513"/><w:tab w:val="right" w:pos="9026"/></w:tabs>'
+    : '<w:tabs><w:tab w:val="right" w:pos="9026"/></w:tabs>';
+
+  const parentStyleMatch = html.match(/style="([^"]*)"/i);
+  const parentStyle = parentStyleMatch ? parentStyleMatch[1] : '';
+
+  let runs = parseInlineHtml(children[0].content, children[0].style || parentStyle);
+  for (let i = 1; i < children.length; i++) {
+    runs += '<w:r><w:rPr><w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr><w:tab/></w:r>';
+    runs += parseInlineHtml(children[i].content, children[i].style || parentStyle);
+  }
+
+  return `<w:p><w:pPr>${tabStops}<w:rPr><w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr></w:pPr>${runs}</w:p>`;
+}
+
+/**
+ * Convert footer HTML to OOXML paragraphs for Word footer
+ * Handles <hr>, flex layouts (space-between), block elements, inline formatting
+ * @param {string} html - Footer HTML content
  * @returns {string} OOXML paragraph elements
  */
 function htmlToOoxml(html) {
   if (!html || !html.trim()) return '';
-  
   let ooxml = '';
-  
-  // Process the HTML content
-  // Split by block elements and process
-  const content = html
-    .replace(/-pageNumber-/gi, '<w:fldSimple w:instr=" PAGE "/>')
-    .replace(/-totalPages-/gi, '<w:fldSimple w:instr=" NUMPAGES "/>');
-  
-  // Handle <hr> tags - convert to horizontal line
-  const hrRegex = /<hr[^>]*style="[^"]*background-color:\s*([^;"]+)[^"]*"[^>]*>/gi;
-  let processedContent = content.replace(hrRegex, (match, color) => {
-    // Convert color name or hex to OOXML format
-    const ooxmlColor = color.replace('#', '').toUpperCase();
-    return `</w:p><w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="12" w:space="1" w:color="${ooxmlColor}"/></w:pBdr></w:pPr></w:p><w:p>`;
-  });
-  
-  // Handle simple <hr> without style
-  processedContent = processedContent.replace(/<hr[^>]*>/gi, '</w:p><w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="auto"/></w:pBdr></w:pPr></w:p><w:p>');
-  
-  // Handle images - extract src and dimensions
-  const imgRegex = /<img[^>]*src="([^"]*)"[^>]*(?:width="(\d+)")?[^>]*(?:height="(\d+)")?[^>]*>/gi;
-  processedContent = processedContent.replace(imgRegex, (match, src, width, height) => {
-    // For now, skip images in footer (complex to embed)
-    // Could be enhanced later with base64 embedding
-    return '';
-  });
-  
-  // Handle <br> tags
-  processedContent = processedContent.replace(/<br\s*\/?>/gi, '</w:t></w:r></w:p><w:p><w:r><w:t>');
-  
-  // Handle <strong> and <b> tags
-  processedContent = processedContent.replace(/<(strong|b)>/gi, '</w:t></w:r><w:r><w:rPr><w:b/></w:rPr><w:t>');
-  processedContent = processedContent.replace(/<\/(strong|b)>/gi, '</w:t></w:r><w:r><w:t>');
-  
-  // Handle <em> and <i> tags
-  processedContent = processedContent.replace(/<(em|i)>/gi, '</w:t></w:r><w:r><w:rPr><w:i/></w:rPr><w:t>');
-  processedContent = processedContent.replace(/<\/(em|i)>/gi, '</w:t></w:r><w:r><w:t>');
-  
-  // Remove remaining HTML tags but keep content
-  processedContent = processedContent.replace(/<[^>]+>/g, '');
-  
-  // Decode HTML entities
-  processedContent = processedContent
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'");
-  
-  // Wrap in paragraph
-  ooxml = `<w:p><w:pPr><w:jc w:val="center"/><w:rPr><w:sz w:val="16"/></w:rPr></w:pPr><w:r><w:rPr><w:sz w:val="16"/></w:rPr><w:t>${processedContent}</w:t></w:r></w:p>`;
-  
+
+  // Split by <hr> elements, keeping them as tokens
+  const parts = html.split(/(<hr[^>]*>)/gi);
+
+  for (const part of parts) {
+    // Handle <hr> elements → horizontal line paragraph
+    if (/^<hr/i.test(part)) {
+      const colorMatch = part.match(/background-color:\s*([^;"]+)/i);
+      const color = colorMatch ? colorMatch[1].trim().replace('#', '').toUpperCase() : 'auto';
+      const heightMatch = part.match(/height:\s*(\d+)/i);
+      const sz = heightMatch ? Math.max(4, parseInt(heightMatch[1]) * 4) : 12;
+      ooxml += `<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="${sz}" w:space="1" w:color="${color}"/></w:pBdr></w:pPr></w:p>`;
+      continue;
+    }
+    if (!part.trim()) continue;
+
+    // Flex container → tab-based left/right layout
+    if (/display:\s*flex/i.test(part) && /justify-content:\s*space-between/i.test(part)) {
+      ooxml += buildFlexParagraph(part);
+      continue;
+    }
+
+    // Split by closing block elements into paragraphs
+    const blocks = part.split(/<\/(?:div|p)>/gi);
+    for (const block of blocks) {
+      const stripped = block.replace(/<[^>]+>/g, '').trim();
+      if (!stripped && !/-pageNumber-/i.test(block) && !/-totalPages-/i.test(block)) continue;
+      const styleMatch = block.match(/<(?:div|p|span)[^>]*style="([^"]*)"/i);
+      const style = styleMatch ? styleMatch[1] : '';
+      const runs = parseInlineHtml(block, style);
+      if (runs) {
+        ooxml += `<w:p><w:pPr><w:jc w:val="center"/><w:rPr><w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr></w:pPr>${runs}</w:p>`;
+      }
+    }
+  }
   return ooxml;
 }
 
 /**
- * Create a reference.docx with custom footer injected
- * @param {string} footerContent - HTML footer content
- * @param {string} tempDir - Temporary directory
- * @param {string} tempId - Unique identifier
- * @returns {Promise<string>} Path to the reference.docx
+ * Inject a Word-native footer into an existing DOCX buffer
+ * Post-processes the Pandoc output to add footer1.xml and wire it into the document
+ * @param {Buffer} docxBuffer - The DOCX file buffer
+ * @param {string} footerContent - Footer HTML content
+ * @returns {Promise<Buffer>} Modified DOCX buffer with footer on every page
  */
-async function createReferenceDocxWithFooter(footerContent, tempDir, tempId) {
-  const baseDocxPath = path.join(tempDir, `${tempId}_base.docx`);
-  const referenceDocxPath = path.join(tempDir, `${tempId}_reference.docx`);
-  
-  // Step 1: Generate a base reference.docx using Pandoc
-  const defaultCmd = `pandoc --print-default-data-file reference.docx > "${baseDocxPath}"`;
-  try {
-    execSync(defaultCmd, { 
-      timeout: 10000, 
-      stdio: ['pipe', 'pipe', 'pipe'],
-      shell: true
-    });
-  } catch (err) {
-    // If --print-default-data-file fails, create a minimal docx
-    const minimalHtml = '<html><body><p></p></body></html>';
-    const minimalHtmlPath = path.join(tempDir, `${tempId}_minimal.html`);
-    fs.writeFileSync(minimalHtmlPath, minimalHtml, 'utf8');
-    execSync(`pandoc "${minimalHtmlPath}" -o "${baseDocxPath}"`, { timeout: 10000 });
-    if (fs.existsSync(minimalHtmlPath)) fs.unlinkSync(minimalHtmlPath);
-  }
-  
-  if (!fs.existsSync(baseDocxPath)) {
-    throw new Error('Failed to create base reference.docx');
-  }
-  
-  // Step 2: Open the DOCX (ZIP) and inject footer
+async function injectFooterIntoDocx(docxBuffer, footerContent) {
   const JSZipClass = await getJSZip();
-  const docxBuffer = fs.readFileSync(baseDocxPath);
   const zip = await JSZipClass.loadAsync(docxBuffer);
-  
-  // Create footer XML content
+
+  // Build footer XML from HTML
   const footerXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
        xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
   ${htmlToOoxml(footerContent)}
 </w:ftr>`;
-  
-  // Add footer1.xml to the DOCX
+
   zip.file('word/footer1.xml', footerXml);
-  
-  // Update [Content_Types].xml to include footer
+
+  // Register footer in [Content_Types].xml
   let contentTypesXml = await zip.file('[Content_Types].xml').async('string');
   if (!contentTypesXml.includes('footer1.xml')) {
     contentTypesXml = contentTypesXml.replace(
@@ -143,52 +225,48 @@ async function createReferenceDocxWithFooter(footerContent, tempDir, tempId) {
     );
     zip.file('[Content_Types].xml', contentTypesXml);
   }
-  
-  // Update word/_rels/document.xml.rels to reference footer
+
+  // Add relationship for the footer
   let relsXml = await zip.file('word/_rels/document.xml.rels').async('string');
   if (!relsXml.includes('footer1.xml')) {
-    // Find the highest rId
     const rIdMatches = relsXml.match(/rId(\d+)/g) || [];
     const maxRId = rIdMatches.reduce((max, id) => {
       const num = parseInt(id.replace('rId', ''));
       return num > max ? num : max;
     }, 0);
-    const newRId = `rId${maxRId + 1}`;
-    
+    const footerRId = `rId${maxRId + 1}`;
+
     relsXml = relsXml.replace(
       '</Relationships>',
-      `<Relationship Id="${newRId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/></Relationships>`
+      `<Relationship Id="${footerRId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/></Relationships>`
     );
     zip.file('word/_rels/document.xml.rels', relsXml);
-    
-    // Update document.xml to reference the footer in section properties
+
+    // Wire the footer into document.xml section properties
     let documentXml = await zip.file('word/document.xml').async('string');
-    
-    // Find or create sectPr (section properties)
     if (documentXml.includes('<w:sectPr')) {
-      // Add footer reference to existing sectPr
       documentXml = documentXml.replace(
         /<w:sectPr([^>]*)>/,
-        `<w:sectPr$1><w:footerReference w:type="default" r:id="${newRId}"/>`
+        `<w:sectPr$1><w:footerReference w:type="default" r:id="${footerRId}"/>`
       );
+      // Ensure footer margin is defined
+      if (!/<w:pgMar[^>]*w:footer/.test(documentXml)) {
+        documentXml = documentXml.replace(
+          /<w:pgMar([^/]*)\/?>/,
+          '<w:pgMar$1 w:footer="720"/>'
+        );
+      }
     } else {
-      // Add sectPr before </w:body>
+      // No sectPr yet – create one with A4 dimensions
       documentXml = documentXml.replace(
         '</w:body>',
-        `<w:sectPr><w:footerReference w:type="default" r:id="${newRId}"/><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720"/></w:sectPr></w:body>`
+        `<w:sectPr><w:footerReference w:type="default" r:id="${footerRId}"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720"/></w:sectPr></w:body>`
       );
     }
     zip.file('word/document.xml', documentXml);
   }
-  
-  // Write the modified DOCX
-  const modifiedBuffer = await zip.generateAsync({ type: 'nodebuffer' });
-  fs.writeFileSync(referenceDocxPath, modifiedBuffer);
-  
-  // Cleanup base file
-  if (fs.existsSync(baseDocxPath)) fs.unlinkSync(baseDocxPath);
-  
-  return referenceDocxPath;
+
+  return zip.generateAsync({ type: 'nodebuffer' });
 }
 
 /**
@@ -207,7 +285,7 @@ function buildPandocHtml({ htmlContent, stylesheet, headerContent }) {
   
   bodyContent += `<div class="document-body">${htmlContent}</div>\n`;
   
-  // Footer is now handled via reference.docx, not in body
+  // Footer is injected via post-processing (injectFooterIntoDocx), not in body
   
   return `<!DOCTYPE html>
 <html>
@@ -226,48 +304,35 @@ function buildPandocHtml({ htmlContent, stylesheet, headerContent }) {
 }
 
 /**
- * Generate DOCX using Pandoc with dynamic footer via reference.docx
- * Footer appears on every page using Word's native footer mechanism
+ * Generate DOCX using Pandoc, then post-process to inject native Word footer
+ * Footer appears on every page via Word's section properties
  */
 async function generateDocxViaPandoc({ htmlContent, stylesheet, headerContent, footerContent }) {
   const tempDir = os.tmpdir();
   const tempId = `docx_${Date.now()}_${Math.random().toString(36).substring(7)}`;
   const htmlFilePath = path.join(tempDir, `${tempId}.html`);
   const docxFilePath = path.join(tempDir, `${tempId}.docx`);
-  let referenceDocxPath = null;
 
   try {
     const hasFooter = footerContent && footerContent.trim();
-    
-    // Build HTML without footer (footer will be in reference.docx)
+
+    // Build HTML (body + header, no footer — footer is injected post-Pandoc)
     const wrappedHtmlContent = buildPandocHtml({
       htmlContent,
       stylesheet,
       headerContent
     });
 
-    log('info', 'DOCX generation via Pandoc with reference.docx', { 
-      hasHeader: !!headerContent, 
+    log('info', 'DOCX generation via Pandoc + post-process footer', {
+      hasHeader: !!headerContent,
       hasFooter: !!hasFooter,
       htmlLength: wrappedHtmlContent.length
     });
 
     fs.writeFileSync(htmlFilePath, wrappedHtmlContent, 'utf8');
-    
-    // Build Pandoc command
-    let pandocCmd = `pandoc "${htmlFilePath}" -f html -t docx -o "${docxFilePath}" --standalone`;
-    
-    // If we have footer content, create a reference.docx with the footer injected
-    if (hasFooter) {
-      try {
-        referenceDocxPath = await createReferenceDocxWithFooter(footerContent, tempDir, tempId);
-        pandocCmd += ` --reference-doc="${referenceDocxPath}"`;
-        log('debug', 'Created reference.docx with footer', { path: referenceDocxPath });
-      } catch (refError) {
-        log('warn', 'Failed to create reference.docx with footer, continuing without', { error: refError.message });
-      }
-    }
-    
+
+    // Run Pandoc HTML → DOCX
+    const pandocCmd = `pandoc "${htmlFilePath}" -f html -t docx -o "${docxFilePath}" --standalone`;
     try {
       execSync(pandocCmd, {
         timeout: 30000,
@@ -277,20 +342,29 @@ async function generateDocxViaPandoc({ htmlContent, stylesheet, headerContent, f
       log('error', 'Pandoc HTML to DOCX conversion failed', { error: cmdError.message });
       throw new Error(`Pandoc conversion failed: ${cmdError.message}`);
     }
-    
+
     if (!fs.existsSync(docxFilePath)) {
       throw new Error('Pandoc did not generate the DOCX file');
     }
 
-    const docxBuffer = fs.readFileSync(docxFilePath);
+    let docxBuffer = fs.readFileSync(docxFilePath);
+
+    // Post-process: inject footer into the generated DOCX
+    if (hasFooter) {
+      try {
+        docxBuffer = await injectFooterIntoDocx(docxBuffer, footerContent);
+        log('debug', 'Footer injected into DOCX via post-processing');
+      } catch (footerError) {
+        log('warn', 'Failed to inject footer into DOCX, returning without footer', { error: footerError.message });
+      }
+    }
+
     log('debug', 'DOCX generated via Pandoc', { size: `${Math.round(docxBuffer.length / 1024)}KB` });
-    
     return docxBuffer;
   } finally {
     try {
       if (fs.existsSync(htmlFilePath)) fs.unlinkSync(htmlFilePath);
       if (fs.existsSync(docxFilePath)) fs.unlinkSync(docxFilePath);
-      if (referenceDocxPath && fs.existsSync(referenceDocxPath)) fs.unlinkSync(referenceDocxPath);
     } catch (cleanupError) {
       log('warn', 'Failed to cleanup temp files', { error: cleanupError.message });
     }
@@ -367,8 +441,7 @@ async function generateDocViaPdf({ htmlContent, stylesheet, headerContent, foote
  * Generate DOCX or DOC from HTML content
  * 
  * Hybrid approach:
- * - DOCX: Pandoc (clean text, editable, no frames)
- *         Note: Footer appears only at end of document (Pandoc limitation)
+ * - DOCX: Pandoc + post-process footer injection (clean text, editable, footer on every page)
  * - DOC: Puppeteer PDF → LibreOffice (visual fidelity with PDF export)
  * 
  * @param {Object} options - Generation options
@@ -393,7 +466,7 @@ async function generateDocx({ htmlContent, stylesheet, headerContent, footerCont
     });
   }
   
-  // DOCX: Use Pandoc for clean, editable text (footer at end only)
+  // DOCX: Use Pandoc for clean, editable text + native Word footer
   return generateDocxViaPandoc({ htmlContent, stylesheet, headerContent, footerContent });
 }
 
