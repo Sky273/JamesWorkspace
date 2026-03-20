@@ -273,4 +273,61 @@ describe('injectFooterIntoDocx()', () => {
     expect(Buffer.isBuffer(result)).toBe(true);
     expect(result.length).toBeGreaterThan(0);
   });
+
+  it('should use default alignment from stylesheet', async () => {
+    const docx = await createMinimalDocx();
+    const stylesheet = 'body { text-align: center; font-size: 8pt; }';
+    const result = await injectFooterIntoDocx(docx, '<p>Centered text</p>', stylesheet);
+
+    const JSZip = (await import('jszip')).default;
+    const zip = await JSZip.loadAsync(result);
+    const footer = await zip.file('word/footer1.xml').async('string');
+
+    expect(footer).toContain('<w:jc w:val="center"/>');
+    expect(footer).toContain('Centered text');
+  });
+
+  it('should default to left alignment without stylesheet', async () => {
+    const docx = await createMinimalDocx();
+    const result = await injectFooterIntoDocx(docx, '<p>Left text</p>');
+
+    const JSZip = (await import('jszip')).default;
+    const zip = await JSZip.loadAsync(result);
+    const footer = await zip.file('word/footer1.xml').async('string');
+
+    expect(footer).toContain('<w:jc w:val="left"/>');
+  });
+
+  it('should decode HTML entities in footer text', async () => {
+    const docx = await createMinimalDocx();
+    const html = '<p>100&nbsp;500&nbsp;&euro; &bull; RCS n&deg; 499</p>';
+    const result = await injectFooterIntoDocx(docx, html);
+
+    const JSZip = (await import('jszip')).default;
+    const zip = await JSZip.loadAsync(result);
+    const footer = await zip.file('word/footer1.xml').async('string');
+
+    expect(footer).toContain('\u20AC');  // euro sign
+    expect(footer).toContain('\u2022');  // bullet
+    expect(footer).toContain('\u00B0');  // degree
+    expect(footer).toContain('\u00A0');  // nbsp
+    expect(footer).not.toContain('&euro;');
+    expect(footer).not.toContain('&bull;');
+    expect(footer).not.toContain('&deg;');
+  });
+
+  it('should decode accented character entities', async () => {
+    const docx = await createMinimalDocx();
+    const html = '<p>R&eacute;sum&eacute; - Exp&eacute;rience fran&ccedil;aise</p>';
+    const result = await injectFooterIntoDocx(docx, html);
+
+    const JSZip = (await import('jszip')).default;
+    const zip = await JSZip.loadAsync(result);
+    const footer = await zip.file('word/footer1.xml').async('string');
+
+    expect(footer).toContain('R\u00E9sum\u00E9');
+    expect(footer).toContain('fran\u00E7aise');
+    expect(footer).not.toContain('&eacute;');
+    expect(footer).not.toContain('&ccedil;');
+  });
 });

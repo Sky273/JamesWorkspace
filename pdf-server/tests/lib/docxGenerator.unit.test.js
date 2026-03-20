@@ -128,6 +128,29 @@ describe('decodeHtmlEntities()', () => {
   it('should leave strings without & unchanged', () => {
     expect(decodeHtmlEntities('no entities here')).toBe('no entities here');
   });
+
+  it('should decode French accented character entities', () => {
+    expect(decodeHtmlEntities('&eacute;')).toBe('\u00E9'); // é
+    expect(decodeHtmlEntities('&egrave;')).toBe('\u00E8'); // è
+    expect(decodeHtmlEntities('&ecirc;')).toBe('\u00EA');  // ê
+    expect(decodeHtmlEntities('&euml;')).toBe('\u00EB');   // ë
+    expect(decodeHtmlEntities('&agrave;')).toBe('\u00E0');  // à
+    expect(decodeHtmlEntities('&acirc;')).toBe('\u00E2');   // â
+    expect(decodeHtmlEntities('&ocirc;')).toBe('\u00F4');   // ô
+    expect(decodeHtmlEntities('&ugrave;')).toBe('\u00F9');  // ù
+    expect(decodeHtmlEntities('&ucirc;')).toBe('\u00FB');   // û
+    expect(decodeHtmlEntities('&ccedil;')).toBe('\u00E7');  // ç
+    expect(decodeHtmlEntities('&iuml;')).toBe('\u00EF');    // ï
+    expect(decodeHtmlEntities('&oelig;')).toBe('\u0153');   // œ
+    expect(decodeHtmlEntities('&Eacute;')).toBe('\u00C9');  // É
+  });
+
+  it('should decode uppercase accented entities', () => {
+    expect(decodeHtmlEntities('&Agrave;')).toBe('\u00C0');
+    expect(decodeHtmlEntities('&Ccedil;')).toBe('\u00C7');
+    expect(decodeHtmlEntities('&Ntilde;')).toBe('\u00D1');
+    expect(decodeHtmlEntities('&Uuml;')).toBe('\u00DC');
+  });
 });
 
 // ========================================================
@@ -222,14 +245,12 @@ describe('buildRuns()', () => {
     expect(result).toContain('<w:b/>');
   });
 
-  it('should decode HTML entities before XML-escaping', () => {
-    const result = buildRuns('100 500 &euro; &bull; RCS n&deg;', defaultProps);
-    expect(result).toContain('100 500 \u20AC');
+  it('should XML-escape already-decoded text correctly', () => {
+    // Entity decoding now happens in parseInlineHtml; buildRuns receives decoded text
+    const result = buildRuns('100\u00A0500\u00A0\u20AC \u2022 RCS n\u00B0', defaultProps);
+    expect(result).toContain('100\u00A0500\u00A0\u20AC');
     expect(result).toContain('\u2022');
     expect(result).toContain('n\u00B0');
-    expect(result).not.toContain('&amp;euro;');
-    expect(result).not.toContain('&amp;bull;');
-    expect(result).not.toContain('&amp;deg;');
   });
 });
 

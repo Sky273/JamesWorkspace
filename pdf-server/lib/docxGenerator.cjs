@@ -43,14 +43,44 @@ function escapeXml(str) {
  * then escapeXml() only escapes the 4 XML-special characters.
  */
 const HTML_ENTITIES = {
-  nbsp: '\u00A0', bull: '\u2022', middot: '\u00B7', euro: '\u20AC',
-  deg: '\u00B0', copy: '\u00A9', reg: '\u00AE', trade: '\u2122',
-  mdash: '\u2014', ndash: '\u2013', laquo: '\u00AB', raquo: '\u00BB',
-  hellip: '\u2026', prime: '\u2032', Prime: '\u2033',
+  // XML core
+  amp: '&', lt: '<', gt: '>', quot: '"', apos: "'",
+  // Spacing & punctuation
+  nbsp: '\u00A0', ensp: '\u2002', emsp: '\u2003', thinsp: '\u2009',
+  bull: '\u2022', middot: '\u00B7', hellip: '\u2026',
+  mdash: '\u2014', ndash: '\u2013', minus: '\u2212',
   lsquo: '\u2018', rsquo: '\u2019', ldquo: '\u201C', rdquo: '\u201D',
+  laquo: '\u00AB', raquo: '\u00BB', prime: '\u2032', Prime: '\u2033',
+  // Symbols
+  euro: '\u20AC', pound: '\u00A3', yen: '\u00A5', cent: '\u00A2', curren: '\u00A4',
+  deg: '\u00B0', copy: '\u00A9', reg: '\u00AE', trade: '\u2122',
   times: '\u00D7', divide: '\u00F7', plusmn: '\u00B1', micro: '\u00B5',
   para: '\u00B6', sect: '\u00A7', dagger: '\u2020', Dagger: '\u2021',
-  amp: '&', lt: '<', gt: '>', quot: '"', apos: "'",
+  permil: '\u2030', fnof: '\u0192', ordf: '\u00AA', ordm: '\u00BA',
+  sup1: '\u00B9', sup2: '\u00B2', sup3: '\u00B3', frac14: '\u00BC', frac12: '\u00BD', frac34: '\u00BE',
+  iquest: '\u00BF', iexcl: '\u00A1', brvbar: '\u00A6', not: '\u00AC', macr: '\u00AF',
+  cedil: '\u00B8', shy: '\u00AD',
+  // Latin uppercase accented
+  Agrave: '\u00C0', Aacute: '\u00C1', Acirc: '\u00C2', Atilde: '\u00C3', Auml: '\u00C4', Aring: '\u00C5',
+  AElig: '\u00C6', Ccedil: '\u00C7',
+  Egrave: '\u00C8', Eacute: '\u00C9', Ecirc: '\u00CA', Euml: '\u00CB',
+  Igrave: '\u00CC', Iacute: '\u00CD', Icirc: '\u00CE', Iuml: '\u00CF',
+  ETH: '\u00D0', Ntilde: '\u00D1',
+  Ograve: '\u00D2', Oacute: '\u00D3', Ocirc: '\u00D4', Otilde: '\u00D5', Ouml: '\u00D6', Oslash: '\u00D8',
+  Ugrave: '\u00D9', Uacute: '\u00DA', Ucirc: '\u00DB', Uuml: '\u00DC',
+  Yacute: '\u00DD', THORN: '\u00DE',
+  // Latin lowercase accented
+  agrave: '\u00E0', aacute: '\u00E1', acirc: '\u00E2', atilde: '\u00E3', auml: '\u00E4', aring: '\u00E5',
+  aelig: '\u00E6', ccedil: '\u00E7',
+  egrave: '\u00E8', eacute: '\u00E9', ecirc: '\u00EA', euml: '\u00EB',
+  igrave: '\u00EC', iacute: '\u00ED', icirc: '\u00EE', iuml: '\u00EF',
+  eth: '\u00F0', ntilde: '\u00F1',
+  ograve: '\u00F2', oacute: '\u00F3', ocirc: '\u00F4', otilde: '\u00F5', ouml: '\u00F6', oslash: '\u00F8',
+  ugrave: '\u00F9', uacute: '\u00FA', ucirc: '\u00FB', uuml: '\u00FC',
+  yacute: '\u00FD', thorn: '\u00FE', yuml: '\u00FF', szlig: '\u00DF',
+  // Extended Latin (OElig, Scaron commonly used in French)
+  OElig: '\u0152', oelig: '\u0153', Scaron: '\u0160', scaron: '\u0161',
+  Yuml: '\u0178',
 };
 
 function decodeHtmlEntities(str) {
@@ -172,7 +202,7 @@ function buildRuns(text, runProps) {
       runs += `<w:r>${runProps}<w:instrText xml:space="preserve"> ${field} </w:instrText></w:r>`;
       runs += `<w:r>${runProps}<w:fldChar w:fldCharType="end"/></w:r>`;
     } else if (part) {
-      runs += `<w:r>${runProps}<w:t xml:space="preserve">${escapeXml(decodeHtmlEntities(part))}</w:t></w:r>`;
+      runs += `<w:r>${runProps}<w:t xml:space="preserve">${escapeXml(part)}</w:t></w:r>`;
     }
   }
   return runs;
@@ -215,10 +245,7 @@ function parseInlineHtml(html, defaultStyle) {
     // Skip ALL other HTML tags (table, td, a, p, div, etc.)
     if (/^<[^>]+>$/.test(token)) continue;
 
-    let text = token
-      .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-      .replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+    let text = decodeHtmlEntities(token);
     if (!text && !text.includes('\t')) continue;
 
     const color = colorStack.length > 0 ? colorStack[colorStack.length - 1] : null;
@@ -342,8 +369,10 @@ function convertTableToOoxml(tableHtml) {
 /**
  * Convert non-table HTML to OOXML paragraphs.
  * Handles <hr>, flex layouts (space-between), and block elements.
+ * @param {string} html - HTML content
+ * @param {string} [defaultAlign='left'] - Default paragraph alignment from stylesheet
  */
-function convertBlocksToOoxml(html) {
+function convertBlocksToOoxml(html, defaultAlign) {
   if (!html || !html.trim()) return '';
   let ooxml = '';
 
@@ -370,7 +399,7 @@ function convertBlocksToOoxml(html) {
       if (!stripped && !/-pageNumber-/i.test(block) && !/-totalPages-/i.test(block) && !/\uFFF1IMGF:/.test(block)) continue;
 
       const alignMatch = block.match(/text-align:\s*(left|right|center|justify)/i);
-      const alignment = alignMatch ? alignMatch[1].toLowerCase() : 'left';
+      const alignment = alignMatch ? alignMatch[1].toLowerCase() : (defaultAlign || 'left');
       const ooxmlAlign = alignment === 'justify' ? 'both' : alignment;
 
       const styleMatch = block.match(/<(?:div|p|span)[^>]*style="([^"]*)"/i);
@@ -388,9 +417,10 @@ function convertBlocksToOoxml(html) {
  * Convert footer HTML to OOXML elements for Word footer.
  * Tables → native <w:tbl>, other content → paragraphs with <hr>/flex/block handling.
  * @param {string} html - Footer HTML content
+ * @param {string} [defaultAlign] - Default paragraph alignment (e.g. from stylesheet)
  * @returns {string} OOXML elements
  */
-function htmlToOoxml(html) {
+function htmlToOoxml(html, defaultAlign) {
   if (!html || !html.trim()) return '';
 
   // Pre-process links and line breaks (tables are kept intact for OOXML conversion)
@@ -406,7 +436,7 @@ function htmlToOoxml(html) {
     if (/^<table/i.test(segment)) {
       ooxml += convertTableToOoxml(segment);
     } else if (segment.trim()) {
-      ooxml += convertBlocksToOoxml(segment);
+      ooxml += convertBlocksToOoxml(segment, defaultAlign);
     }
   }
   return ooxml;
@@ -417,11 +447,19 @@ function htmlToOoxml(html) {
  * Post-processes the Pandoc output to add footer1.xml and wire it into the document
  * @param {Buffer} docxBuffer - The DOCX file buffer
  * @param {string} footerContent - Footer HTML content
+ * @param {string} [stylesheet] - Template stylesheet (used to extract default alignment)
  * @returns {Promise<Buffer>} Modified DOCX buffer with footer on every page
  */
-async function injectFooterIntoDocx(docxBuffer, footerContent) {
+async function injectFooterIntoDocx(docxBuffer, footerContent, stylesheet) {
   const JSZipClass = await getJSZip();
   const zip = await JSZipClass.loadAsync(docxBuffer);
+
+  // Extract default text-align from stylesheet (footer context)
+  let defaultAlign;
+  if (stylesheet) {
+    const alignMatch = stylesheet.match(/text-align:\s*(left|right|center|justify)/i);
+    if (alignMatch) defaultAlign = alignMatch[1].toLowerCase();
+  }
 
   // Extract base64 images from footer HTML (replaced with markers)
   const { html: processedFooter, images } = extractImagesFromHtml(footerContent);
@@ -432,7 +470,7 @@ async function injectFooterIntoDocx(docxBuffer, footerContent) {
   const footerXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
        xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"${wpNs}>
-  ${htmlToOoxml(processedFooter)}
+  ${htmlToOoxml(processedFooter, defaultAlign)}
 </w:ftr>`;
 
   zip.file('word/footer1.xml', footerXml);
@@ -603,7 +641,7 @@ async function generateDocxViaPandoc({ htmlContent, stylesheet, headerContent, f
     // Post-process: inject footer into the generated DOCX
     if (hasFooter) {
       try {
-        docxBuffer = await injectFooterIntoDocx(docxBuffer, footerContent);
+        docxBuffer = await injectFooterIntoDocx(docxBuffer, footerContent, stylesheet);
         log('debug', 'Footer injected into DOCX via post-processing');
       } catch (footerError) {
         log('warn', 'Failed to inject footer into DOCX, returning without footer', { error: footerError.message });
