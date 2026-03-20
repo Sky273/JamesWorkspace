@@ -271,7 +271,7 @@ export const updateEmailTemplateFrontSchema = z.object({
 export const compileEmailTemplateSchema = z.object({
   mjmlContent: z.string().min(1),
   subjectTemplate: z.string().max(500).optional(),
-  context: z.record(z.unknown()).optional()
+  context: z.record(z.string(), z.any()).optional()
 }).strip();
 
 // Consent schemas
@@ -300,13 +300,13 @@ export const createMailDraftSchema = z.object({
   missionId: z.string().uuid().optional().nullable(),
   versionNumber: z.number().optional().nullable(),
   templateId: z.string().uuid().optional().nullable(),
-  templateContext: z.record(z.unknown()).optional()
+  templateContext: z.record(z.string(), z.any()).optional()
 }).strip();
 
 // Batch Jobs schemas
 export const batchImproveSchema = z.object({
   resumeIds: z.array(z.string().uuid()).min(1).max(500),
-  options: z.record(z.unknown()).optional(),
+  options: z.record(z.string(), z.any()).optional(),
   firm_id: z.union([z.string(), z.number()]).optional()
 }).strip();
 
@@ -367,7 +367,7 @@ export const findProfilesSchema = z.object({
   limit: z.number().min(0).max(100).optional(),
   minScore: z.number().min(0).max(100).optional(),
   status: z.string().max(50).optional(),
-  weights: z.record(z.number()).optional(),
+  weights: z.record(z.string(), z.number()).optional(),
   dealId: z.string().uuid().optional().nullable()
 }).strip();
 
@@ -384,7 +384,7 @@ export const analyzeTextSchema = z.object({
 
 export const improveTextSchema = z.object({
   text: z.string().min(1).max(MAX_TEXT_LENGTH),
-  analysis: z.record(z.unknown()).optional().nullable(),
+  analysis: z.record(z.string(), z.any()).optional().nullable(),
   fileName: z.string().max(500).optional().nullable()
 }).strip();
 
@@ -400,7 +400,7 @@ export const aiModifySchema = z.object({
 
 // Email Template Preview schema
 export const previewEmailTemplateSchema = z.object({
-  context: z.record(z.unknown()).optional()
+  context: z.record(z.string(), z.any()).optional()
 }).strip();
 
 // Google Auth Token schema
