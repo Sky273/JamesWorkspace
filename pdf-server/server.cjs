@@ -8,10 +8,10 @@ const bodyParser = require('body-parser');
 const path = require('path');
 const cors = require('cors');
 
-// Import generators
-const { log } = require('./lib/logger.cjs');
-const { generatePdf } = require('./lib/pdfGenerator.cjs');
-const { generateDocx, getDocMimeType, getDocExtension } = require('./lib/docxGenerator.cjs');
+// Import generators (module references for testability)
+const logger = require('./lib/logger.cjs');
+const pdfGen = require('./lib/pdfGenerator.cjs');
+const docxGen = require('./lib/docxGenerator.cjs');
 
 const app = express();
 const PORT = process.env.PDF_SERVER_PORT || 3002;
@@ -41,7 +41,7 @@ function startRateLimitCleanup() {
       }
     }
     if (cleaned > 0) {
-      log('debug', 'Rate limit cleanup', { entriesRemoved: cleaned, remaining: requestCounts.size });
+      logger.log('debug', 'Rate limit cleanup', { entriesRemoved: cleaned, remaining: requestCounts.size });
     }
   }, RATE_LIMIT_WINDOW); // Cleanup every minute
 }
@@ -93,7 +93,7 @@ function rateLimitMiddleware(req, res, next) {
   ipData.count++;
   
   if (ipData.count > RATE_LIMIT_MAX) {
-    log('warn', 'Rate limit exceeded', { ip, count: ipData.count });
+    logger.log('warn', 'Rate limit exceeded', { ip, count: ipData.count });
     return res.status(429).json({ error: 'Too many requests. Please try again later.' });
   }
   
@@ -105,17 +105,17 @@ function validatePdfRequest(req, res, next) {
   const { htmlContent, filename } = req.body;
   
   if (!htmlContent || typeof htmlContent !== 'string') {
-    log('warn', 'Invalid request: missing or invalid htmlContent');
+    logger.log('warn', 'Invalid request: missing or invalid htmlContent');
     return res.status(400).json({ error: 'htmlContent is required and must be a string' });
   }
   
   if (!filename || typeof filename !== 'string') {
-    log('warn', 'Invalid request: missing or invalid filename');
+    logger.log('warn', 'Invalid request: missing or invalid filename');
     return res.status(400).json({ error: 'filename is required and must be a string' });
   }
   
   if (htmlContent.length > MAX_HTML_SIZE) {
-    log('warn', 'HTML content too large', { size: htmlContent.length, max: MAX_HTML_SIZE });
+    logger.log('warn', 'HTML content too large', { size: htmlContent.length, max: MAX_HTML_SIZE });
     return res.status(400).json({ error: `HTML content too large. Max size: ${MAX_HTML_SIZE} bytes` });
   }
   
@@ -134,12 +134,12 @@ function validateDocxRequest(req, res, next) {
   const { htmlContent, filename } = req.body;
   
   if (!htmlContent || typeof htmlContent !== 'string') {
-    log('warn', 'Invalid request: missing or invalid htmlContent');
+    logger.log('warn', 'Invalid request: missing or invalid htmlContent');
     return res.status(400).json({ error: 'htmlContent is required and must be a string' });
   }
   
   if (!filename || typeof filename !== 'string') {
-    log('warn', 'Invalid request: missing or invalid filename');
+    logger.log('warn', 'Invalid request: missing or invalid filename');
     return res.status(400).json({ error: 'filename is required and must be a string' });
   }
   
@@ -156,7 +156,7 @@ app.post('/generate-pdf', rateLimitMiddleware, validatePdfRequest, async (req, r
   const startTime = Date.now();
 
   try {
-    const pdfBuffer = await generatePdf({
+    const pdfBuffer = await pdfGen.generatePdf({
       htmlContent,
       stylesheet,
       headerContent,
@@ -172,14 +172,14 @@ app.post('/generate-pdf', rateLimitMiddleware, validatePdfRequest, async (req, r
     res.end(pdfBuffer);
     
     const duration = Date.now() - startTime;
-    log('info', 'PDF generated successfully', { 
+    logger.log('info', 'PDF generated successfully', { 
       filename, 
       duration: `${duration}ms`, 
       size: `${Math.round(pdfBuffer.length / 1024)}KB` 
     });
   } catch (error) {
     const duration = Date.now() - startTime;
-    log('error', 'Error generating PDF', { 
+    logger.log('error', 'Error generating PDF', { 
       error: error.message, 
       filename, 
       duration: `${duration}ms`,
@@ -202,7 +202,7 @@ app.post('/generate-docx', rateLimitMiddleware, validateDocxRequest, async (req,
   try {
     const outputFormat = format === 'doc' ? 'doc' : 'docx';
     
-    const docxBuffer = await generateDocx({
+    const docxBuffer = await docxGen.generateDocx({
       htmlContent,
       stylesheet,
       headerContent,
@@ -213,28 +213,28 @@ app.post('/generate-docx', rateLimitMiddleware, validateDocxRequest, async (req,
 
     // Sanitize filename
     let sanitizedFilename = filename.replace(/[^a-zA-Z0-9._-]/g, '_').substring(0, 255);
-    const extension = getDocExtension(outputFormat);
+    const extension = docxGen.getDocExtension(outputFormat);
     
     if (!sanitizedFilename.endsWith(extension)) {
       sanitizedFilename = sanitizedFilename.replace(/\.(docx?|pdf)$/i, '') + extension;
     }
 
     res.set({
-      'Content-Type': getDocMimeType(outputFormat),
+      'Content-Type': docxGen.getDocMimeType(outputFormat),
       'Content-Disposition': `attachment; filename="${sanitizedFilename}"`,
       'Content-Length': docxBuffer.length
     });
     res.end(docxBuffer);
 
     const duration = Date.now() - startTime;
-    log('info', `${outputFormat.toUpperCase()} generated successfully`, { 
+    logger.log('info', `${outputFormat.toUpperCase()} generated successfully`, { 
       filename: sanitizedFilename, 
       duration: `${duration}ms`, 
       size: `${Math.round(docxBuffer.length / 1024)}KB` 
     });
   } catch (error) {
     const duration = Date.now() - startTime;
-    log('error', 'Error generating DOCX', { 
+    logger.log('error', 'Error generating DOCX', { 
       error: error.message, 
       filename, 
       duration: `${duration}ms`,
@@ -279,7 +279,7 @@ app.get('/*splat', (req, res) => {
 // ============================================
 
 const gracefulShutdown = async (signal) => {
-  log('info', `${signal} received, shutting down gracefully`);
+  logger.log('info', `${signal} received, shutting down gracefully`);
   
   // Stop rate limit cleanup interval
   stopRateLimitCleanup();
@@ -287,7 +287,7 @@ const gracefulShutdown = async (signal) => {
   // Clear rate limit map
   requestCounts.clear();
   
-  log('info', 'PDF server shutdown complete');
+  logger.log('info', 'PDF server shutdown complete');
   process.exit(0);
 };
 
@@ -299,7 +299,7 @@ if (process.platform === 'win32') {
 }
 
 process.on('disconnect', () => {
-  log('info', 'Parent process disconnected');
+  logger.log('info', 'Parent process disconnected');
   gracefulShutdown('DISCONNECT');
 });
 
@@ -307,15 +307,21 @@ process.on('disconnect', () => {
 // START SERVER
 // ============================================
 
-app.listen(PORT, async () => {
-  // Start rate limit cleanup to prevent memory leaks
-  startRateLimitCleanup();
-  
-  log('info', `PDF Server started on port ${PORT}`, {
-    config: {
-      pdfTimeout: PDF_GENERATION_TIMEOUT,
-      rateLimit: RATE_LIMIT_MAX,
-      maxHtmlSize: MAX_HTML_SIZE
-    }
+// Export app for testing (supertest)
+module.exports = { app };
+
+// Only listen when run directly (not when required by tests)
+if (require.main === module) {
+  app.listen(PORT, async () => {
+    // Start rate limit cleanup to prevent memory leaks
+    startRateLimitCleanup();
+    
+    logger.log('info', `PDF Server started on port ${PORT}`, {
+      config: {
+        pdfTimeout: PDF_GENERATION_TIMEOUT,
+        rateLimit: RATE_LIMIT_MAX,
+        maxHtmlSize: MAX_HTML_SIZE
+      }
+    });
   });
-});
+}

@@ -18,6 +18,19 @@ export default defineConfig({
           },
         },
       },
+      {
+        test: {
+          name: 'pdf-server',
+          globals: true,
+          environment: 'node',
+          include: ['pdf-server/tests/**/*.test.js'],
+          exclude: ['node_modules', 'dist'],
+          env: {
+            NODE_ENV: 'test',
+            LOG_LEVEL: 'error',
+          },
+        },
+      },
       'client/vitest.config.ts',
     ],
   },

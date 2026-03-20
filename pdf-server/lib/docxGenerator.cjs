@@ -38,6 +38,30 @@ function escapeXml(str) {
 }
 
 /**
+ * Decode HTML entities (named + numeric) to their Unicode characters.
+ * Must be called BEFORE escapeXml() so that e.g. &bull; becomes • first,
+ * then escapeXml() only escapes the 4 XML-special characters.
+ */
+const HTML_ENTITIES = {
+  nbsp: '\u00A0', bull: '\u2022', middot: '\u00B7', euro: '\u20AC',
+  deg: '\u00B0', copy: '\u00A9', reg: '\u00AE', trade: '\u2122',
+  mdash: '\u2014', ndash: '\u2013', laquo: '\u00AB', raquo: '\u00BB',
+  hellip: '\u2026', prime: '\u2032', Prime: '\u2033',
+  lsquo: '\u2018', rsquo: '\u2019', ldquo: '\u201C', rdquo: '\u201D',
+  times: '\u00D7', divide: '\u00F7', plusmn: '\u00B1', micro: '\u00B5',
+  para: '\u00B6', sect: '\u00A7', dagger: '\u2020', Dagger: '\u2021',
+  amp: '&', lt: '<', gt: '>', quot: '"', apos: "'",
+};
+
+function decodeHtmlEntities(str) {
+  if (!str || !str.includes('&')) return str;
+  return str
+    .replace(/&#x([0-9A-Fa-f]+);/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10)))
+    .replace(/&([a-zA-Z]+);/g, (m, name) => HTML_ENTITIES[name] ?? m);
+}
+
+/**
  * Extract base64 images from HTML <img> tags.
  * Replaces each <img src="data:..."> with a Unicode marker \uFFF1IMGF:rId:w:h\uFFF1
  * and returns the processed HTML plus an array of image metadata + binary data.
@@ -148,7 +172,7 @@ function buildRuns(text, runProps) {
       runs += `<w:r>${runProps}<w:instrText xml:space="preserve"> ${field} </w:instrText></w:r>`;
       runs += `<w:r>${runProps}<w:fldChar w:fldCharType="end"/></w:r>`;
     } else if (part) {
-      runs += `<w:r>${runProps}<w:t xml:space="preserve">${escapeXml(part)}</w:t></w:r>`;
+      runs += `<w:r>${runProps}<w:t xml:space="preserve">${escapeXml(decodeHtmlEntities(part))}</w:t></w:r>`;
     }
   }
   return runs;
@@ -717,4 +741,13 @@ function getDocExtension(format) {
   return format === 'doc' ? '.doc' : '.docx';
 }
 
-module.exports = { generateDocx, getDocMimeType, getDocExtension };
+module.exports = {
+  generateDocx, getDocMimeType, getDocExtension,
+  // Internal helpers exported for testing
+  _internal: {
+    escapeXml, decodeHtmlEntities, HTML_ENTITIES, buildRunProps, buildRuns, parseInlineHtml,
+    extractImagesFromHtml, buildImageDrawing,
+    convertTableToOoxml, convertBlocksToOoxml, buildFlexParagraph,
+    htmlToOoxml, injectFooterIntoDocx, buildPandocHtml
+  }
+};

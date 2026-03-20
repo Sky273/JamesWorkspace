@@ -14,6 +14,8 @@
     "test": "vitest run --config server/vitest.config.js",
     "test:watch": "vitest --config server/vitest.config.js",
     "test:coverage": "vitest run --coverage --config server/vitest.config.js",
+    "test:pdf": "vitest run --project pdf-server",
+    "test:pdf:watch": "vitest --project pdf-server",
     "test:client": "vitest run --config client/vitest.config.ts",
     "test:client:watch": "vitest --config client/vitest.config.ts",
     "quickstart": "node scripts/quickstart.js",
