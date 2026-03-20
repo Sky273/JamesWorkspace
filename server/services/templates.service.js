@@ -5,13 +5,17 @@
  */
 
 import { query } from '../config/database.js';
+import { escapeLike } from '../utils/postgresHelpers.js';
 
 /**
- * Escape special characters for LIKE queries
+ * Allowed column names for dynamic INSERT/UPDATE on the templates table.
+ * Any key not in this set is silently dropped to prevent SQL injection.
  */
-function escapeLike(str) {
-    return str.replace(/[%_\\]/g, '\\$&');
-}
+const ALLOWED_COLUMNS = new Set([
+    'name', 'description', 'popular', 'status', 'tags', 'preview_image_url',
+    'header_content', 'template_content', 'footer_content', 'footer_height',
+    'stylesheet', 'firm_id'
+]);
 
 /**
  * List templates with pagination and filters
@@ -113,7 +117,7 @@ export async function createTemplate(templateData) {
     let idx = 1;
 
     for (const [key, value] of Object.entries(templateData)) {
-        if (value !== undefined) {
+        if (value !== undefined && ALLOWED_COLUMNS.has(key)) {
             fields.push(key);
             values.push(value);
             placeholders.push(`$${idx}`);
@@ -141,7 +145,7 @@ export async function updateTemplate(id, templateData) {
     let idx = 1;
 
     for (const [key, value] of Object.entries(templateData)) {
-        if (value !== undefined) {
+        if (value !== undefined && ALLOWED_COLUMNS.has(key)) {
             setClauses.push(`${key} = $${idx}`);
             params.push(value);
             idx++;

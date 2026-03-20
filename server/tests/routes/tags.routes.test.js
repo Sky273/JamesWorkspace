@@ -192,7 +192,7 @@ describe('Tags Routes', () => {
                 .send({ category: 'Skills' });
 
             expect(res.status).toBe(400);
-            expect(res.body.error).toContain('Missing required fields');
+            expect(res.body.error).toBe('Validation failed');
         });
 
         it('should return 400 for invalid category', async () => {
@@ -202,7 +202,7 @@ describe('Tags Routes', () => {
                 .send({ category: 'InvalidCat', oldName: 'a', newName: 'b' });
 
             expect(res.status).toBe(400);
-            expect(res.body.error).toContain('Invalid category');
+            expect(res.body.error).toBe('Validation failed');
         });
 
         it('should return 500 on DB error', async () => {

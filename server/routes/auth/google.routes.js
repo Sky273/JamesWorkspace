@@ -6,6 +6,7 @@ import express from 'express';
 import crypto from 'crypto';
 import { authenticateToken } from '../../middleware/auth.middleware.js';
 import { authLimiter } from '../../middleware/rateLimit.middleware.js';
+import { validateBody, googleTokenSchema } from '../../utils/validation.js';
 import { generateAccessToken, generateRefreshToken } from '../../services/jwt.service.js';
 import { securityLog, getRequestMetadata, LOG_LEVELS, SECURITY_EVENTS } from '../../services/security.service.js';
 import { safeLog } from '../../utils/logger.backend.js';
@@ -239,7 +240,7 @@ router.get('/google/callback', async (req, res) => {
 });
 
 // POST /api/auth/google/token - Sign in with Google ID token
-router.post('/google/token', authLimiter, async (req, res) => {
+router.post('/google/token', authLimiter, validateBody(googleTokenSchema), async (req, res) => {
     try {
         const { idToken } = req.body;
         const metadata = getRequestMetadata(req);

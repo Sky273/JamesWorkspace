@@ -6,7 +6,8 @@
 import express from 'express';
 import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
 import { safeLog } from '../utils/logger.backend.js';
-import { validateBody, updateBackupSettingsSchema, testBackupConnectionSchema } from '../utils/validation.js';
+import { validateBody, updateBackupSettingsSchema, testBackupConnectionSchema, restoreBackupSchema } from '../utils/validation.js';
+import { securityLog, getRequestMetadata, LOG_LEVELS, SECURITY_EVENTS } from '../services/security.service.js';
 import {
     getBackupSettings,
     saveBackupSettings,
@@ -279,7 +280,7 @@ router.get('/list-remote', async (req, res) => {
  * POST /api/backup/restore
  * Restore database from backup
  */
-router.post('/restore', async (req, res) => {
+router.post('/restore', validateBody(restoreBackupSchema), async (req, res) => {
     try {
         const { filename } = req.body;
         
@@ -296,6 +297,14 @@ router.post('/restore', async (req, res) => {
         });
         
         const result = await restoreBackup(filename);
+        
+        securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.BACKUP_RESTORE, {
+            ...getRequestMetadata(req),
+            restoredBy: req.user?.id,
+            action: 'BACKUP_RESTORE',
+            message: 'Database restored from backup',
+            metadata: { filename }
+        });
         
         safeLog('info', 'Database restore completed', { filename });
         

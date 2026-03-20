@@ -107,7 +107,7 @@ describe('AuthContext', () => {
         });
 
         it('should set user when /api/auth/me succeeds', async () => {
-            const mockUser = { id: '1', name: 'Test', email: 'test@test.com', role: 'user', status: 'Active' };
+            const mockUser = { id: '1', name: 'Test', email: 'test@test.com', role: 'user', status: 'active' };
 
             (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
                 ok: true,

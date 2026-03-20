@@ -56,9 +56,13 @@ function createTestApp() {
     return app;
 }
 
+const RESUME_ID = '00000000-0000-0000-0000-000000000001';
+const COMMENT_ID = '00000000-0000-0000-0000-000000000011';
+const COMMENT_MISSING_ID = '00000000-0000-0000-0000-000000000099';
+
 const sampleComment = {
-    id: 'com-1',
-    resume_id: 'res-1',
+    id: COMMENT_ID,
+    resume_id: RESUME_ID,
     user_id: 'user-123',
     user_name: 'Test User',
     content: 'Great CV!',
@@ -79,7 +83,7 @@ describe('Resume Comments Routes', () => {
     // ==========================================
     describe('GET /:resumeId/comments', () => {
         it('should return 401 without auth', async () => {
-            const res = await request(app).get('/api/resumes/res-1/comments');
+            const res = await request(app).get(`/api/resumes/${RESUME_ID}/comments`);
             expect(res.status).toBe(401);
         });
 
@@ -87,21 +91,21 @@ describe('Resume Comments Routes', () => {
             mockGetComments.mockResolvedValueOnce([sampleComment]);
 
             const res = await request(app)
-                .get('/api/resumes/res-1/comments')
+                .get(`/api/resumes/${RESUME_ID}/comments`)
                 .set('Authorization', 'Bearer valid-token');
 
             expect(res.status).toBe(200);
             expect(res.body.success).toBe(true);
             expect(res.body.comments).toHaveLength(1);
             expect(res.body.count).toBe(1);
-            expect(mockGetComments).toHaveBeenCalledWith('res-1', 'user-123');
+            expect(mockGetComments).toHaveBeenCalledWith(RESUME_ID, 'user-123');
         });
 
         it('should return empty list when no comments', async () => {
             mockGetComments.mockResolvedValueOnce([]);
 
             const res = await request(app)
-                .get('/api/resumes/res-1/comments')
+                .get(`/api/resumes/${RESUME_ID}/comments`)
                 .set('Authorization', 'Bearer valid-token');
 
             expect(res.status).toBe(200);
@@ -113,7 +117,7 @@ describe('Resume Comments Routes', () => {
             mockGetComments.mockRejectedValueOnce(new Error('DB error'));
 
             const res = await request(app)
-                .get('/api/resumes/res-1/comments')
+                .get(`/api/resumes/${RESUME_ID}/comments`)
                 .set('Authorization', 'Bearer valid-token');
 
             expect(res.status).toBe(500);
@@ -129,7 +133,7 @@ describe('Resume Comments Routes', () => {
             mockAddComment.mockResolvedValueOnce(sampleComment);
 
             const res = await request(app)
-                .post('/api/resumes/res-1/comments')
+                .post(`/api/resumes/${RESUME_ID}/comments`)
                 .set('Authorization', 'Bearer valid-token')
                 .send({ content: 'Great CV!', isPrivate: false });
 
@@ -137,7 +141,7 @@ describe('Resume Comments Routes', () => {
             expect(res.body.success).toBe(true);
             expect(res.body.comment).toBeDefined();
             expect(mockAddComment).toHaveBeenCalledWith(expect.objectContaining({
-                resumeId: 'res-1',
+                resumeId: RESUME_ID,
                 userId: 'user-123',
                 userName: 'Test User',
                 content: 'Great CV!',
@@ -147,17 +151,17 @@ describe('Resume Comments Routes', () => {
 
         it('should return 400 for empty content', async () => {
             const res = await request(app)
-                .post('/api/resumes/res-1/comments')
+                .post(`/api/resumes/${RESUME_ID}/comments`)
                 .set('Authorization', 'Bearer valid-token')
                 .send({ content: '' });
 
             expect(res.status).toBe(400);
-            expect(res.body.error).toBe('Comment content is required');
+            expect(res.body.error).toBe('Validation failed');
         });
 
         it('should return 400 for missing content', async () => {
             const res = await request(app)
-                .post('/api/resumes/res-1/comments')
+                .post(`/api/resumes/${RESUME_ID}/comments`)
                 .set('Authorization', 'Bearer valid-token')
                 .send({});
 
@@ -166,7 +170,7 @@ describe('Resume Comments Routes', () => {
 
         it('should return 400 for whitespace-only content', async () => {
             const res = await request(app)
-                .post('/api/resumes/res-1/comments')
+                .post(`/api/resumes/${RESUME_ID}/comments`)
                 .set('Authorization', 'Bearer valid-token')
                 .send({ content: '   ' });
 
@@ -177,7 +181,7 @@ describe('Resume Comments Routes', () => {
             mockAddComment.mockRejectedValueOnce(new Error('DB error'));
 
             const res = await request(app)
-                .post('/api/resumes/res-1/comments')
+                .post(`/api/resumes/${RESUME_ID}/comments`)
                 .set('Authorization', 'Bearer valid-token')
                 .send({ content: 'test' });
 
@@ -194,20 +198,20 @@ describe('Resume Comments Routes', () => {
             mockUpdateComment.mockResolvedValueOnce({ ...sampleComment, content: 'Updated!' });
 
             const res = await request(app)
-                .put('/api/resumes/res-1/comments/com-1')
+                .put(`/api/resumes/${RESUME_ID}/comments/${COMMENT_ID}`)
                 .set('Authorization', 'Bearer valid-token')
                 .send({ content: 'Updated!' });
 
             expect(res.status).toBe(200);
             expect(res.body.success).toBe(true);
-            expect(mockUpdateComment).toHaveBeenCalledWith('com-1', 'user-123', 'Updated!');
+            expect(mockUpdateComment).toHaveBeenCalledWith(COMMENT_ID, 'user-123', 'Updated!');
         });
 
         it('should return 404 if comment not found or not owner', async () => {
             mockUpdateComment.mockResolvedValueOnce(null);
 
             const res = await request(app)
-                .put('/api/resumes/res-1/comments/com-missing')
+                .put(`/api/resumes/${RESUME_ID}/comments/${COMMENT_MISSING_ID}`)
                 .set('Authorization', 'Bearer valid-token')
                 .send({ content: 'Updated!' });
 
@@ -217,7 +221,7 @@ describe('Resume Comments Routes', () => {
 
         it('should return 400 for empty content', async () => {
             const res = await request(app)
-                .put('/api/resumes/res-1/comments/com-1')
+                .put(`/api/resumes/${RESUME_ID}/comments/${COMMENT_ID}`)
                 .set('Authorization', 'Bearer valid-token')
                 .send({ content: '' });
 
@@ -228,7 +232,7 @@ describe('Resume Comments Routes', () => {
             mockUpdateComment.mockRejectedValueOnce(new Error('DB error'));
 
             const res = await request(app)
-                .put('/api/resumes/res-1/comments/com-1')
+                .put(`/api/resumes/${RESUME_ID}/comments/${COMMENT_ID}`)
                 .set('Authorization', 'Bearer valid-token')
                 .send({ content: 'test' });
 
@@ -245,32 +249,32 @@ describe('Resume Comments Routes', () => {
             mockDeleteComment.mockResolvedValueOnce(true);
 
             const res = await request(app)
-                .delete('/api/resumes/res-1/comments/com-1')
+                .delete(`/api/resumes/${RESUME_ID}/comments/${COMMENT_ID}`)
                 .set('Authorization', 'Bearer valid-token');
 
             expect(res.status).toBe(200);
             expect(res.body.success).toBe(true);
             expect(res.body.message).toBe('Comment deleted');
-            expect(mockDeleteComment).toHaveBeenCalledWith('com-1', 'user-123', false);
+            expect(mockDeleteComment).toHaveBeenCalledWith(COMMENT_ID, 'user-123', false);
         });
 
         it('should allow admin to delete any comment', async () => {
             mockDeleteComment.mockResolvedValueOnce(true);
 
             const res = await request(app)
-                .delete('/api/resumes/res-1/comments/com-1')
+                .delete(`/api/resumes/${RESUME_ID}/comments/${COMMENT_ID}`)
                 .set('Authorization', 'Bearer valid-token')
                 .set('x-test-role', 'admin');
 
             expect(res.status).toBe(200);
-            expect(mockDeleteComment).toHaveBeenCalledWith('com-1', 'user-123', true);
+            expect(mockDeleteComment).toHaveBeenCalledWith(COMMENT_ID, 'user-123', true);
         });
 
         it('should return 404 if comment not found or unauthorized', async () => {
             mockDeleteComment.mockResolvedValueOnce(false);
 
             const res = await request(app)
-                .delete('/api/resumes/res-1/comments/com-missing')
+                .delete(`/api/resumes/${RESUME_ID}/comments/${COMMENT_MISSING_ID}`)
                 .set('Authorization', 'Bearer valid-token');
 
             expect(res.status).toBe(404);
@@ -280,7 +284,7 @@ describe('Resume Comments Routes', () => {
             mockDeleteComment.mockRejectedValueOnce(new Error('DB error'));
 
             const res = await request(app)
-                .delete('/api/resumes/res-1/comments/com-1')
+                .delete(`/api/resumes/${RESUME_ID}/comments/${COMMENT_ID}`)
                 .set('Authorization', 'Bearer valid-token');
 
             expect(res.status).toBe(500);
@@ -296,20 +300,20 @@ describe('Resume Comments Routes', () => {
             mockGetCommentCount.mockResolvedValueOnce(5);
 
             const res = await request(app)
-                .get('/api/resumes/res-1/comments/count')
+                .get(`/api/resumes/${RESUME_ID}/comments/count`)
                 .set('Authorization', 'Bearer valid-token');
 
             expect(res.status).toBe(200);
             expect(res.body.success).toBe(true);
             expect(res.body.count).toBe(5);
-            expect(mockGetCommentCount).toHaveBeenCalledWith('res-1', 'user-123');
+            expect(mockGetCommentCount).toHaveBeenCalledWith(RESUME_ID, 'user-123');
         });
 
         it('should return 500 on error', async () => {
             mockGetCommentCount.mockRejectedValueOnce(new Error('DB error'));
 
             const res = await request(app)
-                .get('/api/resumes/res-1/comments/count')
+                .get(`/api/resumes/${RESUME_ID}/comments/count`)
                 .set('Authorization', 'Bearer valid-token');
 
             expect(res.status).toBe(500);
@@ -325,7 +329,7 @@ describe('Resume Comments Routes', () => {
             mockGetComments.mockRejectedValueOnce(new Error('relation "resume_comments" does not exist'));
 
             const res = await request(app)
-                .get('/api/resumes/res-1/comments')
+                .get('/api/resumes/00000000-0000-0000-0000-000000000001/comments')
                 .set('Authorization', 'Bearer valid-token');
 
             expect(res.status).toBe(500);

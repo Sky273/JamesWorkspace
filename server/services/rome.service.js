@@ -236,7 +236,7 @@ async function getITMetiers() {
 }
 
 // ============================================
-// AIRTABLE STORAGE
+// DATABASE STORAGE
 // ============================================
 
 /**
@@ -426,7 +426,7 @@ async function collectITMetiers() {
                     details = { ...metier };
                 }
 
-                // Store in Airtable
+                // Store in database
                 const result = await storeMetier(details);
                 
                 if (result.action === 'created') {

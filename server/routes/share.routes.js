@@ -6,7 +6,7 @@
 import { Router, json } from 'express';
 import fs from 'fs/promises';
 import { authenticateToken } from '../middleware/auth.middleware.js';
-import { validateParams } from '../utils/validation.js';
+import { validateBody, validateParams, sharePdfSchema } from '../utils/validation.js';
 import shareResumeService from '../services/shareResume.service.js';
 import { safeLog } from '../utils/logger.backend.js';
 
@@ -20,7 +20,7 @@ router.use(json());
  * Generate a shareable PDF for an improved resume
  * Requires authentication
  */
-router.post('/resume/:resumeId/generate', authenticateToken, validateParams('resumeId'), async (req, res) => {
+router.post('/resume/:resumeId/generate', authenticateToken, validateParams('resumeId'), validateBody(sharePdfSchema), async (req, res) => {
     try {
         const { resumeId } = req.params;
         const { htmlContent, filename, stylesheet, headerContent, footerContent, footerHeight } = req.body;

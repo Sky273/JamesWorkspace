@@ -1,6 +1,6 @@
 // ============================================
 // BACKEND DEFAULT LLM PROMPTS CONFIGURATION
-// These are fallback prompts used when Airtable Settings are not available
+// These are fallback prompts used when database settings are not available
 // ============================================
 
 export const DEFAULT_IMPROVEMENT_PROMPT = `# Prompt runtime — Amélioration CV ResumeConverter

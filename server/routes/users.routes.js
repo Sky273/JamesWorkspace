@@ -1,6 +1,6 @@
 import express from 'express';
 import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
-import { validateParams } from '../utils/validation.js';
+import { validateBody, validateParams, updateUserProfileSchema } from '../utils/validation.js';
 import { safeLog } from '../utils/logger.backend.js';
 import * as usersService from '../services/users.service.js';
 
@@ -56,7 +56,7 @@ router.get('/', authenticateToken, requireAdmin, async (req, res) => {
 });
 
 // PUT /api/users/:id - Update user profile
-router.put('/:id', authenticateToken, validateParams('id'), async (req, res) => {
+router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateUserProfileSchema), async (req, res) => {
     try {
         const { id } = req.params;
         const userId = req.user.id;

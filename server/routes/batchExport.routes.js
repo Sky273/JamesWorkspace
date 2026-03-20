@@ -6,6 +6,7 @@
 import express from 'express';
 import JSZip from 'jszip';
 import { authenticateToken } from '../middleware/auth.middleware.js';
+import { validateBody, batchExportSchema } from '../utils/validation.js';
 import { safeLog } from '../utils/logger.backend.js';
 import * as batchExportService from '../services/batchExport.service.js';
 
@@ -55,7 +56,7 @@ function processTemplatePlaceholders(content, name, title) {
 }
 
 // POST /api/batch-export - Generate ZIP with multiple PDFs/DOCXs
-router.post('/', authenticateToken, async (req, res) => {
+router.post('/', authenticateToken, validateBody(batchExportSchema), async (req, res) => {
     try {
         const { resumeIds, templateId, format } = req.body;
         

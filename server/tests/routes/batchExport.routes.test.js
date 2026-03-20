@@ -36,6 +36,12 @@ vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));
 
+// Mock validation
+vi.mock('../../utils/validation.js', () => ({
+    validateBody: () => (req, res, next) => next(),
+    batchExportSchema: {}
+}));
+
 // Mock auth middleware
 vi.mock('../../middleware/auth.middleware.js', () => ({
     authenticateToken: (req, res, next) => {
@@ -62,6 +68,8 @@ function createTestApp() {
 }
 
 const AUTH = { Authorization: 'Bearer valid-token' };
+const RESUME_UUID = '00000000-0000-0000-0000-000000000001';
+const TEMPLATE_UUID = '00000000-0000-0000-0000-000000000002';
 
 describe('Batch Export Routes', () => {
     let app;
@@ -75,7 +83,7 @@ describe('Batch Export Routes', () => {
         it('should return 401 without auth', async () => {
             const res = await request(app)
                 .post('/api/batch-export')
-                .send({ resumeIds: ['r-1'], templateId: 't-1' });
+                .send({ resumeIds: [RESUME_UUID], templateId: TEMPLATE_UUID });
             expect(res.status).toBe(401);
         });
 
@@ -83,7 +91,7 @@ describe('Batch Export Routes', () => {
             const res = await request(app)
                 .post('/api/batch-export')
                 .set(AUTH)
-                .send({ templateId: 't-1' });
+                .send({ templateId: TEMPLATE_UUID });
             expect(res.status).toBe(400);
             expect(res.body.error).toContain('Resume IDs');
         });
@@ -92,7 +100,7 @@ describe('Batch Export Routes', () => {
             const res = await request(app)
                 .post('/api/batch-export')
                 .set(AUTH)
-                .send({ resumeIds: [], templateId: 't-1' });
+                .send({ resumeIds: [], templateId: TEMPLATE_UUID });
             expect(res.status).toBe(400);
         });
 
@@ -100,7 +108,7 @@ describe('Batch Export Routes', () => {
             const res = await request(app)
                 .post('/api/batch-export')
                 .set(AUTH)
-                .send({ resumeIds: ['r-1'] });
+                .send({ resumeIds: [RESUME_UUID] });
             expect(res.status).toBe(400);
             expect(res.body.error).toContain('Template ID');
         });
@@ -111,7 +119,7 @@ describe('Batch Export Routes', () => {
             const res = await request(app)
                 .post('/api/batch-export')
                 .set(AUTH)
-                .send({ resumeIds: ['r-1'], templateId: 't-1' });
+                .send({ resumeIds: [RESUME_UUID], templateId: TEMPLATE_UUID });
 
             expect(res.status).toBe(503);
             expect(res.body.error).toContain('PDF server');
@@ -124,7 +132,7 @@ describe('Batch Export Routes', () => {
             const res = await request(app)
                 .post('/api/batch-export')
                 .set(AUTH)
-                .send({ resumeIds: ['r-1'], templateId: 't-1' });
+                .send({ resumeIds: [RESUME_UUID], templateId: TEMPLATE_UUID });
 
             expect(res.status).toBe(404);
             expect(res.body.error).toContain('Template not found');
@@ -135,11 +143,11 @@ describe('Batch Export Routes', () => {
             mockFetch.mockResolvedValueOnce({ ok: true });
             // Template
             mockGetTemplateById.mockResolvedValueOnce(
-                { id: 't-1', template_content: '<div>-content-</div>', header_content: '', footer_content: '', stylesheet: '', footer_height: 25 }
+                { id: TEMPLATE_UUID, template_content: '<div>-content-</div>', header_content: '', footer_content: '', stylesheet: '', footer_height: 25 }
             );
             // Resume
             mockGetResumeById.mockResolvedValueOnce(
-                { id: 'r-1', name: 'John Doe', title: 'Dev', improved_text: 'CV content' }
+                { id: RESUME_UUID, name: 'John Doe', title: 'Dev', improved_text: 'CV content' }
             );
             // PDF generation
             mockFetch.mockResolvedValueOnce({
@@ -152,7 +160,7 @@ describe('Batch Export Routes', () => {
             const res = await request(app)
                 .post('/api/batch-export')
                 .set(AUTH)
-                .send({ resumeIds: ['r-1'], templateId: 't-1' });
+                .send({ resumeIds: [RESUME_UUID], templateId: TEMPLATE_UUID });
 
             expect(res.status).toBe(200);
             expect(res.headers['content-type']).toContain('application/zip');
@@ -161,7 +169,7 @@ describe('Batch Export Routes', () => {
         it('should return 500 if no files generated', async () => {
             mockFetch.mockResolvedValueOnce({ ok: true }); // health
             mockGetTemplateById.mockResolvedValueOnce(
-                { id: 't-1', template_content: '<div></div>' }
+                { id: TEMPLATE_UUID, template_content: '<div></div>' }
             );
             // Resume not found
             mockGetResumeById.mockResolvedValueOnce(null);
@@ -170,7 +178,7 @@ describe('Batch Export Routes', () => {
             const res = await request(app)
                 .post('/api/batch-export')
                 .set(AUTH)
-                .send({ resumeIds: ['r-1'], templateId: 't-1' });
+                .send({ resumeIds: [RESUME_UUID], templateId: TEMPLATE_UUID });
 
             expect(res.status).toBe(500);
             expect(res.body.error).toContain('No files');
@@ -179,11 +187,11 @@ describe('Batch Export Routes', () => {
         it('should handle PDF generation failure gracefully', async () => {
             mockFetch.mockResolvedValueOnce({ ok: true }); // health
             mockGetTemplateById.mockResolvedValueOnce(
-                { id: 't-1', template_content: '<div>-content-</div>' }
+                { id: TEMPLATE_UUID, template_content: '<div>-content-</div>' }
             );
             // Resume found
             mockGetResumeById.mockResolvedValueOnce(
-                { id: 'r-1', name: 'John', title: 'Dev', improved_text: 'text' }
+                { id: RESUME_UUID, name: 'John', title: 'Dev', improved_text: 'text' }
             );
             // PDF generation fails
             mockFetch.mockResolvedValueOnce({
@@ -195,7 +203,7 @@ describe('Batch Export Routes', () => {
             const res = await request(app)
                 .post('/api/batch-export')
                 .set(AUTH)
-                .send({ resumeIds: ['r-1'], templateId: 't-1' });
+                .send({ resumeIds: [RESUME_UUID], templateId: TEMPLATE_UUID });
 
             // No files generated -> 500
             expect(res.status).toBe(500);

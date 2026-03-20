@@ -5,7 +5,7 @@
 
 import express from 'express';
 import { authenticateToken } from '../middleware/auth.middleware.js';
-import { validateParams } from '../utils/validation.js';
+import { validateBody, validateParams, createEmailTemplateFrontSchema, updateEmailTemplateFrontSchema, compileEmailTemplateSchema, previewEmailTemplateSchema } from '../utils/validation.js';
 import { safeLog } from '../utils/logger.backend.js';
 import * as emailTemplatesService from '../services/emailTemplates.service.js';
 
@@ -129,7 +129,7 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
  * POST /api/email-templates
  * Create a new template
  */
-router.post('/', authenticateToken, async (req, res) => {
+router.post('/', authenticateToken, validateBody(createEmailTemplateFrontSchema), async (req, res) => {
     try {
         const firmId = await getFirmIdForUser(req.user);
         const userId = req.user.id || req.user.userId;
@@ -163,7 +163,7 @@ router.post('/', authenticateToken, async (req, res) => {
  * PUT /api/email-templates/:id
  * Update a template
  */
-router.put('/:id', authenticateToken, validateParams('id'), async (req, res) => {
+router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateEmailTemplateFrontSchema), async (req, res) => {
     try {
         const { id } = req.params;
         const firmId = await getFirmIdForUser(req.user);
@@ -268,7 +268,7 @@ router.post('/:id/duplicate', authenticateToken, async (req, res) => {
  * POST /api/email-templates/:id/preview
  * Preview a template with context data
  */
-router.post('/:id/preview', authenticateToken, async (req, res) => {
+router.post('/:id/preview', authenticateToken, validateParams('id'), validateBody(previewEmailTemplateSchema), async (req, res) => {
     try {
         const { id } = req.params;
         const firmId = await getFirmIdForUser(req.user);
@@ -296,7 +296,7 @@ router.post('/:id/preview', authenticateToken, async (req, res) => {
  * POST /api/email-templates/compile
  * Compile MJML content to HTML (for live preview in editor)
  */
-router.post('/compile', authenticateToken, async (req, res) => {
+router.post('/compile', authenticateToken, validateBody(compileEmailTemplateSchema), async (req, res) => {
     try {
         const { mjmlContent, subjectTemplate, context } = req.body;
         

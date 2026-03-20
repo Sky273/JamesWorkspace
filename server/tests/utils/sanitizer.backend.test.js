@@ -1,69 +1,15 @@
 /**
  * Tests for sanitizer.backend.js
- * escapeAirtableFormula, sanitizeHtmlContent
+ * sanitizeHtmlContent
  */
 
 import { describe, it, expect, vi } from 'vitest';
 
 vi.mock('../../utils/logger.backend.js', () => ({ safeLog: vi.fn() }));
 
-import { escapeAirtableFormula, sanitizeHtmlContent } from '../../utils/sanitizer.backend.js';
+import { sanitizeHtmlContent } from '../../utils/sanitizer.backend.js';
 
 describe('sanitizer.backend', () => {
-    describe('escapeAirtableFormula', () => {
-        it('should return non-string values unchanged', () => {
-            expect(escapeAirtableFormula(null)).toBeNull();
-            expect(escapeAirtableFormula(undefined)).toBeUndefined();
-            expect(escapeAirtableFormula(42)).toBe(42);
-            expect(escapeAirtableFormula('')).toBe('');
-        });
-
-        it('should neutralize dangerous prefix =', () => {
-            const result = escapeAirtableFormula('=SUM(A1)');
-            // Prepended ' gets escaped to \' by the escape step
-            expect(result.startsWith("\\'")).toBe(true);
-        });
-
-        it('should neutralize dangerous prefix +', () => {
-            const result = escapeAirtableFormula('+cmd');
-            expect(result.startsWith("\\'")).toBe(true);
-        });
-
-        it('should neutralize dangerous prefix -', () => {
-            const result = escapeAirtableFormula('-1+1');
-            expect(result.startsWith("\\'")).toBe(true);
-        });
-
-        it('should neutralize dangerous prefix @', () => {
-            const result = escapeAirtableFormula('@import');
-            expect(result.startsWith("\\'")).toBe(true);
-        });
-
-        it('should escape special characters', () => {
-            const result = escapeAirtableFormula('hello(world)');
-            expect(result).toContain('\\(');
-            expect(result).toContain('\\)');
-        });
-
-        it('should escape curly braces and commas', () => {
-            const result = escapeAirtableFormula('{a,b}');
-            expect(result).toContain('\\{');
-            expect(result).toContain('\\}');
-            expect(result).toContain('\\,');
-        });
-
-        it('should escape quotes', () => {
-            const result = escapeAirtableFormula("it's a \"test\"");
-            expect(result).toContain("\\'");
-            expect(result).toContain('\\"');
-        });
-
-        it('should not prepend quote for safe strings', () => {
-            const result = escapeAirtableFormula('Normal text');
-            expect(result.startsWith("'")).toBe(false);
-        });
-    });
-
     describe('sanitizeHtmlContent', () => {
         it('should allow safe HTML tags', () => {
             const input = '<p>Hello <strong>world</strong></p>';

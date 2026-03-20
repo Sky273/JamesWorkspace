@@ -1,7 +1,8 @@
 import express from 'express';
 import multer from 'multer';
 import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
-import { validateBody, validateParams, createFirmSchema } from '../utils/validation.js';
+import { validateBody, validateParams, createFirmSchema, updateFirmSchema } from '../utils/validation.js';
+import { securityLog, getRequestMetadata, LOG_LEVELS, SECURITY_EVENTS } from '../services/security.service.js';
 import { firmsCache } from '../services/cache.service.js';
 import { safeLog } from '../utils/logger.backend.js';
 import * as firmsService from '../services/firms.service.js';
@@ -102,7 +103,7 @@ router.post('/', authenticateToken, requireAdmin, validateBody(createFirmSchema)
 });
 
 // PUT /api/firms/:id - Update firm
-router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), async (req, res) => {
+router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), validateBody(updateFirmSchema), async (req, res) => {
     try {
         firmsCache.invalidate('all_firms');
         
@@ -152,6 +153,14 @@ router.delete('/:id', authenticateToken, requireAdmin, validateParams('id'), asy
         
         firmsCache.invalidate('all_firms');
         await firmsService.deleteFirm(id);
+        
+        securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.FIRM_DELETED, {
+            ...getRequestMetadata(req),
+            firmId: id,
+            deletedBy: req.user.id,
+            action: 'FIRM_DELETED',
+            message: 'Firm deleted by admin'
+        });
         
         res.json({ message: 'Firm deleted successfully' });
     } catch (error) {

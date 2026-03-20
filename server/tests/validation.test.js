@@ -3,34 +3,30 @@
  */
 import { describe, it, expect } from 'vitest';
 import {
-  isValidAirtableId,
+  isValidId,
   isValidEmail,
   sanitizeText,
   signInSchema,
   registerSchema,
   createUserSchema,
-  createMissionSchema,
-  airtableIdSchema
+  createMissionSchema
 } from '../utils/validation.js';
 
 describe('Validation Utilities', () => {
   
-  describe('isValidAirtableId', () => {
-    it('should return true for valid Airtable IDs', () => {
-      expect(isValidAirtableId('recABCDEFGHIJKLMN')).toBe(true);
-      expect(isValidAirtableId('rec1234567890abcd')).toBe(true);
-      expect(isValidAirtableId('recXyZ123AbC456De')).toBe(true);
+  describe('isValidId', () => {
+    it('should return true for valid UUIDs', () => {
+      expect(isValidId('550e8400-e29b-41d4-a716-446655440000')).toBe(true);
+      expect(isValidId('00000000-0000-0000-0000-000000000001')).toBe(true);
     });
 
-    it('should return false for invalid Airtable IDs', () => {
-      expect(isValidAirtableId('')).toBe(false);
-      expect(isValidAirtableId('abc')).toBe(false);
-      expect(isValidAirtableId('recABC')).toBe(false); // Too short
-      expect(isValidAirtableId('recABCDEFGHIJKLMNO')).toBe(false); // Too long
-      expect(isValidAirtableId('xxxABCDEFGHIJKLMN')).toBe(false); // Wrong prefix
-      expect(isValidAirtableId('rec-BCDEFGHIJKLMN')).toBe(false); // Invalid char
-      expect(isValidAirtableId(null)).toBe(false);
-      expect(isValidAirtableId(undefined)).toBe(false);
+    it('should return false for invalid IDs', () => {
+      expect(isValidId('')).toBe(false);
+      expect(isValidId('abc')).toBe(false);
+      expect(isValidId('recABCDEFGHIJKLMN')).toBe(false);
+      expect(isValidId('not-a-uuid')).toBe(false);
+      expect(isValidId(null)).toBe(false);
+      expect(isValidId(undefined)).toBe(false);
     });
   });
 
@@ -187,14 +183,4 @@ describe('Zod Schemas', () => {
     });
   });
 
-  describe('airtableIdSchema', () => {
-    it('should validate correct Airtable IDs', () => {
-      expect(() => airtableIdSchema.parse('recABCDEFGHIJKLMN')).not.toThrow();
-    });
-
-    it('should reject invalid Airtable IDs', () => {
-      expect(() => airtableIdSchema.parse('invalid')).toThrow();
-      expect(() => airtableIdSchema.parse('')).toThrow();
-    });
-  });
 });

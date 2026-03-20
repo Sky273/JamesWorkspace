@@ -5,7 +5,8 @@
 
 import express from 'express';
 import { authenticateToken, requireAdmin, isUserAdmin } from '../../middleware/auth.middleware.js';
-import { validateBody, validateParams, createTemplateSchema } from '../../utils/validation.js';
+import { validateBody, validateParams, createTemplateSchema, updateTemplateSchema } from '../../utils/validation.js';
+import { securityLog, getRequestMetadata, LOG_LEVELS, SECURITY_EVENTS } from '../../services/security.service.js';
 import { templatesCache } from '../../services/cache.service.js';
 import { safeLog } from '../../utils/logger.backend.js';
 import { mapTemplateToFrontend, mapTemplateFromFrontend } from '../../utils/mappers.js';
@@ -133,7 +134,7 @@ router.post('/', authenticateToken, requireAdmin, validateBody(createTemplateSch
 });
 
 // PUT /api/templates/:id - Update template
-router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), async (req, res) => {
+router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), validateBody(updateTemplateSchema), async (req, res) => {
     try {
         templatesCache.invalidate('all_templates');
         
@@ -199,6 +200,14 @@ router.delete('/:id', authenticateToken, requireAdmin, validateParams('id'), asy
         
         templatesCache.invalidate('all_templates');
         await templatesService.deleteTemplate(id);
+        
+        securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.TEMPLATE_DELETED, {
+            ...getRequestMetadata(req),
+            templateId: id,
+            deletedBy: req.user.id,
+            action: 'TEMPLATE_DELETED',
+            message: 'Template deleted by admin'
+        });
         
         res.json({ message: 'Template deleted successfully' });
     } catch (error) {

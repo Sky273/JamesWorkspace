@@ -156,7 +156,7 @@ describe('Google OAuth Routes', () => {
                 .send({});
 
             expect(res.status).toBe(400);
-            expect(res.body.error).toContain('ID token');
+            expect(res.body.error).toBe('Validation failed');
         });
 
         it('should sign in existing user', async () => {

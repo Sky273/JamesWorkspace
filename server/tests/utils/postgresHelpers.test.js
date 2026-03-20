@@ -43,8 +43,6 @@ import {
     transaction,
     buildWhereClause,
     escapeLike,
-    airtableToPostgres,
-    postgrestoAirtable,
     validatePromptSize
 } from '../../utils/postgresHelpers.js';
 
@@ -241,7 +239,7 @@ describe('postgresHelpers', () => {
             );
         });
 
-        it('should support Airtable-style fields format', async () => {
+        it('should support legacy fields format', async () => {
             __mockClient.query.mockResolvedValueOnce({});
             __mockClient.query.mockResolvedValueOnce({ rows: [{ id: '1' }] });
 
@@ -465,52 +463,6 @@ describe('postgresHelpers', () => {
 
         it('should return unchanged string without special chars', () => {
             expect(escapeLike('normal text')).toBe('normal text');
-        });
-    });
-
-    describe('airtableToPostgres', () => {
-        it('should convert Airtable record to PostgreSQL format', () => {
-            const airtableRecord = {
-                id: 'rec123',
-                fields: { Name: 'Test', Status: 'active' }
-            };
-
-            const result = airtableToPostgres(airtableRecord);
-
-            expect(result).toEqual({
-                id: 'rec123',
-                Name: 'Test',
-                Status: 'active'
-            });
-        });
-
-        it('should return as-is if already PostgreSQL format', () => {
-            const pgRecord = { id: '123', name: 'Test' };
-
-            const result = airtableToPostgres(pgRecord);
-
-            expect(result).toEqual(pgRecord);
-        });
-
-        it('should return null for null input', () => {
-            expect(airtableToPostgres(null)).toBeNull();
-        });
-    });
-
-    describe('postgrestoAirtable', () => {
-        it('should convert PostgreSQL row to Airtable format', () => {
-            const pgRow = { id: '123', name: 'Test', status: 'active' };
-
-            const result = postgrestoAirtable(pgRow);
-
-            expect(result).toEqual({
-                id: '123',
-                fields: { name: 'Test', status: 'active' }
-            });
-        });
-
-        it('should return null for null input', () => {
-            expect(postgrestoAirtable(null)).toBeNull();
         });
     });
 

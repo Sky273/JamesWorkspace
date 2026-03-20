@@ -945,7 +945,7 @@ Page de veille complète sur le marché du travail IT en France, permettant de s
 #### Collecte et analyse de données
  - Intégration API France Travail (OAuth2) pour collecte d'offres d'emploi
  - Intégration API Adzuna pour données salariales et tendances
- - Stockage des facts dans Airtable (table MarketFacts)
+ - Stockage des facts dans PostgreSQL (table market_facts)
  - Collecte par codes ROME IT, régions françaises et mots-clés techniques
  - Histogrammes de salaires et top entreprises qui recrutent
 
@@ -998,7 +998,7 @@ Page de veille complète sur le marché du travail IT en France, permettant de s
 
 ## v1.1.6 - 2026-01-29
  - Sécurité renforcée : blacklist JWT, révocation tokens au logout, logs sécurité persistés
- - Fiabilité améliorée : retry avec backoff exponentiel et circuit breakers pour LLM/Airtable
+ - Fiabilité améliorée : retry avec backoff exponentiel et circuit breakers pour LLM
  - Documentation API Swagger, métriques persistées, types TypeScript centralisés
 
 ## v1.1.5 - 2026-01-28

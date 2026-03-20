@@ -6,6 +6,7 @@
 import express from 'express';
 import crypto from 'crypto';
 import { authenticateToken } from '../middleware/auth.middleware.js';
+import { validateBody, createMailDraftSchema } from '../utils/validation.js';
 import { safeLog } from '../utils/logger.backend.js';
 import * as mailService from '../services/mail/mailService.js';
 import * as emailTemplatesService from '../services/emailTemplates.service.js';
@@ -137,7 +138,7 @@ router.get('/callback/gmail', async (req, res) => {
 // ============================================
 // POST /api/mail/draft - Create email draft
 // ============================================
-router.post('/draft', authenticateToken, async (req, res) => {
+router.post('/draft', authenticateToken, validateBody(createMailDraftSchema), async (req, res) => {
     try {
         const userId = req.user.id || req.user.userId;
         const _userFirm = req.user.firm || req.user.customer;

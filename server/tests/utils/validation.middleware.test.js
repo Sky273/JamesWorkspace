@@ -7,7 +7,7 @@ import {
     validateBody,
     validateParams,
     validateQuery,
-    isValidAirtableId,
+    isValidId,
     isValidEmail,
     sanitizeText,
     validators,
@@ -162,22 +162,6 @@ describe('Validation Middleware', () => {
             expect(next).not.toHaveBeenCalled();
         });
 
-        it('should accept valid Airtable ID', () => {
-            const middleware = validateParams('id');
-            
-            const req = {
-                params: { id: 'recABCDEFGHIJKLMN' }
-            };
-            const res = {
-                status: vi.fn().mockReturnThis(),
-                json: vi.fn()
-            };
-            const next = vi.fn();
-
-            middleware(req, res, next);
-
-            expect(next).toHaveBeenCalled();
-        });
     });
 
     describe('validateQuery', () => {
@@ -229,24 +213,20 @@ describe('Validation Middleware', () => {
 
 describe('Validation Utility Functions', () => {
 
-    describe('isValidAirtableId', () => {
-        it('should accept valid Airtable ID', () => {
-            expect(isValidAirtableId('recABCDEFGHIJKLMN')).toBe(true);
-        });
-
+    describe('isValidId', () => {
         it('should accept valid UUID', () => {
-            expect(isValidAirtableId('550e8400-e29b-41d4-a716-446655440000')).toBe(true);
+            expect(isValidId('550e8400-e29b-41d4-a716-446655440000')).toBe(true);
         });
 
         it('should reject invalid format', () => {
-            expect(isValidAirtableId('invalid')).toBe(false);
-            expect(isValidAirtableId('rec123')).toBe(false);
-            expect(isValidAirtableId('')).toBe(false);
+            expect(isValidId('invalid')).toBe(false);
+            expect(isValidId('recABCDEFGHIJKLMN')).toBe(false);
+            expect(isValidId('')).toBe(false);
         });
 
         it('should reject null and undefined', () => {
-            expect(isValidAirtableId(null)).toBe(false);
-            expect(isValidAirtableId(undefined)).toBe(false);
+            expect(isValidId(null)).toBe(false);
+            expect(isValidId(undefined)).toBe(false);
         });
     });
 

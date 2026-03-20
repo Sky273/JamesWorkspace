@@ -113,8 +113,7 @@ class CircuitBreaker {
 // Circuit breakers for different services
 const circuitBreakers = {
     openai: new CircuitBreaker('openai', { failureThreshold: 5, resetTimeoutMs: 60000 }),
-    anthropic: new CircuitBreaker('anthropic', { failureThreshold: 5, resetTimeoutMs: 60000 }),
-    airtable: new CircuitBreaker('airtable', { failureThreshold: 10, resetTimeoutMs: 30000 })
+    anthropic: new CircuitBreaker('anthropic', { failureThreshold: 5, resetTimeoutMs: 60000 })
 };
 
 // ============================================
@@ -277,11 +276,6 @@ export const retryAnthropic = createRetryWrapper('anthropic', {
     maxDelayMs: 60000
 });
 
-export const retryAirtable = createRetryWrapper('airtable', {
-    maxRetries: 3,
-    initialDelayMs: 1000,
-    maxDelayMs: 10000
-});
 
 // ============================================
 // CIRCUIT BREAKER MANAGEMENT

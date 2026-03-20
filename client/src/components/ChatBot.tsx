@@ -198,7 +198,7 @@ const ChatBot = (): JSX.Element | null => {
         const response = await authGet('/api/settings');
         if (response.ok) {
           const data = await response.json();
-          // chatbotEnabled is 'on' or 'off' string from Airtable
+          // chatbotEnabled is 'on' or 'off' string from database
           setChatbotEnabled(data.chatbotEnabled === 'on');
         }
       } catch (error) {

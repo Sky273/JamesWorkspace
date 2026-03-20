@@ -5,7 +5,7 @@
 
 import express from 'express';
 import { authenticateToken } from '../middleware/auth.middleware.js';
-import { validateParams } from '../utils/validation.js';
+import { validateBody, validateParams, createDealSchema, updateDealSchema, addDealResumeSchema, updateDealResumeSchema, addResumeToMultipleDealsSchema } from '../utils/validation.js';
 import { userRateLimit } from '../middleware/rateLimit.middleware.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { getUserFirmId, isUserAdmin } from '../utils/firmHelpers.js';
@@ -162,7 +162,7 @@ router.get('/:id/missions', authenticateToken, validateParams('id'), async (req,
 });
 
 // POST /api/deals - Create a new deal
-router.post('/', authenticateToken, userRateLimit(), async (req, res) => {
+router.post('/', authenticateToken, userRateLimit(), validateBody(createDealSchema), async (req, res) => {
     try {
         safeLog('info', 'Creating deal - request received', { body: req.body });
         
@@ -208,7 +208,7 @@ router.post('/', authenticateToken, userRateLimit(), async (req, res) => {
 });
 
 // PUT /api/deals/:id - Update a deal
-router.put('/:id', authenticateToken, validateParams('id'), userRateLimit(), async (req, res) => {
+router.put('/:id', authenticateToken, validateParams('id'), userRateLimit(), validateBody(updateDealSchema), async (req, res) => {
     try {
         const { id } = req.params;
         const access = await checkDealAccess(req, id);
@@ -280,7 +280,7 @@ router.get('/:id/resumes', authenticateToken, validateParams('id'), async (req, 
 });
 
 // POST /api/deals/:id/resumes - Add a resume to a deal
-router.post('/:id/resumes', authenticateToken, validateParams('id'), userRateLimit(), async (req, res) => {
+router.post('/:id/resumes', authenticateToken, validateParams('id'), userRateLimit(), validateBody(addDealResumeSchema), async (req, res) => {
     try {
         const { id } = req.params;
         const { resumeId, notes, status } = req.body;
@@ -314,7 +314,7 @@ router.post('/:id/resumes', authenticateToken, validateParams('id'), userRateLim
 });
 
 // PUT /api/deals/:id/resumes/:resumeId - Update resume status in deal
-router.put('/:id/resumes/:resumeId', authenticateToken, validateParams('id', 'resumeId'), userRateLimit(), async (req, res) => {
+router.put('/:id/resumes/:resumeId', authenticateToken, validateParams('id', 'resumeId'), userRateLimit(), validateBody(updateDealResumeSchema), async (req, res) => {
     try {
         const { id, resumeId } = req.params;
         const { status, notes } = req.body;
@@ -395,7 +395,7 @@ router.get('/by-resume/:resumeId', authenticateToken, validateParams('resumeId')
 });
 
 // POST /api/deals/add-resume-to-multiple - Add a resume to multiple deals at once
-router.post('/add-resume-to-multiple', authenticateToken, userRateLimit(), async (req, res) => {
+router.post('/add-resume-to-multiple', authenticateToken, userRateLimit(), validateBody(addResumeToMultipleDealsSchema), async (req, res) => {
     try {
         const { resumeId, dealIds } = req.body;
 

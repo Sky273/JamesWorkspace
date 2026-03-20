@@ -73,7 +73,7 @@ export interface MetiersStats {
 }
 
 // ============================================
-// STORED METIERS (from Airtable)
+// STORED METIERS (from database)
 // ============================================
 
 export interface MetiersQueryParams {
@@ -96,7 +96,7 @@ export interface MetiersResponse {
 }
 
 /**
- * Get stored métiers from Airtable (without pagination - returns array)
+ * Get stored métiers from database (without pagination - returns array)
  * Uses 2 minute timeout for large datasets
  */
 export async function getStoredMetiers(filters?: {
@@ -124,7 +124,7 @@ export async function getStoredMetiers(filters?: {
 }
 
 /**
- * Get stored métiers from Airtable with pagination
+ * Get stored métiers from database with pagination
  * Uses 2 minute timeout for large datasets
  */
 export async function getStoredMetiersPaginated(filters: MetiersQueryParams): Promise<MetiersResponse> {

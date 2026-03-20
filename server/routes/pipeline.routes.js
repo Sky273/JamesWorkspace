@@ -6,7 +6,7 @@
 import express from 'express';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { userRateLimit } from '../middleware/rateLimit.middleware.js';
-import { validateBody, validateParams, createPipelineEntrySchema } from '../utils/validation.js';
+import { validateBody, validateParams, createPipelineEntrySchema, scheduleInterviewSchema, completeInterviewSchema, updateInterviewSchema } from '../utils/validation.js';
 import { safeLog } from '../utils/logger.backend.js';
 import {
     PIPELINE_STAGES,
@@ -223,7 +223,7 @@ router.get('/:id/history', authenticateToken, validateParams('id'), async (req, 
  * POST /api/pipeline/:id/interviews
  * Schedule an interview
  */
-router.post('/:id/interviews', authenticateToken, userRateLimit(), validateParams('id'), async (req, res) => {
+router.post('/:id/interviews', authenticateToken, userRateLimit(), validateParams('id'), validateBody(scheduleInterviewSchema), async (req, res) => {
     try {
         const {
             title,
@@ -300,7 +300,7 @@ router.get('/interviews/upcoming', authenticateToken, async (req, res) => {
  * PATCH /api/pipeline/interviews/:interviewId
  * Update an interview
  */
-router.patch('/interviews/:interviewId', authenticateToken, validateParams('interviewId'), async (req, res) => {
+router.patch('/interviews/:interviewId', authenticateToken, validateParams('interviewId'), validateBody(updateInterviewSchema), async (req, res) => {
     try {
         const interview = await updateInterview(req.params.interviewId, req.body);
         res.json(interview);
@@ -314,7 +314,7 @@ router.patch('/interviews/:interviewId', authenticateToken, validateParams('inte
  * POST /api/pipeline/interviews/:interviewId/complete
  * Complete an interview with outcome
  */
-router.post('/interviews/:interviewId/complete', authenticateToken, validateParams('interviewId'), async (req, res) => {
+router.post('/interviews/:interviewId/complete', authenticateToken, validateParams('interviewId'), validateBody(completeInterviewSchema), async (req, res) => {
     try {
         const { outcome, outcomeNotes } = req.body;
 

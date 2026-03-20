@@ -1,6 +1,6 @@
 import express from 'express';
 import { authenticateToken, isUserAdmin } from '../middleware/auth.middleware.js';
-import { validateParams } from '../utils/validation.js';
+import { validateBody, validateParams, createSubmissionSchema, updateSubmissionSchema } from '../utils/validation.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { getUserFirmId } from '../utils/firmHelpers.js';
 import * as submissionsService from '../services/resumeSubmissions.service.js';
@@ -60,7 +60,7 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
 });
 
 // POST /api/submissions - Create submission (record a CV send)
-router.post('/', authenticateToken, async (req, res) => {
+router.post('/', authenticateToken, validateBody(createSubmissionSchema), async (req, res) => {
     try {
         const userFirmId = await getUserFirmId(req);
         const userId = req.user?.id;
@@ -127,7 +127,7 @@ router.post('/', authenticateToken, async (req, res) => {
 });
 
 // PUT /api/submissions/:id - Update submission status
-router.put('/:id', authenticateToken, validateParams('id'), async (req, res) => {
+router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateSubmissionSchema), async (req, res) => {
     try {
         const { id } = req.params;
         const userFirmId = await getUserFirmId(req);

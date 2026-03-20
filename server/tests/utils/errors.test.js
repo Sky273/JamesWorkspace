@@ -9,7 +9,7 @@ vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));
 
-import { handleAirtableError, sendError, AppError, ValidationError, NotFoundError, sanitizeErrorMessage } from '../../utils/errors.js';
+import { sendError, AppError, ValidationError, NotFoundError, sanitizeErrorMessage } from '../../utils/errors.js';
 
 describe('Error Handling Utilities', () => {
     let mockRes;
@@ -19,86 +19,6 @@ describe('Error Handling Utilities', () => {
             status: vi.fn().mockReturnThis(),
             json: vi.fn().mockReturnThis()
         };
-    });
-
-    describe('handleAirtableError', () => {
-        it('should handle 404 NOT_FOUND errors', () => {
-            const error = { statusCode: 404, message: 'NOT_FOUND' };
-            handleAirtableError(error, mockRes, 'fetch');
-            
-            expect(mockRes.status).toHaveBeenCalledWith(404);
-            expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({
-                error: 'Resource not found'
-            }));
-        });
-
-        it('should handle 403 FORBIDDEN errors', () => {
-            const error = { statusCode: 403, message: 'FORBIDDEN' };
-            handleAirtableError(error, mockRes, 'update');
-            
-            expect(mockRes.status).toHaveBeenCalledWith(403);
-            expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({
-                error: 'Access denied'
-            }));
-        });
-
-        it('should handle 429 RATE_LIMIT errors', () => {
-            const error = { statusCode: 429, message: 'RATE_LIMIT' };
-            handleAirtableError(error, mockRes, 'query');
-            
-            expect(mockRes.status).toHaveBeenCalledWith(429);
-            expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({
-                error: 'Rate limit exceeded',
-                retryAfter: 60
-            }));
-        });
-
-        it('should handle 422 INVALID_REQUEST errors', () => {
-            const error = { statusCode: 422, message: 'INVALID_REQUEST' };
-            handleAirtableError(error, mockRes, 'create');
-            
-            expect(mockRes.status).toHaveBeenCalledWith(422);
-            expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({
-                error: 'Invalid request'
-            }));
-        });
-
-        it('should handle 503 SERVICE_UNAVAILABLE errors', () => {
-            const error = { statusCode: 503, message: 'SERVICE_UNAVAILABLE' };
-            handleAirtableError(error, mockRes, 'sync');
-            
-            expect(mockRes.status).toHaveBeenCalledWith(503);
-            expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({
-                error: 'Service unavailable'
-            }));
-        });
-
-        it('should handle timeout errors (ECONNABORTED)', () => {
-            const error = { code: 'ECONNABORTED', message: 'timeout' };
-            handleAirtableError(error, mockRes, 'request');
-            
-            expect(mockRes.status).toHaveBeenCalledWith(504);
-            expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({
-                error: 'Request timeout'
-            }));
-        });
-
-        it('should handle timeout errors (ETIMEDOUT)', () => {
-            const error = { code: 'ETIMEDOUT', message: 'timeout' };
-            handleAirtableError(error, mockRes, 'request');
-            
-            expect(mockRes.status).toHaveBeenCalledWith(504);
-        });
-
-        it('should handle generic errors with 500', () => {
-            const error = { message: 'Unknown error' };
-            handleAirtableError(error, mockRes, 'operation');
-            
-            expect(mockRes.status).toHaveBeenCalledWith(500);
-            expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({
-                error: 'Internal server error'
-            }));
-        });
     });
 
     describe('sendError', () => {

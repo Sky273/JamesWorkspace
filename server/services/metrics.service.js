@@ -211,8 +211,6 @@ class MetricsCollector {
         return endpoint
             // Remove UUIDs (8-4-4-4-12 format)
             .replace(/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '/:id')
-            // Remove Airtable-style IDs (rec + 14 chars)
-            .replace(/\/rec[a-zA-Z0-9]{14}/g, '/:id')
             // Remove numeric IDs
             .replace(/\/\d+/g, '/:id')
             // Remove any remaining long alphanumeric strings (likely IDs)

@@ -40,7 +40,9 @@ vi.mock('../../utils/logger.backend.js', () => ({
 
 // Mock validation
 vi.mock('../../utils/validation.js', () => ({
-    validateParams: () => (req, res, next) => next()
+    validateBody: () => (req, res, next) => next(),
+    validateParams: () => (req, res, next) => next(),
+    sharePdfSchema: {}
 }));
 
 // Mock auth middleware

@@ -10,69 +10,6 @@ import { safeLog } from './logger.backend.js';
 // ============================================
 
 /**
- * Handle Airtable errors and return appropriate HTTP status codes
- */
-export function handleAirtableError(error, res, operation = 'operation') {
-  safeLog('error', `Airtable ${operation} failed`, {
-    message: error.message,
-    statusCode: error.statusCode
-  });
-
-  // Airtable API error codes
-  if (error.statusCode === 404 || error.message?.includes('NOT_FOUND')) {
-    return res.status(404).json({
-      error: 'Resource not found',
-      message: 'The requested record does not exist'
-    });
-  }
-
-  if (error.statusCode === 403 || error.message?.includes('FORBIDDEN')) {
-    return res.status(403).json({
-      error: 'Access denied',
-      message: 'You do not have permission to access this resource'
-    });
-  }
-
-  if (error.statusCode === 429 || error.message?.includes('RATE_LIMIT')) {
-    return res.status(429).json({
-      error: 'Rate limit exceeded',
-      message: 'Too many requests to Airtable. Please try again later.',
-      retryAfter: 60
-    });
-  }
-
-  if (error.statusCode === 422 || error.message?.includes('INVALID_REQUEST')) {
-    return res.status(422).json({
-      error: 'Invalid request',
-      message: 'The request data is invalid or malformed',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
-  }
-
-  if (error.statusCode === 503 || error.message?.includes('SERVICE_UNAVAILABLE')) {
-    return res.status(503).json({
-      error: 'Service unavailable',
-      message: 'Airtable service is temporarily unavailable. Please try again later.'
-    });
-  }
-
-  // Network/timeout errors
-  if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
-    return res.status(504).json({
-      error: 'Request timeout',
-      message: 'The request to Airtable timed out. Please try again.'
-    });
-  }
-
-  // Generic server error
-  return res.status(500).json({
-    error: 'Internal server error',
-    message: `Failed to ${operation}`,
-    details: process.env.NODE_ENV === 'development' ? error.message : undefined
-  });
-}
-
-/**
  * Standardized error response format
  */
 export function sendError(res, statusCode, message, details = null) {

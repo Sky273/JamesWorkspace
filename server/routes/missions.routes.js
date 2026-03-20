@@ -5,7 +5,7 @@
 
 import express from 'express';
 import { authenticateToken } from '../middleware/auth.middleware.js';
-import { validateBody, validateParams, createMissionSchema, updateMissionSchema } from '../utils/validation.js';
+import { validateBody, validateParams, createMissionSchema, updateMissionSchema, findProfilesSchema } from '../utils/validation.js';
 import { sanitizeHtmlContent } from '../utils/sanitizer.backend.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { sanitizeErrorMessage } from '../utils/errors.js';
@@ -345,7 +345,7 @@ router.get('/:missionId/adaptations', authenticateToken, validateParams('mission
 // ============================================
 
 // POST /api/missions/:missionId/find-profiles - Find best matching profiles for a mission
-router.post('/:missionId/find-profiles', authenticateToken, validateParams('missionId'), async (req, res) => {
+router.post('/:missionId/find-profiles', authenticateToken, validateParams('missionId'), validateBody(findProfilesSchema), async (req, res) => {
     try {
         const { missionId } = req.params;
         const { limit = 0, minScore = 0, status, weights, dealId } = req.body;

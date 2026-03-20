@@ -8,6 +8,7 @@
 import express from 'express';
 import crypto from 'crypto';
 import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
+import { validateBody, gdprMailTestSchema } from '../utils/validation.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { gdprMailService } from '../services/mail/gdprMailService.js';
 
@@ -145,7 +146,7 @@ router.post('/disconnect', authenticateToken, requireAdmin, async (req, res) => 
  * @desc Send a test email via GLOBAL GDPR Gmail
  * @access Private (Admin)
  */
-router.post('/test', authenticateToken, requireAdmin, async (req, res) => {
+router.post('/test', authenticateToken, requireAdmin, validateBody(gdprMailTestSchema), async (req, res) => {
     try {
         const { email } = req.body;
 

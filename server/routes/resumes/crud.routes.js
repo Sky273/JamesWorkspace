@@ -6,6 +6,7 @@
 import express from 'express';
 import { authenticateToken } from '../../middleware/auth.middleware.js';
 import { validateParams, validateBody, updateResumeSchema } from '../../utils/validation.js';
+import { securityLog, getRequestMetadata, LOG_LEVELS, SECURITY_EVENTS } from '../../services/security.service.js';
 import { safeLog } from '../../utils/logger.backend.js';
 import { getUserFirmId, isUserAdmin } from '../../utils/firmHelpers.js';
 import { processAnalysisTags } from '../../utils/tagCleaner.js';
@@ -482,6 +483,14 @@ router.delete('/:id', authenticateToken, validateParams('id'), async (req, res) 
         }
         
         await resumesService.deleteResume(id);
+        
+        securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.RESUME_DELETED, {
+            ...getRequestMetadata(req),
+            resumeId: id,
+            deletedBy: req.user?.id,
+            action: 'RESUME_DELETED',
+            message: 'Resume deleted'
+        });
         
         safeLog('info', 'Resume deleted', { resumeId: id, userId: req.user?.id });
         res.json({ message: 'Resume deleted successfully' });

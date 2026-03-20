@@ -7,6 +7,14 @@ import { query } from '../../config/database.js';
 import { safeLog } from '../../utils/logger.backend.js';
 
 /**
+ * Allowed column names for dynamic UPDATE on the backup_history table.
+ * Any key not in this set is silently dropped to prevent SQL injection.
+ */
+const ALLOWED_COLUMNS = new Set([
+    'status', 'file_size', 'size_bytes', 'error_message', 'completed_at'
+]);
+
+/**
  * Cleanup stale "running" entries that have been stuck for more than 30 minutes
  * This handles cases where the backup process crashed without updating the status
  */
@@ -56,9 +64,11 @@ export async function updateHistoryEntry(id, updates) {
     let paramIndex = 1;
     
     for (const [key, value] of Object.entries(updates)) {
-        setClauses.push(`${key} = $${paramIndex}`);
-        values.push(value);
-        paramIndex++;
+        if (ALLOWED_COLUMNS.has(key)) {
+            setClauses.push(`${key} = $${paramIndex}`);
+            values.push(value);
+            paramIndex++;
+        }
     }
     
     values.push(id);

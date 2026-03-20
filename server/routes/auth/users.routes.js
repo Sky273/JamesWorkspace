@@ -6,7 +6,7 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import { SALT_ROUNDS } from '../../config/constants.js';
 import { authenticateToken, requireAdmin } from '../../middleware/auth.middleware.js';
-import { validateBody, validateParams, createUserSchema } from '../../utils/validation.js';
+import { validateBody, validateParams, createUserSchema, updateAdminUserSchema } from '../../utils/validation.js';
 import { securityLog, getRequestMetadata, LOG_LEVELS, SECURITY_EVENTS } from '../../services/security.service.js';
 import { safeLog } from '../../utils/logger.backend.js';
 import * as usersService from '../../services/users.service.js';
@@ -82,7 +82,7 @@ router.post('/users', authenticateToken, requireAdmin, validateBody(createUserSc
 });
 
 // PUT /api/auth/users/:id - Update user (admin only)
-router.put('/users/:id', authenticateToken, requireAdmin, validateParams('id'), async (req, res) => {
+router.put('/users/:id', authenticateToken, requireAdmin, validateParams('id'), validateBody(updateAdminUserSchema), async (req, res) => {
     try {
         const { id } = req.params;
         const updateData = {};

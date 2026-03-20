@@ -1,6 +1,7 @@
 import express from 'express';
 import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
 import { validateParams, validateBody, updateSettingsSchema } from '../utils/validation.js';
+import { securityLog, getRequestMetadata, LOG_LEVELS, SECURITY_EVENTS } from '../services/security.service.js';
 import { settingsCache } from '../services/cache.service.js';
 import { metrics } from '../services/metrics.service.js';
 import { invalidateSettingsCache, getSettings, upsertSettings, createSettings } from '../services/settings.service.js';
@@ -85,6 +86,16 @@ router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), valida
         const fieldsToUpdate = mapSettingsFromFrontend(updateData);
 
         const result = await upsertSettings(id, fieldsToUpdate);
+        
+        securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.SETTINGS_CHANGED, {
+            ...getRequestMetadata(req),
+            settingsId: id,
+            changedBy: req.user.id,
+            action: 'SETTINGS_UPDATED',
+            message: 'LLM settings updated by admin',
+            metadata: { fields: Object.keys(updateData) }
+        });
+        
         res.json(mapSettingsToFrontend(result));
     } catch (error) {
         safeLog('error', 'Error updating settings', { error: error.message });
@@ -112,6 +123,14 @@ router.post('/', authenticateToken, requireAdmin, validateBody(updateSettingsSch
         };
 
         const result = await createSettings(fieldsToCreate);
+        
+        securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.SETTINGS_CHANGED, {
+            ...getRequestMetadata(req),
+            changedBy: req.user.id,
+            action: 'SETTINGS_CREATED',
+            message: 'LLM settings created by admin'
+        });
+        
         res.status(201).json(mapSettingsToFrontend(result));
     } catch (error) {
         safeLog('error', 'Error creating settings', { error: error.message });

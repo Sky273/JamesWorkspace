@@ -6,13 +6,13 @@
 
 import { query } from '../config/database.js';
 import { safeLog } from '../utils/logger.backend.js';
+import { escapeLike } from '../utils/postgresHelpers.js';
 
 /**
- * Escape special characters for LIKE queries
+ * Allowed column names for dynamic INSERT/UPDATE on the firms table.
+ * Any key not in this set is silently dropped to prevent SQL injection.
  */
-function escapeLike(str) {
-    return str.replace(/[%_\\]/g, '\\$&');
-}
+const ALLOWED_COLUMNS = new Set(['name', 'status', 'logo_url']);
 
 /**
  * List firms with pagination and optional search
@@ -86,7 +86,7 @@ export async function createFirm(firmData) {
     let idx = 1;
 
     for (const [key, value] of Object.entries(firmData)) {
-        if (value !== undefined) {
+        if (value !== undefined && ALLOWED_COLUMNS.has(key)) {
             fields.push(key);
             values.push(value);
             placeholders.push(`$${idx}`);
@@ -114,7 +114,7 @@ export async function updateFirm(id, firmData) {
     let idx = 1;
 
     for (const [key, value] of Object.entries(firmData)) {
-        if (value !== undefined) {
+        if (value !== undefined && ALLOWED_COLUMNS.has(key)) {
             setClauses.push(`${key} = $${idx}`);
             params.push(value);
             idx++;

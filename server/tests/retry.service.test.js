@@ -256,7 +256,6 @@ describe('Circuit Breaker Management', () => {
         
         expect(states).toHaveProperty('openai');
         expect(states).toHaveProperty('anthropic');
-        expect(states).toHaveProperty('airtable');
         
         expect(states.openai.state).toBe('CLOSED');
     });

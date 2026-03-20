@@ -166,12 +166,6 @@ All API inputs are validated using Zod schemas:
 - `createTemplateSchema`: Template content validation
 - `updateResumeSchema`: Resume field validation
 
-### Airtable Formula Injection Prevention
-
-The `escapeAirtableFormula()` function prevents formula injection:
-- Escapes special characters: `\ ' " { } ( ) ,`
-- Neutralizes dangerous prefixes: `= + - @ \t \r \n`
-- Logs potential injection attempts
 
 ### HTML Sanitization
 
@@ -482,7 +476,6 @@ The following endpoints are intentionally accessible without authentication:
 - [x] Rate limiting (6 layers: global, auth, user, LLM, upload, combined)
 - [x] Input validation (Zod schemas)
 - [x] HTML sanitization (DOMPurify frontend, sanitize-html backend)
-- [x] Airtable formula injection prevention
 - [x] Security event logging (memory + file persistence)
 - [x] Graceful shutdown with cleanup
 - [x] LLM API key protection (server-side proxy)

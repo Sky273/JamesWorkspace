@@ -6,13 +6,15 @@
 
 import { query } from '../config/database.js';
 import { safeLog } from '../utils/logger.backend.js';
+import { escapeLike } from '../utils/postgresHelpers.js';
 
 /**
- * Escape special characters for LIKE queries
+ * Allowed column names for dynamic UPDATE on the resume_adaptations table.
+ * Any key not in this set is silently dropped to prevent SQL injection.
  */
-function escapeLike(str) {
-    return str.replace(/[%_\\]/g, '\\$&');
-}
+const ALLOWED_COLUMNS = new Set([
+    'adapted_text', 'adapted_title', 'status', 'match_score', 'match_analysis'
+]);
 
 /**
  * List adaptations with pagination and filters
@@ -292,9 +294,11 @@ export async function updateAdaptation(id, updates) {
     let paramIndex = 1;
 
     for (const [key, value] of Object.entries(updates)) {
-        setClauses.push(`${key} = $${paramIndex}`);
-        params.push(value);
-        paramIndex++;
+        if (ALLOWED_COLUMNS.has(key)) {
+            setClauses.push(`${key} = $${paramIndex}`);
+            params.push(value);
+            paramIndex++;
+        }
     }
 
     if (setClauses.length === 0) {

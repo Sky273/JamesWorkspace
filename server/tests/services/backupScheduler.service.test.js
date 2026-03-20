@@ -14,6 +14,10 @@ vi.mock('../../services/backup.service.js', () => ({
     createBackup: vi.fn()
 }));
 
+vi.mock('../../services/consent/operations.js', () => ({
+    getDpoSettings: vi.fn().mockResolvedValue(null)
+}));
+
 import { getBackupSettings } from '../../services/backup.service.js';
 import {
     initBackupScheduler,

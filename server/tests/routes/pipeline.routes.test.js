@@ -19,7 +19,8 @@ vi.mock('../../config/constants.js', () => ({
     MAX_TEXT_LENGTH: 50000,
     MAX_PROMPT_LENGTH: 100000,
     MAX_STRING_FIELD_LENGTH: 1000,
-    RATE_LIMIT: { AUTH: { windowMs: 900000, max: 20 }, USER: { windowMs: 900000, max: 50 } }
+    RATE_LIMIT: { AUTH: { windowMs: 900000, max: 20 }, USER: { windowMs: 900000, max: 50 } },
+    MAX_LOGS: 1000
 }));
 
 // Mock candidatePipeline service
@@ -84,7 +85,10 @@ vi.mock('../../middleware/rateLimit.middleware.js', () => ({
 vi.mock('../../utils/validation.js', () => ({
     validateBody: () => (req, res, next) => next(),
     validateParams: () => (req, res, next) => next(),
-    createPipelineEntrySchema: {}
+    createPipelineEntrySchema: {},
+    scheduleInterviewSchema: {},
+    completeInterviewSchema: {},
+    updateInterviewSchema: {}
 }));
 
 // Mock auth middleware

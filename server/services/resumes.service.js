@@ -5,15 +5,33 @@
  */
 
 import { query } from '../config/database.js';
-import { findWithTimeout, createWithTimeout } from '../utils/postgresHelpers.js';
+import { findWithTimeout, createWithTimeout, escapeLike } from '../utils/postgresHelpers.js';
 import { safeLog } from '../utils/logger.backend.js';
 
 /**
- * Escape special characters for LIKE queries
+ * Allowed column names for dynamic UPDATE on the resumes table.
+ * Any key not in this set is silently dropped to prevent SQL injection.
  */
-function escapeLike(str) {
-    return str.replace(/[%_\\]/g, '\\$&');
-}
+const ALLOWED_COLUMNS = new Set([
+    'name', 'title', 'status', 'original_text', 'improved_text', 'original_name',
+    'file_name', 'resume_file_url', 'resume_file_size', 'resume_file_type', 'resume_file_data', 'relative_path',
+    'firm_id', 'firm_name', 'template_id', 'template_name',
+    'skills', 'industries', 'tools', 'soft_skills',
+    'skills_cleaned', 'industries_cleaned', 'tools_cleaned', 'soft_skills_cleaned',
+    'skills_esco', 'industries_esco', 'tools_esco', 'soft_skills_esco',
+    'improved_skills', 'improved_industries', 'improved_tools', 'improved_soft_skills',
+    'key_improvements', 'improved_key_improvements', 'summary',
+    'experience_years', 'education_level', 'certifications', 'languages',
+    'global_rating', 'skills_score', 'experience_score', 'education_score',
+    'ats_score', 'executive_summary_score', 'hobbies_languages_score',
+    'improved_global_rating', 'improved_skills_score', 'improved_experience_score',
+    'improved_education_score', 'improved_ats_score', 'improved_executive_summary_score',
+    'improved_hobbies_languages_score',
+    'improvement_suggestions', 'analysis_details', 'improvement_date', 'trigram',
+    'analyzed_at', 'profile_type', 'candidate_name', 'candidate_email',
+    'consent_status', 'consent_requested_at', 'consent_responded_at',
+    'consent_token_expires_at', 'retention_until'
+]);
 
 /**
  * SQL columns to select for resume queries (excludes binary resume_file_data)
@@ -122,13 +140,19 @@ export async function listResumes({ conditions = [], params = [], dealId, dealPa
         if (whereClause) {
             sql = sql.replace('WHERE dr.deal_id', `WHERE ${whereClause.replace(/\b(firm_id|status|name|title|file_name)\b/g, 'r.$1')} AND dr.deal_id`);
         }
-        sql += ` ORDER BY LOWER(r.name) ASC, r.created_at DESC LIMIT ${limit + 1} OFFSET ${offset}`;
+        const limitIdx = queryParams.length + 1;
+        const offsetIdx = queryParams.length + 2;
+        sql += ` ORDER BY LOWER(r.name) ASC, r.created_at DESC LIMIT $${limitIdx} OFFSET $${offsetIdx}`;
+        queryParams.push(limit + 1, offset);
     } else {
         sql = `SELECT ${RESUME_SELECT_COLUMNS} FROM resumes`;
         if (conditions.length > 0) {
             sql += ` WHERE ${conditions.join(' AND ')}`;
         }
-        sql += ` ORDER BY LOWER(name) ASC, created_at DESC LIMIT ${limit + 1} OFFSET ${offset}`;
+        const limitIdx = queryParams.length + 1;
+        const offsetIdx = queryParams.length + 2;
+        sql += ` ORDER BY LOWER(name) ASC, created_at DESC LIMIT $${limitIdx} OFFSET $${offsetIdx}`;
+        queryParams.push(limit + 1, offset);
     }
 
     const result = await query(sql, queryParams);
@@ -147,7 +171,7 @@ export async function updateResume(id, updateData) {
     let idx = 1;
 
     for (const [key, value] of Object.entries(updateData)) {
-        if (value !== undefined) {
+        if (value !== undefined && ALLOWED_COLUMNS.has(key)) {
             setClauses.push(`${key} = $${idx}`);
             params.push(value);
             idx++;

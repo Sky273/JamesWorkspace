@@ -5,7 +5,7 @@
 
 import express from 'express';
 import { authenticateToken } from '../middleware/auth.middleware.js';
-import { validateParams } from '../utils/validation.js';
+import { validateBody, validateParams, createCalendarEventSchema } from '../utils/validation.js';
 import { safeLog } from '../utils/logger.backend.js';
 import {
     getCalendarAuthUrl,
@@ -110,7 +110,7 @@ router.post('/disconnect', authenticateToken, async (req, res) => {
  * POST /api/calendar/events
  * Create a calendar event
  */
-router.post('/events', authenticateToken, async (req, res) => {
+router.post('/events', authenticateToken, validateBody(createCalendarEventSchema), async (req, res) => {
     try {
         const event = await createCalendarEvent(req.user.id, req.body);
         

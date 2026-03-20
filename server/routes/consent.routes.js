@@ -6,7 +6,7 @@
 
 import express from 'express';
 import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
-import { validateParams } from '../utils/validation.js';
+import { validateBody, validateParams, initializeConsentSchema, respondConsentSchema } from '../utils/validation.js';
 import { safeLog } from '../utils/logger.backend.js';
 import {
     initializeConsent,
@@ -29,7 +29,7 @@ const router = express.Router();
  * POST /api/consent/initialize
  * Initialize consent for a resume
  */
-router.post('/initialize', authenticateToken, async (req, res) => {
+router.post('/initialize', authenticateToken, validateBody(initializeConsentSchema), async (req, res) => {
     try {
         const { resumeId, profileType, candidateName, candidateEmail } = req.body;
 
@@ -204,7 +204,7 @@ router.get('/respond/:token', async (req, res) => {
  * POST /api/consent/respond/:token
  * Record consent response (accept or refuse)
  */
-router.post('/respond/:token', async (req, res) => {
+router.post('/respond/:token', validateBody(respondConsentSchema), async (req, res) => {
     try {
         const { token } = req.params;
         const { action } = req.body;

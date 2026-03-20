@@ -6,6 +6,7 @@
 import express from 'express';
 import fs from 'fs';
 import { authenticateToken } from '../middleware/auth.middleware.js';
+import { validateBody, validateParams, batchImproveSchema, batchDealExportSchema, provideNameSchema } from '../utils/validation.js';
 import { safeLog } from '../utils/logger.backend.js';
 import multer from 'multer';
 import {
@@ -161,7 +162,7 @@ router.post('/', authenticateToken, upload.array('files', 200), async (req, res)
  * POST /api/batch-jobs/improve
  * Create a batch improvement job for existing resumes
  */
-router.post('/improve', authenticateToken, async (req, res) => {
+router.post('/improve', authenticateToken, validateBody(batchImproveSchema), async (req, res) => {
     try {
         const userId = req.user?.id;
         const isAdmin = req.user?.role === 'admin';
@@ -216,7 +217,7 @@ router.post('/improve', authenticateToken, async (req, res) => {
  * POST /api/batch-jobs/deal-export
  * Create a batch export job for a deal (CVs + adaptations)
  */
-router.post('/deal-export', authenticateToken, async (req, res) => {
+router.post('/deal-export', authenticateToken, validateBody(batchDealExportSchema), async (req, res) => {
     try {
         const userId = req.user?.id;
         const isAdmin = req.user?.role === 'admin';
@@ -550,7 +551,7 @@ router.get('/:id/pending-names', authenticateToken, async (req, res) => {
  * POST /api/batch-jobs/items/:itemId/provide-name
  * Provide name for an item waiting for name input and resume processing
  */
-router.post('/items/:itemId/provide-name', authenticateToken, async (req, res) => {
+router.post('/items/:itemId/provide-name', authenticateToken, validateParams('itemId'), validateBody(provideNameSchema), async (req, res) => {
     try {
         const { itemId } = req.params;
         const { name } = req.body;

@@ -40,6 +40,12 @@ vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));
 
+// Mock validation
+vi.mock('../../utils/validation.js', () => ({
+    validateBody: () => (req, res, next) => next(),
+    createMailDraftSchema: {}
+}));
+
 // Mock crypto
 vi.mock('crypto', () => ({
     default: { randomBytes: () => ({ toString: () => 'state-token-abc' }) },
@@ -204,15 +210,15 @@ describe('Mail Routes', () => {
                     to: 'client@test.com',
                     subject: 'CV',
                     body: 'Hi',
-                    resumeId: 'r-1',
-                    clientId: 'c-1',
-                    contactId: 'ct-1'
+                    resumeId: '00000000-0000-0000-0000-000000000001',
+                    clientId: '00000000-0000-0000-0000-000000000002',
+                    contactId: '00000000-0000-0000-0000-000000000003'
                 });
 
             expect(res.status).toBe(200);
             expect(res.body.submissionId).toBe('sub-1');
             expect(mockRecordSubmission).toHaveBeenCalledWith(
-                expect.objectContaining({ resumeId: 'r-1', clientId: 'c-1', contactId: 'ct-1' })
+                expect.objectContaining({ resumeId: '00000000-0000-0000-0000-000000000001', clientId: '00000000-0000-0000-0000-000000000002', contactId: '00000000-0000-0000-0000-000000000003' })
             );
         });
 

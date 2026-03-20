@@ -5,6 +5,7 @@
 
 import { Router, json } from 'express';
 import { authenticateToken } from '../middleware/auth.middleware.js';
+import { validateBody, validateParams, createCommentSchema, updateCommentSchema } from '../utils/validation.js';
 import resumeCommentsService from '../services/resumeComments.service.js';
 import { safeLog } from '../utils/logger.backend.js';
 
@@ -17,7 +18,7 @@ router.use(json());
  * GET /api/resumes/:resumeId/comments
  * Get all comments for a resume
  */
-router.get('/:resumeId/comments', authenticateToken, async (req, res) => {
+router.get('/:resumeId/comments', authenticateToken, validateParams('resumeId'), async (req, res) => {
     try {
         const { resumeId } = req.params;
         const userId = req.user?.id;
@@ -45,7 +46,7 @@ router.get('/:resumeId/comments', authenticateToken, async (req, res) => {
  * POST /api/resumes/:resumeId/comments
  * Add a comment to a resume
  */
-router.post('/:resumeId/comments', authenticateToken, async (req, res) => {
+router.post('/:resumeId/comments', authenticateToken, validateParams('resumeId'), validateBody(createCommentSchema), async (req, res) => {
     try {
         const { resumeId } = req.params;
         const { content, isPrivate } = req.body;
@@ -87,7 +88,7 @@ router.post('/:resumeId/comments', authenticateToken, async (req, res) => {
  * PUT /api/resumes/:resumeId/comments/:commentId
  * Update a comment
  */
-router.put('/:resumeId/comments/:commentId', authenticateToken, async (req, res) => {
+router.put('/:resumeId/comments/:commentId', authenticateToken, validateParams('resumeId', 'commentId'), validateBody(updateCommentSchema), async (req, res) => {
     try {
         const { commentId } = req.params;
         const { content } = req.body;
@@ -129,7 +130,7 @@ router.put('/:resumeId/comments/:commentId', authenticateToken, async (req, res)
  * DELETE /api/resumes/:resumeId/comments/:commentId
  * Delete a comment
  */
-router.delete('/:resumeId/comments/:commentId', authenticateToken, async (req, res) => {
+router.delete('/:resumeId/comments/:commentId', authenticateToken, validateParams('resumeId', 'commentId'), async (req, res) => {
     try {
         const { commentId } = req.params;
         const userId = req.user?.id;
@@ -164,7 +165,7 @@ router.delete('/:resumeId/comments/:commentId', authenticateToken, async (req, r
  * GET /api/resumes/:resumeId/comments/count
  * Get comment count for a resume
  */
-router.get('/:resumeId/comments/count', authenticateToken, async (req, res) => {
+router.get('/:resumeId/comments/count', authenticateToken, validateParams('resumeId'), async (req, res) => {
     try {
         const { resumeId } = req.params;
         const userId = req.user?.id;

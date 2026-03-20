@@ -15,7 +15,7 @@
 import express from 'express';
 import { authenticateToken } from '../../middleware/auth.middleware.js';
 import { userRateLimit } from '../../middleware/rateLimit.middleware.js';
-import { validateParams } from '../../utils/validation.js';
+import { validateBody, validateParams, analyzeTextSchema, improveTextSchema, missionIdBodySchema, aiModifySchema } from '../../utils/validation.js';
 
 // Import sub-routers
 import crudRouter from './crud.routes.js';
@@ -47,22 +47,22 @@ router.use('/', uploadRouter);
 router.post('/analyze', authenticateToken, userRateLimit(), analyzeHandler);
 
 // POST /api/resumes/analyze-text - Analyze raw text
-router.post('/analyze-text', authenticateToken, userRateLimit(), analyzeTextHandler);
+router.post('/analyze-text', authenticateToken, userRateLimit(), validateBody(analyzeTextSchema), analyzeTextHandler);
 
 // POST /api/resumes/improve - Improve resume text
-router.post('/improve', authenticateToken, userRateLimit(), improveHandler);
+router.post('/improve', authenticateToken, userRateLimit(), validateBody(improveTextSchema), improveHandler);
 
 // POST /api/resumes/:id/improve - Improve resume by ID
 router.post('/:id/improve', authenticateToken, validateParams('id'), userRateLimit(), improveByIdHandler);
 
 // POST /api/resumes/:id/match - Match resume with mission
-router.post('/:id/match', authenticateToken, validateParams('id'), userRateLimit(), matchHandler);
+router.post('/:id/match', authenticateToken, validateParams('id'), userRateLimit(), validateBody(missionIdBodySchema), matchHandler);
 
 // POST /api/resumes/:id/adapt - Adapt resume for mission
-router.post('/:id/adapt', authenticateToken, validateParams('id'), userRateLimit(), adaptHandler);
+router.post('/:id/adapt', authenticateToken, validateParams('id'), userRateLimit(), validateBody(missionIdBodySchema), adaptHandler);
 
 // POST /api/resumes/:id/ai-modify - AI-powered resume modification
-router.post('/:id/ai-modify', authenticateToken, validateParams('id'), userRateLimit(), aiModifyHandler);
+router.post('/:id/ai-modify', authenticateToken, validateParams('id'), userRateLimit(), validateBody(aiModifySchema), aiModifyHandler);
 
 // ============================================
 // VERSION ROUTES

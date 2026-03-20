@@ -5,6 +5,7 @@
 
 import express from 'express';
 import { authenticateToken } from '../middleware/auth.middleware.js';
+import { validateBody, renameTagSchema, escoRecalculateSchema } from '../utils/validation.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { aggregateRawTags, aggregateCleanedTags, aggregateEscoTags, fetchResumeBatch, updateResumeTags, renameTag } from '../services/tags.service.js';
 import { processCleanedTagsToEsco } from '../services/escoService.js';
@@ -295,7 +296,7 @@ router.get('/esco', authenticateToken, async (req, res) => {
 });
 
 // POST /api/tags/esco/recalculate - Recalculate ESCO tags for all resumes from cleaned tags (batch processing)
-router.post('/esco/recalculate', authenticateToken, async (req, res) => {
+router.post('/esco/recalculate', authenticateToken, validateBody(escoRecalculateSchema), async (req, res) => {
     try {
         const { language = 'fr' } = req.body;
         
@@ -383,7 +384,7 @@ router.post('/esco/recalculate', authenticateToken, async (req, res) => {
 });
 
 // PUT /api/tags/rename - Rename tag across all resumes (optimized SQL)
-router.put('/rename', authenticateToken, async (req, res) => {
+router.put('/rename', authenticateToken, validateBody(renameTagSchema), async (req, res) => {
     try {
         const { category, oldName, newName } = req.body;
         

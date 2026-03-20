@@ -613,41 +613,6 @@ export function escapeLike(str) {
     return str.replace(/[%_\\]/g, '\\$&');
 }
 
-/**
- * Convert Airtable-style record to PostgreSQL row format
- * Airtable: {id: 'rec...', fields: {Name: 'value'}}
- * PostgreSQL: {id: 'uuid', name: 'value'}
- * @param {Object} record - Airtable record
- * @returns {Object} PostgreSQL row
- */
-export function airtableToPostgres(record) {
-    if (!record) return null;
-    
-    // If already in PostgreSQL format, return as-is
-    if (!record.fields) return record;
-    
-    return {
-        id: record.id,
-        ...record.fields
-    };
-}
-
-/**
- * Convert PostgreSQL row to Airtable-style record format
- * For backward compatibility during migration
- * @param {Object} row - PostgreSQL row
- * @returns {Object} Airtable-style record
- */
-export function postgrestoAirtable(row) {
-    if (!row) return null;
-    
-    const { id, ...fields } = row;
-    
-    return {
-        id,
-        fields
-    };
-}
 
 /**
  * Validate prompt size for LLM calls
