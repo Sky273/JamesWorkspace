@@ -94,25 +94,23 @@
 ---
 
 ## v1.8.2 - 2026-03-09
-### 🖨️ Migration vers PrinceXML & Refactoring PDF Server
+### 🖨️ Refactoring PDF Server
 
-#### Migration PrinceXML
-- **Nouveau moteur PDF** : Remplacement de Puppeteer par PrinceXML 16.2 pour la génération PDF
-- **Qualité supérieure** : Meilleur rendu typographique et support CSS Paged Media complet
+#### Génération de documents
+- **PDF** : Génération via Puppeteer avec support des headers/footers natifs
 - **Headers/Footers** : Support natif des headers dans le body et footers dans les marges de page
-- **Compteurs de pages** : Support des placeholders `-pageNumber-` et `-totalPages-` via CSS `counter(page)`
+- **Compteurs de pages** : Support des placeholders `-pageNumber-` et `-totalPages-`
+- **DOCX** : Génération via Pandoc avec injection de footer Word natif en post-traitement
+- **DOC** : Conversion PDF → DOC via LibreOffice
 
 #### Refactoring du Serveur PDF
 - **Architecture modulaire** : `server.cjs` divisé en modules séparés pour une meilleure maintenabilité
   - `lib/logger.cjs` : Utilitaire de logging centralisé
-  - `lib/htmlBuilder.cjs` : Construction HTML avec CSS Prince
-  - `lib/pdfGenerator.cjs` : Génération PDF via PrinceXML
-  - `lib/docxGenerator.cjs` : Génération DOCX/DOC (Prince + LibreOffice)
+  - `lib/htmlBuilder.cjs` : Construction HTML pour Puppeteer
+  - `lib/pdfGenerator.cjs` : Génération PDF via Puppeteer
+  - `lib/docxGenerator.cjs` : Génération DOCX/DOC (Pandoc + LibreOffice)
 - **Code réduit** : `server.cjs` réduit de ~670 à ~320 lignes
 - **Testabilité** : Fonctions exportables pour tests unitaires
-
-#### Docker
-- **PrinceXML** : Installation de PrinceXML 16.2 dans le Dockerfile (Ubuntu 22.04)
 
 ---
 

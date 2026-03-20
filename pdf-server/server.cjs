@@ -1,6 +1,6 @@
 /**
  * PDF Server - Express server for PDF and DOCX generation
- * Uses PrinceXML for PDF generation and LibreOffice for DOCX conversion
+ * Uses Puppeteer for PDF generation, Pandoc + LibreOffice for DOCX/DOC conversion
  */
 
 const express = require('express');
@@ -172,7 +172,7 @@ app.post('/generate-pdf', rateLimitMiddleware, validatePdfRequest, async (req, r
     res.end(pdfBuffer);
     
     const duration = Date.now() - startTime;
-    log('info', 'PDF generated successfully via Prince', { 
+    log('info', 'PDF generated successfully', { 
       filename, 
       duration: `${duration}ms`, 
       size: `${Math.round(pdfBuffer.length / 1024)}KB` 
@@ -227,7 +227,7 @@ app.post('/generate-docx', rateLimitMiddleware, validateDocxRequest, async (req,
     res.end(docxBuffer);
 
     const duration = Date.now() - startTime;
-    log('info', `${outputFormat.toUpperCase()} generated successfully via Prince+LibreOffice`, { 
+    log('info', `${outputFormat.toUpperCase()} generated successfully`, { 
       filename: sanitizedFilename, 
       duration: `${duration}ms`, 
       size: `${Math.round(docxBuffer.length / 1024)}KB` 
