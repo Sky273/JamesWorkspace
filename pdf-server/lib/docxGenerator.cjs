@@ -307,8 +307,50 @@ function buildFlexParagraph(html) {
 }
 
 /**
+ * Parse a CSS border shorthand (e.g. "1px solid #000") into OOXML attributes.
+ * Returns null if no valid border found or border is "none"/"0".
+ */
+function parseBorderStyle(css) {
+  if (!css) return null;
+  const m = css.match(/border(?:-(?:top|bottom|left|right))?:\s*([^;]+)/i);
+  if (!m) return null;
+  const val = m[1].trim();
+  if (/^(none|0)\b/i.test(val)) return null;
+
+  const widthMatch = val.match(/(\d+(?:\.\d+)?)\s*px/i);
+  const sz = widthMatch ? Math.max(2, Math.round(parseFloat(widthMatch[1]) * 8)) : 4;
+  const colorMatch = val.match(/#([0-9A-Fa-f]{3,6})\b/);
+  let color = 'auto';
+  if (colorMatch) {
+    let hex = colorMatch[1];
+    if (hex.length === 3) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+    color = hex.toUpperCase();
+  }
+  const style = /dashed/i.test(val) ? 'dashed' : /dotted/i.test(val) ? 'dotted' : 'single';
+  return { sz, color, style };
+}
+
+/**
+ * Build OOXML border elements for all sides.
+ * @param {object|null} border - parsed border or null for no border
+ * @param {string[]} sides - list of border side names
+ */
+function buildBorderXml(border, sides) {
+  let xml = '';
+  for (const s of sides) {
+    if (border) {
+      xml += `<w:${s} w:val="${border.style}" w:sz="${border.sz}" w:space="0" w:color="${border.color}"/>`;
+    } else {
+      xml += `<w:${s} w:val="none" w:sz="0" w:space="0" w:color="auto"/>`;
+    }
+  }
+  return xml;
+}
+
+/**
  * Convert an HTML <table> block to a native OOXML <w:tbl> element.
  * Preserves cell count, colspan, per-cell text-align, and inline content.
+ * Borders are only applied when explicitly present in the HTML style.
  */
 function convertTableToOoxml(tableHtml) {
   const rows = [];
@@ -329,15 +371,21 @@ function convertTableToOoxml(tableHtml) {
   }
   if (!rows.length) return '';
 
+  // Detect table-level border from <table> tag style or border attribute
+  const tableStyleMatch = tableHtml.match(/<table[^>]*style="([^"]*)"/i);
+  const tableBorderAttr = tableHtml.match(/<table[^>]*\bborder="([^"]*)"/i);
+  const tableStyle = tableStyleMatch ? tableStyleMatch[1] : '';
+  const tableBorder = parseBorderStyle(tableStyle)
+    || (tableBorderAttr && tableBorderAttr[1] !== '0' ? { sz: 4, color: 'auto', style: 'single' } : null);
+
   const numCols = rows[0].reduce((s, c) => s + c.colspan, 0);
   const colW = Math.floor(9026 / numCols); // A4 usable width in twips
 
   let tbl = '<w:tbl><w:tblPr>';
   tbl += '<w:tblW w:w="5000" w:type="pct"/>';
+  tbl += '<w:tblLook w:val="0000" w:firstRow="0" w:lastRow="0" w:firstColumn="0" w:lastColumn="0" w:noHBand="0" w:noVBand="0"/>';
   tbl += '<w:tblBorders>';
-  for (const b of ['top','left','bottom','right','insideH','insideV']) {
-    tbl += `<w:${b} w:val="none" w:sz="0" w:space="0" w:color="auto"/>`;
-  }
+  tbl += buildBorderXml(tableBorder, ['top','left','bottom','right','insideH','insideV']);
   tbl += '</w:tblBorders>';
   tbl += '<w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/></w:tblCellMar>';
   tbl += '</w:tblPr><w:tblGrid>';
@@ -349,9 +397,14 @@ function convertTableToOoxml(tableHtml) {
     for (const cell of row) {
       const jc = cell.alignment === 'justify' ? 'both' : cell.alignment;
       const w = colW * cell.colspan;
+      // Check for cell-level border override
+      const cellBorder = parseBorderStyle(cell.style) || tableBorder;
       tbl += '<w:tc><w:tcPr>';
       tbl += `<w:tcW w:w="${w}" w:type="dxa"/>`;
       if (cell.colspan > 1) tbl += `<w:gridSpan w:val="${cell.colspan}"/>`;
+      tbl += '<w:tcBorders>';
+      tbl += buildBorderXml(cellBorder, ['top','left','bottom','right']);
+      tbl += '</w:tcBorders>';
       tbl += '<w:vAlign w:val="center"/>';
       tbl += '</w:tcPr>';
       // Strip <p> wrappers inside cells, keep inline content
@@ -784,7 +837,7 @@ module.exports = {
   // Internal helpers exported for testing
   _internal: {
     escapeXml, decodeHtmlEntities, HTML_ENTITIES, buildRunProps, buildRuns, parseInlineHtml,
-    extractImagesFromHtml, buildImageDrawing,
+    extractImagesFromHtml, buildImageDrawing, parseBorderStyle, buildBorderXml,
     convertTableToOoxml, convertBlocksToOoxml, buildFlexParagraph,
     htmlToOoxml, injectFooterIntoDocx, buildPandocHtml
   }

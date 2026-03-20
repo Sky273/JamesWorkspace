@@ -15,6 +15,7 @@ const {
     escapeXml, decodeHtmlEntities, HTML_ENTITIES,
     buildRunProps, buildRuns, parseInlineHtml,
     extractImagesFromHtml, buildImageDrawing,
+    parseBorderStyle, buildBorderXml,
     convertTableToOoxml, convertBlocksToOoxml, buildFlexParagraph,
     htmlToOoxml, buildPandocHtml
   }
@@ -473,6 +474,80 @@ describe('buildImageDrawing()', () => {
 });
 
 // ========================================================
+// parseBorderStyle
+// ========================================================
+describe('parseBorderStyle()', () => {
+  it('should return null for empty/null input', () => {
+    expect(parseBorderStyle(null)).toBeNull();
+    expect(parseBorderStyle('')).toBeNull();
+    expect(parseBorderStyle(undefined)).toBeNull();
+  });
+
+  it('should return null for "border: none"', () => {
+    expect(parseBorderStyle('border: none;')).toBeNull();
+  });
+
+  it('should return null for "border: 0"', () => {
+    expect(parseBorderStyle('border: 0;')).toBeNull();
+  });
+
+  it('should return null when no border property present', () => {
+    expect(parseBorderStyle('color: red; font-size: 12px;')).toBeNull();
+  });
+
+  it('should parse solid border with hex color', () => {
+    const result = parseBorderStyle('border: 1px solid #ff0000;');
+    expect(result).not.toBeNull();
+    expect(result.style).toBe('single');
+    expect(result.color).toBe('FF0000');
+    expect(result.sz).toBeGreaterThan(0);
+  });
+
+  it('should parse dashed border', () => {
+    const result = parseBorderStyle('border: 2px dashed #000;');
+    expect(result.style).toBe('dashed');
+    expect(result.color).toBe('000000');
+  });
+
+  it('should parse dotted border', () => {
+    const result = parseBorderStyle('border: 1px dotted #ccc;');
+    expect(result.style).toBe('dotted');
+    expect(result.color).toBe('CCCCCC');
+  });
+
+  it('should default to "auto" color when no hex color', () => {
+    const result = parseBorderStyle('border: 1px solid;');
+    expect(result.color).toBe('auto');
+  });
+
+  it('should expand 3-char hex colors', () => {
+    const result = parseBorderStyle('border: 1px solid #abc;');
+    expect(result.color).toBe('AABBCC');
+  });
+});
+
+// ========================================================
+// buildBorderXml
+// ========================================================
+describe('buildBorderXml()', () => {
+  it('should generate "none" borders when border is null', () => {
+    const xml = buildBorderXml(null, ['top', 'bottom']);
+    expect(xml).toContain('w:val="none"');
+    expect(xml).toContain('<w:top');
+    expect(xml).toContain('<w:bottom');
+    expect((xml.match(/w:val="none"/g) || []).length).toBe(2);
+  });
+
+  it('should generate visible borders when border is provided', () => {
+    const xml = buildBorderXml({ sz: 8, color: 'FF0000', style: 'single' }, ['top', 'left']);
+    expect(xml).toContain('w:val="single"');
+    expect(xml).toContain('w:sz="8"');
+    expect(xml).toContain('w:color="FF0000"');
+    expect(xml).not.toContain('w:val="none"');
+  });
+});
+
+// ========================================================
 // convertTableToOoxml
 // ========================================================
 describe('convertTableToOoxml()', () => {
@@ -517,11 +592,53 @@ describe('convertTableToOoxml()', () => {
     expect(result).toContain('<w:gridSpan w:val="2"/>');
   });
 
-  it('should set no-border styles on all sides', () => {
+  it('should set no-border styles on all sides (table + cells)', () => {
     const result = convertTableToOoxml('<table><tr><td>X</td></tr></table>');
     expect(result).toContain('<w:tblBorders>');
+    expect(result).toContain('<w:tcBorders>');
     const noneCount = (result.match(/w:val="none"/g) || []).length;
-    expect(noneCount).toBe(6); // top, left, bottom, right, insideH, insideV
+    // 6 table borders + 4 cell borders = 10
+    expect(noneCount).toBe(10);
+  });
+
+  it('should include tblLook to prevent Word default style overrides', () => {
+    const result = convertTableToOoxml('<table><tr><td>X</td></tr></table>');
+    expect(result).toContain('<w:tblLook');
+  });
+
+  it('should apply borders when table has border CSS style', () => {
+    const result = convertTableToOoxml('<table style="border: 1px solid #000;"><tr><td>X</td></tr></table>');
+    expect(result).toContain('w:val="single"');
+    expect(result).toContain('w:color="000000"');
+    expect(result).not.toMatch(/w:val="none"/);
+  });
+
+  it('should apply borders when table has border HTML attribute', () => {
+    const result = convertTableToOoxml('<table border="1"><tr><td>X</td></tr></table>');
+    expect(result).toContain('w:val="single"');
+    expect(result).not.toMatch(/w:val="none"/);
+  });
+
+  it('should not apply borders when border attribute is 0', () => {
+    const result = convertTableToOoxml('<table border="0"><tr><td>X</td></tr></table>');
+    expect(result).not.toContain('w:val="single"');
+    const noneCount = (result.match(/w:val="none"/g) || []).length;
+    expect(noneCount).toBeGreaterThan(0);
+  });
+
+  it('should apply cell-level border override from cell style', () => {
+    const result = convertTableToOoxml(
+      '<table><tr><td style="border: 2px solid #f00;">X</td></tr></table>'
+    );
+    // Table-level should be "none" (no table border)
+    expect(result).toContain('<w:tblBorders>');
+    // Cell-level should have "single" border (from cell style)
+    expect(result).toContain('<w:tcBorders>');
+    const tblBorders = result.match(/<w:tblBorders>([\s\S]*?)<\/w:tblBorders>/)[1];
+    expect(tblBorders).toContain('w:val="none"');
+    const tcBorders = result.match(/<w:tcBorders>([\s\S]*?)<\/w:tcBorders>/)[1];
+    expect(tcBorders).toContain('w:val="single"');
+    expect(tcBorders).toContain('w:color="FF0000"');
   });
 
   it('should use 100% width via pct', () => {
