@@ -74,7 +74,8 @@ function buildRuns(text, runProps) {
 
 /**
  * Parse inline HTML into OOXML runs
- * Handles <strong>, <b>, <em>, <i>, <span style="color:...">
+ * Handles all HTML tags: known formatting tags are interpreted,
+ * unknown tags are silently stripped. Tab characters produce OOXML tabs.
  */
 function parseInlineHtml(html, defaultStyle) {
   if (!html) return '';
@@ -86,15 +87,16 @@ function parseInlineHtml(html, defaultStyle) {
     .replace(/-totalPages-/gi, '\uFFF0NUMPAGES\uFFF0')
     .replace(/<img[^>]*>/gi, '');
 
-  const tokens = content.split(/(<\/?(?:strong|b|em|i|span)[^>]*>)/gi).filter(Boolean);
+  // Tokenize on ALL HTML tags so none leak as raw text
+  const tokens = content.split(/(<[^>]+>)/g).filter(Boolean);
   let runs = '';
   let bold = false, italic = false;
   let colorStack = defaultColor ? [defaultColor] : [];
 
   for (const token of tokens) {
-    if (/^<(strong|b)>/i.test(token)) { bold = true; continue; }
+    if (/^<(strong|b)\b/i.test(token) && !/^<br/i.test(token)) { bold = true; continue; }
     if (/^<\/(strong|b)>/i.test(token)) { bold = false; continue; }
-    if (/^<(em|i)>/i.test(token)) { italic = true; continue; }
+    if (/^<(em|i)\b/i.test(token)) { italic = true; continue; }
     if (/^<\/(em|i)>/i.test(token)) { italic = false; continue; }
     if (/^<span/i.test(token)) {
       const cm = token.match(/color:\s*([^;"]+)/i);
@@ -105,16 +107,28 @@ function parseInlineHtml(html, defaultStyle) {
       if (colorStack.length > (defaultColor ? 1 : 0)) colorStack.pop();
       continue;
     }
+    // Skip ALL other HTML tags (table, td, a, p, div, etc.)
     if (/^<[^>]+>$/.test(token)) continue;
 
     let text = token
       .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&')
       .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
       .replace(/&quot;/g, '"').replace(/&#39;/g, "'");
-    if (!text) continue;
+    if (!text && !text.includes('\t')) continue;
 
     const color = colorStack.length > 0 ? colorStack[colorStack.length - 1] : null;
-    runs += buildRuns(text, buildRunProps({ bold, italic, color }));
+    const runProps = buildRunProps({ bold, italic, color });
+
+    // Handle tab characters (from table cell conversion) as OOXML tabs
+    if (text.includes('\t')) {
+      const tabParts = text.split('\t');
+      for (let j = 0; j < tabParts.length; j++) {
+        if (j > 0) runs += '<w:r><w:rPr><w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr><w:tab/></w:r>';
+        if (tabParts[j]) runs += buildRuns(tabParts[j], runProps);
+      }
+    } else {
+      runs += buildRuns(text, runProps);
+    }
   }
   return runs;
 }
@@ -151,16 +165,33 @@ function buildFlexParagraph(html) {
 
 /**
  * Convert footer HTML to OOXML paragraphs for Word footer
- * Handles <hr>, flex layouts (space-between), block elements, inline formatting
+ * Handles <hr>, flex layouts, tables, links, block elements, inline formatting
  * @param {string} html - Footer HTML content
  * @returns {string} OOXML paragraph elements
  */
 function htmlToOoxml(html) {
   if (!html || !html.trim()) return '';
+
+  // Phase 1: Pre-process complex HTML into simpler structure
+  let processed = html;
+
+  // Handle <a> tags — keep visible text only
+  processed = processed.replace(/<a[^>]*>([\s\S]*?)<\/a>/gi, '$1');
+
+  // Handle table structures: adjacent cells → tab character, rows → paragraph break
+  processed = processed.replace(/<\/td>\s*<td[^>]*>/gi, '\t');
+  processed = processed.replace(/<\/th>\s*<th[^>]*>/gi, '\t');
+  processed = processed.replace(/<\/tr>/gi, '</p>');
+  // Strip remaining table markup
+  processed = processed.replace(/<\/?(?:table|tbody|thead|tfoot|tr|td|th|colgroup|col|caption)[^>]*>/gi, '');
+
+  // Handle <br> as paragraph break
+  processed = processed.replace(/<br\s*\/?>/gi, '</p><p>');
+
   let ooxml = '';
 
-  // Split by <hr> elements, keeping them as tokens
-  const parts = html.split(/(<hr[^>]*>)/gi);
+  // Phase 2: Split by <hr> elements, keeping them as tokens
+  const parts = processed.split(/(<hr[^>]*>)/gi);
 
   for (const part of parts) {
     // Handle <hr> elements → horizontal line paragraph
@@ -183,14 +214,26 @@ function htmlToOoxml(html) {
     // Split by closing block elements into paragraphs
     const blocks = part.split(/<\/(?:div|p)>/gi);
     for (const block of blocks) {
-      const stripped = block.replace(/<[^>]+>/g, '').trim();
+      const stripped = block.replace(/<[^>]+>/g, '').replace(/\t/g, '').trim();
       if (!stripped && !/-pageNumber-/i.test(block) && !/-totalPages-/i.test(block)) continue;
-      const styleMatch = block.match(/<(?:div|p|span)[^>]*style="([^"]*)"/i);
+
+      // Extract text alignment from style
+      const alignMatch = block.match(/text-align:\s*(left|right|center|justify)/i);
+      const alignment = alignMatch ? alignMatch[1].toLowerCase() : 'left';
+      const ooxmlAlign = alignment === 'justify' ? 'both' : alignment;
+
+      const styleMatch = block.match(/<(?:div|p|span|td)[^>]*style="([^"]*)"/i);
       const style = styleMatch ? styleMatch[1] : '';
       const runs = parseInlineHtml(block, style);
-      if (runs) {
-        ooxml += `<w:p><w:pPr><w:jc w:val="center"/><w:rPr><w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr></w:pPr>${runs}</w:p>`;
-      }
+      if (!runs) continue;
+
+      // If content has tabs (from table cells), use tab stops for alignment
+      const hasTab = block.includes('\t');
+      const pPr = hasTab
+        ? `<w:tabs><w:tab w:val="right" w:pos="9026"/></w:tabs><w:rPr><w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr>`
+        : `<w:jc w:val="${ooxmlAlign}"/><w:rPr><w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr>`;
+
+      ooxml += `<w:p><w:pPr>${pPr}</w:pPr>${runs}</w:p>`;
     }
   }
   return ooxml;
@@ -244,10 +287,17 @@ async function injectFooterIntoDocx(docxBuffer, footerContent) {
 
     // Wire the footer into document.xml section properties
     let documentXml = await zip.file('word/document.xml').async('string');
-    if (documentXml.includes('<w:sectPr')) {
+    const footerRef = `<w:footerReference w:type="default" r:id="${footerRId}"/>`;
+    const defaultSectPr = `<w:sectPr>${footerRef}<w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720"/></w:sectPr>`;
+
+    if (/<w:sectPr\s*\/>/.test(documentXml)) {
+      // Pandoc generates self-closing <w:sectPr /> — replace entirely
+      documentXml = documentXml.replace(/<w:sectPr\s*\/>/, defaultSectPr);
+    } else if (/<w:sectPr[^/]*>/.test(documentXml)) {
+      // Opening tag with children — inject footerReference after opening tag
       documentXml = documentXml.replace(
-        /<w:sectPr([^>]*)>/,
-        `<w:sectPr$1><w:footerReference w:type="default" r:id="${footerRId}"/>`
+        /<w:sectPr([^/][^>]*)>/,
+        `<w:sectPr$1>${footerRef}`
       );
       // Ensure footer margin is defined
       if (!/<w:pgMar[^>]*w:footer/.test(documentXml)) {
@@ -257,11 +307,8 @@ async function injectFooterIntoDocx(docxBuffer, footerContent) {
         );
       }
     } else {
-      // No sectPr yet – create one with A4 dimensions
-      documentXml = documentXml.replace(
-        '</w:body>',
-        `<w:sectPr><w:footerReference w:type="default" r:id="${footerRId}"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720"/></w:sectPr></w:body>`
-      );
+      // No sectPr at all — create one before </w:body>
+      documentXml = documentXml.replace('</w:body>', `${defaultSectPr}</w:body>`);
     }
     zip.file('word/document.xml', documentXml);
   }
