@@ -13,7 +13,8 @@ const {
   getDocMimeType, getDocExtension,
   _internal: {
     escapeXml, decodeHtmlEntities, HTML_ENTITIES,
-    buildRunProps, buildRuns, parseInlineHtml,
+    cssColorToHex, CSS_NAMED_COLORS, cssSizeToHalfPoints, cssSizeToTwips, parseInlineStyles,
+    buildRunProps, buildRuns, parseInlineHtml, INLINE_TAGS,
     extractImagesFromHtml, buildImageDrawing,
     parseBorderStyle, buildBorderXml,
     convertTableToOoxml, convertBlocksToOoxml, buildFlexParagraph,
@@ -155,6 +156,164 @@ describe('decodeHtmlEntities()', () => {
 });
 
 // ========================================================
+// cssColorToHex
+// ========================================================
+describe('cssColorToHex()', () => {
+  it('should return null for null/empty/transparent', () => {
+    expect(cssColorToHex(null)).toBeNull();
+    expect(cssColorToHex('')).toBeNull();
+    expect(cssColorToHex('transparent')).toBeNull();
+    expect(cssColorToHex('inherit')).toBeNull();
+  });
+
+  it('should parse 6-char hex colors', () => {
+    expect(cssColorToHex('#ff0000')).toBe('FF0000');
+    expect(cssColorToHex('#ABC123')).toBe('ABC123');
+  });
+
+  it('should expand 3-char hex colors', () => {
+    expect(cssColorToHex('#f00')).toBe('FF0000');
+    expect(cssColorToHex('#abc')).toBe('AABBCC');
+  });
+
+  it('should parse rgb() colors', () => {
+    expect(cssColorToHex('rgb(255, 0, 0)')).toBe('FF0000');
+    expect(cssColorToHex('rgb(0,128,0)')).toBe('008000');
+  });
+
+  it('should parse rgba() colors (ignoring alpha)', () => {
+    expect(cssColorToHex('rgba(255, 0, 0, 0.5)')).toBe('FF0000');
+  });
+
+  it('should parse named colors', () => {
+    expect(cssColorToHex('red')).toBe('FF0000');
+    expect(cssColorToHex('blue')).toBe('0000FF');
+    expect(cssColorToHex('navy')).toBe('000080');
+    expect(cssColorToHex('Black')).toBe('000000');
+  });
+
+  it('should return null for unknown color names', () => {
+    expect(cssColorToHex('foobar')).toBeNull();
+  });
+});
+
+// ========================================================
+// cssSizeToHalfPoints
+// ========================================================
+describe('cssSizeToHalfPoints()', () => {
+  it('should return null for null/empty', () => {
+    expect(cssSizeToHalfPoints(null)).toBeNull();
+    expect(cssSizeToHalfPoints('')).toBeNull();
+  });
+
+  it('should convert px to half-points (1px ≈ 1.5 half-pt)', () => {
+    expect(cssSizeToHalfPoints('10px')).toBe(15);
+    expect(cssSizeToHalfPoints('8px')).toBe(12);
+  });
+
+  it('should convert pt to half-points (1pt = 2 half-pt)', () => {
+    expect(cssSizeToHalfPoints('8pt')).toBe(16);
+    expect(cssSizeToHalfPoints('12pt')).toBe(24);
+  });
+
+  it('should convert em to half-points', () => {
+    expect(cssSizeToHalfPoints('1em')).toBe(16);
+    expect(cssSizeToHalfPoints('1.5em')).toBe(24);
+  });
+
+  it('should convert named sizes', () => {
+    expect(cssSizeToHalfPoints('small')).toBe(14);
+    expect(cssSizeToHalfPoints('medium')).toBe(16);
+    expect(cssSizeToHalfPoints('large')).toBe(20);
+  });
+
+  it('should return null for unknown values', () => {
+    expect(cssSizeToHalfPoints('auto')).toBeNull();
+  });
+});
+
+// ========================================================
+// cssSizeToTwips
+// ========================================================
+describe('cssSizeToTwips()', () => {
+  it('should return 0 for null/empty', () => {
+    expect(cssSizeToTwips(null)).toBe(0);
+    expect(cssSizeToTwips('')).toBe(0);
+  });
+
+  it('should convert px to twips (1px ≈ 15 twips)', () => {
+    expect(cssSizeToTwips('10px')).toBe(150);
+  });
+
+  it('should convert pt to twips (1pt = 20 twips)', () => {
+    expect(cssSizeToTwips('12pt')).toBe(240);
+  });
+
+  it('should convert mm to twips', () => {
+    expect(cssSizeToTwips('10mm')).toBe(567);
+  });
+});
+
+// ========================================================
+// parseInlineStyles
+// ========================================================
+describe('parseInlineStyles()', () => {
+  it('should return empty object for null/empty', () => {
+    expect(parseInlineStyles(null)).toEqual({});
+    expect(parseInlineStyles('')).toEqual({});
+  });
+
+  it('should parse font-weight bold', () => {
+    expect(parseInlineStyles('font-weight: bold;').bold).toBe(true);
+    expect(parseInlineStyles('font-weight: 700;').bold).toBe(true);
+    expect(parseInlineStyles('font-weight: 400;').bold).toBeUndefined();
+  });
+
+  it('should parse font-style italic', () => {
+    expect(parseInlineStyles('font-style: italic;').italic).toBe(true);
+  });
+
+  it('should parse text-decoration underline and line-through', () => {
+    const ul = parseInlineStyles('text-decoration: underline;');
+    expect(ul.underline).toBe(true);
+    const lt = parseInlineStyles('text-decoration: line-through;');
+    expect(lt.strike).toBe(true);
+    const both = parseInlineStyles('text-decoration: underline line-through;');
+    expect(both.underline).toBe(true);
+    expect(both.strike).toBe(true);
+  });
+
+  it('should parse color (not background-color)', () => {
+    const s = parseInlineStyles('color: #ff0000; background-color: #00ff00;');
+    expect(s.color).toBe('#FF0000');
+    expect(s.bgColor).toBe('#00FF00');
+  });
+
+  it('should parse font-size', () => {
+    expect(parseInlineStyles('font-size: 12pt;').fontSize).toBe(24);
+    expect(parseInlineStyles('font-size: 10px;').fontSize).toBe(15);
+  });
+
+  it('should parse font-family', () => {
+    expect(parseInlineStyles('font-family: Arial, sans-serif;').fontFamily).toBe('Arial, sans-serif');
+  });
+
+  it('should parse vertical-align', () => {
+    expect(parseInlineStyles('vertical-align: super;').vertAlign).toBe('superscript');
+    expect(parseInlineStyles('vertical-align: sub;').vertAlign).toBe('subscript');
+  });
+
+  it('should parse text-transform uppercase', () => {
+    expect(parseInlineStyles('text-transform: uppercase;').caps).toBe(true);
+  });
+
+  it('should parse letter-spacing', () => {
+    expect(parseInlineStyles('letter-spacing: 2px;').letterSpacing).toBe(30);
+    expect(parseInlineStyles('letter-spacing: 1pt;').letterSpacing).toBe(20);
+  });
+});
+
+// ========================================================
 // buildRunProps
 // ========================================================
 describe('buildRunProps()', () => {
@@ -195,6 +354,48 @@ describe('buildRunProps()', () => {
     const rPr = buildRunProps({ bold: false, italic: false });
     expect(rPr).not.toContain('<w:b/>');
     expect(rPr).not.toContain('<w:i/>');
+  });
+
+  it('should include underline when underline=true', () => {
+    expect(buildRunProps({ underline: true })).toContain('<w:u w:val="single"/>');
+  });
+
+  it('should include strikethrough when strike=true', () => {
+    expect(buildRunProps({ strike: true })).toContain('<w:strike/>');
+  });
+
+  it('should include caps when caps=true', () => {
+    expect(buildRunProps({ caps: true })).toContain('<w:caps/>');
+  });
+
+  it('should include font family when fontFamily is set', () => {
+    const rPr = buildRunProps({ fontFamily: "'Arial', sans-serif" });
+    expect(rPr).toContain('<w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/>');
+  });
+
+  it('should use custom fontSize', () => {
+    const rPr = buildRunProps({ fontSize: 24 });
+    expect(rPr).toContain('<w:sz w:val="24"/>');
+    expect(rPr).toContain('<w:szCs w:val="24"/>');
+  });
+
+  it('should include background color shading', () => {
+    const rPr = buildRunProps({ bgColor: '#FFFF00' });
+    expect(rPr).toContain('<w:shd w:val="clear" w:color="auto" w:fill="FFFF00"/>');
+  });
+
+  it('should include vertical alignment', () => {
+    expect(buildRunProps({ vertAlign: 'superscript' })).toContain('<w:vertAlign w:val="superscript"/>');
+    expect(buildRunProps({ vertAlign: 'subscript' })).toContain('<w:vertAlign w:val="subscript"/>');
+  });
+
+  it('should include letter spacing', () => {
+    expect(buildRunProps({ letterSpacing: 30 })).toContain('<w:spacing w:val="30"/>');
+  });
+
+  it('should handle named CSS colors via cssColorToHex', () => {
+    expect(buildRunProps({ color: 'red' })).toContain('<w:color w:val="FF0000"/>');
+    expect(buildRunProps({ color: 'navy' })).toContain('<w:color w:val="000080"/>');
   });
 });
 
@@ -358,6 +559,134 @@ describe('parseInlineHtml()', () => {
   it('should not leak <br> as text', () => {
     const result = parseInlineHtml('A<br>B');
     expect(result).not.toContain('&lt;br');
+  });
+
+  // --- New tag support ---
+  it('should handle <u> underline tag', () => {
+    const result = parseInlineHtml('<u>Underlined</u>');
+    expect(result).toContain('<w:u w:val="single"/>');
+    expect(result).toContain('Underlined');
+  });
+
+  it('should handle <ins> as underline', () => {
+    const result = parseInlineHtml('<ins>Inserted</ins>');
+    expect(result).toContain('<w:u w:val="single"/>');
+  });
+
+  it('should handle <s> strikethrough tag', () => {
+    const result = parseInlineHtml('<s>Deleted</s>');
+    expect(result).toContain('<w:strike/>');
+    expect(result).toContain('Deleted');
+  });
+
+  it('should handle <del> as strikethrough', () => {
+    const result = parseInlineHtml('<del>Removed</del>');
+    expect(result).toContain('<w:strike/>');
+  });
+
+  it('should handle <sub> subscript', () => {
+    const result = parseInlineHtml('H<sub>2</sub>O');
+    expect(result).toContain('<w:vertAlign w:val="subscript"/>');
+    expect(result).toContain('2');
+  });
+
+  it('should handle <sup> superscript', () => {
+    const result = parseInlineHtml('x<sup>2</sup>');
+    expect(result).toContain('<w:vertAlign w:val="superscript"/>');
+    expect(result).toContain('2');
+  });
+
+  it('should handle <small> with reduced font size', () => {
+    const result = parseInlineHtml('<small>Fine print</small>');
+    // default 16 * 0.8 = 12.8 → rounded to 13
+    expect(result).toContain('<w:sz w:val="13"/>');
+    expect(result).toContain('Fine print');
+  });
+
+  it('should handle <mark> with yellow background', () => {
+    const result = parseInlineHtml('<mark>Highlighted</mark>');
+    expect(result).toContain('<w:shd w:val="clear" w:color="auto" w:fill="FFFF00"/>');
+    expect(result).toContain('Highlighted');
+  });
+
+  it('should handle <code> with monospace font', () => {
+    const result = parseInlineHtml('<code>snippet</code>');
+    expect(result).toContain('w:ascii="Courier New"');
+    expect(result).toContain('snippet');
+  });
+
+  it('should handle inline style font-weight: bold on span', () => {
+    const result = parseInlineHtml('<span style="font-weight: bold;">Bold via style</span>');
+    expect(result).toContain('<w:b/>');
+  });
+
+  it('should handle inline style font-style: italic on span', () => {
+    const result = parseInlineHtml('<span style="font-style: italic;">Italic via style</span>');
+    expect(result).toContain('<w:i/>');
+  });
+
+  it('should handle inline style text-decoration: underline', () => {
+    const result = parseInlineHtml('<span style="text-decoration: underline;">Underlined via style</span>');
+    expect(result).toContain('<w:u w:val="single"/>');
+  });
+
+  it('should handle inline style text-decoration: line-through', () => {
+    const result = parseInlineHtml('<span style="text-decoration: line-through;">Struck</span>');
+    expect(result).toContain('<w:strike/>');
+  });
+
+  it('should handle inline style font-size', () => {
+    const result = parseInlineHtml('<span style="font-size: 12pt;">Large</span>');
+    expect(result).toContain('<w:sz w:val="24"/>'); // 12pt = 24 half-points
+  });
+
+  it('should handle inline style font-family', () => {
+    const result = parseInlineHtml('<span style="font-family: Georgia;">Serif</span>');
+    expect(result).toContain('w:ascii="Georgia"');
+  });
+
+  it('should handle inline style background-color', () => {
+    const result = parseInlineHtml('<span style="background-color: #ff0;">Highlighted</span>');
+    expect(result).toContain('<w:shd w:val="clear" w:color="auto" w:fill="FFFF00"/>');
+  });
+
+  it('should handle inline style vertical-align: super', () => {
+    const result = parseInlineHtml('<span style="vertical-align: super;">sup</span>');
+    expect(result).toContain('<w:vertAlign w:val="superscript"/>');
+  });
+
+  it('should handle inline style text-transform: uppercase', () => {
+    const result = parseInlineHtml('<span style="text-transform: uppercase;">caps</span>');
+    expect(result).toContain('<w:caps/>');
+  });
+
+  it('should handle <font> tag with color and face attributes', () => {
+    const result = parseInlineHtml('<font color="#0000ff" face="Verdana">Old style</font>');
+    expect(result).toContain('<w:color w:val="0000FF"/>');
+    expect(result).toContain('w:ascii="Verdana"');
+  });
+
+  it('should handle nested formatting with style stack', () => {
+    const result = parseInlineHtml('<b><u><span style="color: red;">Nested</span></u></b> Plain');
+    // "Nested" should be bold + underline + red
+    expect(result).toContain('<w:b/>');
+    expect(result).toContain('<w:u w:val="single"/>');
+    expect(result).toContain('<w:color w:val="FF0000"/>');
+    // "Plain" should have none of those
+    const plainRun = result.split('Plain')[0].split('Nested')[1];
+    // After closing all tags, formatting should be reset
+  });
+
+  it('should apply default style as base and override with inline', () => {
+    const result = parseInlineHtml(
+      '<span style="font-size: 20pt;">Big</span> Normal',
+      'color: #333; font-size: 10pt;'
+    );
+    // "Big" should have fontSize=40 (20pt) and color #333
+    expect(result).toContain('<w:sz w:val="40"/>');
+    expect(result).toContain('<w:color w:val="333333"/>');
+    // "Normal" should have fontSize=20 (10pt from default)
+    expect(result).toContain('<w:sz w:val="20"/>');
   });
 });
 
@@ -744,6 +1073,69 @@ describe('convertBlocksToOoxml()', () => {
     const result = convertBlocksToOoxml('<p>\uFFF1IMGF:rImgF1:10:10\uFFF1</p>');
     expect(result).toContain('w:drawing');
   });
+
+  // --- Block-level style support ---
+  it('should parse margin-top and margin-bottom as paragraph spacing', () => {
+    const result = convertBlocksToOoxml('<p style="margin-top: 10px; margin-bottom: 5px;">Spaced</p>');
+    expect(result).toContain('w:before="150"'); // 10px * 15 twips
+    expect(result).toContain('w:after="75"');   // 5px * 15 twips
+  });
+
+  it('should parse line-height as paragraph line spacing', () => {
+    const result = convertBlocksToOoxml('<p style="line-height: 1.5;">Text</p>');
+    expect(result).toContain('w:line="360"'); // 1.5 * 240
+    expect(result).toContain('w:lineRule="auto"');
+  });
+
+  it('should parse line-height in px as exact spacing', () => {
+    const result = convertBlocksToOoxml('<p style="line-height: 20px;">Text</p>');
+    expect(result).toContain('w:line="300"'); // 20px * 15 twips
+    expect(result).toContain('w:lineRule="exact"');
+  });
+
+  it('should parse text-indent as first line indent', () => {
+    const result = convertBlocksToOoxml('<p style="text-indent: 20px;">Indented</p>');
+    expect(result).toContain('w:firstLine="300"'); // 20px * 15 twips
+  });
+
+  it('should parse padding-left as left indent', () => {
+    const result = convertBlocksToOoxml('<p style="padding-left: 10px;">Padded</p>');
+    expect(result).toContain('w:left="150"'); // 10px * 15 twips
+  });
+
+  it('should use block font-size for default run properties', () => {
+    const result = convertBlocksToOoxml('<p style="font-size: 12pt;">Big text</p>');
+    // 12pt = 24 half-points
+    expect(result).toContain('<w:sz w:val="24"/>');
+  });
+
+  it('should use defaultAlign parameter when no inline text-align', () => {
+    const result = convertBlocksToOoxml('<p>Centered</p>', 'center');
+    expect(result).toContain('<w:jc w:val="center"/>');
+  });
+
+  it('should always include w:spacing with default zero spacing', () => {
+    const result = convertBlocksToOoxml('<p>No spacing</p>');
+    expect(result).toContain('w:before="0"');
+    expect(result).toContain('w:after="0"');
+    expect(result).toContain('w:line="240"');
+    expect(result).toContain('w:lineRule="auto"');
+  });
+
+  it('should apply defaultStyle font-size when block has no inline style', () => {
+    const result = convertBlocksToOoxml('<p>Text</p>', 'left', 'font-size: 7pt; color: #666;');
+    // 7pt = 14 half-points
+    expect(result).toContain('<w:sz w:val="14"/>');
+    expect(result).toContain('<w:color w:val="666666"/>');
+  });
+
+  it('should let block inline style override defaultStyle', () => {
+    const result = convertBlocksToOoxml(
+      '<p style="font-size: 12pt;">Big</p>', 'left', 'font-size: 7pt;'
+    );
+    // Block style 12pt = 24 should win over default 7pt = 14
+    expect(result).toContain('<w:sz w:val="24"/>');
+  });
 });
 
 // ========================================================
@@ -787,11 +1179,24 @@ describe('htmlToOoxml()', () => {
     expect(htmlToOoxml('   ')).toBe('');
   });
 
-  it('should strip <a> tags keeping visible text', () => {
+  it('should convert <a> tags to spans keeping visible text', () => {
     const result = htmlToOoxml('<p><a href="mailto:test@x.com">test@x.com</a></p>');
     expect(result).toContain('test@x.com');
     expect(result).not.toContain('mailto:');
     expect(result).not.toContain('&lt;a');
+  });
+
+  it('should preserve <a> inline styles (converted to span)', () => {
+    const result = htmlToOoxml('<p><a href="#" style="color: #0000ff;">Link</a></p>');
+    expect(result).toContain('<w:color w:val="0000FF"/>');
+    expect(result).toContain('Link');
+  });
+
+  it('should pass defaultStyle through to paragraphs', () => {
+    const result = htmlToOoxml('<p>Small text</p>', 'center', 'font-size: 7pt; color: #666;');
+    expect(result).toContain('<w:sz w:val="14"/>'); // 7pt = 14 half-points
+    expect(result).toContain('<w:jc w:val="center"/>');
+    expect(result).toContain('<w:color w:val="666666"/>');
   });
 
   it('should convert <br> to paragraph break', () => {

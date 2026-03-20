@@ -92,6 +92,120 @@ function decodeHtmlEntities(str) {
 }
 
 /**
+ * Convert a CSS color value (hex, rgb(), named) to a 6-char uppercase hex string.
+ * Returns null if the color can't be parsed or is transparent.
+ */
+const CSS_NAMED_COLORS = {
+  black:'000000',white:'FFFFFF',red:'FF0000',green:'008000',blue:'0000FF',
+  yellow:'FFFF00',gray:'808080',grey:'808080',silver:'C0C0C0',navy:'000080',
+  teal:'008080',maroon:'800000',purple:'800080',olive:'808000',lime:'00FF00',
+  aqua:'00FFFF',fuchsia:'FF00FF',orange:'FFA500',pink:'FFC0CB',brown:'A52A2A',
+  darkgray:'A9A9A9',darkgrey:'A9A9A9',lightgray:'D3D3D3',lightgrey:'D3D3D3',
+  darkblue:'00008B',darkgreen:'006400',darkred:'8B0000',crimson:'DC143C',
+  coral:'FF7F50',gold:'FFD700',indigo:'4B0082',ivory:'FFFFF0',khaki:'F0E68C',
+  lavender:'E6E6FA',salmon:'FA8072',tomato:'FF6347',violet:'EE82EE',wheat:'F5DEB3',
+};
+function cssColorToHex(color) {
+  if (!color) return null;
+  color = color.trim();
+  if (color === 'transparent' || color === 'inherit' || color === 'initial') return null;
+  if (/^#[0-9A-Fa-f]{3,6}$/.test(color)) {
+    let hex = color.slice(1).toUpperCase();
+    if (hex.length === 3) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+    return hex;
+  }
+  const rgbM = color.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
+  if (rgbM) {
+    return [rgbM[1], rgbM[2], rgbM[3]]
+      .map(v => Math.min(255, parseInt(v)).toString(16).padStart(2, '0'))
+      .join('').toUpperCase();
+  }
+  return CSS_NAMED_COLORS[color.toLowerCase()] || null;
+}
+
+/**
+ * Convert a CSS size value to OOXML half-points (1pt = 2 half-points).
+ * Handles px, pt, em, rem, %, and named sizes.
+ */
+function cssSizeToHalfPoints(cssSize) {
+  if (!cssSize) return null;
+  cssSize = cssSize.trim();
+  const px = cssSize.match(/^(-?\d+(?:\.\d+)?)\s*px$/i);
+  if (px) return Math.round(parseFloat(px[1]) * 1.5); // 1px ≈ 0.75pt → 1.5 half-pt
+  const pt = cssSize.match(/^(-?\d+(?:\.\d+)?)\s*pt$/i);
+  if (pt) return Math.round(parseFloat(pt[1]) * 2);
+  const em = cssSize.match(/^(-?\d+(?:\.\d+)?)\s*(em|rem)$/i);
+  if (em) return Math.round(parseFloat(em[1]) * 16); // 1em ≈ 8pt default
+  const pct = cssSize.match(/^(-?\d+(?:\.\d+)?)\s*%$/i);
+  if (pct) return Math.round(parseFloat(pct[1]) / 100 * 16);
+  const named = { 'xx-small':10, 'x-small':12, 'small':14, 'medium':16, 'large':20, 'x-large':24, 'xx-large':28 };
+  return named[cssSize.toLowerCase()] || null;
+}
+
+/**
+ * Convert a CSS size value to OOXML twips (1pt = 20 twips, 1px ≈ 15 twips).
+ */
+function cssSizeToTwips(cssSize) {
+  if (!cssSize) return 0;
+  cssSize = cssSize.trim();
+  const px = cssSize.match(/^(-?\d+(?:\.\d+)?)\s*px$/i);
+  if (px) return Math.round(parseFloat(px[1]) * 15);
+  const pt = cssSize.match(/^(-?\d+(?:\.\d+)?)\s*pt$/i);
+  if (pt) return Math.round(parseFloat(pt[1]) * 20);
+  const mm = cssSize.match(/^(-?\d+(?:\.\d+)?)\s*mm$/i);
+  if (mm) return Math.round(parseFloat(mm[1]) * 56.7);
+  const cm = cssSize.match(/^(-?\d+(?:\.\d+)?)\s*cm$/i);
+  if (cm) return Math.round(parseFloat(cm[1]) * 567);
+  const em = cssSize.match(/^(-?\d+(?:\.\d+)?)\s*(em|rem)$/i);
+  if (em) return Math.round(parseFloat(em[1]) * 160); // 1em ≈ 8pt ≈ 160 twips
+  return 0;
+}
+
+/**
+ * Parse a CSS style string into a formatting properties object.
+ * Used for inline styles on any HTML element.
+ */
+function parseInlineStyles(styleStr) {
+  if (!styleStr) return {};
+  const s = {};
+  const fw = styleStr.match(/font-weight:\s*(\w+|\d+)/i);
+  if (fw) { const v = fw[1]; if (v === 'bold' || v === 'bolder' || parseInt(v) >= 700) s.bold = true; }
+  const fs = styleStr.match(/font-style:\s*(\w+)/i);
+  if (fs && /^(italic|oblique)$/i.test(fs[1])) s.italic = true;
+  const td = styleStr.match(/text-decoration[^:]*:\s*([^;]+)/i);
+  if (td) {
+    const v = td[1].toLowerCase();
+    if (v.includes('underline')) s.underline = true;
+    if (v.includes('line-through')) s.strike = true;
+  }
+  // color (not background-color)
+  const cm = styleStr.match(/(?<![\w-])color:\s*([^;"]+)/i);
+  if (cm) { const hex = cssColorToHex(cm[1].trim()); if (hex) s.color = '#' + hex; }
+  const bg = styleStr.match(/background-color:\s*([^;"]+)/i);
+  if (bg) { const hex = cssColorToHex(bg[1].trim()); if (hex) s.bgColor = '#' + hex; }
+  const fz = styleStr.match(/font-size:\s*([^;"]+)/i);
+  if (fz) { const hp = cssSizeToHalfPoints(fz[1].trim()); if (hp) s.fontSize = hp; }
+  const ff = styleStr.match(/font-family:\s*([^;"]+)/i);
+  if (ff) s.fontFamily = ff[1].trim();
+  const va = styleStr.match(/vertical-align:\s*(\w+)/i);
+  if (va) {
+    if (va[1] === 'super') s.vertAlign = 'superscript';
+    else if (va[1] === 'sub') s.vertAlign = 'subscript';
+  }
+  const tt = styleStr.match(/text-transform:\s*(\w+)/i);
+  if (tt && tt[1].toLowerCase() === 'uppercase') s.caps = true;
+  const ls = styleStr.match(/letter-spacing:\s*([^;"]+)/i);
+  if (ls) {
+    const v = ls[1].trim();
+    const pxM = v.match(/(-?\d+(?:\.\d+)?)\s*px/i);
+    const ptM = v.match(/(-?\d+(?:\.\d+)?)\s*pt/i);
+    if (pxM) s.letterSpacing = Math.round(parseFloat(pxM[1]) * 15);
+    else if (ptM) s.letterSpacing = Math.round(parseFloat(ptM[1]) * 20);
+  }
+  return s;
+}
+
+/**
  * Extract base64 images from HTML <img> tags.
  * Replaces each <img src="data:..."> with a Unicode marker \uFFF1IMGF:rId:w:h\uFFF1
  * and returns the processed HTML plus an array of image metadata + binary data.
@@ -174,17 +288,33 @@ function buildImageDrawing(rId, widthPx, heightPx) {
 }
 
 /**
- * Build OOXML run properties
+ * Build OOXML run properties from a comprehensive formatting options object.
+ * Supports: fontFamily, bold, italic, caps, strike, underline, color,
+ * fontSize, bgColor, vertAlign, letterSpacing.
  */
 function buildRunProps(options = {}) {
-  let rPr = '<w:sz w:val="16"/><w:szCs w:val="16"/>';
+  let rPr = '';
+  if (options.fontFamily) {
+    const font = escapeXml(options.fontFamily.split(',')[0].trim().replace(/['"]/g, ''));
+    rPr += `<w:rFonts w:ascii="${font}" w:hAnsi="${font}" w:cs="${font}"/>`;
+  }
   if (options.bold) rPr += '<w:b/>';
   if (options.italic) rPr += '<w:i/>';
+  if (options.caps) rPr += '<w:caps/>';
+  if (options.strike) rPr += '<w:strike/>';
+  if (options.underline) rPr += '<w:u w:val="single"/>';
   if (options.color) {
-    let c = options.color.replace('#', '').toUpperCase();
-    if (c.length === 3) c = c.split('').map(ch => ch + ch).join('');
-    if (/^[0-9A-F]{6}$/.test(c)) rPr += `<w:color w:val="${c}"/>`;
+    const hex = cssColorToHex(options.color);
+    if (hex) rPr += `<w:color w:val="${hex}"/>`;
   }
+  const sz = options.fontSize || 16; // default 8pt = 16 half-points
+  rPr += `<w:sz w:val="${sz}"/><w:szCs w:val="${sz}"/>`;
+  if (options.bgColor) {
+    const hex = cssColorToHex(options.bgColor);
+    if (hex) rPr += `<w:shd w:val="clear" w:color="auto" w:fill="${hex}"/>`;
+  }
+  if (options.vertAlign) rPr += `<w:vertAlign w:val="${options.vertAlign}"/>`;
+  if (options.letterSpacing) rPr += `<w:spacing w:val="${options.letterSpacing}"/>`;
   return `<w:rPr>${rPr}</w:rPr>`;
 }
 
@@ -209,14 +339,26 @@ function buildRuns(text, runProps) {
 }
 
 /**
- * Parse inline HTML into OOXML runs
- * Handles all HTML tags: known formatting tags are interpreted,
- * unknown tags are silently stripped. Tab characters produce OOXML tabs.
+ * Inline formatting tag names (lowercase) handled by parseInlineHtml.
+ * Opening tags push styles onto a stack; closing tags pop them.
+ */
+const INLINE_TAGS = new Set([
+  'b','strong','i','em','u','ins','s','strike','del',
+  'sub','sup','small','big','mark','span','font',
+  'abbr','cite','code','kbd','samp','var','q','dfn','time','data'
+]);
+
+/**
+ * Parse inline HTML into OOXML runs.
+ * Uses a style stack: each opening tag pushes formatting overrides,
+ * closing tags pop them. Supports all common HTML formatting tags
+ * plus inline CSS styles on any element.
  */
 function parseInlineHtml(html, defaultStyle) {
   if (!html) return '';
-  const defaultColorMatch = (defaultStyle || '').match(/color:\s*([^;"]+)/i);
-  const defaultColor = defaultColorMatch ? defaultColorMatch[1].trim() : null;
+
+  // Parse defaults from the parent element's style attribute
+  const defaults = parseInlineStyles(defaultStyle || '');
 
   let content = html
     .replace(/-pageNumber-/gi, '\uFFF0PAGE\uFFF0')
@@ -225,31 +367,80 @@ function parseInlineHtml(html, defaultStyle) {
   // Tokenize on ALL HTML tags so none leak as raw text
   const tokens = content.split(/(<[^>]+>)/g).filter(Boolean);
   let runs = '';
-  let bold = false, italic = false;
-  let colorStack = defaultColor ? [defaultColor] : [];
+  const styleStack = []; // each entry: { tag, styles }
+
+  // Compute current merged style from defaults + stack
+  function currentStyles() {
+    const m = { ...defaults };
+    for (const entry of styleStack) {
+      for (const [k, v] of Object.entries(entry.styles)) {
+        if (v !== undefined && v !== null) m[k] = v;
+      }
+    }
+    return m;
+  }
 
   for (const token of tokens) {
-    if (/^<(strong|b)\b/i.test(token) && !/^<br/i.test(token)) { bold = true; continue; }
-    if (/^<\/(strong|b)>/i.test(token)) { bold = false; continue; }
-    if (/^<(em|i)\b/i.test(token)) { italic = true; continue; }
-    if (/^<\/(em|i)>/i.test(token)) { italic = false; continue; }
-    if (/^<span/i.test(token)) {
-      const cm = token.match(/color:\s*([^;"]+)/i);
-      if (cm) colorStack.push(cm[1].trim());
-      continue;
+    // Opening inline formatting tag
+    const openMatch = token.match(/^<([a-z]\w*)\b([^>]*)>/i);
+    if (openMatch && !/^<br/i.test(token)) {
+      const tag = openMatch[1].toLowerCase();
+      if (INLINE_TAGS.has(tag)) {
+        const attrs = openMatch[2];
+        const styleAttr = (attrs.match(/style="([^"]*)"/i) || [])[1] || '';
+        const styles = parseInlineStyles(styleAttr);
+
+        // Apply semantic meaning of the tag
+        if (tag === 'b' || tag === 'strong') styles.bold = true;
+        if (tag === 'i' || tag === 'em' || tag === 'cite' || tag === 'var' || tag === 'dfn') styles.italic = true;
+        if (tag === 'u' || tag === 'ins') styles.underline = true;
+        if (tag === 's' || tag === 'strike' || tag === 'del') styles.strike = true;
+        if (tag === 'sub') styles.vertAlign = 'subscript';
+        if (tag === 'sup') styles.vertAlign = 'superscript';
+        if (tag === 'small') { const cur = currentStyles(); styles.fontSize = Math.round((cur.fontSize || 16) * 0.8); }
+        if (tag === 'big') { const cur = currentStyles(); styles.fontSize = Math.round((cur.fontSize || 16) * 1.2); }
+        if (tag === 'mark' && !styles.bgColor) styles.bgColor = '#FFFF00';
+        if ((tag === 'code' || tag === 'kbd' || tag === 'samp') && !styles.fontFamily) styles.fontFamily = 'Courier New';
+
+        // <font> tag HTML attributes
+        if (tag === 'font') {
+          const colorAttr = (attrs.match(/color="([^"]*)"/i) || [])[1];
+          const faceAttr = (attrs.match(/face="([^"]*)"/i) || [])[1];
+          const sizeAttr = (attrs.match(/size="([^"]*)"/i) || [])[1];
+          if (colorAttr && !styles.color) { const h = cssColorToHex(colorAttr); if (h) styles.color = '#' + h; }
+          if (faceAttr && !styles.fontFamily) styles.fontFamily = faceAttr;
+          if (sizeAttr && !styles.fontSize) {
+            const fontSizeMap = { '1':10, '2':13, '3':16, '4':18, '5':24, '6':32, '7':48 };
+            styles.fontSize = fontSizeMap[sizeAttr] || 16;
+          }
+        }
+
+        styleStack.push({ tag, styles });
+        continue;
+      }
     }
-    if (/^<\/span>/i.test(token)) {
-      if (colorStack.length > (defaultColor ? 1 : 0)) colorStack.pop();
-      continue;
+
+    // Closing inline formatting tag
+    const closeMatch = token.match(/^<\/([a-z]\w*)>/i);
+    if (closeMatch) {
+      const tag = closeMatch[1].toLowerCase();
+      if (INLINE_TAGS.has(tag)) {
+        for (let k = styleStack.length - 1; k >= 0; k--) {
+          if (styleStack[k].tag === tag) { styleStack.splice(k, 1); break; }
+        }
+        continue;
+      }
     }
-    // Skip ALL other HTML tags (table, td, a, p, div, etc.)
+
+    // Skip ALL other HTML tags (table, td, a, p, div, img, br, etc.)
     if (/^<[^>]+>$/.test(token)) continue;
 
+    // Text content
     let text = decodeHtmlEntities(token);
     if (!text && !text.includes('\t')) continue;
 
-    const color = colorStack.length > 0 ? colorStack[colorStack.length - 1] : null;
-    const runProps = buildRunProps({ bold, italic, color });
+    const styles = currentStyles();
+    const runProps = buildRunProps(styles);
 
     // Handle image markers (from extractImagesFromHtml)
     if (text.includes('\uFFF1IMGF:')) {
@@ -263,10 +454,9 @@ function parseInlineHtml(html, defaultStyle) {
         }
       }
     } else if (text.includes('\t')) {
-      // Handle tab characters (from table cell conversion) as OOXML tabs
       const tabParts = text.split('\t');
       for (let j = 0; j < tabParts.length; j++) {
-        if (j > 0) runs += '<w:r><w:rPr><w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr><w:tab/></w:r>';
+        if (j > 0) runs += `<w:r>${buildRunProps(styles)}<w:tab/></w:r>`;
         if (tabParts[j]) runs += buildRuns(tabParts[j], runProps);
       }
     } else {
@@ -424,8 +614,9 @@ function convertTableToOoxml(tableHtml) {
  * Handles <hr>, flex layouts (space-between), and block elements.
  * @param {string} html - HTML content
  * @param {string} [defaultAlign='left'] - Default paragraph alignment from stylesheet
+ * @param {string} [defaultStyle=''] - Default CSS style inherited from stylesheet
  */
-function convertBlocksToOoxml(html, defaultAlign) {
+function convertBlocksToOoxml(html, defaultAlign, defaultStyle) {
   if (!html || !html.trim()) return '';
   let ooxml = '';
 
@@ -451,16 +642,61 @@ function convertBlocksToOoxml(html, defaultAlign) {
       const stripped = block.replace(/<[^>]+>/g, '').replace(/\uFFF1[^\uFFF1]*\uFFF1/g, '').trim();
       if (!stripped && !/-pageNumber-/i.test(block) && !/-totalPages-/i.test(block) && !/\uFFF1IMGF:/.test(block)) continue;
 
+      const styleMatch = block.match(/<(?:div|p|span)[^>]*style="([^"]*)"/i);
+      const blockStyle = styleMatch ? styleMatch[1] : '';
+      // Merge: block inline style first (regex matches first occurrence = block wins)
+      const style = (defaultStyle && blockStyle) ? blockStyle + '; ' + defaultStyle
+        : blockStyle || defaultStyle || '';
+
+      // Paragraph alignment
       const alignMatch = block.match(/text-align:\s*(left|right|center|justify)/i);
       const alignment = alignMatch ? alignMatch[1].toLowerCase() : (defaultAlign || 'left');
       const ooxmlAlign = alignment === 'justify' ? 'both' : alignment;
 
-      const styleMatch = block.match(/<(?:div|p|span)[^>]*style="([^"]*)"/i);
-      const style = styleMatch ? styleMatch[1] : '';
+      // Paragraph spacing (margin-top / margin-bottom / line-height)
+      let spacingXml = '';
+      const mt = (style.match(/margin-top:\s*([^;"]+)/i) || [])[1];
+      const mb = (style.match(/margin-bottom:\s*([^;"]+)/i) || [])[1];
+      const lh = (style.match(/line-height:\s*([^;"]+)/i) || [])[1];
+      {
+        let attrs = '';
+        if (mt) attrs += ` w:before="${cssSizeToTwips(mt)}"`;
+        else attrs += ' w:before="0"';
+        if (mb) attrs += ` w:after="${cssSizeToTwips(mb)}"`;
+        else attrs += ' w:after="0"';
+        if (lh) {
+          const lhVal = lh.trim();
+          const lhNum = parseFloat(lhVal);
+          if (lhVal.endsWith('px') || lhVal.endsWith('pt')) {
+            attrs += ` w:line="${cssSizeToTwips(lhVal)}" w:lineRule="exact"`;
+          } else if (!isNaN(lhNum) && lhNum > 0) {
+            attrs += ` w:line="${Math.round(lhNum * 240)}" w:lineRule="auto"`;
+          }
+        } else {
+          attrs += ' w:line="240" w:lineRule="auto"';
+        }
+        spacingXml = `<w:spacing${attrs}/>`;
+      }
+
+      // Paragraph indentation (text-indent, padding-left, margin-left)
+      let indXml = '';
+      const ti = (style.match(/text-indent:\s*([^;"]+)/i) || [])[1];
+      const pl = (style.match(/(?:padding|margin)-left:\s*([^;"]+)/i) || [])[1];
+      if (ti || pl) {
+        let attrs = '';
+        if (ti) attrs += ` w:firstLine="${cssSizeToTwips(ti)}"`;
+        if (pl) attrs += ` w:left="${cssSizeToTwips(pl)}"`;
+        indXml = `<w:ind${attrs}/>`;
+      }
+
+      // Default run font-size from block style
+      const blockFontSize = cssSizeToHalfPoints((style.match(/font-size:\s*([^;"]+)/i) || [])[1]);
+      const defaultSz = blockFontSize || 16;
+
       const runs = parseInlineHtml(block, style);
       if (!runs) continue;
 
-      ooxml += `<w:p><w:pPr><w:jc w:val="${ooxmlAlign}"/><w:rPr><w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr></w:pPr>${runs}</w:p>`;
+      ooxml += `<w:p><w:pPr><w:jc w:val="${ooxmlAlign}"/>${spacingXml}${indXml}<w:rPr><w:sz w:val="${defaultSz}"/><w:szCs w:val="${defaultSz}"/></w:rPr></w:pPr>${runs}</w:p>`;
     }
   }
   return ooxml;
@@ -473,12 +709,13 @@ function convertBlocksToOoxml(html, defaultAlign) {
  * @param {string} [defaultAlign] - Default paragraph alignment (e.g. from stylesheet)
  * @returns {string} OOXML elements
  */
-function htmlToOoxml(html, defaultAlign) {
+function htmlToOoxml(html, defaultAlign, defaultStyle) {
   if (!html || !html.trim()) return '';
 
-  // Pre-process links and line breaks (tables are kept intact for OOXML conversion)
+  // Pre-process: convert <a> to <span> (preserve inline styles), <br> to paragraph breaks
   let processed = html;
-  processed = processed.replace(/<a[^>]*>([\s\S]*?)<\/a>/gi, '$1');
+  processed = processed.replace(/<a\b([^>]*)>/gi, '<span$1>');
+  processed = processed.replace(/<\/a>/gi, '</span>');
   processed = processed.replace(/<br\s*\/?>/gi, '</p><p>');
 
   let ooxml = '';
@@ -489,7 +726,7 @@ function htmlToOoxml(html, defaultAlign) {
     if (/^<table/i.test(segment)) {
       ooxml += convertTableToOoxml(segment);
     } else if (segment.trim()) {
-      ooxml += convertBlocksToOoxml(segment, defaultAlign);
+      ooxml += convertBlocksToOoxml(segment, defaultAlign, defaultStyle);
     }
   }
   return ooxml;
@@ -507,11 +744,23 @@ async function injectFooterIntoDocx(docxBuffer, footerContent, stylesheet) {
   const JSZipClass = await getJSZip();
   const zip = await JSZipClass.loadAsync(docxBuffer);
 
-  // Extract default text-align from stylesheet (footer context)
+  // Extract default styling from stylesheet for footer context
   let defaultAlign;
+  let defaultStyle = '';
   if (stylesheet) {
     const alignMatch = stylesheet.match(/text-align:\s*(left|right|center|justify)/i);
     if (alignMatch) defaultAlign = alignMatch[1].toLowerCase();
+    // Compose a default inline style string from stylesheet properties
+    const cssParts = [];
+    const fzMatch = stylesheet.match(/font-size:\s*([^;}"]+)/i);
+    if (fzMatch) cssParts.push(`font-size: ${fzMatch[1].trim()}`);
+    const clMatch = stylesheet.match(/(?<![\w-])color:\s*([^;}"]+)/i);
+    if (clMatch) cssParts.push(`color: ${clMatch[1].trim()}`);
+    const ffMatch = stylesheet.match(/font-family:\s*([^;}"]+)/i);
+    if (ffMatch) cssParts.push(`font-family: ${ffMatch[1].trim()}`);
+    const lhMatch = stylesheet.match(/line-height:\s*([^;}"]+)/i);
+    if (lhMatch) cssParts.push(`line-height: ${lhMatch[1].trim()}`);
+    defaultStyle = cssParts.join('; ');
   }
 
   // Extract base64 images from footer HTML (replaced with markers)
@@ -523,7 +772,7 @@ async function injectFooterIntoDocx(docxBuffer, footerContent, stylesheet) {
   const footerXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
        xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"${wpNs}>
-  ${htmlToOoxml(processedFooter, defaultAlign)}
+  ${htmlToOoxml(processedFooter, defaultAlign, defaultStyle)}
 </w:ftr>`;
 
   zip.file('word/footer1.xml', footerXml);
@@ -836,7 +1085,9 @@ module.exports = {
   generateDocx, getDocMimeType, getDocExtension,
   // Internal helpers exported for testing
   _internal: {
-    escapeXml, decodeHtmlEntities, HTML_ENTITIES, buildRunProps, buildRuns, parseInlineHtml,
+    escapeXml, decodeHtmlEntities, HTML_ENTITIES,
+    cssColorToHex, CSS_NAMED_COLORS, cssSizeToHalfPoints, cssSizeToTwips, parseInlineStyles,
+    buildRunProps, buildRuns, parseInlineHtml, INLINE_TAGS,
     extractImagesFromHtml, buildImageDrawing, parseBorderStyle, buildBorderXml,
     convertTableToOoxml, convertBlocksToOoxml, buildFlexParagraph,
     htmlToOoxml, injectFooterIntoDocx, buildPandocHtml
