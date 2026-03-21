@@ -55,7 +55,17 @@ Améliore en priorité :
 - Ne jamais fusionner plusieurs expériences distinctes.
 - Si une information manque, ne pas la compléter.
 - Ne jamais utiliser de placeholder (\`NRE\`, \`TBD\`, \`TODO\`, \`??\`, etc.).
-- Ne pas ajouter de titre global contenant le nom complet du candidat dans le HTML.
+- Ne pas ajouter d'en-tête identité dans le HTML.
+- Ne jamais afficher au début de \`improvedText\` :
+  - le nom complet du candidat ;
+  - le prénom ;
+  - le nom ;
+  - le trigramme ;
+  - \`{TRIGRAM}\` ;
+  - une ligne de titre professionnel isolée ;
+  - un bloc identité ou pseudo-en-tête de CV.
+- Le HTML ne doit jamais commencer par l'identité du candidat ni par le titre du poste.
+- Les informations d'identité et de titre sont déjà portées par les champs JSON (\`name\`, \`summary.title\`, \`summary.targetRole\`) et ne doivent pas être répétées en tête de \`improvedText\`.
 - Appliquer strictement \`{ANONYMIZATION_RULES}\`.
 - Répondre uniquement avec un JSON strictement valide.
 
@@ -108,7 +118,23 @@ Règles :
 - harmoniser les libellés ;
 - supprimer les doublons ;
 - ne jamais ajouter de niveau (\`Avancé\`, \`Intermédiaire\`, etc.) sans preuve explicite ;
-- présenter les compétences d'une catégorie sous forme lisible.
+- présenter les compétences d'une catégorie sous forme lisible ;
+- ne jamais inventer de catégorie non justifiée par le contenu ;
+- ne pas créer de catégorie vide ;
+- regrouper les compétences proches dans la catégorie la plus naturelle sans créer de redondance ;
+- conserver une granularité cohérente ;
+- éviter les doublons évidents de forme quand ils désignent manifestement le même élément, sans perdre d'information utile.
+
+### FORMAT HTML OBLIGATOIRE POUR LA SECTION COMPÉTENCES
+Dans \`improvedText\`, la section \`Compétences\` doit être rendue sous forme de liste HTML valide selon le format strict suivant :
+
+\`\`\`html
+<h2>Compétences</h2>
+<ul>
+  <li><strong>Backend</strong><br>C#, .NET 6, ASP.NET Core, Entity Framework Core</li>
+  <li><strong>Frontend</strong><br>Angular, TypeScript, HTML5, CSS3</li>
+</ul>
+\`\`\`
 
 ## EXPERIENCE RULES
 Objectif : rendre chaque expérience plus lisible, plus concrète et plus évaluable.
