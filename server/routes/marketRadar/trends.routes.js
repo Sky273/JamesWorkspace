@@ -8,6 +8,7 @@ import { authenticateToken, requireAdmin } from '../../middleware/auth.middlewar
 import { safeLog } from '../../utils/logger.backend.js';
 import { FRENCH_REGIONS } from '../../services/franceTravail.service.js';
 import { getStatDynamiqueEmploi } from '../../services/marketTrends.service.js';
+import { createJob, updateJobStatus, updateCollectionJobProgress, JOB_STATUS } from '../../services/batchJobs.service.js';
 import {
     collectMarketTrends,
     getStoredTrends,
@@ -34,10 +35,20 @@ router.post('/trends/collect', authenticateToken, requireAdmin, async (req, res)
             userId: req.user.id 
         });
 
-        // Respond immediately - collection will run in background
+        // Create a tracked job
+        const job = await createJob({
+            firmId: null,
+            userId: req.user.id,
+            jobType: 'collect-trends',
+            options: { source: 'all' }
+        });
+        await updateJobStatus(job.id, JOB_STATUS.PROCESSING);
+
+        // Respond immediately with jobId
         res.json({
             success: true,
             message: 'Collection started in background',
+            jobId: job.id,
             estimatedDuration: '30-60 minutes'
         });
 
@@ -82,9 +93,14 @@ router.post('/trends/collect', authenticateToken, requireAdmin, async (req, res)
                             });
                         }
                         
-                        // Log progress periodically
+                        // Update job progress periodically
                         const now = Date.now();
                         if (now - lastProgressLog > PROGRESS_INTERVAL_MS) {
+                            await updateCollectionJobProgress(job.id, {
+                                processed_items: processedCount,
+                                success_count: createdCount + updatedCount,
+                                error_count: failedCount
+                            });
                             const memUsage = process.memoryUsage();
                             safeLog('info', 'Market Radar: Trends collection progress', {
                                 processed: processedCount,
@@ -107,8 +123,18 @@ router.post('/trends/collect', authenticateToken, requireAdmin, async (req, res)
 
                 // Invalidate cache after collection to force reload
                 invalidateTrendsCache();
+
+                // Mark job as completed
+                await updateCollectionJobProgress(job.id, {
+                    total_items: processedCount,
+                    processed_items: processedCount,
+                    success_count: createdCount + updatedCount,
+                    error_count: failedCount
+                });
+                await updateJobStatus(job.id, JOB_STATUS.COMPLETED);
                 
                 safeLog('info', 'Market Radar: Background collection completed', {
+                    jobId: job.id,
                     totalProcessed: processedCount,
                     created: createdCount,
                     updated: updatedCount,
@@ -128,6 +154,13 @@ router.post('/trends/collect', authenticateToken, requireAdmin, async (req, res)
                     failed: failedCount,
                     heapUsedMB: Math.round(errorMemUsage.heapUsed / 1024 / 1024)
                 });
+                await updateCollectionJobProgress(job.id, {
+                    total_items: processedCount,
+                    processed_items: processedCount,
+                    success_count: createdCount + updatedCount,
+                    error_count: failedCount
+                });
+                await updateJobStatus(job.id, JOB_STATUS.FAILED, { error_message: error.message });
             } finally {
                 // Force garbage collection if available
                 if (global.gc) {
@@ -155,10 +188,21 @@ router.post('/trends/collect-dynamics', authenticateToken, requireAdmin, async (
             userId: req.user.id 
         });
 
-        // Respond immediately
+        // Create a tracked job
+        const job = await createJob({
+            firmId: null,
+            userId: req.user.id,
+            jobType: 'collect-trends',
+            options: { source: 'dynamics' }
+        });
+        await updateJobStatus(job.id, JOB_STATUS.PROCESSING);
+        await updateCollectionJobProgress(job.id, { total_items: FRENCH_REGIONS.length });
+
+        // Respond immediately with jobId
         res.json({
             success: true,
             message: 'DYN_1 dynamics collection started in background',
+            jobId: job.id,
             estimatedDuration: '1-2 minutes'
         });
 
@@ -275,8 +319,17 @@ router.post('/trends/collect-dynamics', authenticateToken, requireAdmin, async (
                 
                 // Verify totals add up
                 const totalAccounted = createdCount + updatedCount + failedCount + skippedCount;
+
+                // Mark job as completed
+                await updateCollectionJobProgress(job.id, {
+                    processed_items: processedCount,
+                    success_count: createdCount + updatedCount,
+                    error_count: failedCount
+                });
+                await updateJobStatus(job.id, JOB_STATUS.COMPLETED);
                 
                 safeLog('info', 'Market Radar: DYN_1 collection completed', {
+                    jobId: job.id,
                     totalRegions,
                     processed: processedCount,
                     created: createdCount,
@@ -299,6 +352,12 @@ router.post('/trends/collect-dynamics', authenticateToken, requireAdmin, async (
                     skipped: skippedCount,
                     heapUsedMB: Math.round(errorMemUsage.heapUsed / 1024 / 1024)
                 });
+                await updateCollectionJobProgress(job.id, {
+                    processed_items: processedCount,
+                    success_count: createdCount + updatedCount,
+                    error_count: failedCount
+                });
+                await updateJobStatus(job.id, JOB_STATUS.FAILED, { error_message: error.message });
             } finally {
                 // Force garbage collection if available
                 if (global.gc) {

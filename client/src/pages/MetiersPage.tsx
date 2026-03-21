@@ -4,12 +4,12 @@
  */
 
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   getStoredMetiers,
   collectITMetiers,
-  Metier,
-  CollectionSummary
+  Metier
 } from '../services/romeService';
 import {
   MagnifyingGlassIcon,
@@ -25,6 +25,7 @@ import {
 import { formatDateTime } from '../utils/dateFormatter';
 
 export default function MetiersPage() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
 
@@ -38,7 +39,7 @@ export default function MetiersPage() {
   
   // Collection state
   const [collecting, setCollecting] = useState(false);
-  const [collectionResult, setCollectionResult] = useState<CollectionSummary | null>(null);
+  const [collectingSuccess, setCollectingSuccess] = useState(false);
 
   // Load stored métiers on mount
   useEffect(() => {
@@ -68,17 +69,14 @@ export default function MetiersPage() {
     
     try {
       setCollecting(true);
+      setCollectingSuccess(false);
       setError(null);
-      setCollectionResult(null);
       
-      const result = await collectITMetiers();
-      setCollectionResult(result);
-      
-      // Reload métiers after collection
-      await loadMetiers();
+      await collectITMetiers();
+      setCollectingSuccess(true);
+      setTimeout(() => navigate('/batch-jobs'), 1200);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur lors de la collecte');
-    } finally {
       setCollecting(false);
     }
   };
@@ -100,23 +98,28 @@ export default function MetiersPage() {
 
   return (
     <>
-      {/* Full-screen overlay during collection */}
+      {/* Full-screen overlay during collection launch */}
       {collecting && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-8 max-w-md mx-4 text-center">
-            <ArrowPathIcon className="h-16 w-16 text-indigo-600 dark:text-indigo-400 animate-spin mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
-              Collecte en cours...
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-4">
-              Récupération des métiers IT depuis l'API Rome 4.0.
-              <br />
-              Cette opération peut prendre quelques minutes.
-            </p>
-            <div className="flex items-center justify-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-              <div className="w-2 h-2 bg-indigo-600 dark:bg-indigo-400 rounded-full animate-pulse"></div>
-              <span>Veuillez patienter...</span>
-            </div>
+            {collectingSuccess ? (
+              <>
+                <CheckCircleIcon className="h-16 w-16 text-green-500 mx-auto mb-4 animate-bounce" />
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                  Collecte lancée !
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400">
+                  Redirection vers les jobs...
+                </p>
+              </>
+            ) : (
+              <>
+                <ArrowPathIcon className="h-16 w-16 text-indigo-600 dark:text-indigo-400 animate-spin mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                  Lancement de la collecte...
+                </h3>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -149,29 +152,6 @@ export default function MetiersPage() {
             )}
           </div>
         </div>
-
-        {/* Collection Result */}
-        {collectionResult && (
-          <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-            <div className="flex items-start gap-3">
-              <CheckCircleIcon className="h-6 w-6 text-green-600 dark:text-green-400 flex-shrink-0" />
-              <div>
-                <h3 className="font-semibold text-green-800 dark:text-green-200">
-                  Collecte terminée
-                </h3>
-                <p className="text-sm text-green-700 dark:text-green-300 mt-1">
-                  {collectionResult.total} métiers traités : {collectionResult.created} créés, {collectionResult.updated} mis à jour, {collectionResult.failed} erreurs
-                </p>
-              </div>
-              <button
-                onClick={() => setCollectionResult(null)}
-                className="ml-auto text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-200"
-              >
-                <XMarkIcon className="h-5 w-5" />
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Error */}
         {error && (

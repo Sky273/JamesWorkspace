@@ -47,6 +47,22 @@ vi.mock('../../services/franceTravail.service.js', () => ({
     ]
 }));
 
+// Mock batchJobs service (needed since collection routes now create tracked jobs)
+const mockCreateJob = vi.fn();
+const mockUpdateJobStatus = vi.fn();
+const mockUpdateCollectionJobProgress = vi.fn();
+vi.mock('../../services/batchJobs.service.js', () => ({
+    createJob: (...args) => mockCreateJob(...args),
+    updateJobStatus: (...args) => mockUpdateJobStatus(...args),
+    updateCollectionJobProgress: (...args) => mockUpdateCollectionJobProgress(...args),
+    JOB_STATUS: {
+        PENDING: 'pending',
+        PROCESSING: 'processing',
+        COMPLETED: 'completed',
+        FAILED: 'failed',
+        CANCELLED: 'cancelled'
+    }
+}));
 
 // Mock logger
 vi.mock('../../utils/logger.backend.js', () => ({
@@ -91,6 +107,9 @@ describe('Market Radar - Trends Routes', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        mockCreateJob.mockResolvedValue({ id: 'job-test-1' });
+        mockUpdateJobStatus.mockResolvedValue({});
+        mockUpdateCollectionJobProgress.mockResolvedValue({});
         app = createTestApp();
     });
 
@@ -110,16 +129,18 @@ describe('Market Radar - Trends Routes', () => {
             expect(res.status).toBe(403);
         });
 
-        it('should start collection and respond immediately', async () => {
-            mockCollectMarketTrends.mockResolvedValue([]);
-
+        it('should start collection and return jobId', async () => {
             const res = await request(app)
                 .post('/api/market-radar/trends/collect')
                 .set(AUTH);
 
             expect(res.status).toBe(200);
             expect(res.body.success).toBe(true);
+            expect(res.body.jobId).toBe('job-test-1');
             expect(res.body.message).toContain('background');
+            expect(mockCreateJob).toHaveBeenCalledWith(expect.objectContaining({
+                jobType: 'collect-trends'
+            }));
         });
     });
 
@@ -134,13 +155,14 @@ describe('Market Radar - Trends Routes', () => {
             expect(res.status).toBe(403);
         });
 
-        it('should start dynamics collection and respond immediately', async () => {
+        it('should start dynamics collection and return jobId', async () => {
             const res = await request(app)
                 .post('/api/market-radar/trends/collect-dynamics')
                 .set(AUTH);
 
             expect(res.status).toBe(200);
             expect(res.body.success).toBe(true);
+            expect(res.body.jobId).toBe('job-test-1');
             expect(res.body.message).toContain('DYN_1');
         });
     });

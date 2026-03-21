@@ -19,7 +19,10 @@ import {
   SparklesIcon,
   ArrowDownTrayIcon,
   UserIcon,
-  PaperAirplaneIcon
+  PaperAirplaneIcon,
+  ChartBarIcon,
+  GlobeAltIcon,
+  BriefcaseIcon
 } from '@heroicons/react/24/outline';
 import { fetchWithAuth, createAuthOptionsWithCsrf } from '../../utils/apiInterceptor';
 import logger from '../../utils/logger.frontend';
@@ -45,7 +48,7 @@ interface JobItem {
 interface Job {
   id: string;
   status: 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
-  job_type: 'import' | 'improve' | 'deal-export';
+  job_type: 'import' | 'improve' | 'deal-export' | 'collect-trends' | 'collect-facts' | 'collect-metiers';
   options: {
     improve?: boolean;
     export?: boolean;
@@ -317,12 +320,25 @@ const JobsTab = (): JSX.Element => {
     });
   };
 
+  const isCollectionJob = (jobType: Job['job_type']) => {
+    return ['collect-trends', 'collect-facts', 'collect-metiers'].includes(jobType);
+  };
+
   const getJobTypeIcon = (jobType: Job['job_type']) => {
     if (jobType === 'improve') {
       return <SparklesIcon className="w-4 h-4 text-yellow-500" />;
     }
     if (jobType === 'deal-export') {
       return <ArrowDownTrayIcon className="w-4 h-4 text-purple-500" />;
+    }
+    if (jobType === 'collect-trends') {
+      return <ChartBarIcon className="w-4 h-4 text-teal-500" />;
+    }
+    if (jobType === 'collect-facts') {
+      return <GlobeAltIcon className="w-4 h-4 text-emerald-500" />;
+    }
+    if (jobType === 'collect-metiers') {
+      return <BriefcaseIcon className="w-4 h-4 text-orange-500" />;
     }
     return <DocumentTextIcon className="w-4 h-4 text-blue-500" />;
   };
@@ -337,6 +353,19 @@ const JobsTab = (): JSX.Element => {
       return dealTitle
         ? t('batchJobs.type.dealExportNamed', 'Export affaire : {{title}}', { title: dealTitle })
         : t('batchJobs.type.dealExport', 'Export affaire');
+    }
+    if (job.job_type === 'collect-trends') {
+      return t('batchJobs.type.collectTrends', 'Collecte tendances marché');
+    }
+    if (job.job_type === 'collect-facts') {
+      const options = typeof job.options === 'string' ? JSON.parse(job.options) : job.options;
+      const source = options?.source || 'all';
+      return source === 'all'
+        ? t('batchJobs.type.collectFacts', 'Collecte offres d\'emploi')
+        : t('batchJobs.type.collectFactsSource', 'Collecte offres ({{source}})', { source });
+    }
+    if (job.job_type === 'collect-metiers') {
+      return t('batchJobs.type.collectMetiers', 'Collecte métiers & compétences');
     }
     const options = typeof job.options === 'string' ? JSON.parse(job.options) : job.options;
     if (options?.improve) {
@@ -511,7 +540,43 @@ const JobsTab = (): JSX.Element => {
 
               {/* Job details (expanded) */}
               <AnimatePresence>
-                {expandedJobId === job.id && job.items && (
+                {expandedJobId === job.id && isCollectionJob(job.job_type) && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="border-t border-gray-200 dark:border-gray-700"
+                  >
+                    <div className="p-4 bg-gray-50 dark:bg-gray-900/50">
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div className="flex justify-between px-3 py-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
+                          <span className="text-gray-500 dark:text-gray-400">{t('batchJobs.collection.processed', 'Traités')}</span>
+                          <span className="font-medium text-gray-900 dark:text-gray-100">{job.processed_items}</span>
+                        </div>
+                        <div className="flex justify-between px-3 py-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
+                          <span className="text-gray-500 dark:text-gray-400">{t('batchJobs.collection.success', 'Succès')}</span>
+                          <span className="font-medium text-green-600 dark:text-green-400">{job.success_count}</span>
+                        </div>
+                        <div className="flex justify-between px-3 py-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
+                          <span className="text-gray-500 dark:text-gray-400">{t('batchJobs.collection.errors', 'Erreurs')}</span>
+                          <span className={`font-medium ${job.error_count > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'}`}>{job.error_count}</span>
+                        </div>
+                        {job.started_at && (
+                          <div className="flex justify-between px-3 py-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
+                            <span className="text-gray-500 dark:text-gray-400">{t('batchJobs.collection.startedAt', 'Démarré')}</span>
+                            <span className="font-medium text-gray-900 dark:text-gray-100">{formatDate(job.started_at)}</span>
+                          </div>
+                        )}
+                      </div>
+                      {job.error_message && (
+                        <div className="mt-3 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-sm text-red-700 dark:text-red-300">
+                          {job.error_message}
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+                {expandedJobId === job.id && !isCollectionJob(job.job_type) && job.items && (
                   <motion.div
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}

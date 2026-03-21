@@ -10,12 +10,14 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   ArrowPathIcon,
   ChartBarIcon,
   ExclamationTriangleIcon,
-  SparklesIcon
+  SparklesIcon,
+  CheckCircleIcon
 } from '@heroicons/react/24/outline';
 import Pagination from '../Pagination';
 import {
@@ -35,6 +37,7 @@ import TrendCard from './TrendCard';
 
 export default function MarketTrendsTab({ className = '' }: { className?: string }) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [trends, setTrends] = useState<MarketTrend[]>([]);
   const [groupedTrends, setGroupedTrends] = useState<Record<string, MarketTrend[]> | null>(null);
   const [countsByType, setCountsByType] = useState<Record<string, number>>({});
@@ -44,9 +47,9 @@ export default function MarketTrendsTab({ className = '' }: { className?: string
   const [summary, setSummary] = useState<TrendsSummary | null>(null);
   const [metiers, setMetiers] = useState<Metier[]>([]);
   const [loading, setLoading] = useState(true);
-  const [_collecting, _setCollecting] = useState(false);
+  const [collecting, setCollecting] = useState(false);
+  const [collectingSuccess, setCollectingSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [_collectionResult, _setCollectionResult] = useState<{ stored: number; created: number; updated: number; duration: number } | null>(null);
   const [filtersLoading, setFiltersLoading] = useState(true);
   
   // Server-side filters - empty means all types
@@ -159,36 +162,35 @@ export default function MarketTrendsTab({ className = '' }: { className?: string
     return grouped;
   }, [isGrouped, groupedTrends, trends]);
 
-  // Handle collection (fire-and-forget)
+  // Handle collection → brief animation → redirect to jobs page
   const handleCollect = async () => {
     setError(null);
+    setCollecting(true);
     try {
-      const result = await triggerTrendsCollection();
-      toast.success(
-        t('marketRadar.trends.collection.started') || 
-        `Collecte lancée en arrière-plan. Durée estimée : ${result.estimatedDuration}`,
-        { duration: 5000 }
-      );
+      await triggerTrendsCollection();
+      setCollectingSuccess(true);
+      setTimeout(() => navigate('/batch-jobs'), 1200);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erreur de lancement de la collecte';
       setError(errorMessage);
       toast.error(errorMessage);
+      setCollecting(false);
     }
   };
 
   // TEMPORARY: Handle DYN_1 dynamics collection only
   const handleCollectDynamics = async () => {
     setError(null);
+    setCollecting(true);
     try {
-      const result = await triggerDynamicsCollection();
-      toast.success(
-        `Collecte DYN_1 (dynamique emploi) lancée. Durée estimée : ${result.estimatedDuration}`,
-        { duration: 5000 }
-      );
+      await triggerDynamicsCollection();
+      setCollectingSuccess(true);
+      setTimeout(() => navigate('/batch-jobs'), 1200);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erreur de lancement de la collecte DYN_1';
       setError(errorMessage);
       toast.error(errorMessage);
+      setCollecting(false);
     }
   };
 
@@ -202,6 +204,33 @@ export default function MarketTrendsTab({ className = '' }: { className?: string
   }
 
   return (
+    <>
+    {/* Full-screen overlay during collection launch */}
+    {collecting && (
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-8 max-w-md mx-4 text-center">
+          {collectingSuccess ? (
+            <>
+              <CheckCircleIcon className="h-16 w-16 text-green-500 mx-auto mb-4 animate-bounce" />
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                {t('marketRadar.collection.launched', 'Collecte lanc\u00e9e !')}
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                {t('marketRadar.collection.redirecting', 'Redirection vers les jobs...')}
+              </p>
+            </>
+          ) : (
+            <>
+              <ArrowPathIcon className="h-16 w-16 text-indigo-600 dark:text-indigo-400 animate-spin mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                {t('marketRadar.collection.starting', 'Lancement de la collecte...')}
+              </h3>
+            </>
+          )}
+        </div>
+      </div>
+    )}
+
     <div className={`space-y-6 ${className}`}>
       {/* Header with refresh and collect buttons */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
@@ -484,5 +513,6 @@ export default function MarketTrendsTab({ className = '' }: { className?: string
         </div>
       )}
     </div>
+    </>
   );
 }

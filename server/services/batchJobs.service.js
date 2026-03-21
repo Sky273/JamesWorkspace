@@ -14,7 +14,7 @@
 import { query } from '../config/database.js';
 
 // Constants
-export { JOB_STATUS, ITEM_STATUS } from './batchJobs/constants.js';
+export { JOB_STATUS, ITEM_STATUS, COLLECTION_JOB_TYPES } from './batchJobs/constants.js';
 
 // Schema
 export { initializeBatchJobsTable } from './batchJobs/schema.js';
@@ -30,6 +30,7 @@ export {
     deleteJob,
     getPendingJobs,
     updateJobCounters,
+    updateCollectionJobProgress,
     updateJobExportFile,
     isJobComplete
 } from './batchJobs/jobCrud.js';

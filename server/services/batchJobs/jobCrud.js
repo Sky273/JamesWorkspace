@@ -5,7 +5,7 @@
 
 import { query } from '../../config/database.js';
 import { safeLog } from '../../utils/logger.backend.js';
-import { JOB_STATUS } from './constants.js';
+import { JOB_STATUS, COLLECTION_JOB_TYPES } from './constants.js';
 
 /**
  * Create a new batch job
@@ -229,14 +229,42 @@ export async function getPendingJobs() {
             LEFT JOIN users u ON bj.user_id = u.id
             LEFT JOIN firms f ON bj.firm_id = f.id
             WHERE bj.status IN ($1, $2)
+            AND bj.job_type NOT IN (${COLLECTION_JOB_TYPES.map((_, i) => `$${i + 3}`).join(', ')})
             ORDER BY bj.created_at ASC
             LIMIT 5
-        `, [JOB_STATUS.PENDING, JOB_STATUS.PROCESSING]);
+        `, [JOB_STATUS.PENDING, JOB_STATUS.PROCESSING, ...COLLECTION_JOB_TYPES]);
 
         return result.rows;
     } catch (error) {
         safeLog('error', 'Failed to get pending batch jobs', { error: error.message });
         return [];
+    }
+}
+
+/**
+ * Update collection job progress directly (no batch_job_items)
+ * @param {string} jobId - Job ID
+ * @param {Object} counters - { total_items, processed_items, success_count, error_count }
+ */
+export async function updateCollectionJobProgress(jobId, counters) {
+    try {
+        const setClauses = [];
+        const params = [jobId];
+        let idx = 2;
+
+        for (const [key, value] of Object.entries(counters)) {
+            if (value !== undefined) {
+                setClauses.push(`${key} = $${idx}`);
+                params.push(value);
+                idx++;
+            }
+        }
+
+        if (setClauses.length === 0) return;
+
+        await query(`UPDATE batch_jobs SET ${setClauses.join(', ')} WHERE id = $1`, params);
+    } catch (error) {
+        safeLog('error', 'Failed to update collection job progress', { error: error.message, jobId });
     }
 }
 

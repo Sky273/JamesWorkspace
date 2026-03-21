@@ -6,6 +6,7 @@
 
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { createLogger } from '../utils/logger.frontend';
 
@@ -30,7 +31,6 @@ import {
   getFactsSummary,
   triggerSourceCollection,
   MarketFact,
-  CollectionSummary,
   FactsSummary
 } from '../services/marketRadarService';
 import { getStoredMetiers, Metier } from '../services/romeService';
@@ -53,6 +53,7 @@ type TabType = 'map' | 'data' | 'trends' | 'metiers';
 
 export default function FactsPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
   
@@ -64,8 +65,8 @@ export default function FactsPage() {
   const [metiers, setMetiers] = useState<Metier[]>([]);
   const [loading, setLoading] = useState(true);
   const [collecting, setCollecting] = useState(false);
+  const [collectingSuccess, setCollectingSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [collectionResult, setCollectionResult] = useState<CollectionSummary | null>(null);
   
   // Filters (simplified for PostgreSQL - source, region, keyword)
   const [sourceFilter, setSourceFilter] = useState<string>('');
@@ -184,20 +185,18 @@ export default function FactsPage() {
     }
   };
 
-  // Trigger collection
+  // Trigger collection → brief animation → redirect to jobs page
   const handleCollect = async (source: 'france_travail' | 'adzuna') => {
     setCollecting(true);
+    setCollectingSuccess(false);
     setError(null);
-    setCollectionResult(null);
     
     try {
-      const result = await triggerSourceCollection(source);
-      setCollectionResult(result);
-      // Reload data and global stats after collection
-      await Promise.all([loadFacts(), reloadGlobalStats()]);
+      await triggerSourceCollection(source);
+      setCollectingSuccess(true);
+      setTimeout(() => navigate('/batch-jobs'), 1200);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Collection failed');
-    } finally {
       setCollecting(false);
     }
   };
@@ -228,24 +227,28 @@ export default function FactsPage() {
 
   return (
     <>
-      {/* Full-screen overlay during collection */}
+      {/* Full-screen overlay during collection launch */}
       {collecting && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-8 max-w-md mx-4 text-center">
-            <ArrowPathIcon className="h-16 w-16 text-indigo-600 dark:text-indigo-400 animate-spin mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
-              {t('marketRadar.facts.collection.overlayTitle')}
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-4">
-              {t('marketRadar.facts.collection.overlayDescription')}
-            </p>
-            <p className="text-sm text-orange-600 dark:text-orange-400 font-medium mb-4">
-              {t('marketRadar.facts.collection.overlayWarning')}
-            </p>
-            <div className="flex items-center justify-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-              <div className="w-2 h-2 bg-indigo-600 dark:bg-indigo-400 rounded-full animate-pulse"></div>
-              <span>{t('common.pleaseWait')}</span>
-            </div>
+            {collectingSuccess ? (
+              <>
+                <CheckCircleIcon className="h-16 w-16 text-green-500 mx-auto mb-4 animate-bounce" />
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                  {t('marketRadar.collection.launched', 'Collecte lanc\u00e9e !')}
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400">
+                  {t('marketRadar.collection.redirecting', 'Redirection vers les jobs...')}
+                </p>
+              </>
+            ) : (
+              <>
+                <ArrowPathIcon className="h-16 w-16 text-indigo-600 dark:text-indigo-400 animate-spin mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                  {t('marketRadar.collection.starting', 'Lancement de la collecte...')}
+                </h3>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -348,28 +351,6 @@ export default function FactsPage() {
                   {t('marketRadar.facts.collection.collectFranceTravail')}
                 </button>
               </div>
-
-              {/* Collection Result */}
-              {collectionResult && (
-                <div className="mt-4 p-4 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-md">
-                  <div className="flex items-start">
-                    <CheckCircleIcon className="h-5 w-5 text-green-500 dark:text-green-400 mt-0.5" />
-                    <div className="ml-3">
-                      <h3 className="text-sm font-medium text-green-800 dark:text-green-300">{t('marketRadar.facts.collection.success')}</h3>
-                      <div className="mt-2 text-sm text-green-700 dark:text-green-400">
-                        <p>{t('marketRadar.facts.collection.factsCollected')}: <strong>{collectionResult.totalFacts}</strong></p>
-                        <p>{t('marketRadar.facts.collection.stored')}: <strong>{collectionResult.stored}</strong></p>
-                        {collectionResult.failed > 0 && (
-                          <p className="text-orange-600">{t('marketRadar.facts.collection.failed')}: {collectionResult.failed}</p>
-                        )}
-                        <p className="text-xs text-green-600 dark:text-green-500 mt-1">
-                          {t('marketRadar.facts.collection.duration')}: {Math.round(collectionResult.duration / 1000)}s
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
 
               {/* Error */}
               {error && (

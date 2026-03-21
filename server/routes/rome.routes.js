@@ -7,6 +7,7 @@ import express from 'express';
 import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { sanitizeErrorMessage } from '../utils/errors.js';
+import { createJob, updateJobStatus, updateCollectionJobProgress, JOB_STATUS } from '../services/batchJobs.service.js';
 import {
     getMetiers,
     getMetierByCode,
@@ -288,22 +289,52 @@ router.get('/api/search', authenticateToken, async (req, res) => {
  */
 router.post('/collect', authenticateToken, requireAdmin, async (req, res) => {
     try {
-        safeLog('info', 'Rome: IT métiers collection triggered', { 
+        safeLog('info', 'Rome: IT métiers collection triggered (background)', { 
             userId: req.user.id 
         });
-        
-        const summary = await collectITMetiers();
-        
+
+        // Create a tracked job
+        const job = await createJob({
+            firmId: null,
+            userId: req.user.id,
+            jobType: 'collect-metiers',
+            options: { source: 'rome_api' }
+        });
+        await updateJobStatus(job.id, JOB_STATUS.PROCESSING);
+
+        // Respond immediately with jobId
         res.json({
             success: true,
-            message: 'IT métiers collection completed',
-            summary
+            message: 'IT métiers collection started in background',
+            jobId: job.id
+        });
+
+        // Run collection in background (non-blocking)
+        setImmediate(async () => {
+            try {
+                const summary = await collectITMetiers({
+                    onProgress: async (progress) => {
+                        await updateCollectionJobProgress(job.id, {
+                            total_items: progress.total || 0,
+                            processed_items: (progress.created || 0) + (progress.updated || 0) + (progress.failed || 0),
+                            success_count: (progress.created || 0) + (progress.updated || 0),
+                            error_count: progress.failed || 0
+                        });
+                    }
+                });
+
+                await updateJobStatus(job.id, JOB_STATUS.COMPLETED);
+                safeLog('info', 'Rome: IT métiers collection completed', { jobId: job.id, summary });
+            } catch (error) {
+                safeLog('error', 'Rome: IT métiers collection failed', { error: error.message });
+                await updateJobStatus(job.id, JOB_STATUS.FAILED, { error_message: error.message });
+            }
         });
     } catch (error) {
-        safeLog('error', 'Rome route: Collection failed', { error: error.message });
+        safeLog('error', 'Rome route: Failed to start collection', { error: error.message });
         res.status(500).json({ 
             success: false, 
-            error: sanitizeErrorMessage(error, 'Collection failed') 
+            error: sanitizeErrorMessage(error, 'Failed to start collection') 
         });
     }
 });

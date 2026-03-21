@@ -374,9 +374,11 @@ async function storeMetier(metier) {
 
 /**
  * Collect and store all IT métiers with their compétences
+ * @param {Object} [options] - Collection options
+ * @param {Function} [options.onProgress] - Callback called after each métier is processed: onProgress({ total, created, updated, failed })
  * @returns {Object} - Collection summary
  */
-async function collectITMetiers() {
+async function collectITMetiers({ onProgress } = {}) {
     const summary = {
         total: 0,
         created: 0,
@@ -392,6 +394,11 @@ async function collectITMetiers() {
         const metiers = await getITMetiers();
         summary.total = metiers.length;
         log.info('IT métiers list fetched', { count: metiers.length });
+
+        // Report initial total
+        if (onProgress) {
+            try { await onProgress(summary); } catch (_) { /* ignore */ }
+        }
 
         // Step 2 & 3: For each IT métier, fetch fiche and store
         const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -446,6 +453,11 @@ async function collectITMetiers() {
                     error: error.message
                 });
                 log.warn('Failed to store métier', { code: metier.code, error: error.message });
+            }
+
+            // Report progress after each métier
+            if (onProgress) {
+                try { await onProgress(summary); } catch (_) { /* ignore */ }
             }
         }
 

@@ -5,6 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { createLogger } from '../../utils/logger.frontend';
 
@@ -15,7 +16,6 @@ import {
   collectITMetiers,
   getMetiersStats,
   Metier,
-  CollectionSummary,
   MetiersStats
 } from '../../services/romeService';
 import {
@@ -38,6 +38,7 @@ interface MetiersTabProps {
 
 export default function MetiersTab({ className = '' }: MetiersTabProps) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
 
@@ -56,7 +57,7 @@ export default function MetiersTab({ className = '' }: MetiersTabProps) {
   
   // Collection state
   const [collecting, setCollecting] = useState(false);
-  const [collectionResult, setCollectionResult] = useState<CollectionSummary | null>(null);
+  const [collectingSuccess, setCollectingSuccess] = useState(false);
   
   // Global stats
   const [globalStats, setGlobalStats] = useState<MetiersStats | null>(null);
@@ -112,17 +113,14 @@ export default function MetiersTab({ className = '' }: MetiersTabProps) {
     
     try {
       setCollecting(true);
+      setCollectingSuccess(false);
       setError(null);
-      setCollectionResult(null);
       
-      const result = await collectITMetiers();
-      setCollectionResult(result);
-      
-      // Reload métiers and global stats after collection
-      await Promise.all([loadMetiers(), loadGlobalStats()]);
+      await collectITMetiers();
+      setCollectingSuccess(true);
+      setTimeout(() => navigate('/batch-jobs'), 1200);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('marketRadar.facts.collection.error'));
-    } finally {
       setCollecting(false);
     }
   };
@@ -144,35 +142,28 @@ export default function MetiersTab({ className = '' }: MetiersTabProps) {
 
   return (
     <>
-      {/* Full-screen overlay during collection */}
+      {/* Full-screen overlay during collection launch */}
       {collecting && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-8 max-w-md mx-4 text-center">
-            <ArrowPathIcon className="h-16 w-16 text-indigo-600 dark:text-indigo-400 animate-spin mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
-              {t('marketRadar.metiers.collection.title')}
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-4">
-              {t('marketRadar.metiers.collection.description')}
-            </p>
-            <p className="text-sm text-orange-600 dark:text-orange-400 font-medium">
-              {t('marketRadar.metiers.collection.warning')}
-            </p>
-            <div className="mt-4 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
-              <div 
-                className="bg-indigo-600 h-2 rounded-full"
-                style={{
-                  width: '30%',
-                  animation: 'indeterminate 1.5s ease-in-out infinite'
-                }}
-              />
-            </div>
-            <style>{`
-              @keyframes indeterminate {
-                0% { transform: translateX(-100%); }
-                100% { transform: translateX(400%); }
-              }
-            `}</style>
+            {collectingSuccess ? (
+              <>
+                <CheckCircleIcon className="h-16 w-16 text-green-500 mx-auto mb-4 animate-bounce" />
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                  {t('marketRadar.collection.launched', 'Collecte lancée !')}
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400">
+                  {t('marketRadar.collection.redirecting', 'Redirection vers les jobs...')}
+                </p>
+              </>
+            ) : (
+              <>
+                <ArrowPathIcon className="h-16 w-16 text-indigo-600 dark:text-indigo-400 animate-spin mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                  {t('marketRadar.collection.starting', 'Lancement de la collecte...')}
+                </h3>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -220,29 +211,6 @@ export default function MetiersTab({ className = '' }: MetiersTabProps) {
               )}
             </div>
           </div>
-
-          {/* Collection Result */}
-          {collectionResult && (
-            <div className="mt-4 p-4 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-md">
-              <div className="flex items-start">
-                <CheckCircleIcon className="h-5 w-5 text-green-500 dark:text-green-400 mt-0.5" />
-                <div className="ml-3 flex-1">
-                  <h3 className="text-sm font-medium text-green-800 dark:text-green-300">
-                    {t('marketRadar.metiers.collection.success')}
-                  </h3>
-                  <p className="text-sm text-green-700 dark:text-green-400 mt-1">
-                    {collectionResult.total} {t('marketRadar.metiers.collection.processed')} : {collectionResult.created} {t('marketRadar.metiers.collection.created')}, {collectionResult.updated} {t('marketRadar.metiers.collection.updated')}, {collectionResult.failed} {t('marketRadar.metiers.collection.errors')}
-                  </p>
-                </div>
-                <button
-                  onClick={() => setCollectionResult(null)}
-                  className="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-200"
-                >
-                  <XMarkIcon className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
-          )}
 
           {/* Error */}
           {error && (

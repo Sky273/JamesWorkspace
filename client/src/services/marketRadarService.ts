@@ -142,37 +142,26 @@ export async function triggerFullCollection(): Promise<CollectionSummary> {
 
 /**
  * Trigger collection for a specific source (admin only)
- * Uses 30 minute timeout due to large number of API calls
+ * Returns immediately - collection runs in background on server
  */
 export async function triggerSourceCollection(
   source: 'france_travail' | 'adzuna'
-): Promise<CollectionSummary> {
-  const THIRTY_MINUTES = 1800000;
-  
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), THIRTY_MINUTES);
-
+): Promise<{ success: boolean; message: string; jobId: string }> {
   const options = await createAuthOptionsWithCsrf({
     method: 'POST',
-    signal: controller.signal,
     headers: {
       'Content-Type': 'application/json',
     },
   });
 
-  try {
-    const response = await fetchWithCsrfRetry(`${API_BASE}/collect/${source}`, options, THIRTY_MINUTES);
+  const response = await fetchWithAuth(`${API_BASE}/collect/${source}`, options);
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Collection failed');
-    }
-
-    const data = await response.json();
-    return data.summary;
-  } finally {
-    clearTimeout(timeoutId);
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Collection failed');
   }
+
+  return response.json();
 }
 
 /**
@@ -456,6 +445,7 @@ export interface TrendFilters {
 export async function triggerTrendsCollection(): Promise<{
   success: boolean;
   message: string;
+  jobId: string;
   estimatedDuration: string;
 }> {
   const options = await createAuthOptionsWithCsrf({
@@ -483,6 +473,7 @@ export async function triggerTrendsCollection(): Promise<{
 export async function triggerDynamicsCollection(): Promise<{
   success: boolean;
   message: string;
+  jobId: string;
   estimatedDuration: string;
 }> {
   const options = await createAuthOptionsWithCsrf({

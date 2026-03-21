@@ -17,6 +17,23 @@ vi.mock('../../services/marketFacts.service.js', () => ({
     invalidateFactsCache: (...args) => mockInvalidateFactsCache(...args)
 }));
 
+// Mock batchJobs service (needed since collection routes now create tracked jobs)
+const mockCreateJob = vi.fn();
+const mockUpdateJobStatus = vi.fn();
+const mockUpdateCollectionJobProgress = vi.fn();
+vi.mock('../../services/batchJobs.service.js', () => ({
+    createJob: (...args) => mockCreateJob(...args),
+    updateJobStatus: (...args) => mockUpdateJobStatus(...args),
+    updateCollectionJobProgress: (...args) => mockUpdateCollectionJobProgress(...args),
+    JOB_STATUS: {
+        PENDING: 'pending',
+        PROCESSING: 'processing',
+        COMPLETED: 'completed',
+        FAILED: 'failed',
+        CANCELLED: 'cancelled'
+    }
+}));
+
 // Mock logger
 vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
@@ -57,6 +74,9 @@ describe('Market Radar Collection Routes', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        mockCreateJob.mockResolvedValue({ id: 'job-test-1' });
+        mockUpdateJobStatus.mockResolvedValue({});
+        mockUpdateCollectionJobProgress.mockResolvedValue({});
         app = createTestApp();
     });
 
@@ -74,9 +94,7 @@ describe('Market Radar Collection Routes', () => {
             expect(res.status).toBe(403);
         });
 
-        it('should run full collection', async () => {
-            mockRunFullCollection.mockResolvedValueOnce({ sources: 2, totalRecords: 500 });
-
+        it('should start full collection and return jobId', async () => {
             const res = await request(app)
                 .post('/api/market-radar/collect')
                 .set(AUTH)
@@ -84,23 +102,15 @@ describe('Market Radar Collection Routes', () => {
 
             expect(res.status).toBe(200);
             expect(res.body.success).toBe(true);
-            expect(res.body.summary.totalRecords).toBe(500);
-            expect(mockInvalidateFactsCache).toHaveBeenCalled();
+            expect(res.body.jobId).toBe('job-test-1');
+            expect(mockCreateJob).toHaveBeenCalledWith(expect.objectContaining({
+                jobType: 'collect-facts',
+                options: { source: 'all' }
+            }));
         });
 
-        it('should pass options from body', async () => {
-            mockRunFullCollection.mockResolvedValueOnce({});
-
-            await request(app)
-                .post('/api/market-radar/collect')
-                .set(AUTH)
-                .send({ options: { force: true } });
-
-            expect(mockRunFullCollection).toHaveBeenCalledWith({ force: true });
-        });
-
-        it('should return 500 on error', async () => {
-            mockRunFullCollection.mockRejectedValueOnce(new Error('API fail'));
+        it('should return 500 when job creation fails', async () => {
+            mockCreateJob.mockRejectedValueOnce(new Error('DB fail'));
 
             const res = await request(app)
                 .post('/api/market-radar/collect')
@@ -122,9 +132,7 @@ describe('Market Radar Collection Routes', () => {
             expect(res.body.error).toContain('Invalid source');
         });
 
-        it('should collect from france_travail', async () => {
-            mockRunSourceCollection.mockResolvedValueOnce({ records: 200 });
-
+        it('should start france_travail collection and return jobId', async () => {
             const res = await request(app)
                 .post('/api/market-radar/collect/france_travail')
                 .set(AUTH)
@@ -132,13 +140,14 @@ describe('Market Radar Collection Routes', () => {
 
             expect(res.status).toBe(200);
             expect(res.body.success).toBe(true);
-            expect(mockRunSourceCollection).toHaveBeenCalledWith('france_travail', {});
-            expect(mockInvalidateFactsCache).toHaveBeenCalled();
+            expect(res.body.jobId).toBe('job-test-1');
+            expect(mockCreateJob).toHaveBeenCalledWith(expect.objectContaining({
+                jobType: 'collect-facts',
+                options: { source: 'france_travail' }
+            }));
         });
 
-        it('should collect from adzuna', async () => {
-            mockRunSourceCollection.mockResolvedValueOnce({ records: 300 });
-
+        it('should start adzuna collection and return jobId', async () => {
             const res = await request(app)
                 .post('/api/market-radar/collect/adzuna')
                 .set(AUTH)
@@ -146,10 +155,11 @@ describe('Market Radar Collection Routes', () => {
 
             expect(res.status).toBe(200);
             expect(res.body.success).toBe(true);
+            expect(res.body.jobId).toBe('job-test-1');
         });
 
-        it('should return 500 on error', async () => {
-            mockRunSourceCollection.mockRejectedValueOnce(new Error('fail'));
+        it('should return 500 when job creation fails', async () => {
+            mockCreateJob.mockRejectedValueOnce(new Error('fail'));
 
             const res = await request(app)
                 .post('/api/market-radar/collect/france_travail')

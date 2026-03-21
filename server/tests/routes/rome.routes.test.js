@@ -35,6 +35,23 @@ vi.mock('../../services/rome.service.js', () => ({
     collectITMetiers: (...args) => mockCollectITMetiers(...args)
 }));
 
+// Mock batchJobs service (needed since collection route now creates tracked jobs)
+const mockCreateJob = vi.fn();
+const mockUpdateJobStatus = vi.fn();
+const mockUpdateCollectionJobProgress = vi.fn();
+vi.mock('../../services/batchJobs.service.js', () => ({
+    createJob: (...args) => mockCreateJob(...args),
+    updateJobStatus: (...args) => mockUpdateJobStatus(...args),
+    updateCollectionJobProgress: (...args) => mockUpdateCollectionJobProgress(...args),
+    JOB_STATUS: {
+        PENDING: 'pending',
+        PROCESSING: 'processing',
+        COMPLETED: 'completed',
+        FAILED: 'failed',
+        CANCELLED: 'cancelled'
+    }
+}));
+
 // Mock logger
 vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
@@ -80,6 +97,9 @@ describe('Rome Routes', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        mockCreateJob.mockResolvedValue({ id: 'job-test-1' });
+        mockUpdateJobStatus.mockResolvedValue({});
+        mockUpdateCollectionJobProgress.mockResolvedValue({});
         app = createTestApp();
     });
 
@@ -272,20 +292,21 @@ describe('Rome Routes', () => {
             expect(res.status).toBe(403);
         });
 
-        it('should collect IT metiers for admin', async () => {
-            mockCollectITMetiers.mockResolvedValueOnce({ collected: 50, stored: 50 });
-
+        it('should start collection and return jobId for admin', async () => {
             const res = await request(app)
                 .post('/api/rome/collect')
                 .set({ ...AUTH, 'x-test-role': 'admin' });
 
             expect(res.status).toBe(200);
             expect(res.body.success).toBe(true);
-            expect(res.body.summary.collected).toBe(50);
+            expect(res.body.jobId).toBe('job-test-1');
+            expect(mockCreateJob).toHaveBeenCalledWith(expect.objectContaining({
+                jobType: 'collect-metiers'
+            }));
         });
 
-        it('should return 500 on error', async () => {
-            mockCollectITMetiers.mockRejectedValueOnce(new Error('API fail'));
+        it('should return 500 when job creation fails', async () => {
+            mockCreateJob.mockRejectedValueOnce(new Error('DB fail'));
 
             const res = await request(app)
                 .post('/api/rome/collect')

@@ -518,9 +518,11 @@ async function getRegionalComparison(date, source = null) {
  * Uses ROME codes from stored métiers to filter API calls
  * @param {Object} options - Collection options
  * @param {boolean} options.useStoredRomeCodes - Use ROME codes from stored métiers (default: true)
+ * @param {Function} [options.onProgress] - Callback called periodically with current summary: onProgress({ totalFacts, stored, failed })
  * @returns {Object} - Collection summary
  */
 async function runFullCollection(options = {}) {
+    const { onProgress } = options;
     const summary = {
         startTime: new Date().toISOString(),
         sources: {},
@@ -555,13 +557,25 @@ async function runFullCollection(options = {}) {
             ftOptions.romeCodes = romeCodes;
         }
         // Pass callback to save each fact immediately
+        let lastProgressUpdate = 0;
+        const PROGRESS_INTERVAL_MS = 5000;
         ftOptions.onFactCollected = async (fact) => {
             try {
                 await storeFact(fact);
                 ftStoredCount++;
+                summary.stored = ftStoredCount;
             } catch (err) {
                 ftFailedCount++;
+                summary.failed = ftFailedCount;
                 safeLog('error', 'MarketFacts: Failed to store fact', { error: err.message });
+            }
+            // Report progress periodically
+            if (onProgress) {
+                const now = Date.now();
+                if (now - lastProgressUpdate > PROGRESS_INTERVAL_MS) {
+                    lastProgressUpdate = now;
+                    try { await onProgress(summary); } catch (_) { /* ignore */ }
+                }
             }
         };
         
@@ -626,9 +640,11 @@ async function runFullCollection(options = {}) {
  * @param {string} source - 'france_travail' or 'adzuna'
  * @param {Object} options - Collection options
  * @param {boolean} options.useStoredRomeCodes - Use ROME codes from stored métiers (default: true)
+ * @param {Function} [options.onProgress] - Callback called periodically with current summary: onProgress({ collected, stored, failed })
  * @returns {Object} - Collection summary
  */
 async function runSourceCollection(source, options = {}) {
+    const { onProgress } = options;
     const summary = {
         source,
         startTime: new Date().toISOString(),
@@ -652,13 +668,25 @@ async function runSourceCollection(source, options = {}) {
         }
 
         // Add callback for immediate storage
+        let lastProgressUpdate = 0;
+        const PROGRESS_INTERVAL_MS = 5000;
         options.onFactCollected = async (fact) => {
             try {
                 await storeFact(fact);
                 storedCount++;
+                summary.stored = storedCount;
             } catch (err) {
                 failedCount++;
+                summary.failed = failedCount;
                 safeLog('error', 'MarketFacts: Failed to store fact', { error: err.message });
+            }
+            // Report progress periodically
+            if (onProgress) {
+                const now = Date.now();
+                if (now - lastProgressUpdate > PROGRESS_INTERVAL_MS) {
+                    lastProgressUpdate = now;
+                    try { await onProgress(summary); } catch (_) { /* ignore */ }
+                }
             }
         };
 

@@ -22,6 +22,13 @@ export const ITEM_STATUS = {
     SKIPPED: 'skipped'
 };
 
+// Collection job types (self-managed, not processed by the batch worker)
+export const COLLECTION_JOB_TYPES = [
+    'collect-trends',
+    'collect-facts',
+    'collect-metiers'
+];
+
 // Processing configuration
 export const BATCH_SIZE = 100; // Process up to 100 CVs in parallel
 export const WORKER_INTERVAL = 5000; // Check for pending jobs every 5 seconds

@@ -301,30 +301,21 @@ export async function searchMetiers(query: string): Promise<unknown[]> {
 
 /**
  * Trigger IT métiers collection (admin only)
- * Uses AbortController with 5 minute timeout for long-running collection
+ * Returns immediately - collection runs in background on server
  */
-export async function collectITMetiers(): Promise<CollectionSummary> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minutes timeout
+export async function collectITMetiers(): Promise<{ success: boolean; message: string; jobId: string }> {
+  const options = await createAuthOptionsWithCsrf({
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({})
+  });
 
-  try {
-    const options = await createAuthOptionsWithCsrf({
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
-      signal: controller.signal
-    });
+  const response = await fetchWithAuth(`${API_BASE}/collect`, options);
 
-    const response = await fetchWithCsrfRetry(`${API_BASE}/collect`, options, 300000); // 5 minutes timeout
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Collection failed');
-    }
-
-    const data = await response.json();
-    return data.summary;
-  } finally {
-    clearTimeout(timeoutId);
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Collection failed');
   }
+
+  return response.json();
 }
