@@ -59,13 +59,23 @@ router.post('/trends/collect', authenticateToken, requireAdmin, async (req, res)
             let updatedCount = 0;
             let failedCount = 0;
             let processedCount = 0;
+            let totalExpected = 0;
             let lastProgressLog = Date.now();
-            const PROGRESS_INTERVAL_MS = 30000;
+            const PROGRESS_INTERVAL_MS = 5000;
 
             try {
                 safeLog('info', 'Market Radar: Background collection starting...');
                 
                 const _trends = await collectMarketTrends({
+                    onTotalEstimated: async (total) => {
+                        totalExpected = total;
+                        await updateCollectionJobProgress(job.id, {
+                            total_items: total,
+                            processed_items: 0,
+                            success_count: 0,
+                            error_count: 0
+                        });
+                    },
                     onTrendCollected: async (trend) => {
                         processedCount++;
                         
@@ -126,7 +136,7 @@ router.post('/trends/collect', authenticateToken, requireAdmin, async (req, res)
 
                 // Mark job as completed
                 await updateCollectionJobProgress(job.id, {
-                    total_items: processedCount,
+                    total_items: totalExpected || processedCount,
                     processed_items: processedCount,
                     success_count: createdCount + updatedCount,
                     error_count: failedCount

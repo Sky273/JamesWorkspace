@@ -312,9 +312,11 @@ function extractValueLabel(data) {
  * Uses the correct API endpoints per OpenAPI spec
  * @param {Object} options - Collection options
  * @param {Function} options.onTrendCollected - Callback for immediate storage
+ * @param {Function} [options.onTotalEstimated] - Callback when total expected trends is known: onTotalEstimated(total)
  */
 export async function collectMarketTrends(options = {}) {
     const onTrendCollected = options.onTrendCollected || null;
+    const onTotalEstimated = options.onTotalEstimated || null;
     const collectionDate = new Date().toISOString().split('T')[0];
     
     // Calculate last complete quarter once for all API calls
@@ -374,13 +376,27 @@ export async function collectMarketTrends(options = {}) {
         throw new Error('No IS/IT métiers found (M18 family). Please run métiers collection first.');
     }
     
+    // Calculate expected total upfront:
+    // 5 types by rome×region (tension, embauche, offre, demandeur, demandeur_entrant)
+    // + 1 type by rome only (salaire)
+    // + 1 type by region only (dynamique_emploi)
+    const regionsCount = FRENCH_REGIONS.length;
+    const romeCount = itRomeCodes.length;
+    const expectedTotal = (5 * romeCount * regionsCount) + romeCount + regionsCount;
+    
     safeLog('info', 'MarketTrends: Starting collection', {
         quarter,
         dateDeb,
         dateFin,
-        regionsCount: FRENCH_REGIONS.length,
-        romeCodesCount: itRomeCodes.length
+        regionsCount,
+        romeCodesCount: romeCount,
+        expectedTotal
     });
+
+    // Report expected total before starting
+    if (onTotalEstimated) {
+        try { await onTotalEstimated(expectedTotal); } catch (_) { /* ignore */ }
+    }
 
     // Helper to get ROME label
     const getRomeLabel = (codeRome) => romeLabelsMap[codeRome] || null;
