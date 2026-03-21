@@ -976,7 +976,9 @@
       "cvModeNominative": "Nominative (personal information included)",
       "cvModeAnonymous": "Anonymous (trigram only)",
       "cvModeNominativeDescription": "The improved CV will contain all personal information of the candidate (full name, contact details, etc.).",
-      "cvModeAnonymousDescription": "The improved CV will be anonymized: only the candidate's trigram will be displayed, without identifying personal information."
+      "cvModeAnonymousDescription": "The improved CV will be anonymized: only the candidate's trigram will be displayed, without identifying personal information.",
+      "obsoleteModel": "obsolete",
+      "obsoleteModelWarning": "This model is no longer available in the list. Please select a valid model and save."
     },
     "prompts": {
       "title": "Prompts Configuration",
