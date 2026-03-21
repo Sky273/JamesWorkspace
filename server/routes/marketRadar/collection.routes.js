@@ -50,8 +50,8 @@ router.post('/collect', authenticateToken, requireAdmin, async (req, res) => {
                     ...options,
                     onProgress: async (progress) => {
                         await updateCollectionJobProgress(job.id, {
-                            total_items: progress.totalFacts || 0,
-                            processed_items: progress.stored + progress.failed,
+                            total_items: progress.totalFacts || progress.totalExpected || 0,
+                            processed_items: (progress.stored || 0) + (progress.failed || 0),
                             success_count: progress.stored || 0,
                             error_count: progress.failed || 0
                         });
@@ -129,7 +129,8 @@ router.post('/collect/:source', authenticateToken, requireAdmin, async (req, res
                     ...options,
                     onProgress: async (progress) => {
                         await updateCollectionJobProgress(job.id, {
-                            processed_items: progress.stored + progress.failed,
+                            total_items: progress.totalExpected || 0,
+                            processed_items: (progress.stored || 0) + (progress.failed || 0),
                             success_count: progress.stored || 0,
                             error_count: progress.failed || 0
                         });

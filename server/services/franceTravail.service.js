@@ -269,16 +269,26 @@ async function collectMarketFacts(options = {}) {
     const romeCodes = options.romeCodes || IT_ROME_CODES;
     const keywords = options.keywords || IT_KEYWORDS.slice(0, 10); // Limit to avoid rate limiting
     const onFactCollected = options.onFactCollected || null; // Callback for immediate save
+    const onTotalEstimated = options.onTotalEstimated || null; // Callback when total is known
     
     const facts = [];
     const collectionDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    
+    // Calculate expected total upfront: (romeCodes × regions) + keywords
+    const expectedTotal = (romeCodes.length * regions.length) + keywords.length;
     
     log.info('Starting market facts collection', {
         regionsCount: regions.length,
         romeCodesCount: romeCodes.length,
         keywordsCount: keywords.length,
+        expectedTotal,
         immediateStorage: !!onFactCollected
     });
+
+    // Report expected total before starting
+    if (onTotalEstimated) {
+        try { await onTotalEstimated(expectedTotal); } catch (_) { /* ignore */ }
+    }
 
     // Rate limiting: 3 requests per second max
     const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));

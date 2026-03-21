@@ -556,6 +556,13 @@ async function runFullCollection(options = {}) {
         if (romeCodes && romeCodes.length > 0) {
             ftOptions.romeCodes = romeCodes;
         }
+        // Report total as soon as France Travail knows it
+        ftOptions.onTotalEstimated = async (total) => {
+            summary.totalFacts = total;
+            if (onProgress) {
+                try { await onProgress(summary); } catch (_) { /* ignore */ }
+            }
+        };
         // Pass callback to save each fact immediately
         let lastProgressUpdate = 0;
         const PROGRESS_INTERVAL_MS = 5000;
@@ -667,6 +674,13 @@ async function runSourceCollection(source, options = {}) {
             }
         }
 
+        // Report total as soon as the source knows it
+        options.onTotalEstimated = async (total) => {
+            summary.totalExpected = total;
+            if (onProgress) {
+                try { await onProgress(summary); } catch (_) { /* ignore */ }
+            }
+        };
         // Add callback for immediate storage
         let lastProgressUpdate = 0;
         const PROGRESS_INTERVAL_MS = 5000;
