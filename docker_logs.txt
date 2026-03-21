@@ -1,0 +1,469 @@
+﻿2026-03-21 09:28:31 [INFO ] Cache system initialized
+  ÔåÆ {"settingsTTL":"600s","templatesTTL":"600s","firmsTTL":"900s"}
+2026-03-21 09:28:31 [INFO ] [metrics] Metrics persistence started
+2026-03-21 09:28:31 [INFO ] CSRF protection enabled
+2026-03-21 09:28:31 [INFO ] Cleaning all caches on startup
+2026-03-21 09:28:31 [INFO ] All caches destroyed
+2026-03-21 09:28:31 [INFO ] MarketFacts: Cache cleaned up for shutdown
+2026-03-21 09:28:31 [INFO ] MarketTrends: Cache cleaned up for shutdown
+2026-03-21 09:28:31 [INFO ] [rome] M├®tiers cache cleaned up for shutdown
+2026-03-21 09:28:31 [INFO ] All caches cleaned successfully
+2026-03-21 09:28:31 [INFO ] PROXY SERVER STARTED
+{
+  "port": "3443",
+  "environment": "production",
+  "corsOrigins": {
+    "0": "https://localhost",
+    "1": "https://localhost:5173",
+    "2": "http://localhost:5173",
+    "3": "https://resumeconverter.net:3001",
+    "4": "http://localhost:4173",
+    "5": "http://localhost:3001",
+    "6": "http://www.resumeconverter.net",
+    "7": "http://resumeconverter.net",
+    "8": "https://www.resumeconverter.net",
+    "9": "https://resumeconverter.net",
+    "10": "https://localhost:3443"
+  },
+  "protocol": "HTTPS",
+  "modules": {
+    "0": "Health & Metrics",
+    "1": "Authentication",
+    "2": "Settings",
+    "3": "Missions",
+    "4": "Resumes",
+    "5": "Templates",
+    "6": "Firms",
+    "7": "LLM Proxy",
+    "8": "Admin"
+  },
+  "features": {
+    "0": "Rate Limiting",
+    "1": "CSRF Protection",
+    "2": "Metrics Tracking",
+    "3": "Request Logging",
+    "4": "Compression",
+    "5": "Security Headers",
+    "6": "File Cleanup",
+    "7": "Token Blacklist"
+  }
+}
+2026-03-21 09:28:31 [INFO ] Initializing PostgreSQL database
+2026-03-21 09:28:31 [INFO ] Initializing PostgreSQL database connection...
+2026-03-21 09:28:31 [INFO ] User guide loaded for chatbot
+  ÔåÆ {"length":92810}
+2026-03-21 09:28:31 [INFO ] PostgreSQL connection successful
+{
+  "timestamp": {},
+  "version": "PostgreSQL 18.3 (Ubuntu 18.3-1.pgdg22.04+1) on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 11.4.0-1ubuntu1~22.04.3) 11.4.0, 64-bit",
+  "attempt": 1
+}
+2026-03-21 09:28:31 [INFO ] All expected tables found in database
+  ÔåÆ {"tableCount":40}
+2026-03-21 09:28:31 [INFO ] PostgreSQL extensions loaded
+  ÔåÆ {"extensions":{"0":"pg_trgm","1":"uuid-ossp"}}
+2026-03-21 09:28:31 [INFO ] Migration: resume_adaptations.candidate_name and adapted_title columns ensured
+2026-03-21 09:28:31 [INFO ] PostgreSQL database initialized successfully
+2026-03-21 09:28:31 [INFO ] GDPR audit log table initialized
+2026-03-21 09:28:31 [INFO ] GDPR Audit Log table initialized
+2026-03-21 09:28:31 [INFO ] Resume comments table initialized
+2026-03-21 09:28:31 [INFO ] Resume Comments table initialized
+2026-03-21 09:28:31 [INFO ] Share resume table columns initialized
+2026-03-21 09:28:31 [INFO ] Share Resume table initialized
+2026-03-21 09:28:31 [INFO ] Dropped old client_id foreign key constraint
+2026-03-21 09:28:31 [INFO ] Candidate pipeline tables initialized
+2026-03-21 09:28:31 [INFO ] Candidate Pipeline table initialized
+2026-03-21 09:28:31 [INFO ] Migration: missions.deal_id column ensured
+2026-03-21 09:28:31 [INFO ] Deals tables initialized successfully
+2026-03-21 09:28:31 [INFO ] Deals table initialized
+2026-03-21 09:28:31 [INFO ] Calendar tokens table initialized
+2026-03-21 09:28:31 [INFO ] Calendar tokens table initialized
+2026-03-21 09:28:31 [INFO ] Backup tables initialized
+2026-03-21 09:28:31 [INFO ] Backup table initialized
+2026-03-21 09:28:31 [INFO ] [BackupScheduler] Loaded backup settings
+{
+  "host": "***configured***",
+  "daily_enabled": true,
+  "daily_time": "02:00:00",
+  "weekly_enabled": true,
+  "weekly_day": 0,
+  "weekly_day_name": "Dimanche",
+  "weekly_time": "03:00:00",
+  "monthly_enabled": true,
+  "monthly_day": 1,
+  "monthly_time": "04:00:00"
+}
+2026-03-21 09:28:31 [INFO ] [BackupScheduler] Daily backup scheduled
+  ÔåÆ {"time":"02:00:00","uploadEnabled":true}
+2026-03-21 09:28:31 [INFO ] [BackupScheduler] Weekly backup scheduled
+  ÔåÆ {"day":"Dimanche","time":"03:00:00","uploadEnabled":true}
+2026-03-21 09:28:31 [INFO ] [BackupScheduler] Monthly backup scheduled
+  ÔåÆ {"dayOfMonth":1,"time":"04:00:00","uploadEnabled":true}
+2026-03-21 09:28:31 [INFO ] [BackupScheduler] Backup scheduler initialized (checking every 30s)
+2026-03-21 09:28:31 [INFO ] Backup Scheduler initialized
+2026-03-21 09:28:31 [INFO ] Starting periodic file cleanup for all directories
+{
+  "intervalMinutes": 60,
+  "directories": 4,
+  "configs": {
+    "0": {
+      "name": "uploads",
+      "path": "./uploads",
+      "maxAgeHours": 1
+    },
+    "1": {
+      "name": "batchExports",
+      "path": "/tmp/batch-exports",
+      "maxAgeHours": 24
+    },
+    "2": {
+      "name": "serverTemp",
+      "path": "/app/server/temp",
+      "maxAgeHours": 1
+    },
+    "3": {
+      "name": "sharedPdfs",
+      "path": "uploads/shared",
+      "maxAgeHours": 720
+    }
+  }
+}
+2026-03-21 09:28:31 [INFO ] Token blacklist cleanup started
+  ÔåÆ {"intervalMs":3600000}
+2026-03-21 09:28:31 [INFO ] Market Radar cache cleanup scheduled (every 15 min if memory > 300MB)
+2026-03-21 09:28:31 [INFO ] [Scheduler] Starting GDPR consent scheduler
+2026-03-21 09:28:31 [INFO ] [Scheduler] GDPR consent scheduler started
+{
+  "consentCheckInterval": "60 minutes",
+  "reminderInterval": "6 hours",
+  "purgeInterval": "24 hours",
+  "tokenRefreshInterval": "7 days"
+}
+2026-03-21 09:28:31 [INFO ] GDPR Consent Scheduler started
+2026-03-21 09:28:31 [INFO ] Upload directory does not exist, creating it
+  ÔåÆ {"directory":"/tmp/batch-exports"}
+2026-03-21 09:28:31 [INFO ] Batch jobs tables initialized
+2026-03-21 09:28:31 [INFO ] Batch jobs worker initialized
+2026-03-21 09:28:31 [INFO ] Starting batch jobs worker
+  ÔåÆ {"interval":5000,"batchSize":100}
+2026-03-21 09:28:31 [INFO ] Batch Jobs Worker started
+2026-03-21 09:28:31 [INFO ] Existing batch jobs
+{
+  "jobs": {
+    "0": {
+      "id": "b5cedcec-582f-461c-b6cc-0c183ad248d7",
+      "status": "completed",
+      "total": 6217,
+      "processed": 6209
+    },
+    "1": {
+      "id": "2639b23f-1029-4e63-b092-c8d4c43e52b1",
+      "status": "completed",
+      "total": 1232,
+      "processed": 1232
+    },
+    "2": {
+      "id": "510b1035-c079-40c1-b5ea-f6d5dcd0bf1a",
+      "status": "completed",
+      "total": 94,
+      "processed": 94
+    },
+    "3": {
+      "id": "82dc8b7b-4dd4-49a8-a7d3-ed7b9d9579ea",
+      "status": "completed",
+      "total": 4,
+      "processed": 4
+    }
+  }
+}
+2026-03-21 09:28:32 [INFO ] GET / - 200 - 412ms
+2026-03-21 09:28:32 [INFO ] GET /resumes - 200 - 8ms
+2026-03-21 09:28:33 [INFO ] GET /me - 200 - 11ms
+2026-03-21 09:28:33 [INFO ] GET /memory - 200 - 2ms
+2026-03-21 09:28:33 [INFO ] GET /stats - 200 - 48ms
+2026-03-21 09:28:33 [INFO ] GET / - 200 - 58ms
+2026-03-21 09:28:33 [INFO ] GET /cleaned - 200 - 59ms
+2026-03-21 09:28:33 [INFO ] GET /grouped-by-deal - 200 - 82ms
+2026-03-21 09:28:33 [INFO ] GET / - 200 - 81ms
+2026-03-21 09:28:33 [INFO ] GET / - 200 - 426ms
+2026-03-21 09:28:40 [INFO ] GET / - 200 - 9ms
+2026-03-21 09:29:00 [INFO ] GET /api/csrf-token - 200 - 1ms
+2026-03-21 09:29:00 [INFO ] POST /upload - 201 - 49ms
+2026-03-21 09:29:00 [INFO ] Starting server-side PDF extraction
+  ÔåÆ {"fileName":"CV_BEN-ABDRABBAH-BALIGH.pdf","fileSize":105549}
+2026-03-21 09:29:01 [INFO ] PDF extraction completed
+{
+  "fileName": "CV_BEN-ABDRABBAH-BALIGH.pdf",
+  "textLength": 3554,
+  "pages": 3,
+  "ocrUsed": false,
+  "ocrPageCount": 0,
+  "avgOcrConfidence": null,
+  "extractionTimeMs": 327
+}
+2026-03-21 09:29:01 [INFO ] POST /extract-pdf - 200 - 347ms
+2026-03-21 09:29:01 [INFO ] Industries loaded successfully from PostgreSQL
+  ÔåÆ {"count":29}
+2026-03-21 09:29:01 [INFO ] Industry mapping lexique loaded from PostgreSQL
+  ÔåÆ {"canonicalCount":29}
+2026-03-21 09:29:01 [INFO ] LLM Request
+{
+  "model": "gpt-5.4",
+  "messageCount": 2,
+  "maxTokens": 16000,
+  "reasoningEffort": "none",
+  "temperature": 0.3,
+  "topP": 1
+}
+2026-03-21 09:29:04 [INFO ] [Scheduler] Running initial consent checks
+2026-03-21 09:29:04 [INFO ] [GDPR Token Refresh] Starting proactive token refresh
+2026-03-21 09:29:05 [INFO ] googleapis module loaded for GDPR mail
+2026-03-21 09:29:05 [INFO ] [GDPR Token Refresh] Token refreshed successfully
+  ÔåÆ {"email":"luc.moreau@aptea.net","newExpiry":"2026-03-28T09:29:05.425Z","hasNewRefreshToken":true}
+2026-03-21 09:29:05 [INFO ] [Scheduler] GDPR token refresh completed
+  ÔåÆ {"email":"luc.moreau@aptea.net","message":"Token refreshed successfully"}
+2026-03-21 09:29:05 [INFO ] GET / - 200 - 365ms
+2026-03-21 09:29:28 [INFO ] LLM Token usage
+  ÔåÆ {"inputTokens":4366,"outputTokens":2294,"totalTokens":6660}
+2026-03-21 09:29:28 [INFO ] Anonymous mode: replaced name with trigram
+  ÔåÆ {"trigram":"BBA"}
+2026-03-21 09:29:28 [INFO ] POST /analyze-text - 200 - 27591ms
+2026-03-21 09:29:28 [INFO ] PUT /api/resumes/:id called
+{
+  "resumeId": "2f350b79-e38f-421b-b265-00775df39dbe",
+  "bodyKeys": {
+    "0": "Original Text",
+    "1": "Skills",
+    "2": "Industries",
+    "3": "Tools",
+    "4": "Soft Skills",
+    "5": "Key Improvements",
+    "6": "Status",
+    "7": "Analysis Date",
+    "8": "Name",
+    "9": "Title",
+    "10": "Original Name",
+    "11": "Global Rating",
+    "12": "Executive Summary Score",
+    "13": "Skills Score",
+    "14": "Experience Score",
+    "15": "Education Score",
+    "16": "ATS Score",
+    "17": "Hobbies Languages Score"
+  },
+  "hasImprovedGlobalRating": false
+}
+2026-03-21 09:29:28 [INFO ] Auto-calculated cleaned tags
+{
+  "resumeId": "2f350b79-e38f-421b-b265-00775df39dbe",
+  "rawSkills": 10,
+  "cleanedSkills": 10,
+  "rawIndustries": 3,
+  "cleanedIndustries": 3
+}
+2026-03-21 09:29:28 [INFO ] PUT /api/resumes/:id - updateData prepared
+{
+  "resumeId": "2f350b79-e38f-421b-b265-00775df39dbe",
+  "fieldsToUpdate": {
+    "0": "name",
+    "1": "title",
+    "2": "status",
+    "3": "original_text",
+    "4": "global_rating",
+    "5": "skills_score",
+    "6": "experience_score",
+    "7": "education_score",
+    "8": "ats_score",
+    "9": "executive_summary_score",
+    "10": "hobbies_languages_score",
+    "11": "skills",
+    "12": "industries",
+    "13": "tools",
+    "14": "soft_skills",
+    "15": "key_improvements",
+    "16": "original_name",
+    "17": "analyzed_at",
+    "18": "skills_cleaned",
+    "19": "industries_cleaned",
+    "20": "tools_cleaned",
+    "21": "soft_skills_cleaned"
+  },
+  "hasGlobalRating": true,
+  "globalRatingMapped": 67
+}
+2026-03-21 09:29:28 [INFO ] PUT /2f350b79-e38f-421b-b265-00775df39dbe - 200 - 11ms
+2026-03-21 09:29:28 [INFO ] GET /2f350b79-e38f-421b-b265-00775df39dbe/comments - 200 - 10ms
+2026-03-21 09:29:33 [INFO ] GET /memory - 200 - 2ms
+2026-03-21 09:29:34 [INFO ] GET / - 200 - 356ms
+2026-03-21 09:29:37 [INFO ] LLM Request
+{
+  "model": "gpt-5.4",
+  "messageCount": 2,
+  "maxTokens": 16384,
+  "reasoningEffort": "none",
+  "temperature": 0.3,
+  "topP": 1
+}
+2026-03-21 09:29:38 [INFO ] GET / - 200 - 359ms
+2026-03-21 09:29:57 [INFO ] LLM Token usage
+  ÔåÆ {"inputTokens":4274,"outputTokens":1633,"totalTokens":5907}
+2026-03-21 09:29:57 [INFO ] LLM Improvement raw response preview:
+{
+  "isJSON": true,
+  "hasImprovedText": true,
+  "preview": "{\n  \"name\": \"BBA\",\n  \"summary\": {\n    \"title\": \"D├®veloppeur S├®nior .NET\",\n    \"targetRole\": \"D├®veloppeur .NET / D├®veloppeur applicatif orient├® SI m├®tier et data\",\n    \"industries\": [\"M├®dia & Communication\", \"Services aux entreprises\", \"T├®l├®communications\"],\n    \"profileHighlights\": [\n      \"D├®velopp"
+}
+2026-03-21 09:29:57 [INFO ] Parsed improvement result:
+{
+  "hasText": true,
+  "textLength": 4780,
+  "analysis": {
+    "globalRating": 86,
+    "executiveSummaryRating": 82,
+    "skillsRating": 88,
+    "experiencesRating": 87,
+    "educationRating": 84,
+    "atsOptimizationRating": 90,
+    "hobbiesLanguagesRating": 72,
+    "suggestions": {},
+    "tags": {
+      "skills": {},
+      "industries": {
+        "0": "M├®dia & Communication",
+        "1": "Services aux entreprises",
+        "2": "T├®l├®communications"
+      },
+      "tools": {},
+      "softSkills": {}
+    },
+    "name": "D├®veloppeur S├®nior .NET",
+    "title": "D├®veloppeur .NET / D├®veloppeur applicatif orient├® SI m├®tier et data"
+  }
+}
+2026-03-21 09:29:57 [INFO ] LLM Request
+{
+  "model": "gpt-5.4",
+  "messageCount": 2,
+  "maxTokens": 16000,
+  "reasoningEffort": "none",
+  "temperature": 0.3,
+  "topP": 1
+}
+2026-03-21 09:30:11 [INFO ] GET / - 200 - 344ms
+2026-03-21 09:30:23 [INFO ] LLM Token usage
+  ÔåÆ {"inputTokens":4409,"outputTokens":2440,"totalTokens":6849}
+2026-03-21 09:30:23 [INFO ] Improvement complete with post-analysis
+{
+  "hasImprovedText": true,
+  "hasSuggestions": true,
+  "suggestionsKeys": {
+    "0": "executiveSummary",
+    "1": "skills",
+    "2": "experiences",
+    "3": "education",
+    "4": "hobbiesLanguages",
+    "5": "atsOptimization"
+  },
+  "tagsSkillsCount": 10,
+  "calculatedGlobalRating": "82%"
+}
+2026-03-21 09:30:23 [INFO ] POST /improve - 200 - 45797ms
+2026-03-21 09:30:27 [INFO ] PUT /api/resumes/:id called
+{
+  "resumeId": "2f350b79-e38f-421b-b265-00775df39dbe",
+  "bodyKeys": {
+    "0": "Original Text",
+    "1": "Improved Text",
+    "2": "Status",
+    "3": "Last Improved",
+    "4": "Improved Global Rating",
+    "5": "Improved Skills Score",
+    "6": "Improved Experience Score",
+    "7": "Improved Education Score",
+    "8": "Improved ATS Score",
+    "9": "Improved Executive Summary Score",
+    "10": "Improved Hobbies Languages Score"
+  },
+  "hasImprovedGlobalRating": true,
+  "improvedGlobalRatingValue": "82",
+  "improvedSkillsScoreValue": "88",
+  "improvedExperienceScoreValue": "78"
+}
+2026-03-21 09:30:27 [INFO ] PUT /api/resumes/:id - updateData prepared
+{
+  "resumeId": "2f350b79-e38f-421b-b265-00775df39dbe",
+  "fieldsToUpdate": {
+    "0": "status",
+    "1": "original_text",
+    "2": "improved_text",
+    "3": "improved_global_rating",
+    "4": "improved_skills_score",
+    "5": "improved_experience_score",
+    "6": "improved_education_score",
+    "7": "improved_ats_score",
+    "8": "improved_executive_summary_score",
+    "9": "improved_hobbies_languages_score"
+  },
+  "hasGlobalRating": false
+}
+2026-03-21 09:30:27 [INFO ] Improved text update detected
+{
+  "resumeId": "2f350b79-e38f-421b-b265-00775df39dbe",
+  "shouldCreateVersion": true,
+  "changeReason": "initial_improvement",
+  "textLength": 4780
+}
+2026-03-21 09:30:27 [INFO ] [resumeVersions] Creating new resume version
+{
+  "resumeId": "2f350b79-e38f-421b-b265-00775df39dbe",
+  "newVersionNumber": 1,
+  "changeReason": "initial_improvement",
+  "textLength": 4780
+}
+2026-03-21 09:30:27 [INFO ] [resumeVersions] Resume version created successfully
+{
+  "resumeId": "2f350b79-e38f-421b-b265-00775df39dbe",
+  "versionNumber": 1,
+  "versionId": "079e1538-2e59-439e-ad81-8cc33a0fb9ea"
+}
+2026-03-21 09:30:27 [INFO ] Resume version created
+  ÔåÆ {"resumeId":"2f350b79-e38f-421b-b265-00775df39dbe","versionNumber":1}
+2026-03-21 09:30:27 [INFO ] PUT /2f350b79-e38f-421b-b265-00775df39dbe - 200 - 34ms
+2026-03-21 09:30:28 [INFO ] GET /2f350b79-e38f-421b-b265-00775df39dbe/comments - 200 - 5ms
+2026-03-21 09:30:28 [INFO ] GET /2f350b79-e38f-421b-b265-00775df39dbe/comments - 200 - 2ms
+2026-03-21 09:30:28 [INFO ] GET /api/resumes/:id/versions
+{
+  "resumeId": "2f350b79-e38f-421b-b265-00775df39dbe",
+  "limit": "1",
+  "offset": "0",
+  "userId": "f3aef290-f27f-4276-a269-87cdd05630ff"
+}
+2026-03-21 09:30:28 [INFO ] GET /2f350b79-e38f-421b-b265-00775df39dbe/versions - 200 - 9ms
+2026-03-21 09:30:34 [INFO ] GET /memory - 200 - 3ms
+2026-03-21 09:30:35 [INFO ] GET / - 200 - 363ms
+2026-03-21 09:30:45 [INFO ] GET / - 200 - 314ms
+2026-03-21 09:31:18 [INFO ] GET / - 200 - 381ms
+2026-03-21 09:31:35 [INFO ] GET /memory - 200 - 2ms
+2026-03-21 09:31:35 [INFO ] GET / - 200 - 347ms
+2026-03-21 09:31:51 [INFO ] GET /2f350b79-e38f-421b-b265-00775df39dbe/comments - 200 - 4ms
+2026-03-21 09:31:51 [INFO ] GET / - 200 - 423ms
+2026-03-21 09:32:01 [INFO ] GET /api/csrf-token - 200 - 0ms
+2026-03-21 09:32:01 [INFO ] Missions GET - query debug
+  ÔåÆ {"whereClause":"","params":{},"conditions":{}}
+2026-03-21 09:32:01 [INFO ] GET / - 200 - 18ms
+2026-03-21 09:32:01 [INFO ] GET / - 200 - 11ms
+2026-03-21 09:32:01 [INFO ] GET /stages - 200 - 1ms
+2026-03-21 09:32:01 [INFO ] GET /resume/2f350b79-e38f-421b-b265-00775df39dbe - 200 - 10ms
+2026-03-21 09:32:06 [INFO ] GET /2f350b79-e38f-421b-b265-00775df39dbe/comments - 200 - 2ms
+2026-03-21 09:32:06 [INFO ] GET /api/resumes/:id/versions
+{
+  "resumeId": "2f350b79-e38f-421b-b265-00775df39dbe",
+  "limit": "1",
+  "offset": "0",
+  "userId": "f3aef290-f27f-4276-a269-87cdd05630ff"
+}
+2026-03-21 09:32:06 [INFO ] GET /2f350b79-e38f-421b-b265-00775df39dbe/versions - 200 - 5ms
+2026-03-21 09:32:24 [INFO ] GET / - 200 - 459ms
+2026-03-21 09:32:33 [INFO ] GET /memory - 200 - 3ms
+2026-03-21 09:32:33 [INFO ] GET / - 200 - 359ms
+2026-03-21 09:32:57 [INFO ] GET / - 200 - 372ms

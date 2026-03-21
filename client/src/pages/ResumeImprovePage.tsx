@@ -531,7 +531,8 @@ const ResumeImprovePage = (): JSX.Element => {
                         onReady={() => setEditorReady(true)}
                         height={500}
                         suggestions={parseSuggestions(
-                          localResume?.['Improved Key Improvements']
+                          localResume?.['Improved Key Improvements'] ||
+                          localResume?.['Key Improvements']
                         )}
                       />
                     }

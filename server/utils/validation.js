@@ -457,7 +457,14 @@ export const updateResumeSchema = z.object({
   'Skills_esco': z.array(z.any()).optional(),
   'Industries_esco': z.array(z.any()).optional(),
   'Tools_esco': z.array(z.any()).optional(),
-  'Soft Skills_esco': z.array(z.any()).optional()
+  'Soft Skills_esco': z.array(z.any()).optional(),
+  // Improved tags (after LLM improvement)
+  'Improved Skills': z.string().optional(),
+  'Improved Industries': z.string().optional(),
+  'Improved Tools': z.string().optional(),
+  'Improved Soft Skills': z.string().optional(),
+  'Improved Key Improvements': z.string().optional(),
+  'FirmName': z.string().max(255).optional()
 }).strip();
 
 // (improveTextSchema moved above with LLM Handler schemas)
