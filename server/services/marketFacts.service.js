@@ -56,7 +56,10 @@ async function storeFact(fact) {
         
         const result = await dbQuery(
             `INSERT INTO market_facts (date, source, keyword, location, job_count, mean_salary, metadata)
-            VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            ON CONFLICT (keyword, location, source, date)
+            DO UPDATE SET job_count = EXCLUDED.job_count, mean_salary = EXCLUDED.mean_salary, metadata = EXCLUDED.metadata, updated_at = NOW()
+            RETURNING *`,
             [
                 fact.date,
                 fact.source,
