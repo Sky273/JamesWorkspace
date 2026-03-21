@@ -1,3 +1,25 @@
+## v1.8.7 - 2026-03-21
+### 📊 Suivi de Progression des Collectes Market Radar
+
+#### Jobs de Collecte — Progression en Temps Réel
+- **Collecte métiers** : Ajout d'un callback `onProgress` à `collectITMetiers` pour mise à jour incrémentale après chaque métier traité
+- **Collecte offres (facts)** : Ajout d'un callback `onProgress` à `runFullCollection` et `runSourceCollection` avec mise à jour toutes les 5 secondes
+- **Collecte tendances** : Réduction de l'intervalle de progression de 30s à 5s pour un affichage plus réactif
+
+#### Estimation du Total Dès le Lancement
+- **Offres France Travail** : Calcul du total attendu `(romeCodes × régions) + keywords` avant la boucle de collecte, via callback `onTotalEstimated`
+- **Tendances** : Calcul du total attendu `5 × (romeCodes × régions) + romeCodes + régions` dès le chargement des métiers IT
+- **Barre de progression** : Le nombre cible (ex: `120 / 1854`) s'affiche immédiatement au lieu de `0 / 0`
+
+#### Correction UPSERT Offres
+- **storeFact** : Remplacement de l'INSERT simple par un `INSERT ... ON CONFLICT DO UPDATE` pour éviter les erreurs de clé dupliquée lors des re-collectes sur la contrainte `(keyword, location, source, date)`
+
+#### Qualité
+- **108 tests serveur** passent après les modifications
+- **Aucune régression** sur les tests client et pdf-server
+
+---
+
 ## v1.8.6 - 2026-03-17
 ### ✏️ Éditeur Tiptap, Vues Groupées par Affaire & Prompts LLM
 
