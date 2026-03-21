@@ -59,11 +59,64 @@ export async function getAcceptedIndustriesString() {
     return industries.join(', ');
 }
 
+// Cache for industry mapping lexique
+let mappingCache = null;
+let mappingCacheTimestamp = null;
+
+/**
+ * Get industry mapping lexique from industry_aliases table
+ * Groups aliases by canonical_name for prompt injection
+ * @returns {Promise<string>} - Formatted mapping lexique
+ */
+export async function getIndustryMappingString() {
+    try {
+        const now = Date.now();
+        if (mappingCache && mappingCacheTimestamp && (now - mappingCacheTimestamp) < CACHE_TTL) {
+            return mappingCache;
+        }
+
+        const records = await selectWithTimeout('industry_aliases', {
+            orderBy: 'canonical_name ASC, alias ASC'
+        });
+
+        // Group aliases by canonical_name
+        const grouped = {};
+        for (const record of records) {
+            const canonical = record.canonical_name?.trim();
+            const alias = record.alias?.trim();
+            if (!canonical || !alias) continue;
+            // Skip self-referencing aliases (canonical_name === alias)
+            if (canonical === alias) continue;
+            if (!grouped[canonical]) grouped[canonical] = [];
+            grouped[canonical].push(alias);
+        }
+
+        // Format: "canonical_name : alias1, alias2, alias3"
+        const lines = Object.entries(grouped)
+            .filter(([, aliases]) => aliases.length > 0)
+            .map(([canonical, aliases]) => `- ${aliases.join(', ')} → ${canonical}`)
+            .join('\n');
+
+        mappingCache = lines;
+        mappingCacheTimestamp = now;
+
+        safeLog('info', 'Industry mapping lexique loaded from PostgreSQL', { 
+            canonicalCount: Object.keys(grouped).length 
+        });
+        return lines;
+    } catch (error) {
+        safeLog('error', 'Error building industry mapping lexique', { error: error.message });
+        return '';
+    }
+}
+
 /**
  * Clear the industries cache
  */
 export function clearIndustriesCache() {
     industriesCache = null;
     cacheTimestamp = null;
+    mappingCache = null;
+    mappingCacheTimestamp = null;
     safeLog('debug', 'Industries cache cleared');
 }

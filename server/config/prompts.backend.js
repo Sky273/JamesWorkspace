@@ -550,11 +550,9 @@ Une industrie est sélectionnable uniquement s'il existe au moins un indice expl
 
 Tu peux mapper un indice métier vers une industrie autorisée.
 
-### Exemples autorisés
+### Lexique de mapping (alias → industrie canonique)
 
-- core banking → Banque et services financiers
-- sinistres → Assurance
-- hôpital → Santé et médico-social
+{INDUSTRY_MAPPING}
 
 ### Règles
 

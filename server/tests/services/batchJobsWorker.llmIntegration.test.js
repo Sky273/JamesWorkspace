@@ -20,11 +20,12 @@ vi.mock('../../services/settings.service.js', () => ({
     calculateWeightedGlobalRating: vi.fn((a) => a)
 }));
 vi.mock('../../services/industry.service.js', () => ({
-    getAcceptedIndustriesString: vi.fn(() => 'IT, Finance')
+    getAcceptedIndustriesString: vi.fn(() => 'IT, Finance'),
+    getIndustryMappingString: vi.fn(() => '- Informatique, Tech → IT\n- Banque → Finance')
 }));
 vi.mock('../../config/prompts.backend.js', () => ({
-    DEFAULT_ANALYSIS_PROMPT: 'analyze {TEXT} {FILENAME} {ACCEPTED_INDUSTRIES} {ANONYMIZATION_RULES}',
-    DEFAULT_IMPROVEMENT_PROMPT: 'improve {TEXT} {ANALYSIS} {FILENAME} {ACCEPTED_INDUSTRIES} {ANONYMIZATION_RULES}',
+    DEFAULT_ANALYSIS_PROMPT: 'analyze {TEXT} {FILENAME} {ACCEPTED_INDUSTRIES} {INDUSTRY_MAPPING} {ANONYMIZATION_RULES}',
+    DEFAULT_IMPROVEMENT_PROMPT: 'improve {TEXT} {ANALYSIS} {FILENAME} {ACCEPTED_INDUSTRIES} {INDUSTRY_MAPPING} {ANONYMIZATION_RULES}',
     ANONYMIZATION_RULES_ANONYMOUS: 'anon rules {FILENAME}',
     ANONYMIZATION_RULES_NOMINATIVE: 'nominative rules {FILENAME}'
 }));

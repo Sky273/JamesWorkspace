@@ -73,7 +73,7 @@ export function resetLLMQueue() {
 export async function analyzeResumeWithLLM(text, _firmId, originalFileName = null) {
     const { analyzeResume, cleanupText } = await import('../openai.service.js');
     const { getLLMSettings, calculateWeightedGlobalRating } = await import('../settings.service.js');
-    const { getAcceptedIndustriesString } = await import('../industry.service.js');
+    const { getAcceptedIndustriesString, getIndustryMappingString } = await import('../industry.service.js');
     const { DEFAULT_ANALYSIS_PROMPT, ANONYMIZATION_RULES_ANONYMOUS, ANONYMIZATION_RULES_NOMINATIVE } = await import('../../config/prompts.backend.js');
 
     const settings = await getLLMSettings();
@@ -88,9 +88,11 @@ export async function analyzeResumeWithLLM(text, _firmId, originalFileName = nul
     // Get filename value for injection
     const fileNameValue = originalFileName || 'Non disponible';
     
-    // Inject accepted industries
+    // Inject accepted industries and mapping lexique
     const acceptedIndustries = await getAcceptedIndustriesString();
+    const industryMapping = await getIndustryMappingString();
     analysisPrompt = analysisPrompt.replace('{ACCEPTED_INDUSTRIES}', acceptedIndustries);
+    analysisPrompt = analysisPrompt.replace('{INDUSTRY_MAPPING}', industryMapping);
     
     // Inject anonymization rules based on cvMode (with FILENAME replaced)
     let anonymizationRules = cvMode === 'anonymous' ? ANONYMIZATION_RULES_ANONYMOUS : ANONYMIZATION_RULES_NOMINATIVE;
@@ -126,7 +128,7 @@ export async function analyzeResumeWithLLM(text, _firmId, originalFileName = nul
 export async function improveResumeWithLLM(text, analysis, _firmId, originalFileName = null) {
     const { improveResume, cleanupText, analyzeResume } = await import('../openai.service.js');
     const { getLLMSettings, calculateWeightedGlobalRating } = await import('../settings.service.js');
-    const { getAcceptedIndustriesString } = await import('../industry.service.js');
+    const { getAcceptedIndustriesString, getIndustryMappingString } = await import('../industry.service.js');
     const { DEFAULT_IMPROVEMENT_PROMPT, DEFAULT_ANALYSIS_PROMPT, ANONYMIZATION_RULES_ANONYMOUS, ANONYMIZATION_RULES_NOMINATIVE } = await import('../../config/prompts.backend.js');
 
     const settings = await getLLMSettings();
@@ -141,7 +143,7 @@ export async function improveResumeWithLLM(text, analysis, _firmId, originalFile
     // Get filename value for injection
     const fileNameValue = originalFileName || 'Non disponible';
     
-    // Inject accepted industries
+    // Inject accepted industries (no mapping lexique needed for improvement)
     const acceptedIndustries = await getAcceptedIndustriesString();
     improvementPrompt = improvementPrompt.replace('{ACCEPTED_INDUSTRIES}', acceptedIndustries);
     
@@ -179,8 +181,10 @@ export async function improveResumeWithLLM(text, analysis, _firmId, originalFile
     });
 
     // Re-analyze the improved text (with rate limiting)
+    const industryMapping = await getIndustryMappingString();
     let analysisPrompt = settings['Analysis Prompt'] || DEFAULT_ANALYSIS_PROMPT;
     analysisPrompt = analysisPrompt.replace('{ACCEPTED_INDUSTRIES}', acceptedIndustries);
+    analysisPrompt = analysisPrompt.replace('{INDUSTRY_MAPPING}', industryMapping);
     analysisPrompt = analysisPrompt.replace('{ANONYMIZATION_RULES}', anonymizationRules);
 
     await acquireLLMSlot();

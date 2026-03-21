@@ -17,6 +17,7 @@ import { selectWithTimeout } from '../../utils/postgresHelpers.js';
 import {
     getAcceptedIndustries,
     getAcceptedIndustriesString,
+    getIndustryMappingString,
     clearIndustriesCache
 } from '../../services/industry.service.js';
 
@@ -82,6 +83,49 @@ describe('Industry Service', () => {
             const result = await getAcceptedIndustriesString();
 
             expect(result).toBe('Finance, IT');
+        });
+    });
+
+    describe('getIndustryMappingString', () => {
+        it('should return formatted mapping lexique grouped by canonical_name', async () => {
+            selectWithTimeout.mockResolvedValueOnce([
+                { canonical_name: 'Banque & Finance', alias: 'Banque & Finance' },
+                { canonical_name: 'Banque & Finance', alias: 'Banque' },
+                { canonical_name: 'Banque & Finance', alias: 'Finance' },
+                { canonical_name: 'Banque & Finance', alias: 'Banking' },
+                { canonical_name: 'IT & Digital', alias: 'IT & Digital' },
+                { canonical_name: 'IT & Digital', alias: 'Informatique' },
+                { canonical_name: 'IT & Digital', alias: 'Tech' }
+            ]);
+
+            const result = await getIndustryMappingString();
+
+            expect(result).toContain('Banque, Finance, Banking → Banque & Finance');
+            expect(result).toContain('Informatique, Tech → IT & Digital');
+            // Self-referencing aliases should be excluded
+            expect(result).not.toContain('Banque & Finance, Banque');
+        });
+
+        it('should return empty string on error', async () => {
+            selectWithTimeout.mockRejectedValueOnce(new Error('DB error'));
+
+            const result = await getIndustryMappingString();
+
+            expect(result).toBe('');
+        });
+
+        it('should use cache on second call', async () => {
+            selectWithTimeout.mockResolvedValueOnce([
+                { canonical_name: 'IT', alias: 'IT' },
+                { canonical_name: 'IT', alias: 'Informatique' }
+            ]);
+
+            await getIndustryMappingString();
+            const result2 = await getIndustryMappingString();
+
+            // selectWithTimeout called once for getIndustryMappingString (cached)
+            expect(selectWithTimeout).toHaveBeenCalledTimes(1);
+            expect(result2).toContain('Informatique → IT');
         });
     });
 

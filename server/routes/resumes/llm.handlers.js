@@ -8,7 +8,7 @@ import { safeLog } from '../../utils/logger.backend.js';
 import { analyzeResume, improveResume, matchResumeWithMission, adaptResumeToMission, cleanupText } from '../../services/openai.service.js';
 import { getRequestMetadata } from '../../services/security.service.js';
 import { getLLMSettings, calculateWeightedGlobalRating } from '../../services/settings.service.js';
-import { getAcceptedIndustriesString } from '../../services/industry.service.js';
+import { getAcceptedIndustriesString, getIndustryMappingString } from '../../services/industry.service.js';
 import { DEFAULT_IMPROVEMENT_PROMPT, DEFAULT_ANALYSIS_PROMPT, DEFAULT_MATCH_ANALYSIS_PROMPT, DEFAULT_ADAPTATION_PROMPT, ANONYMIZATION_RULES_ANONYMOUS, ANONYMIZATION_RULES_NOMINATIVE } from '../../config/prompts.backend.js';
 import { generateTrigram } from '../../utils/trigram.js';
 
@@ -60,9 +60,11 @@ export async function analyzeHandler(req, res) {
         const originalFileName = resumeRecord.original_file_name || resumeRecord.name || null;
         const fileNameValue = originalFileName || 'Non disponible';
         
-        // Inject accepted industries into the prompt
+        // Inject accepted industries and mapping lexique into the prompt
         const acceptedIndustries = await getAcceptedIndustriesString();
+        const industryMapping = await getIndustryMappingString();
         analysisPrompt = analysisPrompt.replace('{ACCEPTED_INDUSTRIES}', acceptedIndustries);
+        analysisPrompt = analysisPrompt.replace('{INDUSTRY_MAPPING}', industryMapping);
         
         // Inject anonymization rules based on cvMode (with FILENAME replaced)
         let anonymizationRules = cvMode === 'anonymous' ? ANONYMIZATION_RULES_ANONYMOUS : ANONYMIZATION_RULES_NOMINATIVE;
@@ -127,9 +129,11 @@ export async function analyzeTextHandler(req, res) {
         // Get filename value for injection
         const fileNameValue = fileName || 'Non disponible';
         
-        // Inject accepted industries into the prompt
+        // Inject accepted industries and mapping lexique into the prompt
         const acceptedIndustries = await getAcceptedIndustriesString();
+        const industryMapping = await getIndustryMappingString();
         analysisPrompt = analysisPrompt.replace('{ACCEPTED_INDUSTRIES}', acceptedIndustries);
+        analysisPrompt = analysisPrompt.replace('{INDUSTRY_MAPPING}', industryMapping);
         
         // Inject anonymization rules based on cvMode (with FILENAME replaced)
         let anonymizationRules = cvMode === 'anonymous' ? ANONYMIZATION_RULES_ANONYMOUS : ANONYMIZATION_RULES_NOMINATIVE;
@@ -190,10 +194,12 @@ export async function improveHandler(req, res) {
         // Get filename value for injection
         const fileNameValue = fileName || 'Non disponible';
         
-        // Inject accepted industries into BOTH prompts
+        // Inject accepted industries into BOTH prompts, mapping lexique only into analysis prompt
         const acceptedIndustries = await getAcceptedIndustriesString();
+        const industryMapping = await getIndustryMappingString();
         improvementPrompt = improvementPrompt.replace('{ACCEPTED_INDUSTRIES}', acceptedIndustries);
         analysisPrompt = analysisPrompt.replace('{ACCEPTED_INDUSTRIES}', acceptedIndustries);
+        analysisPrompt = analysisPrompt.replace('{INDUSTRY_MAPPING}', industryMapping);
         
         // Inject anonymization rules based on cvMode into BOTH prompts (with FILENAME replaced)
         let anonymizationRules = cvMode === 'anonymous' ? ANONYMIZATION_RULES_ANONYMOUS : ANONYMIZATION_RULES_NOMINATIVE;
@@ -327,7 +333,7 @@ export async function improveByIdHandler(req, res) {
         const originalFileName = resumeRecord.original_file_name || resumeRecord.name || null;
         const fileNameValue = originalFileName || 'Non disponible';
         
-        // Inject accepted industries into the prompt
+        // Inject accepted industries into the prompt (no mapping lexique needed for improvement)
         const acceptedIndustries = await getAcceptedIndustriesString();
         improvementPrompt = improvementPrompt.replace('{ACCEPTED_INDUSTRIES}', acceptedIndustries);
         
@@ -443,7 +449,7 @@ export async function adaptHandler(req, res) {
         const originalFileName = resumeRecord.original_file_name || resumeRecord.name || null;
         const fileNameValue = originalFileName || 'Non disponible';
 
-        // Inject accepted industries into the adaptation prompt
+        // Inject accepted industries into the adaptation prompt (no mapping lexique needed for adaptation)
         const acceptedIndustries = await getAcceptedIndustriesString();
         adaptationPrompt = adaptationPrompt.replace('{ACCEPTED_INDUSTRIES}', acceptedIndustries);
 
