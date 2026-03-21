@@ -170,6 +170,33 @@ describe('Settings Routes', () => {
         });
     });
 
+    describe('GET /api/settings/defaults', () => {
+        it('should return default prompts and weights for admin', async () => {
+            const res = await request(app).get('/api/settings/defaults').set(authHeader);
+
+            expect(res.status).toBe(200);
+            expect(res.body['Analysis Prompt']).toBe('default-analysis');
+            expect(res.body['Improvement Prompt']).toBe('default-improvement');
+            expect(res.body['Match Analysis Prompt']).toBe('default-match');
+            expect(res.body['Adaptation Prompt']).toBe('default-adaptation');
+            expect(res.body['Executive Summary Weight']).toBe(20);
+            expect(res.body.llmModel).toBe('chatgpt-4o-latest');
+        });
+
+        it('should return 403 for non-admin', async () => {
+            const res = await request(app)
+                .get('/api/settings/defaults')
+                .set({ ...authHeader, 'x-test-role': 'user' });
+
+            expect(res.status).toBe(403);
+        });
+
+        it('should return 401 without auth', async () => {
+            const res = await request(app).get('/api/settings/defaults');
+            expect(res.status).toBe(401);
+        });
+    });
+
     describe('PUT /api/settings/:id', () => {
         it('should update settings', async () => {
             const updatedRecord = {

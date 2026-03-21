@@ -203,27 +203,34 @@ const SettingsPage = (): JSX.Element => {
     }));
   };
 
-  const resetToDefaults = (): void => {
-    if (window.confirm(t('settings.resetConfirm'))) {
+  const resetToDefaults = async (): Promise<void> => {
+    if (!window.confirm(t('settings.resetConfirm'))) return;
+    try {
+      const response = await authGet('/api/settings/defaults');
+      if (!response.ok) throw new Error('Failed to fetch defaults');
+      const defaults = await response.json();
       setFormData({
-        llmModel: 'chatgpt-4o-latest',
-        cvMode: 'nominative',
-        chatbotEnabled: 'on',
-        'Analysis Prompt': '',
-        'Improvement Prompt': '',
-        'Match Analysis Prompt': '',
-        'Adaptation Prompt': '',
-        'Executive Summary Weight': 20,
-        'Skills Weight': 20,
-        'Experience Weight': 20,
-        'Education Weight': 15,
-        'ATS Weight': 15,
-        'Hobbies Languages Weight': 10,
-        'DPO Name': '',
-        'DPO Email': '',
-        'DPO Phone': ''
+        llmModel: defaults.llmModel || 'chatgpt-4o-latest',
+        cvMode: defaults.cvMode || 'nominative',
+        chatbotEnabled: defaults.chatbotEnabled || 'on',
+        'Analysis Prompt': defaults['Analysis Prompt'] || '',
+        'Improvement Prompt': defaults['Improvement Prompt'] || '',
+        'Match Analysis Prompt': defaults['Match Analysis Prompt'] || '',
+        'Adaptation Prompt': defaults['Adaptation Prompt'] || '',
+        'Executive Summary Weight': defaults['Executive Summary Weight'] ?? 20,
+        'Skills Weight': defaults['Skills Weight'] ?? 20,
+        'Experience Weight': defaults['Experience Weight'] ?? 20,
+        'Education Weight': defaults['Education Weight'] ?? 15,
+        'ATS Weight': defaults['ATS Weight'] ?? 15,
+        'Hobbies Languages Weight': defaults['Hobbies Languages Weight'] ?? 10,
+        'DPO Name': defaults['DPO Name'] || '',
+        'DPO Email': defaults['DPO Email'] || '',
+        'DPO Phone': defaults['DPO Phone'] || ''
       });
       toast.success(t('settings.resetSuccess'));
+    } catch (error) {
+      logger.error('Error fetching default settings:', error);
+      toast.error(t('settings.loadError'));
     }
   };
 

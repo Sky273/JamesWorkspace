@@ -66,6 +66,28 @@ router.get('/', authenticateToken, async (req, res) => {
     }
 });
 
+// GET /api/settings/defaults - Get default prompts and weights
+router.get('/defaults', authenticateToken, requireAdmin, (req, res) => {
+    res.json({
+        llmModel: 'chatgpt-4o-latest',
+        cvMode: 'nominative',
+        chatbotEnabled: 'on',
+        'Analysis Prompt': DEFAULT_ANALYSIS_PROMPT,
+        'Improvement Prompt': DEFAULT_IMPROVEMENT_PROMPT,
+        'Match Analysis Prompt': DEFAULT_MATCH_ANALYSIS_PROMPT,
+        'Adaptation Prompt': DEFAULT_ADAPTATION_PROMPT,
+        'Executive Summary Weight': 20,
+        'Skills Weight': 20,
+        'Experience Weight': 20,
+        'Education Weight': 15,
+        'ATS Weight': 15,
+        'Hobbies Languages Weight': 10,
+        'DPO Name': '',
+        'DPO Email': '',
+        'DPO Phone': ''
+    });
+});
+
 // PUT /api/settings/:id - Update settings (or create if not exists)
 router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), validateBody(updateSettingsSchema), async (req, res) => {
     try {
