@@ -19,7 +19,7 @@ const {
     parseBorderStyle, buildBorderXml,
     convertTableToOoxml, convertBlocksToOoxml, buildFlexParagraph,
     htmlToOoxml, buildPandocHtml,
-    extractHeaderBorder, injectHeaderBorderIntoDocx
+    extractHeaderBorder, injectHeaderIntoDocx
   }
 } = require('../../lib/docxGenerator.cjs');
 
@@ -35,6 +35,7 @@ describe('DOCX Generator – Public API', () => {
     it('should return DOC MIME type for doc', () => {
       expect(getDocMimeType('doc')).toBe('application/msword');
     });
+
   });
 
   describe('getDocExtension()', () => {
@@ -45,6 +46,7 @@ describe('DOCX Generator – Public API', () => {
     it('should return .doc for doc', () => {
       expect(getDocExtension('doc')).toBe('.doc');
     });
+
   });
 });
 
@@ -1293,42 +1295,14 @@ describe('buildPandocHtml()', () => {
     expect(result).toContain('.cls{color:red}');
   });
 
-  it('should include header when provided', () => {
-    const result = buildPandocHtml({ htmlContent: '<p>X</p>', stylesheet: '', headerContent: '<div>Header</div>' });
-    expect(result).toContain('document-header');
-    expect(result).toContain('Header');
-  });
-
-  it('should omit header section when empty', () => {
-    const result = buildPandocHtml({ htmlContent: '<p>X</p>', stylesheet: '', headerContent: '' });
-    expect(result).not.toContain('<div class="document-header">');
-  });
-
-  it('should omit header section when undefined', () => {
+  it('should NOT include header content (header is injected post-Pandoc)', () => {
     const result = buildPandocHtml({ htmlContent: '<p>X</p>', stylesheet: '' });
-    expect(result).not.toContain('<div class="document-header">');
+    expect(result).not.toContain('document-header');
   });
 
   it('should set Arial as base font family', () => {
     const result = buildPandocHtml({ htmlContent: '<p>X</p>', stylesheet: '' });
     expect(result).toContain('font-family: Arial');
-  });
-
-  it('should inject __HDRBDR__ marker when stylesheet has header border-bottom', () => {
-    const css = '.pdf-header { border-bottom: 3px solid #a01c5c; }';
-    const result = buildPandocHtml({ htmlContent: '<p>X</p>', stylesheet: css, headerContent: '<div>H</div>' });
-    expect(result).toContain('__HDRBDR__');
-  });
-
-  it('should NOT inject __HDRBDR__ marker when no border in stylesheet', () => {
-    const result = buildPandocHtml({ htmlContent: '<p>X</p>', stylesheet: 'body{color:red}', headerContent: '<div>H</div>' });
-    expect(result).not.toContain('__HDRBDR__');
-  });
-
-  it('should NOT inject __HDRBDR__ marker when no header content', () => {
-    const css = '.pdf-header { border-bottom: 3px solid #a01c5c; }';
-    const result = buildPandocHtml({ htmlContent: '<p>X</p>', stylesheet: css });
-    expect(result).not.toContain('__HDRBDR__');
   });
 });
 
@@ -1385,49 +1359,77 @@ describe('extractHeaderBorder()', () => {
 });
 
 // ========================================================
-// injectHeaderBorderIntoDocx
+// injectHeaderIntoDocx
 // ========================================================
-describe('injectHeaderBorderIntoDocx()', () => {
-  // Helper to create a minimal valid DOCX with a marker paragraph
-  async function createDocxWithMarker() {
+describe('injectHeaderIntoDocx()', () => {
+  // Helper to create a minimal valid DOCX (like Pandoc output)
+  async function createMinimalDocx() {
     const { default: JSZip } = await import('jszip');
     const zip = new JSZip();
     zip.file('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>');
     zip.file('_rels/.rels', '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
-    zip.file('word/document.xml', `<?xml version="1.0" encoding="UTF-8"?>
-<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-<w:body>
-<w:p><w:r><w:t>Header text</w:t></w:r></w:p>
-<w:p><w:r><w:t>__HDRBDR__</w:t></w:r></w:p>
-<w:p><w:r><w:t>Body content</w:t></w:r></w:p>
-<w:sectPr/>
-</w:body>
-</w:document>`);
+    zip.file('word/_rels/document.xml.rels', '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>');
+    zip.file('word/document.xml', '<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>Body</w:t></w:r></w:p><w:sectPr/></w:body></w:document>');
     return zip.generateAsync({ type: 'nodebuffer' });
   }
 
-  it('should replace __HDRBDR__ marker with a colored border paragraph', async () => {
-    const docxBuffer = await createDocxWithMarker();
-    const result = await injectHeaderBorderIntoDocx(docxBuffer, { color: 'A01C5C', size: 12 });
+  it('should create header1.xml with header content', async () => {
+    const docxBuffer = await createMinimalDocx();
+    const result = await injectHeaderIntoDocx(docxBuffer, '<p>My Header</p>');
+    const { default: JSZip } = await import('jszip');
+    const zip = await JSZip.loadAsync(result);
+    const headerXml = await zip.file('word/header1.xml').async('string');
+    expect(headerXml).toContain('<w:hdr');
+    expect(headerXml).toContain('My Header');
+  });
+
+  it('should register header1.xml in [Content_Types].xml', async () => {
+    const docxBuffer = await createMinimalDocx();
+    const result = await injectHeaderIntoDocx(docxBuffer, '<p>H</p>');
+    const { default: JSZip } = await import('jszip');
+    const zip = await JSZip.loadAsync(result);
+    const ct = await zip.file('[Content_Types].xml').async('string');
+    expect(ct).toContain('header1.xml');
+    expect(ct).toContain('header+xml');
+  });
+
+  it('should add header relationship in document.xml.rels', async () => {
+    const docxBuffer = await createMinimalDocx();
+    const result = await injectHeaderIntoDocx(docxBuffer, '<p>H</p>');
+    const { default: JSZip } = await import('jszip');
+    const zip = await JSZip.loadAsync(result);
+    const rels = await zip.file('word/_rels/document.xml.rels').async('string');
+    expect(rels).toContain('header1.xml');
+    expect(rels).toContain('relationships/header');
+  });
+
+  it('should wire headerReference into sectPr', async () => {
+    const docxBuffer = await createMinimalDocx();
+    const result = await injectHeaderIntoDocx(docxBuffer, '<p>H</p>');
     const { default: JSZip } = await import('jszip');
     const zip = await JSZip.loadAsync(result);
     const docXml = await zip.file('word/document.xml').async('string');
-    expect(docXml).not.toContain('__HDRBDR__');
-    expect(docXml).toContain('<w:pBdr>');
-    expect(docXml).toContain('w:color="A01C5C"');
-    expect(docXml).toContain('w:sz="12"');
-    expect(docXml).toContain('w:after="120"');
+    expect(docXml).toContain('<w:headerReference');
+    expect(docXml).toContain('w:type="default"');
   });
 
-  it('should return unchanged buffer when marker is not found', async () => {
+  it('should append border paragraph when stylesheet has border-bottom on header', async () => {
+    const docxBuffer = await createMinimalDocx();
+    const css = '.document-header { border-bottom: 3px solid #a01c5c; }';
+    const result = await injectHeaderIntoDocx(docxBuffer, '<p>H</p>', css);
     const { default: JSZip } = await import('jszip');
-    const zip = new JSZip();
-    zip.file('[Content_Types].xml', '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"></Types>');
-    zip.file('_rels/.rels', '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>');
-    zip.file('word/document.xml', '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>No marker here</w:t></w:r></w:p></w:body></w:document>');
-    const buf = await zip.generateAsync({ type: 'nodebuffer' });
-    const result = await injectHeaderBorderIntoDocx(buf, { color: 'FF0000', size: 8 });
-    // Should return the original buffer unchanged
-    expect(result).toEqual(buf);
+    const zip = await JSZip.loadAsync(result);
+    const headerXml = await zip.file('word/header1.xml').async('string');
+    expect(headerXml).toContain('<w:pBdr>');
+    expect(headerXml).toContain('w:color="A01C5C"');
+  });
+
+  it('should NOT append border paragraph when no border in stylesheet', async () => {
+    const docxBuffer = await createMinimalDocx();
+    const result = await injectHeaderIntoDocx(docxBuffer, '<p>H</p>', 'body{color:red}');
+    const { default: JSZip } = await import('jszip');
+    const zip = await JSZip.loadAsync(result);
+    const headerXml = await zip.file('word/header1.xml').async('string');
+    expect(headerXml).not.toContain('<w:pBdr>');
   });
 });

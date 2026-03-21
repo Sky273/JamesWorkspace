@@ -902,27 +902,15 @@ async function injectFooterIntoDocx(docxBuffer, footerContent, stylesheet) {
 }
 
 /**
- * Build a complete HTML document for Pandoc conversion (body only, no footer)
+ * Build a complete HTML document for Pandoc conversion (body only)
+ * Header and footer are injected post-Pandoc as native Word header/footer
  * @param {Object} options - Build options
  * @returns {string} Complete HTML document
  */
-function buildPandocHtml({ htmlContent, stylesheet, headerContent }) {
+function buildPandocHtml({ htmlContent, stylesheet }) {
   const styles = stylesheet || '';
   
-  let bodyContent = '';
-  
-  if (headerContent && headerContent.trim()) {
-    bodyContent += `<div class="document-header">${headerContent}</div>\n`;
-    // Inject marker for header border (post-processed into colored OOXML border)
-    const border = extractHeaderBorder(stylesheet);
-    if (border) {
-      bodyContent += '<p>__HDRBDR__</p>\n';
-    }
-  }
-  
-  bodyContent += `<div class="document-body">${htmlContent}</div>\n`;
-  
-  // Footer is injected via post-processing (injectFooterIntoDocx), not in body
+  const bodyContent = `<div class="document-body">${htmlContent}</div>\n`;
   
   return `<!DOCTYPE html>
 <html>
@@ -931,7 +919,6 @@ function buildPandocHtml({ htmlContent, stylesheet, headerContent }) {
   <style>
     ${styles}
     body { font-family: Arial, sans-serif; }
-    .document-header { margin-bottom: 20px; }
   </style>
 </head>
 <body>
@@ -941,25 +928,116 @@ function buildPandocHtml({ htmlContent, stylesheet, headerContent }) {
 }
 
 /**
- * Post-process a Pandoc DOCX to replace __HDRBDR__ marker with a colored border paragraph.
- * @param {Buffer} docxBuffer - DOCX buffer from Pandoc
- * @param {{ color: string, size: number }} borderInfo - Border color and size
- * @returns {Promise<Buffer>} Modified DOCX buffer
+ * Inject a Word-native header into an existing DOCX buffer
+ * Post-processes the Pandoc output to add header1.xml and wire it into the document
+ * @param {Buffer} docxBuffer - The DOCX file buffer
+ * @param {string} headerContent - Header HTML content
+ * @param {string} [stylesheet] - Template stylesheet
+ * @returns {Promise<Buffer>} Modified DOCX buffer with header on every page
  */
-async function injectHeaderBorderIntoDocx(docxBuffer, borderInfo) {
+async function injectHeaderIntoDocx(docxBuffer, headerContent, stylesheet) {
   const JSZipClass = await getJSZip();
   const zip = await JSZipClass.loadAsync(docxBuffer);
-  const docXml = await zip.file('word/document.xml').async('string');
 
-  // Find the paragraph containing __HDRBDR__ and replace it with a border paragraph
-  const markerRegex = /<w:p\b[^>]*>(?:<w:pPr>[\s\S]*?<\/w:pPr>)?\s*<w:r[^>]*>(?:<w:rPr>[\s\S]*?<\/w:rPr>)?\s*<w:t[^>]*>__HDRBDR__<\/w:t>\s*<\/w:r>\s*<\/w:p>/;
-  if (!markerRegex.test(docXml)) {
-    return docxBuffer; // marker not found, return unchanged
+  // Extract base64 images from header HTML (replaced with markers)
+  const { html: processedHeader, images } = extractImagesFromHtml(headerContent);
+  const hasImages = images.length > 0;
+
+  // Build header OOXML content
+  const wpNs = hasImages ? '\n       xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"' : '';
+  let headerOoxml = htmlToOoxml(processedHeader);
+
+  // Append border paragraph if stylesheet defines border-bottom on header
+  const border = extractHeaderBorder(stylesheet);
+  if (border) {
+    headerOoxml += `<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="${border.size}" w:space="1" w:color="${border.color}"/></w:pBdr><w:spacing w:after="120"/></w:pPr></w:p>`;
   }
 
-  const borderParagraph = `<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="${borderInfo.size}" w:space="1" w:color="${borderInfo.color}"/></w:pBdr><w:spacing w:after="120"/></w:pPr></w:p>`;
-  const newDocXml = docXml.replace(markerRegex, borderParagraph);
-  zip.file('word/document.xml', newDocXml);
+  const headerXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"${wpNs}>
+  ${headerOoxml}
+</w:hdr>`;
+
+  zip.file('word/header1.xml', headerXml);
+
+  // Embed image files and create header relationships
+  if (hasImages) {
+    for (const img of images) {
+      zip.file(`word/media/${img.filename}`, img.data);
+    }
+
+    let headerRelsXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">';
+    for (const img of images) {
+      headerRelsXml += `\n  <Relationship Id="${img.rId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${img.filename}"/>`;
+    }
+    headerRelsXml += '\n</Relationships>';
+    zip.file('word/_rels/header1.xml.rels', headerRelsXml);
+  }
+
+  // Register header and image content types in [Content_Types].xml
+  let contentTypesXml = await zip.file('[Content_Types].xml').async('string');
+  if (!contentTypesXml.includes('header1.xml')) {
+    contentTypesXml = contentTypesXml.replace(
+      '</Types>',
+      '<Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/></Types>'
+    );
+  }
+  if (hasImages) {
+    const extensions = [...new Set(images.map(img => img.ext))];
+    for (const ext of extensions) {
+      if (!contentTypesXml.includes(`Extension="${ext}"`)) {
+        const mime = ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : `image/${ext}`;
+        contentTypesXml = contentTypesXml.replace(
+          '</Types>',
+          `<Default Extension="${ext}" ContentType="${mime}"/></Types>`
+        );
+      }
+    }
+  }
+  zip.file('[Content_Types].xml', contentTypesXml);
+
+  // Add relationship for the header
+  let relsXml = await zip.file('word/_rels/document.xml.rels').async('string');
+  if (!relsXml.includes('header1.xml')) {
+    const rIdMatches = relsXml.match(/rId(\d+)/g) || [];
+    const maxRId = rIdMatches.reduce((max, id) => {
+      const num = parseInt(id.replace('rId', ''));
+      return num > max ? num : max;
+    }, 0);
+    const headerRId = `rId${maxRId + 1}`;
+
+    relsXml = relsXml.replace(
+      '</Relationships>',
+      `<Relationship Id="${headerRId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/></Relationships>`
+    );
+    zip.file('word/_rels/document.xml.rels', relsXml);
+
+    // Wire the header into document.xml section properties
+    let documentXml = await zip.file('word/document.xml').async('string');
+    const headerRef = `<w:headerReference w:type="default" r:id="${headerRId}"/>`;
+
+    if (/<w:sectPr\s*\/>/.test(documentXml)) {
+      const defaultSectPr = `<w:sectPr>${headerRef}<w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720"/></w:sectPr>`;
+      documentXml = documentXml.replace(/<w:sectPr\s*\/>/, defaultSectPr);
+    } else if (/<w:sectPr[^/]*>/.test(documentXml)) {
+      documentXml = documentXml.replace(
+        /<w:sectPr([^/][^>]*)>/,
+        `<w:sectPr$1>${headerRef}`
+      );
+      if (!/<w:pgMar[^>]*w:header/.test(documentXml)) {
+        documentXml = documentXml.replace(
+          /<w:pgMar([^/]*)\/?>/,
+          '<w:pgMar$1 w:header="720"/>'
+        );
+      }
+    } else {
+      const defaultSectPr = `<w:sectPr>${headerRef}<w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720"/></w:sectPr>`;
+      documentXml = documentXml.replace('</w:body>', `${defaultSectPr}</w:body>`);
+    }
+    zip.file('word/document.xml', documentXml);
+  }
+
   return zip.generateAsync({ type: 'nodebuffer' });
 }
 
@@ -976,15 +1054,16 @@ async function generateDocxViaPandoc({ htmlContent, stylesheet, headerContent, f
   try {
     const hasFooter = footerContent && footerContent.trim();
 
-    // Build HTML (body + header, no footer — footer is injected post-Pandoc)
+    const hasHeader = headerContent && headerContent.trim();
+
+    // Build HTML (body only — header and footer are injected post-Pandoc)
     const wrappedHtmlContent = buildPandocHtml({
       htmlContent,
-      stylesheet,
-      headerContent
+      stylesheet
     });
 
-    log('info', 'DOCX generation via Pandoc + post-process footer', {
-      hasHeader: !!headerContent,
+    log('info', 'DOCX generation via Pandoc + post-process header/footer', {
+      hasHeader: !!hasHeader,
       hasFooter: !!hasFooter,
       htmlLength: wrappedHtmlContent.length
     });
@@ -1009,14 +1088,13 @@ async function generateDocxViaPandoc({ htmlContent, stylesheet, headerContent, f
 
     let docxBuffer = fs.readFileSync(docxFilePath);
 
-    // Post-process: inject header border if stylesheet defines one
-    const headerBorder = extractHeaderBorder(stylesheet);
-    if (headerBorder && headerContent) {
+    // Post-process: inject header into the generated DOCX
+    if (hasHeader) {
       try {
-        docxBuffer = await injectHeaderBorderIntoDocx(docxBuffer, headerBorder);
-        log('debug', 'Header border injected into DOCX', { color: headerBorder.color });
-      } catch (borderError) {
-        log('warn', 'Failed to inject header border into DOCX', { error: borderError.message });
+        docxBuffer = await injectHeaderIntoDocx(docxBuffer, headerContent, stylesheet);
+        log('debug', 'Header injected into DOCX via post-processing');
+      } catch (headerError) {
+        log('warn', 'Failed to inject header into DOCX, returning without header', { error: headerError.message });
       }
     }
 
@@ -1112,7 +1190,7 @@ async function generateDocViaPdf({ htmlContent, stylesheet, headerContent, foote
  * Generate DOCX or DOC from HTML content
  * 
  * Hybrid approach:
- * - DOCX: Pandoc + post-process footer injection (clean text, editable, footer on every page)
+ * - DOCX: Pandoc + post-process header/footer injection (clean text, editable)
  * - DOC: Puppeteer PDF → LibreOffice (visual fidelity with PDF export)
  * 
  * @param {Object} options - Generation options
@@ -1136,8 +1214,8 @@ async function generateDocx({ htmlContent, stylesheet, headerContent, footerCont
       outputFormat: 'doc'
     });
   }
-  
-  // DOCX: Use Pandoc for clean, editable text + native Word footer
+
+  // DOCX: Use Pandoc for clean, editable text + native Word header/footer
   return generateDocxViaPandoc({ htmlContent, stylesheet, headerContent, footerContent });
 }
 
@@ -1147,7 +1225,7 @@ async function generateDocx({ htmlContent, stylesheet, headerContent, footerCont
  * @returns {string} MIME type
  */
 function getDocMimeType(format) {
-  return format === 'doc' 
+  return format === 'doc'
     ? 'application/msword'
     : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 }
@@ -1170,7 +1248,7 @@ module.exports = {
     buildRunProps, buildRuns, parseInlineHtml, INLINE_TAGS,
     extractImagesFromHtml, buildImageDrawing, parseBorderStyle, buildBorderXml,
     convertTableToOoxml, convertBlocksToOoxml, buildFlexParagraph,
-    htmlToOoxml, injectFooterIntoDocx, buildPandocHtml,
-    extractHeaderBorder, injectHeaderBorderIntoDocx
+    htmlToOoxml, injectFooterIntoDocx, injectHeaderIntoDocx, buildPandocHtml,
+    extractHeaderBorder
   }
 };

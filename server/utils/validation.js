@@ -48,8 +48,8 @@ export const createUserSchema = z.object({
   name: nameSchema,
   jobTitle: z.string().max(255).optional(),
   phone: z.string().max(50).optional(),
-  role: z.enum(['admin', 'Admin', 'user', 'User']).optional(),
-  status: z.enum(['Active', 'Inactive', 'Pending', 'active', 'inactive', 'pending']).optional(),
+  role: z.preprocess(v => typeof v === 'string' ? v.toLowerCase() : v, z.enum(['user', 'admin'])).optional(),
+  status: z.preprocess(v => typeof v === 'string' ? v.toLowerCase() : v, z.enum(['active', 'inactive', 'pending'])).optional(),
   customer: z.string().optional(),
   firm: z.string().optional()
 });
@@ -128,13 +128,19 @@ export const updateFirmSchema = z.object({
   logoUrl: z.string().optional().nullable()
 }).strip();
 
+// Helper: preprocess to lowercase before enum validation
+const lowercaseEnum = (values) => z.preprocess(
+  (val) => (typeof val === 'string' ? val.toLowerCase() : val),
+  z.enum(values)
+);
+
 // Admin user update schema (admin updating any user)
 export const updateAdminUserSchema = z.object({
   name: z.string().min(1).max(255).optional(),
   email: z.string().email().optional(),
   password: z.string().min(6).max(100).optional(),
-  status: z.enum(['active', 'inactive']).optional(),
-  role: z.enum(['user', 'admin']).optional(),
+  status: lowercaseEnum(['active', 'inactive', 'pending']).optional(),
+  role: lowercaseEnum(['user', 'admin']).optional(),
   jobTitle: z.string().max(255).optional().nullable(),
   job_title: z.string().max(255).optional().nullable(),
   phone: z.string().max(50).optional().nullable(),
@@ -147,8 +153,8 @@ export const updateUserProfileSchema = z.object({
   name: z.string().min(1).max(255).optional(),
   jobTitle: z.string().max(255).optional().nullable(),
   phone: z.string().max(50).optional().nullable(),
-  role: z.enum(['user', 'admin']).optional(),
-  status: z.enum(['active', 'inactive']).optional(),
+  role: lowercaseEnum(['user', 'admin']).optional(),
+  status: lowercaseEnum(['active', 'inactive', 'pending']).optional(),
   firm_id: z.string().uuid().optional().nullable()
 }).strip();
 
