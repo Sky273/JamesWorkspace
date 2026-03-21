@@ -29,7 +29,8 @@ export async function getLLMSettings() {
         // Fetch fresh settings
         safeLog('debug', 'Fetching fresh LLM settings from PostgreSQL');
         const settingsRecords = await selectWithTimeout('llm_settings', {
-            limit: 1
+            limit: 1,
+            orderBy: 'created_at DESC'
         });
 
         if (settingsRecords.length === 0) {
