@@ -112,17 +112,22 @@ const INITIAL_MISSIONS_LIMIT = 8;
 
 // ─── Mission Card Component ──────────────────────────────
 
-const MissionCardInDeal = ({ mission }: { mission: GroupedMission }) => {
+const MissionCardInDeal = ({ mission, index }: { mission: GroupedMission; index: number }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const statusColor = MISSION_STATUS_COLORS[mission.status] || MISSION_STATUS_COLORS.active;
+  
+  // Alternating row background (striping) - same as DealResumeCard
+  const stripingClass = index % 2 === 1 
+    ? 'bg-gray-100 dark:bg-gray-700/30' 
+    : 'bg-white dark:bg-gray-800';
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       onClick={() => navigate(`/missions/${mission.id}`)}
-      className="border border-gray-100 dark:border-gray-700/60 rounded-xl overflow-hidden cursor-pointer hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-600 transition-all group"
+      className={`border border-gray-100 dark:border-gray-700/60 rounded-xl overflow-hidden cursor-pointer hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-600 transition-all group ${stripingClass}`}
     >
       <div className="px-4 py-3">
         <div className="flex items-start justify-between gap-3">
@@ -255,8 +260,8 @@ const DealSection = ({
                 </p>
               ) : (
                 <div className="space-y-2 pt-3">
-                  {displayedMissions.map(mission => (
-                    <MissionCardInDeal key={mission.id} mission={mission} />
+                  {displayedMissions.map((mission, missionIndex) => (
+                    <MissionCardInDeal key={mission.id} mission={mission} index={missionIndex} />
                   ))}
                   {!showAll && hiddenCount > 0 && (
                     <button
@@ -481,8 +486,8 @@ const MissionsDealsGroupedView = ({ onAddMission }: MissionsDealsGroupedViewProp
                 className="overflow-hidden"
               >
                 <div className="px-4 pb-4 border-t border-gray-100 dark:border-gray-700 space-y-2 pt-3">
-                  {filteredUnassigned.map(mission => (
-                    <MissionCardInDeal key={mission.id} mission={mission} />
+                  {filteredUnassigned.map((mission, missionIndex) => (
+                    <MissionCardInDeal key={mission.id} mission={mission} index={missionIndex} />
                   ))}
                 </div>
               </motion.div>
