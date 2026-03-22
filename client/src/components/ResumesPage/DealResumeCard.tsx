@@ -97,7 +97,7 @@ export default function DealResumeCard({
 
   // Alternating row background (striping)
   const isEvenRow = index % 2 === 1;
-  const stripingClass = isEvenRow ? 'bg-gray-50/50 dark:bg-gray-700/20' : '';
+  const stripingClass = isEvenRow ? 'bg-gray-100 dark:bg-gray-700/30' : 'bg-white dark:bg-gray-800';
 
   const resumeTags = getResumeTags(resume);
   const skills = (resumeTags.skills || []).slice(0, 2);
@@ -124,7 +124,7 @@ export default function DealResumeCard({
       className={`rounded-lg border-b border-gray-200 dark:border-gray-700 hover:shadow-md transition-all cursor-grab active:cursor-grabbing ${
         isDragging
           ? 'border-purple-400 dark:border-purple-500 opacity-50 bg-white dark:bg-gray-800'
-          : stripingClass || 'bg-white dark:bg-gray-800'
+          : stripingClass
       }`}
       onClick={() => onClick(resume.id)}
     >
