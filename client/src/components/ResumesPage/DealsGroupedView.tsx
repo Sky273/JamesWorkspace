@@ -159,7 +159,7 @@ const DealsGroupedView = ({ allTags }: DealsGroupedViewProps): JSX.Element => {
     });
   };
 
-  const renderResumeCard = (resume: ResumeBasic, sourceDealId: string | null) => (
+  const renderResumeCard = (resume: ResumeBasic, sourceDealId: string | null, index: number) => (
     <DealResumeCard
       key={resume.id}
       resume={resume}
@@ -174,6 +174,7 @@ const DealsGroupedView = ({ allTags }: DealsGroupedViewProps): JSX.Element => {
       onDealChange={fetchGroupedData}
       getResumeTags={getResumeTags}
       getDownloadTitle={getDownloadTitle}
+      index={index}
     />
   );
 
@@ -402,7 +403,7 @@ const DealsGroupedView = ({ allTags }: DealsGroupedViewProps): JSX.Element => {
                       const hiddenCount = visibleData.unassigned.length - INITIAL_RESUMES_LIMIT;
                       return (
                         <>
-                          {displayedResumes.map(resume => renderResumeCard(resume, null))}
+                          {displayedResumes.map((resume, index) => renderResumeCard(resume, null, index))}
                           {!isFullyExpanded && hiddenCount > 0 && (
                             <button
                               onClick={(e) => {
