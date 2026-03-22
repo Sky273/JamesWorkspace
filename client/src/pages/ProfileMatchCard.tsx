@@ -61,8 +61,9 @@ export default function ProfileMatchCard({
   const { t } = useTranslation();
 
   // Alternating row background (striping) - same as DealResumeCard
+  // Using bg-gray-700 (solid) for better dark mode contrast
   const stripingClass = index % 2 === 1 
-    ? 'bg-gray-100 dark:bg-gray-700/30' 
+    ? 'bg-gray-100 dark:bg-gray-700' 
     : 'bg-white dark:bg-gray-800';
 
   return (
