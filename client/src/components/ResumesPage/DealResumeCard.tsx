@@ -185,10 +185,10 @@ export default function DealResumeCard({
             />
             <button
               onClick={(e) => { e.stopPropagation(); setShowPreview(prev => !prev); }}
-              className={`p-1 transition-colors rounded cursor-pointer ${
+              className={`p-1.5 transition-colors rounded-lg cursor-pointer ${
                 showPreview
-                  ? 'text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20'
-                  : 'text-gray-400 hover:text-blue-600 dark:hover:text-blue-400'
+                  ? 'text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-900/30'
+                  : 'text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30'
               }`}
               title={showPreview ? t('resumes.preview.close', 'Fermer l\'aperçu') : t('resumes.preview.open', 'Aperçu rapide')}
             >
@@ -196,7 +196,7 @@ export default function DealResumeCard({
             </button>
             <button
               onClick={(e) => onDownload(resume, e)}
-              className="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors rounded cursor-pointer"
+              className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors rounded-lg cursor-pointer"
               title={getDownloadTitle(resume)}
             >
               <ArrowDownTrayIcon className="icon-lg" />
@@ -206,7 +206,7 @@ export default function DealResumeCard({
             </div>
             <button
               onClick={(e) => onDelete(resume, e)}
-              className="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors rounded cursor-pointer"
+              className="p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors rounded-lg cursor-pointer"
               title={t('resumes.deleteResume')}
             >
               <TrashIcon className="icon-lg" />

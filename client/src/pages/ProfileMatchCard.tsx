@@ -60,13 +60,18 @@ export default function ProfileMatchCard({
 }: ProfileMatchCardProps) {
   const { t } = useTranslation();
 
+  // Alternating row background (striping)
+  const stripingClass = index % 2 === 1 
+    ? 'bg-gray-50 dark:bg-gray-800/80' 
+    : 'bg-white dark:bg-gray-800';
+
   return (
     <motion.div
       key={profile.resumeId}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05 }}
-      className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden"
+      className={`${stripingClass} rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden`}
     >
       <div 
         className="p-4 cursor-pointer"

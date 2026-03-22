@@ -119,18 +119,23 @@ const INITIAL_ADAPTATIONS_LIMIT = 6;
 
 // ─── Adaptation Card Component ──────────────────────────
 
-const AdaptationCardInMission = ({ adaptation }: { adaptation: AdaptationItem }) => {
+const AdaptationCardInMission = ({ adaptation, index }: { adaptation: AdaptationItem; index: number }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const score = adaptation.match_score || 0;
   const displayName = adaptation.resume_name || adaptation.candidate_name || t('adaptations.card.noName', 'Sans nom');
+  
+  // Alternating row background (striping)
+  const stripingClass = index % 2 === 1 
+    ? 'bg-gray-100 dark:bg-gray-700/50' 
+    : 'bg-white dark:bg-gray-800';
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
       onClick={() => navigate(`/adaptations/${adaptation.id}`)}
-      className="flex items-center justify-between gap-3 px-3 py-2 border border-gray-100 dark:border-gray-700 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40 hover:border-indigo-200 dark:hover:border-indigo-700 transition-all group"
+      className={`flex items-center justify-between gap-3 px-3 py-2 border border-gray-100 dark:border-gray-700 rounded-lg cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:border-indigo-200 dark:hover:border-indigo-700 transition-all group ${stripingClass}`}
     >
       <div className="flex items-center gap-2 min-w-0 flex-1">
         <DocumentTextIcon className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
@@ -159,7 +164,7 @@ const AdaptationCardInMission = ({ adaptation }: { adaptation: AdaptationItem })
 
 // ─── Mission Section Component ──────────────────────────
 
-const MissionSection = ({ mission }: { mission: GroupedMission }) => {
+const MissionSection = ({ mission, missionIndex }: { mission: GroupedMission; missionIndex: number }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState(true);
@@ -168,9 +173,14 @@ const MissionSection = ({ mission }: { mission: GroupedMission }) => {
 
   const displayedAdaptations = showAll ? mission.adaptations : mission.adaptations.slice(0, INITIAL_ADAPTATIONS_LIMIT);
   const hiddenCount = mission.adaptations.length - INITIAL_ADAPTATIONS_LIMIT;
+  
+  // Alternating row background for missions
+  const missionStripingClass = missionIndex % 2 === 1 
+    ? 'bg-indigo-50/50 dark:bg-indigo-900/10' 
+    : 'bg-white dark:bg-gray-800';
 
   return (
-    <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+    <div className={`border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden ${missionStripingClass}`}>
       <button
         onClick={() => setExpanded(!expanded)}
         className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors text-left"
@@ -207,8 +217,8 @@ const MissionSection = ({ mission }: { mission: GroupedMission }) => {
             className="overflow-hidden"
           >
             <div className="px-3 pb-3 space-y-1.5 border-t border-gray-100 dark:border-gray-700 pt-2">
-              {displayedAdaptations.map(adaptation => (
-                <AdaptationCardInMission key={adaptation.id} adaptation={adaptation} />
+              {displayedAdaptations.map((adaptation, adaptationIndex) => (
+                <AdaptationCardInMission key={adaptation.id} adaptation={adaptation} index={adaptationIndex} />
               ))}
               {!showAll && hiddenCount > 0 && (
                 <button
@@ -314,8 +324,8 @@ const DealSection = ({
                 </p>
               ) : (
                 <div className="space-y-2 pt-3">
-                  {deal.missions.map(mission => (
-                    <MissionSection key={mission.id} mission={mission} />
+                  {deal.missions.map((mission, missionIndex) => (
+                    <MissionSection key={mission.id} mission={mission} missionIndex={missionIndex} />
                   ))}
                 </div>
               )}
@@ -526,8 +536,8 @@ const AdaptationsDealsGroupedView = (): JSX.Element => {
                 className="overflow-hidden"
               >
                 <div className="px-4 pb-4 border-t border-gray-100 dark:border-gray-700 space-y-2 pt-3">
-                  {filteredUnassigned.map(mission => (
-                    <MissionSection key={mission.id} mission={mission} />
+                  {filteredUnassigned.map((mission, missionIndex) => (
+                    <MissionSection key={mission.id} mission={mission} missionIndex={missionIndex} />
                   ))}
                 </div>
               </motion.div>

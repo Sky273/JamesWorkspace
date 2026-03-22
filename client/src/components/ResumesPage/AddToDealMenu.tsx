@@ -165,7 +165,7 @@ const ManageResumeDealsModal = ({ resumeId, onSuccess }: ManageResumeDealsModalP
       {/* Trigger Button */}
       <button
         onClick={openModal}
-        className="p-1 text-gray-400 hover:text-purple-600 dark:text-gray-400 dark:hover:text-purple-400 transition-colors rounded cursor-pointer"
+        className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors rounded-lg cursor-pointer"
         title="Gérer les affaires"
       >
         <FolderIcon className="w-5 h-5" />

@@ -235,12 +235,16 @@ const DealSection = ({
                     {t('resumes.groupedView.missions', 'Missions')} ({deal.missions.length})
                   </h4>
                   <div className="space-y-3">
-                    {deal.missions.map(mission => (
-                      <div key={mission.id} className="border border-indigo-100 dark:border-indigo-800/30 rounded-lg overflow-hidden">
+                    {deal.missions.map((mission, missionIndex) => (
+                      <div key={mission.id} className={`border border-indigo-100 dark:border-indigo-800/30 rounded-lg overflow-hidden ${
+                        missionIndex % 2 === 1 ? 'bg-indigo-50/50 dark:bg-indigo-900/5' : ''
+                      }`}>
                         {/* Mission header */}
                         <div
                           onClick={() => navigate(`/missions/${mission.id}`)}
-                          className="flex items-center justify-between px-4 py-3 bg-indigo-50 dark:bg-indigo-900/10 cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900/20 transition-colors"
+                          className={`flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900/20 transition-colors ${
+                            missionIndex % 2 === 1 ? 'bg-indigo-100/70 dark:bg-indigo-900/15' : 'bg-indigo-50 dark:bg-indigo-900/10'
+                          }`}
                         >
                           <div className="flex items-center gap-2 min-w-0">
                             <BriefcaseIcon className="icon-md text-indigo-500" />
@@ -260,7 +264,7 @@ const DealSection = ({
                         {/* Adaptations under this mission */}
                         {mission.adaptations && mission.adaptations.length > 0 && (
                           <div className="px-4 py-3 bg-white dark:bg-gray-800/50 space-y-2">
-                            {mission.adaptations.map(adaptation => {
+                            {mission.adaptations.map((adaptation, adaptationIndex) => {
                               const scoreColor = (adaptation.match_score || 0) >= 80
                                 ? 'text-green-600 dark:text-green-400'
                                 : (adaptation.match_score || 0) >= 60
@@ -271,11 +275,14 @@ const DealSection = ({
                                 : (adaptation.match_score || 0) >= 60
                                 ? 'bg-yellow-100 dark:bg-yellow-900/30'
                                 : 'bg-red-100 dark:bg-red-900/30';
+                              const adaptationStriping = adaptationIndex % 2 === 1 
+                                ? 'bg-gray-100 dark:bg-gray-700/50' 
+                                : 'bg-gray-50 dark:bg-gray-700/30';
                               return (
                                 <div
                                   key={adaptation.id}
                                   onClick={(e) => { e.stopPropagation(); saveViewState(); navigate(`/adaptations/${adaptation.id}`, { state: { from: 'dealsGroupedView' } }); }}
-                                  className="flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-700/30 border border-gray-100 dark:border-gray-700 rounded-md cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors"
+                                  className={`flex items-center justify-between px-4 py-3 ${adaptationStriping} border border-gray-100 dark:border-gray-700 rounded-md cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors`}
                                 >
                                   <div className="flex items-center gap-2 min-w-0 flex-1">
                                     <DocumentTextIcon className="icon-sm text-blue-500" />
