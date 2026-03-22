@@ -335,7 +335,7 @@ const UserGuidePage = (): JSX.Element => {
 
       <div className="flex flex-col md:flex-row gap-6">
         {/* Sidebar navigation */}
-        <div className="md:w-64 flex-shrink-0">
+        <div className="md:w-72 flex-shrink-0">
           <nav className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 sticky top-6">
             <ul className="space-y-1">
               {sections.map((section) => {
@@ -344,13 +344,13 @@ const UserGuidePage = (): JSX.Element => {
                   <li key={section.id}>
                     <button
                       onClick={() => setActiveSection(section.id)}
-                      className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                      className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors whitespace-nowrap ${
                         activeSection === section.id
                           ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
                           : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700'
                       }`}
                     >
-                      <IconComponent className="h-5 w-5 mr-2" />
+                      <IconComponent className="h-5 w-5 mr-2 flex-shrink-0" />
                       {section.title}
                     </button>
                   </li>

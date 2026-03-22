@@ -110,9 +110,9 @@ const LLMTab = ({ formData, onInputChange, t }: LLMTabProps): JSX.Element => {
       </div>
 
       {/* WebGL Background Toggle */}
-      <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between">
-          <div>
+      <div className="pt-6 pb-2 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex-1">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               {t('settings.llm.webglEnabled')}
             </label>
