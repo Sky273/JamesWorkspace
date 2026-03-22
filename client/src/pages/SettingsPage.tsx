@@ -286,8 +286,8 @@ const SettingsPage = (): JSX.Element => {
         </p>
       </div>
 
-      <div className="border-b border-gray-200 dark:border-gray-700 mb-6 overflow-x-auto">
-        <nav className="-mb-px flex space-x-4 min-w-max">
+      <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
+        <nav className="-mb-px flex flex-wrap gap-x-1 gap-y-1">
           {tabs.map((tab) => {
             const IconComponent = tab.icon;
             return (
@@ -295,14 +295,14 @@ const SettingsPage = (): JSX.Element => {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`
-                  flex items-center py-3 px-2 border-b-2 font-medium text-xs whitespace-nowrap
+                  flex items-center py-2 px-1.5 border-b-2 font-medium text-[11px] leading-tight
                   ${activeTab === tab.id
                     ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
                   }
                 `}
               >
-                <IconComponent className="w-4 h-4 mr-1.5 flex-shrink-0" />
+                <IconComponent className="w-3.5 h-3.5 mr-1 flex-shrink-0" />
                 {tab.name}
               </button>
             );
