@@ -372,7 +372,7 @@ function HomePage(): JSX.Element {
           </div>
         </motion.nav>
 
-        <section className="min-h-[80vh] flex items-center py-8 relative overflow-hidden">
+        <section className="min-h-[80vh] flex items-center py-8 relative overflow-hidden isolate">
           {/* WebGL Background Animation - hidden only when explicitly disabled in settings */}
           {webglEnabled && (
             <Suspense fallback={null}>

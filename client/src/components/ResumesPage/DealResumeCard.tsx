@@ -143,31 +143,31 @@ export default function DealResumeCard({
             />
             <button
               onClick={(e) => { e.stopPropagation(); setShowPreview(prev => !prev); }}
-              className={`p-1 transition-colors rounded ${
+              className={`p-1 transition-colors rounded cursor-pointer ${
                 showPreview
                   ? 'text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20'
                   : 'text-gray-400 hover:text-blue-600 dark:hover:text-blue-400'
               }`}
               title={showPreview ? t('resumes.preview.close', 'Fermer l\'aperçu') : t('resumes.preview.open', 'Aperçu rapide')}
             >
-              {showPreview ? <EyeSlashIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
+              {showPreview ? <EyeSlashIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
             </button>
             <button
               onClick={(e) => onDownload(resume, e)}
-              className="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors rounded"
+              className="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors rounded cursor-pointer"
               title={getDownloadTitle(resume)}
             >
-              <ArrowDownTrayIcon className="w-4 h-4" />
+              <ArrowDownTrayIcon className="w-5 h-5" />
             </button>
             <div onClick={(e) => e.stopPropagation()}>
               <ManageResumeDealsModal resumeId={resume.id} onSuccess={onDealChange} />
             </div>
             <button
               onClick={(e) => onDelete(resume, e)}
-              className="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors rounded"
+              className="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors rounded cursor-pointer"
               title={t('resumes.deleteResume')}
             >
-              <TrashIcon className="w-4 h-4" />
+              <TrashIcon className="w-5 h-5" />
             </button>
           </div>
         </div>

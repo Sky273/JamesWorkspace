@@ -665,18 +665,18 @@ const ResumesPage = (): JSX.Element => {
               <div className="flex items-center gap-2 p-4 pt-0">
                 <button
                   onClick={(e) => { e.stopPropagation(); handleResumeClick(resume); }}
-                  className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                  className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors cursor-pointer"
                 >
-                  <EyeIcon className="w-4 h-4" />
+                  <EyeIcon className="w-5 h-5" />
                   {t('resumes.view')}
                 </button>
                 {resume['Resume File']?.[0] && (
                   <button
                     onClick={(e) => handleDownloadResume(resume, e)}
-                    className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                    className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors cursor-pointer"
                     title={resume['File Name'] || resume['Resume File']?.[0]?.filename || t('resumes.downloadResume')}
                   >
-                    <ArrowDownTrayIcon className="w-4 h-4" />
+                    <ArrowDownTrayIcon className="w-5 h-5" />
                   </button>
                 )}
                 <ManageResumeDealsModal 
@@ -684,10 +684,10 @@ const ResumesPage = (): JSX.Element => {
                 />
                 <button
                   onClick={(e) => openDeleteConfirm(resume, e)}
-                  className="p-2 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                  className="p-2 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors cursor-pointer"
                   title={t('resumes.deleteResume')}
                 >
-                  <TrashIcon className="w-4 h-4" />
+                  <TrashIcon className="w-5 h-5" />
                 </button>
               </div>
             </motion.div>

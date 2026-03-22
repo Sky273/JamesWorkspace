@@ -22,14 +22,12 @@ export default function WebGLBackground({ className = '' }: WebGLBackgroundProps
   useEffect(() => {
     if (!containerRef.current) return;
 
-    // Check WebGL support before attempting to create a context
-    const canvas = document.createElement('canvas');
-    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-    if (!gl) return;
-
     const container = containerRef.current;
     const width = container.clientWidth;
     const height = container.clientHeight;
+
+    // Skip if container has no dimensions yet
+    if (width === 0 || height === 0) return;
 
     // Scene setup
     const scene = new THREE.Scene();
@@ -46,10 +44,11 @@ export default function WebGLBackground({ className = '' }: WebGLBackgroundProps
       renderer = new THREE.WebGLRenderer({ 
         antialias: true, 
         alpha: true,
-        powerPreference: 'low-power'
+        powerPreference: 'low-power',
+        failIfMajorPerformanceCaveat: false
       });
     } catch {
-      // WebGL not available — silently skip
+      // WebGL not available — silently skip rendering
       return;
     }
     renderer.setSize(width, height);
