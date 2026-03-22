@@ -22,6 +22,11 @@ export default function WebGLBackground({ className = '' }: WebGLBackgroundProps
   useEffect(() => {
     if (!containerRef.current) return;
 
+    // Check WebGL support before attempting to create a context
+    const canvas = document.createElement('canvas');
+    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+    if (!gl) return;
+
     const container = containerRef.current;
     const width = container.clientWidth;
     const height = container.clientHeight;
@@ -35,12 +40,18 @@ export default function WebGLBackground({ className = '' }: WebGLBackgroundProps
     camera.position.z = 5;
     cameraRef.current = camera;
 
-    // Renderer setup
-    const renderer = new THREE.WebGLRenderer({ 
-      antialias: true, 
-      alpha: true,
-      powerPreference: 'low-power'
-    });
+    // Renderer setup — may throw if WebGL context cannot be created
+    let renderer: THREE.WebGLRenderer;
+    try {
+      renderer = new THREE.WebGLRenderer({ 
+        antialias: true, 
+        alpha: true,
+        powerPreference: 'low-power'
+      });
+    } catch {
+      // WebGL not available — silently skip
+      return;
+    }
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setClearColor(0x000000, 0);

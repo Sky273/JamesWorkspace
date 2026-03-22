@@ -1004,6 +1004,8 @@
       "cvModeAnonymous": "Anonyme (trigramme uniquement)",
       "cvModeNominativeDescription": "Le CV amélioré contiendra toutes les informations personnelles du candidat (nom complet, coordonnées, etc.).",
       "cvModeAnonymousDescription": "Le CV amélioré sera anonymisé : seul le trigramme du candidat sera affiché, sans informations personnelles identifiantes.",
+      "webglEnabled": "Animation WebGL sur la page d'accueil",
+      "webglEnabledDescription": "Active ou désactive l'animation 3D en arrière-plan de la page d'accueil. Désactiver peut améliorer les performances sur les appareils moins puissants.",
       "obsoleteModel": "obsolète",
       "obsoleteModelWarning": "Ce modèle n'est plus disponible dans la liste. Veuillez sélectionner un modèle valide puis enregistrer."
     },

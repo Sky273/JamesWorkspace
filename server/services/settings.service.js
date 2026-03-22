@@ -47,6 +47,7 @@ export async function getLLMSettings() {
             llmProvider: dbSettings.llm_provider,
             cvMode: dbSettings.cv_mode,
             chatbotEnabled: dbSettings.chatbot_enabled,
+            webglEnabled: dbSettings.webgl_enabled,
             'Analysis Prompt': dbSettings.analysis_prompt,
             'Improvement Prompt': dbSettings.improvement_prompt,
             'Match Analysis Prompt': dbSettings.match_analysis_prompt,

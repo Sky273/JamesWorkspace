@@ -22,6 +22,7 @@ interface Settings {
   llmModel?: string;
   cvMode?: 'nominative' | 'anonymous';
   chatbotEnabled?: 'on' | 'off';
+  webglEnabled?: 'on' | 'off';
   'Analysis Prompt'?: string;
   'Improvement Prompt'?: string;
   'Match Analysis Prompt'?: string;
@@ -43,6 +44,7 @@ interface SettingsFormData {
   llmModel: string;
   cvMode: 'nominative' | 'anonymous';
   chatbotEnabled: 'on' | 'off';
+  webglEnabled: 'on' | 'off';
   'Analysis Prompt': string;
   'Improvement Prompt': string;
   'Match Analysis Prompt': string;
@@ -78,6 +80,7 @@ const SettingsPage = (): JSX.Element => {
     llmModel: 'chatgpt-4o-latest',
     cvMode: 'nominative',
     chatbotEnabled: 'on',
+    webglEnabled: 'on',
     'Analysis Prompt': '',
     'Improvement Prompt': '',
     'Match Analysis Prompt': '',
@@ -109,6 +112,7 @@ const SettingsPage = (): JSX.Element => {
         llmModel: data.llmModel || 'chatgpt-4o-latest',
         cvMode: data.cvMode || 'nominative',
         chatbotEnabled: data.chatbotEnabled || 'on',
+        webglEnabled: data.webglEnabled || 'on',
         'Analysis Prompt': data['Analysis Prompt'] || '',
         'Improvement Prompt': data['Improvement Prompt'] || '',
         'Match Analysis Prompt': data['Match Analysis Prompt'] || '',
@@ -213,6 +217,7 @@ const SettingsPage = (): JSX.Element => {
         llmModel: defaults.llmModel || 'chatgpt-4o-latest',
         cvMode: defaults.cvMode || 'nominative',
         chatbotEnabled: defaults.chatbotEnabled || 'on',
+        webglEnabled: defaults.webglEnabled || 'on',
         'Analysis Prompt': defaults['Analysis Prompt'] || '',
         'Improvement Prompt': defaults['Improvement Prompt'] || '',
         'Match Analysis Prompt': defaults['Match Analysis Prompt'] || '',

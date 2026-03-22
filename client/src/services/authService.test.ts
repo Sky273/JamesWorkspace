@@ -60,7 +60,7 @@ describe('authService', () => {
 
     describe('signIn', () => {
         it('should sign in successfully and return user', async () => {
-            const mockUser = { id: '1', name: 'Test User', email: 'test@test.com', role: 'user', status: 'Active' };
+            const mockUser = { id: '1', name: 'Test User', email: 'test@test.com', role: 'user', status: 'active' };
 
             mockFetchWithAuth.mockResolvedValueOnce(
                 mockResponse(true, { user: mockUser })
@@ -136,7 +136,7 @@ describe('authService', () => {
 
     describe('signOut', () => {
         it('should clear cached user on sign out', async () => {
-            authService.setCurrentUser({ id: '1', name: 'Test', email: 'test@test.com', role: 'user', status: 'Active' });
+            authService.setCurrentUser({ id: '1', name: 'Test', email: 'test@test.com', role: 'user', status: 'active' });
             expect(authService.getCurrentUser()).not.toBeNull();
 
             mockFetchWithCsrfRetry.mockResolvedValueOnce(mockResponse(true, {}));
@@ -147,7 +147,7 @@ describe('authService', () => {
         });
 
         it('should clear user even if logout API fails', async () => {
-            authService.setCurrentUser({ id: '1', name: 'Test', email: 'test@test.com', role: 'user', status: 'Active' });
+            authService.setCurrentUser({ id: '1', name: 'Test', email: 'test@test.com', role: 'user', status: 'active' });
 
             mockFetchWithCsrfRetry.mockRejectedValueOnce(new Error('Network error'));
 
@@ -159,7 +159,7 @@ describe('authService', () => {
 
     describe('refreshToken', () => {
         it('should refresh token and update user', async () => {
-            const updatedUser = { id: '1', name: 'Test', email: 'test@test.com', role: 'user', status: 'Active' };
+            const updatedUser = { id: '1', name: 'Test', email: 'test@test.com', role: 'user', status: 'active' };
 
             mockFetchWithAuth.mockResolvedValueOnce(
                 mockResponse(true, { user: updatedUser })
@@ -187,13 +187,13 @@ describe('authService', () => {
         });
 
         it('should set and get current user', () => {
-            const user = { id: '1', name: 'Test', email: 'test@test.com', role: 'user' as const, status: 'Active' as const };
+            const user = { id: '1', name: 'Test', email: 'test@test.com', role: 'user' as const, status: 'active' as const };
             authService.setCurrentUser(user);
             expect(authService.getCurrentUser()).toEqual(user);
         });
 
         it('should report authenticated when user is set', () => {
-            authService.setCurrentUser({ id: '1', name: 'Test', email: 'test@test.com', role: 'user', status: 'Active' });
+            authService.setCurrentUser({ id: '1', name: 'Test', email: 'test@test.com', role: 'user', status: 'active' });
             expect(authService.isAuthenticated()).toBe(true);
         });
 
@@ -204,7 +204,7 @@ describe('authService', () => {
 
     describe('createUser', () => {
         it('should create user via API', async () => {
-            const newUser = { id: '2', name: 'Created', email: 'created@test.com', role: 'user', status: 'Active' };
+            const newUser = { id: '2', name: 'Created', email: 'created@test.com', role: 'user', status: 'active' };
 
             mockFetchWithCsrfRetry.mockResolvedValueOnce(
                 mockResponse(true, newUser)
@@ -233,7 +233,7 @@ describe('authService', () => {
 
     describe('updateUser', () => {
         it('should update user via API', async () => {
-            const updated = { id: '1', name: 'Updated', email: 'test@test.com', role: 'user', status: 'Active' };
+            const updated = { id: '1', name: 'Updated', email: 'test@test.com', role: 'user', status: 'active' };
 
             mockFetchWithCsrfRetry.mockResolvedValueOnce(
                 mockResponse(true, updated)

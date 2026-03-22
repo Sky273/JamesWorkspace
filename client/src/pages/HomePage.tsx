@@ -19,6 +19,7 @@ import {
   DocumentMagnifyingGlassIcon
 } from '@heroicons/react/24/outline';
 import HomeDashboard from '../components/HomeDashboard';
+import { useAuthFetch } from '../hooks/useAuthFetch';
 
 // Lazy load WebGL background to avoid blocking initial render
 const WebGLBackground = lazy(() => import('../components/WebGLBackground'));
@@ -193,12 +194,29 @@ interface NavSection {
 function HomePage(): JSX.Element {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { authGet } = useAuthFetch();
   const [activeSection, setActiveSection] = useState<string>('hero');
   const [, setIsScrolled] = useState<boolean>(false);
+  const [webglEnabled, setWebglEnabled] = useState<boolean>(true);
   const [featuresRef] = useInView({
     triggerOnce: true,
     threshold: 0.1
   });
+
+  // Fetch WebGL setting — default is ON, only disable if explicitly 'off'
+  useEffect(() => {
+    let cancelled = false;
+    authGet('/api/settings')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (!cancelled && data?.webglEnabled === 'off') {
+          setWebglEnabled(false);
+        }
+      })
+      .catch(() => { /* keep default: enabled */ });
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   
   const navSections: NavSection[] = useMemo(() => [
     { id: 'hero', label: t('home.nav.hero', 'Accueil') },
@@ -355,10 +373,12 @@ function HomePage(): JSX.Element {
         </motion.nav>
 
         <section className="min-h-[80vh] flex items-center py-8 relative overflow-hidden">
-          {/* WebGL Background Animation */}
-          <Suspense fallback={null}>
-            <WebGLBackground />
-          </Suspense>
+          {/* WebGL Background Animation - hidden only when explicitly disabled in settings */}
+          {webglEnabled && (
+            <Suspense fallback={null}>
+              <WebGLBackground />
+            </Suspense>
+          )}
           <div className="container mx-auto px-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
               <motion.div variants={fadeInUp}>

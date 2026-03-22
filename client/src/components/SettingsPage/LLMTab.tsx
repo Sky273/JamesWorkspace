@@ -8,6 +8,7 @@ import { ChangeEvent } from 'react';
 interface FormData {
   llmModel: string;
   cvMode?: 'nominative' | 'anonymous';
+  webglEnabled?: 'on' | 'off';
   [key: string]: string | number | boolean | undefined;
 }
 
@@ -29,6 +30,10 @@ const LLMTab = ({ formData, onInputChange, t }: LLMTabProps): JSX.Element => {
 
   const handleCvModeChange = (e: ChangeEvent<HTMLSelectElement>): void => {
     onInputChange('cvMode', e.target.value);
+  };
+
+  const handleWebglToggle = (): void => {
+    onInputChange('webglEnabled', formData.webglEnabled === 'on' ? 'off' : 'on');
   };
 
   const isModelObsolete = formData.llmModel && !VALID_MODELS.includes(formData.llmModel);
@@ -102,6 +107,39 @@ const LLMTab = ({ formData, onInputChange, t }: LLMTabProps): JSX.Element => {
             : t('settings.llm.cvModeNominativeDescription')
           }
         </p>
+      </div>
+
+      {/* WebGL Background Toggle */}
+      <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              {t('settings.llm.webglEnabled')}
+            </label>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              {t('settings.llm.webglEnabledDescription')}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleWebglToggle}
+            className={`
+              relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent 
+              transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+              ${formData.webglEnabled === 'on' ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-600'}
+            `}
+            role="switch"
+            aria-checked={formData.webglEnabled === 'on'}
+          >
+            <span
+              className={`
+                pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 
+                transition duration-200 ease-in-out
+                ${formData.webglEnabled === 'on' ? 'translate-x-5' : 'translate-x-0'}
+              `}
+            />
+          </button>
+        </div>
       </div>
     </div>
   );

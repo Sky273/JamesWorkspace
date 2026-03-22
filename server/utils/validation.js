@@ -607,6 +607,7 @@ export const updateSettingsSchema = z.object({
   llmModel: z.string().optional(),
   cvMode: z.enum(['nominative', 'anonymous']).optional(),
   chatbotEnabled: z.enum(['on', 'off']).optional(),
+  webglEnabled: z.enum(['on', 'off']).optional(),
   'Analysis Prompt': z.string().optional(),
   'Improvement Prompt': z.string().optional(),
   'Match Analysis Prompt': z.string().optional(),
