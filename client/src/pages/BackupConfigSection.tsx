@@ -205,7 +205,7 @@ export default function BackupConfigSection({
                     <button
                         onClick={onTestConnection}
                         disabled={testing || !settings.host || !settings.username}
-                        className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md disabled:opacity-50 flex items-center gap-2"
+                        className={`btn btn-secondary px-4 py-2 flex items-center gap-2 ${testing || !settings.host || !settings.username ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                         {testing ? (
                             <ArrowPathIcon className="w-4 h-4 animate-spin" />
@@ -357,7 +357,7 @@ export default function BackupConfigSection({
                 <button
                     onClick={onSave}
                     disabled={saving}
-                    className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md disabled:opacity-50 flex items-center gap-2"
+                    className={`btn btn-primary px-6 py-2 flex items-center gap-2 ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                     {saving && <ArrowPathIcon className="w-4 h-4 animate-spin" />}
                     {t('common.save')}
@@ -366,7 +366,7 @@ export default function BackupConfigSection({
                 <button
                     onClick={onRunBackup}
                     disabled={backingUp || !settings.host}
-                    className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md disabled:opacity-50 flex items-center gap-2"
+                    className={`btn btn-secondary px-6 py-2 flex items-center gap-2 ${backingUp || !settings.host ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                     {backingUp ? (
                         <ArrowPathIcon className="w-4 h-4 animate-spin" />

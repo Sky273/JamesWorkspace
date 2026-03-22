@@ -246,7 +246,7 @@ const ResumeAnalysisPage = (): JSX.Element => {
               {/* Share button */}
               <button
                 onClick={handleShare}
-                className="inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium transition-colors text-sm sm:text-base"
+                className="btn btn-secondary inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 text-sm sm:text-base"
                 title={t('share.button', 'Share')}
               >
                 <ShareIcon className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -266,7 +266,7 @@ const ResumeAnalysisPage = (): JSX.Element => {
               ) : (
                 <button
                   onClick={handleImprove}
-                  className="inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors text-sm sm:text-base"
+                  className="btn btn-primary inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 text-sm sm:text-base"
                 >
                   <SparklesIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                   {t('resume.actions.improve')}
@@ -276,7 +276,7 @@ const ResumeAnalysisPage = (): JSX.Element => {
               {/* Export button - always available after analysis */}
               <Link
                 to={`/resumes/${id}/export`}
-                className="inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 border border-purple-600 dark:border-purple-500 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50 rounded-lg font-medium transition-colors text-sm sm:text-base"
+                className="btn btn-secondary inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 text-sm sm:text-base"
               >
                 {t('resume.actions.export')}
                 <ArrowRightIcon className="w-4 h-4" />

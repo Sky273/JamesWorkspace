@@ -268,10 +268,8 @@ const GdprAuditPage = () => {
             <div className="flex items-center space-x-2">
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className={`inline-flex items-center px-3 py-2 border rounded-md text-sm font-medium transition-colors ${
-                  showFilters
-                    ? 'border-primary-500 text-primary-600 bg-primary-50 dark:bg-primary-900/20'
-                    : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+                className={`btn btn-secondary inline-flex items-center px-3 py-2 text-sm font-medium ${
+                  showFilters ? 'ring-2 ring-primary-500' : ''
                 }`}
               >
                 <FunnelIcon className="h-4 w-4 mr-2" />
@@ -279,7 +277,7 @@ const GdprAuditPage = () => {
               </button>
               <button
                 onClick={() => { fetchLogs(); fetchStats(); }}
-                className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                className="btn btn-primary inline-flex items-center px-3 py-2 text-sm font-medium"
               >
                 <ArrowPathIcon className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                 {t('gdprAudit.refresh', 'Actualiser')}

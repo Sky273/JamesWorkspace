@@ -296,8 +296,8 @@ const NewTemplatePage = (): JSX.Element => {
             </div>
 
             <div className="flex justify-end space-x-4">
-              <button type="button" onClick={() => navigate('/templates')} className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600">{t('common.cancel')}</button>
-              <button type="submit" disabled={!editorReady} className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50">{t(id ? 'templates.editor.title.edit' : 'templates.editor.title.new')}</button>
+              <button type="button" onClick={() => navigate('/templates')} className="btn btn-secondary px-4 py-2">{t('common.cancel')}</button>
+              <button type="submit" disabled={!editorReady} className={`btn btn-primary px-4 py-2 ${!editorReady ? 'opacity-50 cursor-not-allowed' : ''}`}>{t('common.save')}</button>
             </div>
           </form>
         )}

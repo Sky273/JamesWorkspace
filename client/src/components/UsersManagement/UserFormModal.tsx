@@ -202,13 +202,13 @@ const UserFormModal = ({ isOpen, onClose, onSubmit, user, firms, t }: UserFormMo
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+            className="btn btn-secondary px-4 py-2"
           >
             {t('users.management.modal.cancel')}
           </button>
           <button
             type="submit"
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+            className="btn btn-primary px-4 py-2"
           >
             {t('users.management.modal.save')}
           </button>

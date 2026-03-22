@@ -376,7 +376,7 @@ const CRMPage = (): JSX.Element => {
                 setSelectedClient(null);
                 setClientModalOpen(true);
               }}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+              className="btn btn-primary flex items-center gap-2 px-4 py-2"
             >
               <PlusIcon className="w-5 h-5" />
               {t('clients.addClient')}
@@ -499,14 +499,14 @@ const CRMPage = (): JSX.Element => {
                 <div className="flex items-center gap-2 pt-3 border-t border-gray-200 dark:border-gray-700">
                   <button
                     onClick={() => openClientDetail(client)}
-                    className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    className="btn btn-primary flex-1 flex items-center justify-center gap-1 px-3 py-2 text-sm"
                   >
                     <EyeIcon className="w-4 h-4" />
                     {t('common.view')}
                   </button>
                   <button
                     onClick={() => { setSelectedClient(client); setClientModalOpen(true); }}
-                    className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    className="btn btn-secondary flex-1 flex items-center justify-center gap-1 px-3 py-2 text-sm"
                   >
                     <PencilSquareIcon className="w-4 h-4" />
                     {t('common.edit')}

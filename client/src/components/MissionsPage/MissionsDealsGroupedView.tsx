@@ -404,7 +404,7 @@ const MissionsDealsGroupedView = ({ onAddMission }: MissionsDealsGroupedViewProp
             )}
             <button
               onClick={onAddMission}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+              className="btn btn-primary flex items-center gap-2 px-4 py-2"
             >
               <PlusIcon className="h-5 w-5" />
               {t('missions.addMission')}

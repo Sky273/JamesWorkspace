@@ -92,7 +92,7 @@ export default function BackupRestoreSection({
                                         <button
                                             onClick={() => onRestore(file.name)}
                                             disabled={restoring !== null}
-                                            className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded disabled:opacity-50 flex items-center gap-1"
+                                            className={`btn btn-danger px-3 py-1 text-xs flex items-center gap-1 ${restoring !== null ? 'opacity-50 cursor-not-allowed' : ''}`}
                                         >
                                             {restoring === file.name ? (
                                                 <ArrowPathIcon className="w-3 h-3 animate-spin" />

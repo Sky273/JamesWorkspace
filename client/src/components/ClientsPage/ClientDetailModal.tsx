@@ -101,14 +101,14 @@ const ClientDetailModal = ({
                 onClose();
                 navigate(`/clients?tab=deals&clientId=${client.id}`);
               }}
-              className="flex items-center gap-2 px-3 py-2 text-sm bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
+              className="btn btn-primary flex items-center gap-2 px-3 py-2 text-sm"
             >
               <FolderIcon className="w-4 h-4" />
               Affaires
             </button>
             <button
               onClick={onEditClient}
-              className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+              className="btn btn-secondary flex items-center gap-2 px-3 py-2 text-sm"
             >
               <PencilSquareIcon className="w-4 h-4" />
               {t('common.edit')}
@@ -181,7 +181,7 @@ const ClientDetailModal = ({
               </h3>
               <button
                 onClick={onAddContact}
-                className="flex items-center gap-2 px-3 py-2 text-sm bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                className="btn btn-secondary flex items-center gap-2 px-3 py-2 text-sm"
               >
                 <PlusIcon className="w-4 h-4" />
                 {t('clients.addContact')}

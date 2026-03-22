@@ -93,7 +93,7 @@ const SearchAndActions = ({
         {onBatchUpload && (
           <button
             onClick={onBatchUpload}
-            className="flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors text-sm sm:text-base"
+            className="btn btn-secondary flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 text-sm sm:text-base"
             title={t('resumes.batchUploadButton')}
           >
             <FolderArrowDownIcon className="w-5 h-5" />
@@ -102,7 +102,7 @@ const SearchAndActions = ({
         )}
         <button
           onClick={onUpload}
-          className="flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm sm:text-base"
+          className="btn btn-primary flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 text-sm sm:text-base"
         >
           <PlusIcon className="w-5 h-5" />
           <span className="hidden xs:inline">{t('resumes.uploadButton')}</span>

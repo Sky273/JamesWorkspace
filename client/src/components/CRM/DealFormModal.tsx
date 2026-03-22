@@ -199,14 +199,14 @@ export default function DealFormModal({
                   <button
                     type="button"
                     onClick={onClose}
-                    className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                    className="btn btn-secondary px-4 py-2"
                   >
                     {t('common.cancel', 'Annuler')}
                   </button>
                   <button
                     type="submit"
                     disabled={saving}
-                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 transition-colors"
+                    className={`btn btn-primary px-4 py-2 ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     {saving ? t('common.saving', 'Enregistrement...') : t('common.save', 'Enregistrer')}
                   </button>

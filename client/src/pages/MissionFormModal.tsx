@@ -204,10 +204,10 @@ export default function MissionFormModal({
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+            <button type="button" onClick={onClose} className="btn btn-secondary px-4 py-2">
               {t('common.cancel')}
             </button>
-            <button type="submit" className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+            <button type="submit" className="btn btn-primary px-4 py-2">
               {isEditing ? t('missions.update') : t('missions.create')}
             </button>
           </div>

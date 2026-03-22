@@ -346,12 +346,12 @@ const MetricsPage = (): JSX.Element => {
               <input type="checkbox" checked={autoRefresh} onChange={(e: ChangeEvent<HTMLInputElement>) => setAutoRefresh(e.target.checked)} className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500" />
               {t('metrics.autoRefresh')}
             </label>
-            <button onClick={fetchMetrics} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            <button onClick={fetchMetrics} className="btn btn-primary flex items-center gap-2 px-4 py-2">
               <ArrowPathIcon className="w-4 h-4" />
               {t('metrics.refresh')}
             </button>
             <div className="relative group">
-              <button className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
+              <button className="btn btn-secondary flex items-center gap-2 px-4 py-2">
                 <ArrowDownTrayIcon className="w-4 h-4" />
                 {t('metrics.export', 'Export')}
               </button>

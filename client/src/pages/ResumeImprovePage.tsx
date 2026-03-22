@@ -8,7 +8,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useResume } from '../context/ResumeContext';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { SparklesIcon, ShareIcon, CheckCircleIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
+import { SparklesIcon, ShareIcon, CheckCircleIcon, ArrowDownTrayIcon, RocketLaunchIcon, CheckIcon } from '@heroicons/react/24/outline';
 import Breadcrumbs from '../components/Breadcrumbs';
 import ShareQRCodeModal from '../components/ShareQRCodeModal';
 import { templateService } from '../utils/templateService';
@@ -44,6 +44,7 @@ const ResumeImprovePage = (): JSX.Element => {
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareUrl, setShareUrl] = useState<string>('');
   const [shareLoading, setShareLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     const loadResume = async () => {
@@ -105,6 +106,7 @@ const ResumeImprovePage = (): JSX.Element => {
 
   const handleSaveImprovedContent = useCallback(async () => {
     if (!currentResume || !editorRef.current) return;
+    setIsSaving(true);
     try {
       const rawContent = editorRef.current.getContent();
       // Remove suggestion markers before saving to ensure clean content is stored
@@ -122,6 +124,8 @@ const ResumeImprovePage = (): JSX.Element => {
     } catch (err) {
       logger.error('Error saving improved content:', err);
       toast.error(t('resume.saveError'));
+    } finally {
+      setIsSaving(false);
     }
   }, [currentResume, updateImprovedContent, t]);
 
@@ -323,14 +327,50 @@ const ResumeImprovePage = (): JSX.Element => {
                 </p>
               </div>
               {hasImprovedText && (
-                <button
-                  onClick={handleShare}
-                  className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium transition-colors"
-                  title={t('share.button', 'Share')}
-                >
-                  <ShareIcon className="h-5 w-5" />
-                  {t('share.button', 'Share')}
-                </button>
+                <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                  {/* Adapt to mission - Primary CTA */}
+                  <button
+                    onClick={() => navigate(`/resumes/${id}/adapt`)}
+                    className="btn btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm sm:text-base"
+                  >
+                    <RocketLaunchIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+                    <span className="hidden sm:inline">{t('resume.actions.adaptToMission')}</span>
+                    <span className="sm:hidden">{t('resume.actions.adapt', 'Adapter')}</span>
+                  </button>
+                  
+                  {/* Save changes - Secondary */}
+                  <button
+                    onClick={handleSaveImprovedContent}
+                    disabled={isSaving || !editorReady}
+                    className={`btn btn-secondary inline-flex items-center gap-2 px-4 py-2 text-sm sm:text-base ${isSaving || !editorReady ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    {isSaving ? (
+                      <>
+                        <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span className="hidden sm:inline">{t('resume.actions.saving')}</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+                        <span className="hidden sm:inline">{t('resume.actions.saveChanges')}</span>
+                        <span className="sm:hidden">{t('common.save', 'Enregistrer')}</span>
+                      </>
+                    )}
+                  </button>
+                  
+                  {/* Share - Secondary */}
+                  <button
+                    onClick={handleShare}
+                    className="btn btn-secondary inline-flex items-center gap-2 px-4 py-2 text-sm sm:text-base"
+                    title={t('share.button', 'Share')}
+                  >
+                    <ShareIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+                    <span className="hidden sm:inline">{t('share.button', 'Share')}</span>
+                  </button>
+                </div>
               )}
             </div>
         </motion.div>

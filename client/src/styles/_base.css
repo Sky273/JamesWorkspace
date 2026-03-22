@@ -117,6 +117,195 @@ img {
   display: block;
 }
 
+/* --- Forms --- */
+label {
+  display: block;
+  margin-bottom: 0.5em;
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="tel"],
+input[type="url"],
+input[type="search"],
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"],
+textarea,
+select {
+  padding: 0.75em 1em;
+  font-size: var(--font-size-base);
+  line-height: 1.5;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle, #d1d5db);
+  background-color: var(--surface-primary, #fff);
+  color: var(--text-primary);
+  width: 100%;
+  margin-bottom: 1.25em;
+}
+
+.dark input[type="text"],
+.dark input[type="email"],
+.dark input[type="password"],
+.dark input[type="number"],
+.dark input[type="tel"],
+.dark input[type="url"],
+.dark input[type="search"],
+.dark input[type="date"],
+.dark input[type="time"],
+.dark input[type="datetime-local"],
+.dark textarea,
+.dark select {
+  background-color: var(--surface-muted, #374151);
+  border-color: var(--border-subtle, #4b5563);
+}
+
+button,
+input[type="submit"],
+input[type="button"],
+.btn {
+  padding: 0.75em 1.5em;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.5;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border: none;
+}
+
+/* Primary CTA buttons - vivid solid color with hover shadow */
+.btn-primary,
+button[type="submit"],
+input[type="submit"] {
+  background: var(--color-primary-600, #4f46e5);
+  color: #fff;
+  box-shadow: 0 1px 3px rgba(79, 70, 229, 0.3);
+}
+
+.btn-primary:hover,
+button[type="submit"]:hover,
+input[type="submit"]:hover {
+  background: var(--color-primary-700, #4338ca);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active,
+button[type="submit"]:active,
+input[type="submit"]:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(79, 70, 229, 0.3);
+}
+
+/* Success variant for positive actions */
+.btn-success {
+  background: var(--color-green-600, #16a34a);
+  color: #fff;
+  box-shadow: 0 1px 3px rgba(22, 163, 74, 0.3);
+}
+
+.btn-success:hover {
+  background: var(--color-green-700, #15803d);
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.4);
+  transform: translateY(-1px);
+}
+
+/* Secondary buttons - neutral/outline style */
+.btn-secondary,
+button[type="button"] {
+  background: transparent;
+  color: var(--text-secondary, #6b7280);
+  border: 1px solid var(--border-subtle, #d1d5db);
+}
+
+.btn-secondary:hover,
+button[type="button"]:hover {
+  background: var(--color-gray-100, #f3f4f6);
+  border-color: var(--color-gray-400, #9ca3af);
+  color: var(--text-primary);
+}
+
+.dark .btn-secondary,
+.dark button[type="button"] {
+  border-color: var(--border-subtle, #4b5563);
+  color: var(--text-secondary, #9ca3af);
+}
+
+.dark .btn-secondary:hover,
+.dark button[type="button"]:hover {
+  background: var(--color-gray-700, #374151);
+  border-color: var(--color-gray-500, #6b7280);
+  color: var(--text-primary);
+}
+
+/* Danger buttons - red for destructive actions */
+.btn-danger {
+  background: #dc2626;
+  color: white;
+  border: none;
+  box-shadow: 0 1px 3px rgba(220, 38, 38, 0.3);
+}
+
+.btn-danger:hover {
+  background: #b91c1c;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+  transform: translateY(-1px);
+}
+
+.btn-danger:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(220, 38, 38, 0.3);
+}
+
+.dark .btn-danger {
+  background: #dc2626;
+}
+
+.dark .btn-danger:hover {
+  background: #ef4444;
+}
+
+/* Outline variant */
+.btn-outline {
+  background: transparent;
+  color: var(--color-primary-600, #4f46e5);
+  border: 1px solid var(--color-primary-600, #4f46e5);
+}
+
+.btn-outline:hover {
+  background: var(--color-primary-50, #eef2ff);
+}
+
+.dark .btn-outline {
+  color: var(--color-primary-400, #818cf8);
+  border-color: var(--color-primary-400, #818cf8);
+}
+
+.dark .btn-outline:hover {
+  background: rgba(79, 70, 229, 0.1);
+}
+
+/* Form group spacing */
+.form-group {
+  margin-bottom: 1.5em;
+}
+
+.form-group label {
+  margin-bottom: 0.5em;
+}
+
+/* Button row spacing */
+.form-actions {
+  margin-top: 2em;
+  display: flex;
+  gap: 1em;
+}
+
 /* --- Focus States --- */
 :focus-visible {
   outline: 2px solid var(--color-primary-500);

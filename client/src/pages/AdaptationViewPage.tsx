@@ -429,27 +429,23 @@ const AdaptationViewPage = (): JSX.Element => {
                     {/* Action buttons */}
                     <div className="flex justify-end gap-3">
                       <button 
-                        onClick={() => setShowEmailModal(true)}
-                        className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-colors"
-                      >
-                        <EnvelopeIcon className="w-4 h-4" />
-                        {t('adaptations.sendEmail', 'Envoyer par email')}
-                      </button>
-                      <button 
                         onClick={() => setShowExportModal(true)}
-                        className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 transition-colors"
+                        className="btn btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm"
                       >
                         <ArrowDownTrayIcon className="w-4 h-4" />
                         {t('adaptations.exportPDF')}
                       </button>
                       <button 
+                        onClick={() => setShowEmailModal(true)}
+                        className="btn btn-secondary inline-flex items-center gap-2 px-4 py-2 text-sm"
+                      >
+                        <EnvelopeIcon className="w-4 h-4" />
+                        {t('adaptations.sendEmail', 'Envoyer par email')}
+                      </button>
+                      <button 
                         onClick={handleSave}
                         disabled={!hasChanges || saving}
-                        className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                          hasChanges 
-                            ? 'text-white bg-blue-600 hover:bg-blue-700' 
-                            : 'text-gray-400 bg-gray-200 dark:bg-gray-700 cursor-not-allowed'
-                        }`}
+                        className={`btn btn-secondary inline-flex items-center gap-2 px-4 py-2 text-sm ${!hasChanges || saving ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
                         {saving ? t('common.saving') : t('common.save')}
                       </button>
