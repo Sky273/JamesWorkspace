@@ -164,6 +164,102 @@ select {
   border-color: var(--border-subtle, #4b5563);
 }
 
+/* ============================================
+   ACCESSIBILITY - Focus Visible Styles
+   ============================================ */
+
+/* Focus ring for all interactive elements - keyboard navigation */
+:focus-visible {
+  outline: 2px solid var(--color-primary-500, #6366f1);
+  outline-offset: 2px;
+}
+
+/* Form inputs focus */
+input[type="text"]:focus-visible,
+input[type="email"]:focus-visible,
+input[type="password"]:focus-visible,
+input[type="number"]:focus-visible,
+input[type="tel"]:focus-visible,
+input[type="url"]:focus-visible,
+input[type="search"]:focus-visible,
+input[type="date"]:focus-visible,
+input[type="time"]:focus-visible,
+input[type="datetime-local"]:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+  border-color: var(--color-primary-500, #6366f1);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+}
+
+.dark input[type="text"]:focus-visible,
+.dark input[type="email"]:focus-visible,
+.dark input[type="password"]:focus-visible,
+.dark input[type="number"]:focus-visible,
+.dark input[type="tel"]:focus-visible,
+.dark input[type="url"]:focus-visible,
+.dark input[type="search"]:focus-visible,
+.dark input[type="date"]:focus-visible,
+.dark input[type="time"]:focus-visible,
+.dark input[type="datetime-local"]:focus-visible,
+.dark textarea:focus-visible,
+.dark select:focus-visible {
+  border-color: var(--color-primary-400, #818cf8);
+  box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.3);
+}
+
+/* Checkbox and radio focus */
+input[type="checkbox"]:focus-visible,
+input[type="radio"]:focus-visible {
+  outline: 2px solid var(--color-primary-500, #6366f1);
+  outline-offset: 2px;
+}
+
+/* Button focus */
+button:focus-visible,
+.btn:focus-visible,
+[role="button"]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.4);
+}
+
+.dark button:focus-visible,
+.dark .btn:focus-visible,
+.dark [role="button"]:focus-visible {
+  box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.5);
+}
+
+/* Link focus */
+a:focus-visible {
+  outline: 2px solid var(--color-primary-500, #6366f1);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Card/clickable area focus */
+[tabindex="0"]:focus-visible,
+[role="listitem"]:focus-visible,
+[role="option"]:focus-visible {
+  outline: 2px solid var(--color-primary-500, #6366f1);
+  outline-offset: 2px;
+}
+
+/* Skip link for keyboard users */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: var(--color-primary-600, #4f46e5);
+  color: white;
+  padding: 8px 16px;
+  z-index: 100;
+  transition: top 0.2s ease;
+}
+
+.skip-link:focus {
+  top: 0;
+}
+
 button,
 input[type="submit"],
 input[type="button"],
@@ -221,13 +317,22 @@ button[type="button"] {
   background: transparent;
   color: var(--text-secondary, #6b7280);
   border: 1px solid var(--border-subtle, #d1d5db);
+  transition: all 0.2s ease;
 }
 
 .btn-secondary:hover,
 button[type="button"]:hover {
-  background: var(--color-gray-100, #f3f4f6);
+  background: var(--color-gray-200, #e5e7eb);
   border-color: var(--color-gray-400, #9ca3af);
   color: var(--text-primary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+}
+
+.btn-secondary:active,
+button[type="button"]:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .dark .btn-secondary,
@@ -238,9 +343,16 @@ button[type="button"]:hover {
 
 .dark .btn-secondary:hover,
 .dark button[type="button"]:hover {
-  background: var(--color-gray-700, #374151);
-  border-color: var(--color-gray-500, #6b7280);
+  background: var(--color-gray-600, #4b5563);
+  border-color: var(--color-gray-400, #9ca3af);
   color: var(--text-primary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.dark .btn-secondary:active,
+.dark button[type="button"]:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 /* Danger buttons - red for destructive actions */
@@ -432,4 +544,76 @@ button[type="button"]:hover {
 .dark .dark\:border-gray-700\/60,
 .dark .dark\:border-gray-800 {
   border-color: var(--border-subtle) !important;
+}
+
+/* ============================================
+   ICON SYSTEM - Standardized sizes and styles
+   ============================================
+   
+   Convention: Use outline icons by default (@heroicons/react/24/outline)
+   Use solid icons only for active/filled states (stars, checkmarks)
+   
+   Size scale:
+   - icon-xs: 12px (0.75rem) - inline text, badges
+   - icon-sm: 14px (0.875rem) - compact UI, tags
+   - icon-md: 16px (1rem) - default for buttons, inputs
+   - icon-lg: 20px (1.25rem) - section headers, nav items
+   - icon-xl: 24px (1.5rem) - cards, stats
+   - icon-2xl: 32px (2rem) - empty states, hero sections
+*/
+
+.icon-xs {
+  width: 0.75rem;
+  height: 0.75rem;
+  flex-shrink: 0;
+}
+
+.icon-sm {
+  width: 0.875rem;
+  height: 0.875rem;
+  flex-shrink: 0;
+}
+
+.icon-md {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+
+.icon-lg {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+}
+
+.icon-xl {
+  width: 1.5rem;
+  height: 1.5rem;
+  flex-shrink: 0;
+}
+
+.icon-2xl {
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+}
+
+/* Icon in button - consistent spacing */
+.btn .icon-md,
+.btn .icon-lg {
+  margin-right: 0.5rem;
+}
+
+/* Icon colors - inherit from parent by default */
+[class*="icon-"] {
+  color: currentColor;
+}
+
+/* Muted icon style */
+.icon-muted {
+  color: var(--text-muted, #9ca3af);
+}
+
+.dark .icon-muted {
+  color: var(--text-muted, #6b7280);
 }

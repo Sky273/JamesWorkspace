@@ -111,35 +111,22 @@ const LLMTab = ({ formData, onInputChange, t }: LLMTabProps): JSX.Element => {
 
       {/* WebGL Background Toggle */}
       <div className="pt-6 pb-2 border-t border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={formData.webglEnabled === 'on'}
+            onChange={handleWebglToggle}
+            className="mt-1 h-5 w-5 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 focus:ring-2 cursor-pointer"
+          />
+          <div>
+            <span className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               {t('settings.llm.webglEnabled')}
-            </label>
+            </span>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
               {t('settings.llm.webglEnabledDescription')}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={handleWebglToggle}
-            className={`
-              relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent 
-              transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
-              ${formData.webglEnabled === 'on' ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-600'}
-            `}
-            role="switch"
-            aria-checked={formData.webglEnabled === 'on'}
-          >
-            <span
-              className={`
-                pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 
-                transition duration-200 ease-in-out
-                ${formData.webglEnabled === 'on' ? 'translate-x-5' : 'translate-x-0'}
-              `}
-            />
-          </button>
-        </div>
+        </label>
       </div>
     </div>
   );

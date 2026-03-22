@@ -88,7 +88,7 @@ const DealSection = ({
 
   const priorityInfo = PRIORITY_ICONS[deal.priority] || PRIORITY_ICONS.medium;
 
-  const renderResumeCard = (resume: ResumeBasic) => (
+  const renderResumeCard = (resume: ResumeBasic, index: number) => (
     <DealResumeCard
       key={resume.id}
       resume={resume}
@@ -103,11 +103,14 @@ const DealSection = ({
       onDealChange={onDealChange}
       getResumeTags={getResumeTags}
       getDownloadTitle={getDownloadTitle}
+      index={index}
     />
   );
 
   return (
     <div
+      role="region"
+      aria-label={`${t('resumes.groupedView.deal', 'Affaire')}: ${deal.title}`}
       className={`rounded-xl shadow-sm border overflow-hidden transition-all duration-200 ${
         isDragOver
           ? 'bg-purple-50 dark:bg-purple-900/20 ring-2 ring-purple-400 dark:ring-purple-500 ring-offset-1 border-purple-300 dark:border-purple-600'
@@ -123,7 +126,10 @@ const DealSection = ({
       {/* Deal header */}
       <button
         onClick={onToggle}
-        className={`w-full flex items-center justify-between px-4 py-3 transition-colors text-left ${
+        aria-expanded={isExpanded}
+        aria-controls={`deal-content-${deal.id}`}
+        aria-label={`${isExpanded ? t('common.collapse', 'Réduire') : t('common.expand', 'Développer')} ${deal.title}`}
+        className={`group w-full flex items-center justify-between px-4 py-3 transition-colors text-left ${
           isDragOver
             ? 'bg-purple-100/50 dark:bg-purple-900/30'
             : 'hover:bg-gray-50 dark:hover:bg-gray-700/60'
@@ -131,14 +137,16 @@ const DealSection = ({
       >
         <div className="flex items-center gap-3 min-w-0">
           {isExpanded ? (
-            <ChevronDownIcon className="w-5 h-5 text-gray-400 flex-shrink-0" />
+            <ChevronDownIcon className="icon-lg text-gray-400" />
           ) : (
-            <ChevronRightIcon className="w-5 h-5 text-gray-400 flex-shrink-0" />
+            <ChevronRightIcon className="icon-lg text-gray-400" />
           )}
-          <BriefcaseIcon className="w-5 h-5 text-purple-500 flex-shrink-0" />
+          <span className="p-1.5 rounded-lg transition-colors group-hover:bg-blue-100 dark:group-hover:bg-blue-900/30">
+            <BriefcaseIcon className="icon-lg text-purple-500 group-hover:text-blue-600 dark:group-hover:text-blue-400" />
+          </span>
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="font-bold text-gray-900 dark:text-gray-100 truncate">{deal.title}</h3>
+              <h3 className="text-lg font-bold text-purple-700 dark:text-purple-300 truncate">{deal.title}</h3>
               <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[deal.status] || STATUS_COLORS.open}`}>
                 {t(`crm.deals.statuses.${deal.status}`, STATUS_LABELS[deal.status] || deal.status)}
               </span>
@@ -147,14 +155,14 @@ const DealSection = ({
             <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-500 dark:text-gray-400">
               {deal.client_name && (
                 <span className="flex items-center gap-1">
-                  <BuildingOfficeIcon className="w-3 h-3" />
+                  <BuildingOfficeIcon className="icon-xs" />
                   {deal.client_name}
                   {deal.client_type && <span className="text-gray-400">({deal.client_type})</span>}
                 </span>
               )}
               {deal.contact_name && (
                 <span className="flex items-center gap-1">
-                  <UserIcon className="w-3 h-3" />
+                  <UserIcon className="icon-xs" />
                   {deal.contact_name}
                 </span>
               )}
@@ -184,7 +192,7 @@ const DealSection = ({
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); e.currentTarget.click(); } }}
             className="p-1.5 text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-colors cursor-pointer"
           >
-            <ArrowDownTrayIcon className="w-4 h-4" />
+            <ArrowDownTrayIcon className="icon-md" />
           </span>
         </div>
       </button>
@@ -202,13 +210,16 @@ const DealSection = ({
       <AnimatePresence>
         {isExpanded && (
           <motion.div
+            id={`deal-content-${deal.id}`}
+            role="region"
+            aria-label={t('resumes.groupedView.dealContent', 'Contenu de l\'affaire')}
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className={`px-4 pb-4 border-t ${isDragOver ? 'border-purple-200 dark:border-purple-700' : 'border-gray-100 dark:border-gray-700'}`}>
+            <div className={`px-4 py-5 border-t ${isDragOver ? 'border-purple-200 dark:border-purple-700' : 'border-gray-100 dark:border-gray-700'}`}>
               {isDragOver && (
                 <div className="mt-3 mb-2 py-2 border-2 border-dashed border-purple-300 dark:border-purple-600 rounded-lg bg-purple-50/50 dark:bg-purple-900/10">
                   <p className="text-center text-sm text-purple-500 dark:text-purple-400">
@@ -218,21 +229,21 @@ const DealSection = ({
               )}
               {/* Missions section */}
               {deal.missions && deal.missions.length > 0 && (
-                <div className="pt-3 mb-3">
-                  <h4 className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                    <BriefcaseIcon className="w-3.5 h-3.5" />
+                <div className="pt-4 mb-4">
+                  <h4 className="text-sm font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                    <BriefcaseIcon className="icon-sm" />
                     {t('resumes.groupedView.missions', 'Missions')} ({deal.missions.length})
                   </h4>
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {deal.missions.map(mission => (
                       <div key={mission.id} className="border border-indigo-100 dark:border-indigo-800/30 rounded-lg overflow-hidden">
                         {/* Mission header */}
                         <div
                           onClick={() => navigate(`/missions/${mission.id}`)}
-                          className="flex items-center justify-between px-3 py-2 bg-indigo-50 dark:bg-indigo-900/10 cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900/20 transition-colors"
+                          className="flex items-center justify-between px-4 py-3 bg-indigo-50 dark:bg-indigo-900/10 cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900/20 transition-colors"
                         >
                           <div className="flex items-center gap-2 min-w-0">
-                            <BriefcaseIcon className="w-4 h-4 text-indigo-500 flex-shrink-0" />
+                            <BriefcaseIcon className="icon-md text-indigo-500" />
                             <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{mission.title}</span>
                             <span className={`px-1.5 py-0.5 rounded-full text-xs font-medium ${
                               mission.status === 'active' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
@@ -248,7 +259,7 @@ const DealSection = ({
                         </div>
                         {/* Adaptations under this mission */}
                         {mission.adaptations && mission.adaptations.length > 0 && (
-                          <div className="px-3 py-2 bg-white dark:bg-gray-800/50 space-y-1.5">
+                          <div className="px-4 py-3 bg-white dark:bg-gray-800/50 space-y-2">
                             {mission.adaptations.map(adaptation => {
                               const scoreColor = (adaptation.match_score || 0) >= 80
                                 ? 'text-green-600 dark:text-green-400'
@@ -264,10 +275,10 @@ const DealSection = ({
                                 <div
                                   key={adaptation.id}
                                   onClick={(e) => { e.stopPropagation(); saveViewState(); navigate(`/adaptations/${adaptation.id}`, { state: { from: 'dealsGroupedView' } }); }}
-                                  className="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-700/30 border border-gray-100 dark:border-gray-700 rounded-md cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors"
+                                  className="flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-700/30 border border-gray-100 dark:border-gray-700 rounded-md cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors"
                                 >
                                   <div className="flex items-center gap-2 min-w-0 flex-1">
-                                    <DocumentTextIcon className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                                    <DocumentTextIcon className="icon-sm text-blue-500" />
                                     <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                                       {adaptation.resume_name || adaptation.candidate_name || t('adaptations.card.noName', 'Sans nom')}
                                     </span>
@@ -280,7 +291,7 @@ const DealSection = ({
                                   <div className="flex items-center gap-2 flex-shrink-0">
                                     {adaptation.match_score != null && (
                                       <span className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-semibold ${scoreBg} ${scoreColor}`}>
-                                        <ChartBarIcon className="w-3 h-3" />
+                                        <ChartBarIcon className="icon-xs" />
                                         {adaptation.match_score}%
                                       </span>
                                     )}
@@ -305,14 +316,14 @@ const DealSection = ({
 
               {/* Resumes section */}
               {deal.resumes.length === 0 && !isDragOver && (!deal.missions || deal.missions.length === 0) ? (
-                <p className="text-center text-sm text-gray-500 dark:text-gray-400 py-4">
+                <p className="text-center text-sm text-gray-500 dark:text-gray-400 py-6">
                   {t('resumes.groupedView.noResumes', 'Aucun CV associé à cette affaire')}
                 </p>
               ) : deal.resumes.length > 0 ? (
-                <div className="space-y-2 pt-3">
+                <div className="space-y-3 pt-4">
                   {deal.resumes.length > 0 && deal.missions && deal.missions.length > 0 && (
-                    <h4 className="text-xs font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
-                      <DocumentTextIcon className="w-3.5 h-3.5" />
+                    <h4 className="text-sm font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                      <DocumentTextIcon className="icon-sm" />
                       {t('resumes.groupedView.cvs', 'CVs')} ({deal.resumes.length})
                     </h4>
                   )}
@@ -322,14 +333,14 @@ const DealSection = ({
                     const hiddenCount = deal.resumes.length - INITIAL_RESUMES_LIMIT;
                     return (
                       <>
-                        {displayedResumes.map(resume => renderResumeCard(resume))}
+                        {displayedResumes.map((resume, index) => renderResumeCard(resume, index))}
                         {!isFullyExpanded && hiddenCount > 0 && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               setExpandedResumeSections(prev => new Set([...prev, deal.id]));
                             }}
-                            className="w-full py-2 text-sm text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-colors font-medium"
+                            className="w-full py-3 mt-4 text-sm text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-colors font-medium"
                           >
                             {t('resumes.groupedView.showMore', 'Voir {{count}} CV(s) supplémentaire(s)').replace('{{count}}', String(hiddenCount))}
                           </button>
@@ -344,7 +355,7 @@ const DealSection = ({
                                 return next;
                               });
                             }}
-                            className="w-full py-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/30 rounded-lg transition-colors"
+                            className="w-full py-3 mt-4 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/30 rounded-lg transition-colors"
                           >
                             {t('resumes.groupedView.showLess', 'Voir moins')}
                           </button>
