@@ -195,7 +195,53 @@ const App = (): JSX.Element => {
                 </Route>
               </Routes>
             </Suspense>
-            <Toaster position="top-right" />
+            <Toaster 
+              position="top-right"
+              toastOptions={{
+                duration: 4000,
+                style: {
+                  padding: '16px 20px',
+                  borderRadius: '10px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)',
+                },
+                success: {
+                  style: {
+                    background: '#059669',
+                    color: '#ffffff',
+                    border: '2px solid #10b981',
+                  },
+                  iconTheme: {
+                    primary: '#ffffff',
+                    secondary: '#059669',
+                  },
+                },
+                error: {
+                  style: {
+                    background: '#dc2626',
+                    color: '#ffffff',
+                    border: '2px solid #ef4444',
+                  },
+                  iconTheme: {
+                    primary: '#ffffff',
+                    secondary: '#dc2626',
+                  },
+                  duration: 5000,
+                },
+                loading: {
+                  style: {
+                    background: '#f59e0b',
+                    color: '#ffffff',
+                    border: '2px solid #fbbf24',
+                  },
+                  iconTheme: {
+                    primary: '#ffffff',
+                    secondary: '#f59e0b',
+                  },
+                },
+              }}
+            />
           </Router>
         </ChatbotProvider>
       </ResumeProvider>
