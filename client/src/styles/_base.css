@@ -34,8 +34,21 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 h1 { font-size: var(--font-size-3xl); }
-h2 { font-size: var(--font-size-2xl); }
-h3 { font-size: var(--font-size-xl); }
+h2 {
+  font-size: var(--font-size-2xl);
+  margin-top: 1.5em;
+  margin-bottom: 0.6em;
+  background: var(--color-primary-50, #eef2ff);
+  padding: 0.25em 0.5em;
+  border-radius: var(--radius-md);
+}
+
+.dark h2 {
+  background: rgba(79, 70, 229, 0.08);
+}
+h2:first-child { margin-top: 0; }
+h3 { font-size: var(--font-size-xl); margin-top: 1.25em; margin-bottom: 0.5em; }
+h3:first-child { margin-top: 0; }
 h4 { font-size: var(--font-size-lg); }
 h5 { font-size: var(--font-size-base); }
 h6 { font-size: var(--font-size-sm); }
@@ -68,6 +81,33 @@ ul, ol {
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+/* --- Tables --- */
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th, td {
+  padding: 0.75em 0.5em;
+  text-align: left;
+}
+
+tr {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+tr:last-child {
+  border-bottom: none;
+}
+
+.dark tr {
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+.dark tr:last-child {
+  border-bottom: none;
 }
 
 /* --- Images --- */

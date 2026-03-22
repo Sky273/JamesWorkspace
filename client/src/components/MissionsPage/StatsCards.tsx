@@ -54,7 +54,7 @@ const StatCard = ({ icon: Icon, iconBgColor, iconColor, label, value, delay = 0 
 
 const StatsCards = ({ stats, missionsCount, t }: StatsCardsProps): JSX.Element => {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
       <StatCard
         icon={ClipboardDocumentListIcon}
         iconBgColor="bg-blue-100 dark:bg-blue-900/30"

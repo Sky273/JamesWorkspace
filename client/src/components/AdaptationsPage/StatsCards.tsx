@@ -58,7 +58,7 @@ const StatCard = ({ icon: Icon, iconBgColor, iconColor, label, value, delay }: S
 
 const StatsCards = ({ stats, t }: StatsCardsProps): JSX.Element => {
   return (
-    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+    <div className="grid grid-cols-2 md:grid-cols-5 gap-6 mb-8">
       <StatCard
         icon={SparklesIcon}
         iconBgColor="bg-blue-100 dark:bg-blue-900/30"

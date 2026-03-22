@@ -96,3 +96,17 @@
 .animate-shimmer {
   animation: shimmer 1.5s infinite;
 }
+
+/* --- List/Grid item spacing for CVthèque, Missions, etc. --- */
+.list-item-spaced {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.list-item-spaced:last-child {
+  border-bottom: none;
+}
+
+.dark .list-item-spaced {
+  border-bottom-color: rgba(255, 255, 255, 0.05);
+}
