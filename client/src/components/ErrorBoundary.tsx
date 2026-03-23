@@ -7,7 +7,7 @@
 import { Component, ErrorInfo, ReactNode, useState } from 'react';
 import { ExclamationTriangleIcon, ChevronDownIcon, ChevronUpIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { createLogger } from '../utils/logger.frontend';
-import { isSessionRedirectError } from '../utils/apiInterceptor';
+import { isSessionRedirectError, resetSessionState } from '../utils/apiInterceptor';
 
 const log = createLogger('ErrorBoundary');
 
@@ -67,9 +67,8 @@ const isAuthError = (error: Error | null): boolean => {
  * Redirect to signin page with expired flag
  */
 const redirectToSignin = (): void => {
-  // Clear any stored auth data
-  document.cookie = 'accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-  document.cookie = 'refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+  // Server-managed auth cookies are httpOnly; only reset client-side session state here.
+  resetSessionState();
   
   // Redirect to signin with expired flag
   window.location.replace('/signin?expired=true');

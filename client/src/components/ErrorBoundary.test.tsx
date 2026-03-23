@@ -12,10 +12,13 @@ vi.mock('../utils/logger.frontend', () => ({
     createLogger: () => ({ log: vi.fn(), error: vi.fn(), warn: vi.fn(), info: vi.fn() }),
 }));
 
+const mockResetSessionState = vi.fn();
+
 // Mock apiInterceptor
 vi.mock('../utils/apiInterceptor', () => ({
     isSessionRedirectError: (error: unknown) =>
         error instanceof Error && error.name === 'SessionRedirectError',
+    resetSessionState: () => mockResetSessionState(),
 }));
 
 // Mock heroicons

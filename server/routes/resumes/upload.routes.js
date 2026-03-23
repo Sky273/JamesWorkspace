@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Resume Routes - Upload & File Extraction
  * POST /upload, POST /extract-doc, POST /extract-pdf
  */
@@ -32,6 +32,41 @@ const DOC_ALLOWED_MIME_TYPES = new Set(['application/msword']);
 const MAX_PDF_EXTRACTION_PAGES = 50;
 const MAX_SCANNED_OCR_PAGES = 10;
 const MAX_OCR_RENDER_PIXELS = 20_000_000;
+const DEFAULT_PDF_EXTRACTION_MAX_CONCURRENCY = 2;
+const parsedPdfExtractionMaxConcurrency = Number.parseInt(process.env.PDF_EXTRACTION_MAX_CONCURRENCY || '', 10);
+const PDF_EXTRACTION_MAX_CONCURRENCY = Number.isInteger(parsedPdfExtractionMaxConcurrency) && parsedPdfExtractionMaxConcurrency > 0
+    ? parsedPdfExtractionMaxConcurrency
+    : DEFAULT_PDF_EXTRACTION_MAX_CONCURRENCY;
+
+const activePdfExtractionCountsByUser = new Map();
+
+function getPdfExtractionUserKey(req) {
+    return req.user?.id || 'anonymous';
+}
+
+function getActivePdfExtractionCountForUser(userKey) {
+    return activePdfExtractionCountsByUser.get(userKey) || 0;
+}
+
+function tryAcquirePdfExtractionSlot(userKey) {
+    const activeCount = getActivePdfExtractionCountForUser(userKey);
+    if (activeCount >= PDF_EXTRACTION_MAX_CONCURRENCY) {
+        return false;
+    }
+
+    activePdfExtractionCountsByUser.set(userKey, activeCount + 1);
+    return true;
+}
+
+function releasePdfExtractionSlot(userKey) {
+    const activeCount = getActivePdfExtractionCountForUser(userKey);
+    if (activeCount <= 1) {
+        activePdfExtractionCountsByUser.delete(userKey);
+        return;
+    }
+
+    activePdfExtractionCountsByUser.set(userKey, activeCount - 1);
+}
 
 function createDiskUpload(allowedExtensions, allowedMimeTypes) {
     return multer({
@@ -172,11 +207,42 @@ router.post('/extract-doc', authenticateToken, uploadLimiter, uploadDocFile, asy
 // Includes OCR support for scanned PDFs using Tesseract.js
 router.post('/extract-pdf', authenticateToken, uploadLimiter, uploadPdfFile, async (req, res) => {
     let tesseractWorker = null;
+    let pdfExtractionSlotAcquired = false;
+    const pdfExtractionUserKey = getPdfExtractionUserKey(req);
 
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'No file uploaded' });
         }
+
+        if (!tryAcquirePdfExtractionSlot(pdfExtractionUserKey)) {
+            const activeExtractionsForUser = getActivePdfExtractionCountForUser(pdfExtractionUserKey);
+            await cleanupTempFile(req.file.path);
+            metrics.trackUploadActivity({
+                endpoint: 'extract-pdf',
+                fileSize: req.file.size,
+                mimeType: req.file.mimetype || 'application/pdf',
+                success: false,
+                metadata: {
+                    error: 'PDF extraction concurrency limit reached',
+                    userId: pdfExtractionUserKey,
+                    activeExtractionsForUser,
+                    maxConcurrentExtractionsPerUser: PDF_EXTRACTION_MAX_CONCURRENCY
+                }
+            });
+            safeLog('warn', 'Rejecting PDF extraction because the user reached the concurrency limit', {
+                fileName: req.file.originalname,
+                userId: pdfExtractionUserKey,
+                activeExtractionsForUser,
+                maxConcurrentExtractionsPerUser: PDF_EXTRACTION_MAX_CONCURRENCY
+            });
+            return res.status(503).json({
+                error: 'PDF extraction is temporarily saturated for this user. Please retry in a few moments.',
+                retryable: true
+            });
+        }
+
+        pdfExtractionSlotAcquired = true;
 
         const fileBuffer = await fs.readFile(req.file.path);
         const startTime = Date.now();
@@ -389,6 +455,10 @@ router.post('/extract-pdf', authenticateToken, uploadLimiter, uploadPdfFile, asy
         }
         safeLog('error', 'Error extracting text from PDF', { error: error.message });
         res.status(500).json({ error: error.message || 'Failed to extract text from PDF file' });
+    } finally {
+        if (pdfExtractionSlotAcquired) {
+            releasePdfExtractionSlot(pdfExtractionUserKey);
+        }
     }
 });
 

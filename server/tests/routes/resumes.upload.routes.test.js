@@ -7,7 +7,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import express from 'express';
 import request from 'supertest';
 
-const { multerCallOptions } = vi.hoisted(() => ({ multerCallOptions: [] }));
+const { multerCallOptions, pdfDocuments, pendingReadFileResolvers } = vi.hoisted(() => ({
+    multerCallOptions: [],
+    pdfDocuments: [],
+    pendingReadFileResolvers: []
+}));
 
 const mockInsertResume = vi.fn();
 const mockUpdateResumeFileUrl = vi.fn();
@@ -32,6 +36,25 @@ vi.mock('fs/promises', () => ({
     },
     readFile: (...args) => mockReadFile(...args),
     unlink: (...args) => mockUnlink(...args)
+}));
+
+vi.mock('pdfjs-dist/legacy/build/pdf.mjs', () => ({
+    getDocument: vi.fn(() => ({
+        promise: Promise.resolve(pdfDocuments.shift() || {
+            numPages: 1,
+            getPage: async () => ({
+                getTextContent: async () => ({
+                    items: [
+                        { str: 'This', transform: [0, 0, 0, 0, 0, 100] },
+                        { str: 'is', transform: [0, 0, 0, 0, 0, 100] },
+                        { str: 'extracted', transform: [0, 0, 0, 0, 0, 100] },
+                        { str: 'PDF', transform: [0, 0, 0, 0, 0, 100] },
+                        { str: 'text content with enough characters to bypass OCR fallback in tests.', transform: [0, 0, 0, 0, 0, 100] }
+                    ]
+                })
+            })
+        })
+    }))
 }));
 
 const mockGetUserFirmId = vi.fn();
@@ -112,7 +135,7 @@ vi.mock('../../middleware/auth.middleware.js', () => ({
     authenticateToken: (req, res, next) => {
         if (req.headers.authorization === 'Bearer valid-token') {
             req.user = {
-                id: 'user-123',
+                id: req.headers['x-test-user-id'] || 'user-123',
                 role: req.headers['x-test-role'] || 'user',
                 firm: 'Test Firm'
             };
@@ -139,8 +162,19 @@ describe('Resume Upload Routes', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        mockInsertResume.mockReset();
+        mockUpdateResumeFileUrl.mockReset();
+        mockUpdateConsentStatus.mockReset();
+        mockReadFile.mockReset();
+        mockUnlink.mockReset();
+        mockGetUserFirmId.mockReset();
+        mockGetFirmById.mockReset();
+        mockIsValidUUID.mockReset();
         app = createTestApp();
+        pdfDocuments.length = 0;
+        pendingReadFileResolvers.length = 0;
         mockUnlink.mockResolvedValue(undefined);
+        mockReadFile.mockResolvedValue(Buffer.from('fake pdf content'));
         mockGetUserFirmId.mockResolvedValue('firm-1');
         mockGetFirmById.mockResolvedValue({ id: 'firm-1', name: 'Test Firm' });
         mockIsValidUUID.mockReturnValue(true);
@@ -189,6 +223,65 @@ describe('Resume Upload Routes', () => {
             expect(res.status).toBe(400);
             expect(res.body.error).toContain('Invalid file type');
         });
+
+        it('should reject PDF extraction when concurrency limit is reached for the same user', async () => {
+            mockReadFile
+                .mockImplementationOnce(() => new Promise((resolve) => pendingReadFileResolvers.push(resolve)))
+                .mockImplementationOnce(() => new Promise((resolve) => pendingReadFileResolvers.push(resolve)))
+                .mockResolvedValue(Buffer.from('fake pdf content'));
+
+            const firstRequestPromise = request(app).post('/api/resumes/extract-pdf').set(AUTH).then((response) => response);
+            const secondRequestPromise = request(app).post('/api/resumes/extract-pdf').set(AUTH).then((response) => response);
+
+            await vi.waitFor(() => {
+                expect(pendingReadFileResolvers).toHaveLength(2);
+            });
+
+            const thirdResponse = await request(app)
+                .post('/api/resumes/extract-pdf')
+                .set(AUTH);
+
+            expect(thirdResponse.status).toBe(503);
+            expect(thirdResponse.body.retryable).toBe(true);
+            expect(thirdResponse.body.error).toContain('temporarily saturated for this user');
+
+            for (const resolvePendingReadFile of pendingReadFileResolvers.splice(0)) {
+                resolvePendingReadFile(Buffer.from('fake pdf content'));
+            }
+
+            const [firstResponse, secondResponse] = await Promise.all([firstRequestPromise, secondRequestPromise]);
+            expect([200, 400, 500]).toContain(firstResponse.status);
+            expect([200, 400, 500]).toContain(secondResponse.status);
+        }, 10000);
+
+        it('should allow another user to extract a PDF while the first user is saturated', async () => {
+            mockReadFile
+                .mockImplementationOnce(() => new Promise((resolve) => pendingReadFileResolvers.push(resolve)))
+                .mockImplementationOnce(() => new Promise((resolve) => pendingReadFileResolvers.push(resolve)))
+                .mockResolvedValue(Buffer.from('fake pdf content'));
+
+            const firstRequestPromise = request(app).post('/api/resumes/extract-pdf').set({ ...AUTH, 'x-test-user-id': 'user-123' }).then((response) => response);
+            const secondRequestPromise = request(app).post('/api/resumes/extract-pdf').set({ ...AUTH, 'x-test-user-id': 'user-123' }).then((response) => response);
+
+            await vi.waitFor(() => {
+                expect(pendingReadFileResolvers).toHaveLength(2);
+            });
+
+            const otherUserResponse = await request(app)
+                .post('/api/resumes/extract-pdf')
+                .set({ ...AUTH, 'x-test-user-id': 'user-456' });
+
+            expect(otherUserResponse.status).toBe(200);
+            expect(otherUserResponse.body.text).toContain('text content with enough characters');
+
+            for (const resolvePendingReadFile of pendingReadFileResolvers.splice(0)) {
+                resolvePendingReadFile(Buffer.from('fake pdf content'));
+            }
+
+            const [firstResponse, secondResponse] = await Promise.all([firstRequestPromise, secondRequestPromise]);
+            expect([200, 400, 500]).toContain(firstResponse.status);
+            expect([200, 400, 500]).toContain(secondResponse.status);
+        }, 10000);
     });
 
     describe('POST /upload', () => {

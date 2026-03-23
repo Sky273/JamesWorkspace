@@ -12,6 +12,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import './styles/main.css';
 import { AuthProvider } from './context/AuthContext';
+import { resetSessionState } from './utils/apiInterceptor';
 
 // ============================================
 // GLOBAL ERROR HANDLING
@@ -98,9 +99,8 @@ const redirectToSignin = (): void => {
   // Prevent multiple redirects
   if (window.location.pathname === '/signin') return;
   
-  // Clear any stored auth data
-  document.cookie = 'accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-  document.cookie = 'refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+  // Server-managed auth cookies are httpOnly; only reset client-side session state here.
+  resetSessionState();
   
   // Redirect silently
   window.location.replace('/signin?expired=true');

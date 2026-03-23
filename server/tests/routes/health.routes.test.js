@@ -158,6 +158,26 @@ describe('Health Routes', () => {
             expect(response.checks).toBeUndefined();
         });
 
+        it('should ignore deep checks for non-admin users', async () => {
+            mockReq.cookies = {};
+            mockReq.query = { deep: 'true' };
+            global.fetch = vi.fn();
+
+            dbQuery.mockResolvedValueOnce({ rows: [{ connected: 1 }] });
+            dbQuery.mockResolvedValueOnce({ 
+                rows: [{ resumes_count: '10', users_count: '2', missions_count: '5', db_size: '1048576' }] 
+            });
+
+            const healthRouter = (await import('../../routes/health.routes.js')).default;
+            const routeHandler = healthRouter.stack.find(r => r.route?.path === '/').route.stack[0].handle;
+            
+            await routeHandler(mockReq, mockRes);
+
+            expect(global.fetch).not.toHaveBeenCalled();
+            const response = mockRes.json.mock.calls[0][0];
+            expect(response.checks).toBeUndefined();
+        });
+
         it('should include memory usage information', async () => {
             dbQuery.mockResolvedValueOnce({ rows: [{ connected: 1 }] });
             dbQuery.mockResolvedValueOnce({ 

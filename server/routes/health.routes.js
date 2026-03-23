@@ -99,8 +99,16 @@ router.get('/', async (req, res) => {
         overallStatus = 'unhealthy';
     }
     
-    // 3. Check OpenAI API connectivity (with optional deep check)
-    const deepCheck = req.query.deep === 'true';
+    // Only admins may trigger outbound deep checks against provider APIs.
+    const requestedDeepCheck = req.query.deep === 'true';
+    const deepCheck = requestedDeepCheck && isAdmin;
+
+    if (requestedDeepCheck && !isAdmin) {
+        safeLog('warn', 'Ignored unauthorized deep health check request', {
+            path: req.path,
+            ip: req.ip
+        });
+    }
     
     if (OPENAI_API_KEY) {
         if (deepCheck) {

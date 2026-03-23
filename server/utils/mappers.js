@@ -66,19 +66,28 @@ export function mapTemplateToFrontend(row) {
  * @returns {Object} Database column mapping (undefined values excluded)
  */
 export function mapTemplateFromFrontend(data) {
-    const status = data.Status ?? data.status;
+    const getFirstDefinedValue = (...keys) => {
+        for (const key of keys) {
+            if (Object.prototype.hasOwnProperty.call(data, key) && data[key] !== undefined) {
+                return data[key];
+            }
+        }
+        return undefined;
+    };
+
+    const status = getFirstDefinedValue('Status', 'status');
     const fields = {
-        name: data.Name ?? data.name,
-        description: data.Description ?? data.description,
-        popular: data.Popular ?? data.popular,
-        status: typeof status === 'string' ? status.toLowerCase() : undefined,
-        tags: data.Tags ?? data.tags,
-        preview_image_url: data.PreviewImage ?? data.previewImage,
-        header_content: data.HeaderContent ?? data.headerContent,
-        template_content: data.TemplateContent ?? data.templateContent,
-        footer_content: data.FooterContent ?? data.footerContent,
-        footer_height: data.FooterHeight ?? data.footerHeight,
-        stylesheet: data.Stylesheet ?? data.stylesheet
+        name: getFirstDefinedValue('Name', 'name'),
+        description: getFirstDefinedValue('Description', 'description'),
+        popular: getFirstDefinedValue('Popular', 'popular'),
+        status: typeof status === 'string' ? status.toLowerCase() : status,
+        tags: getFirstDefinedValue('Tags', 'tags'),
+        preview_image_url: getFirstDefinedValue('PreviewImage', 'previewImage'),
+        header_content: getFirstDefinedValue('HeaderContent', 'headerContent'),
+        template_content: getFirstDefinedValue('TemplateContent', 'templateContent'),
+        footer_content: getFirstDefinedValue('FooterContent', 'footerContent'),
+        footer_height: getFirstDefinedValue('FooterHeight', 'footerHeight'),
+        stylesheet: getFirstDefinedValue('Stylesheet', 'stylesheet')
     };
 
     // Remove undefined values

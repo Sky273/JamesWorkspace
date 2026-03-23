@@ -127,8 +127,7 @@ router.get('/', authenticateToken, async (req, res) => {
 router.get('/:id/download', authenticateToken, validateParams('id'), async (req, res) => {
     try {
         const { id } = req.params;
-        const userFirm = req.user.firm || req.user.customer;
-        const isAdmin = req.user?.role === 'admin';
+        const isAdmin = isUserAdmin(req);
 
         // Fetch resume with file data
         const resume = await resumesService.getResumeFileForDownload(id);
@@ -137,9 +136,18 @@ router.get('/:id/download', authenticateToken, validateParams('id'), async (req,
             return res.status(404).json({ error: 'Resume not found' });
         }
 
-        // Check access rights (non-admin can only access their customer's resumes)
-        if (!isAdmin && userFirm && resume.firm_name !== userFirm) {
-            return res.status(403).json({ error: 'Access denied' });
+        // Verify user has access to this resume (firm-based access control using firm_id)
+        if (!isAdmin) {
+            const userFirmId = await getUserFirmId(req);
+            if (!userFirmId || resume.firm_id !== userFirmId) {
+                safeLog('warn', 'Access denied: user tried to download resume from different firm', {
+                    userId: req.user?.id,
+                    userFirmId,
+                    resumeFirmId: resume.firm_id,
+                    resumeId: id
+                });
+                return res.status(403).json({ error: 'Access denied' });
+            }
         }
 
         // Check if file data exists

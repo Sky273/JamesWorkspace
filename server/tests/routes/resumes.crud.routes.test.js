@@ -178,6 +178,8 @@ describe('Resume Routes - GET /api/resumes', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         app = createTestApp();
+        mockGetUserFirmId.mockResolvedValue('firm-123');
+        mockIsUserAdmin.mockImplementation((req) => req?.user?.role === 'admin');
     });
 
     it('should return 401 without authentication', async () => {
@@ -379,6 +381,7 @@ describe('Resume Routes - GET /api/resumes/:id/download', () => {
             id: '123e4567-e89b-12d3-a456-426614174000',
             file_name: 'resume.pdf',
             resume_file_data: null,
+            firm_id: 'firm-123',
             firm_name: 'Test Firm'
         });
 
@@ -395,6 +398,7 @@ describe('Resume Routes - GET /api/resumes/:id/download', () => {
             id: '123e4567-e89b-12d3-a456-426614174000',
             file_name: 'resume.pdf',
             resume_file_data: Buffer.from('test'),
+            firm_id: 'firm-other',
             firm_name: 'Other Firm'
         });
 
@@ -413,6 +417,7 @@ describe('Resume Routes - GET /api/resumes/:id/download', () => {
             resume_file_data: fileContent,
             resume_file_type: 'application/pdf',
             resume_file_size: fileContent.length,
+            firm_id: 'firm-123',
             firm_name: 'Test Firm'
         });
 

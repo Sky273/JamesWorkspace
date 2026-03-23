@@ -85,7 +85,7 @@ export async function getResumeById(id) {
  */
 export async function getResumeFileForDownload(id) {
     const result = await query(
-        `SELECT id, file_name, resume_file_data, resume_file_type, resume_file_size, firm_name
+        `SELECT id, file_name, resume_file_data, resume_file_type, resume_file_size, firm_id, firm_name
          FROM resumes WHERE id = $1`,
         [id]
     );
