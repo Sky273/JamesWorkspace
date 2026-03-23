@@ -6,28 +6,104 @@
 import express from 'express';
 import multer from 'multer';
 import fs from 'fs/promises';
+import path from 'path';
 import crypto from 'crypto';
-import { UPLOAD_DIR } from '../../config/constants.js';
+import { MAX_FILE_SIZE, UPLOAD_DIR } from '../../config/constants.js';
 import { authenticateToken } from '../../middleware/auth.middleware.js';
+import { uploadLimiter } from '../../middleware/rateLimit.middleware.js';
 import { safeLog } from '../../utils/logger.backend.js';
 import { getUserFirmId, isValidUUID, getFirmById } from '../../utils/firmHelpers.js';
 import * as resumesService from '../../services/resumes.service.js';
 
 const router = express.Router();
 
-// Configure multer for file uploads
-const upload = multer({ dest: UPLOAD_DIR });
+const GENERIC_FILE_MIME_TYPES = new Set(['', 'application/octet-stream']);
+const RESUME_ALLOWED_EXTENSIONS = new Set(['.pdf', '.doc', '.docx']);
+const RESUME_ALLOWED_MIME_TYPES = new Set([
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+]);
+const PDF_ALLOWED_EXTENSIONS = new Set(['.pdf']);
+const PDF_ALLOWED_MIME_TYPES = new Set(['application/pdf']);
+const DOC_ALLOWED_EXTENSIONS = new Set(['.doc']);
+const DOC_ALLOWED_MIME_TYPES = new Set(['application/msword']);
+const MAX_PDF_EXTRACTION_PAGES = 50;
+const MAX_SCANNED_OCR_PAGES = 10;
+const MAX_OCR_RENDER_PIXELS = 20_000_000;
+
+function createDiskUpload(allowedExtensions, allowedMimeTypes) {
+    return multer({
+        dest: UPLOAD_DIR,
+        limits: {
+            fileSize: MAX_FILE_SIZE,
+            files: 1
+        },
+        fileFilter: (_req, file, cb) => {
+            const extension = path.extname(file.originalname || '').toLowerCase();
+            const mimeType = (file.mimetype || '').toLowerCase();
+            const extensionAllowed = allowedExtensions.has(extension);
+            const mimeAllowed = allowedMimeTypes.has(mimeType) || GENERIC_FILE_MIME_TYPES.has(mimeType);
+
+            if (extensionAllowed && mimeAllowed) {
+                cb(null, true);
+                return;
+            }
+
+            cb(new Error(`Invalid file type. Allowed extensions: ${Array.from(allowedExtensions).join(', ')}`));
+        }
+    });
+}
+
+function handleSingleFileUpload(singleUpload) {
+    return (req, res, next) => {
+        singleUpload(req, res, (error) => {
+            if (!error) {
+                next();
+                return;
+            }
+
+            if (error instanceof multer.MulterError) {
+                if (error.code === 'LIMIT_FILE_SIZE') {
+                    res.status(413).json({ error: `File too large. Maximum allowed size is ${Math.round(MAX_FILE_SIZE / (1024 * 1024))}MB.` });
+                    return;
+                }
+
+                res.status(400).json({ error: error.message || 'Invalid upload request' });
+                return;
+            }
+
+            res.status(400).json({ error: error.message || 'Invalid file upload' });
+        });
+    };
+}
+
+async function cleanupTempFile(filePath) {
+    if (!filePath) {
+        return;
+    }
+
+    await fs.unlink(filePath).catch(() => {});
+}
+
+const resumeUpload = createDiskUpload(RESUME_ALLOWED_EXTENSIONS, RESUME_ALLOWED_MIME_TYPES);
+const pdfExtractionUpload = createDiskUpload(PDF_ALLOWED_EXTENSIONS, PDF_ALLOWED_MIME_TYPES);
+const docExtractionUpload = createDiskUpload(DOC_ALLOWED_EXTENSIONS, DOC_ALLOWED_MIME_TYPES);
+
+const uploadResumeFile = handleSingleFileUpload(resumeUpload.single('file'));
+const uploadPdfFile = handleSingleFileUpload(pdfExtractionUpload.single('file'));
+const uploadDocFile = handleSingleFileUpload(docExtractionUpload.single('file'));
 
 // POST /api/resumes/extract-doc - Extract text from DOC file (Word 97-2003)
 // This endpoint is needed because word-extractor is a Node.js library that doesn't work in browsers
-router.post('/extract-doc', authenticateToken, upload.single('file'), async (req, res) => {
+router.post('/extract-doc', authenticateToken, uploadLimiter, uploadDocFile, async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'No file uploaded' });
         }
 
         const fileBuffer = await fs.readFile(req.file.path);
-        
+
         // Dynamic import of word-extractor
         let text = '';
         try {
@@ -35,43 +111,39 @@ router.post('/extract-doc', authenticateToken, upload.single('file'), async (req
             const extractor = new WordExtractor();
             const extracted = await extractor.extract(fileBuffer);
             text = extracted.getBody().trim();
-            safeLog('info', 'Successfully extracted text from DOC file', { 
+            safeLog('info', 'Successfully extracted text from DOC file', {
                 fileName: req.file.originalname,
-                textLength: text.length 
+                textLength: text.length
             });
         } catch (extractError) {
             safeLog('error', 'word-extractor failed', { error: extractError.message });
-            
+
             // Fallback: try mammoth (limited support for .doc)
             try {
                 const mammoth = (await import('mammoth')).default;
                 const result = await mammoth.extractRawText({ buffer: fileBuffer });
                 text = result.value.trim();
-                safeLog('info', 'Extracted text from DOC using mammoth fallback', { 
+                safeLog('info', 'Extracted text from DOC using mammoth fallback', {
                     fileName: req.file.originalname,
-                    textLength: text.length 
+                    textLength: text.length
                 });
             } catch (mammothError) {
                 safeLog('error', 'mammoth fallback also failed', { error: mammothError.message });
-                throw new Error(`Failed to extract text from DOC file. The file may be corrupted or in an unsupported format.`);
+                throw new Error('Failed to extract text from DOC file. The file may be corrupted or in an unsupported format.');
             }
         }
 
-        // Clean up temp file
-        await fs.unlink(req.file.path).catch(() => {});
+        await cleanupTempFile(req.file.path);
 
         if (!text || text.length < 10) {
-            return res.status(400).json({ 
-                error: 'Could not extract meaningful text from the DOC file. The file may be empty or corrupted.' 
+            return res.status(400).json({
+                error: 'Could not extract meaningful text from the DOC file. The file may be empty or corrupted.'
             });
         }
 
         res.json({ text });
     } catch (error) {
-        // Clean up temp file on error
-        if (req.file?.path) {
-            await fs.unlink(req.file.path).catch(() => {});
-        }
+        await cleanupTempFile(req.file?.path);
         safeLog('error', 'Error extracting text from DOC', { error: error.message });
         res.status(500).json({ error: error.message || 'Failed to extract text from DOC file' });
     }
@@ -80,7 +152,9 @@ router.post('/extract-doc', authenticateToken, upload.single('file'), async (req
 // POST /api/resumes/extract-pdf - Extract text from PDF file (server-side)
 // This endpoint enables CSP-compliant PDF extraction without 'unsafe-eval'
 // Includes OCR support for scanned PDFs using Tesseract.js
-router.post('/extract-pdf', authenticateToken, upload.single('file'), async (req, res) => {
+router.post('/extract-pdf', authenticateToken, uploadLimiter, uploadPdfFile, async (req, res) => {
+    let tesseractWorker = null;
+
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'No file uploaded' });
@@ -88,86 +162,89 @@ router.post('/extract-pdf', authenticateToken, upload.single('file'), async (req
 
         const fileBuffer = await fs.readFile(req.file.path);
         const startTime = Date.now();
-        
-        safeLog('info', 'Starting server-side PDF extraction', { 
+
+        safeLog('info', 'Starting server-side PDF extraction', {
             fileName: req.file.originalname,
-            fileSize: fileBuffer.length 
+            fileSize: fileBuffer.length
         });
 
-        // Use pdfjs-dist/legacy for Node.js compatibility
         const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
         const uint8Array = new Uint8Array(fileBuffer);
-        
+
         const loadingTask = pdfjsLib.getDocument({ data: uint8Array });
         const pdf = await loadingTask.promise;
-        
+
+        if (pdf.numPages > MAX_PDF_EXTRACTION_PAGES) {
+            return res.status(400).json({
+                error: `PDF too large to extract safely. Maximum supported page count is ${MAX_PDF_EXTRACTION_PAGES}.`
+            });
+        }
+
         let fullText = '';
         const numPages = pdf.numPages;
         let ocrUsed = false;
         let ocrPageCount = 0;
         let totalOcrConfidence = 0;
-        
-        // Lazy load Tesseract only if needed
-        let tesseractWorker = null;
-        
-        // Extract text from each page with structure preservation
+
         for (let pageNum = 1; pageNum <= numPages; pageNum++) {
             const page = await pdf.getPage(pageNum);
             const textContent = await page.getTextContent();
-            
-            // Check if page appears to be scanned (very little text)
+
             const totalTextLength = textContent.items.reduce((sum, item) => sum + (item.str || '').length, 0);
             const isScannedPage = totalTextLength < 50 || textContent.items.length < 5;
-            
+
             if (isScannedPage) {
-                // Use OCR for scanned pages
+                if (ocrPageCount >= MAX_SCANNED_OCR_PAGES) {
+                    return res.status(400).json({
+                        error: `PDF contains too many scanned pages for OCR extraction. Maximum supported scanned pages is ${MAX_SCANNED_OCR_PAGES}.`
+                    });
+                }
+
                 safeLog('info', `Page ${pageNum} appears to be scanned (${totalTextLength} chars), using OCR...`, {
                     fileName: req.file.originalname
                 });
-                
+
                 try {
-                    // Initialize Tesseract worker on first scanned page
                     if (!tesseractWorker) {
                         const Tesseract = await import('tesseract.js');
                         tesseractWorker = await Tesseract.createWorker('fra+eng', 1, {
-                            logger: (m) => {
-                                if (m.status === 'recognizing text') {
-                                    safeLog('debug', `OCR progress page ${pageNum}: ${(m.progress * 100).toFixed(0)}%`);
+                            logger: (message) => {
+                                if (message.status === 'recognizing text') {
+                                    safeLog('debug', `OCR progress page ${pageNum}: ${(message.progress * 100).toFixed(0)}%`);
                                 }
                             }
                         });
                     }
-                    
-                    // Render page to canvas/image for OCR
-                    const scale = 2.0; // Higher scale = better OCR quality
+
+                    const scale = 2.0;
                     const viewport = page.getViewport({ scale });
-                    
-                    // Create a canvas using node-canvas or similar
+                    if ((viewport.width * viewport.height) > MAX_OCR_RENDER_PIXELS) {
+                        throw new Error('Page is too large for OCR rendering');
+                    }
+
                     const { createCanvas } = await import('canvas');
                     const canvas = createCanvas(viewport.width, viewport.height);
                     const context = canvas.getContext('2d');
-                    
+
                     await page.render({
                         canvasContext: context,
-                        viewport: viewport
+                        viewport
                     }).promise;
-                    
-                    // Convert canvas to PNG buffer for Tesseract
+
                     const imageBuffer = canvas.toBuffer('image/png');
-                    
-                    // Perform OCR
                     const { data: { text: ocrText, confidence } } = await tesseractWorker.recognize(imageBuffer);
-                    
+
                     if (ocrText && ocrText.trim().length > 20) {
                         fullText += ocrText.trim() + '\n\n';
                         ocrUsed = true;
                         ocrPageCount++;
                         totalOcrConfidence += confidence;
-                        safeLog('info', `OCR completed for page ${pageNum}`, { 
+                        safeLog('info', `OCR completed for page ${pageNum}`, {
                             confidence: confidence.toFixed(2),
                             textLength: ocrText.trim().length
                         });
                     } else {
+                        ocrPageCount++;
                         safeLog('warn', `OCR returned insufficient text for page ${pageNum}`, {
                             confidence: confidence?.toFixed(2) || 'N/A',
                             textLength: ocrText?.trim().length || 0
@@ -175,63 +252,60 @@ router.post('/extract-pdf', authenticateToken, upload.single('file'), async (req
                         fullText += `[Page ${pageNum}: OCR failed - insufficient text extracted]\n\n`;
                     }
                 } catch (ocrError) {
+                    ocrPageCount++;
                     safeLog('error', `OCR failed for page ${pageNum}`, { error: ocrError.message });
                     fullText += `[Page ${pageNum}: OCR error - ${ocrError.message}]\n\n`;
                 }
                 continue;
             }
-            
-            // Group text items by vertical position to preserve lines
+
             const lines = [];
             let currentLine = [];
             let lastY = null;
             const Y_THRESHOLD = 5;
-            
+
             for (const item of textContent.items) {
                 const y = item.transform ? item.transform[5] : 0;
-                
+
                 if (lastY !== null && Math.abs(y - lastY) > Y_THRESHOLD) {
                     if (currentLine.length > 0) {
                         lines.push(currentLine);
                         currentLine = [];
                     }
                 }
-                
+
                 if (item.str && item.str.trim()) {
                     currentLine.push(item.str);
                 }
                 lastY = y;
             }
-            
+
             if (currentLine.length > 0) {
                 lines.push(currentLine);
             }
-            
+
             const pageText = lines
-                .map(line => line.join(' '))
+                .map((line) => line.join(' '))
                 .join('\n');
-            
+
             fullText += pageText + '\n\n';
         }
-        
-        // Cleanup Tesseract worker if used
+
         if (tesseractWorker) {
             await tesseractWorker.terminate();
         }
-        
-        // Clean up excessive whitespace
+
         fullText = fullText
             .replace(/[ \t]+/g, ' ')
             .replace(/\n{3,}/g, '\n\n')
             .trim();
-        
-        // Clean up temp file
-        await fs.unlink(req.file.path).catch(() => {});
-        
+
+        await cleanupTempFile(req.file.path);
+
         const extractionTime = Date.now() - startTime;
         const avgOcrConfidence = ocrPageCount > 0 ? (totalOcrConfidence / ocrPageCount).toFixed(2) : null;
-        
-        safeLog('info', 'PDF extraction completed', { 
+
+        safeLog('info', 'PDF extraction completed', {
             fileName: req.file.originalname,
             textLength: fullText.length,
             pages: numPages,
@@ -242,13 +316,13 @@ router.post('/extract-pdf', authenticateToken, upload.single('file'), async (req
         });
 
         if (!fullText || fullText.length < 10) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 error: 'Could not extract meaningful text from the PDF file. The file may be empty, corrupted, or entirely scanned.',
                 ocrRequired: ocrUsed
             });
         }
 
-        res.json({ 
+        res.json({
             text: fullText,
             pages: numPages,
             ocrUsed,
@@ -257,17 +331,17 @@ router.post('/extract-pdf', authenticateToken, upload.single('file'), async (req
             extractionTimeMs: extractionTime
         });
     } catch (error) {
-        // Clean up temp file on error
-        if (req.file?.path) {
-            await fs.unlink(req.file.path).catch(() => {});
+        if (tesseractWorker) {
+            await tesseractWorker.terminate().catch(() => {});
         }
+        await cleanupTempFile(req.file?.path);
         safeLog('error', 'Error extracting text from PDF', { error: error.message });
         res.status(500).json({ error: error.message || 'Failed to extract text from PDF file' });
     }
 });
 
 // POST /api/resumes/upload - Upload resume file
-router.post('/upload', authenticateToken, upload.single('file'), async (req, res) => {
+router.post('/upload', authenticateToken, uploadLimiter, uploadResumeFile, async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'No file uploaded' });
@@ -276,45 +350,39 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
         const isAdmin = req.user?.role === 'admin';
         const { name, title, profile_type, candidate_name, candidate_email, firm_id: requestedFirmId } = req.body;
 
-        // Read file content from temp location
         const fileBuffer = await fs.readFile(req.file.path);
 
-        // Get firm_id - use only UUID, no name lookup
         let firmId = await getUserFirmId(req);
         let firmName = null;
-        
-        // If admin sends a firm_id, use it instead
+
         if (isAdmin && requestedFirmId && isValidUUID(requestedFirmId)) {
             const firm = await getFirmById(requestedFirmId);
             if (firm) {
                 firmId = firm.id;
                 firmName = firm.name;
-                safeLog('info', 'Admin uploading resume for another firm', { 
-                    adminId: req.user?.id, 
-                    targetFirmId: firmId, 
-                    targetFirmName: firmName 
+                safeLog('info', 'Admin uploading resume for another firm', {
+                    adminId: req.user?.id,
+                    targetFirmId: firmId,
+                    targetFirmName: firmName
                 });
             }
         } else if (firmId) {
-            // Get firm name from firm_id
             const firm = await getFirmById(firmId);
             if (firm) {
                 firmName = firm.name;
             }
         }
 
-        // GDPR consent fields
         const profileType = profile_type || 'external';
         const consentStatus = profileType === 'employee' ? 'not_required' : 'pending_consent';
         const consentToken = profileType === 'external' ? crypto.randomBytes(32).toString('hex') : null;
-        const tokenExpiresAt = profileType === 'external' 
-            ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 days
+        const tokenExpiresAt = profileType === 'external'
+            ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
             : null;
         const retentionUntil = profileType === 'employee'
-            ? null // No retention limit for employees
-            : new Date(Date.now() + 2 * 365 * 24 * 60 * 60 * 1000); // 2 years for external
+            ? null
+            : new Date(Date.now() + 2 * 365 * 24 * 60 * 60 * 1000);
 
-        // Insert resume with file data and GDPR fields
         const newResume = await resumesService.insertResume({
             name: name || req.file.originalname,
             title: title || '',
@@ -336,37 +404,33 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
             retentionUntil
         });
 
-        // Update the resume_file_url with the correct ID
         await resumesService.updateResumeFileUrl(newResume.id, `/api/resumes/${newResume.id}/download`);
         newResume.resume_file_url = `/api/resumes/${newResume.id}/download`;
 
-        // Delete temp file from uploads directory
         try {
             await fs.unlink(req.file.path);
         } catch (unlinkError) {
             safeLog('warn', 'Failed to delete temp file', { path: req.file.path, error: unlinkError.message });
         }
 
-        // Send GDPR consent email automatically for external candidates
         if (profileType === 'external' && candidate_email && firmId) {
-            safeLog('info', 'Attempting to send GDPR consent email', { 
-                resumeId: newResume.id, 
+            safeLog('info', 'Attempting to send GDPR consent email', {
+                resumeId: newResume.id,
                 email: candidate_email,
-                firmId 
+                firmId
             });
             try {
                 const { sendConsentRequest } = await import('../../services/consent.service.js');
                 await sendConsentRequest(newResume.id);
                 safeLog('info', 'GDPR consent email sent automatically', { resumeId: newResume.id, email: candidate_email });
             } catch (emailError) {
-                safeLog('error', 'Failed to send GDPR consent email', { 
-                    resumeId: newResume.id, 
+                safeLog('error', 'Failed to send GDPR consent email', {
+                    resumeId: newResume.id,
                     email: candidate_email,
                     firmId,
                     error: emailError.message,
                     stack: emailError.stack
                 });
-                // Update consent_status to 'error' to indicate email sending failed
                 try {
                     await resumesService.updateConsentStatus(newResume.id, 'error');
                     newResume.consent_status = 'error';
@@ -376,10 +440,10 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
                 }
             }
         } else {
-            safeLog('debug', 'GDPR email not sent', { 
-                profileType, 
-                hasEmail: !!candidate_email, 
-                hasFirmId: !!firmId 
+            safeLog('debug', 'GDPR email not sent', {
+                profileType,
+                hasEmail: !!candidate_email,
+                hasFirmId: !!firmId
             });
         }
 
@@ -405,19 +469,10 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
         });
     } catch (error) {
         safeLog('error', 'Error uploading resume', { error: error.message });
-        // Clean up temp file on error
-        if (req.file?.path) {
-            try {
-                await fs.unlink(req.file.path);
-            } catch (unlinkError) {
-                safeLog('debug', 'Failed to delete temp file during error cleanup', { 
-                    path: req.file.path, 
-                    error: unlinkError.message 
-                });
-            }
-        }
+        await cleanupTempFile(req.file?.path);
         res.status(500).json({ error: 'Failed to upload resume' });
     }
 });
 
 export default router;
+

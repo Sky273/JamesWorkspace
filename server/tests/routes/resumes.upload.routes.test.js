@@ -7,7 +7,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import express from 'express';
 import request from 'supertest';
 
-// Mock resumes service
+const { multerCallOptions } = vi.hoisted(() => ({ multerCallOptions: [] }));
+
 const mockInsertResume = vi.fn();
 const mockUpdateResumeFileUrl = vi.fn();
 const mockUpdateConsentStatus = vi.fn();
@@ -17,12 +18,11 @@ vi.mock('../../services/resumes.service.js', () => ({
     updateConsentStatus: (...args) => mockUpdateConsentStatus(...args)
 }));
 
-// Mock constants
 vi.mock('../../config/constants.js', () => ({
-    UPLOAD_DIR: '/tmp/uploads'
+    UPLOAD_DIR: '/tmp/uploads',
+    MAX_FILE_SIZE: 50 * 1024 * 1024
 }));
 
-// Mock fs/promises
 const mockReadFile = vi.fn();
 const mockUnlink = vi.fn();
 vi.mock('fs/promises', () => ({
@@ -34,7 +34,6 @@ vi.mock('fs/promises', () => ({
     unlink: (...args) => mockUnlink(...args)
 }));
 
-// Mock firmHelpers
 const mockGetUserFirmId = vi.fn();
 const mockIsValidUUID = vi.fn();
 const mockGetFirmById = vi.fn();
@@ -44,42 +43,70 @@ vi.mock('../../utils/firmHelpers.js', () => ({
     getFirmById: (...args) => mockGetFirmById(...args)
 }));
 
-// Mock logger
 vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));
 
-// Mock multer - also populate req.body from x-test-body header for multipart simulation
+const mockUploadLimiter = vi.fn((req, _res, next) => next());
+vi.mock('../../middleware/rateLimit.middleware.js', () => ({
+    uploadLimiter: (...args) => mockUploadLimiter(...args)
+}));
+
 vi.mock('multer', () => {
-    const multerMock = () => ({
-        single: () => (req, res, next) => {
-            if (req.headers['x-test-no-file'] === 'true') {
-                req.file = null;
-            } else {
-                req.file = {
-                    path: '/tmp/uploads/test-file',
-                    originalname: 'resume.pdf',
-                    size: 1024,
-                    mimetype: 'application/pdf'
-                };
-            }
-            // Simulate multer populating req.body from form fields
-            if (req.headers['x-test-body']) {
-                try { req.body = JSON.parse(req.headers['x-test-body']); } catch {}
-            }
-            next();
+    class MulterError extends Error {
+        constructor(code, field) {
+            super(code);
+            this.code = code;
+            this.field = field;
+            this.name = 'MulterError';
         }
+    }
+
+    const multerMock = vi.fn((options = {}) => {
+        multerCallOptions.push(options);
+        return {
+            single: () => (req, _res, next) => {
+                if (req.headers['x-test-oversized'] === 'true') {
+                    next(new MulterError('LIMIT_FILE_SIZE', 'file'));
+                    return;
+                }
+
+                if (req.headers['x-test-invalid-filetype'] === 'true' && typeof options.fileFilter === 'function') {
+                    options.fileFilter(req, {
+                        originalname: 'resume.exe',
+                        mimetype: 'application/x-msdownload'
+                    }, (error) => next(error || undefined));
+                    return;
+                }
+
+                if (req.headers['x-test-no-file'] === 'true') {
+                    req.file = null;
+                } else {
+                    req.file = {
+                        path: '/tmp/uploads/test-file',
+                        originalname: req.headers['x-test-filename'] || 'resume.pdf',
+                        size: 1024,
+                        mimetype: req.headers['x-test-mimetype'] || 'application/pdf'
+                    };
+                }
+
+                if (req.headers['x-test-body']) {
+                    try { req.body = JSON.parse(req.headers['x-test-body']); } catch {}
+                }
+                next();
+            }
+        };
     });
+
     multerMock.memoryStorage = () => ({});
+    multerMock.MulterError = MulterError;
     return { default: multerMock };
 });
 
-// Mock consent service (dynamic import in route)
 vi.mock('../../services/consent.service.js', () => ({
     sendConsentRequest: vi.fn().mockResolvedValue()
 }));
 
-// Mock auth middleware
 vi.mock('../../middleware/auth.middleware.js', () => ({
     authenticateToken: (req, res, next) => {
         if (req.headers.authorization === 'Bearer valid-token') {
@@ -118,9 +145,12 @@ describe('Resume Upload Routes', () => {
         mockIsValidUUID.mockReturnValue(true);
     });
 
-    // ==========================================
-    // POST /extract-doc
-    // ==========================================
+    it('configures multer with a 50MB file size limit', () => {
+        expect(multerCallOptions).toHaveLength(3);
+        expect(multerCallOptions.every((options) => options.limits?.fileSize === 50 * 1024 * 1024)).toBe(true);
+        expect(multerCallOptions.every((options) => options.limits?.files === 1)).toBe(true);
+    });
+
     describe('POST /extract-doc', () => {
         it('should return 401 without auth', async () => {
             const res = await request(app).post('/api/resumes/extract-doc');
@@ -136,9 +166,6 @@ describe('Resume Upload Routes', () => {
         });
     });
 
-    // ==========================================
-    // POST /extract-pdf
-    // ==========================================
     describe('POST /extract-pdf', () => {
         it('should return 401 without auth', async () => {
             const res = await request(app).post('/api/resumes/extract-pdf');
@@ -152,11 +179,17 @@ describe('Resume Upload Routes', () => {
             expect(res.status).toBe(400);
             expect(res.body.error).toContain('No file');
         });
+
+        it('should reject invalid file types before extraction', async () => {
+            const res = await request(app)
+                .post('/api/resumes/extract-pdf')
+                .set({ ...AUTH, 'x-test-invalid-filetype': 'true' });
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toContain('Invalid file type');
+        });
     });
 
-    // ==========================================
-    // POST /upload
-    // ==========================================
     describe('POST /upload', () => {
         it('should return 401 without auth', async () => {
             const res = await request(app).post('/api/resumes/upload');
@@ -171,10 +204,28 @@ describe('Resume Upload Routes', () => {
             expect(res.body.error).toContain('No file');
         });
 
+        it('should reject oversized files with 413', async () => {
+            const res = await request(app)
+                .post('/api/resumes/upload')
+                .set({ ...AUTH, 'x-test-oversized': 'true' });
+
+            expect(res.status).toBe(413);
+            expect(res.body.error).toContain('50MB');
+        });
+
+        it('should reject unsupported file types', async () => {
+            const res = await request(app)
+                .post('/api/resumes/upload')
+                .set({ ...AUTH, 'x-test-invalid-filetype': 'true' });
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toContain('Invalid file type');
+        });
+
         it('should upload resume successfully', async () => {
             const fileBuffer = Buffer.from('fake pdf content');
             mockReadFile.mockResolvedValue(fileBuffer);
-            
+
             mockInsertResume.mockResolvedValueOnce({
                 id: 'r-1',
                 name: 'resume.pdf',
@@ -199,6 +250,10 @@ describe('Resume Upload Routes', () => {
             expect(res.status).toBe(201);
             expect(res.body.id).toBe('r-1');
             expect(res.body.Status).toBe('Active');
+            expect(mockInsertResume).toHaveBeenCalledWith(expect.objectContaining({
+                fileBuffer,
+                fileSize: 1024
+            }));
         });
 
         it('should handle employee profile type', async () => {
@@ -243,3 +298,7 @@ describe('Resume Upload Routes', () => {
         });
     });
 });
+
+
+
+
