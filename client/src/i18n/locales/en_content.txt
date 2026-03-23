@@ -1,4 +1,4 @@
-﻿{
+{
   "userProfile": {
     "anonymous": "User",
     "noCompany": "No Company",
@@ -661,7 +661,35 @@
     "activeEndpoints": "Active endpoints",
     "route": "Route",
     "calls": "Calls",
-    "model": "Model"
+    "model": "Model",
+    "operationsUploadsTitle": "Uploads and binary storage",
+    "operationsUploadsSubtitle": "Files received, stored and kept in the database",
+    "successFailures": "Success / failures",
+    "receivedStoredDb": "Received / stored in DB",
+    "binaryResumes": "Binary resumes",
+    "binaryStorage": "Binary storage",
+    "averagePerResume": "Average per resume",
+    "batchFileData": "Batch file_data",
+    "operationsOcrTitle": "OCR and cleanup",
+    "operationsOcrSubtitle": "Scanned PDF extraction, temporary files and batch exports",
+    "ocrSuccessFailures": "OCR success / failures",
+    "ocrPagesFailures": "OCR pages / failures",
+    "averageConfidence": "Average confidence",
+    "cumulativeOcrTime": "Cumulative OCR time",
+    "cleanupRuns": "Cleanup runs",
+    "filesDirsDeleted": "Files / directories deleted",
+    "orphanBatchExports": "Orphan batch exports",
+    "staleBatchRefs": "Cleared batch references",
+    "tempStorageSummary": "Temp",
+    "batchExportsSummary": "Batch exports",
+    "filesUnit": "files",
+    "resumeBinaryStorageCsv": "Resume Binary Storage",
+    "batchFileDataStorageCsv": "Batch File Data Storage",
+    "uploadFilesTotalCsv": "Upload Files Total",
+    "ocrRunsCsv": "OCR Runs",
+    "cleanupRunsCsv": "Cleanup Runs",
+    "operationsUnavailable": "Operational metrics unavailable",
+    "operationsHint": "Deploy the backend exposing /api/metrics/operations to enable uploads, OCR, storage and cleanup metrics"
   },
   "security": {
     "title": "Security Logs",
@@ -1467,4 +1495,3 @@
     }
   }
 }
-

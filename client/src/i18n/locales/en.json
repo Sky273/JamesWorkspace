@@ -1,4 +1,4 @@
-﻿{
+{
   "userProfile": {
     "anonymous": "User",
     "noCompany": "No Company",
@@ -783,7 +783,6 @@
     "activeEndpoints": "Active endpoints",
     "route": "Route",
     "calls": "Calls",
-    
     "model": "Model",
     "operationsUploadsTitle": "Uploads and binary storage",
     "operationsUploadsSubtitle": "Files received, stored and kept in the database",
@@ -847,8 +846,8 @@
       "duration": "Duration"
     },
     "badges": {
-      "security": "ðŸ”’ Security",
-      "proxy": "ðŸŒ Proxy"
+      "security": "🔒 Security",
+      "proxy": "🌐 Proxy"
     },
     "noLogs": "No security logs found",
     "logs": "[FR] Logs"
@@ -1005,11 +1004,7 @@
       "cvModeNominative": "Nominative (personal information included)",
       "cvModeAnonymous": "Anonymous (trigram only)",
       "cvModeNominativeDescription": "The improved CV will contain all personal information of the candidate (full name, contact details, etc.).",
-      "cvModeAnonymousDescription": "The improved CV will be anonymized: only the candidate's trigram will be displayed, without identifying personal information.",
-      "webglEnabled": "WebGL animation on home page",
-      "webglEnabledDescription": "Enable or disable the 3D background animation on the home page. Disabling may improve performance on less powerful devices.",
-      "obsoleteModel": "obsolete",
-      "obsoleteModelWarning": "This model is no longer available in the list. Please select a valid model and save."
+      "cvModeAnonymousDescription": "The improved CV will be anonymized: only the candidate's trigram will be displayed, without identifying personal information."
     },
     "prompts": {
       "title": "Prompts Configuration",
@@ -1230,7 +1225,7 @@
     "clearChat": "Clear conversation",
     "resetSize": "Reset size",
     "needHelp": "Need help?",
-    "welcomeMessage": "ðŸ‘‹ **Hello!** I'm your AI assistant.\n\nI can help you with:\n- ðŸ“„ **Managing the resume library** (import, analysis, improvement)\n- ðŸŽ¯ **Creating missions** and adapting profiles\n- âš™ï¸ **Using the features** of the application\n- â“ **Answering your questions**\n\nHow can I help you?",
+    "welcomeMessage": "👋 **Hello!** I'm your AI assistant.\n\nI can help you with:\n- 📄 **Managing the resume library** (import, analysis, improvement)\n- 🎯 **Creating missions** and adapting profiles\n- ⚙️ **Using the features** of the application\n- ❓ **Answering your questions**\n\nHow can I help you?",
     "errorMessage": "Sorry, I couldn't process your request. Please try again."
   },
   "userGuide": {
@@ -1426,13 +1421,25 @@
     "viewAnalysis": "View analysis",
     "analyzing": "Analyzing...",
     "analysisComplete": "Detailed analysis complete",
-    "searchingProfiles": "Searching profilesâ€¦",
+    "searchingProfiles": "Searching profiles…",
     "searchingProfilesDescription": "AI is analyzing CVs in your database to find the best profiles for this mission.",
-    "searchingLoadingSteps": ["Extracting mission keywordsâ€¦", "Analyzing required skillsâ€¦", "Scanning the CV databaseâ€¦", "Intelligent AI scoringâ€¦", "Comparing profilesâ€¦", "Ranking the best matchesâ€¦"],
+    "searchingLoadingSteps": [
+      "Extracting mission keywords…",
+      "Analyzing required skills…",
+      "Scanning the CV database…",
+      "Intelligent AI scoring…",
+      "Comparing profiles…",
+      "Ranking the best matches…"
+    ],
     "searchingEstimatedTime": "This may take 1 to 5 minutes depending on the number of CVs",
-    "analyzingProfile": "Analyzing profileâ€¦",
+    "analyzingProfile": "Analyzing profile…",
     "analyzingProfileDescription": "AI is generating a detailed analysis of the match between this profile and the mission.",
-    "analyzingLoadingSteps": ["Deep reading the CVâ€¦", "Comparing with requirementsâ€¦", "Evaluating key skillsâ€¦", "Writing the AI summaryâ€¦"],
+    "analyzingLoadingSteps": [
+      "Deep reading the CV…",
+      "Comparing with requirements…",
+      "Evaluating key skills…",
+      "Writing the AI summary…"
+    ],
     "titleAdjustment": "Title adjustment",
     "llmScored": "AI Score",
     "confidence": {
@@ -1672,7 +1679,6 @@
     "defaultTemplate": "Default template",
     "duplicate": "Duplicate",
     "confirmDelete": "Are you sure you want to delete this template?",
-    "confirmDeleteDefault": "âš ï¸ This is the default template. Deleting it will affect email sending. Are you sure you want to continue?",
     "setAsDefault": "Set as default template",
     "preview": "Preview",
     "desktopView": "Desktop view",
@@ -2180,7 +2186,7 @@
     "dropHere": "Drop files here...",
     "loadingFiles": "Loading files...",
     "dragDrop": "Drag and drop your CVs here, or click to select",
-    "fileTypes": "PDF, DOC, DOCX â€¢ Max 50MB per file",
+    "fileTypes": "PDF, DOC, DOCX • Max 50MB per file",
     "nominativeRecommendation": "For better name extraction, use files named with the candidate's name (e.g., John_Doe_CV.pdf)",
     "filesCount": "Files",
     "retryAll": "Retry errors",
@@ -2265,11 +2271,9 @@
     "adaptations": "adaptation",
     "noTemplates": "No templates available. Create a template in the Templates section.",
     "errorLoadingTemplates": "Error loading templates",
-    "summary": "{{total}} items Ã— {{formats}} format(s)",
+    "summary": "{{total}} items × {{formats}} format(s)",
     "launch": "Start export",
     "creating": "Creating...",
     "jobCreated": "Export started! {{total}} items to process."
   }
 }
-
-

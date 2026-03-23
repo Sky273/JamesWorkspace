@@ -390,7 +390,7 @@ const MetricsPage = (): JSX.Element => {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
     
-    toast.success(t('metrics.exportSuccess', `MÃ©triques exportÃ©es (${format.toUpperCase()})`));
+    toast.success(t('metrics.exportSuccess', `Métriques exportées (${format.toUpperCase()})`));
   };
 
   useEffect(() => {
@@ -512,7 +512,7 @@ const MetricsPage = (): JSX.Element => {
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="rounded-xl border bg-orange-50 text-orange-600 border-orange-200 dark:bg-gray-800 dark:text-orange-400 dark:border-orange-700 p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <p className="text-sm font-medium opacity-80">{t('metrics.database', 'Base de donnÃ©es')}</p>
+                    <p className="text-sm font-medium opacity-80">{t('metrics.database', 'Base de données')}</p>
                     <p className="text-2xl font-bold mt-1">{dbMetrics.database?.sizePretty || 'N/A'}</p>
                     <p className="text-xs mt-1 opacity-60">{t('metrics.dbSize', 'Taille totale')}</p>
                   </div>
@@ -532,7 +532,7 @@ const MetricsPage = (): JSX.Element => {
                     <p className="font-semibold">{safeNumber(dbMetrics.connections?.idle)}</p>
                   </div>
                 </div>
-                <p className="text-xs opacity-60">{t('metrics.queryTime', 'Temps de requÃªte')}: {dbMetrics.queryTime || 'N/A'}</p>
+                <p className="text-xs opacity-60">{t('metrics.queryTime', 'Temps de requête')}: {dbMetrics.queryTime || 'N/A'}</p>
               </motion.div>
 
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }} className="rounded-xl border bg-orange-50 text-orange-600 border-orange-200 dark:bg-gray-800 dark:text-orange-400 dark:border-orange-700 p-6">
@@ -681,7 +681,7 @@ const MetricsPage = (): JSX.Element => {
                   <div>
                     <p className="text-sm font-medium opacity-80">{t('metrics.apm', 'Performance (APM)')}</p>
                     <p className="text-2xl font-bold mt-1">{safeNumber(apmMetrics?.summary?.totalTracked)}</p>
-                    <p className="text-xs mt-1 opacity-60">{t('metrics.slowRequests', 'RequÃªtes lentes')} ({t('metrics.last5min', '5 min')}: {safeNumber(apmMetrics?.summary?.last5min)})</p>
+                    <p className="text-xs mt-1 opacity-60">{t('metrics.slowRequests', 'Requêtes lentes')} ({t('metrics.last5min', '5 min')}: {safeNumber(apmMetrics?.summary?.last5min)})</p>
                   </div>
                   <BoltIcon className="w-10 h-10 opacity-50" />
                 </div>
@@ -692,7 +692,7 @@ const MetricsPage = (): JSX.Element => {
                     <p className="text-xs opacity-50">&gt; {apmMetrics?.config?.slowThreshold || 1000}ms</p>
                   </div>
                   <div className="bg-rose-100 dark:bg-rose-900/30 rounded-lg p-3">
-                    <p className="opacity-70 text-xs">{t('metrics.verySlow', 'TrÃ¨s lentes')}</p>
+                    <p className="opacity-70 text-xs">{t('metrics.verySlow', 'Très lentes')}</p>
                     <p className="font-semibold">{safeNumber(apmMetrics?.summary?.severityCounts?.very_slow)}</p>
                     <p className="text-xs opacity-50">&gt; {apmMetrics?.config?.verySlowThreshold || 5000}ms</p>
                   </div>
@@ -705,12 +705,12 @@ const MetricsPage = (): JSX.Element => {
                 {safeNumber(apmMetrics?.summary?.totalTracked) === 0 && (
                   <p className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
                     <span className="inline-block w-2 h-2 bg-green-500 rounded-full"></span>
-                    {t('metrics.noSlowRequests', 'Aucune requÃªte lente dÃ©tectÃ©e')}
+                    {t('metrics.noSlowRequests', 'Aucune requête lente détectée')}
                   </p>
                 )}
                 {safeNumber(apmMetrics?.summary?.avgDuration) > 0 && (
                   <p className="text-xs opacity-60 mt-2">
-                    {t('metrics.avgDuration', 'DurÃ©e moyenne')}: {safeNumber(apmMetrics?.summary?.avgDuration)}ms
+                    {t('metrics.avgDuration', 'Durée moyenne')}: {safeNumber(apmMetrics?.summary?.avgDuration)}ms
                   </p>
                 )}
               </motion.div>
@@ -748,7 +748,7 @@ const MetricsPage = (): JSX.Element => {
                     </table>
                   </div>
                 ) : (
-                  <p className="text-sm opacity-60 text-center py-4">{t('metrics.noData', 'Aucune donnÃ©e')}</p>
+                  <p className="text-sm opacity-60 text-center py-4">{t('metrics.noData', 'Aucune donnée')}</p>
                 )}
               </motion.div>
             </div>
@@ -864,6 +864,7 @@ const MetricsPage = (): JSX.Element => {
 };
 
 export default MetricsPage;
+
 
 
 
