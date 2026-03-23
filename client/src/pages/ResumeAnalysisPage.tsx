@@ -11,14 +11,16 @@ import { useTranslation } from 'react-i18next';
 import { ArrowRightIcon, ArrowLeftIcon, SparklesIcon, CheckCircleIcon, ShareIcon, ArrowDownTrayIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import Breadcrumbs from '../components/Breadcrumbs';
 import ShareQRCodeModal from '../components/ShareQRCodeModal';
-import { fetchWithAuth } from '../utils/apiInterceptor';
+import { fetchWithAuth, createAuthOptionsWithCsrf } from '../utils/apiInterceptor';
 import ConsentBadge, { ConsentStatus } from '../components/ConsentBadge';
 import { Resume } from '../types/entities';
 import { resumeService } from '../utils/resumeService';
+import { templateService } from '../utils/templateService';
 import toast from 'react-hot-toast';
 import logger from '../utils/logger.frontend';
 import { SkeletonCard } from '../components/ui/Skeleton';
 import ImprovementAnimation from '../components/ImprovementAnimation';
+import { removeSuggestionMarkers } from '../utils/tinymceSuggestionsPlugin';
 
 import OverviewTab from '../components/ResumeAnalysis/OverviewTab';
 import SkillsTagsTab from '../components/ResumeAnalysis/SkillsTagsTab';
@@ -41,6 +43,7 @@ const ResumeAnalysisPage = (): JSX.Element => {
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareUrl, setShareUrl] = useState<string>('');
   const [shareLoading, setShareLoading] = useState(false);
+  const hasImprovedText = !!currentResume?.['Improved Text'];
 
   useEffect(() => {
     const loadResume = async () => {
@@ -129,21 +132,77 @@ const ResumeAnalysisPage = (): JSX.Element => {
     }, 100);
   }, [currentResume, isImproving, improveCurrentResume, t, navigate, id]);
 
-  // Handle share original file
+  // Share improved PDF when available, otherwise share the original file
   const handleShare = useCallback(async () => {
-    if (!id) return;
+    if (!id || !currentResume) return;
     
     setShareLoading(true);
     setShowShareModal(true);
     
     try {
+      if (hasImprovedText) {
+        const templates = await templateService.getAllTemplates();
+        if (!templates || templates.length === 0) {
+          throw new Error('No templates available');
+        }
+
+        const template = templates[0];
+        const rawContent = currentResume['Improved Text'] || currentResume['Original Text'] || '';
+        const content = removeSuggestionMarkers(rawContent);
+        const candidateName = currentResume['Name'] || 'Candidat';
+        const candidateTitle = currentResume['Title'] || '';
+
+        let processedBody = template.TemplateContent || '';
+        processedBody = processedBody.replace(/-name-/g, candidateName);
+        processedBody = processedBody.replace(/-title-/g, candidateTitle);
+        processedBody = processedBody.replace(/-content-/g, content);
+
+        let processedHeader = template.HeaderContent || '';
+        if (processedHeader) {
+          processedHeader = processedHeader.replace(/-name-/g, candidateName);
+          processedHeader = processedHeader.replace(/-title-/g, candidateTitle);
+        }
+
+        let processedFooter = template.FooterContent || '';
+        if (processedFooter) {
+          processedFooter = processedFooter.replace(/-name-/g, candidateName);
+          processedFooter = processedFooter.replace(/-title-/g, candidateTitle);
+        }
+
+        const options = await createAuthOptionsWithCsrf({
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        const response = await fetchWithAuth(`/api/share/resume/${id}/generate`, {
+          ...options,
+          method: 'POST',
+          body: JSON.stringify({
+            htmlContent: processedBody,
+            filename: candidateName.replace(/\s+/g, '_'),
+            stylesheet: template.Stylesheet || '',
+            headerContent: processedHeader || undefined,
+            footerContent: processedFooter || undefined,
+            footerHeight: template.FooterHeight || 25
+          })
+        });
+
+        const data = await response.json();
+
+        if (data.success && data.token) {
+          setShareUrl(`${window.location.origin}/share/pdf/${data.token}`);
+          return;
+        }
+
+        toast.error(t('share.error', 'Failed to generate share link'));
+        setShowShareModal(false);
+        return;
+      }
+
       const response = await fetchWithAuth(`/api/share/resume/${id}/original`);
       const data = await response.json();
       
       if (data.success && data.token) {
-        // Build URL on frontend using current origin - use /share/file route
-        const shareUrl = `${window.location.origin}/share/file/${data.token}`;
-        setShareUrl(shareUrl);
+        setShareUrl(`${window.location.origin}/share/file/${data.token}`);
       } else {
         toast.error(t('share.error', 'Failed to generate share link'));
         setShowShareModal(false);
@@ -155,7 +214,7 @@ const ResumeAnalysisPage = (): JSX.Element => {
     } finally {
       setShareLoading(false);
     }
-  }, [id, t]);
+  }, [id, currentResume, hasImprovedText, t]);
 
   // Loading state
   if (loading) {
@@ -195,7 +254,6 @@ const ResumeAnalysisPage = (): JSX.Element => {
   }
 
   const resumeName = currentResume['Name'] || currentResume['File Name'] || 'CV';
-  const hasImprovedText = !!currentResume['Improved Text'];
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
@@ -435,10 +493,10 @@ const ResumeAnalysisPage = (): JSX.Element => {
         isOpen={showShareModal}
         onClose={() => setShowShareModal(false)}
         url={shareUrl}
-        title={t('share.originalFile', 'Original CV')}
+        title={hasImprovedText ? t('share.improvedCV', 'Improved CV') : t('share.originalFile', 'Original CV')}
         candidateName={currentResume['Name'] || 'CV'}
         isLoading={shareLoading}
-        warning={t('share.originalWarning', 'You are about to share the original version of this CV, not the improved version.')}
+        warning={hasImprovedText ? undefined : t('share.originalWarning', 'You are about to share the original version of this CV, not the improved version.')}
       />
     </div>
   );
