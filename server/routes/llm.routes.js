@@ -2,7 +2,7 @@ import express from 'express';
 import axios from 'axios';
 import { OPENAI_API_KEY, ANTHROPIC_API_KEY, MAX_PROMPT_LENGTH } from '../config/constants.js';
 import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
-import { userRateLimit } from '../middleware/rateLimit.middleware.js';
+import { llmLimiter, combinedRateLimit } from '../middleware/rateLimit.middleware.js';
 import { metrics } from '../services/metrics.service.js';
 import { securityLog, getRequestMetadata, LOG_LEVELS, SECURITY_EVENTS } from '../services/security.service.js';
 import { safeLog } from '../utils/logger.backend.js';
@@ -17,7 +17,7 @@ const router = express.Router();
 // ============================================
 
 // POST /api/llm/openai - OpenAI proxy
-router.post('/openai', authenticateToken, validateBody(openaiRequestSchema), userRateLimit(20, 60 * 60 * 1000), async (req, res) => {
+router.post('/openai', authenticateToken, llmLimiter, combinedRateLimit(30, 60 * 60 * 1000), validateBody(openaiRequestSchema), async (req, res) => {
     const metadata = getRequestMetadata(req);
 
     if (!OPENAI_API_KEY) {
@@ -219,7 +219,7 @@ router.post('/openai', authenticateToken, validateBody(openaiRequestSchema), use
 });
 
 // POST /api/llm/anthropic - Anthropic proxy
-router.post('/anthropic', authenticateToken, validateBody(anthropicRequestSchema), userRateLimit(20, 60 * 60 * 1000), async (req, res) => {
+router.post('/anthropic', authenticateToken, llmLimiter, combinedRateLimit(30, 60 * 60 * 1000), validateBody(anthropicRequestSchema), async (req, res) => {
     const metadata = getRequestMetadata(req);
     const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
     const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20241022';
@@ -294,7 +294,7 @@ router.post('/anthropic', authenticateToken, validateBody(anthropicRequestSchema
 });
 
 // POST /api/openai/chat/completions - OpenAI chat completions
-router.post('/chat/completions', authenticateToken, validateBody(openaiRequestSchema), userRateLimit(20, 60 * 60 * 1000), async (req, res) => {
+router.post('/chat/completions', authenticateToken, llmLimiter, combinedRateLimit(30, 60 * 60 * 1000), validateBody(openaiRequestSchema), async (req, res) => {
     const metadata = getRequestMetadata(req);
     const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
     const model = req.body.model || 'openai';
@@ -339,7 +339,7 @@ router.post('/chat/completions', authenticateToken, validateBody(openaiRequestSc
 });
 
 // POST /api/anthropic/messages - Anthropic messages
-router.post('/messages', authenticateToken, validateBody(anthropicRequestSchema), userRateLimit(20, 60 * 60 * 1000), async (req, res) => {
+router.post('/messages', authenticateToken, llmLimiter, combinedRateLimit(30, 60 * 60 * 1000), validateBody(anthropicRequestSchema), async (req, res) => {
     const metadata = getRequestMetadata(req);
     const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
     const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20241022';
@@ -396,3 +396,4 @@ router.get('/circuit-breakers', authenticateToken, requireAdmin, (req, res) => {
 });
 
 export default router;
+

@@ -259,7 +259,7 @@ router.post('/register', authLimiter, validateBody(registerSchema), async (req, 
 });
 
 // POST /api/auth/refresh - Refresh access token (with token rotation)
-router.post('/refresh', async (req, res) => {
+router.post('/refresh', authLimiter, async (req, res) => {
     try {
         const refreshToken = req.cookies.refreshToken;
 
@@ -348,3 +348,4 @@ router.get('/me', authenticateToken, async (req, res) => {
 });
 
 export default router;
+

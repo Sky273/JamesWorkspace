@@ -37,6 +37,7 @@ import { startServer } from './config/lifecycle.js';
 // Import middleware
 import metricsMiddleware from './middleware/metrics.middleware.js';
 import { apmMiddleware } from './middleware/apm.middleware.js';
+import { globalLimiter } from './middleware/rateLimit.middleware.js';
 import { metrics } from './services/metrics.service.js';
 
 const app = express();
@@ -124,6 +125,11 @@ configureCsrf(app);
 registerCacheControl(app);
 
 // ============================================
+// GLOBAL API RATE LIMITING
+// ============================================
+app.use('/api', globalLimiter);
+
+// ============================================
 // ROUTES
 // ============================================
 registerApiRoutes(app);
@@ -179,3 +185,8 @@ app.use((err, req, res, _next) => {
 startServer(app, __dirname);
 
 export default app;
+
+
+
+
+

@@ -8,6 +8,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import express from 'express';
 import request from 'supertest';
 
+const rateLimitMocks = vi.hoisted(() => {
+    const mockCombinedMiddleware = vi.fn((req, res, next) => next());
+    return {
+        mockLlmLimiter: vi.fn((req, res, next) => next()),
+        mockCombinedMiddleware,
+        mockCombinedRateLimit: vi.fn(() => mockCombinedMiddleware)
+    };
+});
+
 // Mock constants
 vi.mock('../../config/constants.js', () => ({
     OPENAI_API_KEY: 'test-openai-key',
@@ -63,7 +72,8 @@ vi.mock('../../utils/validation.js', () => ({
 
 // Mock rate limit
 vi.mock('../../middleware/rateLimit.middleware.js', () => ({
-    userRateLimit: () => (req, res, next) => next()
+    llmLimiter: (...args) => rateLimitMocks.mockLlmLimiter(...args),
+    combinedRateLimit: (...args) => rateLimitMocks.mockCombinedRateLimit(...args)
 }));
 
 // Mock auth middleware
@@ -102,6 +112,25 @@ describe('LLM Routes', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         app = createTestApp();
+    });
+
+    it('wires LLM-specific rate limiters on protected routes', async () => {
+        mockAxiosPost.mockResolvedValueOnce({
+            status: 200,
+            data: {
+                choices: [{ message: { content: 'Hi!' } }],
+                usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 }
+            }
+        });
+
+        const res = await request(app)
+            .post('/api/llm/openai')
+            .set(AUTH)
+            .send({ messages: [{ role: 'user', content: 'Hello' }] });
+
+        expect(res.status).toBe(200);
+        expect(rateLimitMocks.mockLlmLimiter).toHaveBeenCalled();
+        expect(rateLimitMocks.mockCombinedMiddleware).toHaveBeenCalled();
     });
 
     // ==========================================
@@ -314,3 +343,10 @@ describe('LLM Routes', () => {
         });
     });
 });
+
+
+
+
+
+
+

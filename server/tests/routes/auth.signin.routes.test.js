@@ -96,8 +96,9 @@ vi.mock('../../services/jwt.service.js', () => ({
 }));
 
 // Mock rate limiter
+const mockAuthLimiter = vi.fn((req, res, next) => next());
 vi.mock('../../middleware/rateLimit.middleware.js', () => ({
-    authLimiter: (req, res, next) => next()
+    authLimiter: (...args) => mockAuthLimiter(...args)
 }));
 
 // Mock auth middleware
@@ -389,6 +390,27 @@ describe('Auth Routes - POST /api/auth/refresh', () => {
         expect(res.body.error).toContain('inactive');
     });
 
+    it('should apply auth rate limiting to refresh', async () => {
+        mockVerifyRefreshToken.mockReturnValueOnce({ id: 'user-123' });
+        mockRevokeToken.mockResolvedValueOnce(true);
+        mockFindUserWithFirmById.mockResolvedValueOnce({ 
+            id: 'user-123',
+            email: 'test@example.com',
+            name: 'Test User',
+            status: 'active',
+            role: 'user',
+            firm_id: 'firm-123',
+            firm_name: 'Test Firm'
+        });
+
+        const res = await request(app)
+            .post('/api/auth/refresh')
+            .set('Cookie', 'refreshToken=valid-refresh-token');
+
+        expect(res.status).toBe(200);
+        expect(mockAuthLimiter).toHaveBeenCalled();
+    });
+
     it('should issue new access token and rotate refresh token', async () => {
         mockVerifyRefreshToken.mockReturnValueOnce({ id: 'user-123' });
         mockRevokeToken.mockResolvedValueOnce(true);
@@ -505,3 +527,5 @@ describe('Auth Routes - GET /api/auth/me', () => {
         expect(res.status).toBe(404);
     });
 });
+
+
