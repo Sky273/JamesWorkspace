@@ -8,17 +8,17 @@
     }
   },
   "twoFactor": {
-    "title": "Authentification Ã  deux facteurs (2FA)",
+    "title": "Authentification à deux facteurs (2FA)",
     "enabled": "2FA activé",
     "disabled": "2FA non activé",
     "enabledAt": "Activé le {{date}}",
     "backupCodesRemaining": "{{count}} codes de secours restants",
-    "regenerateWarning": "(Pensez Ã  les régénérer)",
+    "regenerateWarning": "(Pensez à les régénérer)",
     "regenerateButton": "Régénérer les codes de secours",
     "disableButton": "Désactiver 2FA",
     "enableButton": "Activer 2FA",
-    "description": "Protégez votre compte avec l'authentification Ã  deux facteurs. Vous aurez besoin d'une application comme Google Authenticator ou Authy.",
-    "loginOnlyNotice": "Cette fonctionnalité s'applique uniquement Ã  la connexion par email/mot de passe. La connexion via Google (OAuth2) utilise la sécurité de votre compte Google.",
+    "description": "Protégez votre compte avec l'authentification à deux facteurs. Vous aurez besoin d'une application comme Google Authenticator ou Authy.",
+    "loginOnlyNotice": "Cette fonctionnalité s'applique uniquement à la connexion par email/mot de passe. La connexion via Google (OAuth2) utilise la sécurité de votre compte Google.",
     "verifyTitle": "Vérification 2FA",
     "verifyDescription": "Entrez le code de votre application d'authentification",
     "verifyButton": "Vérifier",
@@ -37,7 +37,7 @@
     "save": "Enregistrer",
     "cancel": "Annuler",
     "loading": "Chargement...",
-    "backToList": "Retour Ã  la liste",
+    "backToList": "Retour à la liste",
     "error": "Erreur",
     "delete": "Supprimer",
     "edit": "Modifier",
@@ -85,7 +85,7 @@
   },
   "auth": {
     "signIn": {
-      "title": "Connectez-vous Ã  votre compte",
+      "title": "Connectez-vous à votre compte",
       "emailLabel": "Adresse email",
       "emailPlaceholder": "Adresse email",
       "passwordLabel": "Mot de passe",
@@ -108,10 +108,10 @@
       "emailLabel": "Adresse email",
       "emailPlaceholder": "votre@email.com",
       "submitButton": "Envoyer le lien",
-      "backToSignIn": "Retour Ã  la connexion",
+      "backToSignIn": "Retour à la connexion",
       "successTitle": "Email envoyé !",
       "successMessage": "Si un compte existe avec cette adresse email, un lien de réinitialisation a été envoyé. Le lien est valable 1 heure.",
-      "checkSpam": "Pensez Ã  vérifier vos spams si vous ne recevez pas l'email.",
+      "checkSpam": "Pensez à vérifier vos spams si vous ne recevez pas l'email.",
       "error": "Une erreur est survenue. Veuillez réessayer."
     },
     "resetPassword": {
@@ -125,14 +125,14 @@
       "passwordMismatch": "Les mots de passe ne correspondent pas.",
       "passwordMinLength": "Le mot de passe doit contenir au moins 8 caractères.",
       "submitButton": "Réinitialiser le mot de passe",
-      "backToSignIn": "Retour Ã  la connexion",
+      "backToSignIn": "Retour à la connexion",
       "goToSignIn": "Se connecter",
       "successTitle": "Mot de passe réinitialisé !",
       "successMessage": "Votre mot de passe a été modifié avec succès. Vous pouvez maintenant vous connecter.",
       "error": "Une erreur est survenue. Veuillez réessayer.",
       "errors": {
         "invalid_token": "Ce lien de réinitialisation est invalide.",
-        "token_used": "Ce lien a déjÃ  été utilisé. Veuillez en demander un nouveau.",
+        "token_used": "Ce lien a déjà été utilisé. Veuillez en demander un nouveau.",
         "token_expired": "Ce lien a expiré. Veuillez en demander un nouveau.",
         "account_inactive": "Ce compte est désactivé. Contactez un administrateur."
       }
@@ -148,7 +148,7 @@
       "confirmPasswordLabel": "Confirmez le mot de passe",
       "confirmPasswordPlaceholder": "Confirmez le mot de passe",
       "registerButton": "Créer un compte",
-      "hasAccount": "Vous avez déjÃ  un compte ?",
+      "hasAccount": "Vous avez déjà un compte ?",
       "orContinueWith": "ou continuer avec",
       "registerWithGoogle": "S'inscrire avec Google",
       "googleRegistrationFailed": "Échec de l'inscription via Google. Veuillez réessayer."
@@ -156,7 +156,7 @@
   },
   "about": {
     "title": "À propos de ResumeConverter",
-    "description": "ResumeConverter est une solution développée par Aptea pour répondre Ã  ses besoins d'analyse et d'amélioration des CV, et d'export vers différents modèles.",
+    "description": "ResumeConverter est une solution développée par Aptea pour répondre à ses besoins d'analyse et d'amélioration des CV, et d'export vers différents modèles.",
     "changelog": "Journal des modifications",
     "errorLoadingChangelog": "Impossible de charger le journal des modifications.",
     "allRightsReserved": "Tous droits réservés"
@@ -236,7 +236,7 @@
       "exporting": "Exportation...",
       "saveChanges": "Enregistrer les modifications",
       "saving": "Enregistrement...",
-      "adaptToMission": "Adapter Ã  une mission",
+      "adaptToMission": "Adapter à une mission",
       "improve": "Améliorer",
       "improveNow": "Améliorer maintenant",
       "export": "Exporter",
@@ -331,10 +331,10 @@
       "messages": {
         "confirmDeleteUser": "Êtes-vous sûr de vouloir supprimer cet utilisateur ? Cette action est irréversible.",
         "userCreated": "Utilisateur créé avec succès",
-        "userUpdated": "Utilisateur mis Ã  jour avec succès",
+        "userUpdated": "Utilisateur mis à jour avec succès",
         "userDeleted": "Utilisateur supprimé avec succès",
         "firmCreated": "Cabinet créé avec succès",
-        "firmUpdated": "Cabinet mis Ã  jour avec succès",
+        "firmUpdated": "Cabinet mis à jour avec succès",
         "firmDeleted": "Cabinet supprimé avec succès",
         "passwordChanged": "Mot de passe modifié avec succès",
         "logoUploaded": "Logo téléchargé avec succès",
@@ -344,10 +344,10 @@
         "invalidFileType": "Type de fichier non valide. Seuls JPEG, PNG, GIF, WebP et SVG sont acceptés",
         "fileTooLarge": "Le fichier est trop volumineux. Taille max : 2 Mo",
         "errorCreatingUser": "Erreur lors de la création de l'utilisateur",
-        "errorUpdatingUser": "Erreur lors de la mise Ã  jour de l'utilisateur",
+        "errorUpdatingUser": "Erreur lors de la mise à jour de l'utilisateur",
         "errorDeletingUser": "Erreur lors de la suppression de l'utilisateur",
         "errorCreatingFirm": "Erreur lors de la création du cabinet",
-        "errorUpdatingFirm": "Erreur lors de la mise Ã  jour du cabinet",
+        "errorUpdatingFirm": "Erreur lors de la mise à jour du cabinet",
         "errorDeletingFirm": "Erreur lors de la suppression du cabinet",
         "errorChangingPassword": "Erreur lors du changement de mot de passe",
         "cannotDeleteFirmWithUsers": "Impossible de supprimer ce cabinet car des utilisateurs y sont associés",
@@ -390,7 +390,7 @@
     "hero": {
       "title1": "Votre CVthèque.",
       "title2": "Optimisée. Activée.",
-      "description": "Standardisez, améliorez et déclinez vos CV par client ou mission. Des profils cohérents, prêts Ã  envoyer, en quelques minutes.",
+      "description": "Standardisez, améliorez et déclinez vos CV par client ou mission. Des profils cohérents, prêts à envoyer, en quelques minutes.",
       "startButton": "Importer un CV",
       "analysisComplete": "Analyse terminée",
       "aiSuggestion": "Suggestion IA",
@@ -434,7 +434,7 @@
       "quickActions": "Actions rapides",
       "actions": {
         "importResume": "Importer un CV",
-        "importResumeDesc": "Ajouter un nouveau profil Ã  la CVthèque",
+        "importResumeDesc": "Ajouter un nouveau profil à la CVthèque",
         "viewLibrary": "Voir la CVthèque",
         "viewLibraryDesc": "Consulter et gérer les profils",
         "createMission": "Voir les missions",
@@ -455,7 +455,7 @@
       },
       "step3": {
         "title": "Adaptez et exportez",
-        "description": "Personnalisez chaque profil selon vos missions et exportez-les selon divers modèles, prêts Ã  envoyer."
+        "description": "Personnalisez chaque profil selon vos missions et exportez-les selon divers modèles, prêts à envoyer."
       }
     },
     "features": {
@@ -466,7 +466,7 @@
       },
       "improvement": {
         "title": "Amélioration automatique",
-        "description": "Optimisez vos CV en un clic grâce Ã  notre IA qui reformule et enrichit automatiquement chaque section."
+        "description": "Optimisez vos CV en un clic grâce à notre IA qui reformule et enrichit automatiquement chaque section."
       },
       "scoring": {
         "title": "Notation détaillée",
@@ -536,19 +536,19 @@
     "viewMode": "Affichage",
     "viewList": "Liste",
     "viewByDeal": "Par affaire",
-    "backToDealsView": "Retour Ã  la vue par affaire",
+    "backToDealsView": "Retour à la vue par affaire",
     "groupedView": {
       "deals": "affaires",
       "assigned": "CVs affectés",
       "unassigned": "non affectés",
-      "noResumes": "Aucun CV associé Ã  cette affaire",
+      "noResumes": "Aucun CV associé à cette affaire",
       "noDeals": "Aucune affaire créée. Créez une affaire dans l'onglet CRM pour commencer.",
       "unassignedTitle": "CVs non affectés à une affaire",
       "errorLoading": "Erreur lors du chargement des données",
-      "dropHere": "Déposer ici pour ajouter Ã  cette affaire",
+      "dropHere": "Déposer ici pour ajouter à cette affaire",
       "moving": "Déplacement du CV...",
       "moved": "CV déplacé vers « {{deal}} »",
-      "added": "CV ajouté Ã  « {{deal}} »",
+      "added": "CV ajouté à « {{deal}} »",
       "dropError": "Erreur lors du déplacement",
       "missions": "Missions",
       "adaptations": "adaptation(s)",
@@ -566,7 +566,7 @@
     "newTemplate": "Nouveau modèle",
     "searchPlaceholder": "Rechercher un modèle...",
     "refresh": "Actualiser",
-    "noResults": "Aucun modèle ne correspond Ã  votre recherche",
+    "noResults": "Aucun modèle ne correspond à votre recherche",
     "createFirst": "Créez votre premier modèle pour commencer",
     "stats": {
       "total": "Total des modèles",
@@ -639,7 +639,7 @@
       },
       "success": {
         "create": "Modèle créé avec succès",
-        "update": "Modèle mis Ã  jour avec succès"
+        "update": "Modèle mis à jour avec succès"
       },
       "error": {
         "load": "Échec du chargement du modèle"
@@ -648,7 +648,7 @@
     "selectTemplate": "Sélectionner un modèle",
     "extract": {
       "title": "Extraire depuis un CV",
-      "subtitle": "Créez automatiquement un modèle Ã  partir d'un CV existant",
+      "subtitle": "Créez automatiquement un modèle à partir d'un CV existant",
       "buttonShort": "Extraire",
       "dragDrop": "Glissez-déposez un CV ici ou cliquez pour sélectionner",
       "dropHere": "Déposez le fichier ici...",
@@ -661,7 +661,7 @@
       "step4": "Personnalisez le modèle avant de l'enregistrer",
       "analyzing": "Analyse du CV en cours...",
       "pleaseWait": "L'IA extrait la structure et les styles du document",
-      "longOperation": "Cette opération peut prendre 1 Ã  3 minutes selon la complexité du document.",
+      "longOperation": "Cette opération peut prendre 1 à 3 minutes selon la complexité du document.",
       "extractButton": "Extraire le modèle",
       "extractionComplete": "Extraction terminée !",
       "usedModel": "Modèle IA utilisé",
@@ -880,8 +880,8 @@
       "duration": "Durée"
     },
     "badges": {
-      "security": "ðŸ”’ Sécurité",
-      "proxy": "ðŸŒ Proxy"
+      "security": "🔒 Sécurité",
+      "proxy": "🌐 Proxy"
     },
     "noLogs": "Aucun log de sécurité trouvé",
     "logs": "logs de sécurité"
@@ -911,8 +911,8 @@
     },
     "dpo": {
       "title": "Informations de contact DPO",
-      "description": "Configurez les informations de contact du Délégué Ã  la Protection des Données et du cabinet pour les emails de consentement RGPD.",
-      "dpoSection": "Délégué Ã  la Protection des Données",
+      "description": "Configurez les informations de contact du Délégué à la Protection des Données et du cabinet pour les emails de consentement RGPD.",
+      "dpoSection": "Délégué à la Protection des Données",
       "firmSection": "Informations du Cabinet",
       "dpoName": "Nom du DPO",
       "dpoNamePlaceholder": "Jean Dupont",
@@ -941,7 +941,7 @@
       "disconnect": "Déconnecter",
       "testSend": "Tester l'envoi",
       "testEmailPrompt": "Entrez l'adresse email pour le test :",
-      "testSent": "Email de test envoyé Ã  {{email}}",
+      "testSent": "Email de test envoyé à {{email}}",
       "disconnected": "Gmail déconnecté",
       "confirmDisconnect": "Êtes-vous sûr de vouloir déconnecter ce compte Gmail ?",
       "infoTitle": "Comment ça fonctionne",
@@ -955,14 +955,14 @@
       "days": "jours",
       "years": "ans",
       "errors": {
-        "connectFailed": "Erreur de connexion Ã  Gmail",
+        "connectFailed": "Erreur de connexion à Gmail",
         "disconnectFailed": "Erreur lors de la déconnexion",
         "testFailed": "Erreur lors de l'envoi du test"
       }
     },
     "apiDocs": {
       "title": "Documentation de l'API",
-      "description": "Accédez Ã  la documentation interactive de l'API propulsée par Swagger/OpenAPI.",
+      "description": "Accédez à la documentation interactive de l'API propulsée par Swagger/OpenAPI.",
       "swaggerUi": "Interface Swagger",
       "swaggerUiDescription": "Explorateur d'API interactif avec tous les endpoints documentés",
       "openSwagger": "Ouvrir Swagger",
@@ -1033,7 +1033,7 @@
     "llm": {
       "title": "Configuration du Modèle LLM",
       "model": "Modèle OpenAI",
-      "description": "Sélectionnez le modèle OpenAI Ã  utiliser pour l'analyse et l'amélioration des CV. Si non renseigné, le modèle par défaut (gpt-4o) sera utilisé.",
+      "description": "Sélectionnez le modèle OpenAI à utiliser pour l'analyse et l'amélioration des CV. Si non renseigné, le modèle par défaut (gpt-4o) sera utilisé.",
       "cvMode": "Mode de génération du CV",
       "cvModeNominative": "Nominatif (informations personnelles incluses)",
       "cvModeAnonymous": "Anonyme (trigramme uniquement)",
@@ -1056,9 +1056,9 @@
     },
     "weights": {
       "title": "Poids des Catégories d'Analyse",
-      "description": "Définissez l'importance de chaque catégorie dans le score global. La somme doit être égale Ã  100%.",
+      "description": "Définissez l'importance de chaque catégorie dans le score global. La somme doit être égale à 100%.",
       "total": "Total des poids",
-      "mustEqual100": "La somme des poids doit être égale Ã  100%",
+      "mustEqual100": "La somme des poids doit être égale à 100%",
       "executiveSummary": "Résumé Exécutif",
       "skills": "Compétences (Skills)",
       "experience": "Expérience Professionnelle",
@@ -1073,7 +1073,7 @@
       "enableDescription": "Permet aux utilisateurs d'accéder au chatbot d'assistance pour obtenir de l'aide sur l'utilisation de l'application.",
       "statusEnabled": "Activé",
       "statusDisabled": "Désactivé",
-      "statusEnabledInfo": "Les utilisateurs peuvent accéder au chatbot via le bouton en bas Ã  droite",
+      "statusEnabledInfo": "Les utilisateurs peuvent accéder au chatbot via le bouton en bas à droite",
       "statusDisabledInfo": "Le chatbot est masqué pour tous les utilisateurs",
       "infoTitle": "À propos du chatbot",
       "info1": "Le chatbot utilise le modèle LLM configuré dans l'onglet 'Modèle LLM'",
@@ -1104,7 +1104,7 @@
     "title": "Offres de Mission",
     "subtitle": "Gérez vos offres de mission pour l'adaptation des CV",
     "noMissions": "Aucune mission trouvée",
-    "noResults": "Aucune mission ne correspond Ã  votre recherche",
+    "noResults": "Aucune mission ne correspond à votre recherche",
     "createFirst": "Créez votre première mission pour commencer",
     "noDescription": "Aucune description",
     "searchPlaceholder": "Rechercher une mission...",
@@ -1116,7 +1116,7 @@
     "titlePlaceholder": "Ex: Développeur Full Stack",
     "editorHelp": "Utilisez l'éditeur pour formater votre texte",
     "create": "Créer",
-    "update": "Mettre Ã  jour",
+    "update": "Mettre à jour",
     "view": "Voir",
     "refresh": "Actualiser",
     "status": {
@@ -1151,7 +1151,7 @@
     "subtitle": "Historique des CVs adaptés aux missions",
     "noAdaptations": "Aucune adaptation trouvée",
     "noAdaptationsFiltered": "Essayez de modifier vos filtres de recherche",
-    "noAdaptationsPrompt": "Commencez par adapter un CV Ã  une mission",
+    "noAdaptationsPrompt": "Commencez par adapter un CV à une mission",
     "viewAdaptation": "Voir l'adaptation",
     "delete": "Supprimer",
     "exportPDF": "Exporter PDF",
@@ -1223,7 +1223,7 @@
   },
   "chatbot": {
     "title": "Assistant IA",
-    "subtitle": "Je suis lÃ  pour vous aider",
+    "subtitle": "Je suis là pour vous aider",
     "openChat": "Ouvrir le chat",
     "closeChat": "Fermer le chat",
     "placeholder": "Posez votre question...",
@@ -1232,7 +1232,7 @@
     "clearChat": "Effacer la conversation",
     "resetSize": "Réinitialiser la taille",
     "needHelp": "Besoin d'aide ?",
-    "welcomeMessage": "ðŸ‘‹ **Bonjour !** Je suis votre assistant IA.\n\nJe peux vous aider Ã  :\n- ðŸ“„ **Gérer la CVthèque** (import, analyse, amélioration)\n- ðŸŽ¯ **Créer des missions** et adapter les profils\n- âš™ï¸ **Utiliser les fonctionnalités** de l'application\n- â“ **Répondre Ã  vos questions**\n\nComment puis-je vous aider ?",
+    "welcomeMessage": "👋 **Bonjour !** Je suis votre assistant IA.\n\nJe peux vous aider à :\n- 📄 **Gérer la CVthèque** (import, analyse, amélioration)\n- 🎯 **Créer des missions** et adapter les profils\n- ⚙️ **Utiliser les fonctionnalités** de l'application\n- ❓ **Répondre à vos questions**\n\nComment puis-je vous aider ?",
     "errorMessage": "Désolé, je n'ai pas pu traiter votre demande. Veuillez réessayer."
   },
   "userGuide": {
@@ -1277,7 +1277,7 @@
       "medium": "Moyen",
       "high": "Élevé",
       "clickToFilter": "Cliquez sur une bulle pour filtrer par type",
-      "bubbleSizeInfo": "Taille des bulles proportionnelle Ã  la valeur",
+      "bubbleSizeInfo": "Taille des bulles proportionnelle à la valeur",
       "refresh": "Actualiser"
     },
     "trends": {
@@ -1356,17 +1356,17 @@
         "competencesDetaillees": "Compétences Détaillées",
         "macroSavoirFaire": "Macro Savoir-Faire",
         "savoirs": "Savoirs",
-        "updatedAt": "Mis Ã  jour"
+        "updatedAt": "Mis à jour"
       },
       "collection": {
         "title": "Collecte en cours",
         "description": "Récupération des métiers IS/IT depuis l'API Rome 4.0.",
-        "warning": "Cette opération peut prendre jusqu'Ã  20 minutes. Ne fermez pas cette page.",
+        "warning": "Cette opération peut prendre jusqu'à 20 minutes. Ne fermez pas cette page.",
         "button": "Collecter les métiers",
         "success": "Collecte terminée",
         "processed": "métiers traités",
         "created": "créés",
-        "updated": "mis Ã  jour",
+        "updated": "mis à jour",
         "errors": "erreurs"
       },
       "refresh": "Actualiser"
@@ -1377,7 +1377,7 @@
   },
   "profileMatching": {
     "title": "Matching Profils",
-    "subtitle": "Trouvez les meilleurs CVs correspondant Ã  une mission",
+    "subtitle": "Trouvez les meilleurs CVs correspondant à une mission",
     "selectDeal": "Filtrer par affaire",
     "allDeals": "Toutes les affaires",
     "selectMission": "Sélectionnez une mission",
@@ -1428,24 +1428,24 @@
     "viewAnalysis": "Voir l'analyse",
     "analyzing": "Analyse en cours...",
     "analysisComplete": "Analyse détaillée terminée",
-    "searchingProfiles": "Recherche de profils en coursâ€¦",
+    "searchingProfiles": "Recherche de profils en cours…",
     "searchingProfilesDescription": "L'IA analyse les CVs de votre base pour trouver les meilleurs profils pour cette mission.",
     "searchingLoadingSteps": [
-      "Extraction des mots-clés de la missionâ€¦",
-      "Analyse des compétences requisesâ€¦",
-      "Parcours de la base de CVsâ€¦",
-      "Scoring intelligent par l'IAâ€¦",
-      "Comparaison des profilsâ€¦",
-      "Classement des meilleurs matchsâ€¦"
+      "Extraction des mots-clés de la mission…",
+      "Analyse des compétences requises…",
+      "Parcours de la base de CVs…",
+      "Scoring intelligent par l'IA…",
+      "Comparaison des profils…",
+      "Classement des meilleurs matchs…"
     ],
-    "searchingEstimatedTime": "Cela peut prendre 1 Ã  5 minutes selon le nombre de CVs",
-    "analyzingProfile": "Analyse du profil en coursâ€¦",
+    "searchingEstimatedTime": "Cela peut prendre 1 à 5 minutes selon le nombre de CVs",
+    "analyzingProfile": "Analyse du profil en cours…",
     "analyzingProfileDescription": "L'IA génère une analyse détaillée de l'adéquation entre ce profil et la mission.",
     "analyzingLoadingSteps": [
-      "Lecture approfondie du CVâ€¦",
-      "Comparaison avec les exigencesâ€¦",
-      "Évaluation des compétences clésâ€¦",
-      "Rédaction de la synthèse IAâ€¦"
+      "Lecture approfondie du CV…",
+      "Comparaison avec les exigences…",
+      "Évaluation des compétences clés…",
+      "Rédaction de la synthèse IA…"
     ],
     "overlay": {
       "stepKeywords": "Mots-clés",
@@ -1494,7 +1494,7 @@
     "submissionsLabel": "envois",
     "contactsTitle": "Interlocuteurs",
     "submissionsTitle": "Historique des envois",
-    "sentTo": "Envoyé Ã ",
+    "sentTo": "Envoyé à",
     "by": "par",
     "viewVersion": "Voir la version",
     "primaryContact": "Contact principal",
@@ -1551,16 +1551,16 @@
     },
     "messages": {
       "clientCreated": "Client créé avec succès",
-      "clientUpdated": "Client mis Ã  jour avec succès",
+      "clientUpdated": "Client mis à jour avec succès",
       "clientDeleted": "Client supprimé avec succès",
       "contactCreated": "Contact créé avec succès",
-      "contactUpdated": "Contact mis Ã  jour avec succès",
+      "contactUpdated": "Contact mis à jour avec succès",
       "contactDeleted": "Contact supprimé avec succès",
       "errorFetching": "Erreur lors du chargement des clients",
       "errorCreatingClient": "Erreur lors de la création du client",
-      "errorUpdatingClient": "Erreur lors de la mise Ã  jour du client",
+      "errorUpdatingClient": "Erreur lors de la mise à jour du client",
       "errorCreatingContact": "Erreur lors de la création du contact",
-      "errorUpdatingContact": "Erreur lors de la mise Ã  jour du contact",
+      "errorUpdatingContact": "Erreur lors de la mise à jour du contact",
       "errorDeleting": "Erreur lors de la suppression",
       "confirmDeleteClient": "Êtes-vous sûr de vouloir supprimer le client \"{{name}}\" ?",
       "confirmDeleteContact": "Êtes-vous sûr de vouloir supprimer le contact \"{{name}}\" ?",
@@ -1615,24 +1615,24 @@
       },
       "messages": {
         "dealCreated": "Affaire créée avec succès",
-        "dealUpdated": "Affaire mise Ã  jour avec succès",
+        "dealUpdated": "Affaire mise à jour avec succès",
         "dealDeleted": "Affaire supprimée avec succès",
         "saving": "Enregistrement en cours...",
         "errorFetching": "Erreur lors du chargement des affaires",
         "errorCreating": "Erreur lors de la création de l'affaire",
-        "errorUpdating": "Erreur lors de la mise Ã  jour de l'affaire",
+        "errorUpdating": "Erreur lors de la mise à jour de l'affaire",
         "errorDeleting": "Erreur lors de la suppression de l'affaire",
         "confirmDelete": "Êtes-vous sûr de vouloir supprimer l'affaire \"{{name}}\" ?"
       },
       "modal": {
         "manageDeals": "Affaires du CV",
         "associatedDeals": "Affaires associées",
-        "addToDeal": "Ajouter Ã  une affaire",
+        "addToDeal": "Ajouter à une affaire",
         "searchDeal": "Rechercher une affaire...",
-        "noDealsAssociated": "Ce CV n'est associé Ã  aucune affaire",
-        "allDealsAssociated": "Toutes les affaires sont déjÃ  associées",
+        "noDealsAssociated": "Ce CV n'est associé à aucune affaire",
+        "allDealsAssociated": "Toutes les affaires sont déjà associées",
         "noDealFound": "Aucune affaire trouvée",
-        "cvAdded": "CV ajouté Ã  l'affaire",
+        "cvAdded": "CV ajouté à l'affaire",
         "cvRemoved": "CV retiré de l'affaire",
         "errorAdding": "Erreur lors de l'ajout",
         "errorRemoving": "Erreur lors de la suppression",
@@ -1644,7 +1644,7 @@
     "modal": {
       "title": "Envoyer le CV par email",
       "connectTitle": "Connectez votre messagerie",
-      "connectDescription": "Connectez-vous Ã  Gmail pour créer un brouillon d'email avec le CV en pièce jointe.",
+      "connectDescription": "Connectez-vous à Gmail pour créer un brouillon d'email avec le CV en pièce jointe.",
       "connectGmail": "Se connecter avec Gmail",
       "connectedAs": "Connecté en tant que {{email}}",
       "disconnect": "Déconnecter",
@@ -1671,12 +1671,12 @@
       "openDraft": "Ouvrir dans Gmail",
       "errorTitle": "Erreur",
       "retry": "Réessayer",
-      "ssoReconnectMessage": "Votre session Gmail a expiré. Veuillez vous reconnecter Ã  l'application pour réactiver l'envoi d'emails.",
+      "ssoReconnectMessage": "Votre session Gmail a expiré. Veuillez vous reconnecter à l'application pour réactiver l'envoi d'emails.",
       "reconnectApp": "Se reconnecter"
     },
     "errors": {
       "loadClients": "Erreur lors du chargement des clients",
-      "connectFailed": "Échec de la connexion Ã  Gmail",
+      "connectFailed": "Échec de la connexion à Gmail",
       "noEmail": "Ce contact n'a pas d'adresse email",
       "needsReauth": "Votre session a expiré. Veuillez vous reconnecter.",
       "previewFailed": "Erreur lors de la prévisualisation du template"
@@ -1715,7 +1715,7 @@
     "errors": {
       "loadFailed": "Erreur lors du chargement des templates",
       "createFailed": "Erreur lors de la création du template",
-      "updateFailed": "Erreur lors de la mise Ã  jour du template",
+      "updateFailed": "Erreur lors de la mise à jour du template",
       "deleteFailed": "Erreur lors de la suppression du template",
       "duplicateFailed": "Erreur lors de la duplication du template",
       "previewFailed": "Erreur lors de la prévisualisation",
@@ -1726,7 +1726,7 @@
     },
     "success": {
       "created": "Template créé avec succès",
-      "updated": "Template mis Ã  jour avec succès",
+      "updated": "Template mis à jour avec succès",
       "deleted": "Template supprimé avec succès",
       "duplicated": "Template dupliqué avec succès"
     }
@@ -1739,7 +1739,7 @@
         "label": "Type de profil",
         "employee": "Salarié",
         "external": "Externe",
-        "employeeHint": "Profil interne Ã  l'entreprise - pas de consentement requis",
+        "employeeHint": "Profil interne à l'entreprise - pas de consentement requis",
         "externalHint": "Candidat externe - une demande de consentement sera envoyée"
       },
       "candidateName": {
@@ -1750,7 +1750,7 @@
       "candidateEmail": {
         "label": "Email du candidat",
         "placeholder": "candidat@email.com",
-        "hint": "L'email de demande de consentement sera envoyé Ã  cette adresse"
+        "hint": "L'email de demande de consentement sera envoyé à cette adresse"
       },
       "submit": {
         "sendRequest": "Envoyer la demande",
@@ -1767,7 +1767,7 @@
       "success": {
         "employee": "Profil enregistré - pas de consentement requis",
         "external": "Demande de consentement envoyée",
-        "emailSent": "Un email a été envoyé Ã  {{email}}"
+        "emailSent": "Un email a été envoyé à {{email}}"
       }
     },
     "status": {
@@ -1796,27 +1796,27 @@
       "title": "Demande de consentement",
       "subtitle": "Conservation et traitement de votre CV",
       "greeting": "Bonjour {{name}},",
-      "message": "Le cabinet {{firm}} souhaite conserver votre CV dans son vivier de talents afin de vous proposer des opportunités professionnelles correspondant Ã  votre profil.",
+      "message": "Le cabinet {{firm}} souhaite conserver votre CV dans son vivier de talents afin de vous proposer des opportunités professionnelles correspondant à votre profil.",
       "whyWeProcess": "Pourquoi nous conservons et traitons votre CV",
       "whyItem1": "Conserver votre CV dans notre vivier et vous recontacter",
       "whyItem2": "Analyser votre CV (extraction : compétences, expériences, mots-clés)",
-      "whyItem3": "Améliorer / reformuler votre CV et l'adapter Ã  une opportunité",
+      "whyItem3": "Améliorer / reformuler votre CV et l'adapter à une opportunité",
       "whyItem4": "Évaluer l'adéquation entre votre profil et une opportunité",
-      "automatedProcessing": "Ces traitements automatisés servent Ã  identifier des opportunités adaptées. Ils ne produisent pas, Ã  eux seuls, une décision automatique vous concernant.",
+      "automatedProcessing": "Ces traitements automatisés servent à identifier des opportunités adaptées. Ils ne produisent pas, à eux seuls, une décision automatique vous concernant.",
       "whatWeStore": "Données concernées",
       "storeItem1": "Votre CV et les informations qu'il contient",
       "storeItem2": "Vos coordonnées pour vous contacter",
       "storeItem3": "Les analyses et scores générés par nos outils",
-      "retentionPeriod": "Durée de conservation : 2 ans maximum. Vous pouvez retirer votre consentement Ã  tout moment.",
+      "retentionPeriod": "Durée de conservation : 2 ans maximum. Vous pouvez retirer votre consentement à tout moment.",
       "rights": "Vous disposez d'un droit d'accès, de rectification, suppression, limitation, opposition et portabilité de vos données. Contactez notre DPO pour exercer vos droits.",
       "accept": "J'accepte",
       "refuse": "Je refuse",
       "footer": "Ce formulaire est conforme au Règlement Général sur la Protection des Données (RGPD).",
-      "backToHome": "Retour Ã  l'accueil",
+      "backToHome": "Retour à l'accueil",
       "errors": {
         "noToken": "Lien de consentement invalide",
         "expired": "Cette demande de consentement a expiré",
-        "alreadyProcessed": "Cette demande a déjÃ  été traitée",
+        "alreadyProcessed": "Cette demande a déjà été traitée",
         "invalid": "Lien de consentement invalide",
         "generic": "Une erreur est survenue",
         "network": "Erreur de connexion au serveur",
@@ -1837,11 +1837,11 @@
   "legal": {
     "privacy": {
       "title": "Politique de confidentialité",
-      "lastUpdated": "Dernière mise Ã  jour",
+      "lastUpdated": "Dernière mise à jour",
       "sections": {
         "introduction": {
           "title": "Introduction",
-          "content": "Aptea (« nous », « notre » ou « nos ») s'engage Ã  protéger votre vie privée. Cette Politique de confidentialité explique comment nous collectons, utilisons, divulguons et protégeons vos informations lorsque vous utilisez notre service Resume Converter."
+          "content": "Aptea (« nous », « notre » ou « nos ») s'engage à protéger votre vie privée. Cette Politique de confidentialité explique comment nous collectons, utilisons, divulguons et protégeons vos informations lorsque vous utilisez notre service Resume Converter."
         },
         "dataCollection": {
           "title": "Informations que nous collectons",
@@ -1858,7 +1858,7 @@
           "content": "Nous utilisons les informations collectées pour :",
           "items": {
             "service": "Fournir, maintenir et améliorer nos services",
-            "improvement": "Analyser et améliorer le contenu des CV grâce Ã  l'IA",
+            "improvement": "Analyser et améliorer le contenu des CV grâce à l'IA",
             "communication": "Communiquer avec vous concernant nos services",
             "legal": "Respecter nos obligations légales"
           }
@@ -1871,16 +1871,16 @@
           "title": "Vos droits (RGPD)",
           "content": "En vertu du Règlement Général sur la Protection des Données (RGPD), vous disposez des droits suivants :",
           "rights": {
-            "access": "Droit d'accès Ã  vos données personnelles",
+            "access": "Droit d'accès à vos données personnelles",
             "rectification": "Droit de rectification des données inexactes",
-            "erasure": "Droit Ã  l'effacement (« droit Ã  l'oubli »)",
-            "portability": "Droit Ã  la portabilité des données",
+            "erasure": "Droit à l'effacement (« droit à l'oubli »)",
+            "portability": "Droit à la portabilité des données",
             "objection": "Droit d'opposition au traitement"
           }
         },
         "cookies": {
           "title": "Cookies",
-          "content": "Nous utilisons des cookies essentiels pour assurer le bon fonctionnement de notre service. Ces cookies sont nécessaires Ã  l'authentification et Ã  la sécurité."
+          "content": "Nous utilisons des cookies essentiels pour assurer le bon fonctionnement de notre service. Ces cookies sont nécessaires à l'authentification et à la sécurité."
         },
         "contact": {
           "title": "Nous contacter",
@@ -1890,7 +1890,7 @@
     },
     "terms": {
       "title": "Conditions d'utilisation",
-      "lastUpdated": "Dernière mise Ã  jour",
+      "lastUpdated": "Dernière mise à jour",
       "sections": {
         "acceptance": {
           "title": "Acceptation des conditions",
@@ -1898,7 +1898,7 @@
         },
         "description": {
           "title": "Description du service",
-          "content": "Resume Converter est une plateforme alimentée par l'IA conçue pour les ESN (Entreprises de Services du Numérique) et les cabinets de recrutement. Elle permet de gérer une CVthèque, d'analyser et d'améliorer les CV, d'adapter ces CV Ã  un contexte mission spécifique et de les exporter selon divers modèles."
+          "content": "Resume Converter est une plateforme alimentée par l'IA conçue pour les ESN (Entreprises de Services du Numérique) et les cabinets de recrutement. Elle permet de gérer une CVthèque, d'analyser et d'améliorer les CV, d'adapter ces CV à un contexte mission spécifique et de les exporter selon divers modèles."
         },
         "account": {
           "title": "Comptes utilisateurs",
@@ -1911,12 +1911,12 @@
         },
         "usage": {
           "title": "Utilisation acceptable",
-          "content": "Vous acceptez d'utiliser notre service uniquement Ã  des fins légales. Vous ne devez pas :",
+          "content": "Vous acceptez d'utiliser notre service uniquement à des fins légales. Vous ne devez pas :",
           "items": {
-            "lawful": "Utiliser le service Ã  des fins illégales",
+            "lawful": "Utiliser le service à des fins illégales",
             "noHarm": "Télécharger du contenu malveillant ou tenter de nuire au service",
             "noAbuse": "Abuser, harceler ou discriminer autrui",
-            "noUnauthorized": "Tenter d'accéder de manière non autorisée Ã  nos systèmes"
+            "noUnauthorized": "Tenter d'accéder de manière non autorisée à nos systèmes"
           }
         },
         "intellectual": {
@@ -1929,7 +1929,7 @@
         },
         "disclaimer": {
           "title": "Exclusion de garanties",
-          "content": "Le service est fourni « tel quel » sans garantie d'aucune sorte. Nous ne garantissons pas que les suggestions générées par l'IA seront exactes ou adaptées Ã  vos besoins spécifiques."
+          "content": "Le service est fourni « tel quel » sans garantie d'aucune sorte. Nous ne garantissons pas que les suggestions générées par l'IA seront exactes ou adaptées à vos besoins spécifiques."
         },
         "limitation": {
           "title": "Limitation de responsabilité",
@@ -1937,7 +1937,7 @@
         },
         "termination": {
           "title": "Résiliation",
-          "content": "Nous pouvons résilier ou suspendre votre compte Ã  tout moment en cas de violation de ces conditions. À la résiliation, votre droit d'utiliser le service cessera immédiatement."
+          "content": "Nous pouvons résilier ou suspendre votre compte à tout moment en cas de violation de ces conditions. À la résiliation, votre droit d'utiliser le service cessera immédiatement."
         },
         "governing": {
           "title": "Droit applicable",
@@ -1996,10 +1996,10 @@
     "cancel": "Annuler",
     "edited": "modifié",
     "loading": "Chargement des commentaires...",
-    "empty": "Aucun commentaire. Soyez le premier Ã  en ajouter !",
+    "empty": "Aucun commentaire. Soyez le premier à en ajouter !",
     "fetchError": "Échec du chargement des commentaires",
     "addError": "Échec de l'ajout du commentaire",
-    "updateError": "Échec de la mise Ã  jour du commentaire",
+    "updateError": "Échec de la mise à jour du commentaire",
     "deleteError": "Échec de la suppression du commentaire",
     "confirmDelete": "Êtes-vous sûr de vouloir supprimer ce commentaire ?"
   },
@@ -2031,7 +2031,7 @@
     "description": "Gérez le processus de sélection pour ce candidat",
     "addToProcess": "Ajouter au processus",
     "addToProcessTitle": "Ajouter au pipeline de sélection",
-    "addFirst": "Ajouter ce candidat Ã  un processus de sélection",
+    "addFirst": "Ajouter ce candidat à un processus de sélection",
     "noEntries": "Ce candidat n'est dans aucun processus de sélection",
     "noMissionAssigned": "Aucune mission assignée",
     "selectMission": "Mission associée",
@@ -2047,7 +2047,7 @@
     "confirmRemove": "Êtes-vous sûr de vouloir retirer ce candidat du pipeline ?",
     "addedSuccess": "Candidat ajouté au pipeline",
     "removedSuccess": "Candidat retiré du pipeline",
-    "stageUpdated": "Étape mise Ã  jour",
+    "stageUpdated": "Étape mise à jour",
     "changeStage": "Changer l'étape",
     "interviews": "entretien(s)",
     "scheduledInterviews": "Entretiens planifiés",
@@ -2096,7 +2096,7 @@
     "errors": {
       "loadFailed": "Erreur lors du chargement du pipeline",
       "addFailed": "Erreur lors de l'ajout au pipeline",
-      "updateFailed": "Erreur lors de la mise Ã  jour",
+      "updateFailed": "Erreur lors de la mise à jour",
       "removeFailed": "Erreur lors du retrait du pipeline",
       "scheduleFailed": "Erreur lors de la planification de l'entretien",
       "completeFailed": "Erreur lors de la finalisation de l'entretien",
@@ -2113,7 +2113,7 @@
     "unknownCandidate": "Candidat inconnu",
     "editNotes": "Modifier les notes",
     "viewResume": "Voir le CV",
-    "notesUpdated": "Notes mises Ã  jour",
+    "notesUpdated": "Notes mises à jour",
     "manageInterviews": "Gérer les entretiens"
   },
   "backup": {
@@ -2196,14 +2196,14 @@
     "exportFormat": "Format d'export",
     "exportFormats": "Formats d'export (sélection multiple)",
     "selectAtLeastOneFormat": "Sélectionnez au moins un format",
-    "zipInfo": "Un fichier ZIP contenant tous les CVs exportés sera téléchargé Ã  la fin du traitement (un dossier par format)",
+    "zipInfo": "Un fichier ZIP contenant tous les CVs exportés sera téléchargé à la fin du traitement (un dossier par format)",
     "deleteAfterOption": "Supprimer les CVs après traitement",
     "deleteWarning": "Les CVs seront supprimés de la base de données après le traitement. Cette action est irréversible.",
     "deleteWarningExport": "Les CVs seront supprimés de la base de données après l'export. Cette action est irréversible.",
     "dropHere": "Déposez les fichiers ici...",
     "loadingFiles": "Chargement des fichiers...",
     "dragDrop": "Glissez-déposez vos CVs ici, ou cliquez pour sélectionner",
-    "fileTypes": "PDF, DOC, DOCX â€¢ Max 50MB par fichier",
+    "fileTypes": "PDF, DOC, DOCX • Max 50MB par fichier",
     "nominativeRecommendation": "Pour une meilleure extraction des noms, privilégiez des fichiers nommés avec le nom du candidat (ex: Jean_Dupont_CV.pdf)",
     "filesCount": "Fichiers",
     "retryAll": "Réessayer les erreurs",
@@ -2218,14 +2218,14 @@
     "exporting": "Export en cours...",
     "gdprTitle": "RGPD",
     "gdprInfo": "Les CVs importés par lot sont considérés comme internes (collaborateurs). Aucune demande de consentement ne sera envoyée et aucun nom de candidat n'est enregistré.",
-    "noFiles": "Aucun fichier Ã  traiter",
-    "noFilesToExport": "Aucun CV traité Ã  exporter",
+    "noFiles": "Aucun fichier à traiter",
+    "noFilesToExport": "Aucun CV traité à exporter",
     "selectTemplate": "Veuillez sélectionner un modèle",
     "successCount": "CV(s) traité(s) avec succès",
     "errorCount": "CV(s) en erreur",
     "maxFilesReached": "Maximum de fichiers autorisés atteint",
     "someFilesSkipped": "Certains fichiers ont été ignorés (limite atteinte)",
-    "duplicateSkipped": "Fichier déjÃ  dans la liste",
+    "duplicateSkipped": "Fichier déjà dans la liste",
     "estimatedTime": "< 1 minute",
     "estimatedTime1min": "~1 minute",
     "estimatedTimeMinutes": "~{{minutes}} minutes",
@@ -2288,9 +2288,9 @@
     "adaptations": "adaptation",
     "noTemplates": "Aucun modèle disponible. Créez un modèle dans la section Modèles.",
     "errorLoadingTemplates": "Erreur lors du chargement des modèles",
-    "summary": "{{total}} éléments Ã— {{formats}} format(s)",
+    "summary": "{{total}} éléments × {{formats}} format(s)",
     "launch": "Lancer l'export",
     "creating": "Création...",
-    "jobCreated": "Export lancé ! {{total}} éléments Ã  traiter."
+    "jobCreated": "Export lancé ! {{total}} éléments à traiter."
   }
 }
