@@ -7,7 +7,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import express from 'express';
 import request from 'supertest';
 
-// Mock template extraction service
 const mockExtractTemplateFromHTML = vi.fn();
 const mockExtractTemplateFromImage = vi.fn();
 const mockExtractTemplateFromCV = vi.fn();
@@ -17,17 +16,25 @@ vi.mock('../../services/templateExtraction.service.js', () => ({
     extractTemplateFromCV: (...args) => mockExtractTemplateFromCV(...args)
 }));
 
-// Mock puppeteer
-vi.mock('puppeteer', () => ({
-    default: { launch: vi.fn() }
+const mockExtractTextFromPDFBuffer = vi.fn();
+vi.mock('../../services/batchJobsWorker/textExtraction.js', () => ({
+    extractTextFromPDFBuffer: (...args) => mockExtractTextFromPDFBuffer(...args)
 }));
 
-// Mock logger
+const mockPuppeteerLaunch = vi.fn();
+vi.mock('puppeteer', () => ({
+    default: { launch: (...args) => mockPuppeteerLaunch(...args) }
+}));
+
+const mockPdfParse = vi.fn();
+vi.mock('pdf-parse', () => ({
+    default: (...args) => mockPdfParse(...args)
+}));
+
 vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));
 
-// Mock multer
 vi.mock('multer', () => {
     const multerMock = () => ({
         single: () => (req, res, next) => {
@@ -53,7 +60,6 @@ vi.mock('multer', () => {
     return { default: multerMock };
 });
 
-// Mock auth middleware
 vi.mock('../../middleware/auth.middleware.js', () => ({
     authenticateToken: (req, res, next) => {
         if (req.headers.authorization === 'Bearer valid-token') {
@@ -119,5 +125,27 @@ describe('Templates Extraction Routes', () => {
             expect(res.status).toBe(400);
             expect(res.body.error).toContain('.doc format');
         });
+
+        it('falls back to pdfjs text extraction when pdf-parse is not callable', async () => {
+            mockPdfParse.mockRejectedValue(new TypeError('pdfParse is not a function'));
+            mockExtractTextFromPDFBuffer.mockResolvedValue('A'.repeat(80));
+            mockPuppeteerLaunch.mockRejectedValueOnce(new Error('vision unavailable'));
+            mockExtractTemplateFromCV.mockResolvedValueOnce({
+                template: { name: 'Fallback Template' },
+                model: 'test-model',
+                usage: { total_tokens: 10 }
+            });
+
+            const res = await request(app)
+                .post('/api/templates/extract-from-cv')
+                .set({ ...AUTH, 'x-test-mimetype': 'application/pdf' });
+
+            expect(res.status).toBe(200);
+            expect(mockExtractTextFromPDFBuffer).toHaveBeenCalled();
+            expect(mockExtractTemplateFromCV).toHaveBeenCalledWith('A'.repeat(80), 'template.pdf');
+            expect(res.body.extractionMethod).toBe('pdf-text-fallback');
+        });
     });
 });
+
+

@@ -8,6 +8,7 @@ import multer from 'multer';
 import { authenticateToken, requireAdmin } from '../../middleware/auth.middleware.js';
 import { safeLog } from '../../utils/logger.backend.js';
 import { extractTemplateFromHTML, extractTemplateFromImage, extractTemplateFromCV } from '../../services/templateExtraction.service.js';
+import { extractTextFromPDFBuffer } from '../../services/batchJobsWorker/textExtraction.js';
 import puppeteer from 'puppeteer';
 
 // Configure multer for file uploads (memory storage for template extraction)
@@ -351,6 +352,31 @@ async function extractImagesFromPDF(buffer) {
     return extractedImages;
 }
 
+async function extractPdfText(buffer, fileName) {
+    try {
+        const pdfParseModule = await import('pdf-parse');
+        const pdfParse = typeof pdfParseModule?.default === 'function'
+            ? pdfParseModule.default
+            : typeof pdfParseModule === 'function'
+                ? pdfParseModule
+                : typeof pdfParseModule?.pdfParse === 'function'
+                    ? pdfParseModule.pdfParse
+                    : null;
+
+        if (!pdfParse) {
+            throw new Error('pdf-parse module does not expose a callable parser');
+        }
+
+        const pdfData = await pdfParse(buffer);
+        return pdfData?.text || '';
+    } catch (error) {
+        safeLog('warn', 'pdf-parse extraction failed, falling back to pdfjs-dist', {
+            fileName,
+            error: error.message
+        });
+        return extractTextFromPDFBuffer(buffer);
+    }
+}
 /**
  * Extract template from PDF file using vision analysis
  */
@@ -361,9 +387,7 @@ async function extractFromPDF(buffer, fileName) {
         // First, extract text for context
         let textContent = '';
         try {
-            const pdfParse = (await import('pdf-parse')).default;
-            const pdfData = await pdfParse(buffer);
-            textContent = pdfData.text;
+            textContent = await extractPdfText(buffer, fileName);
         } catch (textError) {
             safeLog('warn', 'PDF text extraction failed, continuing with vision only', { error: textError.message });
         }
@@ -552,10 +576,9 @@ async function extractFromPDF(buffer, fileName) {
         // Fallback to text-only extraction
         safeLog('info', 'Falling back to text-only extraction');
         try {
-            const pdfParse = (await import('pdf-parse')).default;
-            const pdfData = await pdfParse(buffer);
-            if (pdfData.text && pdfData.text.trim().length > 50) {
-                const result = await extractTemplateFromCV(pdfData.text, fileName);
+            const fallbackText = await extractPdfText(buffer, fileName);
+            if (fallbackText && fallbackText.trim().length > 50) {
+                const result = await extractTemplateFromCV(fallbackText, fileName);
                 result.extractionMethod = 'pdf-text-fallback';
                 return result;
             }
@@ -568,3 +591,5 @@ async function extractFromPDF(buffer, fileName) {
 }
 
 export default router;
+
+
