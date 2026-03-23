@@ -56,3 +56,6 @@ Le runner applique :
 - les migrations applicatives et seeds idempotents restants
 
 Relancez la migration apres chaque mise a jour de code ou de schema.
+
+
+Hors Docker, `npm run migrate` applique automatiquement `docker/schema.sql` si la base est vide, puis les migrations SQL/applicatives restantes.

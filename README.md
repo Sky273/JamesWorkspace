@@ -422,3 +422,6 @@ Voir [LICENSE](./LICENSE) pour les détails.
 
 - Équipe Resume Converter
 
+
+
+Le mode hors Docker utilise le meme bootstrap canonique: `npm run migrate` applique `docker/schema.sql` sur une base vide, puis les migrations incrementales restantes.
