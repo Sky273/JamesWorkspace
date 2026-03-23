@@ -12,23 +12,6 @@ import logger from '../utils/logger.frontend';
 
 type FileType = 'pdf' | 'file';
 
-type PdfJsModule = {
-  GlobalWorkerOptions: { workerSrc: string };
-  getDocument: (source: { data: Uint8Array }) => {
-    promise: Promise<{
-      numPages: number;
-      getPage: (pageNumber: number) => Promise<{
-        getViewport: (options: { scale: number }) => { width: number; height: number };
-        render: (options: {
-          canvasContext: CanvasRenderingContext2D;
-          viewport: { width: number; height: number };
-        }) => { promise: Promise<void> };
-      }>;
-      destroy?: () => void;
-    }>;
-  };
-};
-
 const isMobileDevice = (): boolean => {
   return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 };
@@ -41,9 +24,7 @@ const SharedFilePage = (): JSX.Element => {
   const [filename, setFilename] = useState<string>('cv.pdf');
   const [isMobile, setIsMobile] = useState(false);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
-  const [pdfBytes, setPdfBytes] = useState<Uint8Array | null>(null);
-  const [pdfPageImages, setPdfPageImages] = useState<string[]>([]);
-  const [renderingPdf, setRenderingPdf] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const blobUrlRef = useRef<string | null>(null);
 
   const handleDownload = useCallback(() => {
@@ -58,10 +39,14 @@ const SharedFilePage = (): JSX.Element => {
   }, [blobUrl, filename]);
 
   const handleOpenInNewTab = useCallback(() => {
+    if (pdfUrl) {
+      window.open(pdfUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
     if (blobUrl) {
       window.open(blobUrl, '_blank', 'noopener,noreferrer');
     }
-  }, [blobUrl]);
+  }, [blobUrl, pdfUrl]);
 
   useEffect(() => {
     setIsMobile(isMobileDevice());
@@ -102,20 +87,15 @@ const SharedFilePage = (): JSX.Element => {
         blobUrlRef.current = url;
 
         if (contentType.includes('pdf')) {
-          if (isMobileDevice()) {
-            setPdfBytes(null);
-          } else {
-            const buffer = await blob.arrayBuffer();
-            setPdfBytes(new Uint8Array(buffer));
-          }
+          setPdfUrl(type === 'pdf' ? endpoint : url);
         } else {
+          setPdfUrl(null);
           const a = document.createElement('a');
           a.href = url;
           a.download = extractedFilename;
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
-          setPdfBytes(null);
         }
 
         setLoading(false);
@@ -135,68 +115,6 @@ const SharedFilePage = (): JSX.Element => {
       }
     };
   }, [token, type, t]);
-
-  useEffect(() => {
-    if (!pdfBytes || isMobile) {
-      setPdfPageImages([]);
-      setRenderingPdf(false);
-      return;
-    }
-
-    let cancelled = false;
-
-    const renderPdf = async () => {
-      setRenderingPdf(true);
-      try {
-        const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs') as PdfJsModule;
-        pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
-
-        const pdf = await pdfjs.getDocument({ data: pdfBytes }).promise;
-        const nextImages: string[] = [];
-        const scale = Math.min(Math.max(window.devicePixelRatio || 1, 1.25), 2);
-
-        for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
-          const page = await pdf.getPage(pageNumber);
-          const viewport = page.getViewport({ scale });
-          const canvas = document.createElement('canvas');
-          const context = canvas.getContext('2d');
-
-          if (!context) {
-            throw new Error('Canvas context unavailable');
-          }
-
-          canvas.width = Math.ceil(viewport.width);
-          canvas.height = Math.ceil(viewport.height);
-
-          await page.render({ canvasContext: context, viewport }).promise;
-          nextImages.push(canvas.toDataURL('image/png'));
-        }
-
-        if (!cancelled) {
-          setPdfPageImages(nextImages);
-        }
-
-        if (typeof pdf.destroy === 'function') {
-          pdf.destroy();
-        }
-      } catch (err) {
-        logger.error('[SharedFile] Failed to render PDF preview:', err);
-        if (!cancelled) {
-          setPdfPageImages([]);
-        }
-      } finally {
-        if (!cancelled) {
-          setRenderingPdf(false);
-        }
-      }
-    };
-
-    renderPdf();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [pdfBytes, isMobile]);
 
   if (loading) {
     return (
@@ -227,7 +145,7 @@ const SharedFilePage = (): JSX.Element => {
     );
   }
 
-  if (pdfBytes && !isMobile) {
+  if (pdfUrl && !isMobile) {
     return (
       <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
         <div className="sticky top-0 z-10 border-b border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-900/95 backdrop-blur px-4 py-3">
@@ -254,48 +172,11 @@ const SharedFilePage = (): JSX.Element => {
           </div>
         </div>
 
-        <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-6">
-          {renderingPdf && pdfPageImages.length === 0 ? (
-            <div className="flex min-h-[50vh] items-center justify-center">
-              <div className="text-center">
-                <div className="animate-spin h-12 w-12 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-                <p className="text-gray-600 dark:text-gray-400">
-                  {t('share.loading', 'Loading CV...')}
-                </p>
-              </div>
-            </div>
-          ) : pdfPageImages.length > 0 ? (
-            pdfPageImages.map((pageImage, index) => (
-              <div key={`page-${index + 1}`} className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
-                <img
-                  src={pageImage}
-                  alt={`PDF page ${index + 1}`}
-                  className="block h-auto w-full"
-                />
-              </div>
-            ))
-          ) : (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-center text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
-              <p className="mb-4">{t('share.fetchError', 'Failed to load file')}</p>
-              <div className="flex items-center justify-center gap-2">
-                <button
-                  onClick={handleOpenInNewTab}
-                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-amber-300 px-4 py-2 text-sm font-medium transition-colors hover:bg-amber-100 dark:border-amber-700 dark:hover:bg-amber-900/30"
-                >
-                  <EyeIcon className="h-4 w-4" />
-                  {t('share.openPdf', 'Open PDF')}
-                </button>
-                <button
-                  onClick={handleDownload}
-                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
-                >
-                  <DocumentArrowDownIcon className="h-4 w-4" />
-                  {t('share.downloadPdf', 'Download')}
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+        <iframe
+          src={pdfUrl}
+          className="h-[calc(100vh-73px)] w-full border-0"
+          title={filename}
+        />
       </div>
     );
   }
