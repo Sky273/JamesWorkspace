@@ -81,72 +81,10 @@ done
 echo "PostgreSQL is ready!"
 
 # =============================================================================
-# Initialize Database Schema (if not already done)
+# Initialize / migrate database schema outside the web runtime
 # =============================================================================
-echo "[3/5] Checking database schema..."
-
-# Check if tables exist, if not run init script
-TABLES_EXIST=$(PGPASSWORD=$POSTGRES_PASSWORD psql -h 127.0.0.1 -U $POSTGRES_USER -d $POSTGRES_DB -tAc "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'users');")
-
-if [ "$TABLES_EXIST" = "f" ]; then
-    echo "Initializing database schema..."
-    PGPASSWORD=$POSTGRES_PASSWORD psql -h 127.0.0.1 -U $POSTGRES_USER -d $POSTGRES_DB -f /docker-entrypoint-initdb.d/init-db.sql
-    echo "Database schema initialized!"
-    
-    # Mark all migrations as applied (fresh install has everything)
-    echo "Marking all migrations as applied..."
-    for migration_file in /docker-entrypoint-initdb.d/migrations/*.sql; do
-        if [ -f "$migration_file" ]; then
-            migration_name=$(basename "$migration_file")
-            PGPASSWORD=$POSTGRES_PASSWORD psql -h 127.0.0.1 -U $POSTGRES_USER -d $POSTGRES_DB -c \
-                "INSERT INTO schema_migrations (migration_name) VALUES ('$migration_name') ON CONFLICT (migration_name) DO NOTHING;"
-        fi
-    done
-    echo "All migrations marked as applied."
-else
-    echo "Database schema already exists."
-    
-    # Ensure schema_migrations table exists (for older databases)
-    PGPASSWORD=$POSTGRES_PASSWORD psql -h 127.0.0.1 -U $POSTGRES_USER -d $POSTGRES_DB -c \
-        "CREATE TABLE IF NOT EXISTS public.schema_migrations (
-            id SERIAL PRIMARY KEY,
-            migration_name character varying(255) NOT NULL UNIQUE,
-            applied_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
-        );" 2>/dev/null || true
-    
-    # Run pending migrations
-    echo "Checking for pending migrations..."
-    MIGRATIONS_APPLIED=0
-    for migration_file in /docker-entrypoint-initdb.d/migrations/*.sql; do
-        if [ -f "$migration_file" ]; then
-            migration_name=$(basename "$migration_file")
-            
-            # Check if migration was already applied
-            ALREADY_APPLIED=$(PGPASSWORD=$POSTGRES_PASSWORD psql -h 127.0.0.1 -U $POSTGRES_USER -d $POSTGRES_DB -tAc \
-                "SELECT EXISTS (SELECT 1 FROM schema_migrations WHERE migration_name = '$migration_name');")
-            
-            if [ "$ALREADY_APPLIED" = "f" ]; then
-                echo "  Applying migration: $migration_name"
-                if PGPASSWORD=$POSTGRES_PASSWORD psql -h 127.0.0.1 -U $POSTGRES_USER -d $POSTGRES_DB -f "$migration_file" 2>/dev/null; then
-                    PGPASSWORD=$POSTGRES_PASSWORD psql -h 127.0.0.1 -U $POSTGRES_USER -d $POSTGRES_DB -c \
-                        "INSERT INTO schema_migrations (migration_name) VALUES ('$migration_name');"
-                    MIGRATIONS_APPLIED=$((MIGRATIONS_APPLIED + 1))
-                else
-                    echo "  Warning: Migration $migration_name may have partially failed (some changes might already exist)"
-                    # Still mark as applied to avoid re-running
-                    PGPASSWORD=$POSTGRES_PASSWORD psql -h 127.0.0.1 -U $POSTGRES_USER -d $POSTGRES_DB -c \
-                        "INSERT INTO schema_migrations (migration_name) VALUES ('$migration_name') ON CONFLICT (migration_name) DO NOTHING;"
-                fi
-            fi
-        fi
-    done
-    
-    if [ $MIGRATIONS_APPLIED -gt 0 ]; then
-        echo "$MIGRATIONS_APPLIED migration(s) applied."
-    else
-        echo "No pending migrations."
-    fi
-fi
+echo "[3/5] Running docker-migrate..."
+npm run docker-migrate
 
 # =============================================================================
 # Start all services via Supervisor

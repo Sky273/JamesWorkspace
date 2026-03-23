@@ -50,9 +50,6 @@ describe('Database Service', () => {
             });
             // extensions query
             query.mockResolvedValueOnce({ rows: [{ extname: 'uuid-ossp' }, { extname: 'pg_trgm' }] });
-            // migration queries
-            query.mockResolvedValueOnce({ rows: [] });
-            query.mockResolvedValueOnce({ rows: [] });
 
             const result = await initializeDatabase();
 
@@ -73,8 +70,6 @@ describe('Database Service', () => {
             testConnection.mockResolvedValueOnce(true);
             query.mockResolvedValueOnce({ rows: [{ table_name: 'firms' }] }); // only one table
             query.mockResolvedValueOnce({ rows: [] }); // extensions
-            query.mockResolvedValueOnce({ rows: [] }); // migration 1
-            query.mockResolvedValueOnce({ rows: [] }); // migration 2
 
             await initializeDatabase();
 

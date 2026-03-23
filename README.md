@@ -108,14 +108,19 @@ HTTPS_ENABLED=true
 HTTPS_PORT=3443
 ```
 
-### 4. Initialiser la base de données
+### 4. Initialiser ou migrer la base de données
 
 ```bash
 # Créer la base de données
-psql -U postgres -c "CREATE DATABASE resume_converter;"
+psql -U postgres -c "CREATE DATABASE resumeconverter;"
 
-# Exécuter le script de création
-psql -U postgres -d resume_converter -f database/create_database.sql
+# Appliquer le schéma et les migrations applicatives
+npm run migrate
+```
+
+Windows :
+```batch
+migrate-server.bat
 ```
 
 ### 5. Démarrer l'application
@@ -414,3 +419,4 @@ Voir [LICENSE](./LICENSE) pour les détails.
 ## 👥 Contributeurs
 
 - Équipe Resume Converter
+

@@ -21,12 +21,14 @@
     "quickstart": "node scripts/quickstart.js",
     "quickstart:prod": "node scripts/quickstart.js --prod",
     "backup:db": "node server/scripts/backup-db.js",
+    "migrate": "node server/scripts/docker-migrate.js",
     "knip": "knip",
     "unused-exports": "ts-unused-exports client/tsconfig.json --showLineNumber",
     "lint:fix": "eslint client server --ext js,jsx,ts,tsx --fix",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "test:e2e:headed": "playwright test --headed"
+    "test:e2e:headed": "playwright test --headed",
+    "docker-migrate": "node server/scripts/docker-migrate.js"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",

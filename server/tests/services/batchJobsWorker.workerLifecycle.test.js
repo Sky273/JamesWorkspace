@@ -9,12 +9,14 @@ vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));
 vi.mock('../../config/database.js', () => ({
-    query: vi.fn(() => ({ rows: [] }))
+    query: vi.fn(() => ({ rows: [
+        { table_name: 'batch_jobs' },
+        { table_name: 'batch_job_items' }
+    ] }))
 }));
 vi.mock('../../services/batchJobs.service.js', () => ({
     JOB_STATUS: { PENDING: 'pending', PROCESSING: 'processing', COMPLETED: 'completed', FAILED: 'failed' },
     ITEM_STATUS: { PENDING: 'pending', PROCESSING: 'processing', SUCCESS: 'success', ERROR: 'error' },
-    initializeBatchJobsTable: vi.fn(),
     getPendingJobs: vi.fn(() => []),
     getPendingItems: vi.fn(() => []),
     updateJobStatus: vi.fn(),
@@ -39,7 +41,8 @@ import {
     stopWorker
 } from '../../services/batchJobsWorker/workerLifecycle.js';
 
-import { initializeBatchJobsTable, getPendingJobs, getPendingItems, updateJobStatus, updateJobItemStatus, updateJobCounters, isJobComplete } from '../../services/batchJobs.service.js';
+import { query } from '../../config/database.js';
+import { getPendingJobs, getPendingItems, updateJobStatus, updateJobItemStatus, updateJobCounters, isJobComplete } from '../../services/batchJobs.service.js';
 import { processImportItem, processImproveItem } from '../../services/batchJobsWorker/itemProcessors.js';
 import { resetLLMQueue } from '../../services/batchJobsWorker/llmIntegration.js';
 
@@ -50,14 +53,14 @@ describe('Batch Jobs Worker - Worker Lifecycle', () => {
     });
 
     describe('initializeWorker', () => {
-        it('should initialize batch jobs table and skip if already initialized', async () => {
+        it('should validate batch job tables once and skip if already initialized', async () => {
             await initializeWorker();
-            expect(initializeBatchJobsTable).toHaveBeenCalled();
+            expect(query).toHaveBeenCalled();
 
             // Second call should be a no-op (isInitialized is persistent module state)
-            initializeBatchJobsTable.mockClear();
+            query.mockClear();
             await initializeWorker();
-            expect(initializeBatchJobsTable).not.toHaveBeenCalled();
+            expect(query).not.toHaveBeenCalled();
         });
     });
 

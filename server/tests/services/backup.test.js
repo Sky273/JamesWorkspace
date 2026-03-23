@@ -36,8 +36,8 @@ describe('Backup Settings Service', () => {
 
             await initBackupTables();
 
-            // Should call query for: CREATE backup_settings, DO $$ migration, CREATE backup_history, 2 indexes
-            expect(query).toHaveBeenCalledTimes(5);
+            // Should call query for: CREATE backup_settings, settings migration, CREATE backup_history, history migration, 2 indexes
+            expect(query).toHaveBeenCalledTimes(6);
             expect(query.mock.calls[0][0]).toContain('CREATE TABLE IF NOT EXISTS backup_settings');
             expect(query.mock.calls[2][0]).toContain('CREATE TABLE IF NOT EXISTS backup_history');
         });

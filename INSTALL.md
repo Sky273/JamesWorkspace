@@ -236,18 +236,24 @@ GRANT ALL PRIVILEGES ON DATABASE resumeconverter TO resumeconverter;
 \q
 ```
 
-#### 4.2 Initialiser le schéma
+#### 4.2 Initialiser ou migrer le schéma
 
-Exécutez le script d'initialisation :
+Le schéma et les migrations ne sont plus appliqués au démarrage du serveur web. Exécutez la migration explicitement avant le premier lancement et après chaque mise à jour :
 
 ```bash
-psql -U resumeconverter -d resumeconverter -f docker/init-db.sql
+npm run migrate
+```
+
+Windows :
+```batch
+migrate-server.bat
 ```
 
 Ou via pgAdmin :
-1. Connectez-vous à votre base `resumeconverter`
+1. Connectez-vous a votre base resumeconverter
 2. Ouvrez Query Tool
-3. Ouvrez et exécutez le fichier `docker/init-db.sql`
+3. Ouvrez et executez le fichier docker/init-db.sql si la base est vide
+4. Lancez ensuite npm run migrate pour appliquer les migrations applicatives restantes
 
 ### Étape 5 : Lancer l'application
 
@@ -415,9 +421,11 @@ chmod +x docker/docker-build.sh
 |--------|-------------|
 | `docker-build.bat` | Construire l'image Docker |
 | `docker-run.bat` | Démarrer le conteneur (⚠️ terminal Admin) |
+| `docker-migrate.bat` | Lancer les migrations Docker a la demande |
 | `docker-stop.bat` | Arrêter et supprimer le conteneur |
-| `docker-logs.bat` | Voir les logs en temps réel |
+| `docker-logs.bat` | Voir les logs en temps reel |
 | `docker-shell.bat` | Ouvrir un shell dans le conteneur |
+| `migrate-server.bat` | Lancer les migrations hors Docker |
 
 #### Windows - PowerShell (avancé)
 
@@ -876,3 +884,7 @@ Pour toute question ou problème :
 ---
 
 *Dernière mise à jour : 19 Mars 2026*
+
+
+
+

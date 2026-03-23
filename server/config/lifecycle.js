@@ -24,14 +24,8 @@ import { destroyEscoCache } from '../services/escoService.js';
 import { initializeDatabase, closePool } from '../services/database.service.js';
 import { startScheduler, stopScheduler } from '../services/scheduler.service.js';
 import { initBackupScheduler, stopBackupScheduler } from '../services/backup-scheduler.service.js';
-import { initBackupTables } from '../services/backup.service.js';
-import { initGdprAuditTable } from '../services/gdprAudit.service.js';
-import { initResumeCommentsTable } from '../services/resumeComments.service.js';
-import { initShareResumeTable } from '../services/shareResume.service.js';
-import { initCandidatePipelineTable } from '../services/candidatePipeline.service.js';
-import { initDealsTable } from '../services/deals.service.js';
 import { initializeWorker as initBatchJobsWorker, startWorker as startBatchJobsWorker, stopWorker as stopBatchJobsWorker } from '../services/batchJobsWorker.service.js';
-import { initCalendarTokensTable, destroyCalendarService } from '../services/calendar.service.js';
+import { destroyCalendarService } from '../services/calendar.service.js';
 import { destroyAuthOauthStates } from '../routes/auth.routes.js';
 import { destroyMailStatesCleanup } from '../routes/mail.routes.js';
 import { destroyGoogleapis } from '../services/mail/gmailProvider.js';
@@ -153,29 +147,9 @@ async function onServerStart(server, protocol, port) {
     const dbInitialized = await initializeDatabase();
     if (dbInitialized) {
         safeLog('info', 'PostgreSQL database initialized successfully');
-        
-        // Initialize tables
-        const tableInits = [
-            { fn: initGdprAuditTable, name: 'GDPR Audit Log' },
-            { fn: initResumeCommentsTable, name: 'Resume Comments' },
-            { fn: initShareResumeTable, name: 'Share Resume' },
-            { fn: initCandidatePipelineTable, name: 'Candidate Pipeline' },
-            { fn: initDealsTable, name: 'Deals' },
-            { fn: initCalendarTokensTable, name: 'Calendar tokens' },
-            { fn: initBackupTables, name: 'Backup' }
-        ];
-        
-        for (const { fn, name } of tableInits) {
-            try {
-                await fn();
-                safeLog('info', `${name} table initialized`);
-            } catch (error) {
-                safeLog('error', `Failed to initialize ${name} table`, { error: error.message });
-            }
-        }
-        
+
         // Start backup scheduler (scheduled database backups via FTP/SFTP)
-        // Must be after initBackupTables since it reads from backup_settings table
+        // Requires schema to be prepared separately via docker-migrate.
         try {
             await initBackupScheduler();
             safeLog('info', 'Backup Scheduler initialized');

@@ -1,41 +1,58 @@
 # Installation du client PostgreSQL
 
-## 📦 Commande d'installation
+## Commande d'installation
 
 ```bash
 npm install pg
 npm install --save-dev @types/pg
 ```
 
-## 📝 Ce qui sera installé
+## Ce qui sera installe
 
-- **pg** : Client PostgreSQL pour Node.js (production)
-- **@types/pg** : Types TypeScript pour pg (développement)
+- `pg` : client PostgreSQL pour Node.js
+- `@types/pg` : types TypeScript pour `pg`
 
-## ⚙️ Configuration requise
+## Configuration requise
 
-Après l'installation, ajouter ces variables d'environnement dans `.env` :
+Apres l'installation, ajoutez ces variables dans `.env` :
 
 ```env
-# PostgreSQL Configuration
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
 POSTGRES_DB=resumeconverter
 POSTGRES_USER=resumeconverter
 POSTGRES_PASSWORD=votre_mot_de_passe_securise
 POSTGRES_MAX_CONNECTIONS=20
-
-# SSL (production uniquement)
 POSTGRES_SSL=false
 ```
 
-## 🚀 Prochaines étapes
+## Migration de la base
 
-Après l'installation :
-1. Créer `src/config/database.js` - Configuration du pool PostgreSQL
-2. Créer `src/services/database.service.js` - Service de base de données
-3. Créer `src/utils/postgresHelpers.js` - Helpers pour requêtes
+Le schema et les migrations ne sont plus appliques automatiquement au demarrage du serveur web.
 
----
+Hors Docker :
+```bash
+npm run migrate
+```
 
-**Exécutez la commande d'installation ci-dessus pour continuer.**
+Windows :
+```batch
+migrate-server.bat
+```
+
+Docker / conteneur :
+```bash
+npm run docker-migrate
+```
+
+Windows :
+```batch
+docker-migrate.bat
+```
+
+Le runner applique :
+- `docker/init-db.sql` si la base est vide
+- les migrations SQL en attente dans `docker/migrations/`
+- les migrations applicatives et seeds idempotents restants
+
+Relancez la migration apres chaque mise a jour de code ou de schema.

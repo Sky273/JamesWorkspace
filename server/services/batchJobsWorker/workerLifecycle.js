@@ -8,7 +8,6 @@ import { query } from '../../config/database.js';
 import {
     JOB_STATUS,
     ITEM_STATUS,
-    initializeBatchJobsTable,
     getPendingJobs,
     getPendingItems,
     updateJobStatus,
@@ -32,6 +31,27 @@ let isInitialized = false;
 let isShuttingDown = false;
 let activeProcessingCount = 0;
 
+const REQUIRED_BATCH_TABLES = ['batch_jobs', 'batch_job_items'];
+
+async function ensureBatchJobsSchemaReady() {
+    const result = await query(
+        `
+            SELECT table_name
+            FROM information_schema.tables
+            WHERE table_schema = 'public'
+              AND table_name = ANY($1::text[])
+        `,
+        [REQUIRED_BATCH_TABLES]
+    );
+
+    const existingTables = result.rows.map(row => row.table_name);
+    const missingTables = REQUIRED_BATCH_TABLES.filter(tableName => !existingTables.includes(tableName));
+
+    if (missingTables.length > 0) {
+        throw new Error(`Batch jobs schema is missing required tables: ${missingTables.join(', ')}. Run npm run docker-migrate before starting the worker.`);
+    }
+}
+
 /**
  * Initialize the worker
  */
@@ -39,7 +59,7 @@ export async function initializeWorker() {
     if (isInitialized) return;
 
     try {
-        await initializeBatchJobsTable();
+        await ensureBatchJobsSchemaReady();
         isInitialized = true;
         safeLog('info', 'Batch jobs worker initialized');
     } catch (error) {

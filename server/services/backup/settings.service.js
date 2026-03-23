@@ -8,11 +8,9 @@ import { safeLog } from '../../utils/logger.backend.js';
 
 /**
  * Initialize backup tables if they don't exist
- * Called at server startup
  */
 export async function initBackupTables() {
     try {
-        // Create backup_settings table
         await query(`
             CREATE TABLE IF NOT EXISTS backup_settings (
                 id uuid DEFAULT public.uuid_generate_v4() PRIMARY KEY,
@@ -39,10 +37,9 @@ export async function initBackupTables() {
                 updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             )
         `);
-        
-        // Add columns if they don't exist (migration for existing tables)
+
         await query(`
-            DO $$ 
+            DO $$
             BEGIN
                 IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'backup_settings' AND column_name = 'backup_target') THEN
                     ALTER TABLE backup_settings ADD COLUMN backup_target VARCHAR(10) DEFAULT 'local' CHECK (backup_target IN ('local', 'remote'));
@@ -58,26 +55,48 @@ export async function initBackupTables() {
                 END IF;
             END $$;
         `);
-        
-        // Create backup_history table
+
         await query(`
             CREATE TABLE IF NOT EXISTS backup_history (
                 id uuid DEFAULT public.uuid_generate_v4() PRIMARY KEY,
-                type VARCHAR(20) NOT NULL,
-                filename VARCHAR(255) NOT NULL,
+                backup_type VARCHAR(20) NOT NULL,
+                filename VARCHAR(500) NOT NULL,
+                file_size BIGINT,
                 size_bytes BIGINT,
-                status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'running', 'completed', 'failed')),
+                status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'running', 'success', 'failed', 'completed')),
                 started_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
                 completed_at TIMESTAMP WITH TIME ZONE,
                 error_message TEXT,
                 uploaded BOOLEAN DEFAULT false
             )
         `);
-        
-        // Create indexes
+
+        await query(`
+            DO $$
+            BEGIN
+                IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'backup_history' AND column_name = 'type')
+                   AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'backup_history' AND column_name = 'backup_type') THEN
+                    ALTER TABLE backup_history ADD COLUMN backup_type VARCHAR(20);
+                    EXECUTE 'UPDATE backup_history SET backup_type = type WHERE backup_type IS NULL';
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'backup_history' AND column_name = 'backup_type') THEN
+                    ALTER TABLE backup_history ADD COLUMN backup_type VARCHAR(20);
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'backup_history' AND column_name = 'file_size') THEN
+                    ALTER TABLE backup_history ADD COLUMN file_size BIGINT;
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'backup_history' AND column_name = 'size_bytes') THEN
+                    ALTER TABLE backup_history ADD COLUMN size_bytes BIGINT;
+                END IF;
+                EXECUTE 'UPDATE backup_history SET backup_type = COALESCE(backup_type, ''manual'') WHERE backup_type IS NULL';
+                EXECUTE 'UPDATE backup_history SET file_size = COALESCE(file_size, size_bytes) WHERE file_size IS NULL';
+                EXECUTE 'UPDATE backup_history SET size_bytes = COALESCE(size_bytes, file_size) WHERE size_bytes IS NULL';
+            END $$;
+        `);
+
         await query(`CREATE INDEX IF NOT EXISTS idx_backup_history_started_at ON backup_history(started_at DESC)`);
         await query(`CREATE INDEX IF NOT EXISTS idx_backup_history_status ON backup_history(status)`);
-        
+
         safeLog('info', 'Backup tables initialized');
     } catch (error) {
         safeLog('error', 'Failed to initialize backup tables', { error: error.message });
@@ -107,7 +126,7 @@ export async function getBackupSettings() {
 export async function saveBackupSettings(settings) {
     try {
         const existingSettings = await getBackupSettings();
-        
+
         if (existingSettings) {
             const result = await query(`
                 UPDATE backup_settings SET
@@ -155,38 +174,38 @@ export async function saveBackupSettings(settings) {
                 existingSettings.id
             ]);
             return result.rows[0];
-        } else {
-            const result = await query(`
-                INSERT INTO backup_settings (
-                    backup_target, protocol, tls_mode, host, port, username, password, remote_path,
-                    daily_enabled, daily_time, daily_retention,
-                    weekly_enabled, weekly_day, weekly_time, weekly_retention,
-                    monthly_enabled, monthly_day, monthly_time, monthly_retention
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
-                RETURNING *
-            `, [
-                settings.backup_target || 'local',
-                settings.protocol || 'ftp',
-                settings.tls_mode || 'explicit',
-                settings.host || '',
-                settings.port || 21,
-                settings.username || '',
-                settings.password || '',
-                settings.remote_path || '/backups',
-                settings.daily_enabled || false,
-                settings.daily_time || '02:00',
-                settings.daily_retention || 7,
-                settings.weekly_enabled || false,
-                settings.weekly_day || 0,
-                settings.weekly_time || '03:00',
-                settings.weekly_retention || 4,
-                settings.monthly_enabled || false,
-                settings.monthly_day || 1,
-                settings.monthly_time || '04:00',
-                settings.monthly_retention || 12
-            ]);
-            return result.rows[0];
         }
+
+        const result = await query(`
+            INSERT INTO backup_settings (
+                backup_target, protocol, tls_mode, host, port, username, password, remote_path,
+                daily_enabled, daily_time, daily_retention,
+                weekly_enabled, weekly_day, weekly_time, weekly_retention,
+                monthly_enabled, monthly_day, monthly_time, monthly_retention
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+            RETURNING *
+        `, [
+            settings.backup_target || 'local',
+            settings.protocol || 'ftp',
+            settings.tls_mode || 'explicit',
+            settings.host || '',
+            settings.port || 21,
+            settings.username || '',
+            settings.password || '',
+            settings.remote_path || '/backups',
+            settings.daily_enabled || false,
+            settings.daily_time || '02:00',
+            settings.daily_retention || 7,
+            settings.weekly_enabled || false,
+            settings.weekly_day || 0,
+            settings.weekly_time || '03:00',
+            settings.weekly_retention || 4,
+            settings.monthly_enabled || false,
+            settings.monthly_day || 1,
+            settings.monthly_time || '04:00',
+            settings.monthly_retention || 12
+        ]);
+        return result.rows[0];
     } catch (error) {
         safeLog('error', 'Failed to save backup settings', { error: error.message });
         throw error;
