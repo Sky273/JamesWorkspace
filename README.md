@@ -122,7 +122,7 @@ Windows :
 ```batch
 migrate-server.bat
 
-Pour une base vide, le bootstrap applique desormais le schema canonique `docker/schema.sql` avant de marquer les migrations SQL existantes comme deja couvertes.
+Pour une base vide, le bootstrap applique desormais le schema canonique `docker/schema.sql` avant de marquer les migrations SQL existantes comme deja couvertes. `docker/init-db.sql` n'est plus qu'un relais de compatibilite vers ce schema canonique.
 ```
 
 ### 5. Démarrer l'application

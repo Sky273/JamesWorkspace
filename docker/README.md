@@ -295,7 +295,7 @@ rmdir /s /q data\postgresql
 
 If you previously used a Docker volume (`resumeconverter-pgdata`), you can migrate:
 
-For a brand new database, the bootstrap now applies the canonical schema from `docker/schema.sql` before marking the existing SQL migrations as covered.
+For a brand new database, the bootstrap now applies the canonical schema from `docker/schema.sql` before marking the existing SQL migrations as covered. `docker/init-db.sql` is kept only as a compatibility wrapper that includes this canonical schema.
 
 ```bash
 # 1. Stop container

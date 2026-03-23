@@ -252,7 +252,7 @@ migrate-server.bat
 Ou via pgAdmin :
 1. Connectez-vous a votre base resumeconverter
 2. Ouvrez Query Tool
-3. Lancez `npm run migrate` ou `migrate-server.bat` : sur une base vide, le script applique automatiquement `docker/schema.sql`, puis les migrations applicatives restantes
+3. Lancez `npm run migrate` ou `migrate-server.bat` : sur une base vide, le script applique automatiquement `docker/schema.sql`, puis les migrations applicatives restantes. `docker/init-db.sql` reste uniquement un relais de compatibilite vers ce schema.
 
 ### Étape 5 : Lancer l'application
 
