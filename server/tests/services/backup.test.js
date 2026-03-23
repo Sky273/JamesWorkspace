@@ -31,15 +31,42 @@ describe('Backup Settings Service', () => {
     });
 
     describe('initBackupTables', () => {
-        it('should create tables and indexes', async () => {
-            query.mockResolvedValue({ rows: [] });
+        it('should verify tables, columns, and indexes', async () => {
+            query.mockImplementation((sql, params) => {
+                if (sql.includes('information_schema.tables')) {
+                    expect(params).toEqual([['backup_settings', 'backup_history']]);
+                    return Promise.resolve({ rows: [
+                        { table_name: 'backup_settings' },
+                        { table_name: 'backup_history' }
+                    ] });
+                }
+                if (sql.includes('information_schema.columns')) {
+                    if (params[0] === 'backup_settings') {
+                        return Promise.resolve({ rows: [
+                            { column_name: 'backup_target' },
+                            { column_name: 'daily_retention' },
+                            { column_name: 'weekly_retention' },
+                            { column_name: 'monthly_retention' }
+                        ] });
+                    }
+                    return Promise.resolve({ rows: [
+                        { column_name: 'backup_type' },
+                        { column_name: 'file_size' },
+                        { column_name: 'size_bytes' }
+                    ] });
+                }
+                if (sql.includes('pg_indexes')) {
+                    return Promise.resolve({ rows: [
+                        { indexname: 'idx_backup_history_started_at' },
+                        { indexname: 'idx_backup_history_status' }
+                    ] });
+                }
+                return Promise.resolve({ rows: [] });
+            });
 
             await initBackupTables();
 
-            // Should call query for: CREATE backup_settings, settings migration, CREATE backup_history, history migration, 2 indexes
-            expect(query).toHaveBeenCalledTimes(6);
-            expect(query.mock.calls[0][0]).toContain('CREATE TABLE IF NOT EXISTS backup_settings');
-            expect(query.mock.calls[2][0]).toContain('CREATE TABLE IF NOT EXISTS backup_history');
+            expect(query).toHaveBeenCalledTimes(4);
         });
 
         it('should throw on database error', async () => {

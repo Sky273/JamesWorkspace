@@ -6,6 +6,7 @@
 import { safeLog } from '../utils/logger.backend.js';
 import { query } from '../config/database.js';
 import { googleAuthConfig, encryptToken, decryptToken, calculateTokenExpiry } from '../config/oauth.config.js';
+import { assertSchemaRequirements } from './schemaVerification.service.js';
 
 // Lazy-loaded googleapis module
 let google = null;
@@ -390,31 +391,20 @@ export async function getUpcomingCalendarEvents(userId, maxResults = 10) {
 }
 
 /**
- * Initialize calendar tokens table
+ * Verify calendar tokens schema is present
  */
 export async function initCalendarTokensTable() {
     try {
-        await query(`
-            CREATE TABLE IF NOT EXISTS user_calendar_tokens (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                access_token_encrypted TEXT NOT NULL,
-                refresh_token_encrypted TEXT,
-                token_expiry TIMESTAMP WITH TIME ZONE,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE(user_id)
-            )
-        `);
-        
-        await query(`
-            CREATE INDEX IF NOT EXISTS idx_user_calendar_tokens_user_id ON user_calendar_tokens(user_id)
-        `);
-        
-        safeLog('info', 'Calendar tokens table initialized');
+        await assertSchemaRequirements({
+            context: 'calendar tokens',
+            tables: ['user_calendar_tokens'],
+            indexes: ['idx_user_calendar_tokens_user_id']
+        });
+
+        safeLog('info', 'Calendar tokens schema verified');
         return true;
     } catch (error) {
-        safeLog('error', 'Failed to initialize calendar tokens table', { error: error.message });
+        safeLog('error', 'Failed to verify calendar tokens schema', { error: error.message });
         return false;
     }
 }

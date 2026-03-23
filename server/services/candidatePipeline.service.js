@@ -6,6 +6,7 @@
 
 import { query } from '../config/database.js';
 import { safeLog } from '../utils/logger.backend.js';
+import { assertSchemaRequirements } from './schemaVerification.service.js';
 
 // Pipeline stages configuration
 export const PIPELINE_STAGES = [
@@ -20,89 +21,32 @@ export const PIPELINE_STAGES = [
 ];
 
 /**
- * Initialize the candidate_pipeline table
- * Creates the table if it doesn't exist
+ * Verify the candidate pipeline schema is present
  */
 export async function initCandidatePipelineTable() {
     try {
-        // Create candidate_pipeline table
-        await query(`
-            CREATE TABLE IF NOT EXISTS candidate_pipeline (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                resume_id UUID NOT NULL REFERENCES resumes(id) ON DELETE CASCADE,
-                mission_id UUID REFERENCES missions(id) ON DELETE SET NULL,
-                client_id UUID,
-                stage VARCHAR(50) NOT NULL DEFAULT 'new',
-                notes TEXT,
-                created_by UUID NOT NULL,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                moved_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE(resume_id, mission_id)
-            )
-        `);
+        await assertSchemaRequirements({
+            context: 'candidate pipeline',
+            tables: ['candidate_pipeline', 'pipeline_history', 'pipeline_interviews'],
+            columns: {
+                candidate_pipeline: ['client_id'],
+                pipeline_interviews: ['scheduled_at']
+            },
+            indexes: [
+                'idx_candidate_pipeline_resume_id',
+                'idx_candidate_pipeline_mission_id',
+                'idx_candidate_pipeline_client_id',
+                'idx_candidate_pipeline_stage',
+                'idx_pipeline_history_pipeline_id',
+                'idx_pipeline_interviews_pipeline_id',
+                'idx_pipeline_interviews_scheduled_at'
+            ]
+        });
 
-        // Create pipeline_history table for tracking stage changes
-        await query(`
-            CREATE TABLE IF NOT EXISTS pipeline_history (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                pipeline_id UUID NOT NULL REFERENCES candidate_pipeline(id) ON DELETE CASCADE,
-                from_stage VARCHAR(50),
-                to_stage VARCHAR(50) NOT NULL,
-                changed_by UUID NOT NULL,
-                notes TEXT,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
-
-        // Create pipeline_interviews table for interview scheduling
-        await query(`
-            CREATE TABLE IF NOT EXISTS pipeline_interviews (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                pipeline_id UUID NOT NULL REFERENCES candidate_pipeline(id) ON DELETE CASCADE,
-                title VARCHAR(255) NOT NULL,
-                description TEXT,
-                interview_type VARCHAR(50) DEFAULT 'client',
-                scheduled_at TIMESTAMP WITH TIME ZONE NOT NULL,
-                duration_minutes INTEGER DEFAULT 60,
-                location VARCHAR(255),
-                meeting_link VARCHAR(500),
-                attendees JSONB DEFAULT '[]',
-                calendar_event_id VARCHAR(255),
-                calendar_provider VARCHAR(50),
-                status VARCHAR(50) DEFAULT 'scheduled',
-                outcome VARCHAR(50),
-                outcome_notes TEXT,
-                created_by UUID NOT NULL,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
-
-        // Create indexes
-        await query(`
-            CREATE INDEX IF NOT EXISTS idx_candidate_pipeline_resume_id ON candidate_pipeline(resume_id);
-            CREATE INDEX IF NOT EXISTS idx_candidate_pipeline_mission_id ON candidate_pipeline(mission_id);
-            CREATE INDEX IF NOT EXISTS idx_candidate_pipeline_client_id ON candidate_pipeline(client_id);
-            CREATE INDEX IF NOT EXISTS idx_candidate_pipeline_stage ON candidate_pipeline(stage);
-            CREATE INDEX IF NOT EXISTS idx_pipeline_history_pipeline_id ON pipeline_history(pipeline_id);
-            CREATE INDEX IF NOT EXISTS idx_pipeline_interviews_pipeline_id ON pipeline_interviews(pipeline_id);
-            CREATE INDEX IF NOT EXISTS idx_pipeline_interviews_scheduled_at ON pipeline_interviews(scheduled_at);
-        `);
-
-        // Migration: Drop old foreign key constraint on client_id if it exists (was pointing to firms)
-        try {
-            await query(`ALTER TABLE candidate_pipeline DROP CONSTRAINT IF EXISTS candidate_pipeline_client_id_fkey`);
-            safeLog('info', 'Dropped old client_id foreign key constraint');
-        } catch (migrationError) {
-            // Constraint might not exist - that's fine
-            safeLog('debug', 'Migration note: client_id constraint', { note: migrationError.message });
-        }
-
-        safeLog('info', 'Candidate pipeline tables initialized');
+        safeLog('info', 'Candidate pipeline schema verified');
         return true;
     } catch (error) {
-        safeLog('error', 'Failed to initialize candidate pipeline tables', { error: error.message });
+        safeLog('error', 'Failed to verify candidate pipeline schema', { error: error.message });
         throw error;
     }
 }

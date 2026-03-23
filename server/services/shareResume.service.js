@@ -9,36 +9,31 @@ import crypto from 'crypto';
 import fs from 'fs/promises';
 import path from 'path';
 import { UPLOAD_DIR } from '../config/constants.js';
+import { assertSchemaRequirements } from './schemaVerification.service.js';
 
 // Shared PDFs directory
 const SHARED_PDF_DIR = path.join(UPLOAD_DIR, 'shared');
 
 /**
- * Initialize the shared_pdf_path column in resumes table
+ * Verify the shared resume schema is present
  */
 export async function initShareResumeTable() {
     try {
-        // Add shared_pdf_path column if it doesn't exist
-        await query(`
-            ALTER TABLE resumes 
-            ADD COLUMN IF NOT EXISTS shared_pdf_path VARCHAR(500),
-            ADD COLUMN IF NOT EXISTS shared_pdf_token VARCHAR(64)
-        `);
+        await assertSchemaRequirements({
+            context: 'shared resume',
+            tables: ['resumes'],
+            columns: {
+                resumes: ['shared_pdf_path', 'shared_pdf_token']
+            },
+            indexes: ['idx_resumes_shared_pdf_token']
+        });
 
-        // Create index for token lookup
-        await query(`
-            CREATE INDEX IF NOT EXISTS idx_resumes_shared_pdf_token 
-            ON resumes(shared_pdf_token) 
-            WHERE shared_pdf_token IS NOT NULL
-        `);
-
-        // Ensure shared directory exists
         await fs.mkdir(SHARED_PDF_DIR, { recursive: true });
 
-        safeLog('info', 'Share resume table columns initialized');
+        safeLog('info', 'Share resume schema verified');
         return true;
     } catch (error) {
-        safeLog('error', 'Failed to initialize share resume table', {
+        safeLog('error', 'Failed to verify share resume schema', {
             error: error.message
         });
         throw error;

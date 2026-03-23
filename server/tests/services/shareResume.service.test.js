@@ -59,16 +59,31 @@ describe('shareResume.service', () => {
     });
 
     describe('initShareResumeTable', () => {
-        it('should add columns and create index', async () => {
-            query.mockResolvedValue({ rows: [] });
+        it('should verify columns, index, and create shared directory', async () => {
+            query.mockImplementation((sql, params) => {
+                if (sql.includes('information_schema.tables')) {
+                    expect(params).toEqual([['resumes']]);
+                    return Promise.resolve({ rows: [{ table_name: 'resumes' }] });
+                }
+                if (sql.includes('information_schema.columns')) {
+                    expect(params).toEqual(['resumes', ['shared_pdf_path', 'shared_pdf_token']]);
+                    return Promise.resolve({ rows: [
+                        { column_name: 'shared_pdf_path' },
+                        { column_name: 'shared_pdf_token' }
+                    ] });
+                }
+                if (sql.includes('pg_indexes')) {
+                    expect(params).toEqual([['idx_resumes_shared_pdf_token']]);
+                    return Promise.resolve({ rows: [{ indexname: 'idx_resumes_shared_pdf_token' }] });
+                }
+                return Promise.resolve({ rows: [] });
+            });
             fs.mkdir.mockResolvedValue(undefined);
 
             const result = await initShareResumeTable();
 
             expect(result).toBe(true);
-            expect(query).toHaveBeenCalledTimes(2);
-            expect(query).toHaveBeenCalledWith(expect.stringContaining('ADD COLUMN IF NOT EXISTS shared_pdf_path'));
-            expect(query).toHaveBeenCalledWith(expect.stringContaining('CREATE INDEX IF NOT EXISTS'));
+            expect(query).toHaveBeenCalledTimes(3);
             expect(fs.mkdir).toHaveBeenCalled();
         });
 

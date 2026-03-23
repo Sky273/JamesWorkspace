@@ -5,41 +5,27 @@
 
 import { query } from '../config/database.js';
 import { safeLog } from '../utils/logger.backend.js';
+import { assertSchemaRequirements } from './schemaVerification.service.js';
 
 /**
- * Initialize the resume_comments table
- * Creates the table if it doesn't exist
+ * Verify the resume comments schema is present
  */
 export async function initResumeCommentsTable() {
     try {
-        await query(`
-            CREATE TABLE IF NOT EXISTS resume_comments (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                resume_id UUID NOT NULL REFERENCES resumes(id) ON DELETE CASCADE,
-                user_id UUID NOT NULL,
-                user_name VARCHAR(255) NOT NULL,
-                content TEXT NOT NULL,
-                is_private BOOLEAN DEFAULT FALSE,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
+        await assertSchemaRequirements({
+            context: 'resume comments',
+            tables: ['resume_comments'],
+            indexes: [
+                'idx_resume_comments_resume_id',
+                'idx_resume_comments_user_id',
+                'idx_resume_comments_created_at'
+            ]
+        });
 
-        // Create indexes for efficient querying
-        await query(`
-            CREATE INDEX IF NOT EXISTS idx_resume_comments_resume_id ON resume_comments(resume_id)
-        `);
-        await query(`
-            CREATE INDEX IF NOT EXISTS idx_resume_comments_user_id ON resume_comments(user_id)
-        `);
-        await query(`
-            CREATE INDEX IF NOT EXISTS idx_resume_comments_created_at ON resume_comments(created_at DESC)
-        `);
-
-        safeLog('info', 'Resume comments table initialized');
+        safeLog('info', 'Resume comments schema verified');
         return true;
     } catch (error) {
-        safeLog('error', 'Failed to initialize resume comments table', {
+        safeLog('error', 'Failed to verify resume comments schema', {
             error: error.message
         });
         throw error;

@@ -74,14 +74,38 @@ describe('gdprAudit.service', () => {
     });
 
     describe('initGdprAuditTable', () => {
-        it('should create table and indexes', async () => {
-            query.mockResolvedValue({ rows: [] });
+        it('should verify table and indexes', async () => {
+            query.mockImplementation((sql, params) => {
+                if (sql.includes('information_schema.tables')) {
+                    expect(params).toEqual([['gdpr_audit_log']]);
+                    return Promise.resolve({ rows: [{ table_name: 'gdpr_audit_log' }] });
+                }
+                if (sql.includes('pg_indexes')) {
+                    expect(params).toEqual([[
+                        'idx_gdpr_audit_action',
+                        'idx_gdpr_audit_category',
+                        'idx_gdpr_audit_firm_id',
+                        'idx_gdpr_audit_created_at',
+                        'idx_gdpr_audit_target_email',
+                        'idx_gdpr_audit_is_automated'
+                    ]]);
+                    return Promise.resolve({ rows: [
+                        { indexname: 'idx_gdpr_audit_action' },
+                        { indexname: 'idx_gdpr_audit_category' },
+                        { indexname: 'idx_gdpr_audit_firm_id' },
+                        { indexname: 'idx_gdpr_audit_created_at' },
+                        { indexname: 'idx_gdpr_audit_target_email' },
+                        { indexname: 'idx_gdpr_audit_is_automated' }
+                    ] });
+                }
+                return Promise.resolve({ rows: [] });
+            });
 
             const result = await initGdprAuditTable();
 
             expect(result).toBe(true);
-            expect(query).toHaveBeenCalledTimes(7); // 1 CREATE TABLE + 6 CREATE INDEX
-            expect(query).toHaveBeenCalledWith(expect.stringContaining('CREATE TABLE IF NOT EXISTS gdpr_audit_log'));
+            expect(query).toHaveBeenCalledTimes(2);
+            expect(safeLog).toHaveBeenCalledWith('info', 'GDPR audit log schema verified');
         });
 
         it('should throw error on database failure', async () => {

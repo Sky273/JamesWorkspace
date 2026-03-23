@@ -30,12 +30,29 @@ describe('Resume Comments Service', () => {
     });
 
     describe('initResumeCommentsTable', () => {
-        it('should create table and indexes', async () => {
-            query.mockResolvedValue({ rows: [] });
+        it('should verify table and indexes', async () => {
+            query.mockImplementation((sql, params) => {
+                if (sql.includes('information_schema.tables')) {
+                    expect(params).toEqual([['resume_comments']]);
+                    return Promise.resolve({ rows: [{ table_name: 'resume_comments' }] });
+                }
+                if (sql.includes('pg_indexes')) {
+                    expect(params).toEqual([[
+                        'idx_resume_comments_resume_id',
+                        'idx_resume_comments_user_id',
+                        'idx_resume_comments_created_at'
+                    ]]);
+                    return Promise.resolve({ rows: [
+                        { indexname: 'idx_resume_comments_resume_id' },
+                        { indexname: 'idx_resume_comments_user_id' },
+                        { indexname: 'idx_resume_comments_created_at' }
+                    ] });
+                }
+                return Promise.resolve({ rows: [] });
+            });
 
             expect(await initResumeCommentsTable()).toBe(true);
-            expect(query.mock.calls.length).toBeGreaterThanOrEqual(4);
-            expect(query.mock.calls[0][0]).toContain('CREATE TABLE IF NOT EXISTS resume_comments');
+            expect(query).toHaveBeenCalledTimes(2);
         });
 
         it('should throw on error', async () => {

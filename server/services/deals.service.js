@@ -6,6 +6,7 @@
 
 import { query } from '../config/database.js';
 import { safeLog } from '../utils/logger.backend.js';
+import { assertSchemaRequirements } from './schemaVerification.service.js';
 
 // Deal status constants
 export const DEAL_STATUS = {
@@ -32,78 +33,31 @@ export const DEAL_RESUME_STATUS = {
 };
 
 /**
- * Initialize the deals tables
- * Creates deals and deal_resumes tables if they don't exist
+ * Verify the deals schema is present
  */
 export async function initDealsTable() {
     try {
-        // Create deals table
-        await query(`
-            CREATE TABLE IF NOT EXISTS deals (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                firm_id UUID NOT NULL REFERENCES firms(id) ON DELETE CASCADE,
-                client_id UUID REFERENCES clients(id) ON DELETE SET NULL,
-                contact_id UUID REFERENCES client_contacts(id) ON DELETE SET NULL,
-                title VARCHAR(255) NOT NULL,
-                description TEXT,
-                status VARCHAR(50) DEFAULT 'open',
-                expected_start_date DATE,
-                expected_end_date DATE,
-                budget_min DECIMAL(12,2),
-                budget_max DECIMAL(12,2),
-                priority VARCHAR(20) DEFAULT 'medium',
-                tags JSONB DEFAULT '[]',
-                notes TEXT,
-                created_by UUID NOT NULL REFERENCES users(id),
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
-        
-        // Migration: Add contact_id column if it doesn't exist
-        try {
-            await query(`ALTER TABLE deals ADD COLUMN IF NOT EXISTS contact_id UUID REFERENCES client_contacts(id) ON DELETE SET NULL`);
-        } catch (migrationError) {
-            // Column might already exist
-            safeLog('debug', 'Migration note: contact_id column', { note: migrationError.message });
-        }
+        await assertSchemaRequirements({
+            context: 'deals',
+            tables: ['deals', 'deal_resumes', 'missions'],
+            columns: {
+                deals: ['contact_id'],
+                missions: ['deal_id']
+            },
+            indexes: [
+                'idx_deals_firm_id',
+                'idx_deals_client_id',
+                'idx_deals_status',
+                'idx_deals_priority',
+                'idx_deal_resumes_deal_id',
+                'idx_deal_resumes_resume_id',
+                'idx_missions_deal_id'
+            ]
+        });
 
-        // Create deal_resumes junction table
-        await query(`
-            CREATE TABLE IF NOT EXISTS deal_resumes (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                deal_id UUID NOT NULL REFERENCES deals(id) ON DELETE CASCADE,
-                resume_id UUID NOT NULL REFERENCES resumes(id) ON DELETE CASCADE,
-                added_by UUID NOT NULL REFERENCES users(id),
-                added_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                notes TEXT,
-                status VARCHAR(50) DEFAULT 'proposed',
-                UNIQUE(deal_id, resume_id)
-            )
-        `);
-
-        // Create indexes for performance
-        await query(`
-            CREATE INDEX IF NOT EXISTS idx_deals_firm_id ON deals(firm_id);
-            CREATE INDEX IF NOT EXISTS idx_deals_client_id ON deals(client_id);
-            CREATE INDEX IF NOT EXISTS idx_deals_status ON deals(status);
-            CREATE INDEX IF NOT EXISTS idx_deals_priority ON deals(priority);
-            CREATE INDEX IF NOT EXISTS idx_deal_resumes_deal_id ON deal_resumes(deal_id);
-            CREATE INDEX IF NOT EXISTS idx_deal_resumes_resume_id ON deal_resumes(resume_id);
-        `);
-
-        // Migration: Add deal_id column to missions table (missions can belong to a deal)
-        try {
-            await query(`ALTER TABLE missions ADD COLUMN IF NOT EXISTS deal_id UUID REFERENCES deals(id) ON DELETE SET NULL`);
-            await query(`CREATE INDEX IF NOT EXISTS idx_missions_deal_id ON missions(deal_id)`);
-            safeLog('info', 'Migration: missions.deal_id column ensured');
-        } catch (migrationError) {
-            safeLog('debug', 'Migration note: missions.deal_id', { note: migrationError.message });
-        }
-
-        safeLog('info', 'Deals tables initialized successfully');
+        safeLog('info', 'Deals schema verified successfully');
     } catch (error) {
-        safeLog('error', 'Error initializing deals tables', { error: error.message });
+        safeLog('error', 'Error verifying deals schema', { error: error.message });
         throw error;
     }
 }

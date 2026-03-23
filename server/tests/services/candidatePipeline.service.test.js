@@ -66,14 +66,42 @@ describe('Candidate Pipeline Service', () => {
     // ============================================
 
     describe('initCandidatePipelineTable', () => {
-        it('should create tables and indexes', async () => {
-            query.mockResolvedValue({ rows: [] });
+        it('should verify tables, columns, and indexes', async () => {
+            query.mockImplementation((sql, params) => {
+                if (sql.includes('information_schema.tables')) {
+                    expect(params).toEqual([['candidate_pipeline', 'pipeline_history', 'pipeline_interviews']]);
+                    return Promise.resolve({ rows: [
+                        { table_name: 'candidate_pipeline' },
+                        { table_name: 'pipeline_history' },
+                        { table_name: 'pipeline_interviews' }
+                    ] });
+                }
+                if (sql.includes('information_schema.columns')) {
+                    if (params[0] === 'candidate_pipeline') {
+                        expect(params).toEqual(['candidate_pipeline', ['client_id']]);
+                        return Promise.resolve({ rows: [{ column_name: 'client_id' }] });
+                    }
+                    expect(params).toEqual(['pipeline_interviews', ['scheduled_at']]);
+                    return Promise.resolve({ rows: [{ column_name: 'scheduled_at' }] });
+                }
+                if (sql.includes('pg_indexes')) {
+                    return Promise.resolve({ rows: [
+                        { indexname: 'idx_candidate_pipeline_resume_id' },
+                        { indexname: 'idx_candidate_pipeline_mission_id' },
+                        { indexname: 'idx_candidate_pipeline_client_id' },
+                        { indexname: 'idx_candidate_pipeline_stage' },
+                        { indexname: 'idx_pipeline_history_pipeline_id' },
+                        { indexname: 'idx_pipeline_interviews_pipeline_id' },
+                        { indexname: 'idx_pipeline_interviews_scheduled_at' }
+                    ] });
+                }
+                return Promise.resolve({ rows: [] });
+            });
 
             const result = await initCandidatePipelineTable();
 
             expect(result).toBe(true);
-            expect(query.mock.calls.length).toBeGreaterThanOrEqual(4);
-            expect(query.mock.calls[0][0]).toContain('CREATE TABLE IF NOT EXISTS candidate_pipeline');
+            expect(query).toHaveBeenCalledTimes(4);
         });
 
         it('should throw on fatal error', async () => {
@@ -419,3 +447,4 @@ describe('Candidate Pipeline Service', () => {
         });
     });
 });
+

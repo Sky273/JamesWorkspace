@@ -70,14 +70,41 @@ describe('Deals Service', () => {
     // ============================================
 
     describe('initDealsTable', () => {
-        it('should create tables and indexes', async () => {
-            query.mockResolvedValue({ rows: [] });
+        it('should verify tables, columns, and indexes', async () => {
+            query.mockImplementation((sql, params) => {
+                if (sql.includes('information_schema.tables')) {
+                    expect(params).toEqual([['deals', 'deal_resumes', 'missions']]);
+                    return Promise.resolve({ rows: [
+                        { table_name: 'deals' },
+                        { table_name: 'deal_resumes' },
+                        { table_name: 'missions' }
+                    ] });
+                }
+                if (sql.includes('information_schema.columns')) {
+                    if (params[0] === 'deals') {
+                        expect(params).toEqual(['deals', ['contact_id']]);
+                        return Promise.resolve({ rows: [{ column_name: 'contact_id' }] });
+                    }
+                    expect(params).toEqual(['missions', ['deal_id']]);
+                    return Promise.resolve({ rows: [{ column_name: 'deal_id' }] });
+                }
+                if (sql.includes('pg_indexes')) {
+                    return Promise.resolve({ rows: [
+                        { indexname: 'idx_deals_firm_id' },
+                        { indexname: 'idx_deals_client_id' },
+                        { indexname: 'idx_deals_status' },
+                        { indexname: 'idx_deals_priority' },
+                        { indexname: 'idx_deal_resumes_deal_id' },
+                        { indexname: 'idx_deal_resumes_resume_id' },
+                        { indexname: 'idx_missions_deal_id' }
+                    ] });
+                }
+                return Promise.resolve({ rows: [] });
+            });
 
             await initDealsTable();
 
-            // Should have called query multiple times for CREATE TABLE, ALTER TABLE, CREATE INDEX
-            expect(query.mock.calls.length).toBeGreaterThanOrEqual(4);
-            expect(query.mock.calls[0][0]).toContain('CREATE TABLE IF NOT EXISTS deals');
+            expect(query).toHaveBeenCalledTimes(4);
         });
 
         it('should throw on fatal error', async () => {
@@ -427,3 +454,4 @@ describe('Deals Service', () => {
         });
     });
 });
+

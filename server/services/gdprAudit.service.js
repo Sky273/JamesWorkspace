@@ -5,6 +5,7 @@
 
 import { query } from '../config/database.js';
 import { safeLog } from '../utils/logger.backend.js';
+import { assertSchemaRequirements } from './schemaVerification.service.js';
 
 // GDPR Action Types
 export const GDPR_ACTIONS = {
@@ -73,56 +74,27 @@ const ACTION_CATEGORY_MAP = {
 };
 
 /**
- * Initialize the GDPR audit log table
- * Creates the table if it doesn't exist
+ * Verify the GDPR audit log schema is present
  */
 export async function initGdprAuditTable() {
     try {
-        await query(`
-            CREATE TABLE IF NOT EXISTS gdpr_audit_log (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                action VARCHAR(100) NOT NULL,
-                category VARCHAR(50) NOT NULL,
-                firm_id UUID,
-                firm_name VARCHAR(255),
-                user_id UUID,
-                user_name VARCHAR(255),
-                target_type VARCHAR(50),
-                target_id UUID,
-                target_name VARCHAR(255),
-                target_email VARCHAR(255),
-                details JSONB DEFAULT '{}',
-                ip_address VARCHAR(45),
-                user_agent TEXT,
-                is_automated BOOLEAN DEFAULT FALSE,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
+        await assertSchemaRequirements({
+            context: 'GDPR audit log',
+            tables: ['gdpr_audit_log'],
+            indexes: [
+                'idx_gdpr_audit_action',
+                'idx_gdpr_audit_category',
+                'idx_gdpr_audit_firm_id',
+                'idx_gdpr_audit_created_at',
+                'idx_gdpr_audit_target_email',
+                'idx_gdpr_audit_is_automated'
+            ]
+        });
 
-        // Create indexes for efficient filtering
-        await query(`
-            CREATE INDEX IF NOT EXISTS idx_gdpr_audit_action ON gdpr_audit_log(action)
-        `);
-        await query(`
-            CREATE INDEX IF NOT EXISTS idx_gdpr_audit_category ON gdpr_audit_log(category)
-        `);
-        await query(`
-            CREATE INDEX IF NOT EXISTS idx_gdpr_audit_firm_id ON gdpr_audit_log(firm_id)
-        `);
-        await query(`
-            CREATE INDEX IF NOT EXISTS idx_gdpr_audit_created_at ON gdpr_audit_log(created_at DESC)
-        `);
-        await query(`
-            CREATE INDEX IF NOT EXISTS idx_gdpr_audit_target_email ON gdpr_audit_log(target_email)
-        `);
-        await query(`
-            CREATE INDEX IF NOT EXISTS idx_gdpr_audit_is_automated ON gdpr_audit_log(is_automated)
-        `);
-
-        safeLog('info', 'GDPR audit log table initialized');
+        safeLog('info', 'GDPR audit log schema verified');
         return true;
     } catch (error) {
-        safeLog('error', 'Failed to initialize GDPR audit log table', {
+        safeLog('error', 'Failed to verify GDPR audit log schema', {
             error: error.message
         });
         throw error;

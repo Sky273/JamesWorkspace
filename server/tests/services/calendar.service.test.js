@@ -93,12 +93,21 @@ describe('Calendar Service', () => {
     });
 
     describe('initCalendarTokensTable', () => {
-        it('should create table and index', async () => {
-            query.mockResolvedValue({ rows: [] });
+        it('should verify table and index', async () => {
+            query.mockImplementation((sql, params) => {
+                if (sql.includes('information_schema.tables')) {
+                    expect(params).toEqual([['user_calendar_tokens']]);
+                    return Promise.resolve({ rows: [{ table_name: 'user_calendar_tokens' }] });
+                }
+                if (sql.includes('pg_indexes')) {
+                    expect(params).toEqual([['idx_user_calendar_tokens_user_id']]);
+                    return Promise.resolve({ rows: [{ indexname: 'idx_user_calendar_tokens_user_id' }] });
+                }
+                return Promise.resolve({ rows: [] });
+            });
 
             expect(await initCalendarTokensTable()).toBe(true);
-            expect(query.mock.calls[0][0]).toContain('CREATE TABLE IF NOT EXISTS user_calendar_tokens');
-            expect(query.mock.calls[1][0]).toContain('CREATE INDEX');
+            expect(query).toHaveBeenCalledTimes(2);
         });
 
         it('should return false on error', async () => {
