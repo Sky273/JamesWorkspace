@@ -11,6 +11,7 @@ import { swaggerDocument } from './swagger.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { userRateLimit } from '../middleware/rateLimit.middleware.js';
 import { validateBody, generatePdfProxySchema, generateDocxProxySchema } from '../utils/validation.js';
+import { getPdfServerAuthHeaders } from '../utils/pdfServerAuth.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -331,9 +332,9 @@ export function registerProxyRoutes(app) {
             
             const response = await fetch(`${PDF_SERVER_URL}/generate-pdf`, {
                 method: 'POST',
-                headers: {
+                headers: getPdfServerAuthHeaders({
                     'Content-Type': 'application/json'
-                },
+                }),
                 body: JSON.stringify(req.body)
             });
             
@@ -364,9 +365,9 @@ export function registerProxyRoutes(app) {
             
             const response = await fetch(`${PDF_SERVER_URL}/generate-docx`, {
                 method: 'POST',
-                headers: {
+                headers: getPdfServerAuthHeaders({
                     'Content-Type': 'application/json'
-                },
+                }),
                 body: JSON.stringify(req.body)
             });
             

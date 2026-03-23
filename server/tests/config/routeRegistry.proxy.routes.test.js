@@ -117,6 +117,7 @@ describe('Proxy Routes', () => {
         expect(res.status).toBe(200);
         expect(mockUserRateLimit).toHaveBeenCalledWith(20, 15 * 60 * 1000);
         expect(mockFetch).toHaveBeenCalledTimes(1);
+        expect(mockFetch.mock.calls[0][1].headers['x-internal-service-token']).toBeDefined();
 
         const forwardedBody = JSON.parse(mockFetch.mock.calls[0][1].body);
         expect(forwardedBody.filename).toBe('my_evil_file.pdf');

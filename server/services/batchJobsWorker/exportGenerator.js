@@ -16,6 +16,7 @@ import {
     getJobItems
 } from '../batchJobs.service.js';
 import { removeSuggestionMarkers } from './helpers.js';
+import { getPdfServerAuthHeaders } from '../../utils/pdfServerAuth.js';
 
 /**
  * Generate export ZIP for a completed job
@@ -115,7 +116,7 @@ export async function generateJobExport(jobId, options) {
             try {
                 const response = await fetch(`${PDF_SERVER_URL}${endpoint}`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: getPdfServerAuthHeaders({ 'Content-Type': 'application/json' }),
                     body: JSON.stringify({
                         htmlContent: processedBody,
                         filename: `${candidateName.replace(/\s+/g, '_')}.${fileExtension}`,

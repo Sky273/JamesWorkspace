@@ -9,6 +9,7 @@ import { authenticateToken } from '../middleware/auth.middleware.js';
 import { validateBody, batchExportSchema } from '../utils/validation.js';
 import { safeLog } from '../utils/logger.backend.js';
 import * as batchExportService from '../services/batchExport.service.js';
+import { getPdfServerAuthHeaders } from '../utils/pdfServerAuth.js';
 
 const router = express.Router();
 
@@ -29,7 +30,7 @@ async function callPdfServer(endpoint, body, timeout = 30000) {
     try {
         const response = await fetch(`${PDF_SERVER_URL}${endpoint}`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getPdfServerAuthHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify(body),
             signal: controller.signal
         });

@@ -9,6 +9,7 @@ import { authenticateToken } from '../middleware/auth.middleware.js';
 import { validateBody, validateParams, sharePdfSchema } from '../utils/validation.js';
 import shareResumeService from '../services/shareResume.service.js';
 import { safeLog } from '../utils/logger.backend.js';
+import { getPdfServerAuthHeaders } from '../utils/pdfServerAuth.js';
 
 const router = Router();
 
@@ -37,7 +38,7 @@ router.post('/resume/:resumeId/generate', authenticateToken, validateParams('res
         
         const pdfResponse = await fetch(`${pdfServerUrl}/generate-pdf`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getPdfServerAuthHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify({
                 htmlContent,
                 filename: filename || 'cv.pdf',
