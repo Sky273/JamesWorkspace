@@ -29,6 +29,12 @@ export {
 import { SessionRedirectError, isAuthErrorMessage } from './auth.types';
 import type { SessionExpiredHandler, FetchOptions } from './auth.types';
 import { getCsrfToken, refreshCsrfToken, resetCsrfState, isCsrfError } from './csrfManager';
+import {
+  isSessionRedirectInProgress,
+  resetSessionRedirect,
+  setSessionExpiredHandler as setRedirectHandler,
+  triggerSessionExpiry,
+} from './sessionRedirect';
 
 // ============================================
 // SESSION STATE
@@ -36,12 +42,8 @@ import { getCsrfToken, refreshCsrfToken, resetCsrfState, isCsrfError } from './c
 
 const API_BASE_URL = '';
 
-let onSessionExpired: SessionExpiredHandler = null;
 let isRefreshing = false;
 let refreshPromise: Promise<boolean> | null = null;
-
-// Flag to prevent requests during session expiration redirect
-let isSessionExpiring = false;
 
 // Flag to track if proactive refresh is in progress
 let isProactiveRefreshing = false;
@@ -50,7 +52,7 @@ let isProactiveRefreshing = false;
  * Proactively refresh token when it's about to expire
  */
 const proactiveTokenRefresh = async (): Promise<void> => {
-  if (isProactiveRefreshing || isSessionExpiring) return;
+  if (isProactiveRefreshing || isSessionRedirectInProgress()) return;
   
   isProactiveRefreshing = true;
   try {
@@ -72,7 +74,7 @@ const proactiveTokenRefresh = async (): Promise<void> => {
  * Register a callback to be called when session expires
  */
 export const setSessionExpiredHandler = (callback: SessionExpiredHandler): void => {
-  onSessionExpired = callback;
+  setRedirectHandler(callback);
 };
 
 // ============================================
@@ -180,7 +182,7 @@ export const fetchWithAuth = async (
   timeout: number = 120000 // Default 2 minutes timeout (long operations should pass explicit timeout)
 ): Promise<Response> => {
   // If session is expiring, don't make new requests
-  if (isSessionExpiring) {
+  if (isSessionRedirectInProgress()) {
     logger.warn('[API Interceptor] Request blocked - session is expiring');
     throw new SessionRedirectError();
   }
@@ -204,18 +206,14 @@ export const fetchWithAuth = async (
       // If it's a TOKEN_MISSING error, the cookie has expired - redirect immediately
       if (errorCode === 'TOKEN_MISSING') {
         logger.warn('[API Interceptor] Cookie expired (TOKEN_MISSING), redirecting to signin');
-        isSessionExpiring = true;
-        // Redirect and throw special error to stop all processing
-        window.location.href = '/signin?expired=true';
+        triggerSessionExpiry();
         throw new SessionRedirectError();
       }
 
       // If it's a JWT-related error, skip refresh attempt and redirect immediately
       if (isAuthErrorMessage(errorMessage) || errorCode === 'TOKEN_INVALID') {
         logger.warn('[API Interceptor] JWT error detected, redirecting to signin:', errorMessage || errorCode);
-        isSessionExpiring = true;
-        // Redirect and throw special error to stop all processing
-        window.location.href = '/signin?expired=true';
+        triggerSessionExpiry();
         throw new SessionRedirectError();
       }
 
@@ -238,15 +236,7 @@ export const fetchWithAuth = async (
 
       logger.warn('[API Interceptor] Token refresh failed or retry unsuccessful - session expired');
       
-      // Set flag to prevent further requests during redirect
-      isSessionExpiring = true;
-      
-      if (onSessionExpired) {
-        onSessionExpired();
-      } else {
-        logger.warn('[API Interceptor] Session expired - redirecting to signin');
-        window.location.href = '/signin?expired=true';
-      }
+      triggerSessionExpiry();
       // Throw special error to stop all processing
       throw new SessionRedirectError();
     }
@@ -282,8 +272,7 @@ export const fetchWithAuth = async (
 
       if (isSessionError) {
         logger.warn('[API Interceptor] Session/CSRF error detected, redirecting to signin');
-        isSessionExpiring = true;
-        window.location.href = '/signin?expired=true';
+        triggerSessionExpiry();
         // Throw special error to stop all processing
         throw new SessionRedirectError();
       }
@@ -312,7 +301,7 @@ export const fetchWithAuth = async (
  * Reset session expiring flag and CSRF state (call on successful login)
  */
 export const resetSessionState = (): void => {
-  isSessionExpiring = false;
+  resetSessionRedirect();
   resetCsrfState();
 };
 
@@ -467,3 +456,4 @@ export const authDelete = async (url: string, options: FetchOptions = {}): Promi
   const authOptions = await createAuthOptionsWithCsrf({ ...options, method: 'DELETE' });
   return fetchWithCsrfRetry(url, authOptions);
 };
+

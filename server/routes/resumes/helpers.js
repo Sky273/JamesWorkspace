@@ -16,26 +16,23 @@ import * as resumesService from '../../services/resumes.service.js';
  */
 export async function checkResumeAccess(req, resumeId) {
     try {
-        // Fetch resume with firm_id
         const resume = await resumesService.getResumeForAccessCheck(resumeId);
-        
+
         if (!resume) {
             return { hasAccess: false, resume: null, error: 'Resume not found' };
         }
-        
-        // Admins can access all resumes
+
         if (isUserAdmin(req)) {
             return { hasAccess: true, resume, error: null };
         }
-        
-        // Non-admin users can only access resumes from their firm
+
         const userFirmId = await getUserFirmId(req);
-        
+
         if (!userFirmId) {
             safeLog('warn', 'User has no valid firm_id', { userId: req.user?.id });
             return { hasAccess: false, resume: null, error: 'User has no valid firm association' };
         }
-        
+
         if (resume.firm_id !== userFirmId) {
             safeLog('warn', 'Access denied: user tried to access resume from different firm', {
                 userId: req.user?.id,
@@ -45,7 +42,7 @@ export async function checkResumeAccess(req, resumeId) {
             });
             return { hasAccess: false, resume, error: 'Access denied' };
         }
-        
+
         return { hasAccess: true, resume, error: null };
     } catch (error) {
         safeLog('error', 'Error checking resume access', { error: error.message, resumeId });
@@ -53,125 +50,166 @@ export async function checkResumeAccess(req, resumeId) {
     }
 }
 
-/**
- * Parse score values - handles "75%", 75, "75" formats
- * @param {*} value - Score value in various formats
- * @returns {number|undefined} Parsed score or undefined
- */
 export function parseScore(value) {
     if (value === undefined || value === null) return undefined;
     if (typeof value === 'number') return value;
     if (typeof value === 'string') {
-        // Remove % and parse as integer
         const cleaned = value.replace('%', '').trim();
         const parsed = parseInt(cleaned, 10);
-        return isNaN(parsed) ? undefined : parsed;
+        return Number.isNaN(parsed) ? undefined : parsed;
     }
     return undefined;
 }
 
-/**
- * Stringify value if needed for JSONB fields
- * @param {*} value - Value to stringify
- * @returns {string} JSON string
- */
 export function stringifyIfNeeded(value) {
     if (typeof value === 'string') {
-        // Already a string, check if it's valid JSON
         try {
             JSON.parse(value);
-            return value; // Already valid JSON string
+            return value;
         } catch {
-            return JSON.stringify([value]); // Single string, wrap in array
+            return JSON.stringify([value]);
         }
     }
     return JSON.stringify(value || []);
 }
 
-/**
- * Map database resume record to frontend format
- * @param {Object} record - Database record
- * @returns {Object} Frontend-formatted resume
- */
+const buildResumeFile = (record) => (
+    record.resume_file_url ? [{
+        id: record.id,
+        filename: record.file_name,
+        size: record.resume_file_size,
+        type: record.resume_file_type,
+        url: record.resume_file_url
+    }] : []
+);
+
 export function mapResumeToFrontend(record) {
+    const resumeFile = buildResumeFile(record);
+
     return {
         id: record.id,
         Name: record.name,
+        name: record.name,
         Title: record.title,
+        title: record.title,
         'File Name': record.file_name,
-        'Resume File': record.resume_file_url ? [{
-            id: record.id,
-            filename: record.file_name,
-            size: record.resume_file_size,
-            type: record.resume_file_type,
-            url: record.resume_file_url
-        }] : [],
+        fileName: record.file_name,
+        file_name: record.file_name,
+        'Resume File': resumeFile,
+        resumeFile,
         Status: record.status,
+        status: record.status,
         FirmName: record.firm_name,
+        firmName: record.firm_name,
         CustomerName: record.firm_name,
-        // Analysis scores
+        customerName: record.firm_name,
         'Global Rating': record.global_rating,
+        globalRating: record.global_rating,
         'Skills Score': record.skills_score,
+        skillsScore: record.skills_score,
         'Experience Score': record.experience_score,
+        experienceScore: record.experience_score,
         'Education Score': record.education_score,
+        educationScore: record.education_score,
         'ATS Score': record.ats_score,
+        atsScore: record.ats_score,
         'Executive Summary Score': record.executive_summary_score,
+        executiveSummaryScore: record.executive_summary_score,
         'Hobbies Languages Score': record.hobbies_languages_score,
-        // Improved scores
+        hobbiesLanguagesScore: record.hobbies_languages_score,
         'Improved Global Rating': record.improved_global_rating,
+        improvedGlobalRating: record.improved_global_rating,
         'Improved Skills Score': record.improved_skills_score,
+        improvedSkillsScore: record.improved_skills_score,
         'Improved Experience Score': record.improved_experience_score,
+        improvedExperienceScore: record.improved_experience_score,
         'Improved Education Score': record.improved_education_score,
+        improvedEducationScore: record.improved_education_score,
         'Improved ATS Score': record.improved_ats_score,
+        improvedAtsScore: record.improved_ats_score,
         'Improved Executive Summary Score': record.improved_executive_summary_score,
+        improvedExecutiveSummaryScore: record.improved_executive_summary_score,
         'Improved Hobbies Languages Score': record.improved_hobbies_languages_score,
-        // Tags
+        improvedHobbiesLanguagesScore: record.improved_hobbies_languages_score,
         Skills: record.skills,
+        skills: record.skills,
         Industries: record.industries,
+        industries: record.industries,
         Tools: record.tools,
+        tools: record.tools,
         'Soft Skills': record.soft_skills,
+        softSkills: record.soft_skills,
         'Skills_cleaned': record.skills_cleaned,
+        skillsCleaned: record.skills_cleaned,
         'Industries_cleaned': record.industries_cleaned,
+        industriesCleaned: record.industries_cleaned,
         'Tools_cleaned': record.tools_cleaned,
+        toolsCleaned: record.tools_cleaned,
         'Soft Skills_cleaned': record.soft_skills_cleaned,
+        softSkillsCleaned: record.soft_skills_cleaned,
         'Skills_esco': record.skills_esco,
+        skillsEsco: record.skills_esco,
         'Industries_esco': record.industries_esco,
+        industriesEsco: record.industries_esco,
         'Tools_esco': record.tools_esco,
+        toolsEsco: record.tools_esco,
         'Soft Skills_esco': record.soft_skills_esco,
-        // Improved tags
+        softSkillsEsco: record.soft_skills_esco,
         'Improved Skills': record.improved_skills,
+        improvedSkills: record.improved_skills,
         'Improved Industries': record.improved_industries,
+        improvedIndustries: record.improved_industries,
         'Improved Tools': record.improved_tools,
+        improvedTools: record.improved_tools,
         'Improved Soft Skills': record.improved_soft_skills,
+        improvedSoftSkills: record.improved_soft_skills,
         'Key Improvements': record.key_improvements,
+        keyImprovements: record.key_improvements,
         'Improved Key Improvements': record.improved_key_improvements,
+        improvedKeyImprovements: record.improved_key_improvements,
         Summary: record.summary,
+        summary: record.summary,
         'Experience Years': record.experience_years,
+        experienceYears: record.experience_years,
         'Education Level': record.education_level,
+        educationLevel: record.education_level,
         Certifications: record.certifications,
+        certifications: record.certifications,
         Languages: record.languages,
-        // Text fields
+        languages: record.languages,
         'Original Text': record.original_text,
+        originalText: record.original_text,
+        original_text: record.original_text,
         'Improved Text': record.improved_text,
+        improvedText: record.improved_text,
+        improved_text: record.improved_text,
         'Original Name': record.original_name,
-        // Dates
+        originalName: record.original_name,
         'Created At': record.created_at,
+        createdAt: record.created_at,
         'Analyzed At': record.analyzed_at,
+        analyzedAt: record.analyzed_at,
         'Updated At': record.updated_at,
-        // GDPR consent fields
+        updatedAt: record.updated_at,
+        'Current Version': record.current_version || 0,
+        currentVersion: record.current_version || 0,
         profile_type: record.profile_type,
+        profileType: record.profile_type,
         candidate_name: record.candidate_name,
+        candidateName: record.candidate_name,
         candidate_email: record.candidate_email,
+        candidateEmail: record.candidate_email,
         consent_status: record.consent_status,
+        consentStatus: record.consent_status,
         consent_requested_at: record.consent_requested_at,
+        consentRequestedAt: record.consent_requested_at,
         consent_responded_at: record.consent_responded_at,
+        consentRespondedAt: record.consent_responded_at,
         consent_token_expires_at: record.consent_token_expires_at,
-        retention_until: record.retention_until
+        consentTokenExpiresAt: record.consent_token_expires_at,
+        retention_until: record.retention_until,
+        retentionUntil: record.retention_until
     };
 }
 
-/**
- * SQL columns to select for resume queries (excludes binary resume_file_data)
- */
-// Re-export from service for backward compatibility
 export { RESUME_SELECT_COLUMNS } from '../../services/resumes.service.js';

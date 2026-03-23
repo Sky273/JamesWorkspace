@@ -4,14 +4,13 @@
  * TypeScript version with full type safety
  */
 
-import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from 'react';
 import { authService, User, RegisterData, RegisterResponse, SignInResponse } from '../services/authService';
-import { setSessionExpiredHandler, resetSessionState, AUTH_ERROR_PATTERNS } from '../utils/apiInterceptor';
+import { resetSessionState, AUTH_ERROR_PATTERNS } from '../utils/apiInterceptor';
+import { redirectToExpiredSession, setSessionExpiredHandler } from '../utils/sessionRedirect';
 import toast from 'react-hot-toast';
 import logger from '../utils/logger.frontend';
 
-// Prevent duplicate auth calls in StrictMode
-let authCheckInProgress = false;
 
 // ============================================
 // TYPES
@@ -54,15 +53,15 @@ export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
   const [loading, setLoading] = useState<boolean>(true); // Start with loading true
   const [error, setError] = useState<string | null>(null);
   const [initialized, setInitialized] = useState<boolean>(false);
+  const authCheckStartedRef = useRef<boolean>(false);
 
   // Fetch current user from server on mount (session restored via httpOnly cookies)
   useEffect(() => {
     const fetchCurrentUser = async () => {
-      // Prevent duplicate calls in React StrictMode
-      if (authCheckInProgress) {
+      if (authCheckStartedRef.current) {
         return;
       }
-      authCheckInProgress = true;
+      authCheckStartedRef.current = true;
 
       // Skip fetching user if we're on the signin page with expired flag
       // This prevents infinite loops when session has expired
@@ -147,7 +146,6 @@ export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
         authService.setCurrentUser(null);
       } finally {
         setLoading(false);
-        authCheckInProgress = false;
         setInitialized(true);
       }
     };
@@ -205,24 +203,18 @@ export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
 
   const handleSessionExpired = useCallback((): void => {
     logger.warn('[AuthContext] Session expired, cleaning up and redirecting');
-    
-    // Set user to null first to trigger component unmounts
     setUser(null);
-    
-    // Sign out (clears tokens)
-    authService.signOut();
-    
-    // Small delay to allow React to process state changes before redirect
-    setTimeout(() => {
-      window.location.replace('/signin?expired=true');
-    }, 50);
+    authService.setCurrentUser(null);
+    void authService.signOut().finally(() => {
+      redirectToExpiredSession();
+    });
   }, []);
 
   useEffect(() => {
     setSessionExpiredHandler(handleSessionExpired);
     
     return () => {
-      setSessionExpiredHandler(null as unknown as () => void);
+      setSessionExpiredHandler(null);
     };
   }, [handleSessionExpired]);
 
@@ -249,3 +241,4 @@ export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
 };
 
 export default AuthContext;
+

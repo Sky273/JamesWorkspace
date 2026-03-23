@@ -31,8 +31,13 @@ vi.mock('../services/authService', () => ({
 
 // Mock apiInterceptor
 vi.mock('../utils/apiInterceptor', () => ({
-    setSessionExpiredHandler: vi.fn(),
     resetSessionState: vi.fn(),
+    AUTH_ERROR_PATTERNS: ['jwt malformed', 'invalid token', 'jwt expired'],
+}));
+
+vi.mock('../utils/sessionRedirect', () => ({
+    redirectToExpiredSession: vi.fn(),
+    setSessionExpiredHandler: vi.fn(),
 }));
 
 // Mock react-hot-toast
@@ -257,3 +262,4 @@ describe('AuthContext', () => {
         });
     });
 });
+

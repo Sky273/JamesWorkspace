@@ -10,24 +10,18 @@ import { useAuth } from './AuthContext';
 import { createAuthOptionsWithCsrf, fetchWithAuth } from '../utils/apiInterceptor';
 import logger from '../utils/logger.frontend';
 import { showCaughtError, getUserFriendlyMessage } from '../components/ErrorToast';
+import { applyResumeUpdate, normalizeResume, normalizeResumeList } from '../utils/resumeNormalization';
 
-// Import centralized types
 import { Resume } from '../types/entities';
 
-// Re-export Resume type for backward compatibility
 export type { Resume };
 
-// Candidate info for GDPR
 export interface CandidateInfo {
   profileType: 'employee' | 'external';
   candidateName: string;
   candidateEmail: string;
   firmId?: string;
 }
-
-// ============================================
-// TYPES
-// ============================================
 
 export type ProcessingStep = 'upload' | 'extract' | 'analyze' | 'improving' | 'analyzing' | null;
 
@@ -54,10 +48,6 @@ interface ResumeProviderProps {
   children: ReactNode;
 }
 
-// ============================================
-// CONTEXT
-// ============================================
-
 const ResumeContext = createContext<ResumeContextType | undefined>(undefined);
 
 export const useResume = (): ResumeContextType => {
@@ -68,55 +58,51 @@ export const useResume = (): ResumeContextType => {
   return context;
 };
 
-// ============================================
-// PROVIDER
-// ============================================
-
 export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element => {
   const { user } = useAuth();
-  const [resumes, setResumes] = useState<Resume[]>([]);
+  const [resumes, setResumesState] = useState<Resume[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [currentResume, setCurrentResume] = useState<Resume | null>(null);
+  const [currentResume, setCurrentResumeState] = useState<Resume | null>(null);
   const [processingStep, setProcessingStep] = useState<ProcessingStep>(null);
   const [processingError, setProcessingError] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController>(new AbortController());
   const [deleting, setDeleting] = useState<boolean>(false);
 
+  const setCurrentResume = useCallback((resume: Resume | null): void => {
+    setCurrentResumeState(resume ? normalizeResume(resume) : null);
+  }, []);
+
+  const setResumes: React.Dispatch<React.SetStateAction<Resume[]>> = useCallback((value) => {
+    setResumesState(prev => {
+      const nextValue = typeof value === 'function' ? value(prev) : value;
+      return normalizeResumeList(nextValue);
+    });
+  }, []);
+
   const updateResumeAnalysis = useCallback(async (resumeId: string, analysisData: Partial<Resume>): Promise<Resume> => {
     if (abortControllerRef.current.signal.aborted) throw new Error('Operation aborted');
-    
-    try {
-      const updateOptions = await createAuthOptionsWithCsrf({
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(analysisData)
-      });
-      
-      const response = await fetchWithAuth(`/api/resumes/${resumeId}`, updateOptions);
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Failed to update resume' }));
-        throw new Error(errorData.error || 'Failed to update resume');
-      }
-      
-      const updatedResume = await response.json();
 
-      if (!abortControllerRef.current.signal.aborted) {
-        setResumes(prev =>
-          prev.map(resume =>
-            resume.id === resumeId ? updatedResume : resume
-          )
-        );
-        setCurrentResume(updatedResume);
-      }
+    const updateOptions = await createAuthOptionsWithCsrf({
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(analysisData)
+    });
 
-      return updatedResume;
-    } catch (error) {
-      if (!abortControllerRef.current.signal.aborted) {
-        logger.error('Error updating resume analysis:', error);
-      }
-      throw error;
+    const response = await fetchWithAuth(`/api/resumes/${resumeId}`, updateOptions);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Failed to update resume' }));
+      throw new Error(errorData.error || 'Failed to update resume');
     }
-  }, []);
+
+    const updatedResume = normalizeResume(await response.json());
+
+    if (!abortControllerRef.current.signal.aborted) {
+      setResumes(prev => prev.map(resume => (resume.id === resumeId ? updatedResume : resume)));
+      setCurrentResume(updatedResume);
+    }
+
+    return updatedResume;
+  }, [setCurrentResume, setResumes]);
 
   const fetchResumes = useCallback(async (): Promise<void> => {
     const controller = new AbortController();
@@ -130,14 +116,13 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
         throw new Error('Failed to fetch resumes');
       }
       const data = await response.json();
-      const fetchedResumes = data.resumes || data;
-      
+      const fetchedResumes = normalizeResumeList(data.resumes || data.data || data);
+
       if (!controller.signal.aborted) {
         setResumes(fetchedResumes);
       }
     } catch (error) {
       if (!controller.signal.aborted) {
-        // Don't log session expiration errors - user will be redirected
         const errorMessage = error instanceof Error ? error.message : '';
         if (!errorMessage.includes('Session expired')) {
           logger.error('Error fetching resumes:', error);
@@ -148,17 +133,17 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
         setLoading(false);
       }
     }
-  }, []);
+  }, [setResumes]);
 
   const uploadResume = useCallback(async (file: File, candidateInfo?: CandidateInfo): Promise<Resume | undefined> => {
     const controller = new AbortController();
     abortControllerRef.current = controller;
-    
+
     let initialRecord: Resume | null = null;
 
     try {
       if (controller.signal.aborted) return;
-      
+
       setLoading(true);
       setProcessingError(null);
       setProcessingStep('upload');
@@ -173,97 +158,75 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
         throw new Error('Invalid file type. Please upload a PDF, DOC, or DOCX file');
       }
 
-      if (controller.signal.aborted) return;
-
-      // Upload file to backend API with GDPR candidate info
       const formData = new FormData();
       formData.append('file', file);
       formData.append('name', file.name);
       formData.append('title', '');
-      
-      // Add GDPR candidate info if provided
+
       if (candidateInfo) {
         formData.append('profile_type', candidateInfo.profileType);
         formData.append('candidate_name', candidateInfo.candidateName);
         if (candidateInfo.candidateEmail) {
           formData.append('candidate_email', candidateInfo.candidateEmail);
         }
-        // Add firm_id for admin users selecting a different firm
         if (candidateInfo.firmId) {
           formData.append('firm_id', candidateInfo.firmId);
         }
       }
-      
-      const uploadOptions = await createAuthOptionsWithCsrf({
-        method: 'POST',
-        body: formData
-      });
-      
-      // Remove Content-Type header to let browser set it with boundary for multipart/form-data
+
+      const uploadOptions = await createAuthOptionsWithCsrf({ method: 'POST', body: formData });
       if (uploadOptions.headers) {
         delete uploadOptions.headers['Content-Type'];
       }
-      
+
       const uploadResponse = await fetchWithAuth('/api/resumes/upload', {
         ...uploadOptions,
         signal: controller.signal
       });
-      
+
       if (!uploadResponse.ok) {
         const errorData = await uploadResponse.json().catch(() => ({ error: 'Failed to upload resume' }));
         throw new Error(errorData.error || 'Failed to upload resume');
       }
-      
-      initialRecord = await uploadResponse.json();
+
+      initialRecord = normalizeResume(await uploadResponse.json());
 
       setProcessingStep('extract');
       const text = await extractResumeText(file);
-      
       if (!text || text.length === 0) {
         throw new Error('Failed to extract text from resume');
       }
-      
+
       if (controller.signal.aborted) return;
 
       setProcessingStep('analyze');
-      
-      // Call backend API for analysis (same endpoint used for post-improvement analysis)
       const analysisOptions = await createAuthOptionsWithCsrf({
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text })
       });
-      
+
       const analysisResponse = await fetchWithAuth('/api/resumes/analyze-text', {
         ...analysisOptions,
         signal: controller.signal
-      }, 300000); // 5 minutes for LLM analysis
-      
+      }, 300000);
+
       if (!analysisResponse.ok) {
         const errorData = await analysisResponse.json().catch(() => ({ error: 'Failed to analyze resume' }));
-        const errorMessage = typeof errorData === 'string' 
-          ? errorData 
+        const errorMessage = typeof errorData === 'string'
+          ? errorData
           : (errorData?.error || errorData?.message || JSON.stringify(errorData) || 'Failed to analyze resume');
         throw new Error(errorMessage);
       }
-      
+
       const analysis = await analysisResponse.json();
-      
-      // Ensure tags and suggestions have default values if not present
       const tags = analysis.tags || { skills: [], industries: [], tools: [], softSkills: [] };
       const suggestions = analysis.suggestions || {};
-      
-      // Use structuredText from analysis if available, otherwise use raw text
       const originalText = analysis.structuredText || text;
-      
-      // Update resume with analysis data via API
+
       const updateOptions = await createAuthOptionsWithCsrf({
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           'Original Text': originalText,
           'Global Rating': analysis.globalRating,
@@ -286,47 +249,39 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
           'FirmName': user?.firm || undefined
         })
       });
-      
-      const updateResponse = await fetchWithAuth(`/api/resumes/${initialRecord!.id}`, {
+
+      const updateResponse = await fetchWithAuth(`/api/resumes/${initialRecord.id}`, {
         ...updateOptions,
         signal: controller.signal
       });
-      
+
       if (!updateResponse.ok) {
         const errorData = await updateResponse.json().catch(() => ({ error: 'Failed to update resume' }));
         logger.error('[ResumeContext] Update failed:', errorData);
         throw new Error(errorData.error || 'Failed to update resume');
       }
-      
+
       if (controller.signal.aborted) return;
 
-      const updatedRecord = await updateResponse.json();
-      const newResume = updatedRecord;
+      const newResume = normalizeResume(await updateResponse.json());
       setResumes(prev => [newResume, ...prev]);
       setCurrentResume(newResume);
 
       return newResume;
     } catch (error) {
       if (!controller.signal.aborted) {
-        // Convert technical error to user-friendly message
         const { message: userFriendlyMessage } = getUserFriendlyMessage(error);
         setProcessingError(userFriendlyMessage);
         logger.error('[ResumeContext] ERROR during upload:', error);
         showCaughtError(error);
 
         if (initialRecord?.id) {
-          // Update resume status to Error via API
           try {
             const errorUpdateOptions = await createAuthOptionsWithCsrf({
               method: 'PUT',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                'Status': 'Error'
-              })
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ 'Status': 'Error' })
             });
-            
             await fetchWithAuth(`/api/resumes/${initialRecord.id}`, errorUpdateOptions);
           } catch (updateError) {
             logger.error('[ResumeContext] Failed to update resume status to Error:', updateError);
@@ -340,7 +295,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
         setProcessingStep(null);
       }
     }
-  }, [user]);
+  }, [setCurrentResume, setResumes, user]);
 
   const improveCurrentResume = useCallback(async (): Promise<Resume> => {
     if (!currentResume) {
@@ -349,7 +304,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
 
     setLoading(true);
     setProcessingStep('improving');
-    
+
     try {
       const text = currentResume['Original Text'];
       const currentAnalysis = {
@@ -360,9 +315,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
         atsOptimizationRating: currentResume['ATS Score'],
         executiveSummaryRating: currentResume['Executive Summary Score'],
         hobbiesLanguagesRating: currentResume['Hobbies Languages Score'],
-        suggestions: currentResume['Key Improvements'] 
-          ? JSON.parse(currentResume['Key Improvements']) 
-          : {},
+        suggestions: currentResume['Key Improvements'] ? JSON.parse(String(currentResume['Key Improvements'])) : {},
         name: currentResume['Name'],
         originalName: currentResume['Original Name'] || currentResume['Name'],
         title: currentResume['Title']
@@ -370,23 +323,18 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 300000);
-      
+
       let response: Response;
       try {
         const authOptions = await createAuthOptionsWithCsrf({
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            text: text,
-            analysis: currentAnalysis
-          })
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, analysis: currentAnalysis })
         });
         response = await fetchWithAuth('/api/resumes/improve', {
           ...authOptions,
           signal: controller.signal
-        }, 300000); // 5 minutes for LLM improvement
+        }, 300000);
         clearTimeout(timeoutId);
       } catch (fetchError) {
         clearTimeout(timeoutId);
@@ -404,16 +352,11 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
 
       const responseData = await response.json();
       const { text: improvedText, analysis: improvedAnalysis } = responseData;
-      
+
       setProcessingStep('analyzing');
       await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Save improved analysis data
-      // Key Improvements = original suggestions (pre-improvement)
-      // Improved Key Improvements = suggestions from post-improvement analysis
+
       const improvedSuggestions = improvedAnalysis?.suggestions || improvedAnalysis?.['Key Improvements'] || {};
-      
-      // Helper to get score value (handles 0 as valid value)
       const getScore = (primary: number | string | undefined, fallback: number | string | undefined): number => {
         if (primary !== undefined && primary !== null) return typeof primary === 'number' ? primary : parseInt(String(primary).replace('%', ''), 10) || 0;
         if (fallback !== undefined && fallback !== null) return typeof fallback === 'number' ? fallback : parseInt(String(fallback).replace('%', ''), 10) || 0;
@@ -430,21 +373,17 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
         'Improved ATS Score': String(getScore(improvedAnalysis?.atsOptimizationRating, improvedAnalysis?.['ATS Compatibility'])),
         'Improved Executive Summary Score': String(getScore(improvedAnalysis?.executiveSummaryRating, improvedAnalysis?.['Executive Summary'])),
         'Improved Hobbies Languages Score': String(getScore(improvedAnalysis?.hobbiesLanguagesRating, improvedAnalysis?.['Hobbies Languages'])),
-        // Save improved tags from post-improvement analysis
         'Improved Skills': JSON.stringify(improvedAnalysis?.tags?.skills || []),
         'Improved Industries': JSON.stringify(improvedAnalysis?.tags?.industries || []),
         'Improved Tools': JSON.stringify(improvedAnalysis?.tags?.tools || []),
         'Improved Soft Skills': JSON.stringify(improvedAnalysis?.tags?.softSkills || []),
-        // Save suggestions from post-improvement analysis
         'Improved Key Improvements': JSON.stringify(improvedSuggestions),
         'Status': 'Improved' as const,
         'Last Improved': new Date().toISOString(),
         'FirmName': user?.firm || undefined
       };
-      
-      const updatedResume = await updateResumeAnalysis(currentResume.id, updatePayload);
 
-      return updatedResume;
+      return await updateResumeAnalysis(currentResume.id, updatePayload);
     } catch (error) {
       logger.error('Error improving resume:', error);
       showCaughtError(error);
@@ -456,72 +395,47 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
   }, [currentResume, updateResumeAnalysis, user]);
 
   const updateImprovedContent = useCallback(async (resumeId: string, content: string): Promise<{ success: boolean; currentVersion?: number }> => {
-    try {
-      const updateOptions = await createAuthOptionsWithCsrf({
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 'Improved Text': content })
-      });
-      const response = await fetchWithAuth(`/api/resumes/${resumeId}`, updateOptions);
-      if (!response.ok) {
-        throw new Error('Failed to update improved content');
-      }
-
-      const updatedData = await response.json();
-      const newVersion = updatedData['Current Version'] || 0;
-
-      // Update currentResume
-      setCurrentResume(prev => prev ? {
-        ...prev,
-        'Improved Text': content,
-        'Current Version': newVersion
-      } : null);
-
-      // Also update the resumes list to keep it in sync
-      setResumes(prev => prev.map(resume => 
-        resume.id === resumeId 
-          ? { ...resume, 'Improved Text': content, 'Current Version': newVersion }
-          : resume
-      ));
-
-      return { success: true, currentVersion: newVersion };
-    } catch (error) {
-      logger.error('Error updating improved content:', error);
-      throw error;
+    const updateOptions = await createAuthOptionsWithCsrf({
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 'Improved Text': content })
+    });
+    const response = await fetchWithAuth(`/api/resumes/${resumeId}`, updateOptions);
+    if (!response.ok) {
+      throw new Error('Failed to update improved content');
     }
-  }, []);
+
+    const updatedData = normalizeResume(await response.json());
+    const newVersion = updatedData['Current Version'] || 0;
+
+    setCurrentResumeState(prev => (prev ? applyResumeUpdate(prev, { 'Improved Text': content, 'Current Version': newVersion }) : null));
+    setResumes(prev => prev.map(resume => (
+      resume.id === resumeId
+        ? applyResumeUpdate(resume, { 'Improved Text': content, 'Current Version': newVersion })
+        : resume
+    )));
+
+    return { success: true, currentVersion: newVersion };
+  }, [setResumes]);
 
   const updateOriginalContent = useCallback(async (resumeId: string, content: string): Promise<{ success: boolean }> => {
-    try {
-      const updateOptions = await createAuthOptionsWithCsrf({
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 'Original Text': content })
-      });
-      const response = await fetchWithAuth(`/api/resumes/${resumeId}`, updateOptions);
-      if (!response.ok) {
-        throw new Error('Failed to update original content');
-      }
-
-      // Update currentResume
-      setCurrentResume(prev => prev ? {
-        ...prev,
-        'Original Text': content
-      } : null);
-
-      // Also update the resumes list to keep it in sync
-      setResumes(prev => prev.map(resume => 
-        resume.id === resumeId 
-          ? { ...resume, 'Original Text': content }
-          : resume
-      ));
-
-      return { success: true };
-    } catch (error) {
-      logger.error('Error updating original content:', error);
-      throw error;
+    const updateOptions = await createAuthOptionsWithCsrf({
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 'Original Text': content })
+    });
+    const response = await fetchWithAuth(`/api/resumes/${resumeId}`, updateOptions);
+    if (!response.ok) {
+      throw new Error('Failed to update original content');
     }
-  }, []);
+
+    setCurrentResumeState(prev => (prev ? applyResumeUpdate(prev, { 'Original Text': content }) : null));
+    setResumes(prev => prev.map(resume => (
+      resume.id === resumeId ? applyResumeUpdate(resume, { 'Original Text': content }) : resume
+    )));
+
+    return { success: true };
+  }, [setResumes]);
 
   const deleteResume = useCallback(async (resumeId: string): Promise<void> => {
     const controller = new AbortController();
@@ -550,7 +464,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
         setDeleting(false);
       }
     }
-  }, [currentResume]);
+  }, [currentResume, setCurrentResume, setResumes]);
 
   const value: ResumeContextType = {
     resumes,
@@ -571,11 +485,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
     deleteResume
   };
 
-  return (
-    <ResumeContext.Provider value={value}>
-      {children}
-    </ResumeContext.Provider>
-  );
+  return <ResumeContext.Provider value={value}>{children}</ResumeContext.Provider>;
 };
 
 export default ResumeContext;

@@ -101,6 +101,7 @@ router.get('/', authenticateToken, async (req, res) => {
 
         const response = {
             data: processedRecords,
+            resumes: processedRecords,
             pagination: {
                 page,
                 limit,
@@ -402,64 +403,7 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateR
             invalidateTagsCache();
         }
 
-        // Return complete resume data with all analysis fields
-        res.json({
-            id: updatedResume.id,
-            Name: updatedResume.name,
-            Title: updatedResume.title,
-            Status: updatedResume.status,
-            FirmName: updatedResume.firm_name,
-            CustomerName: updatedResume.firm_name,
-            'Original Text': updatedResume.original_text,
-            'Improved Text': updatedResume.improved_text,
-            'Original Name': updatedResume.original_name,
-            'Global Rating': updatedResume.global_rating,
-            'Skills Score': updatedResume.skills_score,
-            'Experience Score': updatedResume.experience_score,
-            'Education Score': updatedResume.education_score,
-            'ATS Score': updatedResume.ats_score,
-            'Executive Summary Score': updatedResume.executive_summary_score,
-            'Hobbies Languages Score': updatedResume.hobbies_languages_score,
-            // Improved scores
-            'Improved Global Rating': updatedResume.improved_global_rating,
-            'Improved Skills Score': updatedResume.improved_skills_score,
-            'Improved Experience Score': updatedResume.improved_experience_score,
-            'Improved Education Score': updatedResume.improved_education_score,
-            'Improved ATS Score': updatedResume.improved_ats_score,
-            'Improved Executive Summary Score': updatedResume.improved_executive_summary_score,
-            'Improved Hobbies Languages Score': updatedResume.improved_hobbies_languages_score,
-            // Tags
-            Skills: updatedResume.skills,
-            Industries: updatedResume.industries,
-            Tools: updatedResume.tools,
-            'Soft Skills': updatedResume.soft_skills,
-            // Improved tags
-            'Improved Skills': updatedResume.improved_skills,
-            'Improved Industries': updatedResume.improved_industries,
-            'Improved Tools': updatedResume.improved_tools,
-            'Improved Soft Skills': updatedResume.improved_soft_skills,
-            'Key Improvements': updatedResume.key_improvements,
-            'Improved Key Improvements': updatedResume.improved_key_improvements,
-            'Analyzed At': updatedResume.analyzed_at,
-            'Current Version': updatedResume.current_version || 0,
-            'Resume File': updatedResume.resume_file_url ? [{
-                url: updatedResume.resume_file_url,
-                filename: updatedResume.file_name,
-                size: updatedResume.resume_file_size,
-                type: updatedResume.resume_file_type
-            }] : [],
-            'Created At': updatedResume.created_at,
-            'Updated At': updatedResume.updated_at,
-            // GDPR consent fields
-            profile_type: updatedResume.profile_type,
-            candidate_name: updatedResume.candidate_name,
-            candidate_email: updatedResume.candidate_email,
-            consent_status: updatedResume.consent_status,
-            consent_requested_at: updatedResume.consent_requested_at,
-            consent_responded_at: updatedResume.consent_responded_at,
-            consent_token_expires_at: updatedResume.consent_token_expires_at,
-            retention_until: updatedResume.retention_until
-        });
+        res.json(mapResumeToFrontend(updatedResume));
     } catch (error) {
         if (error.statusCode === 404) {
             return res.status(404).json({ error: 'Resume not found' });

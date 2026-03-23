@@ -3,16 +3,15 @@
  * TypeScript version with lazy loading for better performance
  */
 
-import { useEffect, ReactNode, lazy, Suspense } from 'react';
+import { ReactNode, lazy, Suspense } from 'react';
 import { BrowserRouter as Router } from 'react-router-dom';
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { ResumeProvider } from './context/ResumeContext';
 import { ChatbotProvider } from './context/ChatbotContext';
 import { Toaster } from 'react-hot-toast';
 import ErrorBoundary from './components/ErrorBoundary';
 import Layout from './components/Layout';
 import { useAuth } from './context/AuthContext';
-import logger from './utils/logger.frontend';
 
 // Lazy load pages for code splitting
 const HomePage = lazy(() => import('./pages/HomePage'));
@@ -54,7 +53,6 @@ const BackupPage = lazy(() => import('./pages/BackupPage'));
 const BatchUploadPage = lazy(() => import('./pages/BatchUploadPage'));
 const BatchJobsPage = lazy(() => import('./pages/BatchJobsPage'));
 
-// Loading fallback component
 const PageLoader = () => (
   <div className="flex items-center justify-center min-h-screen">
     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
@@ -65,23 +63,14 @@ interface RouteProps {
   children: ReactNode;
 }
 
+const publicHomeEnabled = import.meta.env.VITE_PUBLIC_HOME === 'true';
+const unauthenticatedRedirectPath = publicHomeEnabled ? '/welcome' : '/signin';
+
 const ProtectedRoute = ({ children }: RouteProps): JSX.Element => {
   const { isAuthenticated } = useAuth();
-  const navigate = useNavigate();
-  
-  // Check if public home is enabled
-  const publicHomeEnabled = import.meta.env.VITE_PUBLIC_HOME === 'true';
-  const redirectPath = publicHomeEnabled ? '/welcome' : '/signin';
-  
-  useEffect(() => {
-    if (!isAuthenticated) {
-      logger.log(`[ProtectedRoute] User not authenticated, redirecting to ${redirectPath}`);
-      navigate(redirectPath, { replace: true });
-    }
-  }, [isAuthenticated, navigate, redirectPath]);
-  
+
   if (!isAuthenticated) {
-    return <Navigate to={redirectPath} replace />;
+    return <Navigate to={unauthenticatedRedirectPath} replace />;
   }
 
   return <>{children}</>;
@@ -89,15 +78,7 @@ const ProtectedRoute = ({ children }: RouteProps): JSX.Element => {
 
 const AdminRoute = ({ children }: RouteProps): JSX.Element => {
   const { isAuthenticated, user } = useAuth();
-  const navigate = useNavigate();
-  
-  useEffect(() => {
-    if (!isAuthenticated) {
-      logger.log('[AdminRoute] User not authenticated, redirecting to signin');
-      navigate('/signin', { replace: true });
-    }
-  }, [isAuthenticated, navigate]);
-  
+
   if (!isAuthenticated) {
     return <Navigate to="/signin" replace />;
   }
@@ -109,24 +90,17 @@ const AdminRoute = ({ children }: RouteProps): JSX.Element => {
   return <>{children}</>;
 };
 
-// Check if public home is enabled via environment variable
-const isPublicHomeEnabled = import.meta.env.VITE_PUBLIC_HOME === 'true';
-
-// Public home route - shows public page if enabled and not authenticated, otherwise redirects
 const PublicHomeRoute = (): JSX.Element => {
   const { isAuthenticated } = useAuth();
-  
-  // If user is authenticated, redirect to protected home (index route)
+
   if (isAuthenticated) {
     return <Navigate to="/" replace />;
   }
-  
-  // If public home is enabled, show public page
-  if (isPublicHomeEnabled) {
+
+  if (publicHomeEnabled) {
     return <PublicHomePage />;
   }
-  
-  // Otherwise, redirect to signin
+
   return <Navigate to="/signin" replace />;
 };
 
@@ -142,14 +116,10 @@ const App = (): JSX.Element => {
                 <Route path="/register" element={<Register />} />
                 <Route path="/forgot-password" element={<ForgotPasswordPage />} />
                 <Route path="/reset-password" element={<ResetPasswordPage />} />
-                {/* Public consent response page (no auth required) */}
                 <Route path="/consent/:token" element={<ConsentResponsePage />} />
-                {/* Public legal pages (no auth required) */}
                 <Route path="/privacy" element={<PrivacyPolicyPage />} />
                 <Route path="/terms" element={<TermsOfServicePage />} />
-                {/* Public shared file pages (no auth required) */}
                 <Route path="/share/:type/:token" element={<SharedFilePage />} />
-                {/* Public home page (only when VITE_PUBLIC_HOME=true) */}
                 <Route path="/welcome" element={<PublicHomeRoute />} />
                 <Route
                   path="/"
@@ -177,8 +147,6 @@ const App = (): JSX.Element => {
                   <Route path="profile-matching" element={<ProfileMatchingPage />} />
                   <Route path="guide" element={<UserGuidePage />} />
                   <Route path="profile" element={<UserProfilePage />} />
-                  
-                  {/* Admin-only routes */}
                   <Route path="templates" element={<AdminRoute><TemplatesPage /></AdminRoute>} />
                   <Route path="templates/new" element={<AdminRoute><NewTemplatePage /></AdminRoute>} />
                   <Route path="templates/edit/:id" element={<AdminRoute><NewTemplatePage /></AdminRoute>} />

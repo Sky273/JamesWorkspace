@@ -90,11 +90,16 @@ describe('resumes/helpers', () => {
             expect(result.id).toBe('r1');
             expect(result.Name).toBe('Alice');
             expect(result.Title).toBe('Dev');
+            expect(result.name).toBe('Alice');
+            expect(result.title).toBe('Dev');
             expect(result['File Name']).toBe('cv.pdf');
+            expect(result.fileName).toBe('cv.pdf');
             expect(result['Resume File']).toHaveLength(1);
             expect(result['Resume File'][0].filename).toBe('cv.pdf');
             expect(result.Status).toBe('analyzed');
+            expect(result.status).toBe('analyzed');
             expect(result['Global Rating']).toBe(80);
+            expect(result.globalRating).toBe(80);
             expect(result['Original Text']).toBe('<p>text</p>');
         });
 

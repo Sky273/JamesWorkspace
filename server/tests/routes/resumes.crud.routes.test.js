@@ -153,6 +153,7 @@ describe('Resume Routes - GET /api/resumes', () => {
 
         expect(res.status).toBe(200);
         expect(res.body.data).toBeDefined();
+        expect(res.body.resumes).toEqual(res.body.data);
         expect(res.body.pagination).toBeDefined();
         expect(res.body.pagination.totalCount).toBe(5);
     });
@@ -271,6 +272,7 @@ describe('Resume Routes - GET /api/resumes/:id', () => {
 
         expect(res.status).toBe(200);
         expect(res.body.id).toBe('123e4567-e89b-12d3-a456-426614174000');
+        expect(res.body.name).toBe('Test Resume');
     });
 
     it('should return 403 for resume from different firm', async () => {
@@ -437,6 +439,8 @@ describe('Resume Routes - PUT /api/resumes/:id', () => {
             '123e4567-e89b-12d3-a456-426614174000',
             expect.objectContaining({ name: 'Updated Name', title: 'Senior Dev' })
         );
+        expect(res.body.name).toBe('Updated Name');
+        expect(res.body.title).toBe('Senior Dev');
     });
 
     it('should map Status to lowercase', async () => {

@@ -53,6 +53,19 @@ export interface ResumeSuggestions {
 
 export interface Resume {
   id: string;
+  Name?: string;
+  Title?: string;
+  name?: string;
+  originalName?: string;
+  title?: string;
+  fileName?: string;
+  file_name?: string;
+  originalText?: string;
+  original_text?: string;
+  improvedText?: string;
+  improved_text?: string;
+  currentVersion?: number;
+  adapted_title?: string;
   'File Name'?: string;
   'Name'?: string;
   'Original Name'?: string;
@@ -559,3 +572,4 @@ export interface Settings {
   'ATS Weight'?: number;
   'Hobbies Languages Weight'?: number;
 }
+
