@@ -252,7 +252,7 @@ migrate-server.bat
 Ou via pgAdmin :
 1. Connectez-vous a votre base resumeconverter
 2. Ouvrez Query Tool
-3. Ouvrez et executez le fichier docker/init-db.sql si la base est vide
+3. Ouvrez et executez le fichier docker/schema.sql si la base est vide
 4. Lancez ensuite npm run migrate pour appliquer les migrations applicatives restantes
 
 ### Étape 5 : Lancer l'application
@@ -845,7 +845,7 @@ docker exec -it resumeconverter-app psql -U resumeconverter -d resumeconverter
 # Supprimer et recréer la base
 psql -U postgres -c "DROP DATABASE IF EXISTS resumeconverter;"
 psql -U postgres -c "CREATE DATABASE resumeconverter OWNER resumeconverter;"
-psql -U resumeconverter -d resumeconverter -f docker/init-db.sql
+psql -U resumeconverter -d resumeconverter -f docker/schema.sql
 ```
 
 #### Docker

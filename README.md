@@ -121,6 +121,8 @@ npm run migrate
 Windows :
 ```batch
 migrate-server.bat
+
+Pour une base vide, le bootstrap applique desormais le schema canonique `docker/schema.sql` avant de marquer les migrations SQL existantes comme deja couvertes.
 ```
 
 ### 5. Démarrer l'application

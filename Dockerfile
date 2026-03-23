@@ -130,6 +130,7 @@ USER root
 # =============================================================================
 # Database Schema Initialization Script and Migrations
 # =============================================================================
+COPY docker/schema.sql /docker-entrypoint-initdb.d/
 COPY docker/init-db.sql /docker-entrypoint-initdb.d/
 COPY docker/migrations /docker-entrypoint-initdb.d/migrations/
 

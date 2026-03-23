@@ -21,20 +21,28 @@ async function pathExists(targetPath) {
 
 async function resolveDockerAssetPaths() {
     const candidates = [
-        { initDbPath: path.join(DOCKER_DIR, 'init-db.sql'), migrationsDir: path.join(DOCKER_DIR, 'migrations') },
-        { initDbPath: path.join(FALLBACK_DOCKER_DIR, 'init-db.sql'), migrationsDir: path.join(FALLBACK_DOCKER_DIR, 'migrations') }
+        { schemaPath: path.join(DOCKER_DIR, 'schema.sql'), legacyInitDbPath: path.join(DOCKER_DIR, 'init-db.sql'), migrationsDir: path.join(DOCKER_DIR, 'migrations') },
+        { schemaPath: path.join(FALLBACK_DOCKER_DIR, 'schema.sql'), legacyInitDbPath: path.join(FALLBACK_DOCKER_DIR, 'init-db.sql'), migrationsDir: path.join(FALLBACK_DOCKER_DIR, 'migrations') }
     ];
 
     for (const candidate of candidates) {
-        if (await pathExists(candidate.initDbPath) && await pathExists(candidate.migrationsDir)) {
-            return candidate;
+        const hasSchema = await pathExists(candidate.schemaPath);
+        const hasLegacyInit = await pathExists(candidate.legacyInitDbPath);
+        const hasMigrations = await pathExists(candidate.migrationsDir);
+
+        if ((hasSchema || hasLegacyInit) && hasMigrations) {
+            return {
+                schemaPath: hasSchema ? candidate.schemaPath : null,
+                legacyInitDbPath: hasLegacyInit ? candidate.legacyInitDbPath : null,
+                migrationsDir: candidate.migrationsDir
+            };
         }
     }
 
-    throw new Error(`Unable to locate migration assets. Checked: ${candidates.map(c => `${c.initDbPath} | ${c.migrationsDir}`).join('; ')}`);
+    throw new Error(`Unable to locate migration assets. Checked: ${candidates.map(c => `${c.schemaPath} | ${c.legacyInitDbPath} | ${c.migrationsDir}`).join('; ')}`);
 }
 
-const { initDbPath: INIT_DB_PATH, migrationsDir: MIGRATIONS_DIR } = await resolveDockerAssetPaths();
+const { schemaPath: SCHEMA_PATH, legacyInitDbPath: LEGACY_INIT_DB_PATH, migrationsDir: MIGRATIONS_DIR } = await resolveDockerAssetPaths();
 
 function loadEnvironment() {
     const envFiles = [
@@ -264,14 +272,23 @@ async function applyPendingSqlMigrations() {
 }
 
 async function applyFreshSchema() {
-    safeLog('info', 'Applying base database schema from init-db.sql');
-    await runSqlFile(INIT_DB_PATH);
+    const bootstrapPath = SCHEMA_PATH || LEGACY_INIT_DB_PATH;
+
+    if (!bootstrapPath) {
+        throw new Error('No bootstrap schema file found');
+    }
+
+    safeLog('info', 'Applying base database schema', {
+        source: path.basename(bootstrapPath)
+    });
+    await runSqlFile(bootstrapPath);
 
     const migrationFiles = await getMigrationFiles();
     for (const migrationName of migrationFiles) {
         await markMigrationApplied(migrationName);
     }
 }
+
 
 async function ensureResumeAdaptationsColumns() {
     await query(`ALTER TABLE resume_adaptations ADD COLUMN IF NOT EXISTS candidate_name VARCHAR(255)`);

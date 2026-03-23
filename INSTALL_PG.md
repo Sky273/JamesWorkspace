@@ -51,7 +51,7 @@ docker-migrate.bat
 ```
 
 Le runner applique :
-- `docker/init-db.sql` si la base est vide
+- `docker/schema.sql` si la base est vide
 - les migrations SQL en attente dans `docker/migrations/`
 - les migrations applicatives et seeds idempotents restants
 
