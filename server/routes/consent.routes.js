@@ -21,6 +21,25 @@ import { runAllChecks } from '../services/scheduler.service.js';
 
 const router = express.Router();
 
+function getFirstDefinedValue(source, keys) {
+    for (const key of keys) {
+        if (Object.prototype.hasOwnProperty.call(source, key) && source[key] !== undefined) {
+            return source[key];
+        }
+    }
+    return undefined;
+}
+
+function normalizeConsentInitializationPayload(payload = {}) {
+    return {
+        ...payload,
+        resumeId: getFirstDefinedValue(payload, ['resumeId', 'resume_id']),
+        profileType: getFirstDefinedValue(payload, ['profileType', 'profile_type']),
+        candidateName: getFirstDefinedValue(payload, ['candidateName', 'candidate_name']),
+        candidateEmail: getFirstDefinedValue(payload, ['candidateEmail', 'candidate_email'])
+    };
+}
+
 // ============================================
 // AUTHENTICATED ROUTES (require login)
 // ============================================
@@ -31,7 +50,8 @@ const router = express.Router();
  */
 router.post('/initialize', authenticateToken, validateBody(initializeConsentSchema), async (req, res) => {
     try {
-        const { resumeId, profileType, candidateName, candidateEmail } = req.body;
+        const normalizedPayload = normalizeConsentInitializationPayload(req.body);
+        const { resumeId, profileType, candidateName, candidateEmail } = normalizedPayload;
 
         if (!resumeId) {
             return res.status(400).json({ error: 'Resume ID is required' });

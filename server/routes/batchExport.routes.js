@@ -13,6 +13,24 @@ import { getPdfServerAuthHeaders } from '../utils/pdfServerAuth.js';
 
 const router = express.Router();
 
+function getFirstDefinedValue(source, keys) {
+    for (const key of keys) {
+        if (Object.prototype.hasOwnProperty.call(source, key) && source[key] !== undefined) {
+            return source[key];
+        }
+    }
+    return undefined;
+}
+
+function normalizeBatchExportPayload(payload = {}) {
+    return {
+        ...payload,
+        resumeIds: getFirstDefinedValue(payload, ['resumeIds', 'resume_ids']),
+        templateId: getFirstDefinedValue(payload, ['templateId', 'template_id']),
+        format: getFirstDefinedValue(payload, ['format', 'exportFormat', 'export_format'])
+    };
+}
+
 // PDF Server URL from environment
 const PDF_SERVER_URL = process.env.PDF_SERVER_URL || 'http://127.0.0.1:3002';
 
@@ -59,7 +77,8 @@ function processTemplatePlaceholders(content, name, title) {
 // POST /api/batch-export - Generate ZIP with multiple PDFs/DOCXs
 router.post('/', authenticateToken, validateBody(batchExportSchema), async (req, res) => {
     try {
-        const { resumeIds, templateId, format } = req.body;
+        const normalizedPayload = normalizeBatchExportPayload(req.body);
+        const { resumeIds, templateId, format } = normalizedPayload;
         
         if (!resumeIds || !Array.isArray(resumeIds) || resumeIds.length === 0) {
             return res.status(400).json({ error: 'Resume IDs are required' });

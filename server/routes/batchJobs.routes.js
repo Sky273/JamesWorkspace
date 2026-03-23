@@ -32,6 +32,29 @@ import {
 
 const router = express.Router();
 
+function getFirstDefinedValue(source, keys) {
+    for (const key of keys) {
+        if (Object.prototype.hasOwnProperty.call(source, key) && source[key] !== undefined) {
+            return source[key];
+        }
+    }
+    return undefined;
+}
+
+function normalizeBatchJobPayload(payload = {}) {
+    return {
+        ...payload,
+        firm_id: getFirstDefinedValue(payload, ['firm_id', 'firmId']),
+        templateId: getFirstDefinedValue(payload, ['templateId', 'template_id']),
+        exportFormat: getFirstDefinedValue(payload, ['exportFormat', 'export_format']),
+        exportFormats: getFirstDefinedValue(payload, ['exportFormats', 'export_formats']),
+        deleteAfterExport: getFirstDefinedValue(payload, ['deleteAfterExport', 'delete_after_export']),
+        relativePaths: getFirstDefinedValue(payload, ['relativePaths', 'relative_paths']),
+        resumeIds: getFirstDefinedValue(payload, ['resumeIds', 'resume_ids']),
+        dealId: getFirstDefinedValue(payload, ['dealId', 'deal_id'])
+    };
+}
+
 // Configure multer for file uploads (store in memory for batch processing)
 const upload = multer({
     storage: multer.memoryStorage(),
@@ -63,10 +86,12 @@ router.post('/', authenticateToken, upload.array('files', 200), async (req, res)
         const isAdmin = req.user?.role === 'admin';
         const userFirmId = req.user?.firmId || req.user?.firm_id; // JWT uses firmId
 
+        const normalizedPayload = normalizeBatchJobPayload(req.body);
+
         // Get firm_id from request or use user's firm
         let firmId = userFirmId;
-        if (isAdmin && req.body.firm_id) {
-            firmId = req.body.firm_id; // Keep as string (UUID)
+        if (isAdmin && normalizedPayload.firm_id) {
+            firmId = normalizedPayload.firm_id; // Keep as string (UUID)
         }
 
         if (!firmId) {
@@ -76,25 +101,24 @@ router.post('/', authenticateToken, upload.array('files', 200), async (req, res)
         // Parse options - handle both string 'true' and boolean true
         // Parse exportFormats - can be JSON string array or single format string for backward compatibility
         let exportFormats = ['pdf'];
-        if (req.body.exportFormats) {
+        if (normalizedPayload.exportFormats) {
             try {
-                exportFormats = typeof req.body.exportFormats === 'string' 
-                    ? JSON.parse(req.body.exportFormats) 
-                    : req.body.exportFormats;
+                exportFormats = typeof normalizedPayload.exportFormats === 'string' 
+                    ? JSON.parse(normalizedPayload.exportFormats) 
+                    : normalizedPayload.exportFormats;
             } catch {
-                exportFormats = [req.body.exportFormats]; // Single format as fallback
+                exportFormats = [normalizedPayload.exportFormats];
             }
-        } else if (req.body.exportFormat) {
-            // Backward compatibility with single format
-            exportFormats = [req.body.exportFormat];
+        } else if (normalizedPayload.exportFormat) {
+            exportFormats = [normalizedPayload.exportFormat];
         }
 
         const options = {
             improve: req.body.improve === 'true' || req.body.improve === true,
             export: req.body.export === 'true' || req.body.export === true,
             exportFormats: exportFormats,
-            templateId: req.body.templateId || null,
-            deleteAfterExport: req.body.deleteAfterExport === 'true' || req.body.deleteAfterExport === true
+            templateId: normalizedPayload.templateId || null,
+            deleteAfterExport: normalizedPayload.deleteAfterExport === 'true' || normalizedPayload.deleteAfterExport === true
         };
 
         // Create the job
@@ -109,11 +133,11 @@ router.post('/', authenticateToken, upload.array('files', 200), async (req, res)
         if (req.files && req.files.length > 0) {
             // Parse relative paths if provided (JSON array matching files order)
             let relativePaths = [];
-            if (req.body.relativePaths) {
+            if (normalizedPayload.relativePaths) {
                 try {
-                    relativePaths = typeof req.body.relativePaths === 'string' 
-                        ? JSON.parse(req.body.relativePaths) 
-                        : req.body.relativePaths;
+                    relativePaths = typeof normalizedPayload.relativePaths === 'string' 
+                        ? JSON.parse(normalizedPayload.relativePaths) 
+                        : normalizedPayload.relativePaths;
                 } catch {
                     relativePaths = [];
                 }
@@ -168,7 +192,8 @@ router.post('/improve', authenticateToken, validateBody(batchImproveSchema), asy
         const isAdmin = req.user?.role === 'admin';
         const userFirmId = req.user?.firmId || req.user?.firm_id;
 
-        const { resumeIds, options: jobOptions = {} } = req.body;
+        const normalizedPayload = normalizeBatchJobPayload(req.body);
+        const { resumeIds, options: jobOptions = {} } = normalizedPayload;
 
         if (!resumeIds || !Array.isArray(resumeIds) || resumeIds.length === 0) {
             return res.status(400).json({ error: 'Resume IDs requis' });
@@ -176,8 +201,8 @@ router.post('/improve', authenticateToken, validateBody(batchImproveSchema), asy
 
         // Get firm_id from request or use user's firm
         let firmId = userFirmId;
-        if (isAdmin && req.body.firm_id) {
-            firmId = parseInt(req.body.firm_id, 10);
+        if (isAdmin && normalizedPayload.firm_id) {
+            firmId = normalizedPayload.firm_id;
         }
 
         if (!firmId) {
@@ -223,7 +248,8 @@ router.post('/deal-export', authenticateToken, validateBody(batchDealExportSchem
         const isAdmin = req.user?.role === 'admin';
         const userFirmId = req.user?.firmId || req.user?.firm_id;
 
-        const { dealId, templateId, exportFormats = ['pdf'] } = req.body;
+        const normalizedPayload = normalizeBatchJobPayload(req.body);
+        const { dealId, templateId, exportFormats = ['pdf'] } = normalizedPayload;
 
         if (!dealId) {
             return res.status(400).json({ error: 'Deal ID requis' });

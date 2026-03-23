@@ -445,3 +445,61 @@ describe('Batch Jobs Routes - POST /api/batch-jobs/:id/cancel', () => {
         expect(res.status).toBe(403);
     });
 });
+
+
+describe('Batch Jobs Routes - POST /api/batch-jobs/improve', () => {
+    let app;
+
+    beforeEach(() => {
+        vi.resetAllMocks();
+        app = createTestApp();
+    });
+
+    it('should create improve job with camelCase firmId', async () => {
+        mockCreateJob.mockResolvedValueOnce({ id: 'job-improve', status: 'pending' });
+        mockAddJobResumeIds.mockResolvedValueOnce(1);
+        mockGetJob.mockResolvedValueOnce({ id: 'job-improve', status: 'pending', firm_id: 'firm-override' });
+
+        const res = await request(app)
+            .post('/api/batch-jobs/improve')
+            .set('Authorization', 'Bearer valid-token')
+            .set('x-test-role', 'admin')
+            .send({ resumeIds: ['123e4567-e89b-12d3-a456-426614174000'], firmId: 'firm-override', options: { mode: 'fast' } });
+
+        expect(res.status).toBe(201);
+        expect(mockCreateJob).toHaveBeenCalledWith(expect.objectContaining({ firmId: 'firm-override', jobType: 'improve' }));
+    });
+});
+
+describe('Batch Jobs Routes - POST /api/batch-jobs/deal-export', () => {
+    let app;
+
+    beforeEach(() => {
+        vi.resetAllMocks();
+        app = createTestApp();
+    });
+
+    it('should create deal export job with snake_case aliases', async () => {
+        mockGetDealForExport.mockResolvedValueOnce({ id: '123e4567-e89b-12d3-a456-426614174000', title: 'Deal A', firm_id: 'firm-123' });
+        mockGetResumesForDeal.mockResolvedValueOnce([{ id: 'res-1', name: 'Resume A' }]);
+        mockGetAdaptationsForDeal.mockResolvedValueOnce([]);
+        mockCreateJob.mockResolvedValueOnce({ id: 'job-export', status: 'pending' });
+        mockAddJobExportItems.mockResolvedValueOnce(1);
+        mockGetJob.mockResolvedValueOnce({ id: 'job-export', status: 'pending', firm_id: 'firm-123' });
+
+        const res = await request(app)
+            .post('/api/batch-jobs/deal-export')
+            .set('Authorization', 'Bearer valid-token')
+            .send({ deal_id: '123e4567-e89b-12d3-a456-426614174000', template_id: '123e4567-e89b-12d3-a456-426614174001', export_formats: ['pdf'] });
+
+        expect(res.status).toBe(201);
+        expect(mockCreateJob).toHaveBeenCalledWith(expect.objectContaining({
+            jobType: 'deal-export',
+            options: expect.objectContaining({
+                dealId: '123e4567-e89b-12d3-a456-426614174000',
+                templateId: '123e4567-e89b-12d3-a456-426614174001',
+                exportFormats: ['pdf']
+            })
+        }));
+    });
+});

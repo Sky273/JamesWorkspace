@@ -73,6 +73,65 @@ export function stringifyIfNeeded(value) {
     return JSON.stringify(value || []);
 }
 
+function getFirstDefinedValue(source, keys) {
+    for (const key of keys) {
+        if (source[key] !== undefined) {
+            return source[key];
+        }
+    }
+    return undefined;
+}
+
+export function normalizeResumeUpdatePayload(payload = {}) {
+    return {
+        name: getFirstDefinedValue(payload, ['name', 'Name']),
+        title: getFirstDefinedValue(payload, ['title', 'Title']),
+        status: getFirstDefinedValue(payload, ['status', 'Status']),
+        originalText: getFirstDefinedValue(payload, ['originalText', 'original_text', 'Original Text']),
+        improvedText: getFirstDefinedValue(payload, ['improvedText', 'improved_text', 'Improved Text']),
+        globalRating: getFirstDefinedValue(payload, ['globalRating', 'global_rating', 'Global Rating']),
+        skillsScore: getFirstDefinedValue(payload, ['skillsScore', 'skills_score', 'Skills Score']),
+        experienceScore: getFirstDefinedValue(payload, ['experienceScore', 'experience_score', 'Experience Score']),
+        educationScore: getFirstDefinedValue(payload, ['educationScore', 'education_score', 'Education Score']),
+        atsScore: getFirstDefinedValue(payload, ['atsScore', 'ats_score', 'ATS Score']),
+        executiveSummaryScore: getFirstDefinedValue(payload, ['executiveSummaryScore', 'executive_summary_score', 'Executive Summary Score']),
+        hobbiesLanguagesScore: getFirstDefinedValue(payload, ['hobbiesLanguagesScore', 'hobbies_languages_score', 'Hobbies Languages Score']),
+        improvedGlobalRating: getFirstDefinedValue(payload, ['improvedGlobalRating', 'improved_global_rating', 'Improved Global Rating']),
+        improvedSkillsScore: getFirstDefinedValue(payload, ['improvedSkillsScore', 'improved_skills_score', 'Improved Skills Score']),
+        improvedExperienceScore: getFirstDefinedValue(payload, ['improvedExperienceScore', 'improved_experience_score', 'Improved Experience Score']),
+        improvedEducationScore: getFirstDefinedValue(payload, ['improvedEducationScore', 'improved_education_score', 'Improved Education Score']),
+        improvedAtsScore: getFirstDefinedValue(payload, ['improvedAtsScore', 'improved_ats_score', 'Improved ATS Score']),
+        improvedExecutiveSummaryScore: getFirstDefinedValue(payload, ['improvedExecutiveSummaryScore', 'improved_executive_summary_score', 'Improved Executive Summary Score']),
+        improvedHobbiesLanguagesScore: getFirstDefinedValue(payload, ['improvedHobbiesLanguagesScore', 'improved_hobbies_languages_score', 'Improved Hobbies Languages Score']),
+        skills: getFirstDefinedValue(payload, ['skills', 'Skills']),
+        industries: getFirstDefinedValue(payload, ['industries', 'Industries']),
+        tools: getFirstDefinedValue(payload, ['tools', 'Tools']),
+        softSkills: getFirstDefinedValue(payload, ['softSkills', 'soft_skills', 'Soft Skills']),
+        skillsCleaned: getFirstDefinedValue(payload, ['skillsCleaned', 'skills_cleaned', 'Skills_cleaned']),
+        industriesCleaned: getFirstDefinedValue(payload, ['industriesCleaned', 'industries_cleaned', 'Industries_cleaned']),
+        toolsCleaned: getFirstDefinedValue(payload, ['toolsCleaned', 'tools_cleaned', 'Tools_cleaned']),
+        softSkillsCleaned: getFirstDefinedValue(payload, ['softSkillsCleaned', 'soft_skills_cleaned', 'Soft Skills_cleaned']),
+        skillsEsco: getFirstDefinedValue(payload, ['skillsEsco', 'skills_esco', 'Skills_esco']),
+        industriesEsco: getFirstDefinedValue(payload, ['industriesEsco', 'industries_esco', 'Industries_esco']),
+        toolsEsco: getFirstDefinedValue(payload, ['toolsEsco', 'tools_esco', 'Tools_esco']),
+        softSkillsEsco: getFirstDefinedValue(payload, ['softSkillsEsco', 'soft_skills_esco', 'Soft Skills_esco']),
+        improvedSkills: getFirstDefinedValue(payload, ['improvedSkills', 'improved_skills', 'Improved Skills']),
+        improvedIndustries: getFirstDefinedValue(payload, ['improvedIndustries', 'improved_industries', 'Improved Industries']),
+        improvedTools: getFirstDefinedValue(payload, ['improvedTools', 'improved_tools', 'Improved Tools']),
+        improvedSoftSkills: getFirstDefinedValue(payload, ['improvedSoftSkills', 'improved_soft_skills', 'Improved Soft Skills']),
+        keyImprovements: getFirstDefinedValue(payload, ['keyImprovements', 'key_improvements', 'Key Improvements']),
+        improvedKeyImprovements: getFirstDefinedValue(payload, ['improvedKeyImprovements', 'improved_key_improvements', 'Improved Key Improvements']),
+        summary: getFirstDefinedValue(payload, ['summary', 'Summary']),
+        experienceYears: getFirstDefinedValue(payload, ['experienceYears', 'experience_years', 'Experience Years']),
+        educationLevel: getFirstDefinedValue(payload, ['educationLevel', 'education_level', 'Education Level']),
+        certifications: getFirstDefinedValue(payload, ['certifications', 'Certifications']),
+        languages: getFirstDefinedValue(payload, ['languages', 'Languages']),
+        originalName: getFirstDefinedValue(payload, ['originalName', 'original_name', 'Original Name']),
+        analysisDate: getFirstDefinedValue(payload, ['analysisDate', 'analyzedAt', 'analyzed_at', 'Analysis Date']),
+        lastImproved: getFirstDefinedValue(payload, ['lastImproved', 'Last Improved'])
+    };
+}
+
 const buildResumeFile = (record) => (
     record.resume_file_url ? [{
         id: record.id,

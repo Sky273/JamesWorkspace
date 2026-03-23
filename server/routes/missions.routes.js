@@ -14,6 +14,31 @@ import * as missionsService from '../services/missions.service.js';
 
 const router = express.Router();
 
+function getFirstDefinedValue(source, keys) {
+    for (const key of keys) {
+        if (source[key] !== undefined) {
+            return source[key];
+        }
+    }
+    return undefined;
+}
+
+function normalizeMissionPayload(payload = {}) {
+    return {
+        title: getFirstDefinedValue(payload, ['title', 'Title']),
+        content: getFirstDefinedValue(payload, ['content', 'Content']),
+        status: getFirstDefinedValue(payload, ['status', 'Status']),
+        firm: getFirstDefinedValue(payload, ['firm', 'Firm']),
+        firmId: getFirstDefinedValue(payload, ['firmId', 'firm_id', 'Firm ID']),
+        clientId: getFirstDefinedValue(payload, ['clientId', 'client_id', 'Client ID']),
+        contactId: getFirstDefinedValue(payload, ['contactId', 'contact_id', 'Contact ID']),
+        dealId: getFirstDefinedValue(payload, ['dealId', 'deal_id', 'Deal ID']),
+        keywords: getFirstDefinedValue(payload, ['keywords', 'Keywords']),
+        requiredSkills: getFirstDefinedValue(payload, ['requiredSkills', 'required_skills', 'Required Skills']),
+        preferredSkills: getFirstDefinedValue(payload, ['preferredSkills', 'preferred_skills', 'Preferred Skills'])
+    };
+}
+
 // ============================================
 // MISSIONS ROUTES
 // ============================================
@@ -95,6 +120,7 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
 router.post('/', authenticateToken, validateBody(createMissionSchema), async (req, res) => {
     try {
         const missionData = req.body;
+        const normalizedMission = normalizeMissionPayload(missionData);
         const userFirm = req.user?.firm;
         const userFirmId = await getUserFirmId(req);
         const isAdmin = req.user?.role === 'admin';
@@ -102,7 +128,7 @@ router.post('/', authenticateToken, validateBody(createMissionSchema), async (re
         // Determine target firm_id: admin can specify any firm
         let targetFirmId = userFirmId;
         let targetFirmName = userFirm;
-        const requestedFirmId = missionData.firm_id || missionData['Firm ID'];
+        const requestedFirmId = normalizedMission.firmId;
         
         if (isAdmin && requestedFirmId) {
             const firm = await missionsService.validateFirm(requestedFirmId);
@@ -118,13 +144,13 @@ router.post('/', authenticateToken, validateBody(createMissionSchema), async (re
             }
         }
         
-        let content = missionData.Content || missionData.content || '';
+        let content = normalizedMission.content || '';
         if (content) {
             content = sanitizeHtmlContent(content);
         }
         
         // Validate client_id if provided
-        const clientId = missionData['Client ID'] || missionData.client_id || null;
+        const clientId = normalizedMission.clientId || null;
         if (clientId) {
             const clientCheck = await missionsService.validateClient(clientId, targetFirmId);
             if (!clientCheck.exists) {
@@ -137,7 +163,7 @@ router.post('/', authenticateToken, validateBody(createMissionSchema), async (re
         }
         
         // Validate contact_id if provided
-        const contactId = missionData['Contact ID'] || missionData.contact_id || null;
+        const contactId = normalizedMission.contactId || null;
         if (contactId && clientId) {
             const contactValid = await missionsService.validateContact(contactId, clientId);
             if (!contactValid) {
@@ -146,7 +172,7 @@ router.post('/', authenticateToken, validateBody(createMissionSchema), async (re
         }
 
         // Validate deal_id if provided
-        const dealId = missionData['Deal ID'] || missionData.deal_id || null;
+        const dealId = normalizedMission.dealId || null;
         if (dealId) {
             const dealCheck = await missionsService.validateDeal(dealId, targetFirmId);
             if (!dealCheck.exists) {
@@ -162,14 +188,14 @@ router.post('/', authenticateToken, validateBody(createMissionSchema), async (re
         });
         
         const record = await missionsService.createMission({
-            title: missionData.Title || missionData.title,
+            title: normalizedMission.title,
             content: content,
-            firm: targetFirmName || missionData.Firm || missionData.firm || null,
+            firm: targetFirmName || normalizedMission.firm || null,
             firm_id: targetFirmId || null,
-            status: missionData.Status || missionData.status || 'active',
-            keywords: missionData.Keywords || missionData.keywords || null,
-            required_skills: missionData['Required Skills'] || missionData.required_skills || null,
-            preferred_skills: missionData['Preferred Skills'] || missionData.preferred_skills || null,
+            status: normalizedMission.status || 'active',
+            keywords: normalizedMission.keywords || null,
+            required_skills: normalizedMission.requiredSkills || null,
+            preferred_skills: normalizedMission.preferredSkills || null,
             client_id: clientId,
             contact_id: contactId,
             deal_id: dealId
@@ -187,6 +213,7 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateM
     try {
         const { id } = req.params;
         const updateData = req.body;
+        const normalizedUpdates = normalizeMissionPayload(updateData);
         const isAdmin = req.user?.role === 'admin';
         const userFirm = req.user?.firm;
         const userFirmId = await getUserFirmId(req);
@@ -200,28 +227,28 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateM
         // Build update object
         const updates = {};
         
-        if (updateData.Title !== undefined || updateData.title !== undefined) {
-            updates.title = updateData.Title || updateData.title;
+        if (normalizedUpdates.title !== undefined) {
+            updates.title = normalizedUpdates.title;
         }
-        if (updateData.Content !== undefined || updateData.content !== undefined) {
-            updates.content = sanitizeHtmlContent(updateData.Content || updateData.content);
+        if (normalizedUpdates.content !== undefined) {
+            updates.content = sanitizeHtmlContent(normalizedUpdates.content);
         }
-        if (updateData.Status !== undefined || updateData.status !== undefined) {
-            updates.status = updateData.Status || updateData.status;
+        if (normalizedUpdates.status !== undefined) {
+            updates.status = normalizedUpdates.status;
         }
-        if (updateData.Keywords !== undefined || updateData.keywords !== undefined) {
-            updates.keywords = updateData.Keywords || updateData.keywords;
+        if (normalizedUpdates.keywords !== undefined) {
+            updates.keywords = normalizedUpdates.keywords;
         }
-        if (updateData['Required Skills'] !== undefined || updateData.required_skills !== undefined) {
-            updates.required_skills = updateData['Required Skills'] || updateData.required_skills;
+        if (normalizedUpdates.requiredSkills !== undefined) {
+            updates.required_skills = normalizedUpdates.requiredSkills;
         }
-        if (updateData['Preferred Skills'] !== undefined || updateData.preferred_skills !== undefined) {
-            updates.preferred_skills = updateData['Preferred Skills'] || updateData.preferred_skills;
+        if (normalizedUpdates.preferredSkills !== undefined) {
+            updates.preferred_skills = normalizedUpdates.preferredSkills;
         }
         
         // Handle client_id update
-        if (updateData['Client ID'] !== undefined || updateData.client_id !== undefined) {
-            const clientId = updateData['Client ID'] || updateData.client_id;
+        if (normalizedUpdates.clientId !== undefined) {
+            const clientId = normalizedUpdates.clientId;
             if (clientId) {
                 const clientCheck = await missionsService.validateClient(clientId, userFirmId);
                 if (!clientCheck.exists) {
@@ -235,8 +262,8 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateM
         }
         
         // Handle contact_id update
-        if (updateData['Contact ID'] !== undefined || updateData.contact_id !== undefined) {
-            const contactId = updateData['Contact ID'] || updateData.contact_id;
+        if (normalizedUpdates.contactId !== undefined) {
+            const contactId = normalizedUpdates.contactId;
             const clientId = updates.client_id || existingMission.client_id;
             if (contactId && clientId) {
                 const contactValid = await missionsService.validateContact(contactId, clientId);
@@ -248,8 +275,8 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateM
         }
         
         // Handle deal_id update
-        if (updateData['Deal ID'] !== undefined || updateData.deal_id !== undefined) {
-            const newDealId = updateData['Deal ID'] || updateData.deal_id;
+        if (normalizedUpdates.dealId !== undefined) {
+            const newDealId = normalizedUpdates.dealId;
             if (newDealId) {
                 const dealCheck = await missionsService.validateDeal(newDealId, userFirmId);
                 if (!dealCheck.exists) {
@@ -263,8 +290,8 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateM
         }
 
         // Handle firm_id update (admin only)
-        if (isAdmin && (updateData.firm_id || updateData['Firm ID'])) {
-            const newFirmId = updateData.firm_id || updateData['Firm ID'];
+        if (isAdmin && normalizedUpdates.firmId) {
+            const newFirmId = normalizedUpdates.firmId;
             const firm = await missionsService.validateFirm(newFirmId);
             if (!firm) {
                 return res.status(400).json({ error: 'Specified firm not found' });

@@ -32,6 +32,33 @@ import {
 
 const router = express.Router();
 
+function getFirstDefinedValue(source, keys) {
+    for (const key of keys) {
+        if (Object.prototype.hasOwnProperty.call(source, key) && source[key] !== undefined) {
+            return source[key];
+        }
+    }
+    return undefined;
+}
+
+function normalizeDealPayload(payload = {}) {
+    return {
+        ...payload,
+        title: getFirstDefinedValue(payload, ['title', 'Title']),
+        description: getFirstDefinedValue(payload, ['description', 'Description']),
+        client_id: getFirstDefinedValue(payload, ['client_id', 'clientId']),
+        contact_id: getFirstDefinedValue(payload, ['contact_id', 'contactId']),
+        status: getFirstDefinedValue(payload, ['status', 'Status']),
+        expected_start_date: getFirstDefinedValue(payload, ['expected_start_date', 'expectedStartDate']),
+        expected_end_date: getFirstDefinedValue(payload, ['expected_end_date', 'expectedEndDate']),
+        budget_min: getFirstDefinedValue(payload, ['budget_min', 'budgetMin']),
+        budget_max: getFirstDefinedValue(payload, ['budget_max', 'budgetMax']),
+        priority: getFirstDefinedValue(payload, ['priority', 'Priority']),
+        tags: getFirstDefinedValue(payload, ['tags', 'Tags']),
+        notes: getFirstDefinedValue(payload, ['notes', 'Notes'])
+    };
+}
+
 /**
  * Check if user has access to a deal (same firm)
  */
@@ -180,15 +207,17 @@ router.post('/', authenticateToken, userRateLimit(), validateBody(createDealSche
             return res.status(401).json({ error: 'User ID not found' });
         }
 
+        const normalizedDeal = normalizeDealPayload(req.body);
+
         // Validate required fields
-        const { title } = req.body;
+        const { title } = normalizedDeal;
         if (!title || title.trim().length === 0) {
             return res.status(400).json({ error: 'Title is required' });
         }
 
         // If client_id is provided, verify it belongs to the same firm
-        if (req.body.client_id) {
-            const clientFirmId = await getClientFirmId(req.body.client_id);
+        if (normalizedDeal.client_id) {
+            const clientFirmId = await getClientFirmId(normalizedDeal.client_id);
             if (!clientFirmId) {
                 return res.status(400).json({ error: 'Client not found' });
             }
@@ -198,7 +227,7 @@ router.post('/', authenticateToken, userRateLimit(), validateBody(createDealSche
         }
 
         safeLog('info', 'Creating deal - calling createDeal service', { title, userId, userFirmId });
-        const deal = await createDeal(req.body, userId, userFirmId);
+        const deal = await createDeal(normalizedDeal, userId, userFirmId);
         safeLog('info', 'Deal created successfully', { dealId: deal.id });
         return res.status(201).json(deal);
     } catch (error) {
@@ -218,9 +247,11 @@ router.put('/:id', authenticateToken, validateParams('id'), userRateLimit(), val
                 .json({ error: access.error });
         }
 
+        const normalizedDeal = normalizeDealPayload(req.body);
+
         // If client_id is being updated, verify it belongs to the same firm
-        if (req.body.client_id) {
-            const clientFirmId = await getClientFirmId(req.body.client_id);
+        if (normalizedDeal.client_id) {
+            const clientFirmId = await getClientFirmId(normalizedDeal.client_id);
             if (!clientFirmId) {
                 return res.status(400).json({ error: 'Client not found' });
             }
@@ -229,7 +260,7 @@ router.put('/:id', authenticateToken, validateParams('id'), userRateLimit(), val
             }
         }
 
-        const deal = await updateDeal(id, req.body);
+        const deal = await updateDeal(id, normalizedDeal);
         return res.json(deal);
     } catch (error) {
         safeLog('error', 'Error updating deal', { error: error.message });

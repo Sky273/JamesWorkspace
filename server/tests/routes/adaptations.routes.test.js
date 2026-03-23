@@ -345,6 +345,43 @@ describe('Adaptations Routes - PUT /api/adaptations/:id', () => {
         expect(res.status).toBe(404);
     });
 
+    it('should update adaptation with camelCase payload', async () => {
+        mockGetAdaptationById.mockResolvedValueOnce({ 
+            id: 'adapt-123',
+            status: 'pending',
+            firm: 'Test Firm'
+        });
+        mockUpdateAdaptation.mockResolvedValueOnce({
+            id: 'adapt-123',
+            status: 'completed',
+            adapted_title: 'Modern Title',
+            adapted_text: 'Updated adapted text',
+            match_score: 88,
+            match_analysis: 'Strong match',
+            firm: 'Test Firm'
+        });
+
+        const res = await request(app)
+            .put('/api/adaptations/adapt-123')
+            .set('Authorization', 'Bearer valid-token')
+            .send({
+                adaptedTitle: 'Modern Title',
+                adaptedText: 'Updated adapted text',
+                status: 'completed',
+                matchScore: 88,
+                matchAnalysis: 'Strong match'
+            });
+
+        expect(res.status).toBe(200);
+        expect(mockUpdateAdaptation).toHaveBeenCalledWith('adapt-123', expect.objectContaining({
+            adapted_title: 'Modern Title',
+            adapted_text: 'Updated adapted text',
+            status: 'completed',
+            match_score: 88,
+            match_analysis: 'Strong match'
+        }));
+    });
+
     it('should update adaptation for authorized user', async () => {
         mockGetAdaptationById.mockResolvedValueOnce({ 
             id: 'adapt-123',

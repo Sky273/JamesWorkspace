@@ -155,6 +155,24 @@ describe('Pipeline Routes', () => {
             }));
         });
 
+        it('should add to pipeline with snake_case payload', async () => {
+            const entry = { id: 'pipe-2', resumeId: 'r-2', stage: 'screening' };
+            mockAddToPipeline.mockResolvedValue(entry);
+
+            const res = await request(app)
+                .post('/api/pipeline')
+                .set(authHeader)
+                .send({ resume_id: 'r-2', mission_id: 'm-1', client_id: 'c-1', stage: 'screening', notes: 'Legacy payload' });
+
+            expect(res.status).toBe(201);
+            expect(mockAddToPipeline).toHaveBeenCalledWith(expect.objectContaining({
+                resumeId: 'r-2',
+                missionId: 'm-1',
+                clientId: 'c-1',
+                notes: 'Legacy payload'
+            }));
+        });
+
         it('should return 400 if resumeId missing', async () => {
             const res = await request(app)
                 .post('/api/pipeline')

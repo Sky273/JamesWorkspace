@@ -7,6 +7,28 @@ import * as submissionsService from '../services/resumeSubmissions.service.js';
 
 const router = express.Router();
 
+function getFirstDefinedValue(source, keys) {
+    for (const key of keys) {
+        if (Object.prototype.hasOwnProperty.call(source, key) && source[key] !== undefined) {
+            return source[key];
+        }
+    }
+    return undefined;
+}
+
+function normalizeSubmissionPayload(payload = {}) {
+    return {
+        ...payload,
+        resume_id: getFirstDefinedValue(payload, ['resume_id', 'resumeId']),
+        client_id: getFirstDefinedValue(payload, ['client_id', 'clientId']),
+        contact_id: getFirstDefinedValue(payload, ['contact_id', 'contactId']),
+        mission_id: getFirstDefinedValue(payload, ['mission_id', 'missionId']),
+        notes: getFirstDefinedValue(payload, ['notes', 'Notes']),
+        sent_at: getFirstDefinedValue(payload, ['sent_at', 'sentAt']),
+        status: getFirstDefinedValue(payload, ['status', 'Status'])
+    };
+}
+
 // ============================================
 // RESUME SUBMISSIONS ROUTES (PostgreSQL)
 // ============================================
@@ -69,7 +91,8 @@ router.post('/', authenticateToken, validateBody(createSubmissionSchema), async 
             return res.status(400).json({ error: 'User must belong to a firm to create submissions' });
         }
 
-        const { resume_id, client_id, contact_id, mission_id, notes, sent_at, status } = req.body;
+        const normalizedSubmission = normalizeSubmissionPayload(req.body);
+        const { resume_id, client_id, contact_id, mission_id, notes, sent_at, status } = normalizedSubmission;
 
         // Validate required fields
         if (!resume_id) {
@@ -142,7 +165,8 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateS
             return res.status(403).json({ error: 'Access denied' });
         }
 
-        const { status, notes } = req.body;
+        const normalizedSubmission = normalizeSubmissionPayload(req.body);
+        const { status, notes } = normalizedSubmission;
         const updated = await submissionsService.updateSubmission(id, { status, notes });
 
         return res.json(updated);

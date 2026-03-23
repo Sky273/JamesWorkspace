@@ -13,10 +13,35 @@ import * as usersService from '../../services/users.service.js';
 
 const router = express.Router();
 
+function getFirstDefinedValue(source, keys) {
+    for (const key of keys) {
+        if (Object.prototype.hasOwnProperty.call(source, key) && source[key] !== undefined) {
+            return source[key];
+        }
+    }
+    return undefined;
+}
+
+function normalizeAdminUserPayload(payload = {}) {
+    return {
+        ...payload,
+        email: getFirstDefinedValue(payload, ['email', 'Email']),
+        password: getFirstDefinedValue(payload, ['password', 'Password']),
+        name: getFirstDefinedValue(payload, ['name', 'Name']),
+        jobTitle: getFirstDefinedValue(payload, ['jobTitle', 'job_title', 'JobTitle']),
+        phone: getFirstDefinedValue(payload, ['phone', 'Phone']),
+        status: getFirstDefinedValue(payload, ['status', 'Status']),
+        firm: getFirstDefinedValue(payload, ['firm', 'Firm']),
+        customer: getFirstDefinedValue(payload, ['customer', 'Customer']),
+        role: getFirstDefinedValue(payload, ['role', 'Role'])
+    };
+}
+
 // POST /api/auth/users - Create user (admin only)
 router.post('/users', authenticateToken, requireAdmin, validateBody(createUserSchema), async (req, res) => {
     try {
-        const { email, password, name, jobTitle, phone, status, firm, customer, role } = req.body;
+        const normalizedPayload = normalizeAdminUserPayload(req.body);
+        const { email, password, name, jobTitle, phone, status, firm, customer, role } = normalizedPayload;
         const normalizedEmail = email.toLowerCase();
         const metadata = getRequestMetadata(req);
 
@@ -93,12 +118,13 @@ router.put('/users/:id', authenticateToken, requireAdmin, validateParams('id'), 
             return res.status(404).json({ error: 'User not found' });
         }
 
-        const name = req.body.name;
-        const email = req.body.email;
-        const status = req.body.status;
-        const role = req.body.role;
-        const jobTitle = req.body.jobTitle || req.body.job_title;
-        const phone = req.body.phone;
+        const normalizedPayload = normalizeAdminUserPayload(req.body);
+        const name = normalizedPayload.name;
+        const email = normalizedPayload.email;
+        const status = normalizedPayload.status;
+        const role = normalizedPayload.role;
+        const jobTitle = normalizedPayload.jobTitle;
+        const phone = normalizedPayload.phone;
 
         if (name && name !== currentUser.name) updateData.name = name;
         if (email && email.toLowerCase() !== currentUser.email.toLowerCase()) {
@@ -112,8 +138,8 @@ router.put('/users/:id', authenticateToken, requireAdmin, validateParams('id'), 
             updateData.password = await bcrypt.hash(req.body.password, SALT_ROUNDS);
         }
         
-        if (req.body.firm || req.body.customer) {
-            const firmName = req.body.firm || req.body.customer;
+        if (normalizedPayload.firm || normalizedPayload.customer) {
+            const firmName = normalizedPayload.firm || normalizedPayload.customer;
             const foundFirm = await usersService.findFirmByName(firmName);
             
             if (foundFirm) {

@@ -405,6 +405,40 @@ describe('Missions Routes - POST /api/missions', () => {
         expect(res.status).toBe(401);
     });
 
+    it('should create mission with camelCase payload', async () => {
+        mockGetUserFirmId.mockResolvedValueOnce('firm-123');
+        const created = makeMissionRow({
+            id: 'new-mission-camel',
+            title: 'Mission Camel',
+            status: 'active',
+            required_skills: ['React'],
+            preferred_skills: ['Node.js']
+        });
+        mockCreateMission.mockResolvedValueOnce(created);
+
+        const res = await request(app)
+            .post('/api/missions')
+            .set('Authorization', 'Bearer valid-token')
+            .send({
+                title: 'Mission Camel',
+                content: '<p>Modern payload</p>',
+                status: 'active',
+                keywords: ['react'],
+                requiredSkills: ['React'],
+                preferredSkills: ['Node.js']
+            });
+
+        expect(res.status).toBe(200);
+        expect(mockCreateMission).toHaveBeenCalledWith(expect.objectContaining({
+            title: 'Mission Camel',
+            content: '<p>Modern payload</p>',
+            status: 'active',
+            keywords: ['react'],
+            required_skills: ['React'],
+            preferred_skills: ['Node.js']
+        }));
+    });
+
     it('should create mission with valid data', async () => {
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
         const created = makeMissionRow({ id: 'new-mission-1', title: 'Dev Full Stack', status: 'active' });
@@ -510,6 +544,26 @@ describe('Missions Routes - PUT /api/missions/:id', () => {
             .send({ title: 'Updated' });
 
         expect(res.status).toBe(404);
+    });
+
+    it('should update mission with camelCase payload', async () => {
+        mockFindMission.mockResolvedValueOnce(makeMissionRow({ firm: 'Test Firm', firm_id: 'firm-123' }));
+        mockGetUserFirmId.mockResolvedValueOnce('firm-123');
+        const updated = makeMissionRow({ title: 'Updated Camel', status: 'closed', required_skills: ['TS'] });
+        mockUpdateMission.mockResolvedValueOnce(updated);
+
+        const res = await request(app)
+            .put('/api/missions/mission-123')
+            .set('Authorization', 'Bearer valid-token')
+            .send({ title: 'Updated Camel', status: 'closed', requiredSkills: ['TS'], preferredSkills: ['Node'] });
+
+        expect(res.status).toBe(200);
+        expect(mockUpdateMission).toHaveBeenCalledWith('mission-123', expect.objectContaining({
+            title: 'Updated Camel',
+            status: 'closed',
+            required_skills: ['TS'],
+            preferred_skills: ['Node']
+        }));
     });
 
     it('should update mission for authorized user', async () => {

@@ -364,6 +364,35 @@ describe('Templates CRUD Routes', () => {
             expect(mockCreateTemplate).toHaveBeenCalled();
         });
 
+        it('should create template with camelCase payload', async () => {
+            mockCreateTemplate.mockResolvedValueOnce({ ...sampleTemplateRow, name: 'Camel Template' });
+
+            const res = await request(app)
+                .post('/api/templates')
+                .set('Authorization', 'Bearer valid-token')
+                .send({
+                    name: 'Camel Template',
+                    description: 'Camel description',
+                    templateContent: '<main>Camel</main>',
+                    headerContent: '<header>Camel</header>',
+                    footerContent: '<footer>Camel</footer>',
+                    footerHeight: 35,
+                    stylesheet: 'body { color: black; }',
+                    status: 'active',
+                    tags: ['camel'],
+                    popular: true,
+                    previewImage: 'https://example.com/camel.png',
+                    firmId: 'firm-123'
+                });
+
+            expect(res.status).toBe(200);
+            const createArgs = mockCreateTemplate.mock.calls[0][0];
+            expect(createArgs.name).toBe('Camel Template');
+            expect(createArgs.template_content).toBe('<main>Camel</main>');
+            expect(createArgs.preview_image_url).toBe('https://example.com/camel.png');
+            expect(createArgs.status).toBe('active');
+        });
+
         it('should pass mapped snake_case fields to createTemplate', async () => {
             mockCreateTemplate.mockResolvedValueOnce(sampleTemplateRow);
 
@@ -459,6 +488,29 @@ describe('Templates CRUD Routes', () => {
                 .set('x-test-role', 'user')
                 .send(updateBody);
             expect(res.status).toBe(403);
+        });
+
+        it('should update template with camelCase payload', async () => {
+            mockGetTemplateById.mockResolvedValueOnce(sampleTemplateRow);
+            mockUpdateTemplate.mockResolvedValueOnce({ ...sampleTemplateRow, name: 'Camel Updated', description: 'Camel updated description' });
+
+            const res = await request(app)
+                .put('/api/templates/tpl-123')
+                .set('Authorization', 'Bearer valid-token')
+                .send({
+                    name: 'Camel Updated',
+                    description: 'Camel updated description',
+                    status: 'inactive',
+                    templateContent: '<main>Updated</main>',
+                    previewImage: 'https://example.com/updated.png',
+                    firmId: 'firm-123'
+                });
+
+            expect(res.status).toBe(200);
+            const updateArgs = mockUpdateTemplate.mock.calls[0];
+            expect(updateArgs[1].name).toBe('Camel Updated');
+            expect(updateArgs[1].status).toBe('inactive');
+            expect(updateArgs[1].preview_image_url).toBe('https://example.com/updated.png');
         });
 
         it('should update template with valid data', async () => {

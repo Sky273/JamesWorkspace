@@ -318,6 +318,25 @@ describe('Clients Routes - POST /api/clients', () => {
         expect(res.status).toBe(400);
     });
 
+    it('should allow admin to create for another firm with camelCase firmId', async () => {
+        mockGetUserFirmId.mockResolvedValueOnce('firm-123');
+        mockValidateFirm.mockResolvedValueOnce({ id: 'firm-other', name: 'Other Firm' });
+        mockCreateClient.mockResolvedValueOnce({
+            id: 'new-client-camel',
+            name: 'Camel Client',
+            firm_id: 'firm-other'
+        });
+
+        const res = await request(app)
+            .post('/api/clients')
+            .set('Authorization', 'Bearer valid-token')
+            .set('x-test-role', 'admin')
+            .send({ name: 'Camel Client', firmId: 'firm-other' });
+
+        expect(res.status).toBe(201);
+        expect(mockCreateClient).toHaveBeenCalledWith(expect.objectContaining({ firmId: 'firm-other' }));
+    });
+
     it('should allow admin to create for another firm', async () => {
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
         mockValidateFirm.mockResolvedValueOnce({ id: 'firm-other', name: 'Other Firm' });

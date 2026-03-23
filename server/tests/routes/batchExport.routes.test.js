@@ -104,6 +104,19 @@ describe('Batch Export Routes', () => {
             expect(res.status).toBe(400);
         });
 
+        it('should accept snake_case batch export payload', async () => {
+            mockFetch.mockResolvedValueOnce({ ok: true });
+            mockGetTemplateById.mockResolvedValueOnce({ id: TEMPLATE_UUID, template_content: '<div></div>' });
+            mockGetResumeById.mockResolvedValueOnce(null);
+
+            const res = await request(app)
+                .post('/api/batch-export')
+                .set(AUTH)
+                .send({ resume_ids: [RESUME_UUID], template_id: TEMPLATE_UUID, export_format: 'pdf' });
+
+            expect([404, 500]).toContain(res.status);
+        });
+
         it('should return 400 if no templateId', async () => {
             const res = await request(app)
                 .post('/api/batch-export')

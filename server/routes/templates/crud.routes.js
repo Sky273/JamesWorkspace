@@ -15,6 +15,33 @@ import * as templatesService from '../../services/templates.service.js';
 
 const router = express.Router();
 
+function getFirstDefinedValue(source, keys) {
+    for (const key of keys) {
+        if (Object.prototype.hasOwnProperty.call(source, key) && source[key] !== undefined) {
+            return source[key];
+        }
+    }
+    return undefined;
+}
+
+function normalizeTemplatePayload(payload = {}) {
+    return {
+        ...payload,
+        Name: getFirstDefinedValue(payload, ['Name', 'name']),
+        Description: getFirstDefinedValue(payload, ['Description', 'description']),
+        Popular: getFirstDefinedValue(payload, ['Popular', 'popular']),
+        Status: getFirstDefinedValue(payload, ['Status', 'status']),
+        Tags: getFirstDefinedValue(payload, ['Tags', 'tags']),
+        PreviewImage: getFirstDefinedValue(payload, ['PreviewImage', 'previewImage']),
+        HeaderContent: getFirstDefinedValue(payload, ['HeaderContent', 'headerContent']),
+        TemplateContent: getFirstDefinedValue(payload, ['TemplateContent', 'templateContent']),
+        FooterContent: getFirstDefinedValue(payload, ['FooterContent', 'footerContent']),
+        FooterHeight: getFirstDefinedValue(payload, ['FooterHeight', 'footerHeight']),
+        Stylesheet: getFirstDefinedValue(payload, ['Stylesheet', 'stylesheet']),
+        firm_id: getFirstDefinedValue(payload, ['firm_id', 'Firm ID', 'FirmId', 'firmId'])
+    };
+}
+
 // GET /api/templates - Get all templates (with server-side pagination and filters)
 router.get('/', authenticateToken, async (req, res) => {
     try {
@@ -89,8 +116,10 @@ router.post('/', authenticateToken, requireAdmin, validateBody(createTemplateSch
         const userFirmId = await getUserFirmId(req);
         
         // Determine target firm_id: admin can specify a different firm or create global templates
+        const normalizedTemplate = normalizeTemplatePayload(req.body);
+
         let targetFirmId = userFirmId;
-        const requestedFirmId = req.body.firm_id || req.body['Firm ID'];
+        const requestedFirmId = normalizedTemplate.firm_id;
         
         if (isAdmin) {
             if (requestedFirmId === '' || requestedFirmId === null) {
@@ -112,7 +141,7 @@ router.post('/', authenticateToken, requireAdmin, validateBody(createTemplateSch
         }
         
         const templateData = {
-            ...mapTemplateFromFrontend(req.body),
+            ...mapTemplateFromFrontend(normalizedTemplate),
             firm_id: targetFirmId
         };
 
@@ -145,8 +174,10 @@ router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), valida
         const existingTemplate = await templatesService.getTemplateById(id);
         
         // Handle firm_id update (admin only)
+        const normalizedTemplate = normalizeTemplatePayload(req.body);
+
         let targetFirmId = existingTemplate.firm_id;
-        const requestedFirmId = req.body.firm_id || req.body.FirmId;
+        const requestedFirmId = normalizedTemplate.firm_id;
         
         if (isAdmin && requestedFirmId !== undefined) {
             if (requestedFirmId === '' || requestedFirmId === null) {
@@ -222,3 +253,4 @@ router.delete('/:id', authenticateToken, requireAdmin, validateParams('id'), asy
 });
 
 export default router;
+

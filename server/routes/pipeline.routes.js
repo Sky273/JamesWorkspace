@@ -31,6 +31,26 @@ import {
 
 const router = express.Router();
 
+function getFirstDefinedValue(source, keys) {
+    for (const key of keys) {
+        if (Object.prototype.hasOwnProperty.call(source, key) && source[key] !== undefined) {
+            return source[key];
+        }
+    }
+    return undefined;
+}
+
+function normalizePipelineEntryPayload(payload = {}) {
+    return {
+        ...payload,
+        resumeId: getFirstDefinedValue(payload, ['resumeId', 'resume_id']),
+        missionId: getFirstDefinedValue(payload, ['missionId', 'mission_id']),
+        clientId: getFirstDefinedValue(payload, ['clientId', 'client_id']),
+        stage: getFirstDefinedValue(payload, ['stage', 'Stage']),
+        notes: getFirstDefinedValue(payload, ['notes', 'Notes'])
+    };
+}
+
 // ============================================
 // PIPELINE STAGES
 // ============================================
@@ -53,7 +73,8 @@ router.get('/stages', authenticateToken, (req, res) => {
  */
 router.post('/', authenticateToken, userRateLimit(), validateBody(createPipelineEntrySchema), async (req, res) => {
     try {
-        const { resumeId, missionId, clientId, stage, notes } = req.body;
+        const normalizedEntry = normalizePipelineEntryPayload(req.body);
+        const { resumeId, missionId, clientId, stage, notes } = normalizedEntry;
 
         if (!resumeId) {
             return res.status(400).json({ error: 'Resume ID is required' });

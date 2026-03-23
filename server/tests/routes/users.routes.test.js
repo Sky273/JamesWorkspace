@@ -130,6 +130,25 @@ describe('Users Routes', () => {
             expect(res.body.email).toBe('new@example.com');
         });
 
+        it('should create a user with legacy aliases', async () => {
+            mockFindUserByEmail.mockResolvedValueOnce(null);
+            mockFindFirmByName.mockResolvedValueOnce({ id: 'f-1', name: 'Acme Corp' });
+            mockCreateAdminUser.mockResolvedValue({
+                id: 'u-legacy',
+                email: 'legacy@example.com',
+                name: 'Legacy User',
+                role: 'user',
+                status: 'active'
+            });
+
+            const res = await request(app)
+                .post('/api/auth/users')
+                .set(authHeader)
+                .send({ email: 'legacy@example.com', password: 'Password123!', name: 'Legacy User', job_title: 'Engineer', Firm: 'Acme Corp' });
+
+            expect(res.status).toBe(201);
+        });
+
         it('should return 409 if user already exists', async () => {
             mockFindUserByEmail.mockResolvedValueOnce({ id: 'u-existing' });
 
@@ -212,6 +231,24 @@ describe('Users Routes', () => {
 
             expect(res.status).toBe(200);
             expect(res.body.name).toBe('New Name');
+        });
+
+        it('should update a user with legacy aliases', async () => {
+            mockFindUserById.mockResolvedValueOnce({
+                id: 'u-1', email: 'old@example.com', name: 'Old Name', role: 'user', status: 'active'
+            });
+            mockFindFirmByName.mockResolvedValueOnce({ id: 'f-1', name: 'Acme Corp' });
+            mockUpdateAdminUser.mockResolvedValue({
+                id: 'u-1', email: 'old@example.com', name: 'Old Name', role: 'user', status: 'active'
+            });
+
+            const res = await request(app)
+                .put('/api/auth/users/u-1')
+                .set(authHeader)
+                .send({ job_title: 'Director', Customer: 'Acme Corp' });
+
+            expect(res.status).toBe(200);
+            expect(mockUpdateAdminUser).toHaveBeenCalledWith('u-1', expect.objectContaining({ job_title: 'Director', firm_id: 'f-1' }));
         });
 
         it('should return 404 if user not found', async () => {

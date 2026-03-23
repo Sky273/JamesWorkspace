@@ -66,18 +66,19 @@ export function mapTemplateToFrontend(row) {
  * @returns {Object} Database column mapping (undefined values excluded)
  */
 export function mapTemplateFromFrontend(data) {
+    const status = data.Status ?? data.status;
     const fields = {
-        name: data.Name,
-        description: data.Description,
-        popular: data.Popular,
-        status: data.Status ? data.Status.toLowerCase() : undefined,
-        tags: data.Tags,
-        preview_image_url: data.PreviewImage,
-        header_content: data.HeaderContent,
-        template_content: data.TemplateContent,
-        footer_content: data.FooterContent,
-        footer_height: data.FooterHeight,
-        stylesheet: data.Stylesheet
+        name: data.Name ?? data.name,
+        description: data.Description ?? data.description,
+        popular: data.Popular ?? data.popular,
+        status: typeof status === 'string' ? status.toLowerCase() : undefined,
+        tags: data.Tags ?? data.tags,
+        preview_image_url: data.PreviewImage ?? data.previewImage,
+        header_content: data.HeaderContent ?? data.headerContent,
+        template_content: data.TemplateContent ?? data.templateContent,
+        footer_content: data.FooterContent ?? data.footerContent,
+        footer_height: data.FooterHeight ?? data.footerHeight,
+        stylesheet: data.Stylesheet ?? data.stylesheet
     };
 
     // Remove undefined values

@@ -15,6 +15,7 @@ import { createVersion, hasImprovedTextChanged } from '../../services/resumeVers
 import * as resumesService from '../../services/resumes.service.js';
 import { 
     checkResumeAccess, 
+    normalizeResumeUpdatePayload,
     parseScore, 
     stringifyIfNeeded, 
     mapResumeToFrontend
@@ -210,88 +211,84 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateR
             return res.status(statusCode).json({ error: accessError });
         }
         
+        const normalizedBody = normalizeResumeUpdatePayload(req.body);
+
         safeLog('info', 'PUT /api/resumes/:id called', { 
             resumeId: id, 
             bodyKeys: Object.keys(req.body),
-            hasImprovedGlobalRating: req.body['Improved Global Rating'] !== undefined,
-            improvedGlobalRatingValue: req.body['Improved Global Rating'],
-            improvedSkillsScoreValue: req.body['Improved Skills Score'],
-            improvedExperienceScoreValue: req.body['Improved Experience Score']
+            hasImprovedGlobalRating: normalizedBody.improvedGlobalRating !== undefined,
+            improvedGlobalRatingValue: normalizedBody.improvedGlobalRating,
+            improvedSkillsScoreValue: normalizedBody.improvedSkillsScore,
+            improvedExperienceScoreValue: normalizedBody.improvedExperienceScore
         });
         const updateData = {};
 
-        // Map frontend fields to PostgreSQL columns
-        if (req.body.Name !== undefined) updateData.name = req.body.Name;
-        if (req.body.Title !== undefined) updateData.title = req.body.Title;
-        if (req.body.Status !== undefined) updateData.status = req.body.Status.toLowerCase();
-        if (req.body['Original Text'] !== undefined) updateData.original_text = req.body['Original Text'];
-        if (req.body['Improved Text'] !== undefined) updateData.improved_text = req.body['Improved Text'];
-        
-        // Parse scores - handle "75%", 75, "75" formats
-        if (req.body['Global Rating'] !== undefined) updateData.global_rating = parseScore(req.body['Global Rating']);
-        if (req.body['Skills Score'] !== undefined) updateData.skills_score = parseScore(req.body['Skills Score']);
-        if (req.body['Experience Score'] !== undefined) updateData.experience_score = parseScore(req.body['Experience Score']);
-        if (req.body['Education Score'] !== undefined) updateData.education_score = parseScore(req.body['Education Score']);
-        if (req.body['ATS Score'] !== undefined) updateData.ats_score = parseScore(req.body['ATS Score']);
-        if (req.body['Executive Summary Score'] !== undefined) updateData.executive_summary_score = parseScore(req.body['Executive Summary Score']);
-        if (req.body['Hobbies Languages Score'] !== undefined) updateData.hobbies_languages_score = parseScore(req.body['Hobbies Languages Score']);
-        
-        // Improved scores (post-improvement)
-        if (req.body['Improved Global Rating'] !== undefined) updateData.improved_global_rating = parseScore(req.body['Improved Global Rating']);
-        if (req.body['Improved Skills Score'] !== undefined) updateData.improved_skills_score = parseScore(req.body['Improved Skills Score']);
-        if (req.body['Improved Experience Score'] !== undefined) updateData.improved_experience_score = parseScore(req.body['Improved Experience Score']);
-        if (req.body['Improved Education Score'] !== undefined) updateData.improved_education_score = parseScore(req.body['Improved Education Score']);
-        if (req.body['Improved ATS Score'] !== undefined) updateData.improved_ats_score = parseScore(req.body['Improved ATS Score']);
-        if (req.body['Improved Executive Summary Score'] !== undefined) updateData.improved_executive_summary_score = parseScore(req.body['Improved Executive Summary Score']);
-        if (req.body['Improved Hobbies Languages Score'] !== undefined) updateData.improved_hobbies_languages_score = parseScore(req.body['Improved Hobbies Languages Score']);
-        
-        // JSONB fields - ensure they are properly formatted for PostgreSQL
-        if (req.body.Skills !== undefined) updateData.skills = stringifyIfNeeded(req.body.Skills);
-        if (req.body.Industries !== undefined) updateData.industries = stringifyIfNeeded(req.body.Industries);
-        if (req.body.Tools !== undefined) updateData.tools = stringifyIfNeeded(req.body.Tools);
-        if (req.body['Soft Skills'] !== undefined) updateData.soft_skills = stringifyIfNeeded(req.body['Soft Skills']);
-        if (req.body.Skills_cleaned !== undefined) updateData.skills_cleaned = stringifyIfNeeded(req.body.Skills_cleaned);
-        if (req.body.Industries_cleaned !== undefined) updateData.industries_cleaned = stringifyIfNeeded(req.body.Industries_cleaned);
-        if (req.body.Tools_cleaned !== undefined) updateData.tools_cleaned = stringifyIfNeeded(req.body.Tools_cleaned);
-        if (req.body['Soft Skills_cleaned'] !== undefined) updateData.soft_skills_cleaned = stringifyIfNeeded(req.body['Soft Skills_cleaned']);
-        if (req.body.Skills_esco !== undefined) updateData.skills_esco = stringifyIfNeeded(req.body.Skills_esco);
-        if (req.body.Industries_esco !== undefined) updateData.industries_esco = stringifyIfNeeded(req.body.Industries_esco);
-        if (req.body.Tools_esco !== undefined) updateData.tools_esco = stringifyIfNeeded(req.body.Tools_esco);
-        if (req.body['Soft Skills_esco'] !== undefined) updateData.soft_skills_esco = stringifyIfNeeded(req.body['Soft Skills_esco']);
-        
-        // Improved tags (after LLM improvement)
-        if (req.body['Improved Skills'] !== undefined) updateData.improved_skills = stringifyIfNeeded(req.body['Improved Skills']);
-        if (req.body['Improved Industries'] !== undefined) updateData.improved_industries = stringifyIfNeeded(req.body['Improved Industries']);
-        if (req.body['Improved Tools'] !== undefined) updateData.improved_tools = stringifyIfNeeded(req.body['Improved Tools']);
-        if (req.body['Improved Soft Skills'] !== undefined) updateData.improved_soft_skills = stringifyIfNeeded(req.body['Improved Soft Skills']);
-        
-        if (req.body['Key Improvements'] !== undefined) {
-            // Key Improvements can be a string or object
-            const keyImprovements = req.body['Key Improvements'];
-            updateData.key_improvements = typeof keyImprovements === 'string' ? keyImprovements : JSON.stringify(keyImprovements);
-        }
-        if (req.body['Improved Key Improvements'] !== undefined) {
-            const improvedKeyImprovements = req.body['Improved Key Improvements'];
-            updateData.improved_key_improvements = typeof improvedKeyImprovements === 'string' ? improvedKeyImprovements : JSON.stringify(improvedKeyImprovements);
-        }
-        if (req.body.Summary !== undefined) updateData.summary = req.body.Summary;
-        if (req.body['Experience Years'] !== undefined) updateData.experience_years = req.body['Experience Years'];
-        if (req.body['Education Level'] !== undefined) updateData.education_level = req.body['Education Level'];
-        if (req.body.Certifications !== undefined) updateData.certifications = req.body.Certifications;
-        if (req.body.Languages !== undefined) updateData.languages = req.body.Languages;
-        if (req.body['Original Name'] !== undefined) updateData.original_name = req.body['Original Name'];
-        if (req.body['Analysis Date'] !== undefined) updateData.analyzed_at = new Date(req.body['Analysis Date']);
+        if (normalizedBody.name !== undefined) updateData.name = normalizedBody.name;
+        if (normalizedBody.title !== undefined) updateData.title = normalizedBody.title;
+        if (normalizedBody.status !== undefined) updateData.status = String(normalizedBody.status).toLowerCase();
+        if (normalizedBody.originalText !== undefined) updateData.original_text = normalizedBody.originalText;
+        if (normalizedBody.improvedText !== undefined) updateData.improved_text = normalizedBody.improvedText;
 
-        // Set analyzed_at if analysis data is being updated
-        if (req.body.Skills || req.body.Industries || req.body.Tools || req.body['Soft Skills']) {
+        if (normalizedBody.globalRating !== undefined) updateData.global_rating = parseScore(normalizedBody.globalRating);
+        if (normalizedBody.skillsScore !== undefined) updateData.skills_score = parseScore(normalizedBody.skillsScore);
+        if (normalizedBody.experienceScore !== undefined) updateData.experience_score = parseScore(normalizedBody.experienceScore);
+        if (normalizedBody.educationScore !== undefined) updateData.education_score = parseScore(normalizedBody.educationScore);
+        if (normalizedBody.atsScore !== undefined) updateData.ats_score = parseScore(normalizedBody.atsScore);
+        if (normalizedBody.executiveSummaryScore !== undefined) updateData.executive_summary_score = parseScore(normalizedBody.executiveSummaryScore);
+        if (normalizedBody.hobbiesLanguagesScore !== undefined) updateData.hobbies_languages_score = parseScore(normalizedBody.hobbiesLanguagesScore);
+
+        if (normalizedBody.improvedGlobalRating !== undefined) updateData.improved_global_rating = parseScore(normalizedBody.improvedGlobalRating);
+        if (normalizedBody.improvedSkillsScore !== undefined) updateData.improved_skills_score = parseScore(normalizedBody.improvedSkillsScore);
+        if (normalizedBody.improvedExperienceScore !== undefined) updateData.improved_experience_score = parseScore(normalizedBody.improvedExperienceScore);
+        if (normalizedBody.improvedEducationScore !== undefined) updateData.improved_education_score = parseScore(normalizedBody.improvedEducationScore);
+        if (normalizedBody.improvedAtsScore !== undefined) updateData.improved_ats_score = parseScore(normalizedBody.improvedAtsScore);
+        if (normalizedBody.improvedExecutiveSummaryScore !== undefined) updateData.improved_executive_summary_score = parseScore(normalizedBody.improvedExecutiveSummaryScore);
+        if (normalizedBody.improvedHobbiesLanguagesScore !== undefined) updateData.improved_hobbies_languages_score = parseScore(normalizedBody.improvedHobbiesLanguagesScore);
+
+        if (normalizedBody.skills !== undefined) updateData.skills = stringifyIfNeeded(normalizedBody.skills);
+        if (normalizedBody.industries !== undefined) updateData.industries = stringifyIfNeeded(normalizedBody.industries);
+        if (normalizedBody.tools !== undefined) updateData.tools = stringifyIfNeeded(normalizedBody.tools);
+        if (normalizedBody.softSkills !== undefined) updateData.soft_skills = stringifyIfNeeded(normalizedBody.softSkills);
+        if (normalizedBody.skillsCleaned !== undefined) updateData.skills_cleaned = stringifyIfNeeded(normalizedBody.skillsCleaned);
+        if (normalizedBody.industriesCleaned !== undefined) updateData.industries_cleaned = stringifyIfNeeded(normalizedBody.industriesCleaned);
+        if (normalizedBody.toolsCleaned !== undefined) updateData.tools_cleaned = stringifyIfNeeded(normalizedBody.toolsCleaned);
+        if (normalizedBody.softSkillsCleaned !== undefined) updateData.soft_skills_cleaned = stringifyIfNeeded(normalizedBody.softSkillsCleaned);
+        if (normalizedBody.skillsEsco !== undefined) updateData.skills_esco = stringifyIfNeeded(normalizedBody.skillsEsco);
+        if (normalizedBody.industriesEsco !== undefined) updateData.industries_esco = stringifyIfNeeded(normalizedBody.industriesEsco);
+        if (normalizedBody.toolsEsco !== undefined) updateData.tools_esco = stringifyIfNeeded(normalizedBody.toolsEsco);
+        if (normalizedBody.softSkillsEsco !== undefined) updateData.soft_skills_esco = stringifyIfNeeded(normalizedBody.softSkillsEsco);
+
+        if (normalizedBody.improvedSkills !== undefined) updateData.improved_skills = stringifyIfNeeded(normalizedBody.improvedSkills);
+        if (normalizedBody.improvedIndustries !== undefined) updateData.improved_industries = stringifyIfNeeded(normalizedBody.improvedIndustries);
+        if (normalizedBody.improvedTools !== undefined) updateData.improved_tools = stringifyIfNeeded(normalizedBody.improvedTools);
+        if (normalizedBody.improvedSoftSkills !== undefined) updateData.improved_soft_skills = stringifyIfNeeded(normalizedBody.improvedSoftSkills);
+
+        if (normalizedBody.keyImprovements !== undefined) {
+            updateData.key_improvements = typeof normalizedBody.keyImprovements === 'string'
+                ? normalizedBody.keyImprovements
+                : JSON.stringify(normalizedBody.keyImprovements);
+        }
+        if (normalizedBody.improvedKeyImprovements !== undefined) {
+            updateData.improved_key_improvements = typeof normalizedBody.improvedKeyImprovements === 'string'
+                ? normalizedBody.improvedKeyImprovements
+                : JSON.stringify(normalizedBody.improvedKeyImprovements);
+        }
+        if (normalizedBody.summary !== undefined) updateData.summary = normalizedBody.summary;
+        if (normalizedBody.experienceYears !== undefined) updateData.experience_years = normalizedBody.experienceYears;
+        if (normalizedBody.educationLevel !== undefined) updateData.education_level = normalizedBody.educationLevel;
+        if (normalizedBody.certifications !== undefined) updateData.certifications = normalizedBody.certifications;
+        if (normalizedBody.languages !== undefined) updateData.languages = normalizedBody.languages;
+        if (normalizedBody.originalName !== undefined) updateData.original_name = normalizedBody.originalName;
+        if (normalizedBody.analysisDate !== undefined) updateData.analyzed_at = new Date(normalizedBody.analysisDate);
+
+        if (normalizedBody.skills || normalizedBody.industries || normalizedBody.tools || normalizedBody.softSkills) {
             updateData.analyzed_at = new Date();
-            
-            // Automatically calculate cleaned tags when raw tags are provided
+
             const rawTags = {
-                skills: Array.isArray(req.body.Skills) ? req.body.Skills : [],
-                industries: Array.isArray(req.body.Industries) ? req.body.Industries : [],
-                tools: Array.isArray(req.body.Tools) ? req.body.Tools : [],
-                softSkills: Array.isArray(req.body['Soft Skills']) ? req.body['Soft Skills'] : []
+                skills: Array.isArray(normalizedBody.skills) ? normalizedBody.skills : [],
+                industries: Array.isArray(normalizedBody.industries) ? normalizedBody.industries : [],
+                tools: Array.isArray(normalizedBody.tools) ? normalizedBody.tools : [],
+                softSkills: Array.isArray(normalizedBody.softSkills) ? normalizedBody.softSkills : []
             };
             
             const { cleanedTags } = processAnalysisTags({ tags: rawTags });
@@ -338,7 +335,7 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateR
 
         if (isImprovedTextUpdate) {
             // Determine change reason based on status or other indicators
-            if (req.body.Status === 'Improved' || req.body['Last Improved']) {
+            if (normalizedBody.status === 'Improved' || normalizedBody.status === 'improved' || normalizedBody.lastImproved) {
                 changeReason = 'initial_improvement';
             }
             

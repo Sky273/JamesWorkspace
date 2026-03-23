@@ -48,71 +48,163 @@ export const createUserSchema = z.object({
   password: passwordSchema,
   name: nameSchema,
   jobTitle: z.string().max(255).optional(),
+  job_title: z.string().max(255).optional(),
   phone: z.string().max(50).optional(),
   role: z.preprocess(v => typeof v === 'string' ? v.toLowerCase() : v, z.enum(['user', 'admin'])).optional(),
   status: z.preprocess(v => typeof v === 'string' ? v.toLowerCase() : v, z.enum(['active', 'inactive', 'pending'])).optional(),
   customer: z.string().optional(),
-  firm: z.string().optional()
+  Customer: z.string().optional(),
+  firm: z.string().optional(),
+  Firm: z.string().optional()
 });
 
 // Mission schemas
+const missionStatusSchema = z.enum(['Active', 'Closed', 'Draft', 'active', 'closed', 'draft']).optional();
+const missionTitleSchema = z.string().min(1).max(500);
+const missionOptionalArraySchema = z.union([z.string(), z.array(z.string())]).optional().nullable();
+
 export const createMissionSchema = z.object({
-  Title: z.string().min(1).max(500),
+  Title: missionTitleSchema.optional(),
+  title: missionTitleSchema.optional(),
   Content: z.string().optional(),
-  Status: z.enum(['Active', 'Closed', 'Draft']).optional(),
+  content: z.string().optional(),
+  Status: missionStatusSchema,
+  status: missionStatusSchema,
   Customer: z.string().optional(),
+  customer: z.string().optional(),
+  Firm: z.string().optional().nullable(),
+  firm: z.string().optional().nullable(),
   'Client ID': z.string().uuid().optional().nullable(),
+  clientId: z.string().uuid().optional().nullable(),
   client_id: z.string().uuid().optional().nullable(),
   'Contact ID': z.string().uuid().optional().nullable(),
+  contactId: z.string().uuid().optional().nullable(),
   contact_id: z.string().uuid().optional().nullable(),
   'Firm ID': z.string().uuid().optional().nullable(),
+  firmId: z.string().uuid().optional().nullable(),
   firm_id: z.string().uuid().optional().nullable(),
   'Deal ID': z.string().uuid().optional().nullable(),
-  deal_id: z.string().uuid().optional().nullable()
+  dealId: z.string().uuid().optional().nullable(),
+  deal_id: z.string().uuid().optional().nullable(),
+  Keywords: missionOptionalArraySchema,
+  keywords: missionOptionalArraySchema,
+  'Required Skills': missionOptionalArraySchema,
+  requiredSkills: missionOptionalArraySchema,
+  required_skills: missionOptionalArraySchema,
+  'Preferred Skills': missionOptionalArraySchema,
+  preferredSkills: missionOptionalArraySchema,
+  preferred_skills: missionOptionalArraySchema
+}).refine((data) => Boolean(data.Title || data.title), {
+  message: 'Title is required',
+  path: ['title']
 });
 
 export const updateMissionSchema = z.object({
-  Title: z.string().min(1).max(500).optional(),
+  Title: missionTitleSchema.optional(),
+  title: missionTitleSchema.optional(),
   Content: z.string().optional(),
-  Status: z.enum(['Active', 'Closed', 'Draft']).optional(),
+  content: z.string().optional(),
+  Status: missionStatusSchema,
+  status: missionStatusSchema,
   'Client ID': z.string().uuid().optional().nullable(),
+  clientId: z.string().uuid().optional().nullable(),
   client_id: z.string().uuid().optional().nullable(),
   'Contact ID': z.string().uuid().optional().nullable(),
+  contactId: z.string().uuid().optional().nullable(),
   contact_id: z.string().uuid().optional().nullable(),
   'Firm ID': z.string().uuid().optional().nullable(),
+  firmId: z.string().uuid().optional().nullable(),
   firm_id: z.string().uuid().optional().nullable(),
   'Deal ID': z.string().uuid().optional().nullable(),
-  deal_id: z.string().uuid().optional().nullable()
-});
+  dealId: z.string().uuid().optional().nullable(),
+  deal_id: z.string().uuid().optional().nullable(),
+  Keywords: missionOptionalArraySchema,
+  keywords: missionOptionalArraySchema,
+  'Required Skills': missionOptionalArraySchema,
+  requiredSkills: missionOptionalArraySchema,
+  required_skills: missionOptionalArraySchema,
+  'Preferred Skills': missionOptionalArraySchema,
+  preferredSkills: missionOptionalArraySchema,
+  preferred_skills: missionOptionalArraySchema
+}).strip();
 
 // Template schemas
+const templateStatusSchema = z.preprocess(
+  (value) => {
+    if (typeof value !== 'string') {
+      return value;
+    }
+    const normalized = value.toLowerCase();
+    if (normalized === 'active' || normalized === 'inactive') {
+      return normalized;
+    }
+    return value;
+  },
+  z.enum(['active', 'inactive'])
+);
+
 export const createTemplateSchema = z.object({
-  Name: z.string().min(1).max(255),
+  Name: z.string().min(1).max(255).optional(),
+  name: z.string().min(1).max(255).optional(),
   Description: z.string().optional(),
+  description: z.string().optional(),
   HeaderContent: z.string().optional(),
-  TemplateContent: z.string().min(1),
+  headerContent: z.string().optional(),
+  TemplateContent: z.string().min(1).optional(),
+  templateContent: z.string().min(1).optional(),
   FooterContent: z.string().optional(),
+  footerContent: z.string().optional(),
   FooterHeight: z.number().min(10).max(250).optional(),
+  footerHeight: z.number().min(10).max(250).optional(),
   Stylesheet: z.string().optional(),
-  Status: z.enum(['Active', 'Inactive']).optional(),
+  stylesheet: z.string().optional(),
+  Status: templateStatusSchema.optional(),
+  status: templateStatusSchema.optional(),
   Tags: z.array(z.string()).optional(),
-  Popular: z.boolean().optional()
-});
+  tags: z.array(z.string()).optional(),
+  Popular: z.boolean().optional(),
+  popular: z.boolean().optional(),
+  PreviewImage: z.string().optional(),
+  previewImage: z.string().optional(),
+  firm_id: z.string().uuid().optional().nullable(),
+  firmId: z.string().uuid().optional().nullable(),
+  FirmId: z.string().uuid().optional().nullable(),
+  'Firm ID': z.string().uuid().optional().nullable()
+}).strip().refine(
+  (data) => Boolean(data.Name || data.name),
+  { message: 'Template name is required', path: ['Name'] }
+).refine(
+  (data) => Boolean(data.TemplateContent || data.templateContent),
+  { message: 'Template content is required', path: ['TemplateContent'] }
+);
 
 export const updateTemplateSchema = z.object({
   Name: z.string().min(1).max(255).optional(),
+  name: z.string().min(1).max(255).optional(),
   Description: z.string().optional(),
+  description: z.string().optional(),
   HeaderContent: z.string().optional(),
+  headerContent: z.string().optional(),
   TemplateContent: z.string().optional(),
+  templateContent: z.string().optional(),
   FooterContent: z.string().optional(),
+  footerContent: z.string().optional(),
   FooterHeight: z.number().min(10).max(250).optional(),
+  footerHeight: z.number().min(10).max(250).optional(),
   Stylesheet: z.string().optional(),
-  Status: z.enum(['Active', 'Inactive']).optional(),
+  stylesheet: z.string().optional(),
+  Status: templateStatusSchema.optional(),
+  status: templateStatusSchema.optional(),
   Tags: z.array(z.string()).optional(),
+  tags: z.array(z.string()).optional(),
   Popular: z.boolean().optional(),
+  popular: z.boolean().optional(),
   PreviewImage: z.string().optional(),
+  previewImage: z.string().optional(),
   firm_id: z.string().uuid().optional().nullable(),
-  FirmId: z.string().uuid().optional().nullable()
+  firmId: z.string().uuid().optional().nullable(),
+  FirmId: z.string().uuid().optional().nullable(),
+  'Firm ID': z.string().uuid().optional().nullable()
 }).strip();
 
 // Firm schemas
@@ -153,10 +245,12 @@ export const updateAdminUserSchema = z.object({
 export const updateUserProfileSchema = z.object({
   name: z.string().min(1).max(255).optional(),
   jobTitle: z.string().max(255).optional().nullable(),
+  job_title: z.string().max(255).optional().nullable(),
   phone: z.string().max(50).optional().nullable(),
   role: lowercaseEnum(['user', 'admin']).optional(),
   status: lowercaseEnum(['active', 'inactive', 'pending']).optional(),
-  firm_id: z.string().uuid().optional().nullable()
+  firm_id: z.string().uuid().optional().nullable(),
+  firmId: z.string().uuid().optional().nullable()
 }).strip();
 
 // Resume comment schemas
@@ -178,33 +272,60 @@ export const renameTagSchema = z.object({
 
 // Deal schemas
 export const createDealSchema = z.object({
-  title: z.string().min(1).max(500),
+  title: z.string().min(1).max(500).optional(),
+  Title: z.string().min(1).max(500).optional(),
   description: z.string().max(5000).optional().nullable(),
+  Description: z.string().max(5000).optional().nullable(),
   client_id: z.string().uuid().optional().nullable(),
+  clientId: z.string().uuid().optional().nullable(),
   contact_id: z.string().uuid().optional().nullable(),
+  contactId: z.string().uuid().optional().nullable(),
   status: z.enum(['open', 'won', 'lost', 'on_hold']).optional(),
+  Status: z.enum(['open', 'won', 'lost', 'on_hold']).optional(),
   expected_start_date: z.string().optional().nullable(),
+  expectedStartDate: z.string().optional().nullable(),
   expected_end_date: z.string().optional().nullable(),
+  expectedEndDate: z.string().optional().nullable(),
   budget_min: z.number().optional().nullable(),
+  budgetMin: z.number().optional().nullable(),
   budget_max: z.number().optional().nullable(),
+  budgetMax: z.number().optional().nullable(),
   priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
+  Priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
   tags: z.array(z.string()).optional(),
-  notes: z.string().max(5000).optional().nullable()
-}).strip();
+  Tags: z.array(z.string()).optional(),
+  notes: z.string().max(5000).optional().nullable(),
+  Notes: z.string().max(5000).optional().nullable()
+}).strip().refine(
+  (data) => Boolean(data.title || data.Title),
+  { message: 'Deal title is required', path: ['title'] }
+);
 
 export const updateDealSchema = z.object({
   title: z.string().min(1).max(500).optional(),
+  Title: z.string().min(1).max(500).optional(),
   description: z.string().max(5000).optional().nullable(),
+  Description: z.string().max(5000).optional().nullable(),
   client_id: z.string().uuid().optional().nullable(),
+  clientId: z.string().uuid().optional().nullable(),
   contact_id: z.string().uuid().optional().nullable(),
+  contactId: z.string().uuid().optional().nullable(),
   status: z.enum(['open', 'won', 'lost', 'on_hold']).optional(),
+  Status: z.enum(['open', 'won', 'lost', 'on_hold']).optional(),
   expected_start_date: z.string().optional().nullable(),
+  expectedStartDate: z.string().optional().nullable(),
   expected_end_date: z.string().optional().nullable(),
+  expectedEndDate: z.string().optional().nullable(),
   budget_min: z.number().optional().nullable(),
+  budgetMin: z.number().optional().nullable(),
   budget_max: z.number().optional().nullable(),
+  budgetMax: z.number().optional().nullable(),
   priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
+  Priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
   tags: z.array(z.string()).optional(),
-  notes: z.string().max(5000).optional().nullable()
+  Tags: z.array(z.string()).optional(),
+  notes: z.string().max(5000).optional().nullable(),
+  Notes: z.string().max(5000).optional().nullable()
 }).strip();
 
 export const addDealResumeSchema = z.object({
@@ -225,18 +346,36 @@ export const addResumeToMultipleDealsSchema = z.object({
 
 // Resume Submission schemas
 export const createSubmissionSchema = z.object({
-  resume_id: z.string().uuid(),
-  client_id: z.string().uuid(),
-  contact_id: z.string().uuid(),
+  resume_id: z.string().uuid().optional(),
+  resumeId: z.string().uuid().optional(),
+  client_id: z.string().uuid().optional(),
+  clientId: z.string().uuid().optional(),
+  contact_id: z.string().uuid().optional(),
+  contactId: z.string().uuid().optional(),
   mission_id: z.string().uuid().optional().nullable(),
+  missionId: z.string().uuid().optional().nullable(),
   notes: z.string().max(5000).optional().nullable(),
+  Notes: z.string().max(5000).optional().nullable(),
   sent_at: z.string().optional().nullable(),
-  status: z.string().max(50).optional()
-}).strip();
+  sentAt: z.string().optional().nullable(),
+  status: z.string().max(50).optional(),
+  Status: z.string().max(50).optional()
+}).strip().refine(
+  (data) => Boolean(data.resume_id || data.resumeId),
+  { message: 'Resume ID is required', path: ['resume_id'] }
+).refine(
+  (data) => Boolean(data.client_id || data.clientId),
+  { message: 'Client ID is required', path: ['client_id'] }
+).refine(
+  (data) => Boolean(data.contact_id || data.contactId),
+  { message: 'Contact ID is required', path: ['contact_id'] }
+);
 
 export const updateSubmissionSchema = z.object({
   status: z.string().max(50).optional(),
-  notes: z.string().max(5000).optional().nullable()
+  Status: z.string().max(50).optional(),
+  notes: z.string().max(5000).optional().nullable(),
+  Notes: z.string().max(5000).optional().nullable()
 }).strip();
 
 // Pipeline Interview schemas
@@ -283,11 +422,24 @@ export const compileEmailTemplateSchema = z.object({
 
 // Consent schemas
 export const initializeConsentSchema = z.object({
-  resumeId: z.string().uuid(),
-  profileType: z.string().min(1).max(100),
-  candidateName: z.string().min(1).max(255),
-  candidateEmail: z.string().email().optional()
-}).strip();
+  resumeId: z.string().uuid().optional(),
+  resume_id: z.string().uuid().optional(),
+  profileType: z.string().min(1).max(100).optional(),
+  profile_type: z.string().min(1).max(100).optional(),
+  candidateName: z.string().min(1).max(255).optional(),
+  candidate_name: z.string().min(1).max(255).optional(),
+  candidateEmail: z.string().email().optional(),
+  candidate_email: z.string().email().optional()
+}).strip().refine(
+  (data) => Boolean(data.resumeId || data.resume_id),
+  { message: 'Resume ID is required', path: ['resumeId'] }
+).refine(
+  (data) => Boolean(data.profileType || data.profile_type),
+  { message: 'Profile type is required', path: ['profileType'] }
+).refine(
+  (data) => Boolean(data.candidateName || data.candidate_name),
+  { message: 'Candidate name is required', path: ['candidateName'] }
+);
 
 export const respondConsentSchema = z.object({
   action: z.enum(['accept', 'refuse'])
@@ -299,29 +451,52 @@ export const createMailDraftSchema = z.object({
   subject: z.string().max(1000).optional(),
   body: z.string().optional(),
   pdfBase64: z.string().optional(),
+  pdf_base64: z.string().optional(),
   pdfFilename: z.string().max(500).optional(),
+  pdf_filename: z.string().max(500).optional(),
   provider: z.enum(['gmail', 'outlook']).optional(),
   resumeId: z.string().uuid().optional().nullable(),
+  resume_id: z.string().uuid().optional().nullable(),
   clientId: z.string().uuid().optional().nullable(),
+  client_id: z.string().uuid().optional().nullable(),
   contactId: z.string().uuid().optional().nullable(),
+  contact_id: z.string().uuid().optional().nullable(),
   missionId: z.string().uuid().optional().nullable(),
+  mission_id: z.string().uuid().optional().nullable(),
   versionNumber: z.number().optional().nullable(),
+  version_number: z.number().optional().nullable(),
   templateId: z.string().uuid().optional().nullable(),
-  templateContext: z.record(z.string(), z.any()).optional()
+  template_id: z.string().uuid().optional().nullable(),
+  templateContext: z.record(z.string(), z.any()).optional(),
+  template_context: z.record(z.string(), z.any()).optional()
 }).strip();
 
 // Batch Jobs schemas
 export const batchImproveSchema = z.object({
-  resumeIds: z.array(z.string().uuid()).min(1).max(500),
+  resumeIds: z.array(z.string().uuid()).min(1).max(500).optional(),
+  resume_ids: z.array(z.string().uuid()).min(1).max(500).optional(),
   options: z.record(z.string(), z.any()).optional(),
-  firm_id: z.union([z.string(), z.number()]).optional()
-}).strip();
+  firm_id: z.union([z.string(), z.number()]).optional(),
+  firmId: z.union([z.string(), z.number()]).optional()
+}).strip().refine(
+  (data) => Boolean(data.resumeIds || data.resume_ids),
+  { message: 'resumeIds is required', path: ['resumeIds'] }
+);
 
 export const batchDealExportSchema = z.object({
-  dealId: z.string().uuid(),
-  templateId: z.string().uuid(),
-  exportFormats: z.array(z.enum(['pdf', 'docx'])).optional()
-}).strip();
+  dealId: z.string().uuid().optional(),
+  deal_id: z.string().uuid().optional(),
+  templateId: z.string().uuid().optional(),
+  template_id: z.string().uuid().optional(),
+  exportFormats: z.array(z.enum(['pdf', 'docx'])).optional(),
+  export_formats: z.array(z.enum(['pdf', 'docx'])).optional()
+}).strip().refine(
+  (data) => Boolean(data.dealId || data.deal_id),
+  { message: 'dealId is required', path: ['dealId'] }
+).refine(
+  (data) => Boolean(data.templateId || data.template_id),
+  { message: 'templateId is required', path: ['templateId'] }
+);
 
 export const provideNameSchema = z.object({
   name: z.string().min(1).max(255)
@@ -329,10 +504,20 @@ export const provideNameSchema = z.object({
 
 // Batch Export schema
 export const batchExportSchema = z.object({
-  resumeIds: z.array(z.string().uuid()).min(1).max(500),
-  templateId: z.string().uuid(),
-  format: z.enum(['pdf', 'docx']).optional()
-}).strip();
+  resumeIds: z.array(z.string().uuid()).min(1).max(500).optional(),
+  resume_ids: z.array(z.string().uuid()).min(1).max(500).optional(),
+  templateId: z.string().uuid().optional(),
+  template_id: z.string().uuid().optional(),
+  format: z.enum(['pdf', 'docx']).optional(),
+  exportFormat: z.enum(['pdf', 'docx']).optional(),
+  export_format: z.enum(['pdf', 'docx']).optional()
+}).strip().refine(
+  (data) => Boolean(data.resumeIds || data.resume_ids),
+  { message: 'resumeIds is required', path: ['resumeIds'] }
+).refine(
+  (data) => Boolean(data.templateId || data.template_id),
+  { message: 'templateId is required', path: ['templateId'] }
+);
 
 // Calendar Event schema
 export const createCalendarEventSchema = z.object({
@@ -452,7 +637,8 @@ export const findProfilesSchema = z.object({
 
 // Tags Esco Recalculate schema
 export const escoRecalculateSchema = z.object({
-  language: z.string().max(10).optional()
+  language: z.string().max(10).optional(),
+  lang: z.string().max(10).optional()
 }).strip();
 
 // LLM Handler schemas
@@ -488,56 +674,153 @@ export const googleTokenSchema = z.object({
 }).strip();
 
 // Resume schemas
+const resumeStringArraySchema = z.union([z.string(), z.array(z.string())]).optional();
+const resumeFlexibleObjectSchema = z.union([z.string(), z.record(z.string(), z.any()), z.array(z.any())]).optional();
+const resumeScoreSchema = z.union([z.string(), z.number()]).optional();
+const resumeStatusSchema = z.enum(['Pending', 'Processing', 'Analyzed', 'Improved', 'Error', 'Active', 'active', 'analyzed', 'improved']).optional();
+
 export const updateResumeSchema = z.object({
   'Original Text': z.string().max(MAX_TEXT_LENGTH).optional(),
+  originalText: z.string().max(MAX_TEXT_LENGTH).optional(),
+  original_text: z.string().max(MAX_TEXT_LENGTH).optional(),
   'Improved Text': z.string().max(MAX_TEXT_LENGTH).optional(),
+  improvedText: z.string().max(MAX_TEXT_LENGTH).optional(),
+  improved_text: z.string().max(MAX_TEXT_LENGTH).optional(),
   'Analysis': z.string().optional(),
-  'Skills': z.union([z.string(), z.array(z.string())]).optional(),
-  'Industries': z.union([z.string(), z.array(z.string())]).optional(),
-  'Tools': z.union([z.string(), z.array(z.string())]).optional(),
-  'Soft Skills': z.union([z.string(), z.array(z.string())]).optional(),
-  'Key Improvements': z.string().optional(),
-  'Original Score': z.union([z.string(), z.number()]).optional(),
-  'Improved Score': z.union([z.string(), z.number()]).optional(),
+  analysis: z.string().optional(),
+  'Skills': resumeStringArraySchema,
+  skills: resumeStringArraySchema,
+  skills_raw: resumeStringArraySchema,
+  'Industries': resumeStringArraySchema,
+  industries: resumeStringArraySchema,
+  'Tools': resumeStringArraySchema,
+  tools: resumeStringArraySchema,
+  'Soft Skills': resumeStringArraySchema,
+  softSkills: resumeStringArraySchema,
+  soft_skills: resumeStringArraySchema,
+  'Key Improvements': resumeFlexibleObjectSchema,
+  keyImprovements: resumeFlexibleObjectSchema,
+  key_improvements: resumeFlexibleObjectSchema,
+  'Original Score': resumeScoreSchema,
+  'Improved Score': resumeScoreSchema,
   'Candidate Name': z.string().max(255).optional(),
   'Professional Title': z.string().max(255).optional(),
-  'Status': z.enum(['Pending', 'Processing', 'Analyzed', 'Improved', 'Error', 'Active', 'active', 'analyzed']).optional(),
+  'Status': resumeStatusSchema,
+  status: resumeStatusSchema,
   'Analysis Date': z.string().optional(),
+  analysisDate: z.string().optional(),
+  analyzedAt: z.string().optional(),
+  analyzed_at: z.string().optional(),
   'Last Improved': z.string().optional(),
+  lastImproved: z.string().optional(),
   'CustomerName': z.string().nullable().optional(),
+  customerName: z.string().nullable().optional(),
   'Created At': z.string().optional(),
+  createdAt: z.string().optional(),
   'Name': z.string().max(255).optional(),
+  name: z.string().max(255).optional(),
   'Title': z.string().max(255).optional(),
+  title: z.string().max(255).optional(),
   'Original Name': z.string().max(255).optional(),
-  'Global Rating': z.union([z.string(), z.number()]).optional(),
-  'Executive Summary Score': z.union([z.string(), z.number()]).optional(),
-  'Skills Score': z.union([z.string(), z.number()]).optional(),
-  'Experience Score': z.union([z.string(), z.number()]).optional(),
-  'Education Score': z.union([z.string(), z.number()]).optional(),
-  'ATS Score': z.union([z.string(), z.number()]).optional(),
-  'Hobbies Languages Score': z.union([z.string(), z.number()]).optional(),
-  'Improved Global Rating': z.union([z.string(), z.number()]).optional(),
-  'Improved Skills Score': z.union([z.string(), z.number()]).optional(),
-  'Improved Experience Score': z.union([z.string(), z.number()]).optional(),
-  'Improved Education Score': z.union([z.string(), z.number()]).optional(),
-  'Improved ATS Score': z.union([z.string(), z.number()]).optional(),
-  'Improved Executive Summary Score': z.union([z.string(), z.number()]).optional(),
-  'Improved Hobbies Languages Score': z.union([z.string(), z.number()]).optional(),
+  originalName: z.string().max(255).optional(),
+  original_name: z.string().max(255).optional(),
+  'Global Rating': resumeScoreSchema,
+  globalRating: resumeScoreSchema,
+  global_rating: resumeScoreSchema,
+  'Executive Summary Score': resumeScoreSchema,
+  executiveSummaryScore: resumeScoreSchema,
+  executive_summary_score: resumeScoreSchema,
+  'Skills Score': resumeScoreSchema,
+  skillsScore: resumeScoreSchema,
+  skills_score: resumeScoreSchema,
+  'Experience Score': resumeScoreSchema,
+  experienceScore: resumeScoreSchema,
+  experience_score: resumeScoreSchema,
+  'Education Score': resumeScoreSchema,
+  educationScore: resumeScoreSchema,
+  education_score: resumeScoreSchema,
+  'ATS Score': resumeScoreSchema,
+  atsScore: resumeScoreSchema,
+  ats_score: resumeScoreSchema,
+  'Hobbies Languages Score': resumeScoreSchema,
+  hobbiesLanguagesScore: resumeScoreSchema,
+  hobbies_languages_score: resumeScoreSchema,
+  'Improved Global Rating': resumeScoreSchema,
+  improvedGlobalRating: resumeScoreSchema,
+  improved_global_rating: resumeScoreSchema,
+  'Improved Skills Score': resumeScoreSchema,
+  improvedSkillsScore: resumeScoreSchema,
+  improved_skills_score: resumeScoreSchema,
+  'Improved Experience Score': resumeScoreSchema,
+  improvedExperienceScore: resumeScoreSchema,
+  improved_experience_score: resumeScoreSchema,
+  'Improved Education Score': resumeScoreSchema,
+  improvedEducationScore: resumeScoreSchema,
+  improved_education_score: resumeScoreSchema,
+  'Improved ATS Score': resumeScoreSchema,
+  improvedAtsScore: resumeScoreSchema,
+  improved_ats_score: resumeScoreSchema,
+  'Improved Executive Summary Score': resumeScoreSchema,
+  improvedExecutiveSummaryScore: resumeScoreSchema,
+  improved_executive_summary_score: resumeScoreSchema,
+  'Improved Hobbies Languages Score': resumeScoreSchema,
+  improvedHobbiesLanguagesScore: resumeScoreSchema,
+  improved_hobbies_languages_score: resumeScoreSchema,
   'Skills_cleaned': z.array(z.string()).optional(),
+  skillsCleaned: z.array(z.string()).optional(),
+  skills_cleaned: z.array(z.string()).optional(),
   'Industries_cleaned': z.array(z.string()).optional(),
+  industriesCleaned: z.array(z.string()).optional(),
+  industries_cleaned: z.array(z.string()).optional(),
   'Tools_cleaned': z.array(z.string()).optional(),
+  toolsCleaned: z.array(z.string()).optional(),
+  tools_cleaned: z.array(z.string()).optional(),
   'Soft Skills_cleaned': z.array(z.string()).optional(),
+  softSkillsCleaned: z.array(z.string()).optional(),
+  soft_skills_cleaned: z.array(z.string()).optional(),
   'Skills_esco': z.array(z.any()).optional(),
+  skillsEsco: z.array(z.any()).optional(),
+  skills_esco: z.array(z.any()).optional(),
   'Industries_esco': z.array(z.any()).optional(),
+  industriesEsco: z.array(z.any()).optional(),
+  industries_esco: z.array(z.any()).optional(),
   'Tools_esco': z.array(z.any()).optional(),
+  toolsEsco: z.array(z.any()).optional(),
+  tools_esco: z.array(z.any()).optional(),
   'Soft Skills_esco': z.array(z.any()).optional(),
+  softSkillsEsco: z.array(z.any()).optional(),
+  soft_skills_esco: z.array(z.any()).optional(),
   // Improved tags (after LLM improvement)
-  'Improved Skills': z.string().optional(),
-  'Improved Industries': z.string().optional(),
-  'Improved Tools': z.string().optional(),
-  'Improved Soft Skills': z.string().optional(),
-  'Improved Key Improvements': z.string().optional(),
-  'FirmName': z.string().max(255).optional()
+  'Improved Skills': resumeStringArraySchema,
+  improvedSkills: resumeStringArraySchema,
+  improved_skills: resumeStringArraySchema,
+  'Improved Industries': resumeStringArraySchema,
+  improvedIndustries: resumeStringArraySchema,
+  improved_industries: resumeStringArraySchema,
+  'Improved Tools': resumeStringArraySchema,
+  improvedTools: resumeStringArraySchema,
+  improved_tools: resumeStringArraySchema,
+  'Improved Soft Skills': resumeStringArraySchema,
+  improvedSoftSkills: resumeStringArraySchema,
+  improved_soft_skills: resumeStringArraySchema,
+  'Improved Key Improvements': resumeFlexibleObjectSchema,
+  improvedKeyImprovements: resumeFlexibleObjectSchema,
+  improved_key_improvements: resumeFlexibleObjectSchema,
+  Summary: z.string().optional(),
+  summary: z.string().optional(),
+  'Experience Years': z.union([z.string(), z.number()]).optional(),
+  experienceYears: z.union([z.string(), z.number()]).optional(),
+  experience_years: z.union([z.string(), z.number()]).optional(),
+  'Education Level': z.string().optional(),
+  educationLevel: z.string().optional(),
+  education_level: z.string().optional(),
+  Certifications: z.string().optional(),
+  certifications: z.string().optional(),
+  Languages: z.string().optional(),
+  languages: z.string().optional(),
+  'FirmName': z.string().max(255).optional(),
+  firmName: z.string().max(255).optional(),
+  firm_name: z.string().max(255).optional()
 }).strip();
 
 // (improveTextSchema moved above with LLM Handler schemas)
@@ -580,8 +863,19 @@ export const chatbotRequestSchema = z.object({
 // Adaptation schemas
 export const updateAdaptationSchema = z.object({
   'Adapted Text': z.string().optional(),
+  adaptedText: z.string().optional(),
+  adapted_text: z.string().optional(),
   'Adapted Title': z.string().max(500).optional().nullable(),
-  adapted_title: z.string().max(500).optional().nullable()
+  adaptedTitle: z.string().max(500).optional().nullable(),
+  adapted_title: z.string().max(500).optional().nullable(),
+  Status: z.string().max(50).optional(),
+  status: z.string().max(50).optional(),
+  'Match Score': z.union([z.string(), z.number()]).optional(),
+  matchScore: z.union([z.string(), z.number()]).optional(),
+  match_score: z.union([z.string(), z.number()]).optional(),
+  'Match Analysis': z.string().optional(),
+  matchAnalysis: z.string().optional(),
+  match_analysis: z.string().optional()
 }).strict();
 
 // Client schemas
@@ -592,7 +886,9 @@ export const createClientSchema = z.object({
   website: z.string().url().optional().or(z.literal('')),
   address: z.string().max(500).optional(),
   notes: z.string().max(5000).optional(),
-  status: z.enum(['active', 'inactive']).optional()
+  status: z.enum(['active', 'inactive']).optional(),
+  firm_id: z.string().uuid().optional().nullable(),
+  firmId: z.string().uuid().optional().nullable()
 }).strip();
 
 export const updateClientSchema = z.object({
@@ -602,7 +898,9 @@ export const updateClientSchema = z.object({
   website: z.string().url().optional().or(z.literal('')),
   address: z.string().max(500).optional(),
   notes: z.string().max(5000).optional(),
-  status: z.enum(['active', 'inactive']).optional()
+  status: z.enum(['active', 'inactive']).optional(),
+  firm_id: z.string().uuid().optional().nullable(),
+  firmId: z.string().uuid().optional().nullable()
 }).strip();
 
 // Client Contact schemas
@@ -610,32 +908,50 @@ export const createContactSchema = z.object({
   name: z.string().min(1).max(255),
   email: z.string().email().optional().or(z.literal('')),
   phone: z.string().max(50).optional(),
+  role: z.string().max(255).optional(),
   job_title: z.string().max(255).optional(),
-  is_primary: z.boolean().optional()
+  jobTitle: z.string().max(255).optional(),
+  is_primary: z.boolean().optional(),
+  isPrimary: z.boolean().optional()
 }).strip();
 
 export const updateContactSchema = z.object({
   name: z.string().min(1).max(255).optional(),
   email: z.string().email().optional().or(z.literal('')),
   phone: z.string().max(50).optional(),
+  role: z.string().max(255).optional(),
   job_title: z.string().max(255).optional(),
-  is_primary: z.boolean().optional()
+  jobTitle: z.string().max(255).optional(),
+  is_primary: z.boolean().optional(),
+  isPrimary: z.boolean().optional()
 }).strip();
 
 // Pipeline schemas
+const pipelineStageSchema = z.enum(['new', 'sourced', 'screening', 'interview', 'offer', 'hired', 'rejected']);
+
 export const createPipelineEntrySchema = z.object({
-  resume_id: z.string().uuid(),
+  resume_id: z.string().uuid().optional(),
+  resumeId: z.string().uuid().optional(),
   mission_id: z.string().uuid().optional().nullable(),
+  missionId: z.string().uuid().optional().nullable(),
   client_id: z.string().uuid().optional().nullable(),
-  stage: z.enum(['sourced', 'screening', 'interview', 'offer', 'hired', 'rejected']).optional(),
-  notes: z.string().max(5000).optional()
-}).strip();
+  clientId: z.string().uuid().optional().nullable(),
+  stage: pipelineStageSchema.optional(),
+  notes: z.string().max(5000).optional(),
+  Notes: z.string().max(5000).optional()
+}).strip().refine(
+  (data) => Boolean(data.resume_id || data.resumeId),
+  { message: 'Resume ID is required', path: ['resume_id'] }
+);
 
 export const updatePipelineEntrySchema = z.object({
-  stage: z.enum(['sourced', 'screening', 'interview', 'offer', 'hired', 'rejected']).optional(),
+  stage: pipelineStageSchema.optional(),
   notes: z.string().max(5000).optional(),
+  Notes: z.string().max(5000).optional(),
   mission_id: z.string().uuid().optional().nullable(),
-  client_id: z.string().uuid().optional().nullable()
+  missionId: z.string().uuid().optional().nullable(),
+  client_id: z.string().uuid().optional().nullable(),
+  clientId: z.string().uuid().optional().nullable()
 }).strip();
 
 // Email Template schemas

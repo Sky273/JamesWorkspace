@@ -221,6 +221,19 @@ describe('Resume Submissions Routes', () => {
             expect(res.body.id).toBe('sub-123');
         });
 
+        it('should update submission with camelCase payload', async () => {
+            mockFindSubmission.mockResolvedValueOnce(sampleSubmission);
+            mockUpdateSubmission.mockResolvedValueOnce({ ...sampleSubmission, status: 'viewed', notes: 'Camel notes' });
+
+            const res = await request(app)
+                .put('/api/submissions/sub-123')
+                .set('Authorization', 'Bearer valid-token')
+                .send({ status: 'viewed', notes: 'Camel notes' });
+
+            expect(res.status).toBe(200);
+            expect(mockUpdateSubmission).toHaveBeenCalledWith('sub-123', { status: 'viewed', notes: 'Camel notes' });
+        });
+
         it('should return 404 if not found', async () => {
             mockGetSubmissionById.mockResolvedValueOnce(null);
 
@@ -279,6 +292,36 @@ describe('Resume Submissions Routes', () => {
 
             expect(res.status).toBe(201);
             expect(res.body.id).toBe('sub-new');
+        });
+
+        it('should create submission with camelCase payload', async () => {
+            mockValidateResume.mockResolvedValueOnce(true);
+            mockValidateClient.mockResolvedValueOnce({ exists: true, firmMatch: true });
+            mockValidateContact.mockResolvedValueOnce(true);
+            mockValidateMission.mockResolvedValueOnce(true);
+            mockCreateSubmission.mockResolvedValueOnce({ ...sampleSubmission, id: 'sub-camel' });
+
+            const res = await request(app)
+                .post('/api/submissions')
+                .set('Authorization', 'Bearer valid-token')
+                .send({
+                    resumeId: 'res-1',
+                    clientId: 'cli-1',
+                    contactId: 'con-1',
+                    missionId: 'mis-1',
+                    sentAt: '2026-03-23T10:00:00Z',
+                    notes: 'Sent by camelCase'
+                });
+
+            expect(res.status).toBe(201);
+            expect(mockCreateSubmission).toHaveBeenCalledWith(expect.objectContaining({
+                resume_id: 'res-1',
+                client_id: 'cli-1',
+                contact_id: 'con-1',
+                mission_id: 'mis-1',
+                sent_at: '2026-03-23T10:00:00Z',
+                notes: 'Sent by camelCase'
+            }));
         });
 
         it('should return 400 if resume_id missing', async () => {

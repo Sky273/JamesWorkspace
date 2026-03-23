@@ -119,6 +119,32 @@ describe('Consent Routes', () => {
             expect(res.body.consent).toBeDefined();
         });
 
+        it('should initialize consent with snake_case payload', async () => {
+            mockInitializeConsent.mockResolvedValueOnce({
+                resumeId: 'res-legacy',
+                consentStatus: 'pending_consent',
+                token: 'tok-legacy'
+            });
+
+            const res = await request(app)
+                .post('/api/consent/initialize')
+                .set('Authorization', 'Bearer valid-token')
+                .send({
+                    resume_id: 'res-legacy',
+                    profile_type: 'nominative',
+                    candidate_name: 'John Doe',
+                    candidate_email: 'john@example.com'
+                });
+
+            expect(res.status).toBe(200);
+            expect(mockInitializeConsent).toHaveBeenCalledWith(expect.objectContaining({
+                resumeId: 'res-legacy',
+                profileType: 'nominative',
+                candidateName: 'John Doe',
+                candidateEmail: 'john@example.com'
+            }));
+        });
+
         it('should return 400 if resumeId missing', async () => {
             const res = await request(app)
                 .post('/api/consent/initialize')

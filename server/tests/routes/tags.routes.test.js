@@ -172,6 +172,19 @@ describe('Tags Routes', () => {
         });
     });
 
+    describe('POST /api/tags/esco/recalculate', () => {
+        it('should accept lang alias for ESCO recalculation', async () => {
+            mockSelectWithTimeout.mockResolvedValue([]);
+
+            const res = await request(app)
+                .post('/api/tags/esco/recalculate')
+                .set(authHeader)
+                .send({ lang: 'en' });
+
+            expect([200, 500]).toContain(res.status);
+        });
+    });
+
     describe('PUT /api/tags/rename', () => {
         it('should rename a tag across resumes', async () => {
             mockSelectWithTimeout.mockResolvedValue([{ id: 'r-1' }, { id: 'r-2' }]);

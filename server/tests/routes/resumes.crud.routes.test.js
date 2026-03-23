@@ -7,6 +7,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import request from 'supertest';
+import { processAnalysisTags } from '../../utils/tagCleaner.js';
 
 // Mock constants module FIRST
 vi.mock('../../config/constants.js', () => ({
@@ -82,6 +83,53 @@ vi.mock('../../utils/validation.js', () => ({
 const mockCheckResumeAccess = vi.fn();
 vi.mock('../../routes/resumes/helpers.js', () => ({
     checkResumeAccess: (...args) => mockCheckResumeAccess(...args),
+    normalizeResumeUpdatePayload: vi.fn((body) => ({
+        name: body.name ?? body.Name,
+        title: body.title ?? body.Title,
+        status: body.status ?? body.Status,
+        originalText: body.originalText ?? body['Original Text'],
+        improvedText: body.improvedText ?? body['Improved Text'],
+        globalRating: body.globalRating ?? body['Global Rating'],
+        skillsScore: body.skillsScore ?? body['Skills Score'],
+        experienceScore: body.experienceScore ?? body['Experience Score'],
+        educationScore: body.educationScore ?? body['Education Score'],
+        atsScore: body.atsScore ?? body['ATS Score'],
+        executiveSummaryScore: body.executiveSummaryScore ?? body['Executive Summary Score'],
+        hobbiesLanguagesScore: body.hobbiesLanguagesScore ?? body['Hobbies Languages Score'],
+        improvedGlobalRating: body.improvedGlobalRating ?? body['Improved Global Rating'],
+        improvedSkillsScore: body.improvedSkillsScore ?? body['Improved Skills Score'],
+        improvedExperienceScore: body.improvedExperienceScore ?? body['Improved Experience Score'],
+        improvedEducationScore: body.improvedEducationScore ?? body['Improved Education Score'],
+        improvedAtsScore: body.improvedAtsScore ?? body['Improved ATS Score'],
+        improvedExecutiveSummaryScore: body.improvedExecutiveSummaryScore ?? body['Improved Executive Summary Score'],
+        improvedHobbiesLanguagesScore: body.improvedHobbiesLanguagesScore ?? body['Improved Hobbies Languages Score'],
+        skills: body.skills ?? body.Skills,
+        industries: body.industries ?? body.Industries,
+        tools: body.tools ?? body.Tools,
+        softSkills: body.softSkills ?? body['Soft Skills'],
+        skillsCleaned: body.skillsCleaned ?? body.Skills_cleaned,
+        industriesCleaned: body.industriesCleaned ?? body.Industries_cleaned,
+        toolsCleaned: body.toolsCleaned ?? body.Tools_cleaned,
+        softSkillsCleaned: body.softSkillsCleaned ?? body['Soft Skills_cleaned'],
+        skillsEsco: body.skillsEsco ?? body.Skills_esco,
+        industriesEsco: body.industriesEsco ?? body.Industries_esco,
+        toolsEsco: body.toolsEsco ?? body.Tools_esco,
+        softSkillsEsco: body.softSkillsEsco ?? body['Soft Skills_esco'],
+        improvedSkills: body.improvedSkills ?? body['Improved Skills'],
+        improvedIndustries: body.improvedIndustries ?? body['Improved Industries'],
+        improvedTools: body.improvedTools ?? body['Improved Tools'],
+        improvedSoftSkills: body.improvedSoftSkills ?? body['Improved Soft Skills'],
+        keyImprovements: body.keyImprovements ?? body['Key Improvements'],
+        improvedKeyImprovements: body.improvedKeyImprovements ?? body['Improved Key Improvements'],
+        summary: body.summary ?? body.Summary,
+        experienceYears: body.experienceYears ?? body['Experience Years'],
+        educationLevel: body.educationLevel ?? body['Education Level'],
+        certifications: body.certifications ?? body.Certifications,
+        languages: body.languages ?? body.Languages,
+        originalName: body.originalName ?? body['Original Name'],
+        analysisDate: body.analysisDate ?? body['Analysis Date'],
+        lastImproved: body.lastImproved ?? body['Last Improved']
+    })),
     parseScore: vi.fn((s) => parseFloat(s) || 0),
     stringifyIfNeeded: vi.fn((v) => typeof v === 'string' ? v : JSON.stringify(v)),
     mapResumeToFrontend: vi.fn((r) => ({
@@ -417,6 +465,27 @@ describe('Resume Routes - PUT /api/resumes/:id', () => {
         expect(res.status).toBe(403);
     });
 
+    it('should successfully update resume with camelCase fields', async () => {
+        const updatedRow = {
+            id: '123e4567-e89b-12d3-a456-426614174000',
+            name: 'Modern Name',
+            title: 'Lead Engineer',
+            status: 'improved'
+        };
+        mockUpdateResume.mockResolvedValueOnce(updatedRow);
+
+        const res = await request(app)
+            .put('/api/resumes/123e4567-e89b-12d3-a456-426614174000')
+            .set('Authorization', 'Bearer valid-token')
+            .send({ name: 'Modern Name', title: 'Lead Engineer', status: 'Improved' });
+
+        expect(res.status).toBe(200);
+        expect(mockUpdateResume).toHaveBeenCalledWith(
+            '123e4567-e89b-12d3-a456-426614174000',
+            expect.objectContaining({ name: 'Modern Name', title: 'Lead Engineer', status: 'improved' })
+        );
+    });
+
     it('should successfully update resume with Name and Title', async () => {
         const updatedRow = {
             id: '123e4567-e89b-12d3-a456-426614174000',
@@ -457,6 +526,23 @@ describe('Resume Routes - PUT /api/resumes/:id', () => {
         expect(mockUpdateResume).toHaveBeenCalledWith(
             expect.any(String),
             expect.objectContaining({ status: 'improved' })
+        );
+    });
+
+    it('should parse camelCase score fields', async () => {
+        mockUpdateResume.mockResolvedValueOnce({
+            id: '123e4567-e89b-12d3-a456-426614174000',
+            global_rating: 91
+        });
+
+        await request(app)
+            .put('/api/resumes/123e4567-e89b-12d3-a456-426614174000')
+            .set('Authorization', 'Bearer valid-token')
+            .send({ globalRating: '91%', skillsScore: 77, improvedSkillsScore: '83%' });
+
+        expect(mockUpdateResume).toHaveBeenCalledWith(
+            expect.any(String),
+            expect.objectContaining({ global_rating: 91, skills_score: 77, improved_skills_score: 83 })
         );
     });
 
@@ -570,6 +656,47 @@ describe('Resume Routes - PUT /api/resumes/:id', () => {
             .send({ Name: 'Test' });
 
         expect(res.status).toBe(404);
+    });
+
+    it('should map camelCase text and tag fields', async () => {
+        processAnalysisTags.mockReturnValueOnce({
+            cleanedTags: {
+                skills: ['Node.js'],
+                industries: [],
+                tools: [],
+                softSkills: ['Communication']
+            }
+        });
+        mockUpdateResume.mockResolvedValueOnce({
+            id: '123e4567-e89b-12d3-a456-426614174000',
+            summary: 'Modern summary'
+        });
+
+        await request(app)
+            .put('/api/resumes/123e4567-e89b-12d3-a456-426614174000')
+            .set('Authorization', 'Bearer valid-token')
+            .send({
+                summary: 'Modern summary',
+                experienceYears: 6,
+                educationLevel: 'Master',
+                certifications: 'AWS',
+                languages: 'French',
+                skills: ['Node.js'],
+                softSkills: ['Communication']
+            });
+
+        expect(mockUpdateResume).toHaveBeenCalledWith(
+            expect.any(String),
+            expect.objectContaining({
+                summary: 'Modern summary',
+                experience_years: 6,
+                education_level: 'Master',
+                certifications: 'AWS',
+                languages: 'French',
+                skills: expect.any(String),
+                soft_skills: expect.any(String)
+            })
+        );
     });
 
     it('should map additional text fields', async () => {

@@ -319,6 +319,37 @@ describe('Deals Routes - GET /api/deals/:id', () => {
         expect(res.status).toBe(404);
     });
 
+    it('should update deal with camelCase payload', async () => {
+        mockGetDealFirmId.mockResolvedValueOnce('firm-123');
+        mockIsUserAdmin.mockReturnValue(false);
+        mockGetUserFirmId.mockResolvedValueOnce('firm-123');
+        mockGetClientFirmId.mockResolvedValueOnce('firm-123');
+        mockUpdateDeal.mockResolvedValueOnce({
+            id: 'deal-123',
+            title: 'Camel Updated Deal',
+            status: 'won',
+            client_id: '123e4567-e89b-12d3-a456-426614174000',
+            firm_id: 'firm-123'
+        });
+
+        const res = await request(app)
+            .put('/api/deals/deal-123')
+            .set('Authorization', 'Bearer valid-token')
+            .send({
+                title: 'Camel Updated Deal',
+                clientId: '123e4567-e89b-12d3-a456-426614174000',
+                expectedEndDate: '2026-03-30',
+                budgetMax: 5000
+            });
+
+        expect(res.status).toBe(200);
+        expect(mockUpdateDeal).toHaveBeenCalledWith('deal-123', expect.objectContaining({
+            client_id: '123e4567-e89b-12d3-a456-426614174000',
+            expected_end_date: '2026-03-30',
+            budget_max: 5000
+        }));
+    });
+
     it('should return 403 for deal from different firm', async () => {
         mockGetDealFirmId.mockResolvedValueOnce('firm-other');
         mockIsUserAdmin.mockReturnValue(false);
@@ -406,6 +437,40 @@ describe('Deals Routes - POST /api/deals', () => {
 
         expect(res.status).toBe(201);
         expect(res.body.id).toBe('new-deal-123');
+    });
+
+    it('should create deal with camelCase payload', async () => {
+        mockGetUserFirmId.mockResolvedValueOnce('firm-123');
+        mockIsUserAdmin.mockReturnValue(false);
+        mockGetClientFirmId.mockResolvedValueOnce('firm-123');
+        mockCreateDeal.mockResolvedValueOnce({
+            id: 'new-deal-camel',
+            title: 'Camel Deal',
+            status: 'open',
+            client_id: '123e4567-e89b-12d3-a456-426614174000',
+            firm_id: 'firm-123'
+        });
+
+        const res = await request(app)
+            .post('/api/deals')
+            .set('Authorization', 'Bearer valid-token')
+            .send({
+                title: 'Camel Deal',
+                clientId: '123e4567-e89b-12d3-a456-426614174000',
+                contactId: '123e4567-e89b-12d3-a456-426614174001',
+                expectedStartDate: '2026-03-23',
+                budgetMin: 1000,
+                budgetMax: 2000
+            });
+
+        expect(res.status).toBe(201);
+        expect(mockCreateDeal).toHaveBeenCalledWith(expect.objectContaining({
+            client_id: '123e4567-e89b-12d3-a456-426614174000',
+            contact_id: '123e4567-e89b-12d3-a456-426614174001',
+            expected_start_date: '2026-03-23',
+            budget_min: 1000,
+            budget_max: 2000
+        }), 'user-123', 'firm-123');
     });
 
     it('should reject deal without title', async () => {

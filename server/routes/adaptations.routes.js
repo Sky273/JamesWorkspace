@@ -12,6 +12,25 @@ import * as adaptationsService from '../services/adaptations.service.js';
 
 const router = express.Router();
 
+function getFirstDefinedValue(source, keys) {
+    for (const key of keys) {
+        if (source[key] !== undefined) {
+            return source[key];
+        }
+    }
+    return undefined;
+}
+
+function normalizeAdaptationPayload(payload = {}) {
+    return {
+        adaptedText: getFirstDefinedValue(payload, ['adaptedText', 'adapted_text', 'Adapted Text']),
+        adaptedTitle: getFirstDefinedValue(payload, ['adaptedTitle', 'adapted_title', 'Adapted Title']),
+        status: getFirstDefinedValue(payload, ['status', 'Status']),
+        matchScore: getFirstDefinedValue(payload, ['matchScore', 'match_score', 'Match Score']),
+        matchAnalysis: getFirstDefinedValue(payload, ['matchAnalysis', 'match_analysis', 'Match Analysis'])
+    };
+}
+
 // ============================================
 // ADAPTATIONS ROUTES
 // ============================================
@@ -162,22 +181,23 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateA
             }
         }
 
-        // Build update object
+        const normalizedUpdates = normalizeAdaptationPayload(req.body);
+
         const updates = {};
-        if (req.body['Adapted Text'] !== undefined) {
-            updates.adapted_text = req.body['Adapted Text'];
+        if (normalizedUpdates.adaptedText !== undefined) {
+            updates.adapted_text = normalizedUpdates.adaptedText;
         }
-        if (req.body['Adapted Title'] !== undefined || req.body.adapted_title !== undefined) {
-            updates.adapted_title = req.body['Adapted Title'] ?? req.body.adapted_title;
+        if (normalizedUpdates.adaptedTitle !== undefined) {
+            updates.adapted_title = normalizedUpdates.adaptedTitle;
         }
-        if (req.body.Status !== undefined || req.body.status !== undefined) {
-            updates.status = req.body.Status || req.body.status;
+        if (normalizedUpdates.status !== undefined) {
+            updates.status = normalizedUpdates.status;
         }
-        if (req.body['Match Score'] !== undefined || req.body.match_score !== undefined) {
-            updates.match_score = req.body['Match Score'] || req.body.match_score;
+        if (normalizedUpdates.matchScore !== undefined) {
+            updates.match_score = normalizedUpdates.matchScore;
         }
-        if (req.body['Match Analysis'] !== undefined || req.body.match_analysis !== undefined) {
-            updates.match_analysis = req.body['Match Analysis'] || req.body.match_analysis;
+        if (normalizedUpdates.matchAnalysis !== undefined) {
+            updates.match_analysis = normalizedUpdates.matchAnalysis;
         }
 
         const updatedRecord = await adaptationsService.updateAdaptation(id, updates);
