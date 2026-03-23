@@ -32,6 +32,7 @@ export {
     updateJobCounters,
     updateCollectionJobProgress,
     updateJobExportFile,
+    clearJobExportFile,
     isJobComplete
 } from './batchJobs/jobCrud.js';
 
@@ -52,7 +53,7 @@ export {
 export { startWorker, stopWorker } from './batchJobs/worker.js';
 
 // Maintenance
-export { cleanupOldJobs, getBatchJobsStats } from './batchJobs/maintenance.js';
+export { cleanupOldJobs, cleanupJobExportArtifacts, getBatchJobsStats } from './batchJobs/maintenance.js';
 
 /**
  * Get deal info for export validation

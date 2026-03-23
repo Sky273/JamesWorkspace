@@ -23,12 +23,19 @@ vi.mock('fs/promises', () => ({
 
 // Mock logger
 vi.mock('../../utils/logger.backend.js', () => ({
-    safeLog: vi.fn()
+    safeLog: vi.fn(),
+    createModuleLogger: () => ({ info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() })
 }));
 
 // Mock constants
 vi.mock('../../config/constants.js', () => ({
     UPLOAD_DIR: '/tmp/test-uploads'
+}));
+
+vi.mock('../../services/metrics.service.js', () => ({
+    metrics: {
+        trackCleanupActivity: vi.fn()
+    }
 }));
 
 // Mock dynamic imports for batch jobs and backup services

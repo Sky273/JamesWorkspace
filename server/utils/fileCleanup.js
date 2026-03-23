@@ -1,9 +1,10 @@
-import fs from 'fs/promises';
+﻿import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
 import { fileURLToPath } from 'url';
 import { UPLOAD_DIR } from '../config/constants.js';
 import { safeLog } from './logger.backend.js';
+import { metrics } from '../services/metrics.service.js';
 
 /**
  * Utility for cleaning up temporary files across multiple directories
@@ -232,6 +233,12 @@ async function cleanupAllDirectories() {
     try {
         const { cleanupOldJobs } = await import('../services/batchJobs.service.js');
         const batchCleanup = await cleanupOldJobs(7); // Keep jobs for 7 days
+        metrics.trackCleanupActivity({
+            filesDeleted: batchCleanup.deletedJobs || 0,
+            orphanExportFilesDeleted: batchCleanup.orphanExportFilesDeleted || 0,
+            staleExportRefsCleared: batchCleanup.staleExportRefsCleared || 0,
+            metadata: { source: 'batchJobs' }
+        });
         results.batchJobs = { success: true, ...batchCleanup };
         cleanupStats.batchJobs = {
             lastCleanup: new Date().toISOString(),
@@ -257,6 +264,15 @@ async function cleanupAllDirectories() {
         safeLog('debug', 'Local backups cleanup skipped', { error: error.message });
     }
     
+    const totalDirectoryDeletes = Object.values(results)
+        .filter(result => result.success && typeof result.deletedCount === 'number')
+        .reduce((sum, result) => sum + result.deletedCount, 0);
+
+    metrics.trackCleanupActivity({
+        filesDeleted: totalDirectoryDeletes,
+        metadata: { source: 'fileCleanup' }
+    });
+
     return results;
 }
 
@@ -348,3 +364,4 @@ export async function cleanupAllFiles() {
         return 0;
     }
 }
+

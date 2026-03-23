@@ -1,8 +1,9 @@
-import express from 'express';
+﻿import express from 'express';
 import { metrics } from '../services/metrics.service.js';
 import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { getDatabaseMetrics } from '../services/health.service.js';
+import { getStorageStats, getFileCleanupStats } from '../utils/fileCleanup.js';
 import { getAPMStats, getSlowRequests, clearSlowRequests } from '../middleware/apm.middleware.js';
 
 const router = express.Router();
@@ -142,6 +143,42 @@ router.get('/llm', authenticateToken, requireAdmin, (req, res) => {
 });
 
 /**
+ * GET /api/metrics/operations
+ * Get operational metrics around uploads, OCR, storage, and cleanup (admin only)
+ */
+router.get('/operations', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const fullMetrics = metrics.getMetrics();
+        const { binaryStorageResult, batchStorageResult } = await getDatabaseMetrics();
+        const storageStats = await getStorageStats();
+        const cleanupStats = getFileCleanupStats();
+
+        res.json({
+            operations: fullMetrics.operations || {
+                uploads: metrics.operations?.uploads || {},
+                ocr: metrics.operations?.ocr || {},
+                cleanup: metrics.operations?.cleanup || {}
+            },
+            binaryStorage: {
+                resumesWithBinary: parseInt(binaryStorageResult.rows[0]?.resumes_with_binary || 0),
+                resumeBinaryBytes: parseInt(binaryStorageResult.rows[0]?.resume_binary_bytes || 0),
+                avgResumeBinaryBytes: Math.round(parseFloat(binaryStorageResult.rows[0]?.avg_resume_binary_bytes || 0)),
+                maxResumeBinaryBytes: parseInt(binaryStorageResult.rows[0]?.max_resume_binary_bytes || 0),
+                batchItemsWithFileData: parseInt(batchStorageResult.rows[0]?.items_with_file_data || 0),
+                batchFileDataBytes: parseInt(batchStorageResult.rows[0]?.total_file_data_bytes || 0)
+            },
+            storage: storageStats,
+            cleanup: cleanupStats,
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        safeLog('error', 'Error fetching operational metrics', { error: error.message });
+        res.status(500).json({
+            error: 'Failed to fetch operational metrics'
+        });
+    }
+});
+/**
  * POST /api/metrics/reset
  * Reset all metrics (admin only, use with caution)
  */
@@ -178,7 +215,7 @@ router.get('/database', authenticateToken, requireAdmin, async (req, res) => {
             });
         }
         
-        const { sizeResult, tableStatsResult, connectionStatsResult, queryTime } = await getDatabaseMetrics();
+        const { sizeResult, tableStatsResult, connectionStatsResult, binaryStorageResult, batchStorageResult, queryTime } = await getDatabaseMetrics();
         
         const result = {
             database: {
@@ -271,3 +308,6 @@ router.delete('/apm/slow-requests', authenticateToken, requireAdmin, (req, res) 
 });
 
 export default router;
+
+
+

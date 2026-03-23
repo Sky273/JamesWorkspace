@@ -1,4 +1,4 @@
-/**
+﻿/**
  * MetricsPage Component
  * TypeScript version
  */
@@ -153,9 +153,69 @@ interface Metrics {
 
 interface DatabaseMetrics {
   database?: { size?: number; sizePretty?: string };
+  binaryStorage?: {
+    resumesWithBinary?: number;
+    resumeBinaryBytes?: number;
+    avgResumeBinaryBytes?: number;
+    maxResumeBinaryBytes?: number;
+    batchItemsWithFileData?: number;
+    batchFileDataBytes?: number;
+  };
   tables?: Array<{ name: string; rowCount: number; deadRows: number; lastVacuum?: string; lastAnalyze?: string }>;
   connections?: { total?: number; active?: number; idle?: number };
   queryTime?: string;
+  timestamp?: string;
+}
+
+interface OperationsMetrics {
+  operations?: {
+    uploads?: {
+      total?: number;
+      successful?: number;
+      failed?: number;
+      bytesReceived?: number;
+      bytesStoredInDb?: number;
+      byEndpoint?: Record<string, number>;
+      byMimeType?: Record<string, number>;
+    };
+    ocr?: {
+      runs?: number;
+      successfulRuns?: number;
+      failedRuns?: number;
+      pagesProcessed?: number;
+      scannedPagesDetected?: number;
+      failedPages?: number;
+      totalConfidence?: number;
+      confidenceSamples?: number;
+      totalExtractionTimeMs?: number;
+    };
+    cleanup?: {
+      runs?: number;
+      filesDeleted?: number;
+      directoriesDeleted?: number;
+      orphanExportFilesDeleted?: number;
+      staleExportRefsCleared?: number;
+    };
+  };
+  binaryStorage?: {
+    resumesWithBinary?: number;
+    resumeBinaryBytes?: number;
+    avgResumeBinaryBytes?: number;
+    maxResumeBinaryBytes?: number;
+    batchItemsWithFileData?: number;
+    batchFileDataBytes?: number;
+  };
+  storage?: {
+    tempDirectorySize?: number;
+    tempFileCount?: number;
+    batchExportDirectorySize?: number;
+    batchExportFileCount?: number;
+  };
+  cleanup?: {
+    filesDeleted?: number;
+    dirsDeleted?: number;
+    lastCleanupTime?: string;
+  };
   timestamp?: string;
 }
 
@@ -190,6 +250,8 @@ const MetricsPage = (): JSX.Element => {
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [dbMetrics, setDbMetrics] = useState<DatabaseMetrics | null>(null);
   const [apmMetrics, setApmMetrics] = useState<APMMetrics | null>(null);
+  const [operationsMetrics, setOperationsMetrics] = useState<OperationsMetrics | null>(null);
+  const [operationsMetricsError, setOperationsMetricsError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [autoRefresh, setAutoRefresh] = useState<boolean>(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -245,6 +307,31 @@ const MetricsPage = (): JSX.Element => {
     }
   };
 
+  const fetchOperationsMetrics = async (): Promise<void> => {
+    try {
+      const response = await fetchWithAuth('/api/metrics/operations', createAuthOptions());
+      if (!response.ok) {
+        setOperationsMetrics(null);
+        setOperationsMetricsError(`${t('metrics.operationsUnavailable', 'Operational metrics unavailable')} (${response.status})`);
+        return;
+      }
+      const data = await response.json();
+      setOperationsMetrics(data);
+      setOperationsMetricsError(null);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '';
+      if (!errorMessage.includes('Session expired')) {
+        logger.error('Error fetching operations metrics:', error);
+      }
+      setOperationsMetrics(null);
+      setOperationsMetricsError(t('metrics.operationsUnavailable', 'Operational metrics unavailable'));
+    }
+  };
+
+  const refreshAllMetrics = async (): Promise<void> => {
+    await Promise.all([fetchMetrics(), fetchDbMetrics(), fetchApmMetrics(), fetchOperationsMetrics()]);
+  };
+
   const exportMetrics = (format: 'json' | 'csv'): void => {
     if (!metrics) return;
     
@@ -258,7 +345,8 @@ const MetricsPage = (): JSX.Element => {
       const exportData = {
         exportedAt: new Date().toISOString(),
         metrics,
-        database: dbMetrics
+        database: dbMetrics,
+        operations: operationsMetrics
       };
       content = JSON.stringify(exportData, null, 2);
       mimeType = 'application/json';
@@ -280,6 +368,11 @@ const MetricsPage = (): JSX.Element => {
         ['LLM Requests', String(metrics.llm?.requests || 0)],
         ['LLM Total Tokens', String(metrics.llm?.totalTokens || 0)],
         ['DB Size', dbMetrics?.database?.sizePretty || 'N/A'],
+        [t('metrics.resumeBinaryStorageCsv', 'Resume Binary Storage'), formatBytes(operationsMetrics?.binaryStorage?.resumeBinaryBytes)],
+        [t('metrics.batchFileDataStorageCsv', 'Batch File Data Storage'), formatBytes(operationsMetrics?.binaryStorage?.batchFileDataBytes)],
+        [t('metrics.uploadFilesTotalCsv', 'Upload Files Total'), String(operationsMetrics?.operations?.uploads?.total || 0)],
+        [t('metrics.ocrRunsCsv', 'OCR Runs'), String(operationsMetrics?.operations?.ocr?.runs || 0)],
+        [t('metrics.cleanupRunsCsv', 'Cleanup Runs'), String(operationsMetrics?.operations?.cleanup?.runs || 0)],
         ['DB Connections Total', String(dbMetrics?.connections?.total || 0)],
         ['DB Connections Active', String(dbMetrics?.connections?.active || 0)]
       ];
@@ -297,13 +390,13 @@ const MetricsPage = (): JSX.Element => {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
     
-    toast.success(t('metrics.exportSuccess', `Métriques exportées (${format.toUpperCase()})`));
+    toast.success(t('metrics.exportSuccess', `MÃ©triques exportÃ©es (${format.toUpperCase()})`));
   };
 
   useEffect(() => {
     const loadData = async (): Promise<void> => {
       setLoading(true);
-      await Promise.all([fetchMetrics(), fetchDbMetrics(), fetchApmMetrics()]);
+      await refreshAllMetrics();
       setLoading(false);
     };
     // Load immediately without delay for faster initial render
@@ -314,7 +407,7 @@ const MetricsPage = (): JSX.Element => {
   useEffect(() => {
     if (!autoRefresh) return;
     const interval = setInterval(async () => {
-      await Promise.all([fetchMetrics(), fetchDbMetrics(), fetchApmMetrics()]);
+      await refreshAllMetrics();
     }, 30000);
     return () => clearInterval(interval);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -346,7 +439,7 @@ const MetricsPage = (): JSX.Element => {
               <input type="checkbox" checked={autoRefresh} onChange={(e: ChangeEvent<HTMLInputElement>) => setAutoRefresh(e.target.checked)} className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500" />
               {t('metrics.autoRefresh')}
             </label>
-            <button onClick={fetchMetrics} className="btn btn-primary flex items-center gap-2 px-4 py-2">
+            <button onClick={refreshAllMetrics} className="btn btn-primary flex items-center gap-2 px-4 py-2">
               <ArrowPathIcon className="w-4 h-4" />
               {t('metrics.refresh')}
             </button>
@@ -419,7 +512,7 @@ const MetricsPage = (): JSX.Element => {
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="rounded-xl border bg-orange-50 text-orange-600 border-orange-200 dark:bg-gray-800 dark:text-orange-400 dark:border-orange-700 p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <p className="text-sm font-medium opacity-80">{t('metrics.database', 'Base de données')}</p>
+                    <p className="text-sm font-medium opacity-80">{t('metrics.database', 'Base de donnÃ©es')}</p>
                     <p className="text-2xl font-bold mt-1">{dbMetrics.database?.sizePretty || 'N/A'}</p>
                     <p className="text-xs mt-1 opacity-60">{t('metrics.dbSize', 'Taille totale')}</p>
                   </div>
@@ -439,7 +532,7 @@ const MetricsPage = (): JSX.Element => {
                     <p className="font-semibold">{safeNumber(dbMetrics.connections?.idle)}</p>
                   </div>
                 </div>
-                <p className="text-xs opacity-60">{t('metrics.queryTime', 'Temps de requête')}: {dbMetrics.queryTime || 'N/A'}</p>
+                <p className="text-xs opacity-60">{t('metrics.queryTime', 'Temps de requÃªte')}: {dbMetrics.queryTime || 'N/A'}</p>
               </motion.div>
 
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }} className="rounded-xl border bg-orange-50 text-orange-600 border-orange-200 dark:bg-gray-800 dark:text-orange-400 dark:border-orange-700 p-6">
@@ -475,6 +568,112 @@ const MetricsPage = (): JSX.Element => {
             </div>
           )}
 
+          {operationsMetricsError && !operationsMetrics && (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.185 }} className="rounded-xl border bg-amber-50 text-amber-700 border-amber-200 dark:bg-gray-800 dark:text-amber-400 dark:border-amber-700 p-6 mb-8">
+              <div className="flex items-center gap-3 mb-2">
+                <ExclamationTriangleIcon className="w-6 h-6 opacity-80" />
+                <p className="text-sm font-semibold">{t('metrics.operationsUnavailable', 'Operational metrics unavailable')}</p>
+              </div>
+              <p className="text-sm opacity-80">{operationsMetricsError}</p>
+              <p className="text-xs opacity-60 mt-2">{t('metrics.operationsHint', 'Deploy the backend exposing /api/metrics/operations to enable uploads, OCR, storage and cleanup metrics.')}</p>
+            </motion.div>
+          )}
+
+          {operationsMetrics && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.185 }} className="rounded-xl border bg-sky-50 text-sky-700 border-sky-200 dark:bg-gray-800 dark:text-sky-400 dark:border-sky-700 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-sm font-medium opacity-80">{t('metrics.operationsUploadsTitle', 'Uploads and binary storage')}</p>
+                    <p className="text-2xl font-bold mt-1">{formatNumber(safeNumber(operationsMetrics.operations?.uploads?.total))}</p>
+                    <p className="text-xs mt-1 opacity-60">{t('metrics.operationsUploadsSubtitle', 'Files received, stored and kept in the database')}</p>
+                  </div>
+                  <ArrowDownTrayIcon className="w-10 h-10 opacity-50" />
+                </div>
+                <div className="grid grid-cols-2 gap-3 text-sm mb-4">
+                  <div className="bg-sky-100 dark:bg-sky-900/30 rounded-lg p-3">
+                    <p className="opacity-70">{t('metrics.successFailures', 'Success / failures')}</p>
+                    <p className="font-semibold">{safeNumber(operationsMetrics.operations?.uploads?.successful)} / {safeNumber(operationsMetrics.operations?.uploads?.failed)}</p>
+                  </div>
+                  <div className="bg-sky-100 dark:bg-sky-900/30 rounded-lg p-3">
+                    <p className="opacity-70">{t('metrics.receivedStoredDb', 'Received / stored in DB')}</p>
+                    <p className="font-semibold">{formatBytes(safeNumber(operationsMetrics.operations?.uploads?.bytesReceived))} / {formatBytes(safeNumber(operationsMetrics.operations?.uploads?.bytesStoredInDb))}</p>
+                  </div>
+                  <div className="bg-sky-100 dark:bg-sky-900/30 rounded-lg p-3">
+                    <p className="opacity-70">{t('metrics.binaryResumes', 'Binary resumes')}</p>
+                    <p className="font-semibold">{safeNumber(operationsMetrics.binaryStorage?.resumesWithBinary)}</p>
+                  </div>
+                  <div className="bg-sky-100 dark:bg-sky-900/30 rounded-lg p-3">
+                    <p className="opacity-70">{t('metrics.binaryStorage', 'Binary storage')}</p>
+                    <p className="font-semibold">{formatBytes(safeNumber(operationsMetrics.binaryStorage?.resumeBinaryBytes))}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="bg-sky-100 dark:bg-sky-900/30 rounded-lg p-3">
+                    <p className="opacity-70">{t('metrics.averagePerResume', 'Average per resume')}</p>
+                    <p className="font-semibold">{formatBytes(safeNumber(operationsMetrics.binaryStorage?.avgResumeBinaryBytes))}</p>
+                  </div>
+                  <div className="bg-sky-100 dark:bg-sky-900/30 rounded-lg p-3">
+                    <p className="opacity-70">{t('metrics.batchFileData', 'Batch file_data')}</p>
+                    <p className="font-semibold">{formatBytes(safeNumber(operationsMetrics.binaryStorage?.batchFileDataBytes))}</p>
+                  </div>
+                </div>
+              </motion.div>
+
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.19 }} className="rounded-xl border bg-teal-50 text-teal-700 border-teal-200 dark:bg-gray-800 dark:text-teal-400 dark:border-teal-700 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-sm font-medium opacity-80">{t('metrics.operationsOcrTitle', 'OCR and cleanup')}</p>
+                    <p className="text-2xl font-bold mt-1">{formatNumber(safeNumber(operationsMetrics.operations?.ocr?.runs))}</p>
+                    <p className="text-xs mt-1 opacity-60">{t('metrics.operationsOcrSubtitle', 'Scanned PDF extraction, temporary files and batch exports')}</p>
+                  </div>
+                  <BoltIcon className="w-10 h-10 opacity-50" />
+                </div>
+                <div className="grid grid-cols-2 gap-3 text-sm mb-4">
+                  <div className="bg-teal-100 dark:bg-teal-900/30 rounded-lg p-3">
+                    <p className="opacity-70">{t('metrics.ocrSuccessFailures', 'OCR success / failures')}</p>
+                    <p className="font-semibold">{safeNumber(operationsMetrics.operations?.ocr?.successfulRuns)} / {safeNumber(operationsMetrics.operations?.ocr?.failedRuns)}</p>
+                  </div>
+                  <div className="bg-teal-100 dark:bg-teal-900/30 rounded-lg p-3">
+                    <p className="opacity-70">{t('metrics.ocrPagesFailures', 'OCR pages / failures')}</p>
+                    <p className="font-semibold">{safeNumber(operationsMetrics.operations?.ocr?.scannedPagesDetected)} / {safeNumber(operationsMetrics.operations?.ocr?.failedPages)}</p>
+                  </div>
+                  <div className="bg-teal-100 dark:bg-teal-900/30 rounded-lg p-3">
+                    <p className="opacity-70">{t('metrics.averageConfidence', 'Average confidence')}</p>
+                    <p className="font-semibold">{safeNumber(operationsMetrics.operations?.ocr?.confidenceSamples) > 0 ? ((safeNumber(operationsMetrics.operations?.ocr?.totalConfidence) / safeNumber(operationsMetrics.operations?.ocr?.confidenceSamples)).toFixed(1) + '%') : 'N/A'}</p>
+                  </div>
+                  <div className="bg-teal-100 dark:bg-teal-900/30 rounded-lg p-3">
+                    <p className="opacity-70">{t('metrics.cumulativeOcrTime', 'Cumulative OCR time')}</p>
+                    <p className="font-semibold">{Math.round(safeNumber(operationsMetrics.operations?.ocr?.totalExtractionTimeMs) / 1000) + 's'}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3 text-sm mb-4">
+                  <div className="bg-teal-100 dark:bg-teal-900/30 rounded-lg p-3">
+                    <p className="opacity-70">{t('metrics.cleanupRuns', 'Cleanup runs')}</p>
+                    <p className="font-semibold">{safeNumber(operationsMetrics.operations?.cleanup?.runs)}</p>
+                  </div>
+                  <div className="bg-teal-100 dark:bg-teal-900/30 rounded-lg p-3">
+                    <p className="opacity-70">{t('metrics.filesDirsDeleted', 'Files / directories deleted')}</p>
+                    <p className="font-semibold">{safeNumber(operationsMetrics.operations?.cleanup?.filesDeleted)} / {safeNumber(operationsMetrics.operations?.cleanup?.directoriesDeleted)}</p>
+                  </div>
+                  <div className="bg-teal-100 dark:bg-teal-900/30 rounded-lg p-3">
+                    <p className="opacity-70">{t('metrics.orphanBatchExports', 'Orphan batch exports')}</p>
+                    <p className="font-semibold">{safeNumber(operationsMetrics.operations?.cleanup?.orphanExportFilesDeleted)}</p>
+                  </div>
+                  <div className="bg-teal-100 dark:bg-teal-900/30 rounded-lg p-3">
+                    <p className="opacity-70">{t('metrics.staleBatchRefs', 'Cleared batch references')}</p>
+                    <p className="font-semibold">{safeNumber(operationsMetrics.operations?.cleanup?.staleExportRefsCleared)}</p>
+                  </div>
+                </div>
+                <p className="text-xs opacity-60">
+                  {t('metrics.tempStorageSummary', 'Temp')}: {formatBytes(safeNumber(operationsMetrics.storage?.tempDirectorySize))} / {safeNumber(operationsMetrics.storage?.tempFileCount)} {t('metrics.filesUnit', 'files')}
+                  {' | '}
+                  {t('metrics.batchExportsSummary', 'Batch exports')}: {formatBytes(safeNumber(operationsMetrics.storage?.batchExportDirectorySize))} / {safeNumber(operationsMetrics.storage?.batchExportFileCount)} {t('metrics.filesUnit', 'files')}
+                </p>
+              </motion.div>
+            </div>
+          )}
+
           {/* APM (Application Performance Monitoring) Section */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.19 }} className="rounded-xl border bg-rose-50 text-rose-600 border-rose-200 dark:bg-gray-800 dark:text-rose-400 dark:border-rose-700 p-6">
@@ -482,7 +681,7 @@ const MetricsPage = (): JSX.Element => {
                   <div>
                     <p className="text-sm font-medium opacity-80">{t('metrics.apm', 'Performance (APM)')}</p>
                     <p className="text-2xl font-bold mt-1">{safeNumber(apmMetrics?.summary?.totalTracked)}</p>
-                    <p className="text-xs mt-1 opacity-60">{t('metrics.slowRequests', 'Requêtes lentes')} ({t('metrics.last5min', '5 min')}: {safeNumber(apmMetrics?.summary?.last5min)})</p>
+                    <p className="text-xs mt-1 opacity-60">{t('metrics.slowRequests', 'RequÃªtes lentes')} ({t('metrics.last5min', '5 min')}: {safeNumber(apmMetrics?.summary?.last5min)})</p>
                   </div>
                   <BoltIcon className="w-10 h-10 opacity-50" />
                 </div>
@@ -493,7 +692,7 @@ const MetricsPage = (): JSX.Element => {
                     <p className="text-xs opacity-50">&gt; {apmMetrics?.config?.slowThreshold || 1000}ms</p>
                   </div>
                   <div className="bg-rose-100 dark:bg-rose-900/30 rounded-lg p-3">
-                    <p className="opacity-70 text-xs">{t('metrics.verySlow', 'Très lentes')}</p>
+                    <p className="opacity-70 text-xs">{t('metrics.verySlow', 'TrÃ¨s lentes')}</p>
                     <p className="font-semibold">{safeNumber(apmMetrics?.summary?.severityCounts?.very_slow)}</p>
                     <p className="text-xs opacity-50">&gt; {apmMetrics?.config?.verySlowThreshold || 5000}ms</p>
                   </div>
@@ -506,12 +705,12 @@ const MetricsPage = (): JSX.Element => {
                 {safeNumber(apmMetrics?.summary?.totalTracked) === 0 && (
                   <p className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
                     <span className="inline-block w-2 h-2 bg-green-500 rounded-full"></span>
-                    {t('metrics.noSlowRequests', 'Aucune requête lente détectée')}
+                    {t('metrics.noSlowRequests', 'Aucune requÃªte lente dÃ©tectÃ©e')}
                   </p>
                 )}
                 {safeNumber(apmMetrics?.summary?.avgDuration) > 0 && (
                   <p className="text-xs opacity-60 mt-2">
-                    {t('metrics.avgDuration', 'Durée moyenne')}: {safeNumber(apmMetrics?.summary?.avgDuration)}ms
+                    {t('metrics.avgDuration', 'DurÃ©e moyenne')}: {safeNumber(apmMetrics?.summary?.avgDuration)}ms
                   </p>
                 )}
               </motion.div>
@@ -549,7 +748,7 @@ const MetricsPage = (): JSX.Element => {
                     </table>
                   </div>
                 ) : (
-                  <p className="text-sm opacity-60 text-center py-4">{t('metrics.noData', 'Aucune donnée')}</p>
+                  <p className="text-sm opacity-60 text-center py-4">{t('metrics.noData', 'Aucune donnÃ©e')}</p>
                 )}
               </motion.div>
             </div>
@@ -657,7 +856,7 @@ const MetricsPage = (): JSX.Element => {
         <div className="text-center py-12">
           <ExclamationTriangleIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
           <p className="text-gray-500">{t('metrics.error')}</p>
-          <button onClick={fetchMetrics} className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">{t('metrics.retry')}</button>
+          <button onClick={refreshAllMetrics} className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">{t('metrics.retry')}</button>
         </div>
       )}
     </motion.div>
@@ -665,3 +864,6 @@ const MetricsPage = (): JSX.Element => {
 };
 
 export default MetricsPage;
+
+
+

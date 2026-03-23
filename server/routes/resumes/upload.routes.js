@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Resume Routes - Upload & File Extraction
  * POST /upload, POST /extract-doc, POST /extract-pdf
  */
@@ -12,6 +12,7 @@ import { MAX_FILE_SIZE, UPLOAD_DIR } from '../../config/constants.js';
 import { authenticateToken } from '../../middleware/auth.middleware.js';
 import { uploadLimiter } from '../../middleware/rateLimit.middleware.js';
 import { safeLog } from '../../utils/logger.backend.js';
+import { metrics } from '../../services/metrics.service.js';
 import { getUserFirmId, isValidUUID, getFirmById } from '../../utils/firmHelpers.js';
 import * as resumesService from '../../services/resumes.service.js';
 
@@ -135,6 +136,14 @@ router.post('/extract-doc', authenticateToken, uploadLimiter, uploadDocFile, asy
 
         await cleanupTempFile(req.file.path);
 
+        metrics.trackUploadActivity({
+            endpoint: 'extract-doc',
+            fileSize: req.file.size,
+            mimeType: req.file.mimetype || 'application/msword',
+            success: true,
+            metadata: { textLength: text.length }
+        });
+
         if (!text || text.length < 10) {
             return res.status(400).json({
                 error: 'Could not extract meaningful text from the DOC file. The file may be empty or corrupted.'
@@ -144,6 +153,15 @@ router.post('/extract-doc', authenticateToken, uploadLimiter, uploadDocFile, asy
         res.json({ text });
     } catch (error) {
         await cleanupTempFile(req.file?.path);
+        if (req.file) {
+            metrics.trackUploadActivity({
+                endpoint: 'extract-doc',
+                fileSize: req.file.size,
+                mimeType: req.file.mimetype || 'application/msword',
+                success: false,
+                metadata: { error: error.message }
+            });
+        }
         safeLog('error', 'Error extracting text from DOC', { error: error.message });
         res.status(500).json({ error: error.message || 'Failed to extract text from DOC file' });
     }
@@ -185,6 +203,7 @@ router.post('/extract-pdf', authenticateToken, uploadLimiter, uploadPdfFile, asy
         let ocrUsed = false;
         let ocrPageCount = 0;
         let totalOcrConfidence = 0;
+        let failedOcrPages = 0;
 
         for (let pageNum = 1; pageNum <= numPages; pageNum++) {
             const page = await pdf.getPage(pageNum);
@@ -249,10 +268,11 @@ router.post('/extract-pdf', authenticateToken, uploadLimiter, uploadPdfFile, asy
                             confidence: confidence?.toFixed(2) || 'N/A',
                             textLength: ocrText?.trim().length || 0
                         });
-                        fullText += `[Page ${pageNum}: OCR failed - insufficient text extracted]\n\n`;
+                        failedOcrPages++;
                     }
                 } catch (ocrError) {
                     ocrPageCount++;
+                    failedOcrPages++;
                     safeLog('error', `OCR failed for page ${pageNum}`, { error: ocrError.message });
                     fullText += `[Page ${pageNum}: OCR error - ${ocrError.message}]\n\n`;
                 }
@@ -305,6 +325,25 @@ router.post('/extract-pdf', authenticateToken, uploadLimiter, uploadPdfFile, asy
         const extractionTime = Date.now() - startTime;
         const avgOcrConfidence = ocrPageCount > 0 ? (totalOcrConfidence / ocrPageCount).toFixed(2) : null;
 
+        metrics.trackUploadActivity({
+            endpoint: 'extract-pdf',
+            fileSize: req.file.size,
+            mimeType: req.file.mimetype || 'application/pdf',
+            success: true,
+            metadata: { pages: numPages, ocrUsed, ocrPageCount, extractionTimeMs: extractionTime }
+        });
+        if (ocrUsed) {
+            metrics.trackOcrActivity({
+                pages: numPages,
+                ocrPageCount,
+                failedPages: failedOcrPages,
+                avgConfidence: avgOcrConfidence ? Number(avgOcrConfidence) : null,
+                extractionTimeMs: extractionTime,
+                success: failedOcrPages === 0,
+                metadata: { fileName: req.file.originalname }
+            });
+        }
+
         safeLog('info', 'PDF extraction completed', {
             fileName: req.file.originalname,
             textLength: fullText.length,
@@ -335,6 +374,19 @@ router.post('/extract-pdf', authenticateToken, uploadLimiter, uploadPdfFile, asy
             await tesseractWorker.terminate().catch(() => {});
         }
         await cleanupTempFile(req.file?.path);
+        if (req.file) {
+            metrics.trackUploadActivity({
+                endpoint: 'extract-pdf',
+                fileSize: req.file.size,
+                mimeType: req.file.mimetype || 'application/pdf',
+                success: false,
+                metadata: { error: error.message }
+            });
+            metrics.trackOcrActivity({
+                success: false,
+                metadata: { fileName: req.file.originalname, error: error.message }
+            });
+        }
         safeLog('error', 'Error extracting text from PDF', { error: error.message });
         res.status(500).json({ error: error.message || 'Failed to extract text from PDF file' });
     }
@@ -447,6 +499,15 @@ router.post('/upload', authenticateToken, uploadLimiter, uploadResumeFile, async
             });
         }
 
+        metrics.trackUploadActivity({
+            endpoint: 'upload',
+            fileSize: req.file.size,
+            mimeType: req.file.mimetype || 'application/octet-stream',
+            success: true,
+            storedInDb: true,
+            metadata: { profileType, resumeId: newResume.id }
+        });
+
         res.status(201).json({
             id: newResume.id,
             Name: newResume.name,
@@ -468,6 +529,16 @@ router.post('/upload', authenticateToken, uploadLimiter, uploadResumeFile, async
             consent_status: newResume.consent_status
         });
     } catch (error) {
+        if (req.file) {
+            metrics.trackUploadActivity({
+                endpoint: 'upload',
+                fileSize: req.file.size,
+                mimeType: req.file.mimetype || 'application/octet-stream',
+                success: false,
+                storedInDb: false,
+                metadata: { error: error.message }
+            });
+        }
         safeLog('error', 'Error uploading resume', { error: error.message });
         await cleanupTempFile(req.file?.path);
         res.status(500).json({ error: 'Failed to upload resume' });
@@ -475,4 +546,7 @@ router.post('/upload', authenticateToken, uploadLimiter, uploadResumeFile, async
 });
 
 export default router;
+
+
+
 

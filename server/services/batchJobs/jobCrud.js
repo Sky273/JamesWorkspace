@@ -307,6 +307,20 @@ export async function updateJobExportFile(jobId, filePath, fileName) {
     }
 }
 
+export async function clearJobExportFile(jobId) {
+    try {
+        await query(`
+            UPDATE batch_jobs
+            SET export_file_path = NULL, export_file_name = NULL
+            WHERE id = $1
+        `, [jobId]);
+        safeLog('debug', 'Cleared batch job export file', { jobId });
+    } catch (error) {
+        safeLog('error', 'Failed to clear batch job export file', { error: error.message, jobId });
+        throw error;
+    }
+}
+
 /**
  * Check if job is complete
  * @param {string} jobId - Job ID

@@ -1,4 +1,4 @@
-// ============================================
+﻿// ============================================
 // METRICS AND MONITORING SERVICE
 // ============================================
 
@@ -56,6 +56,38 @@ class MetricsCollector {
             totalTokens: 0,
             errors: 0
         };
+        this.operations = {
+            uploads: {
+                total: 0,
+                successful: 0,
+                failed: 0,
+                bytesReceived: 0,
+                bytesStoredInDb: 0,
+                byEndpoint: {},
+                byMimeType: {},
+                recent: []
+            },
+            ocr: {
+                runs: 0,
+                successfulRuns: 0,
+                failedRuns: 0,
+                pagesProcessed: 0,
+                scannedPagesDetected: 0,
+                failedPages: 0,
+                totalConfidence: 0,
+                confidenceSamples: 0,
+                totalExtractionTimeMs: 0,
+                recent: []
+            },
+            cleanup: {
+                runs: 0,
+                filesDeleted: 0,
+                directoriesDeleted: 0,
+                orphanExportFilesDeleted: 0,
+                staleExportRefsCleared: 0,
+                recent: []
+            }
+        };
         
         // Persistence intervals
         this.saveInterval = null;
@@ -96,6 +128,23 @@ class MetricsCollector {
                     this.llm.totalTokens = data.llm.totalTokens || 0;
                     this.llm.errors = data.llm.errors || 0;
                 }
+                if (data.operations) {
+                    this.operations.uploads = {
+                        ...this.operations.uploads,
+                        ...(data.operations.uploads || {}),
+                        recent: []
+                    };
+                    this.operations.ocr = {
+                        ...this.operations.ocr,
+                        ...(data.operations.ocr || {}),
+                        recent: []
+                    };
+                    this.operations.cleanup = {
+                        ...this.operations.cleanup,
+                        ...(data.operations.cleanup || {}),
+                        recent: []
+                    };
+                }
                 
                 log.debug('Metrics loaded from file');
             }
@@ -127,6 +176,35 @@ class MetricsCollector {
                     byProvider: this.llm.byProvider,
                     totalTokens: this.llm.totalTokens,
                     errors: this.llm.errors
+                },
+                operations: {
+                    uploads: {
+                        total: this.operations.uploads.total,
+                        successful: this.operations.uploads.successful,
+                        failed: this.operations.uploads.failed,
+                        bytesReceived: this.operations.uploads.bytesReceived,
+                        bytesStoredInDb: this.operations.uploads.bytesStoredInDb,
+                        byEndpoint: this.operations.uploads.byEndpoint,
+                        byMimeType: this.operations.uploads.byMimeType
+                    },
+                    ocr: {
+                        runs: this.operations.ocr.runs,
+                        successfulRuns: this.operations.ocr.successfulRuns,
+                        failedRuns: this.operations.ocr.failedRuns,
+                        pagesProcessed: this.operations.ocr.pagesProcessed,
+                        scannedPagesDetected: this.operations.ocr.scannedPagesDetected,
+                        failedPages: this.operations.ocr.failedPages,
+                        totalConfidence: this.operations.ocr.totalConfidence,
+                        confidenceSamples: this.operations.ocr.confidenceSamples,
+                        totalExtractionTimeMs: this.operations.ocr.totalExtractionTimeMs
+                    },
+                    cleanup: {
+                        runs: this.operations.cleanup.runs,
+                        filesDeleted: this.operations.cleanup.filesDeleted,
+                        directoriesDeleted: this.operations.cleanup.directoriesDeleted,
+                        orphanExportFilesDeleted: this.operations.cleanup.orphanExportFilesDeleted,
+                        staleExportRefsCleared: this.operations.cleanup.staleExportRefsCleared
+                    }
                 }
             };
             
@@ -296,6 +374,111 @@ class MetricsCollector {
         
         if (!success) {
             this.llm.errors++;
+        }
+    }
+
+    trackUploadActivity({
+        endpoint = 'upload',
+        fileSize = 0,
+        mimeType = 'unknown',
+        success = true,
+        storedInDb = false,
+        metadata = {}
+    } = {}) {
+        this.operations.uploads.total++;
+        this.operations.uploads.bytesReceived += Number(fileSize) || 0;
+
+        if (success) {
+            this.operations.uploads.successful++;
+        } else {
+            this.operations.uploads.failed++;
+        }
+
+        if (storedInDb) {
+            this.operations.uploads.bytesStoredInDb += Number(fileSize) || 0;
+        }
+
+        this.operations.uploads.byEndpoint[endpoint] = (this.operations.uploads.byEndpoint[endpoint] || 0) + 1;
+        this.operations.uploads.byMimeType[mimeType] = (this.operations.uploads.byMimeType[mimeType] || 0) + 1;
+
+        this.operations.uploads.recent.push({
+            timestamp: new Date().toISOString(),
+            endpoint,
+            fileSize: Number(fileSize) || 0,
+            mimeType,
+            success,
+            storedInDb,
+            ...metadata
+        });
+        if (this.operations.uploads.recent.length > 50) {
+            this.operations.uploads.recent.shift();
+        }
+    }
+
+    trackOcrActivity({
+        pages = 0,
+        ocrPageCount = 0,
+        failedPages = 0,
+        avgConfidence = null,
+        extractionTimeMs = 0,
+        success = true,
+        metadata = {}
+    } = {}) {
+        this.operations.ocr.runs++;
+        if (success) {
+            this.operations.ocr.successfulRuns++;
+        } else {
+            this.operations.ocr.failedRuns++;
+        }
+
+        this.operations.ocr.pagesProcessed += Number(pages) || 0;
+        this.operations.ocr.scannedPagesDetected += Number(ocrPageCount) || 0;
+        this.operations.ocr.failedPages += Number(failedPages) || 0;
+        this.operations.ocr.totalExtractionTimeMs += Number(extractionTimeMs) || 0;
+
+        if (avgConfidence !== null && avgConfidence !== undefined && !Number.isNaN(Number(avgConfidence))) {
+            this.operations.ocr.totalConfidence += Number(avgConfidence);
+            this.operations.ocr.confidenceSamples++;
+        }
+
+        this.operations.ocr.recent.push({
+            timestamp: new Date().toISOString(),
+            pages: Number(pages) || 0,
+            ocrPageCount: Number(ocrPageCount) || 0,
+            failedPages: Number(failedPages) || 0,
+            avgConfidence: avgConfidence === null || avgConfidence === undefined ? null : Number(avgConfidence),
+            extractionTimeMs: Number(extractionTimeMs) || 0,
+            success,
+            ...metadata
+        });
+        if (this.operations.ocr.recent.length > 50) {
+            this.operations.ocr.recent.shift();
+        }
+    }
+
+    trackCleanupActivity({
+        filesDeleted = 0,
+        directoriesDeleted = 0,
+        orphanExportFilesDeleted = 0,
+        staleExportRefsCleared = 0,
+        metadata = {}
+    } = {}) {
+        this.operations.cleanup.runs++;
+        this.operations.cleanup.filesDeleted += Number(filesDeleted) || 0;
+        this.operations.cleanup.directoriesDeleted += Number(directoriesDeleted) || 0;
+        this.operations.cleanup.orphanExportFilesDeleted += Number(orphanExportFilesDeleted) || 0;
+        this.operations.cleanup.staleExportRefsCleared += Number(staleExportRefsCleared) || 0;
+
+        this.operations.cleanup.recent.push({
+            timestamp: new Date().toISOString(),
+            filesDeleted: Number(filesDeleted) || 0,
+            directoriesDeleted: Number(directoriesDeleted) || 0,
+            orphanExportFilesDeleted: Number(orphanExportFilesDeleted) || 0,
+            staleExportRefsCleared: Number(staleExportRefsCleared) || 0,
+            ...metadata
+        });
+        if (this.operations.cleanup.recent.length > 50) {
+            this.operations.cleanup.recent.shift();
         }
     }
 
@@ -648,6 +831,38 @@ class MetricsCollector {
             totalTokens: 0,
             errors: 0
         };
+        this.operations = {
+            uploads: {
+                total: 0,
+                successful: 0,
+                failed: 0,
+                bytesReceived: 0,
+                bytesStoredInDb: 0,
+                byEndpoint: {},
+                byMimeType: {},
+                recent: []
+            },
+            ocr: {
+                runs: 0,
+                successfulRuns: 0,
+                failedRuns: 0,
+                pagesProcessed: 0,
+                scannedPagesDetected: 0,
+                failedPages: 0,
+                totalConfidence: 0,
+                confidenceSamples: 0,
+                totalExtractionTimeMs: 0,
+                recent: []
+            },
+            cleanup: {
+                runs: 0,
+                filesDeleted: 0,
+                directoriesDeleted: 0,
+                orphanExportFilesDeleted: 0,
+                staleExportRefsCleared: 0,
+                recent: []
+            }
+        };
         
         // Save reset state
         this.saveMetrics();
@@ -682,3 +897,8 @@ class MetricsCollector {
 export const metrics = new MetricsCollector();
 
 export default metrics;
+
+
+
+
+

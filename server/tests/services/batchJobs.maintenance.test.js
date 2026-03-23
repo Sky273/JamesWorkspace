@@ -31,7 +31,7 @@ describe('Batch Jobs - Maintenance', () => {
 
             const result = await cleanupOldJobs(7);
 
-            expect(result).toEqual({ deletedJobs: 2, clearedFileData: 5 });
+            expect(result).toEqual({ deletedJobs: 2, clearedFileData: 5, orphanExportFilesDeleted: 0, staleExportRefsCleared: 0 });
             expect(query.mock.calls[0][0]).toContain('file_data = NULL');
             expect(query.mock.calls[1][0]).toContain('DELETE FROM batch_jobs');
         });
@@ -60,7 +60,7 @@ describe('Batch Jobs - Maintenance', () => {
 
             const result = await cleanupOldJobs();
 
-            expect(result).toEqual({ deletedJobs: 0, clearedFileData: 0 });
+            expect(result).toEqual({ deletedJobs: 0, clearedFileData: 0, orphanExportFilesDeleted: 0, staleExportRefsCleared: 0 });
         });
     });
 

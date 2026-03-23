@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Tests for Health Service
  * Tests database health checks and metrics
  */
@@ -42,18 +42,24 @@ describe('Health Service', () => {
     });
 
     describe('getDatabaseMetrics', () => {
-        it('should return size, table stats, connection stats, and query time', async () => {
+        it('should return size, table stats, connection stats, binary storage stats, and query time', async () => {
             query
                 .mockResolvedValueOnce({ rows: [{ db_size: 123456, db_size_pretty: '120 kB' }] })
                 .mockResolvedValueOnce({ rows: [{ table_name: 'resumes', row_count: 100 }] })
-                .mockResolvedValueOnce({ rows: [{ total_connections: '5', active_connections: '2', idle_connections: '3' }] });
+                .mockResolvedValueOnce({ rows: [{ total_connections: '5', active_connections: '2', idle_connections: '3' }] })
+                .mockResolvedValueOnce({ rows: [{ resumes_with_binary: '4', resume_binary_bytes: '4096', avg_resume_binary_bytes: '1024', max_resume_binary_bytes: '2048' }] })
+                .mockResolvedValueOnce({ rows: [{ items_with_file_data: '2', total_file_data_bytes: '512' }] });
 
             const result = await getDatabaseMetrics();
 
             expect(result.sizeResult.rows[0].db_size).toBe(123456);
             expect(result.tableStatsResult.rows).toHaveLength(1);
             expect(result.connectionStatsResult.rows[0].total_connections).toBe('5');
+            expect(result.binaryStorageResult.rows[0].resume_binary_bytes).toBe('4096');
+            expect(result.batchStorageResult.rows[0].total_file_data_bytes).toBe('512');
             expect(result.queryTime).toBeGreaterThanOrEqual(0);
         });
     });
 });
+
+

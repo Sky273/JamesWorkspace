@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Tests for Metrics routes
  * GET /, GET /summary, GET /performance, GET /errors, GET /cache, GET /llm,
  * POST /reset, GET /database, GET /apm, GET /apm/slow-requests, DELETE /apm/slow-requests
@@ -279,6 +279,37 @@ describe('Metrics Routes', () => {
     });
 
     // ==========================================
+    // GET /api/metrics/operations
+    // ==========================================
+    describe('GET /operations', () => {
+        it('should return operational metrics', async () => {
+            mockGetMetrics.mockReturnValueOnce({
+                ...sampleMetrics,
+                operations: {
+                    uploads: { total: 3, successful: 2, failed: 1 },
+                    ocr: { runs: 2 },
+                    cleanup: { runs: 1 }
+                }
+            });
+
+            mockDbQuery
+                .mockResolvedValueOnce({ rows: [{ db_size: '52428800', db_size_pretty: '50 MB' }] })
+                .mockResolvedValueOnce({ rows: [{ table_name: 'resumes', row_count: 100, dead_rows: 5 }] })
+                .mockResolvedValueOnce({ rows: [{ total_connections: 10, active_connections: 3, idle_connections: 7 }] })
+                .mockResolvedValueOnce({ rows: [{ resumes_with_binary: '4', resume_binary_bytes: '4096', avg_resume_binary_bytes: '1024', max_resume_binary_bytes: '2048' }] })
+                .mockResolvedValueOnce({ rows: [{ items_with_file_data: '2', total_file_data_bytes: '512' }] });
+
+            const res = await request(app)
+                .get('/api/metrics/operations')
+                .set('Authorization', 'Bearer valid-token');
+
+            expect(res.status).toBe(200);
+            expect(res.body.operations.uploads.total).toBe(3);
+            expect(res.body.binaryStorage.resumeBinaryBytes).toBe(4096);
+            expect(res.body.binaryStorage.batchFileDataBytes).toBe(512);
+        });
+    });
+    // ==========================================
     // GET /api/metrics/apm
     // ==========================================
     describe('GET /apm', () => {
@@ -342,3 +373,4 @@ describe('Metrics Routes', () => {
         });
     });
 });
+

@@ -531,6 +531,12 @@ router.get('/:id/download', authenticateToken, async (req, res) => {
                         error: err.message 
                     });
                 } else {
+                    clearJobExportFile(id).catch((clearErr) => {
+                        safeLog('warn', 'Failed to clear export file metadata after download', {
+                            jobId: id,
+                            error: clearErr.message
+                        });
+                    });
                     safeLog('debug', 'Export file deleted after download', { 
                         filePath: job.export_file_path 
                     });
