@@ -8,6 +8,9 @@ import { fileURLToPath } from 'url';
 import express from 'express';
 import { safeLog } from '../utils/logger.backend.js';
 import { swaggerDocument } from './swagger.js';
+import { authenticateToken } from '../middleware/auth.middleware.js';
+import { userRateLimit } from '../middleware/rateLimit.middleware.js';
+import { validateBody, generatePdfProxySchema, generateDocxProxySchema } from '../utils/validation.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -317,8 +320,12 @@ export function registerApiRoutes(app) {
  */
 export function registerProxyRoutes(app) {
     const PDF_SERVER_URL = process.env.PDF_SERVER_URL || 'http://localhost:3002';
+    const proxyGuards = [
+        authenticateToken,
+        userRateLimit(20, 15 * 60 * 1000)
+    ];
 
-    app.post('/generate-pdf', async (req, res) => {
+    app.post('/generate-pdf', ...proxyGuards, validateBody(generatePdfProxySchema), async (req, res) => {
         try {
             safeLog('info', 'Proxying PDF generation request to PDF server');
             
@@ -351,7 +358,7 @@ export function registerProxyRoutes(app) {
         }
     });
 
-    app.post('/generate-docx', async (req, res) => {
+    app.post('/generate-docx', ...proxyGuards, validateBody(generateDocxProxySchema), async (req, res) => {
         try {
             safeLog('info', 'Proxying DOCX generation request to PDF server');
             
@@ -385,3 +392,5 @@ export function registerProxyRoutes(app) {
         }
     });
 }
+
+

@@ -15,7 +15,7 @@ import toast from 'react-hot-toast';
 import { createSafeHtml } from '../utils/sanitizer.frontend';
 import ExportModal from './AdaptationsPage_ExportModal';
 import AdaptationAnalysisView from '../components/AdaptationAnalysisView';
-import { createAuthOptionsWithCsrf, fetchWithAuth } from '../utils/apiInterceptor';
+import { createAuthOptionsWithCsrf, fetchWithAuth, fetchWithCsrfRetry } from '../utils/apiInterceptor';
 import logger from '../utils/logger.frontend';
 import { formatDateTime } from '../utils/dateFormatter';
 
@@ -284,7 +284,7 @@ const AdaptationsPage = (): JSX.Element => {
         processedFooter = processedFooter.replace(/-title-/g, candidateTitle);
       }
 
-      const response = await fetchWithAuth('/generate-pdf', {
+      const exportOptions = await createAuthOptionsWithCsrf({
         method: 'POST',
         headers: { 'Content-Type': 'application/json; charset=utf-8' },
         body: JSON.stringify({ 
@@ -296,6 +296,8 @@ const AdaptationsPage = (): JSX.Element => {
           footerHeight: template.FooterHeight || 25
         })
       });
+
+      const response = await fetchWithCsrfRetry('/generate-pdf', exportOptions, 300000);
 
       if (!response.ok) throw new Error('Failed to generate PDF');
 
@@ -584,3 +586,6 @@ const AdaptationsPage = (): JSX.Element => {
 };
 
 export default AdaptationsPage;
+
+
+

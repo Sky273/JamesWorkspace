@@ -19,7 +19,7 @@ import { SkeletonCard } from '../components/ui/Skeleton';
 import ExportTab, { ExportFormat } from '../components/ResumeAnalysis/ExportTab';
 import ConsentBadge, { ConsentStatus } from '../components/ConsentBadge';
 import SendEmailModal from '../components/ResumeAnalysis/SendEmailModal';
-import { fetchWithAuth } from '../utils/apiInterceptor';
+import { createAuthOptionsWithCsrf, fetchWithCsrfRetry } from '../utils/apiInterceptor';
 import { removeSuggestionMarkers } from '../utils/tinymceSuggestionsPlugin';
 
 interface Template {
@@ -138,7 +138,7 @@ const ResumeExportPage = (): JSX.Element => {
         ? 'application/pdf' 
         : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
-      const response = await fetchWithAuth(endpoint, {
+      const exportOptions = await createAuthOptionsWithCsrf({
         method: 'POST',
         headers: { 'Content-Type': 'application/json; charset=utf-8' },
         body: JSON.stringify({
@@ -150,7 +150,9 @@ const ResumeExportPage = (): JSX.Element => {
           footerHeight: template.FooterHeight || 25,
           format: selectedFormat
         })
-      }, 300000); // 5 minutes for PDF/DOCX generation
+      });
+
+      const response = await fetchWithCsrfRetry(endpoint, exportOptions, 300000); // 5 minutes for PDF/DOCX generation
 
       if (!response.ok) throw new Error(`Failed to generate ${selectedFormat.toUpperCase()}`);
 
@@ -385,10 +387,10 @@ const ResumeExportPage = (): JSX.Element => {
             const endpoint = format === 'pdf' ? '/generate-pdf' : '/generate-docx';
             const fileExtension = format === 'pdf' ? 'pdf' : format;
             
-            const response = await fetchWithAuth(endpoint, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json; charset=utf-8' },
-              body: JSON.stringify({
+            const exportOptions = await createAuthOptionsWithCsrf({
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
+        body: JSON.stringify({
                 htmlContent: processedBody,
                 filename: `${candidateName.replace(/\s+/g, '_')}.${fileExtension}`,
                 stylesheet: template.Stylesheet || '',
@@ -397,7 +399,9 @@ const ResumeExportPage = (): JSX.Element => {
                 footerHeight: template.FooterHeight || 25,
                 format: format
               })
-            }, 300000); // 5 minutes for PDF/DOCX generation
+      });
+
+      const response = await fetchWithCsrfRetry(endpoint, exportOptions, 300000); // 5 minutes for PDF/DOCX generation
             
             if (!response.ok) throw new Error(`Failed to generate ${format.toUpperCase()}`);
             return await response.blob();
@@ -409,3 +413,5 @@ const ResumeExportPage = (): JSX.Element => {
 };
 
 export default ResumeExportPage;
+
+

@@ -239,9 +239,7 @@ export function configureCsrf(app) {
         '/api/auth/signin',
         '/api/auth/refresh',
         '/api/auth/logout',
-        '/api/auth/register',
-        '/generate-pdf',  // PDF generation proxy - internal server-to-server call
-        '/generate-docx'  // DOCX generation proxy - internal server-to-server call
+        '/api/auth/register'
     ];
 
     // Paths that start with these prefixes are exempt from CSRF (public consent response)
@@ -297,3 +295,4 @@ export function configureCsrf(app) {
 
     safeLog('info', 'CSRF protection enabled');
 }
+

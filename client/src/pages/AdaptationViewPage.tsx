@@ -15,7 +15,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { useAuthFetch } from '../hooks/useAuthFetch';
 import { createSafeHtml } from '../utils/sanitizer.frontend';
-import { createAuthOptionsWithCsrf, fetchWithAuth } from '../utils/apiInterceptor';
+import { createAuthOptionsWithCsrf, fetchWithAuth, fetchWithCsrfRetry } from '../utils/apiInterceptor';
 import { templateService } from '../utils/templateService';
 import { TiptapEditor } from '../components/TiptapEditor';
 import type { TiptapEditorRef } from '../components/TiptapEditor';
@@ -259,7 +259,7 @@ const AdaptationViewPage = (): JSX.Element => {
         processedFooter = processedFooter.replace(/-title-/g, title);
       }
 
-      const response = await fetchWithAuth('/generate-pdf', {
+      const exportOptions = await createAuthOptionsWithCsrf({
         method: 'POST',
         headers: { 'Content-Type': 'application/json; charset=utf-8' },
         body: JSON.stringify({ 
@@ -270,7 +270,9 @@ const AdaptationViewPage = (): JSX.Element => {
           footerContent: processedFooter || undefined,
           footerHeight: template.FooterHeight || 25
         })
-      }, 300000); // 5 minutes for PDF generation
+      });
+
+      const response = await fetchWithCsrfRetry('/generate-pdf', exportOptions, 300000); // 5 minutes for PDF generation
 
       if (!response.ok) throw new Error('Failed to generate PDF');
 
@@ -580,7 +582,7 @@ const AdaptationViewPage = (): JSX.Element => {
               })
             });
 
-            const response = await fetchWithAuth(endpoint, options, 300000); // 5 minutes for PDF/DOCX generation
+            const response = await fetchWithCsrfRetry(endpoint, options, 300000); // 5 minutes for PDF/DOCX generation
             if (!response.ok) throw new Error(`Failed to generate ${format.toUpperCase()}`);
             return await response.blob();
           }}
@@ -595,3 +597,5 @@ const AdaptationViewPage = (): JSX.Element => {
 };
 
 export default AdaptationViewPage;
+
+

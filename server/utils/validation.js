@@ -6,6 +6,7 @@
 import { z } from 'zod';
 import { MAX_TEXT_LENGTH } from '../config/constants.js';
 import { safeLog } from './logger.backend.js';
+import { sanitizeDocumentFilename, sanitizeDocumentHtmlContent, sanitizeDocumentStylesheet } from './sanitizer.backend.js';
 
 // ============================================
 // ZOD SCHEMAS
@@ -363,6 +364,78 @@ export const sharePdfSchema = z.object({
   footerHeight: z.union([z.string(), z.number()]).optional()
 }).strip();
 
+const DOCUMENT_PROXY_MAX_HTML_SIZE = 5 * 1024 * 1024;
+const DOCUMENT_PROXY_MAX_SECTION_SIZE = 256 * 1024;
+const DOCUMENT_PROXY_MAX_STYLESHEET_SIZE = 200 * 1024;
+
+const footerHeightSchema = z.preprocess(
+  (value) => {
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      return trimmed === '' ? undefined : Number(trimmed);
+    }
+    return value;
+  },
+  z.number().min(10).max(250)
+).optional();
+
+const documentHtmlSchema = z.string()
+  .min(1)
+  .max(DOCUMENT_PROXY_MAX_HTML_SIZE)
+  .transform((value) => sanitizeDocumentHtmlContent(value))
+  .refine((value) => value.trim().length > 0, {
+    message: 'htmlContent cannot be empty after sanitization'
+  });
+
+const optionalDocumentSectionSchema = z.string()
+  .max(DOCUMENT_PROXY_MAX_SECTION_SIZE)
+  .transform((value) => sanitizeDocumentHtmlContent(value))
+  .optional();
+
+const documentStylesheetSchema = z.string()
+  .max(DOCUMENT_PROXY_MAX_STYLESHEET_SIZE)
+  .transform((value) => sanitizeDocumentStylesheet(value))
+  .optional();
+
+export const generatePdfProxySchema = z.object({
+  htmlContent: documentHtmlSchema,
+  filename: z.string().min(1).max(255),
+  stylesheet: documentStylesheetSchema,
+  headerContent: optionalDocumentSectionSchema,
+  footerContent: optionalDocumentSectionSchema,
+  footerHeight: footerHeightSchema,
+  format: z.preprocess(
+    (value) => typeof value === 'string' ? value.toLowerCase() : value,
+    z.enum(['pdf']).optional()
+  )
+}).strict().transform((data) => ({
+  htmlContent: data.htmlContent,
+  filename: sanitizeDocumentFilename(data.filename, 'pdf'),
+  stylesheet: data.stylesheet,
+  headerContent: data.headerContent,
+  footerContent: data.footerContent,
+  footerHeight: data.footerHeight
+}));
+
+export const generateDocxProxySchema = z.object({
+  htmlContent: documentHtmlSchema,
+  filename: z.string().min(1).max(255),
+  stylesheet: documentStylesheetSchema,
+  headerContent: optionalDocumentSectionSchema,
+  footerContent: optionalDocumentSectionSchema,
+  footerHeight: footerHeightSchema,
+  format: z.preprocess(
+    (value) => typeof value === 'string' ? value.toLowerCase() : value,
+    z.enum(['doc', 'docx']).optional()
+  )
+}).strict().transform((data) => {
+  const format = data.format === 'doc' ? 'doc' : 'docx';
+  return {
+    ...data,
+    format,
+    filename: sanitizeDocumentFilename(data.filename, format)
+  };
+});
 // GDPR Mail Test schema
 export const gdprMailTestSchema = z.object({
   email: z.string().email()
@@ -815,3 +888,5 @@ export const validators = {
     return { valid: true, value };
   }
 };
+
+
