@@ -8,6 +8,41 @@ import * as clientsService from '../services/clients.service.js';
 
 const router = express.Router();
 
+function getFirstDefinedValue(source, keys) {
+    for (const key of keys) {
+        if (Object.prototype.hasOwnProperty.call(source, key) && source[key] !== undefined) {
+            return source[key];
+        }
+    }
+    return undefined;
+}
+
+function normalizeClientPayload(payload = {}) {
+    return {
+        ...payload,
+        name: getFirstDefinedValue(payload, ['name', 'Name']),
+        type: getFirstDefinedValue(payload, ['type', 'Type']),
+        status: getFirstDefinedValue(payload, ['status', 'Status']),
+        address: getFirstDefinedValue(payload, ['address', 'Address']),
+        website: getFirstDefinedValue(payload, ['website', 'Website']),
+        industry: getFirstDefinedValue(payload, ['industry', 'Industry']),
+        notes: getFirstDefinedValue(payload, ['notes', 'Notes']),
+        firm_id: getFirstDefinedValue(payload, ['firm_id', 'firmId', 'FirmId'])
+    };
+}
+
+function normalizeContactPayload(payload = {}) {
+    return {
+        ...payload,
+        name: getFirstDefinedValue(payload, ['name', 'Name']),
+        role: getFirstDefinedValue(payload, ['role', 'Role']),
+        email: getFirstDefinedValue(payload, ['email', 'Email']),
+        phone: getFirstDefinedValue(payload, ['phone', 'Phone']),
+        job_title: getFirstDefinedValue(payload, ['job_title', 'jobTitle', 'JobTitle']),
+        is_primary: getFirstDefinedValue(payload, ['is_primary', 'isPrimary', 'IsPrimary'])
+    };
+}
+
 // ============================================
 // CLIENTS ROUTES
 // ============================================
@@ -95,7 +130,8 @@ router.post('/', authenticateToken, userRateLimit(), validateBody(createClientSc
             return res.status(400).json({ error: 'User must belong to a firm to create clients' });
         }
 
-        const { name, type, status, address, website, industry, notes, firm_id } = req.body;
+        const normalizedClient = normalizeClientPayload(req.body);
+        const { name, type, status, address, website, industry, notes, firm_id } = normalizedClient;
 
         if (!name) {
             return res.status(400).json({ error: 'Client name is required' });
@@ -151,7 +187,8 @@ router.put('/:id', authenticateToken, userRateLimit(), validateParams('id'), val
             return res.status(403).json({ error: 'Access denied' });
         }
 
-        const { name, type, status, address, website, industry, notes, firm_id } = req.body;
+        const normalizedClient = normalizeClientPayload(req.body);
+        const { name, type, status, address, website, industry, notes, firm_id } = normalizedClient;
 
         // Handle firm_id update (admin only)
         let targetFirmId = existing.firm_id;
@@ -272,13 +309,14 @@ router.post('/:clientId/contacts', authenticateToken, userRateLimit(), validateB
         const access = await checkClientAccess(req, res, clientId);
         if (!access.ok) return;
 
-        const { name, role, email, phone, is_primary } = req.body;
+        const normalizedContact = normalizeContactPayload(req.body);
+        const { name, role, email, phone, job_title, is_primary } = normalizedContact;
 
         if (!name) {
             return res.status(400).json({ error: 'Contact name is required' });
         }
 
-        const contact = await clientsService.createContact(clientId, { name, role, email, phone, is_primary });
+        const contact = await clientsService.createContact(clientId, { name, role, email, phone, job_title, is_primary });
         return res.status(201).json(contact);
     } catch (error) {
         safeLog('error', 'Error creating contact', { error: error.message, clientId: req.params.clientId });
@@ -295,9 +333,10 @@ router.put('/:clientId/contacts/:id', authenticateToken, userRateLimit(), valida
         const access = await checkClientAccess(req, res, clientId);
         if (!access.ok) return;
 
-        const { name, role, email, phone, is_primary } = req.body;
+        const normalizedContact = normalizeContactPayload(req.body);
+        const { name, role, email, phone, job_title, is_primary } = normalizedContact;
 
-        const updated = await clientsService.updateContact(id, clientId, { name, role, email, phone, is_primary });
+        const updated = await clientsService.updateContact(id, clientId, { name, role, email, phone, job_title, is_primary });
 
         if (!updated) {
             return res.status(404).json({ error: 'Contact not found' });
