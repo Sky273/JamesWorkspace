@@ -300,10 +300,23 @@ describe('Batch Jobs Routes - POST /api/batch-jobs', () => {
             .post('/api/batch-jobs')
             .set('Authorization', 'Bearer valid-token')
             .set('Content-Type', 'application/json')
-            .send({ improve: true });
+            .send({
+                improve: true,
+                profile_type: 'external',
+                candidate_name: 'Jane Candidate',
+                candidate_email: 'jane@example.com'
+            });
 
         expect(res.status).toBe(201);
         expect(res.body.id).toBe('new-job-123');
+        expect(mockCreateJob).toHaveBeenCalledWith(expect.objectContaining({
+            options: expect.objectContaining({
+                improve: true,
+                profileType: 'external',
+                candidateName: 'Jane Candidate',
+                candidateEmail: 'jane@example.com'
+            })
+        }));
     });
 });
 

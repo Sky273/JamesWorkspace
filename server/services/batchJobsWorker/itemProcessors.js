@@ -10,12 +10,71 @@ import { ITEM_STATUS, updateJobItemStatus } from '../batchJobs.service.js';
 import { parseScore, generateTrigram } from './helpers.js';
 import { extractTextFromBuffer } from './textExtraction.js';
 import { analyzeResumeWithLLM, improveResumeWithLLM } from './llmIntegration.js';
+import crypto from 'crypto';
+import { markConsentError, sendConsentRequest } from '../consent.service.js';
 
 /**
  * Process an import item (upload + analyze + optionally improve)
  */
+function normalizeProfileType(profileType) {
+    return profileType === 'employee' ? 'employee' : 'external';
+}
+
+function buildConsentMetadata(options = {}) {
+    const profileType = normalizeProfileType(options.profileType);
+    const candidateName = typeof options.candidateName === 'string' && options.candidateName.trim().length > 0
+        ? options.candidateName.trim()
+        : null;
+    const candidateEmail = profileType === 'external' && typeof options.candidateEmail === 'string' && options.candidateEmail.trim().length > 0
+        ? options.candidateEmail.trim()
+        : null;
+    const consentStatus = profileType === 'employee' ? 'not_required' : 'pending_consent';
+    const consentToken = profileType === 'external' ? crypto.randomBytes(32).toString('hex') : null;
+    const consentTokenExpiresAt = profileType === 'external'
+        ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
+        : null;
+    const consentRequestedAt = profileType === 'external' ? new Date() : null;
+    const retentionUntil = profileType === 'employee'
+        ? null
+        : new Date(Date.now() + 2 * 365 * 24 * 60 * 60 * 1000);
+
+    return {
+        profileType,
+        candidateName,
+        candidateEmail,
+        consentStatus,
+        consentToken,
+        consentTokenExpiresAt,
+        consentRequestedAt,
+        retentionUntil
+    };
+}
+
+async function sendConsentRequestIfNeeded(resumeId, consentMetadata, firmId) {
+    if (consentMetadata.profileType !== 'external' || !consentMetadata.candidateEmail || !firmId) {
+        return;
+    }
+
+    try {
+        await sendConsentRequest(resumeId);
+    } catch (error) {
+        safeLog('error', 'Failed to send GDPR consent email for batch import', {
+            resumeId,
+            firmId,
+            error: error.message
+        });
+        await markConsentError(resumeId).catch(markError => {
+            safeLog('error', 'Failed to mark consent email error for batch import', {
+                resumeId,
+                firmId,
+                error: markError.message
+            });
+        });
+    }
+}
 export async function processImportItem(item, job, options) {
     const { improve = false } = options;
+    const consentMetadata = buildConsentMetadata(options);
     
     safeLog('info', 'Starting import item processing', { 
         itemId: item.id, 
@@ -23,7 +82,10 @@ export async function processImportItem(item, job, options) {
         improve,
         hasFileData: !!item.file_data,
         fileDataLength: item.file_data?.length,
-        mimeType: item.file_mime_type
+        mimeType: item.file_mime_type,
+        profileType: consentMetadata.profileType,
+        hasCandidateName: !!consentMetadata.candidateName,
+        hasCandidateEmail: !!consentMetadata.candidateEmail
     });
 
     // Step 1: Create resume record with file data (like single upload)
@@ -42,34 +104,46 @@ export async function processImportItem(item, job, options) {
             firm_id,
             firm_name,
             profile_type,
+            candidate_name,
+            candidate_email,
             consent_status,
+            consent_token,
+            consent_token_expires_at,
+            consent_requested_at,
+            retention_until,
             created_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, NOW())
         RETURNING id
     `, [
-        item.file_name,
+        consentMetadata.candidateName || item.file_name,
         item.file_name,
         item.relative_path || null,
         item.file_data,
         item.file_data?.length || 0,
         item.file_mime_type || 'application/octet-stream',
-        null, // Will be updated after insert with correct ID
+        null,
         'processing',
         job.firm_id,
         job.firm_name || null,
-        'employee',
-        'not_required'
+        consentMetadata.profileType,
+        consentMetadata.candidateName,
+        consentMetadata.candidateEmail,
+        consentMetadata.consentStatus,
+        consentMetadata.consentToken,
+        consentMetadata.consentTokenExpiresAt,
+        consentMetadata.consentRequestedAt,
+        consentMetadata.retentionUntil
     ]);
 
     const resumeId = resumeResult.rows[0].id;
 
-    // Update resume_file_url with correct ID (like single upload)
     await query(
         `UPDATE resumes SET resume_file_url = $1 WHERE id = $2`,
         [`/api/resumes/${resumeId}/download`, resumeId]
     );
 
-    // Update item with resume_id
+    await sendConsentRequestIfNeeded(resumeId, consentMetadata, job.firm_id);
+
     await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, { 
         progress: 30,
         resume_id: resumeId 
@@ -121,7 +195,17 @@ export async function processImportItem(item, job, options) {
     // Check if name extraction failed - only for new analysis, not resumed items
     // Detect: XXX (new instruction), Candidat (old instruction), or CAN (trigram of Candidat)
     const nameUpper = analysis.name?.toUpperCase()?.trim();
-    const isNameExtractionFailed = nameUpper === 'XXX' || nameUpper === 'CANDIDAT' || nameUpper === 'CAN';
+    let isNameExtractionFailed = nameUpper === 'XXX' || nameUpper === 'CANDIDAT' || nameUpper === 'CAN';
+
+    if (!isResumedWithName && isNameExtractionFailed && consentMetadata.candidateName) {
+        analysis.name = consentMetadata.candidateName;
+        isNameExtractionFailed = false;
+        safeLog('info', 'Using candidate name provided at upload as analysis fallback', {
+            itemId: item.id,
+            resumeId,
+            fallbackName: consentMetadata.candidateName
+        });
+    }
     
     if (!isResumedWithName && isNameExtractionFailed) {
         safeLog('warn', 'Name extraction failed - pausing item for manual input', { 

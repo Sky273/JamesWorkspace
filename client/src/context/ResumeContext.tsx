@@ -5,7 +5,6 @@
  */
 
 import { createContext, useContext, useState, useCallback, useRef, ReactNode } from 'react';
-import { extractResumeText } from '../utils/resumeProcessing';
 import { useAuth } from './AuthContext';
 import { createAuthOptionsWithCsrf, fetchWithAuth } from '../utils/apiInterceptor';
 import logger from '../utils/logger.frontend';
@@ -49,6 +48,9 @@ interface ResumeProviderProps {
 }
 
 const ResumeContext = createContext<ResumeContextType | undefined>(undefined);
+
+const SINGLE_UPLOAD_JOB_POLL_INTERVAL_MS = 2000;
+const SINGLE_UPLOAD_JOB_TIMEOUT_MS = 10 * 60 * 1000;
 
 export const useResume = (): ResumeContextType => {
   const context = useContext(ResumeContext);
@@ -135,11 +137,109 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
     }
   }, [setResumes]);
 
+  const deriveUploadProcessingStep = (jobData: { status?: string; items?: Array<{ progress?: number; status?: string }> }): ProcessingStep => {
+    const item = jobData.items?.[0];
+    const progress = typeof item?.progress === 'number' ? item.progress : 0;
+
+    if (item?.status === 'success' || jobData.status === 'completed') {
+      return 'analyze';
+    }
+    if (progress >= 40 || item?.status === 'pending_name') {
+      return 'analyze';
+    }
+    if (progress >= 30 || item?.status === 'processing') {
+      return 'extract';
+    }
+    return 'upload';
+  };
+
+  const fetchResumeById = useCallback(async (resumeId: string, signal: AbortSignal): Promise<Resume> => {
+    const fetchOptions = await createAuthOptionsWithCsrf({ method: 'GET' });
+    const response = await fetchWithAuth(`/api/resumes/${resumeId}`, {
+      ...fetchOptions,
+      signal
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Failed to fetch resume' }));
+      throw new Error(errorData.error || 'Failed to fetch resume');
+    }
+
+    return normalizeResume(await response.json());
+  }, []);
+
+  const waitForUploadJobCompletion = useCallback(async (jobId: string, signal: AbortSignal): Promise<string> => {
+    const startedAt = Date.now();
+
+    while (Date.now() - startedAt < SINGLE_UPLOAD_JOB_TIMEOUT_MS) {
+      if (signal.aborted) {
+        throw new Error('Operation aborted');
+      }
+
+      const fetchOptions = await createAuthOptionsWithCsrf({ method: 'GET' });
+      const jobResponse = await fetchWithAuth(`/api/batch-jobs/${jobId}`, {
+        ...fetchOptions,
+        signal
+      }, 30000);
+
+      if (!jobResponse.ok) {
+        const errorData = await jobResponse.json().catch(() => ({ error: 'Failed to fetch upload job' }));
+        throw new Error(errorData.error || 'Failed to fetch upload job');
+      }
+
+      const jobData = await jobResponse.json() as {
+        status?: string;
+        error_message?: string;
+        items?: Array<{
+          status?: string;
+          progress?: number;
+          resume_id?: string;
+          error_message?: string;
+        }>;
+      };
+
+      setProcessingStep(deriveUploadProcessingStep(jobData));
+
+      const item = jobData.items?.[0];
+      if (item?.status === 'pending_name') {
+        throw new Error("L'analyse du CV n?cessite une confirmation du nom du candidat.");
+      }
+
+      if (item?.status === 'error') {
+        throw new Error(item.error_message || 'Failed to process resume');
+      }
+
+      if (jobData.status === 'failed' || jobData.status === 'cancelled') {
+        throw new Error(jobData.error_message || 'Failed to process resume');
+      }
+
+      if (item?.resume_id && (item.status === 'success' || jobData.status === 'completed')) {
+        return item.resume_id;
+      }
+
+      await new Promise<void>((resolve, reject) => {
+        let timeoutId = 0;
+        const handleAbort = () => {
+          window.clearTimeout(timeoutId);
+          signal.removeEventListener('abort', handleAbort);
+          reject(new Error('Operation aborted'));
+        };
+
+        timeoutId = window.setTimeout(() => {
+          signal.removeEventListener('abort', handleAbort);
+          resolve();
+        }, SINGLE_UPLOAD_JOB_POLL_INTERVAL_MS);
+
+        signal.addEventListener('abort', handleAbort, { once: true });
+      });
+    }
+
+    throw new Error('Le traitement du CV a dÃ©passÃ© le dÃ©lai maximum autorisÃ©.');
+  }, []);
+
   const uploadResume = useCallback(async (file: File, candidateInfo?: CandidateInfo): Promise<Resume | undefined> => {
     const controller = new AbortController();
     abortControllerRef.current = controller;
-
-    let initialRecord: Resume | null = null;
 
     try {
       if (controller.signal.aborted) return;
@@ -159,9 +259,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
       }
 
       const formData = new FormData();
-      formData.append('file', file);
-      formData.append('name', file.name);
-      formData.append('title', '');
+      formData.append('files', file);
 
       if (candidateInfo) {
         formData.append('profile_type', candidateInfo.profileType);
@@ -179,92 +277,28 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
         delete uploadOptions.headers['Content-Type'];
       }
 
-      const uploadResponse = await fetchWithAuth('/api/resumes/upload', {
+      const uploadResponse = await fetchWithAuth('/api/batch-jobs', {
         ...uploadOptions,
-        signal: controller.signal
-      });
-
-      if (!uploadResponse.ok) {
-        const errorData = await uploadResponse.json().catch(() => ({ error: 'Failed to upload resume' }));
-        throw new Error(errorData.error || 'Failed to upload resume');
-      }
-
-      initialRecord = normalizeResume(await uploadResponse.json());
-
-      setProcessingStep('extract');
-      const text = await extractResumeText(file);
-      if (!text || text.length === 0) {
-        throw new Error('Failed to extract text from resume');
-      }
-
-      if (controller.signal.aborted) return;
-
-      setProcessingStep('analyze');
-      const analysisOptions = await createAuthOptionsWithCsrf({
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text })
-      });
-
-      const analysisResponse = await fetchWithAuth('/api/resumes/analyze-text', {
-        ...analysisOptions,
         signal: controller.signal
       }, 300000);
 
-      if (!analysisResponse.ok) {
-        const errorData = await analysisResponse.json().catch(() => ({ error: 'Failed to analyze resume' }));
-        const errorMessage = typeof errorData === 'string'
-          ? errorData
-          : (errorData?.error || errorData?.message || JSON.stringify(errorData) || 'Failed to analyze resume');
-        throw new Error(errorMessage);
+      if (!uploadResponse.ok) {
+        const errorData = await uploadResponse.json().catch(() => ({ error: 'Failed to create upload job' }));
+        throw new Error(errorData.error || 'Failed to create upload job');
       }
 
-      const analysis = await analysisResponse.json();
-      const tags = analysis.tags || { skills: [], industries: [], tools: [], softSkills: [] };
-      const suggestions = analysis.suggestions || {};
-      const originalText = analysis.structuredText || text;
-
-      const updateOptions = await createAuthOptionsWithCsrf({
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          'Original Text': originalText,
-          'Global Rating': analysis.globalRating,
-          'Skills Score': analysis.skillsRating,
-          'Experience Score': analysis.experiencesRating,
-          'Education Score': analysis.educationRating,
-          'ATS Score': analysis.atsOptimizationRating,
-          'Executive Summary Score': analysis.executiveSummaryRating,
-          'Hobbies Languages Score': analysis.hobbiesLanguagesRating,
-          'Skills': tags.skills || [],
-          'Industries': tags.industries || [],
-          'Tools': tags.tools || [],
-          'Soft Skills': tags.softSkills || [],
-          'Key Improvements': JSON.stringify(suggestions),
-          'Name': analysis.name,
-          'Original Name': analysis.originalName || analysis.name,
-          'Title': analysis.title,
-          'Status': 'Analyzed',
-          'Analysis Date': new Date().toISOString(),
-          'FirmName': user?.firm || undefined
-        })
-      });
-
-      const updateResponse = await fetchWithAuth(`/api/resumes/${initialRecord.id}`, {
-        ...updateOptions,
-        signal: controller.signal
-      });
-
-      if (!updateResponse.ok) {
-        const errorData = await updateResponse.json().catch(() => ({ error: 'Failed to update resume' }));
-        logger.error('[ResumeContext] Update failed:', errorData);
-        throw new Error(errorData.error || 'Failed to update resume');
+      const uploadJob = await uploadResponse.json() as { id?: string };
+      if (!uploadJob.id) {
+        throw new Error('Upload job was created without an identifier');
       }
 
+      const resumeId = await waitForUploadJobCompletion(uploadJob.id, controller.signal);
       if (controller.signal.aborted) return;
 
-      const newResume = normalizeResume(await updateResponse.json());
-      setResumes(prev => [newResume, ...prev]);
+      const newResume = await fetchResumeById(resumeId, controller.signal);
+      if (controller.signal.aborted) return;
+
+      setResumes(prev => [newResume, ...prev.filter(resume => resume.id !== newResume.id)]);
       setCurrentResume(newResume);
 
       return newResume;
@@ -274,19 +308,6 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
         setProcessingError(userFriendlyMessage);
         logger.error('[ResumeContext] ERROR during upload:', error);
         showCaughtError(error);
-
-        if (initialRecord?.id) {
-          try {
-            const errorUpdateOptions = await createAuthOptionsWithCsrf({
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ 'Status': 'Error' })
-            });
-            await fetchWithAuth(`/api/resumes/${initialRecord.id}`, errorUpdateOptions);
-          } catch (updateError) {
-            logger.error('[ResumeContext] Failed to update resume status to Error:', updateError);
-          }
-        }
       }
       throw error;
     } finally {
@@ -295,7 +316,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
         setProcessingStep(null);
       }
     }
-  }, [setCurrentResume, setResumes, user]);
+  }, [fetchResumeById, setCurrentResume, setResumes, waitForUploadJobCompletion]);
 
   const improveCurrentResume = useCallback(async (): Promise<Resume> => {
     if (!currentResume) {

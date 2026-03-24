@@ -47,6 +47,13 @@ vi.mock('../../services/settings.service.js', () => ({
     }))
 }));
 
+const mockSendConsentRequest = vi.fn();
+const mockMarkConsentError = vi.fn();
+vi.mock('../../services/consent.service.js', () => ({
+    sendConsentRequest: (...args) => mockSendConsentRequest(...args),
+    markConsentError: (...args) => mockMarkConsentError(...args)
+}));
+
 import { processImportItem, processImproveItem } from '../../services/batchJobsWorker/itemProcessors.js';
 import { updateJobItemStatus } from '../../services/batchJobs.service.js';
 
@@ -123,6 +130,67 @@ describe('Batch Jobs Worker - Item Processors', () => {
             expect(updateJobItemStatus).toHaveBeenCalledWith('item-1', 'pending_name', expect.objectContaining({
                 error_message: expect.stringContaining('nom du candidat')
             }));
+        });
+
+        it('should preserve external profile metadata and send consent request', async () => {
+            mockQuery
+                .mockResolvedValueOnce({ rows: [{ id: 'res-1' }] })
+                .mockResolvedValueOnce({ rows: [] })
+                .mockResolvedValueOnce({ rows: [] });
+
+            mockExtractText.mockResolvedValueOnce('A long resume text that is more than fifty characters for the check to pass easily.');
+            mockAnalyze.mockResolvedValueOnce({
+                name: 'John Doe',
+                title: 'Developer',
+                globalRating: 75,
+                skillsRating: 80,
+                experiencesRating: 70,
+                educationRating: 65,
+                atsOptimizationRating: 72,
+                executiveSummaryRating: 78,
+                hobbiesLanguagesRating: 60,
+                structuredText: '<p>structured</p>',
+                suggestions: {}
+            });
+
+            await processImportItem(item, job, {
+                profileType: 'external',
+                candidateName: 'Jane Candidate',
+                candidateEmail: 'jane@example.com'
+            });
+
+            expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('candidate_name'), expect.arrayContaining([
+                'Jane Candidate',
+                'jane@example.com',
+                'external',
+                'pending_consent'
+            ]));
+            expect(mockSendConsentRequest).toHaveBeenCalledWith('res-1');
+        });
+
+        it('should use the provided candidate name as fallback when analysis returns XXX', async () => {
+            mockQuery
+                .mockResolvedValueOnce({ rows: [{ id: 'res-1' }] })
+                .mockResolvedValueOnce({ rows: [] })
+                .mockResolvedValueOnce({ rows: [] });
+
+            mockExtractText.mockResolvedValueOnce('A long resume text that is more than fifty characters for validation.');
+            mockAnalyze.mockResolvedValueOnce({
+                name: 'XXX',
+                title: 'Dev',
+                globalRating: 70, skillsRating: 70, experiencesRating: 70,
+                educationRating: 70, atsOptimizationRating: 70,
+                executiveSummaryRating: 70, hobbiesLanguagesRating: 70
+            });
+
+            await processImportItem(item, job, {
+                profileType: 'external',
+                candidateName: 'Fallback Name',
+                candidateEmail: 'fallback@example.com'
+            });
+
+            expect(updateJobItemStatus).not.toHaveBeenCalledWith('item-1', 'pending_name', expect.anything());
+            expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('name = COALESCE'), expect.arrayContaining(['Fallback Name']));
         });
 
         it('should import and improve when improve=true', async () => {
