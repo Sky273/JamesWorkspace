@@ -38,10 +38,10 @@ describe('Breadcrumbs', () => {
     expect(screen.getByText('resume.steps.analysis')).toBeInTheDocument();
   });
 
-  it('renders admin breadcrumb hierarchy for nested dashboard routes', () => {
+  it('renders dashboard child routes without Administration breadcrumb', () => {
     renderBreadcrumbs('/dashboard/security-logs');
 
-    expect(screen.getByText('navigation.admin')).toBeInTheDocument();
+    expect(screen.queryByText('navigation.admin')).toBeNull();
     expect(screen.getByText('navigation.securityLogs')).toBeInTheDocument();
   });
 
@@ -87,4 +87,3 @@ describe('Breadcrumbs', () => {
     expect(screen.getByText('Custom')).toBeInTheDocument();
   });
 });
-

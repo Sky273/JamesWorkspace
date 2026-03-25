@@ -49,9 +49,6 @@ const Breadcrumbs = ({ items, className = '', tone = 'default' }: BreadcrumbsPro
     href: string,
     isLast: boolean,
   ): void => {
-    if (!breadcrumbs.some((item) => item.href === '/dashboard' || item.label === t('navigation.admin', 'Administration'))) {
-      breadcrumbs.push({ label: t('navigation.admin', 'Administration'), href: '/dashboard', current: false });
-    }
     breadcrumbs.push({ label, href: isLast ? undefined : href, current: isLast });
   };
 
@@ -93,7 +90,6 @@ const Breadcrumbs = ({ items, className = '', tone = 'default' }: BreadcrumbsPro
 
       switch (segment) {
         case 'dashboard':
-          breadcrumbs.push({ label: t('navigation.admin', 'Administration'), href: isLast ? undefined : '/dashboard', current: isLast });
           break;
         case 'resumes':
           breadcrumbs.push({ label: t('navigation.resumes'), href: isLast ? undefined : '/resumes', current: isLast });
