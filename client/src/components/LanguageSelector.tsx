@@ -3,10 +3,9 @@
  * TypeScript version
  */
 
-import { Menu, Transition } from '@headlessui/react';
-import { Fragment } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { GlobeAltIcon } from '@heroicons/react/24/outline';
 
 interface Language {
   code: string;
@@ -18,7 +17,7 @@ interface LanguageSelectorProps {
 }
 
 const FlagFR = () => (
-  <svg className="w-5 h-4 rounded-sm" viewBox="0 0 640 480" xmlns="http://www.w3.org/2000/svg">
+  <svg className="h-4 w-5 rounded-sm" viewBox="0 0 640 480" xmlns="http://www.w3.org/2000/svg">
     <rect width="213.3" height="480" fill="#002654" />
     <rect x="213.3" width="213.4" height="480" fill="#fff" />
     <rect x="426.7" width="213.3" height="480" fill="#ce1126" />
@@ -26,7 +25,7 @@ const FlagFR = () => (
 );
 
 const FlagGB = () => (
-  <svg className="w-5 h-4 rounded-sm" viewBox="0 0 640 480" xmlns="http://www.w3.org/2000/svg">
+  <svg className="h-4 w-5 rounded-sm" viewBox="0 0 640 480" xmlns="http://www.w3.org/2000/svg">
     <path fill="#012169" d="M0 0h640v480H0z" />
     <path fill="#FFF" d="m75 0 244 181L562 0h78v62L400 241l240 178v61h-80L320 301 81 480H0v-60l239-178L0 64V0h75z" />
     <path fill="#C8102E" d="m424 281 216 159v40L369 281h55zm-184 20 6 35L54 480H0l240-179zM640 0v3L391 191l2-44L590 0h50zM0 0l239 176h-60L0 42V0z" />
@@ -45,61 +44,117 @@ const languages: Language[] = [
   { code: 'en', label: 'English' },
 ];
 
+const HeaderLanguageIcon = (): JSX.Element => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className="h-[18px] w-[18px] flex-shrink-0 text-slate-400 transition-colors duration-200 group-hover:text-slate-600 dark:text-slate-500 dark:group-hover:text-slate-300"
+    aria-hidden="true"
+  >
+    <circle cx="12" cy="12" r="8.5" />
+    <path d="M3.9 9.5h16.2" />
+    <path d="M3.9 14.5h16.2" />
+    <path d="M12 3.5c2.3 2.4 3.6 5.4 3.6 8.5S14.3 18.1 12 20.5" />
+    <path d="M12 3.5c-2.3 2.4-3.6 5.4-3.6 8.5s1.3 6.1 3.6 8.5" />
+  </svg>
+);
+
 const LanguageSelector = ({ variant = 'default' }: LanguageSelectorProps): JSX.Element => {
   const { i18n, t } = useTranslation();
-
+  const [isOpen, setIsOpen] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
   const normalizedLanguage = i18n.resolvedLanguage?.toLowerCase().startsWith('en') ? 'en' : 'fr';
   const currentLanguage = languages.find((lang) => lang.code === normalizedLanguage) || languages[0];
   const isHeader = variant === 'header';
 
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (buttonRef.current?.contains(target) || menuRef.current?.contains(target)) {
+        return;
+      }
+      setIsOpen(false);
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsOpen(false);
+        buttonRef.current?.focus();
+      }
+    };
+
+    window.addEventListener('mousedown', handlePointerDown);
+    window.addEventListener('keydown', handleEscape);
+    return () => {
+      window.removeEventListener('mousedown', handlePointerDown);
+      window.removeEventListener('keydown', handleEscape);
+    };
+  }, [isOpen]);
+
+  const buttonClassName = isHeader
+    ? 'group flex h-9 w-9 items-center justify-center rounded-full border border-slate-200/90 bg-white shadow-sm shadow-slate-200/50 transition-all hover:-translate-y-px hover:border-slate-300 dark:border-white/8 dark:bg-white/[0.045] dark:shadow-none dark:hover:border-white/12 dark:hover:bg-white/[0.08]'
+    : 'p-2 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300';
+
+
+  const menu = isOpen && buttonRef.current
+    ? createPortal(
+        <div
+          ref={menuRef}
+          className="fixed z-[70] w-40 origin-top-right rounded-xl border border-slate-200 bg-white p-1 shadow-lg focus:outline-none dark:border-slate-700 dark:bg-slate-800"
+          style={{
+            top: buttonRef.current.getBoundingClientRect().bottom + 10,
+            left: buttonRef.current.getBoundingClientRect().right - 160,
+          }}
+        >
+          {languages.map((language) => {
+            const isActive = currentLanguage.code === language.code;
+            return (
+              <button
+                key={language.code}
+                onClick={() => {
+                  void i18n.changeLanguage(language.code);
+                  setIsOpen(false);
+                }}
+                className={`flex w-full items-center rounded-lg px-3 py-2 text-sm ${
+                  isActive
+                    ? 'bg-slate-100 text-slate-900 dark:bg-slate-700 dark:text-slate-100'
+                    : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100'
+                }`}
+              >
+                <span className="mr-2 flex-shrink-0">{flags[language.code]()}</span>
+                {t(`header.language.${language.code}`)}
+                {isActive && <span className="ml-auto text-indigo-600 dark:text-indigo-400">✓</span>}
+              </button>
+            );
+          })}
+        </div>,
+        document.body
+      )
+    : null;
+
   return (
-    <Menu as="div" className="relative inline-block text-left">
-      <Menu.Button
-        className={isHeader
-          ? 'group flex h-9 w-9 items-center justify-center rounded-full border border-slate-200/90 bg-white shadow-sm shadow-slate-200/50 transition-all hover:-translate-y-px hover:border-slate-300 dark:border-white/8 dark:bg-white/[0.045] dark:shadow-none dark:hover:border-white/12 dark:hover:bg-white/[0.08]'
-          : 'p-2 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300'}
+    <>
+      <button
+        ref={buttonRef}
+        type="button"
+        className={buttonClassName}
+        onClick={() => setIsOpen((prev) => !prev)}
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
       >
         <span className="sr-only">{t('header.changeLanguage')}</span>
-        <div className="flex items-center">
-          <GlobeAltIcon className={isHeader ? 'h-[18px] w-[18px] stroke-2 text-slate-500 transition-colors duration-200 group-hover:text-slate-700 dark:text-slate-300 dark:group-hover:text-white' : 'h-6 w-6'} aria-hidden="true" />
-        </div>
-      </Menu.Button>
-
-      <Transition
-        as={Fragment}
-        enter="transition ease-out duration-100"
-        enterFrom="transform opacity-0 scale-95"
-        enterTo="transform opacity-100 scale-100"
-        leave="transition ease-in duration-75"
-        leaveFrom="transform opacity-100 scale-100"
-        leaveTo="transform opacity-0 scale-95"
-      >
-        <Menu.Items className="absolute right-0 z-50 mt-2 w-40 origin-top-right rounded-xl border border-slate-200 bg-white p-1 shadow-lg focus:outline-none dark:border-slate-700 dark:bg-slate-800">
-          {languages.map((language) => (
-            <Menu.Item key={language.code}>
-              {({ active }: { active: boolean }) => (
-                <button
-                  onClick={() => i18n.changeLanguage(language.code)}
-                  className={`${
-                    active
-                      ? 'bg-slate-100 text-slate-900 dark:bg-slate-700 dark:text-slate-100'
-                      : 'text-slate-700 dark:text-slate-300'
-                  } flex w-full items-center rounded-lg px-3 py-2 text-sm`}
-                >
-                  <span className="mr-2 flex-shrink-0">{flags[language.code]()}</span>
-                  {t(`header.language.${language.code}`)}
-                  {currentLanguage.code === language.code && (
-                    <span className="ml-auto text-indigo-600 dark:text-indigo-400">✓</span>
-                  )}
-                </button>
-              )}
-            </Menu.Item>
-          ))}
-        </Menu.Items>
-      </Transition>
-    </Menu>
+        <HeaderLanguageIcon />
+      </button>
+      {menu}
+    </>
   );
 };
 
 export default LanguageSelector;
-

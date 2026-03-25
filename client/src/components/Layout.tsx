@@ -4,13 +4,15 @@ import { useAuth } from '../context/AuthContext';
 import Sidebar from './Sidebar';
 import ScrollToTop from './ScrollToTop';
 import {
-  SunIcon,
-  MoonIcon,
   Bars3Icon,
   InformationCircleIcon,
   Cog6ToothIcon,
-  ArrowRightOnRectangleIcon,
 } from '@heroicons/react/24/outline';
+import {
+  SunIcon,
+  MoonIcon,
+  ArrowRightOnRectangleIcon as ArrowRightOnRectangleSolidIcon,
+} from '@heroicons/react/24/solid';
 import { useTranslation } from 'react-i18next';
 import LanguageSelector from './LanguageSelector';
 import Footer from './Footer';
@@ -43,7 +45,10 @@ const headerIconButtonClassName =
   'group flex h-9 w-9 items-center justify-center rounded-full border border-slate-200/90 bg-white shadow-sm shadow-slate-200/50 transition-all hover:-translate-y-px hover:border-slate-300 dark:border-white/8 dark:bg-white/[0.045] dark:shadow-none dark:hover:border-white/12 dark:hover:bg-white/[0.08]';
 
 const headerIconClassName =
-  'h-[18px] w-[18px] stroke-2 text-slate-500 transition-colors duration-200 group-hover:text-slate-700 dark:text-slate-300 dark:group-hover:text-white';
+  'h-[18px] w-[18px] flex-shrink-0 stroke-2 text-slate-400 transition-colors duration-200 group-hover:text-slate-600 dark:text-slate-500 dark:group-hover:text-slate-300';
+
+const headerSolidIconClassName =
+  'h-5 w-5 flex-shrink-0 fill-current text-slate-400 transition-colors duration-200 group-hover:text-slate-600 dark:text-slate-500 dark:group-hover:text-slate-300';
 
 const Layout = (): JSX.Element => {
   const { user, signOut } = useAuth();
@@ -80,7 +85,7 @@ const Layout = (): JSX.Element => {
       <ScrollToTop />
       <Sidebar isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
 
-      <div className="md:pl-64 flex min-h-screen flex-1 flex-col">
+      <div className="flex min-h-screen flex-1 flex-col md:pl-64">
         <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/92 shadow-[0_1px_0_rgba(15,23,42,0.04)] backdrop-blur-xl dark:border-white/6 dark:bg-[#0c1222]/95 dark:shadow-[0_1px_0_rgba(255,255,255,0.03)]">
           <div className="flex h-16 items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
             <div className="flex min-w-0 items-center gap-3.5">
@@ -104,9 +109,9 @@ const Layout = (): JSX.Element => {
                     {theme === 'dark' ? t('header.theme.light') : t('header.theme.dark')}
                   </span>
                   {theme === 'dark' ? (
-                    <SunIcon className={headerIconClassName} aria-hidden="true" />
+                    <SunIcon className={headerSolidIconClassName} aria-hidden="true" />
                   ) : (
-                    <MoonIcon className={headerIconClassName} aria-hidden="true" />
+                    <MoonIcon className={headerSolidIconClassName} aria-hidden="true" />
                   )}
                 </button>
 
@@ -157,7 +162,7 @@ const Layout = (): JSX.Element => {
                     className={headerIconButtonClassName}
                     title={t('common.signOut')}
                   >
-                    <ArrowRightOnRectangleIcon className={headerIconClassName} aria-hidden="true" />
+                    <ArrowRightOnRectangleSolidIcon className={headerSolidIconClassName} aria-hidden="true" />
                   </button>
                 </>
               )}
@@ -183,4 +188,3 @@ const Layout = (): JSX.Element => {
 };
 
 export default Layout;
-

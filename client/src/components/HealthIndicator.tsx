@@ -81,7 +81,6 @@ const HealthIndicator = ({ showAlways = false, variant = 'default' }: HealthIndi
   const [isExpanded, setIsExpanded] = useState(false);
   const isHeader = variant === 'header';
 
-  // Check if user is admin
   const isAdmin = user?.role === 'admin';
 
   const fetchMemoryStats = async (): Promise<void> => {
@@ -101,52 +100,50 @@ const HealthIndicator = ({ showAlways = false, variant = 'default' }: HealthIndi
       const response = await fetchWithAuth('/health', createAuthOptions({ method: 'GET' }));
       if (response.ok) {
         const data = await response.json();
-        
-        // Collect issues from checks
+
         const issues: string[] = [];
-        
+
         if (data.checks?.database?.status === 'error') {
-          issues.push(`Base de donnÃ©es: ${data.checks.database.error || 'Connexion Ã©chouÃ©e'}`);
+          issues.push(`Base de données : ${data.checks.database.error || 'Connexion échouée'}`);
         }
         if (data.checks?.memory?.percentage && data.checks.memory.percentage > 90) {
-          issues.push(`MÃ©moire critique: ${data.checks.memory.percentage.toFixed(0)}% utilisÃ©e`);
+          issues.push(`Mémoire critique : ${data.checks.memory.percentage.toFixed(0)}% utilisée`);
         }
         if (data.checks?.cache?.status === 'error') {
-          issues.push(`Cache: ${data.checks.cache.error || 'Erreur'}`);
+          issues.push(`Cache : ${data.checks.cache.error || 'Erreur'}`);
         }
         if (data.checks?.apiKeys?.status === 'warning') {
           const missing = [];
           if (!data.checks.apiKeys.openai) missing.push('OpenAI');
           if (!data.checks.apiKeys.anthropic) missing.push('Anthropic');
           if (missing.length > 0) {
-            issues.push(`ClÃ©s API manquantes: ${missing.join(', ')}`);
+            issues.push(`Clés API manquantes : ${missing.join(', ')}`);
           }
         }
-        
+
         setHealth({
           status: data.status || 'unknown',
           responseTime: data.responseTime,
           timestamp: data.timestamp,
           checks: data.checks,
-          issues
+          issues,
         });
       } else {
         const errorText = await response.text().catch(() => 'Erreur inconnue');
-        setHealth({ 
+        setHealth({
           status: 'unhealthy',
-          issues: [`Serveur inaccessible (${response.status}): ${errorText.substring(0, 100)}`]
+          issues: [`Serveur inaccessible (${response.status}) : ${errorText.substring(0, 100)}`],
         });
       }
     } catch (error) {
-      setHealth({ 
+      setHealth({
         status: 'unhealthy',
-        issues: [`Impossible de contacter le serveur: ${error instanceof Error ? error.message : 'Erreur rÃ©seau'}`]
+        issues: [`Impossible de contacter le serveur : ${error instanceof Error ? error.message : 'Erreur réseau'}`],
       });
     }
   };
 
   useEffect(() => {
-    // Only fetch health if admin or showAlways
     if (isAdmin || showAlways) {
       fetchHealth();
       fetchMemoryStats();
@@ -158,7 +155,6 @@ const HealthIndicator = ({ showAlways = false, variant = 'default' }: HealthIndi
     }
   }, [isAdmin, showAlways]);
 
-  // Refresh data when tooltip becomes visible (hover or expand)
   useEffect(() => {
     if (isHovered || isExpanded) {
       fetchHealth();
@@ -166,7 +162,6 @@ const HealthIndicator = ({ showAlways = false, variant = 'default' }: HealthIndi
     }
   }, [isHovered, isExpanded]);
 
-  // Don't render if not admin (unless showAlways is true)
   if (!isAdmin && !showAlways) {
     return null;
   }
@@ -187,20 +182,20 @@ const HealthIndicator = ({ showAlways = false, variant = 'default' }: HealthIndi
   const getStatusText = (): string => {
     switch (health.status) {
       case 'healthy':
-        return t('health.healthy', 'SystÃ¨me OK');
+        return t('health.healthy', 'Système OK');
       case 'degraded':
-        return t('health.degraded', 'DÃ©gradÃ©');
+        return t('health.degraded', 'Dégradé');
       case 'unhealthy':
-        return t('health.unhealthy', 'ProblÃ¨me');
+        return t('health.unhealthy', 'Problème');
       default:
-        return t('health.unknown', 'VÃ©rification...');
+        return t('health.unknown', 'Vérification...');
     }
   };
 
   const getCheckIcon = (status?: string): string => {
-    if (status === 'ok' || status === 'healthy') return 'âœ“';
-    if (status === 'warning' || status === 'degraded') return 'âš ';
-    if (status === 'error' || status === 'unhealthy') return 'âœ—';
+    if (status === 'ok' || status === 'healthy') return '✓';
+    if (status === 'warning' || status === 'degraded') return '⚠';
+    if (status === 'error' || status === 'unhealthy') return '✕';
     return '?';
   };
 
@@ -212,56 +207,64 @@ const HealthIndicator = ({ showAlways = false, variant = 'default' }: HealthIndi
   };
 
   return (
-    <div 
+    <div
       className="relative"
       onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => { setIsHovered(false); setIsExpanded(false); }}
+      onMouseLeave={() => {
+        setIsHovered(false);
+        setIsExpanded(false);
+      }}
     >
-      <div 
-        className={isHeader ? 'group flex items-center gap-2 rounded-full border border-slate-200/90 bg-white px-3.5 py-2 text-slate-600 shadow-sm shadow-slate-200/50 transition-all hover:-translate-y-px hover:border-slate-300 dark:border-white/8 dark:bg-white/[0.045] dark:text-slate-300 dark:shadow-none dark:hover:border-white/12 dark:hover:bg-white/[0.08]'
-        : 'flex items-center gap-2 px-2 py-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors'}
+      <div
+        className={isHeader
+          ? 'group flex items-center gap-2 rounded-full border border-slate-200/90 bg-white px-3.5 py-2 text-slate-600 shadow-sm shadow-slate-200/50 transition-all hover:-translate-y-px hover:border-slate-300 dark:border-white/8 dark:bg-white/[0.045] dark:text-slate-300 dark:shadow-none dark:hover:border-white/12 dark:hover:bg-white/[0.08]'
+          : 'flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700'}
         onClick={() => setIsExpanded(!isExpanded)}
       >
-        <SignalIcon className={isHeader ? 'h-[18px] w-[18px] stroke-2 text-slate-500 transition-colors duration-200 group-hover:text-slate-700 dark:text-slate-300 dark:group-hover:text-white' : 'h-4 w-4 text-gray-400 dark:text-gray-500'} aria-hidden="true" />
-        <span className={`w-2.5 h-2.5 rounded-full ${getStatusColor()} ${health.status !== 'healthy' ? 'animate-pulse' : ''}`} />
+        <SignalIcon
+          className={isHeader
+            ? 'h-[18px] w-[18px] stroke-2 text-slate-400 transition-colors duration-200 group-hover:text-slate-600 dark:text-slate-500 dark:group-hover:text-slate-300'
+            : 'h-4 w-4 text-gray-400 dark:text-gray-500'}
+          aria-hidden="true"
+        />
+        <span className={`h-2.5 w-2.5 rounded-full ${getStatusColor()} ${health.status !== 'healthy' ? 'animate-pulse' : ''}`} />
         <span className={isHeader ? 'hidden text-xs text-slate-600 dark:text-slate-300 sm:inline' : 'hidden text-xs text-gray-500 dark:text-gray-400 sm:inline'}>
           {getStatusText()}
         </span>
         {health.issues && health.issues.length > 0 && (
-          <span className="text-xs text-red-500 font-medium">
-            ({health.issues.length})
-          </span>
+          <span className="text-xs font-medium text-red-500">({health.issues.length})</span>
         )}
       </div>
 
-      {/* Detailed tooltip on hover or click */}
       {(isHovered || isExpanded) && (
-        <div className="absolute top-full right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-4 z-50">
+        <div className="absolute right-0 top-full z-50 mt-2 w-80 rounded-lg border border-gray-200 bg-white p-4 shadow-lg dark:border-gray-700 dark:bg-gray-800">
           <div className="text-sm">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-200 dark:border-gray-700">
+            <div className="mb-3 flex items-center justify-between border-b border-gray-200 pb-2 dark:border-gray-700">
               <span className="font-semibold text-gray-700 dark:text-gray-300">
-                {t('health.systemHealth', 'Ã‰tat du systÃ¨me')}
+                {t('health.systemHealth', 'État du système')}
               </span>
-              <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                health.status === 'healthy' ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' :
-                health.status === 'degraded' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300' :
-                'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
-              }`}>
+              <span
+                className={`rounded px-2 py-0.5 text-xs font-medium ${
+                  health.status === 'healthy'
+                    ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                    : health.status === 'degraded'
+                      ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'
+                      : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
+                }`}
+              >
                 {getStatusText()}
               </span>
             </div>
 
-            {/* Issues section - show prominently if there are problems */}
             {health.issues && health.issues.length > 0 && (
-              <div className="mb-3 p-2 bg-red-50 dark:bg-red-900/20 rounded-md border border-red-200 dark:border-red-800">
-                <div className="text-xs font-medium text-red-700 dark:text-red-300 mb-1">
-                  {t('health.issues', 'ProblÃ¨mes dÃ©tectÃ©s')}:
+              <div className="mb-3 rounded-md border border-red-200 bg-red-50 p-2 dark:border-red-800 dark:bg-red-900/20">
+                <div className="mb-1 text-xs font-medium text-red-700 dark:text-red-300">
+                  {t('health.issues', 'Problèmes détectés')}:
                 </div>
-                <ul className="text-xs text-red-600 dark:text-red-400 space-y-1">
+                <ul className="space-y-1 text-xs text-red-600 dark:text-red-400">
                   {health.issues.map((issue, index) => (
                     <li key={index} className="flex items-start gap-1">
-                      <span className="text-red-500 mt-0.5">â€¢</span>
+                      <span className="mt-0.5 text-red-500">•</span>
                       <span>{issue}</span>
                     </li>
                   ))}
@@ -269,88 +272,62 @@ const HealthIndicator = ({ showAlways = false, variant = 'default' }: HealthIndi
               </div>
             )}
 
-            {/* Response time */}
             {health.responseTime && (
-              <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-2">
+              <div className="mb-2 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
                 <span>{t('health.responseTime', 'Latence')}</span>
                 <span className="font-mono">{health.responseTime}</span>
               </div>
             )}
 
-            {/* Checks grid */}
             <div className="space-y-2">
-              {/* Server */}
               {health.checks?.server && (
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-gray-600 dark:text-gray-400">
-                    {t('health.server', 'Serveur')}
-                  </span>
+                  <span className="text-gray-600 dark:text-gray-400">{t('health.server', 'Serveur')}</span>
                   <div className="flex items-center gap-2">
                     {health.checks.server.uptime && (
-                      <span className="text-gray-400 font-mono text-[10px]">
-                        {health.checks.server.uptime}
-                      </span>
+                      <span className="font-mono text-[10px] text-gray-400">{health.checks.server.uptime}</span>
                     )}
-                    <span className={getCheckColor(health.checks.server.status)}>
-                      {getCheckIcon(health.checks.server.status)}
-                    </span>
+                    <span className={getCheckColor(health.checks.server.status)}>{getCheckIcon(health.checks.server.status)}</span>
                   </div>
                 </div>
               )}
 
-              {/* Database */}
               {health.checks?.database && (
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-gray-600 dark:text-gray-400">
-                    {t('health.database', 'Base de donnÃ©es')}
-                  </span>
+                  <span className="text-gray-600 dark:text-gray-400">{t('health.database', 'Base de données')}</span>
                   <div className="flex items-center gap-2">
                     {health.checks.database.latency && (
-                      <span className="text-gray-400 font-mono text-[10px]">
-                        {health.checks.database.latency}
-                      </span>
+                      <span className="font-mono text-[10px] text-gray-400">{health.checks.database.latency}</span>
                     )}
                     {health.checks.database.size && (
-                      <span className="text-gray-400 font-mono text-[10px]">
-                        {health.checks.database.size}
-                      </span>
+                      <span className="font-mono text-[10px] text-gray-400">{health.checks.database.size}</span>
                     )}
-                    <span className={getCheckColor(health.checks.database.status)}>
-                      {getCheckIcon(health.checks.database.status)}
-                    </span>
+                    <span className={getCheckColor(health.checks.database.status)}>{getCheckIcon(health.checks.database.status)}</span>
                   </div>
                 </div>
               )}
 
-              {/* Memory */}
               {health.checks?.memory && (
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-gray-600 dark:text-gray-400">
-                    {t('health.memory', 'MÃ©moire')}
-                  </span>
+                  <span className="text-gray-600 dark:text-gray-400">{t('health.memory', 'Mémoire')}</span>
                   <div className="flex items-center gap-2">
                     {health.checks.memory.heapUsed && health.checks.memory.heapTotal && (
-                      <span className="text-gray-400 font-mono text-[10px]">
+                      <span className="font-mono text-[10px] text-gray-400">
                         {health.checks.memory.heapUsed}/{health.checks.memory.heapTotal}
                       </span>
                     )}
-                    <span className={getCheckColor(health.checks.memory.status)}>
-                      {getCheckIcon(health.checks.memory.status)}
-                    </span>
+                    <span className={getCheckColor(health.checks.memory.status)}>{getCheckIcon(health.checks.memory.status)}</span>
                   </div>
                 </div>
               )}
 
-              {/* Cache - always visible details */}
               <div className="text-xs">
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">
-                    {t('health.cache', 'Cache')}
-                  </span>
+                  <span className="text-gray-600 dark:text-gray-400">{t('health.cache', 'Cache')}</span>
                   <div className="flex items-center gap-2">
                     {memoryStats && (
-                      <span className="text-gray-400 font-mono text-[10px]">
-                        {memoryStats.summary.totalCacheEntries} entrÃ©es
+                      <span className="font-mono text-[10px] text-gray-400">
+                        {memoryStats.summary.totalCacheEntries} entrées
                       </span>
                     )}
                     <span className={getCheckColor(health.checks?.cache?.status || 'ok')}>
@@ -358,121 +335,99 @@ const HealthIndicator = ({ showAlways = false, variant = 'default' }: HealthIndi
                     </span>
                   </div>
                 </div>
-                
-                {/* Cache details - always visible */}
+
                 {memoryStats && (
-                  <div className="mt-2 ml-2 space-y-1.5 border-l-2 border-gray-200 dark:border-gray-600 pl-2">
-                    {/* Process Memory */}
-                    <div className="text-[10px] text-gray-500 dark:text-gray-400 pb-1 border-b border-gray-100 dark:border-gray-700">
+                  <div className="mt-2 ml-2 space-y-1.5 border-l-2 border-gray-200 pl-2 dark:border-gray-600">
+                    <div className="border-b border-gray-100 pb-1 text-[10px] text-gray-500 dark:border-gray-700 dark:text-gray-400">
                       <span className="font-medium">Processus:</span> {memoryStats.process.heapUsed} / {memoryStats.process.heapTotal}
                     </div>
-                    
-                    {/* SimpleCache */}
+
                     <div className="flex items-center justify-between">
                       <span className="text-gray-500 dark:text-gray-400">Settings/Templates/Firms</span>
                       <span className="font-mono text-gray-600 dark:text-gray-300">
                         {memoryStats.caches.simpleCache.details.settings}/{memoryStats.caches.simpleCache.details.templates}/{memoryStats.caches.simpleCache.details.firms}
                       </span>
                     </div>
-                    
-                    {/* Trends Cache */}
+
                     <div className="flex items-center justify-between">
                       <span className="text-gray-500 dark:text-gray-400">Tendances</span>
                       <div className="flex items-center gap-1">
-                        <span className="font-mono text-gray-600 dark:text-gray-300">
-                          {memoryStats.caches.trends.details.size || 0}
-                        </span>
+                        <span className="font-mono text-gray-600 dark:text-gray-300">{memoryStats.caches.trends.details.size || 0}</span>
                         <span className="text-gray-400">/ {memoryStats.caches.trends.details.maxSize}</span>
                       </div>
                     </div>
-                    
-                    {/* Facts Cache */}
+
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-500 dark:text-gray-400">Faits marchÃ©</span>
+                      <span className="text-gray-500 dark:text-gray-400">Faits marché</span>
                       <div className="flex items-center gap-1">
-                        <span className="font-mono text-gray-600 dark:text-gray-300">
-                          {memoryStats.caches.facts.details.size || 0}
-                        </span>
+                        <span className="font-mono text-gray-600 dark:text-gray-300">{memoryStats.caches.facts.details.size || 0}</span>
                         <span className="text-gray-400">/ {memoryStats.caches.facts.details.maxSize}</span>
                       </div>
                     </div>
-                    
-                    {/* MÃ©tiers Cache */}
+
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-500 dark:text-gray-400">MÃ©tiers ROME</span>
+                      <span className="text-gray-500 dark:text-gray-400">Métiers ROME</span>
                       <div className="flex items-center gap-1">
-                        <span className="font-mono text-gray-600 dark:text-gray-300">
-                          {memoryStats.caches.metiers.details.size || 0}
-                        </span>
+                        <span className="font-mono text-gray-600 dark:text-gray-300">{memoryStats.caches.metiers.details.size || 0}</span>
                         <span className="text-gray-400">/ {memoryStats.caches.metiers.details.maxSize}</span>
                       </div>
                     </div>
-                    
-                    {/* ESCO Cache */}
+
                     <div className="flex items-center justify-between">
                       <span className="text-gray-500 dark:text-gray-400">ESCO</span>
                       <div className="flex items-center gap-1">
-                        <span className="font-mono text-gray-600 dark:text-gray-300">
-                          {memoryStats.caches.esco.details.size || 0}
-                        </span>
+                        <span className="font-mono text-gray-600 dark:text-gray-300">{memoryStats.caches.esco.details.size || 0}</span>
                         <span className="text-gray-400">/ {memoryStats.caches.esco.details.maxSize}</span>
                       </div>
                     </div>
-                    
-                    {/* Tags Cache */}
+
                     <div className="flex items-center justify-between">
                       <span className="text-gray-500 dark:text-gray-400">Tags</span>
                       <div className="flex items-center gap-1">
                         <span className={memoryStats.caches.tags.details.cleanedTags.hasData ? 'text-green-500' : 'text-gray-400'}>
-                          C{memoryStats.caches.tags.details.cleanedTags.hasData ? 'âœ“' : 'â—‹'}
+                          C{memoryStats.caches.tags.details.cleanedTags.hasData ? '✓' : '○'}
                         </span>
                         <span className={memoryStats.caches.tags.details.escoTags.hasData ? 'text-green-500' : 'text-gray-400'}>
-                          E{memoryStats.caches.tags.details.escoTags.hasData ? 'âœ“' : 'â—‹'}
+                          E{memoryStats.caches.tags.details.escoTags.hasData ? '✓' : '○'}
                         </span>
                       </div>
                     </div>
-                    
-                    {/* Security */}
+
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-500 dark:text-gray-400">SÃ©curitÃ© (blacklist)</span>
+                      <span className="text-gray-500 dark:text-gray-400">Sécurité (blacklist)</span>
                       <span className="font-mono text-gray-600 dark:text-gray-300">
                         {memoryStats.caches.security.details.blacklistedTokens} tokens, {memoryStats.caches.security.details.blacklistedUsers} users
                       </span>
                     </div>
-                    
-                    {/* GC Status */}
-                    <div className="flex items-center justify-between pt-1 border-t border-gray-100 dark:border-gray-700">
+
+                    <div className="flex items-center justify-between border-t border-gray-100 pt-1 dark:border-gray-700">
                       <span className="text-gray-500 dark:text-gray-400">Garbage Collector</span>
                       <span className={memoryStats.summary.gcAvailable ? 'text-green-500' : 'text-gray-400'}>
-                        {memoryStats.summary.gcAvailable ? 'Disponible' : 'Non exposÃ©'}
+                        {memoryStats.summary.gcAvailable ? 'Disponible' : 'Non exposé'}
                       </span>
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* API Keys */}
               {health.checks?.apiKeys && (
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-gray-600 dark:text-gray-400">
-                    {t('health.apiKeys', 'ClÃ©s API')}
-                  </span>
+                  <span className="text-gray-600 dark:text-gray-400">{t('health.apiKeys', 'Clés API')}</span>
                   <div className="flex items-center gap-1">
                     <span className={health.checks.apiKeys.openai ? 'text-green-500' : 'text-red-500'} title="OpenAI">
-                      O{health.checks.apiKeys.openai ? 'âœ“' : 'âœ—'}
+                      O{health.checks.apiKeys.openai ? '✓' : '✕'}
                     </span>
                     <span className={health.checks.apiKeys.anthropic ? 'text-green-500' : 'text-red-500'} title="Anthropic">
-                      A{health.checks.apiKeys.anthropic ? 'âœ“' : 'âœ—'}
+                      A{health.checks.apiKeys.anthropic ? '✓' : '✕'}
                     </span>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Last check timestamp */}
             {health.timestamp && (
-              <div className="mt-3 pt-2 border-t border-gray-200 dark:border-gray-700 text-[10px] text-gray-400">
-                {t('health.lastCheck', 'DerniÃ¨re vÃ©rification')}: {formatDateTime(health.timestamp)}
+              <div className="mt-3 border-t border-gray-200 pt-2 text-[10px] text-gray-400 dark:border-gray-700">
+                {t('health.lastCheck', 'Dernière vérification')}: {formatDateTime(health.timestamp)}
               </div>
             )}
           </div>
@@ -483,4 +438,3 @@ const HealthIndicator = ({ showAlways = false, variant = 'default' }: HealthIndi
 };
 
 export default HealthIndicator;
-
