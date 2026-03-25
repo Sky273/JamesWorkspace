@@ -56,12 +56,12 @@ const LanguageSelector = ({ variant = 'default' }: LanguageSelectorProps): JSX.E
     <Menu as="div" className="relative inline-block text-left">
       <Menu.Button
         className={isHeader
-          ? 'flex h-9 w-9 items-center justify-center rounded-full border border-slate-200/90 bg-white text-slate-500 shadow-sm shadow-slate-200/50 transition-all hover:-translate-y-px hover:border-slate-300 hover:text-slate-900 dark:border-white/8 dark:bg-white/[0.045] dark:text-slate-400 dark:shadow-none dark:hover:border-white/12 dark:hover:bg-white/[0.08] dark:hover:text-white'
+          ? 'group flex h-9 w-9 items-center justify-center rounded-full border border-slate-200/90 bg-white shadow-sm shadow-slate-200/50 transition-all hover:-translate-y-px hover:border-slate-300 dark:border-white/8 dark:bg-white/[0.045] dark:shadow-none dark:hover:border-white/12 dark:hover:bg-white/[0.08]'
           : 'p-2 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300'}
       >
         <span className="sr-only">{t('header.changeLanguage')}</span>
         <div className="flex items-center">
-          <GlobeAltIcon className={isHeader ? 'h-4 w-4' : 'h-6 w-6'} aria-hidden="true" />
+          <GlobeAltIcon className={isHeader ? 'h-[18px] w-[18px] stroke-2 text-slate-500 transition-colors duration-200 group-hover:text-slate-700 dark:text-slate-300 dark:group-hover:text-white' : 'h-6 w-6'} aria-hidden="true" />
         </div>
       </Menu.Button>
 
@@ -102,3 +102,4 @@ const LanguageSelector = ({ variant = 'default' }: LanguageSelectorProps): JSX.E
 };
 
 export default LanguageSelector;
+

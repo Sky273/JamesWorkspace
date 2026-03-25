@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Health Indicator Component
  * Shows system health status in the header (admin only)
  */
@@ -106,10 +106,10 @@ const HealthIndicator = ({ showAlways = false, variant = 'default' }: HealthIndi
         const issues: string[] = [];
         
         if (data.checks?.database?.status === 'error') {
-          issues.push(`Base de données: ${data.checks.database.error || 'Connexion échouée'}`);
+          issues.push(`Base de donnÃ©es: ${data.checks.database.error || 'Connexion Ã©chouÃ©e'}`);
         }
         if (data.checks?.memory?.percentage && data.checks.memory.percentage > 90) {
-          issues.push(`Mémoire critique: ${data.checks.memory.percentage.toFixed(0)}% utilisée`);
+          issues.push(`MÃ©moire critique: ${data.checks.memory.percentage.toFixed(0)}% utilisÃ©e`);
         }
         if (data.checks?.cache?.status === 'error') {
           issues.push(`Cache: ${data.checks.cache.error || 'Erreur'}`);
@@ -119,7 +119,7 @@ const HealthIndicator = ({ showAlways = false, variant = 'default' }: HealthIndi
           if (!data.checks.apiKeys.openai) missing.push('OpenAI');
           if (!data.checks.apiKeys.anthropic) missing.push('Anthropic');
           if (missing.length > 0) {
-            issues.push(`Clés API manquantes: ${missing.join(', ')}`);
+            issues.push(`ClÃ©s API manquantes: ${missing.join(', ')}`);
           }
         }
         
@@ -140,7 +140,7 @@ const HealthIndicator = ({ showAlways = false, variant = 'default' }: HealthIndi
     } catch (error) {
       setHealth({ 
         status: 'unhealthy',
-        issues: [`Impossible de contacter le serveur: ${error instanceof Error ? error.message : 'Erreur réseau'}`]
+        issues: [`Impossible de contacter le serveur: ${error instanceof Error ? error.message : 'Erreur rÃ©seau'}`]
       });
     }
   };
@@ -187,20 +187,20 @@ const HealthIndicator = ({ showAlways = false, variant = 'default' }: HealthIndi
   const getStatusText = (): string => {
     switch (health.status) {
       case 'healthy':
-        return t('health.healthy', 'Système OK');
+        return t('health.healthy', 'SystÃ¨me OK');
       case 'degraded':
-        return t('health.degraded', 'Dégradé');
+        return t('health.degraded', 'DÃ©gradÃ©');
       case 'unhealthy':
-        return t('health.unhealthy', 'Problème');
+        return t('health.unhealthy', 'ProblÃ¨me');
       default:
-        return t('health.unknown', 'Vérification...');
+        return t('health.unknown', 'VÃ©rification...');
     }
   };
 
   const getCheckIcon = (status?: string): string => {
-    if (status === 'ok' || status === 'healthy') return '✓';
-    if (status === 'warning' || status === 'degraded') return '⚠';
-    if (status === 'error' || status === 'unhealthy') return '✗';
+    if (status === 'ok' || status === 'healthy') return 'âœ“';
+    if (status === 'warning' || status === 'degraded') return 'âš ';
+    if (status === 'error' || status === 'unhealthy') return 'âœ—';
     return '?';
   };
 
@@ -218,12 +218,11 @@ const HealthIndicator = ({ showAlways = false, variant = 'default' }: HealthIndi
       onMouseLeave={() => { setIsHovered(false); setIsExpanded(false); }}
     >
       <div 
-        className={isHeader
-        ? 'flex items-center gap-2 rounded-full border border-slate-200/90 bg-white px-3.5 py-2 text-slate-600 shadow-sm shadow-slate-200/50 transition-all hover:-translate-y-px hover:border-slate-300 dark:border-white/8 dark:bg-white/[0.045] dark:text-slate-300 dark:shadow-none dark:hover:border-white/12 dark:hover:bg-white/[0.08]'
+        className={isHeader ? 'group flex items-center gap-2 rounded-full border border-slate-200/90 bg-white px-3.5 py-2 text-slate-600 shadow-sm shadow-slate-200/50 transition-all hover:-translate-y-px hover:border-slate-300 dark:border-white/8 dark:bg-white/[0.045] dark:text-slate-300 dark:shadow-none dark:hover:border-white/12 dark:hover:bg-white/[0.08]'
         : 'flex items-center gap-2 px-2 py-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors'}
         onClick={() => setIsExpanded(!isExpanded)}
       >
-        <SignalIcon className={isHeader ? 'h-4 w-4 text-slate-400 dark:text-slate-500' : 'h-4 w-4 text-gray-400 dark:text-gray-500'} aria-hidden="true" />
+        <SignalIcon className={isHeader ? 'h-[18px] w-[18px] stroke-2 text-slate-500 transition-colors duration-200 group-hover:text-slate-700 dark:text-slate-300 dark:group-hover:text-white' : 'h-4 w-4 text-gray-400 dark:text-gray-500'} aria-hidden="true" />
         <span className={`w-2.5 h-2.5 rounded-full ${getStatusColor()} ${health.status !== 'healthy' ? 'animate-pulse' : ''}`} />
         <span className={isHeader ? 'hidden text-xs text-slate-600 dark:text-slate-300 sm:inline' : 'hidden text-xs text-gray-500 dark:text-gray-400 sm:inline'}>
           {getStatusText()}
@@ -242,7 +241,7 @@ const HealthIndicator = ({ showAlways = false, variant = 'default' }: HealthIndi
             {/* Header */}
             <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-200 dark:border-gray-700">
               <span className="font-semibold text-gray-700 dark:text-gray-300">
-                {t('health.systemHealth', 'État du système')}
+                {t('health.systemHealth', 'Ã‰tat du systÃ¨me')}
               </span>
               <span className={`px-2 py-0.5 rounded text-xs font-medium ${
                 health.status === 'healthy' ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' :
@@ -257,12 +256,12 @@ const HealthIndicator = ({ showAlways = false, variant = 'default' }: HealthIndi
             {health.issues && health.issues.length > 0 && (
               <div className="mb-3 p-2 bg-red-50 dark:bg-red-900/20 rounded-md border border-red-200 dark:border-red-800">
                 <div className="text-xs font-medium text-red-700 dark:text-red-300 mb-1">
-                  {t('health.issues', 'Problèmes détectés')}:
+                  {t('health.issues', 'ProblÃ¨mes dÃ©tectÃ©s')}:
                 </div>
                 <ul className="text-xs text-red-600 dark:text-red-400 space-y-1">
                   {health.issues.map((issue, index) => (
                     <li key={index} className="flex items-start gap-1">
-                      <span className="text-red-500 mt-0.5">•</span>
+                      <span className="text-red-500 mt-0.5">â€¢</span>
                       <span>{issue}</span>
                     </li>
                   ))}
@@ -303,7 +302,7 @@ const HealthIndicator = ({ showAlways = false, variant = 'default' }: HealthIndi
               {health.checks?.database && (
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-gray-600 dark:text-gray-400">
-                    {t('health.database', 'Base de données')}
+                    {t('health.database', 'Base de donnÃ©es')}
                   </span>
                   <div className="flex items-center gap-2">
                     {health.checks.database.latency && (
@@ -327,7 +326,7 @@ const HealthIndicator = ({ showAlways = false, variant = 'default' }: HealthIndi
               {health.checks?.memory && (
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-gray-600 dark:text-gray-400">
-                    {t('health.memory', 'Mémoire')}
+                    {t('health.memory', 'MÃ©moire')}
                   </span>
                   <div className="flex items-center gap-2">
                     {health.checks.memory.heapUsed && health.checks.memory.heapTotal && (
@@ -351,7 +350,7 @@ const HealthIndicator = ({ showAlways = false, variant = 'default' }: HealthIndi
                   <div className="flex items-center gap-2">
                     {memoryStats && (
                       <span className="text-gray-400 font-mono text-[10px]">
-                        {memoryStats.summary.totalCacheEntries} entrées
+                        {memoryStats.summary.totalCacheEntries} entrÃ©es
                       </span>
                     )}
                     <span className={getCheckColor(health.checks?.cache?.status || 'ok')}>
@@ -389,7 +388,7 @@ const HealthIndicator = ({ showAlways = false, variant = 'default' }: HealthIndi
                     
                     {/* Facts Cache */}
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-500 dark:text-gray-400">Faits marché</span>
+                      <span className="text-gray-500 dark:text-gray-400">Faits marchÃ©</span>
                       <div className="flex items-center gap-1">
                         <span className="font-mono text-gray-600 dark:text-gray-300">
                           {memoryStats.caches.facts.details.size || 0}
@@ -398,9 +397,9 @@ const HealthIndicator = ({ showAlways = false, variant = 'default' }: HealthIndi
                       </div>
                     </div>
                     
-                    {/* Métiers Cache */}
+                    {/* MÃ©tiers Cache */}
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-500 dark:text-gray-400">Métiers ROME</span>
+                      <span className="text-gray-500 dark:text-gray-400">MÃ©tiers ROME</span>
                       <div className="flex items-center gap-1">
                         <span className="font-mono text-gray-600 dark:text-gray-300">
                           {memoryStats.caches.metiers.details.size || 0}
@@ -425,17 +424,17 @@ const HealthIndicator = ({ showAlways = false, variant = 'default' }: HealthIndi
                       <span className="text-gray-500 dark:text-gray-400">Tags</span>
                       <div className="flex items-center gap-1">
                         <span className={memoryStats.caches.tags.details.cleanedTags.hasData ? 'text-green-500' : 'text-gray-400'}>
-                          C{memoryStats.caches.tags.details.cleanedTags.hasData ? '✓' : '○'}
+                          C{memoryStats.caches.tags.details.cleanedTags.hasData ? 'âœ“' : 'â—‹'}
                         </span>
                         <span className={memoryStats.caches.tags.details.escoTags.hasData ? 'text-green-500' : 'text-gray-400'}>
-                          E{memoryStats.caches.tags.details.escoTags.hasData ? '✓' : '○'}
+                          E{memoryStats.caches.tags.details.escoTags.hasData ? 'âœ“' : 'â—‹'}
                         </span>
                       </div>
                     </div>
                     
                     {/* Security */}
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-500 dark:text-gray-400">Sécurité (blacklist)</span>
+                      <span className="text-gray-500 dark:text-gray-400">SÃ©curitÃ© (blacklist)</span>
                       <span className="font-mono text-gray-600 dark:text-gray-300">
                         {memoryStats.caches.security.details.blacklistedTokens} tokens, {memoryStats.caches.security.details.blacklistedUsers} users
                       </span>
@@ -445,7 +444,7 @@ const HealthIndicator = ({ showAlways = false, variant = 'default' }: HealthIndi
                     <div className="flex items-center justify-between pt-1 border-t border-gray-100 dark:border-gray-700">
                       <span className="text-gray-500 dark:text-gray-400">Garbage Collector</span>
                       <span className={memoryStats.summary.gcAvailable ? 'text-green-500' : 'text-gray-400'}>
-                        {memoryStats.summary.gcAvailable ? 'Disponible' : 'Non exposé'}
+                        {memoryStats.summary.gcAvailable ? 'Disponible' : 'Non exposÃ©'}
                       </span>
                     </div>
                   </div>
@@ -456,14 +455,14 @@ const HealthIndicator = ({ showAlways = false, variant = 'default' }: HealthIndi
               {health.checks?.apiKeys && (
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-gray-600 dark:text-gray-400">
-                    {t('health.apiKeys', 'Clés API')}
+                    {t('health.apiKeys', 'ClÃ©s API')}
                   </span>
                   <div className="flex items-center gap-1">
                     <span className={health.checks.apiKeys.openai ? 'text-green-500' : 'text-red-500'} title="OpenAI">
-                      O{health.checks.apiKeys.openai ? '✓' : '✗'}
+                      O{health.checks.apiKeys.openai ? 'âœ“' : 'âœ—'}
                     </span>
                     <span className={health.checks.apiKeys.anthropic ? 'text-green-500' : 'text-red-500'} title="Anthropic">
-                      A{health.checks.apiKeys.anthropic ? '✓' : '✗'}
+                      A{health.checks.apiKeys.anthropic ? 'âœ“' : 'âœ—'}
                     </span>
                   </div>
                 </div>
@@ -473,7 +472,7 @@ const HealthIndicator = ({ showAlways = false, variant = 'default' }: HealthIndi
             {/* Last check timestamp */}
             {health.timestamp && (
               <div className="mt-3 pt-2 border-t border-gray-200 dark:border-gray-700 text-[10px] text-gray-400">
-                {t('health.lastCheck', 'Dernière vérification')}: {formatDateTime(health.timestamp)}
+                {t('health.lastCheck', 'DerniÃ¨re vÃ©rification')}: {formatDateTime(health.timestamp)}
               </div>
             )}
           </div>
@@ -484,3 +483,4 @@ const HealthIndicator = ({ showAlways = false, variant = 'default' }: HealthIndi
 };
 
 export default HealthIndicator;
+

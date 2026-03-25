@@ -40,7 +40,10 @@ const getInitials = (name: string | undefined): string => {
 };
 
 const headerIconButtonClassName =
-  'flex h-9 w-9 items-center justify-center rounded-full border border-slate-200/90 bg-white text-slate-500 shadow-sm shadow-slate-200/50 transition-all hover:-translate-y-px hover:border-slate-300 hover:text-slate-900 dark:border-white/8 dark:bg-white/[0.045] dark:text-slate-400 dark:shadow-none dark:hover:border-white/12 dark:hover:bg-white/[0.08] dark:hover:text-white';
+  'group flex h-9 w-9 items-center justify-center rounded-full border border-slate-200/90 bg-white shadow-sm shadow-slate-200/50 transition-all hover:-translate-y-px hover:border-slate-300 dark:border-white/8 dark:bg-white/[0.045] dark:shadow-none dark:hover:border-white/12 dark:hover:bg-white/[0.08]';
+
+const headerIconClassName =
+  'h-[18px] w-[18px] stroke-2 text-slate-500 transition-colors duration-200 group-hover:text-slate-700 dark:text-slate-300 dark:group-hover:text-white';
 
 const Layout = (): JSX.Element => {
   const { user, signOut } = useAuth();
@@ -86,7 +89,7 @@ const Layout = (): JSX.Element => {
                 onClick={() => setIsMobileMenuOpen(true)}
               >
                 <span className="sr-only">{t('common.openMenu')}</span>
-                <Bars3Icon className="h-[18px] w-[18px]" aria-hidden="true" />
+                <Bars3Icon className={headerIconClassName} aria-hidden="true" />
               </button>
               <div className="hidden h-6 w-px bg-slate-200/80 md:block dark:bg-white/8" />
               <div className="min-w-0 rounded-full border border-slate-200/80 bg-white/70 px-3 py-2 dark:border-white/8 dark:bg-white/[0.03]">
@@ -101,9 +104,9 @@ const Layout = (): JSX.Element => {
                     {theme === 'dark' ? t('header.theme.light') : t('header.theme.dark')}
                   </span>
                   {theme === 'dark' ? (
-                    <SunIcon className="h-4 w-4" aria-hidden="true" />
+                    <SunIcon className={headerIconClassName} aria-hidden="true" />
                   ) : (
-                    <MoonIcon className="h-4 w-4" aria-hidden="true" />
+                    <MoonIcon className={headerIconClassName} aria-hidden="true" />
                   )}
                 </button>
 
@@ -115,12 +118,12 @@ const Layout = (): JSX.Element => {
                   title={t('navigation.settings')}
                 >
                   <span className="sr-only">{t('navigation.settings')}</span>
-                  <Cog6ToothIcon className="h-4 w-4" aria-hidden="true" />
+                  <Cog6ToothIcon className={headerIconClassName} aria-hidden="true" />
                 </Link>
 
                 <button className={headerIconButtonClassName} onClick={() => setIsAboutOpen(true)}>
                   <span className="sr-only">{t('common.about')}</span>
-                  <InformationCircleIcon className="h-4 w-4" aria-hidden="true" />
+                  <InformationCircleIcon className={headerIconClassName} aria-hidden="true" />
                 </button>
               </div>
 
@@ -154,7 +157,7 @@ const Layout = (): JSX.Element => {
                     className={headerIconButtonClassName}
                     title={t('common.signOut')}
                   >
-                    <ArrowRightOnRectangleIcon className="h-4 w-4" aria-hidden="true" />
+                    <ArrowRightOnRectangleIcon className={headerIconClassName} aria-hidden="true" />
                   </button>
                 </>
               )}
@@ -180,3 +183,4 @@ const Layout = (): JSX.Element => {
 };
 
 export default Layout;
+
