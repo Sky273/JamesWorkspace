@@ -66,10 +66,8 @@ export interface Resume {
   improved_text?: string;
   currentVersion?: number;
   adapted_title?: string;
-  'File Name'?: string;
-  'Name'?: string;
-  'Original Name'?: string;
-  'Title'?: string;
+  'File Name'?: string;
+  'Original Name'?: string;
   'Original Text'?: string;
   'Improved Text'?: string;
   'Resume File'?: ResumeFile[];

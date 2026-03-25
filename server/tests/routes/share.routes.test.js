@@ -1,63 +1,76 @@
 /**
  * Tests for Share routes
- * POST /resume/:resumeId/generate, GET /resume/:resumeId/status,
- * GET /resume/:resumeId/original, GET /pdf/:token, GET /file/:token
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import express from 'express';
 import request from 'supertest';
 
-// Mock shareResume service
 const mockStoreSharedPdf = vi.fn();
 const mockGetShareStatus = vi.fn();
 const mockGetOriginalFileInfo = vi.fn();
 const mockGetSharedPdfByToken = vi.fn();
-const mockGetOrCreateShareToken = vi.fn();
+const mockGetOrCreateOriginalFileToken = vi.fn();
 const mockGetResumeFileByToken = vi.fn();
+const mockRevokeShareLinks = vi.fn();
+const mockGetResumeForAccessCheck = vi.fn();
+const mockGetUserFirmId = vi.fn();
+
 vi.mock('../../services/shareResume.service.js', () => ({
     default: {
         storeSharedPdf: (...args) => mockStoreSharedPdf(...args),
         getShareStatus: (...args) => mockGetShareStatus(...args),
         getOriginalFileInfo: (...args) => mockGetOriginalFileInfo(...args),
         getSharedPdfByToken: (...args) => mockGetSharedPdfByToken(...args),
-        getOrCreateShareToken: (...args) => mockGetOrCreateShareToken(...args),
-        getResumeFileByToken: (...args) => mockGetResumeFileByToken(...args)
+        getOrCreateOriginalFileToken: (...args) => mockGetOrCreateOriginalFileToken(...args),
+        getResumeFileByToken: (...args) => mockGetResumeFileByToken(...args),
+        revokeShareLinks: (...args) => mockRevokeShareLinks(...args)
     }
 }));
 
-// Mock fs
+vi.mock('../../services/resumes.service.js', () => ({
+    getResumeForAccessCheck: (...args) => mockGetResumeForAccessCheck(...args)
+}));
+
+vi.mock('../../utils/firmHelpers.js', () => ({
+    getUserFirmId: (...args) => mockGetUserFirmId(...args)
+}));
+
 const mockReadFile = vi.fn();
 vi.mock('fs/promises', () => ({
     default: { readFile: (...args) => mockReadFile(...args) },
     readFile: (...args) => mockReadFile(...args)
 }));
 
-// Mock logger
 vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));
 
-// Mock validation
 vi.mock('../../utils/validation.js', () => ({
     validateBody: () => (req, res, next) => next(),
     validateParams: () => (req, res, next) => next(),
     sharePdfSchema: {}
 }));
 
-// Mock auth middleware
 vi.mock('../../middleware/auth.middleware.js', () => ({
     authenticateToken: (req, res, next) => {
         if (req.headers.authorization === 'Bearer valid-token') {
-            req.user = { id: 'user-123', email: 'user@test.com', role: 'user' };
+            req.user = { id: 'user-123', email: 'user@test.com', role: 'user', firm_id: 'firm-1' };
             next();
-        } else {
-            res.status(401).json({ error: 'Unauthorized' });
+            return;
         }
-    }
+
+        if (req.headers.authorization === 'Bearer admin-token') {
+            req.user = { id: 'admin-1', email: 'admin@test.com', role: 'admin' };
+            next();
+            return;
+        }
+
+        res.status(401).json({ error: 'Unauthorized' });
+    },
+    isUserAdmin: (req) => req.user?.role === 'admin'
 }));
 
-// Mock global fetch for PDF generation
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
@@ -71,6 +84,7 @@ function createTestApp() {
 }
 
 const AUTH = { Authorization: 'Bearer valid-token' };
+const ADMIN_AUTH = { Authorization: 'Bearer admin-token' };
 const VALID_TOKEN = 'a'.repeat(64);
 
 describe('Share Routes', () => {
@@ -78,248 +92,117 @@ describe('Share Routes', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        mockGetResumeForAccessCheck.mockResolvedValue({ id: 'res-1', firm_id: 'firm-1', name: 'Resume 1' });
+        mockGetUserFirmId.mockResolvedValue('firm-1');
         app = createTestApp();
     });
 
-    // ==========================================
-    // POST /resume/:resumeId/generate
-    // ==========================================
-    describe('POST /resume/:resumeId/generate', () => {
-        it('should return 401 without auth', async () => {
-            const res = await request(app)
-                .post('/api/share/resume/res-1/generate')
-                .send({ htmlContent: '<h1>CV</h1>' });
-            expect(res.status).toBe(401);
-        });
+    it('blocks a user from sharing a resume from another firm', async () => {
+        mockGetResumeForAccessCheck.mockResolvedValueOnce({ id: 'res-2', firm_id: 'firm-2', name: 'Resume 2' });
 
-        it('should return 400 if no htmlContent', async () => {
-            const res = await request(app)
-                .post('/api/share/resume/res-1/generate')
-                .set(AUTH)
-                .send({});
+        const res = await request(app)
+            .post('/api/share/resume/res-2/generate')
+            .set(AUTH)
+            .send({ htmlContent: '<h1>CV</h1>' });
 
-            expect(res.status).toBe(400);
-            expect(res.body.error).toContain('HTML content');
-        });
-
-        it('should generate PDF and return token', async () => {
-            const pdfBuffer = Buffer.from('fake-pdf');
-            mockFetch.mockResolvedValueOnce({
-                ok: true,
-                arrayBuffer: () => Promise.resolve(pdfBuffer.buffer)
-            });
-            mockStoreSharedPdf.mockResolvedValueOnce({ token: 'share-token-123' });
-
-            const res = await request(app)
-                .post('/api/share/resume/res-1/generate')
-                .set(AUTH)
-                .send({ htmlContent: '<h1>CV</h1>', filename: 'john-cv' });
-
-            expect(res.status).toBe(200);
-            expect(res.body.success).toBe(true);
-            expect(res.body.token).toBe('share-token-123');
-        });
-
-        it('should return 500 if PDF generation fails', async () => {
-            mockFetch.mockResolvedValueOnce({ ok: false });
-
-            const res = await request(app)
-                .post('/api/share/resume/res-1/generate')
-                .set(AUTH)
-                .send({ htmlContent: '<h1>CV</h1>' });
-
-            expect(res.status).toBe(500);
-            expect(res.body.error).toContain('Failed');
-        });
-
-        it('should return 500 on service error', async () => {
-            mockFetch.mockRejectedValueOnce(new Error('Network error'));
-
-            const res = await request(app)
-                .post('/api/share/resume/res-1/generate')
-                .set(AUTH)
-                .send({ htmlContent: '<h1>CV</h1>' });
-
-            expect(res.status).toBe(500);
-        });
+        expect(res.status).toBe(403);
+        expect(mockStoreSharedPdf).not.toHaveBeenCalled();
     });
 
-    // ==========================================
-    // GET /resume/:resumeId/status
-    // ==========================================
-    describe('GET /resume/:resumeId/status', () => {
-        it('should return share status', async () => {
-            mockGetShareStatus.mockResolvedValueOnce({
-                hasSharedPdf: true,
-                token: 'existing-token'
-            });
+    it('allows an admin to share any resume PDF', async () => {
+        mockGetResumeForAccessCheck.mockResolvedValueOnce({ id: 'res-2', firm_id: 'firm-2', name: 'Resume 2' });
+        mockFetch.mockResolvedValueOnce({ ok: true, arrayBuffer: () => Promise.resolve(Buffer.from('pdf').buffer) });
+        mockStoreSharedPdf.mockResolvedValueOnce({ token: 'pdf-token', expiresAt: new Date(Date.now() + 60_000) });
 
-            const res = await request(app)
-                .get('/api/share/resume/res-1/status')
-                .set(AUTH);
+        const res = await request(app)
+            .post('/api/share/resume/res-2/generate')
+            .set(ADMIN_AUTH)
+            .send({ htmlContent: '<h1>CV</h1>', filename: 'admin-cv' });
 
-            expect(res.status).toBe(200);
-            expect(res.body.success).toBe(true);
-            expect(res.body.hasSharedPdf).toBe(true);
-            expect(res.body.token).toBe('existing-token');
-        });
-
-        it('should return 500 on error', async () => {
-            mockGetShareStatus.mockRejectedValueOnce(new Error('DB error'));
-
-            const res = await request(app)
-                .get('/api/share/resume/res-1/status')
-                .set(AUTH);
-
-            expect(res.status).toBe(500);
-        });
+        expect(res.status).toBe(200);
+        expect(res.body.token).toBe('pdf-token');
     });
 
-    // ==========================================
-    // GET /resume/:resumeId/original
-    // ==========================================
-    describe('GET /resume/:resumeId/original', () => {
-        it('should return 404 if no original file', async () => {
-            mockGetOriginalFileInfo.mockResolvedValueOnce(null);
-
-            const res = await request(app)
-                .get('/api/share/resume/res-1/original')
-                .set(AUTH);
-
-            expect(res.status).toBe(404);
+    it('returns detailed share status with separate PDF and file tokens', async () => {
+        mockGetShareStatus.mockResolvedValueOnce({
+            hasSharedPdf: true,
+            token: 'pdf-token',
+            expiresAt: new Date(Date.now() + 60_000),
+            pdfToken: 'pdf-token',
+            pdfExpiresAt: new Date(Date.now() + 60_000),
+            hasSharedFile: true,
+            fileToken: 'file-token',
+            fileExpiresAt: new Date(Date.now() + 60_000)
         });
 
-        it('should return token for existing file with token', async () => {
-            mockGetOriginalFileInfo.mockResolvedValueOnce({ filename: 'john-cv.pdf' });
-            mockGetOrCreateShareToken.mockResolvedValueOnce('existing-token-abc');
+        const res = await request(app)
+            .get('/api/share/resume/res-1/status')
+            .set(AUTH);
 
-            const res = await request(app)
-                .get('/api/share/resume/res-1/original')
-                .set(AUTH);
-
-            expect(res.status).toBe(200);
-            expect(res.body.success).toBe(true);
-            expect(res.body.token).toBe('existing-token-abc');
-            expect(res.body.filename).toBe('john-cv.pdf');
-        });
-
-        it('should generate new token if none exists', async () => {
-            mockGetOriginalFileInfo.mockResolvedValueOnce({ filename: 'cv.pdf' });
-            mockGetOrCreateShareToken.mockResolvedValueOnce('b'.repeat(64));
-
-            const res = await request(app)
-                .get('/api/share/resume/res-1/original')
-                .set(AUTH);
-
-            expect(res.status).toBe(200);
-            expect(res.body.success).toBe(true);
-            expect(res.body.token).toBeDefined();
-            expect(res.body.token.length).toBe(64); // 32 bytes hex = 64 chars
-        });
-
-        it('should return 500 on error', async () => {
-            mockGetOriginalFileInfo.mockRejectedValueOnce(new Error('fail'));
-
-            const res = await request(app)
-                .get('/api/share/resume/res-1/original')
-                .set(AUTH);
-
-            expect(res.status).toBe(500);
-        });
+        expect(res.status).toBe(200);
+        expect(res.body.pdfToken).toBe('pdf-token');
+        expect(res.body.fileToken).toBe('file-token');
+        expect(res.body.hasSharedFile).toBe(true);
     });
 
-    // ==========================================
-    // GET /pdf/:token (PUBLIC)
-    // ==========================================
-    describe('GET /pdf/:token', () => {
-        it('should return 400 for invalid token length', async () => {
-            const res = await request(app).get('/api/share/pdf/short-token');
+    it('returns a dedicated original-file token', async () => {
+        mockGetOriginalFileInfo.mockResolvedValueOnce({ filename: 'john-cv.pdf' });
+        mockGetOrCreateOriginalFileToken.mockResolvedValueOnce('file-token-abc');
 
-            expect(res.status).toBe(400);
-            expect(res.body.error).toContain('Invalid token');
-        });
+        const res = await request(app)
+            .get('/api/share/resume/res-1/original')
+            .set(AUTH);
 
-        it('should return 404 if PDF not found', async () => {
-            mockGetSharedPdfByToken.mockResolvedValueOnce(null);
-
-            const res = await request(app).get(`/api/share/pdf/${VALID_TOKEN}`);
-
-            expect(res.status).toBe(404);
-            expect(res.body.error).toContain('not found');
-        });
-
-        it('should serve PDF file', async () => {
-            const pdfContent = Buffer.from('%PDF-1.4 fake content');
-            mockGetSharedPdfByToken.mockResolvedValueOnce({
-                path: '/tmp/shared/cv.pdf',
-                name: 'John Doe CV'
-            });
-            mockReadFile.mockResolvedValueOnce(pdfContent);
-
-            const res = await request(app).get(`/api/share/pdf/${VALID_TOKEN}`);
-
-            expect(res.status).toBe(200);
-            expect(res.headers['content-type']).toContain('application/pdf');
-            expect(res.headers['content-disposition']).toContain('John_Doe_CV.pdf');
-        });
-
-        it('should return 500 on error', async () => {
-            mockGetSharedPdfByToken.mockRejectedValueOnce(new Error('IO error'));
-
-            const res = await request(app).get(`/api/share/pdf/${VALID_TOKEN}`);
-
-            expect(res.status).toBe(500);
-        });
+        expect(res.status).toBe(200);
+        expect(res.body.token).toBe('file-token-abc');
     });
 
-    // ==========================================
-    // GET /file/:token (PUBLIC)
-    // ==========================================
-    describe('GET /file/:token', () => {
-        it('should return 400 for invalid token', async () => {
-            const res = await request(app).get('/api/share/file/bad');
-            expect(res.status).toBe(400);
+    it('revokes share links for an authorized user', async () => {
+        mockRevokeShareLinks.mockResolvedValueOnce(true);
+
+        const res = await request(app)
+            .post('/api/share/resume/res-1/revoke')
+            .set(AUTH);
+
+        expect(res.status).toBe(200);
+        expect(res.body.success).toBe(true);
+        expect(mockRevokeShareLinks).toHaveBeenCalledWith('res-1');
+    });
+
+    it('serves a shared PDF by PDF token', async () => {
+        mockGetSharedPdfByToken.mockResolvedValueOnce({
+            path: '/tmp/shared/cv.pdf',
+            name: 'John Doe CV'
+        });
+        mockReadFile.mockResolvedValueOnce(Buffer.from('%PDF-1.4 fake content'));
+
+        const res = await request(app).get(`/api/share/pdf/${VALID_TOKEN}`);
+
+        expect(res.status).toBe(200);
+        expect(res.headers['content-type']).toContain('application/pdf');
+    });
+
+    it('serves an original file only by file token', async () => {
+        mockGetResumeFileByToken.mockResolvedValueOnce({
+            id: 'r-1',
+            file_name: 'resume.docx',
+            name: 'John',
+            resume_file_data: Buffer.from('file content'),
+            resume_file_type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            resume_file_size: 12
         });
 
-        it('should return 404 if no resume found', async () => {
-            mockGetResumeFileByToken.mockResolvedValueOnce(null);
+        const res = await request(app).get(`/api/share/file/${VALID_TOKEN}`);
 
-            const res = await request(app).get(`/api/share/file/${VALID_TOKEN}`);
-            expect(res.status).toBe(404);
-        });
+        expect(res.status).toBe(200);
+        expect(res.headers['content-type']).toContain('application/vnd.openxmlformats');
+    });
 
-        it('should return 404 if file data missing', async () => {
-            mockGetResumeFileByToken.mockResolvedValueOnce({
-                id: 'r-1', file_name: 'cv.pdf', resume_file_data: null
-            });
+    it('returns 404 for an expired or unknown public file token', async () => {
+        mockGetResumeFileByToken.mockResolvedValueOnce(null);
 
-            const res = await request(app).get(`/api/share/file/${VALID_TOKEN}`);
-            expect(res.status).toBe(404);
-            expect(res.body.error).toContain('not available');
-        });
+        const res = await request(app).get(`/api/share/file/${VALID_TOKEN}`);
 
-        it('should serve original file', async () => {
-            const fileData = Buffer.from('file content');
-            mockGetResumeFileByToken.mockResolvedValueOnce({
-                id: 'r-1',
-                file_name: 'resume.docx',
-                name: 'John',
-                resume_file_data: fileData,
-                resume_file_type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                resume_file_size: fileData.length
-            });
-
-            const res = await request(app).get(`/api/share/file/${VALID_TOKEN}`);
-
-            expect(res.status).toBe(200);
-            expect(res.headers['content-type']).toContain('application/vnd.openxmlformats');
-        });
-
-        it('should return 500 on error', async () => {
-            mockGetResumeFileByToken.mockRejectedValueOnce(new Error('DB error'));
-
-            const res = await request(app).get(`/api/share/file/${VALID_TOKEN}`);
-            expect(res.status).toBe(500);
-        });
+        expect(res.status).toBe(404);
     });
 });

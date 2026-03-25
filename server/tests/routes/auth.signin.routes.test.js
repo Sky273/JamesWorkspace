@@ -86,13 +86,14 @@ vi.mock('../../services/totp.service.js', () => ({
 const mockGenerateAccessToken = vi.fn(() => 'mock-access-token');
 const mockGenerateRefreshToken = vi.fn(() => 'mock-refresh-token');
 const mockVerifyRefreshToken = vi.fn();
+const mockVerifyToken = vi.fn();
 const mockRevokeToken = vi.fn();
 vi.mock('../../services/jwt.service.js', () => ({
     generateAccessToken: (...args) => mockGenerateAccessToken(...args),
     generateRefreshToken: (...args) => mockGenerateRefreshToken(...args),
     verifyRefreshToken: (...args) => mockVerifyRefreshToken(...args),
-    revokeToken: (...args) => mockRevokeToken(...args),
-    verifyToken: vi.fn()
+    verifyToken: (...args) => mockVerifyToken(...args),
+    revokeToken: (...args) => mockRevokeToken(...args)
 }));
 
 // Mock rate limiter
@@ -453,14 +454,21 @@ describe('Auth Routes - POST /api/auth/logout', () => {
         app = createTestApp();
     });
 
-    it('should return 401 without valid access token', async () => {
+    it('should clear cookies even without valid access token', async () => {
+        mockVerifyToken.mockReturnValueOnce(null);
+
         const res = await request(app)
             .post('/api/auth/logout');
 
-        expect(res.status).toBe(401);
+        expect(res.status).toBe(200);
+        expect(res.body.message).toContain('Signed out');
+        const cookies = res.headers['set-cookie'];
+        expect(cookies.some(c => c.includes('accessToken=;'))).toBe(true);
+        expect(cookies.some(c => c.includes('refreshToken=;'))).toBe(true);
     });
 
     it('should clear cookies and revoke tokens on logout', async () => {
+        mockVerifyToken.mockReturnValueOnce({ id: 'user-123', email: 'test@example.com' });
         mockRevokeToken.mockResolvedValue(undefined);
 
         const res = await request(app)
@@ -469,11 +477,25 @@ describe('Auth Routes - POST /api/auth/logout', () => {
 
         expect(res.status).toBe(200);
         expect(res.body.message).toContain('Signed out');
-        
-        // Check cookies are cleared
+        expect(mockRevokeToken).toHaveBeenCalledWith('valid-token');
+        expect(mockRevokeToken).toHaveBeenCalledWith('valid-refresh');
+
         const cookies = res.headers['set-cookie'];
         expect(cookies.some(c => c.includes('accessToken=;'))).toBe(true);
         expect(cookies.some(c => c.includes('refreshToken=;'))).toBe(true);
+    });
+
+    it('should logout with only a valid refresh token when access token is expired', async () => {
+        mockVerifyToken.mockReturnValueOnce(null);
+        mockVerifyRefreshToken.mockReturnValueOnce({ id: 'user-123', email: 'test@example.com' });
+        mockRevokeToken.mockResolvedValue(undefined);
+
+        const res = await request(app)
+            .post('/api/auth/logout')
+            .set('Cookie', 'refreshToken=valid-refresh');
+
+        expect(res.status).toBe(200);
+        expect(mockRevokeToken).toHaveBeenCalledWith('valid-refresh');
     });
 });
 

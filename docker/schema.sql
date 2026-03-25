@@ -987,6 +987,9 @@ CREATE TABLE public.resumes (
     consent_reminder_count integer DEFAULT 0,
     shared_pdf_path character varying(500),
     shared_pdf_token character varying(64),
+    shared_pdf_expires_at timestamp with time zone,
+    shared_file_token character varying(64),
+    shared_file_expires_at timestamp with time zone,
     relative_path character varying(1024),
     CONSTRAINT resumes_consent_status_check CHECK (((consent_status)::text = ANY (ARRAY[('not_required'::character varying)::text, ('pending_consent'::character varying)::text, ('active'::character varying)::text, ('refused'::character varying)::text, ('expired'::character varying)::text, ('purged'::character varying)::text, ('error'::character varying)::text]))),
     CONSTRAINT resumes_profile_type_check CHECK (((profile_type)::text = ANY (ARRAY[('employee'::character varying)::text, ('external'::character varying)::text]))),
@@ -2536,6 +2539,12 @@ CREATE INDEX idx_resumes_retention_until ON public.resumes USING btree (retentio
 --
 
 CREATE INDEX idx_resumes_shared_pdf_token ON public.resumes USING btree (shared_pdf_token) WHERE (shared_pdf_token IS NOT NULL);
+
+--
+-- Name: idx_resumes_shared_file_token; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_resumes_shared_file_token ON public.resumes USING btree (shared_file_token) WHERE (shared_file_token IS NOT NULL);
 
 
 --

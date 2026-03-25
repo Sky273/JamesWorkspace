@@ -5,16 +5,46 @@
 
 import { Router, json } from 'express';
 import fs from 'fs/promises';
-import { authenticateToken } from '../middleware/auth.middleware.js';
+import { authenticateToken, isUserAdmin } from '../middleware/auth.middleware.js';
 import { validateBody, validateParams, sharePdfSchema } from '../utils/validation.js';
 import shareResumeService from '../services/shareResume.service.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { getPdfServerAuthHeaders } from '../utils/pdfServerAuth.js';
+import { getResumeForAccessCheck } from '../services/resumes.service.js';
+import { getUserFirmId } from '../utils/firmHelpers.js';
 
 const router = Router();
 
 // JSON parsing for this router
 router.use(json());
+
+async function assertResumeAccess(req, res) {
+    const { resumeId } = req.params;
+    const resume = await getResumeForAccessCheck(resumeId);
+
+    if (!resume) {
+        res.status(404).json({
+            success: false,
+            error: 'Resume not found'
+        });
+        return null;
+    }
+
+    if (isUserAdmin(req)) {
+        return resume;
+    }
+
+    const userFirmId = await getUserFirmId(req);
+    if (!userFirmId || !resume.firm_id || resume.firm_id !== userFirmId) {
+        res.status(403).json({
+            success: false,
+            error: 'Access denied'
+        });
+        return null;
+    }
+
+    return resume;
+}
 
 /**
  * POST /api/share/resume/:resumeId/generate
@@ -25,6 +55,11 @@ router.post('/resume/:resumeId/generate', authenticateToken, validateParams('res
     try {
         const { resumeId } = req.params;
         const { htmlContent, filename, stylesheet, headerContent, footerContent, footerHeight } = req.body;
+        const resume = await assertResumeAccess(req, res);
+
+        if (!resume) {
+            return;
+        }
 
         if (!htmlContent) {
             return res.status(400).json({
@@ -33,9 +68,7 @@ router.post('/resume/:resumeId/generate', authenticateToken, validateParams('res
             });
         }
 
-        // Generate PDF via the PDF server
         const pdfServerUrl = process.env.PDF_SERVER_URL || 'http://localhost:3002';
-        
         const pdfResponse = await fetch(`${pdfServerUrl}/generate-pdf`, {
             method: 'POST',
             headers: getPdfServerAuthHeaders({ 'Content-Type': 'application/json' }),
@@ -54,18 +87,16 @@ router.post('/resume/:resumeId/generate', authenticateToken, validateParams('res
         }
 
         const pdfBuffer = Buffer.from(await pdfResponse.arrayBuffer());
-
-        // Store the PDF
-        const { token } = await shareResumeService.storeSharedPdf(
+        const { token, expiresAt } = await shareResumeService.storeSharedPdf(
             resumeId,
             pdfBuffer,
             filename || 'cv'
         );
 
-        // Return token - frontend will build the URL using its origin
         res.json({
             success: true,
-            token
+            token,
+            expiresAt
         });
     } catch (error) {
         safeLog('error', 'Failed to generate shareable PDF', {
@@ -87,12 +118,24 @@ router.post('/resume/:resumeId/generate', authenticateToken, validateParams('res
 router.get('/resume/:resumeId/status', authenticateToken, validateParams('resumeId'), async (req, res) => {
     try {
         const { resumeId } = req.params;
+        const resume = await assertResumeAccess(req, res);
+
+        if (!resume) {
+            return;
+        }
+
         const status = await shareResumeService.getShareStatus(resumeId);
-        
+
         res.json({
             success: true,
             hasSharedPdf: status.hasSharedPdf,
-            token: status.token
+            token: status.token,
+            expiresAt: status.expiresAt,
+            pdfToken: status.pdfToken,
+            pdfExpiresAt: status.pdfExpiresAt,
+            hasSharedFile: status.hasSharedFile,
+            fileToken: status.fileToken,
+            fileExpiresAt: status.fileExpiresAt
         });
     } catch (error) {
         safeLog('error', 'Failed to get share status', {
@@ -114,8 +157,13 @@ router.get('/resume/:resumeId/status', authenticateToken, validateParams('resume
 router.get('/resume/:resumeId/original', authenticateToken, validateParams('resumeId'), async (req, res) => {
     try {
         const { resumeId } = req.params;
-        const fileInfo = await shareResumeService.getOriginalFileInfo(resumeId);
+        const resume = await assertResumeAccess(req, res);
 
+        if (!resume) {
+            return;
+        }
+
+        const fileInfo = await shareResumeService.getOriginalFileInfo(resumeId);
         if (!fileInfo) {
             return res.status(404).json({
                 success: false,
@@ -123,10 +171,8 @@ router.get('/resume/:resumeId/original', authenticateToken, validateParams('resu
             });
         }
 
-        // For original files, we serve them directly via a token-based URL
-        const token = await shareResumeService.getOrCreateShareToken(resumeId);
+        const token = await shareResumeService.getOrCreateOriginalFileToken(resumeId);
 
-        // Return token - frontend will build the URL using its origin
         res.json({
             success: true,
             token,
@@ -141,6 +187,31 @@ router.get('/resume/:resumeId/original', authenticateToken, validateParams('resu
             success: false,
             error: 'Failed to get original file URL'
         });
+    }
+});
+
+/**
+ * POST /api/share/resume/:resumeId/revoke
+ * Revoke all public share links for a resume
+ * Requires authentication
+ */
+router.post('/resume/:resumeId/revoke', authenticateToken, validateParams('resumeId'), async (req, res) => {
+    try {
+        const { resumeId } = req.params;
+        const resume = await assertResumeAccess(req, res);
+
+        if (!resume) {
+            return;
+        }
+
+        await shareResumeService.revokeShareLinks(resumeId);
+        res.json({ success: true, message: 'Share links revoked' });
+    } catch (error) {
+        safeLog('error', 'Failed to revoke share links', {
+            resumeId: req.params.resumeId,
+            error: error.message
+        });
+        res.status(500).json({ success: false, error: 'Failed to revoke share links' });
     }
 });
 
@@ -161,7 +232,6 @@ router.get('/pdf/:token', async (req, res) => {
         }
 
         const pdfInfo = await shareResumeService.getSharedPdfByToken(token);
-
         if (!pdfInfo) {
             return res.status(404).json({
                 success: false,
@@ -169,7 +239,6 @@ router.get('/pdf/:token', async (req, res) => {
             });
         }
 
-        // Read and serve the PDF
         const pdfBuffer = await fs.readFile(pdfInfo.path);
         const filename = pdfInfo.name ? `${pdfInfo.name.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf` : 'cv.pdf';
 
@@ -205,9 +274,7 @@ router.get('/file/:token', async (req, res) => {
             });
         }
 
-        // Find resume by token and get file data from database
         const resume = await shareResumeService.getResumeFileByToken(token);
-
         if (!resume) {
             return res.status(404).json({
                 success: false,

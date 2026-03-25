@@ -8,7 +8,7 @@ import { SALT_ROUNDS } from '../../config/constants.js';
 import { authenticateToken } from '../../middleware/auth.middleware.js';
 import { authLimiter } from '../../middleware/rateLimit.middleware.js';
 import { validateBody, signInSchema, registerSchema, isValidEmail } from '../../utils/validation.js';
-import { generateAccessToken, generateRefreshToken, verifyRefreshToken, revokeToken } from '../../services/jwt.service.js';
+import { generateAccessToken, generateRefreshToken, verifyRefreshToken, verifyToken, revokeToken } from '../../services/jwt.service.js';
 import { securityLog, getRequestMetadata, LOG_LEVELS, SECURITY_EVENTS } from '../../services/security.service.js';
 import { safeLog } from '../../utils/logger.backend.js';
 import { is2FAEnabled, verifyTotpCode } from '../../services/totp.service.js';
@@ -295,25 +295,39 @@ router.post('/refresh', authLimiter, async (req, res) => {
     }
 });
 
+function resolveLogoutUser(accessToken, refreshToken) {
+    const decodedAccessToken = accessToken ? verifyToken(accessToken) : null;
+    if (decodedAccessToken) {
+        return decodedAccessToken;
+    }
+
+    const decodedRefreshToken = refreshToken ? verifyRefreshToken(refreshToken) : null;
+    if (decodedRefreshToken) {
+        return decodedRefreshToken;
+    }
+
+    return null;
+}
+
 // Logout handler
 const logoutHandler = async (req, res) => {
     try {
         const metadata = getRequestMetadata(req);
-        
         const accessToken = req.cookies.accessToken;
         const refreshToken = req.cookies.refreshToken;
-        
+        const logoutUser = resolveLogoutUser(accessToken, refreshToken);
+
         if (accessToken) {
             await revokeToken(accessToken);
         }
         if (refreshToken) {
             await revokeToken(refreshToken);
         }
-        
+
         securityLog(LOG_LEVELS.INFO, SECURITY_EVENTS.AUTH_LOGOUT, {
             ...metadata,
-            userId: req.user?.id,
-            email: req.user?.email,
+            userId: logoutUser?.id,
+            email: logoutUser?.email,
             statusCode: 200,
             action: 'LOGOUT',
             message: 'User signed out'
@@ -328,8 +342,8 @@ const logoutHandler = async (req, res) => {
     }
 };
 
-router.post('/signout', authenticateToken, logoutHandler);
-router.post('/logout', authenticateToken, logoutHandler);
+router.post('/signout', logoutHandler);
+router.post('/logout', logoutHandler);
 
 // GET /api/auth/me - Get current user
 router.get('/me', authenticateToken, async (req, res) => {
