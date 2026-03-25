@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ExtractTemplateModal Component
  * Modal for extracting a CV template from an uploaded CV file
  */
@@ -18,7 +18,7 @@ import {
   ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
 import { templateService, ExtractedTemplate } from '../utils/templateService';
-import { createSafeHtml } from '../utils/sanitizer.frontend';
+import TemplatePreviewFrame from './TemplatePreviewFrame';
 import logger from '../utils/logger.frontend';
 
 interface ExtractTemplateModalProps {
@@ -206,10 +206,10 @@ const ExtractTemplateModal = ({ isOpen, onClose }: ExtractTemplateModalProps): J
                     {t('templates.extract.howItWorks')}
                   </h4>
                   <ul className="text-sm text-blue-700 dark:text-blue-400 space-y-1">
-                    <li>• {t('templates.extract.step1')}</li>
-                    <li>• {t('templates.extract.step2')}</li>
-                    <li>• {t('templates.extract.step3')}</li>
-                    <li>• {t('templates.extract.step4')}</li>
+                    <li>â€¢ {t('templates.extract.step1')}</li>
+                    <li>â€¢ {t('templates.extract.step2')}</li>
+                    <li>â€¢ {t('templates.extract.step3')}</li>
+                    <li>â€¢ {t('templates.extract.step4')}</li>
                   </ul>
                 </div>
               </div>
@@ -230,7 +230,7 @@ const ExtractTemplateModal = ({ isOpen, onClose }: ExtractTemplateModalProps): J
                     {t('templates.extract.pleaseWait')}
                   </p>
                   <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">
-                    {t('templates.extract.longOperation') || 'Cette opération peut prendre 1 à 3 minutes selon la complexité du document.'}
+                    {t('templates.extract.longOperation') || 'Cette opÃ©ration peut prendre 1 Ã  3 minutes selon la complexitÃ© du document.'}
                   </p>
                 </div>
               </div>
@@ -247,9 +247,9 @@ const ExtractTemplateModal = ({ isOpen, onClose }: ExtractTemplateModalProps): J
                   <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
                     {extractionMethod && (
                       <span className="inline-flex items-center px-2 py-1 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
-                        {extractionMethod === 'docx-html' ? '📄 DOCX → HTML' : 
-                         extractionMethod === 'pdf-vision' ? '👁️ PDF → Vision' : 
-                         extractionMethod === 'pdf-text-fallback' ? '📝 PDF → Text' : extractionMethod}
+                        {extractionMethod === 'docx-html' ? 'ðŸ“„ DOCX â†’ HTML' : 
+                         extractionMethod === 'pdf-vision' ? 'ðŸ‘ï¸ PDF â†’ Vision' : 
+                         extractionMethod === 'pdf-text-fallback' ? 'ðŸ“ PDF â†’ Text' : extractionMethod}
                       </span>
                     )}
                     {usedModel && (
@@ -337,18 +337,17 @@ const ExtractTemplateModal = ({ isOpen, onClose }: ExtractTemplateModalProps): J
                   <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 max-h-80 overflow-auto">
                     <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
                       {t('templates.extract.preview')}
+                    <div className="overflow-hidden rounded border border-gray-200 bg-white dark:border-gray-700">
+                      <TemplatePreviewFrame
+                        title={extractedTemplate.name}
+                        stylesheet={extractedTemplate.stylesheet}
+                        headerContent={extractedTemplate.headerContent}
+                        templateContent={extractedTemplate.templateContent}
+                        footerContent={extractedTemplate.footerContent}
+                        className="h-64 w-full border-0 bg-white"
+                        scale={0.75}
+                      />
                     </div>
-                    {extractedTemplate.stylesheet && (
-                      <style dangerouslySetInnerHTML={{ __html: extractedTemplate.stylesheet }} />
-                    )}
-                    <div className="bg-white dark:bg-gray-800 p-3 rounded border border-gray-200 dark:border-gray-700 space-y-2 text-xs transform scale-75 origin-top-left" style={{ width: '133%' }}>
-                      {extractedTemplate.headerContent && (
-                        <div dangerouslySetInnerHTML={createSafeHtml(extractedTemplate.headerContent)} />
-                      )}
-                      <div dangerouslySetInnerHTML={createSafeHtml(extractedTemplate.templateContent)} />
-                      {extractedTemplate.footerContent && (
-                        <div dangerouslySetInnerHTML={createSafeHtml(extractedTemplate.footerContent)} />
-                      )}
                     </div>
                   </div>
                 </div>

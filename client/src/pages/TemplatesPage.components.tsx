@@ -27,7 +27,7 @@ import PaginationPair from '../components/page/PaginationPair';
 import SearchField from '../components/page/SearchField';
 import StatCardsGrid from '../components/page/StatCardsGrid';
 import { SkeletonTemplateList } from '../components/ui/Skeleton';
-import { createSafeHtml } from '../utils/sanitizer.frontend';
+import TemplatePreviewFrame from '../components/TemplatePreviewFrame';
 import { TEMPLATES_PAGE_SIZE, type Template, type TemplateSort, type TemplateStats } from './TemplatesPage.hooks';
 
 function TemplateCard({
@@ -54,12 +54,15 @@ function TemplateCard({
     <AnimatedCard index={index} className="shadow-md overflow-hidden">
       <div className="relative group cursor-pointer" onClick={() => onPreviewClick(template)}>
         <div className="h-48 bg-gray-50 dark:bg-gray-900 overflow-hidden">
-          {template.Stylesheet ? <style dangerouslySetInnerHTML={{ __html: template.Stylesheet }} /> : null}
-          <div className="p-3 text-xs transform scale-75 origin-top-left space-y-1" style={{ width: '133%' }}>
-            {template.HeaderContent ? <div dangerouslySetInnerHTML={createSafeHtml(template.HeaderContent)} /> : null}
-            <div dangerouslySetInnerHTML={createSafeHtml(template.TemplateContent || '')} />
-            {template.FooterContent ? <div dangerouslySetInnerHTML={createSafeHtml(template.FooterContent)} /> : null}
-          </div>
+          <TemplatePreviewFrame
+            title={template.Name}
+            stylesheet={template.Stylesheet}
+            headerContent={template.HeaderContent}
+            templateContent={template.TemplateContent || ''}
+            footerContent={template.FooterContent}
+            className="h-full w-full border-0 bg-white pointer-events-none"
+            scale={0.75}
+          />
         </div>
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
           <div className="flex items-center gap-2 text-white">
@@ -339,26 +342,15 @@ export function TemplatesPreviewModal({
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"><XMarkIcon className="w-6 h-6" /></button>
         </div>
         <div className="p-6 overflow-auto max-h-[70vh] bg-gray-50 dark:bg-gray-900">
-          {template.Stylesheet ? <style dangerouslySetInnerHTML={{ __html: template.Stylesheet }} /> : null}
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow space-y-4">
-            {template.HeaderContent ? (
-              <div className="border-b border-gray-200 dark:border-gray-700 pb-4">
-                <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">{t('templates.editor.header.label')}</div>
-                <div dangerouslySetInnerHTML={createSafeHtml(template.HeaderContent)} />
-              </div>
-            ) : null}
-            <div>
-              {template.HeaderContent || template.FooterContent ? (
-                <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">{t('templates.editor.content.label')}</div>
-              ) : null}
-              <div dangerouslySetInnerHTML={createSafeHtml(template.TemplateContent || '')} />
-            </div>
-            {template.FooterContent ? (
-              <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-                <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">{t('templates.editor.footer.label')}</div>
-                <div dangerouslySetInnerHTML={createSafeHtml(template.FooterContent)} />
-              </div>
-            ) : null}
+          <div className="rounded-lg border border-gray-200 bg-white shadow dark:border-gray-700">
+            <TemplatePreviewFrame
+              title={template.Name}
+              stylesheet={template.Stylesheet}
+              headerContent={template.HeaderContent}
+              templateContent={template.TemplateContent || ''}
+              footerContent={template.FooterContent}
+              className="h-[60vh] w-full border-0 bg-white"
+            />
           </div>
         </div>
         <div className="flex justify-end gap-3 p-4 border-t border-gray-200 dark:border-gray-700">
