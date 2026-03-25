@@ -1,6 +1,5 @@
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import Breadcrumbs from '../components/Breadcrumbs';
 import JobsTab from '../components/BatchUpload/JobsTab';
 
 const BatchJobsPage = (): JSX.Element => {
@@ -9,8 +8,6 @@ const BatchJobsPage = (): JSX.Element => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
       <div className="max-w-6xl mx-auto px-4">
-        <Breadcrumbs className="mb-4" />
-
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

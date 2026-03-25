@@ -1,409 +1,154 @@
-import { defineConfig, loadEnv } from 'vite';
+﻿import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import path from 'path';
-import fs from 'fs';
-import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import compression from 'vite-plugin-compression';
-import zlib from 'zlib';
 
-// Tiptap v3 ships source-only (no dist/). This plugin resolves @tiptap/* to their TS source.
-const tiptapV3SourcePlugin = () => {
-  const tiptapDir = path.resolve(__dirname, '../node_modules/@tiptap');
-  return {
-    name: 'tiptap-v3-source',
-    enforce: 'pre',
-    resolveId(source, importer) {
-      // Handle @tiptap/* bare specifiers
-      if (source.startsWith('@tiptap/')) {
-        const match = source.match(/^@tiptap\/([^/]+)(?:\/(.+))?$/);
-        if (!match) return null;
-        const [, pkgName, subpath] = match;
-        const pkgDir = path.join(tiptapDir, pkgName);
+import { httpConfigPlugin } from './build/httpConfigPlugin.js';
+import { getHttpsConfig } from './build/httpsConfig.js';
+import { manualChunks } from './build/manualChunks.js';
+import { tiptapV3SourcePlugin } from './build/tiptapV3SourcePlugin.js';
 
-        // @tiptap/pm: subpath re-exports at root level (e.g. @tiptap/pm/state -> state/index.ts)
-        if (pkgName === 'pm' && subpath) {
-          const file = path.join(pkgDir, subpath, 'index.ts');
-          if (fs.existsSync(file)) return file;
-          return null;
-        }
+const OPTIMIZE_DEPENDENCY_INCLUDE = [
+  'react',
+  'react-dom',
+  'react-router-dom',
+  'react-i18next',
+  'i18next',
+  'i18next-browser-languagedetector',
+  'html-parse-stringify',
+];
 
-        // Subpath imports: try src/<subpath>.ts then src/<subpath>/index.ts
-        if (subpath) {
-          const srcFile = path.join(pkgDir, 'src', `${subpath}.ts`);
-          if (fs.existsSync(srcFile)) return srcFile;
-          const srcDir = path.join(pkgDir, 'src', subpath, 'index.ts');
-          if (fs.existsSync(srcDir)) return srcDir;
-          return null;
-        }
-
-        // Main entry: src/index.ts
-        const srcEntry = path.join(pkgDir, 'src', 'index.ts');
-        if (fs.existsSync(srcEntry)) return srcEntry;
-        return null;
-      }
-
-      // Handle relative imports from within @tiptap source that reference ../dist/
-      if (importer && importer.includes(path.join('node_modules', '@tiptap')) && source.includes('/dist/')) {
-        // Rewrite ../dist/foo/bar.js → ../src/foo.ts (strip directory from filename)
-        const rewritten = source.replace(/\/dist\//, '/src/').replace(/\.js$/, '.ts');
-        const resolved = path.resolve(path.dirname(importer), rewritten);
-        if (fs.existsSync(resolved)) return resolved;
-      }
-
-      return null;
-    }
-  };
-};
-
-// Plugin to configure HTTP server timeouts, compression, and diagnose 400 errors
-const httpConfigPlugin = () => ({
-  name: 'http-config',
-  configureServer(server) {
-    // Log cache cleanup on startup
-    console.log('\n🧹 Vite cache cleaned on startup (--force flag)');
-    console.log('✅ Dependencies re-optimized\n');
-    
-    // Configure the underlying HTTP server once it's created
-    server.httpServer?.on('listening', () => {
-      const httpServer = server.httpServer;
-      // Increase keep-alive timeout to 30 minutes (default is 5 seconds in Node.js)
-      httpServer.keepAliveTimeout = 30 * 60 * 1000; // 30 minutes
-      // Headers timeout should be slightly higher
-      httpServer.headersTimeout = 31 * 60 * 1000; // 31 minutes
-      // Request timeout
-      httpServer.requestTimeout = 5 * 60 * 1000; // 5 minutes for request processing
-      console.log('[Vite] HTTP server timeouts configured: keepAlive=30min, headers=31min');
-      console.log('[Vite] Compression middleware enabled (gzip/brotli)');
-    });
-    
-    // Compression middleware for dev server (same behavior as production)
-    server.middlewares.use((req, res, next) => {
-      const acceptEncoding = req.headers['accept-encoding'] || '';
-      const url = req.url || '';
-      
-      // Skip SPA routes (paths without file extensions that are not API calls)
-      // These should be handled by Vite's SPA fallback, not as static files
-      const isSpaRoute = !url.includes('.') && !url.startsWith('/api/') && !url.startsWith('/@') && !url.startsWith('/node_modules/');
-      if (isSpaRoute && url !== '/') {
-        return next();
-      }
-      
-      // Only compress text-based assets
-      const compressibleExtensions = /\.(js|mjs|css|html|json|svg|txt|xml)(\?.*)?$/i;
-      const shouldCompress = compressibleExtensions.test(url);
-      
-      if (shouldCompress && (acceptEncoding.includes('br') || acceptEncoding.includes('gzip'))) {
-        const originalWrite = res.write.bind(res);
-        const originalEnd = res.end.bind(res);
-        const chunks = [];
-        
-        res.write = function(chunk, encoding, callback) {
-          if (chunk) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-          if (typeof encoding === 'function') {
-            callback = encoding;
-            encoding = undefined;
-          }
-          if (callback) callback();
-          return true;
-        };
-        
-        res.end = function(chunk, encoding, callback) {
-          if (chunk) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-          
-          const body = Buffer.concat(chunks);
-          
-          // Only compress if body is larger than 1KB
-          if (body.length > 1024) {
-            const useBrotli = acceptEncoding.includes('br');
-            const compressMethod = useBrotli ? zlib.brotliCompressSync : zlib.gzipSync;
-            const encoding = useBrotli ? 'br' : 'gzip';
-            
-            try {
-              const compressed = compressMethod(body);
-              res.setHeader('Content-Encoding', encoding);
-              res.setHeader('Vary', 'Accept-Encoding');
-              res.removeHeader('Content-Length');
-              return originalEnd.call(res, compressed, callback);
-            } catch (e) {
-              // Fallback to uncompressed on error
-              return originalEnd.call(res, body, callback);
-            }
-          }
-          
-          return originalEnd.call(res, body, callback);
-        };
-      }
-      
-      next();
-    });
-    
-    // Redirect /favicon.ico to /favicon.svg to prevent 404
-    server.middlewares.use((req, res, next) => {
-      if (req.url === '/favicon.ico') {
-        res.writeHead(302, { Location: '/favicon.svg' });
-        res.end();
-        return;
-      }
-      next();
-    });
-    
-    // Log all requests at the earliest possible point
-    server.middlewares.use((req, res, next) => {
-      // Skip logging favicon requests
-      if (req.url === '/favicon.svg' || req.url === '/favicon.ico') {
-        return next();
-      }
-      console.log(`[Vite] ${new Date().toISOString()} ${req.method} ${req.url}`);
-      
-      // Intercept response to log errors
-      const originalEnd = res.end.bind(res);
-      res.end = function(...args) {
-        if (res.statusCode >= 400) {
-          console.error(`[Vite] Error ${res.statusCode} on ${req.method} ${req.url}`);
-        }
-        return originalEnd(...args);
-      };
-      
-      next();
-    });
-  }
-});
-
-// HTTPS configuration helper
-const getHttpsConfig = (httpsEnabled) => {
-  if (!httpsEnabled) return false;
-  
-  const certsPath = path.resolve(__dirname, '..', 'certificates');
-  const keyPath = path.join(certsPath, 'private.key');
-  const certPath = path.join(certsPath, 'certificate.crt');
-  
-  if (!fs.existsSync(keyPath) || !fs.existsSync(certPath)) {
-    console.warn('⚠️  HTTPS enabled but certificates not found. Falling back to HTTP.');
-    return false;
-  }
-  
-  return {
-    key: fs.readFileSync(keyPath),
-    cert: fs.readFileSync(certPath),
-  };
-};
+const COMPRESSED_ASSET_FILTER = /\.(js|mjs|json|css|html|svg|txt|xml|wasm)$/i;
 
 export default defineConfig(({ mode }) => {
-  // Load env from client directory (VITE_ prefixed variables)
   const env = loadEnv(mode, __dirname, '');
-  const HTTPS_ENABLED = env.VITE_HTTPS_ENABLED === 'true';
-  const HTTPS_PORT = env.VITE_HTTPS_PORT || '3443';
-  
-  console.log(`🔐 HTTPS_ENABLED: ${HTTPS_ENABLED} (env value: "${env.VITE_HTTPS_ENABLED}")`);
-  
+  const httpsEnabled = env.VITE_HTTPS_ENABLED === 'true';
+  const httpsPort = env.VITE_HTTPS_PORT || '3443';
+
+  console.log(`HTTPS_ENABLED: ${httpsEnabled} (env value: "${env.VITE_HTTPS_ENABLED}")`);
+
   return {
-  plugins: [
-    tiptapV3SourcePlugin(),
-    tailwindcss(),
-    react(),
-    nodePolyfills({
-      globals: {
-        Buffer: true,
-        global: true,
-        process: true,
+    plugins: [
+      tiptapV3SourcePlugin(),
+      tailwindcss(),
+      react(),
+      httpConfigPlugin(),
+      compression({
+        algorithm: 'gzip',
+        ext: '.gz',
+        threshold: 1024,
+        deleteOriginFile: false,
+        filter: COMPRESSED_ASSET_FILTER,
+      }),
+      compression({
+        algorithm: 'brotliCompress',
+        ext: '.br',
+        threshold: 1024,
+        deleteOriginFile: false,
+        filter: COMPRESSED_ASSET_FILTER,
+      }),
+    ],
+    server: {
+      host: '0.0.0.0',
+      port: httpsEnabled ? 443 : 5173,
+      strictPort: true,
+      https: getHttpsConfig({
+        certificatesDir: path.resolve(__dirname, '..', 'certificates'),
+        httpsEnabled,
+      }),
+      allowedHosts: ['www.resumeconverter.net', 'resumeconverter.net', 'localhost'],
+      hmr: {
+        overlay: false,
       },
-      protocolImports: true,
-      // Exclude crypto-related polyfills to avoid elliptic vulnerability (GHSA-848j-6mx2-7j84)
-      // We don't use browser-side crypto operations that require these polyfills
-      exclude: [
-        'crypto',
-        'tls',
-        'net',
-        'dns',
-        'dgram',
-        'child_process',
-        'cluster',
-        'module',
-        'readline',
-        'repl',
-        'tty',
-        'v8',
-        'vm',
-        'worker_threads',
-      ],
-    }),
-    httpConfigPlugin(),
-    // Gzip compression for production builds
-    compression({
-      algorithm: 'gzip',
-      ext: '.gz',
-      threshold: 1024, // Only compress files > 1KB
-      deleteOriginFile: false,
-      filter: /\.(js|mjs|json|css|html|svg|txt|xml|wasm)$/i,
-    }),
-    // Brotli compression (better compression ratio)
-    compression({
-      algorithm: 'brotliCompress',
-      ext: '.br',
-      threshold: 1024,
-      deleteOriginFile: false,
-      filter: /\.(js|mjs|json|css|html|svg|txt|xml|wasm)$/i,
-    }),
-  ],
-  server: {
-    host: '0.0.0.0',
-    port: HTTPS_ENABLED ? 443 : 5173,
-    strictPort: true,
-    https: getHttpsConfig(HTTPS_ENABLED),
-    allowedHosts: ['www.resumeconverter.net', 'resumeconverter.net', 'localhost'],
-    hmr: {
-      overlay: false // Disable error overlay - we handle errors in ErrorBoundary
-    },
-    proxy: {
-      '/api': {
-        target: HTTPS_ENABLED ? `https://localhost:${HTTPS_PORT}` : 'http://localhost:3001',
-        changeOrigin: true,
-        secure: false,
-        ws: true,
-        timeout: 600000, // 10 minutes timeout for proxy
-        proxyTimeout: 600000, // 10 minutes timeout for proxy connection
-        rewrite: (path) => path,
-        configure: (proxy, options) => {
-          // Set proxy timeout to 10 minutes
-          proxy.options.timeout = 600000;
-          proxy.options.proxyTimeout = 600000;
-          
-          proxy.on('error', (err, req, res) => {
-            console.error('[Vite Proxy] Error:', err.message);
-          });
-          proxy.on('proxyReq', (proxyReq, req, res) => {
-            // Set socket timeout on the outgoing request to 10 minutes
-            proxyReq.socket?.setTimeout(600000);
-            console.log('[Vite Proxy] Proxying:', req.method, req.url, '→', proxyReq.path);
-          });
-          proxy.on('proxyRes', (proxyRes, req, res) => {
-            console.log('[Vite Proxy] Response:', proxyRes.statusCode, 'from', req.url);
-          });
-        },
-      },
-      '/generate-pdf': {
-        target: 'http://localhost:3002',
-        changeOrigin: true,
-        secure: false,
-      },
-      '/health': {
-        target: HTTPS_ENABLED ? `https://localhost:${HTTPS_PORT}` : 'http://localhost:3001',
-        changeOrigin: true,
-        secure: false,
-      },
-    },
-    fs: {
-      strict: true,
-      allow: ['.', '..', '../node_modules']
-    },
-    // Ensure SPA routing works - all non-file requests should serve index.html
-    middlewareMode: false
-  },
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-      '@root': path.resolve(__dirname, '..'),
-      // Fix for html-parse-stringify ESM issue in Vite 7 - use UMD version
-      'html-parse-stringify': path.resolve(__dirname, '../node_modules/html-parse-stringify/dist/html-parse-stringify.umd.js'),
-    },
-      },
-      optimizeDeps: {
-    // Force pre-bundling of problematic ESM packages for Vite 7
-    force: true,
-    rolldownOptions: {
-      // Fix for React exports not being recognized
-      resolve: { mainFields: ['module', 'main'] },
+      proxy: {
+        '/api': {
+          target: httpsEnabled ? `https://localhost:${httpsPort}` : 'http://localhost:3001',
+          changeOrigin: true,
+          secure: false,
+          ws: true,
+          timeout: 600000,
+          proxyTimeout: 600000,
+          rewrite: (requestPath) => requestPath,
+          configure: (proxy) => {
+            proxy.options.timeout = 600000;
+            proxy.options.proxyTimeout = 600000;
+
+            proxy.on('error', (err) => {
+              console.error('[Vite Proxy] Error:', err.message);
+            });
+            proxy.on('proxyReq', (proxyReq, req) => {
+              proxyReq.socket?.setTimeout(600000);
+              console.log('[Vite Proxy] Proxying:', req.method, req.url, '→', proxyReq.path);
+            });
+            proxy.on('proxyRes', (proxyRes, req) => {
+              console.log('[Vite Proxy] Response:', proxyRes.statusCode, 'from', req.url);
+            });
           },
-    // Exclude .env files from optimization
-    exclude: ['.env', '.env.local', '.env.development', '.env.production'],
-    include: [
-      'react',
-      'react-dom',
-      'react-router-dom',
-      'react-i18next',
-      'i18next',
-      'i18next-browser-languagedetector',
-      'html-parse-stringify'
-    ]
-  },
-  build: {
-    // Output directory (inside client/)
-    outDir: 'dist',
-    minify: true,
-    // Enable source maps for debugging
-    sourcemap: true,
-    // Chunk size warning limit (in kB)
-    // Increased to 1500 to suppress warnings for necessary large libs (maplibre, Three.js)
-    // These libs are already lazy-loaded, so they don't affect initial page load
-    chunkSizeWarningLimit: 1500,
-    // Target modern browsers for smaller output
-    target: 'es2020',
-    // Disable modulePreload polyfill to avoid unused preload warnings in production
-    modulePreload: {
-      polyfill: false
-    },
-    commonjsOptions: {
-      include: [/node_modules/],
-      transformMixedEsModules: true,
-    },
-    rollupOptions: {
-      output: {
-        // Manual chunk splitting for better caching
-        manualChunks(id) {
-          if (id.includes('node_modules')) {
-            // Tiptap & ProseMirror (MUST be before React check: @tiptap/react contains '/react/')
-            if (id.includes('@tiptap') || id.includes('prosemirror')) {
-              return 'vendor-tiptap';
-            }
-            // React core (includes react-i18next to avoid circular with vendor-i18n)
-            if (id.includes('react-dom') || id.includes('react-router') || id.includes('/react/') || id.includes('react-i18next')) {
-              return 'vendor-react';
-            }
-            // UI libraries
-            if (id.includes('framer-motion') || id.includes('@headlessui') || id.includes('@heroicons')) {
-              return 'vendor-ui';
-            }
-            // Charts
-            if (id.includes('recharts') || id.includes('d3-')) {
-              return 'vendor-charts';
-            }
-            // Map libraries
-            if (id.includes('maplibre') || id.includes('react-map-gl') || id.includes('mapbox')) {
-              return 'vendor-map';
-            }
-            // PDF libraries
-            if (id.includes('pdfjs-dist') || id.includes('html2pdf') || id.includes('jspdf')) {
-              return 'vendor-pdf';
-            }
-            // i18n (pure i18next only; react-i18next is in vendor-react)
-            if (id.includes('i18next')) {
-              return 'vendor-i18n';
-            }
-            // Three.js (WebGL)
-            if (id.includes('three')) {
-              return 'vendor-three';
-            }
-          }
         },
-        // Optimize chunk file names
-        chunkFileNames: 'assets/js/[name]-[hash].js',
-        entryFileNames: 'assets/js/[name]-[hash].js',
-        assetFileNames: 'assets/[ext]/[name]-[hash].[ext]',
+        '/generate-pdf': {
+          target: 'http://localhost:3002',
+          changeOrigin: true,
+          secure: false,
+        },
+        '/health': {
+          target: httpsEnabled ? `https://localhost:${httpsPort}` : 'http://localhost:3001',
+          changeOrigin: true,
+          secure: false,
+        },
       },
-      onwarn(warning, warn) {
-        // Suppress warnings about vite-plugin-node-polyfills
-        if (warning.message?.includes('vite-plugin-node-polyfills')) {
-          return;
-        }
-        warn(warning);
+      fs: {
+        strict: true,
+        allow: ['.', '..', '../node_modules'],
       },
-      // Tree-shaking optimization
-      treeshake: {
-        moduleSideEffects: true,
-        propertyReadSideEffects: false,
+      middlewareMode: false,
+    },
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, './src'),
+        '@root': path.resolve(__dirname, '..'),
+        'html-parse-stringify': path.resolve(__dirname, '../node_modules/html-parse-stringify/dist/html-parse-stringify.umd.js'),
       },
-    }
-  }
-};
+    },
+    optimizeDeps: {
+      force: true,
+      rolldownOptions: {
+        resolve: {
+          mainFields: ['module', 'main'],
+        },
+      },
+      exclude: ['.env', '.env.local', '.env.development', '.env.production'],
+      include: OPTIMIZE_DEPENDENCY_INCLUDE,
+    },
+    build: {
+      outDir: 'dist',
+      minify: true,
+      sourcemap: mode !== 'production',
+      chunkSizeWarningLimit: 1100,
+      target: 'es2020',
+      modulePreload: {
+        polyfill: false,
+      },
+      commonjsOptions: {
+        include: [/node_modules/],
+        transformMixedEsModules: true,
+      },
+      rollupOptions: {
+        output: {
+          manualChunks,
+          chunkFileNames: 'assets/js/[name]-[hash].js',
+          entryFileNames: 'assets/js/[name]-[hash].js',
+          assetFileNames: 'assets/[ext]/[name]-[hash].[ext]',
+        },
+        onwarn(warning, warn) {
+          warn(warning);
+        },
+        treeshake: {
+          moduleSideEffects: true,
+          propertyReadSideEffects: false,
+        },
+      },
+    },
+  };
 });
+

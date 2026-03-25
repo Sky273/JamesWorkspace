@@ -23,7 +23,6 @@ import {
   DocumentTextIcon,
   GlobeEuropeAfricaIcon
 } from '@heroicons/react/24/outline';
-import Breadcrumbs from '../components/Breadcrumbs';
 
 type HeroIcon = ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, 'ref'> & { title?: string; titleId?: string } & RefAttributes<SVGSVGElement>>;
 
@@ -335,10 +334,7 @@ const TagsManagement = (): JSX.Element => {
   }
 
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="p-6 max-w-7xl mx-auto">
-      <Breadcrumbs className="mb-4" />
-      
-      <div className="mb-8">
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="p-6 max-w-7xl mx-auto">      <div className="mb-8">
         <div className="flex items-center gap-3 mb-1">
           <div className="w-1 h-8 rounded-full bg-primary-500" />
           <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-gray-100">{t('tags.title')}</h1>

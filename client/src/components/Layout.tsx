@@ -1,35 +1,35 @@
-/**
- * Layout Component
- * TypeScript version
- */
-
-import { useState, useEffect } from 'react';
+﻿import { lazy, Suspense, useEffect, useState } from 'react';
 import { Outlet, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Sidebar from './Sidebar';
 import ScrollToTop from './ScrollToTop';
-import { SunIcon, MoonIcon, Bars3Icon } from '@heroicons/react/24/outline';
-import { InformationCircleIcon } from '@heroicons/react/24/outline';
-import AboutModal from './AboutModal';
+import {
+  SunIcon,
+  MoonIcon,
+  Bars3Icon,
+  InformationCircleIcon,
+  Cog6ToothIcon,
+  ArrowRightOnRectangleIcon,
+} from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
 import LanguageSelector from './LanguageSelector';
 import Footer from './Footer';
-import ChatBot from './ChatBot';
 import HealthIndicator from './HealthIndicator';
+import Breadcrumbs from './Breadcrumbs';
 
-// Helper to get cookie value
+const AboutModal = lazy(() => import('./AboutModal'));
+const ChatBot = lazy(() => import('./ChatBot'));
+
 const getCookie = (name: string): string | null => {
   const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
   return match ? match[2] : null;
 };
 
-// Helper to set cookie value
 const setCookie = (name: string, value: string, days: number = 365): void => {
   const expires = new Date(Date.now() + days * 864e5).toUTCString();
   document.cookie = `${name}=${value}; expires=${expires}; path=/; SameSite=Lax`;
 };
 
-// Helper to get initials from name (first letter of first name + first letter of last name)
 const getInitials = (name: string | undefined): string => {
   if (!name) return '?';
   const parts = name.trim().split(/\s+/);
@@ -38,6 +38,9 @@ const getInitials = (name: string | undefined): string => {
   }
   return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
 };
+
+const headerIconButtonClassName =
+  'flex h-9 w-9 items-center justify-center rounded-full border border-slate-200/90 bg-white text-slate-500 shadow-sm shadow-slate-200/50 transition-all hover:-translate-y-px hover:border-slate-300 hover:text-slate-900 dark:border-white/8 dark:bg-white/[0.045] dark:text-slate-400 dark:shadow-none dark:hover:border-white/12 dark:hover:bg-white/[0.08] dark:hover:text-white';
 
 const Layout = (): JSX.Element => {
   const { user, signOut } = useAuth();
@@ -59,14 +62,9 @@ const Layout = (): JSX.Element => {
   }, [theme]);
 
   const toggleTheme = (): void => {
-    setTheme(prevTheme => prevTheme === 'light' ? 'dark' : 'light');
+    setTheme((prevTheme) => (prevTheme === 'light' ? 'dark' : 'light'));
   };
 
-  const handleSignOut = (): void => {
-    signOut();
-  };
-
-  // Get translated role name (only 'user' and 'admin' are valid roles)
   const getRoleLabel = (role: string | undefined): string => {
     if (!role) return t('userProfile.roles.user');
     const roleLower = role.toLowerCase();
@@ -78,90 +76,94 @@ const Layout = (): JSX.Element => {
     <div className="min-h-screen bg-app">
       <ScrollToTop />
       <Sidebar isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
-      
-      {/* Fixed user profile card - top right, vertically centered with header icons */}
-      {user && (
-        <div className="fixed top-0 right-2 sm:right-4 z-50 h-16 flex items-center">
-          <div className="flex items-center space-x-2 sm:space-x-3">
-          {/* Avatar with initials - clickable link to profile */}
-          <Link 
-            to="/profile" 
-            className="flex items-center space-x-2 sm:space-x-3 hover:opacity-80 transition-opacity"
-            title={t('userProfile.viewProfile') || 'Mon compte'}
-          >
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-semibold text-xs sm:text-sm shadow-md">
-              {getInitials(user?.name)}
-            </div>
-            {/* User info - hidden on small mobile */}
-            <div className="hidden xs:flex flex-col">
-              <span className="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 leading-tight truncate max-w-[100px] sm:max-w-[150px]">
-                {user?.name || t('userProfile.anonymous')}
-              </span>
-              <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 leading-tight truncate max-w-[100px] sm:max-w-[150px]">
-                {user?.firm || t('userProfile.noCompany')} • {getRoleLabel(user?.role)}
-              </span>
-            </div>
-          </Link>
-          {/* Sign out button */}
-          <button 
-            onClick={handleSignOut} 
-            className="ml-1 sm:ml-2 p-1 sm:p-1.5 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-600/50 transition-colors"
-            title={t('common.signOut')}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-          </button>
-          </div>
-        </div>
-      )}
 
-      <div className="md:pl-64 flex flex-col flex-1 min-h-screen">
-        <div className="header-bar shrink-0 sticky top-0 z-40 bg-gray-100/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 h-16">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
-              <div className="flex items-center space-x-4">
-                {/* Mobile menu button */}
-                <button
-                  className="md:hidden p-2 rounded-lg bg-white dark:bg-gray-800 shadow-md border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                  onClick={() => setIsMobileMenuOpen(true)}
-                >
-                  <span className="sr-only">{t('common.openMenu')}</span>
-                  <Bars3Icon className="h-6 w-6" aria-hidden="true" />
-                </button>
+      <div className="md:pl-64 flex min-h-screen flex-1 flex-col">
+        <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/92 shadow-[0_1px_0_rgba(15,23,42,0.04)] backdrop-blur-xl dark:border-white/6 dark:bg-[#0c1222]/95 dark:shadow-[0_1px_0_rgba(255,255,255,0.03)]">
+          <div className="flex h-16 items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+            <div className="flex min-w-0 items-center gap-3.5">
+              <button
+                className={`md:hidden ${headerIconButtonClassName}`}
+                onClick={() => setIsMobileMenuOpen(true)}
+              >
+                <span className="sr-only">{t('common.openMenu')}</span>
+                <Bars3Icon className="h-[18px] w-[18px]" aria-hidden="true" />
+              </button>
+              <div className="hidden h-6 w-px bg-slate-200/80 md:block dark:bg-white/8" />
+              <div className="min-w-0 rounded-full border border-slate-200/80 bg-white/70 px-3 py-2 dark:border-white/8 dark:bg-white/[0.03]">
+                <Breadcrumbs tone="header" />
+              </div>
+            </div>
 
-                <button
-                  className="p-2 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
-                  onClick={toggleTheme}
-                >
+            <div className="flex items-center gap-2.5 text-slate-700 dark:text-slate-300">
+              <div className="flex items-center gap-2 rounded-full border border-slate-200/80 bg-slate-50/80 px-1.5 py-1 shadow-sm shadow-slate-200/40 dark:border-white/8 dark:bg-white/[0.03] dark:shadow-none">
+                <button className={headerIconButtonClassName} onClick={toggleTheme}>
                   <span className="sr-only">
                     {theme === 'dark' ? t('header.theme.light') : t('header.theme.dark')}
                   </span>
                   {theme === 'dark' ? (
-                    <SunIcon className="h-6 w-6" aria-hidden="true" />
+                    <SunIcon className="h-4 w-4" aria-hidden="true" />
                   ) : (
-                    <MoonIcon className="h-6 w-6" aria-hidden="true" />
+                    <MoonIcon className="h-4 w-4" aria-hidden="true" />
                   )}
                 </button>
 
-                <LanguageSelector />
+                <LanguageSelector variant="header" />
 
-                <button
-                  className="p-2 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
-                  onClick={() => setIsAboutOpen(true)}
+                <Link
+                  to="/settings"
+                  className={headerIconButtonClassName}
+                  title={t('navigation.settings')}
                 >
-                  <span className="sr-only">{t('common.about')}</span>
-                  <InformationCircleIcon className="h-6 w-6" aria-hidden="true" />
-                </button>
+                  <span className="sr-only">{t('navigation.settings')}</span>
+                  <Cog6ToothIcon className="h-4 w-4" aria-hidden="true" />
+                </Link>
 
-                <HealthIndicator />
+                <button className={headerIconButtonClassName} onClick={() => setIsAboutOpen(true)}>
+                  <span className="sr-only">{t('common.about')}</span>
+                  <InformationCircleIcon className="h-4 w-4" aria-hidden="true" />
+                </button>
               </div>
+
+              <div className="hidden sm:block">
+                <HealthIndicator variant="header" />
+              </div>
+
+              {user && (
+                <>
+                  <div className="hidden h-7 w-px bg-slate-200/80 lg:block dark:bg-white/8" />
+                  <Link
+                    to="/profile"
+                    className="flex min-w-0 items-center gap-3 rounded-full border border-slate-200/90 bg-white px-2.5 py-1.5 shadow-sm shadow-slate-200/50 transition-all hover:-translate-y-px hover:border-slate-300 dark:border-white/8 dark:bg-white/[0.045] dark:shadow-none dark:hover:border-white/12 dark:hover:bg-white/[0.08]"
+                    title={t('userProfile.viewProfile') || 'Mon compte'}
+                  >
+                    <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 via-violet-500 to-sky-500 text-[11px] font-semibold text-white shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
+                      {getInitials(user.name)}
+                    </div>
+                    <div className="hidden min-w-0 lg:flex lg:flex-col">
+                      <span className="truncate text-[12px] font-semibold tracking-[0.01em] text-slate-900 dark:text-white">
+                        {user.name || t('userProfile.anonymous')}
+                      </span>
+                      <span className="truncate text-[11px] text-slate-500 dark:text-slate-400">
+                        {user.firm || t('userProfile.noCompany')} · {getRoleLabel(user.role)}
+                      </span>
+                    </div>
+                  </Link>
+
+                  <button
+                    onClick={signOut}
+                    className={headerIconButtonClassName}
+                    title={t('common.signOut')}
+                  >
+                    <ArrowRightOnRectangleIcon className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                </>
+              )}
             </div>
           </div>
-        </div>
+        </header>
 
         <main className="flex-1">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
             <Outlet />
           </div>
         </main>
@@ -169,8 +171,10 @@ const Layout = (): JSX.Element => {
         <Footer />
       </div>
 
-      <AboutModal isOpen={isAboutOpen} onClose={() => setIsAboutOpen(false)} />
-      <ChatBot />
+      <Suspense fallback={null}>
+        <AboutModal isOpen={isAboutOpen} onClose={() => setIsAboutOpen(false)} />
+        <ChatBot />
+      </Suspense>
     </div>
   );
 };

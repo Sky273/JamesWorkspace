@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { formatDateTime } from '../utils/dateFormatter';
 import { fetchWithAuth, createAuthOptions } from '../utils/apiInterceptor';
+import { SignalIcon } from '@heroicons/react/24/outline';
 
 interface HealthCheck {
   status: string;
@@ -68,15 +69,17 @@ interface HealthStatus {
 
 interface HealthIndicatorProps {
   showAlways?: boolean;
+  variant?: 'default' | 'header';
 }
 
-const HealthIndicator = ({ showAlways = false }: HealthIndicatorProps): JSX.Element | null => {
+const HealthIndicator = ({ showAlways = false, variant = 'default' }: HealthIndicatorProps): JSX.Element | null => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const [health, setHealth] = useState<HealthStatus>({ status: 'unknown' });
   const [memoryStats, setMemoryStats] = useState<MemoryStats | null>(null);
   const [isHovered, setIsHovered] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const isHeader = variant === 'header';
 
   // Check if user is admin
   const isAdmin = user?.role === 'admin';
@@ -215,11 +218,14 @@ const HealthIndicator = ({ showAlways = false }: HealthIndicatorProps): JSX.Elem
       onMouseLeave={() => { setIsHovered(false); setIsExpanded(false); }}
     >
       <div 
-        className="flex items-center gap-2 px-2 py-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors"
+        className={isHeader
+        ? 'flex items-center gap-2 rounded-full border border-slate-200/90 bg-white px-3.5 py-2 text-slate-600 shadow-sm shadow-slate-200/50 transition-all hover:-translate-y-px hover:border-slate-300 dark:border-white/8 dark:bg-white/[0.045] dark:text-slate-300 dark:shadow-none dark:hover:border-white/12 dark:hover:bg-white/[0.08]'
+        : 'flex items-center gap-2 px-2 py-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors'}
         onClick={() => setIsExpanded(!isExpanded)}
       >
+        <SignalIcon className={isHeader ? 'h-4 w-4 text-slate-400 dark:text-slate-500' : 'h-4 w-4 text-gray-400 dark:text-gray-500'} aria-hidden="true" />
         <span className={`w-2.5 h-2.5 rounded-full ${getStatusColor()} ${health.status !== 'healthy' ? 'animate-pulse' : ''}`} />
-        <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">
+        <span className={isHeader ? 'hidden text-xs text-slate-600 dark:text-slate-300 sm:inline' : 'hidden text-xs text-gray-500 dark:text-gray-400 sm:inline'}>
           {getStatusText()}
         </span>
         {health.issues && health.issues.length > 0 && (

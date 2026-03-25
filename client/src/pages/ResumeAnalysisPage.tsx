@@ -9,7 +9,6 @@ import { useResume } from '../context/ResumeContext';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { ArrowRightIcon, ArrowLeftIcon, SparklesIcon, CheckCircleIcon, ShareIcon, ArrowDownTrayIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
-import Breadcrumbs from '../components/Breadcrumbs';
 import ShareQRCodeModal from '../components/ShareQRCodeModal';
 import { fetchWithAuth, createAuthOptionsWithCsrf } from '../utils/apiInterceptor';
 import ConsentBadge, { ConsentStatus } from '../components/ConsentBadge';
@@ -246,7 +245,6 @@ const ResumeAnalysisPage = (): JSX.Element => {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
         <div className="max-w-7xl mx-auto px-4">
-          <Breadcrumbs className="mb-4" />
           <ImprovementAnimation currentStep={processingStep || 'improving'} />
         </div>
       </div>
@@ -268,10 +266,6 @@ const ResumeAnalysisPage = (): JSX.Element => {
             {t('resumes.backToDealsView', 'Retour à la vue par affaire')}
           </button>
         )}
-
-        {/* Breadcrumbs */}
-        <Breadcrumbs className="mb-4" />
-
         {/* Header with navigation */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}

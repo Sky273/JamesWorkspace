@@ -253,18 +253,38 @@ export function startServer(app, serverDir) {
     }
 
     // Configure graceful shutdown
-    const gracefulShutdown = async (signal) => {
-        safeLog('info', 'Graceful shutdown initiated', { signal });
+    let shutdownInProgress = false;
+    const gracefulShutdown = async (signal, exitCode = 0) => {
+        if (shutdownInProgress) {
+            safeLog('warn', 'Graceful shutdown already in progress', { signal, exitCode });
+            return;
+        }
+
+        shutdownInProgress = true;
+        safeLog('info', 'Graceful shutdown initiated', { signal, exitCode });
         
         // Force exit timer - use unref() so it doesn't keep process alive
         const forceExitTimer = setTimeout(() => {
-            safeLog('error', 'Forced shutdown after timeout');
+            safeLog('error', 'Forced shutdown after timeout', { exitCode });
             process.exit(1);
         }, 10000);
-        forceExitTimer.unref(); // Don't keep process alive waiting for this timer
+        forceExitTimer.unref();
         
         // Stop accepting new connections
-        server.close(async () => {
+        server.close(async (closeError) => {
+            if (closeError && closeError.code !== 'ERR_SERVER_NOT_RUNNING') {
+                safeLog('error', 'Error while closing HTTP server', {
+                    error: closeError.message,
+                    code: closeError.code,
+                    exitCode,
+                });
+                clearTimeout(forceExitTimer);
+                setImmediate(() => {
+                    process.exit(exitCode || 1);
+                });
+                return;
+            }
+
             safeLog('info', 'HTTP server closed');
             
             // Cleanup intervals and caches
@@ -317,17 +337,16 @@ export function startServer(app, serverDir) {
                 safeLog('debug', 'Garbage collection triggered');
             }
             
-            // Clear the force exit timer
             clearTimeout(forceExitTimer);
+            safeLog('info', 'Graceful shutdown complete', { exitCode });
             
-            safeLog('info', 'Graceful shutdown complete');
-            
-            // Use setImmediate to ensure all cleanup is done before exiting
             setImmediate(() => {
-                process.exit(0);
+                process.exit(exitCode);
             });
         });
     };
+
+    server.gracefulShutdown = gracefulShutdown;
 
     process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
     process.on('SIGINT', () => gracefulShutdown('SIGINT'));

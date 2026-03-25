@@ -19,11 +19,10 @@ import {
   FolderArrowDownIcon,
   ArrowDownTrayIcon
 } from '@heroicons/react/24/outline';
-import Breadcrumbs from '../components/Breadcrumbs';
 import { useAuth } from '../context/AuthContext';
 import logger from '../utils/logger.frontend';
 import toast from 'react-hot-toast';
-import { templateService, Template } from '../utils/templateService';
+import type { Template } from '../utils/templateService';
 import { type FileWithPath, type FileStatus, type ExportFormats, getFilesFromEvent } from './batchUpload.utils';
 import BatchUploadOptions from './BatchUploadOptions';
 import BatchUploadFileList from './BatchUploadFileList';
@@ -94,7 +93,8 @@ const BatchUploadPage = (): JSX.Element => {
     if (exportOption && templates.length === 0) {
       let isCancelled = false;
       
-      templateService.getAllTemplates()
+      import('../utils/templateService')
+        .then(({ templateService }) => templateService.getAllTemplates())
         .then(fetchedTemplates => {
           if (!isCancelled && isMountedRef.current) {
             setTemplates(fetchedTemplates);
@@ -297,8 +297,6 @@ const BatchUploadPage = (): JSX.Element => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
       <div className="max-w-4xl mx-auto px-4">
-        <Breadcrumbs className="mb-4" />
-        
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

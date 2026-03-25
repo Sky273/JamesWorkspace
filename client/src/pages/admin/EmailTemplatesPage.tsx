@@ -19,7 +19,6 @@ import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
 import { EmailTemplate, EmailTemplateKeywords } from '../../types/entities';
 import emailTemplateService from '../../services/emailTemplateService';
 import { EmailTemplateEditor, EmailTemplatePreview } from '../../components/EmailTemplates';
-import Breadcrumbs from '../../components/Breadcrumbs';
 
 type ModalMode = 'create' | 'edit' | 'preview' | null;
 
@@ -208,10 +207,7 @@ const EmailTemplatesPage = (): JSX.Element => {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <Breadcrumbs className="mb-4" />
-      
-      {/* Header */}
+    <div className="p-6 max-w-7xl mx-auto">      {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
           <div className="flex items-center gap-3 mb-1">

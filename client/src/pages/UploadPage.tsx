@@ -9,7 +9,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import FileUpload from '../components/FileUpload';
-import Breadcrumbs from '../components/Breadcrumbs';
 
 const UploadPage = (): JSX.Element => {
   const { currentResume, setCurrentResume } = useResume();
@@ -42,10 +41,7 @@ const UploadPage = (): JSX.Element => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
-      <div className="max-w-7xl mx-auto px-4">
-        <Breadcrumbs className="mb-4" />
-        
-        <motion.div
+      <div className="max-w-7xl mx-auto px-4">        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"

@@ -22,7 +22,6 @@ import resumeAdaptationService from '../utils/resumeAdaptationService';
 import type { MatchAnalysis } from '../utils/resumeAdaptationService';
 import toast from 'react-hot-toast';
 import logger from '../utils/logger.frontend';
-import Breadcrumbs from '../components/Breadcrumbs';
 
 interface Resume {
   id: string;
@@ -221,8 +220,6 @@ const ResumeAdaptPage = (): JSX.Element => {
       className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8"
     >
       <div className="max-w-6xl mx-auto px-4">
-        <Breadcrumbs className="mb-4" />
-        
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">

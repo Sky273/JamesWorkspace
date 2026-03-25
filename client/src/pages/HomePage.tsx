@@ -3,7 +3,8 @@
  * TypeScript version
  */
 
-import { ForwardRefExoticComponent, RefAttributes, SVGProps, useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
+import { ForwardRefExoticComponent, RefAttributes, SVGProps, useState, useEffect, useCallback, useMemo, Suspense } from 'react';
+import DeferredWebGLBackground from '../components/DeferredWebGLBackground';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useInView } from 'react-intersection-observer';
@@ -21,8 +22,6 @@ import {
 import HomeDashboard from '../components/HomeDashboard';
 import { useAuthFetch } from '../hooks/useAuthFetch';
 
-// Lazy load WebGL background to avoid blocking initial render
-const WebGLBackground = lazy(() => import('../components/WebGLBackground'));
 
 type HeroIcon = ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, 'ref'> & { title?: string; titleId?: string } & RefAttributes<SVGSVGElement>>;
 
@@ -376,7 +375,7 @@ function HomePage(): JSX.Element {
           {/* WebGL Background Animation - hidden only when explicitly disabled in settings */}
           {webglEnabled && (
             <Suspense fallback={null}>
-              <WebGLBackground />
+              <DeferredWebGLBackground />
             </Suspense>
           )}
           <div className="container mx-auto px-4">

@@ -3,13 +3,12 @@
  * Text extraction and resume improvement using Claude/OpenAI
  */
 
-import { 
-    extractTextFromPDF, 
-    extractTextFromDOCX, 
-    extractTextFromDOC
-} from './textExtraction';
 import { createAuthOptionsWithCsrf } from './apiInterceptor';
 import logger from './logger.frontend';
+
+async function loadTextExtraction() {
+    return import('./textExtraction');
+}
 
 export interface ResumeAnalysis {
     name: string;
@@ -61,6 +60,7 @@ export async function extractResumeText(file: File): Promise<string> {
             
             // PDF extraction
             if (file.type === 'application/pdf') {
+                const { extractTextFromPDF } = await loadTextExtraction();
                 const text = await extractTextFromPDF(file);
                 
                 // More lenient validation for OCR results
@@ -84,6 +84,7 @@ export async function extractResumeText(file: File): Promise<string> {
             
             // DOCX extraction
             if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+                const { extractTextFromDOCX } = await loadTextExtraction();
                 const text = await extractTextFromDOCX(file);
                 if (!text || text.trim().length < 50) {
                     throw new Error('Insufficient text extracted from DOCX');
@@ -94,6 +95,7 @@ export async function extractResumeText(file: File): Promise<string> {
             // DOC extraction (Word 97-2003)
             if (file.type === 'application/msword') {
                 try {
+                    const { extractTextFromDOC } = await loadTextExtraction();
                     const text = await extractTextFromDOC(file);
                     if (!text || text.trim().length < 50) {
                         throw new Error('Insufficient text extracted from DOC');
@@ -105,6 +107,7 @@ export async function extractResumeText(file: File): Promise<string> {
                     if (attempt === MAX_RETRIES) {
                         logger.log('Attempting fallback: treating DOC as DOCX...');
                         try {
+                            const { extractTextFromDOCX } = await loadTextExtraction();
                             return await extractTextFromDOCX(file);
                         } catch (fallbackError) {
                             logger.error('Fallback extraction also failed:', fallbackError instanceof Error ? fallbackError.message : 'Unknown error');
@@ -377,8 +380,10 @@ export async function processResume(input: File | string, isImprovement: boolean
 
             // Extract text based on file type
             if (input.type === 'application/pdf') {
+                const { extractTextFromPDF } = await loadTextExtraction();
                 text = await extractTextFromPDF(input);
             } else if (input.type === 'application/msword' || input.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+                const { extractTextFromDOCX } = await loadTextExtraction();
                 text = await extractTextFromDOCX(input);
             } else {
                 throw new Error('Unsupported file type');

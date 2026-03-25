@@ -5,9 +5,10 @@
  * PDF extraction is now handled server-side to enable strict CSP without 'unsafe-eval'
  */
 
-import mammoth from 'mammoth';
 import logger from './logger.frontend';
 import { fetchWithAuth, createAuthOptionsWithCsrf } from './apiInterceptor';
+
+const loadMammoth = async () => (await import('mammoth')).default;
 
 /**
  * Extract text from PDF using server-side extraction
@@ -67,6 +68,7 @@ export async function extractTextFromDOCX(file: File): Promise<string> {
     try {
         logger.log('Extracting text from DOCX file...');
         const arrayBuffer = await file.arrayBuffer();
+        const mammoth = await loadMammoth();
         const result = await mammoth.extractRawText({ arrayBuffer });
         const text = result.value.trim();
         logger.log(`Successfully extracted ${text.length} characters from DOCX`);

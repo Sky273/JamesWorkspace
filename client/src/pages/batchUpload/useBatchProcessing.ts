@@ -9,11 +9,13 @@
 import { useCallback, type MutableRefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { fetchWithAuth, createAuthOptionsWithCsrf, attemptTokenRefresh } from '../../utils/apiInterceptor';
-import { extractResumeText } from '../../utils/resumeProcessing';
+import { fetchWithAuth, createAuthOptionsWithCsrf } from '../../utils/apiInterceptor';
 import logger from '../../utils/logger.frontend';
 import toast from 'react-hot-toast';
 import type { FileStatus, ExportFormats } from '../batchUpload.utils';
+
+const loadResumeProcessing = async () => import('../../utils/resumeProcessing');
+const loadApiInterceptor = async () => import('../../utils/apiInterceptor');
 
 interface UseBatchProcessingParams {
   filesRef: MutableRefObject<FileStatus[]>;
@@ -111,6 +113,7 @@ export function useBatchProcessing({
       
       // Step 2: Extract text
       updateFileStatus(index, { status: 'extracting', progress: 35 });
+      const { extractResumeText } = await loadResumeProcessing();
       const text = await extractResumeText(fileStatus.file);
       
       if (!text || text.length === 0) {
@@ -379,6 +382,7 @@ export function useBatchProcessing({
       }
       
       logger.info('[BatchUpload] Session keep-alive: refreshing token...');
+      const { attemptTokenRefresh } = await loadApiInterceptor();
       const success = await attemptTokenRefresh();
       if (!success) {
         logger.warn('[BatchUpload] Session keep-alive: token refresh failed');

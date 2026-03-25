@@ -1,18 +1,13 @@
-/**
- * Search and Actions Component for Resumes Page
- * TypeScript version
- */
-
-import { ChangeEvent } from 'react';
-import { 
-  MagnifyingGlassIcon,
+﻿import {
   FunnelIcon,
   ArrowPathIcon,
   PlusIcon,
   ChevronDownIcon,
   XMarkIcon,
-  FolderArrowDownIcon
+  FolderArrowDownIcon,
 } from '@heroicons/react/24/outline';
+
+import SearchField from '../page/SearchField';
 
 interface SearchAndActionsProps {
   searchQuery: string;
@@ -27,35 +22,27 @@ interface SearchAndActionsProps {
   t: (key: string) => string;
 }
 
-const SearchAndActions = ({ 
-  searchQuery, 
-  onSearchChange, 
-  isFilterExpanded, 
-  onToggleFilter, 
+const SearchAndActions = ({
+  searchQuery,
+  onSearchChange,
+  isFilterExpanded,
+  onToggleFilter,
   selectedTagsCount,
-  onRefresh, 
+  onRefresh,
   onUpload,
   onBatchUpload,
   onReset,
-  t 
+  t,
 }: SearchAndActionsProps): JSX.Element => {
   const hasActiveFilters = searchQuery !== '' || selectedTagsCount > 0;
-  const handleSearchChange = (e: ChangeEvent<HTMLInputElement>): void => {
-    onSearchChange(e.target.value);
-  };
 
   return (
     <div className="flex flex-col md:flex-row md:items-center md:justify-between p-4 gap-4">
-      <div className="relative flex-1 max-w-md">
-        <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={handleSearchChange}
-          className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
-          placeholder={t('resumes.searchPlaceholder')}
-        />
-      </div>
+      <SearchField
+        value={searchQuery}
+        onChange={onSearchChange}
+        placeholder={t('resumes.searchPlaceholder')}
+      />
 
       <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
         <button
@@ -68,9 +55,7 @@ const SearchAndActions = ({
         >
           <FunnelIcon className="w-5 h-5" />
           <span className="hidden xs:inline">{t('resumes.filterButton')}</span>
-          {selectedTagsCount > 0 && (
-            <span className="px-1.5 py-0.5 text-xs bg-blue-500 text-white rounded-full">{selectedTagsCount}</span>
-          )}
+          {selectedTagsCount > 0 ? <span className="px-1.5 py-0.5 text-xs bg-blue-500 text-white rounded-full">{selectedTagsCount}</span> : null}
           <ChevronDownIcon className={`w-4 h-4 transition-transform ${isFilterExpanded ? 'rotate-180' : ''}`} />
         </button>
         <button
@@ -80,7 +65,7 @@ const SearchAndActions = ({
         >
           <ArrowPathIcon className="w-5 h-5" />
         </button>
-        {onReset && hasActiveFilters && (
+        {onReset && hasActiveFilters ? (
           <button
             onClick={onReset}
             className="inline-flex items-center gap-1.5 px-2 sm:px-3 py-2 text-sm font-medium rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
@@ -89,8 +74,8 @@ const SearchAndActions = ({
             <XMarkIcon className="w-4 h-4" />
             <span className="hidden sm:inline">{t('common.resetFilters')}</span>
           </button>
-        )}
-        {onBatchUpload && (
+        ) : null}
+        {onBatchUpload ? (
           <button
             onClick={onBatchUpload}
             className="btn btn-secondary flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 text-sm sm:text-base"
@@ -99,7 +84,7 @@ const SearchAndActions = ({
             <FolderArrowDownIcon className="w-5 h-5" />
             <span className="hidden sm:inline">{t('resumes.batchUploadButton')}</span>
           </button>
-        )}
+        ) : null}
         <button
           onClick={onUpload}
           className="btn btn-primary flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 text-sm sm:text-base"

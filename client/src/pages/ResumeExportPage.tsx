@@ -9,7 +9,6 @@ import { useResume } from '../context/ResumeContext';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { DocumentArrowDownIcon, CheckCircleIcon, SparklesIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
-import Breadcrumbs from '../components/Breadcrumbs';
 import { Resume } from '../types/entities';
 import { resumeService } from '../utils/resumeService';
 import { templateService } from '../utils/templateService';
@@ -204,9 +203,6 @@ const ResumeExportPage = (): JSX.Element => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
       <div className="max-w-7xl mx-auto px-4">
-        {/* Breadcrumbs */}
-        <Breadcrumbs className="mb-4" />
-
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}

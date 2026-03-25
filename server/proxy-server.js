@@ -9,12 +9,41 @@ import 'dotenv/config';
 import { safeLog } from './utils/logger.backend.js';
 
 // Global error handlers to catch crashes
+let serverInstance = null;
+let fatalErrorInProgress = false;
+
+const triggerFatalShutdown = (signal, details) => {
+    if (fatalErrorInProgress) {
+        safeLog('warn', 'Fatal shutdown already in progress', { signal });
+        return;
+    }
+
+    fatalErrorInProgress = true;
+    safeLog('error', 'Fatal process error', { signal, ...details });
+
+    if (serverInstance?.gracefulShutdown) {
+        serverInstance.gracefulShutdown(signal, 1);
+        return;
+    }
+
+    setImmediate(() => {
+        process.exit(1);
+    });
+};
+
 process.on('uncaughtException', (error) => {
-    safeLog('error', 'UNCAUGHT EXCEPTION', { message: error.message, stack: error.stack });
+    triggerFatalShutdown('UNCAUGHT_EXCEPTION', {
+        message: error.message,
+        stack: error.stack,
+    });
 });
 
-process.on('unhandledRejection', (reason, _promise) => {
-    safeLog('error', 'UNHANDLED REJECTION', { reason: String(reason) });
+process.on('unhandledRejection', (reason) => {
+    const normalizedReason = reason instanceof Error
+        ? { message: reason.message, stack: reason.stack }
+        : { reason: String(reason) };
+
+    triggerFatalShutdown('UNHANDLED_REJECTION', normalizedReason);
 });
 
 // ES module __dirname equivalent
@@ -182,7 +211,7 @@ app.use((err, req, res, _next) => {
 // ============================================
 // SERVER STARTUP
 // ============================================
-startServer(app, __dirname);
+serverInstance = startServer(app, __dirname);
 
 export default app;
 

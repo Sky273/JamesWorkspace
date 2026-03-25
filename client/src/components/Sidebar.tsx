@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Sidebar Component
  * TypeScript version with organized sections
  */
@@ -24,7 +24,7 @@ import {
   XMarkIcon,
   ClipboardDocumentListIcon,
   ServerStackIcon,
-  QueueListIcon
+  QueueListIcon,
 } from '@heroicons/react/24/outline';
 import classNames from 'classnames';
 import { useTranslation } from 'react-i18next';
@@ -64,19 +64,17 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
     const checkDarkMode = (): void => {
       setIsDarkMode(document.documentElement.classList.contains('dark'));
     };
-    
+
     checkDarkMode();
-    
+
     const observer = new MutationObserver(checkDarkMode);
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-    
+
     return () => observer.disconnect();
   }, []);
 
-  // Home item (no section header)
   const homeItem: NavItem = { name: t('navigation.home'), href: '/', icon: HomeIcon };
 
-  // GESTION section - visible to all users
   const gestionSection: NavSection = {
     title: null,
     items: [
@@ -86,10 +84,9 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
       { name: t('navigation.adaptations'), href: '/adaptations', icon: SparklesIcon },
       { name: t('navigation.crm', 'CRM'), href: '/clients', icon: BuildingOfficeIcon },
       { name: t('navigation.marketRadar'), href: '/facts', icon: SignalIcon },
-    ]
+    ],
   };
 
-  // ADMIN section - only visible to admins
   const adminSection: NavSection = {
     title: null,
     items: [
@@ -101,10 +98,9 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
       { name: t('navigation.gdprAudit'), href: '/dashboard/gdpr-audit', icon: ClipboardDocumentListIcon },
       { name: t('navigation.metrics'), href: '/dashboard/metrics', icon: ChartBarIcon },
     ],
-    adminOnly: true
+    adminOnly: true,
   };
 
-  // Bottom items (Settings, Jobs, Backup, and User Guide)
   const bottomItems: NavItem[] = [
     { name: t('navigation.settings'), href: '/settings', icon: Cog6ToothIcon, adminOnly: true },
     { name: t('navigation.jobs', 'Jobs'), href: '/batch-jobs', icon: QueueListIcon, adminOnly: true },
@@ -112,58 +108,55 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
     { name: t('navigation.userGuide'), href: '/guide', icon: BookOpenIcon },
   ];
 
-  const renderNavItem = (item: NavItem, isBottomItem = false) => {
+  const renderNavItem = (item: NavItem) => {
     const isActive = location.pathname === item.href;
     const IconComponent = item.icon;
+
     return (
       <Link
         key={item.name}
         to={item.href}
         className={classNames(
-          'group relative flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200',
+          'group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium transition-all duration-200',
           isActive
-            ? 'bg-primary-50 text-primary-700 dark:bg-primary-500/15 dark:text-primary-300 shadow-sm'
-            : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-200'
+            ? 'bg-slate-900 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] dark:bg-white/12 dark:text-white'
+            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-slate-100'
         )}
       >
-        {/* Active indicator bar */}
         {isActive && (
-          <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-primary-500 dark:bg-primary-400 rounded-r-full" />
+          <span className="absolute left-0 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-r-full bg-sky-500 dark:bg-sky-400" />
         )}
         <IconComponent
           className={classNames(
-            'flex-shrink-0 h-[18px] w-[18px] transition-colors duration-200',
+            'h-[18px] w-[18px] flex-shrink-0 transition-colors duration-200',
             isActive
-              ? 'text-primary-600 dark:text-primary-400'
-              : 'text-gray-400 group-hover:text-gray-600 dark:text-gray-500 dark:group-hover:text-gray-300'
+              ? 'text-sky-300 dark:text-sky-300'
+              : 'text-slate-400 group-hover:text-slate-600 dark:text-slate-500 dark:group-hover:text-slate-300'
           )}
           aria-hidden={true}
         />
-        {item.name}
+        <span className="truncate">{item.name}</span>
       </Link>
     );
   };
 
   const renderSection = (section: NavSection) => {
-    // Filter items based on admin status
-    const visibleItems = section.items.filter(item => !item.adminOnly || isAdmin);
-    
+    const visibleItems = section.items.filter((item) => !item.adminOnly || isAdmin);
+
     if (visibleItems.length === 0) return null;
 
     return (
       <div key={section.title} className="mt-5">
         {section.title && (
-          <div className="flex items-center gap-2 px-3 mb-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-primary-400 dark:bg-primary-500" />
-            <h3 className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">
+          <div className="mb-2 flex items-center gap-2 px-3">
+            <span className="h-1.5 w-1.5 rounded-full bg-sky-500 dark:bg-sky-400" />
+            <h3 className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
               {section.title}
             </h3>
-            <span className="flex-1 h-px bg-gradient-to-r from-gray-200 dark:from-gray-700 to-transparent" />
+            <span className="h-px flex-1 bg-gradient-to-r from-slate-200 via-slate-100 to-transparent dark:from-white/10 dark:via-white/6 dark:to-transparent" />
           </div>
         )}
-        <div className="space-y-0.5">
-          {visibleItems.map(item => renderNavItem(item))}
-        </div>
+        <div className="space-y-1">{visibleItems.map((item) => renderNavItem(item))}</div>
       </div>
     );
   };
@@ -173,40 +166,26 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
   };
 
   const sidebarContent = (
-    <div className="flex-1 flex flex-col min-h-0 bg-white dark:bg-gray-900 border-r border-gray-200/80 dark:border-gray-800">
-      <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto sidebar-scrollbar">
-        <div className="flex items-center justify-between flex-shrink-0 px-4 pb-4 border-b border-gray-100 dark:border-gray-800">
-          <img src={isDarkMode ? resumeConverterLogoDark : resumeConverterLogoLight} alt="Resume Converter" className="max-w-[180px] h-auto object-contain" />
-          {/* Close button - only visible on mobile */}
+    <div className="flex min-h-0 flex-1 flex-col border-r border-slate-200/80 bg-white/96 shadow-[1px_0_0_rgba(15,23,42,0.04)] dark:border-white/6 dark:bg-[#09111f] dark:shadow-[1px_0_0_rgba(255,255,255,0.03)]">
+      <div className="flex flex-1 flex-col overflow-y-auto px-3 pb-4 pt-4 sidebar-scrollbar">
+        <div className="flex flex-shrink-0 items-center justify-between rounded-2xl border border-slate-200/80 bg-slate-50/90 px-3 py-3 dark:border-white/6 dark:bg-white/[0.03]">
+          <img src={isDarkMode ? resumeConverterLogoDark : resumeConverterLogoLight} alt="Resume Converter" className="h-auto max-w-[176px] object-contain" />
           <button
             onClick={onClose}
-            className="md:hidden p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            className="rounded-xl p-1.5 text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-white/8 dark:hover:text-slate-200 md:hidden"
           >
             <XMarkIcon className="h-5 w-5" />
           </button>
         </div>
-        
-        <nav className="mt-4 flex-1 px-3 flex flex-col" onClick={handleNavClick}>
-          {/* Home - no section header */}
-          <div className="space-y-0.5">
-            {renderNavItem(homeItem)}
-          </div>
 
-          {/* GESTION section */}
+        <nav className="mt-5 flex flex-1 flex-col" onClick={handleNavClick}>
+          <div className="space-y-1">{renderNavItem(homeItem)}</div>
           {renderSection(gestionSection)}
-
-          {/* ADMIN section - only for admins */}
           {isAdmin && renderSection(adminSection)}
-
-          {/* Spacer to push bottom items down */}
-          <div className="flex-1 min-h-4" />
-
-          {/* Bottom items: Settings and User Guide */}
-          <div className="relative pt-4 mt-3 space-y-0.5">
-            <span className="absolute top-0 left-3 right-3 h-px bg-gradient-to-r from-transparent via-gray-200 dark:via-gray-700 to-transparent" />
-            {bottomItems
-              .filter(item => !item.adminOnly || isAdmin)
-              .map(item => renderNavItem(item, true))}
+          <div className="min-h-4 flex-1" />
+          <div className="relative mt-4 space-y-1 pt-4">
+            <span className="absolute left-3 right-3 top-0 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent dark:via-white/10" />
+            {bottomItems.filter((item) => !item.adminOnly || isAdmin).map((item) => renderNavItem(item))}
           </div>
         </nav>
       </div>
@@ -215,25 +194,14 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
 
   return (
     <>
-      {/* Mobile sidebar overlay */}
       {isOpen && (
         <div className="fixed inset-0 z-40 md:hidden">
-          {/* Backdrop */}
-          <div 
-            className="fixed inset-0 bg-gray-600/75 backdrop-blur-sm transition-opacity"
-            onClick={onClose}
-          />
-          {/* Sidebar panel - solid background for readability */}
-          <div className="fixed inset-y-0 left-0 flex w-64 flex-col bg-white dark:bg-gray-900 shadow-2xl">
-            {sidebarContent}
-          </div>
+          <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm transition-opacity" onClick={onClose} />
+          <div className="fixed inset-y-0 left-0 flex w-72 max-w-[88vw] flex-col">{sidebarContent}</div>
         </div>
       )}
 
-      {/* Desktop sidebar */}
-      <div className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0">
-        {sidebarContent}
-      </div>
+      <div className="hidden md:fixed md:inset-y-0 md:flex md:w-64 md:flex-col">{sidebarContent}</div>
     </>
   );
 };

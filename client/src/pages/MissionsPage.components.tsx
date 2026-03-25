@@ -1,0 +1,159 @@
+﻿import { BriefcaseIcon, FolderIcon, ListBulletIcon } from '@heroicons/react/24/outline';
+import { useTranslation } from 'react-i18next';
+
+import EmptyStateCard from '../components/page/EmptyStateCard';
+import PageHeader from '../components/page/PageHeader';
+import PaginationPair from '../components/page/PaginationPair';
+import ViewModeToggle from '../components/page/ViewModeToggle';
+import { MissionsDealsGroupedView, SearchAndActions, StatsCards } from '../components/MissionsPage';
+import { SkeletonMissionList } from '../components/ui/Skeleton';
+import MissionCard from './MissionCard';
+import type { Mission, MissionStats, MissionViewMode } from './MissionsPage.hooks';
+import { MISSIONS_PAGE_SIZE } from './MissionsPage.hooks';
+
+export function MissionsHeader() {
+  const { t } = useTranslation();
+
+  return <PageHeader title={t('missions.title')} subtitle={t('missions.subtitle')} />;
+}
+
+export function MissionsViewModeToggle({
+  onChange,
+  value,
+}: {
+  onChange: (mode: MissionViewMode) => void;
+  value: MissionViewMode;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <ViewModeToggle
+      label={t('missions.viewMode', 'Affichage')}
+      onChange={onChange}
+      options={[
+        { icon: FolderIcon, label: t('missions.viewByDeal', 'Par affaire'), value: 'byDeal' },
+        { icon: ListBulletIcon, label: t('missions.viewList', 'Liste'), value: 'list' },
+      ]}
+      value={value}
+    />
+  );
+}
+
+export function MissionsListPanel({
+  currentPage,
+  loading,
+  missions,
+  onAddMission,
+  onDelete,
+  onEdit,
+  onPageChange,
+  onRefresh,
+  onResetSearch,
+  onSearchChange,
+  searchTerm,
+  stats,
+  totalCount,
+  totalPages,
+}: {
+  currentPage: number;
+  loading: boolean;
+  missions: Mission[];
+  onAddMission: () => void;
+  onDelete: (id: string) => Promise<void>;
+  onEdit: (mission: Mission) => void;
+  onPageChange: (page: number) => void;
+  onRefresh: () => Promise<void>;
+  onResetSearch: () => void;
+  onSearchChange: (value: string) => void;
+  searchTerm: string;
+  stats: MissionStats;
+  totalCount: number;
+  totalPages: number;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <>
+      <StatsCards stats={stats} missionsCount={totalCount} t={t} />
+      <SearchAndActions
+        searchTerm={searchTerm}
+        onSearchChange={onSearchChange}
+        onRefresh={() => {
+          void onRefresh();
+        }}
+        onAddMission={onAddMission}
+        onReset={onResetSearch}
+        t={t}
+      />
+
+      <PaginationPair
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalCount={totalCount}
+        pageSize={MISSIONS_PAGE_SIZE}
+        onPageChange={onPageChange}
+        loading={loading}
+        itemName={t('missions.results')}
+      />
+
+      <MissionsGrid
+        loading={loading}
+        missions={missions}
+        onDelete={onDelete}
+        onEdit={onEdit}
+        searchTerm={searchTerm}
+      />
+    </>
+  );
+}
+
+function MissionsGrid({
+  loading,
+  missions,
+  onDelete,
+  onEdit,
+  searchTerm,
+}: {
+  loading: boolean;
+  missions: Mission[];
+  onDelete: (id: string) => Promise<void>;
+  onEdit: (mission: Mission) => void;
+  searchTerm: string;
+}) {
+  const { t } = useTranslation();
+
+  if (loading) {
+    return <SkeletonMissionList count={6} />;
+  }
+
+  if (missions.length === 0) {
+    return (
+      <EmptyStateCard
+        icon={BriefcaseIcon}
+        title={t('missions.noMissions')}
+        description={searchTerm ? t('missions.noResults') : t('missions.createFirst')}
+        containerClassName="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 p-12 text-center"
+      />
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {missions.map((mission, index) => (
+        <MissionCard
+          key={mission.id}
+          mission={mission}
+          index={index}
+          onEdit={onEdit}
+          onDelete={(id) => {
+            void onDelete(id);
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+export function MissionsByDealView({ onAddMission }: { onAddMission: () => void }) {
+  return <MissionsDealsGroupedView onAddMission={onAddMission} />;
+}

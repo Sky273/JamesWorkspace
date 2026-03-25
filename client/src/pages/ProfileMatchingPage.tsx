@@ -24,7 +24,6 @@ import type {
   DetailedProfileAnalysisResponse
 } from '../types/entities';
 import logger from '../utils/logger.frontend';
-import Breadcrumbs from '../components/Breadcrumbs';
 import ProfileMatchCard from './ProfileMatchCard';
 import ProfileMatchSearchPanel from './ProfileMatchSearchPanel';
 import ProfileMatchingOverlay from '../components/ProfileMatchingOverlay';
@@ -224,9 +223,6 @@ const ProfileMatchingPage = (): JSX.Element => {
           <ProfileMatchingOverlay mode={loading ? 'searching' : 'analyzing'} />
         )}
       </AnimatePresence>
-
-      <Breadcrumbs className="mb-4" />
-      
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-1">

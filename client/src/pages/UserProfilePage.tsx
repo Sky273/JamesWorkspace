@@ -17,7 +17,6 @@ import {
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../context/AuthContext';
 import { useAuthFetch } from '../hooks/useAuthFetch';
-import Breadcrumbs from '../components/Breadcrumbs';
 import logger from '../utils/logger.frontend';
 import TwoFactorSettings from '../components/TwoFactorSettings';
 
@@ -111,8 +110,6 @@ const UserProfilePage = (): JSX.Element => {
       transition={{ duration: 0.5 }}
       className="p-6 max-w-4xl mx-auto"
     >
-      <Breadcrumbs className="mb-4" />
-      
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-1">
           <div className="w-1 h-8 rounded-full bg-primary-500" />

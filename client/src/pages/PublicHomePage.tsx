@@ -3,15 +3,14 @@
  * Public landing page for unauthenticated users
  */
 
-import { lazy, Suspense } from 'react';
+import { Suspense } from 'react';
+import DeferredWebGLBackground from '../components/DeferredWebGLBackground';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { SparklesIcon } from '@heroicons/react/24/outline';
 import Footer from '../components/Footer';
 
-// Lazy load WebGL background to avoid blocking initial render
-const WebGLBackground = lazy(() => import('../components/WebGLBackground'));
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -176,7 +175,7 @@ function PublicHomePage(): JSX.Element {
         <section className="flex-1 flex items-center pt-24 pb-12 relative overflow-hidden">
           {/* WebGL Background Animation */}
           <Suspense fallback={null}>
-            <WebGLBackground />
+            <DeferredWebGLBackground />
           </Suspense>
           <div className="container mx-auto px-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
