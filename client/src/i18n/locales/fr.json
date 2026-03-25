@@ -1038,7 +1038,9 @@
       "cvModeNominative": "Nominatif (informations personnelles incluses)",
       "cvModeAnonymous": "Anonyme (trigramme uniquement)",
       "cvModeNominativeDescription": "Le CV amélioré contiendra toutes les informations personnelles du candidat (nom complet, coordonnées, etc.).",
-      "cvModeAnonymousDescription": "Le CV amélioré sera anonymisé : seul le trigramme du candidat sera affiché, sans informations personnelles identifiantes."
+      "cvModeAnonymousDescription": "Le CV amélioré sera anonymisé : seul le trigramme du candidat sera affiché, sans informations personnelles identifiantes.",
+      "webglEnabled": "Activer les arri?re-plans WebGL",
+      "webglEnabledDescription": "Affiche les fonds visuels anim?s de l'application quand le navigateur et l'appareil le permettent."
     },
     "prompts": {
       "title": "Configuration des Prompts",

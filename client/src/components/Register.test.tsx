@@ -1,127 +1,144 @@
-/**
- * Tests for Register component
- */
-
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, fireEvent } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
+﻿import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import Register from './Register';
 
-// Mock auth context
-const mockRegister = vi.fn();
+const {
+  mockRegister,
+  mockNavigate,
+  mockFetchWithCsrfRetry,
+} = vi.hoisted(() => ({
+  mockRegister: vi.fn(),
+  mockNavigate: vi.fn(),
+  mockFetchWithCsrfRetry: vi.fn(),
+}));
+
+let mockSearchParams = new URLSearchParams();
+
 vi.mock('../context/AuthContext', () => ({
-    useAuth: () => ({
-        register: mockRegister,
-    }),
+  useAuth: () => ({ register: mockRegister }),
 }));
 
-// Mock apiInterceptor
 vi.mock('../utils/apiInterceptor', () => ({
-    fetchWithCsrfRetry: vi.fn().mockResolvedValue({
-        json: () => Promise.resolve({ authUrl: 'https://accounts.google.com/oauth' }),
-    }),
-    resetSessionState: vi.fn(),
+  fetchWithCsrfRetry: mockFetchWithCsrfRetry,
 }));
 
-// Mock react-hot-toast
-vi.mock('react-hot-toast', () => ({
-    toast: { error: vi.fn(), success: vi.fn() },
-    default: { error: vi.fn(), success: vi.fn() },
-}));
-
-// Mock logger
 vi.mock('../utils/logger.frontend', () => ({
-    default: { log: vi.fn(), error: vi.fn(), warn: vi.fn(), info: vi.fn() },
+  default: { log: vi.fn(), error: vi.fn(), warn: vi.fn(), info: vi.fn() },
 }));
 
-const renderRegister = () => {
-    return render(
-        <BrowserRouter>
-            <Register />
-        </BrowserRouter>
-    );
-};
+vi.mock('./Footer', () => ({
+  default: () => <div data-testid="footer" />,
+}));
 
-describe('Register Component', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+    useSearchParams: () => [mockSearchParams],
+  };
+});
+
+const renderRegister = () => render(
+  <MemoryRouter>
+    <Register />
+  </MemoryRouter>
+);
+
+describe('Register', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSearchParams = new URLSearchParams();
+    mockFetchWithCsrfRetry.mockResolvedValue({
+      json: async () => ({ authUrl: 'https://accounts.google.com/oauth' }),
     });
+  });
 
-    describe('Rendering', () => {
-        it('should render registration form fields', () => {
-            const { getByPlaceholderText } = renderRegister();
+  it('renders registration fields and actions', () => {
+    renderRegister();
 
-            expect(getByPlaceholderText('auth.register.namePlaceholder')).toBeDefined();
-            expect(getByPlaceholderText('auth.register.emailPlaceholder')).toBeDefined();
-            expect(getByPlaceholderText('auth.register.passwordPlaceholder')).toBeDefined();
-            expect(getByPlaceholderText('auth.register.confirmPasswordPlaceholder')).toBeDefined();
-        });
+    expect(screen.getByPlaceholderText('auth.register.namePlaceholder')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('auth.register.emailPlaceholder')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'auth.register.registerButton' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'auth.register.registerWithGoogle' })).toBeInTheDocument();
+  });
 
-        it('should render submit button', () => {
-            const { getByRole } = renderRegister();
-            expect(getByRole('button', { name: 'auth.register.registerButton' })).toBeDefined();
-        });
+  it('shows Google registration error from query params', async () => {
+    mockSearchParams = new URLSearchParams('error=registration_failed');
+    renderRegister();
 
-        it('should render sign in link', () => {
-            const { getByText } = renderRegister();
-            expect(getByText('common.signIn')).toBeDefined();
-        });
+    expect(await screen.findByText('auth.register.googleRegistrationFailed')).toBeInTheDocument();
+    expect(mockNavigate).toHaveBeenCalledWith('/register', { replace: true });
+  });
 
-        it('should render Google sign up button', () => {
-            const { getByRole } = renderRegister();
-            expect(getByRole('button', { name: 'auth.register.registerWithGoogle' })).toBeDefined();
-        });
+  it('validates required fields and password rules', async () => {
+    renderRegister();
+
+    fireEvent.submit(screen.getByRole('button', { name: 'auth.register.registerButton' }).closest('form') as HTMLFormElement);
+    expect(await screen.findByText('errors.required')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByPlaceholderText('auth.register.namePlaceholder'), { target: { value: 'Test', name: 'name' } });
+    fireEvent.change(screen.getByPlaceholderText('auth.register.emailPlaceholder'), { target: { value: 'test@test.com', name: 'email' } });
+    fireEvent.change(screen.getByPlaceholderText('auth.register.passwordPlaceholder'), { target: { value: 'short', name: 'password' } });
+    fireEvent.change(screen.getByPlaceholderText('auth.register.confirmPasswordPlaceholder'), { target: { value: 'short', name: 'confirmPassword' } });
+    fireEvent.click(screen.getByRole('button', { name: 'auth.register.registerButton' }));
+    expect(await screen.findByText('errors.passwordLength')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByPlaceholderText('auth.register.passwordPlaceholder'), { target: { value: 'password123', name: 'password' } });
+    fireEvent.change(screen.getByPlaceholderText('auth.register.confirmPasswordPlaceholder'), { target: { value: 'different123', name: 'confirmPassword' } });
+    fireEvent.click(screen.getByRole('button', { name: 'auth.register.registerButton' }));
+    expect(await screen.findByText('errors.passwordMismatch')).toBeInTheDocument();
+  });
+
+  it('submits normalized email and navigates to signin on success', async () => {
+    mockRegister.mockResolvedValue({ success: true });
+    renderRegister();
+
+    fireEvent.change(screen.getByPlaceholderText('auth.register.namePlaceholder'), { target: { value: 'John Doe', name: 'name' } });
+    fireEvent.change(screen.getByPlaceholderText('auth.register.emailPlaceholder'), { target: { value: 'John@Example.COM', name: 'email' } });
+    fireEvent.change(screen.getByPlaceholderText('auth.register.passwordPlaceholder'), { target: { value: 'password123', name: 'password' } });
+    fireEvent.change(screen.getByPlaceholderText('auth.register.confirmPasswordPlaceholder'), { target: { value: 'password123', name: 'confirmPassword' } });
+    fireEvent.click(screen.getByRole('button', { name: 'auth.register.registerButton' }));
+
+    await waitFor(() => {
+      expect(mockRegister).toHaveBeenCalledWith({
+        name: 'John Doe',
+        email: 'john@example.com',
+        password: 'password123',
+      });
     });
+    expect(mockNavigate).toHaveBeenCalledWith('/signin');
+  });
 
-    describe('Form interaction', () => {
-        it('should update input values on change', () => {
-            const { getByPlaceholderText } = renderRegister();
+  it('shows backend error when register fails', async () => {
+    mockRegister.mockRejectedValue(new Error('Email déjà utilisé'));
+    renderRegister();
 
-            const nameInput = getByPlaceholderText('auth.register.namePlaceholder') as HTMLInputElement;
-            fireEvent.change(nameInput, { target: { value: 'John Doe', name: 'name' } });
-            expect(nameInput.value).toBe('John Doe');
+    fireEvent.change(screen.getByPlaceholderText('auth.register.namePlaceholder'), { target: { value: 'John Doe', name: 'name' } });
+    fireEvent.change(screen.getByPlaceholderText('auth.register.emailPlaceholder'), { target: { value: 'john@example.com', name: 'email' } });
+    fireEvent.change(screen.getByPlaceholderText('auth.register.passwordPlaceholder'), { target: { value: 'password123', name: 'password' } });
+    fireEvent.change(screen.getByPlaceholderText('auth.register.confirmPasswordPlaceholder'), { target: { value: 'password123', name: 'confirmPassword' } });
+    fireEvent.click(screen.getByRole('button', { name: 'auth.register.registerButton' }));
 
-            const emailInput = getByPlaceholderText('auth.register.emailPlaceholder') as HTMLInputElement;
-            fireEvent.change(emailInput, { target: { value: 'john@test.com', name: 'email' } });
-            expect(emailInput.value).toBe('john@test.com');
-        });
+    expect(await screen.findByText('Email déjà utilisé')).toBeInTheDocument();
+  });
 
-        it('should show error for empty name on submit', async () => {
-            const { container, findByText } = renderRegister();
+  it('shows Google auth bootstrap failure when authUrl is missing', async () => {
+    mockFetchWithCsrfRetry.mockResolvedValue({ json: async () => ({}) });
+    renderRegister();
 
-            const form = container.querySelector('form')!;
-            fireEvent.submit(form);
+    fireEvent.click(screen.getByRole('button', { name: 'auth.register.registerWithGoogle' }));
 
-            const error = await findByText('errors.required');
-            expect(error).toBeDefined();
-        });
+    expect(await screen.findByText('auth.register.googleRegistrationFailed')).toBeInTheDocument();
+  });
 
-        it('should show error for short password', async () => {
-            const { getByPlaceholderText, getByRole, findByText } = renderRegister();
+  it('shows Google auth bootstrap failure on exception', async () => {
+    mockFetchWithCsrfRetry.mockRejectedValue(new Error('oauth error'));
+    renderRegister();
 
-            fireEvent.change(getByPlaceholderText('auth.register.namePlaceholder'), { target: { value: 'Test', name: 'name' } });
-            fireEvent.change(getByPlaceholderText('auth.register.emailPlaceholder'), { target: { value: 'test@test.com', name: 'email' } });
-            fireEvent.change(getByPlaceholderText('auth.register.passwordPlaceholder'), { target: { value: 'short', name: 'password' } });
-            fireEvent.change(getByPlaceholderText('auth.register.confirmPasswordPlaceholder'), { target: { value: 'short', name: 'confirmPassword' } });
+    fireEvent.click(screen.getByRole('button', { name: 'auth.register.registerWithGoogle' }));
 
-            fireEvent.click(getByRole('button', { name: 'auth.register.registerButton' }));
-
-            const error = await findByText('errors.passwordLength');
-            expect(error).toBeDefined();
-        });
-
-        it('should show error for password mismatch', async () => {
-            const { getByPlaceholderText, getByRole, findByText } = renderRegister();
-
-            fireEvent.change(getByPlaceholderText('auth.register.namePlaceholder'), { target: { value: 'Test', name: 'name' } });
-            fireEvent.change(getByPlaceholderText('auth.register.emailPlaceholder'), { target: { value: 'test@test.com', name: 'email' } });
-            fireEvent.change(getByPlaceholderText('auth.register.passwordPlaceholder'), { target: { value: 'password123', name: 'password' } });
-            fireEvent.change(getByPlaceholderText('auth.register.confirmPasswordPlaceholder'), { target: { value: 'different123', name: 'confirmPassword' } });
-
-            fireEvent.click(getByRole('button', { name: 'auth.register.registerButton' }));
-
-            const error = await findByText('errors.passwordMismatch');
-            expect(error).toBeDefined();
-        });
-    });
+    expect(await screen.findByText('auth.register.googleRegistrationFailed')).toBeInTheDocument();
+  });
 });

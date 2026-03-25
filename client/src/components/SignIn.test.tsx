@@ -1,86 +1,159 @@
-/**
- * Tests for SignIn component
- */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
+﻿import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import SignIn from './SignIn';
 
-// Mock the auth context
-const mockSignIn = vi.fn();
+const {
+  mockSignIn,
+  mockNavigate,
+  mockFetchWithCsrfRetry,
+  mockResetSessionState,
+  mockToastError,
+  mockToastSuccess,
+} = vi.hoisted(() => ({
+  mockSignIn: vi.fn(),
+  mockNavigate: vi.fn(),
+  mockFetchWithCsrfRetry: vi.fn(),
+  mockResetSessionState: vi.fn(),
+  mockToastError: vi.fn(),
+  mockToastSuccess: vi.fn(),
+}));
+
+let mockSearchParams = new URLSearchParams();
+
 vi.mock('../context/AuthContext', () => ({
-  useAuth: () => ({
-    signIn: mockSignIn,
-  }),
+  useAuth: () => ({ signIn: mockSignIn }),
 }));
 
-// Mock the API interceptor
 vi.mock('../utils/apiInterceptor', () => ({
-  resetSessionState: vi.fn(),
-  fetchWithCsrfRetry: vi.fn().mockResolvedValue({
-    json: () => Promise.resolve({ authUrl: 'https://accounts.google.com/oauth' }),
-  }),
+  resetSessionState: mockResetSessionState,
+  fetchWithCsrfRetry: mockFetchWithCsrfRetry,
 }));
 
-// Mock react-hot-toast
 vi.mock('react-hot-toast', () => ({
   toast: {
-    error: vi.fn(),
-    success: vi.fn(),
-  },
-  default: {
-    error: vi.fn(),
-    success: vi.fn(),
+    error: mockToastError,
+    success: mockToastSuccess,
   },
 }));
 
-// Mock logger
 vi.mock('../utils/logger.frontend', () => ({
-  default: {
-    log: vi.fn(),
-    error: vi.fn(),
-    warn: vi.fn(),
-  },
+  default: { log: vi.fn(), error: vi.fn(), warn: vi.fn() },
 }));
 
-const renderSignIn = () => {
-  return render(
-    <BrowserRouter>
-      <SignIn />
-    </BrowserRouter>
-  );
-};
+vi.mock('./Footer', () => ({
+  default: () => <div data-testid="footer" />,
+}));
 
-describe('SignIn Component', () => {
+vi.mock('./TwoFactorVerify', () => ({
+  default: ({ email, userId }: { email: string; userId: string }) => (
+    <div data-testid="two-factor-verify">2FA:{email}:{userId}</div>
+  ),
+}));
+
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+    useSearchParams: () => [mockSearchParams],
+  };
+});
+
+const renderSignIn = () => render(
+  <MemoryRouter>
+    <SignIn />
+  </MemoryRouter>
+);
+
+describe('SignIn', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSearchParams = new URLSearchParams();
+    mockFetchWithCsrfRetry.mockResolvedValue({
+      json: async () => ({ authUrl: 'https://accounts.google.com/oauth' }),
+    });
   });
 
-  describe('Rendering', () => {
-    it('should render the sign in form', () => {
-      const { getByPlaceholderText, getByRole } = renderSignIn();
-      
-      expect(getByPlaceholderText('auth.signIn.emailPlaceholder')).toBeDefined();
-      expect(getByPlaceholderText('auth.signIn.passwordPlaceholder')).toBeDefined();
-      expect(getByRole('button', { name: 'auth.signIn.signInButton' })).toBeDefined();
-    });
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
 
-    it('should render Google sign in button', () => {
-      const { getByRole } = renderSignIn();
-      
-      expect(getByRole('button', { name: 'auth.signIn.signInWithGoogle' })).toBeDefined();
-    });
+  it('resets session state on mount', () => {
+    renderSignIn();
+    expect(mockResetSessionState).toHaveBeenCalled();
+  });
 
-    it('should render "or continue with" separator', () => {
-      const { getByText } = renderSignIn();
-      
-      expect(getByText('auth.signIn.orContinueWith')).toBeDefined();
-    });
+  it('submits credentials in lowercase and navigates home on success', async () => {
+    mockSignIn.mockResolvedValue({ id: '1', email: 'john@example.com' });
+    renderSignIn();
 
-    it('should render register link', () => {
-      const { getByText } = renderSignIn();
-      
-      expect(getByText('common.register')).toBeDefined();
+    fireEvent.change(screen.getByPlaceholderText('auth.signIn.emailPlaceholder'), { target: { value: 'John@Example.COM' } });
+    fireEvent.change(screen.getByPlaceholderText('auth.signIn.passwordPlaceholder'), { target: { value: 'secret' } });
+    fireEvent.click(screen.getByRole('button', { name: 'auth.signIn.signInButton' }));
+
+    await waitFor(() => {
+      expect(mockSignIn).toHaveBeenCalledWith('john@example.com', 'secret');
     });
+    expect(mockNavigate).toHaveBeenCalledWith('/');
+  });
+
+  it('shows unauthorized error when sign in fails', async () => {
+    mockSignIn.mockRejectedValue(new Error('bad creds'));
+    renderSignIn();
+
+    fireEvent.change(screen.getByPlaceholderText('auth.signIn.emailPlaceholder'), { target: { value: 'john@example.com' } });
+    fireEvent.change(screen.getByPlaceholderText('auth.signIn.passwordPlaceholder'), { target: { value: 'secret' } });
+    fireEvent.submit(screen.getByRole('button', { name: 'auth.signIn.signInButton' }).closest('form') as HTMLFormElement);
+
+    expect(await screen.findByText('errors.unauthorized')).toBeInTheDocument();
+  });
+
+  it('switches to 2FA verification when required', async () => {
+    mockSignIn.mockResolvedValue({ requires2FA: true, userId: 'user-42' });
+    renderSignIn();
+
+    fireEvent.change(screen.getByPlaceholderText('auth.signIn.emailPlaceholder'), { target: { value: 'john@example.com' } });
+    fireEvent.change(screen.getByPlaceholderText('auth.signIn.passwordPlaceholder'), { target: { value: 'secret' } });
+    fireEvent.click(screen.getByRole('button', { name: 'auth.signIn.signInButton' }));
+
+    expect(await screen.findByTestId('two-factor-verify')).toHaveTextContent('2FA:john@example.com:user-42');
+  });
+
+  it('shows expired session toast from query params', async () => {
+    mockSearchParams = new URLSearchParams('expired=true');
+    renderSignIn();
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith('auth.signIn.sessionExpired', expect.objectContaining({ icon: '🔒' }));
+    });
+    expect(mockNavigate).toHaveBeenCalledWith('/signin', { replace: true });
+  });
+
+  it('shows registration success toast from query params', async () => {
+    mockSearchParams = new URLSearchParams('success=registered_pending');
+    renderSignIn();
+
+    await waitFor(() => {
+      expect(mockToastSuccess).toHaveBeenCalledWith('auth.signIn.registeredPending', expect.objectContaining({ icon: '✅' }));
+    });
+    expect(mockNavigate).toHaveBeenCalledWith('/signin', { replace: true });
+  });
+
+  it('shows Google auth error from query params', async () => {
+    mockSearchParams = new URLSearchParams('error=no_account&email=test@example.com');
+    renderSignIn();
+
+    expect(await screen.findByText('auth.signIn.googleNoAccount')).toBeInTheDocument();
+    expect(mockNavigate).toHaveBeenCalledWith('/signin', { replace: true });
+  });
+
+  it('shows Google auth failure when popup bootstrap fails', async () => {
+    mockFetchWithCsrfRetry.mockRejectedValue(new Error('oauth down'));
+    renderSignIn();
+
+    fireEvent.click(screen.getByRole('button', { name: 'auth.signIn.signInWithGoogle' }));
+
+    expect(await screen.findByText('auth.signIn.googleAuthFailed')).toBeInTheDocument();
   });
 });
