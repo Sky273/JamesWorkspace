@@ -1,4 +1,4 @@
-/* eslint-disable react-refresh/only-export-components */
+﻿/* eslint-disable react-refresh/only-export-components */
 /**
  * Resume Context
  * TypeScript version with full type safety
@@ -8,7 +8,7 @@ import { createContext, useContext, useState, useCallback, useRef, ReactNode } f
 import { useAuth } from './AuthContext';
 import { createAuthOptionsWithCsrf, fetchWithAuth } from '../utils/apiInterceptor';
 import logger from '../utils/logger.frontend';
-import { showCaughtError, getUserFriendlyMessage } from '../components/ErrorToast';
+import { showCaughtError, getUserFriendlyMessage } from '../components/errorToast.helpers';
 import { applyResumeUpdate, normalizeResume, normalizeResumeList } from '../utils/resumeNormalization';
 
 import { Resume } from '../types/entities';
@@ -234,7 +234,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
       });
     }
 
-    throw new Error('Le traitement du CV a dÃ©passÃ© le dÃ©lai maximum autorisÃ©.');
+    throw new Error('Le traitement du CV a dépassé le délai maximum autorisé.');
   }, []);
 
   const uploadResume = useCallback(async (file: File, candidateInfo?: CandidateInfo): Promise<Resume | undefined> => {
@@ -510,3 +510,4 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
 };
 
 export default ResumeContext;
+

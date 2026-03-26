@@ -1,4 +1,4 @@
-/**
+﻿/**
  * TinyMCE Suggestions Plugin
  * Displays improvement suggestions as inline annotations in the editor
  */
@@ -22,19 +22,19 @@ interface SuggestionsPluginConfig {
 
 // Section markers to identify where to place suggestions (expanded for better detection)
 const SECTION_MARKERS: Record<string, string[]> = {
-  executiveSummary: ['profil', 'résumé', 'summary', 'profile', 'présentation', 'introduction', 'objectif', 'sommaire', 'à propos', 'about'],
-  skills: ['compétences', 'skills', 'technologies', 'outils', 'expertise', 'savoir-faire', 'compétences techniques', 'technical skills', 'stack technique', 'environnement technique'],
-  experiences: ['expérience', 'experience', 'parcours', 'missions', 'postes', 'emplois', 'expériences professionnelles', 'professional experience', 'work experience', 'historique'],
-  education: ['formation', 'education', 'diplômes', 'études', 'certifications', 'académique', 'cursus', 'scolarité', 'diplôme'],
-  hobbiesLanguages: ['langues', 'languages', 'loisirs', 'hobbies', 'centres d\'intérêt', 'interests', 'activités', 'divers', 'autres'],
+  executiveSummary: ['profil', 'resume', 'summary', 'profile', 'presentation', 'introduction', 'objectif', 'sommaire', 'a propos', 'about'],
+  skills: ['competences', 'skills', 'technologies', 'outils', 'expertise', 'savoir-faire', 'competences techniques', 'technical skills', 'stack technique', 'environnement technique'],
+  experiences: ['experience', 'parcours', 'missions', 'postes', 'emplois', 'experiences professionnelles', 'professional experience', 'work experience', 'historique'],
+  education: ['formation', 'education', 'diplomes', 'etudes', 'certifications', 'academique', 'cursus', 'scolarite', 'diplome'],
+  hobbiesLanguages: ['langues', 'languages', 'loisirs', 'hobbies', "centres d'interet", 'interests', 'activites', 'divers', 'autres'],
   atsOptimization: [] // Global suggestions, shown in panel at top
 };
 
 // Section labels for display in the global panel
 const SECTION_LABELS: Record<string, string> = {
-  executiveSummary: 'Résumé exécutif',
-  skills: 'Compétences',
-  experiences: 'Expérience',
+  executiveSummary: 'Resume executif',
+  skills: 'Competences',
+  experiences: 'Experience',
   education: 'Formation',
   hobbiesLanguages: 'Langues & Loisirs',
   atsOptimization: 'Optimisation ATS'
@@ -163,9 +163,9 @@ const SUGGESTION_STYLES = `
 
 // Unicode icons for markers (TinyMCE filters SVG for security)
 const ICONS = {
-  warning: '💡',
-  error: '❌',
-  info: 'ℹ️'
+  warning: '[!]',
+  error: '[x]',
+  info: '[i]'
 };
 
 // Styles for highlighted sections - clean design without emoji, using only border accent
@@ -275,7 +275,7 @@ function insertSuggestionsIntoContent(content: string, suggestions: SuggestionsB
     const tooltipText = tooltipLines.replace(/"/g, '&quot;');
     
     // Create a badge showing suggestion count
-    const suggestionBadge = `<span style="${BADGE_STYLE}" title="${tooltipText}">💡 ${sectionSuggestions.length}</span>`;
+    const suggestionBadge = `<span style="${BADGE_STYLE}" title="${tooltipText}">[!] ${sectionSuggestions.length}</span>`;
     
     // Wrap with highlight div and badge after the header (no emoji on the left, just the border accent)
     // Insert badge right after the closing tag of the header element
@@ -306,12 +306,12 @@ function _createSuggestionsPanel(suggestions: string[], sectionKey?: string): st
     </li>`
   ).join('');
   
-  const title = sectionKey ? SECTION_LABELS[sectionKey] || 'Suggestions' : 'Suggestions d\'amélioration';
+  const title = sectionKey ? SECTION_LABELS[sectionKey] || 'Suggestions' : "Suggestions d'amélioration";
   
   return `
     <div class="suggestion-panel" style="background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%); border: 1px solid #F59E0B; border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15);">
       <div style="display: flex; align-items: center; gap: 10px; font-weight: 600; color: #92400E; font-size: 15px; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid rgba(146, 64, 14, 0.2);">
-        <span style="font-size: 1.3em;">💡</span>
+        <span style="font-size: 1.3em;">&#128161;</span>
         <span>${title}</span>
         <span style="background: #92400E; color: white; border-radius: 10px; padding: 2px 8px; font-size: 12px; margin-left: auto;">${suggestions.length}</span>
       </div>
@@ -341,7 +341,7 @@ function createGroupedSuggestionsPanel(suggestions: SuggestionsBySection): strin
     
     const items = sectionSuggestions.map((s) => 
       `<li style="display: flex; align-items: flex-start; gap: 8px; padding: 6px 10px; margin-bottom: 4px; background: rgba(255, 255, 255, 0.5); border-radius: 6px; color: #78350F; font-size: 12px; line-height: 1.4;">
-        <span style="color: #F59E0B; font-weight: bold;">•</span>
+        <span style="color: #F59E0B; font-weight: bold;">&#8226;</span>
         <span style="flex: 1;">${s}</span>
       </li>`
     ).join('');
@@ -362,7 +362,7 @@ function createGroupedSuggestionsPanel(suggestions: SuggestionsBySection): strin
   return `
     <div class="suggestion-panel" style="background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%); border: 1px solid #F59E0B; border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15);">
       <div style="display: flex; align-items: center; gap: 10px; font-weight: 600; color: #92400E; font-size: 15px; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid rgba(146, 64, 14, 0.2);">
-        <span style="font-size: 1.3em;">💡</span>
+        <span style="font-size: 1.3em;">&#128161;</span>
         <span>Suggestions d'amélioration</span>
         <span style="background: #92400E; color: white; border-radius: 10px; padding: 2px 8px; font-size: 12px; margin-left: auto;">${totalCount}</span>
       </div>
@@ -380,14 +380,14 @@ export function removeSuggestionMarkers(content: string): string {
   
   // Step 1: Remove suggestion badges (the orange pill with count)
   // These are spans with the BADGE_STYLE containing #F59E0B or #D97706
-  // Pattern matches: <span style="...#F59E0B...">💡 N</span>
+  // Pattern matches: <span style="...#F59E0B...">&#128161; N</span>
   cleaned = cleaned.replace(/<span[^>]*style="[^"]*(?:#F59E0B|#D97706)[^"]*"[^>]*>[^<]*<\/span>/g, '');
   
   // Step 2: Remove any span with lightbulb emoji (with or without number)
-  cleaned = cleaned.replace(/<span[^>]*>[^<]*💡[^<]*<\/span>/g, '');
+  cleaned = cleaned.replace(/<span[^>]*>[^<]*(&#128161;|??)[^<]*<\/span>/g, '');
   
   // Step 3: Remove any span with title attribute containing suggestion text (tooltip spans)
-  cleaned = cleaned.replace(/<span[^>]*title="[^"]*"[^>]*>💡[^<]*<\/span>/g, '');
+  cleaned = cleaned.replace(/<span[^>]*title="[^"]*"[^>]*>(&#128161;|??)[^<]*<\/span>/g, '');
   
   // Step 4: Remove suggestion-highlight wrapper divs but KEEP their inner content
   // Use a function to properly handle nested content
@@ -404,7 +404,7 @@ export function removeSuggestionMarkers(content: string): string {
   cleaned = cleaned.replace(/<div[^>]*style="[^"]*background:\s*linear-gradient\(135deg,\s*#FEF3C7[^"]*"[^>]*>[\s\S]*?<\/ul>\s*<\/div>/g, '');
   
   // Step 6: Clean up any orphaned lightbulb emojis (standalone or in spans)
-  cleaned = cleaned.replace(/💡\s*\d*/g, '');
+  cleaned = cleaned.replace(/(?:&#128161;|??)\s*\d*/g, '');
   
   // Step 7: Remove empty spans and divs that might be left over
   cleaned = cleaned.replace(/<span[^>]*>\s*<\/span>/g, '');
@@ -450,7 +450,7 @@ export function registerSuggestionsPlugin(
   // Register toggle button
   editor.ui.registry.addToggleButton('suggestions', {
     text: suggestionsVisible ? '✓ Suggestions' : 'Suggestions',
-    tooltip: 'Afficher/masquer les suggestions d\'amélioration',
+    tooltip: "Afficher/masquer les suggestions d'amélioration",
     onAction: () => {
       suggestionsVisible = !suggestionsVisible;
       
@@ -555,3 +555,4 @@ export function parseSuggestions(suggestionsJson: string | object | undefined): 
 }
 
 export type { SuggestionsBySection, SuggestionsPluginConfig };
+

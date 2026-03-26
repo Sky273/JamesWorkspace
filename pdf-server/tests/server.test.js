@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Tests for PDF Server endpoints
  * Tests health, validation middleware, PDF and DOCX generation routes
  */
@@ -9,7 +9,7 @@ import request from 'supertest';
 
 const require = createRequire(import.meta.url);
 
-process.env.CSRF_SECRET = 'test-csrf-secret-for-pdf-server-minimum-32chars';
+process.env.PDF_SERVER_INTERNAL_TOKEN = 'test-pdf-server-internal-token-minimum-32-chars';
 
 const pdfGen = require('../lib/pdfGenerator.cjs');
 const docxGen = require('../lib/docxGenerator.cjs');
@@ -86,7 +86,7 @@ describe('PDF Server', () => {
     });
   });
 
-  describe('POST /generate-pdf � validation', () => {
+  describe('POST /generate-pdf ï¿½ validation', () => {
     it('should reject requests without the internal token', async () => {
       const res = await request(app)
         .post('/generate-pdf')
@@ -97,7 +97,7 @@ describe('PDF Server', () => {
     it('should reject missing htmlContent', async () => {
       const res = await request(app)
         .post('/generate-pdf')
-        .set('x-internal-service-token', process.env.CSRF_SECRET)
+        .set('x-internal-service-token', process.env.PDF_SERVER_INTERNAL_TOKEN)
         .send({ filename: 'test.pdf' });
       expect(res.status).toBe(400);
       expect(res.body.error).toContain('htmlContent');
@@ -106,7 +106,7 @@ describe('PDF Server', () => {
     it('should reject non-string htmlContent', async () => {
       const res = await request(app)
         .post('/generate-pdf')
-        .set('x-internal-service-token', process.env.CSRF_SECRET)
+        .set('x-internal-service-token', process.env.PDF_SERVER_INTERNAL_TOKEN)
         .send({ htmlContent: 123, filename: 'test.pdf' });
       expect(res.status).toBe(400);
       expect(res.body.error).toContain('htmlContent');
@@ -115,7 +115,7 @@ describe('PDF Server', () => {
     it('should reject missing filename', async () => {
       const res = await request(app)
         .post('/generate-pdf')
-        .set('x-internal-service-token', process.env.CSRF_SECRET)
+        .set('x-internal-service-token', process.env.PDF_SERVER_INTERNAL_TOKEN)
         .send({ htmlContent: '<p>Hello</p>' });
       expect(res.status).toBe(400);
       expect(res.body.error).toContain('filename');
@@ -124,7 +124,7 @@ describe('PDF Server', () => {
     it('should reject non-string filename', async () => {
       const res = await request(app)
         .post('/generate-pdf')
-        .set('x-internal-service-token', process.env.CSRF_SECRET)
+        .set('x-internal-service-token', process.env.PDF_SERVER_INTERNAL_TOKEN)
         .send({ htmlContent: '<p>Hello</p>', filename: 42 });
       expect(res.status).toBe(400);
       expect(res.body.error).toContain('filename');
@@ -134,7 +134,7 @@ describe('PDF Server', () => {
       const bigHtml = 'x'.repeat(6 * 1024 * 1024);
       const res = await request(app)
         .post('/generate-pdf')
-        .set('x-internal-service-token', process.env.CSRF_SECRET)
+        .set('x-internal-service-token', process.env.PDF_SERVER_INTERNAL_TOKEN)
         .send({ htmlContent: bigHtml, filename: 'big.pdf' });
       expect(res.status).toBe(400);
       expect(res.body.error).toContain('too large');
@@ -143,7 +143,7 @@ describe('PDF Server', () => {
     it('should reject dangerous htmlContent', async () => {
       const res = await request(app)
         .post('/generate-pdf')
-        .set('x-internal-service-token', process.env.CSRF_SECRET)
+        .set('x-internal-service-token', process.env.PDF_SERVER_INTERNAL_TOKEN)
         .send({ htmlContent: '<img src=x onerror=alert(1)>', filename: 'test.pdf' });
       expect(res.status).toBe(400);
       expect(res.body.error).toContain('unsupported');
@@ -152,7 +152,7 @@ describe('PDF Server', () => {
     it('should reject dangerous stylesheet', async () => {
       const res = await request(app)
         .post('/generate-pdf')
-        .set('x-internal-service-token', process.env.CSRF_SECRET)
+        .set('x-internal-service-token', process.env.PDF_SERVER_INTERNAL_TOKEN)
         .send({ htmlContent: '<p>Hello</p>', filename: 'test.pdf', stylesheet: '@import url(https://evil.test/x.css);' });
       expect(res.status).toBe(400);
       expect(res.body.error).toContain('stylesheet');
@@ -161,21 +161,21 @@ describe('PDF Server', () => {
     it('should reject invalid footerHeight', async () => {
       const res = await request(app)
         .post('/generate-pdf')
-        .set('x-internal-service-token', process.env.CSRF_SECRET)
+        .set('x-internal-service-token', process.env.PDF_SERVER_INTERNAL_TOKEN)
         .send({ htmlContent: '<p>Hello</p>', filename: 'test.pdf', footerHeight: 'abc' });
       expect(res.status).toBe(400);
       expect(res.body.error).toContain('footerHeight');
     });
   });
 
-  describe('POST /generate-pdf � generation', () => {
+  describe('POST /generate-pdf ï¿½ generation', () => {
     it('should return PDF buffer on success', async () => {
       const fakePdf = Buffer.from('%PDF-1.4 fake content');
       pdfGen.generatePdf.mockResolvedValue(fakePdf);
 
       const res = await request(app)
         .post('/generate-pdf')
-        .set('x-internal-service-token', process.env.CSRF_SECRET)
+        .set('x-internal-service-token', process.env.PDF_SERVER_INTERNAL_TOKEN)
         .send({ htmlContent: '<p>Hello</p>', filename: 'test.pdf' });
 
       expect(res.status).toBe(200);
@@ -189,7 +189,7 @@ describe('PDF Server', () => {
 
       const res = await request(app)
         .post('/generate-pdf')
-        .set('x-internal-service-token', process.env.CSRF_SECRET)
+        .set('x-internal-service-token', process.env.PDF_SERVER_INTERNAL_TOKEN)
         .send({ htmlContent: '<p>X</p>', filename: 'my file (1).pdf' });
 
       expect(res.status).toBe(200);
@@ -201,7 +201,7 @@ describe('PDF Server', () => {
 
       const res = await request(app)
         .post('/generate-pdf')
-        .set('x-internal-service-token', process.env.CSRF_SECRET)
+        .set('x-internal-service-token', process.env.PDF_SERVER_INTERNAL_TOKEN)
         .send({ htmlContent: '<p>X</p>', filename: 'doc' });
 
       expect(res.status).toBe(200);
@@ -213,7 +213,7 @@ describe('PDF Server', () => {
 
       await request(app)
         .post('/generate-pdf')
-        .set('x-internal-service-token', process.env.CSRF_SECRET)
+        .set('x-internal-service-token', process.env.PDF_SERVER_INTERNAL_TOKEN)
         .send({
           htmlContent: '<p>Body</p>',
           filename: 'test.pdf',
@@ -239,7 +239,7 @@ describe('PDF Server', () => {
 
       const res = await request(reloadedApp)
         .post('/generate-pdf')
-        .set('x-internal-service-token', process.env.CSRF_SECRET)
+        .set('x-internal-service-token', process.env.PDF_SERVER_INTERNAL_TOKEN)
         .send({ htmlContent: '<p>X</p>', filename: 'test.pdf' });
 
       expect(res.status).toBe(413);
@@ -250,7 +250,7 @@ describe('PDF Server', () => {
 
       const res = await request(app)
         .post('/generate-pdf')
-        .set('x-internal-service-token', process.env.CSRF_SECRET)
+        .set('x-internal-service-token', process.env.PDF_SERVER_INTERNAL_TOKEN)
         .send({ htmlContent: '<p>X</p>', filename: 'test.pdf' });
 
       expect(res.status).toBe(500);
@@ -262,7 +262,7 @@ describe('PDF Server', () => {
 
       const res = await request(app)
         .post('/generate-pdf')
-        .set('x-internal-service-token', process.env.CSRF_SECRET)
+        .set('x-internal-service-token', process.env.PDF_SERVER_INTERNAL_TOKEN)
         .send({ htmlContent: '<p>X</p>', filename: 'test.pdf' });
 
       expect(res.status).toBe(504);
@@ -270,11 +270,11 @@ describe('PDF Server', () => {
     });
   });
 
-  describe('POST /generate-docx � validation', () => {
+  describe('POST /generate-docx ï¿½ validation', () => {
     it('should reject missing htmlContent', async () => {
       const res = await request(app)
         .post('/generate-docx')
-        .set('x-internal-service-token', process.env.CSRF_SECRET)
+        .set('x-internal-service-token', process.env.PDF_SERVER_INTERNAL_TOKEN)
         .send({ filename: 'test.docx' });
       expect(res.status).toBe(400);
       expect(res.body.error).toContain('htmlContent');
@@ -283,7 +283,7 @@ describe('PDF Server', () => {
     it('should reject missing filename', async () => {
       const res = await request(app)
         .post('/generate-docx')
-        .set('x-internal-service-token', process.env.CSRF_SECRET)
+        .set('x-internal-service-token', process.env.PDF_SERVER_INTERNAL_TOKEN)
         .send({ htmlContent: '<p>Hello</p>' });
       expect(res.status).toBe(400);
       expect(res.body.error).toContain('filename');
@@ -292,21 +292,21 @@ describe('PDF Server', () => {
     it('should reject invalid format', async () => {
       const res = await request(app)
         .post('/generate-docx')
-        .set('x-internal-service-token', process.env.CSRF_SECRET)
+        .set('x-internal-service-token', process.env.PDF_SERVER_INTERNAL_TOKEN)
         .send({ htmlContent: '<p>Hello</p>', filename: 'test.docx', format: 'rtf' });
       expect(res.status).toBe(400);
       expect(res.body.error).toContain('format');
     });
   });
 
-  describe('POST /generate-docx � DOCX generation', () => {
+  describe('POST /generate-docx ï¿½ DOCX generation', () => {
     it('should return DOCX buffer on success', async () => {
       const fakeDocx = Buffer.from('PK\x03\x04fake docx');
       docxGen.generateDocx.mockResolvedValue(fakeDocx);
 
       const res = await request(app)
         .post('/generate-docx')
-        .set('x-internal-service-token', process.env.CSRF_SECRET)
+        .set('x-internal-service-token', process.env.PDF_SERVER_INTERNAL_TOKEN)
         .send({ htmlContent: '<p>Hello</p>', filename: 'test.docx', format: 'docx' });
 
       expect(res.status).toBe(200);
@@ -319,7 +319,7 @@ describe('PDF Server', () => {
 
       await request(app)
         .post('/generate-docx')
-        .set('x-internal-service-token', process.env.CSRF_SECRET)
+        .set('x-internal-service-token', process.env.PDF_SERVER_INTERNAL_TOKEN)
         .send({ htmlContent: '<p>X</p>', filename: 'test.docx' });
 
       expect(docxGen.generateDocx).toHaveBeenCalledWith(expect.objectContaining({
@@ -332,7 +332,7 @@ describe('PDF Server', () => {
 
       const res = await request(app)
         .post('/generate-docx')
-        .set('x-internal-service-token', process.env.CSRF_SECRET)
+        .set('x-internal-service-token', process.env.PDF_SERVER_INTERNAL_TOKEN)
         .send({ htmlContent: '<p>X</p>', filename: 'my doc.pdf', format: 'docx' });
 
       expect(res.status).toBe(200);
@@ -344,7 +344,7 @@ describe('PDF Server', () => {
 
       await request(app)
         .post('/generate-docx')
-        .set('x-internal-service-token', process.env.CSRF_SECRET)
+        .set('x-internal-service-token', process.env.PDF_SERVER_INTERNAL_TOKEN)
         .send({
           htmlContent: '<p>Body</p>',
           filename: 'test.docx',
@@ -372,7 +372,7 @@ describe('PDF Server', () => {
 
       const res = await request(reloadedApp)
         .post('/generate-docx')
-        .set('x-internal-service-token', process.env.CSRF_SECRET)
+        .set('x-internal-service-token', process.env.PDF_SERVER_INTERNAL_TOKEN)
         .send({ htmlContent: '<p>X</p>', filename: 'test.docx' });
 
       expect(res.status).toBe(413);
@@ -383,7 +383,7 @@ describe('PDF Server', () => {
 
       const res = await request(app)
         .post('/generate-docx')
-        .set('x-internal-service-token', process.env.CSRF_SECRET)
+        .set('x-internal-service-token', process.env.PDF_SERVER_INTERNAL_TOKEN)
         .send({ htmlContent: '<p>X</p>', filename: 'test.docx' });
 
       expect(res.status).toBe(500);
@@ -391,14 +391,14 @@ describe('PDF Server', () => {
     });
   });
 
-  describe('POST /generate-docx � DOC generation', () => {
+  describe('POST /generate-docx ï¿½ DOC generation', () => {
     it('should return DOC buffer when format=doc', async () => {
       const fakeDoc = Buffer.from('fake doc content');
       docxGen.generateDocx.mockResolvedValue(fakeDoc);
 
       const res = await request(app)
         .post('/generate-docx')
-        .set('x-internal-service-token', process.env.CSRF_SECRET)
+        .set('x-internal-service-token', process.env.PDF_SERVER_INTERNAL_TOKEN)
         .send({ htmlContent: '<p>Hello</p>', filename: 'test.doc', format: 'doc' });
 
       expect(res.status).toBe(200);
@@ -411,7 +411,7 @@ describe('PDF Server', () => {
 
       await request(app)
         .post('/generate-docx')
-        .set('x-internal-service-token', process.env.CSRF_SECRET)
+        .set('x-internal-service-token', process.env.PDF_SERVER_INTERNAL_TOKEN)
         .send({ htmlContent: '<p>X</p>', filename: 'test.doc', format: 'doc' });
 
       expect(docxGen.generateDocx).toHaveBeenCalledWith(expect.objectContaining({
@@ -420,3 +420,4 @@ describe('PDF Server', () => {
     });
   });
 });
+

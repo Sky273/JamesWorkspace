@@ -1,11 +1,11 @@
-/**
+﻿/**
  * Profile Matching Service
  * Frontend service for finding best matching CVs for a mission
  */
 
 import { fetchWithAuth, createAuthOptions, createAuthOptionsWithCsrf } from './apiInterceptor';
 import logger from './logger.frontend';
-import { showCaughtError } from '../components/ErrorToast';
+import { showCaughtError } from '../components/errorToast.helpers';
 import type { 
   ProfileMatchingResponse, 
   ProfileMatchWeights,
@@ -184,3 +184,4 @@ export default {
   getDeals,
   analyzeProfileForMission
 };
+

@@ -66,11 +66,8 @@ export async function getClient(settings) {
         const client = new ftp.Client();
         // Enable verbose logging only in development
         client.ftp.verbose = process.env.NODE_ENV === 'development';
-        
-        // TLS options: accept self-signed certificates
-        const secureOptions = {
-            rejectUnauthorized: false  // Accept self-signed certificates
-        };
+        const allowSelfSigned = process.env.BACKUP_FTP_ALLOW_SELF_SIGNED === 'true';
+        const secureOptions = allowSelfSigned ? { rejectUnauthorized: false } : undefined;
         
         // Determine secure mode based on protocol and tls_mode setting
         let tlsMode = settings.tls_mode;
@@ -106,8 +103,7 @@ export async function getClient(settings) {
             secure,
             protocol: settings.protocol,
             username: settings.username,
-            hasPassword: !!settings.password,
-            passwordLength: settings.password ? settings.password.length : 0
+            allowSelfSigned
         });
         
         const accessParams = {
@@ -123,9 +119,9 @@ export async function getClient(settings) {
             host: accessParams.host,
             port: accessParams.port,
             user: accessParams.user,
-            hasPassword: !!accessParams.password,
             secure: accessParams.secure,
-            secureType: typeof accessParams.secure
+            secureType: typeof accessParams.secure,
+            allowSelfSigned
         });
         
         try {
@@ -180,7 +176,7 @@ export async function testConnection(settings) {
         if (clientWrapper.type === 'sftp') {
             await clientWrapper.client.list(settings.remote_path || '/');
         } else {
-            await clientWrapper.client.ensureDir(settings.remote_path || '/backups');
+            await clientWrapper.client.list(settings.remote_path || '/backups');
         }
         
         safeLog('info', 'Backup connection test successful', { 
@@ -347,3 +343,4 @@ export async function cleanupOldRemoteBackups(settings, type, retention) {
         await closeClient(clientWrapper);
     }
 }
+

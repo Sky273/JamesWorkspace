@@ -1,4 +1,4 @@
-import { defineConfig, devices } from '@playwright/test';
+﻿import { defineConfig, devices } from '@playwright/test';
 
 /**
  * Playwright E2E Test Configuration
@@ -35,5 +35,10 @@ export default defineConfig({
     url: 'http://localhost:3001/health',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
+    env: {
+      ...process.env,
+      PDF_SERVER_INTERNAL_TOKEN: process.env.PDF_SERVER_INTERNAL_TOKEN || 'playwright-pdf-server-internal-token-32chars',
+      HTTPS_ENABLED: process.env.HTTPS_ENABLED || 'false',
+    },
   },
 });

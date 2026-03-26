@@ -28,7 +28,6 @@
     "vite-plugin-compression",
     "buffer",
     "dompurify",
-    "vite-plugin-node-polyfills",
     "@tailwindcss/typography",
     "@rollup/plugin-commonjs",
     "@testing-library/dom",

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Batch Jobs Routes
  * API endpoints for managing batch processing jobs
  */
@@ -74,7 +74,7 @@ const upload = multer({
         if (allowedMimes.includes(file.mimetype)) {
             cb(null, true);
         } else {
-            cb(new Error(`Type de fichier non supportÃ©: ${file.mimetype}`));
+            cb(new Error(`Type de fichier non support? : ${file.mimetype}`));
         }
     }
 });
@@ -184,7 +184,7 @@ router.post('/', authenticateToken, upload.array('files', 200), async (req, res)
         res.status(201).json(updatedJob);
     } catch (error) {
         safeLog('error', 'Failed to create batch job', { error: error.message });
-        res.status(500).json({ error: error.message || 'Erreur lors de la crÃ©ation du job' });
+        res.status(500).json({ error: error.message || 'Erreur lors de la création du job' });
     }
 });
 
@@ -240,7 +240,7 @@ router.post('/improve', authenticateToken, validateBody(batchImproveSchema), asy
         res.status(201).json(updatedJob);
     } catch (error) {
         safeLog('error', 'Failed to create batch improvement job', { error: error.message });
-        res.status(500).json({ error: error.message || 'Erreur lors de la crÃ©ation du job' });
+        res.status(500).json({ error: error.message || 'Erreur lors de la création du job' });
     }
 });
 
@@ -267,11 +267,11 @@ router.post('/deal-export', authenticateToken, validateBody(batchDealExportSchem
         // Verify deal exists and user has access
         const deal = await getDealForExport(dealId);
         if (!deal) {
-            return res.status(404).json({ error: 'Affaire non trouvÃ©e' });
+            return res.status(404).json({ error: 'Affaire non trouvée' });
         }
 
         if (!isAdmin && deal.firm_id !== userFirmId) {
-            return res.status(403).json({ error: 'AccÃ¨s non autorisÃ©' });
+            return res.status(403).json({ error: 'Accès non autorisé' });
         }
 
         // 1. Get resumes linked to the deal
@@ -282,7 +282,7 @@ router.post('/deal-export', authenticateToken, validateBody(batchDealExportSchem
 
         const totalItems = dealResumes.length + dealAdaptations.length;
         if (totalItems === 0) {
-            return res.status(400).json({ error: 'Aucun CV ni adaptation Ã  exporter pour cette affaire' });
+            return res.status(400).json({ error: 'Aucun CV ni adaptation ? exporter pour cette affaire' });
         }
 
         // Create the job
@@ -344,7 +344,7 @@ router.post('/deal-export', authenticateToken, validateBody(batchDealExportSchem
         });
     } catch (error) {
         safeLog('error', 'Failed to create deal export job', { error: error.message });
-        res.status(500).json({ error: error.message || 'Erreur lors de la crÃ©ation du job d\'export' });
+        res.status(500).json({ error: error.message || "Erreur lors de la création du job d'export" });
     }
 });
 
@@ -383,7 +383,7 @@ router.get('/', authenticateToken, async (req, res) => {
         res.json(jobsWithAvailability);
     } catch (error) {
         safeLog('error', 'Failed to get batch jobs', { error: error.message });
-        res.status(500).json({ error: 'Erreur lors de la rÃ©cupÃ©ration des jobs' });
+        res.status(500).json({ error: 'Erreur lors de la récupération des jobs' });
     }
 });
 
@@ -400,12 +400,12 @@ router.get('/:id', authenticateToken, async (req, res) => {
         const job = await getJob(id);
 
         if (!job) {
-            return res.status(404).json({ error: 'Job non trouvÃ©' });
+            return res.status(404).json({ error: 'Job non trouvé' });
         }
 
         // Check access rights
         if (!isAdmin && job.firm_id !== userFirmId) {
-            return res.status(403).json({ error: 'AccÃ¨s non autorisÃ©' });
+            return res.status(403).json({ error: 'Accès non autorisé' });
         }
 
         // Get job items
@@ -415,7 +415,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
         res.json({ ...job, items, export_file_available });
     } catch (error) {
         safeLog('error', 'Failed to get batch job', { error: error.message });
-        res.status(500).json({ error: 'Erreur lors de la rÃ©cupÃ©ration du job' });
+        res.status(500).json({ error: 'Erreur lors de la récupération du job' });
     }
 });
 
@@ -432,17 +432,17 @@ router.post('/:id/cancel', authenticateToken, async (req, res) => {
         const job = await getJob(id);
 
         if (!job) {
-            return res.status(404).json({ error: 'Job non trouvÃ©' });
+            return res.status(404).json({ error: 'Job non trouvé' });
         }
 
         // Check access rights
         if (!isAdmin && job.firm_id !== userFirmId) {
-            return res.status(403).json({ error: 'AccÃ¨s non autorisÃ©' });
+            return res.status(403).json({ error: 'Accès non autorisé' });
         }
 
         // Can only cancel pending or processing jobs
         if (job.status !== JOB_STATUS.PENDING && job.status !== JOB_STATUS.PROCESSING) {
-            return res.status(400).json({ error: 'Ce job ne peut pas Ãªtre annulÃ©' });
+            return res.status(400).json({ error: 'Ce job ne peut pas ?tre annul?' });
         }
 
         await cancelJob(id);
@@ -468,12 +468,12 @@ router.delete('/:id', authenticateToken, async (req, res) => {
         const job = await getJob(id);
 
         if (!job) {
-            return res.status(404).json({ error: 'Job non trouvÃ©' });
+            return res.status(404).json({ error: 'Job non trouvé' });
         }
 
         // Check access rights
         if (!isAdmin && job.firm_id !== userFirmId) {
-            return res.status(403).json({ error: 'AccÃ¨s non autorisÃ©' });
+            return res.status(403).json({ error: 'Accès non autorisé' });
         }
 
         // Can only delete completed, failed, or cancelled jobs
@@ -483,7 +483,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 
         await deleteJob(id);
 
-        res.json({ success: true, message: 'Job supprimÃ©' });
+        res.json({ success: true, message: 'Job supprim?' });
     } catch (error) {
         safeLog('error', 'Failed to delete batch job', { error: error.message });
         res.status(500).json({ error: 'Erreur lors de la suppression du job' });
@@ -503,12 +503,12 @@ router.get('/:id/download', authenticateToken, async (req, res) => {
         const job = await getJob(id);
 
         if (!job) {
-            return res.status(404).json({ error: 'Job non trouvÃ©' });
+            return res.status(404).json({ error: 'Job non trouvé' });
         }
 
         // Check access rights
         if (!isAdmin && job.firm_id !== userFirmId) {
-            return res.status(403).json({ error: 'AccÃ¨s non autorisÃ©' });
+            return res.status(403).json({ error: 'Accès non autorisé' });
         }
 
         // Check if export file exists
@@ -518,7 +518,7 @@ router.get('/:id/download', authenticateToken, async (req, res) => {
 
         // Check if file exists on disk
         if (!fs.existsSync(job.export_file_path)) {
-            return res.status(404).json({ error: 'Fichier d\'export non trouvÃ© sur le serveur' });
+            return res.status(404).json({ error: "Fichier d'export non trouvé sur le serveur" });
         }
 
         // Send file
@@ -553,7 +553,7 @@ router.get('/:id/download', authenticateToken, async (req, res) => {
         safeLog('info', 'Export file downloaded', { jobId: id, fileName: job.export_file_name });
     } catch (error) {
         safeLog('error', 'Failed to download export file', { error: error.message });
-        res.status(500).json({ error: 'Erreur lors du tÃ©lÃ©chargement' });
+        res.status(500).json({ error: 'Erreur lors du téléchargement' });
     }
 });
 
@@ -569,19 +569,19 @@ router.get('/:id/pending-names', authenticateToken, async (req, res) => {
 
         const job = await getJob(id);
         if (!job) {
-            return res.status(404).json({ error: 'Job non trouvÃ©' });
+            return res.status(404).json({ error: 'Job non trouvé' });
         }
 
         // Check access
         if (!isAdmin && job.firm_id !== userFirmId) {
-            return res.status(403).json({ error: 'AccÃ¨s non autorisÃ©' });
+            return res.status(403).json({ error: 'Accès non autorisé' });
         }
 
         const items = await getItemsPendingName(id);
         res.json({ items });
     } catch (error) {
         safeLog('error', 'Failed to get items pending name', { error: error.message });
-        res.status(500).json({ error: 'Erreur lors de la rÃ©cupÃ©ration des items' });
+        res.status(500).json({ error: 'Erreur lors de la récupération des items' });
     }
 });
 
@@ -602,12 +602,12 @@ router.post('/items/:itemId/provide-name', authenticateToken, validateParams('it
 
         const item = await getJobItem(itemId);
         if (!item) {
-            return res.status(404).json({ error: 'Item non trouvÃ©' });
+            return res.status(404).json({ error: 'Item non trouvé' });
         }
 
         // Check access
         if (!isAdmin && item.firm_id !== userFirmId) {
-            return res.status(403).json({ error: 'AccÃ¨s non autorisÃ©' });
+            return res.status(403).json({ error: 'Accès non autorisé' });
         }
 
         if (item.status !== ITEM_STATUS.PENDING_NAME) {
@@ -631,7 +631,7 @@ router.post('/items/:itemId/provide-name', authenticateToken, validateParams('it
         });
     } catch (error) {
         safeLog('error', 'Failed to provide name for item', { error: error.message });
-        res.status(500).json({ error: error.message || 'Erreur lors de la mise Ã  jour' });
+        res.status(500).json({ error: error.message || 'Erreur lors de la mise ? jour' });
     }
 });
 

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * PDF Server - Express server for PDF and DOCX generation
  * Uses Puppeteer for PDF generation, Pandoc + LibreOffice for DOCX/DOC conversion
  */
@@ -17,7 +17,12 @@ const PORT = process.env.PDF_SERVER_PORT || 3002;
 
 const PDF_GENERATION_TIMEOUT = parseInt(process.env.PDF_TIMEOUT || '30000', 10);
 const PDF_SERVER_AUTH_HEADER = 'x-internal-service-token';
-const PDF_SERVER_INTERNAL_TOKEN = process.env.PDF_SERVER_INTERNAL_TOKEN || process.env.CSRF_SECRET || process.env.JWT_SECRET || '';
+const DEV_TEST_FALLBACK_TOKEN = 'dev-test-pdf-server-internal-token-32chars';
+const isProduction = process.env.NODE_ENV === 'production';
+const configuredPdfToken = process.env.PDF_SERVER_INTERNAL_TOKEN || '';
+const PDF_SERVER_INTERNAL_TOKEN = configuredPdfToken.length >= 32
+  ? configuredPdfToken
+  : (!isProduction ? DEV_TEST_FALLBACK_TOKEN : '');
 const MAX_HTML_SIZE = parseInt(process.env.PDF_MAX_HTML_SIZE || '5242880', 10);
 const MAX_STYLESHEET_SIZE = parseInt(process.env.PDF_MAX_STYLESHEET_SIZE || '262144', 10);
 const MAX_FRAGMENT_SIZE = parseInt(process.env.PDF_MAX_FRAGMENT_SIZE || '524288', 10);
@@ -446,6 +451,15 @@ process.on('disconnect', () => {
 module.exports = { app };
 
 if (require.main === module) {
+  if (!PDF_SERVER_INTERNAL_TOKEN || PDF_SERVER_INTERNAL_TOKEN.length < 32) {
+    throw new Error('CRITICAL: PDF_SERVER_INTERNAL_TOKEN must be set and at least 32 characters long.');
+  }
+
+  if (!configuredPdfToken && !isProduction) {
+    process.env.PDF_SERVER_INTERNAL_TOKEN = PDF_SERVER_INTERNAL_TOKEN;
+    logger.log('warn', 'PDF_SERVER_INTERNAL_TOKEN missing; using development/test fallback token');
+  }
+
   app.listen(PORT, async () => {
     startRateLimitCleanup();
     logger.log('info', `PDF Server started on port ${PORT}`, {
@@ -461,3 +475,5 @@ if (require.main === module) {
     });
   });
 }
+
+

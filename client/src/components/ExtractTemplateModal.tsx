@@ -206,10 +206,10 @@ const ExtractTemplateModal = ({ isOpen, onClose }: ExtractTemplateModalProps): J
                     {t('templates.extract.howItWorks')}
                   </h4>
                   <ul className="text-sm text-blue-700 dark:text-blue-400 space-y-1">
-                    <li>â€¢ {t('templates.extract.step1')}</li>
-                    <li>â€¢ {t('templates.extract.step2')}</li>
-                    <li>â€¢ {t('templates.extract.step3')}</li>
-                    <li>â€¢ {t('templates.extract.step4')}</li>
+                    <li>? {t('templates.extract.step1')}</li>
+                    <li>? {t('templates.extract.step2')}</li>
+                    <li>? {t('templates.extract.step3')}</li>
+                    <li>? {t('templates.extract.step4')}</li>
                   </ul>
                 </div>
               </div>
@@ -230,7 +230,7 @@ const ExtractTemplateModal = ({ isOpen, onClose }: ExtractTemplateModalProps): J
                     {t('templates.extract.pleaseWait')}
                   </p>
                   <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">
-                    {t('templates.extract.longOperation') || 'Cette opÃ©ration peut prendre 1 Ã  3 minutes selon la complexitÃ© du document.'}
+                    {t('templates.extract.longOperation') || 'Cette op?ration peut prendre 1 ? 3 minutes selon la complexit? du document.'}
                   </p>
                 </div>
               </div>
@@ -247,9 +247,9 @@ const ExtractTemplateModal = ({ isOpen, onClose }: ExtractTemplateModalProps): J
                   <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
                     {extractionMethod && (
                       <span className="inline-flex items-center px-2 py-1 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
-                        {extractionMethod === 'docx-html' ? 'ðŸ“„ DOCX â†’ HTML' : 
-                         extractionMethod === 'pdf-vision' ? 'ðŸ‘ï¸ PDF â†’ Vision' : 
-                         extractionMethod === 'pdf-text-fallback' ? 'ðŸ“ PDF â†’ Text' : extractionMethod}
+                        {extractionMethod === 'docx-html' ? 'DOCX ? HTML' : 
+                         extractionMethod === 'pdf-vision' ? 'PDF ? Vision' : 
+                         extractionMethod === 'pdf-text-fallback' ? 'PDF ? Texte' : extractionMethod}
                       </span>
                     )}
                     {usedModel && (

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+﻿import { test, expect } from '@playwright/test';
 
 /**
  * Authentication E2E Tests
@@ -12,19 +12,26 @@ test.describe('Authentication', () => {
 
   test('should display public entry page for unauthenticated users', async ({ page }) => {
     await expect(page).toHaveURL(/\/(welcome|signin)(\?.*)?$/);
-    await expect(page.getByRole('link', { name: /se connecter|connexion|login/i }).first()).toBeVisible();
+
+    if (page.url().includes('/welcome')) {
+      await expect(page.locator('a[href="/signin"]').first()).toBeVisible();
+      return;
+    }
+
+    await expect(page.getByRole('heading', { name: /connexion|se connecter|login/i })).toBeVisible();
+    await expect(page.locator('#email-address')).toBeVisible();
   });
 
   test('should show email and password fields on signin page', async ({ page }) => {
     await page.goto('/signin');
-    await expect(page.getByLabel(/email/i)).toBeVisible();
-    await expect(page.getByLabel(/mot de passe|password/i)).toBeVisible();
+    await expect(page.locator('#email-address')).toBeVisible();
+    await expect(page.locator('#password')).toBeVisible();
   });
 
   test('should reject invalid credentials', async ({ page }) => {
     await page.goto('/signin');
-    await page.getByLabel(/email/i).fill('invalid@test.com');
-    await page.getByLabel(/mot de passe|password/i).fill('wrongpassword');
+    await page.locator('#email-address').fill('invalid@test.com');
+    await page.locator('#password').fill('wrongpassword');
 
     const signInResponsePromise = page.waitForResponse((response) =>
       response.url().includes('/api/auth/signin') && response.request().method() === 'POST'

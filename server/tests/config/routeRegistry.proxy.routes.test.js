@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import express from 'express';
 import request from 'supertest';
 
+process.env.PDF_SERVER_INTERNAL_TOKEN = 'test-pdf-server-internal-token-minimum-32-chars';
+
 const mockAuthenticateToken = vi.fn((req, res, next) => {
     if (req.headers['x-test-auth'] === 'ok') {
         req.user = { id: 'user-123', role: 'user', email: 'test@example.com' };

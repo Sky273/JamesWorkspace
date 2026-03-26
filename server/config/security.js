@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Security Configuration
  * CSP (Content Security Policy), CORS, CSRF protection
  */
@@ -57,9 +57,9 @@ export function configureHelmet(app) {
                     "https://*.basemaps.cartocdn.com",        // MapLibre GL scripts from tiles
                     // Cloudflare injects inline scripts (Rocket Loader, Email Obfuscation, etc.)
                     // These hashes allow the specific Cloudflare-injected scripts without 'unsafe-inline'.
-                    // ⚠️  Cloudflare can change these at any time — if new CSP violations appear for
-                    //    inline scripts, add the hash from the browser error or disable Rocket Loader
-                    //    and Email Obfuscation in the Cloudflare dashboard for a permanent fix.
+                    // âš ï¸  Cloudflare can change these at any time â€” if new CSP violations appear for
+                    // inline scripts, add the hash from the browser error or disable Rocket Loader
+                    // and Email Obfuscation in the Cloudflare dashboard for a permanent fix.
                     "'sha256-A1+e72bQn7hPqkdKAAlQSbFpetfFWJBOj5vG34ZrAxU='",  // Cloudflare injected script
                     "'sha256-P5AT03Ewswrka26JysiPTKxr4GXeRKQKbPiV4tBCy2k='",  // Cloudflare injected script (variant)
                     "'sha256-yZlHOZ5xtWE8Evaf3HFDtJxWosKnkweYfd1MWFsufuI='",  // Cloudflare injected script (variant 2)
@@ -295,4 +295,5 @@ export function configureCsrf(app) {
 
     safeLog('info', 'CSRF protection enabled');
 }
+
 

@@ -1,7 +1,7 @@
 /**
  * Template Extraction Service
  * Extracts CV template structure from uploaded CV files using LLM
- * Supports both visual analysis (PDF→image) and HTML extraction (DOCX)
+ * Supports both visual analysis (PDF -> image) and HTML extraction (DOCX)
  */
 
 import { callLLM } from './llm.service.js';
@@ -12,100 +12,99 @@ import { safeLog } from '../utils/logger.backend.js';
  * Prompt for extracting template from HTML content (DOCX)
  * CRITICAL: This prompt instructs the LLM to PRESERVE the exact HTML structure
  */
-const HTML_EXTRACTION_PROMPT = `Tu es un expert en création de templates de CV réutilisables.
+const HTML_EXTRACTION_PROMPT = [
+    "Tu es un expert en cr?ation de templates de CV r?utilisables.",
+    "",
+    "T?CHE : convertir le HTML d'un CV en template VIDE r?utilisable.",
+    "",
+    "R?GLES CRITIQUES :",
+    "1. AUCUNE information personnelle (pas de nom, email, t?l?phone, adresse, dates, entreprises, ?coles)",
+    "2. AUCUN contenu de CV (pas de titres de sections comme \"Comp?tences\", \"Exp?riences\", etc.)",
+    "3. UN SEUL placeholder -content- pour TOUT le corps du CV",
+    "",
+    "STRUCTURE DU TEMPLATE :",
+    "1. HEADER : en-t?te avec logo/nom de soci?t? -> headerContent (remplacer le logo par -logo-)",
+    "2. FOOTER : pied de page soci?t? -> footerContent (garder les infos soci?t?)",
+    "3. CORPS : structure MINIMALISTE avec 3 placeholders UNIQUEMENT :",
+    "   - -name- : nom du candidat",
+    "   - -title- : titre/poste",
+    "   - -content- : UN SEUL bloc pour TOUT le contenu (pas de sections s?par?es)",
+    "",
+    "EXEMPLE CORRECT de templateContent :",
+    "\"<div class='cv-header'><h1>-name-</h1><h2>-title-</h2></div><div class='cv-body'>-content-</div>\"",
+    "",
+    "EXEMPLE INCORRECT (? NE PAS faire) :",
+    "\"<h3>Contact</h3>-content-<h3>Comp?tences</h3>-content-<h3>Exp?riences</h3>-content-\"",
+    "",
+    "IMPORTANT :",
+    "- Conserve les images base64 (<img src=\"data:...\">) ou remplace-les par -logo-",
+    "- Cr?e un stylesheet CSS bas? sur les couleurs et polices observ?es",
+    "",
+    "Tu DOIS retourner un JSON avec TOUS ces champs :",
+    "",
+    "{",
+    "  \"name\": \"string - nom du template\",",
+    "  \"description\": \"string - description du style\",",
+    "  \"headerContent\": \"string - HTML du header avec -logo-\",",
+    "  \"templateContent\": \"string - HTML minimaliste avec -name-, -title-, -content- (UN SEUL -content-)\",",
+    "  \"footerContent\": \"string - HTML du footer\",",
+    "  \"stylesheet\": \"string - CSS complet\",",
+    "  \"footerHeight\": 25,",
+    "  \"tags\": [\"tag1\", \"tag2\"],",
+    "  \"extractedColors\": [\"#color1\"],",
+    "  \"extractedFonts\": [\"font1\"]",
+    "}",
+    "",
+    "R?ponds UNIQUEMENT avec le JSON, sans texte avant ou apr?s."
+].join('\n');
 
-TÂCHE: Convertir le HTML d'un CV en template VIDE réutilisable.
-
-RÈGLES CRITIQUES:
-1. AUCUNE information personnelle (pas de nom, email, téléphone, adresse, dates, entreprises, écoles)
-2. AUCUN contenu de CV (pas de titres de sections comme "Compétences", "Expériences", etc.)
-3. UN SEUL placeholder -content- pour TOUT le corps du CV
-
-STRUCTURE DU TEMPLATE:
-1. HEADER: en-tête avec logo/nom de société → headerContent (remplacer logo par -logo-)
-2. FOOTER: pied de page société → footerContent (garder infos société)
-3. CORPS: structure MINIMALISTE avec 3 placeholders UNIQUEMENT:
-   - -name- : nom du candidat
-   - -title- : titre/poste
-   - -content- : UN SEUL bloc pour TOUT le contenu (pas de sections séparées!)
-
-EXEMPLE CORRECT de templateContent:
-"<div class='cv-header'><h1>-name-</h1><h2>-title-</h2></div><div class='cv-body'>-content-</div>"
-
-EXEMPLE INCORRECT (à NE PAS faire):
-"<h3>Contact</h3>-content-<h3>Compétences</h3>-content-<h3>Expériences</h3>-content-"
-
-IMPORTANT: 
-- Conserve les images base64 (<img src="data:...">) ou remplace par -logo-
-- Crée un stylesheet CSS basé sur les couleurs et polices observées
-
-Tu DOIS retourner un JSON avec TOUS ces champs:
-
-{
-  "name": "string - nom du template",
-  "description": "string - description du style",
-  "headerContent": "string - HTML du header avec -logo-",
-  "templateContent": "string - HTML MINIMALISTE avec -name-, -title-, -content- (UN SEUL -content-)",
-  "footerContent": "string - HTML du footer",
-  "stylesheet": "string - CSS complet",
-  "footerHeight": 25,
-  "tags": ["tag1", "tag2"],
-  "extractedColors": ["#color1"],
-  "extractedFonts": ["font1"]
-}
-
-Réponds UNIQUEMENT avec le JSON, sans texte avant ou après.`;
-
-/**
- * Prompt for visual analysis of PDF (image-based)
- * Focuses on REPRODUCING the exact visual layout observed
- */
-const VISION_EXTRACTION_PROMPT = `Tu es un expert en création de templates de CV réutilisables.
-
-TÂCHE: Analyser cette image de CV et créer un template HTML/CSS VIDE (sans contenu).
-
-RÈGLES CRITIQUES:
-1. AUCUNE information personnelle (pas de nom, email, téléphone, adresse, dates, entreprises, écoles)
-2. AUCUN contenu de CV (pas de titres de sections comme "Compétences", "Expériences", "Contact", etc.)
-3. UN SEUL placeholder -content- pour TOUT le corps du CV (pas plusieurs -content- séparés!)
-4. Pour les logos/images, utilise le placeholder: -logo-
-
-STRUCTURE DU TEMPLATE:
-1. HEADER: bandeau coloré avec logo de société → headerContent avec -logo-
-2. FOOTER: pied de page société → footerContent (garder infos société)
-3. CORPS: structure MINIMALISTE avec 3 placeholders UNIQUEMENT:
-   - -name- : nom du candidat
-   - -title- : titre/poste
-   - -content- : UN SEUL bloc pour TOUT le contenu
-
-EXEMPLE CORRECT de templateContent:
-"<div class='cv-header'><h1>-name-</h1><h2>-title-</h2></div><div class='cv-body'>-content-</div>"
-
-EXEMPLE INCORRECT (à NE PAS faire):
-"<h3>Contact</h3>-content-<h3>Compétences</h3>-content-<h3>Expériences</h3>-content-"
-
-ANALYSE L'IMAGE POUR EXTRAIRE:
-- Couleurs exactes (#hex) utilisées
-- Polices de caractères
-- Espacements et mise en page
-
-Tu DOIS retourner un JSON avec TOUS ces champs:
-
-{
-  "name": "string - nom du template basé sur la société",
-  "description": "string - description du style visuel",
-  "headerContent": "string - HTML du header avec -logo-",
-  "templateContent": "string - HTML MINIMALISTE avec -name-, -title-, -content- (UN SEUL -content-)",
-  "footerContent": "string - HTML du footer (coordonnées société OK)",
-  "stylesheet": "string - CSS complet avec couleurs exactes",
-  "footerHeight": 25,
-  "tags": ["tag1", "tag2"],
-  "extractedColors": ["#hex1", "#hex2"],
-  "extractedFonts": ["font1", "font2"]
-}
-
-Réponds UNIQUEMENT avec le JSON.`;
-
+const VISION_EXTRACTION_PROMPT = [
+    "Tu es un expert en cr?ation de templates de CV r?utilisables.",
+    "",
+    "T?CHE : analyser cette image de CV et cr?er un template HTML/CSS VIDE (sans contenu).",
+    "",
+    "R?GLES CRITIQUES :",
+    "1. AUCUNE information personnelle (pas de nom, email, t?l?phone, adresse, dates, entreprises, ?coles)",
+    "2. AUCUN contenu de CV (pas de titres de sections comme \"Comp?tences\", \"Exp?riences\", \"Contact\", etc.)",
+    "3. UN SEUL placeholder -content- pour TOUT le corps du CV (pas plusieurs -content- s?par?s)",
+    "4. Pour les logos/images, utilise le placeholder : -logo-",
+    "",
+    "STRUCTURE DU TEMPLATE :",
+    "1. HEADER : bandeau color? avec logo de soci?t? -> headerContent avec -logo-",
+    "2. FOOTER : pied de page soci?t? -> footerContent (garder les infos soci?t?)",
+    "3. CORPS : structure MINIMALISTE avec 3 placeholders UNIQUEMENT :",
+    "   - -name- : nom du candidat",
+    "   - -title- : titre/poste",
+    "   - -content- : UN SEUL bloc pour TOUT le contenu",
+    "",
+    "EXEMPLE CORRECT de templateContent :",
+    "\"<div class='cv-header'><h1>-name-</h1><h2>-title-</h2></div><div class='cv-body'>-content-</div>\"",
+    "",
+    "EXEMPLE INCORRECT (? NE PAS faire) :",
+    "\"<h3>Contact</h3>-content-<h3>Comp?tences</h3>-content-<h3>Exp?riences</h3>-content-\"",
+    "",
+    "ANALYSE L'IMAGE POUR EXTRAIRE :",
+    "- les couleurs exactes (#hex) utilis?es",
+    "- les polices de caract?res",
+    "- les espacements et la mise en page",
+    "",
+    "Tu DOIS retourner un JSON avec TOUS ces champs :",
+    "",
+    "{",
+    "  \"name\": \"string - nom du template bas? sur la soci?t?\",",
+    "  \"description\": \"string - description du style visuel\",",
+    "  \"headerContent\": \"string - HTML du header avec -logo-\",",
+    "  \"templateContent\": \"string - HTML minimaliste avec -name-, -title-, -content- (UN SEUL -content-)\",",
+    "  \"footerContent\": \"string - HTML du footer (coordonn?es soci?t? autoris?es)\",",
+    "  \"stylesheet\": \"string - CSS complet avec couleurs exactes\",",
+    "  \"footerHeight\": 25,",
+    "  \"tags\": [\"tag1\", \"tag2\"],",
+    "  \"extractedColors\": [\"#hex1\", \"#hex2\"],",
+    "  \"extractedFonts\": [\"font1\", \"font2\"]",
+    "}",
+    "",
+    "R?ponds UNIQUEMENT avec le JSON."
+].join('\n');
 /**
  * Extract template from DOCX HTML content
  * @param {string} htmlContent - HTML extracted from DOCX with styles

@@ -5,7 +5,7 @@ export const PORT = process.env.PROXY_PORT || 3001;
 export const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET || JWT_SECRET.length < 32) {
     throw new Error(
-        '❌ CRITICAL: JWT_SECRET must be set in environment variables and be at least 32 characters long.\n' +
+        'CRITICAL: JWT_SECRET must be set in environment variables and be at least 32 characters long.\n' +
         'Generate one with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"'
     );
 }
@@ -14,7 +14,7 @@ if (!JWT_SECRET || JWT_SECRET.length < 32) {
 export const CSRF_SECRET = process.env.CSRF_SECRET;
 if (!CSRF_SECRET || CSRF_SECRET.length < 32) {
     throw new Error(
-        '❌ CRITICAL: CSRF_SECRET must be set in environment variables and be at least 32 characters long.\n' +
+        'CRITICAL: CSRF_SECRET must be set in environment variables and be at least 32 characters long.\n' +
         'Generate one with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"'
     );
 }
@@ -24,7 +24,7 @@ if (!CSRF_SECRET || CSRF_SECRET.length < 32) {
 export const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET || JWT_SECRET;
 if (REFRESH_TOKEN_SECRET === JWT_SECRET) {
     console.warn(
-        '⚠️  WARNING: REFRESH_TOKEN_SECRET is not set. Using JWT_SECRET as fallback.\n' +
+        'WARNING: REFRESH_TOKEN_SECRET is not set. Using JWT_SECRET as fallback.\n' +
         'For enhanced security, set a separate REFRESH_TOKEN_SECRET in your environment variables.\n' +
         'Generate one with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"'
     );
@@ -39,59 +39,52 @@ export const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 export const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 
 // Market Radar - France Travail API (OAuth2)
-// Register at: https://francetravail.io/ or https://www.emploi-store-dev.fr/
 export const FRANCE_TRAVAIL_CLIENT_ID = process.env.FRANCE_TRAVAIL_CLIENT_ID;
 export const FRANCE_TRAVAIL_CLIENT_SECRET = process.env.FRANCE_TRAVAIL_CLIENT_SECRET;
 export const FRANCE_TRAVAIL_TOKEN_URL = 'https://entreprise.francetravail.fr/connexion/oauth2/access_token?realm=/partenaire';
-// Try alternative API URL if 403 error persists
-// Production: https://api.francetravail.io/partenaire/offresdemploi/v2
-// Alternative: https://api.emploi-store.fr/partenaire/offresdemploi/v2
 export const FRANCE_TRAVAIL_API_URL = process.env.FRANCE_TRAVAIL_API_URL || 'https://api.francetravail.io/partenaire/offresdemploi/v2';
 
 // Rome 4.0 APIs
-// 1. ROME 4.0 - Compétences : pour récupérer la liste des métiers avec compétences
+// 1. ROME 4.0 - Competences: pour recuperer la liste des metiers avec competences
 export const ROME_COMPETENCES_API_URL = 'https://api.francetravail.io/partenaire/rome-competences/v1';
-// 2. ROME 4.0 - Fiches Métiers : pour récupérer les fiches métiers détaillées
+// 2. ROME 4.0 - Fiches Metiers: pour recuperer les fiches metiers detaillees
 export const ROME_FICHES_METIERS_API_URL = 'https://api.francetravail.io/partenaire/rome-fiches-metiers/v1';
+
 // Market Radar - Adzuna API
-// Register at: https://developer.adzuna.com/signup
 export const ADZUNA_APP_ID = process.env.ADZUNA_APP_ID;
 export const ADZUNA_APP_KEY = process.env.ADZUNA_APP_KEY;
 export const ADZUNA_API_URL = 'https://api.adzuna.com/v1/api';
 
 // File upload configuration
-export const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+export const MAX_FILE_SIZE = 50 * 1024 * 1024;
 export const MAX_TEXT_LENGTH = 50000;
 export const MAX_PROMPT_LENGTH = 100000;
 export const MAX_STRING_FIELD_LENGTH = 1000;
-// Upload directory relative to project root (where package.json is)
 export const UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads';
 
 // Security configuration
 export const MAX_LOGS = 1000;
 
 // CORS - Use environment variables only
-// Set ALLOWED_ORIGINS in .env as comma-separated list: http://localhost:5173,https://your-domain.com
 export const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
     ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim()).filter(Boolean)
     : [
-        'http://localhost:5173',  // Vite dev server
-        'http://localhost:4173',  // Vite preview server
+        'http://localhost:5173',
+        'http://localhost:4173',
         'http://localhost:3000',
-        'http://localhost:3001',  // Proxy server HTTP
-        'https://localhost:3443', // Proxy server HTTPS (production mode)
-        'http://localhost:3002'   // PDF server
+        'http://localhost:3001',
+        'https://localhost:3443',
+        'http://localhost:3002'
     ];
 
-// Cache TTL (Time To Live) in milliseconds
+// Cache TTL in milliseconds
 export const CACHE_TTL = {
-    SETTINGS: 10 * 60 * 1000,      // 10 minutes
-    TEMPLATES: 10 * 60 * 1000,     // 10 minutes
-    FIRMS: 15 * 60 * 1000          // 15 minutes
+    SETTINGS: 10 * 60 * 1000,
+    TEMPLATES: 10 * 60 * 1000,
+    FIRMS: 15 * 60 * 1000
 };
 
 // SMTP Configuration for GDPR consent emails
-// Set these environment variables to enable automatic consent email sending
 export const SMTP_CONFIG = {
     host: process.env.SMTP_HOST,
     port: parseInt(process.env.SMTP_PORT || '587', 10),
@@ -104,23 +97,23 @@ export const SMTP_CONFIG = {
 
 // GDPR Consent Configuration
 export const CONSENT_CONFIG = {
-    tokenExpiryDays: 14,      // Days until consent token expires (2 weeks)
-    retentionDays: 730,       // Days to retain data after consent (2 years)
-    reminderAfterDays: 7      // Days after request to send reminder
+    tokenExpiryDays: 14,
+    retentionDays: 730,
+    reminderAfterDays: 7
 };
 
 // Rate limiting configuration
 export const RATE_LIMIT = {
     GLOBAL: {
-        windowMs: 15 * 60 * 1000,  // 15 minutes
-        max: 1000                   // requests per window
+        windowMs: 15 * 60 * 1000,
+        max: 1000
     },
     AUTH: {
-        windowMs: 15 * 60 * 1000,  // 15 minutes
-        max: 20                     // login attempts per window
+        windowMs: 15 * 60 * 1000,
+        max: 20
     },
     USER: {
-        windowMs: 15 * 60 * 1000,  // 15 minutes
-        max: 50                     // requests per user per window
+        windowMs: 15 * 60 * 1000,
+        max: 50
     }
 };

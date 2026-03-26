@@ -6,6 +6,8 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
 import express from 'express';
+import { Readable } from 'stream';
+import { pipeline } from 'stream/promises';
 import { safeLog } from '../utils/logger.backend.js';
 import { swaggerDocument } from './swagger.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
@@ -326,6 +328,29 @@ export function registerProxyRoutes(app) {
         userRateLimit(20, 15 * 60 * 1000)
     ];
 
+    async function relayBinaryResponse(response, res, fallbackContentType) {
+        const contentType = response.headers.get('Content-Type') || fallbackContentType;
+        const contentDisposition = response.headers.get('Content-Disposition');
+        const contentLength = response.headers.get('Content-Length');
+
+        res.setHeader('Content-Type', contentType);
+        if (contentDisposition) {
+            res.setHeader('Content-Disposition', contentDisposition);
+        }
+        if (contentLength) {
+            res.setHeader('Content-Length', contentLength);
+        }
+
+        if (response.body) {
+            await pipeline(Readable.fromWeb(response.body), res);
+            return;
+        }
+
+        const buffer = Buffer.from(await response.arrayBuffer());
+        res.setHeader('Content-Length', buffer.length.toString());
+        res.end(buffer);
+    }
+
     app.post('/generate-pdf', ...proxyGuards, validateBody(generatePdfProxySchema), async (req, res) => {
         try {
             safeLog('info', 'Proxying PDF generation request to PDF server');
@@ -343,19 +368,12 @@ export function registerProxyRoutes(app) {
                 safeLog('error', 'PDF server error', { status: response.status, error: errorText });
                 return res.status(response.status).json({ error: errorText });
             }
-            
-            // Stream the PDF response back to the client
-            res.setHeader('Content-Type', 'application/pdf');
-            const contentDisposition = response.headers.get('Content-Disposition');
-            if (contentDisposition) {
-                res.setHeader('Content-Disposition', contentDisposition);
-            }
-            
-            const buffer = await response.arrayBuffer();
-            res.send(Buffer.from(buffer));
+            await relayBinaryResponse(response, res, 'application/pdf');
         } catch (error) {
             safeLog('error', 'PDF proxy error', { error: error.message });
-            res.status(500).json({ error: 'Failed to generate PDF', details: error.message });
+            if (!res.headersSent) {
+                res.status(500).json({ error: 'Failed to generate PDF', details: error.message });
+            }
         }
     });
 
@@ -376,22 +394,19 @@ export function registerProxyRoutes(app) {
                 safeLog('error', 'DOCX server error', { status: response.status, error: errorText });
                 return res.status(response.status).json({ error: errorText });
             }
-            
-            // Stream the DOCX response back to the client
-            const contentType = response.headers.get('Content-Type') || 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-            res.setHeader('Content-Type', contentType);
-            const contentDisposition = response.headers.get('Content-Disposition');
-            if (contentDisposition) {
-                res.setHeader('Content-Disposition', contentDisposition);
-            }
-            
-            const buffer = await response.arrayBuffer();
-            res.send(Buffer.from(buffer));
+            await relayBinaryResponse(
+                response,
+                res,
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            );
         } catch (error) {
             safeLog('error', 'DOCX proxy error', { error: error.message });
-            res.status(500).json({ error: 'Failed to generate DOCX', details: error.message });
+            if (!res.headersSent) {
+                res.status(500).json({ error: 'Failed to generate DOCX', details: error.message });
+            }
         }
     });
 }
+
 
 
