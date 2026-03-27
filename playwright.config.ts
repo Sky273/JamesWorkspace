@@ -31,7 +31,7 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: 'npm run start:proxy',
+    command: 'npm run build && npm run start:proxy',
     url: 'http://localhost:3001/health',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
