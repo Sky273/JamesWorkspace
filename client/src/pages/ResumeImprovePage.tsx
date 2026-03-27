@@ -289,6 +289,16 @@ const ResumeImprovePage = (): JSX.Element => {
     );
   }
 
+  if (isImproving || contextLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+        <div className="max-w-7xl mx-auto px-4">
+          <ImprovementAnimation currentStep={processingStep || 'improving'} />
+        </div>
+      </div>
+    );
+  }
+
   const resumeName = localResume['Name'] || localResume['File Name'] || 'CV';
   const hasImprovedText = !!localResume['Improved Text'];
 
@@ -440,9 +450,7 @@ const ResumeImprovePage = (): JSX.Element => {
         </motion.div>
 
         {/* Content */}
-        {isImproving || contextLoading ? (
-          <ImprovementAnimation currentStep={processingStep || 'improving'} />
-        ) : !hasImprovedText ? (
+        {!hasImprovedText ? (
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
@@ -609,3 +617,4 @@ const ResumeImprovePage = (): JSX.Element => {
 };
 
 export default ResumeImprovePage;
+

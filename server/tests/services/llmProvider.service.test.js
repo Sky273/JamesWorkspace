@@ -86,7 +86,8 @@ describe('llmProvider.service', () => {
 
         expect(callMiniMaxOpenAICompatible).toHaveBeenCalledWith(expect.objectContaining({
             model: 'MiniMax-M2.7',
-            operationType: 'Resume Analysis'
+            operationType: 'Resume Analysis',
+            timeout: 20 * 60 * 1000
         }));
         expect(result.choices[0].message.content).toBe('ok minimax');
     });
@@ -102,4 +103,5 @@ describe('llmProvider.service', () => {
         })).rejects.toThrow('Model is required');
     });
 });
+
 

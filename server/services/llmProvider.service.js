@@ -10,14 +10,14 @@ import { callMiniMaxOpenAICompatible } from './minimax.service.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { normalizeUtf8Text } from './openai/textUtils.js';
 
-const OLLAMA_CV_OPERATION_TIMEOUTS_MS = {
+const BUSINESS_CV_OPERATION_TIMEOUTS_MS = {
     'Resume Analysis': 20 * 60 * 1000,
     'Improved Resume Analysis': 20 * 60 * 1000,
     'Resume Improvement': 25 * 60 * 1000
 };
 
-function resolveBusinessOllamaTimeout(operationType, timeout) {
-    const operationTimeout = OLLAMA_CV_OPERATION_TIMEOUTS_MS[operationType];
+function resolveBusinessOperationTimeout(operationType, timeout) {
+    const operationTimeout = BUSINESS_CV_OPERATION_TIMEOUTS_MS[operationType];
     if (operationTimeout) {
         return Math.max(operationTimeout, Number(timeout) || 0);
     }
@@ -96,7 +96,7 @@ export async function callBusinessChatCompletion({
         const result = await callOllama(normalizedMessages, effectiveModel, settings, {
             temperature,
             max_tokens: maxTokens,
-            timeout: resolveBusinessOllamaTimeout(operationType, timeout),
+            timeout: resolveBusinessOperationTimeout(operationType, timeout),
             operationType
         });
 
@@ -118,7 +118,7 @@ export async function callBusinessChatCompletion({
             temperature,
             topP,
             responseFormat,
-            timeout,
+            timeout: resolveBusinessOperationTimeout(operationType, timeout),
             maxPromptLength,
             operationType
         });
@@ -139,3 +139,6 @@ export async function callBusinessChatCompletion({
         operationType
     });
 }
+
+
+
