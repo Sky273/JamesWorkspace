@@ -1,4 +1,4 @@
-﻿/**
+/**
  * ExtractTemplateModal Component
  * Modal for extracting a CV template from an uploaded CV file
  */
@@ -233,7 +233,7 @@ const ExtractTemplateModal = ({ isOpen, onClose }: ExtractTemplateModalProps): J
                     {t('templates.extract.pleaseWait')}
                   </p>
                   <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">
-                    {t('templates.extract.longOperation') || 'Cette operation peut prendre 1 a 3 minutes selon la complexite du document.'}
+                    {t('templates.extract.longOperation') || 'Cette opération peut prendre 1 à 3 minutes selon la complexité du document.'}
                   </p>
                 </div>
               </div>
@@ -342,7 +342,7 @@ const ExtractTemplateModal = ({ isOpen, onClose }: ExtractTemplateModalProps): J
                       {t('templates.extract.preview')}
                     </div>
                     <div className="overflow-hidden rounded border border-gray-200 bg-white dark:border-gray-700">
-                      <Suspense fallback={<div className="flex h-64 items-center justify-center text-sm text-gray-500 dark:text-gray-400">Chargement de l'apercu...</div>}>
+                      <Suspense fallback={<div className="flex h-64 items-center justify-center text-sm text-gray-500 dark:text-gray-400">Chargement de l’aperçu...</div>}>
                         <TemplatePreviewFrame
                         title={extractedTemplate.name}
                         stylesheet={extractedTemplate.stylesheet}
@@ -428,3 +428,4 @@ const ExtractTemplateModal = ({ isOpen, onClose }: ExtractTemplateModalProps): J
 };
 
 export default ExtractTemplateModal;
+

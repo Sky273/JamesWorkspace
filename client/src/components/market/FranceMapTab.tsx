@@ -148,7 +148,7 @@ export default function FranceMapTab({ className = '' }: { className?: string })
 
   const getValueLabel = useCallback(() => {
     const labels: Record<DataSourceType, string> = {
-      all: 'donnees',
+      all: 'données',
       offres: 'offres',
       tension: 'indice',
       salaire: 'EUR',
@@ -225,7 +225,7 @@ export default function FranceMapTab({ className = '' }: { className?: string })
     return (
       <div className={`space-y-6 ${className}`}>
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Type de donnees</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Type de données</label>
           <select
             value={dataSource}
             onChange={(event) => setDataSource(event.target.value as DataSourceType)}
@@ -303,19 +303,19 @@ export default function FranceMapTab({ className = '' }: { className?: string })
                   dataFreshness.status === 'fresh' ? 'bg-green-500' : dataFreshness.status === 'recent' ? 'bg-yellow-500' : 'bg-red-500'
                 }`}></span>
                 {dataFreshness.status === 'fresh'
-                  ? t('marketRadar.freshness.fresh', 'Donnees a jour')
+                  ? t('marketRadar.freshness.fresh', 'Données à jour')
                   : dataFreshness.status === 'recent'
-                    ? t('marketRadar.freshness.recent', 'Donnees recentes')
-                    : t('marketRadar.freshness.stale', 'Donnees anciennes')}
+                    ? t('marketRadar.freshness.recent', 'Données récentes')
+                    : t('marketRadar.freshness.stale', 'Données anciennes')}
               </span>
               {dataFreshness.quarterPeriod && (
                 <span className="text-xs text-gray-500 dark:text-gray-400">
-                  {t('marketRadar.freshness.period', 'Periode')}: <strong>{dataFreshness.quarterPeriod}</strong>
+                  {t('marketRadar.freshness.period', 'Période')}: <strong>{dataFreshness.quarterPeriod}</strong>
                 </span>
               )}
             </div>
             <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
-              <span>{t('marketRadar.freshness.collectedAt', 'Collecte le')}: {dataFreshness.newestDate.toLocaleDateString('fr-FR')}</span>
+              <span>{t('marketRadar.freshness.collectedAt', 'Collecté le')}: {dataFreshness.newestDate.toLocaleDateString('fr-FR')}</span>
               <span>{t('marketRadar.freshness.records', 'Enregistrements')}: {dataFreshness.totalRecords.toLocaleString()}</span>
               <span className="text-gray-400 dark:text-gray-500">Source: France Travail API</span>
             </div>
@@ -335,7 +335,7 @@ export default function FranceMapTab({ className = '' }: { className?: string })
         }`}>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
             <SourceIcon className="h-5 w-5" />
-            {t(`marketRadar.dataTypes.${dataSource}`)} {t('marketRadar.map.title').toLowerCase().replace('donnees ', '')}
+            {t(`marketRadar.dataTypes.${dataSource}`)} {t('marketRadar.map.title').toLowerCase().replace('données ', '')}
           </h3>
           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t('marketRadar.map.subtitle')}</p>
         </div>
@@ -455,3 +455,4 @@ export default function FranceMapTab({ className = '' }: { className?: string })
     </div>
   );
 }
+

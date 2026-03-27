@@ -7,6 +7,7 @@
 import { lazy, Suspense, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import PageHeader from '../components/page/PageHeader';
 import { useAuth } from '../context/AuthContext';
 
 import { FactsCollectionOverlay, FactsDataTab, FactsTabs, TabLoader } from './FactsPage.components';
@@ -32,15 +33,7 @@ export default function FactsPage() {
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-1">
-            <div className="w-1 h-8 rounded-full bg-primary-500" />
-            <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-gray-100">
-              {t('marketRadar.title')}
-            </h1>
-          </div>
-          <p className="text-gray-500 dark:text-gray-400 ml-[1.75rem]">{t('marketRadar.subtitle')}</p>
-        </div>
+        <PageHeader title={t('marketRadar.title')} subtitle={t('marketRadar.subtitle')} />
 
         <FactsTabs activeTab={activeTab} onChange={setActiveTab} />
 

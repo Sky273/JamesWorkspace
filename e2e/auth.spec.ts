@@ -1,4 +1,4 @@
-﻿import { test, expect } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 
 /**
  * Authentication E2E Tests
@@ -44,9 +44,13 @@ test.describe('Authentication', () => {
     await expect(page).toHaveURL(/\/signin(\?.*)?$/);
   });
 
-  test('should redirect unauthenticated users away from protected routes', async ({ page }) => {
-    await page.goto('/resumes');
-    await expect(page).toHaveURL(/\/(welcome|signin)(\?.*)?$/);
+  test('should redirect unauthenticated users away from protected shell routes', async ({ page }) => {
+    const protectedRoutes = ['/resumes', '/settings', '/facts', '/dashboard/users'];
+
+    for (const route of protectedRoutes) {
+      await page.goto(route);
+      await expect(page).toHaveURL(/\/(welcome|signin)(\?.*)?$/);
+    }
   });
 });
 
