@@ -81,6 +81,62 @@ function ensureModelName(model) {
     return String(model).trim();
 }
 
+function extractTextFromStructuredContent(content) {
+    if (typeof content === 'string') {
+        return content.trim();
+    }
+
+    if (Array.isArray(content)) {
+        return content
+            .map((item) => {
+                if (typeof item === 'string') {
+                    return item;
+                }
+                if (typeof item?.text === 'string') {
+                    return item.text;
+                }
+                if (typeof item?.content === 'string') {
+                    return item.content;
+                }
+                return '';
+            })
+            .join('\n')
+            .trim();
+    }
+
+    if (content && typeof content === 'object') {
+        if (typeof content.text === 'string') {
+            return content.text.trim();
+        }
+        if (typeof content.content === 'string') {
+            return content.content.trim();
+        }
+    }
+
+    return '';
+}
+
+function extractOllamaContent(payload = {}) {
+    const candidates = [
+        payload?.message?.content,
+        payload?.message?.text,
+        payload?.response,
+        payload?.content,
+        payload?.output,
+        payload?.message?.reasoning_content,
+        payload?.message?.thinking
+    ];
+
+    for (const candidate of candidates) {
+        const text = extractTextFromStructuredContent(candidate);
+        if (text) {
+            return text;
+        }
+    }
+
+    return '';
+}
+
 async function pullModelIfNeeded(baseUrl, model, options = {}) {
     if (!OLLAMA_AUTO_PULL) {
         throw new Error(`Ollama model "${model}" is not available and automatic pull is disabled`);
@@ -253,8 +309,16 @@ export async function callOllama(messages, model, settings = {}, options = {}) {
         }
     );
 
-    const content = response.data?.message?.content;
+    const content = extractOllamaContent(response.data);
     if (!content) {
+        safeLog('error', 'Ollama response contained no usable text', {
+            model: resolvedModel,
+            baseUrl,
+            done: response.data?.done,
+            doneReason: response.data?.done_reason,
+            messageKeys: response.data?.message ? Object.keys(response.data.message) : [],
+            topLevelKeys: response.data ? Object.keys(response.data) : []
+        });
         throw new Error('Ollama returned empty content');
     }
 
@@ -319,8 +383,16 @@ export async function callOllamaWithVision(systemPrompt, userContent, model, set
         }
     );
 
-    const content = response.data?.message?.content;
+    const content = extractOllamaContent(response.data);
     if (!content) {
+        safeLog('error', 'Ollama vision response contained no usable text', {
+            model: resolvedModel,
+            baseUrl,
+            done: response.data?.done,
+            doneReason: response.data?.done_reason,
+            messageKeys: response.data?.message ? Object.keys(response.data.message) : [],
+            topLevelKeys: response.data ? Object.keys(response.data) : []
+        });
         throw new Error('Ollama vision returned empty content');
     }
 
@@ -335,5 +407,3 @@ export async function callOllamaWithVision(systemPrompt, userContent, model, set
         }
     };
 }
-
-
