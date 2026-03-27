@@ -21,6 +21,23 @@ const RECOMMENDED_VARS = [
     { name: 'NODE_ENV', description: 'Environment (development/production)' }
 ];
 
+const PLACEHOLDER_PATTERNS = [
+    /change-this-in-production/i,
+    /your-super-secret/i,
+    /your-secure-password/i,
+    /your-google-client/i,
+    /your-64-character-hex/i,
+    /your-domain\.com/i,
+    /your-client-id/i,
+    /your-client-secret/i,
+    /your-openai-api-key/i,
+    /your-anthropic-api-key/i
+];
+
+function looksLikePlaceholder(value = '') {
+    return PLACEHOLDER_PATTERNS.some(pattern => pattern.test(value));
+}
+
 function canDerivePdfServerToken() {
     return !!(
         process.env.JWT_SECRET &&
@@ -42,6 +59,8 @@ export function validateEnvironment() {
             errors.push(`Missing required environment variable: ${varConfig.name} (${varConfig.description})`);
         } else if (varConfig.minLength && value.length < varConfig.minLength) {
             errors.push(`${varConfig.name} must be at least ${varConfig.minLength} characters long`);
+        } else if (looksLikePlaceholder(value)) {
+            errors.push(`${varConfig.name} is still using an example or placeholder value`);
         }
     }
 
@@ -51,6 +70,8 @@ export function validateEnvironment() {
             warnings.push(`Missing recommended variable: ${varConfig.name} (${varConfig.description})`);
         } else if (varConfig.minLength && value.length < varConfig.minLength) {
             warnings.push(`${varConfig.name} should be at least ${varConfig.minLength} characters long`);
+        } else if (looksLikePlaceholder(value)) {
+            warnings.push(`${varConfig.name} appears to still use an example or placeholder value`);
         }
     }
 
@@ -77,6 +98,8 @@ export function validateEnvironment() {
                     : `${message}. Using the development/test fallback token outside production.`
             );
         }
+    } else if (looksLikePlaceholder(pdfServerToken)) {
+        warnings.push('PDF_SERVER_INTERNAL_TOKEN appears to still use an example or placeholder value');
     }
 
     if (errors.length > 0) {

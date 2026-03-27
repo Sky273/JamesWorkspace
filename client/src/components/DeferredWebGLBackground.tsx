@@ -45,6 +45,18 @@ export default function DeferredWebGLBackground({ className = '' }: DeferredWebG
       return;
     }
 
+    const connection = (navigator as Navigator & {
+      connection?: { saveData?: boolean };
+    }).connection;
+    if (connection?.saveData) {
+      return;
+    }
+
+    const deviceMemory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
+    if (typeof deviceMemory === 'number' && deviceMemory <= 4) {
+      return;
+    }
+
     let cancelled = false;
     let timeoutId: number | null = null;
     let idleId: number | null = null;
