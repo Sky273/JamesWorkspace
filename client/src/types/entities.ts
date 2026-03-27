@@ -558,7 +558,15 @@ export interface EmailTemplateKeywords {
 
 export interface Settings {
   id?: string;
+  llmProvider?: 'openai' | 'anthropic' | 'ollama';
   llmModel?: string;
+  ollamaBaseUrl?: string;
+  ollamaVisionModel?: string;
+  ollamaKeepAlive?: string;
+  ollamaNumCtx?: number;
+  cvMode?: 'nominative' | 'anonymous';
+  chatbotEnabled?: 'on' | 'off';
+  webglEnabled?: 'on' | 'off';
   'Analysis Prompt'?: string;
   'Improvement Prompt'?: string;
   'Match Analysis Prompt'?: string;
@@ -569,5 +577,8 @@ export interface Settings {
   'Education Weight'?: number;
   'ATS Weight'?: number;
   'Hobbies Languages Weight'?: number;
+  'DPO Name'?: string;
+  'DPO Email'?: string;
+  'DPO Phone'?: string;
 }
 

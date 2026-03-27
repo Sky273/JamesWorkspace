@@ -15,10 +15,29 @@ import logger from '../utils/logger.frontend';
 import { LLMTab, PromptsTab, WeightsTab, ChatbotTab, GdprTab, DpoTab } from '../components/SettingsPage';
 
 type HeroIcon = ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, 'ref'> & { title?: string; titleId?: string } & RefAttributes<SVGSVGElement>>;
+type LLMProvider = 'openai' | 'anthropic' | 'ollama';
+type OllamaAction = 'pull' | 'run' | 'stop' | 'refresh' | 'status';
+
+interface OllamaModelInfo {
+  name: string;
+  size?: number | null;
+  modifiedAt?: string | null;
+}
+
+interface OllamaRuntimeStatus {
+  running: boolean;
+  activeModel: string | null;
+  runningModels: OllamaModelInfo[];
+}
 
 interface Settings {
   id?: string;
+  llmProvider?: LLMProvider;
   llmModel?: string;
+  ollamaBaseUrl?: string;
+  ollamaVisionModel?: string;
+  ollamaKeepAlive?: string;
+  ollamaNumCtx?: number;
   cvMode?: 'nominative' | 'anonymous';
   chatbotEnabled?: 'on' | 'off';
   webglEnabled?: 'on' | 'off';
@@ -40,7 +59,12 @@ interface Settings {
 }
 
 interface SettingsFormData {
+  llmProvider: LLMProvider;
   llmModel: string;
+  ollamaBaseUrl: string;
+  ollamaVisionModel: string;
+  ollamaKeepAlive: string;
+  ollamaNumCtx: number;
   cvMode: 'nominative' | 'anonymous';
   chatbotEnabled: 'on' | 'off';
   webglEnabled: 'on' | 'off';
@@ -66,6 +90,31 @@ interface Tab {
   icon: HeroIcon;
 }
 
+const defaultFormData: SettingsFormData = {
+  llmProvider: 'openai',
+  llmModel: 'gpt-4o',
+  ollamaBaseUrl: 'http://127.0.0.1:11434',
+  ollamaVisionModel: '',
+  ollamaKeepAlive: '5m',
+  ollamaNumCtx: 8192,
+  cvMode: 'nominative',
+  chatbotEnabled: 'on',
+  webglEnabled: 'on',
+  'Analysis Prompt': '',
+  'Improvement Prompt': '',
+  'Match Analysis Prompt': '',
+  'Adaptation Prompt': '',
+  'Executive Summary Weight': 20,
+  'Skills Weight': 20,
+  'Experience Weight': 20,
+  'Education Weight': 15,
+  'ATS Weight': 15,
+  'Hobbies Languages Weight': 10,
+  'DPO Name': '',
+  'DPO Email': '',
+  'DPO Phone': ''
+};
+
 const SettingsPage = (): JSX.Element => {
   const { t } = useTranslation();
   const { authGet, authPost, authPut } = useAuthFetch();
@@ -73,33 +122,92 @@ const SettingsPage = (): JSX.Element => {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
+  const [ollamaActionLoading, setOllamaActionLoading] = useState<OllamaAction | null>(null);
+  const [ollamaModels, setOllamaModels] = useState<OllamaModelInfo[]>([]);
+  const [ollamaRuntimeStatus, setOllamaRuntimeStatus] = useState<OllamaRuntimeStatus>({ running: false, activeModel: null, runningModels: [] });
   const [activeTab, setActiveTab] = useState<string>('llm');
-
-  const [formData, setFormData] = useState<SettingsFormData>({
-    llmModel: 'chatgpt-4o-latest',
-    cvMode: 'nominative',
-    chatbotEnabled: 'on',
-    webglEnabled: 'on',
-    'Analysis Prompt': '',
-    'Improvement Prompt': '',
-    'Match Analysis Prompt': '',
-    'Adaptation Prompt': '',
-    'Executive Summary Weight': 20,
-    'Skills Weight': 20,
-    'Experience Weight': 20,
-    'Education Weight': 15,
-    'ATS Weight': 15,
-    'Hobbies Languages Weight': 10,
-    'DPO Name': '',
-    'DPO Email': '',
-    'DPO Phone': ''
-  });
+  const [formData, setFormData] = useState<SettingsFormData>(defaultFormData);
 
   useEffect(() => {
     fetchSettings();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const persistCurrentLlmSettings = async (): Promise<void> => {
+    const payload = {
+      llmProvider: formData.llmProvider,
+      llmModel: formData.llmModel,
+      ollamaBaseUrl: formData.ollamaBaseUrl,
+      ollamaVisionModel: formData.ollamaVisionModel,
+      ollamaKeepAlive: formData.ollamaKeepAlive,
+      ollamaNumCtx: Number(formData.ollamaNumCtx)
+    };
+
+    let response: Response;
+    if (settings?.id) {
+      response = await authPut(`/api/settings/${settings.id}`, payload);
+    } else {
+      response = await authPost('/api/settings', payload);
+    }
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to save LLM settings');
+    }
+
+    setSettings(data);
+  };
+
+  const fetchOllamaStatus = async (): Promise<void> => {
+    try {
+      setOllamaActionLoading('status');
+      const baseUrl = encodeURIComponent(formData.ollamaBaseUrl || 'http://127.0.0.1:11434');
+      const response = await authGet('/api/llm/ollama/status?baseUrl=' + baseUrl);
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.error || 'Failed to get Ollama runtime status');
+      }
+
+      setOllamaRuntimeStatus({
+        running: Boolean(payload.running),
+        activeModel: payload.activeModel || null,
+        runningModels: Array.isArray(payload.runningModels) ? payload.runningModels : []
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to get Ollama runtime status';
+      logger.error('Error fetching Ollama runtime status:', error);
+      toast.error(message);
+    } finally {
+      setOllamaActionLoading(current => (current === 'status' ? null : current));
+    }
+  };
+  const fetchOllamaModels = async (): Promise<void> => {
+    try {
+      setOllamaActionLoading('refresh');
+      const baseUrl = encodeURIComponent(formData.ollamaBaseUrl || 'http://127.0.0.1:11434');
+      const response = await authGet(`/api/llm/ollama/models?baseUrl=${baseUrl}`);
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.error || 'Failed to list Ollama models');
+      }
+
+      setOllamaModels(Array.isArray(payload.models) ? payload.models : []);
+      toast.success('Liste des modeles Ollama actualisee.');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to list Ollama models';
+      logger.error('Error refreshing Ollama models:', error);
+      toast.error(message);
+    } finally {
+      setOllamaActionLoading(null);
+    }
+  };
+
+  useEffect(() => {
+    if (formData.llmProvider === 'ollama') {
+      void fetchOllamaStatus();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.llmProvider, formData.ollamaBaseUrl]);
   const fetchSettings = async (): Promise<void> => {
     try {
       const response = await authGet('/api/settings');
@@ -108,7 +216,12 @@ const SettingsPage = (): JSX.Element => {
       const data: Settings = await response.json();
       setSettings(data);
       setFormData({
-        llmModel: data.llmModel || 'chatgpt-4o-latest',
+        llmProvider: data.llmProvider || 'openai',
+        llmModel: data.llmModel || 'gpt-4o',
+        ollamaBaseUrl: data.ollamaBaseUrl || 'http://127.0.0.1:11434',
+        ollamaVisionModel: data.ollamaVisionModel || '',
+        ollamaKeepAlive: data.ollamaKeepAlive || '5m',
+        ollamaNumCtx: data.ollamaNumCtx || 8192,
         cvMode: data.cvMode || 'nominative',
         chatbotEnabled: data.chatbotEnabled || 'on',
         webglEnabled: data.webglEnabled || 'on',
@@ -126,7 +239,7 @@ const SettingsPage = (): JSX.Element => {
         'DPO Email': data['DPO Email'] || '',
         'DPO Phone': data['DPO Phone'] || ''
       });
-      
+
       logger.log('[Settings] Prompts loaded:', {
         analysisPromptLength: data.analysisPrompt?.length || 0,
         improvementPromptLength: data.improvementPrompt?.length || 0
@@ -142,11 +255,51 @@ const SettingsPage = (): JSX.Element => {
     }
   };
 
+  const runOllamaAction = async (action: Exclude<OllamaAction, 'refresh'>): Promise<void> => {
+    const model = String(formData.llmModel || '').trim();
+    if (!model) {
+      toast.error('Veuillez renseigner un modele Ollama.');
+      return;
+    }
+
+    try {
+      setOllamaActionLoading(action);
+      await persistCurrentLlmSettings();
+      const response = await authPost(`/api/llm/ollama/${action}`, {
+        model,
+        baseUrl: formData.ollamaBaseUrl,
+        keepAlive: formData.ollamaKeepAlive,
+        numCtx: formData.ollamaNumCtx
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.error || `Failed to ${action} Ollama model`);
+      }
+
+      await fetchOllamaStatus();
+
+      if (action === 'pull') {
+        toast.success(`Modele ${model} telecharge avec succes.`);
+      } else if (action === 'run') {
+        toast.success(`Modele ${model} charge dans Ollama.`);
+      } else {
+        toast.success(`Modele ${model} arrete dans Ollama.`);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : `Failed to ${action} Ollama model`;
+      logger.error(`Error during Ollama ${action}:`, error);
+      toast.error(message);
+    } finally {
+      setOllamaActionLoading(null);
+    }
+  };
+
   const handleSave = async (): Promise<void> => {
     try {
       setSaving(true);
 
-      const totalWeight = 
+      const totalWeight =
         Number(formData['Executive Summary Weight']) +
         Number(formData['Skills Weight']) +
         Number(formData['Experience Weight']) +
@@ -155,16 +308,16 @@ const SettingsPage = (): JSX.Element => {
         Number(formData['Hobbies Languages Weight']);
 
       if (totalWeight !== 100) {
-        toast.error(`La somme des poids doit être égale à 100% (actuellement: ${totalWeight}%)`);
+        toast.error(`La somme des poids doit etre egale a 100% (actuellement: ${totalWeight}%)`);
         setSaving(false);
         return;
       }
 
-      // Ensure chatbotEnabled is 'on' or 'off' string (not boolean)
       const chatbotValue = formData.chatbotEnabled;
       const dataToSave = {
         ...formData,
         chatbotEnabled: chatbotValue === 'on' || (chatbotValue as unknown) === true ? 'on' : 'off',
+        ollamaNumCtx: Number(formData.ollamaNumCtx),
         'Executive Summary Weight': Number(formData['Executive Summary Weight']),
         'Skills Weight': Number(formData['Skills Weight']),
         'Experience Weight': Number(formData['Experience Weight']),
@@ -186,10 +339,7 @@ const SettingsPage = (): JSX.Element => {
 
       const data = await response.json();
       setSettings(data);
-      
-      // Update chatbot state in context immediately
       setChatbotEnabled(dataToSave.chatbotEnabled === 'on');
-      
       toast.success(t('settings.saveSuccess'));
     } catch (error) {
       logger.error('Error saving settings:', error);
@@ -211,9 +361,14 @@ const SettingsPage = (): JSX.Element => {
     try {
       const response = await authGet('/api/settings/defaults');
       if (!response.ok) throw new Error('Failed to fetch defaults');
-      const defaults = await response.json();
+      const defaults: Settings = await response.json();
       setFormData({
-        llmModel: defaults.llmModel || 'chatgpt-4o-latest',
+        llmProvider: defaults.llmProvider || 'openai',
+        llmModel: defaults.llmModel || 'gpt-4o',
+        ollamaBaseUrl: defaults.ollamaBaseUrl || 'http://127.0.0.1:11434',
+        ollamaVisionModel: defaults.ollamaVisionModel || '',
+        ollamaKeepAlive: defaults.ollamaKeepAlive || '5m',
+        ollamaNumCtx: defaults.ollamaNumCtx || 8192,
         cvMode: defaults.cvMode || 'nominative',
         chatbotEnabled: defaults.chatbotEnabled || 'on',
         webglEnabled: defaults.webglEnabled || 'on',
@@ -256,7 +411,7 @@ const SettingsPage = (): JSX.Element => {
     { id: 'swagger', name: t('settings.tabs.apiDocs'), icon: DocumentTextIcon }
   ];
 
-  const totalWeight = 
+  const totalWeight =
     Number(formData['Executive Summary Weight']) +
     Number(formData['Skills Weight']) +
     Number(formData['Experience Weight']) +
@@ -270,7 +425,8 @@ const SettingsPage = (): JSX.Element => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
       className="p-6 max-w-6xl mx-auto"
-    >      <div className="mb-8">
+    >
+      <div className="mb-8">
         <div className="flex items-center gap-3 mb-1">
           <div className="w-1 h-8 rounded-full bg-primary-500" />
           <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-gray-100">
@@ -286,17 +442,18 @@ const SettingsPage = (): JSX.Element => {
         <nav className="-mb-px flex flex-wrap gap-x-1 gap-y-1">
           {tabs.map((tab) => {
             const IconComponent = tab.icon;
+            const isActive = activeTab === tab.id;
+
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`
-                  flex items-center py-2 px-1.5 border-b-2 font-medium text-[11px] leading-tight
-                  ${activeTab === tab.id
+                className={
+                  `flex items-center py-2 px-1.5 border-b-2 font-medium text-[11px] leading-tight ${isActive
                     ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                  }
-                `}
+                  }`
+                }
               >
                 <IconComponent className="w-3.5 h-3.5 mr-1 flex-shrink-0" />
                 {tab.name}
@@ -308,7 +465,19 @@ const SettingsPage = (): JSX.Element => {
 
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 overflow-visible">
         {activeTab === 'llm' && (
-          <LLMTab formData={formData} onInputChange={handleInputChange} t={t} />
+          <LLMTab
+            formData={formData}
+            onInputChange={handleInputChange}
+            onOllamaPull={() => runOllamaAction('pull')}
+            onOllamaRun={() => runOllamaAction('run')}
+            onOllamaStop={() => runOllamaAction('stop')}
+            onOllamaRefreshModels={fetchOllamaModels}
+            onOllamaRefreshStatus={fetchOllamaStatus}
+            ollamaActionLoading={ollamaActionLoading}
+            ollamaModels={ollamaModels}
+            ollamaRuntimeStatus={ollamaRuntimeStatus}
+            t={t}
+          />
         )}
 
         {activeTab === 'prompts' && (
@@ -316,11 +485,11 @@ const SettingsPage = (): JSX.Element => {
         )}
 
         {activeTab === 'weights' && (
-          <WeightsTab 
-            formData={formData} 
-            onInputChange={handleInputChange} 
+          <WeightsTab
+            formData={formData}
+            onInputChange={handleInputChange}
             totalWeight={totalWeight}
-            t={t} 
+            t={t}
           />
         )}
 
@@ -346,7 +515,7 @@ const SettingsPage = (): JSX.Element => {
                 {t('settings.apiDocs.description')}
               </p>
             </div>
-            
+
             <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -405,3 +574,4 @@ const SettingsPage = (): JSX.Element => {
 };
 
 export default SettingsPage;
+

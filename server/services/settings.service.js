@@ -44,7 +44,11 @@ export async function getLLMSettings() {
         // Map PostgreSQL columns to frontend format
         const settings = {
             llmModel: dbSettings.llm_model,
-            llmProvider: dbSettings.llm_provider,
+            llmProvider: dbSettings.llm_provider || 'openai',
+            ollamaBaseUrl: dbSettings.ollama_base_url || 'http://127.0.0.1:11434',
+            ollamaVisionModel: dbSettings.ollama_vision_model || '',
+            ollamaKeepAlive: dbSettings.ollama_keep_alive || '5m',
+            ollamaNumCtx: dbSettings.ollama_num_ctx || 8192,
             cvMode: dbSettings.cv_mode,
             chatbotEnabled: dbSettings.chatbot_enabled,
             webglEnabled: dbSettings.webgl_enabled,

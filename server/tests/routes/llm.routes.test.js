@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Tests for LLM routes
  * POST /openai, POST /anthropic, POST /chat/completions,
  * POST /messages, GET /circuit-breakers
@@ -17,20 +17,17 @@ const rateLimitMocks = vi.hoisted(() => {
     };
 });
 
-// Mock constants
 vi.mock('../../config/constants.js', () => ({
     OPENAI_API_KEY: 'test-openai-key',
     ANTHROPIC_API_KEY: 'test-anthropic-key',
     MAX_PROMPT_LENGTH: 10000
 }));
 
-// Mock axios
 const mockAxiosPost = vi.fn();
 vi.mock('axios', () => ({
     default: { post: (...args) => mockAxiosPost(...args) }
 }));
 
-// Mock metrics
 vi.mock('../../services/metrics.service.js', () => ({
     metrics: {
         trackLLMRequest: vi.fn(),
@@ -39,7 +36,6 @@ vi.mock('../../services/metrics.service.js', () => ({
     }
 }));
 
-// Mock security
 vi.mock('../../services/security.service.js', () => ({
     securityLog: vi.fn(),
     getRequestMetadata: () => ({ ip: '127.0.0.1', email: 'user@test.com' }),
@@ -47,36 +43,31 @@ vi.mock('../../services/security.service.js', () => ({
     SECURITY_EVENTS: { LLM_REQUEST: 'llm_request' }
 }));
 
-// Mock logger
 vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));
 
-// Mock settings
+const mockGetLLMSettings = vi.fn().mockResolvedValue({ llmModel: 'gpt-4o' });
 vi.mock('../../services/settings.service.js', () => ({
-    getLLMSettings: vi.fn().mockResolvedValue({ llmModel: 'gpt-4o' })
+    getLLMSettings: (...args) => mockGetLLMSettings(...args)
 }));
 
-// Mock retry service
 vi.mock('../../services/retry.service.js', () => ({
     withRetry: (fn) => fn(),
     getCircuitBreakerStates: vi.fn().mockReturnValue({ openai: 'closed', anthropic: 'closed' })
 }));
 
-// Mock validation
 vi.mock('../../utils/validation.js', () => ({
     validateBody: () => (req, res, next) => next(),
     openaiRequestSchema: {},
     anthropicRequestSchema: {}
 }));
 
-// Mock rate limit
 vi.mock('../../middleware/rateLimit.middleware.js', () => ({
     llmLimiter: (...args) => rateLimitMocks.mockLlmLimiter(...args),
     combinedRateLimit: (...args) => rateLimitMocks.mockCombinedRateLimit(...args)
 }));
 
-// Mock auth middleware
 vi.mock('../../middleware/auth.middleware.js', () => ({
     authenticateToken: (req, res, next) => {
         if (req.headers.authorization === 'Bearer valid-token') {
@@ -95,6 +86,19 @@ vi.mock('../../middleware/auth.middleware.js', () => ({
     }
 }));
 
+const mockCallOllama = vi.fn();
+const mockListOllamaModels = vi.fn();
+const mockPullOllamaModel = vi.fn();
+const mockRunOllamaModel = vi.fn();
+const mockStopOllamaModel = vi.fn();
+vi.mock('../../services/ollama.service.js', () => ({
+    callOllama: (...args) => mockCallOllama(...args),
+    listOllamaModels: (...args) => mockListOllamaModels(...args),
+    pullOllamaModel: (...args) => mockPullOllamaModel(...args),
+    runOllamaModel: (...args) => mockRunOllamaModel(...args),
+    stopOllamaModel: (...args) => mockStopOllamaModel(...args)
+}));
+
 import llmRoutes from '../../routes/llm.routes.js';
 
 function createTestApp() {
@@ -111,6 +115,7 @@ describe('LLM Routes', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        mockGetLLMSettings.mockResolvedValue({ llmModel: 'gpt-4o' });
         app = createTestApp();
     });
 
@@ -133,9 +138,64 @@ describe('LLM Routes', () => {
         expect(rateLimitMocks.mockCombinedMiddleware).toHaveBeenCalled();
     });
 
-    // ==========================================
-    // POST /openai
-    // ==========================================
+    describe('GET /ollama/models', () => {
+        it('returns models for admin', async () => {
+            mockListOllamaModels.mockResolvedValueOnce([{ name: 'qwen3:14b' }]);
+
+            const res = await request(app)
+                .get('/api/llm/ollama/models')
+                .set({ ...AUTH, 'x-test-role': 'admin' });
+
+            expect(res.status).toBe(200);
+            expect(res.body.models).toEqual([{ name: 'qwen3:14b' }]);
+        });
+    });
+
+    describe('POST /ollama/pull', () => {
+        it('pulls a model for admin', async () => {
+            mockGetLLMSettings.mockResolvedValueOnce({ ollamaBaseUrl: 'http://127.0.0.1:11434' });
+            mockPullOllamaModel.mockResolvedValueOnce({ model: 'qwen3:14b', status: 'success' });
+
+            const res = await request(app)
+                .post('/api/llm/ollama/pull')
+                .set({ ...AUTH, 'x-test-role': 'admin' })
+                .send({ model: 'qwen3:14b' });
+
+            expect(res.status).toBe(200);
+            expect(mockPullOllamaModel).toHaveBeenCalledWith('qwen3:14b', expect.objectContaining({ ollamaBaseUrl: 'http://127.0.0.1:11434' }));
+        });
+    });
+
+    describe('POST /ollama/run', () => {
+        it('runs a model for admin', async () => {
+            mockGetLLMSettings.mockResolvedValueOnce({ ollamaBaseUrl: 'http://127.0.0.1:11434', ollamaKeepAlive: '5m', ollamaNumCtx: 8192 });
+            mockRunOllamaModel.mockResolvedValueOnce({ model: 'qwen3:14b', status: 'running' });
+
+            const res = await request(app)
+                .post('/api/llm/ollama/run')
+                .set({ ...AUTH, 'x-test-role': 'admin' })
+                .send({ model: 'qwen3:14b', keepAlive: '10m' });
+
+            expect(res.status).toBe(200);
+            expect(mockRunOllamaModel).toHaveBeenCalledWith('qwen3:14b', expect.objectContaining({ ollamaKeepAlive: '10m' }));
+        });
+    });
+
+    describe('POST /ollama/stop', () => {
+        it('stops a model for admin', async () => {
+            mockGetLLMSettings.mockResolvedValueOnce({ ollamaBaseUrl: 'http://127.0.0.1:11434' });
+            mockStopOllamaModel.mockResolvedValueOnce({ model: 'qwen3:14b', status: 'stopped' });
+
+            const res = await request(app)
+                .post('/api/llm/ollama/stop')
+                .set({ ...AUTH, 'x-test-role': 'admin' })
+                .send({ model: 'qwen3:14b' });
+
+            expect(res.status).toBe(200);
+            expect(mockStopOllamaModel).toHaveBeenCalledWith('qwen3:14b', expect.objectContaining({ ollamaBaseUrl: 'http://127.0.0.1:11434' }));
+        });
+    });
+
     describe('POST /openai', () => {
         it('should return 401 without auth', async () => {
             const res = await request(app)
@@ -160,6 +220,19 @@ describe('LLM Routes', () => {
 
             expect(res.status).toBe(200);
             expect(res.body.choices).toBeDefined();
+        });
+
+        it('routes through Ollama when configured', async () => {
+            mockGetLLMSettings.mockResolvedValueOnce({ llmProvider: 'ollama', llmModel: 'qwen3:14b' });
+            mockCallOllama.mockResolvedValueOnce({ content: 'Hi from Ollama', model: 'qwen3:14b', actualModel: 'qwen3:14b', usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 } });
+
+            const res = await request(app)
+                .post('/api/llm/openai')
+                .set(AUTH)
+                .send({ messages: [{ role: 'user', content: 'Hello' }] });
+
+            expect(res.status).toBe(200);
+            expect(res.body.choices[0].message.content).toBe('Hi from Ollama');
         });
 
         it('should return 400 for message exceeding max length', async () => {
@@ -212,9 +285,6 @@ describe('LLM Routes', () => {
         });
     });
 
-    // ==========================================
-    // POST /anthropic
-    // ==========================================
     describe('POST /anthropic', () => {
         it('should proxy to Anthropic and return response', async () => {
             mockAxiosPost.mockResolvedValueOnce({
@@ -257,9 +327,6 @@ describe('LLM Routes', () => {
         });
     });
 
-    // ==========================================
-    // POST /chat/completions
-    // ==========================================
     describe('POST /chat/completions', () => {
         it('should proxy to OpenAI chat completions', async () => {
             mockAxiosPost.mockResolvedValueOnce({
@@ -290,9 +357,6 @@ describe('LLM Routes', () => {
         });
     });
 
-    // ==========================================
-    // POST /messages
-    // ==========================================
     describe('POST /messages', () => {
         it('should proxy to Anthropic messages', async () => {
             mockAxiosPost.mockResolvedValueOnce({
@@ -322,9 +386,6 @@ describe('LLM Routes', () => {
         });
     });
 
-    // ==========================================
-    // GET /circuit-breakers
-    // ==========================================
     describe('GET /circuit-breakers', () => {
         it('should return 403 for non-admin', async () => {
             const res = await request(app)
@@ -343,10 +404,3 @@ describe('LLM Routes', () => {
         });
     });
 });
-
-
-
-
-
-
-

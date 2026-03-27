@@ -4,7 +4,7 @@
  */
 
 import { safeLog } from '../../utils/logger.backend.js';
-import { callOpenAI } from './apiClient.js';
+import { callBusinessChatCompletion } from '../llmProvider.service.js';
 
 /**
  * Match resume with mission using OpenAI
@@ -21,7 +21,7 @@ export async function matchResumeWithMission(resumeText, missionTitle, missionCo
         .replace('{MISSION_TITLE}', missionTitle)
         .replace('{MISSION_CONTENT}', missionContent);
 
-    const response = await callOpenAI({
+    const response = await callBusinessChatCompletion({
         model,
         messages: [
             { role: 'system', content: 'You are a JSON-only resume-mission matching API. Respond with valid JSON only.' },
@@ -43,7 +43,7 @@ export async function matchResumeWithMission(resumeText, missionTitle, missionCo
             error: parseError.message,
             responsePreview: response.choices[0].message.content.substring(0, 500)
         });
-        throw new Error('Le modèle LLM a retourné une réponse invalide pour le matching. Veuillez réessayer ou contacter le support si le problème persiste.');
+        throw new Error('Le modÃ¨le LLM a retournÃ© une rÃ©ponse invalide pour le matching. Veuillez rÃ©essayer ou contacter le support si le problÃ¨me persiste.');
     }
 }
 
@@ -67,7 +67,7 @@ function normalizeMatchAnalysis(analysis) {
             // New format: preserve original and create legacy format
             normalized._strengthsDetailed = normalized.strengths;
             normalized.strengths = normalized.strengths.map(s => {
-                const coverage = s.coverage === 'explicit' ? '✓' : s.coverage === 'partial' ? '~' : '';
+                const coverage = s.coverage === 'explicit' ? 'âœ“' : s.coverage === 'partial' ? '~' : '';
                 return `${coverage} ${s.item}${s.evidence ? ` (${s.evidence})` : ''}`.trim();
             });
         }
@@ -79,7 +79,7 @@ function normalizeMatchAnalysis(analysis) {
             // New format: preserve original and create legacy format
             normalized._gapsDetailed = normalized.gaps;
             normalized.gaps = normalized.gaps.map(g => {
-                const severity = g.severity === 'high' ? '⚠️' : g.severity === 'medium' ? '⚡' : '';
+                const severity = g.severity === 'high' ? 'âš ï¸' : g.severity === 'medium' ? 'âš¡' : '';
                 return `${severity} ${g.item}${g.reason ? ` - ${g.reason}` : ''}`.trim();
             });
         }
@@ -170,7 +170,7 @@ You must respond with a valid JSON object following the exact structure specifie
 Do NOT wrap your response in markdown code blocks. Return ONLY the JSON object.
 Respond in the same language as the resume.`;
 
-    const response = await callOpenAI({
+    const response = await callBusinessChatCompletion({
         model,
         messages: [
             { role: 'system', content: systemPrompt },
@@ -249,12 +249,12 @@ function convertAdaptationToHtml(data) {
     
     // Professional Summary
     if (data.professionalSummary) {
-        sections.push(`<h2>Résumé Professionnel</h2>\n<p>${data.professionalSummary}</p>`);
+        sections.push(`<h2>RÃ©sumÃ© Professionnel</h2>\n<p>${data.professionalSummary}</p>`);
     }
     
     // Key Skills
     if (data.keySkills && data.keySkills.length > 0) {
-        sections.push(`<h2>Compétences Clés</h2>\n<ul>\n${data.keySkills.map(s => `  <li>${s}</li>`).join('\n')}\n</ul>`);
+        sections.push(`<h2>CompÃ©tences ClÃ©s</h2>\n<ul>\n${data.keySkills.map(s => `  <li>${s}</li>`).join('\n')}\n</ul>`);
     }
     
     // Tools and Technologies
@@ -275,7 +275,7 @@ function convertAdaptationToHtml(data) {
                 : '';
             return `${header}\n${context}${missions}${techs}`;
         }).join('\n\n');
-        sections.push(`<h2>Expérience Professionnelle</h2>\n${expHtml}`);
+        sections.push(`<h2>ExpÃ©rience Professionnelle</h2>\n${expHtml}`);
     }
     
     // Education

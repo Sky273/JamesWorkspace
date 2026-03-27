@@ -9,11 +9,11 @@ vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));
 
-vi.mock('../../services/openai/apiClient.js', () => ({
-    callOpenAI: vi.fn()
+vi.mock('../../services/llmProvider.service.js', () => ({
+    callBusinessChatCompletion: vi.fn()
 }));
 
-import { callOpenAI } from '../../services/openai/apiClient.js';
+import { callBusinessChatCompletion } from '../../services/llmProvider.service.js';
 import { matchResumeWithMission, adaptResumeToMission } from '../../services/openai/missionOperations.js';
 
 describe('OpenAI Mission Operations', () => {
@@ -23,7 +23,7 @@ describe('OpenAI Mission Operations', () => {
 
     describe('matchResumeWithMission', () => {
         it('should return normalized match analysis', async () => {
-            callOpenAI.mockResolvedValueOnce({
+            callBusinessChatCompletion.mockResolvedValueOnce({
                 choices: [{
                     message: {
                         content: JSON.stringify({
@@ -47,7 +47,7 @@ describe('OpenAI Mission Operations', () => {
         });
 
         it('should normalize structured strengths to string array', async () => {
-            callOpenAI.mockResolvedValueOnce({
+            callBusinessChatCompletion.mockResolvedValueOnce({
                 choices: [{
                     message: {
                         content: JSON.stringify({
@@ -76,7 +76,7 @@ describe('OpenAI Mission Operations', () => {
         });
 
         it('should normalize keywordAnalysis to legacy format', async () => {
-            callOpenAI.mockResolvedValueOnce({
+            callBusinessChatCompletion.mockResolvedValueOnce({
                 choices: [{
                     message: {
                         content: JSON.stringify({
@@ -103,7 +103,7 @@ describe('OpenAI Mission Operations', () => {
         });
 
         it('should throw on invalid JSON response', async () => {
-            callOpenAI.mockResolvedValueOnce({
+            callBusinessChatCompletion.mockResolvedValueOnce({
                 choices: [{ message: { content: 'not json' } }]
             });
 
@@ -115,7 +115,7 @@ describe('OpenAI Mission Operations', () => {
 
     describe('adaptResumeToMission', () => {
         it('should return adaptedText from new format (improvedText)', async () => {
-            callOpenAI.mockResolvedValueOnce({
+            callBusinessChatCompletion.mockResolvedValueOnce({
                 choices: [{
                     message: {
                         content: JSON.stringify({
@@ -137,7 +137,7 @@ describe('OpenAI Mission Operations', () => {
         });
 
         it('should return adaptedText from legacy format (targetedTitle)', async () => {
-            callOpenAI.mockResolvedValueOnce({
+            callBusinessChatCompletion.mockResolvedValueOnce({
                 choices: [{
                     message: {
                         content: JSON.stringify({
@@ -161,7 +161,7 @@ describe('OpenAI Mission Operations', () => {
         });
 
         it('should handle non-JSON response as plain text', async () => {
-            callOpenAI.mockResolvedValueOnce({
+            callBusinessChatCompletion.mockResolvedValueOnce({
                 choices: [{ message: { content: '<p>Plain HTML</p>' } }]
             });
 

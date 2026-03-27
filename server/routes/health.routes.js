@@ -1,5 +1,5 @@
 import express from 'express';
-import { OPENAI_API_KEY, ANTHROPIC_API_KEY } from '../config/constants.js';
+import { OPENAI_API_KEY, ANTHROPIC_API_KEY, OLLAMA_BASE_URL } from '../config/constants.js';
 import { settingsCache, templatesCache, firmsCache } from '../services/cache.service.js';
 import { checkDatabaseHealth } from '../services/health.service.js';
 import { getTrendsCacheStats } from '../services/marketTrends.service.js';
@@ -14,18 +14,17 @@ import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.j
 
 const router = express.Router();
 
-// Comprehensive health check endpoint
 router.get('/', async (req, res) => {
     const startTime = Date.now();
 
-    // Minimal public response: only overall status + uptime
-    // Detailed checks require admin authentication
     const isAdmin = req.cookies?.accessToken ? await (async () => {
         try {
             const { verifyToken } = await import('../services/jwt.service.js');
             const decoded = verifyToken(req.cookies.accessToken);
             return decoded?.role === 'admin';
-        } catch { return false; }
+        } catch {
+            return false;
+        }
     })() : false;
 
     const checks = {
@@ -33,32 +32,31 @@ router.get('/', async (req, res) => {
         database: { status: 'unknown' },
         openai: { status: 'unknown' },
         anthropic: { status: 'unknown' },
+        ollama: { status: 'unknown' },
         memory: { status: 'ok' },
         cache: { status: 'ok' }
     };
-    
+
     let overallStatus = 'healthy';
-    
-    // 1. Server uptime and memory
+
     const uptime = process.uptime();
     const memoryUsage = process.memoryUsage();
     const heapUsedMB = Math.round(memoryUsage.heapUsed / 1024 / 1024);
     const heapTotalMB = Math.round(memoryUsage.heapTotal / 1024 / 1024);
     const heapPercent = Math.round((heapUsedMB / heapTotalMB) * 100);
-    
+
     checks.server = {
         status: 'ok',
         uptime: `${Math.floor(uptime / 60)} minutes`,
         uptimeSeconds: Math.floor(uptime)
     };
-    
-    // Memory thresholds in MB (absolute values for better control)
-    const MEMORY_WARNING_THRESHOLD_MB = 120;  // Warning (degraded) at 120 MB
-    const MEMORY_CRITICAL_THRESHOLD_MB = 1024; // Critical (problem) at 1 GB
-    
-    const memoryStatus = heapUsedMB >= MEMORY_CRITICAL_THRESHOLD_MB ? 'critical' : 
-                         heapUsedMB >= MEMORY_WARNING_THRESHOLD_MB ? 'warning' : 'ok';
-    
+
+    const MEMORY_WARNING_THRESHOLD_MB = 120;
+    const MEMORY_CRITICAL_THRESHOLD_MB = 1024;
+
+    const memoryStatus = heapUsedMB >= MEMORY_CRITICAL_THRESHOLD_MB ? 'critical' :
+        heapUsedMB >= MEMORY_WARNING_THRESHOLD_MB ? 'warning' : 'ok';
+
     checks.memory = {
         status: memoryStatus,
         heapUsed: `${heapUsedMB} MB`,
@@ -66,18 +64,17 @@ router.get('/', async (req, res) => {
         heapPercent: `${heapPercent}%`,
         rss: `${Math.round(memoryUsage.rss / 1024 / 1024)} MB`
     };
-    
+
     if (checks.memory.status !== 'ok') {
         overallStatus = checks.memory.status === 'critical' ? 'unhealthy' : 'degraded';
     }
-    
-    // 2. Check PostgreSQL connectivity with detailed stats
+
     try {
         const { latency: dbLatency, stats } = await checkDatabaseHealth();
         const dbSizeMB = Math.round(parseInt(stats.db_size) / 1024 / 1024);
-        
-        checks.database = { 
-            status: dbLatency > 1000 ? 'slow' : 'ok', 
+
+        checks.database = {
+            status: dbLatency > 1000 ? 'slow' : 'ok',
             message: 'PostgreSQL connected',
             latency: `${dbLatency}ms`,
             size: `${dbSizeMB} MB`,
@@ -87,19 +84,18 @@ router.get('/', async (req, res) => {
                 missions: parseInt(stats.missions_count)
             }
         };
-        
+
         if (dbLatency > 1000) {
             overallStatus = overallStatus === 'healthy' ? 'degraded' : overallStatus;
         }
     } catch (error) {
-        checks.database = { 
-            status: 'error', 
+        checks.database = {
+            status: 'error',
             message: 'Connection failed'
         };
         overallStatus = 'unhealthy';
     }
-    
-    // Only admins may trigger outbound deep checks against provider APIs.
+
     const requestedDeepCheck = req.query.deep === 'true';
     const deepCheck = requestedDeepCheck && isAdmin;
 
@@ -109,7 +105,7 @@ router.get('/', async (req, res) => {
             ip: req.ip
         });
     }
-    
+
     if (OPENAI_API_KEY) {
         if (deepCheck) {
             try {
@@ -117,32 +113,31 @@ router.get('/', async (req, res) => {
                 const response = await Promise.race([
                     fetch('https://api.openai.com/v1/models', {
                         method: 'GET',
-                        headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}` }
+                        headers: { Authorization: `Bearer ${OPENAI_API_KEY}` }
                     }),
                     new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
                 ]);
                 const openaiLatency = Date.now() - openaiStart;
-                
+
                 if (response.ok) {
-                    checks.openai = { 
-                        status: openaiLatency > 2000 ? 'slow' : 'ok', 
+                    checks.openai = {
+                        status: openaiLatency > 2000 ? 'slow' : 'ok',
                         message: 'API connected',
                         latency: `${openaiLatency}ms`
                     };
                 } else {
-                    checks.openai = { 
-                        status: 'error', 
+                    checks.openai = {
+                        status: 'error',
                         message: `API error: ${response.status}`,
                         latency: `${openaiLatency}ms`
                     };
                     overallStatus = overallStatus === 'healthy' ? 'degraded' : overallStatus;
                 }
             } catch (error) {
-                checks.openai = { 
-                    status: 'error', 
+                checks.openai = {
+                    status: 'error',
                     message: error.message === 'Timeout' ? 'Connection timeout' : 'Connection failed'
                 };
-                safeLog('warn', 'OpenAI health check failed', { error: error.message });
             }
         } else {
             checks.openai = { status: 'configured', message: 'API key present (use ?deep=true for connectivity test)' };
@@ -150,8 +145,7 @@ router.get('/', async (req, res) => {
     } else {
         checks.openai = { status: 'not_configured', message: 'API key missing' };
     }
-    
-    // 4. Check Anthropic API connectivity (with optional deep check)
+
     if (ANTHROPIC_API_KEY) {
         if (deepCheck) {
             try {
@@ -159,7 +153,7 @@ router.get('/', async (req, res) => {
                 const response = await Promise.race([
                     fetch('https://api.anthropic.com/v1/messages', {
                         method: 'POST',
-                        headers: { 
+                        headers: {
                             'x-api-key': ANTHROPIC_API_KEY,
                             'anthropic-version': '2023-06-01',
                             'Content-Type': 'application/json'
@@ -173,28 +167,26 @@ router.get('/', async (req, res) => {
                     new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
                 ]);
                 const anthropicLatency = Date.now() - anthropicStart;
-                
-                // 200 or 400 (bad request but API is reachable) both indicate connectivity
+
                 if (response.ok || response.status === 400) {
-                    checks.anthropic = { 
-                        status: anthropicLatency > 2000 ? 'slow' : 'ok', 
+                    checks.anthropic = {
+                        status: anthropicLatency > 2000 ? 'slow' : 'ok',
                         message: 'API connected',
                         latency: `${anthropicLatency}ms`
                     };
                 } else {
-                    checks.anthropic = { 
-                        status: 'error', 
+                    checks.anthropic = {
+                        status: 'error',
                         message: `API error: ${response.status}`,
                         latency: `${anthropicLatency}ms`
                     };
                     overallStatus = overallStatus === 'healthy' ? 'degraded' : overallStatus;
                 }
             } catch (error) {
-                checks.anthropic = { 
-                    status: 'error', 
+                checks.anthropic = {
+                    status: 'error',
                     message: error.message === 'Timeout' ? 'Connection timeout' : 'Connection failed'
                 };
-                safeLog('warn', 'Anthropic health check failed', { error: error.message });
             }
         } else {
             checks.anthropic = { status: 'configured', message: 'API key present (use ?deep=true for connectivity test)' };
@@ -202,18 +194,29 @@ router.get('/', async (req, res) => {
     } else {
         checks.anthropic = { status: 'not_configured', message: 'API key missing' };
     }
-    
-    // 5. Cache status
+
+    try {
+        const response = await Promise.race([
+            fetch(new URL('/api/tags', OLLAMA_BASE_URL).toString(), { method: 'GET' }),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 3000))
+        ]);
+        checks.ollama = {
+            status: response.ok ? 'ok' : 'error',
+            message: response.ok ? 'Ollama reachable' : `Ollama error: ${response.status}`
+        };
+    } catch {
+        checks.ollama = { status: 'error', message: 'Ollama unreachable' };
+    }
+
     checks.cache = {
         status: 'ok',
         settings: settingsCache.size(),
         templates: templatesCache.size(),
         firms: firmsCache.size()
     };
-    
+
     const responseTime = Date.now() - startTime;
-    
-    const response = {
+    const responsePayload = {
         status: overallStatus,
         timestamp: new Date().toISOString(),
         responseTime: `${responseTime}ms`,
@@ -221,10 +224,9 @@ router.get('/', async (req, res) => {
         version: process.env.npm_package_version || '1.0.0',
         environment: process.env.NODE_ENV || 'development'
     };
-    
+
     const statusCode = overallStatus === 'healthy' ? 200 : overallStatus === 'degraded' ? 200 : 503;
 
-    // Non-admin: return minimal info only
     if (!isAdmin) {
         return res.status(statusCode).json({
             status: overallStatus,
@@ -233,14 +235,12 @@ router.get('/', async (req, res) => {
         });
     }
 
-    res.status(statusCode).json(response);
+    res.status(statusCode).json(responsePayload);
 });
 
-// Detailed memory and cache statistics endpoint (admin only)
 router.get('/memory', authenticateToken, requireAdmin, async (req, res) => {
     const memoryUsage = process.memoryUsage();
-    
-    // Get all cache stats
+
     const cacheStats = {
         simpleCache: {
             settings: settingsCache.size(),
@@ -254,8 +254,7 @@ router.get('/memory', authenticateToken, requireAdmin, async (req, res) => {
         tags: getTagsCacheStats(),
         security: getBlacklistStats()
     };
-    
-    // Calculate estimated memory usage per cache
+
     const estimatedMemory = {
         simpleCache: {
             estimated: `${Math.round((cacheStats.simpleCache.settings + cacheStats.simpleCache.templates + cacheStats.simpleCache.firms) * 1)} KB`,
@@ -286,7 +285,7 @@ router.get('/memory', authenticateToken, requireAdmin, async (req, res) => {
             details: cacheStats.security
         }
     };
-    
+
     res.json({
         timestamp: new Date().toISOString(),
         process: {
@@ -298,7 +297,7 @@ router.get('/memory', authenticateToken, requireAdmin, async (req, res) => {
         },
         caches: estimatedMemory,
         summary: {
-            totalCacheEntries: 
+            totalCacheEntries:
                 (cacheStats.simpleCache.settings || 0) +
                 (cacheStats.simpleCache.templates || 0) +
                 (cacheStats.simpleCache.firms || 0) +
@@ -311,21 +310,11 @@ router.get('/memory', authenticateToken, requireAdmin, async (req, res) => {
     });
 });
 
-// ============================================
-// STORAGE STATS ENDPOINT (Admin only)
-// ============================================
-
-/**
- * GET /api/health/storage
- * Get storage usage statistics for all managed directories
- * Requires admin authentication
- */
 router.get('/storage', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const storageStats = await getStorageStats();
         const cleanupStats = getFileCleanupStats();
 
-        // Calculate totals
         const totalFiles = Object.values(storageStats).reduce((sum, dir) => sum + dir.fileCount, 0);
         const totalSizeMB = Object.values(storageStats).reduce((sum, dir) => sum + dir.totalSizeMB, 0);
 
@@ -343,10 +332,10 @@ router.get('/storage', authenticateToken, requireAdmin, async (req, res) => {
             cleanupHistory: cleanupStats.cleanupStats
         });
 
-        safeLog('info', 'Storage stats requested', { 
-            userId: req.user?.id, 
-            totalFiles, 
-            totalSizeMB: Math.round(totalSizeMB * 100) / 100 
+        safeLog('info', 'Storage stats requested', {
+            userId: req.user?.id,
+            totalFiles,
+            totalSizeMB: Math.round(totalSizeMB * 100) / 100
         });
     } catch (error) {
         safeLog('error', 'Failed to get storage stats', { error: error.message });

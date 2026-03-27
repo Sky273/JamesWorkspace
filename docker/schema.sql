@@ -542,7 +542,12 @@ COMMENT ON TABLE public.industry_aliases IS 'Industry name mappings and aliases'
 CREATE TABLE public.llm_settings (
     id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     name character varying(255) NOT NULL,
+    llm_provider character varying(20) DEFAULT 'openai'::character varying,
     llm_model character varying(100),
+    ollama_base_url character varying(500) DEFAULT 'http://127.0.0.1:11434'::character varying,
+    ollama_vision_model character varying(100) DEFAULT ''::character varying,
+    ollama_keep_alive character varying(50) DEFAULT '5m'::character varying,
+    ollama_num_ctx integer DEFAULT 8192,
     analysis_prompt text,
     improvement_prompt text,
     match_analysis_prompt text,
@@ -569,6 +574,7 @@ CREATE TABLE public.llm_settings (
     CONSTRAINT llm_settings_executive_summary_weight_check CHECK (((executive_summary_weight >= 0) AND (executive_summary_weight <= 100))),
     CONSTRAINT llm_settings_experience_weight_check CHECK (((experience_weight >= 0) AND (experience_weight <= 100))),
     CONSTRAINT llm_settings_hobbies_languages_weight_check CHECK (((hobbies_languages_weight >= 0) AND (hobbies_languages_weight <= 100))),
+    CONSTRAINT llm_settings_llm_provider_check CHECK (((llm_provider)::text = ANY (ARRAY[('openai'::character varying)::text, ('anthropic'::character varying)::text, ('ollama'::character varying)::text]))),
     CONSTRAINT llm_settings_skills_weight_check CHECK (((skills_weight >= 0) AND (skills_weight <= 100))),
     CONSTRAINT llm_settings_status_check CHECK (((status)::text = ANY (ARRAY[('active'::character varying)::text, ('inactive'::character varying)::text])))
 );

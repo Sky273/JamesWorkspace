@@ -993,7 +993,12 @@ export const updateInterviewSchema = z.object({
 
 // Settings schemas
 export const updateSettingsSchema = z.object({
-  llmModel: z.string().optional(),
+  llmProvider: z.enum(['openai', 'anthropic', 'ollama']).optional(),
+  llmModel: z.string().max(100).optional(),
+  ollamaBaseUrl: z.string().url().max(500).optional(),
+  ollamaVisionModel: z.string().max(100).optional(),
+  ollamaKeepAlive: z.string().max(50).optional(),
+  ollamaNumCtx: z.coerce.number().min(1024).max(262144).optional(),
   cvMode: z.enum(['nominative', 'anonymous']).optional(),
   chatbotEnabled: z.enum(['on', 'off']).optional(),
   webglEnabled: z.enum(['on', 'off']).optional(),

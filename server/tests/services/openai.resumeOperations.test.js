@@ -9,15 +9,15 @@ vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));
 
-vi.mock('../../services/openai/apiClient.js', () => ({
-    callOpenAI: vi.fn()
+vi.mock('../../services/llmProvider.service.js', () => ({
+    callBusinessChatCompletion: vi.fn()
 }));
 
 vi.mock('../../services/openai/textUtils.js', () => ({
     cleanupHtml: vi.fn(html => html)
 }));
 
-import { callOpenAI } from '../../services/openai/apiClient.js';
+import { callBusinessChatCompletion } from '../../services/llmProvider.service.js';
 import { analyzeResume, improveResume } from '../../services/openai/resumeOperations.js';
 
 describe('OpenAI Resume Operations', () => {
@@ -49,7 +49,7 @@ describe('OpenAI Resume Operations', () => {
         };
 
         it('should return normalized analysis', async () => {
-            callOpenAI.mockResolvedValueOnce({
+            callBusinessChatCompletion.mockResolvedValueOnce({
                 choices: [{ message: { content: JSON.stringify(mockAnalysis) } }]
             });
 
@@ -64,7 +64,7 @@ describe('OpenAI Resume Operations', () => {
         });
 
         it('should normalize GPT-5 format with different field names', async () => {
-            callOpenAI.mockResolvedValueOnce({
+            callBusinessChatCompletion.mockResolvedValueOnce({
                 choices: [{
                     message: {
                         content: JSON.stringify({
@@ -95,18 +95,18 @@ describe('OpenAI Resume Operations', () => {
         });
 
         it('should inject filename into prompt', async () => {
-            callOpenAI.mockResolvedValueOnce({
+            callBusinessChatCompletion.mockResolvedValueOnce({
                 choices: [{ message: { content: JSON.stringify(mockAnalysis) } }]
             });
 
             await analyzeResume('text', 'gpt-4o', 'Analyze {TEXT} file:{FILENAME}', null, false, 'cv_john.pdf');
 
-            const callArgs = callOpenAI.mock.calls[0][0];
+            const callArgs = callBusinessChatCompletion.mock.calls[0][0];
             expect(callArgs.messages[1].content).toContain('cv_john.pdf');
         });
 
         it('should throw on invalid JSON response', async () => {
-            callOpenAI.mockResolvedValueOnce({
+            callBusinessChatCompletion.mockResolvedValueOnce({
                 choices: [{ message: { content: 'not valid json' } }]
             });
 
@@ -116,7 +116,7 @@ describe('OpenAI Resume Operations', () => {
 
     describe('improveResume', () => {
         it('should return structured result from JSON response', async () => {
-            callOpenAI.mockResolvedValueOnce({
+            callBusinessChatCompletion.mockResolvedValueOnce({
                 choices: [{
                     message: {
                         content: JSON.stringify({
@@ -141,7 +141,7 @@ describe('OpenAI Resume Operations', () => {
         });
 
         it('should handle HTML fallback response', async () => {
-            callOpenAI.mockResolvedValueOnce({
+            callBusinessChatCompletion.mockResolvedValueOnce({
                 choices: [{
                     message: { content: '<h1>Improved</h1><p>Content here</p>' }
                 }]
@@ -165,7 +165,7 @@ describe('OpenAI Resume Operations', () => {
         });
 
         it('should throw if JSON response has empty improvedText', async () => {
-            callOpenAI.mockResolvedValueOnce({
+            callBusinessChatCompletion.mockResolvedValueOnce({
                 choices: [{
                     message: {
                         content: JSON.stringify({ improvedText: '' })
@@ -179,7 +179,7 @@ describe('OpenAI Resume Operations', () => {
         });
 
         it('should strip markdown code fences from response', async () => {
-            callOpenAI.mockResolvedValueOnce({
+            callBusinessChatCompletion.mockResolvedValueOnce({
                 choices: [{
                     message: {
                         content: '```json\n' + JSON.stringify({

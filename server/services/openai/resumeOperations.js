@@ -4,7 +4,7 @@
  */
 
 import { safeLog } from '../../utils/logger.backend.js';
-import { callOpenAI } from './apiClient.js';
+import { callBusinessChatCompletion } from '../llmProvider.service.js';
 import { cleanupHtml } from './textUtils.js';
 
 /**
@@ -98,7 +98,7 @@ export async function analyzeResume(resumeText, model, analysisPrompt, userMetad
     // Agnostic system message - same for all CVs
     const systemMessage = 'You are a JSON-only resume analysis API. Respond with valid JSON only.';
 
-    const response = await callOpenAI({
+    const response = await callBusinessChatCompletion({
         model,
         messages: [
             { role: 'system', content: systemMessage },
@@ -120,7 +120,7 @@ export async function analyzeResume(resumeText, model, analysisPrompt, userMetad
             error: parseError.message,
             responsePreview: response.choices[0].message.content.substring(0, 500)
         });
-        throw new Error('Le modèle LLM a retourné une réponse invalide. Veuillez réessayer ou contacter le support si le problème persiste.');
+        throw new Error('Le modÃ¨le LLM a retournÃ© une rÃ©ponse invalide. Veuillez rÃ©essayer ou contacter le support si le problÃ¨me persiste.');
     }
     
     // Debug logging to track tags and ratings
@@ -186,10 +186,10 @@ export async function improveResume(text, analysis, model, improvementPromptTemp
             textLength: text?.length || 0,
             minRequired: 100
         });
-        throw new Error('Le texte du CV est trop court pour être amélioré (minimum 100 caractères).');
+        throw new Error('Le texte du CV est trop court pour Ãªtre amÃ©liorÃ© (minimum 100 caractÃ¨res).');
     }
 
-    const response = await callOpenAI({
+    const response = await callBusinessChatCompletion({
         model,
         messages: [
             { role: 'system', content: 'You are a professional resume improvement assistant. You MUST respond with valid JSON only, following the exact structure specified in the user prompt. Do not include any text outside the JSON object.' },
@@ -231,7 +231,7 @@ export async function improveResume(text, analysis, model, improvementPromptTemp
                     improvedTextLength: parsed.improvedText?.length || 0,
                     cleanedTextLength: cleanedText?.length || 0
                 });
-                throw new Error('Le modèle LLM a retourné un CV amélioré vide. Veuillez réessayer.');
+                throw new Error('Le modÃ¨le LLM a retournÃ© un CV amÃ©liorÃ© vide. Veuillez rÃ©essayer.');
             }
             
             // Build analysis object from improvements
@@ -273,7 +273,7 @@ export async function improveResume(text, analysis, model, improvementPromptTemp
                 error: parseError.message,
                 responsePreview: rawContent.substring(0, 500)
             });
-            throw new Error('Le modèle LLM a retourné une réponse JSON invalide pour l\'amélioration. Veuillez réessayer ou contacter le support si le problème persiste.');
+            throw new Error('Le modÃ¨le LLM a retournÃ© une rÃ©ponse JSON invalide pour l\'amÃ©lioration. Veuillez rÃ©essayer ou contacter le support si le problÃ¨me persiste.');
         }
     }
 
@@ -287,7 +287,7 @@ export async function improveResume(text, analysis, model, improvementPromptTemp
             cleanedTextLength: cleanedText?.length || 0,
             rawContentPreview: rawContent?.substring(0, 200)
         });
-        throw new Error('Le modèle LLM a retourné une réponse vide. Veuillez réessayer.');
+        throw new Error('Le modÃ¨le LLM a retournÃ© une rÃ©ponse vide. Veuillez rÃ©essayer.');
     }
     
     return {

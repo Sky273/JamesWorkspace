@@ -1,5 +1,5 @@
 /**
- * Centralized field mappers for PostgreSQL snake_case ↔ frontend format
+ * Centralized field mappers for PostgreSQL snake_case <-> frontend format
  * Eliminates duplication of mapping logic across route files
  */
 
@@ -13,7 +13,12 @@ import { DEFAULT_ANALYSIS_PROMPT, DEFAULT_IMPROVEMENT_PROMPT, DEFAULT_MATCH_ANAL
 export function mapSettingsToFrontend(row) {
     return {
         id: row.id,
+        llmProvider: row.llm_provider || 'openai',
         llmModel: row.llm_model || null,
+        ollamaBaseUrl: row.ollama_base_url || 'http://127.0.0.1:11434',
+        ollamaVisionModel: row.ollama_vision_model || '',
+        ollamaKeepAlive: row.ollama_keep_alive || '5m',
+        ollamaNumCtx: row.ollama_num_ctx || 8192,
         cvMode: row.cv_mode || 'nominative',
         chatbotEnabled: row.chatbot_enabled || 'on',
         webglEnabled: row.webgl_enabled || 'on',
@@ -90,7 +95,6 @@ export function mapTemplateFromFrontend(data) {
         stylesheet: getFirstDefinedValue('Stylesheet', 'stylesheet')
     };
 
-    // Remove undefined values
     Object.keys(fields).forEach(key => {
         if (fields[key] === undefined) {
             delete fields[key];
@@ -107,7 +111,12 @@ export function mapTemplateFromFrontend(data) {
  */
 export function mapSettingsFromFrontend(data) {
     const fields = {
+        llm_provider: data.llmProvider,
         llm_model: data.llmModel,
+        ollama_base_url: data.ollamaBaseUrl,
+        ollama_vision_model: data.ollamaVisionModel,
+        ollama_keep_alive: data.ollamaKeepAlive,
+        ollama_num_ctx: data.ollamaNumCtx,
         cv_mode: data.cvMode,
         chatbot_enabled: data.chatbotEnabled,
         webgl_enabled: data.webglEnabled,
@@ -126,7 +135,6 @@ export function mapSettingsFromFrontend(data) {
         dpo_phone: data['DPO Phone']
     };
 
-    // Remove undefined values
     Object.keys(fields).forEach(key => {
         if (fields[key] === undefined) {
             delete fields[key];
