@@ -37,7 +37,7 @@ export const SALT_ROUNDS = 10;
 // LLM API Keys
 export const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 export const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-export const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434';
+export const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || '';
 export const OLLAMA_AUTO_PULL = process.env.OLLAMA_AUTO_PULL !== 'false';
 export const OLLAMA_REQUEST_TIMEOUT_MS = parseInt(process.env.OLLAMA_REQUEST_TIMEOUT_MS || '300000', 10);
 
@@ -120,3 +120,4 @@ export const RATE_LIMIT = {
         max: 50
     }
 };
+

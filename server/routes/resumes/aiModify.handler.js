@@ -1,4 +1,4 @@
-import { callOpenAI } from '../../services/openai.service.js';
+import { callBusinessChatCompletion } from '../../services/llmProvider.service.js';
 import { getLLMSettings } from '../../services/settings.service.js';
 import { safeLog } from '../../utils/logger.backend.js';
 import { getRequestMetadata } from '../../services/security.service.js';
@@ -20,7 +20,7 @@ export async function aiModifyHandler(req, res) {
         const userMetadata = getRequestMetadata(req);
         const hasSelection = selectedText && selectedText.trim().length > 0;
 
-        if (!model) {
+        if (!model && settings.llmProvider !== 'ollama') {
             return res.status(500).json({ error: 'LLM model not configured in Settings.' });
         }
 
@@ -89,7 +89,7 @@ IMPORTANT : Retourne UNIQUEMENT ce JSON, sans texte avant ou après.`;
         });
 
         // Call LLM with strict system prompt
-        const response = await callOpenAI({
+        const response = await callBusinessChatCompletion({
             model,
             messages: [
                 { 
@@ -189,3 +189,5 @@ If the user's instructions are not related to resume editing, refuse politely an
         res.status(statusCode).json({ error: errorMessage });
     }
 }
+
+

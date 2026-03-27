@@ -1,9 +1,24 @@
-﻿import axios from 'axios';
+import axios from 'axios';
 import { OLLAMA_AUTO_PULL, OLLAMA_BASE_URL, OLLAMA_REQUEST_TIMEOUT_MS } from '../config/constants.js';
 import { safeLog } from '../utils/logger.backend.js';
 
+const OLLAMA_OPERATION_TIMEOUTS_MS = {
+    'Resume Analysis': 20 * 60 * 1000,
+    'Improved Resume Analysis': 20 * 60 * 1000,
+    'Resume Improvement': 25 * 60 * 1000,
+    'Resume Adaptation': 20 * 60 * 1000,
+    'Resume-Mission Matching': 10 * 60 * 1000,
+    'Mission Keywords Extraction': 5 * 60 * 1000,
+    'Batch Profile Scoring': 10 * 60 * 1000,
+    'Detailed Profile Analysis': 10 * 60 * 1000,
+    'Resume AI Modification': 10 * 60 * 1000
+};
+
 function normalizeBaseUrl(baseUrl = OLLAMA_BASE_URL) {
-    const trimmed = (baseUrl || OLLAMA_BASE_URL || 'http://127.0.0.1:11434').trim();
+    const trimmed = String(baseUrl || OLLAMA_BASE_URL || '').trim();
+    if (!trimmed) {
+        throw new Error('Ollama base URL is required');
+    }
     return trimmed.endsWith('/') ? trimmed.slice(0, -1) : trimmed;
 }
 
@@ -35,12 +50,19 @@ function buildOllamaOptions(_settings = {}, options = {}) {
 }
 
 function resolveOllamaTimeoutMs(options = {}) {
+    const operationTimeout = OLLAMA_OPERATION_TIMEOUTS_MS[options.operationType];
     const requestedTimeout = Number(options.timeout);
+    const baselineTimeout = Math.max(OLLAMA_REQUEST_TIMEOUT_MS, operationTimeout || 0);
+
     if (Number.isFinite(requestedTimeout) && requestedTimeout > 0) {
-        return Math.max(OLLAMA_REQUEST_TIMEOUT_MS, requestedTimeout);
+        return Math.max(baselineTimeout, requestedTimeout);
     }
 
-    return OLLAMA_REQUEST_TIMEOUT_MS;
+    return baselineTimeout;
+}
+
+function resolveOllamaControlPlaneTimeoutMs(options = {}) {
+    return Math.max(60000, Math.min(resolveOllamaTimeoutMs(options), 5 * 60 * 1000));
 }
 
 function resolveOllamaSettings(settings = {}) {
@@ -59,7 +81,7 @@ function ensureModelName(model) {
     return String(model).trim();
 }
 
-async function pullModelIfNeeded(baseUrl, model) {
+async function pullModelIfNeeded(baseUrl, model, options = {}) {
     if (!OLLAMA_AUTO_PULL) {
         throw new Error(`Ollama model "${model}" is not available and automatic pull is disabled`);
     }
@@ -70,36 +92,36 @@ async function pullModelIfNeeded(baseUrl, model) {
         `${baseUrl}/api/pull`,
         { model, stream: false },
         {
-            timeout: Math.max(OLLAMA_REQUEST_TIMEOUT_MS, 15 * 60 * 1000)
+            timeout: Math.max(resolveOllamaTimeoutMs(options), 15 * 60 * 1000)
         }
     );
 }
 
-async function ensureModelAvailable(baseUrl, model) {
+async function ensureModelAvailable(baseUrl, model, options = {}) {
     const response = await axios.get(`${baseUrl}/api/tags`, {
-        timeout: 15000
+        timeout: resolveOllamaControlPlaneTimeoutMs(options)
     });
 
     const models = response.data?.models || [];
     const exists = models.some(entry => entry?.name === model || entry?.model === model);
 
     if (!exists) {
-        await pullModelIfNeeded(baseUrl, model);
+        await pullModelIfNeeded(baseUrl, model, options);
     }
 }
 
-async function resolveModelName(baseUrl, model) {
+async function resolveModelName(baseUrl, model, options = {}) {
     const requestedModel = typeof model === 'string' ? model.trim() : '';
     if (requestedModel) {
         return requestedModel;
     }
 
-    const runtimeStatus = await getOllamaRuntimeStatus(baseUrl);
+    const runtimeStatus = await getOllamaRuntimeStatus(baseUrl, options);
     if (runtimeStatus.activeModel) {
         return runtimeStatus.activeModel;
     }
 
-    const availableModels = await listOllamaModels(baseUrl);
+    const availableModels = await listOllamaModels(baseUrl, options);
     if (availableModels.length > 0 && availableModels[0]?.name) {
         return availableModels[0].name;
     }
@@ -107,10 +129,10 @@ async function resolveModelName(baseUrl, model) {
     throw new Error('No Ollama model is active or installed on the configured host');
 }
 
-export async function listOllamaModels(baseUrl = OLLAMA_BASE_URL) {
+export async function listOllamaModels(baseUrl = OLLAMA_BASE_URL, options = {}) {
     const normalizedBaseUrl = normalizeBaseUrl(baseUrl);
     const response = await axios.get(`${normalizedBaseUrl}/api/tags`, {
-        timeout: 15000
+        timeout: resolveOllamaControlPlaneTimeoutMs(options)
     });
 
     return (response.data?.models || []).map(model => ({
@@ -120,10 +142,10 @@ export async function listOllamaModels(baseUrl = OLLAMA_BASE_URL) {
     }));
 }
 
-export async function getOllamaRuntimeStatus(baseUrl = OLLAMA_BASE_URL) {
+export async function getOllamaRuntimeStatus(baseUrl = OLLAMA_BASE_URL, options = {}) {
     const normalizedBaseUrl = normalizeBaseUrl(baseUrl);
     const response = await axios.get(`${normalizedBaseUrl}/api/ps`, {
-        timeout: 15000
+        timeout: resolveOllamaControlPlaneTimeoutMs(options)
     });
 
     const runningModels = (response.data?.models || []).map(model => ({
@@ -150,7 +172,7 @@ export async function pullOllamaModel(model, settings = {}) {
         `${baseUrl}/api/pull`,
         { model: normalizedModel, stream: false },
         {
-            timeout: Math.max(OLLAMA_REQUEST_TIMEOUT_MS, 15 * 60 * 1000)
+            timeout: Math.max(resolveOllamaTimeoutMs(resolvedSettings), 15 * 60 * 1000)
         }
     );
 
@@ -165,7 +187,7 @@ export async function runOllamaModel(model, settings = {}) {
     const resolvedSettings = resolveOllamaSettings(settings);
     const baseUrl = normalizeBaseUrl(resolvedSettings.ollamaBaseUrl);
 
-    await ensureModelAvailable(baseUrl, normalizedModel);
+    await ensureModelAvailable(baseUrl, normalizedModel, resolvedSettings);
 
     await axios.post(
         `${baseUrl}/api/generate`,
@@ -175,7 +197,7 @@ export async function runOllamaModel(model, settings = {}) {
             stream: false
         },
         {
-            timeout: Math.max(OLLAMA_REQUEST_TIMEOUT_MS, 2 * 60 * 1000)
+            timeout: Math.max(resolveOllamaTimeoutMs(resolvedSettings), 2 * 60 * 1000)
         }
     );
 
@@ -199,7 +221,7 @@ export async function stopOllamaModel(model, settings = {}) {
             keep_alive: 0
         },
         {
-            timeout: 30000
+            timeout: Math.max(resolveOllamaControlPlaneTimeoutMs(resolvedSettings), 30000)
         }
     );
 
@@ -212,8 +234,9 @@ export async function stopOllamaModel(model, settings = {}) {
 export async function callOllama(messages, model, settings = {}, options = {}) {
     const resolvedSettings = resolveOllamaSettings(settings);
     const baseUrl = normalizeBaseUrl(resolvedSettings.ollamaBaseUrl);
-    const resolvedModel = await resolveModelName(baseUrl, model);
-    await ensureModelAvailable(baseUrl, resolvedModel);
+    const requestOptions = { ...resolvedSettings, ...options };
+    const resolvedModel = await resolveModelName(baseUrl, model, requestOptions);
+    await ensureModelAvailable(baseUrl, resolvedModel, requestOptions);
 
     const requestBody = {
         model: resolvedModel,
@@ -226,7 +249,7 @@ export async function callOllama(messages, model, settings = {}, options = {}) {
         `${baseUrl}/api/chat`,
         requestBody,
         {
-            timeout: resolveOllamaTimeoutMs(options)
+            timeout: resolveOllamaTimeoutMs(requestOptions)
         }
     );
 
@@ -250,8 +273,9 @@ export async function callOllama(messages, model, settings = {}, options = {}) {
 export async function callOllamaWithVision(systemPrompt, userContent, model, settings = {}, options = {}) {
     const resolvedSettings = resolveOllamaSettings(settings);
     const baseUrl = normalizeBaseUrl(resolvedSettings.ollamaBaseUrl);
-    const resolvedModel = await resolveModelName(baseUrl, model);
-    await ensureModelAvailable(baseUrl, resolvedModel);
+    const requestOptions = { ...resolvedSettings, ...options };
+    const resolvedModel = await resolveModelName(baseUrl, model, requestOptions);
+    await ensureModelAvailable(baseUrl, resolvedModel, requestOptions);
 
     const textChunks = [];
     const images = [];
@@ -291,7 +315,7 @@ export async function callOllamaWithVision(systemPrompt, userContent, model, set
         `${baseUrl}/api/chat`,
         requestBody,
         {
-            timeout: Math.max(resolveOllamaTimeoutMs(options), 10 * 60 * 1000)
+            timeout: Math.max(resolveOllamaTimeoutMs(requestOptions), 10 * 60 * 1000)
         }
     );
 
@@ -311,3 +335,5 @@ export async function callOllamaWithVision(systemPrompt, userContent, model, set
         }
     };
 }
+
+

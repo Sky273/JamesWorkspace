@@ -52,7 +52,7 @@ export async function analyzeHandler(req, res) {
         const cvMode = settings.cvMode || 'nominative';
         let analysisPrompt = settings['Analysis Prompt'] || DEFAULT_ANALYSIS_PROMPT;
 
-        if (!model) {
+        if (!model && settings.llmProvider !== 'ollama') {
             return res.status(500).json({ error: 'LLM model not configured in Settings.' });
         }
 
@@ -122,7 +122,7 @@ export async function analyzeTextHandler(req, res) {
         const cvMode = settings.cvMode || 'nominative';
         let analysisPrompt = settings['Analysis Prompt'] || DEFAULT_ANALYSIS_PROMPT;
 
-        if (!model) {
+        if (!model && settings.llmProvider !== 'ollama') {
             return res.status(500).json({ error: 'LLM model not configured in Settings.' });
         }
 
@@ -187,7 +187,7 @@ export async function improveHandler(req, res) {
         let improvementPrompt = settings['Improvement Prompt'] || DEFAULT_IMPROVEMENT_PROMPT;
         let analysisPrompt = settings['Analysis Prompt'] || DEFAULT_ANALYSIS_PROMPT;
 
-        if (!model) {
+        if (!model && settings.llmProvider !== 'ollama') {
             return res.status(500).json({ error: 'LLM model not configured in Settings.' });
         }
 
@@ -325,7 +325,7 @@ export async function improveByIdHandler(req, res) {
         const cvMode = settings.cvMode || 'nominative';
         let improvementPrompt = settings['Improvement Prompt'] || DEFAULT_IMPROVEMENT_PROMPT;
 
-        if (!model) {
+        if (!model && settings.llmProvider !== 'ollama') {
             return res.status(500).json({ error: 'LLM model not configured in Settings.' });
         }
 
@@ -396,7 +396,7 @@ export async function matchHandler(req, res) {
         const model = settings.llmModel;
         let matchPrompt = settings['Match Analysis Prompt'] || DEFAULT_MATCH_ANALYSIS_PROMPT;
 
-        if (!model) {
+        if (!model && settings.llmProvider !== 'ollama') {
             return res.status(500).json({ error: 'LLM model not configured in Settings.' });
         }
 
@@ -441,7 +441,7 @@ export async function adaptHandler(req, res) {
         const cvMode = settings.cvMode || 'nominative';
         let adaptationPrompt = settings['Adaptation Prompt'] || DEFAULT_ADAPTATION_PROMPT;
 
-        if (!model) {
+        if (!model && settings.llmProvider !== 'ollama') {
             return res.status(500).json({ error: 'LLM model not configured in Settings.' });
         }
 
@@ -545,3 +545,4 @@ export async function adaptHandler(req, res) {
         handleLLMError(error, res, 'adapting resume to mission');
     }
 }
+

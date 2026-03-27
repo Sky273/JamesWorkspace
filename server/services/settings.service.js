@@ -4,6 +4,7 @@
  */
 
 import { selectWithTimeout, updateWithTimeout, createWithTimeout } from '../utils/postgresHelpers.js';
+import { OLLAMA_BASE_URL } from '../config/constants.js';
 import { safeLog } from '../utils/logger.backend.js';
 
 // Cache settings for 5 minutes to reduce database calls
@@ -45,7 +46,7 @@ export async function getLLMSettings() {
         const settings = {
             llmModel: dbSettings.llm_model,
             llmProvider: dbSettings.llm_provider || 'openai',
-            ollamaBaseUrl: dbSettings.ollama_base_url || 'http://127.0.0.1:11434',
+            ollamaBaseUrl: dbSettings.ollama_base_url || OLLAMA_BASE_URL || '',
             ollamaVisionModel: dbSettings.ollama_vision_model || '',
             ollamaKeepAlive: dbSettings.ollama_keep_alive || '5m',
             ollamaNumCtx: dbSettings.ollama_num_ctx || 8192,
@@ -319,3 +320,4 @@ export async function calculateWeightedGlobalRating(analysis, settings = null) {
         return analysis;
     }
 }
+

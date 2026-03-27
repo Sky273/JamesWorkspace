@@ -6,7 +6,7 @@
 
 import { selectWithTimeout, findWithTimeout, updateWithTimeout } from '../utils/postgresHelpers.js';
 import { safeLog } from '../utils/logger.backend.js';
-import { callOpenAI } from './openai.service.js';
+import { callBusinessChatCompletion } from './llmProvider.service.js';
 import { getLLMSettings } from './settings.service.js';
 import { MISSION_KEYWORDS_EXTRACTION_PROMPT, DETAILED_PROFILE_ANALYSIS_PROMPT, BATCH_PROFILE_SCORING_PROMPT } from '../config/prompts.backend.js';
 
@@ -49,7 +49,7 @@ async function extractMissionKeywords(missionTitle, missionContent, model, userM
     
     safeLog('info', 'Extracting mission keywords via LLM', { missionTitle });
     
-    const response = await callOpenAI({
+    const response = await callBusinessChatCompletion({
         model,
         messages: [
             { role: 'system', content: 'You are a JSON-only keyword extraction API. Respond with valid JSON only.' },
@@ -97,7 +97,7 @@ async function getMissionKeywords(missionId, missionRecord, userMetadata = null)
     const settings = await getLLMSettings();
     const model = settings.llmModel;
     
-    if (!model) {
+    if (!model && settings.llmProvider !== 'ollama') {
         throw new Error('LLM model not configured in Settings.');
     }
     
@@ -149,7 +149,7 @@ async function scoreBatchWithLLM(profiles, missionKeywords, missionRecord, userM
     const settings = await getLLMSettings();
     const model = settings.llmModel;
 
-    if (!model) {
+    if (!model && settings.llmProvider !== 'ollama') {
         safeLog('warn', 'LLM model not configured, skipping LLM scoring');
         return { scores: {}, success: false, error: 'LLM model not configured' };
     }
@@ -189,7 +189,7 @@ async function scoreBatchWithLLM(profiles, missionKeywords, missionRecord, userM
             .replace('{EXPERIENCE_LEVEL}', missionKeywords.experienceLevel || 'Non spécifié')
             .replace('{CANDIDATES_JSON}', candidatesJson);
 
-        const response = await callOpenAI({
+        const response = await callBusinessChatCompletion({
             model,
             messages: [
                 { role: 'system', content: 'You are a JSON-only HR analysis API specialized in IT/IS profile matching. Respond with valid JSON only.' },
@@ -497,7 +497,7 @@ export async function analyzeProfileForMission(missionId, resumeId, userMetadata
     const settings = await getLLMSettings();
     const model = settings.llmModel;
     
-    if (!model) {
+    if (!model && settings.llmProvider !== 'ollama') {
         throw new Error('LLM model not configured in Settings.');
     }
     
@@ -524,7 +524,7 @@ export async function analyzeProfileForMission(missionId, resumeId, userMetadata
         .replace('{MISSION_SOFT_SKILLS}', (missionKeywords.softSkills || []).join(', ') || 'Non spécifié');
     
     // 7. Call LLM
-    const response = await callOpenAI({
+    const response = await callBusinessChatCompletion({
         model,
         messages: [
             { role: 'system', content: 'You are a JSON-only HR analysis API. Respond with valid JSON only.' },
@@ -566,3 +566,5 @@ export default {
     analyzeProfileForMission,
     DEFAULT_WEIGHTS
 };
+
+

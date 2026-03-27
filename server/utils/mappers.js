@@ -15,7 +15,7 @@ export function mapSettingsToFrontend(row) {
         id: row.id,
         llmProvider: row.llm_provider || 'openai',
         llmModel: row.llm_model || null,
-        ollamaBaseUrl: row.ollama_base_url || 'http://127.0.0.1:11434',
+        ollamaBaseUrl: row.ollama_base_url || '',
         ollamaVisionModel: row.ollama_vision_model || '',
         ollamaKeepAlive: row.ollama_keep_alive || '5m',
         ollamaNumCtx: row.ollama_num_ctx || 8192,
@@ -143,3 +143,4 @@ export function mapSettingsFromFrontend(data) {
 
     return fields;
 }
+

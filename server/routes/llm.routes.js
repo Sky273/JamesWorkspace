@@ -1,4 +1,4 @@
-﻿import express from 'express';
+import express from 'express';
 import axios from 'axios';
 import { OPENAI_API_KEY, ANTHROPIC_API_KEY, MAX_PROMPT_LENGTH } from '../config/constants.js';
 import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
@@ -9,7 +9,7 @@ import { safeLog } from '../utils/logger.backend.js';
 import { getLLMSettings } from '../services/settings.service.js';
 import { withRetry, getCircuitBreakerStates } from '../services/retry.service.js';
 import { validateBody, openaiRequestSchema, anthropicRequestSchema } from '../utils/validation.js';
-import { callOllama, listOllamaModels, getOllamaRuntimeStatus, pullOllamaModel, runOllamaModel, stopOllamaModel } from '../services/ollama.service.js';
+import { callOllama } from '../services/ollama.service.js';
 
 const router = express.Router();
 
@@ -64,19 +64,6 @@ function toAnthropicCompatibleResponse(result) {
     };
 }
 
-function getOllamaRequestSettings(settings, body = {}) {
-    return {
-        ...settings,
-        ollamaBaseUrl: body.baseUrl || settings.ollamaBaseUrl,
-        ollamaKeepAlive: body.keepAlive || settings.ollamaKeepAlive,
-        ollamaNumCtx: body.numCtx || settings.ollamaNumCtx
-    };
-}
-
-function getErrorMessage(error, fallback) {
-    return error.response?.data?.error || error.response?.data?.message || error.message || fallback;
-}
-
 function isLikelyOpenAIModel(model = '') {
     return /^(gpt|chatgpt|o\d|text-embedding|whisper|davinci|babbage|omni)/i.test(String(model || '').trim());
 }
@@ -114,67 +101,12 @@ async function handleOllamaRequest(req, res, settings, responseShape) {
     return res.json(responseShape === 'anthropic' ? toAnthropicCompatibleResponse(result) : toOpenAICompatibleResponse(result));
 }
 
-router.get('/ollama/models', authenticateToken, requireAdmin, async (req, res) => {
-    try {
-        const settings = await getLLMSettings();
-        const models = await listOllamaModels(req.query.baseUrl || settings.ollamaBaseUrl);
-        res.json({ models });
-    } catch (error) {
-        safeLog('error', 'Failed to list Ollama models', { error: error.message });
-        res.status(500).json({ error: 'Failed to list Ollama models' });
-    }
-});
-
-router.get('/ollama/status', authenticateToken, requireAdmin, async (req, res) => {
-    try {
-        const settings = await getLLMSettings();
-        const status = await getOllamaRuntimeStatus(req.query.baseUrl || settings.ollamaBaseUrl);
-        res.json(status);
-    } catch (error) {
-        safeLog('error', 'Failed to get Ollama runtime status', { error: error.message });
-        res.status(500).json({ error: 'Failed to get Ollama runtime status' });
-    }
-});
-router.post('/ollama/pull', authenticateToken, requireAdmin, async (req, res) => {
-    try {
-        const settings = getOllamaRequestSettings(await getLLMSettings(), req.body);
-        const result = await pullOllamaModel(req.body.model, settings);
-        res.json(result);
-    } catch (error) {
-        safeLog('error', 'Failed to pull Ollama model', { error: error.message, model: req.body?.model });
-        res.status(error.response?.status || 500).json({ error: getErrorMessage(error, 'Failed to pull Ollama model') });
-    }
-});
-
-router.post('/ollama/run', authenticateToken, requireAdmin, async (req, res) => {
-    try {
-        const settings = getOllamaRequestSettings(await getLLMSettings(), req.body);
-        const result = await runOllamaModel(req.body.model, settings);
-        res.json(result);
-    } catch (error) {
-        safeLog('error', 'Failed to run Ollama model', { error: error.message, model: req.body?.model });
-        res.status(error.response?.status || 500).json({ error: getErrorMessage(error, 'Failed to run Ollama model') });
-    }
-});
-
-router.post('/ollama/stop', authenticateToken, requireAdmin, async (req, res) => {
-    try {
-        const settings = getOllamaRequestSettings(await getLLMSettings(), req.body);
-        const result = await stopOllamaModel(req.body.model, settings);
-        res.json(result);
-    } catch (error) {
-        safeLog('error', 'Failed to stop Ollama model', { error: error.message, model: req.body?.model });
-        res.status(error.response?.status || 500).json({ error: getErrorMessage(error, 'Failed to stop Ollama model') });
-    }
-});
-
 router.post('/openai', authenticateToken, llmLimiter, combinedRateLimit(30, 60 * 60 * 1000), validateBody(openaiRequestSchema), async (req, res) => {
     const metadata = getRequestMetadata(req);
     let model = req.body.model;
 
     try {
         const settings = await getLLMSettings();
-        const provider = settings.llmProvider || 'openai';
         const validationError = validateMessageLengths(req.body.messages);
         if (validationError) {
             return res.status(400).json({ error: validationError });
@@ -303,7 +235,6 @@ router.post('/anthropic', authenticateToken, llmLimiter, combinedRateLimit(30, 6
 
     try {
         const settings = await getLLMSettings();
-        const provider = settings.llmProvider || 'openai';
         const validationError = validateMessageLengths(req.body.messages);
         if (validationError) {
             return res.status(400).json({ error: validationError });
@@ -470,4 +401,3 @@ router.get('/circuit-breakers', authenticateToken, requireAdmin, (req, res) => {
 });
 
 export default router;
-

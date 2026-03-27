@@ -81,7 +81,7 @@ export async function analyzeResumeWithLLM(text, _firmId, originalFileName = nul
     const cvMode = settings.cvMode || 'nominative';
     let analysisPrompt = settings['Analysis Prompt'] || DEFAULT_ANALYSIS_PROMPT;
 
-    if (!model) {
+    if (!model && settings.llmProvider !== 'ollama') {
         throw new Error('LLM model not configured');
     }
 
@@ -136,7 +136,7 @@ export async function improveResumeWithLLM(text, analysis, _firmId, originalFile
     const cvMode = settings.cvMode || 'nominative';
     let improvementPrompt = settings['Improvement Prompt'] || DEFAULT_IMPROVEMENT_PROMPT;
 
-    if (!model) {
+    if (!model && settings.llmProvider !== 'ollama') {
         throw new Error('LLM model not configured');
     }
 
@@ -211,3 +211,4 @@ export async function improveResumeWithLLM(text, analysis, _firmId, originalFile
         analysis: improvedAnalysis
     };
 }
+

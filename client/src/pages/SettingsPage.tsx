@@ -16,20 +16,6 @@ import { LLMTab, PromptsTab, WeightsTab, ChatbotTab, GdprTab, DpoTab } from '../
 
 type HeroIcon = ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, 'ref'> & { title?: string; titleId?: string } & RefAttributes<SVGSVGElement>>;
 type LLMProvider = 'openai' | 'anthropic' | 'ollama';
-type OllamaAction = 'refresh' | 'status';
-
-interface OllamaModelInfo {
-  name: string;
-  size?: number | null;
-  modifiedAt?: string | null;
-}
-
-interface OllamaRuntimeStatus {
-  running: boolean;
-  activeModel: string | null;
-  runningModels: OllamaModelInfo[];
-}
-
 interface Settings {
   id?: string;
   llmProvider?: LLMProvider;
@@ -87,7 +73,7 @@ interface Tab {
 const defaultFormData: SettingsFormData = {
   llmProvider: 'openai',
   llmModel: 'gpt-4o',
-  ollamaBaseUrl: 'http://host.docker.internal:11434',
+  ollamaBaseUrl: '',
   cvMode: 'nominative',
   chatbotEnabled: 'on',
   webglEnabled: 'on',
@@ -113,9 +99,6 @@ const SettingsPage = (): JSX.Element => {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
-  const [ollamaActionLoading, setOllamaActionLoading] = useState<OllamaAction | null>(null);
-  const [ollamaModels, setOllamaModels] = useState<OllamaModelInfo[]>([]);
-  const [ollamaRuntimeStatus, setOllamaRuntimeStatus] = useState<OllamaRuntimeStatus>({ running: false, activeModel: null, runningModels: [] });
   const [activeTab, setActiveTab] = useState<string>('llm');
   const [formData, setFormData] = useState<SettingsFormData>(defaultFormData);
 
@@ -124,56 +107,6 @@ const SettingsPage = (): JSX.Element => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const fetchOllamaStatus = async (): Promise<void> => {
-    try {
-      setOllamaActionLoading('status');
-      const baseUrl = encodeURIComponent(formData.ollamaBaseUrl || 'http://host.docker.internal:11434');
-      const response = await authGet('/api/llm/ollama/status?baseUrl=' + baseUrl);
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(payload.error || 'Failed to get Ollama runtime status');
-      }
-
-      setOllamaRuntimeStatus({
-        running: Boolean(payload.running),
-        activeModel: payload.activeModel || null,
-        runningModels: Array.isArray(payload.runningModels) ? payload.runningModels : []
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to get Ollama runtime status';
-      logger.error('Error fetching Ollama runtime status:', error);
-      toast.error(message);
-    } finally {
-      setOllamaActionLoading(current => (current === 'status' ? null : current));
-    }
-  };
-  const fetchOllamaModels = async (): Promise<void> => {
-    try {
-      setOllamaActionLoading('refresh');
-      const baseUrl = encodeURIComponent(formData.ollamaBaseUrl || 'http://host.docker.internal:11434');
-      const response = await authGet(`/api/llm/ollama/models?baseUrl=${baseUrl}`);
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(payload.error || 'Failed to list Ollama models');
-      }
-
-      setOllamaModels(Array.isArray(payload.models) ? payload.models : []);
-      toast.success('Liste des modeles Ollama actualisee.');
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to list Ollama models';
-      logger.error('Error refreshing Ollama models:', error);
-      toast.error(message);
-    } finally {
-      setOllamaActionLoading(null);
-    }
-  };
-
-  useEffect(() => {
-    if (formData.llmProvider === 'ollama') {
-      void fetchOllamaStatus();
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData.llmProvider, formData.ollamaBaseUrl]);
   const fetchSettings = async (): Promise<void> => {
     try {
       const response = await authGet('/api/settings');
@@ -184,7 +117,7 @@ const SettingsPage = (): JSX.Element => {
       setFormData({
         llmProvider: data.llmProvider || 'openai',
         llmModel: data.llmModel || (data.llmProvider === 'anthropic' ? 'claude-sonnet-4.6' : 'gpt-4o'),
-        ollamaBaseUrl: data.ollamaBaseUrl || 'http://host.docker.internal:11434',
+        ollamaBaseUrl: data.ollamaBaseUrl || '',
         cvMode: data.cvMode || 'nominative',
         chatbotEnabled: data.chatbotEnabled || 'on',
         webglEnabled: data.webglEnabled || 'on',
@@ -294,7 +227,7 @@ const SettingsPage = (): JSX.Element => {
       setFormData({
         llmProvider: defaults.llmProvider || 'openai',
         llmModel: defaults.llmModel || 'gpt-4o',
-        ollamaBaseUrl: defaults.ollamaBaseUrl || 'http://host.docker.internal:11434',
+        ollamaBaseUrl: defaults.ollamaBaseUrl || '',
         cvMode: defaults.cvMode || 'nominative',
         chatbotEnabled: defaults.chatbotEnabled || 'on',
         webglEnabled: defaults.webglEnabled || 'on',
@@ -394,11 +327,6 @@ const SettingsPage = (): JSX.Element => {
           <LLMTab
             formData={formData}
             onInputChange={handleInputChange}
-            onOllamaRefreshModels={fetchOllamaModels}
-            onOllamaRefreshStatus={fetchOllamaStatus}
-            ollamaActionLoading={ollamaActionLoading}
-            ollamaModels={ollamaModels}
-            ollamaRuntimeStatus={ollamaRuntimeStatus}
             t={t}
           />
         )}
@@ -497,4 +425,6 @@ const SettingsPage = (): JSX.Element => {
 };
 
 export default SettingsPage;
+
+
 

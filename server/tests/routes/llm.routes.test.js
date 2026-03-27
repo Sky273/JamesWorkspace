@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Tests for LLM routes
  * POST /openai, POST /anthropic, POST /chat/completions,
  * POST /messages, GET /circuit-breakers
@@ -87,16 +87,8 @@ vi.mock('../../middleware/auth.middleware.js', () => ({
 }));
 
 const mockCallOllama = vi.fn();
-const mockListOllamaModels = vi.fn();
-const mockPullOllamaModel = vi.fn();
-const mockRunOllamaModel = vi.fn();
-const mockStopOllamaModel = vi.fn();
 vi.mock('../../services/ollama.service.js', () => ({
-    callOllama: (...args) => mockCallOllama(...args),
-    listOllamaModels: (...args) => mockListOllamaModels(...args),
-    pullOllamaModel: (...args) => mockPullOllamaModel(...args),
-    runOllamaModel: (...args) => mockRunOllamaModel(...args),
-    stopOllamaModel: (...args) => mockStopOllamaModel(...args)
+    callOllama: (...args) => mockCallOllama(...args)
 }));
 
 import llmRoutes from '../../routes/llm.routes.js';
@@ -136,64 +128,6 @@ describe('LLM Routes', () => {
         expect(res.status).toBe(200);
         expect(rateLimitMocks.mockLlmLimiter).toHaveBeenCalled();
         expect(rateLimitMocks.mockCombinedMiddleware).toHaveBeenCalled();
-    });
-
-    describe('GET /ollama/models', () => {
-        it('returns models for admin', async () => {
-            mockListOllamaModels.mockResolvedValueOnce([{ name: 'qwen3:14b' }]);
-
-            const res = await request(app)
-                .get('/api/llm/ollama/models')
-                .set({ ...AUTH, 'x-test-role': 'admin' });
-
-            expect(res.status).toBe(200);
-            expect(res.body.models).toEqual([{ name: 'qwen3:14b' }]);
-        });
-    });
-
-    describe('POST /ollama/pull', () => {
-        it('pulls a model for admin', async () => {
-            mockGetLLMSettings.mockResolvedValueOnce({ ollamaBaseUrl: 'http://127.0.0.1:11434' });
-            mockPullOllamaModel.mockResolvedValueOnce({ model: 'qwen3:14b', status: 'success' });
-
-            const res = await request(app)
-                .post('/api/llm/ollama/pull')
-                .set({ ...AUTH, 'x-test-role': 'admin' })
-                .send({ model: 'qwen3:14b' });
-
-            expect(res.status).toBe(200);
-            expect(mockPullOllamaModel).toHaveBeenCalledWith('qwen3:14b', expect.objectContaining({ ollamaBaseUrl: 'http://127.0.0.1:11434' }));
-        });
-    });
-
-    describe('POST /ollama/run', () => {
-        it('runs a model for admin', async () => {
-            mockGetLLMSettings.mockResolvedValueOnce({ ollamaBaseUrl: 'http://127.0.0.1:11434', ollamaKeepAlive: '5m', ollamaNumCtx: 8192 });
-            mockRunOllamaModel.mockResolvedValueOnce({ model: 'qwen3:14b', status: 'running' });
-
-            const res = await request(app)
-                .post('/api/llm/ollama/run')
-                .set({ ...AUTH, 'x-test-role': 'admin' })
-                .send({ model: 'qwen3:14b', keepAlive: '10m' });
-
-            expect(res.status).toBe(200);
-            expect(mockRunOllamaModel).toHaveBeenCalledWith('qwen3:14b', expect.objectContaining({ ollamaKeepAlive: '10m' }));
-        });
-    });
-
-    describe('POST /ollama/stop', () => {
-        it('stops a model for admin', async () => {
-            mockGetLLMSettings.mockResolvedValueOnce({ ollamaBaseUrl: 'http://127.0.0.1:11434' });
-            mockStopOllamaModel.mockResolvedValueOnce({ model: 'qwen3:14b', status: 'stopped' });
-
-            const res = await request(app)
-                .post('/api/llm/ollama/stop')
-                .set({ ...AUTH, 'x-test-role': 'admin' })
-                .send({ model: 'qwen3:14b' });
-
-            expect(res.status).toBe(200);
-            expect(mockStopOllamaModel).toHaveBeenCalledWith('qwen3:14b', expect.objectContaining({ ollamaBaseUrl: 'http://127.0.0.1:11434' }));
-        });
     });
 
     describe('POST /openai', () => {

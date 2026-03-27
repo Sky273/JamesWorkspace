@@ -60,9 +60,9 @@ export async function callBusinessChatCompletion({
     const settings = await getLLMSettings();
     const provider = settings?.llmProvider || 'openai';
     const configuredModel = settings?.llmModel || model;
-    const effectiveModel = provider === 'ollama' ? null : (model || configuredModel);
+    const effectiveModel = provider === 'ollama' ? (model || configuredModel || null) : (model || configuredModel);
 
-    if (!effectiveModel) {
+    if (provider !== 'ollama' && !effectiveModel) {
         throw new Error('Model is required');
     }
 
@@ -70,14 +70,15 @@ export async function callBusinessChatCompletion({
         safeLog('info', 'Routing business LLM call to Ollama', {
             operationType,
             provider,
-            model: settings?.llmModel || 'runtime:auto',
+            model: effectiveModel || 'runtime:auto',
             messageCount: messages?.length || 0
         });
 
         const result = await callOllama(messages, effectiveModel, settings, {
             temperature,
             max_tokens: maxTokens,
-            timeout: resolveBusinessOllamaTimeout(operationType, timeout)
+            timeout: resolveBusinessOllamaTimeout(operationType, timeout),
+            operationType
         });
 
         return toOpenAIShape(result);

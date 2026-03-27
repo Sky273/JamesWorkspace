@@ -1,4 +1,4 @@
-﻿import { ChangeEvent, useMemo } from 'react';
+import { ChangeEvent, useMemo } from 'react';
 
 interface FormData {
   llmProvider: 'openai' | 'anthropic' | 'ollama';
@@ -9,26 +9,9 @@ interface FormData {
   [key: string]: string | number | boolean | undefined;
 }
 
-interface OllamaModelInfo {
-  name: string;
-  size?: number | null;
-  modifiedAt?: string | null;
-}
-
-interface OllamaRuntimeStatus {
-  running: boolean;
-  activeModel: string | null;
-  runningModels: OllamaModelInfo[];
-}
-
 interface LLMTabProps {
   formData: FormData;
   onInputChange: (key: string, value: string | number) => void;
-  onOllamaRefreshModels: () => Promise<void>;
-  onOllamaRefreshStatus: () => Promise<void>;
-  ollamaActionLoading?: 'refresh' | 'status' | null;
-  ollamaModels?: OllamaModelInfo[];
-  ollamaRuntimeStatus?: OllamaRuntimeStatus;
   t: (key: string) => string;
 }
 
@@ -49,16 +32,9 @@ const fallbackText = (t: (key: string) => string, key: string, fallback: string)
   return translated === key ? fallback : translated;
 };
 
-const actionButtonClassName = 'inline-flex items-center justify-center rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-800';
-
 const LLMTab = ({
   formData,
   onInputChange,
-  onOllamaRefreshModels,
-  onOllamaRefreshStatus,
-  ollamaActionLoading,
-  ollamaModels = [],
-  ollamaRuntimeStatus = { running: false, activeModel: null, runningModels: [] },
   t
 }: LLMTabProps): JSX.Element => {
   const provider = formData.llmProvider || 'openai';
@@ -89,7 +65,7 @@ const LLMTab = ({
     }
 
     if (nextProvider === 'ollama' && !formData.ollamaBaseUrl) {
-      onInputChange('ollamaBaseUrl', 'http://host.docker.internal:11434');
+      onInputChange('ollamaBaseUrl', '');
     }
   };
 
@@ -108,10 +84,6 @@ const LLMTab = ({
   const handleTextChange = (field: string) => (e: ChangeEvent<HTMLInputElement>): void => {
     onInputChange(field, e.target.value);
   };
-
-  const runningModels = ollamaRuntimeStatus.runningModels || [];
-  const hasLoadedModelList = ollamaModels.length > 0;
-  const isBusy = Boolean(ollamaActionLoading);
 
   return (
     <div className="space-y-6">
@@ -169,85 +141,14 @@ const LLMTab = ({
             </label>
             <input
               type="url"
-              value={formData.ollamaBaseUrl || 'http://host.docker.internal:11434'}
+              value={formData.ollamaBaseUrl || ''}
               onChange={handleTextChange('ollamaBaseUrl')}
               className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
-              placeholder="http://host.docker.internal:11434"
+              placeholder="https://ollama.example.com"
             />
             <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-              {fallbackText(t, 'settings.llm.ollamaHelp', 'Si l application tourne en Docker et Ollama sur votre PC, utilisez http://host.docker.internal:11434. Le modele actif sera utilise automatiquement.')}
+              {fallbackText(t, 'settings.llm.ollamaHelp', 'Renseignez l URL complete de votre instance Ollama distante. Le modele actif sera utilise automatiquement.')}
             </p>
-          </div>
-
-          <div className="rounded-md border border-emerald-200 bg-emerald-50/70 p-3 dark:border-emerald-900/60 dark:bg-emerald-950/20">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                  {fallbackText(t, 'settings.llm.ollamaRuntimeStatus', 'Etat runtime Ollama')}
-                </p>
-                <p className={`mt-1 text-sm ${ollamaRuntimeStatus.running ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-700 dark:text-amber-300'}`}>
-                  {ollamaRuntimeStatus.running
-                    ? `${fallbackText(t, 'settings.llm.ollamaRuntimeRunning', 'Modele actif')} : ${ollamaRuntimeStatus.activeModel || fallbackText(t, 'settings.llm.ollamaUnknownModel', 'Inconnu')}`
-                    : fallbackText(t, 'settings.llm.ollamaRuntimeStopped', 'Aucun modele Ollama n est actuellement charge.')}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => void onOllamaRefreshStatus()}
-                disabled={isBusy}
-                className={actionButtonClassName}
-              >
-                {ollamaActionLoading === 'status'
-                  ? fallbackText(t, 'settings.llm.ollamaRefreshingStatus', 'Actualisation...')
-                  : fallbackText(t, 'settings.llm.ollamaRefreshStatus', 'Rafraichir l etat')}
-              </button>
-            </div>
-            {runningModels.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-2">
-                {runningModels.map((model) => (
-                  <span
-                    key={model.name}
-                    className="rounded-full border border-emerald-300 bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-800 dark:border-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200"
-                  >
-                    {model.name}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="rounded-md border border-gray-200 bg-white/70 p-3 dark:border-gray-700 dark:bg-gray-900/40">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                {fallbackText(t, 'settings.llm.ollamaAvailableModels', 'Modeles disponibles dans Ollama')}
-              </p>
-              <button
-                type="button"
-                onClick={() => void onOllamaRefreshModels()}
-                disabled={isBusy}
-                className={actionButtonClassName}
-              >
-                {ollamaActionLoading === 'refresh'
-                  ? fallbackText(t, 'settings.llm.ollamaRefreshingModels', 'Actualisation...')
-                  : fallbackText(t, 'settings.llm.ollamaRefreshModels', 'Rafraichir les modeles')}
-              </button>
-            </div>
-            {hasLoadedModelList ? (
-              <div className="mt-2 flex flex-wrap gap-2">
-                {ollamaModels.map((model) => (
-                  <span
-                    key={model.name}
-                    className={`rounded-full border px-3 py-1 text-xs font-medium ${model.name === ollamaRuntimeStatus.activeModel ? 'border-blue-500 bg-blue-100 text-blue-700 dark:border-blue-400 dark:bg-blue-500/20 dark:text-blue-200' : 'border-gray-300 bg-white text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200'}`}
-                  >
-                    {model.name}
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                {fallbackText(t, 'settings.llm.ollamaNoModelsLoaded', 'Aucun modele liste pour le moment. Utilisez le bouton de rafraichissement pour interroger Ollama.')}
-              </p>
-            )}
           </div>
         </div>
       )}
@@ -294,3 +195,4 @@ const LLMTab = ({
 };
 
 export default LLMTab;
+
