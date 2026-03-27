@@ -1,13 +1,13 @@
-﻿import { defineConfig, loadEnv } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import path from 'path';
 import compression from 'vite-plugin-compression';
 
-import { httpConfigPlugin } from './build/httpConfigPlugin.js';
-import { getHttpsConfig } from './build/httpsConfig.js';
-import { manualChunks } from './build/manualChunks.js';
-import { tiptapV3SourcePlugin } from './build/tiptapV3SourcePlugin.js';
+import { httpConfigPlugin } from './vite/httpConfigPlugin.js';
+import { getHttpsConfig } from './vite/httpsConfig.js';
+import { manualChunks } from './vite/manualChunks.js';
+import { tiptapV3SourcePlugin } from './vite/tiptapV3SourcePlugin.js';
 
 const OPTIMIZE_DEPENDENCY_INCLUDE = [
   'react',
@@ -79,7 +79,7 @@ export default defineConfig(({ mode }) => {
             });
             proxy.on('proxyReq', (proxyReq, req) => {
               proxyReq.socket?.setTimeout(600000);
-              console.log('[Vite Proxy] Proxying:', req.method, req.url, '→', proxyReq.path);
+              console.log('[Vite Proxy] Proxying:', req.method, req.url, '?', proxyReq.path);
             });
             proxy.on('proxyRes', (proxyRes, req) => {
               console.log('[Vite Proxy] Response:', proxyRes.statusCode, 'from', req.url);
