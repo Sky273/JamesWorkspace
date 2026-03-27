@@ -7,6 +7,16 @@ import { safeLog } from '../../utils/logger.backend.js';
 import { callBusinessChatCompletion } from '../llmProvider.service.js';
 import { cleanupHtml, normalizeUtf8Text, parseJsonFromLlmResponse, stripLlmThinkingContent } from './textUtils.js';
 
+function pickNumericScore(...values) {
+    for (const value of values) {
+        if (value === undefined || value === null || value === '') continue;
+        if (typeof value === 'number' && Number.isFinite(value)) return Math.round(value);
+        const parsed = parseInt(String(value).replace('%', '').trim(), 10);
+        if (!Number.isNaN(parsed)) return parsed;
+    }
+    return 0;
+}
+
 /**
  * Normalize analysis response to ensure consistent format regardless of model
  * GPT-5 models sometimes return different field names than expected
@@ -230,29 +240,30 @@ export async function improveResume(text, analysis, model, improvementPromptTemp
 }
             
             // Build analysis object from improvements
-            const improvements = parsed.improvements || {};
+            const improvements = parsed.improvements || parsed.scores || parsed.analysis || {};
             const summary = parsed.summary || {};
+            const tags = parsed.tags || {};
             
             // Return structured response for frontend
             const result = {
                 text: cleanedText,
                 analysis: {
-                    globalRating: improvements.overall || 0,
-                    executiveSummaryRating: improvements.executiveSummary || 0,
-                    skillsRating: improvements.skills || 0,
-                    experiencesRating: improvements.experience || 0,
-                    educationRating: improvements.education || 0,
-                    atsOptimizationRating: improvements.atsOptimization || 0,
-                    hobbiesLanguagesRating: improvements.languagesInterests || 0,
-                    suggestions: {}, // Post-improvement has no new suggestions
+                    globalRating: pickNumericScore(improvements.overall, improvements.globalRating, improvements.global, parsed.globalRating),
+                    executiveSummaryRating: pickNumericScore(improvements.executiveSummary, improvements.executive_summary, improvements.executiveSummaryRating, improvements.summary),
+                    skillsRating: pickNumericScore(improvements.skills, improvements.skillsRating, improvements.competencies),
+                    experiencesRating: pickNumericScore(improvements.experience, improvements.experiences, improvements.experienceRating, improvements.experiencesRating),
+                    educationRating: pickNumericScore(improvements.education, improvements.educationRating, improvements.formation),
+                    atsOptimizationRating: pickNumericScore(improvements.atsOptimization, improvements.ats, improvements.atsOptimizationRating),
+                    hobbiesLanguagesRating: pickNumericScore(improvements.languagesInterests, improvements.hobbiesLanguages, improvements.languages, improvements.hobbiesLanguagesRating),
+                    suggestions: parsed.suggestions || {},
                     tags: {
-                        skills: [],
-                        industries: summary.industries || [],
-                        tools: [],
-                        softSkills: []
+                        skills: tags.skills || summary.skills || [],
+                        industries: tags.industries || summary.industries || [],
+                        tools: tags.tools || summary.tools || [],
+                        softSkills: tags.softSkills || tags.soft_skills || summary.softSkills || []
                     },
-                    name: summary.title || analysis?.name || '',
-                    title: summary.targetRole || analysis?.title || ''
+                    name: parsed.name || summary.name || analysis?.name || '',
+                    title: summary.targetRole || summary.title || parsed.title || analysis?.title || ''
                 }
             };
             

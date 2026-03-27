@@ -6,7 +6,7 @@
 
 import { createContext, useContext, useState, useCallback, useRef, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
-import { createAuthOptionsWithCsrf, fetchWithAuth } from '../utils/apiInterceptor';
+import { createAuthOptionsWithCsrf, fetchWithAuth, fetchWithCsrfRetry } from '../utils/apiInterceptor';
 import logger from '../utils/logger.frontend';
 import { showCaughtError, getUserFriendlyMessage } from '../components/errorToast.helpers';
 import { applyResumeUpdate, normalizeResume, normalizeResumeList } from '../utils/resumeNormalization';
@@ -14,6 +14,7 @@ import { applyResumeUpdate, normalizeResume, normalizeResumeList } from '../util
 import { Resume } from '../types/entities';
 import {
   FRONTEND_LLM_IMPROVEMENT_TIMEOUT_MS,
+  FRONTEND_RESUME_SAVE_TIMEOUT_MS,
   FRONTEND_SINGLE_UPLOAD_JOB_TIMEOUT_MS,
 } from '../constants/llmTimeouts';
 
@@ -40,7 +41,7 @@ interface ResumeContextType {
   setResumes: React.Dispatch<React.SetStateAction<Resume[]>>;
   uploadResume: (file: File, candidateInfo?: CandidateInfo) => Promise<Resume | undefined>;
   improveCurrentResume: () => Promise<Resume>;
-  updateResumeAnalysis: (resumeId: string, analysisData: Partial<Resume>) => Promise<Resume>;
+  updateResumeAnalysis: (resumeId: string, analysisData: Partial<Resume>, timeoutMs?: number) => Promise<Resume>;
   fetchResumes: () => Promise<void>;
   updateImprovedContent: (resumeId: string, content: string) => Promise<{ success: boolean; currentVersion?: number }>;
   updateOriginalContent: (resumeId: string, content: string) => Promise<{ success: boolean }>;
@@ -55,6 +56,8 @@ const ResumeContext = createContext<ResumeContextType | undefined>(undefined);
 
 const SINGLE_UPLOAD_JOB_POLL_INTERVAL_MS = 2000;
 const SINGLE_UPLOAD_JOB_TIMEOUT_MS = FRONTEND_SINGLE_UPLOAD_JOB_TIMEOUT_MS;
+const POST_IMPROVEMENT_REFRESH_INTERVAL_MS = 2000;
+const POST_IMPROVEMENT_REFRESH_MAX_ATTEMPTS = 45;
 
 export const useResume = (): ResumeContextType => {
   const context = useContext(ResumeContext);
@@ -85,7 +88,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
     });
   }, []);
 
-  const updateResumeAnalysis = useCallback(async (resumeId: string, analysisData: Partial<Resume>): Promise<Resume> => {
+  const updateResumeAnalysis = useCallback(async (resumeId: string, analysisData: Partial<Resume>, timeoutMs: number = 120000): Promise<Resume> => {
     if (abortControllerRef.current.signal.aborted) throw new Error('Operation aborted');
 
     const updateOptions = await createAuthOptionsWithCsrf({
@@ -94,7 +97,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
       body: JSON.stringify(analysisData)
     });
 
-    const response = await fetchWithAuth(`/api/resumes/${resumeId}`, updateOptions);
+    const response = await fetchWithCsrfRetry(`/api/resumes/${resumeId}`, updateOptions, timeoutMs);
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ error: 'Failed to update resume' }));
       throw new Error(errorData.error || 'Failed to update resume');
@@ -157,6 +160,26 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
     return 'upload';
   };
 
+  const hasImprovedAnalysisData = (resume: Resume): boolean => {
+    const improvedGlobalRating = Number(resume['Improved Global Rating'] || resume.improvedGlobalRating || 0);
+    if (improvedGlobalRating > 0) {
+      return true;
+    }
+
+    const rawSuggestions = resume['Improved Key Improvements'] || resume.improvedKeyImprovements;
+    if (!rawSuggestions) return false;
+
+    try {
+      const parsed = typeof rawSuggestions === 'string' ? JSON.parse(rawSuggestions) : rawSuggestions;
+      if (!parsed || typeof parsed !== 'object') return false;
+      return Object.values(parsed as Record<string, unknown>).some(value =>
+        Array.isArray(value) ? value.length > 0 : Boolean(value)
+      );
+    } catch {
+      return false;
+    }
+  };
+
   const fetchResumeById = useCallback(async (resumeId: string, signal: AbortSignal): Promise<Resume> => {
     const fetchOptions = await createAuthOptionsWithCsrf({ method: 'GET' });
     const response = await fetchWithAuth(`/api/resumes/${resumeId}`, {
@@ -171,6 +194,30 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
 
     return normalizeResume(await response.json());
   }, []);
+
+  const refreshResumeAfterDeferredPostAnalysis = useCallback((resumeId: string): void => {
+    void (async () => {
+      for (let attempt = 0; attempt < POST_IMPROVEMENT_REFRESH_MAX_ATTEMPTS; attempt += 1) {
+        await new Promise(resolve => window.setTimeout(resolve, POST_IMPROVEMENT_REFRESH_INTERVAL_MS));
+
+        try {
+          const refreshedResume = await fetchResumeById(resumeId, new AbortController().signal);
+          if (!hasImprovedAnalysisData(refreshedResume)) {
+            continue;
+          }
+
+          setResumes(prev => prev.map(resume => (resume.id === resumeId ? refreshedResume : resume)));
+          setCurrentResumeState(prev => (prev?.id === resumeId ? refreshedResume : prev));
+          logger.info('[ResumeContext] Deferred post-improvement analysis loaded', { resumeId, attempt: attempt + 1 });
+          return;
+        } catch (error) {
+          logger.warn('[ResumeContext] Deferred post-improvement refresh failed', { resumeId, attempt: attempt + 1, error });
+        }
+      }
+
+      logger.warn('[ResumeContext] Deferred post-improvement analysis did not complete in time', { resumeId });
+    })();
+  }, [fetchResumeById, setResumes]);
 
   const waitForUploadJobCompletion = useCallback(async (jobId: string, signal: AbortSignal): Promise<string> => {
     const startedAt = Date.now();
@@ -354,9 +401,9 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
         const authOptions = await createAuthOptionsWithCsrf({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text, analysis: currentAnalysis })
+          body: JSON.stringify({ text, analysis: currentAnalysis, resumeId: currentResume.id })
         });
-        response = await fetchWithAuth('/api/resumes/improve', {
+        response = await fetchWithCsrfRetry('/api/resumes/improve', {
           ...authOptions,
           signal: controller.signal
         }, FRONTEND_LLM_IMPROVEMENT_TIMEOUT_MS);
@@ -376,7 +423,17 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
       }
 
       const responseData = await response.json();
-      const { text: improvedText, analysis: improvedAnalysis } = responseData;
+      const { text: improvedText, analysis: improvedAnalysis, savedResume, postAnalysisPending } = responseData;
+
+      if (savedResume) {
+        const normalizedSavedResume = normalizeResume(savedResume);
+        setResumes(prev => prev.map(resume => (resume.id === currentResume.id ? normalizedSavedResume : resume)));
+        setCurrentResume(normalizedSavedResume);
+        if (postAnalysisPending) {
+          refreshResumeAfterDeferredPostAnalysis(currentResume.id);
+        }
+        return normalizedSavedResume;
+      }
 
       setProcessingStep('analyzing');
       await new Promise(resolve => setTimeout(resolve, 2000));
@@ -408,7 +465,12 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
         'FirmName': user?.firm || undefined
       };
 
-      return await updateResumeAnalysis(currentResume.id, updatePayload);
+      try {
+        return await updateResumeAnalysis(currentResume.id, updatePayload, FRONTEND_RESUME_SAVE_TIMEOUT_MS);
+      } catch (saveError) {
+        logger.error('Error saving improved resume after successful LLM response:', saveError);
+        throw new Error('Failed to save improved resume');
+      }
     } catch (error) {
       logger.error('Error improving resume:', error);
       showCaughtError(error);
@@ -417,7 +479,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
       setLoading(false);
       setProcessingStep(null);
     }
-  }, [currentResume, updateResumeAnalysis, user]);
+  }, [currentResume, refreshResumeAfterDeferredPostAnalysis, setCurrentResume, setResumes, updateResumeAnalysis, user]);
 
   const updateImprovedContent = useCallback(async (resumeId: string, content: string): Promise<{ success: boolean; currentVersion?: number }> => {
     const updateOptions = await createAuthOptionsWithCsrf({
@@ -425,7 +487,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 'Improved Text': content })
     });
-    const response = await fetchWithAuth(`/api/resumes/${resumeId}`, updateOptions);
+    const response = await fetchWithCsrfRetry(`/api/resumes/${resumeId}`, updateOptions);
     if (!response.ok) {
       throw new Error('Failed to update improved content');
     }

@@ -11,10 +11,12 @@ vi.mock('../../utils/trigram.js', () => ({ generateTrigram: vi.fn(name => (name 
 const mockFindResume = vi.fn();
 const mockFindMission = vi.fn();
 const mockCreateAdaptation = vi.fn();
+const mockUpdateResume = vi.fn();
 vi.mock('../../services/resumes.service.js', () => ({
     findResumeRecord: (...a) => mockFindResume(...a),
     findMissionRecord: (...a) => mockFindMission(...a),
-    createAdaptation: (...a) => mockCreateAdaptation(...a)
+    createAdaptation: (...a) => mockCreateAdaptation(...a),
+    updateResume: (...a) => mockUpdateResume(...a)
 }));
 
 const mockAnalyzeResume = vi.fn();
@@ -44,6 +46,10 @@ vi.mock('../../services/settings.service.js', () => ({
 vi.mock('../../services/industry.service.js', () => ({
     getAcceptedIndustriesString: vi.fn(() => 'IT,Finance'),
     getIndustryMappingString: vi.fn(() => '- Informatique, Tech → IT\n- Banque → Finance')
+}));
+
+vi.mock('../../routes/resumes/helpers.js', () => ({
+    mapResumeToFrontend: vi.fn(record => record)
 }));
 
 vi.mock('../../config/prompts.backend.js', () => ({
@@ -165,19 +171,19 @@ describe('LLM Handlers', () => {
             expect(res.status).toHaveBeenCalledWith(400);
         });
 
-        it('should improve and re-analyze', async () => {
+        it('should improve without synchronous re-analysis when no resumeId is provided', async () => {
             mockImproveResume.mockResolvedValueOnce({ text: '<p>improved</p>', analysis: { globalRating: 80 } });
-            mockAnalyzeResume.mockResolvedValueOnce({ globalRating: 85, suggestions: { tip: 'ok' }, tags: { skills: ['JS'] } });
 
             const { req, res } = mockReqRes({}, { text: 'CV text', analysis: { globalRating: 70 } });
 
             await improveHandler(req, res);
 
             expect(mockImproveResume).toHaveBeenCalled();
-            expect(mockAnalyzeResume).toHaveBeenCalled();
+            expect(mockAnalyzeResume).not.toHaveBeenCalled();
             const result = res.json.mock.calls[0][0];
             expect(result.text).toBe('<p>improved</p>');
-            expect(result.analysis.suggestions).toEqual({ tip: 'ok' });
+            expect(result.analysis.globalRating).toBe(80);
+            expect(result.postAnalysisPending).toBe(false);
         });
     });
 
