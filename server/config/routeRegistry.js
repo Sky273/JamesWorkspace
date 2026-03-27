@@ -365,7 +365,11 @@ export function registerProxyRoutes(app) {
             
             if (!response.ok) {
                 const errorText = await response.text();
-                safeLog('error', 'PDF server error', { status: response.status, error: errorText });
+                safeLog(response.status === 403 ? 'warn' : 'error', 'PDF server error', {
+                    status: response.status,
+                    error: errorText,
+                    probableCause: response.status === 403 ? 'PDF_SERVER_INTERNAL_TOKEN mismatch between proxy and PDF server' : undefined
+                });
                 return res.status(response.status).json({ error: errorText });
             }
             await relayBinaryResponse(response, res, 'application/pdf');
@@ -391,7 +395,11 @@ export function registerProxyRoutes(app) {
             
             if (!response.ok) {
                 const errorText = await response.text();
-                safeLog('error', 'DOCX server error', { status: response.status, error: errorText });
+                safeLog(response.status === 403 ? 'warn' : 'error', 'DOCX server error', {
+                    status: response.status,
+                    error: errorText,
+                    probableCause: response.status === 403 ? 'PDF_SERVER_INTERNAL_TOKEN mismatch between proxy and PDF server' : undefined
+                });
                 return res.status(response.status).json({ error: errorText });
             }
             await relayBinaryResponse(

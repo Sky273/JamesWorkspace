@@ -3,7 +3,7 @@
  * TypeScript version
  */
 
-import { ForwardRefExoticComponent, RefAttributes, SVGProps, useState, useEffect, useCallback, useMemo, Suspense } from 'react';
+import { ForwardRefExoticComponent, RefAttributes, SVGProps, lazy, useState, useEffect, useCallback, useMemo, Suspense } from 'react';
 import DeferredWebGLBackground from '../components/DeferredWebGLBackground';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -19,7 +19,8 @@ import {
   BriefcaseIcon,
   DocumentMagnifyingGlassIcon
 } from '@heroicons/react/24/outline';
-import HomeDashboard from '../components/HomeDashboard';
+const HomeDashboard = lazy(() => import('../components/HomeDashboard'));
+
 import { useAuthFetch } from '../hooks/useAuthFetch';
 
 
@@ -200,6 +201,10 @@ function HomePage(): JSX.Element {
   const [featuresRef] = useInView({
     triggerOnce: true,
     threshold: 0.1
+  });
+  const [dashboardRef, dashboardInView] = useInView({
+    triggerOnce: true,
+    rootMargin: '320px 0px'
   });
 
   // Fetch WebGL setting — default is ON, only disable if explicitly 'off'
@@ -450,8 +455,12 @@ function HomePage(): JSX.Element {
         </section>
 
         {/* Dashboard Section - Only visible when authenticated */}
-        <div id="dashboard" className="scroll-mt-32">
-          <HomeDashboard />
+        <div id="dashboard" ref={dashboardRef} className="scroll-mt-32">
+          {dashboardInView ? (
+            <Suspense fallback={<div className="py-12" />}><HomeDashboard /></Suspense>
+          ) : (
+            <div className="py-12" />
+          )}
         </div>
 
         <motion.section 

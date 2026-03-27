@@ -38,6 +38,7 @@ export default defineConfig({
     env: {
       ...process.env,
       PDF_SERVER_INTERNAL_TOKEN: process.env.PDF_SERVER_INTERNAL_TOKEN || 'playwright-pdf-server-internal-token-32chars',
+      REFRESH_TOKEN_SECRET: process.env.REFRESH_TOKEN_SECRET || process.env.JWT_SECRET || 'playwright-refresh-token-secret-minimum-32-chars',
       HTTPS_ENABLED: process.env.HTTPS_ENABLED || 'false',
     },
   },

@@ -93,6 +93,11 @@ if [ -z "$PDF_SERVER_INTERNAL_TOKEN" ] || [ "${#PDF_SERVER_INTERNAL_TOKEN}" -lt 
     fi
 fi
 
+if [ -z "$PDF_SERVER_INTERNAL_TOKEN" ] || [ "${#PDF_SERVER_INTERNAL_TOKEN}" -lt 32 ]; then
+    echo "ERROR: PDF_SERVER_INTERNAL_TOKEN is missing or too short, and no compatible fallback could be derived."
+    exit 1
+fi
+
 # =============================================================================
 # Initialize / migrate database schema outside the web runtime
 # =============================================================================
