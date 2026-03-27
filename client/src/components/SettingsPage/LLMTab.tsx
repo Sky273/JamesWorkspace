@@ -1,12 +1,9 @@
-import { ChangeEvent, useMemo } from 'react';
+﻿import { ChangeEvent, useMemo } from 'react';
 
 interface FormData {
   llmProvider: 'openai' | 'anthropic' | 'ollama';
   llmModel: string;
   ollamaBaseUrl?: string;
-  ollamaVisionModel?: string;
-  ollamaKeepAlive?: string;
-  ollamaNumCtx?: number;
   cvMode?: 'nominative' | 'anonymous';
   webglEnabled?: 'on' | 'off';
   [key: string]: string | number | boolean | undefined;
@@ -27,12 +24,9 @@ interface OllamaRuntimeStatus {
 interface LLMTabProps {
   formData: FormData;
   onInputChange: (key: string, value: string | number) => void;
-  onOllamaPull: () => Promise<void>;
-  onOllamaRun: () => Promise<void>;
-  onOllamaStop: () => Promise<void>;
   onOllamaRefreshModels: () => Promise<void>;
   onOllamaRefreshStatus: () => Promise<void>;
-  ollamaActionLoading?: 'pull' | 'run' | 'stop' | 'refresh' | 'status' | null;
+  ollamaActionLoading?: 'refresh' | 'status' | null;
   ollamaModels?: OllamaModelInfo[];
   ollamaRuntimeStatus?: OllamaRuntimeStatus;
   t: (key: string) => string;
@@ -50,18 +44,6 @@ const ANTHROPIC_MODELS = [
   'claude-3-5-haiku-20241022'
 ];
 
-const OLLAMA_MODEL_SUGGESTIONS = [
-  'llama3.2',
-  'llama3.1',
-  'mistral',
-  'qwen2.5',
-  'deepseek-r1',
-  'llava',
-  'llava:13b'
-];
-
-const KEEP_ALIVE_OPTIONS = ['1m', '5m', '15m', '1h', '-1'];
-
 const fallbackText = (t: (key: string) => string, key: string, fallback: string): string => {
   const translated = t(key);
   return translated === key ? fallback : translated;
@@ -72,9 +54,6 @@ const actionButtonClassName = 'inline-flex items-center justify-center rounded-m
 const LLMTab = ({
   formData,
   onInputChange,
-  onOllamaPull,
-  onOllamaRun,
-  onOllamaStop,
   onOllamaRefreshModels,
   onOllamaRefreshStatus,
   ollamaActionLoading,
@@ -94,9 +73,6 @@ const LLMTab = ({
     if (provider === 'anthropic') {
       return ANTHROPIC_MODELS;
     }
-    if (provider === 'ollama') {
-      return OLLAMA_MODEL_SUGGESTIONS;
-    }
     return OPENAI_MODELS;
   }, [provider]);
 
@@ -112,23 +88,12 @@ const LLMTab = ({
       onInputChange('llmModel', 'gpt-4o');
     }
 
-    if (nextProvider === 'ollama') {
-      if (!formData.llmModel) {
-        onInputChange('llmModel', 'llama3.2');
-      }
-      if (!formData.ollamaBaseUrl) {
-        onInputChange('ollamaBaseUrl', 'http://127.0.0.1:11434');
-      }
-      if (!formData.ollamaKeepAlive) {
-        onInputChange('ollamaKeepAlive', '5m');
-      }
-      if (!formData.ollamaNumCtx) {
-        onInputChange('ollamaNumCtx', 8192);
-      }
+    if (nextProvider === 'ollama' && !formData.ollamaBaseUrl) {
+      onInputChange('ollamaBaseUrl', 'http://host.docker.internal:11434');
     }
   };
 
-  const handleModelChange = (e: ChangeEvent<HTMLSelectElement | HTMLInputElement>): void => {
+  const handleModelChange = (e: ChangeEvent<HTMLSelectElement>): void => {
     onInputChange('llmModel', e.target.value);
   };
 
@@ -140,20 +105,13 @@ const LLMTab = ({
     onInputChange('webglEnabled', formData.webglEnabled === 'on' ? 'off' : 'on');
   };
 
-  const handleNumericChange = (field: string) => (e: ChangeEvent<HTMLInputElement>): void => {
-    onInputChange(field, Number(e.target.value));
-  };
-
-  const handleTextChange = (field: string) => (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>): void => {
+  const handleTextChange = (field: string) => (e: ChangeEvent<HTMLInputElement>): void => {
     onInputChange(field, e.target.value);
   };
 
-  const isModelObsolete = Boolean(formData.llmModel) && !modelOptions.includes(formData.llmModel);
-  const hasModelName = Boolean(String(formData.llmModel || '').trim());
-  const isBusy = Boolean(ollamaActionLoading);
-  const hasLoadedModelList = ollamaModels.length > 0;
   const runningModels = ollamaRuntimeStatus.runningModels || [];
-  const hasRunningModels = runningModels.length > 0;
+  const hasLoadedModelList = ollamaModels.length > 0;
+  const isBusy = Boolean(ollamaActionLoading);
 
   return (
     <div className="space-y-6">
@@ -163,7 +121,7 @@ const LLMTab = ({
         </h2>
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
           {provider === 'ollama'
-            ? fallbackText(t, 'settings.llm.ollamaDescription', 'Configurez le provider local Ollama, son endpoint et les modeles utilises par l application.')
+            ? fallbackText(t, 'settings.llm.ollamaDescription', 'Configurez uniquement l adresse de votre hote Ollama. Le modele actif sera detecte automatiquement sur votre machine.')
             : fallbackText(t, 'settings.llm.description', 'Selectionnez le provider et le modele LLM a utiliser pour l analyse et l amelioration des CV.')}
         </p>
       </div>
@@ -183,76 +141,86 @@ const LLMTab = ({
         </select>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          {provider === 'ollama'
-            ? fallbackText(t, 'settings.llm.ollamaModel', 'Modele Ollama principal')
-            : fallbackText(t, 'settings.llm.model', 'Modele')}
-        </label>
-        {provider === 'ollama' ? (
-          <input
-            type="text"
-            value={formData.llmModel}
-            onChange={handleModelChange}
-            className={`w-full px-4 py-2 border rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 ${
-              isModelObsolete ? 'border-yellow-500 dark:border-yellow-400' : 'border-gray-300 dark:border-gray-600'
-            }`}
-            placeholder="llama3.2"
-            autoComplete="off"
-            spellCheck={false}
-          />
-        ) : (
+      {provider !== 'ollama' && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            {fallbackText(t, 'settings.llm.model', 'Modele')}
+          </label>
           <select
             value={formData.llmModel}
             onChange={handleModelChange}
-            className={`w-full px-4 py-2 border rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 ${
-              isModelObsolete ? 'border-red-500 dark:border-red-400' : 'border-gray-300 dark:border-gray-600'
-            }`}
+            className="w-full px-4 py-2 border rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 border-gray-300 dark:border-gray-600"
           >
-            {isModelObsolete && (
-              <option value={formData.llmModel}>{formData.llmModel}</option>
-            )}
             {modelOptions.map(model => (
               <option key={model} value={model}>{model}</option>
             ))}
           </select>
-        )}
-        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-          {fallbackText(t, 'settings.currentModel', 'Modele actuel')} : <span className="font-semibold">{formData.llmModel}</span>
-        </p>
-        {provider === 'ollama' && (
-          <>
-            <div className="mt-3 flex flex-wrap gap-2">
+          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+            {fallbackText(t, 'settings.currentModel', 'Modele actuel')} : <span className="font-semibold">{formData.llmModel}</span>
+          </p>
+        </div>
+      )}
+
+      {provider === 'ollama' && (
+        <div className="space-y-4 rounded-lg border border-blue-200 bg-blue-50/60 p-4 dark:border-blue-900/60 dark:bg-blue-950/20">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {fallbackText(t, 'settings.llm.ollamaBaseUrl', 'URL Ollama')}
+            </label>
+            <input
+              type="url"
+              value={formData.ollamaBaseUrl || 'http://host.docker.internal:11434'}
+              onChange={handleTextChange('ollamaBaseUrl')}
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
+              placeholder="http://host.docker.internal:11434"
+            />
+            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+              {fallbackText(t, 'settings.llm.ollamaHelp', 'Si l application tourne en Docker et Ollama sur votre PC, utilisez http://host.docker.internal:11434. Le modele actif sera utilise automatiquement.')}
+            </p>
+          </div>
+
+          <div className="rounded-md border border-emerald-200 bg-emerald-50/70 p-3 dark:border-emerald-900/60 dark:bg-emerald-950/20">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                  {fallbackText(t, 'settings.llm.ollamaRuntimeStatus', 'Etat runtime Ollama')}
+                </p>
+                <p className={`mt-1 text-sm ${ollamaRuntimeStatus.running ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-700 dark:text-amber-300'}`}>
+                  {ollamaRuntimeStatus.running
+                    ? `${fallbackText(t, 'settings.llm.ollamaRuntimeRunning', 'Modele actif')} : ${ollamaRuntimeStatus.activeModel || fallbackText(t, 'settings.llm.ollamaUnknownModel', 'Inconnu')}`
+                    : fallbackText(t, 'settings.llm.ollamaRuntimeStopped', 'Aucun modele Ollama n est actuellement charge.')}
+                </p>
+              </div>
               <button
                 type="button"
-                onClick={() => void onOllamaPull()}
-                disabled={!hasModelName || isBusy}
+                onClick={() => void onOllamaRefreshStatus()}
+                disabled={isBusy}
                 className={actionButtonClassName}
               >
-                {ollamaActionLoading === 'pull'
-                  ? fallbackText(t, 'settings.llm.ollamaPulling', 'Pull en cours...')
-                  : fallbackText(t, 'settings.llm.ollamaPull', 'Pull du modele')}
+                {ollamaActionLoading === 'status'
+                  ? fallbackText(t, 'settings.llm.ollamaRefreshingStatus', 'Actualisation...')
+                  : fallbackText(t, 'settings.llm.ollamaRefreshStatus', 'Rafraichir l etat')}
               </button>
-              <button
-                type="button"
-                onClick={() => void onOllamaRun()}
-                disabled={!hasModelName || isBusy}
-                className={actionButtonClassName}
-              >
-                {ollamaActionLoading === 'run'
-                  ? fallbackText(t, 'settings.llm.ollamaStarting', 'Chargement...')
-                  : fallbackText(t, 'settings.llm.ollamaRun', 'Lancer le modele')}
-              </button>
-              <button
-                type="button"
-                onClick={() => void onOllamaStop()}
-                disabled={!hasModelName || isBusy}
-                className={actionButtonClassName}
-              >
-                {ollamaActionLoading === 'stop'
-                  ? fallbackText(t, 'settings.llm.ollamaStopping', 'Arret...')
-                  : fallbackText(t, 'settings.llm.ollamaStop', 'Arreter le modele')}
-              </button>
+            </div>
+            {runningModels.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {runningModels.map((model) => (
+                  <span
+                    key={model.name}
+                    className="rounded-full border border-emerald-300 bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-800 dark:border-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200"
+                  >
+                    {model.name}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-md border border-gray-200 bg-white/70 p-3 dark:border-gray-700 dark:bg-gray-900/40">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                {fallbackText(t, 'settings.llm.ollamaAvailableModels', 'Modeles disponibles dans Ollama')}
+              </p>
               <button
                 type="button"
                 onClick={() => void onOllamaRefreshModels()}
@@ -264,142 +232,22 @@ const LLMTab = ({
                   : fallbackText(t, 'settings.llm.ollamaRefreshModels', 'Rafraichir les modeles')}
               </button>
             </div>
-            <div className="mt-3 rounded-md border border-emerald-200 bg-emerald-50/70 p-3 dark:border-emerald-900/60 dark:bg-emerald-950/20">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                    {fallbackText(t, 'settings.llm.ollamaRuntimeStatus', 'Etat runtime Ollama')}
-                  </p>
-                  <p className={`mt-1 text-sm ${ollamaRuntimeStatus.running ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-700 dark:text-amber-300'}`}>
-                    {ollamaRuntimeStatus.running
-                      ? `${fallbackText(t, 'settings.llm.ollamaRuntimeRunning', 'Modele actif')} : ${ollamaRuntimeStatus.activeModel || fallbackText(t, 'settings.llm.ollamaUnknownModel', 'Inconnu')}`
-                      : fallbackText(t, 'settings.llm.ollamaRuntimeStopped', 'Aucun modele Ollama n est actuellement charge.')}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => void onOllamaRefreshStatus()}
-                  disabled={isBusy}
-                  className={actionButtonClassName}
-                >
-                  {ollamaActionLoading === 'status'
-                    ? fallbackText(t, 'settings.llm.ollamaRefreshingStatus', 'Actualisation...')
-                    : fallbackText(t, 'settings.llm.ollamaRefreshStatus', 'Rafraichir l etat')}
-                </button>
+            {hasLoadedModelList ? (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {ollamaModels.map((model) => (
+                  <span
+                    key={model.name}
+                    className={`rounded-full border px-3 py-1 text-xs font-medium ${model.name === ollamaRuntimeStatus.activeModel ? 'border-blue-500 bg-blue-100 text-blue-700 dark:border-blue-400 dark:bg-blue-500/20 dark:text-blue-200' : 'border-gray-300 bg-white text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200'}`}
+                  >
+                    {model.name}
+                  </span>
+                ))}
               </div>
-              {hasRunningModels && (
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {runningModels.map((model) => (
-                    <span
-                      key={model.name}
-                      className="rounded-full border border-emerald-300 bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-800 dark:border-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200"
-                    >
-                      {model.name}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="mt-3 rounded-md border border-gray-200 bg-white/70 p-3 dark:border-gray-700 dark:bg-gray-900/40">
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                {fallbackText(t, 'settings.llm.ollamaAvailableModels', 'Modeles disponibles dans Ollama')}
+            ) : (
+              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                {fallbackText(t, 'settings.llm.ollamaNoModelsLoaded', 'Aucun modele liste pour le moment. Utilisez le bouton de rafraichissement pour interroger Ollama.')}
               </p>
-              {hasLoadedModelList ? (
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {ollamaModels.map((model) => {
-                    const isSelected = model.name === formData.llmModel;
-                    return (
-                      <button
-                        key={model.name}
-                        type="button"
-                        onClick={() => onInputChange('llmModel', model.name)}
-                        className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                          isSelected
-                            ? 'border-blue-500 bg-blue-100 text-blue-700 dark:border-blue-400 dark:bg-blue-500/20 dark:text-blue-200'
-                            : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:border-gray-500'
-                        }`}
-                      >
-                        {model.name}
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                  {fallbackText(t, 'settings.llm.ollamaNoModelsLoaded', 'Aucun modele liste pour le moment. Utilisez le bouton de rafraichissement pour interroger Ollama.')}
-                </p>
-              )}
-            </div>
-          </>
-        )}
-      </div>
-
-      {provider === 'ollama' && (
-        <div className="space-y-4 rounded-lg border border-blue-200 bg-blue-50/60 p-4 dark:border-blue-900/60 dark:bg-blue-950/20">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              {fallbackText(t, 'settings.llm.ollamaBaseUrl', 'URL Ollama')}
-            </label>
-            <input
-              type="url"
-              value={formData.ollamaBaseUrl || 'http://127.0.0.1:11434'}
-              onChange={handleTextChange('ollamaBaseUrl')}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
-              placeholder="http://127.0.0.1:11434"
-            />
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {fallbackText(t, 'settings.llm.ollamaVisionModel', 'Modele vision Ollama')}
-              </label>
-              <input
-                list="ollama-vision-model-suggestions"
-                value={formData.ollamaVisionModel || ''}
-                onChange={handleTextChange('ollamaVisionModel')}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
-                placeholder={fallbackText(t, 'settings.llm.ollamaVisionModelPlaceholder', 'Laisser vide pour reutiliser le modele principal')}
-              />
-              <datalist id="ollama-vision-model-suggestions">
-                {['llava', 'llava:13b', 'llama3.2-vision'].map(model => (
-                  <option key={model} value={model} />
-                ))}
-              </datalist>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {fallbackText(t, 'settings.llm.ollamaKeepAlive', 'Keep alive')}
-              </label>
-              <select
-                value={formData.ollamaKeepAlive || '5m'}
-                onChange={handleTextChange('ollamaKeepAlive')}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
-              >
-                {KEEP_ALIVE_OPTIONS.map(option => (
-                  <option key={option} value={option}>{option}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              {fallbackText(t, 'settings.llm.ollamaNumCtx', 'Contexte Ollama (tokens)')}
-            </label>
-            <input
-              type="number"
-              min={1024}
-              step={1024}
-              value={formData.ollamaNumCtx || 8192}
-              onChange={handleNumericChange('ollamaNumCtx')}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
-            />
-            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-              {fallbackText(t, 'settings.llm.ollamaHelp', 'Configurez ici l endpoint local, le modele principal, le modele vision optionnel et les options runtime Ollama utilisees par l application.')}
-            </p>
+            )}
           </div>
         </div>
       )}

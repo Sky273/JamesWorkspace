@@ -8,6 +8,21 @@ import { callOpenAI } from './openai/apiClient.js';
 import { callOllama } from './ollama.service.js';
 import { safeLog } from '../utils/logger.backend.js';
 
+const OLLAMA_CV_OPERATION_TIMEOUTS_MS = {
+    'Resume Analysis': 20 * 60 * 1000,
+    'Improved Resume Analysis': 20 * 60 * 1000,
+    'Resume Improvement': 25 * 60 * 1000
+};
+
+function resolveBusinessOllamaTimeout(operationType, timeout) {
+    const operationTimeout = OLLAMA_CV_OPERATION_TIMEOUTS_MS[operationType];
+    if (operationTimeout) {
+        return Math.max(operationTimeout, Number(timeout) || 0);
+    }
+
+    return timeout;
+}
+
 function toOpenAIShape(result) {
     return {
         id: `ollama-${Date.now()}`,
@@ -45,7 +60,7 @@ export async function callBusinessChatCompletion({
     const settings = await getLLMSettings();
     const provider = settings?.llmProvider || 'openai';
     const configuredModel = settings?.llmModel || model;
-    const effectiveModel = model || configuredModel;
+    const effectiveModel = provider === 'ollama' ? null : (model || configuredModel);
 
     if (!effectiveModel) {
         throw new Error('Model is required');
@@ -55,13 +70,14 @@ export async function callBusinessChatCompletion({
         safeLog('info', 'Routing business LLM call to Ollama', {
             operationType,
             provider,
-            model: effectiveModel,
+            model: settings?.llmModel || 'runtime:auto',
             messageCount: messages?.length || 0
         });
 
         const result = await callOllama(messages, effectiveModel, settings, {
             temperature,
-            max_tokens: maxTokens
+            max_tokens: maxTokens,
+            timeout: resolveBusinessOllamaTimeout(operationType, timeout)
         });
 
         return toOpenAIShape(result);

@@ -91,10 +91,12 @@ function Run-Container {
     $RefreshTokenSecret = if ($env:REFRESH_TOKEN_SECRET) { $env:REFRESH_TOKEN_SECRET } else { "docker-refresh-token-secret-change-in-production-min32chars" }
     $CsrfSecret = if ($env:CSRF_SECRET) { $env:CSRF_SECRET } else { "docker-csrf-secret-change-in-production-min32chars" }
     $PdfServerInternalToken = if ($env:PDF_SERVER_INTERNAL_TOKEN) { $env:PDF_SERVER_INTERNAL_TOKEN } else { "docker-pdf-server-internal-token-change-in-production-min32chars" }
+    $OllamaBaseUrl = if ($env:OLLAMA_BASE_URL) { $env:OLLAMA_BASE_URL } else { "http://host.docker.internal:11434" }
 
     docker run -d `
         --name $ContainerName `
         -p 3443:3443 `
+        -p 5433:5432 `
         -e OPENAI_API_KEY=$env:OPENAI_API_KEY `
         -e ANTHROPIC_API_KEY=$env:ANTHROPIC_API_KEY `
         -e JWT_SECRET="$JwtSecret" `
@@ -102,6 +104,7 @@ function Run-Container {
         -e REFRESH_TOKEN_SECRET="$RefreshTokenSecret" `
         -e CSRF_SECRET="$CsrfSecret" `
         -e PDF_SERVER_INTERNAL_TOKEN="$PdfServerInternalToken" `
+        -e OLLAMA_BASE_URL="$OllamaBaseUrl" `
         -e GOOGLE_CLIENT_ID=$env:GOOGLE_CLIENT_ID `
         -e GOOGLE_CLIENT_SECRET=$env:GOOGLE_CLIENT_SECRET `
         -e MAIL_TOKEN_ENCRYPTION_KEY=$env:MAIL_TOKEN_ENCRYPTION_KEY `
@@ -118,6 +121,7 @@ function Run-Container {
         Write-Host "============================================" -ForegroundColor Cyan
         Write-Host "  Application URL: https://localhost:3443" -ForegroundColor White
         Write-Host "  Database: ./data/postgresql (persistent local directory)" -ForegroundColor White
+        Write-Host "  Ollama host:    $OllamaBaseUrl" -ForegroundColor White
         Write-Host "  Default login:   admin@resumeconverter.local" -ForegroundColor White
         Write-Host "  Default password: admin123" -ForegroundColor White
         Write-Host "============================================" -ForegroundColor Cyan

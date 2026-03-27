@@ -1,4 +1,4 @@
-import axios from 'axios';
+﻿import axios from 'axios';
 import { OLLAMA_AUTO_PULL, OLLAMA_BASE_URL, OLLAMA_REQUEST_TIMEOUT_MS } from '../config/constants.js';
 import { safeLog } from '../utils/logger.backend.js';
 
@@ -19,19 +19,28 @@ function extractImageData(dataUrl) {
     };
 }
 
-function buildOllamaOptions(settings = {}, options = {}) {
+function buildOllamaOptions(_settings = {}, options = {}) {
     const ollamaOptions = {};
 
     if (typeof options.temperature === 'number') {
         ollamaOptions.temperature = options.temperature;
     }
 
-    const numCtx = Number(settings.ollamaNumCtx);
-    if (Number.isFinite(numCtx) && numCtx > 0) {
-        ollamaOptions.num_ctx = numCtx;
+    const explicitNumCtx = Number(options.num_ctx);
+    if (Number.isFinite(explicitNumCtx) && explicitNumCtx > 0) {
+        ollamaOptions.num_ctx = explicitNumCtx;
     }
 
     return ollamaOptions;
+}
+
+function resolveOllamaTimeoutMs(options = {}) {
+    const requestedTimeout = Number(options.timeout);
+    if (Number.isFinite(requestedTimeout) && requestedTimeout > 0) {
+        return Math.max(OLLAMA_REQUEST_TIMEOUT_MS, requestedTimeout);
+    }
+
+    return OLLAMA_REQUEST_TIMEOUT_MS;
 }
 
 function resolveOllamaSettings(settings = {}) {
@@ -79,6 +88,25 @@ async function ensureModelAvailable(baseUrl, model) {
     }
 }
 
+async function resolveModelName(baseUrl, model) {
+    const requestedModel = typeof model === 'string' ? model.trim() : '';
+    if (requestedModel) {
+        return requestedModel;
+    }
+
+    const runtimeStatus = await getOllamaRuntimeStatus(baseUrl);
+    if (runtimeStatus.activeModel) {
+        return runtimeStatus.activeModel;
+    }
+
+    const availableModels = await listOllamaModels(baseUrl);
+    if (availableModels.length > 0 && availableModels[0]?.name) {
+        return availableModels[0].name;
+    }
+
+    throw new Error('No Ollama model is active or installed on the configured host');
+}
+
 export async function listOllamaModels(baseUrl = OLLAMA_BASE_URL) {
     const normalizedBaseUrl = normalizeBaseUrl(baseUrl);
     const response = await axios.get(`${normalizedBaseUrl}/api/tags`, {
@@ -112,6 +140,7 @@ export async function getOllamaRuntimeStatus(baseUrl = OLLAMA_BASE_URL) {
         runningModels
     };
 }
+
 export async function pullOllamaModel(model, settings = {}) {
     const normalizedModel = ensureModelName(model);
     const resolvedSettings = resolveOllamaSettings(settings);
@@ -143,9 +172,7 @@ export async function runOllamaModel(model, settings = {}) {
         {
             model: normalizedModel,
             prompt: '',
-            stream: false,
-            keep_alive: resolvedSettings.ollamaKeepAlive || '5m',
-            options: buildOllamaOptions(resolvedSettings)
+            stream: false
         },
         {
             timeout: Math.max(OLLAMA_REQUEST_TIMEOUT_MS, 2 * 60 * 1000)
@@ -183,30 +210,23 @@ export async function stopOllamaModel(model, settings = {}) {
 }
 
 export async function callOllama(messages, model, settings = {}, options = {}) {
-    if (!model) {
-        throw new Error('Ollama model not configured');
-    }
-
     const resolvedSettings = resolveOllamaSettings(settings);
     const baseUrl = normalizeBaseUrl(resolvedSettings.ollamaBaseUrl);
-    await ensureModelAvailable(baseUrl, model);
+    const resolvedModel = await resolveModelName(baseUrl, model);
+    await ensureModelAvailable(baseUrl, resolvedModel);
 
     const requestBody = {
-        model,
+        model: resolvedModel,
         messages,
         stream: false,
         options: buildOllamaOptions(resolvedSettings, options)
     };
 
-    if (resolvedSettings.ollamaKeepAlive) {
-        requestBody.keep_alive = resolvedSettings.ollamaKeepAlive;
-    }
-
     const response = await axios.post(
         `${baseUrl}/api/chat`,
         requestBody,
         {
-            timeout: OLLAMA_REQUEST_TIMEOUT_MS
+            timeout: resolveOllamaTimeoutMs(options)
         }
     );
 
@@ -217,8 +237,8 @@ export async function callOllama(messages, model, settings = {}, options = {}) {
 
     return {
         content,
-        model,
-        actualModel: response.data?.model || model,
+        model: resolvedModel,
+        actualModel: response.data?.model || resolvedModel,
         usage: {
             prompt_tokens: response.data?.prompt_eval_count || 0,
             completion_tokens: response.data?.eval_count || 0,
@@ -229,13 +249,9 @@ export async function callOllama(messages, model, settings = {}, options = {}) {
 
 export async function callOllamaWithVision(systemPrompt, userContent, model, settings = {}, options = {}) {
     const resolvedSettings = resolveOllamaSettings(settings);
-    const visionModel = resolvedSettings.ollamaVisionModel || model;
-    if (!visionModel) {
-        throw new Error('Ollama vision model not configured');
-    }
-
     const baseUrl = normalizeBaseUrl(resolvedSettings.ollamaBaseUrl);
-    await ensureModelAvailable(baseUrl, visionModel);
+    const resolvedModel = await resolveModelName(baseUrl, model);
+    await ensureModelAvailable(baseUrl, resolvedModel);
 
     const textChunks = [];
     const images = [];
@@ -265,21 +281,17 @@ export async function callOllamaWithVision(systemPrompt, userContent, model, set
     });
 
     const requestBody = {
-        model: visionModel,
+        model: resolvedModel,
         messages,
         stream: false,
         options: buildOllamaOptions(resolvedSettings, options)
     };
 
-    if (resolvedSettings.ollamaKeepAlive) {
-        requestBody.keep_alive = resolvedSettings.ollamaKeepAlive;
-    }
-
     const response = await axios.post(
         `${baseUrl}/api/chat`,
         requestBody,
         {
-            timeout: Math.max(OLLAMA_REQUEST_TIMEOUT_MS, 10 * 60 * 1000)
+            timeout: Math.max(resolveOllamaTimeoutMs(options), 10 * 60 * 1000)
         }
     );
 
@@ -290,8 +302,8 @@ export async function callOllamaWithVision(systemPrompt, userContent, model, set
 
     return {
         content,
-        model: visionModel,
-        actualModel: response.data?.model || visionModel,
+        model: resolvedModel,
+        actualModel: response.data?.model || resolvedModel,
         usage: {
             prompt_tokens: response.data?.prompt_eval_count || 0,
             completion_tokens: response.data?.eval_count || 0,
@@ -299,4 +311,3 @@ export async function callOllamaWithVision(systemPrompt, userContent, model, set
         }
     };
 }
-

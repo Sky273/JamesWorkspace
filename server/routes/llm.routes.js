@@ -104,7 +104,7 @@ function shouldRouteToOllama(settings, model) {
 }
 
 async function handleOllamaRequest(req, res, settings, responseShape) {
-    const model = req.body.model || settings.llmModel || 'llama3.2';
+    const model = req.body.model || settings.llmModel || null;
     const result = await callOllama(req.body.messages || [], model, settings, {
         temperature: req.body.temperature,
         max_tokens: req.body.max_tokens || req.body.max_completion_tokens || req.body.max_output_tokens

@@ -44,8 +44,8 @@ if not %ERRORLEVEL% EQU 0 (
     exit /b 1
 )
 
-echo.
-powershell -NoProfile -ExecutionPolicy Bypass -File "%cd%\docker\warm-ollama.ps1" -ContainerName "resumeconverter-app"
+
+
 
 echo.
 echo ============================================

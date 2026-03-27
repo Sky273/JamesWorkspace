@@ -72,15 +72,10 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Ollama (direct binary install for Docker builds)
-RUN curl -fsSL https://ollama.com/download/ollama-linux-amd64.tar.zst -o /tmp/ollama.tar.zst \
-    && tar --use-compress-program=unzstd -C /usr -xf /tmp/ollama.tar.zst \
-    && rm /tmp/ollama.tar.zst
 
 # Set Puppeteer to use Google Chrome
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
-ENV OLLAMA_HOST=0.0.0.0:11434
 
 # =============================================================================
 # Application Setup
@@ -181,9 +176,8 @@ RUN mkdir -p /app/logs /app/uploads /app/uploads/logos /app/data /var/log/superv
 # 3001 = Proxy Server HTTP (internal)
 # 3443 = Proxy Server HTTPS (main app)
 # 3002 = PDF Server
-# 11434 = Ollama
 # 5432 = PostgreSQL (internal only)
-EXPOSE 3443 11434
+EXPOSE 3443
 
 # =============================================================================
 # Health Check

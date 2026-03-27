@@ -56,7 +56,7 @@ function getMetricsProviderLabel(provider, model) {
 export async function callLLM(messages, options = {}) {
     try {
         const settings = await getLLMSettings();
-        const model = settings.llmModel || 'gpt-4o';
+        const model = settings.llmProvider === 'ollama' ? null : (settings.llmModel || 'gpt-4o');
         const provider = settings.llmProvider || 'openai';
 
         safeLog('info', 'Calling LLM', {
@@ -197,7 +197,7 @@ async function callAnthropic(messages, model, options) {
 export async function callLLMWithVision(systemPrompt, userContent, options = {}) {
     try {
         const settings = await getLLMSettings();
-        const model = settings.llmModel || 'gpt-4o';
+        const model = settings.llmProvider === 'ollama' ? null : (settings.llmModel || 'gpt-4o');
         const provider = settings.llmProvider || 'openai';
 
         safeLog('info', 'Calling LLM with vision', {
