@@ -12,6 +12,10 @@ vi.mock('../../services/ollama.service.js', () => ({
     callOllama: vi.fn()
 }));
 
+vi.mock('../../services/minimax.service.js', () => ({
+    callMiniMaxOpenAICompatible: vi.fn()
+}));
+
 vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));
@@ -19,6 +23,7 @@ vi.mock('../../utils/logger.backend.js', () => ({
 import { getLLMSettings } from '../../services/settings.service.js';
 import { callOpenAI } from '../../services/openai/apiClient.js';
 import { callOllama } from '../../services/ollama.service.js';
+import { callMiniMaxOpenAICompatible } from '../../services/minimax.service.js';
 import { callBusinessChatCompletion } from '../../services/llmProvider.service.js';
 
 describe('llmProvider.service', () => {
@@ -62,6 +67,30 @@ describe('llmProvider.service', () => {
         expect(result.model).toBe('qwen3:14b');
     });
 
+    it('routes MiniMax business calls through the MiniMax service', async () => {
+        getLLMSettings.mockResolvedValueOnce({
+            llmProvider: 'minimax',
+            llmModel: 'MiniMax-M2.7'
+        });
+        callMiniMaxOpenAICompatible.mockResolvedValueOnce({
+            content: 'ok minimax',
+            model: 'MiniMax-M2.7',
+            actualModel: 'MiniMax-M2.7',
+            usage: { prompt_tokens: 1, completion_tokens: 2, total_tokens: 3 }
+        });
+
+        const result = await callBusinessChatCompletion({
+            messages: [{ role: 'user', content: 'Analyse ce CV' }],
+            operationType: 'Resume Analysis'
+        });
+
+        expect(callMiniMaxOpenAICompatible).toHaveBeenCalledWith(expect.objectContaining({
+            model: 'MiniMax-M2.7',
+            operationType: 'Resume Analysis'
+        }));
+        expect(result.choices[0].message.content).toBe('ok minimax');
+    });
+
     it('still requires a model for non-Ollama providers', async () => {
         getLLMSettings.mockResolvedValueOnce({
             llmProvider: 'openai',
@@ -73,3 +102,4 @@ describe('llmProvider.service', () => {
         })).rejects.toThrow('Model is required');
     });
 });
+

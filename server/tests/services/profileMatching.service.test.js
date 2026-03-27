@@ -24,8 +24,8 @@ vi.mock('../../utils/postgresHelpers.js', () => ({
 }));
 
 // Mock OpenAI service
-vi.mock('../../services/openai.service.js', () => ({
-    callOpenAI: vi.fn()
+vi.mock('../../services/llmProvider.service.js', () => ({
+    callBusinessChatCompletion: vi.fn()
 }));
 
 // Mock settings service
@@ -43,7 +43,7 @@ vi.mock('../../config/prompts.backend.js', () => ({
 
 // Import mocked modules
 import { selectWithTimeout, findWithTimeout, updateWithTimeout } from '../../utils/postgresHelpers.js';
-import { callOpenAI } from '../../services/openai.service.js';
+import { callBusinessChatCompletion } from '../../services/llmProvider.service.js';
 import { getLLMSettings } from '../../services/settings.service.js';
 
 // Import the service (after mocks are set up)
@@ -169,7 +169,7 @@ describe('Profile Matching Service', () => {
         beforeEach(() => {
             findWithTimeout.mockResolvedValue(mockMissionRecord);
             selectWithTimeout.mockResolvedValue(mockResumeRecords);
-            callOpenAI.mockResolvedValue(mockLLMScoringResponse);
+            callBusinessChatCompletion.mockResolvedValue(mockLLMScoringResponse);
         });
 
         it('should find and score profiles using LLM', async () => {
@@ -200,7 +200,7 @@ describe('Profile Matching Service', () => {
         });
 
         it('should return empty profiles when LLM fails', async () => {
-            callOpenAI.mockRejectedValue(new Error('LLM API error'));
+            callBusinessChatCompletion.mockRejectedValue(new Error('LLM API error'));
             
             const result = await findMatchingProfiles('mission-1', { limit: 10 });
             
@@ -254,7 +254,7 @@ describe('Profile Matching Service', () => {
             expect(result.missionKeywords).toEqual(mockMissionKeywords);
             
             // Should not call LLM for keyword extraction (only for scoring)
-            const extractionCalls = callOpenAI.mock.calls.filter(
+            const extractionCalls = callBusinessChatCompletion.mock.calls.filter(
                 call => call[0]?.operationType === 'Mission Keywords Extraction'
             );
             expect(extractionCalls).toHaveLength(0);
@@ -273,7 +273,7 @@ describe('Profile Matching Service', () => {
                 }]
             };
             
-            callOpenAI
+            callBusinessChatCompletion
                 .mockResolvedValueOnce(extractionResponse) // First call: extraction
                 .mockResolvedValue(mockLLMScoringResponse); // Subsequent calls: scoring
             
@@ -305,7 +305,7 @@ describe('Profile Matching Service', () => {
             selectWithTimeout.mockResolvedValue(manyResumes);
             
             // Mock responses for multiple batches
-            callOpenAI.mockResolvedValue({
+            callBusinessChatCompletion.mockResolvedValue({
                 choices: [{
                     message: {
                         content: JSON.stringify({
@@ -321,12 +321,12 @@ describe('Profile Matching Service', () => {
             
             // Should have called LLM multiple times for batches
             // (exact count depends on pre-filtering)
-            expect(callOpenAI).toHaveBeenCalled();
+            expect(callBusinessChatCompletion).toHaveBeenCalled();
         });
 
         it('should handle partial LLM failures gracefully', async () => {
             // First batch succeeds, second fails
-            callOpenAI
+            callBusinessChatCompletion
                 .mockResolvedValueOnce(mockLLMScoringResponse)
                 .mockRejectedValueOnce(new Error('Batch 2 failed'));
             
@@ -338,7 +338,7 @@ describe('Profile Matching Service', () => {
         });
 
         it('should handle malformed LLM response', async () => {
-            callOpenAI.mockResolvedValue({
+            callBusinessChatCompletion.mockResolvedValue({
                 choices: [{
                     message: {
                         content: 'not valid json'

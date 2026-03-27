@@ -1,7 +1,7 @@
 import { ChangeEvent, useMemo } from 'react';
 
 interface FormData {
-  llmProvider: 'openai' | 'anthropic' | 'ollama';
+  llmProvider: 'openai' | 'anthropic' | 'minimax' | 'ollama';
   llmModel: string;
   ollamaBaseUrl?: string;
   cvMode?: 'nominative' | 'anonymous';
@@ -27,6 +27,15 @@ const ANTHROPIC_MODELS = [
   'claude-3-5-haiku-20241022'
 ];
 
+const MINIMAX_MODELS = [
+  'MiniMax-M2.7',
+  'MiniMax-M2.5',
+  'MiniMax-M2.5-highspeed',
+  'MiniMax-M2.1',
+  'MiniMax-M2.1-highspeed',
+  'MiniMax-M2'
+];
+
 const fallbackText = (t: (key: string) => string, key: string, fallback: string): string => {
   const translated = t(key);
   return translated === key ? fallback : translated;
@@ -42,6 +51,7 @@ const LLMTab = ({
   const providerOptions = useMemo(() => ([
     { value: 'openai', label: 'OpenAI' },
     { value: 'anthropic', label: 'Anthropic' },
+    { value: 'minimax', label: 'MiniMax' },
     { value: 'ollama', label: 'Ollama' }
   ]), []);
 
@@ -49,15 +59,22 @@ const LLMTab = ({
     if (provider === 'anthropic') {
       return ANTHROPIC_MODELS;
     }
+    if (provider === 'minimax') {
+      return MINIMAX_MODELS;
+    }
     return OPENAI_MODELS;
   }, [provider]);
 
   const handleProviderChange = (e: ChangeEvent<HTMLSelectElement>): void => {
-    const nextProvider = e.target.value as 'openai' | 'anthropic' | 'ollama';
+    const nextProvider = e.target.value as 'openai' | 'anthropic' | 'minimax' | 'ollama';
     onInputChange('llmProvider', nextProvider);
 
     if (nextProvider === 'anthropic' && !ANTHROPIC_MODELS.includes(formData.llmModel)) {
       onInputChange('llmModel', 'claude-sonnet-4.6');
+    }
+
+    if (nextProvider === 'minimax' && !MINIMAX_MODELS.includes(formData.llmModel)) {
+      onInputChange('llmModel', 'MiniMax-M2.7');
     }
 
     if (nextProvider === 'openai' && !OPENAI_MODELS.includes(formData.llmModel)) {
@@ -94,7 +111,9 @@ const LLMTab = ({
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
           {provider === 'ollama'
             ? fallbackText(t, 'settings.llm.ollamaDescription', 'Configurez uniquement l adresse de votre hote Ollama. Le modele actif sera detecte automatiquement sur votre machine.')
-            : fallbackText(t, 'settings.llm.description', 'Selectionnez le provider et le modele LLM a utiliser pour l analyse et l amelioration des CV.')}
+            : provider === 'minimax'
+              ? fallbackText(t, 'settings.llm.minimaxDescription', 'Selectionnez un modele MiniMax. L application utilisera l API MiniMax cote serveur.')
+              : fallbackText(t, 'settings.llm.description', 'Selectionnez le provider et le modele LLM a utiliser pour l analyse et l amelioration des CV.')}
         </p>
       </div>
 
@@ -195,4 +214,3 @@ const LLMTab = ({
 };
 
 export default LLMTab;
-

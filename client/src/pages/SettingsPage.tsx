@@ -15,7 +15,7 @@ import logger from '../utils/logger.frontend';
 import { LLMTab, PromptsTab, WeightsTab, ChatbotTab, GdprTab, DpoTab } from '../components/SettingsPage';
 
 type HeroIcon = ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, 'ref'> & { title?: string; titleId?: string } & RefAttributes<SVGSVGElement>>;
-type LLMProvider = 'openai' | 'anthropic' | 'ollama';
+type LLMProvider = 'openai' | 'anthropic' | 'minimax' | 'ollama';
 interface Settings {
   id?: string;
   llmProvider?: LLMProvider;
@@ -116,7 +116,7 @@ const SettingsPage = (): JSX.Element => {
       setSettings(data);
       setFormData({
         llmProvider: data.llmProvider || 'openai',
-        llmModel: data.llmModel || (data.llmProvider === 'anthropic' ? 'claude-sonnet-4.6' : 'gpt-4o'),
+        llmModel: data.llmModel || (data.llmProvider === 'anthropic' ? 'claude-sonnet-4.6' : data.llmProvider === 'minimax' ? 'MiniMax-M2.7' : 'gpt-4o'),
         ollamaBaseUrl: data.ollamaBaseUrl || '',
         cvMode: data.cvMode || 'nominative',
         chatbotEnabled: data.chatbotEnabled || 'on',
@@ -226,7 +226,7 @@ const SettingsPage = (): JSX.Element => {
       const defaults: Settings = await response.json();
       setFormData({
         llmProvider: defaults.llmProvider || 'openai',
-        llmModel: defaults.llmModel || 'gpt-4o',
+        llmModel: defaults.llmModel || (defaults.llmProvider === 'anthropic' ? 'claude-sonnet-4.6' : defaults.llmProvider === 'minimax' ? 'MiniMax-M2.7' : 'gpt-4o'),
         ollamaBaseUrl: defaults.ollamaBaseUrl || '',
         cvMode: defaults.cvMode || 'nominative',
         chatbotEnabled: defaults.chatbotEnabled || 'on',
@@ -425,6 +425,7 @@ const SettingsPage = (): JSX.Element => {
 };
 
 export default SettingsPage;
+
 
 
 

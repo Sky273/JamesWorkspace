@@ -171,6 +171,22 @@ describe('Zod Validation Schemas', () => {
             const result = anthropicRequestSchema.safeParse(validRequest);
             expect(result.success).toBe(true);
         });
+
+        it('should accept structured Anthropic content blocks', () => {
+            const validRequest = {
+                messages: [{
+                    role: 'user',
+                    content: [
+                        { type: 'text', text: 'Hello' },
+                        { type: 'thinking', thinking: 'Internal reasoning' }
+                    ]
+                }],
+                system: [{ type: 'text', text: 'You are a helpful assistant' }]
+            };
+
+            const result = anthropicRequestSchema.safeParse(validRequest);
+            expect(result.success).toBe(true);
+        });
     });
 
     describe('createMissionSchema', () => {
@@ -654,3 +670,4 @@ describe('Zod Validation Schemas', () => {
         });
     });
 });
+

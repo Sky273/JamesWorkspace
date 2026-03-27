@@ -1,5 +1,5 @@
 import express from 'express';
-import { OPENAI_API_KEY, ANTHROPIC_API_KEY, OLLAMA_BASE_URL } from '../config/constants.js';
+import { OPENAI_API_KEY, ANTHROPIC_API_KEY, MINIMAX_API_KEY, MINIMAX_ANTHROPIC_BASE_URL, OLLAMA_BASE_URL } from '../config/constants.js';
 import { settingsCache, templatesCache, firmsCache } from '../services/cache.service.js';
 import { checkDatabaseHealth } from '../services/health.service.js';
 import { getTrendsCacheStats } from '../services/marketTrends.service.js';
@@ -32,6 +32,7 @@ router.get('/', async (req, res) => {
         database: { status: 'unknown' },
         openai: { status: 'unknown' },
         anthropic: { status: 'unknown' },
+        minimax: { status: 'unknown' },
         ollama: { status: 'unknown' },
         memory: { status: 'ok' },
         cache: { status: 'ok' }
@@ -344,3 +345,7 @@ router.get('/storage', authenticateToken, requireAdmin, async (req, res) => {
 });
 
 export default router;
+
+
+
+

@@ -5,6 +5,7 @@
 
 import { safeLog } from '../../utils/logger.backend.js';
 import { callBusinessChatCompletion } from '../llmProvider.service.js';
+import { normalizeUtf8Text, parseJsonFromLlmResponse, stripLlmThinkingContent } from './textUtils.js';
 
 /**
  * Match resume with mission using OpenAI
@@ -35,7 +36,7 @@ export async function matchResumeWithMission(resumeText, missionTitle, missionCo
     });
 
     try {
-        const rawAnalysis = JSON.parse(response.choices[0].message.content);
+        const rawAnalysis = parseJsonFromLlmResponse(response.choices[0].message.content);
         // Normalize the response to ensure frontend compatibility while preserving full data
         return normalizeMatchAnalysis(rawAnalysis);
     } catch (parseError) {
@@ -43,8 +44,8 @@ export async function matchResumeWithMission(resumeText, missionTitle, missionCo
             error: parseError.message,
             responsePreview: response.choices[0].message.content.substring(0, 500)
         });
-        throw new Error('Le modÃ¨le LLM a retournÃ© une rÃ©ponse invalide pour le matching. Veuillez rÃ©essayer ou contacter le support si le problÃ¨me persiste.');
-    }
+        throw new Error(normalizeUtf8Text('Le mod\u00e8le LLM a retourn\u00e9 une r\u00e9ponse invalide pour le matching. Veuillez r\u00e9essayer ou contacter le support si le probl\u00e8me persiste.'));
+}
 }
 
 /**
@@ -67,7 +68,7 @@ function normalizeMatchAnalysis(analysis) {
             // New format: preserve original and create legacy format
             normalized._strengthsDetailed = normalized.strengths;
             normalized.strengths = normalized.strengths.map(s => {
-                const coverage = s.coverage === 'explicit' ? 'âœ“' : s.coverage === 'partial' ? '~' : '';
+                const coverage = s.coverage === 'explicit' ? '\u2713' : s.coverage === 'partial' ? '~' : '';
                 return `${coverage} ${s.item}${s.evidence ? ` (${s.evidence})` : ''}`.trim();
             });
         }
@@ -79,7 +80,7 @@ function normalizeMatchAnalysis(analysis) {
             // New format: preserve original and create legacy format
             normalized._gapsDetailed = normalized.gaps;
             normalized.gaps = normalized.gaps.map(g => {
-                const severity = g.severity === 'high' ? 'âš ï¸' : g.severity === 'medium' ? 'âš¡' : '';
+                const severity = g.severity === 'high' ? '\u26a0\ufe0f' : g.severity === 'medium' ? '\u26a1' : '';
                 return `${severity} ${g.item}${g.reason ? ` - ${g.reason}` : ''}`.trim();
             });
         }
@@ -185,12 +186,11 @@ Respond in the same language as the resume.`;
     });
 
     // Clean markdown code blocks if present
-    let content = response.choices[0].message.content;
-    content = content.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
+    const content = stripLlmThinkingContent(response.choices[0].message.content);
     
     // Parse the structured JSON response
     try {
-        const parsed = JSON.parse(content);
+        const parsed = parseJsonFromLlmResponse(content);
         
         // New format: { name, summary, improvedText, improvements }
         if (parsed.improvedText !== undefined) {
@@ -249,12 +249,12 @@ function convertAdaptationToHtml(data) {
     
     // Professional Summary
     if (data.professionalSummary) {
-        sections.push(`<h2>RÃ©sumÃ© Professionnel</h2>\n<p>${data.professionalSummary}</p>`);
+        sections.push(`<h2>R\u00e9sum\u00e9 Professionnel</h2>\n<p>${data.professionalSummary}</p>`);
     }
     
     // Key Skills
     if (data.keySkills && data.keySkills.length > 0) {
-        sections.push(`<h2>CompÃ©tences ClÃ©s</h2>\n<ul>\n${data.keySkills.map(s => `  <li>${s}</li>`).join('\n')}\n</ul>`);
+        sections.push(`<h2>Comp\u00e9tences Cl\u00e9s</h2>\n<ul>\n${data.keySkills.map(s => `  <li>${s}</li>`).join('\n')}\n</ul>`);
     }
     
     // Tools and Technologies
@@ -275,7 +275,7 @@ function convertAdaptationToHtml(data) {
                 : '';
             return `${header}\n${context}${missions}${techs}`;
         }).join('\n\n');
-        sections.push(`<h2>ExpÃ©rience Professionnelle</h2>\n${expHtml}`);
+        sections.push(`<h2>Exp\u00e9rience Professionnelle</h2>\n${expHtml}`);
     }
     
     // Education
@@ -298,3 +298,6 @@ function convertAdaptationToHtml(data) {
     
     return sections.join('\n\n');
 }
+
+
+

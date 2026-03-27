@@ -13,9 +13,13 @@ vi.mock('../../services/llmProvider.service.js', () => ({
     callBusinessChatCompletion: vi.fn()
 }));
 
-vi.mock('../../services/openai/textUtils.js', () => ({
-    cleanupHtml: vi.fn(html => html)
-}));
+vi.mock('../../services/openai/textUtils.js', async (importOriginal) => {
+    const actual = await importOriginal();
+    return {
+        ...actual,
+        cleanupHtml: vi.fn(html => html)
+    };
+});
 
 import { callBusinessChatCompletion } from '../../services/llmProvider.service.js';
 import { analyzeResume, improveResume } from '../../services/openai/resumeOperations.js';

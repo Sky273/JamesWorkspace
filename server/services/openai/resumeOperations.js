@@ -5,7 +5,7 @@
 
 import { safeLog } from '../../utils/logger.backend.js';
 import { callBusinessChatCompletion } from '../llmProvider.service.js';
-import { cleanupHtml } from './textUtils.js';
+import { cleanupHtml, normalizeUtf8Text, parseJsonFromLlmResponse, stripLlmThinkingContent } from './textUtils.js';
 
 /**
  * Normalize analysis response to ensure consistent format regardless of model
@@ -114,14 +114,14 @@ export async function analyzeResume(resumeText, model, analysisPrompt, userMetad
 
     let rawAnalysis;
     try {
-        rawAnalysis = JSON.parse(response.choices[0].message.content);
+        rawAnalysis = parseJsonFromLlmResponse(response.choices[0].message.content);
     } catch (parseError) {
         safeLog('error', 'Failed to parse LLM analysis response as JSON', {
             error: parseError.message,
             responsePreview: response.choices[0].message.content.substring(0, 500)
         });
-        throw new Error('Le modÃ¨le LLM a retournÃ© une rÃ©ponse invalide. Veuillez rÃ©essayer ou contacter le support si le problÃ¨me persiste.');
-    }
+        throw new Error(normalizeUtf8Text('Le mod\u00e8le LLM a retourn\u00e9 une r\u00e9ponse invalide. Veuillez r\u00e9essayer ou contacter le support si le probl\u00e8me persiste.'));
+}
     
     // Debug logging to track tags and ratings
     safeLog('debug', 'Raw analysis from LLM', {
@@ -186,8 +186,8 @@ export async function improveResume(text, analysis, model, improvementPromptTemp
             textLength: text?.length || 0,
             minRequired: 100
         });
-        throw new Error('Le texte du CV est trop court pour Ãªtre amÃ©liorÃ© (minimum 100 caractÃ¨res).');
-    }
+        throw new Error(normalizeUtf8Text('Le texte du CV est trop court pour \u00eatre am\u00e9lior\u00e9 (minimum 100 caract\u00e8res).'));
+}
 
     const response = await callBusinessChatCompletion({
         model,
@@ -202,12 +202,7 @@ export async function improveResume(text, analysis, model, improvementPromptTemp
         operationType: 'Resume Improvement'
     });
 
-    let rawContent = response.choices[0].message.content
-        .replace(/^```html\s*/i, '')
-        .replace(/\s*```$/i, '')
-        .replace(/^```json\s*/i, '')
-        .replace(/^```\s*/i, '')
-        .trim();
+    const rawContent = stripLlmThinkingContent(response.choices[0].message.content);
 
     safeLog('info', 'LLM Improvement raw response preview:', { 
         isJSON: rawContent.startsWith('{'),
@@ -219,7 +214,7 @@ export async function improveResume(text, analysis, model, improvementPromptTemp
     // The prompt asks for JSON format with improvedText, improvements, summary
     if (rawContent.startsWith('{') && rawContent.includes('"improvedText"')) {
         try {
-            const parsed = JSON.parse(rawContent);
+            const parsed = parseJsonFromLlmResponse(rawContent);
             
             // Clean up the HTML content
             const cleanedText = cleanupHtml(parsed.improvedText || '');
@@ -231,8 +226,8 @@ export async function improveResume(text, analysis, model, improvementPromptTemp
                     improvedTextLength: parsed.improvedText?.length || 0,
                     cleanedTextLength: cleanedText?.length || 0
                 });
-                throw new Error('Le modÃ¨le LLM a retournÃ© un CV amÃ©liorÃ© vide. Veuillez rÃ©essayer.');
-            }
+                throw new Error(normalizeUtf8Text('Le mod\u00e8le LLM a retourn\u00e9 un CV am\u00e9lior\u00e9 vide. Veuillez r\u00e9essayer.'));
+}
             
             // Build analysis object from improvements
             const improvements = parsed.improvements || {};
@@ -273,8 +268,8 @@ export async function improveResume(text, analysis, model, improvementPromptTemp
                 error: parseError.message,
                 responsePreview: rawContent.substring(0, 500)
             });
-            throw new Error('Le modÃ¨le LLM a retournÃ© une rÃ©ponse JSON invalide pour l\'amÃ©lioration. Veuillez rÃ©essayer ou contacter le support si le problÃ¨me persiste.');
-        }
+            throw new Error(normalizeUtf8Text("Le mod\u00e8le LLM a retourn\u00e9 une r\u00e9ponse JSON invalide pour l'am\u00e9lioration. Veuillez r\u00e9essayer ou contacter le support si le probl\u00e8me persiste."));
+}
     }
 
     // Fallback: if response is plain HTML, return with empty analysis
@@ -287,8 +282,8 @@ export async function improveResume(text, analysis, model, improvementPromptTemp
             cleanedTextLength: cleanedText?.length || 0,
             rawContentPreview: rawContent?.substring(0, 200)
         });
-        throw new Error('Le modÃ¨le LLM a retournÃ© une rÃ©ponse vide. Veuillez rÃ©essayer.');
-    }
+        throw new Error(normalizeUtf8Text('Le mod\u00e8le LLM a retourn\u00e9 une r\u00e9ponse vide. Veuillez r\u00e9essayer.'));
+}
     
     return {
         text: cleanedText,
@@ -307,3 +302,8 @@ export async function improveResume(text, analysis, model, improvementPromptTemp
         }
     };
 }
+
+
+
+
+

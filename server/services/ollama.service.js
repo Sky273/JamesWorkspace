@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { OLLAMA_AUTO_PULL, OLLAMA_BASE_URL, OLLAMA_REQUEST_TIMEOUT_MS } from '../config/constants.js';
 import { safeLog } from '../utils/logger.backend.js';
+import { stripLlmThinkingContent } from './openai/textUtils.js';
 
 const OLLAMA_OPERATION_TIMEOUTS_MS = {
     'Resume Analysis': 20 * 60 * 1000,
@@ -117,18 +118,28 @@ function extractTextFromStructuredContent(content) {
 }
 
 function extractOllamaContent(payload = {}) {
-    const candidates = [
+    const responseCandidates = [
         payload?.message?.content,
         payload?.message?.text,
         payload?.response,
         payload?.content,
-        payload?.output,
+        payload?.output
+    ];
+
+    for (const candidate of responseCandidates) {
+        const text = stripLlmThinkingContent(extractTextFromStructuredContent(candidate));
+        if (text) {
+            return text;
+        }
+    }
+
+    const reasoningCandidates = [
         payload?.message?.reasoning_content,
         payload?.message?.thinking
     ];
 
-    for (const candidate of candidates) {
-        const text = extractTextFromStructuredContent(candidate);
+    for (const candidate of reasoningCandidates) {
+        const text = stripLlmThinkingContent(extractTextFromStructuredContent(candidate));
         if (text) {
             return text;
         }

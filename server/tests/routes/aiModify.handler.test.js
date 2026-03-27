@@ -5,11 +5,19 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('../../utils/logger.backend.js', () => ({ safeLog: vi.fn() }));
+vi.mock('../../utils/logger.backend.js', () => ({
+    safeLog: vi.fn(),
+    createModuleLogger: () => ({
+        info: vi.fn(),
+        error: vi.fn(),
+        warn: vi.fn(),
+        debug: vi.fn()
+    })
+}));
 
-const mockCallOpenAI = vi.fn();
-vi.mock('../../services/openai.service.js', () => ({
-    callOpenAI: (...args) => mockCallOpenAI(...args)
+const mockCallBusinessChatCompletion = vi.fn();
+vi.mock('../../services/llmProvider.service.js', () => ({
+    callBusinessChatCompletion: (...args) => mockCallBusinessChatCompletion(...args)
 }));
 
 const mockGetLLMSettings = vi.fn();
@@ -66,7 +74,7 @@ describe('aiModifyHandler', () => {
     });
 
     it('should handle full content modification', async () => {
-        mockCallOpenAI.mockResolvedValueOnce({
+        mockCallBusinessChatCompletion.mockResolvedValueOnce({
             choices: [{ message: { content: '{"modifiedContent":"<p>Fixed CV</p>","message":"Fixed typos"}' } }]
         });
 
@@ -81,7 +89,7 @@ describe('aiModifyHandler', () => {
     });
 
     it('should handle selection-based modification', async () => {
-        mockCallOpenAI.mockResolvedValueOnce({
+        mockCallBusinessChatCompletion.mockResolvedValueOnce({
             choices: [{ message: { content: '{"modifiedSelection":"<span>Better text</span>","message":"Improved selection"}' } }]
         });
 
@@ -100,7 +108,7 @@ describe('aiModifyHandler', () => {
     });
 
     it('should handle non-JSON LLM response (fallback)', async () => {
-        mockCallOpenAI.mockResolvedValueOnce({
+        mockCallBusinessChatCompletion.mockResolvedValueOnce({
             choices: [{ message: { content: '<p>Raw HTML response</p>' } }]
         });
 
@@ -114,7 +122,7 @@ describe('aiModifyHandler', () => {
     });
 
     it('should strip markdown code blocks from LLM response', async () => {
-        mockCallOpenAI.mockResolvedValueOnce({
+        mockCallBusinessChatCompletion.mockResolvedValueOnce({
             choices: [{ message: { content: '```json\n{"modifiedContent":"<p>OK</p>","message":"Done"}\n```' } }]
         });
 
@@ -128,7 +136,7 @@ describe('aiModifyHandler', () => {
     });
 
     it('should handle LLM error with status code', async () => {
-        mockCallOpenAI.mockRejectedValueOnce(Object.assign(new Error('Rate limited'), {
+        mockCallBusinessChatCompletion.mockRejectedValueOnce(Object.assign(new Error('Rate limited'), {
             response: { status: 429, data: { error: 'Too many requests' } }
         }));
 

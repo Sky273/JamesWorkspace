@@ -9,6 +9,7 @@ import { safeLog } from '../utils/logger.backend.js';
 import { callBusinessChatCompletion } from './llmProvider.service.js';
 import { getLLMSettings } from './settings.service.js';
 import { MISSION_KEYWORDS_EXTRACTION_PROMPT, DETAILED_PROFILE_ANALYSIS_PROMPT, BATCH_PROFILE_SCORING_PROMPT } from '../config/prompts.backend.js';
+import { normalizeUtf8Text, parseJsonFromLlmResponse } from './openai/textUtils.js';
 
 /**
  * Default weights for scoring categories
@@ -64,13 +65,13 @@ async function extractMissionKeywords(missionTitle, missionContent, model, userM
     
     let keywords;
     try {
-        keywords = JSON.parse(response.choices[0].message.content);
+        keywords = parseJsonFromLlmResponse(response.choices[0].message.content);
     } catch (parseError) {
         safeLog('error', 'Failed to parse mission keywords response as JSON', {
             error: parseError.message
         });
-        throw new Error('Erreur lors de l\'extraction des mots-clés de la mission.');
-    }
+        throw new Error(normalizeUtf8Text("Erreur lors de l'extraction des mots-cl\u00e9s de la mission."));
+}
     
     return keywords;
 }
@@ -171,7 +172,7 @@ async function scoreBatchWithLLM(profiles, missionKeywords, missionRecord, userM
     async function processBatch(batch, batchIndex) {
         const candidatesData = batch.map(p => ({
             id: p.resumeId,
-            title: p.title || 'Non spécifié',
+            title: p.title || normalizeUtf8Text('Non sp\u00e9cifi\u00e9'),
             skills: (p.resumeTags?.skills || []).slice(0, 10),
             tools: (p.resumeTags?.tools || []).slice(0, 8),
             industries: (p.resumeTags?.industries || []).slice(0, 3),
@@ -182,11 +183,11 @@ async function scoreBatchWithLLM(profiles, missionKeywords, missionRecord, userM
 
         const prompt = BATCH_PROFILE_SCORING_PROMPT
             .replace('{MISSION_TITLE}', missionRecord.title || '')
-            .replace('{MISSION_SKILLS}', (missionKeywords.skills || []).join(', ') || 'Non spécifié')
-            .replace('{MISSION_TOOLS}', (missionKeywords.tools || []).join(', ') || 'Non spécifié')
-            .replace('{MISSION_INDUSTRIES}', (missionKeywords.industries || []).join(', ') || 'Non spécifié')
-            .replace('{MISSION_SOFT_SKILLS}', (missionKeywords.softSkills || []).join(', ') || 'Non spécifié')
-            .replace('{EXPERIENCE_LEVEL}', missionKeywords.experienceLevel || 'Non spécifié')
+            .replace('{MISSION_SKILLS}', (missionKeywords.skills || []).join(', ') || normalizeUtf8Text('Non sp\u00e9cifi\u00e9'))
+            .replace('{MISSION_TOOLS}', (missionKeywords.tools || []).join(', ') || normalizeUtf8Text('Non sp\u00e9cifi\u00e9'))
+            .replace('{MISSION_INDUSTRIES}', (missionKeywords.industries || []).join(', ') || normalizeUtf8Text('Non sp\u00e9cifi\u00e9'))
+            .replace('{MISSION_SOFT_SKILLS}', (missionKeywords.softSkills || []).join(', ') || normalizeUtf8Text('Non sp\u00e9cifi\u00e9'))
+            .replace('{EXPERIENCE_LEVEL}', missionKeywords.experienceLevel || normalizeUtf8Text('Non sp\u00e9cifi\u00e9'))
             .replace('{CANDIDATES_JSON}', candidatesJson);
 
         const response = await callBusinessChatCompletion({
@@ -202,7 +203,7 @@ async function scoreBatchWithLLM(profiles, missionKeywords, missionRecord, userM
             operationType: 'Batch Profile Scoring'
         });
 
-        const result = JSON.parse(response.choices[0].message.content);
+        const result = parseJsonFromLlmResponse(response.choices[0].message.content);
         safeLog('debug', 'Batch scoring completed', { 
             batchIndex: batchIndex + 1, 
             totalBatches: batches.length,
@@ -509,19 +510,19 @@ export async function analyzeProfileForMission(missionId, resumeId, userMetadata
     
     // 6. Build prompt
     const prompt = DETAILED_PROFILE_ANALYSIS_PROMPT
-        .replace('{CANDIDATE_NAME}', resumeRecord.name || 'Non spécifié')
-        .replace('{CANDIDATE_TITLE}', resumeRecord.title || 'Non spécifié')
-        .replace('{CANDIDATE_SKILLS}', candidateSkills.join(', ') || 'Non spécifié')
-        .replace('{CANDIDATE_TOOLS}', candidateTools.join(', ') || 'Non spécifié')
-        .replace('{CANDIDATE_INDUSTRIES}', candidateIndustries.join(', ') || 'Non spécifié')
-        .replace('{CANDIDATE_SOFT_SKILLS}', candidateSoftSkills.join(', ') || 'Non spécifié')
-        .replace('{CANDIDATE_RATING}', resumeRecord.global_rating || 'Non évalué')
+        .replace('{CANDIDATE_NAME}', resumeRecord.name || normalizeUtf8Text('Non sp\u00e9cifi\u00e9'))
+        .replace('{CANDIDATE_TITLE}', resumeRecord.title || normalizeUtf8Text('Non sp\u00e9cifi\u00e9'))
+        .replace('{CANDIDATE_SKILLS}', candidateSkills.join(', ') || normalizeUtf8Text('Non sp\u00e9cifi\u00e9'))
+        .replace('{CANDIDATE_TOOLS}', candidateTools.join(', ') || normalizeUtf8Text('Non sp\u00e9cifi\u00e9'))
+        .replace('{CANDIDATE_INDUSTRIES}', candidateIndustries.join(', ') || normalizeUtf8Text('Non sp\u00e9cifi\u00e9'))
+        .replace('{CANDIDATE_SOFT_SKILLS}', candidateSoftSkills.join(', ') || normalizeUtf8Text('Non sp\u00e9cifi\u00e9'))
+        .replace('{CANDIDATE_RATING}', resumeRecord.global_rating || normalizeUtf8Text('Non \u00e9valu\u00e9'))
         .replace('{MISSION_TITLE}', missionRecord.title || '')
         .replace('{MISSION_CONTENT}', missionRecord.content || '')
-        .replace('{MISSION_SKILLS}', (missionKeywords.skills || []).join(', ') || 'Non spécifié')
-        .replace('{MISSION_TOOLS}', (missionKeywords.tools || []).join(', ') || 'Non spécifié')
-        .replace('{MISSION_INDUSTRIES}', (missionKeywords.industries || []).join(', ') || 'Non spécifié')
-        .replace('{MISSION_SOFT_SKILLS}', (missionKeywords.softSkills || []).join(', ') || 'Non spécifié');
+        .replace('{MISSION_SKILLS}', (missionKeywords.skills || []).join(', ') || normalizeUtf8Text('Non sp\u00e9cifi\u00e9'))
+        .replace('{MISSION_TOOLS}', (missionKeywords.tools || []).join(', ') || normalizeUtf8Text('Non sp\u00e9cifi\u00e9'))
+        .replace('{MISSION_INDUSTRIES}', (missionKeywords.industries || []).join(', ') || normalizeUtf8Text('Non sp\u00e9cifi\u00e9'))
+        .replace('{MISSION_SOFT_SKILLS}', (missionKeywords.softSkills || []).join(', ') || normalizeUtf8Text('Non sp\u00e9cifi\u00e9'));
     
     // 7. Call LLM
     const response = await callBusinessChatCompletion({
@@ -539,10 +540,10 @@ export async function analyzeProfileForMission(missionId, resumeId, userMetadata
     
     let analysis;
     try {
-        analysis = JSON.parse(response.choices[0].message.content);
+        analysis = parseJsonFromLlmResponse(response.choices[0].message.content);
     } catch (_parseError) {
-        throw new Error('Erreur lors de l\'analyse détaillée du profil.');
-    }
+        throw new Error(normalizeUtf8Text("Erreur lors de l'analyse d\u00e9taill\u00e9e du profil."));
+}
     
     safeLog('info', 'Detailed profile analysis completed', {
         resumeId,
@@ -566,5 +567,6 @@ export default {
     analyzeProfileForMission,
     DEFAULT_WEIGHTS
 };
+
 
 

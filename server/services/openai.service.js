@@ -13,10 +13,11 @@
 export { callOpenAI, callOpenAIWithCircuitBreaker, getOpenAICircuitBreakerStatus } from './openai/apiClient.js';
 
 // Text utilities
-export { cleanupText, cleanupHtml, decodeHtmlEntities } from './openai/textUtils.js';
+export { cleanupText, cleanupHtml, decodeHtmlEntities, stripLlmThinkingContent, extractJsonPayload, parseJsonFromLlmResponse } from './openai/textUtils.js';
 
 // Resume operations
 export { analyzeResume, improveResume } from './openai/resumeOperations.js';
 
 // Mission operations
 export { matchResumeWithMission, adaptResumeToMission } from './openai/missionOperations.js';
+

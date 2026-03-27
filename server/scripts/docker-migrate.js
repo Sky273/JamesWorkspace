@@ -9,6 +9,7 @@ const ROOT_DIR = path.resolve(__dirname, '..', '..');
 const DOCKER_DIR = path.join(ROOT_DIR, 'docker');
 const FALLBACK_DOCKER_DIR = '/docker-entrypoint-initdb.d';
 const MIGRATION_TABLE = 'schema_migrations';
+const MINIMAX_PROVIDER_MIGRATION = 'add_minimax_provider.sql';
 
 async function pathExists(targetPath) {
     try {
@@ -208,6 +209,20 @@ async function tableExists(tableName) {
     return result.rows[0]?.exists === true;
 }
 
+async function llmProviderConstraintSupportsMiniMax() {
+    const result = await query(
+        `
+            SELECT pg_get_constraintdef(oid) AS definition
+            FROM pg_constraint
+            WHERE conname = 'llm_settings_llm_provider_check'
+              AND conrelid = 'public.llm_settings'::regclass
+        `
+    );
+
+    const definition = result.rows[0]?.definition || '';
+    return definition.toLowerCase().includes('minimax');
+}
+
 async function readSqlFile(filePath) {
     return fs.readFile(filePath, 'utf8');
 }
@@ -241,9 +256,34 @@ async function markMigrationApplied(migrationName) {
     );
 }
 
+async function unmarkMigrationApplied(migrationName) {
+    await query(
+        `DELETE FROM ${MIGRATION_TABLE} WHERE migration_name = $1`,
+        [migrationName]
+    );
+}
+
+async function reconcileCriticalMigrations(appliedMigrations) {
+    if (!await tableExists('llm_settings')) {
+        return appliedMigrations;
+    }
+
+    const minimaxConstraintOk = await llmProviderConstraintSupportsMiniMax();
+    if (appliedMigrations.has(MINIMAX_PROVIDER_MIGRATION) && !minimaxConstraintOk) {
+        safeLog('warn', 'MiniMax provider migration was marked applied but schema is still outdated; forcing reapply', {
+            migrationName: MINIMAX_PROVIDER_MIGRATION
+        });
+        await unmarkMigrationApplied(MINIMAX_PROVIDER_MIGRATION);
+        appliedMigrations.delete(MINIMAX_PROVIDER_MIGRATION);
+    }
+
+    return appliedMigrations;
+}
+
 async function applyPendingSqlMigrations() {
     const migrationFiles = await getMigrationFiles();
-    const appliedMigrations = await getAppliedMigrationNames();
+    let appliedMigrations = await getAppliedMigrationNames();
+    appliedMigrations = await reconcileCriticalMigrations(appliedMigrations);
 
     for (const migrationName of migrationFiles) {
         if (appliedMigrations.has(migrationName)) {
@@ -253,16 +293,9 @@ async function applyPendingSqlMigrations() {
         const migrationPath = path.join(MIGRATIONS_DIR, migrationName);
         safeLog('info', 'Applying SQL migration', { migrationName });
 
-        try {
-            await runSqlFile(migrationPath);
-        } catch (error) {
-            safeLog('warn', 'SQL migration reported an error and will be marked as applied', {
-                migrationName,
-                error: error.message
-            });
-        }
-
+        await runSqlFile(migrationPath);
         await markMigrationApplied(migrationName);
+        appliedMigrations.add(migrationName);
     }
 }
 
@@ -281,8 +314,6 @@ async function applyFreshSchema() {
         await markMigrationApplied(migrationName);
     }
 }
-
-
 
 async function seedIndustryAliases() {
     const countResult = await query('SELECT COUNT(*) AS cnt FROM industry_aliases');
@@ -357,4 +388,3 @@ if (isDirectRun) {
         await closePool();
     }
 }
-

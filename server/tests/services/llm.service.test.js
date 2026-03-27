@@ -14,10 +14,23 @@ vi.mock('../../services/settings.service.js', () => ({
     getLLMSettings: vi.fn()
 }));
 vi.mock('../../utils/logger.backend.js', () => ({
-    safeLog: vi.fn()
+    safeLog: vi.fn(),
+    createModuleLogger: () => ({
+        info: vi.fn(),
+        error: vi.fn(),
+        warn: vi.fn(),
+        debug: vi.fn()
+    })
 }));
 vi.mock('../../services/metrics.service.js', () => ({
     metrics: { trackLLMRequest: vi.fn() }
+}));
+vi.mock('../../services/ollama.service.js', () => ({
+    callOllama: vi.fn(),
+    callOllamaWithVision: vi.fn()
+}));
+vi.mock('../../services/minimax.service.js', () => ({
+    callMiniMaxOpenAICompatible: vi.fn()
 }));
 
 import axios from 'axios';
@@ -164,8 +177,26 @@ describe('LLM Service', () => {
             ]);
 
             const callBody = axios.post.mock.calls[0][1];
-            expect(callBody.system).toBe('You are helpful');
-            expect(callBody.messages).toHaveLength(1); // system removed from messages
+            expect(callBody.system).toEqual([{ type: 'text', text: 'You are helpful' }]);
+            expect(callBody.messages).toHaveLength(1);
+            expect(callBody.messages[0].content).toEqual([{ type: 'text', text: 'hello' }]);
+        });
+
+        it('should extract text from Anthropic structured responses', async () => {
+            getLLMSettings.mockResolvedValueOnce({ llmModel: 'claude-3-sonnet', llmProvider: 'anthropic' });
+            axios.post.mockResolvedValueOnce({
+                data: {
+                    content: [
+                        { type: 'thinking', thinking: 'Reasoning' },
+                        { type: 'text', text: 'Final answer' }
+                    ],
+                    model: 'claude-3-sonnet',
+                    usage: { input_tokens: 10, output_tokens: 20 }
+                }
+            });
+
+            const result = await callLLM([{ role: 'user', content: 'hello' }]);
+            expect(result.content).toBe('Reasoning\nFinal answer');
         });
     });
 
@@ -202,8 +233,10 @@ describe('LLM Service', () => {
 
             expect(result.content).toBe('I see it');
             const body = axios.post.mock.calls[0][1];
+            expect(body.system).toEqual([{ type: 'text', text: 'Describe' }]);
             expect(body.messages[0].content[0].type).toBe('image');
             expect(body.messages[0].content[0].source.data).toBe('abc123');
         });
     });
 });
+

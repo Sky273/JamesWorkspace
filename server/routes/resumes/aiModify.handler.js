@@ -2,6 +2,7 @@ import { callBusinessChatCompletion } from '../../services/llmProvider.service.j
 import { getLLMSettings } from '../../services/settings.service.js';
 import { safeLog } from '../../utils/logger.backend.js';
 import { getRequestMetadata } from '../../services/security.service.js';
+import { normalizeUtf8Text, parseJsonFromLlmResponse, stripLlmThinkingContent } from '../../services/openai/textUtils.js';
 
 /**
  * AI Modify Handler
@@ -29,7 +30,7 @@ export async function aiModifyHandler(req, res) {
         
         if (hasSelection) {
             // Selection-based modification: only modify the selected portion
-            modificationPrompt = `Tu es un assistant spécialisé dans l'édition de CV professionnels.
+            modificationPrompt = normalizeUtf8Text(`Tu es un assistant spécialisé dans l'édition de CV professionnels.
 
 INSTRUCTIONS DE L'UTILISATEUR :
 ${instructions}
@@ -53,10 +54,10 @@ FORMAT DE RÉPONSE OBLIGATOIRE (JSON) :
   "message": "Un message court (1-2 phrases) décrivant les modifications apportées"
 }
 
-IMPORTANT : Retourne UNIQUEMENT ce JSON, sans texte avant ou après.`;
+IMPORTANT : Retourne UNIQUEMENT ce JSON, sans texte avant ou après.`);
         } else {
             // Full content modification
-            modificationPrompt = `Tu es un assistant spécialisé dans l'édition de CV professionnels.
+            modificationPrompt = normalizeUtf8Text(`Tu es un assistant spécialisé dans l'édition de CV professionnels.
 
 INSTRUCTIONS DE L'UTILISATEUR :
 ${instructions}
@@ -77,7 +78,7 @@ FORMAT DE RÉPONSE OBLIGATOIRE (JSON) :
   "message": "Un message court (1-2 phrases) décrivant les modifications apportées"
 }
 
-IMPORTANT : Retourne UNIQUEMENT ce JSON, sans texte avant ou après.`;
+IMPORTANT : Retourne UNIQUEMENT ce JSON, sans texte avant ou après.`);
         }
 
         safeLog('info', 'AI Modify request', {
@@ -134,27 +135,24 @@ If the user's instructions are not related to resume editing, refuse politely an
             operationType: 'Resume AI Modification'
         });
 
-        let rawResponse = response.choices[0].message.content;
-
-        // Clean up response - remove markdown code blocks if present
-        rawResponse = rawResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        const rawResponse = stripLlmThinkingContent(response.choices[0].message.content);
 
         // Parse the JSON response from LLM
         let parsedResponse;
         try {
-            parsedResponse = JSON.parse(rawResponse);
+            parsedResponse = parseJsonFromLlmResponse(rawResponse);
         } catch (parseError) {
             safeLog('error', 'Failed to parse LLM JSON response', { error: parseError.message, rawResponse: rawResponse.substring(0, 500) });
             // Fallback: treat the entire response as HTML content
             if (hasSelection) {
                 parsedResponse = {
                     modifiedSelection: rawResponse,
-                    message: 'Sélection modifiée avec succès.'
+                    message: normalizeUtf8Text('S\u00e9lection modifi\u00e9e avec succ\u00e8s.')
                 };
             } else {
                 parsedResponse = {
                     modifiedContent: rawResponse,
-                    message: 'Modifications appliquées avec succès. Le CV a été modifié selon vos instructions.'
+                    message: normalizeUtf8Text('Modifications appliqu\u00e9es avec succ\u00e8s. Le CV a \u00e9t\u00e9 modifi\u00e9 selon vos instructions.')
                 };
             }
         }
@@ -189,5 +187,8 @@ If the user's instructions are not related to resume editing, refuse politely an
         res.status(statusCode).json({ error: errorMessage });
     }
 }
+
+
+
 
 

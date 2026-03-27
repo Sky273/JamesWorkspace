@@ -1,12 +1,14 @@
 /**
  * Provider-aware chat completion helper for business flows.
- * Keeps OpenAI response shape for callers, while routing to Ollama when configured.
+ * Keeps OpenAI response shape for callers, while routing to the configured provider.
  */
 
 import { getLLMSettings } from './settings.service.js';
 import { callOpenAI } from './openai/apiClient.js';
 import { callOllama } from './ollama.service.js';
+import { callMiniMaxOpenAICompatible } from './minimax.service.js';
 import { safeLog } from '../utils/logger.backend.js';
+import { normalizeUtf8Text } from './openai/textUtils.js';
 
 const OLLAMA_CV_OPERATION_TIMEOUTS_MS = {
     'Resume Analysis': 20 * 60 * 1000,
@@ -21,6 +23,22 @@ function resolveBusinessOllamaTimeout(operationType, timeout) {
     }
 
     return timeout;
+}
+
+function normalizeMessagesContent(messages = []) {
+    return (messages || []).map(message => ({
+        ...message,
+        content: typeof message?.content === 'string'
+            ? normalizeUtf8Text(message.content)
+            : Array.isArray(message?.content)
+                ? message.content.map(block => ({
+                    ...block,
+                    text: typeof block?.text === 'string' ? normalizeUtf8Text(block.text) : block?.text,
+                    content: typeof block?.content === 'string' ? normalizeUtf8Text(block.content) : block?.content,
+                    thinking: typeof block?.thinking === 'string' ? normalizeUtf8Text(block.thinking) : block?.thinking
+                }))
+                : message?.content
+    }));
 }
 
 function toOpenAIShape(result) {
@@ -60,6 +78,7 @@ export async function callBusinessChatCompletion({
     const settings = await getLLMSettings();
     const provider = settings?.llmProvider || 'openai';
     const configuredModel = settings?.llmModel || model;
+    const normalizedMessages = normalizeMessagesContent(messages);
     const effectiveModel = provider === 'ollama' ? (model || configuredModel || null) : (model || configuredModel);
 
     if (provider !== 'ollama' && !effectiveModel) {
@@ -71,10 +90,10 @@ export async function callBusinessChatCompletion({
             operationType,
             provider,
             model: effectiveModel || 'runtime:auto',
-            messageCount: messages?.length || 0
+            messageCount: normalizedMessages.length
         });
 
-        const result = await callOllama(messages, effectiveModel, settings, {
+        const result = await callOllama(normalizedMessages, effectiveModel, settings, {
             temperature,
             max_tokens: maxTokens,
             timeout: resolveBusinessOllamaTimeout(operationType, timeout),
@@ -84,9 +103,32 @@ export async function callBusinessChatCompletion({
         return toOpenAIShape(result);
     }
 
+    if (provider === 'minimax') {
+        safeLog('info', 'Routing business LLM call to MiniMax', {
+            operationType,
+            provider,
+            model: effectiveModel,
+            messageCount: normalizedMessages.length
+        });
+
+        const result = await callMiniMaxOpenAICompatible({
+            model: effectiveModel,
+            messages: normalizedMessages,
+            maxTokens,
+            temperature,
+            topP,
+            responseFormat,
+            timeout,
+            maxPromptLength,
+            operationType
+        });
+
+        return toOpenAIShape(result);
+    }
+
     return callOpenAI({
         model: effectiveModel,
-        messages,
+        messages: normalizedMessages,
         maxTokens,
         temperature,
         topP,

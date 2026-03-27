@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { decodeHtmlEntities, cleanupText, cleanupHtml } from '../../services/openai/textUtils.js';
+import { decodeHtmlEntities, cleanupText, cleanupHtml, normalizeUtf8Text, stripLlmThinkingContent, extractJsonPayload, parseJsonFromLlmResponse } from '../../services/openai/textUtils.js';
 
 describe('OpenAI Text Utilities', () => {
     describe('decodeHtmlEntities', () => {
@@ -23,28 +23,29 @@ describe('OpenAI Text Utilities', () => {
         });
 
         it('should decode typographic entities', () => {
-            expect(decodeHtmlEntities('&laquo;')).toBe('«');
-            expect(decodeHtmlEntities('&raquo;')).toBe('»');
-            expect(decodeHtmlEntities('&ndash;')).toBe('–');
-            expect(decodeHtmlEntities('&mdash;')).toBe('—');
-            expect(decodeHtmlEntities('&hellip;')).toBe('…');
-            expect(decodeHtmlEntities('&euro;')).toBe('€');
+            expect(decodeHtmlEntities('&laquo;')).toBe('\u00ab');
+            expect(decodeHtmlEntities('&raquo;')).toBe('\u00bb');
+            expect(decodeHtmlEntities('&ndash;')).toBe('\u2013');
+            expect(decodeHtmlEntities('&mdash;')).toBe('\u2014');
+            expect(decodeHtmlEntities('&hellip;')).toBe('\u2026');
+            expect(decodeHtmlEntities('&euro;')).toBe('\u20ac');
         });
 
         it('should decode decimal numeric entities', () => {
             expect(decodeHtmlEntities('&#65;')).toBe('A');
-            expect(decodeHtmlEntities('&#233;')).toBe('é');
+            expect(decodeHtmlEntities('&#233;')).toBe('\u00e9');
         });
 
         it('should decode hexadecimal numeric entities', () => {
             expect(decodeHtmlEntities('&#x41;')).toBe('A');
-            expect(decodeHtmlEntities('&#xE9;')).toBe('é');
+            expect(decodeHtmlEntities('&#xE9;')).toBe('\u00e9');
         });
 
         it('should decode multiple entities in one string', () => {
             expect(decodeHtmlEntities('A &amp; B &lt; C')).toBe('A & B < C');
         });
     });
+
 
     describe('cleanupText', () => {
         it('should return falsy input as-is', () => {
@@ -81,6 +82,29 @@ describe('OpenAI Text Utilities', () => {
 
         it('should trim result', () => {
             expect(cleanupText('  hello  ')).toBe('hello');
+        });
+    });
+
+    describe('LLM JSON parsing', () => {
+        it('should strip think blocks before parsing', () => {
+            expect(stripLlmThinkingContent('<think>reasoning</think>{"ok":true}')).toBe('{"ok":true}');
+            expect(extractJsonPayload('preface <think>reasoning</think>{"ok":true}')).toBe('{"ok":true}');
+        });
+
+        it('should discard unclosed think preambles before the JSON payload', () => {
+            const response = '<think>reasoning about the resume\n- bullet\n{"ok":true,"items":["a","b"]}';
+            expect(stripLlmThinkingContent(response)).toBe('{"ok":true,"items":["a","b"]}');
+            expect(parseJsonFromLlmResponse(response)).toEqual({ ok: true, items: ['a', 'b'] });
+        });
+
+        it('should parse JSON wrapped in markdown fences after reasoning', () => {
+            const response = '<thinking>draft</thinking>```json\n{"ok":true}\n```';
+            expect(parseJsonFromLlmResponse(response)).toEqual({ ok: true });
+        });
+
+        it('should repair raw control characters inside JSON strings', () => {
+            const parsed = parseJsonFromLlmResponse('{"summary":"Line 1\nLine 2","score":85}');
+            expect(parsed).toEqual({ summary: 'Line 1\nLine 2', score: 85 });
         });
     });
 
@@ -126,3 +150,8 @@ describe('OpenAI Text Utilities', () => {
         });
     });
 });
+
+
+
+
+

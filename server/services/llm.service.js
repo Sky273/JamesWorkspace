@@ -1,5 +1,5 @@
 // ============================================
-// LLM SERVICE - OpenAI, Anthropic and Ollama helpers
+// LLM SERVICE - OpenAI, Anthropic, MiniMax and Ollama helpers
 // ============================================
 
 import axios from 'axios';
@@ -8,6 +8,7 @@ import { getLLMSettings } from './settings.service.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { metrics } from './metrics.service.js';
 import { callOllama, callOllamaWithVision } from './ollama.service.js';
+import { callMiniMaxOpenAICompatible } from './minimax.service.js';
 
 export function getTokenParameter(model, tokenLimit) {
     const requiresCompletionTokens = model.match(/^(gpt-5(\.\d+)?(-\w+)?|gpt-4\.1|chatgpt-5|gpt-4o-2024-08-06|gpt-4o-2024-11-20|gpt-4o-mini-2024-07-18)/i);
@@ -50,14 +51,57 @@ function buildRequestOptions(options = {}) {
 }
 
 function getMetricsProviderLabel(provider, model) {
-    return provider === 'ollama' ? `ollama:${model}` : model;
+    if (provider === 'ollama') {
+        return `ollama:${model}`;
+    }
+    if (provider === 'minimax') {
+        return `minimax:${model}`;
+    }
+    return model;
+}
+
+function normalizeAnthropicContentBlocks(content) {
+    if (typeof content === 'string') {
+        return [{ type: 'text', text: content }];
+    }
+
+    if (!Array.isArray(content)) {
+        return [];
+    }
+
+    return content.map(block => {
+        if (typeof block === 'string') {
+            return { type: 'text', text: block };
+        }
+        return block;
+    });
+}
+
+function extractAnthropicTextContent(payload = {}) {
+    const blocks = Array.isArray(payload?.content) ? payload.content : [];
+    return blocks
+        .map(block => {
+            if (block?.type === 'text' && typeof block.text === 'string') {
+                return block.text;
+            }
+            if (block?.type === 'thinking' && typeof block.thinking === 'string') {
+                return block.thinking;
+            }
+            if (typeof block?.text === 'string') {
+                return block.text;
+            }
+            return '';
+        })
+        .filter(Boolean)
+        .join('\n')
+        .trim();
 }
 
 export async function callLLM(messages, options = {}) {
     try {
         const settings = await getLLMSettings();
-        const model = settings.llmProvider === 'ollama' ? null : (settings.llmModel || 'gpt-4o');
         const provider = settings.llmProvider || 'openai';
+        const model = provider === 'ollama' ? null : (settings.llmModel || (provider === 'minimax' ? 'MiniMax-M2.7' : 'gpt-4o'));
 
         safeLog('info', 'Calling LLM', {
             model,
@@ -77,6 +121,18 @@ export async function callLLM(messages, options = {}) {
             const result = await callOllama(messages, model, settings, buildRequestOptions(options));
             metrics.trackLLMRequest(getMetricsProviderLabel(provider, result.actualModel || model), result.usage?.total_tokens || 0, true, result.usage?.prompt_tokens || 0, result.usage?.completion_tokens || 0);
             return result;
+        }
+
+        if (provider === 'minimax') {
+            return await callMiniMaxOpenAICompatible({
+                model,
+                messages,
+                maxTokens: options.max_tokens || options.max_completion_tokens || options.max_output_tokens || 1000,
+                temperature: options.temperature,
+                topP: options.top_p,
+                responseFormat: options.response_format,
+                timeout: options.timeout || 300000
+            });
         }
 
         return await callOpenAI(messages, model, options);
@@ -150,8 +206,13 @@ async function callAnthropic(messages, model, options) {
         throw new Error('Anthropic API key not configured');
     }
 
-    const systemMessage = messages.find(m => m.role === 'system');
-    const conversationMessages = messages.filter(m => m.role !== 'system');
+    const systemMessages = messages.filter(message => message.role === 'system');
+    const conversationMessages = messages
+        .filter(message => message.role !== 'system')
+        .map(message => ({
+            role: message.role,
+            content: normalizeAnthropicContentBlocks(message.content)
+        }));
 
     const requestBody = {
         model,
@@ -159,8 +220,10 @@ async function callAnthropic(messages, model, options) {
         max_tokens: options.max_tokens || 1000
     };
 
-    if (systemMessage) {
-        requestBody.system = systemMessage.content;
+    if (systemMessages.length > 0) {
+        requestBody.system = systemMessages
+            .flatMap(message => normalizeAnthropicContentBlocks(message.content))
+            .filter(Boolean);
     }
 
     if (options.temperature !== undefined) {
@@ -186,8 +249,13 @@ async function callAnthropic(messages, model, options) {
     const totalTokens = inputTokens + outputTokens;
     metrics.trackLLMRequest(model, totalTokens, true, inputTokens, outputTokens);
 
+    const content = extractAnthropicTextContent(response.data);
+    if (!content) {
+        throw new Error('Anthropic returned empty content');
+    }
+
     return {
-        content: response.data.content[0].text,
+        content,
         model,
         actualModel: response.data.model,
         usage: response.data.usage
@@ -197,8 +265,8 @@ async function callAnthropic(messages, model, options) {
 export async function callLLMWithVision(systemPrompt, userContent, options = {}) {
     try {
         const settings = await getLLMSettings();
-        const model = settings.llmProvider === 'ollama' ? null : (settings.llmModel || 'gpt-4o');
         const provider = settings.llmProvider || 'openai';
+        const model = provider === 'ollama' ? null : (settings.llmModel || (provider === 'minimax' ? 'MiniMax-M2.7' : 'gpt-4o'));
 
         safeLog('info', 'Calling LLM with vision', {
             model,
@@ -215,6 +283,10 @@ export async function callLLMWithVision(systemPrompt, userContent, options = {})
             const result = await callOllamaWithVision(systemPrompt, userContent, model, settings, buildRequestOptions(options));
             metrics.trackLLMRequest(getMetricsProviderLabel(provider, result.actualModel || model), result.usage?.total_tokens || 0, true, result.usage?.prompt_tokens || 0, result.usage?.completion_tokens || 0);
             return result;
+        }
+
+        if (provider === 'minimax') {
+            throw new Error('MiniMax vision is not supported by this integration');
         }
 
         return await callOpenAIWithVision(systemPrompt, userContent, model, options);
@@ -302,7 +374,7 @@ async function callAnthropicWithVision(systemPrompt, userContent, model, options
 
     const requestBody = {
         model,
-        system: systemPrompt,
+        system: [{ type: 'text', text: systemPrompt }],
         messages: [{ role: 'user', content: anthropicContent }],
         max_tokens: options.max_tokens || 4000
     };
@@ -327,8 +399,13 @@ async function callAnthropicWithVision(systemPrompt, userContent, model, options
     const usage = response.data.usage || {};
     metrics.trackLLMRequest(model, (usage.input_tokens || 0) + (usage.output_tokens || 0), true, usage.input_tokens || 0, usage.output_tokens || 0);
 
+    const content = extractAnthropicTextContent(response.data);
+    if (!content) {
+        throw new Error('Anthropic vision returned empty content');
+    }
+
     return {
-        content: response.data.content[0].text,
+        content,
         model,
         actualModel: response.data.model,
         usage: response.data.usage

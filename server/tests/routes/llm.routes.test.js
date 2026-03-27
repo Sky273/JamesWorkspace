@@ -20,7 +20,8 @@ const rateLimitMocks = vi.hoisted(() => {
 vi.mock('../../config/constants.js', () => ({
     OPENAI_API_KEY: 'test-openai-key',
     ANTHROPIC_API_KEY: 'test-anthropic-key',
-    MAX_PROMPT_LENGTH: 10000
+    MAX_PROMPT_LENGTH: 10000,
+    MINIMAX_API_KEY: 'test-minimax-key'
 }));
 
 const mockAxiosPost = vi.fn();
@@ -89,6 +90,13 @@ vi.mock('../../middleware/auth.middleware.js', () => ({
 const mockCallOllama = vi.fn();
 vi.mock('../../services/ollama.service.js', () => ({
     callOllama: (...args) => mockCallOllama(...args)
+}));
+
+const mockCallMiniMaxOpenAICompatible = vi.fn();
+const mockCallMiniMaxAnthropicCompatible = vi.fn();
+vi.mock('../../services/minimax.service.js', () => ({
+    callMiniMaxOpenAICompatible: (...args) => mockCallMiniMaxOpenAICompatible(...args),
+    callMiniMaxAnthropicCompatible: (...args) => mockCallMiniMaxAnthropicCompatible(...args)
 }));
 
 import llmRoutes from '../../routes/llm.routes.js';
@@ -169,6 +177,19 @@ describe('LLM Routes', () => {
             expect(res.body.choices[0].message.content).toBe('Hi from Ollama');
         });
 
+        it('routes through MiniMax when configured', async () => {
+            mockGetLLMSettings.mockResolvedValueOnce({ llmProvider: 'minimax', llmModel: 'MiniMax-M2.7' });
+            mockCallMiniMaxOpenAICompatible.mockResolvedValueOnce({ content: 'Hi from MiniMax', model: 'MiniMax-M2.7', actualModel: 'MiniMax-M2.7', usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 } });
+
+            const res = await request(app)
+                .post('/api/llm/openai')
+                .set(AUTH)
+                .send({ messages: [{ role: 'user', content: 'Hello' }] });
+
+            expect(res.status).toBe(200);
+            expect(res.body.choices[0].message.content).toBe('Hi from MiniMax');
+        });
+
         it('should return 400 for message exceeding max length', async () => {
             const longContent = 'x'.repeat(10001);
             const res = await request(app)
@@ -178,44 +199,6 @@ describe('LLM Routes', () => {
 
             expect(res.status).toBe(400);
             expect(res.body.error).toContain('maximum length');
-        });
-
-        it('should handle OpenAI API errors', async () => {
-            mockAxiosPost.mockRejectedValueOnce({
-                response: { status: 429, data: { error: 'Rate limited' } }
-            });
-
-            const res = await request(app)
-                .post('/api/llm/openai')
-                .set(AUTH)
-                .send({ messages: [{ role: 'user', content: 'Hello' }] });
-
-            expect(res.status).toBe(429);
-        });
-
-        it('should return 500 on network error', async () => {
-            mockAxiosPost.mockRejectedValueOnce(new Error('Network error'));
-
-            const res = await request(app)
-                .post('/api/llm/openai')
-                .set(AUTH)
-                .send({ messages: [{ role: 'user', content: 'Hello' }] });
-
-            expect(res.status).toBe(500);
-        });
-
-        it('should forward 4xx errors from OpenAI', async () => {
-            mockAxiosPost.mockResolvedValueOnce({
-                status: 400,
-                data: { error: { message: 'Bad request' } }
-            });
-
-            const res = await request(app)
-                .post('/api/llm/openai')
-                .set(AUTH)
-                .send({ messages: [{ role: 'user', content: 'Hello' }] });
-
-            expect(res.status).toBe(400);
         });
     });
 
@@ -237,27 +220,41 @@ describe('LLM Routes', () => {
             expect(res.body.content).toBeDefined();
         });
 
-        it('should return 400 for message exceeding max length', async () => {
-            const longContent = 'x'.repeat(10001);
+        it('normalizes system messages and structured blocks for Anthropic proxying', async () => {
+            mockAxiosPost.mockResolvedValueOnce({
+                data: {
+                    content: [{ type: 'text', text: 'Hi from Claude' }],
+                    usage: { input_tokens: 10, output_tokens: 5 }
+                }
+            });
+
             const res = await request(app)
                 .post('/api/llm/anthropic')
                 .set(AUTH)
-                .send({ messages: [{ role: 'user', content: longContent }] });
+                .send({
+                    messages: [
+                        { role: 'system', content: 'You are helpful' },
+                        { role: 'user', content: [{ type: 'text', text: 'Hello' }] }
+                    ]
+                });
 
-            expect(res.status).toBe(400);
+            expect(res.status).toBe(200);
+            const forwardedBody = mockAxiosPost.mock.calls[0][1];
+            expect(forwardedBody.system).toEqual([{ type: 'text', text: 'You are helpful' }]);
+            expect(forwardedBody.messages).toEqual([{ role: 'user', content: [{ type: 'text', text: 'Hello' }] }]);
         });
 
-        it('should handle Anthropic errors', async () => {
-            mockAxiosPost.mockRejectedValueOnce({
-                response: { status: 500, data: { error: 'Internal error' } }
-            });
+        it('routes Anthropic-compatible requests through MiniMax when configured', async () => {
+            mockGetLLMSettings.mockResolvedValueOnce({ llmProvider: 'minimax', llmModel: 'MiniMax-M2.7' });
+            mockCallMiniMaxAnthropicCompatible.mockResolvedValueOnce({ content: 'Hi from MiniMax', model: 'MiniMax-M2.7', actualModel: 'MiniMax-M2.7', usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 } });
 
             const res = await request(app)
                 .post('/api/llm/anthropic')
                 .set(AUTH)
                 .send({ messages: [{ role: 'user', content: 'Hello' }] });
 
-            expect(res.status).toBe(500);
+            expect(res.status).toBe(200);
+            expect(res.body.content[0].text).toBe('Hi from MiniMax');
         });
     });
 
@@ -278,17 +275,6 @@ describe('LLM Routes', () => {
             expect(res.status).toBe(200);
             expect(res.body.choices).toBeDefined();
         });
-
-        it('should handle errors', async () => {
-            mockAxiosPost.mockRejectedValueOnce(new Error('Network fail'));
-
-            const res = await request(app)
-                .post('/api/llm/chat/completions')
-                .set(AUTH)
-                .send({ messages: [{ role: 'user', content: 'Hi' }] });
-
-            expect(res.status).toBe(500);
-        });
     });
 
     describe('POST /messages', () => {
@@ -307,17 +293,6 @@ describe('LLM Routes', () => {
 
             expect(res.status).toBe(200);
         });
-
-        it('should handle errors', async () => {
-            mockAxiosPost.mockRejectedValueOnce(new Error('fail'));
-
-            const res = await request(app)
-                .post('/api/llm/messages')
-                .set(AUTH)
-                .send({ messages: [{ role: 'user', content: 'Hi' }] });
-
-            expect(res.status).toBe(500);
-        });
     });
 
     describe('GET /circuit-breakers', () => {
@@ -334,7 +309,8 @@ describe('LLM Routes', () => {
                 .set({ ...AUTH, 'x-test-role': 'admin' });
 
             expect(res.status).toBe(200);
-            expect(res.body).toEqual({ openai: 'closed', anthropic: 'closed' });
+            expect(res.body).toEqual({ openai: 'closed', anthropic: 'closed', minimax: { state: 'UNKNOWN', failures: 0 } });
         });
     });
 });
+

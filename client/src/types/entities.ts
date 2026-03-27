@@ -558,7 +558,7 @@ export interface EmailTemplateKeywords {
 
 export interface Settings {
   id?: string;
-  llmProvider?: 'openai' | 'anthropic' | 'ollama';
+  llmProvider?: 'openai' | 'anthropic' | 'minimax' | 'ollama';
   llmModel?: string;
   ollamaBaseUrl?: string;
   ollamaVisionModel?: string;
@@ -581,4 +581,5 @@ export interface Settings {
   'DPO Email'?: string;
   'DPO Phone'?: string;
 }
+
 

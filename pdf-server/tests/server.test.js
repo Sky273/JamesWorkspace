@@ -86,7 +86,7 @@ describe('PDF Server', () => {
     });
   });
 
-  describe('POST /generate-pdf ï¿½ validation', () => {
+  describe('POST /generate-pdf - validation', () => {
     it('should reject requests without the internal token', async () => {
       const res = await request(app)
         .post('/generate-pdf')
@@ -168,7 +168,7 @@ describe('PDF Server', () => {
     });
   });
 
-  describe('POST /generate-pdf ï¿½ generation', () => {
+  describe('POST /generate-pdf - generation', () => {
     it('should return PDF buffer on success', async () => {
       const fakePdf = Buffer.from('%PDF-1.4 fake content');
       pdfGen.generatePdf.mockResolvedValue(fakePdf);
@@ -270,7 +270,7 @@ describe('PDF Server', () => {
     });
   });
 
-  describe('POST /generate-docx ï¿½ validation', () => {
+  describe('POST /generate-docx - validation', () => {
     it('should reject missing htmlContent', async () => {
       const res = await request(app)
         .post('/generate-docx')
@@ -299,7 +299,7 @@ describe('PDF Server', () => {
     });
   });
 
-  describe('POST /generate-docx ï¿½ DOCX generation', () => {
+  describe('POST /generate-docx - DOCX generation', () => {
     it('should return DOCX buffer on success', async () => {
       const fakeDocx = Buffer.from('PK\x03\x04fake docx');
       docxGen.generateDocx.mockResolvedValue(fakeDocx);
@@ -391,7 +391,7 @@ describe('PDF Server', () => {
     });
   });
 
-  describe('POST /generate-docx ï¿½ DOC generation', () => {
+  describe('POST /generate-docx - DOC generation', () => {
     it('should return DOC buffer when format=doc', async () => {
       const fakeDoc = Buffer.from('fake doc content');
       docxGen.generateDocx.mockResolvedValue(fakeDoc);

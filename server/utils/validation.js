@@ -827,10 +827,35 @@ export const updateResumeSchema = z.object({
 
 // (matchResumeSchema / adaptResumeSchema replaced by missionIdBodySchema above)
 
+const anthropicContentBlockSchema = z.union([
+  z.object({
+    type: z.literal('text'),
+    text: z.string().max(100000)
+  }),
+  z.object({
+    type: z.literal('thinking'),
+    thinking: z.string().max(100000)
+  }),
+  z.object({
+    type: z.string(),
+    text: z.string().max(100000).optional(),
+    thinking: z.string().max(100000).optional(),
+    content: z.string().max(100000).optional()
+  })
+]);
+
 // LLM message schema
 const llmMessageSchema = z.object({
   role: z.enum(['system', 'user', 'assistant']),
   content: z.string().max(100000)
+});
+
+const anthropicMessageSchema = z.object({
+  role: z.enum(['system', 'user', 'assistant']),
+  content: z.union([
+    z.string().max(100000),
+    z.array(anthropicContentBlockSchema).min(1).max(1000)
+  ])
 });
 
 // OpenAI request schema
@@ -845,10 +870,13 @@ export const openaiRequestSchema = z.object({
 // Anthropic request schema
 export const anthropicRequestSchema = z.object({
   model: z.string().max(100).optional(),
-  messages: z.array(llmMessageSchema).min(1).max(50),
+  messages: z.array(anthropicMessageSchema).min(1).max(50),
   max_tokens: z.number().min(1).max(200000).optional(),
   temperature: z.number().min(0).max(1).optional(),
-  system: z.string().max(100000).optional()
+  system: z.union([
+    z.string().max(100000),
+    z.array(anthropicContentBlockSchema).min(1).max(1000)
+  ]).optional()
 }).passthrough();
 
 // Chatbot request schema
@@ -993,7 +1021,7 @@ export const updateInterviewSchema = z.object({
 
 // Settings schemas
 export const updateSettingsSchema = z.object({
-  llmProvider: z.enum(['openai', 'anthropic', 'ollama']).optional(),
+  llmProvider: z.enum(['openai', 'anthropic', 'minimax', 'ollama']).optional(),
   llmModel: z.string().max(100).optional(),
   ollamaBaseUrl: z.string().url().max(500).optional(),
   ollamaVisionModel: z.string().max(100).optional(),
@@ -1209,5 +1237,6 @@ export const validators = {
     return { valid: true, value };
   }
 };
+
 
 

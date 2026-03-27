@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Environment Variables Validation
  * Validates required environment variables at startup
  */
@@ -18,6 +18,7 @@ const REQUIRED_VARS = [
 const RECOMMENDED_VARS = [
     { name: 'OPENAI_API_KEY', description: 'OpenAI API key for LLM features' },
     { name: 'ANTHROPIC_API_KEY', description: 'Anthropic API key for Claude' },
+    { name: 'MINIMAX_API_KEY', description: 'MiniMax API key for MiniMax models' },
     { name: 'NODE_ENV', description: 'Environment (development/production)' }
 ];
 
@@ -146,6 +147,7 @@ export function getEnvironmentInfo() {
         hasPostgres: !!process.env.POSTGRES_HOST,
         hasOpenAI: !!process.env.OPENAI_API_KEY,
         hasAnthropic: !!process.env.ANTHROPIC_API_KEY,
+        hasMiniMax: !!process.env.MINIMAX_API_KEY,
         hasCsrf: !!process.env.CSRF_SECRET,
         hasPdfServerToken: !!process.env.PDF_SERVER_INTERNAL_TOKEN
     };
@@ -156,3 +158,5 @@ export default {
     validateEnvironmentOrExit,
     getEnvironmentInfo
 };
+
+

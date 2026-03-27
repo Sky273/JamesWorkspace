@@ -14,138 +14,278 @@ const HTML_ENTITIES = {
     '&quot;': '"',
     '&#39;': "'",
     '&apos;': "'",
-    '&laquo;': '«',
-    '&raquo;': '»',
-    '&ldquo;': '\u201C',
-    '&rdquo;': '\u201D',
+    '&laquo;': '\u00ab',
+    '&raquo;': '\u00bb',
+    '&ldquo;': '\u201c',
+    '&rdquo;': '\u201d',
     '&lsquo;': '\u2018',
     '&rsquo;': '\u2019',
-    '&ndash;': '–',
-    '&mdash;': '—',
-    '&hellip;': '…',
-    '&bull;': '•',
-    '&middot;': '·',
-    '&copy;': '©',
-    '&reg;': '®',
-    '&trade;': '™',
-    '&euro;': '€',
-    '&pound;': '£',
-    '&yen;': '¥',
-    '&cent;': '¢',
-    '&deg;': '°',
-    '&plusmn;': '±',
-    '&times;': '×',
-    '&divide;': '÷',
-    '&frac12;': '½',
-    '&frac14;': '¼',
-    '&frac34;': '¾',
-    '&sup2;': '²',
-    '&sup3;': '³',
-    '&acute;': '´',
-    '&cedil;': '¸',
-    '&iexcl;': '¡',
-    '&iquest;': '¿',
-    '&sect;': '§',
-    '&para;': '¶',
-    '&dagger;': '†',
-    '&Dagger;': '‡',
-    '&permil;': '‰'
+    '&ndash;': '\u2013',
+    '&mdash;': '\u2014',
+    '&hellip;': '\u2026',
+    '&bull;': '\u2022',
+    '&middot;': '\u00b7',
+    '&copy;': '\u00a9',
+    '&reg;': '\u00ae',
+    '&trade;': '\u2122',
+    '&euro;': '\u20ac',
+    '&pound;': '\u00a3',
+    '&yen;': '\u00a5',
+    '&cent;': '\u00a2',
+    '&deg;': '\u00b0',
+    '&plusmn;': '\u00b1',
+    '&times;': '\u00d7',
+    '&divide;': '\u00f7',
+    '&frac12;': '\u00bd',
+    '&frac14;': '\u00bc',
+    '&frac34;': '\u00be',
+    '&sup2;': '\u00b2',
+    '&sup3;': '\u00b3',
+    '&acute;': '\u00b4',
+    '&cedil;': '\u00b8',
+    '&iexcl;': '\u00a1',
+    '&iquest;': '\u00bf',
+    '&sect;': '\u00a7',
+    '&para;': '\u00b6',
+    '&dagger;': '\u2020',
+    '&Dagger;': '\u2021',
+    '&permil;': '\u2030'
 };
 
-/**
- * Convert HTML entities to their corresponding characters
- * @param {string} text - Text with HTML entities
- * @returns {string} - Text with entities converted
- */
+const MOJIBAKE_SEQUENCES = ['\\u00c3', '\\u00c2', '\\u00e2\\u20ac', '\\u00e2\\u20ac\\u201c', '\\u00e2\\u20ac\\u201d', '\\u00e2\\u20ac\\u00a6', '\\u00e2\\u20ac\\u00a2', '\\u00ef\\u00bf\\u00bd'];
+
+export function normalizeUtf8Text(text) {
+    if (!text || typeof text !== 'string') {
+        return text;
+    }
+
+    if (!MOJIBAKE_SEQUENCES.some(sequence => text.includes(sequence))) {
+        return text;
+    }
+
+    const repaired = Buffer.from(text, 'latin1').toString('utf8');
+    const originalHits = MOJIBAKE_SEQUENCES.reduce((count, sequence) => count + (text.split(sequence).length - 1), 0);
+    const repairedHits = MOJIBAKE_SEQUENCES.reduce((count, sequence) => count + (repaired.split(sequence).length - 1), 0);
+
+    if (repaired.includes('\u0000')) {
+        return text;
+    }
+
+    return repairedHits < originalHits ? repaired : text;
+}
+
 export function decodeHtmlEntities(text) {
     if (!text) return text;
-    
-    let decoded = text;
-    
-    // Replace named HTML entities
+
+    let decoded = normalizeUtf8Text(text);
+
     for (const [entity, char] of Object.entries(HTML_ENTITIES)) {
         decoded = decoded.replace(new RegExp(entity, 'gi'), char);
     }
-    
-    // Replace numeric HTML entities (decimal: &#123; and hex: &#x7B;)
+
     decoded = decoded.replace(/&#(\d+);/g, (match, dec) => String.fromCharCode(parseInt(dec, 10)));
     decoded = decoded.replace(/&#x([0-9a-fA-F]+);/g, (match, hex) => String.fromCharCode(parseInt(hex, 16)));
-    
+
     return decoded;
 }
 
-/**
- * Clean up text by removing HTML tags and normalizing whitespace
- * Used before analysis to get cleaner text for LLM processing
- * @param {string} text - Text to clean (may contain HTML)
- * @returns {string} - Clean plain text
- */
+export function stripLlmThinkingContent(text) {
+    if (!text || typeof text !== 'string') {
+        return text;
+    }
+
+    let cleaned = normalizeUtf8Text(text).trim();
+
+    cleaned = cleaned
+        .replace(/<think>[\s\S]*?<\/think>/gi, '')
+        .replace(/<thinking>[\s\S]*?<\/thinking>/gi, '')
+        .trim();
+
+    const firstJsonObject = cleaned.indexOf('{');
+    const firstJsonArray = cleaned.indexOf('[');
+    const jsonStartCandidates = [firstJsonObject, firstJsonArray].filter(index => index >= 0);
+    const firstJsonStart = jsonStartCandidates.length > 0 ? Math.min(...jsonStartCandidates) : -1;
+
+    if (firstJsonStart >= 0) {
+        const beforeJson = cleaned.slice(0, firstJsonStart);
+        if (/<think(?:ing)?>/i.test(beforeJson)) {
+            cleaned = cleaned.slice(firstJsonStart);
+        }
+    }
+
+    return cleaned
+        .replace(/^```(?:json|html)?\s*/i, '')
+        .replace(/\s*```$/i, '')
+        .trim();
+}
+
+export function extractJsonPayload(text) {
+    const cleaned = stripLlmThinkingContent(text);
+    if (!cleaned) {
+        return cleaned;
+    }
+
+    const directParse = (() => {
+        try {
+            JSON.parse(cleaned);
+            return cleaned;
+        } catch {
+            return null;
+        }
+    })();
+
+    if (directParse) {
+        return directParse;
+    }
+
+    const firstBrace = cleaned.indexOf('{');
+    const firstBracket = cleaned.indexOf('[');
+    const startCandidates = [firstBrace, firstBracket].filter(index => index >= 0);
+    if (startCandidates.length === 0) {
+        return cleaned;
+    }
+
+    const startIndex = Math.min(...startCandidates);
+    const openingChar = cleaned[startIndex];
+    const closingChar = openingChar === '{' ? '}' : ']';
+
+    let depth = 0;
+    let inString = false;
+    let escapeNext = false;
+
+    for (let index = startIndex; index < cleaned.length; index++) {
+        const char = cleaned[index];
+
+        if (escapeNext) {
+            escapeNext = false;
+            continue;
+        }
+
+        if (char === '\\') {
+            escapeNext = true;
+            continue;
+        }
+
+        if (char === '"') {
+            inString = !inString;
+            continue;
+        }
+
+        if (inString) {
+            continue;
+        }
+
+        if (char === openingChar) {
+            depth++;
+        } else if (char === closingChar) {
+            depth--;
+            if (depth === 0) {
+                return cleaned.slice(startIndex, index + 1).trim();
+            }
+        }
+    }
+
+    return cleaned.slice(startIndex).trim();
+}
+
+function escapeJsonControlCharacters(text) {
+    if (!text || typeof text !== 'string') {
+        return text;
+    }
+
+    let result = '';
+    let inString = false;
+    let escapeNext = false;
+
+    for (const char of text) {
+        if (escapeNext) {
+            result += char;
+            escapeNext = false;
+            continue;
+        }
+
+        if (char === '\\') {
+            result += char;
+            escapeNext = true;
+            continue;
+        }
+
+        if (char === '"') {
+            result += char;
+            inString = !inString;
+            continue;
+        }
+
+        if (inString) {
+            if (char === '\n') {
+                result += '\\n';
+                continue;
+            }
+            if (char === '\r') {
+                result += '\\r';
+                continue;
+            }
+            if (char === '\t') {
+                result += '\\t';
+                continue;
+            }
+        }
+
+        result += char;
+    }
+
+    return result;
+}
+
+export function parseJsonFromLlmResponse(text) {
+    const payload = extractJsonPayload(text);
+
+    try {
+        return JSON.parse(payload);
+    } catch (error) {
+        const repairedPayload = escapeJsonControlCharacters(payload);
+        if (repairedPayload !== payload) {
+            return JSON.parse(repairedPayload);
+        }
+        throw error;
+    }
+}
+
 export function cleanupText(text) {
     if (!text) return text;
-    
-    let cleaned = text;
-    
-    // Convert HTML entities first
-    cleaned = decodeHtmlEntities(cleaned);
-    
-    // Convert <br> and </p> to newlines before removing tags
+
+    let cleaned = decodeHtmlEntities(normalizeUtf8Text(text));
     cleaned = cleaned.replace(/<br\s*\/?>/gi, '\n');
     cleaned = cleaned.replace(/<\/p>/gi, '\n');
     cleaned = cleaned.replace(/<\/li>/gi, '\n');
     cleaned = cleaned.replace(/<\/h[1-6]>/gi, '\n\n');
-    
-    // Remove all HTML tags
     cleaned = cleaned.replace(/<[^>]*>/g, '');
-    
-    // Normalize whitespace
-    cleaned = cleaned.replace(/[ \t]+/g, ' ');  // Multiple spaces/tabs to single space
-    cleaned = cleaned.replace(/\n[ \t]+/g, '\n');  // Remove leading spaces on lines
-    cleaned = cleaned.replace(/[ \t]+\n/g, '\n');  // Remove trailing spaces on lines
-    cleaned = cleaned.replace(/\n{3,}/g, '\n\n');  // Max 2 consecutive newlines
-    
+    cleaned = cleaned.replace(/[ \t]+/g, ' ');
+    cleaned = cleaned.replace(/\n[ \t]+/g, '\n');
+    cleaned = cleaned.replace(/[ \t]+\n/g, '\n');
+    cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
+
     return cleaned.trim();
 }
 
-/**
- * Clean up common HTML formatting issues from AI-generated content
- * Preserves HTML tags but fixes structural issues
- * Used after improvement to clean the improved_text field
- * @param {string} html - HTML content to clean
- * @returns {string} - Cleaned HTML
- */
 export function cleanupHtml(html) {
     if (!html) return html;
-    
-    let cleaned = html;
-    
-    // Convert HTML entities to their corresponding characters
-    cleaned = decodeHtmlEntities(cleaned);
-    
-    // Remove nested <p> tags inside <li> elements
+
+    let cleaned = decodeHtmlEntities(normalizeUtf8Text(html));
     cleaned = cleaned.replace(/<li>\s*<p>(.*?)<\/p>\s*<\/li>/gi, '<li>$1</li>');
-    
-    // Remove <p> tags wrapping <ul> or <ol> lists
     cleaned = cleaned.replace(/<p>\s*(<ul[^>]*>)/gi, '$1');
     cleaned = cleaned.replace(/(<\/ul>)\s*<\/p>/gi, '$1');
     cleaned = cleaned.replace(/<p>\s*(<ol[^>]*>)/gi, '$1');
     cleaned = cleaned.replace(/(<\/ol>)\s*<\/p>/gi, '$1');
-    
-    // Remove <p> tags wrapping headings
     cleaned = cleaned.replace(/<p>\s*(<h[1-6][^>]*>)/gi, '$1');
     cleaned = cleaned.replace(/(<\/h[1-6]>)\s*<\/p>/gi, '$1');
-    
-    // Remove empty <p> tags
     cleaned = cleaned.replace(/<p>\s*<\/p>/gi, '');
-    
-    // Remove <p> tags inside <p> tags (nested paragraphs)
     cleaned = cleaned.replace(/<p>\s*<p>/gi, '<p>');
     cleaned = cleaned.replace(/<\/p>\s*<\/p>/gi, '</p>');
-    
-    // Clean up multiple consecutive <br> tags
     cleaned = cleaned.replace(/(<br\s*\/?>\s*){3,}/gi, '<br><br>');
-    
-    // Remove <p> tags wrapping only whitespace and <br>
     cleaned = cleaned.replace(/<p>\s*(<br\s*\/?>\s*)*<\/p>/gi, '');
-    
+
     return cleaned;
 }
+
+
