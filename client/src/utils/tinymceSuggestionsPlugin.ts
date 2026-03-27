@@ -384,10 +384,10 @@ export function removeSuggestionMarkers(content: string): string {
   cleaned = cleaned.replace(/<span[^>]*style="[^"]*(?:#F59E0B|#D97706)[^"]*"[^>]*>[^<]*<\/span>/g, '');
   
   // Step 2: Remove any span with lightbulb emoji (with or without number)
-  cleaned = cleaned.replace(/<span[^>]*>[^<]*(&#128161;|??)[^<]*<\/span>/g, '');
+  cleaned = cleaned.replace(/<span[^>]*>[^<]*(&#128161;|\u{1F4A1})[^<]*<\/span>/gu, '');
   
   // Step 3: Remove any span with title attribute containing suggestion text (tooltip spans)
-  cleaned = cleaned.replace(/<span[^>]*title="[^"]*"[^>]*>(&#128161;|??)[^<]*<\/span>/g, '');
+  cleaned = cleaned.replace(/<span[^>]*title="[^"]*"[^>]*>(&#128161;|\u{1F4A1})[^<]*<\/span>/gu, '');
   
   // Step 4: Remove suggestion-highlight wrapper divs but KEEP their inner content
   // Use a function to properly handle nested content
@@ -404,7 +404,7 @@ export function removeSuggestionMarkers(content: string): string {
   cleaned = cleaned.replace(/<div[^>]*style="[^"]*background:\s*linear-gradient\(135deg,\s*#FEF3C7[^"]*"[^>]*>[\s\S]*?<\/ul>\s*<\/div>/g, '');
   
   // Step 6: Clean up any orphaned lightbulb emojis (standalone or in spans)
-  cleaned = cleaned.replace(/(?:&#128161;|??)\s*\d*/g, '');
+  cleaned = cleaned.replace(/(?:&#128161;|\u{1F4A1})\s*\d*/gu, '');
   
   // Step 7: Remove empty spans and divs that might be left over
   cleaned = cleaned.replace(/<span[^>]*>\s*<\/span>/g, '');

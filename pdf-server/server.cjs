@@ -18,11 +18,24 @@ const PORT = process.env.PDF_SERVER_PORT || 3002;
 const PDF_GENERATION_TIMEOUT = parseInt(process.env.PDF_TIMEOUT || '30000', 10);
 const PDF_SERVER_AUTH_HEADER = 'x-internal-service-token';
 const DEV_TEST_FALLBACK_TOKEN = 'dev-test-pdf-server-internal-token-32chars';
+const DERIVATION_SALT = 'resumeconverter-pdf-server-internal-token-v1';
 const isProduction = process.env.NODE_ENV === 'production';
 const configuredPdfToken = process.env.PDF_SERVER_INTERNAL_TOKEN || '';
+
+function deriveProductionFallbackToken() {
+  const jwtSecret = process.env.JWT_SECRET || '';
+  const csrfSecret = process.env.CSRF_SECRET || '';
+
+  if (jwtSecret.length < 32 || csrfSecret.length < 32) {
+    return '';
+  }
+
+  return Buffer.from(`${jwtSecret}:${csrfSecret}:${DERIVATION_SALT}`).toString('base64url').slice(0, 48);
+}
+
 const PDF_SERVER_INTERNAL_TOKEN = configuredPdfToken.length >= 32
   ? configuredPdfToken
-  : (!isProduction ? DEV_TEST_FALLBACK_TOKEN : '');
+  : (!isProduction ? DEV_TEST_FALLBACK_TOKEN : deriveProductionFallbackToken());
 const MAX_HTML_SIZE = parseInt(process.env.PDF_MAX_HTML_SIZE || '5242880', 10);
 const MAX_STYLESHEET_SIZE = parseInt(process.env.PDF_MAX_STYLESHEET_SIZE || '262144', 10);
 const MAX_FRAGMENT_SIZE = parseInt(process.env.PDF_MAX_FRAGMENT_SIZE || '524288', 10);
@@ -452,12 +465,17 @@ module.exports = { app };
 
 if (require.main === module) {
   if (!PDF_SERVER_INTERNAL_TOKEN || PDF_SERVER_INTERNAL_TOKEN.length < 32) {
-    throw new Error('CRITICAL: PDF_SERVER_INTERNAL_TOKEN must be set and at least 32 characters long.');
+    throw new Error('CRITICAL: PDF_SERVER_INTERNAL_TOKEN must be set and at least 32 characters long, or derivable from valid JWT_SECRET and CSRF_SECRET.');
   }
 
-  if (!configuredPdfToken && !isProduction) {
+  if (!configuredPdfToken) {
     process.env.PDF_SERVER_INTERNAL_TOKEN = PDF_SERVER_INTERNAL_TOKEN;
-    logger.log('warn', 'PDF_SERVER_INTERNAL_TOKEN missing; using development/test fallback token');
+    logger.log(
+      'warn',
+      isProduction
+        ? 'PDF_SERVER_INTERNAL_TOKEN missing; using compatibility fallback derived from JWT_SECRET and CSRF_SECRET'
+        : 'PDF_SERVER_INTERNAL_TOKEN missing; using development/test fallback token'
+    );
   }
 
   app.listen(PORT, async () => {
@@ -475,5 +493,3 @@ if (require.main === module) {
     });
   });
 }
-
-

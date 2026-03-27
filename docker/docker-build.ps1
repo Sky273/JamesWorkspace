@@ -1,4 +1,4 @@
-# =============================================================================
+﻿# =============================================================================
 # ResumeConverter - Docker Build Script (Windows PowerShell)
 # =============================================================================
 
@@ -46,9 +46,9 @@ function Build-Image {
     Write-Host "Building Docker image: ${ImageName}:${Tag}" -ForegroundColor Green
     Write-Host "This may take several minutes on first build..." -ForegroundColor Yellow
     Write-Host ""
-    
+
     docker build -t "${ImageName}:${Tag}" -f Dockerfile .
-    
+
     if ($LASTEXITCODE -eq 0) {
         Write-Host ""
         Write-Host "Build successful!" -ForegroundColor Green
@@ -61,40 +61,37 @@ function Build-Image {
 }
 
 function Run-Container {
-    # Check if container exists
     $existing = docker ps -aq -f name=$ContainerName
     if ($existing) {
         Write-Host "Stopping existing container..." -ForegroundColor Yellow
         docker stop $ContainerName 2>$null
         docker rm $ContainerName 2>$null
     }
-    
-    # Check if image exists, build if not
+
     $imageExists = docker images -q "${ImageName}:${Tag}"
     if (-not $imageExists) {
         Write-Host "Image not found, building..." -ForegroundColor Yellow
         Build-Image
     }
-    
+
     Write-Host ""
     Write-Host "Starting container: $ContainerName" -ForegroundColor Green
     Write-Host ""
-    
-    # Create local data directories for persistence (survives rebuilds)
+
     $DataDir = Join-Path $PWD "data\postgresql"
     $UploadsDir = Join-Path $PWD "uploads"
     $LogsDir = Join-Path $PWD "logs"
-    
+
     if (-not (Test-Path $DataDir)) { New-Item -ItemType Directory -Path $DataDir -Force | Out-Null }
     if (-not (Test-Path $UploadsDir)) { New-Item -ItemType Directory -Path $UploadsDir -Force | Out-Null }
     if (-not (Test-Path $LogsDir)) { New-Item -ItemType Directory -Path $LogsDir -Force | Out-Null }
-    
-    # Generate stable secrets if not provided (persist across restarts)
+
     $JwtSecret = if ($env:JWT_SECRET) { $env:JWT_SECRET } else { "docker-jwt-secret-change-in-production-min32chars" }
     $JwtRefreshSecret = if ($env:JWT_REFRESH_SECRET) { $env:JWT_REFRESH_SECRET } else { "docker-jwt-refresh-secret-change-in-production-min32chars" }
     $RefreshTokenSecret = if ($env:REFRESH_TOKEN_SECRET) { $env:REFRESH_TOKEN_SECRET } else { "docker-refresh-token-secret-change-in-production-min32chars" }
     $CsrfSecret = if ($env:CSRF_SECRET) { $env:CSRF_SECRET } else { "docker-csrf-secret-change-in-production-min32chars" }
-    
+    $PdfServerInternalToken = if ($env:PDF_SERVER_INTERNAL_TOKEN) { $env:PDF_SERVER_INTERNAL_TOKEN } else { "docker-pdf-server-internal-token-change-in-production-min32chars" }
+
     docker run -d `
         --name $ContainerName `
         -p 3443:3443 `
@@ -104,6 +101,7 @@ function Run-Container {
         -e JWT_REFRESH_SECRET="$JwtRefreshSecret" `
         -e REFRESH_TOKEN_SECRET="$RefreshTokenSecret" `
         -e CSRF_SECRET="$CsrfSecret" `
+        -e PDF_SERVER_INTERNAL_TOKEN="$PdfServerInternalToken" `
         -e GOOGLE_CLIENT_ID=$env:GOOGLE_CLIENT_ID `
         -e GOOGLE_CLIENT_SECRET=$env:GOOGLE_CLIENT_SECRET `
         -e MAIL_TOKEN_ENCRYPTION_KEY=$env:MAIL_TOKEN_ENCRYPTION_KEY `
@@ -112,7 +110,7 @@ function Run-Container {
         -v "${LogsDir}:/app/logs" `
         --restart unless-stopped `
         "${ImageName}:${Tag}"
-    
+
     if ($LASTEXITCODE -eq 0) {
         Write-Host ""
         Write-Host "Container started successfully!" -ForegroundColor Green
@@ -158,18 +156,14 @@ function Open-Shell {
 
 function Clean-All {
     Write-Host "Cleaning up Docker resources..." -ForegroundColor Yellow
-    
-    # Stop and remove container
+
     docker stop $ContainerName 2>$null
     docker rm $ContainerName 2>$null
-    
-    # Remove image
     docker rmi "${ImageName}:${Tag}" 2>$null
-    
+
     Write-Host "Cleanup complete." -ForegroundColor Green
 }
 
-# Main logic
 if ($Build) {
     Build-Image
 } elseif ($Run) {

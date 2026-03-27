@@ -12,7 +12,7 @@ import { useTranslation } from 'react-i18next';
 import logger from '../utils/logger.frontend';
 import AdminFirmSelector from '../components/AdminFirmSelector';
 
-import { TiptapEditor } from '../components/TiptapEditor';
+import { DeferredTiptapEditor as TiptapEditor } from '../components/TiptapEditor';
 import type { TiptapEditorRef } from '../components/TiptapEditor';
 
 interface FormData {

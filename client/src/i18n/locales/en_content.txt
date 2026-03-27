@@ -1,4 +1,4 @@
-{
+﻿{
   "userProfile": {
     "anonymous": "User",
     "noCompany": "No Company",
@@ -253,7 +253,7 @@
       "avgScore": "Average Score"
     },
     "deleteConfirm": {
-      "title": "[FR] Title"
+      "title": "Delete Resume"
     }
   },
   "upload": {
@@ -466,8 +466,8 @@
     "loadAdaptation": "Error loading adaptation",
     "adaptationNotFound": "Adaptation not found",
     "adaptationNotFoundDescription": "The requested adaptation does not exist or has been deleted.",
-    "exportFailed": "[FR] Export Failed",
-    "saveFailed": "[FR] Save Failed"
+    "exportFailed": "Export Failed",
+    "saveFailed": "Save Failed"
   },
   "templates": {
     "title": "Resume Templates",
@@ -552,9 +552,9 @@
       }
     },
     "delete": {
-      "title": "Supprimer le modÃ¨le"
+      "title": "Delete Template"
     },
-    "selectTemplate": "[FR] Select Template"
+    "selectTemplate": "Select Template"
   },
   "processing": {
     "steps": {
@@ -1495,3 +1495,4 @@
     }
   }
 }
+

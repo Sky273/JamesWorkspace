@@ -74,7 +74,7 @@ const upload = multer({
         if (allowedMimes.includes(file.mimetype)) {
             cb(null, true);
         } else {
-            cb(new Error(`Type de fichier non support? : ${file.mimetype}`));
+            cb(new Error(`Type de fichier non supporte : ${file.mimetype}`));
         }
     }
 });

@@ -17,7 +17,7 @@ import { useAuthFetch } from '../hooks/useAuthFetch';
 import { createSafeHtml } from '../utils/sanitizer.frontend';
 import { createAuthOptionsWithCsrf, fetchWithAuth, fetchWithCsrfRetry } from '../utils/apiInterceptor';
 import { templateService } from '../utils/templateService';
-import { TiptapEditor } from '../components/TiptapEditor';
+import { DeferredTiptapEditor as TiptapEditor } from '../components/TiptapEditor';
 import type { TiptapEditorRef } from '../components/TiptapEditor';
 import AdaptationAnalysisView from '../components/AdaptationAnalysisView';
 import SendEmailModal from '../components/ResumeAnalysis/SendEmailModal';

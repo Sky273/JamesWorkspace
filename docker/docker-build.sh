@@ -1,4 +1,4 @@
-#!/bin/bash
+﻿#!/bin/bash
 # =============================================================================
 # ResumeConverter - Docker Build Script (Linux/Mac)
 # =============================================================================
@@ -38,9 +38,9 @@ build_image() {
     echo "Building Docker image: ${IMAGE_NAME}:${TAG}"
     echo "This may take several minutes on first build..."
     echo ""
-    
+
     docker build -t "${IMAGE_NAME}:${TAG}" -f Dockerfile .
-    
+
     if [ $? -eq 0 ]; then
         echo ""
         echo "Build successful!"
@@ -53,34 +53,31 @@ build_image() {
 }
 
 run_container() {
-    # Check if container exists
     if docker ps -aq -f name=$CONTAINER_NAME | grep -q .; then
         echo "Stopping existing container..."
         docker stop $CONTAINER_NAME 2>/dev/null
         docker rm $CONTAINER_NAME 2>/dev/null
     fi
-    
-    # Check if image exists, build if not
+
     if ! docker images -q "${IMAGE_NAME}:${TAG}" | grep -q .; then
         echo "Image not found, building..."
         build_image
     fi
-    
+
     echo ""
     echo "Starting container: $CONTAINER_NAME"
     echo ""
-    
-    # Create local data directories for persistence (survives rebuilds)
+
     mkdir -p "$(pwd)/data/postgresql"
     mkdir -p "$(pwd)/uploads"
     mkdir -p "$(pwd)/logs"
-    
-    # Use environment secrets if provided, otherwise use defaults
+
     JWT_SECRET_VAL="${JWT_SECRET:-docker-jwt-secret-change-in-production-min32chars}"
     JWT_REFRESH_SECRET_VAL="${JWT_REFRESH_SECRET:-docker-jwt-refresh-secret-change-in-production-min32chars}"
     REFRESH_TOKEN_SECRET_VAL="${REFRESH_TOKEN_SECRET:-docker-refresh-token-secret-change-in-production-min32chars}"
     CSRF_SECRET_VAL="${CSRF_SECRET:-docker-csrf-secret-change-in-production-min32chars}"
-    
+    PDF_SERVER_INTERNAL_TOKEN_VAL="${PDF_SERVER_INTERNAL_TOKEN:-docker-pdf-server-internal-token-change-in-production-min32chars}"
+
     docker run -d \
         --name $CONTAINER_NAME \
         -p 3443:3443 \
@@ -90,6 +87,7 @@ run_container() {
         -e JWT_REFRESH_SECRET="${JWT_REFRESH_SECRET_VAL}" \
         -e REFRESH_TOKEN_SECRET="${REFRESH_TOKEN_SECRET_VAL}" \
         -e CSRF_SECRET="${CSRF_SECRET_VAL}" \
+        -e PDF_SERVER_INTERNAL_TOKEN="${PDF_SERVER_INTERNAL_TOKEN_VAL}" \
         -e GOOGLE_CLIENT_ID="${GOOGLE_CLIENT_ID}" \
         -e GOOGLE_CLIENT_SECRET="${GOOGLE_CLIENT_SECRET}" \
         -e MAIL_TOKEN_ENCRYPTION_KEY="${MAIL_TOKEN_ENCRYPTION_KEY}" \
@@ -98,7 +96,7 @@ run_container() {
         -v "$(pwd)/logs:/app/logs" \
         --restart unless-stopped \
         "${IMAGE_NAME}:${TAG}"
-    
+
     if [ $? -eq 0 ]; then
         echo ""
         echo "Container started successfully!"
@@ -157,7 +155,6 @@ clean_all() {
     echo "Cleanup complete."
 }
 
-# Main logic
 case "$1" in
     build)
         build_image

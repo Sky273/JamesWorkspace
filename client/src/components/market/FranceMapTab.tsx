@@ -1,12 +1,12 @@
 /**
  * FranceMapTab - Interactive France Map for Market Radar
- * Displays regional job market data on a map of France using react-map-gl/maplibre
+ * Displays regional job market data on a map of France using MapLibre
  */
 
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowPathIcon, ChartBarIcon, MapPinIcon } from '@heroicons/react/24/outline';
-import type { MapRef } from 'react-map-gl/maplibre';
+import type { Map as MaplibreMap } from 'maplibre-gl';
 
 import {
   DATA_SOURCE_OPTIONS,
@@ -23,7 +23,7 @@ const FranceMapCanvas = lazy(() => import('./FranceMapCanvas'));
 
 export default function FranceMapTab({ className = '' }: { className?: string }) {
   const { t } = useTranslation();
-  const mapRef = useRef<MapRef>(null);
+  const mapRef = useRef<MaplibreMap | null>(null);
   const [dataSource, setDataSource] = useState<DataSourceType>('offres');
   const [selectedRegion, setSelectedRegion] = useState<RegionData | TrendRegionData | null>(null);
   const [hoveredRegion, setHoveredRegion] = useState<string | null>(null);
@@ -80,7 +80,7 @@ export default function FranceMapTab({ className = '' }: { className?: string })
   }, [currentRegionData, selectedRegionCode]);
 
   const handleMapLoad = useCallback(() => {
-    const map = mapRef.current?.getMap();
+    const map = mapRef.current;
     if (map) {
       setFrenchLabels(map);
     }

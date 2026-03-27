@@ -1,7 +1,7 @@
 ﻿import { useRef } from 'react';
 import { motion } from 'framer-motion';
 
-import { TiptapEditor } from '../components/TiptapEditor';
+import { DeferredTiptapEditor as TiptapEditor } from '../components/TiptapEditor';
 import type { TiptapEditorRef } from '../components/TiptapEditor';
 import MissionFormModal from './MissionFormModal';
 import {

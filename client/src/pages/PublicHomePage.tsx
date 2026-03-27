@@ -1,10 +1,8 @@
-/**
+﻿/**
  * PublicHomePage Component
  * Public landing page for unauthenticated users
  */
 
-import { Suspense } from 'react';
-import DeferredWebGLBackground from '../components/DeferredWebGLBackground';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -173,10 +171,6 @@ function PublicHomePage(): JSX.Element {
 
         {/* Hero Section */}
         <section className="flex-1 flex items-center pt-24 pb-12 relative overflow-hidden">
-          {/* WebGL Background Animation */}
-          <Suspense fallback={null}>
-            <DeferredWebGLBackground />
-          </Suspense>
           <div className="container mx-auto px-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
               <motion.div variants={fadeInUp}>
@@ -261,3 +255,4 @@ function PublicHomePage(): JSX.Element {
 }
 
 export default PublicHomePage;
+

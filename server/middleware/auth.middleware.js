@@ -1,4 +1,4 @@
-import { verifyToken } from '../services/jwt.service.js';
+﻿import { verifyToken } from '../services/jwt.service.js';
 import { safeLog } from '../utils/logger.backend.js';
 
 // ============================================
@@ -20,7 +20,10 @@ export function authenticateToken(req, res, next) {
     });
     
     if (!token) {
-        safeLog('warn', 'No token provided - cookie may have expired');
+        safeLog('debug', 'No access token cookie provided', {
+            path: req.path,
+            method: req.method
+        });
         return res.status(401).json({ 
             error: 'Access token required',
             code: 'TOKEN_MISSING',
@@ -156,4 +159,5 @@ export function requireFirmAccess(getResourceFirm) {
         }
     };
 }
+
 

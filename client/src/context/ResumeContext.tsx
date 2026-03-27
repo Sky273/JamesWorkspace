@@ -202,7 +202,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
 
       const item = jobData.items?.[0];
       if (item?.status === 'pending_name') {
-        throw new Error("L'analyse du CV n?cessite une confirmation du nom du candidat.");
+        throw new Error("L'analyse du CV necessite une confirmation du nom du candidat.");
       }
 
       if (item?.status === 'error') {

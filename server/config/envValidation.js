@@ -21,10 +21,20 @@ const RECOMMENDED_VARS = [
     { name: 'NODE_ENV', description: 'Environment (development/production)' }
 ];
 
+function canDerivePdfServerToken() {
+    return !!(
+        process.env.JWT_SECRET &&
+        process.env.JWT_SECRET.length >= 32 &&
+        process.env.CSRF_SECRET &&
+        process.env.CSRF_SECRET.length >= 32
+    );
+}
+
 export function validateEnvironment() {
     const errors = [];
     const warnings = [];
     const isProduction = process.env.NODE_ENV === 'production';
+    const canDerivePdfToken = canDerivePdfServerToken();
 
     for (const varConfig of REQUIRED_VARS) {
         const value = process.env[varConfig.name];
@@ -47,17 +57,25 @@ export function validateEnvironment() {
     const pdfServerToken = process.env.PDF_SERVER_INTERNAL_TOKEN;
     if (!pdfServerToken) {
         const message = 'Missing required environment variable: PDF_SERVER_INTERNAL_TOKEN (Proxy to PDF server shared secret)';
-        if (isProduction) {
+        if (isProduction && !canDerivePdfToken) {
             errors.push(message);
         } else {
-            warnings.push(`${message}. Using the development/test fallback token outside production.`);
+            warnings.push(
+                isProduction
+                    ? `${message}. Falling back to a token derived from JWT_SECRET and CSRF_SECRET for backward compatibility; set an explicit dedicated secret.`
+                    : `${message}. Using the development/test fallback token outside production.`
+            );
         }
     } else if (pdfServerToken.length < 32) {
         const message = 'PDF_SERVER_INTERNAL_TOKEN must be at least 32 characters long';
-        if (isProduction) {
+        if (isProduction && !canDerivePdfToken) {
             errors.push(message);
         } else {
-            warnings.push(`${message}. Using the development/test fallback token outside production.`);
+            warnings.push(
+                isProduction
+                    ? `${message}. Falling back to a token derived from JWT_SECRET and CSRF_SECRET for backward compatibility; set an explicit dedicated secret.`
+                    : `${message}. Using the development/test fallback token outside production.`
+            );
         }
     }
 

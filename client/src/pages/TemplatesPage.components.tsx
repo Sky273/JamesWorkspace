@@ -1,4 +1,4 @@
-﻿import type { MouseEvent } from 'react';
+﻿import { lazy, Suspense, type MouseEvent } from 'react';
 import {
   ArrowPathIcon,
   BuildingOfficeIcon,
@@ -17,7 +17,6 @@ import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
-import ExtractTemplateModal from '../components/ExtractTemplateModal';
 import CardActionButton from '../components/page/CardActionButton';
 import AnimatedCard from '../components/page/AnimatedCard';
 import ConfirmDialog from '../components/page/ConfirmDialog';
@@ -27,8 +26,10 @@ import PaginationPair from '../components/page/PaginationPair';
 import SearchField from '../components/page/SearchField';
 import StatCardsGrid from '../components/page/StatCardsGrid';
 import { SkeletonTemplateList } from '../components/ui/Skeleton';
-import TemplatePreviewFrame from '../components/TemplatePreviewFrame';
 import { TEMPLATES_PAGE_SIZE, type Template, type TemplateSort, type TemplateStats } from './TemplatesPage.hooks';
+
+const ExtractTemplateModal = lazy(() => import('../components/ExtractTemplateModal'));
+const TemplatePreviewFrame = lazy(() => import('../components/TemplatePreviewFrame'));
 
 function TemplateCard({
   index,
@@ -54,6 +55,7 @@ function TemplateCard({
     <AnimatedCard index={index} className="shadow-md overflow-hidden">
       <div className="relative group cursor-pointer" onClick={() => onPreviewClick(template)}>
         <div className="h-48 bg-gray-50 dark:bg-gray-900 overflow-hidden">
+          <Suspense fallback={<div className="flex h-full min-h-48 items-center justify-center text-xs text-gray-400 dark:text-gray-500">Chargement de l'apercu...</div>}>
           <TemplatePreviewFrame
             title={template.Name}
             stylesheet={template.Stylesheet}
@@ -63,6 +65,7 @@ function TemplateCard({
             className="h-full w-full border-0 bg-white pointer-events-none"
             scale={0.75}
           />
+          </Suspense>
         </div>
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
           <div className="flex items-center gap-2 text-white">
@@ -343,7 +346,8 @@ export function TemplatesPreviewModal({
         </div>
         <div className="p-6 overflow-auto max-h-[70vh] bg-gray-50 dark:bg-gray-900">
           <div className="rounded-lg border border-gray-200 bg-white shadow dark:border-gray-700">
-            <TemplatePreviewFrame
+            <Suspense fallback={<div className="flex h-full min-h-48 items-center justify-center text-xs text-gray-400 dark:text-gray-500">Chargement de l'apercu...</div>}>
+          <TemplatePreviewFrame
               title={template.Name}
               stylesheet={template.Stylesheet}
               headerContent={template.HeaderContent}
@@ -351,6 +355,7 @@ export function TemplatesPreviewModal({
               footerContent={template.FooterContent}
               className="h-[60vh] w-full border-0 bg-white"
             />
+          </Suspense>
           </div>
         </div>
         <div className="flex justify-end gap-3 p-4 border-t border-gray-200 dark:border-gray-700">
@@ -369,5 +374,9 @@ export function TemplatesExtractDialog({
   isOpen: boolean;
   onClose: () => void;
 }) {
-  return <ExtractTemplateModal isOpen={isOpen} onClose={onClose} />;
+  return (
+    <Suspense fallback={null}>
+      <ExtractTemplateModal isOpen={isOpen} onClose={onClose} />
+    </Suspense>
+  );
 }

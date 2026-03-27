@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-import { FactsCollectionOverlay, FactsDataTab, FactsTabs, TabLoader } from './FactsPage.components';
+import { FactsCollectionOverlay, FactsDataTab, FactsMapPlaceholder, FactsTabs, TabLoader } from './FactsPage.components';
 import { type TabType, useFactsDashboard } from './FactsPage.hooks';
 
 const FranceMapTab = lazy(() => import('../components/market/FranceMapTab'));
@@ -21,7 +21,8 @@ export default function FactsPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
-  const [activeTab, setActiveTab] = useState<TabType>('map');
+  const [activeTab, setActiveTab] = useState<TabType>('data');
+  const [mapRequested, setMapRequested] = useState(false);
   const factsDashboard = useFactsDashboard({ navigate });
 
   return (
@@ -45,9 +46,13 @@ export default function FactsPage() {
         <FactsTabs activeTab={activeTab} onChange={setActiveTab} />
 
         {activeTab === 'map' && (
-          <Suspense fallback={<TabLoader />}>
-            <FranceMapTab />
-          </Suspense>
+          mapRequested ? (
+            <Suspense fallback={<TabLoader />}>
+              <FranceMapTab />
+            </Suspense>
+          ) : (
+            <FactsMapPlaceholder onEnable={() => setMapRequested(true)} />
+          )
         )}
 
         {activeTab === 'trends' && (

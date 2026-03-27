@@ -17,6 +17,10 @@ interface FactsCollectionOverlayProps {
   collectingSuccess: boolean;
 }
 
+interface FactsMapPlaceholderProps {
+  onEnable: () => void;
+}
+
 interface FactsDataTabProps {
   facts: MarketFact[];
   loading: boolean;
@@ -113,6 +117,48 @@ export const FactsTabs = ({ activeTab, onChange }: FactsTabsProps): JSX.Element 
           );
         })}
       </nav>
+    </div>
+  );
+};
+
+export const FactsMapPlaceholder = ({ onEnable }: FactsMapPlaceholderProps): JSX.Element => {
+  const { t } = useTranslation();
+
+  return (
+    <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+      <div className="mx-auto flex max-w-3xl flex-col items-center text-center">
+        <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300">
+          <MapIcon className="h-8 w-8" />
+        </div>
+        <h3 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+          {t('marketRadar.map.title')}
+        </h3>
+        <p className="mt-3 max-w-2xl text-sm text-gray-600 dark:text-gray-400">
+          {t('marketRadar.map.subtitle')}
+        </p>
+        <div className="mt-6 grid w-full gap-3 text-left text-sm text-gray-600 dark:text-gray-400 md:grid-cols-3">
+          <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/40">
+            <div className="font-medium text-gray-900 dark:text-gray-100">Chargement differe</div>
+            <div className="mt-1">La carte interactive n'est chargee qu'a la demande.</div>
+          </div>
+          <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/40">
+            <div className="font-medium text-gray-900 dark:text-gray-100">Vue data d'abord</div>
+            <div className="mt-1">Le radar demarre sur les donnees tabulaires pour reduire le cout initial.</div>
+          </div>
+          <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/40">
+            <div className="font-medium text-gray-900 dark:text-gray-100">Interaction complete</div>
+            <div className="mt-1">Le rendu interactif reste disponible quand vous en avez reellement besoin.</div>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onEnable}
+          className="mt-8 inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-indigo-500"
+        >
+          <MapIcon className="h-5 w-5" />
+          {t('marketRadar.map.loadInteractive', 'Charger la carte interactive')}
+        </button>
+      </div>
     </div>
   );
 };

@@ -25,7 +25,7 @@ import PipelineTab from '../components/ResumeAnalysis/PipelineTab';
 import ResumeComments from '../components/ResumeComments';
 import { fetchWithAuth, createAuthOptionsWithCsrf } from '../utils/apiInterceptor';
 import { removeSuggestionMarkers } from '../utils/tinymceSuggestionsPlugin';
-import { TiptapEditor, parseSuggestions } from '../components/TiptapEditor';
+import { DeferredTiptapEditor as TiptapEditor, parseSuggestions } from '../components/TiptapEditor';
 import type { TiptapEditorRef } from '../components/TiptapEditor';
 
 const ResumeImprovePage = (): JSX.Element => {
