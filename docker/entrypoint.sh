@@ -81,15 +81,28 @@ done
 echo "PostgreSQL is ready!"
 
 # =============================================================================
+# Normalize internal PDF auth token before spawning Supervisor-managed services
+# =============================================================================
+echo "[3/5] Preparing shared internal service secrets..."
+
+if [ -z "$PDF_SERVER_INTERNAL_TOKEN" ] || [ "${#PDF_SERVER_INTERNAL_TOKEN}" -lt 32 ]; then
+    if [ -n "$JWT_SECRET" ] && [ "${#JWT_SECRET}" -ge 32 ] && [ -n "$CSRF_SECRET" ] && [ "${#CSRF_SECRET}" -ge 32 ]; then
+        PDF_SERVER_INTERNAL_TOKEN="$(printf '%s' "${JWT_SECRET}:${CSRF_SECRET}:resumeconverter-pdf-server-internal-token-v1" | base64 | tr '+/' '-_' | tr -d '=\n' | cut -c1-48)"
+        export PDF_SERVER_INTERNAL_TOKEN
+        echo "Derived shared PDF_SERVER_INTERNAL_TOKEN from JWT_SECRET and CSRF_SECRET."
+    fi
+fi
+
+# =============================================================================
 # Initialize / migrate database schema outside the web runtime
 # =============================================================================
-echo "[3/5] Running docker-migrate..."
+echo "[4/5] Running docker-migrate..."
 npm run docker-migrate
 
 # =============================================================================
 # Start all services via Supervisor
 # =============================================================================
-echo "[4/5] Starting application servers..."
+echo "[5/5] Starting application servers..."
 echo ""
 echo "=============================================="
 echo "  Services:"
