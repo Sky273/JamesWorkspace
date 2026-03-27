@@ -245,7 +245,7 @@ const ResumeAnalysisPage = (): JSX.Element => {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
         <div className="max-w-7xl mx-auto px-4">
-          <ImprovementAnimation currentStep={processingStep || 'improving'} />
+          <ImprovementAnimation currentStep={processingStep || 'improving'} fullscreen={true} />
         </div>
       </div>
     );
@@ -497,3 +497,4 @@ const ResumeAnalysisPage = (): JSX.Element => {
 };
 
 export default ResumeAnalysisPage;
+

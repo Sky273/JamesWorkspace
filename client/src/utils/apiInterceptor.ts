@@ -36,6 +36,26 @@ import {
   triggerSessionExpiry,
 } from './sessionRedirect';
 
+function mergeAbortSignals(...signals: Array<AbortSignal | null | undefined>): AbortSignal | undefined {
+  const activeSignals = signals.filter((signal): signal is AbortSignal => Boolean(signal));
+  if (activeSignals.length === 0) {
+    return undefined;
+  }
+
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+
+  for (const signal of activeSignals) {
+    if (signal.aborted) {
+      controller.abort();
+      return controller.signal;
+    }
+    signal.addEventListener('abort', abort, { once: true });
+  }
+
+  return controller.signal;
+}
+
 // ============================================
 // SESSION STATE
 // ============================================
@@ -90,8 +110,8 @@ const fetchWithTimeout = async (
   timeout: number = 120000, // Default 2 minutes timeout (long operations should pass explicit timeout)
   retryCount: number = 0
 ): Promise<Response> => {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeout);
+  const timeoutController = new AbortController();
+  const timeoutId = setTimeout(() => timeoutController.abort(), timeout);
   
   const fullUrl = url.startsWith('/') ? `${API_BASE_URL}${url}` : url;
   
@@ -106,7 +126,7 @@ const fetchWithTimeout = async (
     const response = await fetch(fullUrl, {
       ...options,
       headers: headersWithCacheBust,
-      signal: controller.signal,
+      signal: mergeAbortSignals(options.signal, timeoutController.signal),
       credentials: 'include'
     } as RequestInit);
     clearTimeout(timeoutId);

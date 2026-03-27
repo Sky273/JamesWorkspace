@@ -13,6 +13,10 @@ import { fetchWithAuth, createAuthOptionsWithCsrf } from '../../utils/apiInterce
 import logger from '../../utils/logger.frontend';
 import toast from 'react-hot-toast';
 import type { FileStatus, ExportFormats } from '../batchUpload.utils';
+import {
+  FRONTEND_LLM_ANALYSIS_TIMEOUT_MS,
+  FRONTEND_LLM_IMPROVEMENT_TIMEOUT_MS,
+} from '../../constants/llmTimeouts';
 
 const loadResumeProcessing = async () => import('../../utils/resumeProcessing');
 const loadApiInterceptor = async () => import('../../utils/apiInterceptor');
@@ -134,7 +138,7 @@ export function useBatchProcessing({
       const analysisResponse = await fetchWithAuth('/api/resumes/analyze-text', {
         ...analysisOptions,
         signal
-      }, 300000); // 5 minutes for LLM analysis
+      }, FRONTEND_LLM_ANALYSIS_TIMEOUT_MS);
       
       if (!analysisResponse.ok) {
         const errorData = await analysisResponse.json().catch(() => ({ error: 'Échec de l\'analyse' }));
@@ -213,7 +217,7 @@ export function useBatchProcessing({
         const improveResponse = await fetchWithAuth('/api/resumes/improve', {
           ...improveOptions,
           signal
-        }, 300000); // 5 minutes for LLM improvement
+        }, FRONTEND_LLM_IMPROVEMENT_TIMEOUT_MS);
         
         if (improveResponse.ok) {
           const { text: improvedText, analysis: improvedAnalysis } = await improveResponse.json();

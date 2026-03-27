@@ -1,7 +1,7 @@
 /**
  * ImprovementAnimation Component
- * Polished inline animation shown during CV improvement (improving + analyzing steps).
- * Renders as a card that replaces the main content area.
+ * Polished animation shown during CV improvement (improving + analyzing steps).
+ * Can render inline or as a fullscreen overlay.
  */
 
 import { useState, useEffect, useMemo } from 'react';
@@ -11,31 +11,28 @@ import { useTranslation } from 'react-i18next';
 
 interface ImprovementAnimationProps {
   currentStep?: string;
+  fullscreen?: boolean;
 }
 
-// ─── Cycling messages per step ─────────────────────────────
-
 const IMPROVING_MESSAGES = [
-  'Restructuration du résumé professionnel…',
-  'Optimisation des compétences techniques…',
-  'Amélioration de la lisibilité ATS…',
-  'Renforcement des expériences clés…',
-  'Harmonisation du style rédactionnel…',
-  'Ajustement des mots-clés sectoriels…',
-  'Factualisation des réalisations…',
-  'Polissage de la mise en forme…',
+  'Restructuration du resume professionnel...',
+  'Optimisation des competences techniques...',
+  'Amelioration de la lisibilite ATS...',
+  'Renforcement des experiences cles...',
+  'Harmonisation du style redactionnel...',
+  'Ajustement des mots-cles sectoriels...',
+  'Factualisation des realisations...',
+  'Polissage de la mise en forme...',
 ];
 
 const ANALYZING_MESSAGES = [
-  'Calcul des scores de qualité…',
-  'Évaluation de la compatibilité ATS…',
-  'Analyse des compétences identifiées…',
-  'Comparaison avant / après…',
-  'Extraction des axes d\'amélioration…',
-  'Vérification de la cohérence globale…',
+  'Calcul des scores de qualite...',
+  'Evaluation de la compatibilite ATS...',
+  'Analyse des competences identifiees...',
+  'Comparaison avant / apres...',
+  'Extraction des axes d\'amelioration...',
+  'Verification de la coherence globale...',
 ];
-
-// ─── Floating particle background ──────────────────────────
 
 const PARTICLES = Array.from({ length: 12 }, (_, i) => ({
   id: i,
@@ -65,15 +62,12 @@ const FloatingParticles = ({ color }: { color: string }) => (
   </>
 );
 
-// ─── Multi-ring spinner ────────────────────────────────────
-
 const MultiRingSpinner = ({ variant }: { variant: 'improving' | 'analyzing' }) => {
   const isImproving = variant === 'improving';
   const Icon = isImproving ? SparklesIcon : ChartBarIcon;
 
   return (
     <div className="relative w-32 h-32">
-      {/* Outer glow */}
       <motion.div
         className={`absolute -inset-4 rounded-full ${isImproving
           ? 'bg-gradient-to-br from-blue-400/10 to-indigo-500/10'
@@ -82,7 +76,6 @@ const MultiRingSpinner = ({ variant }: { variant: 'improving' | 'analyzing' }) =
         animate={{ scale: [1, 1.15, 1], opacity: [0.4, 0.8, 0.4] }}
         transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
       />
-      {/* Outer ring — slow */}
       <motion.div
         className={`absolute inset-0 rounded-full border-[3px] ${isImproving
           ? 'border-blue-200/50 dark:border-blue-800/30'
@@ -95,7 +88,6 @@ const MultiRingSpinner = ({ variant }: { variant: 'improving' | 'analyzing' }) =
         animate={{ rotate: 360 }}
         transition={{ duration: 3.5, repeat: Infinity, ease: 'linear' }}
       />
-      {/* Middle ring — opposite */}
       <motion.div
         className={`absolute inset-3 rounded-full border-[3px] ${isImproving
           ? 'border-indigo-200/30 dark:border-indigo-800/20'
@@ -108,7 +100,6 @@ const MultiRingSpinner = ({ variant }: { variant: 'improving' | 'analyzing' }) =
         animate={{ rotate: -360 }}
         transition={{ duration: 2.2, repeat: Infinity, ease: 'linear' }}
       />
-      {/* Inner ring — fast */}
       <motion.div
         className={`absolute inset-6 rounded-full border-[2px] ${isImproving
           ? 'border-purple-200/20 dark:border-purple-800/15'
@@ -121,7 +112,6 @@ const MultiRingSpinner = ({ variant }: { variant: 'improving' | 'analyzing' }) =
         animate={{ rotate: 360 }}
         transition={{ duration: 1.4, repeat: Infinity, ease: 'linear' }}
       />
-      {/* Central icon */}
       <div className="absolute inset-0 flex items-center justify-center">
         <motion.div
           className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg ${isImproving
@@ -132,7 +122,6 @@ const MultiRingSpinner = ({ variant }: { variant: 'improving' | 'analyzing' }) =
           transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
         >
           <Icon className="w-7 h-7 text-white" />
-          {/* Shimmer */}
           <motion.div
             className="absolute inset-0 rounded-2xl bg-gradient-to-r from-transparent via-white/25 to-transparent"
             animate={{ x: ['-100%', '200%'] }}
@@ -144,16 +133,13 @@ const MultiRingSpinner = ({ variant }: { variant: 'improving' | 'analyzing' }) =
   );
 };
 
-// ─── Main component ────────────────────────────────────────
-
-const ImprovementAnimation = ({ currentStep = 'improving' }: ImprovementAnimationProps): JSX.Element => {
+const ImprovementAnimation = ({ currentStep = 'improving', fullscreen = false }: ImprovementAnimationProps): JSX.Element => {
   const { t } = useTranslation();
   const [messageIndex, setMessageIndex] = useState(0);
 
   const isImproving = currentStep === 'improving';
-  const messages = useMemo(() => isImproving ? IMPROVING_MESSAGES : ANALYZING_MESSAGES, [isImproving]);
+  const messages = useMemo(() => (isImproving ? IMPROVING_MESSAGES : ANALYZING_MESSAGES), [isImproving]);
 
-  // Cycle messages
   useEffect(() => {
     setMessageIndex(0);
     const interval = setInterval(() => {
@@ -165,19 +151,19 @@ const ImprovementAnimation = ({ currentStep = 'improving' }: ImprovementAnimatio
   const steps = [
     {
       id: 'improving',
-      label: t('improvementAnimation.steps.improving.label', 'Amélioration du CV'),
+      label: t('improvementAnimation.steps.improving.label', 'Amelioration du CV'),
       icon: SparklesIcon,
     },
     {
       id: 'analyzing',
-      label: t('improvementAnimation.steps.analyzing.label', 'Analyse de qualité'),
+      label: t('improvementAnimation.steps.analyzing.label', 'Analyse de qualite'),
       icon: ChartBarIcon,
     },
   ];
 
-  const currentStepIndex = steps.findIndex(s => s.id === currentStep);
+  const currentStepIndex = steps.findIndex(step => step.id === currentStep);
 
-  return (
+  const content = (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -185,24 +171,20 @@ const ImprovementAnimation = ({ currentStep = 'improving' }: ImprovementAnimatio
       transition={{ duration: 0.4 }}
       className="relative bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden"
     >
-      {/* Gradient background */}
       <div className={`absolute inset-0 ${isImproving
         ? 'bg-gradient-to-br from-blue-50/60 via-transparent to-indigo-50/40 dark:from-blue-950/20 dark:via-transparent dark:to-indigo-950/15'
         : 'bg-gradient-to-br from-emerald-50/60 via-transparent to-teal-50/40 dark:from-emerald-950/20 dark:via-transparent dark:to-teal-950/15'
       }`} />
 
-      {/* Floating particles */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <FloatingParticles color={isImproving ? 'bg-indigo-400/40' : 'bg-emerald-400/40'} />
       </div>
 
       <div className="relative flex flex-col items-center py-16 px-6">
-        {/* Spinner */}
         <div className="mb-8">
           <MultiRingSpinner variant={isImproving ? 'improving' : 'analyzing'} />
         </div>
 
-        {/* Title */}
         <AnimatePresence mode="wait">
           <motion.h3
             key={currentStep}
@@ -212,13 +194,11 @@ const ImprovementAnimation = ({ currentStep = 'improving' }: ImprovementAnimatio
             className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2 text-center"
           >
             {isImproving
-              ? t('improvementAnimation.steps.improving.label', 'Amélioration du CV en cours…')
-              : t('improvementAnimation.steps.analyzing.label', 'Analyse de qualité en cours…')
-            }
+              ? t('improvementAnimation.steps.improving.label', 'Amelioration du CV en cours...')
+              : t('improvementAnimation.steps.analyzing.label', 'Analyse de qualite en cours...')}
           </motion.h3>
         </AnimatePresence>
 
-        {/* Cycling sub-message */}
         <div className="h-6 mb-6">
           <AnimatePresence mode="wait">
             <motion.p
@@ -234,7 +214,6 @@ const ImprovementAnimation = ({ currentStep = 'improving' }: ImprovementAnimatio
           </AnimatePresence>
         </div>
 
-        {/* Shimmer progress bar */}
         <div className={`w-72 h-1.5 rounded-full overflow-hidden mb-8 ${isImproving
           ? 'bg-indigo-100 dark:bg-indigo-900/30'
           : 'bg-emerald-100 dark:bg-emerald-900/30'
@@ -250,7 +229,6 @@ const ImprovementAnimation = ({ currentStep = 'improving' }: ImprovementAnimatio
           />
         </div>
 
-        {/* Step indicators */}
         <div className="flex items-center gap-0 mb-6">
           {steps.map((step, i) => {
             const isActive = step.id === currentStep;
@@ -293,7 +271,6 @@ const ImprovementAnimation = ({ currentStep = 'improving' }: ImprovementAnimatio
                     {step.label}
                   </span>
                 </div>
-                {/* Connector */}
                 {i < steps.length - 1 && (
                   <div className="w-16 sm:w-24 h-[3px] mx-2 sm:mx-3 -mt-5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                     <motion.div
@@ -309,15 +286,12 @@ const ImprovementAnimation = ({ currentStep = 'improving' }: ImprovementAnimatio
           })}
         </div>
 
-        {/* Estimated time */}
         <p className="text-xs text-gray-400 dark:text-gray-500">
           {isImproving
-            ? t('improvementAnimation.estimatedTime', 'Cela peut prendre 30–90 secondes')
-            : t('improvementAnimation.analyzingTime', 'Quelques secondes…')
-          }
+            ? t('improvementAnimation.estimatedTime', 'Cela peut prendre 30-90 secondes')
+            : t('improvementAnimation.analyzingTime', 'Quelques secondes...')}
         </p>
 
-        {/* Bouncing dots */}
         <div className="flex items-center gap-1.5 mt-4">
           {[0, 1, 2, 3].map(i => (
             <motion.div
@@ -331,6 +305,29 @@ const ImprovementAnimation = ({ currentStep = 'improving' }: ImprovementAnimatio
       </div>
     </motion.div>
   );
+
+  if (fullscreen) {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-[60]"
+      >
+        <motion.div
+          initial={{ scale: 0.92, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.92, opacity: 0 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+          className="max-w-3xl w-full mx-4"
+        >
+          {content}
+        </motion.div>
+      </motion.div>
+    );
+  }
+
+  return content;
 };
 
 export default ImprovementAnimation;

@@ -25,6 +25,7 @@ import PipelineTab from '../components/ResumeAnalysis/PipelineTab';
 import ResumeComments from '../components/ResumeComments';
 import { fetchWithAuth, createAuthOptionsWithCsrf } from '../utils/apiInterceptor';
 import { removeSuggestionMarkers } from '../utils/tinymceSuggestionsPlugin';
+import { FRONTEND_LLM_AI_MODIFICATION_TIMEOUT_MS } from '../constants/llmTimeouts';
 import { DeferredTiptapEditor as TiptapEditor, parseSuggestions } from '../components/TiptapEditor';
 import type { TiptapEditorRef } from '../components/TiptapEditor';
 
@@ -139,7 +140,7 @@ const ResumeImprovePage = (): JSX.Element => {
         body: JSON.stringify({ content: currentContent, instructions })
       });
       
-      const response = await fetchWithAuth(`/api/resumes/${currentResume.id}/ai-modify`, authOptions, 300000); // 5 minutes for LLM operation
+      const response = await fetchWithAuth(`/api/resumes/${currentResume.id}/ai-modify`, authOptions, FRONTEND_LLM_AI_MODIFICATION_TIMEOUT_MS);
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Failed to modify resume' }));
         throw new Error(errorData.error || 'Failed to modify resume with AI');
@@ -293,7 +294,7 @@ const ResumeImprovePage = (): JSX.Element => {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
         <div className="max-w-7xl mx-auto px-4">
-          <ImprovementAnimation currentStep={processingStep || 'improving'} />
+          <ImprovementAnimation currentStep={processingStep || 'improving'} fullscreen={true} />
         </div>
       </div>
     );
@@ -617,4 +618,5 @@ const ResumeImprovePage = (): JSX.Element => {
 };
 
 export default ResumeImprovePage;
+
 

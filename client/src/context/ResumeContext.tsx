@@ -12,6 +12,10 @@ import { showCaughtError, getUserFriendlyMessage } from '../components/errorToas
 import { applyResumeUpdate, normalizeResume, normalizeResumeList } from '../utils/resumeNormalization';
 
 import { Resume } from '../types/entities';
+import {
+  FRONTEND_LLM_IMPROVEMENT_TIMEOUT_MS,
+  FRONTEND_SINGLE_UPLOAD_JOB_TIMEOUT_MS,
+} from '../constants/llmTimeouts';
 
 export type { Resume };
 
@@ -50,7 +54,7 @@ interface ResumeProviderProps {
 const ResumeContext = createContext<ResumeContextType | undefined>(undefined);
 
 const SINGLE_UPLOAD_JOB_POLL_INTERVAL_MS = 2000;
-const SINGLE_UPLOAD_JOB_TIMEOUT_MS = 10 * 60 * 1000;
+const SINGLE_UPLOAD_JOB_TIMEOUT_MS = FRONTEND_SINGLE_UPLOAD_JOB_TIMEOUT_MS;
 
 export const useResume = (): ResumeContextType => {
   const context = useContext(ResumeContext);
@@ -343,7 +347,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
       };
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 300000);
+      const timeoutId = setTimeout(() => controller.abort(), FRONTEND_LLM_IMPROVEMENT_TIMEOUT_MS);
 
       let response: Response;
       try {
@@ -355,13 +359,13 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
         response = await fetchWithAuth('/api/resumes/improve', {
           ...authOptions,
           signal: controller.signal
-        }, 300000);
+        }, FRONTEND_LLM_IMPROVEMENT_TIMEOUT_MS);
         clearTimeout(timeoutId);
       } catch (fetchError) {
         clearTimeout(timeoutId);
         logger.error('Fetch error:', fetchError);
         if (fetchError instanceof Error && fetchError.name === 'AbortError') {
-          throw new Error('Request timed out after 5 minutes.');
+          throw new Error('Request timed out after 25 minutes.');
         }
         throw new Error('Network error: Unable to connect to the server.');
       }
