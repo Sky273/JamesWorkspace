@@ -32,7 +32,7 @@
 | **Frontend** | React 19, TypeScript, Vite 8 (Rolldown), TailwindCSS 4, Framer Motion |
 | **Backend** | Node.js, Express.js |
 | **Base de données** | PostgreSQL 18 avec pg (node-postgres) |
-| **IA/LLM** | OpenAI (GPT-4/5), Anthropic (Claude) |
+| **IA/LLM** | OpenAI (GPT-4/5), Anthropic (Claude), MiniMax, Ollama distant |
 | **APIs Externes** | France Travail, Adzuna, ROME 4.0, ESCO |
 | **Génération PDF** | Puppeteer (html-pdf-node) |
 | **Éditeur WYSIWYG** | Tiptap 3.x (ProseMirror) |
@@ -440,8 +440,10 @@ EXECUTE FUNCTION sync_customer_name();
 
 | Provider | Modèles | Usage |
 |----------|---------|-------|
-| **OpenAI** | GPT-4, GPT-4o, GPT-5.x | Analyse, amélioration, adaptation |
-| **Anthropic** | Claude 3.x | Alternative à OpenAI |
+| **OpenAI** | GPT-4, GPT-4o, GPT-5.x | Analyse, am?lioration, adaptation |
+| **Anthropic** | Claude 3.x / Claude 4.x | Alternative ? OpenAI |
+| **MiniMax** | MiniMax-M2.7, MiniMax-M2.5, MiniMax-M2.1 | Alternative API-compatible pour analyse, am?lioration, adaptation |
+| **Ollama (distant)** | Mod?les expos?s par une instance Ollama externe | Ex?cution via une URL Ollama distante, sans moteur Ollama embarqu? dans le conteneur |
 
 ### Service LLM Unifié
 
@@ -449,13 +451,18 @@ EXECUTE FUNCTION sync_customer_name();
 // src/services/llm.service.js
 export async function callLLM(messages, options) {
   const settings = await getLLMSettings(); // Config depuis PostgreSQL
-  const provider = settings.llmProvider;   // 'openai' ou 'anthropic'
+  const provider = settings.llmProvider;   // 'openai', 'anthropic', 'minimax' ou 'ollama'
   
   if (provider === 'anthropic') {
     return await callAnthropic(messages, model, options);
-  } else {
-    return await callOpenAI(messages, model, options);
   }
+  if (provider === 'minimax') {
+    return await callMiniMax(messages, model, options);
+  }
+  if (provider === 'ollama') {
+    return await callOllama(messages, model, options);
+  }
+  return await callOpenAI(messages, model, options);
 }
 ```
 
@@ -465,6 +472,9 @@ Le service gère automatiquement les différences entre modèles :
 - `max_tokens` vs `max_completion_tokens` (GPT-5+)
 - Support température (non supporté par GPT-5)
 - Format messages (OpenAI vs Anthropic)
+- APIs compatibles OpenAI et Anthropic pour MiniMax
+- Connexion HTTP vers une instance Ollama distante configur?e dans les param?tres
+- Cas Ollama sans `llmModel` obligatoire c?t? application lorsque le mod?le est pilot? par l'instance distante
 
 ---
 
@@ -1240,8 +1250,13 @@ CREATE TABLE schema_migrations (
 | `JWT_REFRESH_SECRET` | ✅ | Secret refresh token |
 | `REFRESH_TOKEN_SECRET` | ✅ | Secret token additionnel |
 | `CSRF_SECRET` | ✅ | Secret CSRF |
-| `OPENAI_API_KEY` | Optionnel | Clé API OpenAI |
-| `ANTHROPIC_API_KEY` | Optionnel | Clé API Anthropic |
+| `OPENAI_API_KEY` | Optionnel | Cl? API OpenAI |
+| `ANTHROPIC_API_KEY` | Optionnel | Cl? API Anthropic |
+| `MINIMAX_API_KEY` | Optionnel | Cl? API MiniMax |
+| `MINIMAX_OPENAI_BASE_URL` | Optionnel | URL base OpenAI-compatible MiniMax |
+| `MINIMAX_ANTHROPIC_BASE_URL` | Optionnel | URL base Anthropic-compatible MiniMax |
+| `OLLAMA_BASE_URL` | Optionnel | URL de l'instance Ollama distante |
+| `OLLAMA_REQUEST_TIMEOUT_MS` | Optionnel | Timeout global des appels Ollama |
 | `GOOGLE_CLIENT_ID` | Optionnel | Client ID Google OAuth |
 | `GOOGLE_CLIENT_SECRET` | Optionnel | Secret Google OAuth |
 | `MAIL_TOKEN_ENCRYPTION_KEY` | Optionnel | Clé de chiffrement tokens mail |

@@ -42,7 +42,7 @@ Application professionnelle de gestion et d'analyse de CVs avec intelligence art
 
 ### Chatbot IA
 - **Assistant conversationnel** : Aide à la rédaction et conseils carrière
-- **Multi-modèles** : Support OpenAI (GPT-5, GPT-4o) et Anthropic (Claude 4.5/4.6)
+- **Multi-modèles** : Support OpenAI (GPT-5, GPT-4o), Anthropic (Claude 4.5/4.6), MiniMax et Ollama distant
 - **Contexte CV** : Réponses personnalisées basées sur le profil
 
 ### Administration
@@ -102,6 +102,12 @@ CSRF_SECRET=your-csrf-secret-key-min-32-chars
 # APIs LLM (optionnel)
 OPENAI_API_KEY=sk-...
 ANTHROPIC_API_KEY=sk-ant-...
+MINIMAX_API_KEY=sk-api-...
+MINIMAX_OPENAI_BASE_URL=https://api.minimax.io/v1
+MINIMAX_ANTHROPIC_BASE_URL=https://api.minimax.io/anthropic
+# Ollama distant uniquement
+OLLAMA_BASE_URL=http://192.168.1.20:11434
+OLLAMA_REQUEST_TIMEOUT_MS=300000
 
 # Serveur
 HTTPS_ENABLED=true
@@ -314,6 +320,8 @@ psql -U postgres -d resume_converter < backup.sql
 ### LLM (Proxy)
 - `POST /api/llm/openai` - Proxy OpenAI (GPT-5, GPT-4o)
 - `POST /api/llm/anthropic` - Proxy Anthropic (Claude)
+- `POST /api/llm/messages` - Proxy Anthropic / providers compatibles
+- `POST /api/llm/chat/completions` - Proxy unifi? OpenAI-compatible (OpenAI, MiniMax, Ollama selon configuration)
 
 ### Cabinets (Firms)
 - `GET /api/firms` - Liste des cabinets

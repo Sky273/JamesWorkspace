@@ -17,6 +17,8 @@ This Docker setup creates a **single, fully autonomous container** that includes
 - **`.env.docker` file** at the project root (required — see below)
 - (Optional) OpenAI API key for AI features
 - (Optional) Anthropic API key for Claude integration
+- (Optional) MiniMax API key for MiniMax models
+- (Optional) URL of a remote Ollama instance
 
 ### ⚠️ Required: `.env.docker` file
 
@@ -45,6 +47,12 @@ HTTPS_PORT=3443
 # LLM APIs (optional)
 OPENAI_API_KEY=sk-...
 ANTHROPIC_API_KEY=sk-ant-...
+MINIMAX_API_KEY=sk-api-...
+MINIMAX_OPENAI_BASE_URL=https://api.minimax.io/v1
+MINIMAX_ANTHROPIC_BASE_URL=https://api.minimax.io/anthropic
+# Remote Ollama only
+OLLAMA_BASE_URL=http://192.168.1.20:11434
+OLLAMA_REQUEST_TIMEOUT_MS=300000
 
 # Google OAuth (optional)
 GOOGLE_CLIENT_ID=your-client-id
@@ -160,12 +168,14 @@ After starting the container:
 
 ### Environment Variables
 
-Pass API keys when running:
+Pass LLM configuration when running:
 
 ```powershell
 # Windows
 $env:OPENAI_API_KEY = "sk-..."
 $env:ANTHROPIC_API_KEY = "sk-ant-..."
+$env:MINIMAX_API_KEY = "sk-api-..."
+$env:OLLAMA_BASE_URL = "http://192.168.1.20:11434"
 .\docker\docker-build.ps1 -Run
 ```
 
@@ -173,6 +183,8 @@ $env:ANTHROPIC_API_KEY = "sk-ant-..."
 # Linux/Mac
 export OPENAI_API_KEY="sk-..."
 export ANTHROPIC_API_KEY="sk-ant-..."
+export MINIMAX_API_KEY="sk-api-..."
+export OLLAMA_BASE_URL="http://192.168.1.20:11434"
 ./docker/docker-build.sh run
 ```
 
@@ -187,6 +199,8 @@ docker run -d \
     -p 5433:5432 \
     -e OPENAI_API_KEY="your-key" \
     -e ANTHROPIC_API_KEY="your-key" \
+    -e MINIMAX_API_KEY="your-key" \
+    -e OLLAMA_BASE_URL="http://192.168.1.20:11434" \
     -e JWT_SECRET="your-secret-min-32-chars" \
     -e REFRESH_TOKEN_SECRET="your-refresh-secret-min-32-chars" \
     -v ./uploads:/app/uploads \
