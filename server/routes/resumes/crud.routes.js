@@ -130,48 +130,46 @@ async function updateResumeVersionWithPostAnalysis(resumeId, versionNumber, anal
     );
 }
 async function persistDeferredPostImprovementAnalysis({ resumeId, improvedText, fileName, userMetadata, currentVersion }) {
-    try {
-        const settings = await getLLMSettings();
-        const model = settings.llmModel;
-        const cvMode = settings.cvMode || 'nominative';
-        let analysisPrompt = settings['Analysis Prompt'] || DEFAULT_ANALYSIS_PROMPT;
-        const acceptedIndustries = await getAcceptedIndustriesString();
-        const industryMapping = await getIndustryMappingString();
-        analysisPrompt = analysisPrompt.replace('{ACCEPTED_INDUSTRIES}', acceptedIndustries);
-        analysisPrompt = analysisPrompt.replace('{INDUSTRY_MAPPING}', industryMapping);
+    const settings = await getLLMSettings();
+    const model = settings.llmModel;
+    const cvMode = settings.cvMode || 'nominative';
+    let analysisPrompt = settings['Analysis Prompt'] || DEFAULT_ANALYSIS_PROMPT;
+    const acceptedIndustries = await getAcceptedIndustriesString();
+    const industryMapping = await getIndustryMappingString();
+    analysisPrompt = analysisPrompt.replace('{ACCEPTED_INDUSTRIES}', acceptedIndustries);
+    analysisPrompt = analysisPrompt.replace('{INDUSTRY_MAPPING}', industryMapping);
 
-        let anonymizationRules = cvMode === 'anonymous' ? ANONYMIZATION_RULES_ANONYMOUS : ANONYMIZATION_RULES_NOMINATIVE;
-        anonymizationRules = anonymizationRules.replace(/{FILENAME}/g, fileName || 'Non disponible');
-        analysisPrompt = analysisPrompt.replace('{ANONYMIZATION_RULES}', anonymizationRules);
+    let anonymizationRules = cvMode === 'anonymous' ? ANONYMIZATION_RULES_ANONYMOUS : ANONYMIZATION_RULES_NOMINATIVE;
+    anonymizationRules = anonymizationRules.replace(/{FILENAME}/g, fileName || 'Non disponible');
+    analysisPrompt = analysisPrompt.replace('{ANONYMIZATION_RULES}', anonymizationRules);
 
-        let improvedAnalysis = await analyzeResume(
-            cleanupText(improvedText),
-            model,
-            analysisPrompt,
-            userMetadata,
-            true,
-            fileName || null
-        );
-        improvedAnalysis = await calculateWeightedGlobalRating(improvedAnalysis, settings);
+    let improvedAnalysis = await analyzeResume(
+        cleanupText(improvedText),
+        model,
+        analysisPrompt,
+        userMetadata,
+        true,
+        fileName || null
+    );
+    improvedAnalysis = await calculateWeightedGlobalRating(improvedAnalysis, settings);
 
-        await resumesService.updateResume(resumeId, buildImprovedResumeUpdateData(improvedText, improvedAnalysis));
+    const updatedResume = await resumesService.updateResume(resumeId, buildImprovedResumeUpdateData(improvedText, improvedAnalysis));
 
-        if (currentVersion) {
-            await updateResumeVersionWithPostAnalysis(resumeId, currentVersion, improvedAnalysis);
-        }
-
-        safeLog('info', 'Deferred post-improvement analysis saved from PUT flow', {
-            resumeId,
-            currentVersion,
-            hasSuggestions: hasSuggestionContent(improvedAnalysis.suggestions),
-            suggestionsKeys: Object.keys(improvedAnalysis.suggestions || {})
-        });
-    } catch (error) {
-        safeLog('warn', 'Deferred post-improvement analysis failed from PUT flow', {
-            resumeId,
-            error: error.message
-        });
+    if (currentVersion) {
+        await updateResumeVersionWithPostAnalysis(resumeId, currentVersion, improvedAnalysis);
     }
+
+    safeLog('info', 'Deferred post-improvement analysis saved from PUT flow', {
+        resumeId,
+        currentVersion,
+        hasSuggestions: hasSuggestionContent(improvedAnalysis.suggestions),
+        suggestionsKeys: Object.keys(improvedAnalysis.suggestions || {})
+    });
+
+    return {
+        updatedResume,
+        improvedAnalysis
+    };
 }
 
 // GET /api/resumes - Get all resumes (with server-side pagination and filters)
@@ -511,7 +509,7 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateR
             });
         }
 
-        const updatedResume = await resumesService.updateResume(id, updateData);
+        let updatedResume = await resumesService.updateResume(id, updateData);
 
         // Create a new version if improved text was changed
         if (shouldCreateVersion && updateData.improved_text) {
@@ -586,13 +584,14 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateR
         });
 
         if (shouldRunDeferredPostAnalysis) {
-            void persistDeferredPostImprovementAnalysis({
+            const deferredResult = await persistDeferredPostImprovementAnalysis({
                 resumeId: id,
                 improvedText: updateData.improved_text,
                 fileName: updatedResume.file_name || updatedResume.name || null,
                 userMetadata: getRequestMetadata(req),
                 currentVersion: updatedResume.current_version || null
             });
+            updatedResume = deferredResult.updatedResume;
         }
 
         res.json(mapResumeToFrontend(updatedResume));

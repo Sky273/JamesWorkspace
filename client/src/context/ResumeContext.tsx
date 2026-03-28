@@ -58,6 +58,17 @@ const SINGLE_UPLOAD_JOB_POLL_INTERVAL_MS = 2000;
 const SINGLE_UPLOAD_JOB_TIMEOUT_MS = FRONTEND_SINGLE_UPLOAD_JOB_TIMEOUT_MS;
 const POST_IMPROVEMENT_REFRESH_INTERVAL_MS = 2000;
 const POST_IMPROVEMENT_REFRESH_MAX_ATTEMPTS = 45;
+const getResumeIdentifier = (resume: Resume | null | undefined): string | undefined => {
+  if (!resume) return undefined;
+  const candidates = [resume.id, resume['ID']];
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string' && candidate.trim().length > 0) {
+      return candidate;
+    }
+  }
+  return undefined;
+};
+
 
 export const useResume = (): ResumeContextType => {
   const context = useContext(ResumeContext);
@@ -369,6 +380,11 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
       throw new Error('No resume selected for improvement');
     }
 
+    const resumeId = getResumeIdentifier(currentResume);
+    if (!resumeId) {
+      throw new Error('Resume ID is missing for improvement');
+    }
+
     setLoading(true);
     setProcessingStep('improving');
 
@@ -396,7 +412,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
         const authOptions = await createAuthOptionsWithCsrf({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text, analysis: currentAnalysis, resumeId: currentResume.id })
+          body: JSON.stringify({ text, analysis: currentAnalysis, resumeId })
         });
         response = await fetchWithCsrfRetry('/api/resumes/improve', {
           ...authOptions,
@@ -422,10 +438,10 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
 
       if (savedResume) {
         const normalizedSavedResume = normalizeResume(savedResume);
-        setResumes(prev => prev.map(resume => (resume.id === currentResume.id ? normalizedSavedResume : resume)));
+        setResumes(prev => prev.map(resume => (resume.id === resumeId ? normalizedSavedResume : resume)));
         setCurrentResume(normalizedSavedResume);
         if (postAnalysisPending) {
-          refreshResumeAfterDeferredPostAnalysis(currentResume.id);
+          refreshResumeAfterDeferredPostAnalysis(resumeId);
         }
         return normalizedSavedResume;
       }
@@ -461,7 +477,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
       };
 
       try {
-        return await updateResumeAnalysis(currentResume.id, updatePayload, FRONTEND_RESUME_SAVE_TIMEOUT_MS);
+        return await updateResumeAnalysis(resumeId, updatePayload, FRONTEND_RESUME_SAVE_TIMEOUT_MS);
       } catch (saveError) {
         logger.error('Error saving improved resume after successful LLM response:', saveError);
         throw new Error('Failed to save improved resume');

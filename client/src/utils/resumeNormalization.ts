@@ -19,6 +19,7 @@ const getFirstNumber = (...values: Array<unknown>): number | undefined => {
 };
 
 export const normalizeResume = (resume: Resume): Resume => {
+  const normalizedId = getFirstString(resume.id, resume['ID'], resume.ID) || '';
   const normalizedName = getFirstString(resume.name, resume['Name'], resume.candidate_name, resume.Name);
   const normalizedOriginalName = getFirstString(resume.originalName, resume['Original Name'], normalizedName);
   const normalizedTitle = getFirstString(resume.title, resume['Title'], resume.adapted_title);
@@ -34,6 +35,8 @@ export const normalizeResume = (resume: Resume): Resume => {
 
   return {
     ...resume,
+    id: normalizedId,
+    ID: normalizedId,
     Name: normalizedName,
     name: normalizedName,
     'Original Name': normalizedOriginalName,

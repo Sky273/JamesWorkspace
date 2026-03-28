@@ -124,56 +124,55 @@ async function persistPostImprovementAnalysis({
     userId,
     shouldCreateVersion
 }) {
-    try {
-        let analysisPrompt = settings['Analysis Prompt'] || DEFAULT_ANALYSIS_PROMPT;
-        const industryMapping = await getIndustryMappingString();
-        analysisPrompt = analysisPrompt.replace('{ACCEPTED_INDUSTRIES}', acceptedIndustries);
-        analysisPrompt = analysisPrompt.replace('{INDUSTRY_MAPPING}', industryMapping);
-        analysisPrompt = analysisPrompt.replace('{ANONYMIZATION_RULES}', anonymizationRules);
+    let analysisPrompt = settings['Analysis Prompt'] || DEFAULT_ANALYSIS_PROMPT;
+    const industryMapping = await getIndustryMappingString();
+    analysisPrompt = analysisPrompt.replace('{ACCEPTED_INDUSTRIES}', acceptedIndustries);
+    analysisPrompt = analysisPrompt.replace('{INDUSTRY_MAPPING}', industryMapping);
+    analysisPrompt = analysisPrompt.replace('{ANONYMIZATION_RULES}', anonymizationRules);
 
-        let postImprovementAnalysis = await analyzeResume(
-            cleanupText(improvedText),
-            model,
-            analysisPrompt,
-            userMetadata,
-            true,
-            originalFileName || null
-        );
+    let postImprovementAnalysis = await analyzeResume(
+        cleanupText(improvedText),
+        model,
+        analysisPrompt,
+        userMetadata,
+        true,
+        originalFileName || null
+    );
 
-        postImprovementAnalysis = await calculateWeightedGlobalRating(postImprovementAnalysis, settings);
-        const updatedRecord = await updateResume(
+    postImprovementAnalysis = await calculateWeightedGlobalRating(postImprovementAnalysis, settings);
+    const updatedRecord = await updateResume(
+        resumeId,
+        buildImprovedResumeUpdateData(improvedText, postImprovementAnalysis)
+    );
+
+    let createdVersionNumber = null;
+    if (shouldCreateVersion) {
+        const versionPayload = buildImprovementVersionPayload(improvedText, postImprovementAnalysis);
+        const versionData = await createVersion({
             resumeId,
-            buildImprovedResumeUpdateData(improvedText, postImprovementAnalysis)
-        );
-
-        let createdVersionNumber = null;
-        if (shouldCreateVersion) {
-            const versionPayload = buildImprovementVersionPayload(improvedText, postImprovementAnalysis);
-            const versionData = await createVersion({
-                resumeId,
-                improvedText: versionPayload.improvedText,
-                scores: versionPayload.scores,
-                tags: versionPayload.tags,
-                keyImprovements: versionPayload.keyImprovements,
-                userId,
-                changeReason: 'initial_improvement'
-            });
-            createdVersionNumber = versionData.versionNumber;
-        }
-
-        safeLog('info', 'Post-improvement analysis saved', {
-            resumeId,
-            improvedGlobalRating: updatedRecord.improved_global_rating,
-            hasSuggestions: hasSuggestionContent(postImprovementAnalysis.suggestions),
-            suggestionsKeys: Object.keys(postImprovementAnalysis.suggestions || {}),
-            createdVersionNumber
+            improvedText: versionPayload.improvedText,
+            scores: versionPayload.scores,
+            tags: versionPayload.tags,
+            keyImprovements: versionPayload.keyImprovements,
+            userId,
+            changeReason: 'initial_improvement'
         });
-    } catch (error) {
-        safeLog('warn', 'Post-improvement analysis failed after initial improvement save', {
-            resumeId,
-            error: error.message
-        });
+        createdVersionNumber = versionData.versionNumber;
     }
+
+    safeLog('info', 'Post-improvement analysis saved', {
+        resumeId,
+        improvedGlobalRating: updatedRecord.improved_global_rating,
+        hasSuggestions: hasSuggestionContent(postImprovementAnalysis.suggestions),
+        suggestionsKeys: Object.keys(postImprovementAnalysis.suggestions || {}),
+        createdVersionNumber
+    });
+
+    return {
+        updatedRecord,
+        postImprovementAnalysis,
+        createdVersionNumber
+    };
 }
 
 /**
@@ -397,7 +396,7 @@ export async function improveHandler(req, res) {
         }
 
         let savedResume = null;
-        let postAnalysisPending = false;
+        let finalAnalysis = mergedAnalysis;
 
         if (resumeId) {
             const resumeRecord = await findResumeRecord(resumeId);
@@ -409,14 +408,7 @@ export async function improveHandler(req, res) {
             }
 
             const shouldCreateVersion = await hasImprovedTextChanged(resumeId, improved.text);
-            const savedRecord = await updateResume(
-                resumeId,
-                buildImprovedResumeUpdateData(improved.text, mergedAnalysis)
-            );
-            savedResume = mapResumeToFrontend(savedRecord);
-            postAnalysisPending = true;
-
-            void persistPostImprovementAnalysis({
+            const { updatedRecord, postImprovementAnalysis } = await persistPostImprovementAnalysis({
                 resumeId,
                 improvedText: improved.text,
                 model,
@@ -428,22 +420,24 @@ export async function improveHandler(req, res) {
                 userId: req.user?.id,
                 shouldCreateVersion
             });
+            savedResume = mapResumeToFrontend(updatedRecord);
+            finalAnalysis = postImprovementAnalysis;
         }
 
-        safeLog('info', 'Improvement complete with immediate save and deferred post-analysis', {
+        safeLog('info', 'Improvement complete with fully persisted post-analysis', {
             resumeId: resumeId || null,
             hasImprovedText: !!improved.text,
-            hasSuggestions: hasSuggestionContent(mergedAnalysis.suggestions),
-            suggestionsKeys: Object.keys(mergedAnalysis.suggestions || {}),
-            tagsSkillsCount: Array.isArray(mergedAnalysis.tags?.skills) ? mergedAnalysis.tags.skills.length : 0,
-            calculatedGlobalRating: mergedAnalysis.globalRating,
-            postAnalysisPending
+            hasSuggestions: hasSuggestionContent(finalAnalysis.suggestions),
+            suggestionsKeys: Object.keys(finalAnalysis.suggestions || {}),
+            tagsSkillsCount: Array.isArray(finalAnalysis.tags?.skills) ? finalAnalysis.tags.skills.length : 0,
+            calculatedGlobalRating: finalAnalysis.globalRating,
+            postAnalysisPending: false
         });
         res.json({
             text: improved.text,
-            analysis: mergedAnalysis,
+            analysis: finalAnalysis,
             savedResume,
-            postAnalysisPending
+            postAnalysisPending: false
         });
     } catch (error) {
         handleLLMError(error, res, 'improving resume');
