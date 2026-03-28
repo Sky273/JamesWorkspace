@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Security Configuration
  * CSP (Content Security Policy), CORS, CSRF protection
  */
@@ -249,11 +249,15 @@ export function configureCsrf(app) {
     ];
 
     // Safe HTTP methods that should never require CSRF validation
-    const csrfSafeMethods = ['GET', 'HEAD', 'OPTIONS'];
+    const csrfSafeMethods = ['GET', 'HEAD', 'OPTIONS', 'PROPFIND'];
 
     // Apply CSRF protection conditionally
     app.use((req, res, next) => {
-        // Skip CSRF completely for safe methods (GET, HEAD, OPTIONS)
+        // CSRF only applies to API mutations. Ignore static/site probes entirely.
+        if (!req.path.startsWith('/api/')) {
+            return next();
+        }
+        // Skip CSRF completely for safe methods (GET, HEAD, OPTIONS, PROPFIND)
         // This prevents 400 errors from corrupted/expired CSRF cookies on page load
         if (csrfSafeMethods.includes(req.method)) {
             return next();
@@ -295,4 +299,5 @@ export function configureCsrf(app) {
 
     safeLog('info', 'CSRF protection enabled');
 }
+
 

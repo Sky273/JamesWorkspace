@@ -107,6 +107,49 @@ const RatingBar = ({ label, percentage, improved }: RatingBarProps): JSX.Element
   );
 };
 
+const normalizeSuggestionStrings = (value: unknown): string[] => {
+  if (value === null || value === undefined) return [];
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed ? [trimmed] : [];
+  }
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return [String(value)];
+  }
+  if (Array.isArray(value)) {
+    return [...new Set(value.flatMap((item) => normalizeSuggestionStrings(item)).filter(Boolean))];
+  }
+  if (typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    const directText = [
+      record.text,
+      record.suggestion,
+      record.content,
+      record.message,
+      record.label,
+      record.title,
+      record.value,
+      record.description,
+    ].find((candidate): candidate is string => typeof candidate === 'string' && candidate.trim().length > 0);
+
+    if (directText) {
+      return [directText.trim()];
+    }
+
+    return [...new Set(Object.values(record).flatMap((item) => normalizeSuggestionStrings(item)).filter(Boolean))];
+  }
+  return [];
+};
+
+const normalizeSuggestionSections = (value: unknown): Record<string, string[]> => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .map(([key, items]) => [key, normalizeSuggestionStrings(items)])
+      .filter(([, items]) => items.length > 0),
+  );
+};
+
 // Helper to parse improvements from JSON string
 const parseImprovements = (rawImprovements: string | undefined): { bySection: Record<string, string[]>, global: string[] } => {
   let bySection: Record<string, string[]> = {};
@@ -122,13 +165,13 @@ const parseImprovements = (rawImprovements: string | undefined): { bySection: Re
       }
       
       if (Array.isArray(parsed)) {
-        global = parsed as string[];
+        global = normalizeSuggestionStrings(parsed);
       } else if (typeof parsed === 'object' && parsed !== null) {
         const obj = parsed as Record<string, unknown>;
-        if (obj.executiveSummary || obj.skills || obj.experiences || obj.education) {
-          bySection = obj as Record<string, string[]>;
+        if (obj.executiveSummary || obj.skills || obj.experiences || obj.education || obj.atsOptimization || obj.hobbiesLanguages) {
+          bySection = normalizeSuggestionSections(obj);
         } else if (obj.suggestions && typeof obj.suggestions === 'object') {
-          bySection = obj.suggestions as Record<string, string[]>;
+          bySection = normalizeSuggestionSections(obj.suggestions);
         }
       }
     }

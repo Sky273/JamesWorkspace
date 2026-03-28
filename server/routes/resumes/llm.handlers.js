@@ -12,6 +12,7 @@ import { getAcceptedIndustriesString, getIndustryMappingString } from '../../ser
 import { DEFAULT_IMPROVEMENT_PROMPT, DEFAULT_ANALYSIS_PROMPT, DEFAULT_MATCH_ANALYSIS_PROMPT, DEFAULT_ADAPTATION_PROMPT, ANONYMIZATION_RULES_ANONYMOUS, ANONYMIZATION_RULES_NOMINATIVE } from '../../config/prompts.backend.js';
 import { generateTrigram } from '../../utils/trigram.js';
 import { mapResumeToFrontend } from './helpers.js';
+import { createVersion, hasImprovedTextChanged } from '../../services/resumeVersions.service.js';
 
 
 /**
@@ -38,8 +39,52 @@ function hasSuggestionContent(suggestions) {
     return Object.values(suggestions).some((value) => Array.isArray(value) ? value.length > 0 : Boolean(value));
 }
 
+function stringifyJsonField(value, fallback = null) {
+    if (value === undefined) return undefined;
+    if (value === null) return fallback;
+    return JSON.stringify(value);
+}
+
+function extractSummaryText(analysis) {
+    const summary = analysis?.summary ?? analysis?.Summary;
+    if (typeof summary === 'string') {
+        return summary.trim() || null;
+    }
+    if (summary && typeof summary === 'object') {
+        const highlights = Array.isArray(summary.profileHighlights) ? summary.profileHighlights.filter(Boolean).map(String) : [];
+        if (highlights.length > 0) {
+            return highlights.join(' ');
+        }
+    }
+    return null;
+}
+
+function buildImprovementVersionPayload(improvedText, analysis) {
+    const improvedTags = analysis?.tags || {};
+    return {
+        improvedText,
+        scores: {
+            improvedGlobalRating: parseScoreValue(analysis?.globalRating || analysis?.['Global Rating']),
+            improvedSkillsScore: parseScoreValue(analysis?.skillsRating || analysis?.['Skills']),
+            improvedExperienceScore: parseScoreValue(analysis?.experiencesRating || analysis?.['Experience']),
+            improvedEducationScore: parseScoreValue(analysis?.educationRating || analysis?.['Education']),
+            improvedAtsScore: parseScoreValue(analysis?.atsOptimizationRating || analysis?.['ATS Compatibility']),
+            improvedExecutiveSummaryScore: parseScoreValue(analysis?.executiveSummaryRating || analysis?.['Executive Summary']),
+            improvedHobbiesLanguagesScore: parseScoreValue(analysis?.hobbiesLanguagesRating || analysis?.['Hobbies Languages'])
+        },
+        tags: {
+            improvedSkills: improvedTags.skills || [],
+            improvedIndustries: improvedTags.industries || [],
+            improvedTools: improvedTags.tools || [],
+            improvedSoftSkills: improvedTags.softSkills || []
+        },
+        keyImprovements: JSON.stringify(analysis?.suggestions || {})
+    };
+}
+
 function buildImprovedResumeUpdateData(improvedText, analysis) {
     const improvedTags = analysis?.tags || {};
+    const summaryText = extractSummaryText(analysis);
     return {
         improved_text: improvedText,
         improved_global_rating: parseScoreValue(analysis?.globalRating || analysis?.['Global Rating']),
@@ -54,6 +99,14 @@ function buildImprovedResumeUpdateData(improvedText, analysis) {
         improved_tools: JSON.stringify(improvedTags.tools || []),
         improved_soft_skills: JSON.stringify(improvedTags.softSkills || []),
         improved_key_improvements: JSON.stringify(analysis?.suggestions || {}),
+        improvement_suggestions: JSON.stringify(analysis?.suggestions || {}),
+        analysis_details: analysis,
+        summary: summaryText ?? undefined,
+        title: analysis?.title || analysis?.Title || undefined,
+        experience_years: analysis?.experienceYears ?? analysis?.experience_years,
+        education_level: analysis?.educationLevel ?? analysis?.education_level,
+        certifications: stringifyJsonField(analysis?.certifications),
+        languages: stringifyJsonField(analysis?.languages),
         status: 'improved',
         improvement_date: new Date()
     };
@@ -67,7 +120,9 @@ async function persistPostImprovementAnalysis({
     acceptedIndustries,
     anonymizationRules,
     originalFileName,
-    userMetadata
+    userMetadata,
+    userId,
+    shouldCreateVersion
 }) {
     try {
         let analysisPrompt = settings['Analysis Prompt'] || DEFAULT_ANALYSIS_PROMPT;
@@ -91,11 +146,27 @@ async function persistPostImprovementAnalysis({
             buildImprovedResumeUpdateData(improvedText, postImprovementAnalysis)
         );
 
+        let createdVersionNumber = null;
+        if (shouldCreateVersion) {
+            const versionPayload = buildImprovementVersionPayload(improvedText, postImprovementAnalysis);
+            const versionData = await createVersion({
+                resumeId,
+                improvedText: versionPayload.improvedText,
+                scores: versionPayload.scores,
+                tags: versionPayload.tags,
+                keyImprovements: versionPayload.keyImprovements,
+                userId,
+                changeReason: 'initial_improvement'
+            });
+            createdVersionNumber = versionData.versionNumber;
+        }
+
         safeLog('info', 'Post-improvement analysis saved', {
             resumeId,
             improvedGlobalRating: updatedRecord.improved_global_rating,
             hasSuggestions: hasSuggestionContent(postImprovementAnalysis.suggestions),
-            suggestionsKeys: Object.keys(postImprovementAnalysis.suggestions || {})
+            suggestionsKeys: Object.keys(postImprovementAnalysis.suggestions || {}),
+            createdVersionNumber
         });
     } catch (error) {
         safeLog('warn', 'Post-improvement analysis failed after initial improvement save', {
@@ -337,6 +408,7 @@ export async function improveHandler(req, res) {
                 return res.status(403).json({ error: 'Access denied: You can only improve resumes from your firm' });
             }
 
+            const shouldCreateVersion = await hasImprovedTextChanged(resumeId, improved.text);
             const savedRecord = await updateResume(
                 resumeId,
                 buildImprovedResumeUpdateData(improved.text, mergedAnalysis)
@@ -352,7 +424,9 @@ export async function improveHandler(req, res) {
                 acceptedIndustries,
                 anonymizationRules,
                 originalFileName: fileName || null,
-                userMetadata
+                userMetadata,
+                userId: req.user?.id,
+                shouldCreateVersion
             });
         }
 

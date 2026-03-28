@@ -98,6 +98,36 @@ describe('OpenAI Resume Operations', () => {
             expect(result.tags.tools).toContain('Jira');
         });
 
+        it('should normalize alternate suggestion keys from analysis response', async () => {
+            callBusinessChatCompletion.mockResolvedValueOnce({
+                choices: [{
+                    message: {
+                        content: JSON.stringify({
+                            name: 'Jane',
+                            globalRating: '78%',
+                            'Key Improvements': {
+                                executiveBrief: ['Shorten intro'],
+                                skillsKeywords: ['Group skills by category'],
+                                experience: ['Add concrete deliverables'],
+                                formation: ['Clarify degree title'],
+                                ats: ['Use clearer section headings'],
+                                languages: ['Make language levels explicit']
+                            }
+                        })
+                    }
+                }]
+            });
+
+            const result = await analyzeResume('resume', 'gpt-5', '{TEXT} {FILENAME}');
+
+            expect(result.suggestions.executiveSummary).toEqual(['Shorten intro']);
+            expect(result.suggestions.skills).toEqual(['Group skills by category']);
+            expect(result.suggestions.experiences).toEqual(['Add concrete deliverables']);
+            expect(result.suggestions.education).toEqual(['Clarify degree title']);
+            expect(result.suggestions.atsOptimization).toEqual(['Use clearer section headings']);
+            expect(result.suggestions.hobbiesLanguages).toEqual(['Make language levels explicit']);
+        });
+
         it('should inject filename into prompt', async () => {
             callBusinessChatCompletion.mockResolvedValueOnce({
                 choices: [{ message: { content: JSON.stringify(mockAnalysis) } }]

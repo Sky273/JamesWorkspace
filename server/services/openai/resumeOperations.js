@@ -17,6 +17,149 @@ function pickNumericScore(...values) {
     return 0;
 }
 
+function extractSuggestionText(value) {
+    if (value === null || value === undefined) return [];
+
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        return trimmed ? [trimmed] : [];
+    }
+
+    if (typeof value === 'number' || typeof value === 'boolean') {
+        return [String(value)];
+    }
+
+    if (Array.isArray(value)) {
+        return value.flatMap(extractSuggestionText);
+    }
+
+    if (typeof value === 'object') {
+        const directText = [
+            value.text,
+            value.suggestion,
+            value.content,
+            value.message,
+            value.label,
+            value.title,
+            value.value,
+            value.description
+        ].find(candidate => typeof candidate === 'string' && candidate.trim());
+
+        if (directText) {
+            return [directText.trim()];
+        }
+
+        const nestedValues = Object.values(value)
+            .filter(candidate => candidate !== null && candidate !== undefined);
+
+        return nestedValues.flatMap(extractSuggestionText);
+    }
+
+    return [];
+}
+
+function asSuggestionArray(value) {
+    return [...new Set(extractSuggestionText(value).filter(Boolean))];
+}
+
+function extractStructuredSummaryText(summary) {
+    if (typeof summary === 'string') return summary.trim() || '';
+    if (!summary || typeof summary !== 'object') return '';
+
+    const parts = [];
+    const title = typeof summary.title === 'string' ? summary.title.trim() : '';
+    const targetRole = typeof summary.targetRole === 'string' ? summary.targetRole.trim() : '';
+    const highlights = Array.isArray(summary.profileHighlights) ? summary.profileHighlights.filter(Boolean).map(item => String(item).trim()).filter(Boolean) : [];
+
+    if (title) parts.push(title);
+    if (targetRole && targetRole !== title) parts.push(targetRole);
+    if (highlights.length > 0) parts.push(highlights.join(' '));
+
+    return parts.join(' - ').trim();
+}
+
+function extractImprovementEnvelope(parsed) {
+    const nestedImprovedCv = parsed?.improvedCV && typeof parsed.improvedCV === 'object' ? parsed.improvedCV : {};
+    const nestedImprovedResume = parsed?.improvedResume && typeof parsed.improvedResume === 'object' ? parsed.improvedResume : {};
+    const nestedResume = parsed?.resume && typeof parsed.resume === 'object' ? parsed.resume : {};
+    const envelope = Object.keys(nestedImprovedCv).length > 0
+        ? nestedImprovedCv
+        : Object.keys(nestedImprovedResume).length > 0
+            ? nestedImprovedResume
+            : nestedResume;
+
+    return {
+        envelope,
+        improvedText: parsed?.improvedText
+            || envelope?.improvedText
+            || envelope?.structuredText
+            || envelope?.html
+            || envelope?.content
+            || envelope?.text
+            || '',
+        summary: parsed?.summary || envelope?.summary || {},
+        improvements: parsed?.improvements || parsed?.scores || parsed?.analysis || envelope?.improvements || envelope?.scores || envelope?.analysis || {},
+        tags: parsed?.tags || envelope?.tags || {},
+        name: parsed?.name || envelope?.name || '',
+        title: parsed?.title || envelope?.title || '',
+        experienceYears: parsed?.experienceYears ?? parsed?.experience_years ?? envelope?.experienceYears ?? envelope?.experience_years,
+        educationLevel: parsed?.educationLevel ?? parsed?.education_level ?? envelope?.educationLevel ?? envelope?.education_level,
+        certifications: parsed?.certifications ?? envelope?.certifications,
+        languages: parsed?.languages ?? envelope?.languages,
+        suggestionsSource: parsed?.suggestions || parsed?.['Key Improvements'] || parsed?.keyImprovements || envelope?.suggestions || envelope?.['Key Improvements'] || envelope?.keyImprovements || parsed,
+    };
+}
+
+function normalizeSuggestionsBySection(source) {
+    const suggestionsSource = source?.suggestions || source?.['Key Improvements'] || source?.keyImprovements || source?.recommendations || source?.sectionSuggestions || source?.section_improvements || source || {};
+    return {
+        executiveSummary: asSuggestionArray(
+            suggestionsSource.executiveSummary
+            ?? suggestionsSource.executive_summary
+            ?? suggestionsSource.executiveBrief
+            ?? suggestionsSource.executive_summary_suggestions
+            ?? suggestionsSource.summary
+            ?? suggestionsSource.resumeSummary
+        ),
+        skills: asSuggestionArray(
+            suggestionsSource.skills
+            ?? suggestionsSource.skillsKeywords
+            ?? suggestionsSource.competencies
+            ?? suggestionsSource.keywords
+            ?? suggestionsSource.skillSuggestions
+            ?? suggestionsSource.skills_and_keywords
+        ),
+        experiences: asSuggestionArray(
+            suggestionsSource.experiences
+            ?? suggestionsSource.experience
+            ?? suggestionsSource.professionalExperience
+            ?? suggestionsSource.workExperience
+            ?? suggestionsSource.projects
+            ?? suggestionsSource.missions
+        ),
+        education: asSuggestionArray(
+            suggestionsSource.education
+            ?? suggestionsSource.formation
+            ?? suggestionsSource.training
+        ),
+        hobbiesLanguages: asSuggestionArray(
+            suggestionsSource.hobbiesLanguages
+            ?? suggestionsSource.hobbies
+            ?? suggestionsSource.languages
+            ?? suggestionsSource.languagesAndHobbies
+            ?? suggestionsSource.languages_hobbies
+            ?? suggestionsSource.interests
+        ),
+        atsOptimization: asSuggestionArray(
+            suggestionsSource.atsOptimization
+            ?? suggestionsSource.ats
+            ?? suggestionsSource.atsCompatibility
+            ?? suggestionsSource.atsSuggestions
+            ?? suggestionsSource.formatting
+        )
+    };
+}
+
 /**
  * Normalize analysis response to ensure consistent format regardless of model
  * GPT-5 models sometimes return different field names than expected
@@ -35,6 +178,8 @@ function normalizeAnalysisResponse(analysis) {
         || analysis['languagesHobbiesRating']
         || '0%';
     
+    const normalizedSuggestions = normalizeSuggestionsBySection(analysis);
+
     const normalized = {
         name: analysis.name || analysis.Name || 'Candidat',
         title: analysis.title || analysis.Title || analysis['Professional Title'] || '',
@@ -51,14 +196,7 @@ function normalizeAnalysisResponse(analysis) {
             tools: analysis['Top Tools'] || [],
             softSkills: analysis['Top Soft Skills'] || []
         },
-        suggestions: analysis.suggestions || {
-            executiveSummary: [],
-            skills: [],
-            experiences: [],
-            education: [],
-            hobbiesLanguages: [],
-            atsOptimization: []
-        }
+        suggestions: normalizedSuggestions
     };
     
     // Also preserve the original flat format for backward compatibility
@@ -153,7 +291,9 @@ export async function analyzeResume(resumeText, model, analysisPrompt, userMetad
         tagsToolsCount: normalized.tags?.tools?.length || 0,
         tagsSoftSkillsCount: normalized.tags?.softSkills?.length || 0,
         tagsSkillsPreview: normalized.tags?.skills?.slice(0, 3),
-        tagsToolsPreview: normalized.tags?.tools?.slice(0, 3)
+        tagsToolsPreview: normalized.tags?.tools?.slice(0, 3),
+        suggestionKeys: Object.keys(normalized.suggestions || {}),
+        suggestionCounts: Object.fromEntries(Object.entries(normalized.suggestions || {}).map(([key, value]) => [key, Array.isArray(value) ? value.length : 0]))
     });
     
     return normalized;
@@ -217,34 +357,34 @@ export async function improveResume(text, analysis, model, improvementPromptTemp
     safeLog('info', 'LLM Improvement raw response preview:', { 
         isJSON: rawContent.startsWith('{'),
         hasImprovedText: rawContent.includes('"improvedText"'),
+        hasImprovedCv: rawContent.includes('"improvedCV"'),
         preview: rawContent.substring(0, 300)
     });
 
-    // Check if the response is JSON with improvedText field
-    // The prompt asks for JSON format with improvedText, improvements, summary
-    if (rawContent.startsWith('{') && rawContent.includes('"improvedText"')) {
+    if (rawContent.startsWith('{')) {
         try {
             const parsed = parseJsonFromLlmResponse(rawContent);
-            
-            // Clean up the HTML content
-            const cleanedText = cleanupHtml(parsed.improvedText || '');
-            
-            // Validate that we have actual content
+            const improvementPayload = extractImprovementEnvelope(parsed);
+            const cleanedText = cleanupHtml(improvementPayload.improvedText || '');
+
             if (!cleanedText || cleanedText.trim().length === 0) {
-                safeLog('error', 'LLM returned empty improvedText in JSON response', {
-                    hasImprovedText: !!parsed.improvedText,
-                    improvedTextLength: parsed.improvedText?.length || 0,
+                safeLog('error', 'LLM returned empty improved text in JSON response', {
+                    topLevelKeys: Object.keys(parsed || {}),
+                    envelopeKeys: Object.keys(improvementPayload.envelope || {}),
+                    hasTopLevelImprovedText: !!parsed.improvedText,
+                    hasEnvelopeImprovedText: !!improvementPayload.envelope?.improvedText,
+                    hasEnvelopeStructuredText: !!improvementPayload.envelope?.structuredText,
+                    improvedTextLength: improvementPayload.improvedText?.length || 0,
                     cleanedTextLength: cleanedText?.length || 0
                 });
                 throw new Error(normalizeUtf8Text('Le mod\u00e8le LLM a retourn\u00e9 un CV am\u00e9lior\u00e9 vide. Veuillez r\u00e9essayer.'));
 }
-            
-            // Build analysis object from improvements
-            const improvements = parsed.improvements || parsed.scores || parsed.analysis || {};
-            const summary = parsed.summary || {};
-            const tags = parsed.tags || {};
-            
-            // Return structured response for frontend
+
+            const improvements = improvementPayload.improvements || {};
+            const summary = improvementPayload.summary || {};
+            const tags = improvementPayload.tags || {};
+            const normalizedSuggestions = normalizeSuggestionsBySection(improvementPayload.suggestionsSource);
+
             const result = {
                 text: cleanedText,
                 analysis: {
@@ -255,24 +395,29 @@ export async function improveResume(text, analysis, model, improvementPromptTemp
                     educationRating: pickNumericScore(improvements.education, improvements.educationRating, improvements.formation),
                     atsOptimizationRating: pickNumericScore(improvements.atsOptimization, improvements.ats, improvements.atsOptimizationRating),
                     hobbiesLanguagesRating: pickNumericScore(improvements.languagesInterests, improvements.hobbiesLanguages, improvements.languages, improvements.hobbiesLanguagesRating),
-                    suggestions: parsed.suggestions || {},
+                    suggestions: normalizedSuggestions,
                     tags: {
                         skills: tags.skills || summary.skills || [],
                         industries: tags.industries || summary.industries || [],
                         tools: tags.tools || summary.tools || [],
                         softSkills: tags.softSkills || tags.soft_skills || summary.softSkills || []
                     },
-                    name: parsed.name || summary.name || analysis?.name || '',
-                    title: summary.targetRole || summary.title || parsed.title || analysis?.title || ''
+                    name: improvementPayload.name || summary.name || analysis?.name || '',
+                    title: summary.targetRole || summary.title || improvementPayload.title || analysis?.title || '',
+                    summary: extractStructuredSummaryText(summary),
+                    experienceYears: improvementPayload.experienceYears,
+                    educationLevel: improvementPayload.educationLevel,
+                    certifications: improvementPayload.certifications,
+                    languages: improvementPayload.languages
                 }
             };
-            
+
             safeLog('info', 'Parsed improvement result:', {
                 hasText: !!result.text,
                 textLength: result.text?.length,
                 analysis: result.analysis
             });
-            
+
             return result;
         } catch (parseError) {
             safeLog('error', 'Failed to parse LLM improvement response as JSON', {

@@ -20,6 +20,26 @@ function normalizeProfileType(profileType) {
     return profileType === 'employee' ? 'employee' : 'external';
 }
 
+function stringifyJsonField(value, fallback = null) {
+    if (value === undefined) return undefined;
+    if (value === null) return fallback;
+    return JSON.stringify(value);
+}
+
+function extractSummaryText(analysis) {
+    const summary = analysis?.summary ?? analysis?.Summary;
+    if (typeof summary === 'string') {
+        return summary.trim() || null;
+    }
+    if (summary && typeof summary === 'object') {
+        const highlights = Array.isArray(summary.profileHighlights) ? summary.profileHighlights.filter(Boolean).map(String) : [];
+        if (highlights.length > 0) {
+            return highlights.join(' ');
+        }
+    }
+    return null;
+}
+
 function buildConsentMetadata(options = {}) {
     const profileType = normalizeProfileType(options.profileType);
     const candidateName = typeof options.candidateName === 'string' && options.candidateName.trim().length > 0
@@ -514,6 +534,8 @@ async function saveImprovedData(item, resumeId, improvedResult) {
         hobbiesLanguagesScore
     });
 
+    const summaryText = extractSummaryText(improvedAnalysis);
+
     await query(`
         UPDATE resumes SET
             improved_text = $1,
@@ -529,10 +551,18 @@ async function saveImprovedData(item, resumeId, improvedResult) {
             improved_tools = $11,
             improved_soft_skills = $12,
             improved_key_improvements = $13,
+            improvement_suggestions = $14,
+            analysis_details = $15,
+            summary = COALESCE($16, summary),
+            title = COALESCE($17, title),
+            experience_years = COALESCE($18, experience_years),
+            education_level = COALESCE($19, education_level),
+            certifications = COALESCE($20, certifications),
+            languages = COALESCE($21, languages),
             status = 'improved',
             improvement_date = NOW(),
             updated_at = NOW()
-        WHERE id = $14
+        WHERE id = $22
     `, [
         improvedResult.text,
         globalRating,
@@ -547,6 +577,14 @@ async function saveImprovedData(item, resumeId, improvedResult) {
         JSON.stringify(improvedTags.tools || []),
         JSON.stringify(improvedTags.softSkills || []),
         JSON.stringify(improvedAnalysis.suggestions || {}),
+        JSON.stringify(improvedAnalysis.suggestions || {}),
+        JSON.stringify(improvedAnalysis),
+        summaryText,
+        improvedAnalysis.title || null,
+        improvedAnalysis.experienceYears ?? improvedAnalysis.experience_years ?? null,
+        improvedAnalysis.educationLevel ?? improvedAnalysis.education_level ?? null,
+        stringifyJsonField(improvedAnalysis.certifications),
+        stringifyJsonField(improvedAnalysis.languages),
         resumeId
     ]);
 

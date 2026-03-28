@@ -188,6 +188,73 @@ export function extractJsonPayload(text) {
     return cleaned.slice(startIndex).trim();
 }
 
+function repairMalformedJsonStrings(text) {
+    if (!text || typeof text !== 'string') {
+        return text;
+    }
+
+    let result = '';
+    let inString = false;
+    let escapeNext = false;
+
+    for (let index = 0; index < text.length; index++) {
+        const char = text[index];
+
+        if (escapeNext) {
+            result += char;
+            escapeNext = false;
+            continue;
+        }
+
+        if (char === '\\') {
+            result += char;
+            escapeNext = true;
+            continue;
+        }
+
+        if (char === '"') {
+            if (!inString) {
+                inString = true;
+                result += char;
+                continue;
+            }
+
+            let lookaheadIndex = index + 1;
+            while (lookaheadIndex < text.length && /\s/.test(text[lookaheadIndex])) {
+                lookaheadIndex++;
+            }
+            const nextSignificantChar = text[lookaheadIndex];
+
+            if (nextSignificantChar === ',' || nextSignificantChar === '}' || nextSignificantChar === ']' || nextSignificantChar === ':' || nextSignificantChar === undefined) {
+                inString = false;
+                result += char;
+                continue;
+            }
+
+            result += '\\"';
+            continue;
+        }
+
+        if (inString) {
+            if (char === '\n') {
+                result += '\\n';
+                continue;
+            }
+            if (char === '\r') {
+                result += '\\r';
+                continue;
+            }
+            if (char === '\t') {
+                result += '\\t';
+                continue;
+            }
+        }
+
+        result += char;
+    }
+
+    return result;
+}
 function escapeJsonControlCharacters(text) {
     if (!text || typeof text !== 'string') {
         return text;
@@ -243,7 +310,7 @@ export function parseJsonFromLlmResponse(text) {
     try {
         return JSON.parse(payload);
     } catch (error) {
-        const repairedPayload = escapeJsonControlCharacters(payload);
+        const repairedPayload = repairMalformedJsonStrings(escapeJsonControlCharacters(payload));
         if (repairedPayload !== payload) {
             return JSON.parse(repairedPayload);
         }
@@ -287,5 +354,6 @@ export function cleanupHtml(html) {
 
     return cleaned;
 }
+
 
 

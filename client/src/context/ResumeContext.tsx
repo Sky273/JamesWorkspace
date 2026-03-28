@@ -160,12 +160,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
     return 'upload';
   };
 
-  const hasImprovedAnalysisData = (resume: Resume): boolean => {
-    const improvedGlobalRating = Number(resume['Improved Global Rating'] || resume.improvedGlobalRating || 0);
-    if (improvedGlobalRating > 0) {
-      return true;
-    }
-
+  const hasImprovedSuggestions = (resume: Resume): boolean => {
     const rawSuggestions = resume['Improved Key Improvements'] || resume.improvedKeyImprovements;
     if (!rawSuggestions) return false;
 
@@ -202,20 +197,20 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
 
         try {
           const refreshedResume = await fetchResumeById(resumeId, new AbortController().signal);
-          if (!hasImprovedAnalysisData(refreshedResume)) {
+          if (!hasImprovedSuggestions(refreshedResume)) {
             continue;
           }
 
           setResumes(prev => prev.map(resume => (resume.id === resumeId ? refreshedResume : resume)));
           setCurrentResumeState(prev => (prev?.id === resumeId ? refreshedResume : prev));
-          logger.info('[ResumeContext] Deferred post-improvement analysis loaded', { resumeId, attempt: attempt + 1 });
+          logger.info('[ResumeContext] Deferred post-improvement suggestions loaded', { resumeId, attempt: attempt + 1 });
           return;
         } catch (error) {
           logger.warn('[ResumeContext] Deferred post-improvement refresh failed', { resumeId, attempt: attempt + 1, error });
         }
       }
 
-      logger.warn('[ResumeContext] Deferred post-improvement analysis did not complete in time', { resumeId });
+      logger.warn('[ResumeContext] Deferred post-improvement suggestions did not arrive in time', { resumeId });
     })();
   }, [fetchResumeById, setResumes]);
 
