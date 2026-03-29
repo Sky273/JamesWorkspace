@@ -22,6 +22,62 @@
   - DeepSeek : batch `4`, concurrence `2` pour `deepseek-reasoner`
   - autres providers : batch `12`, concurrence `5`
 
+### Ranking local administrable
+
+Le `profile matching` utilise un pré-ranking local avant le scoring LLM. Cette couche est maintenant pilotable à deux niveaux :
+
+- valeurs par défaut via l'environnement
+- override persistant via `llm_settings`
+
+Poids disponibles :
+
+- `Profile Matching Local Skill Weight`
+- `Profile Matching Local Tool Weight`
+- `Profile Matching Local Industry Weight`
+- `Profile Matching Local Soft Skill Weight`
+- `Profile Matching Local Title Exact Weight`
+- `Profile Matching Local Title Token Weight`
+- `Profile Matching Local Coverage Multiplier`
+
+Variables d'environnement associées :
+
+- `PROFILE_MATCHING_LOCAL_SKILL_WEIGHT`
+- `PROFILE_MATCHING_LOCAL_TOOL_WEIGHT`
+- `PROFILE_MATCHING_LOCAL_INDUSTRY_WEIGHT`
+- `PROFILE_MATCHING_LOCAL_SOFTSKILL_WEIGHT`
+- `PROFILE_MATCHING_LOCAL_TITLE_EXACT_WEIGHT`
+- `PROFILE_MATCHING_LOCAL_TITLE_TOKEN_WEIGHT`
+- `PROFILE_MATCHING_LOCAL_COVERAGE_MULTIPLIER`
+
+Règle de priorité :
+
+- valeur persistée en base via `Settings`
+- sinon fallback sur l'environnement
+- sinon fallback sur les constantes serveur
+
+### Expiration des indisponibilités runtime
+
+La couche `llmAvailability.service.js` persiste les refus runtime provider/modèle avec une expiration.
+
+Structure persistée :
+
+- `model`
+- `reason`
+- `fallbackModel`
+- `markedAt`
+- `expiresAt`
+
+TTL global :
+
+- `LLM_RUNTIME_UNAVAILABLE_TTL_MS`
+- défaut : `6h`
+
+Comportement :
+
+- les entrées expirées sont ignorées au chargement
+- les entrées expirées sont ignorées lors de `resolveAvailableModel(...)`
+- cela évite de masquer un modèle de façon permanente après un incident transitoire ou un refus temporaire
+
 
 ## ðŸ“‹ Table des MatiÃ¨res
 

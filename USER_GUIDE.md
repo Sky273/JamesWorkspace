@@ -598,6 +598,59 @@ Sous la description, un **tableau Kanban** affiche tous les candidats en cours d
 
 ## Matching Profils
 
+### Réglages administrateur utiles
+
+L'administrateur peut maintenant ajuster deux familles de paramètres qui influencent directement le matching profils :
+
+1. Réglages de débit LLM
+- `PROFILE_MATCHING_LLM_MAX_CONCURRENCY`
+- `PROFILE_MATCHING_LLM_BATCH_SIZE`
+
+2. Réglages de pré-ranking local
+- `Profile Matching Local Skill Weight`
+- `Profile Matching Local Tool Weight`
+- `Profile Matching Local Industry Weight`
+- `Profile Matching Local Soft Skill Weight`
+- `Profile Matching Local Title Exact Weight`
+- `Profile Matching Local Title Token Weight`
+- `Profile Matching Local Coverage Multiplier`
+
+Ces poids sont accessibles dans `Settings > Weights`.
+
+### Comment lire les métriques de matching
+
+La page métriques admin expose maintenant les indicateurs suivants pour le `profile matching` :
+
+- `Profiles requested`
+- `Profiles scored`
+- `Profiles explained`
+- `Profiles returned`
+- `Requested -> scored`
+- `Scored -> explained`
+- `Scored -> returned`
+
+Des alertes visuelles apparaissent si les ratios se dégradent trop.
+
+Exemples d'interprétation :
+
+- un ratio `requested -> scored` faible indique qu'une grande partie des profils n'atteint pas le scoring LLM
+- un ratio `scored -> returned` faible indique qu'une partie importante des profils scorés est ensuite écartée ou échoue plus loin dans le pipeline
+- un ratio `scored -> explained` faible est normal si l'explication détaillée est réservée aux meilleurs profils, mais doit rester cohérent avec votre configuration métier
+
+### Disponibilité runtime des modèles
+
+Quand un modèle est refusé à runtime par un provider, l'application peut le marquer temporairement indisponible.
+
+Ce marquage :
+
+- est persisté
+- expire automatiquement après un TTL
+- permet ensuite de retester le modèle plus tard
+
+Le TTL par défaut est de `6h` et peut être ajusté côté environnement avec :
+
+- `LLM_RUNTIME_UNAVAILABLE_TTL_MS`
+
 ### Qu'est-ce que le Matching Profils ?
 
 Le **Matching Profils** permet de trouver automatiquement les meilleurs CV de votre CVthèque pour une mission donnée. L'IA analyse les compétences requises par la mission et les compare aux profils disponibles. Les traitements longs sont exécutés en arrière-plan via des jobs backend, puis l'interface se met à jour automatiquement.
