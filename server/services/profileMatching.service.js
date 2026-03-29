@@ -10,6 +10,7 @@ import { callBusinessChatCompletion } from './llmProvider.service.js';
 import { getLLMSettings } from './settings.service.js';
 import { MISSION_KEYWORDS_EXTRACTION_PROMPT, DETAILED_PROFILE_ANALYSIS_PROMPT, BATCH_PROFILE_SCORING_PROMPT } from '../config/prompts.backend.js';
 import { normalizeUtf8Text, parseJsonFromLlmResponse } from './openai/textUtils.js';
+import { PROFILE_MATCHING_LLM_MAX_CONCURRENCY } from '../config/constants.js';
 
 /**
  * Default weights for scoring categories
@@ -132,10 +133,11 @@ function chunkArray(array, size) {
     return chunks;
 }
 
-function isRecoverableJsonParseError(error) {
+function isRecoverableBatchScoringError(error) {
     const message = error?.message || '';
     return message.includes('Unexpected end of JSON input')
-        || message.includes('Unterminated string in JSON');
+        || message.includes('Unterminated string in JSON')
+        || message.includes('DeepSeek response truncated due to token limit');
 }
 
 /**
@@ -161,19 +163,27 @@ async function scoreBatchWithLLM(profiles, missionKeywords, missionRecord, userM
     }
 
     const isMiniMaxProvider = settings.llmProvider === 'minimax';
+    const isDeepSeekProvider = settings.llmProvider === 'deepseek';
+    const isDeepSeekReasoner = isDeepSeekProvider && model === 'deepseek-reasoner';
     const supportsStructuredJsonResponse = settings.llmProvider === 'deepseek';
-    const BATCH_SIZE = isMiniMaxProvider ? 6 : 12;
-    const MAX_CONCURRENCY = isMiniMaxProvider ? 3 : 5;
+    const BATCH_SIZE = isDeepSeekProvider ? 4 : (isMiniMaxProvider ? 6 : 12);
+    const providerDefaultConcurrency = isDeepSeekReasoner ? 2 : (isMiniMaxProvider ? 3 : 5);
+    const MAX_CONCURRENCY = PROFILE_MATCHING_LLM_MAX_CONCURRENCY > 0
+        ? Math.min(PROFILE_MATCHING_LLM_MAX_CONCURRENCY, 100)
+        : providerDefaultConcurrency;
+    const scoringMaxTokens = isDeepSeekReasoner ? 8192 : (isDeepSeekProvider ? 4096 : 2048);
     const batches = chunkArray(profiles, BATCH_SIZE);
     const allScores = {};
     let hasErrors = false;
 
-    safeLog('info', 'Starting LLM batch scoring', { 
-        totalProfiles: profiles.length, 
-        batchCount: batches.length,
-        batchSize: BATCH_SIZE,
-        maxConcurrency: MAX_CONCURRENCY
-    });
+        safeLog('info', 'Starting LLM batch scoring', { 
+            totalProfiles: profiles.length, 
+            batchCount: batches.length,
+            batchSize: BATCH_SIZE,
+            maxConcurrency: MAX_CONCURRENCY,
+            providerDefaultConcurrency,
+            scoringMaxTokens
+        });
 
     // Process a single batch and return its scores
     async function processBatch(batch, batchIndex, depth = 0) {
@@ -197,20 +207,20 @@ async function scoreBatchWithLLM(profiles, missionKeywords, missionRecord, userM
             .replace('{EXPERIENCE_LEVEL}', missionKeywords.experienceLevel || normalizeUtf8Text('Non sp\u00e9cifi\u00e9'))
             .replace('{CANDIDATES_JSON}', candidatesJson);
 
-        const response = await callBusinessChatCompletion({
-            model,
-            messages: [
-                { role: 'system', content: 'You are a JSON-only HR analysis API specialized in IT/IS profile matching. Respond with valid JSON only.' },
-                { role: 'user', content: prompt }
-            ],
-            maxTokens: 2048,
-            temperature: 0.3,
-            responseFormat: supportsStructuredJsonResponse ? { type: 'json_object' } : undefined,
-            userMetadata,
-            operationType: 'Batch Profile Scoring'
-        });
-
         try {
+            const response = await callBusinessChatCompletion({
+                model,
+                messages: [
+                    { role: 'system', content: 'You are a JSON-only HR analysis API specialized in IT/IS profile matching. Respond with valid JSON only.' },
+                    { role: 'user', content: prompt }
+                ],
+                maxTokens: scoringMaxTokens,
+                temperature: 0.3,
+                responseFormat: supportsStructuredJsonResponse ? { type: 'json_object' } : undefined,
+                userMetadata,
+                operationType: 'Batch Profile Scoring'
+            });
+
             const result = parseJsonFromLlmResponse(response.choices[0].message.content);
             safeLog('debug', 'Batch scoring completed', {
                 batchIndex: batchIndex + 1,
@@ -220,7 +230,7 @@ async function scoreBatchWithLLM(profiles, missionKeywords, missionRecord, userM
             });
             return result.scores || {};
         } catch (error) {
-            if (batch.length > 1 && isRecoverableJsonParseError(error)) {
+            if (batch.length > 1 && isRecoverableBatchScoringError(error)) {
                 const midpoint = Math.ceil(batch.length / 2);
                 const leftBatch = batch.slice(0, midpoint);
                 const rightBatch = batch.slice(midpoint);

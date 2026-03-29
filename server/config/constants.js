@@ -46,6 +46,10 @@ export const MINIMAX_ENABLE_HIGHSPEED_MODELS = process.env.MINIMAX_ENABLE_HIGHSP
 export const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || '';
 export const OLLAMA_AUTO_PULL = process.env.OLLAMA_AUTO_PULL !== 'false';
 export const OLLAMA_REQUEST_TIMEOUT_MS = parseInt(process.env.OLLAMA_REQUEST_TIMEOUT_MS || '300000', 10);
+export const PROFILE_MATCHING_LLM_MAX_CONCURRENCY = Math.min(
+    Math.max(parseInt(process.env.PROFILE_MATCHING_LLM_MAX_CONCURRENCY || '0', 10) || 0, 0),
+    100
+);
 
 // Market Radar - France Travail API (OAuth2)
 export const FRANCE_TRAVAIL_CLIENT_ID = process.env.FRANCE_TRAVAIL_CLIENT_ID;
@@ -126,6 +130,5 @@ export const RATE_LIMIT = {
         max: 50
     }
 };
-
 
 

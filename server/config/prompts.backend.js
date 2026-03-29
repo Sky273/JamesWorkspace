@@ -1486,9 +1486,10 @@ RÈGLES D'ÉVALUATION:
 4. Un profil junior ne convient PAS pour un poste senior (sous-qualification pénalisante)
 5. Le titre du candidat doit être cohérent avec le poste (Dev vs Chef de projet)
 6. confidence: "high" si les données sont complètes, "medium" si partielles, "low" si insuffisantes
-7. reason: 1-2 phrases maximum, factuel et actionnable
-8. keyStrengths: 2-3 points forts maximum
-9. keyGaps: 1-2 lacunes principales (vide si aucune lacune majeure)`;
+7. reason: 1 phrase courte maximum, factuelle, sans formulation longue
+8. keyStrengths: 1-2 points forts maximum
+9. keyGaps: 0-1 lacune principale (vide si aucune lacune majeure)
+10. Réduisez au strict minimum la verbosité pour chaque candidat afin de préserver un JSON compact`;
 
 /**
  * Helper function to normalize weights to sum to 100%

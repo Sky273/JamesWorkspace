@@ -456,6 +456,48 @@ describe('Profile Matching Service', () => {
             expect(result.profiles).toHaveLength(6);
             expect(callBusinessChatCompletion).toHaveBeenCalledTimes(3);
         });
+
+        it('should retry DeepSeek token-limit truncation with smaller sub-batches', async () => {
+            const fourResumes = Array.from({ length: 4 }, (_, i) => ({
+                ...mockResumeRecords[0],
+                id: `resume-${i}`,
+                name: `Candidate ${i}`
+            }));
+
+            getLLMSettings.mockResolvedValue({ llmModel: 'deepseek-reasoner', llmProvider: 'deepseek' });
+            selectWithTimeout.mockResolvedValue(fourResumes);
+
+            callBusinessChatCompletion
+                .mockRejectedValueOnce(new Error('DeepSeek response truncated due to token limit'))
+                .mockResolvedValueOnce({
+                    choices: [{
+                        message: {
+                            content: JSON.stringify({
+                                scores: Object.fromEntries(
+                                    fourResumes.slice(0, 2).map(r => [r.id, { score: 81, confidence: 'high', reason: 'OK' }])
+                                )
+                            })
+                        }
+                    }]
+                })
+                .mockResolvedValueOnce({
+                    choices: [{
+                        message: {
+                            content: JSON.stringify({
+                                scores: Object.fromEntries(
+                                    fourResumes.slice(2).map(r => [r.id, { score: 79, confidence: 'medium', reason: 'OK' }])
+                                )
+                            })
+                        }
+                    }]
+                });
+
+            const result = await findMatchingProfiles('mission-1', { limit: 10 });
+
+            expect(result.llmScoringApplied).toBe(true);
+            expect(result.profiles).toHaveLength(4);
+            expect(callBusinessChatCompletion).toHaveBeenCalledTimes(3);
+        });
     });
 
     // ============================================
