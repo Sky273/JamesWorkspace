@@ -10,6 +10,7 @@ const DOCKER_DIR = path.join(ROOT_DIR, 'docker');
 const FALLBACK_DOCKER_DIR = '/docker-entrypoint-initdb.d';
 const MIGRATION_TABLE = 'schema_migrations';
 const MINIMAX_PROVIDER_MIGRATION = 'add_minimax_provider.sql';
+const DEEPSEEK_PROVIDER_MIGRATION = 'add_deepseek_provider.sql';
 
 async function pathExists(targetPath) {
     try {
@@ -223,6 +224,20 @@ async function llmProviderConstraintSupportsMiniMax() {
     return definition.toLowerCase().includes('minimax');
 }
 
+async function llmProviderConstraintSupportsDeepSeek() {
+    const result = await query(
+        `
+            SELECT pg_get_constraintdef(oid) AS definition
+            FROM pg_constraint
+            WHERE conname = 'llm_settings_llm_provider_check'
+              AND conrelid = 'public.llm_settings'::regclass
+        `
+    );
+
+    const definition = result.rows[0]?.definition || '';
+    return definition.toLowerCase().includes('deepseek');
+}
+
 async function readSqlFile(filePath) {
     return fs.readFile(filePath, 'utf8');
 }
@@ -275,6 +290,15 @@ async function reconcileCriticalMigrations(appliedMigrations) {
         });
         await unmarkMigrationApplied(MINIMAX_PROVIDER_MIGRATION);
         appliedMigrations.delete(MINIMAX_PROVIDER_MIGRATION);
+    }
+
+    const deepseekConstraintOk = await llmProviderConstraintSupportsDeepSeek();
+    if (appliedMigrations.has(DEEPSEEK_PROVIDER_MIGRATION) && !deepseekConstraintOk) {
+        safeLog('warn', 'DeepSeek provider migration was marked applied but schema is still outdated; forcing reapply', {
+            migrationName: DEEPSEEK_PROVIDER_MIGRATION
+        });
+        await unmarkMigrationApplied(DEEPSEEK_PROVIDER_MIGRATION);
+        appliedMigrations.delete(DEEPSEEK_PROVIDER_MIGRATION);
     }
 
     return appliedMigrations;

@@ -1,7 +1,7 @@
 import { ChangeEvent, useMemo } from 'react';
 
 interface FormData {
-  llmProvider: 'openai' | 'anthropic' | 'minimax' | 'ollama';
+  llmProvider: 'openai' | 'anthropic' | 'deepseek' | 'minimax' | 'ollama';
   llmModel: string;
   ollamaBaseUrl?: string;
   cvMode?: 'nominative' | 'anonymous';
@@ -25,6 +25,11 @@ const ANTHROPIC_MODELS = [
   'claude-opus-4.6',
   'claude-3-5-sonnet-20241022',
   'claude-3-5-haiku-20241022'
+];
+
+const DEEPSEEK_MODELS = [
+  'deepseek-chat',
+  'deepseek-reasoner'
 ];
 
 const MINIMAX_MODELS = [
@@ -51,6 +56,7 @@ const LLMTab = ({
   const providerOptions = useMemo(() => ([
     { value: 'openai', label: 'OpenAI' },
     { value: 'anthropic', label: 'Anthropic' },
+    { value: 'deepseek', label: 'DeepSeek' },
     { value: 'minimax', label: 'MiniMax' },
     { value: 'ollama', label: 'Ollama' }
   ]), []);
@@ -59,6 +65,9 @@ const LLMTab = ({
     if (provider === 'anthropic') {
       return ANTHROPIC_MODELS;
     }
+    if (provider === 'deepseek') {
+      return DEEPSEEK_MODELS;
+    }
     if (provider === 'minimax') {
       return MINIMAX_MODELS;
     }
@@ -66,11 +75,15 @@ const LLMTab = ({
   }, [provider]);
 
   const handleProviderChange = (e: ChangeEvent<HTMLSelectElement>): void => {
-    const nextProvider = e.target.value as 'openai' | 'anthropic' | 'minimax' | 'ollama';
+    const nextProvider = e.target.value as 'openai' | 'anthropic' | 'deepseek' | 'minimax' | 'ollama';
     onInputChange('llmProvider', nextProvider);
 
     if (nextProvider === 'anthropic' && !ANTHROPIC_MODELS.includes(formData.llmModel)) {
       onInputChange('llmModel', 'claude-sonnet-4.6');
+    }
+
+    if (nextProvider === 'deepseek' && !DEEPSEEK_MODELS.includes(formData.llmModel)) {
+      onInputChange('llmModel', 'deepseek-chat');
     }
 
     if (nextProvider === 'minimax' && !MINIMAX_MODELS.includes(formData.llmModel)) {
@@ -111,9 +124,11 @@ const LLMTab = ({
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
           {provider === 'ollama'
             ? fallbackText(t, 'settings.llm.ollamaDescription', 'Configurez uniquement l adresse de votre hote Ollama. Le modele actif sera detecte automatiquement sur votre machine.')
-            : provider === 'minimax'
-              ? fallbackText(t, 'settings.llm.minimaxDescription', 'Selectionnez un modele MiniMax. L application utilisera l API MiniMax cote serveur.')
-              : fallbackText(t, 'settings.llm.description', 'Selectionnez le provider et le modele LLM a utiliser pour l analyse et l amelioration des CV.')}
+            : provider === 'deepseek'
+              ? fallbackText(t, 'settings.llm.deepseekDescription', 'Selectionnez un modele DeepSeek. L application utilisera l API DeepSeek cote serveur.')
+              : provider === 'minimax'
+                ? fallbackText(t, 'settings.llm.minimaxDescription', 'Selectionnez un modele MiniMax. L application utilisera l API MiniMax cote serveur.')
+                : fallbackText(t, 'settings.llm.description', 'Selectionnez le provider et le modele LLM a utiliser pour l analyse et l amelioration des CV.')}
         </p>
       </div>
 

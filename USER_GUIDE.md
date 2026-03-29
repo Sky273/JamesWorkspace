@@ -1401,6 +1401,18 @@ L'assistant IA est disponible via le **bouton de chat** (icône de bulle) en bas
 - Suggestions de compétences
 - Conseils de rédaction
 
+
+#### Providers LLM disponibles
+
+L'assistant et les fonctions d'analyse utilisent le provider configuré par l'administrateur :
+- **OpenAI** : usage général, GPT-5 / GPT-4o
+- **Anthropic** : alternative Claude
+- **DeepSeek** : `deepseek-chat` ou `deepseek-reasoner`
+- **MiniMax** : `MiniMax-M2.7` et variantes compatibles
+- **Ollama** : instance distante gérée par votre organisation
+
+Le choix du provider n'affiche jamais le contenu de raisonnement interne à l'utilisateur final. Seule la réponse utile est rendue dans l'interface.
+
 ### Exemples de Questions
 
 **Sur l'utilisation** :
@@ -1584,7 +1596,6 @@ Cette fonctionnalité permet de créer automatiquement un modèle à partir d'un
 1. Cliquez sur l'icône **crayon** sur la carte du modèle
 2. Modifiez les sections souhaitées
 3. Cliquez sur **"Enregistrer"**
-
 #### Supprimer un Modèle
 
 1. Cliquez sur l'icône **corbeille** sur la carte du modèle
@@ -1595,15 +1606,24 @@ Cette fonctionnalité permet de créer automatiquement un modèle à partir d'un
 1. Cliquez sur l'icône **œil** sur la carte du modèle
 2. Un aperçu du modèle s'affiche avec les placeholders visibles
 
+
 ### Paramètres Système
 
 #### Onglet Modèle LLM
 
 **Choix du Modèle IA** :
-- GPT-4o (OpenAI) - Recommandé
-- GPT-4o-mini (OpenAI) - Plus rapide
-- Claude 3.5 Sonnet (Anthropic)
-- Autres modèles disponibles
+- **OpenAI** : `gpt-5.x`, `gpt-4o`, `gpt-4o-mini`
+- **Anthropic** : `claude-sonnet-4.6`, `claude-opus-4.6`, `claude-3-5-sonnet-20241022`, `claude-3-5-haiku-20241022`
+- **DeepSeek** : `deepseek-chat`, `deepseek-reasoner`
+- **MiniMax** : `MiniMax-M2.7`, `MiniMax-M2.5`, `MiniMax-M2.5-highspeed`, `MiniMax-M2.1`, `MiniMax-M2.1-highspeed`, `MiniMax-M2`
+- **Ollama** : provider distant. Le modèle effectif vient de l'instance Ollama configurée.
+
+**Choix du provider** :
+- **OpenAI** : choix général par défaut
+- **Anthropic** : utile si vous standardisez sur Claude
+- **DeepSeek** : bon compromis coût / qualité, `deepseek-reasoner` pour les tâches de raisonnement
+- **MiniMax** : alternative compatible avec les proxys OpenAI et Anthropic
+- **Ollama** : exécution sur une instance distante que vous contrôlez
 
 **Mode CV** :
 - **Nominatif** : Les CV conservent toutes les informations personnelles du candidat
@@ -1615,6 +1635,16 @@ Le mode anonyme supprime automatiquement :
 - Numéros de téléphone
 - Liens LinkedIn, GitHub, portfolio
 - Adresse postale
+
+**Paramètres Ollama** :
+- **URL Ollama** : URL complète de l'instance distante
+- **Keep alive** : durée de maintien du modèle en mémoire sur l'hôte Ollama
+- **Contexte (`num_ctx`)** : fenêtre de contexte demandée au runtime Ollama
+
+**Observabilité admin** :
+- La page d'administration expose les métriques LLM par famille
+- L'endpoint circuit breaker indique l'état de `openai`, `anthropic`, `deepseek`, `minimax` et `ollama`
+- Le health check profond permet de confirmer la connectivité des providers configurés
 
 #### Onglet Pondération
 
@@ -2519,3 +2549,4 @@ Nous encourageons vivement les utilisateurs à partager leurs remarques, critiqu
 ---
 
 *Pour toute question concernant cette documentation, contactez votre administrateur système.*
+

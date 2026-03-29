@@ -20,6 +20,7 @@ const rateLimitMocks = vi.hoisted(() => {
 vi.mock('../../config/constants.js', () => ({
     OPENAI_API_KEY: 'test-openai-key',
     ANTHROPIC_API_KEY: 'test-anthropic-key',
+    DEEPSEEK_API_KEY: 'test-deepseek-key',
     MAX_PROMPT_LENGTH: 10000,
     MINIMAX_API_KEY: 'test-minimax-key'
 }));
@@ -30,6 +31,7 @@ vi.mock('axios', () => ({
 }));
 
 vi.mock('../../services/metrics.service.js', () => ({
+    buildLLMMetricLabel: (provider, model = '') => (model ? provider + ':' + model : provider),
     metrics: {
         trackLLMRequest: vi.fn(),
         trackRequest: vi.fn(),
@@ -55,7 +57,12 @@ vi.mock('../../services/settings.service.js', () => ({
 
 vi.mock('../../services/retry.service.js', () => ({
     withRetry: (fn) => fn(),
-    getCircuitBreakerStates: vi.fn().mockReturnValue({ openai: 'closed', anthropic: 'closed' })
+    getCircuitBreakerStates: vi.fn().mockReturnValue({
+        openai: { state: 'CLOSED', failures: 0, lastFailureTime: null },
+        anthropic: { state: 'CLOSED', failures: 0, lastFailureTime: null },
+        deepseek: { state: 'CLOSED', failures: 1, lastFailureTime: 12345 },
+        minimax: { state: 'HALF_OPEN', failures: 2, lastFailureTime: 67890 }
+    })
 }));
 
 vi.mock('../../utils/validation.js', () => ({
@@ -90,6 +97,11 @@ vi.mock('../../middleware/auth.middleware.js', () => ({
 const mockCallOllama = vi.fn();
 vi.mock('../../services/ollama.service.js', () => ({
     callOllama: (...args) => mockCallOllama(...args)
+}));
+
+const mockCallDeepSeek = vi.fn();
+vi.mock('../../services/deepseek.service.js', () => ({
+    callDeepSeek: (...args) => mockCallDeepSeek(...args)
 }));
 
 const mockCallMiniMaxOpenAICompatible = vi.fn();
@@ -175,6 +187,23 @@ describe('LLM Routes', () => {
 
             expect(res.status).toBe(200);
             expect(res.body.choices[0].message.content).toBe('Hi from Ollama');
+        });
+
+        it('routes through DeepSeek when configured', async () => {
+            mockGetLLMSettings.mockResolvedValueOnce({ llmProvider: 'deepseek', llmModel: 'deepseek-chat' });
+            mockCallDeepSeek.mockResolvedValueOnce({
+                model: 'deepseek-chat',
+                choices: [{ message: { content: 'Hi from DeepSeek' } }],
+                usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 }
+            });
+
+            const res = await request(app)
+                .post('/api/llm/openai')
+                .set(AUTH)
+                .send({ messages: [{ role: 'user', content: 'Hello' }] });
+
+            expect(res.status).toBe(200);
+            expect(res.body.choices[0].message.content).toBe('Hi from DeepSeek');
         });
 
         it('routes through MiniMax when configured', async () => {
@@ -276,6 +305,24 @@ describe('LLM Routes', () => {
             expect(res.body.choices).toBeDefined();
         });
 
+        it('should strip reasoning content from DeepSeek-compatible proxy responses', async () => {
+            mockGetLLMSettings.mockResolvedValueOnce({ llmProvider: 'deepseek', llmModel: 'deepseek-reasoner' });
+            mockCallDeepSeek.mockResolvedValueOnce({
+                model: 'deepseek-reasoner',
+                choices: [{ message: { content: 'Answer', reasoning_content: 'internal' } }],
+                usage: { prompt_tokens: 5, completion_tokens: 3, total_tokens: 8 }
+            });
+
+            const res = await request(app)
+                .post('/api/llm/chat/completions')
+                .set(AUTH)
+                .send({ messages: [{ role: 'user', content: 'Hi' }], model: 'deepseek-reasoner' });
+
+            expect(res.status).toBe(200);
+            expect(res.body.choices[0].message.content).toBe('Answer');
+            expect(res.body.choices[0].message.reasoning_content).toBeUndefined();
+        });
+
         it('should strip think markup from OpenAI chat completions proxy responses', async () => {
             mockAxiosPost.mockResolvedValueOnce({
                 data: {
@@ -326,7 +373,13 @@ describe('LLM Routes', () => {
                 .set({ ...AUTH, 'x-test-role': 'admin' });
 
             expect(res.status).toBe(200);
-            expect(res.body).toEqual({ openai: 'closed', anthropic: 'closed', minimax: { state: 'UNKNOWN', failures: 0 } });
+            expect(res.body).toEqual({
+                openai: { provider: 'openai', supported: true, configured: true, state: 'CLOSED', failures: 0, lastFailureTime: null },
+                anthropic: { provider: 'anthropic', supported: true, configured: true, state: 'CLOSED', failures: 0, lastFailureTime: null },
+                deepseek: { provider: 'deepseek', supported: true, configured: true, state: 'CLOSED', failures: 1, lastFailureTime: 12345 },
+                minimax: { provider: 'minimax', supported: true, configured: true, state: 'HALF_OPEN', failures: 2, lastFailureTime: 67890 },
+                ollama: { provider: 'ollama', supported: false, configured: true, state: 'NOT_APPLICABLE', failures: 0, lastFailureTime: null }
+            });
         });
     });
 });

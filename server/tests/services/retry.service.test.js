@@ -172,6 +172,7 @@ describe('Retry Service', () => {
             const states = getCircuitBreakerStates();
             expect(states.openai).toBeDefined();
             expect(states.anthropic).toBeDefined();
+            expect(states.deepseek).toBeDefined();
             expect(states.minimax).toBeDefined();
         });
 

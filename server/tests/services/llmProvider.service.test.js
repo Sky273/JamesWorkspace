@@ -17,6 +17,10 @@ vi.mock('../../services/anthropic.service.js', () => ({
     callAnthropicVision: vi.fn()
 }));
 
+vi.mock('../../services/deepseek.service.js', () => ({
+    callDeepSeekChat: vi.fn()
+}));
+
 vi.mock('../../services/ollama.service.js', () => ({
     callOllama: vi.fn(),
     callOllamaWithVision: vi.fn()
@@ -42,6 +46,7 @@ vi.mock('../../utils/logger.backend.js', () => ({
 
 import { getLLMSettings } from '../../services/settings.service.js';
 import { callOpenAI } from '../../services/openai/apiClient.js';
+import { callDeepSeekChat } from '../../services/deepseek.service.js';
 import { callOllama } from '../../services/ollama.service.js';
 import { callMiniMaxOpenAICompatible } from '../../services/minimax.service.js';
 import { callBusinessChatCompletion } from '../../services/llmProvider.service.js';
@@ -86,6 +91,37 @@ describe('llmProvider.service', () => {
         expect(callOpenAI).not.toHaveBeenCalled();
         expect(result.choices[0].message.content).toBe('ok');
         expect(result.model).toBe('qwen3:14b');
+    });
+
+    it('routes DeepSeek business calls through the DeepSeek service', async () => {
+        getLLMSettings.mockResolvedValueOnce({
+            llmProvider: 'deepseek',
+            llmModel: 'deepseek-reasoner'
+        });
+        callDeepSeekChat.mockResolvedValueOnce({
+            content: 'ok deepseek',
+            model: 'deepseek-reasoner',
+            actualModel: 'deepseek-reasoner',
+            usage: { prompt_tokens: 1, completion_tokens: 2, total_tokens: 3 }
+        });
+
+        const result = await callBusinessChatCompletion({
+            messages: [{ role: 'user', content: 'Analyse ce CV' }],
+            operationType: 'Resume Analysis'
+        });
+
+        expect(callDeepSeekChat).toHaveBeenCalledWith(
+            [{ role: 'user', content: 'Analyse ce CV' }],
+            'deepseek-reasoner',
+            expect.objectContaining({
+                max_tokens: 4096,
+                temperature: 0,
+                timeout: 20 * 60 * 1000,
+                operationType: 'Resume Analysis'
+            })
+        );
+        expect(result.choices[0].message.content).toBe('ok deepseek');
+        expect(result.model).toBe('deepseek-reasoner');
     });
 
     it('routes MiniMax business calls through the MiniMax service', async () => {
@@ -136,5 +172,3 @@ describe('llmProvider.service', () => {
         expect(result.model).toBe('gpt-4o');
     });
 });
-
-

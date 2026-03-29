@@ -10,7 +10,7 @@ import {
     MINIMAX_ANTHROPIC_BASE_URL,
     MINIMAX_OPENAI_BASE_URL
 } from '../config/constants.js';
-import { metrics } from './metrics.service.js';
+import { buildLLMMetricLabel, metrics } from './metrics.service.js';
 import { withRetry } from './retry.service.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { validatePromptSize } from '../utils/postgresHelpers.js';
@@ -147,7 +147,7 @@ export async function callMiniMaxOpenAICompatible({
         const inputTokens = usage.input_tokens || usage.prompt_tokens || 0;
         const outputTokens = usage.output_tokens || usage.completion_tokens || 0;
         const totalTokens = usage.total_tokens || (inputTokens + outputTokens);
-        metrics.trackLLMRequest(`minimax:${response.data?.model || model}`, totalTokens, true, inputTokens, outputTokens);
+        metrics.trackLLMRequest(buildLLMMetricLabel('minimax', response.data?.model || model), totalTokens, true, inputTokens, outputTokens);
 
         return {
             content,
@@ -157,7 +157,7 @@ export async function callMiniMaxOpenAICompatible({
             raw: response.data
         };
     } catch (error) {
-        metrics.trackLLMRequest(`minimax:${model}`, 0, false, 0, 0);
+        metrics.trackLLMRequest(buildLLMMetricLabel('minimax', model), 0, false, 0, 0);
         safeLog('error', 'MiniMax OpenAI-compatible API call failed', {
             model,
             operationType,
@@ -233,7 +233,7 @@ export async function callMiniMaxAnthropicCompatible({
         const inputTokens = usage.input_tokens || 0;
         const outputTokens = usage.output_tokens || 0;
         const totalTokens = usage.total_tokens || (inputTokens + outputTokens);
-        metrics.trackLLMRequest(`minimax:${response.data?.model || model}`, totalTokens, true, inputTokens, outputTokens);
+        metrics.trackLLMRequest(buildLLMMetricLabel('minimax', response.data?.model || model), totalTokens, true, inputTokens, outputTokens);
 
         return {
             content,
@@ -243,7 +243,7 @@ export async function callMiniMaxAnthropicCompatible({
             raw: response.data
         };
     } catch (error) {
-        metrics.trackLLMRequest(`minimax:${model}`, 0, false, 0, 0);
+        metrics.trackLLMRequest(buildLLMMetricLabel('minimax', model), 0, false, 0, 0);
         safeLog('error', 'MiniMax Anthropic-compatible API call failed', {
             model,
             operationType,

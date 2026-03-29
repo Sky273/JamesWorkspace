@@ -3,32 +3,32 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Mock database query
 vi.mock('../../config/database.js', () => ({
     query: vi.fn()
 }));
 
-// Mock cache service
 vi.mock('../../services/cache.service.js', () => ({
     settingsCache: { size: () => 5 },
     templatesCache: { size: () => 3 },
     firmsCache: { size: () => 2 }
 }));
 
-// Mock constants
 vi.mock('../../config/constants.js', () => ({
     OPENAI_API_KEY: 'test-openai-key',
     ANTHROPIC_API_KEY: 'test-anthropic-key',
+    DEEPSEEK_API_KEY: 'test-deepseek-key',
+    DEEPSEEK_BASE_URL: 'https://api.deepseek.com',
+    MINIMAX_API_KEY: 'test-minimax-key',
+    MINIMAX_ANTHROPIC_BASE_URL: 'https://api.minimax.io/anthropic',
+    OLLAMA_BASE_URL: 'http://127.0.0.1:11434',
     UPLOAD_DIR: './test-uploads'
 }));
 
-// Mock fileCleanup
 vi.mock('../../utils/fileCleanup.js', () => ({
     getStorageStats: vi.fn().mockResolvedValue({}),
     getFileCleanupStats: vi.fn().mockReturnValue({ timerActive: false, cleanupStats: {} })
 }));
 
-// Mock jwt.service.js for admin detection in health route
 vi.mock('../../services/jwt.service.js', () => ({
     verifyToken: vi.fn((token) => {
         if (token === 'valid-admin-token') {
@@ -38,18 +38,15 @@ vi.mock('../../services/jwt.service.js', () => ({
     })
 }));
 
-// Mock logger
 vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));
 
-// Mock auth middleware
 vi.mock('../../middleware/auth.middleware.js', () => ({
     authenticateToken: (req, res, next) => next(),
     requireAdmin: (req, res, next) => next()
 }));
 
-// Mock market/cache services used by /memory endpoint
 vi.mock('../../services/marketTrends.service.js', () => ({
     getTrendsCacheStats: vi.fn(() => ({ size: 0 }))
 }));
@@ -77,7 +74,8 @@ describe('Health Routes', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        
+        global.fetch = vi.fn().mockResolvedValue({ ok: true, status: 200 });
+
         mockReq = {
             query: {},
             cookies: { accessToken: 'valid-admin-token' }
@@ -90,71 +88,63 @@ describe('Health Routes', () => {
 
     describe('GET /health', () => {
         it('should return healthy status when all checks pass', async () => {
-            // Mock successful DB queries
             dbQuery.mockResolvedValueOnce({ rows: [{ connected: 1 }] });
-            dbQuery.mockResolvedValueOnce({ 
-                rows: [{ 
-                    resumes_count: '100', 
-                    users_count: '10', 
+            dbQuery.mockResolvedValueOnce({
+                rows: [{
+                    resumes_count: '100',
+                    users_count: '10',
                     missions_count: '50',
-                    db_size: '52428800' // 50MB
-                }] 
+                    db_size: '52428800'
+                }]
             });
 
-            // Import the router after mocks are set up
             const healthRouter = (await import('../../routes/health.routes.js')).default;
-            
-            // Get the route handler
             const routeHandler = healthRouter.stack.find(r => r.route?.path === '/').route.stack[0].handle;
-            
+
             await routeHandler(mockReq, mockRes);
 
             expect(mockRes.status).toHaveBeenCalledWith(200);
-            expect(mockRes.json).toHaveBeenCalled();
-            
             const response = mockRes.json.mock.calls[0][0];
             expect(response.status).toBe('healthy');
             expect(response.checks.server.status).toBe('ok');
             expect(response.checks.database.status).toBe('ok');
             expect(response.checks.openai.status).toBe('configured');
             expect(response.checks.anthropic.status).toBe('configured');
+            expect(response.checks.deepseek.status).toBe('configured');
+            expect(response.checks.minimax.status).toBe('configured');
             expect(response.checks.cache.status).toBe('ok');
         });
 
         it('should return unhealthy status when database fails', async () => {
-            // Mock DB failure - Promise.all inside Promise.race rejects
             dbQuery.mockRejectedValue(new Error('Connection refused'));
 
             const healthRouter = (await import('../../routes/health.routes.js')).default;
             const routeHandler = healthRouter.stack.find(r => r.route?.path === '/').route.stack[0].handle;
-            
+
             await routeHandler(mockReq, mockRes);
 
             expect(mockRes.status).toHaveBeenCalledWith(503);
-            
             const response = mockRes.json.mock.calls[0][0];
             expect(response.status).toBe('unhealthy');
             expect(response.checks.database.status).toBe('error');
         });
 
         it('should return minimal response for non-admin users', async () => {
-            // Non-admin: no cookies
             mockReq.cookies = {};
-            
+
             dbQuery.mockResolvedValueOnce({ rows: [{ connected: 1 }] });
-            dbQuery.mockResolvedValueOnce({ 
-                rows: [{ resumes_count: '10', users_count: '2', missions_count: '5', db_size: '1048576' }] 
+            dbQuery.mockResolvedValueOnce({
+                rows: [{ resumes_count: '10', users_count: '2', missions_count: '5', db_size: '1048576' }]
             });
 
             const healthRouter = (await import('../../routes/health.routes.js')).default;
             const routeHandler = healthRouter.stack.find(r => r.route?.path === '/').route.stack[0].handle;
-            
+
             await routeHandler(mockReq, mockRes);
 
             const response = mockRes.json.mock.calls[0][0];
             expect(response.status).toBe('healthy');
             expect(response.responseTime).toBeDefined();
-            // Non-admin should NOT see checks
             expect(response.checks).toBeUndefined();
         });
 
@@ -164,34 +154,35 @@ describe('Health Routes', () => {
             global.fetch = vi.fn();
 
             dbQuery.mockResolvedValueOnce({ rows: [{ connected: 1 }] });
-            dbQuery.mockResolvedValueOnce({ 
-                rows: [{ resumes_count: '10', users_count: '2', missions_count: '5', db_size: '1048576' }] 
+            dbQuery.mockResolvedValueOnce({
+                rows: [{ resumes_count: '10', users_count: '2', missions_count: '5', db_size: '1048576' }]
             });
 
             const healthRouter = (await import('../../routes/health.routes.js')).default;
             const routeHandler = healthRouter.stack.find(r => r.route?.path === '/').route.stack[0].handle;
-            
+
             await routeHandler(mockReq, mockRes);
 
-            expect(global.fetch).not.toHaveBeenCalled();
+            expect(global.fetch).toHaveBeenCalledTimes(1);
+            expect(global.fetch.mock.calls[0][0]).toBe('http://127.0.0.1:11434/api/tags');
             const response = mockRes.json.mock.calls[0][0];
             expect(response.checks).toBeUndefined();
         });
 
         it('should include memory usage information', async () => {
             dbQuery.mockResolvedValueOnce({ rows: [{ connected: 1 }] });
-            dbQuery.mockResolvedValueOnce({ 
-                rows: [{ 
-                    resumes_count: '100', 
-                    users_count: '10', 
+            dbQuery.mockResolvedValueOnce({
+                rows: [{
+                    resumes_count: '100',
+                    users_count: '10',
                     missions_count: '50',
                     db_size: '52428800'
-                }] 
+                }]
             });
 
             const healthRouter = (await import('../../routes/health.routes.js')).default;
             const routeHandler = healthRouter.stack.find(r => r.route?.path === '/').route.stack[0].handle;
-            
+
             await routeHandler(mockReq, mockRes);
 
             const response = mockRes.json.mock.calls[0][0];
@@ -203,23 +194,52 @@ describe('Health Routes', () => {
 
         it('should include response time', async () => {
             dbQuery.mockResolvedValueOnce({ rows: [{ connected: 1 }] });
-            dbQuery.mockResolvedValueOnce({ 
-                rows: [{ 
-                    resumes_count: '100', 
-                    users_count: '10', 
+            dbQuery.mockResolvedValueOnce({
+                rows: [{
+                    resumes_count: '100',
+                    users_count: '10',
                     missions_count: '50',
                     db_size: '52428800'
-                }] 
+                }]
             });
 
             const healthRouter = (await import('../../routes/health.routes.js')).default;
             const routeHandler = healthRouter.stack.find(r => r.route?.path === '/').route.stack[0].handle;
-            
+
             await routeHandler(mockReq, mockRes);
 
             const response = mockRes.json.mock.calls[0][0];
             expect(response.responseTime).toBeDefined();
             expect(response.responseTime).toMatch(/\d+ms/);
+        });
+
+        it('should run deep connectivity checks for hosted providers including DeepSeek and MiniMax', async () => {
+            mockReq.query = { deep: 'true' };
+            global.fetch = vi.fn()
+                .mockResolvedValueOnce({ ok: true, status: 200 })
+                .mockResolvedValueOnce({ ok: true, status: 200 })
+                .mockResolvedValueOnce({ ok: true, status: 200 })
+                .mockResolvedValueOnce({ ok: true, status: 200 })
+                .mockResolvedValueOnce({ ok: true, status: 200 });
+
+            dbQuery.mockResolvedValueOnce({ rows: [{ connected: 1 }] });
+            dbQuery.mockResolvedValueOnce({
+                rows: [{ resumes_count: '100', users_count: '10', missions_count: '50', db_size: '52428800' }]
+            });
+
+            const healthRouter = (await import('../../routes/health.routes.js')).default;
+            const routeHandler = healthRouter.stack.find(r => r.route?.path === '/').route.stack[0].handle;
+
+            await routeHandler(mockReq, mockRes);
+
+            const response = mockRes.json.mock.calls[0][0];
+            expect(response.checks.openai.status).toBe('ok');
+            expect(response.checks.anthropic.status).toBe('ok');
+            expect(response.checks.deepseek.status).toBe('ok');
+            expect(response.checks.minimax.status).toBe('ok');
+            expect(global.fetch).toHaveBeenCalledTimes(5);
+            expect(global.fetch.mock.calls[2][0]).toBe('https://api.deepseek.com/chat/completions');
+            expect(global.fetch.mock.calls[3][0]).toBe('https://api.minimax.io/anthropic/v1/messages');
         });
     });
 });

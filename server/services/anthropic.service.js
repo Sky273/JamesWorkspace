@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { ANTHROPIC_API_KEY } from '../config/constants.js';
-import { metrics } from './metrics.service.js';
+import { buildLLMMetricLabel, metrics } from './metrics.service.js';
 import { extractTextFromContentBlocks } from './llmContent.service.js';
 import { normalizeAnthropicContent } from './llmProviderCommon.service.js';
 
@@ -50,7 +50,7 @@ export async function callAnthropicChat(messages, model, options = {}) {
     const inputTokens = usage.input_tokens || 0;
     const outputTokens = usage.output_tokens || 0;
     const totalTokens = inputTokens + outputTokens;
-    metrics.trackLLMRequest(model, totalTokens, true, inputTokens, outputTokens);
+    metrics.trackLLMRequest(buildLLMMetricLabel('anthropic', model), totalTokens, true, inputTokens, outputTokens);
 
     const content = extractTextFromContentBlocks(response.data?.content);
     if (!content) {
@@ -113,7 +113,7 @@ export async function callAnthropicVision(systemPrompt, userContent, model, opti
     );
 
     const usage = response.data.usage || {};
-    metrics.trackLLMRequest(model, (usage.input_tokens || 0) + (usage.output_tokens || 0), true, usage.input_tokens || 0, usage.output_tokens || 0);
+    metrics.trackLLMRequest(buildLLMMetricLabel('anthropic', model), (usage.input_tokens || 0) + (usage.output_tokens || 0), true, usage.input_tokens || 0, usage.output_tokens || 0);
 
     const content = extractTextFromContentBlocks(response.data?.content);
     if (!content) {

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Health Indicator Component
  * Shows system health status in the header (admin only)
  */

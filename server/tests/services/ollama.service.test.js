@@ -20,7 +20,7 @@ vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));
 
-import { callOllama } from '../../services/ollama.service.js';
+import { callOllama, callOllamaWithVision } from '../../services/ollama.service.js';
 
 describe('ollama.service', () => {
     beforeEach(() => {
@@ -52,6 +52,55 @@ describe('ollama.service', () => {
         );
 
         expect(result.content).toBe('{"ok":true,"name":"Julien"}');
+    });
+
+    it('applies keep_alive from Ollama settings on chat requests', async () => {
+        mockAxiosPost.mockResolvedValueOnce({
+            data: {
+                model: 'qwen3:14b',
+                message: { content: 'Final answer' },
+                prompt_eval_count: 10,
+                eval_count: 5
+            }
+        });
+
+        await callOllama(
+            [{ role: 'user', content: 'Analyse ce CV' }],
+            'qwen3:14b',
+            { ollamaBaseUrl: 'http://ollama.test:11434', ollamaKeepAlive: '30s' },
+            { operationType: 'Resume Analysis' }
+        );
+
+        expect(mockAxiosPost).toHaveBeenCalledWith(
+            'http://ollama.test:11434/api/chat',
+            expect.objectContaining({ keep_alive: '30s' }),
+            expect.any(Object)
+        );
+    });
+
+    it('applies keep_alive on vision requests and allows overrides', async () => {
+        mockAxiosPost.mockResolvedValueOnce({
+            data: {
+                model: 'qwen3:14b',
+                message: { content: 'Vision answer' },
+                prompt_eval_count: 10,
+                eval_count: 5
+            }
+        });
+
+        await callOllamaWithVision(
+            'System prompt',
+            [{ type: 'text', text: 'Describe this image' }],
+            'qwen3:14b',
+            { ollamaBaseUrl: 'http://ollama.test:11434', ollamaKeepAlive: '30s' },
+            { operationType: 'Resume Analysis', keep_alive: 0 }
+        );
+
+        expect(mockAxiosPost).toHaveBeenCalledWith(
+            'http://ollama.test:11434/api/chat',
+            expect.objectContaining({ keep_alive: 0 }),
+            expect.any(Object)
+        );
     });
 
     it('rejects responses that only contain reasoning fields', async () => {

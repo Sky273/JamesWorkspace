@@ -1,5 +1,5 @@
 import express from 'express';
-import { OPENAI_API_KEY, ANTHROPIC_API_KEY, MINIMAX_API_KEY, MINIMAX_ANTHROPIC_BASE_URL, OLLAMA_BASE_URL } from '../config/constants.js';
+import { OPENAI_API_KEY, ANTHROPIC_API_KEY, DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, MINIMAX_API_KEY, MINIMAX_ANTHROPIC_BASE_URL, OLLAMA_BASE_URL } from '../config/constants.js';
 import { settingsCache, templatesCache, firmsCache } from '../services/cache.service.js';
 import { checkDatabaseHealth } from '../services/health.service.js';
 import { getTrendsCacheStats } from '../services/marketTrends.service.js';
@@ -13,6 +13,41 @@ import { getStorageStats, getFileCleanupStats } from '../utils/fileCleanup.js';
 import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
 
 const router = express.Router();
+
+async function runConnectivityCheck({
+    fetchUrl,
+    fetchOptions,
+    timeoutMs = 5000,
+    slowThresholdMs = 2000,
+    connectedStatuses = []
+}) {
+    const start = Date.now();
+    const response = await Promise.race([
+        fetch(fetchUrl, fetchOptions),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), timeoutMs))
+    ]);
+    const latency = Date.now() - start;
+    const isConnected = response.ok || connectedStatuses.includes(response.status);
+
+    return isConnected
+        ? { status: latency > slowThresholdMs ? 'slow' : 'ok', message: 'API connected', latency: `${latency}ms` }
+        : { status: 'error', message: `API error: ${response.status}`, latency: `${latency}ms` };
+}
+
+function getConfiguredCheck() {
+    return { status: 'configured', message: 'API key present (use ?deep=true for connectivity test)' };
+}
+
+function getNotConfiguredCheck() {
+    return { status: 'not_configured', message: 'API key missing' };
+}
+
+function getFailedConnectivityCheck(error) {
+    return {
+        status: 'error',
+        message: error.message === 'Timeout' ? 'Connection timeout' : 'Connection failed'
+    };
+}
 
 router.get('/', async (req, res) => {
     const startTime = Date.now();
@@ -32,6 +67,7 @@ router.get('/', async (req, res) => {
         database: { status: 'unknown' },
         openai: { status: 'unknown' },
         anthropic: { status: 'unknown' },
+        deepseek: { status: 'unknown' },
         minimax: { status: 'unknown' },
         ollama: { status: 'unknown' },
         memory: { status: 'ok' },
@@ -110,49 +146,32 @@ router.get('/', async (req, res) => {
     if (OPENAI_API_KEY) {
         if (deepCheck) {
             try {
-                const openaiStart = Date.now();
-                const response = await Promise.race([
-                    fetch('https://api.openai.com/v1/models', {
+                checks.openai = await runConnectivityCheck({
+                    fetchUrl: 'https://api.openai.com/v1/models',
+                    fetchOptions: {
                         method: 'GET',
                         headers: { Authorization: `Bearer ${OPENAI_API_KEY}` }
-                    }),
-                    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
-                ]);
-                const openaiLatency = Date.now() - openaiStart;
-
-                if (response.ok) {
-                    checks.openai = {
-                        status: openaiLatency > 2000 ? 'slow' : 'ok',
-                        message: 'API connected',
-                        latency: `${openaiLatency}ms`
-                    };
-                } else {
-                    checks.openai = {
-                        status: 'error',
-                        message: `API error: ${response.status}`,
-                        latency: `${openaiLatency}ms`
-                    };
+                    }
+                });
+                if (checks.openai.status === 'error') {
                     overallStatus = overallStatus === 'healthy' ? 'degraded' : overallStatus;
                 }
             } catch (error) {
-                checks.openai = {
-                    status: 'error',
-                    message: error.message === 'Timeout' ? 'Connection timeout' : 'Connection failed'
-                };
+                checks.openai = getFailedConnectivityCheck(error);
             }
         } else {
-            checks.openai = { status: 'configured', message: 'API key present (use ?deep=true for connectivity test)' };
+            checks.openai = getConfiguredCheck();
         }
     } else {
-        checks.openai = { status: 'not_configured', message: 'API key missing' };
+        checks.openai = getNotConfiguredCheck();
     }
 
     if (ANTHROPIC_API_KEY) {
         if (deepCheck) {
             try {
-                const anthropicStart = Date.now();
-                const response = await Promise.race([
-                    fetch('https://api.anthropic.com/v1/messages', {
+                checks.anthropic = await runConnectivityCheck({
+                    fetchUrl: 'https://api.anthropic.com/v1/messages',
+                    fetchOptions: {
                         method: 'POST',
                         headers: {
                             'x-api-key': ANTHROPIC_API_KEY,
@@ -164,36 +183,85 @@ router.get('/', async (req, res) => {
                             max_tokens: 1,
                             messages: [{ role: 'user', content: 'ping' }]
                         })
-                    }),
-                    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
-                ]);
-                const anthropicLatency = Date.now() - anthropicStart;
-
-                if (response.ok || response.status === 400) {
-                    checks.anthropic = {
-                        status: anthropicLatency > 2000 ? 'slow' : 'ok',
-                        message: 'API connected',
-                        latency: `${anthropicLatency}ms`
-                    };
-                } else {
-                    checks.anthropic = {
-                        status: 'error',
-                        message: `API error: ${response.status}`,
-                        latency: `${anthropicLatency}ms`
-                    };
+                    },
+                    connectedStatuses: [400]
+                });
+                if (checks.anthropic.status === 'error') {
                     overallStatus = overallStatus === 'healthy' ? 'degraded' : overallStatus;
                 }
             } catch (error) {
-                checks.anthropic = {
-                    status: 'error',
-                    message: error.message === 'Timeout' ? 'Connection timeout' : 'Connection failed'
-                };
+                checks.anthropic = getFailedConnectivityCheck(error);
             }
         } else {
-            checks.anthropic = { status: 'configured', message: 'API key present (use ?deep=true for connectivity test)' };
+            checks.anthropic = getConfiguredCheck();
         }
     } else {
-        checks.anthropic = { status: 'not_configured', message: 'API key missing' };
+        checks.anthropic = getNotConfiguredCheck();
+    }
+
+    if (DEEPSEEK_API_KEY) {
+        if (deepCheck) {
+            try {
+                checks.deepseek = await runConnectivityCheck({
+                    fetchUrl: `${DEEPSEEK_BASE_URL.replace(/\/$/, '')}/chat/completions`,
+                    fetchOptions: {
+                        method: 'POST',
+                        headers: {
+                            Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            model: 'deepseek-chat',
+                            messages: [{ role: 'user', content: 'ping' }],
+                            max_tokens: 1
+                        })
+                    },
+                    connectedStatuses: [400]
+                });
+                if (checks.deepseek.status === 'error') {
+                    overallStatus = overallStatus === 'healthy' ? 'degraded' : overallStatus;
+                }
+            } catch (error) {
+                checks.deepseek = getFailedConnectivityCheck(error);
+            }
+        } else {
+            checks.deepseek = getConfiguredCheck();
+        }
+    } else {
+        checks.deepseek = getNotConfiguredCheck();
+    }
+
+    if (MINIMAX_API_KEY) {
+        if (deepCheck) {
+            try {
+                checks.minimax = await runConnectivityCheck({
+                    fetchUrl: `${MINIMAX_ANTHROPIC_BASE_URL.replace(/\/$/, '')}/v1/messages`,
+                    fetchOptions: {
+                        method: 'POST',
+                        headers: {
+                            'x-api-key': MINIMAX_API_KEY,
+                            'anthropic-version': '2023-06-01',
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            model: 'MiniMax-M2.7',
+                            max_tokens: 1,
+                            messages: [{ role: 'user', content: [{ type: 'text', text: 'ping' }] }]
+                        })
+                    },
+                    connectedStatuses: [400]
+                });
+                if (checks.minimax.status === 'error') {
+                    overallStatus = overallStatus === 'healthy' ? 'degraded' : overallStatus;
+                }
+            } catch (error) {
+                checks.minimax = getFailedConnectivityCheck(error);
+            }
+        } else {
+            checks.minimax = getConfiguredCheck();
+        }
+    } else {
+        checks.minimax = getNotConfiguredCheck();
     }
 
     try {
@@ -345,7 +413,3 @@ router.get('/storage', authenticateToken, requireAdmin, async (req, res) => {
 });
 
 export default router;
-
-
-
-

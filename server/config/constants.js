@@ -37,6 +37,8 @@ export const SALT_ROUNDS = 10;
 // LLM API Keys
 export const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 export const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+export const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
+export const DEEPSEEK_BASE_URL = process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com';
 export const MINIMAX_API_KEY = process.env.MINIMAX_API_KEY;
 export const MINIMAX_OPENAI_BASE_URL = process.env.MINIMAX_OPENAI_BASE_URL || 'https://api.minimax.io/v1';
 export const MINIMAX_ANTHROPIC_BASE_URL = process.env.MINIMAX_ANTHROPIC_BASE_URL || 'https://api.minimax.io/anthropic';
@@ -123,5 +125,6 @@ export const RATE_LIMIT = {
         max: 50
     }
 };
+
 
 

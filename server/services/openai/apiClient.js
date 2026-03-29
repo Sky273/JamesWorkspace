@@ -6,7 +6,7 @@
 import axios from 'axios';
 import { OPENAI_API_KEY, MAX_PROMPT_LENGTH } from '../../config/constants.js';
 import { buildOpenAICompatibleParams } from '../llmProviderCommon.service.js';
-import { metrics } from '../metrics.service.js';
+import { buildLLMMetricLabel, metrics } from '../metrics.service.js';
 import { safeLog } from '../../utils/logger.backend.js';
 import { validatePromptSize } from '../../utils/postgresHelpers.js';
 import { securityLog, LOG_LEVELS, SECURITY_EVENTS } from '../security.service.js';
@@ -162,7 +162,7 @@ export async function callOpenAI({
         const totalTokens = usage.total_tokens || (inputTokens + outputTokens);
         
         safeLog('info', 'LLM Token usage', { inputTokens, outputTokens, totalTokens });
-        metrics.trackLLMRequest(model, totalTokens, true, inputTokens, outputTokens);
+        metrics.trackLLMRequest(buildLLMMetricLabel('openai', model), totalTokens, true, inputTokens, outputTokens);
 
         // Transform Responses API format to Chat Completions API format for consistency
         if (isGPT5Model && response.data?.output) {
@@ -190,7 +190,7 @@ export async function callOpenAI({
 
         return sanitizeOpenAICompatibleResponseBody(response.data);
     } catch (error) {
-        metrics.trackLLMRequest(model, 0, false, 0, 0);
+        metrics.trackLLMRequest(buildLLMMetricLabel('openai', model), 0, false, 0, 0);
         safeLog('error', 'OpenAI API call failed', {
             error: error.message,
             status: error.response?.status,

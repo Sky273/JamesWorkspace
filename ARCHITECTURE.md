@@ -32,7 +32,7 @@
 | **Frontend** | React 19, TypeScript, Vite 8 (Rolldown), TailwindCSS 4, Framer Motion |
 | **Backend** | Node.js, Express.js |
 | **Base de données** | PostgreSQL 18 avec pg (node-postgres) |
-| **IA/LLM** | OpenAI (GPT-4/5), Anthropic (Claude), MiniMax, Ollama distant |
+| **IA/LLM** | OpenAI (GPT-4/5), Anthropic (Claude), DeepSeek, MiniMax, Ollama distant |
 | **APIs Externes** | France Travail, Adzuna, ROME 4.0, ESCO |
 | **Génération PDF** | Puppeteer (html-pdf-node) |
 | **Éditeur WYSIWYG** | Tiptap 3.x (ProseMirror) |
@@ -440,31 +440,24 @@ EXECUTE FUNCTION sync_customer_name();
 
 | Provider | Modèles | Usage |
 |----------|---------|-------|
-| **OpenAI** | GPT-4, GPT-4o, GPT-5.x | Analyse, am?lioration, adaptation |
-| **Anthropic** | Claude 3.x / Claude 4.x | Alternative ? OpenAI |
-| **MiniMax** | MiniMax-M2.7, MiniMax-M2.5, MiniMax-M2.1 | Alternative API-compatible pour analyse, am?lioration, adaptation |
-| **Ollama (distant)** | Mod?les expos?s par une instance Ollama externe | Ex?cution via une URL Ollama distante, sans moteur Ollama embarqu? dans le conteneur |
+| **OpenAI** | GPT-4, GPT-4o, GPT-5.x | Analyse, amélioration, adaptation |
+| **Anthropic** | Claude 3.x / Claude 4.x | Alternative à OpenAI |
+| **DeepSeek** | deepseek-chat, deepseek-reasoner | Alternative OpenAI-compatible avec support du raisonnement côté provider |
+| **MiniMax** | MiniMax-M2.7, MiniMax-M2.5, MiniMax-M2.1 | Alternative API-compatible pour analyse, amélioration, adaptation |
+| **Ollama (distant)** | Modèles exposés par une instance Ollama externe | Exécution via une URL Ollama distante, sans moteur Ollama embarqué dans le conteneur |
 
-### Service LLM Unifié
+### Gateway LLM Unifié
 
 ```javascript
-// src/services/llm.service.js
+// server/services/llmGateway.service.js
 export async function callLLM(messages, options) {
   const settings = await getLLMSettings(); // Config depuis PostgreSQL
-  const provider = settings.llmProvider;   // 'openai', 'anthropic', 'minimax' ou 'ollama'
-  
-  if (provider === 'anthropic') {
-    return await callAnthropic(messages, model, options);
-  }
-  if (provider === 'minimax') {
-    return await callMiniMax(messages, model, options);
-  }
-  if (provider === 'ollama') {
-    return await callOllama(messages, model, options);
-  }
-  return await callOpenAI(messages, model, options);
+  const runtime = resolveLLMRuntimeConfig(settings);
+  return providerHandlers[runtime.provider](messages, runtime.model, options);
 }
 ```
+
+
 
 ### Compatibilité Modèles
 
@@ -472,9 +465,26 @@ Le service gère automatiquement les différences entre modèles :
 - `max_tokens` vs `max_completion_tokens` (GPT-5+)
 - Support température (non supporté par GPT-5)
 - Format messages (OpenAI vs Anthropic)
+- Support OpenAI-compatible DeepSeek
 - APIs compatibles OpenAI et Anthropic pour MiniMax
-- Connexion HTTP vers une instance Ollama distante configur?e dans les param?tres
-- Cas Ollama sans `llmModel` obligatoire c?t? application lorsque le mod?le est pilot? par l'instance distante
+- Connexion HTTP vers une instance Ollama distante configurée dans les paramètres
+- Cas Ollama sans `llmModel` obligatoire côté application lorsque le modèle est piloté par l'instance distante
+
+### Services LLM
+
+Les responsabilités sont maintenant séparées :
+- `llmConfiguration.service.js` : résolution runtime provider / modèle
+- `llmGateway.service.js` : gateway unique, agnostique du provider hors configuration
+- `openaiChat.service.js`, `anthropic.service.js`, `deepseek.service.js`, `minimax.service.js`, `ollama.service.js` : implémentations provider
+- `llmContent.service.js` : normalisation/sanitation des sorties
+- `llmProviderCommon.service.js` : règles communes de payloads/réponses compatibles
+
+### Résilience et observabilité
+
+- Retry et circuit breaker pour `openai`, `anthropic`, `deepseek` et `minimax`
+- Indicateur d'état par famille via `/api/llm/circuit-breakers`
+- Health checks profonds via `/api/health?deep=true`
+- Métriques LLM normalisées et bornées pour éviter la cardinalité non contrôlée en mémoire
 
 ---
 
@@ -1250,12 +1260,16 @@ CREATE TABLE schema_migrations (
 | `JWT_REFRESH_SECRET` | ✅ | Secret refresh token |
 | `REFRESH_TOKEN_SECRET` | ✅ | Secret token additionnel |
 | `CSRF_SECRET` | ✅ | Secret CSRF |
-| `OPENAI_API_KEY` | Optionnel | Cl? API OpenAI |
-| `ANTHROPIC_API_KEY` | Optionnel | Cl? API Anthropic |
-| `MINIMAX_API_KEY` | Optionnel | Cl? API MiniMax |
+| `OPENAI_API_KEY` | Optionnel | Clé API OpenAI |
+| `ANTHROPIC_API_KEY` | Optionnel | Clé API Anthropic |
+| `ANTHROPIC_MODEL` | Optionnel | Modèle Anthropic par défaut |
+| `DEEPSEEK_API_KEY` | Optionnel | Clé API DeepSeek |
+| `DEEPSEEK_BASE_URL` | Optionnel | URL base DeepSeek |
+| `MINIMAX_API_KEY` | Optionnel | Clé API MiniMax |
 | `MINIMAX_OPENAI_BASE_URL` | Optionnel | URL base OpenAI-compatible MiniMax |
 | `MINIMAX_ANTHROPIC_BASE_URL` | Optionnel | URL base Anthropic-compatible MiniMax |
 | `OLLAMA_BASE_URL` | Optionnel | URL de l'instance Ollama distante |
+| `OLLAMA_AUTO_PULL` | Optionnel | Auto-pull du modèle Ollama si nécessaire |
 | `OLLAMA_REQUEST_TIMEOUT_MS` | Optionnel | Timeout global des appels Ollama |
 | `GOOGLE_CLIENT_ID` | Optionnel | Client ID Google OAuth |
 | `GOOGLE_CLIENT_SECRET` | Optionnel | Secret Google OAuth |
@@ -1507,3 +1521,4 @@ L'architecture actuelle est **adaptée pour un usage PME/ESN** et peut supporter
 | dotenv | 16.x | 17.3 | |
 | autoprefixer | 10.x | — | Supprimé (intégré dans TailwindCSS 4) |
 | @rollup/plugin-commonjs | 28.x | — | Supprimé (Rolldown gère CJS nativement) |
+

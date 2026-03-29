@@ -1,21 +1,71 @@
 import express from 'express';
 import axios from 'axios';
-import { OPENAI_API_KEY, ANTHROPIC_API_KEY, MAX_PROMPT_LENGTH, MINIMAX_API_KEY } from '../config/constants.js';
+import { OPENAI_API_KEY, ANTHROPIC_API_KEY, DEEPSEEK_API_KEY, MAX_PROMPT_LENGTH, MINIMAX_API_KEY } from '../config/constants.js';
 import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
 import { llmLimiter, combinedRateLimit } from '../middleware/rateLimit.middleware.js';
-import { metrics } from '../services/metrics.service.js';
+import { buildLLMMetricLabel, metrics } from '../services/metrics.service.js';
 import { securityLog, getRequestMetadata, LOG_LEVELS, SECURITY_EVENTS } from '../services/security.service.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { getLLMSettings } from '../services/settings.service.js';
 import { withRetry, getCircuitBreakerStates } from '../services/retry.service.js';
 import { validateBody, openaiRequestSchema, anthropicRequestSchema } from '../utils/validation.js';
 import { callOllama } from '../services/ollama.service.js';
+import { callDeepSeek } from '../services/deepseek.service.js';
 import { callMiniMaxOpenAICompatible, callMiniMaxAnthropicCompatible } from '../services/minimax.service.js';
 import { extractOpenAIResponsesText, flattenLlmTextContent, sanitizeOpenAICompatibleResponseBody } from '../services/llmContent.service.js';
 import { normalizeAnthropicRequestBody, toAnthropicCompatibleResponse, toOpenAICompatibleResponse } from '../services/llmProviderCommon.service.js';
 import { resolveCompatibleProviderRuntimeConfig } from '../services/llmConfiguration.service.js';
 
 const router = express.Router();
+
+const LLM_FAMILY_INDICATORS = ['openai', 'anthropic', 'deepseek', 'minimax', 'ollama'];
+
+function normalizeCircuitBreakerIndicator(provider, indicator) {
+    if (indicator && typeof indicator === 'object' && !Array.isArray(indicator)) {
+        return {
+            provider,
+            supported: provider !== 'ollama',
+            state: indicator.state || 'UNKNOWN',
+            failures: indicator.failures || 0,
+            lastFailureTime: indicator.lastFailureTime || null
+        };
+    }
+
+    if (typeof indicator === 'string') {
+        return {
+            provider,
+            supported: provider !== 'ollama',
+            state: indicator.toUpperCase(),
+            failures: 0,
+            lastFailureTime: null
+        };
+    }
+
+    if (provider === 'ollama') {
+        return {
+            provider,
+            supported: false,
+            state: 'NOT_APPLICABLE',
+            failures: 0,
+            lastFailureTime: null
+        };
+    }
+
+    return {
+        provider,
+        supported: true,
+        state: 'UNKNOWN',
+        failures: 0,
+        lastFailureTime: null
+    };
+}
+
+function buildCircuitBreakerIndicators(states = {}) {
+    return Object.fromEntries(LLM_FAMILY_INDICATORS.map(provider => [
+        provider,
+        normalizeCircuitBreakerIndicator(provider, states[provider])
+    ]));
+}
 
 function validateMessageLengths(messages) {
     if (!messages || !Array.isArray(messages)) {
@@ -36,24 +86,13 @@ function getRequestedMaxTokens(body = {}) {
     return body.max_tokens || body.max_completion_tokens || body.max_output_tokens || 4096;
 }
 
-function buildProviderOptions(body = {}, timeout, operationType) {
-    return {
-        temperature: body.temperature,
-        max_tokens: getRequestedMaxTokens(body),
-        top_p: body.top_p,
-        response_format: body.response_format,
-        timeout,
-        operationType
-    };
-}
-
 async function handleOllamaRequest(req, res, settings, responseShape, model) {
     const result = await callOllama(req.body.messages || [], model, settings, {
         temperature: req.body.temperature,
         max_tokens: getRequestedMaxTokens(req.body)
     });
 
-    metrics.trackLLMRequest(`ollama:${result.actualModel || model}`, result.usage?.total_tokens || 0, true, result.usage?.prompt_tokens || 0, result.usage?.completion_tokens || 0);
+    metrics.trackLLMRequest(buildLLMMetricLabel('ollama', result.actualModel || model), result.usage?.total_tokens || 0, true, result.usage?.prompt_tokens || 0, result.usage?.completion_tokens || 0);
     return res.json(responseShape === 'anthropic' ? toAnthropicCompatibleResponse(result, 'ollama') : toOpenAICompatibleResponse(result, 'ollama'));
 }
 
@@ -88,7 +127,35 @@ async function handleMiniMaxRequest(req, res, responseShape, model) {
     return res.json(toOpenAICompatibleResponse(result, 'minimax'));
 }
 
-async function maybeHandleCompatibleProviderRequest(req, res, settings, responseShape, model) {
+async function handleDeepSeekRequest(req, res, model, metadata) {
+    if (!DEEPSEEK_API_KEY) {
+        return res.status(500).json({ error: 'DeepSeek API key not configured on server.' });
+    }
+
+    securityLog(LOG_LEVELS.INFO, SECURITY_EVENTS.LLM_REQUEST, {
+        ...metadata,
+        message: 'DeepSeek API request',
+        metadata: {
+            model,
+            messageCount: req.body.messages?.length || 0
+        }
+    });
+
+    const response = await callDeepSeek({
+        model,
+        messages: req.body.messages || [],
+        maxTokens: getRequestedMaxTokens(req.body),
+        temperature: req.body.temperature,
+        topP: req.body.top_p,
+        responseFormat: req.body.response_format,
+        timeout: 120000,
+        operationType: `DeepSeek ${model} request`
+    });
+
+    return res.json(sanitizeOpenAICompatibleResponseBody(response));
+}
+
+async function maybeHandleCompatibleProviderRequest(req, res, settings, responseShape, model, metadata) {
     const { provider } = resolveCompatibleProviderRuntimeConfig({
         settings,
         requestedModel: model,
@@ -103,6 +170,11 @@ async function maybeHandleCompatibleProviderRequest(req, res, settings, response
     if (provider === 'minimax') {
         safeLog('info', `Routing ${responseShape}-compatible request through MiniMax`, { model, provider });
         return handleMiniMaxRequest(req, res, responseShape, model);
+    }
+
+    if (provider === 'deepseek' && responseShape === 'openai') {
+        safeLog('info', 'Routing openai-compatible request through DeepSeek', { model, provider });
+        return handleDeepSeekRequest(req, res, model, metadata);
     }
 
     return null;
@@ -185,7 +257,7 @@ async function proxyOpenAIRequest(req, res, model, metadata, { allowResponsesApi
     const inputTokens = usage.input_tokens || usage.prompt_tokens || 0;
     const outputTokens = usage.output_tokens || usage.completion_tokens || 0;
     const totalTokens = usage.total_tokens || (inputTokens + outputTokens);
-    metrics.trackLLMRequest(model, totalTokens, true, inputTokens, outputTokens);
+    metrics.trackLLMRequest(buildLLMMetricLabel('openai', model), totalTokens, true, inputTokens, outputTokens);
 
     if (isGPT5Model && response.data?.output) {
         const textContent = extractOpenAIResponsesText(response.data.output || []);
@@ -252,7 +324,7 @@ async function proxyAnthropicRequest(req, res, model, metadata, { useRetry = tru
     const inputTokens = usage.input_tokens || 0;
     const outputTokens = usage.output_tokens || 0;
     const totalTokens = inputTokens + outputTokens;
-    metrics.trackLLMRequest(model, totalTokens, true, inputTokens, outputTokens);
+    metrics.trackLLMRequest(buildLLMMetricLabel('anthropic', model), totalTokens, true, inputTokens, outputTokens);
 
     return res.json(response.data);
 }
@@ -270,14 +342,14 @@ router.post('/openai', authenticateToken, llmLimiter, combinedRateLimit(30, 60 *
 
         ({ model } = resolveCompatibleProviderRuntimeConfig({ settings, requestedModel: model, responseShape: 'openai' }));
 
-        const compatibleResponse = await maybeHandleCompatibleProviderRequest(req, res, settings, 'openai', model);
+        const compatibleResponse = await maybeHandleCompatibleProviderRequest(req, res, settings, 'openai', model, metadata);
         if (compatibleResponse) {
             return compatibleResponse;
         }
 
         return await proxyOpenAIRequest(req, res, model, metadata, { allowResponsesApi: true });
     } catch (error) {
-        metrics.trackLLMRequest(model || 'openai', 0, false, 0, 0);
+        metrics.trackLLMRequest(buildLLMMetricLabel('openai', model || 'openai'), 0, false, 0, 0);
         const statusCode = error.response ? error.response.status : 500;
         const errorData = error.response ? error.response.data : { error: 'Failed to proxy request to OpenAI.' };
         return res.status(statusCode).json(errorData);
@@ -297,14 +369,14 @@ router.post('/anthropic', authenticateToken, llmLimiter, combinedRateLimit(30, 6
 
         ({ model } = resolveCompatibleProviderRuntimeConfig({ settings, requestedModel: req.body.model || model, responseShape: 'anthropic' }));
 
-        const compatibleResponse = await maybeHandleCompatibleProviderRequest(req, res, settings, 'anthropic', model);
+        const compatibleResponse = await maybeHandleCompatibleProviderRequest(req, res, settings, 'anthropic', model, metadata);
         if (compatibleResponse) {
             return compatibleResponse;
         }
 
         return await proxyAnthropicRequest(req, res, model, metadata, { useRetry: true });
     } catch (error) {
-        metrics.trackLLMRequest(model, 0, false, 0, 0);
+        metrics.trackLLMRequest(buildLLMMetricLabel('anthropic', model), 0, false, 0, 0);
         const statusCode = error.response ? error.response.status : 500;
         const errorData = error.response ? error.response.data : { error: `Failed to proxy request to Anthropic: ${error.message}` };
         return res.status(statusCode).json(errorData);
@@ -319,14 +391,14 @@ router.post('/chat/completions', authenticateToken, llmLimiter, combinedRateLimi
         const settings = await getLLMSettings();
         ({ model } = resolveCompatibleProviderRuntimeConfig({ settings, requestedModel: req.body.model || model, responseShape: 'openai' }));
 
-        const compatibleResponse = await maybeHandleCompatibleProviderRequest(req, res, settings, 'openai', model);
+        const compatibleResponse = await maybeHandleCompatibleProviderRequest(req, res, settings, 'openai', model, metadata);
         if (compatibleResponse) {
             return compatibleResponse;
         }
 
         return await proxyOpenAIRequest(req, res, model, metadata, { allowResponsesApi: false });
     } catch (error) {
-        metrics.trackLLMRequest(req.body.model || 'openai', 0, false, 0, 0);
+        metrics.trackLLMRequest(buildLLMMetricLabel('openai', req.body.model || model), 0, false, 0, 0);
         const statusCode = error.response ? error.response.status : 500;
         const errorData = error.response ? error.response.data : { error: 'Failed to call OpenAI API.' };
         return res.status(statusCode).json(errorData);
@@ -341,14 +413,14 @@ router.post('/messages', authenticateToken, llmLimiter, combinedRateLimit(30, 60
         const settings = await getLLMSettings();
         ({ model } = resolveCompatibleProviderRuntimeConfig({ settings, requestedModel: req.body.model || model, responseShape: 'anthropic' }));
 
-        const compatibleResponse = await maybeHandleCompatibleProviderRequest(req, res, settings, 'anthropic', model);
+        const compatibleResponse = await maybeHandleCompatibleProviderRequest(req, res, settings, 'anthropic', model, metadata);
         if (compatibleResponse) {
             return compatibleResponse;
         }
 
         return await proxyAnthropicRequest(req, res, model, metadata, { useRetry: false });
     } catch (error) {
-        metrics.trackLLMRequest(req.body.model || 'anthropic', 0, false, 0, 0);
+        metrics.trackLLMRequest(buildLLMMetricLabel('anthropic', req.body.model || model), 0, false, 0, 0);
         const statusCode = error.response ? error.response.status : 500;
         const errorData = error.response ? error.response.data : { error: 'Failed to call Anthropic API.' };
         return res.status(statusCode).json(errorData);
@@ -357,10 +429,17 @@ router.post('/messages', authenticateToken, llmLimiter, combinedRateLimit(30, 60
 
 router.get('/circuit-breakers', authenticateToken, requireAdmin, (req, res) => {
     const states = getCircuitBreakerStates();
-    if (MINIMAX_API_KEY && !states.minimax) {
-        states.minimax = { state: 'UNKNOWN', failures: 0 };
-    }
-    res.json(states);
+    const indicators = buildCircuitBreakerIndicators(states);
+
+    indicators.openai.configured = Boolean(OPENAI_API_KEY);
+    indicators.anthropic.configured = Boolean(ANTHROPIC_API_KEY);
+    indicators.deepseek.configured = Boolean(DEEPSEEK_API_KEY);
+    indicators.minimax.configured = Boolean(MINIMAX_API_KEY);
+    indicators.ollama.configured = true;
+
+    res.json(indicators);
 });
 
 export default router;
+
+

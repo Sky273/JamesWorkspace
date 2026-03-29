@@ -88,20 +88,16 @@ export function sanitizeOpenAICompatibleResponseBody(body = {}) {
 
     return {
         ...body,
-        choices: choices.map(choice => {
-            const content = choice?.message?.content;
-            if (typeof content !== 'string') {
-                return choice;
+        choices: choices.map(choice => ({
+            ...choice,
+            message: {
+                ...choice?.message,
+                ...(typeof choice?.message?.content === 'string'
+                    ? { content: stripLlmThinkingContent(choice.message.content) }
+                    : {}),
+                reasoning_content: undefined
             }
-
-            return {
-                ...choice,
-                message: {
-                    ...choice.message,
-                    content: stripLlmThinkingContent(content)
-                }
-            };
-        })
+        }))
     };
 }
 
@@ -112,4 +108,8 @@ export function extractOpenAIResponsesText(output = []) {
         messageItem?.content?.[0]?.text ||
         (typeof messageItem?.content === 'string' ? messageItem.content : '')
     );
+}
+
+export function extractDeepSeekContent(body = {}) {
+    return stripLlmThinkingContent(body?.choices?.[0]?.message?.content || '');
 }

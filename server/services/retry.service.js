@@ -114,6 +114,7 @@ class CircuitBreaker {
 const circuitBreakers = {
     openai: new CircuitBreaker('openai', { failureThreshold: 5, resetTimeoutMs: 60000 }),
     anthropic: new CircuitBreaker('anthropic', { failureThreshold: 5, resetTimeoutMs: 60000 }),
+    deepseek: new CircuitBreaker('deepseek', { failureThreshold: 5, resetTimeoutMs: 60000 }),
     minimax: new CircuitBreaker('minimax', { failureThreshold: 5, resetTimeoutMs: 60000 })
 };
 
@@ -272,6 +273,12 @@ export const retryOpenAI = createRetryWrapper('openai', {
 });
 
 export const retryAnthropic = createRetryWrapper('anthropic', {
+    maxRetries: 3,
+    initialDelayMs: 2000,
+    maxDelayMs: 60000
+});
+
+export const retryDeepSeek = createRetryWrapper('deepseek', {
     maxRetries: 3,
     initialDelayMs: 2000,
     maxDelayMs: 60000

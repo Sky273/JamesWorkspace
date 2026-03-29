@@ -42,7 +42,7 @@ Application professionnelle de gestion et d'analyse de CVs avec intelligence art
 
 ### Chatbot IA
 - **Assistant conversationnel** : Aide à la rédaction et conseils carrière
-- **Multi-modèles** : Support OpenAI (GPT-5, GPT-4o), Anthropic (Claude 4.5/4.6), MiniMax et Ollama distant
+- **Multi-modèles** : Support OpenAI (GPT-5, GPT-4o), Anthropic (Claude), DeepSeek (`deepseek-chat`, `deepseek-reasoner`), MiniMax et Ollama distant
 - **Contexte CV** : Réponses personnalisées basées sur le profil
 
 ### Administration
@@ -102,11 +102,14 @@ CSRF_SECRET=your-csrf-secret-key-min-32-chars
 # APIs LLM (optionnel)
 OPENAI_API_KEY=sk-...
 ANTHROPIC_API_KEY=sk-ant-...
+DEEPSEEK_API_KEY=sk-...
+DEEPSEEK_BASE_URL=https://api.deepseek.com
 MINIMAX_API_KEY=sk-api-...
 MINIMAX_OPENAI_BASE_URL=https://api.minimax.io/v1
 MINIMAX_ANTHROPIC_BASE_URL=https://api.minimax.io/anthropic
 # Ollama distant uniquement
 OLLAMA_BASE_URL=http://192.168.1.20:11434
+OLLAMA_AUTO_PULL=true
 OLLAMA_REQUEST_TIMEOUT_MS=300000
 
 # Serveur
@@ -128,7 +131,7 @@ Windows :
 ```batch
 migrate-server.bat
 
-Pour une base vide, le bootstrap applique desormais le schema canonique `docker/schema.sql` avant de marquer les migrations SQL existantes comme deja couvertes. `docker/init-db.sql` n'est plus qu'un relais de compatibilite vers ce schema canonique.
+Pour une base vide, le bootstrap applique désormais le schéma canonique `docker/schema.sql` avant de marquer les migrations SQL existantes comme déjà couvertes. `docker/init-db.sql` n'est plus qu'un relais de compatibilité vers ce schéma canonique.
 ```
 
 ### 5. Démarrer l'application
@@ -318,10 +321,11 @@ psql -U postgres -d resume_converter < backup.sql
 - `POST /api/tags/extract` - Extraire les tags d'un texte
 
 ### LLM (Proxy)
-- `POST /api/llm/openai` - Proxy OpenAI (GPT-5, GPT-4o)
-- `POST /api/llm/anthropic` - Proxy Anthropic (Claude)
+- `POST /api/llm/openai` - Proxy OpenAI (GPT-5, GPT-4o) avec routage compatible DeepSeek / MiniMax / Ollama selon configuration
+- `POST /api/llm/anthropic` - Proxy Anthropic (Claude) avec routage compatible MiniMax selon configuration
 - `POST /api/llm/messages` - Proxy Anthropic / providers compatibles
-- `POST /api/llm/chat/completions` - Proxy unifi? OpenAI-compatible (OpenAI, MiniMax, Ollama selon configuration)
+- `POST /api/llm/chat/completions` - Proxy OpenAI-compatible unifie (OpenAI, DeepSeek, MiniMax, Ollama selon configuration)
+- `GET /api/llm/circuit-breakers` - Etat des familles LLM (`openai`, `anthropic`, `deepseek`, `minimax`, `ollama`)
 
 ### Cabinets (Firms)
 - `GET /api/firms` - Liste des cabinets
@@ -386,7 +390,20 @@ L'application supporte plusieurs fournisseurs LLM :
 - **Claude 4.5 Sonnet** : Meilleur rapport qualité/prix
 - **Claude 3.5 Sonnet** : Fallback économique
 
-Configuration via les paramètres de l'application ou variables d'environnement.
+### DeepSeek
+- **deepseek-chat** : chat généraliste
+- **deepseek-reasoner** : raisonnement renforcé, avec sanitation serveur du `reasoning_content`
+
+### MiniMax
+- **MiniMax-M2.7** : modèle principal côté MiniMax
+- **MiniMax-M2.5 / M2.1** : alternatives compatibles OpenAI et Anthropic
+
+### Ollama (distant)
+- Instance Ollama distante uniquement
+- URL configurable dans les paramètres LLM
+- `keep_alive` et `num_ctx` pilotables via les paramètres stockés
+
+Configuration via les paramètres de l'application ou variables d'environnement. L'orchestration serveur passe par un gateway LLM unique avec retries, circuit breakers, sanitation du contenu et métriques bornées.
 
 ## 🐳 Docker
 
@@ -432,4 +449,5 @@ Voir [LICENSE](./LICENSE) pour les détails.
 
 
 
-Le mode hors Docker utilise le meme bootstrap canonique: `npm run migrate` applique `docker/schema.sql` sur une base vide, puis les migrations incrementales restantes.
+Le mode hors Docker utilise le même bootstrap canonique : `npm run migrate` applique `docker/schema.sql` sur une base vide, puis les migrations incrémentales restantes.
+

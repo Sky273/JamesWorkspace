@@ -1,6 +1,7 @@
 export const LLM_PROVIDER_DEFAULT_MODELS = {
     openai: 'gpt-4o',
     anthropic: 'claude-3-5-sonnet-20241022',
+    deepseek: 'deepseek-chat',
     minimax: 'MiniMax-M2.7',
     ollama: null
 };
@@ -11,6 +12,10 @@ export function isLikelyOpenAIModel(model = '') {
 
 export function isLikelyAnthropicModel(model = '') {
     return /^claude/i.test(String(model || '').trim());
+}
+
+export function isLikelyDeepSeekModel(model = '') {
+    return /^deepseek/i.test(String(model || '').trim());
 }
 
 export function isLikelyMiniMaxModel(model = '') {
@@ -46,6 +51,20 @@ export function resolveCompatibleProviderRuntimeConfig({ settings = {}, requeste
         };
     }
 
+    if (configuredProvider === 'deepseek' || (candidateModel && isLikelyDeepSeekModel(candidateModel))) {
+        if (responseShape === 'openai') {
+            return {
+                provider: 'deepseek',
+                model: resolveLLMModel({ provider: 'deepseek', settings, requestedModel })
+            };
+        }
+
+        return {
+            provider: 'anthropic',
+            model: isLikelyAnthropicModel(candidateModel) ? candidateModel : LLM_PROVIDER_DEFAULT_MODELS.anthropic
+        };
+    }
+
     if (configuredProvider === 'minimax' || (candidateModel && isLikelyMiniMaxModel(candidateModel))) {
         return {
             provider: 'minimax',
@@ -53,7 +72,12 @@ export function resolveCompatibleProviderRuntimeConfig({ settings = {}, requeste
         };
     }
 
-    const looksLikeKnownHostedModel = isLikelyOpenAIModel(candidateModel) || isLikelyAnthropicModel(candidateModel) || isLikelyMiniMaxModel(candidateModel);
+    const looksLikeKnownHostedModel =
+        isLikelyOpenAIModel(candidateModel) ||
+        isLikelyAnthropicModel(candidateModel) ||
+        isLikelyDeepSeekModel(candidateModel) ||
+        isLikelyMiniMaxModel(candidateModel);
+
     if (candidateModel && !looksLikeKnownHostedModel && settings?.ollamaBaseUrl) {
         return {
             provider: 'ollama',

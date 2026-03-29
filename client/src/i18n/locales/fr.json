@@ -1032,15 +1032,17 @@
     },
     "llm": {
       "title": "Configuration du Modèle LLM",
-      "model": "Modèle OpenAI",
-      "description": "Sélectionnez le modèle OpenAI à utiliser pour l'analyse et l'amélioration des CV. Si non renseigné, le modèle par défaut (gpt-4o) sera utilisé.",
+      "model": "Modele",
+      "description": "Selectionnez le provider et le modele LLM a utiliser pour l analyse et l amelioration des CV.",
       "cvMode": "Mode de génération du CV",
       "cvModeNominative": "Nominatif (informations personnelles incluses)",
       "cvModeAnonymous": "Anonyme (trigramme uniquement)",
       "cvModeNominativeDescription": "Le CV amélioré contiendra toutes les informations personnelles du candidat (nom complet, coordonnées, etc.).",
       "cvModeAnonymousDescription": "Le CV amélioré sera anonymisé : seul le trigramme du candidat sera affiché, sans informations personnelles identifiantes.",
       "webglEnabled": "Activer les arri?re-plans WebGL",
-      "webglEnabledDescription": "Affiche les fonds visuels anim?s de l'application quand le navigateur et l'appareil le permettent."
+      "webglEnabledDescription": "Affiche les fonds visuels anim?s de l'application quand le navigateur et l'appareil le permettent.",
+      "minimaxDescription": "Selectionnez un modele MiniMax. L application utilisera l API MiniMax cote serveur.",
+      "deepseekDescription": "Selectionnez un modele DeepSeek. L application utilisera l API DeepSeek cote serveur."
     },
     "prompts": {
       "title": "Configuration des Prompts",

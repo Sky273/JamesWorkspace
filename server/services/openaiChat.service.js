@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { OPENAI_API_KEY } from '../config/constants.js';
-import { metrics } from './metrics.service.js';
+import { buildLLMMetricLabel, metrics } from './metrics.service.js';
 import { getOpenAICompatibleTokenParam, supportsCustomTemperatureForOpenAICompatible } from './llmProviderCommon.service.js';
 import { stripLlmThinkingContent } from './openai/textUtils.js';
 
@@ -35,7 +35,7 @@ export async function callOpenAIChat(messages, model, options = {}) {
     const inputTokens = usage.prompt_tokens || 0;
     const outputTokens = usage.completion_tokens || 0;
     const totalTokens = usage.total_tokens || (inputTokens + outputTokens);
-    metrics.trackLLMRequest(model, totalTokens, true, inputTokens, outputTokens);
+    metrics.trackLLMRequest(buildLLMMetricLabel('openai', model), totalTokens, true, inputTokens, outputTokens);
 
     const choices = response.data?.choices;
     if (!choices || choices.length === 0) {
@@ -92,7 +92,7 @@ export async function callOpenAIVisionChat(systemPrompt, userContent, model, opt
     );
 
     const usage = response.data.usage || {};
-    metrics.trackLLMRequest(visionModel, usage.total_tokens || 0, true, usage.prompt_tokens || 0, usage.completion_tokens || 0);
+    metrics.trackLLMRequest(buildLLMMetricLabel('openai', visionModel), usage.total_tokens || 0, true, usage.prompt_tokens || 0, usage.completion_tokens || 0);
 
     const content = stripLlmThinkingContent(response.data.choices?.[0]?.message?.content);
     if (!content) {

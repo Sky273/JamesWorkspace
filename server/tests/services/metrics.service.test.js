@@ -336,3 +336,37 @@ describe('MetricsCollector', () => {
         });
     });
 });
+
+
+describe('metrics singleton safeguards', () => {
+    let actualMetrics;
+
+    beforeEach(async () => {
+        vi.resetModules();
+        ({ metrics: actualMetrics } = await import('../../services/metrics.service.js'));
+        actualMetrics.stopPeriodicSave();
+        actualMetrics.reset();
+    });
+
+    afterEach(() => {
+        actualMetrics.stopPeriodicSave();
+        actualMetrics.reset();
+    });
+
+    it('caps LLM provider cardinality and aggregates overflow into other', () => {
+        for (let i = 0; i < 60; i++) {
+            actualMetrics.trackLLMRequest('custom-provider-' + i, 10, true, 5, 5);
+        }
+
+        const keys = Object.keys(actualMetrics.llm.byProvider);
+        expect(keys.length).toBeLessThanOrEqual(50);
+        expect(actualMetrics.llm.byProvider.other).toBeDefined();
+        expect(actualMetrics.llm.byProvider.other.requests).toBeGreaterThan(0);
+    });
+
+    it('normalizes LLM provider keys before storing metrics', () => {
+        actualMetrics.trackLLMRequest('  DeepSeek Reasoner!?  ', 10, true, 5, 5);
+
+        expect(actualMetrics.llm.byProvider['deepseek-reasoner']).toBeDefined();
+    });
+});

@@ -1,9 +1,10 @@
 import { callOllama, callOllamaWithVision } from './ollama.service.js';
 import { callMiniMaxOpenAICompatible } from './minimax.service.js';
 import { callAnthropicChat, callAnthropicVision } from './anthropic.service.js';
+import { callDeepSeekChat } from './deepseek.service.js';
 import { callOpenAI } from './openai/apiClient.js';
 import { callOpenAIVisionChat } from './openaiChat.service.js';
-import { metrics } from './metrics.service.js';
+import { buildLLMMetricLabel, metrics } from './metrics.service.js';
 import { safeLog } from '../utils/logger.backend.js';
 
 function buildRequestOptions(options = {}) {
@@ -17,13 +18,7 @@ function buildRequestOptions(options = {}) {
 }
 
 function getMetricsProviderLabel(provider, model) {
-    if (provider === 'ollama') {
-        return `ollama:${model}`;
-    }
-    if (provider === 'minimax') {
-        return `minimax:${model}`;
-    }
-    return model;
+    return buildLLMMetricLabel(provider, model);
 }
 
 function unwrapOpenAICompatibleResponse(response, fallbackModel) {
@@ -56,6 +51,14 @@ async function invokeOpenAIChat({ model, messages, options }) {
     });
 
     return unwrapOpenAICompatibleResponse(response, model);
+}
+
+async function invokeDeepSeekChat({ model, messages, options }) {
+    return callDeepSeekChat(messages, model, options);
+}
+
+async function invokeDeepSeekVision() {
+    throw new Error('DeepSeek vision is not supported by this integration');
 }
 
 async function invokeOllamaChat({ model, messages, settings, options }) {
@@ -96,6 +99,10 @@ const LLM_PROVIDER_REGISTRY = {
     anthropic: {
         chat: ({ model, messages, options }) => callAnthropicChat(messages, model, options),
         vision: ({ model, systemPrompt, userContent, options }) => callAnthropicVision(systemPrompt, userContent, model, options)
+    },
+    deepseek: {
+        chat: invokeDeepSeekChat,
+        vision: invokeDeepSeekVision
     },
     minimax: {
         chat: invokeMiniMaxChat,

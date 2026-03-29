@@ -1021,7 +1021,7 @@ export const updateInterviewSchema = z.object({
 
 // Settings schemas
 export const updateSettingsSchema = z.object({
-  llmProvider: z.enum(['openai', 'anthropic', 'minimax', 'ollama']).optional(),
+  llmProvider: z.enum(['openai', 'anthropic', 'deepseek', 'minimax', 'ollama']).optional(),
   llmModel: z.string().max(100).optional(),
   ollamaBaseUrl: z.string().url().max(500).optional(),
   ollamaVisionModel: z.string().max(100).optional(),

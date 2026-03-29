@@ -15,7 +15,7 @@ import logger from '../utils/logger.frontend';
 import { LLMTab, PromptsTab, WeightsTab, ChatbotTab, GdprTab, DpoTab } from '../components/SettingsPage';
 
 type HeroIcon = ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, 'ref'> & { title?: string; titleId?: string } & RefAttributes<SVGSVGElement>>;
-type LLMProvider = 'openai' | 'anthropic' | 'minimax' | 'ollama';
+type LLMProvider = 'openai' | 'anthropic' | 'deepseek' | 'minimax' | 'ollama';
 interface Settings {
   id?: string;
   llmProvider?: LLMProvider;
@@ -92,6 +92,13 @@ const defaultFormData: SettingsFormData = {
   'DPO Phone': ''
 };
 
+const getDefaultModelForProvider = (provider?: LLMProvider): string => {
+  if (provider === 'anthropic') return 'claude-sonnet-4.6';
+  if (provider === 'deepseek') return 'deepseek-chat';
+  if (provider === 'minimax') return 'MiniMax-M2.7';
+  return 'gpt-4o';
+};
+
 const SettingsPage = (): JSX.Element => {
   const { t } = useTranslation();
   const { authGet, authPost, authPut } = useAuthFetch();
@@ -116,7 +123,7 @@ const SettingsPage = (): JSX.Element => {
       setSettings(data);
       setFormData({
         llmProvider: data.llmProvider || 'openai',
-        llmModel: data.llmModel || (data.llmProvider === 'anthropic' ? 'claude-sonnet-4.6' : data.llmProvider === 'minimax' ? 'MiniMax-M2.7' : 'gpt-4o'),
+        llmModel: data.llmModel || getDefaultModelForProvider(data.llmProvider),
         ollamaBaseUrl: data.ollamaBaseUrl || '',
         cvMode: data.cvMode || 'nominative',
         chatbotEnabled: data.chatbotEnabled || 'on',
@@ -226,7 +233,7 @@ const SettingsPage = (): JSX.Element => {
       const defaults: Settings = await response.json();
       setFormData({
         llmProvider: defaults.llmProvider || 'openai',
-        llmModel: defaults.llmModel || (defaults.llmProvider === 'anthropic' ? 'claude-sonnet-4.6' : defaults.llmProvider === 'minimax' ? 'MiniMax-M2.7' : 'gpt-4o'),
+        llmModel: defaults.llmModel || getDefaultModelForProvider(defaults.llmProvider),
         ollamaBaseUrl: defaults.ollamaBaseUrl || '',
         cvMode: defaults.cvMode || 'nominative',
         chatbotEnabled: defaults.chatbotEnabled || 'on',

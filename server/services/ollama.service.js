@@ -51,6 +51,23 @@ function buildOllamaOptions(_settings = {}, options = {}) {
     return ollamaOptions;
 }
 
+function resolveOllamaKeepAlive(settings = {}, options = {}) {
+    const configuredKeepAlive = options.keep_alive ?? settings.ollamaKeepAlive;
+
+    if (typeof configuredKeepAlive === 'number' && Number.isFinite(configuredKeepAlive) && configuredKeepAlive >= 0) {
+        return configuredKeepAlive;
+    }
+
+    if (typeof configuredKeepAlive === 'string') {
+        const normalizedKeepAlive = configuredKeepAlive.trim();
+        if (normalizedKeepAlive) {
+            return normalizedKeepAlive;
+        }
+    }
+
+    return undefined;
+}
+
 function resolveOllamaTimeoutMs(options = {}) {
     const operationTimeout = OLLAMA_OPERATION_TIMEOUTS_MS[options.operationType];
     const requestedTimeout = Number(options.timeout);
@@ -266,6 +283,11 @@ export async function callOllama(messages, model, settings = {}, options = {}) {
         options: buildOllamaOptions(resolvedSettings, options)
     };
 
+    const keepAlive = resolveOllamaKeepAlive(resolvedSettings, options);
+    if (keepAlive !== undefined) {
+        requestBody.keep_alive = keepAlive;
+    }
+
     const response = await axios.post(
         `${baseUrl}/api/chat`,
         requestBody,
@@ -339,6 +361,11 @@ export async function callOllamaWithVision(systemPrompt, userContent, model, set
         stream: false,
         options: buildOllamaOptions(resolvedSettings, options)
     };
+
+    const keepAlive = resolveOllamaKeepAlive(resolvedSettings, options);
+    if (keepAlive !== undefined) {
+        requestBody.keep_alive = keepAlive;
+    }
 
     const response = await axios.post(
         `${baseUrl}/api/chat`,

@@ -20,6 +20,29 @@ const METRICS_FILE = path.join(METRICS_DIR, 'metrics.json');
 const METRICS_HISTORY_FILE = path.join(METRICS_DIR, 'metrics-history.jsonl');
 const SAVE_INTERVAL_MS = 5 * 60 * 1000; // Save every 5 minutes
 const HISTORY_INTERVAL_MS = 60 * 60 * 1000; // Append to history every hour
+const MAX_LLM_PROVIDER_KEYS = 50;
+const LLM_PROVIDER_FALLBACK_KEY = 'other';
+
+
+function sanitizeLLMMetricPart(value) {
+    const sanitized = String(value || '')
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9._-]/g, '')
+        .slice(0, 40);
+
+    return sanitized || 'unknown';
+}
+
+export function buildLLMMetricLabel(provider, model = '') {
+    const normalizedProvider = sanitizeLLMMetricPart(provider);
+    if (!model) {
+        return normalizedProvider;
+    }
+
+    return `${normalizedProvider}:${sanitizeLLMMetricPart(model)}`;
+}
 
 // Ensure metrics directory exists
 try {
@@ -124,7 +147,19 @@ class MetricsCollector {
                 }
                 if (data.llm) {
                     this.llm.requests = data.llm.requests || 0;
-                    this.llm.byProvider = data.llm.byProvider || {};
+                    const loadedProviders = data.llm.byProvider || {};
+                    this.llm.byProvider = Object.fromEntries(
+                        Object.entries(loadedProviders).map(([provider, stats]) => [
+                            this.normalizeLLMProviderKey(provider),
+                            {
+                                requests: stats?.requests || 0,
+                                totalTokens: stats?.totalTokens || 0,
+                                inputTokens: stats?.inputTokens || 0,
+                                outputTokens: stats?.outputTokens || 0
+                            }
+                        ])
+                    );
+                    this.pruneLLMProviderStats();
                     this.llm.totalTokens = data.llm.totalTokens || 0;
                     this.llm.errors = data.llm.errors || 0;
                 }
@@ -352,23 +387,78 @@ class MetricsCollector {
         this.cache.misses++;
     }
 
+    normalizeLLMProviderKey(provider) {
+        const [rawProvider = 'unknown', ...rawModelParts] = String(provider || 'unknown').split(':');
+        return buildLLMMetricLabel(rawProvider, rawModelParts.join(':'));
+    }
+
+    pruneLLMProviderStats() {
+        const entries = Object.entries(this.llm.byProvider);
+        if (entries.length <= MAX_LLM_PROVIDER_KEYS) {
+            return;
+        }
+
+        const fallbackStats = this.llm.byProvider[LLM_PROVIDER_FALLBACK_KEY] || {
+            requests: 0,
+            totalTokens: 0,
+            inputTokens: 0,
+            outputTokens: 0
+        };
+
+        const sortedEntries = entries
+            .filter(([key]) => key !== LLM_PROVIDER_FALLBACK_KEY)
+            .sort(([, a], [, b]) => b.requests - a.requests);
+
+        const keptEntries = sortedEntries.slice(0, MAX_LLM_PROVIDER_KEYS - 1);
+        const prunedEntries = sortedEntries.slice(MAX_LLM_PROVIDER_KEYS - 1);
+
+        const mergedFallback = prunedEntries.reduce((acc, [, stats]) => ({
+            requests: acc.requests + (stats.requests || 0),
+            totalTokens: acc.totalTokens + (stats.totalTokens || 0),
+            inputTokens: acc.inputTokens + (stats.inputTokens || 0),
+            outputTokens: acc.outputTokens + (stats.outputTokens || 0)
+        }), { ...fallbackStats });
+
+        this.llm.byProvider = Object.fromEntries([
+            ...keptEntries,
+            [LLM_PROVIDER_FALLBACK_KEY, mergedFallback]
+        ]);
+    }
+
+    getTrackedLLMProviderKey(provider) {
+        const normalizedKey = this.normalizeLLMProviderKey(provider);
+        if (this.llm.byProvider[normalizedKey]) {
+            return normalizedKey;
+        }
+
+        const hasFallbackBucket = Boolean(this.llm.byProvider[LLM_PROVIDER_FALLBACK_KEY]);
+        const maxDistinctKeys = hasFallbackBucket ? MAX_LLM_PROVIDER_KEYS : MAX_LLM_PROVIDER_KEYS - 1;
+
+        if (Object.keys(this.llm.byProvider).length < maxDistinctKeys) {
+            return normalizedKey;
+        }
+
+        return LLM_PROVIDER_FALLBACK_KEY;
+    }
+
     // Track LLM request with token breakdown
     trackLLMRequest(provider, tokens = 0, success = true, inputTokens = 0, outputTokens = 0) {
         this.llm.requests++;
-        
-        if (!this.llm.byProvider[provider]) {
-            this.llm.byProvider[provider] = {
+
+        const providerKey = this.getTrackedLLMProviderKey(provider);
+        if (!this.llm.byProvider[providerKey]) {
+            this.llm.byProvider[providerKey] = {
                 requests: 0,
                 totalTokens: 0,
                 inputTokens: 0,
                 outputTokens: 0
             };
         }
-        
-        this.llm.byProvider[provider].requests++;
-        this.llm.byProvider[provider].totalTokens += tokens;
-        this.llm.byProvider[provider].inputTokens += inputTokens;
-        this.llm.byProvider[provider].outputTokens += outputTokens;
+
+        this.llm.byProvider[providerKey].requests++;
+        this.llm.byProvider[providerKey].totalTokens += tokens;
+        this.llm.byProvider[providerKey].inputTokens += inputTokens;
+        this.llm.byProvider[providerKey].outputTokens += outputTokens;
         
         this.llm.totalTokens += tokens;
         

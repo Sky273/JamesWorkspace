@@ -998,15 +998,17 @@
     },
     "llm": {
       "title": "LLM Model Configuration",
-      "model": "OpenAI Model",
-      "description": "Select the OpenAI model to use for resume analysis and improvement. If not specified, the default model (gpt-4o) will be used.",
+      "model": "Model",
+      "description": "Select the LLM provider and model to use for resume analysis and improvement.",
       "cvMode": "CV Generation Mode",
       "cvModeNominative": "Nominative (personal information included)",
       "cvModeAnonymous": "Anonymous (trigram only)",
       "cvModeNominativeDescription": "The improved CV will contain all personal information of the candidate (full name, contact details, etc.).",
       "cvModeAnonymousDescription": "The improved CV will be anonymized: only the candidate's trigram will be displayed, without identifying personal information.",
       "webglEnabled": "Enable WebGL backgrounds",
-      "webglEnabledDescription": "Displays animated visual backgrounds when the browser and device support them."
+      "webglEnabledDescription": "Displays animated visual backgrounds when the browser and device support them.",
+      "minimaxDescription": "Select a MiniMax model. The application will use the server-side MiniMax API.",
+      "deepseekDescription": "Select a DeepSeek model. The application will use the server-side DeepSeek API."
     },
     "prompts": {
       "title": "Prompts Configuration",
