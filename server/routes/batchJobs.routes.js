@@ -6,15 +6,17 @@
 import express from 'express';
 import fs from 'fs';
 import { authenticateToken } from '../middleware/auth.middleware.js';
-import { validateBody, validateParams, batchImproveSchema, batchAdaptSchema, batchMatchSchema, batchDealExportSchema, provideNameSchema } from '../utils/validation.js';
+import { validateBody, validateParams, batchImproveSchema, batchAdaptSchema, batchMatchSchema, batchProfileSearchSchema, batchProfileAnalysisSchema, batchDealExportSchema, provideNameSchema } from '../utils/validation.js';
 import { safeLog } from '../utils/logger.backend.js';
 import multer from 'multer';
+import * as missionsService from '../services/missions.service.js';
 import {
     JOB_STATUS,
     ITEM_STATUS,
     createJob,
     addJobItems,
     addJobResumeIds,
+    addJobTaskItems,
     addJobExportItems,
     getJob,
     getJobItems,
@@ -52,6 +54,7 @@ function normalizeBatchJobPayload(payload = {}) {
         deleteAfterExport: getFirstDefinedValue(payload, ['deleteAfterExport', 'delete_after_export']),
         relativePaths: getFirstDefinedValue(payload, ['relativePaths', 'relative_paths']),
         resumeIds: getFirstDefinedValue(payload, ['resumeIds', 'resume_ids']),
+        resumeId: getFirstDefinedValue(payload, ['resumeId', 'resume_id']),
         dealId: getFirstDefinedValue(payload, ['dealId', 'deal_id']),
         profileType: getFirstDefinedValue(payload, ['profileType', 'profile_type']),
         candidateName: getFirstDefinedValue(payload, ['candidateName', 'candidate_name']),
@@ -382,6 +385,137 @@ router.post('/match', authenticateToken, validateBody(batchMatchSchema), async (
         res.status(201).json(updatedJob);
     } catch (error) {
         safeLog('error', 'Failed to create batch match job', { error: error.message });
+        res.status(500).json({ error: error.message || 'Erreur lors de la création du job' });
+    }
+});
+
+/**
+ * POST /api/batch-jobs/profile-search
+ * Create a profile matching search job for a mission
+ */
+router.post('/profile-search', authenticateToken, validateBody(batchProfileSearchSchema), async (req, res) => {
+    try {
+        const userId = req.user?.id;
+        const isAdmin = req.user?.role === 'admin';
+        const userFirmId = req.user?.firmId || req.user?.firm_id;
+
+        const normalizedPayload = normalizeBatchJobPayload(req.body);
+        const missionId = normalizedPayload.missionId;
+
+        let firmId = userFirmId;
+        if (isAdmin && normalizedPayload.firm_id) {
+            firmId = normalizedPayload.firm_id;
+        }
+
+        if (!firmId) {
+            return res.status(400).json({ error: 'Firm ID requis' });
+        }
+
+        const missionRecord = await missionsService.findMission(missionId);
+        if (!missionRecord) {
+            return res.status(404).json({ error: 'Mission non trouvée' });
+        }
+
+        const missionFirmId = missionRecord.firm_id || missionRecord.firm;
+        if (!isAdmin && missionFirmId !== userFirmId) {
+            return res.status(403).json({ error: 'Accès non autorisé' });
+        }
+
+        const job = await createJob({
+            firmId,
+            userId,
+            jobType: 'profile-search',
+            options: {
+                missionId,
+                limit: normalizedPayload.limit ?? 0,
+                minScore: normalizedPayload.minScore ?? 0,
+                status: normalizedPayload.status ?? null,
+                weights: normalizedPayload.weights,
+                dealId: normalizedPayload.dealId || null,
+                searchFirmId: isAdmin && !normalizedPayload.firm_id ? null : firmId
+            }
+        });
+
+        await addJobTaskItems(job.id, [{
+            fileName: missionRecord.title || `Mission ${missionId}`,
+            sourceType: 'profile-search'
+        }]);
+
+        const updatedJob = await getJob(job.id);
+
+        safeLog('info', 'Profile search job created via API', {
+            jobId: job.id,
+            missionId,
+            requestedBy: userId
+        });
+
+        res.status(201).json(updatedJob);
+    } catch (error) {
+        safeLog('error', 'Failed to create profile search job', { error: error.message });
+        res.status(500).json({ error: error.message || 'Erreur lors de la création du job' });
+    }
+});
+
+/**
+ * POST /api/batch-jobs/profile-analysis
+ * Create a detailed profile analysis job for a mission/resume pair
+ */
+router.post('/profile-analysis', authenticateToken, validateBody(batchProfileAnalysisSchema), async (req, res) => {
+    try {
+        const userId = req.user?.id;
+        const isAdmin = req.user?.role === 'admin';
+        const userFirmId = req.user?.firmId || req.user?.firm_id;
+
+        const normalizedPayload = normalizeBatchJobPayload(req.body);
+        const resumeId = normalizedPayload.resumeId || normalizedPayload.resume_id;
+        const missionId = normalizedPayload.missionId;
+
+        let firmId = userFirmId;
+        if (isAdmin && normalizedPayload.firm_id) {
+            firmId = normalizedPayload.firm_id;
+        }
+
+        if (!firmId) {
+            return res.status(400).json({ error: 'Firm ID requis' });
+        }
+
+        const missionRecord = await missionsService.findMission(missionId);
+        if (!missionRecord) {
+            return res.status(404).json({ error: 'Mission non trouvée' });
+        }
+
+        const missionFirmId = missionRecord.firm_id || missionRecord.firm;
+        if (!isAdmin && missionFirmId !== userFirmId) {
+            return res.status(403).json({ error: 'Accès non autorisé' });
+        }
+
+        const job = await createJob({
+            firmId,
+            userId,
+            jobType: 'profile-analysis',
+            options: {
+                missionId
+            }
+        });
+
+        await addJobTaskItems(job.id, [{
+            resumeId,
+            fileName: `Profile Analysis ${resumeId}`,
+            sourceType: 'profile-analysis'
+        }]);
+
+        const updatedJob = await getJob(job.id);
+
+        safeLog('info', 'Profile analysis job created via API', {
+            jobId: job.id,
+            missionId,
+            resumeId,
+            requestedBy: userId
+        });
+
+        res.status(201).json(updatedJob);
+    } catch (error) {
+        safeLog('error', 'Failed to create profile analysis job', { error: error.message });
         res.status(500).json({ error: error.message || 'Erreur lors de la création du job' });
     }
 });

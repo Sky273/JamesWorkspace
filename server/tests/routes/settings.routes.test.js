@@ -41,11 +41,13 @@ vi.mock('../../services/metrics.service.js', () => ({
 
 // Mock settings service
 const mockGetSettings = vi.fn();
+const mockGetLLMSettings = vi.fn();
 const mockUpsertSettings = vi.fn();
 const mockCreateSettings = vi.fn();
 vi.mock('../../services/settings.service.js', () => ({
     invalidateSettingsCache: vi.fn(),
     getSettings: (...args) => mockGetSettings(...args),
+    getLLMSettings: (...args) => mockGetLLMSettings(...args),
     upsertSettings: (...args) => mockUpsertSettings(...args),
     createSettings: (...args) => mockCreateSettings(...args)
 }));
@@ -164,6 +166,7 @@ describe('Settings Routes', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        mockGetLLMSettings.mockResolvedValue({});
         app = createTestApp();
     });
 
@@ -196,6 +199,31 @@ describe('Settings Routes', () => {
             expect(res.body.cvMode).toBe('nominative');
             expect(res.body['Analysis Prompt']).toBe('Analyze this');
             expect(res.body['DPO Name']).toBe('John');
+        });
+
+        it('should overlay canonical LLM settings on the general settings payload', async () => {
+            mockGetSettings.mockResolvedValue({
+                id: 'set-1',
+                llm_model: 'MiniMax-M2.7-highspeed',
+                llm_provider: 'minimax',
+                cv_mode: 'nominative',
+                chatbot_enabled: 'on'
+            });
+            mockGetLLMSettings.mockResolvedValue({
+                llmModel: 'MiniMax-M2.7',
+                llmProvider: 'minimax',
+                llmAvailability: {
+                    minimax: { highspeedEnabled: false }
+                }
+            });
+
+            const res = await request(app).get('/api/settings').set(authHeader);
+
+            expect(res.status).toBe(200);
+            expect(res.body.llmModel).toBe('MiniMax-M2.7');
+            expect(res.body.llmAvailability).toEqual({
+                minimax: { highspeedEnabled: false }
+            });
         });
 
         it('should return defaults when no settings exist', async () => {
@@ -232,7 +260,7 @@ describe('Settings Routes', () => {
             expect(res.body['Match Analysis Prompt']).toBe('default-match');
             expect(res.body['Adaptation Prompt']).toBe('default-adaptation');
             expect(res.body['Executive Summary Weight']).toBe(20);
-            expect(res.body.llmModel).toBe('chatgpt-4o-latest');
+            expect(res.body.llmModel).toBe('gpt-5.4');
         });
 
         it('should return 403 for non-admin', async () => {

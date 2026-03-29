@@ -16,6 +16,8 @@ import {
   ChevronDownIcon,
   ChevronUpIcon,
   DocumentTextIcon,
+  DocumentMagnifyingGlassIcon,
+  MagnifyingGlassIcon,
   SparklesIcon,
   ArrowDownTrayIcon,
   UserIcon,
@@ -49,7 +51,7 @@ interface JobItem {
 interface Job {
   id: string;
   status: 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
-  job_type: 'import' | 'improve' | 'adapt' | 'deal-export' | 'collect-trends' | 'collect-facts' | 'collect-metiers';
+  job_type: 'import' | 'improve' | 'adapt' | 'match' | 'profile-search' | 'profile-analysis' | 'deal-export' | 'collect-trends' | 'collect-facts' | 'collect-metiers';
   options: {
     improve?: boolean;
     export?: boolean;
@@ -332,6 +334,15 @@ const JobsTab = (): JSX.Element => {
     if (jobType === 'adapt') {
       return <BriefcaseIcon className="w-4 h-4 text-indigo-500" />;
     }
+    if (jobType === 'match') {
+      return <DocumentMagnifyingGlassIcon className="w-4 h-4 text-sky-500" />;
+    }
+    if (jobType === 'profile-search') {
+      return <MagnifyingGlassIcon className="w-4 h-4 text-cyan-500" />;
+    }
+    if (jobType === 'profile-analysis') {
+      return <DocumentMagnifyingGlassIcon className="w-4 h-4 text-emerald-500" />;
+    }
     if (jobType === 'deal-export') {
       return <ArrowDownTrayIcon className="w-4 h-4 text-purple-500" />;
     }
@@ -353,6 +364,15 @@ const JobsTab = (): JSX.Element => {
     }
     if (job.job_type === 'adapt') {
       return t('batchJobs.type.adapt', 'Adaptation');
+    }
+    if (job.job_type === 'match') {
+      return t('batchJobs.type.match', 'Analyse de match');
+    }
+    if (job.job_type === 'profile-search') {
+      return t('batchJobs.type.profileSearch', 'Recherche de profils');
+    }
+    if (job.job_type === 'profile-analysis') {
+      return t('batchJobs.type.profileAnalysis', 'Analyse détaillée de profil');
     }
     if (job.job_type === 'deal-export') {
       const options = typeof job.options === 'string' ? JSON.parse(job.options) : job.options;

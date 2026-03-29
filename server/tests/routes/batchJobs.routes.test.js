@@ -58,11 +58,13 @@ const mockDeleteJob = vi.fn();
 const mockGetJobItems = vi.fn();
 const mockAddJobItems = vi.fn();
 const mockAddJobResumeIds = vi.fn();
+const mockAddJobTaskItems = vi.fn();
 const mockAddJobExportItems = vi.fn();
 const mockCancelJob = vi.fn();
 const mockGetJobItem = vi.fn();
 const mockResumeItemWithName = vi.fn();
 const mockGetItemsPendingName = vi.fn();
+const mockFindMission = vi.fn();
 
 vi.mock('../../services/batchJobs.service.js', () => ({
     createJob: (...args) => mockCreateJob(...args),
@@ -73,6 +75,7 @@ vi.mock('../../services/batchJobs.service.js', () => ({
     getJobItems: (...args) => mockGetJobItems(...args),
     addJobItems: (...args) => mockAddJobItems(...args),
     addJobResumeIds: (...args) => mockAddJobResumeIds(...args),
+    addJobTaskItems: (...args) => mockAddJobTaskItems(...args),
     addJobExportItems: (...args) => mockAddJobExportItems(...args),
     cancelJob: (...args) => mockCancelJob(...args),
     getJobItem: (...args) => mockGetJobItem(...args),
@@ -83,6 +86,10 @@ vi.mock('../../services/batchJobs.service.js', () => ({
     getAdaptationsForDeal: (...args) => mockGetAdaptationsForDeal(...args),
     JOB_STATUS: { PENDING: 'pending', PROCESSING: 'processing', COMPLETED: 'completed', FAILED: 'failed', PAUSED: 'paused', CANCELLED: 'cancelled' },
     ITEM_STATUS: { PENDING: 'pending', PROCESSING: 'processing', SUCCESS: 'success', ERROR: 'error', SKIPPED: 'skipped', PENDING_NAME: 'pending_name' }
+}));
+
+vi.mock('../../services/missions.service.js', () => ({
+    findMission: (...args) => mockFindMission(...args)
 }));
 
 // Mock firmHelpers
@@ -110,6 +117,8 @@ vi.mock('../../utils/validation.js', () => ({
     batchImproveSchema: {},
     batchAdaptSchema: {},
     batchMatchSchema: {},
+    batchProfileSearchSchema: {},
+    batchProfileAnalysisSchema: {},
     batchDealExportSchema: {},
     provideNameSchema: {}
 }));
@@ -555,6 +564,93 @@ describe('Batch Jobs Routes - POST /api/batch-jobs/match', () => {
                 match: true
             })
         }));
+    });
+});
+
+describe('Batch Jobs Routes - POST /api/batch-jobs/profile-search', () => {
+    let app;
+
+    beforeEach(() => {
+        vi.resetAllMocks();
+        app = createTestApp();
+    });
+
+    it('should create profile search job and stage a generic task item', async () => {
+        mockFindMission.mockResolvedValueOnce({
+            id: '123e4567-e89b-12d3-a456-426614174001',
+            title: 'Mission Search',
+            firm: 'firm-123'
+        });
+        mockCreateJob.mockResolvedValueOnce({ id: 'job-profile-search', status: 'pending' });
+        mockAddJobTaskItems.mockResolvedValueOnce(1);
+        mockGetJob.mockResolvedValueOnce({ id: 'job-profile-search', status: 'pending', firm_id: 'firm-123' });
+
+        const res = await request(app)
+            .post('/api/batch-jobs/profile-search')
+            .set('Authorization', 'Bearer valid-token')
+            .send({
+                missionId: '123e4567-e89b-12d3-a456-426614174001',
+                limit: 25,
+                minScore: 50
+            });
+
+        expect(res.status).toBe(201);
+        expect(mockCreateJob).toHaveBeenCalledWith(expect.objectContaining({
+            jobType: 'profile-search',
+            options: expect.objectContaining({
+                missionId: '123e4567-e89b-12d3-a456-426614174001',
+                limit: 25,
+                minScore: 50
+            })
+        }));
+        expect(mockAddJobTaskItems).toHaveBeenCalledWith('job-profile-search', [
+            expect.objectContaining({
+                fileName: 'Mission Search',
+                sourceType: 'profile-search'
+            })
+        ]);
+    });
+});
+
+describe('Batch Jobs Routes - POST /api/batch-jobs/profile-analysis', () => {
+    let app;
+
+    beforeEach(() => {
+        vi.resetAllMocks();
+        app = createTestApp();
+    });
+
+    it('should create profile analysis job for a mission and resume pair', async () => {
+        mockFindMission.mockResolvedValueOnce({
+            id: '123e4567-e89b-12d3-a456-426614174001',
+            title: 'Mission Analysis',
+            firm: 'firm-123'
+        });
+        mockCreateJob.mockResolvedValueOnce({ id: 'job-profile-analysis', status: 'pending' });
+        mockAddJobTaskItems.mockResolvedValueOnce(1);
+        mockGetJob.mockResolvedValueOnce({ id: 'job-profile-analysis', status: 'pending', firm_id: 'firm-123' });
+
+        const res = await request(app)
+            .post('/api/batch-jobs/profile-analysis')
+            .set('Authorization', 'Bearer valid-token')
+            .send({
+                missionId: '123e4567-e89b-12d3-a456-426614174001',
+                resumeId: '123e4567-e89b-12d3-a456-426614174000'
+            });
+
+        expect(res.status).toBe(201);
+        expect(mockCreateJob).toHaveBeenCalledWith(expect.objectContaining({
+            jobType: 'profile-analysis',
+            options: expect.objectContaining({
+                missionId: '123e4567-e89b-12d3-a456-426614174001'
+            })
+        }));
+        expect(mockAddJobTaskItems).toHaveBeenCalledWith('job-profile-analysis', [
+            expect.objectContaining({
+                resumeId: '123e4567-e89b-12d3-a456-426614174000',
+                sourceType: 'profile-analysis'
+            })
+        ]);
     });
 });
 

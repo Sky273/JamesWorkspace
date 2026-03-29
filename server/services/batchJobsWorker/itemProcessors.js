@@ -17,6 +17,7 @@ import { matchResumeWithMission } from '../openai.service.js';
 import { findResumeRecord, findMissionRecord } from '../resumes.service.js';
 import { getLLMSettings } from '../settings.service.js';
 import { DEFAULT_MATCH_ANALYSIS_PROMPT } from '../../config/prompts.backend.js';
+import { findMatchingProfiles, analyzeProfileForMission } from '../profileMatching.service.js';
 
 /**
  * Process an import item (upload + analyze + optionally improve)
@@ -702,6 +703,79 @@ export async function processMatchItem(item, job, options) {
         resumeId: item.resume_id,
         missionId,
         hasMatchAnalysis: !!matchAnalysis
+    });
+}
+
+export async function processProfileSearchItem(item, job, options) {
+    const missionId = options?.missionId;
+
+    if (!missionId) {
+        throw new Error('Mission ID manquant');
+    }
+
+    await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, { progress: 25 });
+
+    const results = await findMatchingProfiles(missionId, {
+        limit: options?.limit ?? 0,
+        minScore: options?.minScore ?? 0,
+        status: options?.status ?? null,
+        firm: options?.searchFirmId ?? job.firm_id ?? null,
+        weights: options?.weights,
+        dealId: options?.dealId ?? null
+    }, {
+        source: 'batch-job',
+        jobId: job.id,
+        itemId: item.id,
+        userId: job.user_id,
+        firm: job.firm_id
+    });
+
+    await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, {
+        progress: 90,
+        result_data: {
+            profileMatchingResults: results
+        }
+    });
+
+    safeLog('info', 'Profile matching search completed', {
+        itemId: item.id,
+        missionId,
+        profileCount: results?.profiles?.length || 0
+    });
+}
+
+export async function processProfileAnalysisItem(item, job, options) {
+    const missionId = options?.missionId;
+
+    if (!item.resume_id) {
+        throw new Error('Resume ID manquant');
+    }
+
+    if (!missionId) {
+        throw new Error('Mission ID manquant');
+    }
+
+    await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, { progress: 30 });
+
+    const analysisResponse = await analyzeProfileForMission(missionId, item.resume_id, {
+        source: 'batch-job',
+        jobId: job.id,
+        itemId: item.id,
+        userId: job.user_id,
+        firm: job.firm_id
+    });
+
+    await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, {
+        progress: 90,
+        result_data: {
+            detailedProfileAnalysis: analysisResponse
+        }
+    });
+
+    safeLog('info', 'Detailed profile analysis item completed', {
+        itemId: item.id,
+        resumeId: item.resume_id,
+        missionId
     });
 }
 

@@ -1,13 +1,19 @@
-﻿/**
+/**
  * Profile Matching Service
- * Frontend service for finding best matching CVs for a mission
+ * Frontend service for mission-driven profile search and detailed analysis
  */
 
 import { fetchWithAuth, createAuthOptions, createAuthOptionsWithCsrf } from './apiInterceptor';
 import logger from './logger.frontend';
 import { showCaughtError } from '../components/errorToast.helpers';
-import type { 
-  ProfileMatchingResponse, 
+import {
+  createProfileAnalysisJob,
+  createProfileSearchJob,
+  waitForProfileAnalysisJobCompletion,
+  waitForProfileSearchJobCompletion
+} from './profileMatchingJob';
+import type {
+  ProfileMatchingResponse,
   ProfileMatchWeights,
   Mission,
   Deal,
@@ -30,32 +36,22 @@ export async function findMatchingProfiles(
   options: FindProfilesOptions = {}
 ): Promise<ProfileMatchingResponse> {
   try {
-    const authOptions = await createAuthOptionsWithCsrf({
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        limit: options.limit ?? 0,
-        minScore: options.minScore || 0,
-        status: options.status,
-        weights: options.weights,
-        dealId: options.dealId || undefined
-      })
+    const job = await createProfileSearchJob({
+      missionId,
+      limit: options.limit,
+      minScore: options.minScore,
+      status: options.status,
+      weights: options.weights,
+      dealId: options.dealId
     });
 
-    const response = await fetchWithAuth(
-      `/api/missions/${missionId}/find-profiles`,
-      authOptions,
-      600000 // 10 minute timeout for LLM keyword extraction + scoring
-    );
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `HTTP ${response.status}: Failed to find matching profiles`);
+    if (!job.id) {
+      throw new Error('Failed to create profile matching job');
     }
 
-    return await response.json();
+    return await waitForProfileSearchJobCompletion({
+      jobId: job.id
+    });
   } catch (error) {
     logger.error('Error finding matching profiles:', error);
     showCaughtError(error);
@@ -102,13 +98,11 @@ export async function getMissions(): Promise<Mission[]> {
     }
 
     const data = await response.json();
-    
-    // Handle paginated response
+
     if (data.data && Array.isArray(data.data)) {
       return data.data;
     }
-    
-    // Fallback for non-paginated response
+
     return Array.isArray(data) ? data : [];
   } catch (error) {
     logger.error('Error fetching missions:', error);
@@ -125,22 +119,19 @@ export async function analyzeProfileForMission(
   resumeId: string
 ): Promise<DetailedProfileAnalysisResponse> {
   try {
-    const authOptions = await createAuthOptionsWithCsrf({
-      method: 'POST'
+    const job = await createProfileAnalysisJob({
+      missionId,
+      resumeId
     });
 
-    const response = await fetchWithAuth(
-      `/api/missions/${missionId}/analyze-profile/${resumeId}`,
-      authOptions,
-      600000 // 10 minute timeout for LLM analysis
-    );
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `HTTP ${response.status}: Failed to analyze profile`);
+    if (!job.id) {
+      throw new Error('Failed to create detailed profile analysis job');
     }
 
-    return await response.json();
+    return await waitForProfileAnalysisJobCompletion({
+      jobId: job.id,
+      resumeId
+    });
   } catch (error) {
     logger.error('Error analyzing profile:', error);
     showCaughtError(error);
@@ -162,13 +153,11 @@ export async function getDeals(): Promise<Deal[]> {
     }
 
     const data = await response.json();
-    
-    // Handle paginated response
+
     if (data.data && Array.isArray(data.data)) {
       return data.data;
     }
-    
-    // Fallback for non-paginated response
+
     return Array.isArray(data) ? data : [];
   } catch (error) {
     logger.error('Error fetching deals:', error);
@@ -184,4 +173,3 @@ export default {
   getDeals,
   analyzeProfileForMission
 };
-

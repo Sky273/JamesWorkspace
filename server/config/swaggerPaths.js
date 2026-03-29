@@ -610,16 +610,6 @@ export const swaggerPaths = {
             responses: { 200: { description: 'Array of adaptations' }, 401: auth401 }
         }
     },
-    '/missions/{missionId}/find-profiles': {
-        post: {
-            tags: ['Missions'],
-            summary: 'Find matching profiles',
-            description: 'AI-powered search for resumes matching a mission',
-            security: securityCsrf,
-            parameters: [paramMissionId],
-            responses: { 200: { description: 'Matching profiles with scores' }, 401: auth401 }
-        }
-    },
     '/missions/{missionId}/keywords-cache': {
         delete: {
             tags: ['Missions'],
@@ -627,15 +617,6 @@ export const swaggerPaths = {
             security: securityCsrf,
             parameters: [paramMissionId],
             responses: { 200: { description: 'Cache cleared' }, 401: auth401 }
-        }
-    },
-    '/missions/{missionId}/analyze-profile/{resumeId}': {
-        post: {
-            tags: ['Missions'],
-            summary: 'Analyze profile for mission',
-            security: securityCsrf,
-            parameters: [paramMissionId, paramResumeId],
-            responses: { 200: { description: 'Profile analysis' }, 401: auth401 }
         }
     },
 
@@ -2111,6 +2092,12 @@ export const swaggerPaths = {
     },
     '/batch-jobs/match': {
         post: { tags: ['Resumes'], summary: 'Create batch match-analysis job', security: securityCsrf, responses: { 201: { description: 'Match-analysis job created' }, 401: auth401 } }
+    },
+    '/batch-jobs/profile-search': {
+        post: { tags: ['Missions'], summary: 'Create profile matching search job', security: securityCsrf, responses: { 201: { description: 'Profile search job created' }, 401: auth401 } }
+    },
+    '/batch-jobs/profile-analysis': {
+        post: { tags: ['Missions'], summary: 'Create detailed profile analysis job', security: securityCsrf, responses: { 201: { description: 'Profile analysis job created' }, 401: auth401 } }
     },
     '/batch-jobs/deal-export': {
         post: { tags: ['Resumes'], summary: 'Create deal export job', security: securityCsrf, responses: { 201: { description: 'Export job created' }, 401: auth401 } }

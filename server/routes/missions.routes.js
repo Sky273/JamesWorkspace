@@ -5,10 +5,9 @@
 
 import express from 'express';
 import { authenticateToken } from '../middleware/auth.middleware.js';
-import { validateBody, validateParams, createMissionSchema, updateMissionSchema, findProfilesSchema } from '../utils/validation.js';
+import { validateBody, validateParams, createMissionSchema, updateMissionSchema } from '../utils/validation.js';
 import { sanitizeHtmlContent } from '../utils/sanitizer.backend.js';
 import { safeLog } from '../utils/logger.backend.js';
-import { sanitizeErrorMessage } from '../utils/errors.js';
 import { getUserFirmId } from '../utils/firmHelpers.js';
 import * as missionsService from '../services/missions.service.js';
 
@@ -371,49 +370,6 @@ router.get('/:missionId/adaptations', authenticateToken, validateParams('mission
 // PROFILE MATCHING ROUTES
 // ============================================
 
-// POST /api/missions/:missionId/find-profiles - Find best matching profiles for a mission
-router.post('/:missionId/find-profiles', authenticateToken, validateParams('missionId'), validateBody(findProfilesSchema), async (req, res) => {
-    try {
-        const { missionId } = req.params;
-        const { limit = 0, minScore = 0, status, weights, dealId } = req.body;
-        
-        const isAdmin = req.user?.role === 'admin';
-        const userFirm = req.user?.firm || req.user?.firm_id;
-        
-        // Verify mission access
-        const missionRecord = await missionsService.findMission(missionId);
-        
-        if (!isAdmin && missionRecord.firm !== userFirm) {
-            return res.status(403).json({ error: 'Access denied: You can only search profiles for your missions' });
-        }
-        
-        // Build user metadata for LLM calls
-        const userMetadata = {
-            userId: req.user?.id,
-            userName: req.user?.name,
-            firm: userFirm
-        };
-        
-        // Import the service dynamically to avoid circular dependencies
-        const { findMatchingProfiles } = await import('../services/profileMatching.service.js');
-        
-        // Find matching profiles
-        const results = await findMatchingProfiles(missionId, {
-            limit: Math.max(0, limit),
-            minScore: Math.max(0, Math.min(100, minScore)),
-            status,
-            firm: isAdmin ? null : userFirm,
-            weights,
-            dealId: dealId || null
-        }, userMetadata);
-        
-        res.json(results);
-    } catch (error) {
-        safeLog('error', 'Error finding matching profiles', { error: error.message, missionId: req.params.missionId });
-        res.status(500).json({ error: sanitizeErrorMessage(error, 'Failed to find matching profiles') });
-    }
-});
-
 // DELETE /api/missions/:missionId/keywords-cache - Clear cached keywords for a mission
 router.delete('/:missionId/keywords-cache', authenticateToken, validateParams('missionId'), async (req, res) => {
     try {
@@ -437,45 +393,6 @@ router.delete('/:missionId/keywords-cache', authenticateToken, validateParams('m
     } catch (error) {
         safeLog('error', 'Error clearing keywords cache', { error: error.message, missionId: req.params.missionId });
         res.status(500).json({ error: 'Failed to clear keywords cache' });
-    }
-});
-
-// POST /api/missions/:missionId/analyze-profile/:resumeId - Detailed LLM analysis of a profile for a mission
-router.post('/:missionId/analyze-profile/:resumeId', authenticateToken, async (req, res) => {
-    try {
-        const { missionId, resumeId } = req.params;
-        
-        const isAdmin = req.user?.role === 'admin';
-        const userFirm = req.user?.firm || req.user?.firm_id;
-        
-        // Verify mission access
-        const missionRecord = await missionsService.findMission(missionId);
-        
-        if (!isAdmin && missionRecord.firm !== userFirm) {
-            return res.status(403).json({ error: 'Access denied: You can only analyze profiles for your missions' });
-        }
-        
-        // Build user metadata for LLM calls
-        const userMetadata = {
-            userId: req.user?.id,
-            userName: req.user?.name,
-            firm: userFirm
-        };
-        
-        // Import the service dynamically
-        const { analyzeProfileForMission } = await import('../services/profileMatching.service.js');
-        
-        // Perform detailed analysis
-        const analysis = await analyzeProfileForMission(missionId, resumeId, userMetadata);
-        
-        res.json(analysis);
-    } catch (error) {
-        safeLog('error', 'Error analyzing profile', { 
-            error: error.message,
-            missionId: req.params.missionId,
-            resumeId: req.params.resumeId 
-        });
-        res.status(500).json({ error: sanitizeErrorMessage(error, 'Failed to analyze profile') });
     }
 });
 

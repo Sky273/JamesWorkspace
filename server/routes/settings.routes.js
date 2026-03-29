@@ -4,7 +4,7 @@ import { validateParams, validateBody, updateSettingsSchema } from '../utils/val
 import { securityLog, getRequestMetadata, LOG_LEVELS, SECURITY_EVENTS } from '../services/security.service.js';
 import { settingsCache } from '../services/cache.service.js';
 import { metrics } from '../services/metrics.service.js';
-import { invalidateSettingsCache, getSettings, upsertSettings, createSettings } from '../services/settings.service.js';
+import { invalidateSettingsCache, getSettings, getLLMSettings, upsertSettings, createSettings } from '../services/settings.service.js';
 import { normalizeWeights, DEFAULT_ANALYSIS_PROMPT, DEFAULT_IMPROVEMENT_PROMPT, DEFAULT_MATCH_ANALYSIS_PROMPT, DEFAULT_ADAPTATION_PROMPT } from '../config/prompts.backend.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { mapSettingsToFrontend, mapSettingsFromFrontend } from '../utils/mappers.js';
@@ -47,6 +47,36 @@ function decorateSettingsResponse(settings) {
     };
 }
 
+function mergeCanonicalLlmSettings(settingsData, canonicalLlmSettings = {}) {
+    if (!canonicalLlmSettings || Object.keys(canonicalLlmSettings).length === 0) {
+        return settingsData;
+    }
+
+    return {
+        ...settingsData,
+        llmProvider: canonicalLlmSettings.llmProvider ?? settingsData.llmProvider,
+        llmModel: canonicalLlmSettings.llmModel ?? settingsData.llmModel,
+        ollamaBaseUrl: canonicalLlmSettings.ollamaBaseUrl ?? settingsData.ollamaBaseUrl,
+        ollamaVisionModel: canonicalLlmSettings.ollamaVisionModel ?? settingsData.ollamaVisionModel,
+        ollamaKeepAlive: canonicalLlmSettings.ollamaKeepAlive ?? settingsData.ollamaKeepAlive,
+        ollamaNumCtx: canonicalLlmSettings.ollamaNumCtx ?? settingsData.ollamaNumCtx,
+        cvMode: canonicalLlmSettings.cvMode ?? settingsData.cvMode,
+        chatbotEnabled: canonicalLlmSettings.chatbotEnabled ?? settingsData.chatbotEnabled,
+        webglEnabled: canonicalLlmSettings.webglEnabled ?? settingsData.webglEnabled,
+        'Analysis Prompt': canonicalLlmSettings['Analysis Prompt'] ?? settingsData['Analysis Prompt'],
+        'Improvement Prompt': canonicalLlmSettings['Improvement Prompt'] ?? settingsData['Improvement Prompt'],
+        'Match Analysis Prompt': canonicalLlmSettings['Match Analysis Prompt'] ?? settingsData['Match Analysis Prompt'],
+        'Adaptation Prompt': canonicalLlmSettings['Adaptation Prompt'] ?? settingsData['Adaptation Prompt'],
+        'Executive Summary Weight': canonicalLlmSettings['Executive Summary Weight'] ?? settingsData['Executive Summary Weight'],
+        'Skills Weight': canonicalLlmSettings['Skills Weight'] ?? settingsData['Skills Weight'],
+        'Experience Weight': canonicalLlmSettings['Experience Weight'] ?? settingsData['Experience Weight'],
+        'Education Weight': canonicalLlmSettings['Education Weight'] ?? settingsData['Education Weight'],
+        'ATS Weight': canonicalLlmSettings['ATS Weight'] ?? settingsData['ATS Weight'],
+        'Hobbies Languages Weight': canonicalLlmSettings['Hobbies Languages Weight'] ?? settingsData['Hobbies Languages Weight'],
+        llmAvailability: canonicalLlmSettings.llmAvailability ?? settingsData.llmAvailability
+    };
+}
+
 // GET /api/settings - Get settings
 router.get('/', authenticateToken, async (req, res) => {
     try {
@@ -60,12 +90,15 @@ router.get('/', authenticateToken, async (req, res) => {
         metrics.trackCacheMiss();
         safeLog('debug', 'Cache miss - fetching settings from PostgreSQL');
 
-        const settings = await getSettings();
+        const [settings, canonicalLlmSettings] = await Promise.all([
+            getSettings(),
+            getLLMSettings()
+        ]);
 
         if (!settings) {
             safeLog('info', 'No settings found, returning defaults');
 
-            const defaultSettings = decorateSettingsResponse({
+            const defaultSettings = mergeCanonicalLlmSettings(decorateSettingsResponse({
                 id: null,
                 llmModel: null,
                 cvMode: 'nominative',
@@ -81,12 +114,15 @@ router.get('/', authenticateToken, async (req, res) => {
                 'Education Weight': 15,
                 'ATS Weight': 15,
                 'Hobbies Languages Weight': 10
-            });
+            }), canonicalLlmSettings);
 
             return res.json(defaultSettings);
         }
 
-        const responseData = decorateSettingsResponse(normalizeRequestedSettingsModel(mapSettingsToFrontend(settings)));
+        const responseData = mergeCanonicalLlmSettings(
+            decorateSettingsResponse(normalizeRequestedSettingsModel(mapSettingsToFrontend(settings))),
+            canonicalLlmSettings
+        );
 
         settingsCache.set('settings', responseData);
 
@@ -102,7 +138,7 @@ router.get('/', authenticateToken, async (req, res) => {
 // GET /api/settings/defaults - Get default prompts and weights
 router.get('/defaults', authenticateToken, requireAdmin, (req, res) => {
     res.json(decorateSettingsResponse({
-        llmModel: 'chatgpt-4o-latest',
+        llmModel: 'gpt-5.4',
         cvMode: 'nominative',
         chatbotEnabled: 'on',
         webglEnabled: 'on',

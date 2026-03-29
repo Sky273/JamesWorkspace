@@ -81,9 +81,10 @@
 1. **Requête utilisateur** → Frontend React
 2. **Appel API** → Proxy Server (avec JWT + CSRF token)
 3. **Validation & Auth** → Middleware chain
-4. **Traitement** → Routes → Services
-5. **Données** → PostgreSQL ou LLM API
-6. **Réponse** → JSON → Frontend → UI Update
+4. **Création de job** → Route backend persistante (`batch_jobs`, `batch_job_items`)
+5. **Exécution asynchrone** → Worker batch → Services métier → PostgreSQL / API LLM
+6. **Suivi d'avancement** → Polling frontend sur `GET /api/batch-jobs/:id`
+7. **Hydratation finale** → JSON → Frontend → UI Update
 
 ---
 
@@ -250,7 +251,7 @@ server/routes/
 ├── resumeSubmissions.routes.js # Envoi de CV à des clients
 ├── pipeline.routes.js       # Pipeline de recrutement
 ├── deals.routes.js          # Affaires commerciales
-├── batchJobs.routes.js      # Import batch de CV
+├── batchJobs.routes.js      # Jobs backend (import, amélioration, matching, adaptation, missions)
 ├── batchExport.routes.js    # Export batch (ZIP)
 ├── templates/crud.routes.js # Templates d'export PDF
 ├── llm.routes.js            # Proxy LLM (OpenAI/Anthropic)
@@ -284,7 +285,7 @@ server/routes/
 | Service | Rôle |
 |---------|------|
 | `jwt.service.js` | Génération/vérification JWT, révocation |
-| `llm.service.js` | Abstraction OpenAI/Anthropic, gestion modèles |
+| `llm.service.js` | Orchestration LLM métier indépendante du provider |
 | `cache.service.js` | Cache en mémoire avec TTL et cleanup |
 | `database.service.js` | Pool PostgreSQL avec retry |
 | `tokenBlacklist.service.js` | Révocation tokens, blacklist users |
@@ -297,8 +298,11 @@ server/routes/
 | `calendar.service.js` | Google Calendar (entretiens) |
 | `deals.service.js` | Affaires commerciales |
 | `candidatePipeline.service.js` | Pipeline de recrutement |
-| `batchJobs.service.js` | Import batch de CV |
-| `batchJobsWorker/` | Worker d'exécution batch (extraction, LLM, export) |
+| `batchJobs.service.js` | Gestion des jobs backend persistés et de leurs items |
+| `batchJobsWorker/` | Worker d'exécution batch (import, extraction, LLM, matching, adaptation, export) |
+| `llmAvailability.service.js` | Disponibilité runtime/persistée des modèles selon entitlement et fallback |
+| `llmModelCapabilities.service.js` | Registre central des capacités et limites par modèle |
+| `llmPayloadCapabilities.service.js` | Construction/sanitation des payloads LLM par capacités |
 | `backup.service.js` | Sauvegarde/restauration PostgreSQL |
 | `backup-scheduler.service.js` | Planification sauvegardes automatiques |
 | `industry.service.js` | Gestion des secteurs d'activité |
@@ -443,7 +447,7 @@ EXECUTE FUNCTION sync_customer_name();
 | **OpenAI** | GPT-5.4 / GPT-5.4-pro / GPT-5.2 / GPT-5.1 / GPT-5, GPT-4.1, GPT-4o | Analyse, amélioration, adaptation |
 | **Anthropic** | Claude Opus 4.x, Claude Sonnet 4, Claude 3.7, Claude 3.5 | Alternative à OpenAI |
 | **DeepSeek** | DeepSeek-V3.2 via `deepseek-chat` et `deepseek-reasoner` | Alternative OpenAI-compatible avec deux modes d'appel : standard et raisonnement |
-| **MiniMax** | MiniMax-M2.7, MiniMax-M2.5, MiniMax-M2.1, MiniMax-M2, M2-her, variantes `highspeed` conditionnelles | Alternative API-compatible pour analyse, am?lioration, adaptation avec filtrage selon disponibilit? de plan |
+| **MiniMax** | MiniMax-M2.7, MiniMax-M2.5, MiniMax-M2.1, MiniMax-M2, M2-her, variantes `highspeed` conditionnelles | Alternative API-compatible pour analyse, amélioration, adaptation avec filtrage selon disponibilité de plan |
 | **Ollama (distant)** | Modèles exposés par une instance Ollama externe | Exécution via une URL Ollama distante, sans moteur Ollama embarqué dans le conteneur |
 
 ### Gateway LLM Unifié
@@ -459,25 +463,25 @@ export async function callLLM(messages, options) {
 
 
 
-### Compatibilit? Mod?les
+### Compatibilité Modèles
 
-Le service g?re automatiquement les diff?rences entre mod?les :
+Le service gère automatiquement les différences entre modèles :
 - `max_tokens` vs `max_completion_tokens` (GPT-5+)
-- support ou suppression de `temperature` / `top_p` selon les capacit?s du mod?le
-- suppression automatique de `response_format` quand un mod?le ne le supporte pas (ex. famille MiniMax M2.x)
-- clamp centralis? des plafonds de sortie connus par mod?le/provider
+- support ou suppression de `temperature` / `top_p` selon les capacités du modèle
+- suppression automatique de `response_format` quand un modèle ne le supporte pas (ex. famille MiniMax M2.x)
+- clamp centralisé des plafonds de sortie connus par modèle/provider
 - support OpenAI-compatible DeepSeek
 - APIs compatibles OpenAI et Anthropic pour MiniMax
-- connexion HTTP vers une instance Ollama distante configur?e dans les param?tres
-- cas Ollama sans `llmModel` obligatoire c?t? application lorsque le mod?le est pilot? par l'instance distante
+- connexion HTTP vers une instance Ollama distante configurée dans les paramètres
+- cas Ollama sans `llmModel` obligatoire côté application lorsque le modèle est piloté par l'instance distante
 
-La compatibilit? de payload est pilot?e par deux couches distinctes :
-- `llmModelCapabilities.service.js` : capacit?s techniques d'un mod?le/provider (tokens, param?tres support?s, plafonds, etc.)
-- `llmPayloadCapabilities.service.js` : construction et sanitation du payload r?ellement envoy? ? l'API upstream
+La compatibilité de payload est pilotée par deux couches distinctes :
+- `llmModelCapabilities.service.js` : capacités techniques d'un modèle/provider (tokens, paramètres supportés, plafonds, etc.)
+- `llmPayloadCapabilities.service.js` : construction et sanitation du payload réellement envoyé à l'API upstream
 
-La disponibilit? m?tier d'un mod?le est trait?e s?par?ment de ses capacit?s techniques :
-- `llmAvailability.service.js` : disponibilit? runtime selon la configuration de l'instance
-- exemple actuel : les mod?les MiniMax `*-highspeed` sont masqu?s et normalis?s vers leur variante standard tant que `MINIMAX_ENABLE_HIGHSPEED_MODELS=true` n'est pas activ?
+La disponibilité métier d'un modèle est traitée séparément de ses capacités techniques :
+- `llmAvailability.service.js` : disponibilité runtime selon la configuration de l'instance
+- exemple actuel : les modèles MiniMax `*-highspeed` sont masqués et normalisés vers leur variante standard tant que `MINIMAX_ENABLE_HIGHSPEED_MODELS=true` n'est pas activé
 
 ### Services LLM
 
@@ -1279,7 +1283,7 @@ CREATE TABLE schema_migrations (
 | `MINIMAX_API_KEY` | Optionnel | Clé API MiniMax |
 | `MINIMAX_OPENAI_BASE_URL` | Optionnel | URL base OpenAI-compatible MiniMax |
 | `MINIMAX_ANTHROPIC_BASE_URL` | Optionnel | URL base Anthropic-compatible MiniMax |
-| `MINIMAX_ENABLE_HIGHSPEED_MODELS` | Optionnel | Active l'exposition et l'utilisation des mod?les MiniMax `highspeed` sur les instances disposant du plan adapt? |
+| `MINIMAX_ENABLE_HIGHSPEED_MODELS` | Optionnel | Active l'exposition et l'utilisation des modèles MiniMax `highspeed` sur les instances disposant du plan adapté |
 | `OLLAMA_BASE_URL` | Optionnel | URL de l'instance Ollama distante |
 | `OLLAMA_AUTO_PULL` | Optionnel | Auto-pull du modèle Ollama si nécessaire |
 | `OLLAMA_REQUEST_TIMEOUT_MS` | Optionnel | Timeout global des appels Ollama |
@@ -1533,4 +1537,3 @@ L'architecture actuelle est **adaptée pour un usage PME/ESN** et peut supporter
 | dotenv | 16.x | 17.3 | |
 | autoprefixer | 10.x | — | Supprimé (intégré dans TailwindCSS 4) |
 | @rollup/plugin-commonjs | 28.x | — | Supprimé (Rolldown gère CJS nativement) |
-

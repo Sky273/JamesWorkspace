@@ -22,6 +22,7 @@ Application professionnelle de gestion et d'analyse de CVs avec intelligence art
 - **Analyse de compatibilité** : Score de matching entre CV et offre d'emploi
 - **Adaptations de CV** : Génération de versions adaptées à une mission spécifique
 - **Comparaison détaillée** : Visualisation des écarts compétences/expériences
+- **Exécution asynchrone** : Recherche de profils, analyse détaillée, match et adaptation sont exécutés via des jobs backend suivis par polling
 
 ### Gestion des Missions
 - **Création et suivi** : Gestion complète des offres d'emploi
@@ -199,7 +200,7 @@ ResumeConverter/
 │   │   ├── franceTravail.service.js # API France Travail
 │   │   ├── adzuna.service.js    # API Adzuna
 │   │   ├── rome.service.js      # Service ROME
-│   │   ├── profileMatching.service.js # Matching profils
+│   │   ├── profileMatching.service.js # Matching profils via jobs backend
 │   │   ├── escoService.js       # Classification ESCO
 │   │   └── ...
 │   ├── database/                # Base de données
@@ -295,6 +296,14 @@ psql -U postgres -d resume_converter < backup.sql
 - `GET /api/missions/:id` - Détails d'une mission
 - `PUT /api/missions/:id` - Modifier une mission
 - `DELETE /api/missions/:id` - Supprimer une mission
+- `DELETE /api/missions/:missionId/keywords-cache` - Vider le cache de mots-clés d'une mission
+
+### Jobs backend pour missions et matching
+- `POST /api/batch-jobs/profile-search` - Lancer une recherche de profils pour une mission
+- `POST /api/batch-jobs/profile-analysis` - Lancer une analyse détaillée d'un profil pour une mission
+- `POST /api/batch-jobs/match` - Lancer une analyse de match mission/CV
+- `POST /api/batch-jobs/adapt` - Lancer une adaptation de CV pour une mission
+- `GET /api/batch-jobs/:id` - Suivre l'avancement et récupérer les résultats d'un job
 
 ### Adaptations
 - `GET /api/adaptations` - Liste des adaptations
@@ -302,7 +311,8 @@ psql -U postgres -d resume_converter < backup.sql
 - `GET /api/adaptations/:id` - Détails d'une adaptation
 
 ### Matching
-- `POST /api/resumes/:id/match` - Analyser le matching CV/Mission
+- `POST /api/batch-jobs/match` - Lancer une analyse de matching CV/Mission
+- `GET /api/batch-jobs/:id` - Suivre l'avancement et récupérer le résultat du matching
 
 ### Radar du Marché
 - `GET /api/market-radar/trends` - Tendances paginées
@@ -453,4 +463,3 @@ Voir [LICENSE](./LICENSE) pour les détails.
 
 
 Le mode hors Docker utilise le même bootstrap canonique : `npm run migrate` applique `docker/schema.sql` sur une base vide, puis les migrations incrémentales restantes.
-

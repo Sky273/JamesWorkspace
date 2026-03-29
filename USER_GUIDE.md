@@ -62,7 +62,7 @@
 ### Workflow Typique
 
 ```
-1. Importer un CV → 2. Analyser → 3. Améliorer → 4. Créer une mission → 5. Adapter le CV → 6. Exporter
+1. Importer un CV → 2. Analyser → 3. Améliorer → 4. Créer une mission → 5. Rechercher des profils → 6. Lancer un match ou une adaptation → 7. Exporter
 ```
 
 ---
@@ -600,13 +600,14 @@ Sous la description, un **tableau Kanban** affiche tous les candidats en cours d
 
 ### Qu'est-ce que le Matching Profils ?
 
-Le **Matching Profils** est une fonctionnalité puissante qui permet de trouver automatiquement les meilleurs CV de votre CVthèque pour une mission donnée. L'IA analyse les compétences requises par la mission et les compare aux profils disponibles.
+Le **Matching Profils** permet de trouver automatiquement les meilleurs CV de votre CVthèque pour une mission donnée. L'IA analyse les compétences requises par la mission et les compare aux profils disponibles. Les traitements longs sont exécutés en arrière-plan via des jobs backend, puis l'interface se met à jour automatiquement.
 
 ### Accéder au Matching Profils
 
 1. Accédez à **"Matching Profils"** dans le menu latéral
 2. Sélectionnez une mission dans la liste déroulante
 3. Cliquez sur **"Rechercher"**
+4. Suivez l'avancement du job jusqu'à l'affichage des résultats
 
 ### Comment fonctionne le Matching ?
 
@@ -930,10 +931,11 @@ Une **adaptation** est une version personnalisée d'un CV, optimisée pour une m
 2. Cliquez sur **"Adapter un CV"**
 3. Sélectionnez le CV à adapter
 4. Cliquez sur **"Générer l'adaptation"**
+5. L'application crée un job backend, suit la progression puis affiche l'adaptation finalisée
 
 ### Analyse d'Adéquation
 
-L'IA effectue une analyse en plusieurs étapes :
+L'IA effectue une analyse en plusieurs étapes dans un job backend dédié :
 
 1. **Matching des Compétences** : Comparaison avec les compétences requises
 2. **Analyse Contextuelle** : Évaluation de l'expérience pertinente
@@ -2550,4 +2552,3 @@ Nous encourageons vivement les utilisateurs à partager leurs remarques, critiqu
 ---
 
 *Pour toute question concernant cette documentation, contactez votre administrateur système.*
-

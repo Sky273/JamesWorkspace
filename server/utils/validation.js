@@ -500,8 +500,8 @@ export const batchAdaptSchema = z.object({
   );
 
 export const batchMatchSchema = z.object({
-    resumeIds: z.array(z.string().uuid()).min(1).max(500).optional(),
-    resume_ids: z.array(z.string().uuid()).min(1).max(500).optional(),
+      resumeIds: z.array(z.string().uuid()).min(1).max(500).optional(),
+      resume_ids: z.array(z.string().uuid()).min(1).max(500).optional(),
     missionId: z.string().uuid().optional(),
     mission_id: z.string().uuid().optional(),
     options: z.record(z.string(), z.any()).optional(),
@@ -510,10 +510,41 @@ export const batchMatchSchema = z.object({
   }).strip().refine(
     (data) => Boolean(data.resumeIds || data.resume_ids),
     { message: 'resumeIds is required', path: ['resumeIds'] }
-  ).refine(
+    ).refine(
+      (data) => Boolean(data.missionId || data.mission_id),
+      { message: 'missionId is required', path: ['missionId'] }
+    );
+
+export const batchProfileSearchSchema = z.object({
+    missionId: z.string().uuid().optional(),
+    mission_id: z.string().uuid().optional(),
+    limit: z.number().min(0).max(100).optional(),
+    minScore: z.number().min(0).max(100).optional(),
+    status: z.string().max(50).optional(),
+    weights: z.record(z.string(), z.number()).optional(),
+    dealId: z.string().uuid().optional().nullable(),
+    deal_id: z.string().uuid().optional().nullable(),
+    firm_id: z.union([z.string(), z.number()]).optional(),
+    firmId: z.union([z.string(), z.number()]).optional()
+}).strip().refine(
     (data) => Boolean(data.missionId || data.mission_id),
     { message: 'missionId is required', path: ['missionId'] }
-  );
+);
+
+export const batchProfileAnalysisSchema = z.object({
+    resumeId: z.string().uuid().optional(),
+    resume_id: z.string().uuid().optional(),
+    missionId: z.string().uuid().optional(),
+    mission_id: z.string().uuid().optional(),
+    firm_id: z.union([z.string(), z.number()]).optional(),
+    firmId: z.union([z.string(), z.number()]).optional()
+}).strip().refine(
+    (data) => Boolean(data.resumeId || data.resume_id),
+    { message: 'resumeId is required', path: ['resumeId'] }
+).refine(
+    (data) => Boolean(data.missionId || data.mission_id),
+    { message: 'missionId is required', path: ['missionId'] }
+);
 
 export const batchDealExportSchema = z.object({
   dealId: z.string().uuid().optional(),

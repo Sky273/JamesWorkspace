@@ -89,6 +89,47 @@ export async function addJobResumeIds(jobId, resumeIds) {
 }
 
 /**
+ * Add generic task items to a batch job
+ * @param {string} jobId - Job ID
+ * @param {Array} items - Array of { resumeId?, fileName, sourceType?, originalName?, resultData? }
+ * @returns {Promise<number>} Number of items added
+ */
+export async function addJobTaskItems(jobId, items) {
+    try {
+        const normalizedItems = Array.isArray(items) ? items : [];
+        let addedCount = 0;
+
+        for (const item of normalizedItems) {
+            await query(`
+                INSERT INTO batch_job_items (job_id, resume_id, file_name, source_type, original_name, pending_data, status)
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
+            `, [
+                jobId,
+                item.resumeId || null,
+                item.fileName,
+                item.sourceType || null,
+                item.originalName || null,
+                item.resultData ? JSON.stringify(item.resultData) : null,
+                ITEM_STATUS.PENDING
+            ]);
+            addedCount++;
+        }
+
+        await query(`
+            UPDATE batch_jobs
+            SET total_items = (SELECT COUNT(*) FROM batch_job_items WHERE job_id = $1)
+            WHERE id = $1
+        `, [jobId]);
+
+        safeLog('info', 'Added task items to batch job', { jobId, count: addedCount });
+        return addedCount;
+    } catch (error) {
+        safeLog('error', 'Failed to add task items to batch job', { error: error.message, jobId });
+        throw error;
+    }
+}
+
+/**
  * Add export items to a batch job (for deal-export jobs)
  * @param {string} jobId - Job ID
  * @param {Array} items - Array of { resumeId, adaptationId, sourceType, fileName, relativePath }
