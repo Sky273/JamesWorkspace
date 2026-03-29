@@ -11,35 +11,11 @@ import {
     MINIMAX_OPENAI_BASE_URL
 } from '../config/constants.js';
 import { metrics } from './metrics.service.js';
+import { withRetry } from './retry.service.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { validatePromptSize } from '../utils/postgresHelpers.js';
-
-function getTokenParameter(model, tokenLimit) {
-    const requiresCompletionTokens = model.match(/^(gpt-5(\.\d+)?(-\w+)?|gpt-4\.1|chatgpt-5|gpt-4o-2024-08-06|gpt-4o-2024-11-20|gpt-4o-mini-2024-07-18)/i);
-    return requiresCompletionTokens ? { max_completion_tokens: tokenLimit } : { max_tokens: tokenLimit };
-}
-
-function supportsCustomTemperature(model) {
-    return !model.match(/^(gpt-5(\.\d+)?(-\w+)?|chatgpt-5)/i);
-}
-
-function buildOpenAICompatibleParams(model, { maxTokens, temperature, topP, additionalParams }) {
-    const params = {
-        model,
-        ...getTokenParameter(model, maxTokens),
-        ...additionalParams
-    };
-
-    if (temperature !== undefined && supportsCustomTemperature(model)) {
-        params.temperature = temperature;
-    }
-
-    if (topP !== undefined) {
-        params.top_p = topP;
-    }
-
-    return params;
-}
+import { extractTextFromContentBlocks, flattenLlmTextContent } from './llmContent.service.js';
+import { buildOpenAICompatibleParams } from './llmProviderCommon.service.js';
 
 function validateMiniMaxRequest(model, messages, maxPromptLength = MAX_PROMPT_LENGTH) {
     if (!MINIMAX_API_KEY) {
@@ -55,7 +31,10 @@ function validateMiniMaxRequest(model, messages, maxPromptLength = MAX_PROMPT_LE
     }
 
     if (maxPromptLength) {
-        const combinedPrompt = messages.map(message => String(message?.content || '')).join('\n');
+        const combinedPrompt = messages
+            .map(message => flattenLlmTextContent(message?.content))
+            .filter(Boolean)
+            .join('\n');
         const promptValidation = validatePromptSize(combinedPrompt, maxPromptLength);
         if (!promptValidation.valid) {
             const error = new Error(promptValidation.error);
@@ -101,25 +80,22 @@ function extractMiniMaxOpenAIContent(payload = {}) {
     return '';
 }
 
-function extractMiniMaxAnthropicContent(payload = {}) {
-    const contentBlocks = payload?.content;
-    if (!Array.isArray(contentBlocks) || contentBlocks.length === 0) {
-        return '';
-    }
-
-    return contentBlocks
-        .map(block => {
-            if (block?.type === 'text' && typeof block.text === 'string') {
-                return block.text;
+async function postToMiniMax(url, body, headers, timeout, operationType) {
+    return withRetry(
+        () => axios.post(url, body, {
+            headers,
+            timeout
+        }),
+        {
+            serviceName: 'minimax',
+            operationName: operationType,
+            retryConfig: {
+                maxRetries: 3,
+                initialDelayMs: 2000,
+                maxDelayMs: 60000
             }
-            if (block?.type === 'thinking' && typeof block.thinking === 'string') {
-                return block.thinking;
-            }
-            return '';
-        })
-        .filter(Boolean)
-        .join('\n')
-        .trim();
+        }
+    );
 }
 
 export async function callMiniMaxOpenAICompatible({
@@ -146,16 +122,15 @@ export async function callMiniMaxOpenAICompatible({
     });
 
     try {
-        const response = await axios.post(
+        const response = await postToMiniMax(
             `${MINIMAX_OPENAI_BASE_URL.replace(/\/$/, '')}/chat/completions`,
             requestParams,
             {
-                headers: {
-                    Authorization: `Bearer ${MINIMAX_API_KEY}`,
-                    'Content-Type': 'application/json'
-                },
-                timeout
-            }
+                Authorization: `Bearer ${MINIMAX_API_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            timeout,
+            operationType
         );
 
         const content = extractMiniMaxOpenAIContent(response.data);
@@ -232,20 +207,19 @@ export async function callMiniMaxAnthropicCompatible({
     }
 
     try {
-        const response = await axios.post(
+        const response = await postToMiniMax(
             `${MINIMAX_ANTHROPIC_BASE_URL.replace(/\/$/, '')}/v1/messages`,
             requestBody,
             {
-                headers: {
-                    'x-api-key': MINIMAX_API_KEY,
-                    'anthropic-version': '2023-06-01',
-                    'Content-Type': 'application/json'
-                },
-                timeout
-            }
+                'x-api-key': MINIMAX_API_KEY,
+                'anthropic-version': '2023-06-01',
+                'Content-Type': 'application/json'
+            },
+            timeout,
+            operationType
         );
 
-        const content = extractMiniMaxAnthropicContent(response.data);
+        const content = extractTextFromContentBlocks(response.data?.content);
         if (!content) {
             safeLog('error', 'MiniMax Anthropic-compatible response contained no usable text', {
                 model,

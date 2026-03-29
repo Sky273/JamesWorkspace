@@ -37,7 +37,7 @@ describe('ollama.service', () => {
             data: {
                 model: 'qwen3:14b',
                 message: {
-                    content: '<think>internal reasoning</think>{\"ok\":true,\"name\":\"Julien\"}'
+                    content: '<think>internal reasoning</think>{"ok":true,"name":"Julien"}'
                 },
                 prompt_eval_count: 10,
                 eval_count: 5
@@ -51,10 +51,10 @@ describe('ollama.service', () => {
             { operationType: 'Resume Analysis' }
         );
 
-        expect(result.content).toBe('{\"ok\":true,\"name\":\"Julien\"}');
+        expect(result.content).toBe('{"ok":true,"name":"Julien"}');
     });
 
-    it('falls back to reasoning fields only when no assistant content exists', async () => {
+    it('rejects responses that only contain reasoning fields', async () => {
         mockAxiosPost.mockResolvedValueOnce({
             data: {
                 model: 'qwen3:14b',
@@ -66,13 +66,11 @@ describe('ollama.service', () => {
             }
         });
 
-        const result = await callOllama(
+        await expect(callOllama(
             [{ role: 'user', content: 'Analyse ce CV' }],
             'qwen3:14b',
             { ollamaBaseUrl: 'http://ollama.test:11434' },
             { operationType: 'Resume Analysis' }
-        );
-
-        expect(result.content).toBe('Final answer');
+        )).rejects.toThrow('Ollama returned empty content');
     });
 });

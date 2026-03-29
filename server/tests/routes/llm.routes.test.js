@@ -275,6 +275,23 @@ describe('LLM Routes', () => {
             expect(res.status).toBe(200);
             expect(res.body.choices).toBeDefined();
         });
+
+        it('should strip think markup from OpenAI chat completions proxy responses', async () => {
+            mockAxiosPost.mockResolvedValueOnce({
+                data: {
+                    choices: [{ message: { content: '<think>draft</think>Response' } }],
+                    usage: { prompt_tokens: 5, completion_tokens: 3, total_tokens: 8 }
+                }
+            });
+
+            const res = await request(app)
+                .post('/api/llm/chat/completions')
+                .set(AUTH)
+                .send({ messages: [{ role: 'user', content: 'Hi' }], model: 'gpt-4o' });
+
+            expect(res.status).toBe(200);
+            expect(res.body.choices[0].message.content).toBe('Response');
+        });
     });
 
     describe('POST /messages', () => {

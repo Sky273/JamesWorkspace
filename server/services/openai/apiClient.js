@@ -5,12 +5,13 @@
 
 import axios from 'axios';
 import { OPENAI_API_KEY, MAX_PROMPT_LENGTH } from '../../config/constants.js';
-import { buildOpenAIParams } from '../llm.service.js';
+import { buildOpenAICompatibleParams } from '../llmProviderCommon.service.js';
 import { metrics } from '../metrics.service.js';
 import { safeLog } from '../../utils/logger.backend.js';
 import { validatePromptSize } from '../../utils/postgresHelpers.js';
 import { securityLog, LOG_LEVELS, SECURITY_EVENTS } from '../security.service.js';
 import { withRetry, getCircuitBreakerStates } from '../retry.service.js';
+import { extractOpenAIResponsesText, flattenLlmTextContent, sanitizeOpenAICompatibleResponseBody } from '../llmContent.service.js';
 
 const OPENAI_CHAT_API_URL = 'https://api.openai.com/v1/chat/completions';
 const OPENAI_RESPONSES_API_URL = 'https://api.openai.com/v1/responses';
@@ -53,7 +54,7 @@ export async function callOpenAI({
 
     // Validate prompt size if maxPromptLength is specified
     if (maxPromptLength) {
-        const combinedPrompt = messages.map(m => m.content).join('\n');
+        const combinedPrompt = messages.map(m => flattenLlmTextContent(m.content)).join('\n');
         const promptValidation = validatePromptSize(combinedPrompt, maxPromptLength);
         if (!promptValidation.valid) {
             const error = new Error(promptValidation.error);
@@ -118,7 +119,7 @@ export async function callOpenAI({
             // Standard models use Chat Completions API
             apiUrl = OPENAI_CHAT_API_URL;
             
-            requestParams = buildOpenAIParams(model, {
+            requestParams = buildOpenAICompatibleParams(model, {
                 maxTokens,
                 temperature,
                 topP,
@@ -165,11 +166,7 @@ export async function callOpenAI({
 
         // Transform Responses API format to Chat Completions API format for consistency
         if (isGPT5Model && response.data?.output) {
-            const outputItems = response.data.output || [];
-            const messageItem = outputItems.find(item => item.type === 'message');
-            const textContent = messageItem?.content?.find(c => c.type === 'output_text')?.text || 
-                               messageItem?.content?.[0]?.text ||
-                               (typeof messageItem?.content === 'string' ? messageItem.content : '');
+            const textContent = extractOpenAIResponsesText(response.data.output || []);
             
             const transformedResponse = {
                 id: response.data.id,
@@ -191,7 +188,7 @@ export async function callOpenAI({
             return transformedResponse;
         }
 
-        return response.data;
+        return sanitizeOpenAICompatibleResponseBody(response.data);
     } catch (error) {
         metrics.trackLLMRequest(model, 0, false, 0, 0);
         safeLog('error', 'OpenAI API call failed', {

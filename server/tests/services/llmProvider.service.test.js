@@ -8,16 +8,36 @@ vi.mock('../../services/openai/apiClient.js', () => ({
     callOpenAI: vi.fn()
 }));
 
+vi.mock('../../services/openaiChat.service.js', () => ({
+    callOpenAIVisionChat: vi.fn()
+}));
+
+vi.mock('../../services/anthropic.service.js', () => ({
+    callAnthropicChat: vi.fn(),
+    callAnthropicVision: vi.fn()
+}));
+
 vi.mock('../../services/ollama.service.js', () => ({
-    callOllama: vi.fn()
+    callOllama: vi.fn(),
+    callOllamaWithVision: vi.fn()
 }));
 
 vi.mock('../../services/minimax.service.js', () => ({
     callMiniMaxOpenAICompatible: vi.fn()
 }));
 
+vi.mock('../../services/metrics.service.js', () => ({
+    metrics: { trackLLMRequest: vi.fn() }
+}));
+
 vi.mock('../../utils/logger.backend.js', () => ({
-    safeLog: vi.fn()
+    safeLog: vi.fn(),
+    createModuleLogger: () => ({
+        info: vi.fn(),
+        error: vi.fn(),
+        warn: vi.fn(),
+        debug: vi.fn()
+    })
 }));
 
 import { getLLMSettings } from '../../services/settings.service.js';
@@ -28,7 +48,7 @@ import { callBusinessChatCompletion } from '../../services/llmProvider.service.j
 
 describe('llmProvider.service', () => {
     beforeEach(() => {
-        vi.clearAllMocks();
+        vi.resetAllMocks();
     });
 
     it('routes Ollama business calls without requiring an explicit model', async () => {
@@ -59,7 +79,8 @@ describe('llmProvider.service', () => {
             expect.objectContaining({
                 max_tokens: 4096,
                 temperature: 0,
-                timeout: 20 * 60 * 1000
+                timeout: 20 * 60 * 1000,
+                operationType: 'Resume Analysis'
             })
         );
         expect(callOpenAI).not.toHaveBeenCalled();
@@ -92,15 +113,27 @@ describe('llmProvider.service', () => {
         expect(result.choices[0].message.content).toBe('ok minimax');
     });
 
-    it('still requires a model for non-Ollama providers', async () => {
+    it('uses the configured default OpenAI model when none is passed explicitly', async () => {
         getLLMSettings.mockResolvedValueOnce({
             llmProvider: 'openai',
             llmModel: ''
         });
+        callOpenAI.mockResolvedValueOnce({
+            model: 'gpt-4o',
+            choices: [{ message: { content: 'openai ok' } }],
+            usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 }
+        });
 
-        await expect(callBusinessChatCompletion({
+        const result = await callBusinessChatCompletion({
             messages: [{ role: 'user', content: 'Analyse ce CV' }]
-        })).rejects.toThrow('Model is required');
+        });
+
+        expect(callOpenAI).toHaveBeenCalledWith(expect.objectContaining({
+            model: 'gpt-4o',
+            operationType: 'LLM business operation'
+        }));
+        expect(result.choices[0].message.content).toBe('openai ok');
+        expect(result.model).toBe('gpt-4o');
     });
 });
 

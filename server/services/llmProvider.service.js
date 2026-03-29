@@ -4,9 +4,9 @@
  */
 
 import { getLLMSettings } from './settings.service.js';
-import { callOpenAI } from './openai/apiClient.js';
-import { callOllama } from './ollama.service.js';
-import { callMiniMaxOpenAICompatible } from './minimax.service.js';
+import { resolveLLMRuntimeConfig } from './llmConfiguration.service.js';
+import { callProviderChat } from './llmGateway.service.js';
+import { toOpenAICompatibleResponse } from './llmProviderCommon.service.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { normalizeUtf8Text } from './openai/textUtils.js';
 
@@ -41,28 +41,6 @@ function normalizeMessagesContent(messages = []) {
     }));
 }
 
-function toOpenAIShape(result) {
-    return {
-        id: `ollama-${Date.now()}`,
-        object: 'chat.completion',
-        created: Math.floor(Date.now() / 1000),
-        model: result.actualModel || result.model,
-        choices: [{
-            index: 0,
-            message: {
-                role: 'assistant',
-                content: result.content
-            },
-            finish_reason: 'stop'
-        }],
-        usage: result.usage || {
-            prompt_tokens: 0,
-            completion_tokens: 0,
-            total_tokens: 0
-        }
-    };
-}
-
 export async function callBusinessChatCompletion({
     model,
     messages,
@@ -76,69 +54,36 @@ export async function callBusinessChatCompletion({
     operationType = 'LLM business operation'
 }) {
     const settings = await getLLMSettings();
-    const provider = settings?.llmProvider || 'openai';
-    const configuredModel = settings?.llmModel || model;
+    const { provider, model: effectiveModel } = resolveLLMRuntimeConfig(settings, model);
     const normalizedMessages = normalizeMessagesContent(messages);
-    const effectiveModel = provider === 'ollama' ? (model || configuredModel || null) : (model || configuredModel);
 
     if (provider !== 'ollama' && !effectiveModel) {
         throw new Error('Model is required');
     }
 
-    if (provider === 'ollama') {
-        safeLog('info', 'Routing business LLM call to Ollama', {
-            operationType,
-            provider,
-            model: effectiveModel || 'runtime:auto',
-            messageCount: normalizedMessages.length
-        });
+    safeLog('info', 'Routing business LLM call via provider gateway', {
+        operationType,
+        provider,
+        model: effectiveModel || 'runtime:auto',
+        messageCount: normalizedMessages.length
+    });
 
-        const result = await callOllama(normalizedMessages, effectiveModel, settings, {
-            temperature,
-            max_tokens: maxTokens,
-            timeout: resolveBusinessOperationTimeout(operationType, timeout),
-            operationType
-        });
-
-        return toOpenAIShape(result);
-    }
-
-    if (provider === 'minimax') {
-        safeLog('info', 'Routing business LLM call to MiniMax', {
-            operationType,
-            provider,
-            model: effectiveModel,
-            messageCount: normalizedMessages.length
-        });
-
-        const result = await callMiniMaxOpenAICompatible({
-            model: effectiveModel,
-            messages: normalizedMessages,
-            maxTokens,
-            temperature,
-            topP,
-            responseFormat,
-            timeout: resolveBusinessOperationTimeout(operationType, timeout),
-            maxPromptLength,
-            operationType
-        });
-
-        return toOpenAIShape(result);
-    }
-
-    return callOpenAI({
+    const result = await callProviderChat({
+        provider,
         model: effectiveModel,
         messages: normalizedMessages,
-        maxTokens,
-        temperature,
-        topP,
-        responseFormat,
-        timeout,
-        maxPromptLength,
-        userMetadata,
-        operationType
+        settings,
+        options: {
+            temperature,
+            max_tokens: maxTokens,
+            top_p: topP,
+            response_format: responseFormat,
+            timeout: resolveBusinessOperationTimeout(operationType, timeout),
+            maxPromptLength,
+            userMetadata,
+            operationType
+        }
     });
+
+    return toOpenAICompatibleResponse(result, provider);
 }
-
-
-

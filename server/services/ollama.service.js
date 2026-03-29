@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { OLLAMA_AUTO_PULL, OLLAMA_BASE_URL, OLLAMA_REQUEST_TIMEOUT_MS } from '../config/constants.js';
 import { safeLog } from '../utils/logger.backend.js';
+import { extractTextFromContentBlocks } from './llmContent.service.js';
 import { stripLlmThinkingContent } from './openai/textUtils.js';
 
 const OLLAMA_OPERATION_TIMEOUTS_MS = {
@@ -82,41 +83,6 @@ function ensureModelName(model) {
     return String(model).trim();
 }
 
-function extractTextFromStructuredContent(content) {
-    if (typeof content === 'string') {
-        return content.trim();
-    }
-
-    if (Array.isArray(content)) {
-        return content
-            .map((item) => {
-                if (typeof item === 'string') {
-                    return item;
-                }
-                if (typeof item?.text === 'string') {
-                    return item.text;
-                }
-                if (typeof item?.content === 'string') {
-                    return item.content;
-                }
-                return '';
-            })
-            .join('\n')
-            .trim();
-    }
-
-    if (content && typeof content === 'object') {
-        if (typeof content.text === 'string') {
-            return content.text.trim();
-        }
-        if (typeof content.content === 'string') {
-            return content.content.trim();
-        }
-    }
-
-    return '';
-}
-
 function extractOllamaContent(payload = {}) {
     const responseCandidates = [
         payload?.message?.content,
@@ -127,19 +93,7 @@ function extractOllamaContent(payload = {}) {
     ];
 
     for (const candidate of responseCandidates) {
-        const text = stripLlmThinkingContent(extractTextFromStructuredContent(candidate));
-        if (text) {
-            return text;
-        }
-    }
-
-    const reasoningCandidates = [
-        payload?.message?.reasoning_content,
-        payload?.message?.thinking
-    ];
-
-    for (const candidate of reasoningCandidates) {
-        const text = stripLlmThinkingContent(extractTextFromStructuredContent(candidate));
+        const text = stripLlmThinkingContent(extractTextFromContentBlocks(candidate));
         if (text) {
             return text;
         }

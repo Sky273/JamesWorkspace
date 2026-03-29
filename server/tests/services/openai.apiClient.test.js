@@ -74,6 +74,17 @@ describe('OpenAI API Client', () => {
                 messages: [{ role: 'user', content: 'hi' }]
             })).rejects.toThrow('Too large');
         });
+
+        it('should validate structured prompt content using flattened text', async () => {
+            validatePromptSize.mockReturnValueOnce({ valid: false, error: 'Visible\nNested', estimatedTokens: 42 });
+
+            await expect(callOpenAI({
+                model: 'gpt-4o',
+                messages: [{ role: 'user', content: [{ type: 'text', text: 'Visible' }, { type: 'input_text', content: 'Nested' }] }]
+            })).rejects.toThrow('Visible\nNested');
+
+            expect(validatePromptSize).toHaveBeenCalledWith('Visible\nNested', 50000);
+        });
     });
 
     describe('callOpenAI - standard models', () => {
@@ -97,6 +108,23 @@ describe('OpenAI API Client', () => {
                 expect.any(Object),
                 expect.any(Object)
             );
+        });
+
+        it('should strip think markup from standard model responses', async () => {
+            axios.post.mockResolvedValueOnce({
+                status: 200,
+                data: {
+                    choices: [{ message: { role: 'assistant', content: '<think>draft</think>hello' } }],
+                    usage: { prompt_tokens: 5, completion_tokens: 10, total_tokens: 15 }
+                }
+            });
+
+            const result = await callOpenAI({
+                model: 'gpt-4o',
+                messages: [{ role: 'user', content: 'hi' }]
+            });
+
+            expect(result.choices[0].message.content).toBe('hello');
         });
 
         it('should throw on 4xx response', async () => {
