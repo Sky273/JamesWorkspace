@@ -58,7 +58,6 @@ async function extractMissionKeywords(missionTitle, missionContent, model, userM
         ],
         maxTokens: 1024,
         temperature: 0.2,
-        responseFormat: { type: "json_object" },
         userMetadata,
         operationType: 'Mission Keywords Extraction'
     });
@@ -133,6 +132,12 @@ function chunkArray(array, size) {
     return chunks;
 }
 
+function isRecoverableJsonParseError(error) {
+    const message = error?.message || '';
+    return message.includes('Unexpected end of JSON input')
+        || message.includes('Unterminated string in JSON');
+}
+
 /**
  * Score profiles using LLM for intelligent semantic matching
  * Processes profiles in batches for cost efficiency
@@ -155,8 +160,9 @@ async function scoreBatchWithLLM(profiles, missionKeywords, missionRecord, userM
         return { scores: {}, success: false, error: 'LLM model not configured' };
     }
 
-    const BATCH_SIZE = 12; // Optimal batch size for token efficiency
-    const MAX_CONCURRENCY = 5; // Process up to 5 batches in parallel
+    const isMiniMaxProvider = settings.llmProvider === 'minimax';
+    const BATCH_SIZE = isMiniMaxProvider ? 6 : 12;
+    const MAX_CONCURRENCY = isMiniMaxProvider ? 3 : 5;
     const batches = chunkArray(profiles, BATCH_SIZE);
     const allScores = {};
     let hasErrors = false;
@@ -169,17 +175,17 @@ async function scoreBatchWithLLM(profiles, missionKeywords, missionRecord, userM
     });
 
     // Process a single batch and return its scores
-    async function processBatch(batch, batchIndex) {
+    async function processBatch(batch, batchIndex, depth = 0) {
         const candidatesData = batch.map(p => ({
             id: p.resumeId,
             title: p.title || normalizeUtf8Text('Non sp\u00e9cifi\u00e9'),
-            skills: (p.resumeTags?.skills || []).slice(0, 10),
-            tools: (p.resumeTags?.tools || []).slice(0, 8),
+            skills: (p.resumeTags?.skills || []).slice(0, 6),
+            tools: (p.resumeTags?.tools || []).slice(0, 5),
             industries: (p.resumeTags?.industries || []).slice(0, 3),
-            softSkills: (p.resumeTags?.softSkills || []).slice(0, 5)
+            softSkills: (p.resumeTags?.softSkills || []).slice(0, 4)
         }));
 
-        const candidatesJson = JSON.stringify(candidatesData, null, 2);
+        const candidatesJson = JSON.stringify(candidatesData);
 
         const prompt = BATCH_PROFILE_SCORING_PROMPT
             .replace('{MISSION_TITLE}', missionRecord.title || '')
@@ -198,18 +204,47 @@ async function scoreBatchWithLLM(profiles, missionKeywords, missionRecord, userM
             ],
             maxTokens: 2048,
             temperature: 0.3,
-            responseFormat: { type: "json_object" },
             userMetadata,
             operationType: 'Batch Profile Scoring'
         });
 
-        const result = parseJsonFromLlmResponse(response.choices[0].message.content);
-        safeLog('debug', 'Batch scoring completed', { 
-            batchIndex: batchIndex + 1, 
-            totalBatches: batches.length,
-            scoresReturned: Object.keys(result.scores || {}).length
-        });
-        return result.scores || {};
+        try {
+            const result = parseJsonFromLlmResponse(response.choices[0].message.content);
+            safeLog('debug', 'Batch scoring completed', {
+                batchIndex: batchIndex + 1,
+                totalBatches: batches.length,
+                batchDepth: depth,
+                scoresReturned: Object.keys(result.scores || {}).length
+            });
+            return result.scores || {};
+        } catch (error) {
+            if (batch.length > 1 && isRecoverableJsonParseError(error)) {
+                const midpoint = Math.ceil(batch.length / 2);
+                const leftBatch = batch.slice(0, midpoint);
+                const rightBatch = batch.slice(midpoint);
+
+                safeLog('warn', 'LLM scoring batch returned malformed JSON, retrying with smaller sub-batches', {
+                    batchIndex,
+                    batchSize: batch.length,
+                    leftBatchSize: leftBatch.length,
+                    rightBatchSize: rightBatch.length,
+                    batchDepth: depth,
+                    error: error.message
+                });
+
+                const [leftScores, rightScores] = await Promise.all([
+                    processBatch(leftBatch, batchIndex, depth + 1),
+                    processBatch(rightBatch, batchIndex, depth + 1)
+                ]);
+
+                return {
+                    ...leftScores,
+                    ...rightScores
+                };
+            }
+
+            throw error;
+        }
     }
 
     // Process batches in waves of MAX_CONCURRENCY
@@ -290,7 +325,7 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
     }
     
     if (firmFilter) {
-        conditions.push(`r.firm_name = $${paramIndex}`);
+        conditions.push(`r.firm_id = $${paramIndex}`);
         params.push(firmFilter);
         paramIndex++;
     }
@@ -313,7 +348,7 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
                r.skills, r.tools, r.industries, r.soft_skills,
                r.skills_cleaned, r.tools_cleaned, r.industries_cleaned, r.soft_skills_cleaned,
                r.improved_skills, r.improved_tools, r.improved_industries, r.improved_soft_skills,
-               r.firm_name, r.created_at
+               r.firm_id, r.firm_name, r.created_at
         FROM resumes r
         ${dealJoin}
         ${whereClause}
@@ -379,6 +414,27 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
         profilesToScore: profilesToScore.length
     });
     
+    if (profilesToScore.length === 0) {
+        safeLog('info', 'No resumes available for profile matching after filters', {
+            missionId,
+            dealId,
+            status,
+            firm: firmFilter
+        });
+
+        return {
+            missionId,
+            missionTitle: missionRecord.title,
+            missionKeywords,
+            totalResumesScanned: 0,
+            profiles: [],
+            weights,
+            llmScoringApplied: false,
+            llmScoringFailed: false,
+            titleRefinementApplied: false
+        };
+    }
+
     // 7. Score profiles using LLM for intelligent semantic matching
     let llmScoringApplied = false;
     let llmScoringFailed = false;
@@ -533,7 +589,6 @@ export async function analyzeProfileForMission(missionId, resumeId, userMetadata
         ],
         maxTokens: 2048,
         temperature: 0.3,
-        responseFormat: { type: "json_object" },
         userMetadata,
         operationType: 'Detailed Profile Analysis'
     });

@@ -1,6 +1,10 @@
 import { createAuthOptionsWithCsrf, fetchWithAuth, getResponseErrorMessage } from './apiInterceptor';
 import { pollUntil } from './longRunningOperation';
 import type { DetailedProfileAnalysisResponse, ProfileMatchingResponse, ProfileMatchWeights } from '../types/entities';
+import {
+  FRONTEND_PROFILE_ANALYSIS_TIMEOUT_MS,
+  FRONTEND_PROFILE_MATCHING_TIMEOUT_MS
+} from '../constants/llmTimeouts';
 
 export interface ProfileMatchingJobItem {
   id: string;
@@ -112,7 +116,7 @@ export async function fetchProfileMatchingJob(jobId: string, signal?: AbortSigna
 export async function waitForProfileSearchJobCompletion({
   jobId,
   signal,
-  timeoutMs = 300000,
+  timeoutMs = FRONTEND_PROFILE_MATCHING_TIMEOUT_MS,
   onJobUpdate
 }: {
   jobId: string;
@@ -156,7 +160,7 @@ export async function waitForProfileAnalysisJobCompletion({
   jobId,
   resumeId,
   signal,
-  timeoutMs = 300000,
+  timeoutMs = FRONTEND_PROFILE_ANALYSIS_TIMEOUT_MS,
   onJobUpdate
 }: {
   jobId: string;

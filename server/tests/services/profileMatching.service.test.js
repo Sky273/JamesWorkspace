@@ -78,6 +78,7 @@ const mockResumeRecords = [
         title: 'Lead Developer React',
         status: 'improved',
         global_rating: 85,
+        firm_id: 'firm-1',
         skills: JSON.stringify(['React', 'TypeScript', 'JavaScript', 'Node.js']),
         tools: JSON.stringify(['Git', 'Docker', 'Jenkins']),
         industries: JSON.stringify(['Banque', 'Assurance']),
@@ -91,6 +92,7 @@ const mockResumeRecords = [
         title: 'Développeur Java Backend',
         status: 'analyzed',
         global_rating: 70,
+        firm_id: 'firm-1',
         skills: JSON.stringify(['Java', 'Spring', 'SQL']),
         tools: JSON.stringify(['Git', 'Maven']),
         industries: JSON.stringify(['Retail']),
@@ -104,6 +106,7 @@ const mockResumeRecords = [
         title: 'Architecte Cloud AWS',
         status: 'improved',
         global_rating: 90,
+        firm_id: 'firm-1',
         skills: JSON.stringify(['AWS', 'Terraform', 'Python']),
         tools: JSON.stringify(['AWS', 'Docker', 'Kubernetes']),
         industries: JSON.stringify(['Finance', 'Banque']),
@@ -260,6 +263,44 @@ describe('Profile Matching Service', () => {
             expect(extractionCalls).toHaveLength(0);
         });
 
+        it('should not request responseFormat for batch profile scoring', async () => {
+            await findMatchingProfiles('mission-1', { limit: 10 });
+
+            const scoringCall = callBusinessChatCompletion.mock.calls.find(
+                call => call[0]?.operationType === 'Batch Profile Scoring'
+            );
+
+            expect(scoringCall).toBeDefined();
+            expect(scoringCall[0]).not.toHaveProperty('responseFormat');
+        });
+
+        it('should filter resumes by firm_id when a firm is provided', async () => {
+            await findMatchingProfiles('mission-1', {
+                limit: 10,
+                firm: 'firm-1'
+            });
+
+            expect(selectWithTimeout).toHaveBeenCalledWith('resumes', expect.objectContaining({
+                rawQuery: expect.stringContaining('r.firm_id = $1'),
+                rawParams: ['firm-1']
+            }));
+        });
+
+        it('should return an empty result without LLM failure when no resumes match filters', async () => {
+            selectWithTimeout.mockResolvedValue([]);
+
+            const result = await findMatchingProfiles('mission-1', {
+                limit: 10,
+                firm: 'firm-1'
+            });
+
+            expect(result.totalResumesScanned).toBe(0);
+            expect(result.profiles).toEqual([]);
+            expect(result.llmScoringApplied).toBe(false);
+            expect(result.llmScoringFailed).toBe(false);
+            expect(callBusinessChatCompletion).not.toHaveBeenCalled();
+        });
+
         it('should extract keywords via LLM when not cached', async () => {
             const missionWithoutKeywords = { ...mockMissionRecord, keywords: null };
             findWithTimeout.mockResolvedValue(missionWithoutKeywords);
@@ -351,6 +392,54 @@ describe('Profile Matching Service', () => {
             // No fallback - LLM is the only scoring source
             expect(result.llmScoringFailed).toBe(true);
             expect(result.profiles).toHaveLength(0);
+        });
+
+        it('should retry malformed batch scoring responses with smaller sub-batches', async () => {
+            const sixResumes = Array.from({ length: 6 }, (_, i) => ({
+                ...mockResumeRecords[0],
+                id: `resume-${i}`,
+                name: `Candidate ${i}`
+            }));
+
+            selectWithTimeout.mockResolvedValue(sixResumes);
+
+            callBusinessChatCompletion
+                .mockResolvedValueOnce({
+                    choices: [{
+                        message: {
+                            content: '{"scores":{"resume-0":{"score":80,"confidence":"high","reason":"oops'
+                        }
+                    }]
+                })
+                .mockResolvedValueOnce({
+                    choices: [{
+                        message: {
+                            content: JSON.stringify({
+                                scores: Object.fromEntries(
+                                    sixResumes.slice(0, 3).map(r => [r.id, { score: 80, confidence: 'high', reason: 'OK' }])
+                                )
+                            })
+                        }
+                    }]
+                })
+                .mockResolvedValueOnce({
+                    choices: [{
+                        message: {
+                            content: JSON.stringify({
+                                scores: Object.fromEntries(
+                                    sixResumes.slice(3).map(r => [r.id, { score: 78, confidence: 'medium', reason: 'OK' }])
+                                )
+                            })
+                        }
+                    }]
+                });
+
+            const result = await findMatchingProfiles('mission-1', { limit: 10 });
+
+            expect(result.llmScoringApplied).toBe(true);
+            expect(result.llmScoringFailed).toBe(false);
+            expect(result.profiles).toHaveLength(6);
+            expect(callBusinessChatCompletion).toHaveBeenCalledTimes(3);
         });
     });
 
