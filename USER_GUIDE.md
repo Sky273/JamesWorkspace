@@ -1407,7 +1407,7 @@ L'assistant IA est disponible via le **bouton de chat** (icône de bulle) en bas
 L'assistant et les fonctions d'analyse utilisent le provider configuré par l'administrateur :
 - **OpenAI** : usage général, GPT-5 / GPT-4o
 - **Anthropic** : alternative Claude
-- **DeepSeek** : `deepseek-chat` ou `deepseek-reasoner`
+- **DeepSeek** : DeepSeek-V3.2, disponible en mode standard (`deepseek-chat`) ou raisonnement (`deepseek-reasoner`)
 - **MiniMax** : `MiniMax-M2.7` et variantes compatibles
 - **Ollama** : instance distante gérée par votre organisation
 
@@ -1614,14 +1614,14 @@ Cette fonctionnalité permet de créer automatiquement un modèle à partir d'un
 **Choix du Modèle IA** :
 - **OpenAI** : `gpt-5.x`, `gpt-4o`, `gpt-4o-mini`
 - **Anthropic** : `claude-sonnet-4.6`, `claude-opus-4.6`, `claude-3-5-sonnet-20241022`, `claude-3-5-haiku-20241022`
-- **DeepSeek** : `deepseek-chat`, `deepseek-reasoner`
+- **DeepSeek** : DeepSeek-V3.2 en mode standard (`deepseek-chat`) ou raisonnement (`deepseek-reasoner`)
 - **MiniMax** : `MiniMax-M2.7`, `MiniMax-M2.5`, `MiniMax-M2.5-highspeed`, `MiniMax-M2.1`, `MiniMax-M2.1-highspeed`, `MiniMax-M2`
 - **Ollama** : provider distant. Le modèle effectif vient de l'instance Ollama configurée.
 
 **Choix du provider** :
 - **OpenAI** : choix général par défaut
 - **Anthropic** : utile si vous standardisez sur Claude
-- **DeepSeek** : bon compromis coût / qualité, `deepseek-reasoner` pour les tâches de raisonnement
+- **DeepSeek** : bon compromis coût / qualité, avec `deepseek-chat` pour le standard et `deepseek-reasoner` pour les tâches de raisonnement
 - **MiniMax** : alternative compatible avec les proxys OpenAI et Anthropic
 - **Ollama** : exécution sur une instance distante que vous contrôlez
 

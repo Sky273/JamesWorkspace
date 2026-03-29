@@ -442,7 +442,7 @@ EXECUTE FUNCTION sync_customer_name();
 |----------|---------|-------|
 | **OpenAI** | GPT-4, GPT-4o, GPT-5.x | Analyse, amélioration, adaptation |
 | **Anthropic** | Claude 3.x / Claude 4.x | Alternative à OpenAI |
-| **DeepSeek** | deepseek-chat, deepseek-reasoner | Alternative OpenAI-compatible avec support du raisonnement côté provider |
+| **DeepSeek** | DeepSeek-V3.2 via `deepseek-chat` et `deepseek-reasoner` | Alternative OpenAI-compatible avec deux modes d'appel : standard et raisonnement |
 | **MiniMax** | MiniMax-M2.7, MiniMax-M2.5, MiniMax-M2.1 | Alternative API-compatible pour analyse, amélioration, adaptation |
 | **Ollama (distant)** | Modèles exposés par une instance Ollama externe | Exécution via une URL Ollama distante, sans moteur Ollama embarqué dans le conteneur |
 

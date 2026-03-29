@@ -1008,7 +1008,7 @@
       "webglEnabled": "Enable WebGL backgrounds",
       "webglEnabledDescription": "Displays animated visual backgrounds when the browser and device support them.",
       "minimaxDescription": "Select a MiniMax model. The application will use the server-side MiniMax API.",
-      "deepseekDescription": "Select a DeepSeek model. The application will use the server-side DeepSeek API."
+      "deepseekDescription": "Select the DeepSeek API mode to use. The callable IDs remain deepseek-chat and deepseek-reasoner, both currently mapped to DeepSeek-V3.2 on the API side."
     },
     "prompts": {
       "title": "Prompts Configuration",

@@ -1042,7 +1042,7 @@
       "webglEnabled": "Activer les arri?re-plans WebGL",
       "webglEnabledDescription": "Affiche les fonds visuels anim?s de l'application quand le navigateur et l'appareil le permettent.",
       "minimaxDescription": "Selectionnez un modele MiniMax. L application utilisera l API MiniMax cote serveur.",
-      "deepseekDescription": "Selectionnez un modele DeepSeek. L application utilisera l API DeepSeek cote serveur."
+      "deepseekDescription": "Selectionnez le mode API DeepSeek a utiliser. Les identifiants appeles restent deepseek-chat et deepseek-reasoner, tous deux mappes sur DeepSeek-V3.2 cote API."
     },
     "prompts": {
       "title": "Configuration des Prompts",

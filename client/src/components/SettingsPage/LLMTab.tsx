@@ -28,8 +28,8 @@ const ANTHROPIC_MODELS = [
 ];
 
 const DEEPSEEK_MODELS = [
-  'deepseek-chat',
-  'deepseek-reasoner'
+  { value: 'deepseek-chat', label: 'DeepSeek-V3.2 - Standard (API: deepseek-chat)' },
+  { value: 'deepseek-reasoner', label: 'DeepSeek-V3.2 - Raisonnement (API: deepseek-reasoner)' }
 ];
 
 const MINIMAX_MODELS = [
@@ -82,7 +82,7 @@ const LLMTab = ({
       onInputChange('llmModel', 'claude-sonnet-4.6');
     }
 
-    if (nextProvider === 'deepseek' && !DEEPSEEK_MODELS.includes(formData.llmModel)) {
+    if (nextProvider === 'deepseek' && !DEEPSEEK_MODELS.some(model => model.value === formData.llmModel)) {
       onInputChange('llmModel', 'deepseek-chat');
     }
 
@@ -102,6 +102,12 @@ const LLMTab = ({
   const handleModelChange = (e: ChangeEvent<HTMLSelectElement>): void => {
     onInputChange('llmModel', e.target.value);
   };
+  const currentModelLabel = useMemo(() => {
+    if (provider === 'deepseek') {
+      return DEEPSEEK_MODELS.find(model => model.value === formData.llmModel)?.label || formData.llmModel;
+    }
+    return formData.llmModel;
+  }, [provider, formData.llmModel]);
 
   const handleCvModeChange = (e: ChangeEvent<HTMLSelectElement>): void => {
     onInputChange('cvMode', e.target.value);
@@ -125,7 +131,7 @@ const LLMTab = ({
           {provider === 'ollama'
             ? fallbackText(t, 'settings.llm.ollamaDescription', 'Configurez uniquement l adresse de votre hote Ollama. Le modele actif sera detecte automatiquement sur votre machine.')
             : provider === 'deepseek'
-              ? fallbackText(t, 'settings.llm.deepseekDescription', 'Selectionnez un modele DeepSeek. L application utilisera l API DeepSeek cote serveur.')
+              ? fallbackText(t, 'settings.llm.deepseekDescription', 'Selectionnez le mode API DeepSeek a utiliser. Les identifiants appeles restent deepseek-chat et deepseek-reasoner, tous deux mappes sur DeepSeek-V3.2 cote API.')
               : provider === 'minimax'
                 ? fallbackText(t, 'settings.llm.minimaxDescription', 'Selectionnez un modele MiniMax. L application utilisera l API MiniMax cote serveur.')
                 : fallbackText(t, 'settings.llm.description', 'Selectionnez le provider et le modele LLM a utiliser pour l analyse et l amelioration des CV.')}
@@ -157,12 +163,15 @@ const LLMTab = ({
             onChange={handleModelChange}
             className="w-full px-4 py-2 border rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 border-gray-300 dark:border-gray-600"
           >
-            {modelOptions.map(model => (
-              <option key={model} value={model}>{model}</option>
-            ))}
+            {modelOptions.map(model => {
+              if (typeof model === 'string') {
+                return <option key={model} value={model}>{model}</option>;
+              }
+              return <option key={model.value} value={model.value}>{model.label}</option>;
+            })}
           </select>
           <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-            {fallbackText(t, 'settings.currentModel', 'Modele actuel')} : <span className="font-semibold">{formData.llmModel}</span>
+            {fallbackText(t, 'settings.currentModel', 'Modele actuel')} : <span className="font-semibold">{currentModelLabel}</span>
           </p>
         </div>
       )}

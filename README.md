@@ -42,7 +42,7 @@ Application professionnelle de gestion et d'analyse de CVs avec intelligence art
 
 ### Chatbot IA
 - **Assistant conversationnel** : Aide à la rédaction et conseils carrière
-- **Multi-modèles** : Support OpenAI (GPT-5, GPT-4o), Anthropic (Claude), DeepSeek (`deepseek-chat`, `deepseek-reasoner`), MiniMax et Ollama distant
+- **Multi-modèles** : Support OpenAI (GPT-5, GPT-4o), Anthropic (Claude), DeepSeek (DeepSeek-V3.2 via `deepseek-chat` et `deepseek-reasoner`), MiniMax et Ollama distant
 - **Contexte CV** : Réponses personnalisées basées sur le profil
 
 ### Administration
@@ -391,8 +391,8 @@ L'application supporte plusieurs fournisseurs LLM :
 - **Claude 3.5 Sonnet** : Fallback économique
 
 ### DeepSeek
-- **deepseek-chat** : chat généraliste
-- **deepseek-reasoner** : raisonnement renforcé, avec sanitation serveur du `reasoning_content`
+- **DeepSeek-V3.2 - Standard** : appelé via l'identifiant API `deepseek-chat`
+- **DeepSeek-V3.2 - Raisonnement** : appelé via l'identifiant API `deepseek-reasoner`, avec sanitation serveur du `reasoning_content`
 
 ### MiniMax
 - **MiniMax-M2.7** : modèle principal côté MiniMax
