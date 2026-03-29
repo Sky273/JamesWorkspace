@@ -1098,7 +1098,7 @@ export const swaggerPaths = {
         post: {
             tags: ['LLM'],
             summary: 'Anthropic proxy',
-            description: 'Proxy requests to Anthropic Claude API (server-side API key)',
+            description: 'Proxy requests to Anthropic Claude API (server-side API key). May also route to Anthropic-compatible upstreams such as MiniMax when configured.',
             security: securityCsrf,
             responses: { 200: { description: 'Anthropic response' }, 401: auth401 }
         }
@@ -1123,6 +1123,7 @@ export const swaggerPaths = {
         get: {
             tags: ['LLM'],
             summary: 'Get circuit breaker status (admin)',
+            description: 'Return circuit-breaker indicators for the configured LLM families: openai, anthropic, deepseek, glm, minimax and ollama.',
             security,
             responses: { 200: { description: 'Circuit breaker states' }, 401: auth401, 403: forbidden403 }
         }
@@ -2191,6 +2192,7 @@ export const swaggerPaths = {
         post: {
             tags: ['LLM'],
             summary: 'Proxy OpenAI-compatible request',
+            description: 'Server-side OpenAI-compatible proxy. Depending on the configured provider and requested model, requests may be routed to OpenAI, DeepSeek, GLM (Z.AI), MiniMax or Ollama.',
             security: securityCsrf,
             responses: { 200: { description: 'OpenAI-compatible response' }, 400: validation400, 401: auth401, 500: error500 }
         }
@@ -2199,6 +2201,7 @@ export const swaggerPaths = {
         post: {
             tags: ['LLM'],
             summary: 'Proxy Anthropic-compatible request',
+            description: 'Server-side Anthropic-compatible proxy. Depending on the configured provider and requested model, requests may be routed to Anthropic or MiniMax.',
             security: securityCsrf,
             responses: { 200: { description: 'Anthropic-compatible response' }, 400: validation400, 401: auth401, 500: error500 }
         }
@@ -2207,6 +2210,7 @@ export const swaggerPaths = {
         post: {
             tags: ['LLM'],
             summary: 'Unified OpenAI-compatible completions proxy',
+            description: 'Unified OpenAI-compatible endpoint for OpenAI, DeepSeek, GLM (Z.AI), MiniMax and Ollama, selected by runtime configuration and model family.',
             security: securityCsrf,
             responses: { 200: { description: 'OpenAI-compatible response' }, 400: validation400, 401: auth401, 500: error500 }
         }
@@ -2215,6 +2219,7 @@ export const swaggerPaths = {
         post: {
             tags: ['LLM'],
             summary: 'Unified Anthropic-compatible messages proxy',
+            description: 'Unified Anthropic-compatible endpoint for Anthropic and Anthropic-compatible upstreams such as MiniMax.',
             security: securityCsrf,
             responses: { 200: { description: 'Anthropic-compatible response' }, 400: validation400, 401: auth401, 500: error500 }
         }
@@ -2223,6 +2228,7 @@ export const swaggerPaths = {
         get: {
             tags: ['LLM'],
             summary: 'Get LLM family circuit-breaker indicators',
+            description: 'Return circuit-breaker indicators for the configured LLM families: openai, anthropic, deepseek, glm, minimax and ollama.',
             security,
             responses: { 200: { description: 'Circuit-breaker indicators' }, 401: auth401, 403: forbidden403 }
         }
