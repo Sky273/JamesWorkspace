@@ -161,6 +161,7 @@ async function scoreBatchWithLLM(profiles, missionKeywords, missionRecord, userM
     }
 
     const isMiniMaxProvider = settings.llmProvider === 'minimax';
+    const supportsStructuredJsonResponse = settings.llmProvider === 'deepseek';
     const BATCH_SIZE = isMiniMaxProvider ? 6 : 12;
     const MAX_CONCURRENCY = isMiniMaxProvider ? 3 : 5;
     const batches = chunkArray(profiles, BATCH_SIZE);
@@ -204,6 +205,7 @@ async function scoreBatchWithLLM(profiles, missionKeywords, missionRecord, userM
             ],
             maxTokens: 2048,
             temperature: 0.3,
+            responseFormat: supportsStructuredJsonResponse ? { type: 'json_object' } : undefined,
             userMetadata,
             operationType: 'Batch Profile Scoring'
         });

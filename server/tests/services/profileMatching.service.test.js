@@ -263,7 +263,9 @@ describe('Profile Matching Service', () => {
             expect(extractionCalls).toHaveLength(0);
         });
 
-        it('should not request responseFormat for batch profile scoring', async () => {
+        it('should not request responseFormat for batch profile scoring with MiniMax', async () => {
+            getLLMSettings.mockResolvedValue({ llmModel: 'MiniMax-M2.7', llmProvider: 'minimax' });
+
             await findMatchingProfiles('mission-1', { limit: 10 });
 
             const scoringCall = callBusinessChatCompletion.mock.calls.find(
@@ -271,7 +273,20 @@ describe('Profile Matching Service', () => {
             );
 
             expect(scoringCall).toBeDefined();
-            expect(scoringCall[0]).not.toHaveProperty('responseFormat');
+            expect(scoringCall[0].responseFormat).toBeUndefined();
+        });
+
+        it('should request responseFormat for batch profile scoring with DeepSeek', async () => {
+            getLLMSettings.mockResolvedValue({ llmModel: 'deepseek-reasoner', llmProvider: 'deepseek' });
+
+            await findMatchingProfiles('mission-1', { limit: 10 });
+
+            const scoringCall = callBusinessChatCompletion.mock.calls.find(
+                call => call[0]?.operationType === 'Batch Profile Scoring'
+            );
+
+            expect(scoringCall).toBeDefined();
+            expect(scoringCall[0].responseFormat).toEqual({ type: 'json_object' });
         });
 
         it('should filter resumes by firm_id when a firm is provided', async () => {
