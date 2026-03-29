@@ -130,7 +130,7 @@ export async function initializeLLMAvailabilityState({ forceRefresh = false } = 
 
             return normalizedState;
         } catch (error) {
-            availabilityStateInitialized = true;
+            availabilityStateInitialized = false;
             runtimeUnavailableModels.clear();
             safeLog('error', 'Failed to load persisted LLM availability state', {
                 error: error.message

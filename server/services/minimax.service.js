@@ -131,6 +131,18 @@ function shouldFallbackFromMiniMaxHighspeed(error) {
     return status === 500 || status === 403 || status === 401;
 }
 
+function persistMiniMaxRuntimeUnavailabilityInBackground(model, fallbackModel) {
+    Promise.resolve(
+        markModelUnavailable('minimax', model, 'minimax_highspeed_runtime_unavailable', fallbackModel)
+    ).catch(persistenceError => {
+        safeLog('error', 'Failed to persist MiniMax highspeed runtime unavailability', {
+            model,
+            fallbackModel,
+            error: persistenceError.message
+        });
+    });
+}
+
 export async function callMiniMaxOpenAICompatible({
     model,
     messages,
@@ -203,7 +215,7 @@ export async function callMiniMaxOpenAICompatible({
     } catch (error) {
         const fallbackModel = getMiniMaxStandardFallbackModel(model);
         if (fallbackModel && shouldFallbackFromMiniMaxHighspeed(error)) {
-            await markModelUnavailable('minimax', model, 'minimax_highspeed_runtime_unavailable', fallbackModel);
+            persistMiniMaxRuntimeUnavailabilityInBackground(model, fallbackModel);
             safeLog('warn', 'MiniMax highspeed model failed, retrying with standard variant', {
                 model,
                 fallbackModel,
@@ -327,7 +339,7 @@ export async function callMiniMaxAnthropicCompatible({
     } catch (error) {
         const fallbackModel = getMiniMaxStandardFallbackModel(model);
         if (fallbackModel && shouldFallbackFromMiniMaxHighspeed(error)) {
-            await markModelUnavailable('minimax', model, 'minimax_highspeed_runtime_unavailable', fallbackModel);
+            persistMiniMaxRuntimeUnavailabilityInBackground(model, fallbackModel);
             safeLog('warn', 'MiniMax highspeed model failed on Anthropic-compatible route, retrying with standard variant', {
                 model,
                 fallbackModel,

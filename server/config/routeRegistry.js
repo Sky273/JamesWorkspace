@@ -35,7 +35,6 @@ import usersRoutes from '../routes/users.routes.js';
 import chatbotRoutes from '../routes/chatbot.routes.js';
 import marketRadarRoutes from '../routes/marketRadar.routes.js';
 import romeRoutes from '../routes/rome.routes.js';
-import docsRoutes from '../routes/docs.routes.js';
 import clientsRoutes from '../routes/clients.routes.js';
 import resumeSubmissionsRoutes from '../routes/resumeSubmissions.routes.js';
 import mailRoutes from '../routes/mail.routes.js';
@@ -265,9 +264,6 @@ export function registerApiRoutes(app) {
 
     // Rome 4.0 routes
     app.use('/api/rome', romeRoutes);
-
-    // API Documentation routes
-    app.use('/api/docs', docsRoutes);
 
     // Clients routes
     app.use('/api/clients', clientsRoutes);

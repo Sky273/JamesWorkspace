@@ -113,6 +113,38 @@ describe('llmAvailability.service', () => {
         });
     });
 
+    it('retries loading persisted availability state after a transient initialization failure', async () => {
+        mockSelectWithTimeout
+            .mockRejectedValueOnce(new Error('temporary db failure'))
+            .mockResolvedValueOnce([{
+                llm_availability_state: {
+                    minimax: {
+                        runtimeUnavailableModels: [{
+                            model: 'MiniMax-M2.7-highspeed',
+                            reason: 'minimax_highspeed_runtime_unavailable',
+                            fallbackModel: 'MiniMax-M2.7'
+                        }]
+                    }
+                }
+            }]);
+
+        await initializeLLMAvailabilityState();
+        expect(getProviderAvailabilityFlags()).toEqual({
+            minimax: {
+                highspeedEnabled: false,
+                runtimeUnavailableModels: []
+            }
+        });
+
+        await initializeLLMAvailabilityState();
+        expect(getProviderAvailabilityFlags()).toEqual({
+            minimax: {
+                highspeedEnabled: false,
+                runtimeUnavailableModels: ['MiniMax-M2.7-highspeed']
+            }
+        });
+    });
+
     it('persists runtime-unavailable models after marking them', async () => {
         mockSelectWithTimeout
             .mockResolvedValueOnce([])
