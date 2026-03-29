@@ -62,7 +62,6 @@ describe('OpenAI Resume Operations', () => {
             expect(result.name).toBe('John Doe');
             expect(result.globalRating).toBe('85%');
             expect(result.tags.skills).toContain('React');
-            // Legacy format preserved
             expect(result['Global Rating']).toBe('85%');
             expect(result['Top Skills']).toContain('React');
         });
@@ -163,7 +162,7 @@ describe('OpenAI Resume Operations', () => {
             });
 
             const result = await improveResume(
-                'A'.repeat(200), // min 100 chars
+                'A'.repeat(200),
                 { name: 'John' },
                 'gpt-4o',
                 '{TEXT} {ANALYSIS} {FILENAME}'
@@ -174,6 +173,56 @@ describe('OpenAI Resume Operations', () => {
             expect(result.analysis.skillsRating).toBe(85);
         });
 
+        it('should prefer structured HTML over flattened improvedText when both are present', async () => {
+            callBusinessChatCompletion.mockResolvedValueOnce({
+                choices: [{
+                    message: {
+                        content: JSON.stringify({
+                            improvedText: 'Experiences Professionnelles Consultant Senior',
+                            structuredText: '<h2>Experiences Professionnelles</h2><h4>Consultant Senior</h4><ul><li>Mission cle</li></ul>',
+                            improvements: { overall: 88 },
+                            summary: {}
+                        })
+                    }
+                }]
+            });
+
+            const result = await improveResume(
+                '<h2>Experiences Professionnelles</h2><p>Source</p>'.repeat(5),
+                {},
+                'gpt-4o',
+                '{TEXT} {ANALYSIS} {FILENAME}'
+            );
+
+            expect(result.text).toContain('<h2>Experiences Professionnelles</h2>');
+            expect(result.text).toContain('<h4>Consultant Senior</h4>');
+        });
+
+
+        it('should ignore flat text fields when any HTML field is present in the LLM payload', async () => {
+            callBusinessChatCompletion.mockResolvedValueOnce({
+                choices: [{
+                    message: {
+                        content: JSON.stringify({
+                            improvedText: 'Version texte aplatie',
+                            text: 'Autre version texte',
+                            html: '<h2>Competences</h2><ul><li>Architecture</li></ul>',
+                            improvements: { overall: 91 },
+                            summary: {}
+                        })
+                    }
+                }]
+            });
+
+            const result = await improveResume(
+                '<h2>Competences</h2><p>Source</p>'.repeat(5),
+                {},
+                'gpt-4o',
+                '{TEXT} {ANALYSIS} {FILENAME}'
+            );
+
+            expect(result.text).toBe('<h2>Competences</h2><ul><li>Architecture</li></ul>');
+        });
         it('should handle HTML fallback response', async () => {
             callBusinessChatCompletion.mockResolvedValueOnce({
                 choices: [{
@@ -233,3 +282,4 @@ describe('OpenAI Resume Operations', () => {
         });
     });
 });
+

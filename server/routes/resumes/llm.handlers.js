@@ -361,15 +361,14 @@ export async function improveHandler(req, res) {
             fileName: fileNameValue
         });
 
-        // Clean up text before improvement (removes HTML tags for cleaner LLM processing)
-        const cleanedText = cleanupText(text);
-        safeLog('debug', 'Text cleaned before improvement', { 
-            originalLength: text.length, 
-            cleanedLength: cleanedText.length 
+        // Preserve the structured resume markup for improvement; stripping HTML here flattens the CV.
+        safeLog('debug', 'Text prepared before improvement', {
+            originalLength: text.length,
+            containsHtml: /<\/?[a-z][^>]*>/i.test(text)
         });
 
         // Step 1: Improve the resume
-        const improved = await improveResume(cleanedText, analysis, model, improvementPrompt, fileName || null, userMetadata);
+        const improved = await improveResume(text, analysis, model, improvementPrompt, fileName || null, userMetadata);
         
         // Do not trigger a second LLM call here.
         // The improvement response is already the completion of this operation.
@@ -422,6 +421,14 @@ export async function improveHandler(req, res) {
             });
             savedResume = mapResumeToFrontend(updatedRecord);
             finalAnalysis = postImprovementAnalysis;
+        }
+
+        if (text && /<\/?[a-z][^>]*>/i.test(text) && improved.text && !/<\/?[a-z][^>]*>/i.test(improved.text)) {
+            safeLog('warn', 'Improved resume output is plain text despite HTML input', {
+                resumeId: resumeId || null,
+                inputLength: text.length,
+                outputLength: improved.text.length
+            });
         }
 
         safeLog('info', 'Improvement complete with fully persisted post-analysis', {
@@ -502,17 +509,15 @@ export async function improveByIdHandler(req, res) {
         anonymizationRules = anonymizationRules.replace(/{FILENAME}/g, fileNameValue);
         improvementPrompt = improvementPrompt.replace('{ANONYMIZATION_RULES}', anonymizationRules);
 
-        // Clean up text before improvement (removes HTML tags for cleaner LLM processing)
-        const cleanedText = cleanupText(resumeText);
-        safeLog('debug', 'Text cleaned before improvement (by ID)', { 
-            originalLength: resumeText.length, 
-            cleanedLength: cleanedText.length,
+        // Preserve the structured resume markup for improvement; stripping HTML here flattens the CV.
+        safeLog('debug', 'Text prepared before improvement (by ID)', {
+            originalLength: resumeText.length,
+            containsHtml: /<\/?[a-z][^>]*>/i.test(resumeText),
             cvMode,
             fileName: fileNameValue
         });
         
-        const improved = await improveResume(cleanedText, analysis, model, improvementPrompt, originalFileName, userMetadata);
-        
+        const improved = await improveResume(resumeText, analysis, model, improvementPrompt, originalFileName, userMetadata);
         // Recalculate globalRating based on admin-defined weights
         if (improved.analysis) {
             improved.analysis = await calculateWeightedGlobalRating(improved.analysis, settings);
@@ -705,4 +710,10 @@ export async function adaptHandler(req, res) {
         handleLLMError(error, res, 'adapting resume to mission');
     }
 }
+
+
+
+
+
+
 

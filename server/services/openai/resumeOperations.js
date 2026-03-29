@@ -78,6 +78,54 @@ function extractStructuredSummaryText(summary) {
     return parts.join(' - ').trim();
 }
 
+function looksLikeHtml(value) {
+    return typeof value === 'string' && /<\/?[a-z][^>]*>/i.test(value);
+}
+
+function collectImprovementCandidates(...candidates) {
+    return candidates
+        .filter(candidate => typeof candidate === 'string')
+        .map(candidate => candidate.trim())
+        .filter(Boolean);
+}
+
+function pickImprovedHtmlCandidate(...candidates) {
+    const normalizedCandidates = collectImprovementCandidates(...candidates);
+    const htmlCandidate = normalizedCandidates.find(looksLikeHtml);
+    return htmlCandidate || normalizedCandidates[0] || '';
+}
+
+function finalizeImprovedOutput({ sourceText, selectedText, htmlAlternatives = [], context = {} }) {
+    const normalizedSelected = typeof selectedText === 'string' ? cleanupHtml(selectedText) : '';
+    const normalizedAlternatives = collectImprovementCandidates(...htmlAlternatives).map(candidate => cleanupHtml(candidate));
+    const bestHtmlAlternative = normalizedAlternatives.find(looksLikeHtml) || '';
+    const sourceLooksLikeHtml = looksLikeHtml(sourceText);
+    const selectedLooksLikeHtml = looksLikeHtml(normalizedSelected);
+
+    if (!normalizedSelected) {
+        return normalizedSelected;
+    }
+
+    if (!selectedLooksLikeHtml && bestHtmlAlternative) {
+        safeLog('warn', 'LLM improvement output was flattened; using structured HTML alternative', {
+            ...context,
+            selectedLength: normalizedSelected.length,
+            alternativeLength: bestHtmlAlternative.length
+        });
+        return bestHtmlAlternative;
+    }
+
+    if (!selectedLooksLikeHtml && sourceLooksLikeHtml) {
+        safeLog('warn', 'LLM improvement output lost HTML structure with no structured fallback available', {
+            ...context,
+            selectedLength: normalizedSelected.length,
+            sourceLength: sourceText.length
+        });
+    }
+
+    return normalizedSelected;
+}
+
 function extractImprovementEnvelope(parsed) {
     const nestedImprovedCv = parsed?.improvedCV && typeof parsed.improvedCV === 'object' ? parsed.improvedCV : {};
     const nestedImprovedResume = parsed?.improvedResume && typeof parsed.improvedResume === 'object' ? parsed.improvedResume : {};
@@ -88,15 +136,32 @@ function extractImprovementEnvelope(parsed) {
             ? nestedImprovedResume
             : nestedResume;
 
+    const htmlCandidates = collectImprovementCandidates(
+        parsed?.structuredText,
+        envelope?.structuredText,
+        parsed?.html,
+        envelope?.html,
+        parsed?.improvedText,
+        envelope?.improvedText,
+        parsed?.content,
+        envelope?.content,
+        parsed?.text,
+        envelope?.text
+    ).filter(looksLikeHtml);
+
+    const textCandidates = collectImprovementCandidates(
+        parsed?.improvedText,
+        envelope?.improvedText,
+        parsed?.content,
+        envelope?.content,
+        parsed?.text,
+        envelope?.text
+    );
+
     return {
         envelope,
-        improvedText: parsed?.improvedText
-            || envelope?.improvedText
-            || envelope?.structuredText
-            || envelope?.html
-            || envelope?.content
-            || envelope?.text
-            || '',
+        improvedText: htmlCandidates[0] || textCandidates[0] || '',
+        htmlAlternatives: htmlCandidates,
         summary: parsed?.summary || envelope?.summary || {},
         improvements: parsed?.improvements || parsed?.scores || parsed?.analysis || envelope?.improvements || envelope?.scores || envelope?.analysis || {},
         tags: parsed?.tags || envelope?.tags || {},
@@ -160,15 +225,7 @@ function normalizeSuggestionsBySection(source) {
     };
 }
 
-/**
- * Normalize analysis response to ensure consistent format regardless of model
- * GPT-5 models sometimes return different field names than expected
- * @param {Object} analysis - Raw analysis from LLM
- * @returns {Object} - Normalized analysis object
- */
 function normalizeAnalysisResponse(analysis) {
-    // Normalize field names (GPT-5 sometimes uses different formats)
-    // Check multiple possible key names for hobbies/languages rating
     const hobbiesRating = analysis.hobbiesLanguagesRating 
         || analysis['Hobbies Languages'] 
         || analysis['hobbiesLanguages']
@@ -199,7 +256,6 @@ function normalizeAnalysisResponse(analysis) {
         suggestions: normalizedSuggestions
     };
     
-    // Also preserve the original flat format for backward compatibility
     normalized['Global Rating'] = normalized.globalRating;
     normalized['Executive Summary'] = normalized.executiveSummaryRating;
     normalized['Skills'] = normalized.skillsRating;
@@ -211,11 +267,9 @@ function normalizeAnalysisResponse(analysis) {
     normalized['Top Industries'] = normalized.tags.industries;
     normalized['Top Tools'] = normalized.tags.tools;
     normalized['Top Soft Skills'] = normalized.tags.softSkills;
-    // Preserve suggestions structure by section for display in OverviewTab
     normalized['Key Improvements'] = normalized.suggestions;
     normalized['Summary'] = analysis['Summary'] || analysis.summary || '';
     
-    // Preserve structuredText if provided by LLM (HTML-formatted version of the CV)
     if (analysis.structuredText) {
         normalized.structuredText = analysis.structuredText;
     }
@@ -223,27 +277,15 @@ function normalizeAnalysisResponse(analysis) {
     return normalized;
 }
 
-/**
- * Analyze a resume using OpenAI
- * @param {string} resumeText - The resume text to analyze
- * @param {string} model - OpenAI model to use
- * @param {string} analysisPrompt - The analysis prompt template
- * @param {Object} userMetadata - User metadata for logging
- * @param {boolean} isImprovedCV - Whether this is an improved CV (for logging purposes only)
- * @param {string} originalFileName - Original file name for name extraction hint
- * @returns {Promise<Object>} - Parsed analysis result
- */
 export async function analyzeResume(resumeText, model, analysisPrompt, userMetadata = null, isImprovedCV = false, originalFileName = null) {
     let prompt = analysisPrompt.replace('{TEXT}', resumeText);
     
-    // Inject original filename if available (helps LLM determine candidate name)
     if (originalFileName) {
         prompt = prompt.replace('{FILENAME}', originalFileName);
     } else {
         prompt = prompt.replace('{FILENAME}', 'Non disponible');
     }
     
-    // Agnostic system message - same for all CVs
     const systemMessage = 'You are a JSON-only resume analysis API. Respond with valid JSON only.';
 
     const response = await callBusinessChatCompletion({
@@ -271,7 +313,6 @@ export async function analyzeResume(resumeText, model, analysisPrompt, userMetad
         throw new Error(normalizeUtf8Text('Le mod\u00e8le LLM a retourn\u00e9 une r\u00e9ponse invalide. Veuillez r\u00e9essayer ou contacter le support si le probl\u00e8me persiste.'));
 }
     
-    // Debug logging to track tags and ratings
     safeLog('debug', 'Raw analysis from LLM', {
         allKeys: Object.keys(rawAnalysis),
         hasTags: !!rawAnalysis.tags,
@@ -299,16 +340,6 @@ export async function analyzeResume(resumeText, model, analysisPrompt, userMetad
     return normalized;
 }
 
-/**
- * Improve resume text using OpenAI
- * @param {string} text - Resume text to improve
- * @param {Object} analysis - Analysis data
- * @param {string} model - OpenAI model to use
- * @param {string} improvementPromptTemplate - Improvement prompt template
- * @param {string} originalFileName - Original file name for name extraction hint
- * @param {Object} userMetadata - User metadata for logging
- * @returns {Promise<string>} - Improved resume text
- */
 export async function improveResume(text, analysis, model, improvementPromptTemplate, originalFileName = null, userMetadata = null) {
     const analysisJson = JSON.stringify(analysis, null, 2);
     const fileNameValue = originalFileName || 'Non disponible';
@@ -320,7 +351,6 @@ export async function improveResume(text, analysis, model, improvementPromptTemp
         .replace(/{FILENAME}/g, fileNameValue)
         .replace(/{filename}/g, fileNameValue);
 
-    // Debug: Log the full prompt sent to LLM (dev mode only)
     if (process.env.NODE_ENV === 'development' || process.env.DEBUG_LLM === 'true') {
         safeLog('debug', '========== LLM IMPROVEMENT PROMPT DEBUG ==========');
         safeLog('debug', 'Model:', { model });
@@ -330,7 +360,6 @@ export async function improveResume(text, analysis, model, improvementPromptTemp
         safeLog('debug', '--- END PROMPT ---');
     }
 
-    // Validate input text before calling LLM
     if (!text || text.trim().length < 100) {
         safeLog('error', 'Improvement input text too short', { 
             textLength: text?.length || 0,
@@ -345,9 +374,9 @@ export async function improveResume(text, analysis, model, improvementPromptTemp
             { role: 'system', content: 'You are a professional resume improvement assistant. You MUST respond with valid JSON only, following the exact structure specified in the user prompt. Do not include any text outside the JSON object.' },
             { role: 'user', content: improvementPrompt }
         ],
-        maxTokens: 16384,  // Increased from 8192 to handle longer CVs
+        maxTokens: 16384,
         temperature: 0.3,
-        timeout: 300000,   // 5 minutes for complex CVs
+        timeout: 300000,
         userMetadata,
         operationType: 'Resume Improvement'
     });
@@ -428,10 +457,12 @@ export async function improveResume(text, analysis, model, improvementPromptTemp
 }
     }
 
-    // Fallback: if response is plain HTML, return with empty analysis
-    const cleanedText = cleanupHtml(rawContent);
+    const cleanedText = finalizeImprovedOutput({
+        sourceText: text,
+        selectedText: rawContent,
+        context: { fallback: true }
+    });
     
-    // Validate fallback content is not empty
     if (!cleanedText || cleanedText.trim().length === 0) {
         safeLog('error', 'LLM returned empty content in fallback (non-JSON) response', {
             rawContentLength: rawContent?.length || 0,
@@ -458,8 +489,5 @@ export async function improveResume(text, analysis, model, improvementPromptTemp
         }
     };
 }
-
-
-
 
 

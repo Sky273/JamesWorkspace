@@ -48,6 +48,11 @@ vi.mock('../../services/industry.service.js', () => ({
     getIndustryMappingString: vi.fn(() => '- Informatique, Tech → IT\n- Banque → Finance')
 }));
 
+vi.mock('../../services/resumeVersions.service.js', () => ({
+    createVersion: vi.fn(),
+    hasImprovedTextChanged: vi.fn(() => false)
+}));
+
 vi.mock('../../routes/resumes/helpers.js', () => ({
     mapResumeToFrontend: vi.fn(record => record)
 }));
@@ -178,7 +183,7 @@ describe('LLM Handlers', () => {
 
             await improveHandler(req, res);
 
-            expect(mockImproveResume).toHaveBeenCalled();
+            expect(mockImproveResume).toHaveBeenCalledWith('CV text', expect.any(Object), 'gpt-4o', expect.any(String), null, expect.any(Object));
             expect(mockAnalyzeResume).not.toHaveBeenCalled();
             const result = res.json.mock.calls[0][0];
             expect(result.text).toBe('<p>improved</p>');
@@ -218,7 +223,7 @@ describe('LLM Handlers', () => {
 
             await improveByIdHandler(req, res);
 
-            expect(mockImproveResume).toHaveBeenCalled();
+            expect(mockImproveResume).toHaveBeenCalledWith('Original text', expect.any(Object), 'gpt-4o', expect.any(String), 'Bob', expect.any(Object));
             expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ text: '<p>better</p>' }));
         });
     });
@@ -277,3 +282,5 @@ describe('LLM Handlers', () => {
         });
     });
 });
+
+

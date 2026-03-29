@@ -17,6 +17,10 @@ const llmQueue = [];
 // Track queue health for debugging
 let _lastLLMActivity = Date.now();
 
+function looksLikeHtml(value) {
+    return typeof value === 'string' && /<\/?[a-z][^>]*>/i.test(value);
+}
+
 /**
  * Acquire a slot for LLM request (rate limiting)
  * @returns {Promise<void>}
@@ -152,15 +156,15 @@ export async function improveResumeWithLLM(text, analysis, _firmId, originalFile
     anonymizationRules = anonymizationRules.replace(/{FILENAME}/g, fileNameValue);
     improvementPrompt = improvementPrompt.replace('{ANONYMIZATION_RULES}', anonymizationRules);
 
-    // Clean text
-    const cleanedText = cleanupText(text);
+    // Preserve the structured resume markup for improvement; stripping HTML here flattens the CV.
+    const improvementInput = typeof text === 'string' ? text : '';
 
     // Acquire LLM slot for improvement (rate limiting)
     await acquireLLMSlot();
     let improveResult;
     try {
         // improveResume returns { text, analysis } object
-        improveResult = await improveResume(cleanedText, analysis, model, improvementPrompt, originalFileName);
+        improveResult = await improveResume(improvementInput, analysis, model, improvementPrompt, originalFileName);
     } finally {
         releaseLLMSlot();
     }
@@ -171,6 +175,13 @@ export async function improveResumeWithLLM(text, analysis, _firmId, originalFile
     // Validate that we have actual content (not null, undefined, or empty string)
     if (!improvedText || improvedText.trim().length === 0) {
         throw new Error('L\'amélioration LLM a retourné un texte vide. Le CV n\'a pas pu être amélioré.');
+    }
+
+    if (looksLikeHtml(text) && !looksLikeHtml(improvedText)) {
+        safeLog('warn', 'Batch improvement output is plain text despite HTML input', {
+            inputLength: text.length,
+            outputLength: improvedText.length
+        });
     }
 
     safeLog('debug', 'Improvement result received', {
@@ -211,4 +222,9 @@ export async function improveResumeWithLLM(text, analysis, _firmId, originalFile
         analysis: improvedAnalysis
     };
 }
+
+
+
+
+
 
