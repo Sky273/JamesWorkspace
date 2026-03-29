@@ -56,6 +56,14 @@ export const PROFILE_MATCHING_LLM_BATCH_SIZE = Math.min(
     Math.max(parseInt(process.env.PROFILE_MATCHING_LLM_BATCH_SIZE || '0', 10) || 0, 0),
     100
 );
+export const PROFILE_MATCHING_LOCAL_SKILL_WEIGHT = Math.max(parseInt(process.env.PROFILE_MATCHING_LOCAL_SKILL_WEIGHT || '6', 10) || 6, 0);
+export const PROFILE_MATCHING_LOCAL_TOOL_WEIGHT = Math.max(parseInt(process.env.PROFILE_MATCHING_LOCAL_TOOL_WEIGHT || '4', 10) || 4, 0);
+export const PROFILE_MATCHING_LOCAL_INDUSTRY_WEIGHT = Math.max(parseInt(process.env.PROFILE_MATCHING_LOCAL_INDUSTRY_WEIGHT || '3', 10) || 3, 0);
+export const PROFILE_MATCHING_LOCAL_SOFTSKILL_WEIGHT = Math.max(parseInt(process.env.PROFILE_MATCHING_LOCAL_SOFTSKILL_WEIGHT || '2', 10) || 2, 0);
+export const PROFILE_MATCHING_LOCAL_TITLE_EXACT_WEIGHT = Math.max(parseInt(process.env.PROFILE_MATCHING_LOCAL_TITLE_EXACT_WEIGHT || '5', 10) || 5, 0);
+export const PROFILE_MATCHING_LOCAL_TITLE_TOKEN_WEIGHT = Math.max(parseInt(process.env.PROFILE_MATCHING_LOCAL_TITLE_TOKEN_WEIGHT || '2', 10) || 2, 0);
+export const PROFILE_MATCHING_LOCAL_COVERAGE_MULTIPLIER = Math.max(parseInt(process.env.PROFILE_MATCHING_LOCAL_COVERAGE_MULTIPLIER || '3', 10) || 3, 0);
+export const LLM_RUNTIME_UNAVAILABLE_TTL_MS = Math.max(parseInt(process.env.LLM_RUNTIME_UNAVAILABLE_TTL_MS || `${6 * 60 * 60 * 1000}`, 10) || (6 * 60 * 60 * 1000), 60 * 1000);
 
 // Market Radar - France Travail API (OAuth2)
 export const FRANCE_TRAVAIL_CLIENT_ID = process.env.FRANCE_TRAVAIL_CLIENT_ID;

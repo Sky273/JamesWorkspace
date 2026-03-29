@@ -18,7 +18,14 @@ vi.mock('../../config/constants.js', () => ({
     MAX_PROMPT_LENGTH: 100000,
     MAX_STRING_FIELD_LENGTH: 1000,
     RATE_LIMIT: { AUTH: { windowMs: 900000, max: 20 }, USER: { windowMs: 900000, max: 50 } },
-    MAX_LOGS: 1000
+    MAX_LOGS: 1000,
+    PROFILE_MATCHING_LOCAL_SKILL_WEIGHT: 6,
+    PROFILE_MATCHING_LOCAL_TOOL_WEIGHT: 4,
+    PROFILE_MATCHING_LOCAL_INDUSTRY_WEIGHT: 3,
+    PROFILE_MATCHING_LOCAL_SOFTSKILL_WEIGHT: 2,
+    PROFILE_MATCHING_LOCAL_TITLE_EXACT_WEIGHT: 5,
+    PROFILE_MATCHING_LOCAL_TITLE_TOKEN_WEIGHT: 2,
+    PROFILE_MATCHING_LOCAL_COVERAGE_MULTIPLIER: 3
 }));
 
 
@@ -112,6 +119,13 @@ vi.mock('../../utils/mappers.js', () => ({
         'Education Weight': settings.education_weight ?? settings['Education Weight'] ?? 15,
         'ATS Weight': settings.ats_weight ?? settings['ATS Weight'] ?? 15,
         'Hobbies Languages Weight': settings.hobbies_languages_weight ?? settings['Hobbies Languages Weight'] ?? 10,
+        'Profile Matching Local Skill Weight': settings.profile_matching_local_skill_weight ?? settings['Profile Matching Local Skill Weight'] ?? 6,
+        'Profile Matching Local Tool Weight': settings.profile_matching_local_tool_weight ?? settings['Profile Matching Local Tool Weight'] ?? 4,
+        'Profile Matching Local Industry Weight': settings.profile_matching_local_industry_weight ?? settings['Profile Matching Local Industry Weight'] ?? 3,
+        'Profile Matching Local Soft Skill Weight': settings.profile_matching_local_softskill_weight ?? settings['Profile Matching Local Soft Skill Weight'] ?? 2,
+        'Profile Matching Local Title Exact Weight': settings.profile_matching_local_title_exact_weight ?? settings['Profile Matching Local Title Exact Weight'] ?? 5,
+        'Profile Matching Local Title Token Weight': settings.profile_matching_local_title_token_weight ?? settings['Profile Matching Local Title Token Weight'] ?? 2,
+        'Profile Matching Local Coverage Multiplier': settings.profile_matching_local_coverage_multiplier ?? settings['Profile Matching Local Coverage Multiplier'] ?? 3,
         'DPO Name': settings.dpo_name ?? settings['DPO Name'] ?? '',
         'DPO Email': settings.dpo_email ?? settings['DPO Email'] ?? '',
         'DPO Phone': settings.dpo_phone ?? settings['DPO Phone'] ?? ''
@@ -235,6 +249,7 @@ describe('Settings Routes', () => {
             expect(res.body.id).toBeNull();
             expect(res.body.llmModel).toBeNull();
             expect(res.body['Analysis Prompt']).toBe('default-analysis');
+            expect(res.body['Profile Matching Local Skill Weight']).toBe(6);
         });
 
         it('should return 401 without auth', async () => {

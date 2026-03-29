@@ -1103,6 +1103,13 @@ export const updateSettingsSchema = z.object({
   'Education Weight': z.coerce.number().min(0).max(100).optional(),
   'Hobbies Languages Weight': z.coerce.number().min(0).max(100).optional(),
   'ATS Weight': z.coerce.number().min(0).max(100).optional(),
+  'Profile Matching Local Skill Weight': z.coerce.number().min(0).max(100).optional(),
+  'Profile Matching Local Tool Weight': z.coerce.number().min(0).max(100).optional(),
+  'Profile Matching Local Industry Weight': z.coerce.number().min(0).max(100).optional(),
+  'Profile Matching Local Soft Skill Weight': z.coerce.number().min(0).max(100).optional(),
+  'Profile Matching Local Title Exact Weight': z.coerce.number().min(0).max(100).optional(),
+  'Profile Matching Local Title Token Weight': z.coerce.number().min(0).max(100).optional(),
+  'Profile Matching Local Coverage Multiplier': z.coerce.number().min(0).max(100).optional(),
   'DPO Name': z.string().optional(),
   'DPO Email': z.string().optional(),
   'DPO Phone': z.string().optional()

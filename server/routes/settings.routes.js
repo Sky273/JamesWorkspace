@@ -10,6 +10,15 @@ import { safeLog } from '../utils/logger.backend.js';
 import { mapSettingsToFrontend, mapSettingsFromFrontend } from '../utils/mappers.js';
 import { getProviderAvailabilityFlags, resolveAvailableModel } from '../services/llmAvailability.service.js';
 import { getProviderDefaultModel } from '../services/llmConfiguration.service.js';
+import {
+    PROFILE_MATCHING_LOCAL_SKILL_WEIGHT,
+    PROFILE_MATCHING_LOCAL_TOOL_WEIGHT,
+    PROFILE_MATCHING_LOCAL_INDUSTRY_WEIGHT,
+    PROFILE_MATCHING_LOCAL_SOFTSKILL_WEIGHT,
+    PROFILE_MATCHING_LOCAL_TITLE_EXACT_WEIGHT,
+    PROFILE_MATCHING_LOCAL_TITLE_TOKEN_WEIGHT,
+    PROFILE_MATCHING_LOCAL_COVERAGE_MULTIPLIER
+} from '../config/constants.js';
 
 const router = express.Router();
 
@@ -74,6 +83,13 @@ function mergeCanonicalLlmSettings(settingsData, canonicalLlmSettings = {}) {
         'Education Weight': canonicalLlmSettings['Education Weight'] ?? settingsData['Education Weight'],
         'ATS Weight': canonicalLlmSettings['ATS Weight'] ?? settingsData['ATS Weight'],
         'Hobbies Languages Weight': canonicalLlmSettings['Hobbies Languages Weight'] ?? settingsData['Hobbies Languages Weight'],
+        'Profile Matching Local Skill Weight': canonicalLlmSettings['Profile Matching Local Skill Weight'] ?? settingsData['Profile Matching Local Skill Weight'],
+        'Profile Matching Local Tool Weight': canonicalLlmSettings['Profile Matching Local Tool Weight'] ?? settingsData['Profile Matching Local Tool Weight'],
+        'Profile Matching Local Industry Weight': canonicalLlmSettings['Profile Matching Local Industry Weight'] ?? settingsData['Profile Matching Local Industry Weight'],
+        'Profile Matching Local Soft Skill Weight': canonicalLlmSettings['Profile Matching Local Soft Skill Weight'] ?? settingsData['Profile Matching Local Soft Skill Weight'],
+        'Profile Matching Local Title Exact Weight': canonicalLlmSettings['Profile Matching Local Title Exact Weight'] ?? settingsData['Profile Matching Local Title Exact Weight'],
+        'Profile Matching Local Title Token Weight': canonicalLlmSettings['Profile Matching Local Title Token Weight'] ?? settingsData['Profile Matching Local Title Token Weight'],
+        'Profile Matching Local Coverage Multiplier': canonicalLlmSettings['Profile Matching Local Coverage Multiplier'] ?? settingsData['Profile Matching Local Coverage Multiplier'],
         llmAvailability: canonicalLlmSettings.llmAvailability ?? settingsData.llmAvailability
     };
 }
@@ -114,7 +130,14 @@ router.get('/', authenticateToken, async (req, res) => {
                 'Experience Weight': 20,
                 'Education Weight': 15,
                 'ATS Weight': 15,
-                'Hobbies Languages Weight': 10
+                'Hobbies Languages Weight': 10,
+                'Profile Matching Local Skill Weight': PROFILE_MATCHING_LOCAL_SKILL_WEIGHT,
+                'Profile Matching Local Tool Weight': PROFILE_MATCHING_LOCAL_TOOL_WEIGHT,
+                'Profile Matching Local Industry Weight': PROFILE_MATCHING_LOCAL_INDUSTRY_WEIGHT,
+                'Profile Matching Local Soft Skill Weight': PROFILE_MATCHING_LOCAL_SOFTSKILL_WEIGHT,
+                'Profile Matching Local Title Exact Weight': PROFILE_MATCHING_LOCAL_TITLE_EXACT_WEIGHT,
+                'Profile Matching Local Title Token Weight': PROFILE_MATCHING_LOCAL_TITLE_TOKEN_WEIGHT,
+                'Profile Matching Local Coverage Multiplier': PROFILE_MATCHING_LOCAL_COVERAGE_MULTIPLIER
             }), canonicalLlmSettings);
 
             return res.json(defaultSettings);
@@ -153,6 +176,13 @@ router.get('/defaults', authenticateToken, requireAdmin, (req, res) => {
         'Education Weight': 15,
         'ATS Weight': 15,
         'Hobbies Languages Weight': 10,
+        'Profile Matching Local Skill Weight': PROFILE_MATCHING_LOCAL_SKILL_WEIGHT,
+        'Profile Matching Local Tool Weight': PROFILE_MATCHING_LOCAL_TOOL_WEIGHT,
+        'Profile Matching Local Industry Weight': PROFILE_MATCHING_LOCAL_INDUSTRY_WEIGHT,
+        'Profile Matching Local Soft Skill Weight': PROFILE_MATCHING_LOCAL_SOFTSKILL_WEIGHT,
+        'Profile Matching Local Title Exact Weight': PROFILE_MATCHING_LOCAL_TITLE_EXACT_WEIGHT,
+        'Profile Matching Local Title Token Weight': PROFILE_MATCHING_LOCAL_TITLE_TOKEN_WEIGHT,
+        'Profile Matching Local Coverage Multiplier': PROFILE_MATCHING_LOCAL_COVERAGE_MULTIPLIER,
         'DPO Name': '',
         'DPO Email': '',
         'DPO Phone': ''

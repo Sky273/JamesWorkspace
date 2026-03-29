@@ -4,6 +4,20 @@ import { buildLLMMetricLabel, metrics } from './metrics.service.js';
 import { extractTextFromContentBlocks } from './llmContent.service.js';
 import { normalizeAnthropicContent } from './llmProviderCommon.service.js';
 import { buildCapabilityAwareAnthropicOptions } from './llmPayloadCapabilities.service.js';
+import { markModelUnavailable } from './llmAvailability.service.js';
+import { inferProviderFallbackModel } from './llmConfiguration.service.js';
+
+function shouldMarkAnthropicModelUnavailable(error) {
+    const status = error?.response?.status;
+    const message = String(error?.response?.data?.error?.message || error?.message || '').toLowerCase();
+
+    return status === 403
+        || status === 404
+        || ((status === 400 || status === 422) && (
+            message.includes('model')
+            && (message.includes('not found') || message.includes('not exist') || message.includes('permission') || message.includes('access'))
+        ));
+}
 
 export async function callAnthropicChat(messages, model, options = {}) {
     if (!ANTHROPIC_API_KEY) {
@@ -45,36 +59,44 @@ export async function callAnthropicChat(messages, model, options = {}) {
         requestBody.top_p = normalized.topP;
     }
 
-    const response = await axios.post(
-        'https://api.anthropic.com/v1/messages',
-        requestBody,
-        {
-            headers: {
-                'x-api-key': ANTHROPIC_API_KEY,
-                'anthropic-version': '2023-06-01',
-                'Content-Type': 'application/json'
-            },
-            timeout: 300000
+    try {
+        const response = await axios.post(
+            'https://api.anthropic.com/v1/messages',
+            requestBody,
+            {
+                headers: {
+                    'x-api-key': ANTHROPIC_API_KEY,
+                    'anthropic-version': '2023-06-01',
+                    'Content-Type': 'application/json'
+                },
+                timeout: 300000
+            }
+        );
+
+        const usage = response.data.usage || {};
+        const inputTokens = usage.input_tokens || 0;
+        const outputTokens = usage.output_tokens || 0;
+        const totalTokens = inputTokens + outputTokens;
+        metrics.trackLLMRequest(buildLLMMetricLabel('anthropic', model), totalTokens, true, inputTokens, outputTokens);
+
+        const content = extractTextFromContentBlocks(response.data?.content);
+        if (!content) {
+            throw new Error('Anthropic returned empty content');
         }
-    );
 
-    const usage = response.data.usage || {};
-    const inputTokens = usage.input_tokens || 0;
-    const outputTokens = usage.output_tokens || 0;
-    const totalTokens = inputTokens + outputTokens;
-    metrics.trackLLMRequest(buildLLMMetricLabel('anthropic', model), totalTokens, true, inputTokens, outputTokens);
-
-    const content = extractTextFromContentBlocks(response.data?.content);
-    if (!content) {
-        throw new Error('Anthropic returned empty content');
+        return {
+            content,
+            model,
+            actualModel: response.data.model,
+            usage: response.data.usage
+        };
+    } catch (error) {
+        metrics.trackLLMRequest(buildLLMMetricLabel('anthropic', model), 0, false, 0, 0);
+        if (shouldMarkAnthropicModelUnavailable(error)) {
+            void markModelUnavailable('anthropic', model, 'provider_model_access_denied', inferProviderFallbackModel('anthropic', model));
+        }
+        throw error;
     }
-
-    return {
-        content,
-        model,
-        actualModel: response.data.model,
-        usage: response.data.usage
-    };
 }
 
 export async function callAnthropicVision(systemPrompt, userContent, model, options = {}) {
@@ -122,31 +144,39 @@ export async function callAnthropicVision(systemPrompt, userContent, model, opti
         requestBody.top_p = normalized.topP;
     }
 
-    const response = await axios.post(
-        'https://api.anthropic.com/v1/messages',
-        requestBody,
-        {
-            headers: {
-                'x-api-key': ANTHROPIC_API_KEY,
-                'anthropic-version': '2023-06-01',
-                'Content-Type': 'application/json'
-            },
-            timeout: 600000
+    try {
+        const response = await axios.post(
+            'https://api.anthropic.com/v1/messages',
+            requestBody,
+            {
+                headers: {
+                    'x-api-key': ANTHROPIC_API_KEY,
+                    'anthropic-version': '2023-06-01',
+                    'Content-Type': 'application/json'
+                },
+                timeout: 600000
+            }
+        );
+
+        const usage = response.data.usage || {};
+        metrics.trackLLMRequest(buildLLMMetricLabel('anthropic', model), (usage.input_tokens || 0) + (usage.output_tokens || 0), true, usage.input_tokens || 0, usage.output_tokens || 0);
+
+        const content = extractTextFromContentBlocks(response.data?.content);
+        if (!content) {
+            throw new Error('Anthropic vision returned empty content');
         }
-    );
 
-    const usage = response.data.usage || {};
-    metrics.trackLLMRequest(buildLLMMetricLabel('anthropic', model), (usage.input_tokens || 0) + (usage.output_tokens || 0), true, usage.input_tokens || 0, usage.output_tokens || 0);
-
-    const content = extractTextFromContentBlocks(response.data?.content);
-    if (!content) {
-        throw new Error('Anthropic vision returned empty content');
+        return {
+            content,
+            model,
+            actualModel: response.data.model,
+            usage: response.data.usage
+        };
+    } catch (error) {
+        metrics.trackLLMRequest(buildLLMMetricLabel('anthropic', model), 0, false, 0, 0);
+        if (shouldMarkAnthropicModelUnavailable(error)) {
+            void markModelUnavailable('anthropic', model, 'provider_model_access_denied', inferProviderFallbackModel('anthropic', model));
+        }
+        throw error;
     }
-
-    return {
-        content,
-        model,
-        actualModel: response.data.model,
-        usage: response.data.usage
-    };
 }

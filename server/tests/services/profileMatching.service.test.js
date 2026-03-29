@@ -412,6 +412,40 @@ describe('Profile Matching Service', () => {
             }));
         });
 
+        it('should prefilter very large candidate sets before sending them to the LLM', async () => {
+            const manyResumes = Array.from({ length: 180 }, (_, i) => ({
+                ...mockResumeRecords[0],
+                id: `resume-${i}`,
+                name: `Candidate ${i}`,
+                global_rating: 100 - (i % 20),
+                skills: JSON.stringify(i < 120 ? ['React', 'TypeScript', 'Node.js'] : ['Cobol']),
+                tools: JSON.stringify(i < 120 ? ['Git', 'Docker'] : ['SVN']),
+                industries: JSON.stringify(i < 120 ? ['Banque'] : ['Retail']),
+                soft_skills: JSON.stringify(['Communication'])
+            }));
+
+            selectWithTimeout.mockResolvedValue(manyResumes);
+            callBusinessChatCompletion.mockResolvedValue({
+                choices: [{
+                    message: {
+                        content: JSON.stringify({
+                            scores: Object.fromEntries(
+                                manyResumes.slice(0, 100).map(r => [r.id, { score: 72, confidence: 'medium', reason: 'Test' }])
+                            )
+                        })
+                    }
+                }]
+            });
+
+            await findMatchingProfiles('mission-1', { limit: 0 });
+
+            const llmPayload = callBusinessChatCompletion.mock.calls[0][0];
+            const serializedCandidates = llmPayload.messages[1].content;
+            const candidateIdCount = (serializedCandidates.match(/"id":/g) || []).length;
+
+            expect(candidateIdCount).toBeLessThanOrEqual(100);
+        });
+
         it('should handle partial LLM failures gracefully', async () => {
             // First batch succeeds, second fails
             callBusinessChatCompletion
@@ -482,11 +516,14 @@ describe('Profile Matching Service', () => {
                 });
 
             const result = await findMatchingProfiles('mission-1', { limit: 10 });
+            const scoringCalls = callBusinessChatCompletion.mock.calls.filter(
+                call => call[0]?.operationType === 'Batch Profile Scoring'
+            );
 
             expect(result.llmScoringApplied).toBe(true);
             expect(result.llmScoringFailed).toBe(false);
             expect(result.profiles).toHaveLength(6);
-            expect(callBusinessChatCompletion).toHaveBeenCalledTimes(3);
+            expect(scoringCalls).toHaveLength(3);
             expect(metrics.trackProfileMatchingActivity).toHaveBeenCalledWith(expect.objectContaining({
                 event: 'retry',
                 batchesRetried: 1
@@ -529,10 +566,61 @@ describe('Profile Matching Service', () => {
                 });
 
             const result = await findMatchingProfiles('mission-1', { limit: 10 });
+            const scoringCalls = callBusinessChatCompletion.mock.calls.filter(
+                call => call[0]?.operationType === 'Batch Profile Scoring'
+            );
 
             expect(result.llmScoringApplied).toBe(true);
             expect(result.profiles).toHaveLength(4);
-            expect(callBusinessChatCompletion).toHaveBeenCalledTimes(3);
+            expect(scoringCalls).toHaveLength(3);
+        });
+
+        it('should run a second explanation pass only for the top profiles on larger result sets', async () => {
+            const manyResumes = Array.from({ length: 12 }, (_, i) => ({
+                ...mockResumeRecords[0],
+                id: `resume-${i}`,
+                name: `Candidate ${i}`
+            }));
+
+            selectWithTimeout.mockResolvedValue(manyResumes);
+            callBusinessChatCompletion
+                .mockResolvedValueOnce({
+                    choices: [{
+                        message: {
+                            content: JSON.stringify({
+                                scores: Object.fromEntries(
+                                    manyResumes.map((resume, index) => [resume.id, {
+                                        score: 90 - index,
+                                        confidence: 'high',
+                                        reason: 'Batch reason',
+                                        keyStrengths: ['Batch strength'],
+                                        keyGaps: ['Batch gap']
+                                    }])
+                                )
+                            })
+                        }
+                    }]
+                })
+                .mockResolvedValue({
+                    choices: [{
+                        message: {
+                            content: JSON.stringify({
+                                reason: 'Focused explanation',
+                                keyStrengths: ['Strong match'],
+                                keyGaps: ['Minor gap']
+                            })
+                        }
+                    }]
+                });
+
+            const result = await findMatchingProfiles('mission-1', { limit: 12 });
+            const explanationCalls = callBusinessChatCompletion.mock.calls.filter(
+                call => call[0]?.operationType === 'Profile Match Explanation'
+            );
+
+            expect(result.profilesExplained).toBe(5);
+            expect(explanationCalls).toHaveLength(5);
+            expect(result.profiles[0].reason).toBe('Focused explanation');
         });
     });
 

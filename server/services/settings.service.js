@@ -4,15 +4,23 @@
  */
 
 import { selectWithTimeout, updateWithTimeout, createWithTimeout } from '../utils/postgresHelpers.js';
-import { OLLAMA_BASE_URL } from '../config/constants.js';
+import {
+    OLLAMA_BASE_URL,
+    PROFILE_MATCHING_LOCAL_SKILL_WEIGHT,
+    PROFILE_MATCHING_LOCAL_TOOL_WEIGHT,
+    PROFILE_MATCHING_LOCAL_INDUSTRY_WEIGHT,
+    PROFILE_MATCHING_LOCAL_SOFTSKILL_WEIGHT,
+    PROFILE_MATCHING_LOCAL_TITLE_EXACT_WEIGHT,
+    PROFILE_MATCHING_LOCAL_TITLE_TOKEN_WEIGHT,
+    PROFILE_MATCHING_LOCAL_COVERAGE_MULTIPLIER
+} from '../config/constants.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { resolveAvailableModel, getProviderAvailabilityFlags, syncPersistedAvailabilityState } from './llmAvailability.service.js';
 import { getProviderDefaultModel } from './llmConfiguration.service.js';
+import { settingsCache as sharedSettingsCache } from './cache.service.js';
 
-// Cache settings for 5 minutes to reduce database calls
-let settingsCache = null;
+const LLM_SETTINGS_CACHE_KEY = 'llm-settings';
 let cacheTimestamp = null;
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 /**
  * Get LLM settings from PostgreSQL with caching
@@ -20,13 +28,13 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
  */
 export async function getLLMSettings() {
     try {
-        // Check cache validity
         const now = Date.now();
-        if (settingsCache && cacheTimestamp && (now - cacheTimestamp) < CACHE_TTL) {
+        const cachedSettings = sharedSettingsCache.get(LLM_SETTINGS_CACHE_KEY);
+        if (cachedSettings) {
             safeLog('debug', 'Using cached LLM settings', {
                 age: Math.round((now - cacheTimestamp) / 1000) + 's'
             });
-            return settingsCache;
+            return cachedSettings;
         }
 
         // Fetch fresh settings
@@ -66,6 +74,13 @@ export async function getLLMSettings() {
             'Education Weight': dbSettings.education_weight,
             'ATS Weight': dbSettings.ats_weight,
             'Hobbies Languages Weight': dbSettings.hobbies_languages_weight,
+            'Profile Matching Local Skill Weight': dbSettings.profile_matching_local_skill_weight ?? PROFILE_MATCHING_LOCAL_SKILL_WEIGHT,
+            'Profile Matching Local Tool Weight': dbSettings.profile_matching_local_tool_weight ?? PROFILE_MATCHING_LOCAL_TOOL_WEIGHT,
+            'Profile Matching Local Industry Weight': dbSettings.profile_matching_local_industry_weight ?? PROFILE_MATCHING_LOCAL_INDUSTRY_WEIGHT,
+            'Profile Matching Local Soft Skill Weight': dbSettings.profile_matching_local_softskill_weight ?? PROFILE_MATCHING_LOCAL_SOFTSKILL_WEIGHT,
+            'Profile Matching Local Title Exact Weight': dbSettings.profile_matching_local_title_exact_weight ?? PROFILE_MATCHING_LOCAL_TITLE_EXACT_WEIGHT,
+            'Profile Matching Local Title Token Weight': dbSettings.profile_matching_local_title_token_weight ?? PROFILE_MATCHING_LOCAL_TITLE_TOKEN_WEIGHT,
+            'Profile Matching Local Coverage Multiplier': dbSettings.profile_matching_local_coverage_multiplier ?? PROFILE_MATCHING_LOCAL_COVERAGE_MULTIPLIER,
             llmAvailabilityState: dbSettings.llm_availability_state || {}
         };
 
@@ -88,7 +103,7 @@ export async function getLLMSettings() {
         settings.llmAvailability = getProviderAvailabilityFlags();
 
         // Update cache
-        settingsCache = settings;
+        sharedSettingsCache.set(LLM_SETTINGS_CACHE_KEY, settings);
         cacheTimestamp = now;
 
         safeLog('debug', 'LLM settings loaded from PostgreSQL', {
@@ -103,9 +118,10 @@ export async function getLLMSettings() {
         });
 
         // Return cached settings if available, even if expired
-        if (settingsCache) {
+        const cachedSettings = sharedSettingsCache.get(LLM_SETTINGS_CACHE_KEY);
+        if (cachedSettings) {
             safeLog('warn', 'Using stale cached settings due to error');
-            return settingsCache;
+            return cachedSettings;
         }
 
         // Return empty object as fallback
@@ -136,7 +152,7 @@ export async function getLLMProvider() {
  */
 export function invalidateSettingsCache() {
     safeLog('info', 'Settings cache invalidated');
-    settingsCache = null;
+    sharedSettingsCache.invalidate(LLM_SETTINGS_CACHE_KEY);
     cacheTimestamp = null;
 }
 
@@ -145,7 +161,7 @@ export function invalidateSettingsCache() {
  * Alias for invalidateSettingsCache for consistency with other cache services
  */
 export function destroySettingsCache() {
-    settingsCache = null;
+    sharedSettingsCache.invalidate(LLM_SETTINGS_CACHE_KEY);
     cacheTimestamp = null;
     safeLog('info', 'Settings cache destroyed');
 }
@@ -155,9 +171,10 @@ export function destroySettingsCache() {
  */
 export function getSettingsCacheStats() {
     return {
-        hasCache: !!settingsCache,
+        hasCache: !!sharedSettingsCache.get(LLM_SETTINGS_CACHE_KEY),
+        entries: sharedSettingsCache.size(),
         ageMs: cacheTimestamp ? Date.now() - cacheTimestamp : null,
-        ttlMs: CACHE_TTL
+        ttlMs: null
     };
 }
 

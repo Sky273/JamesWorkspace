@@ -117,6 +117,8 @@ class MetricsCollector {
                 batchesFailed: 0,
                 profilesRequested: 0,
                 profilesScored: 0,
+                profilesExplained: 0,
+                profilesReturned: 0,
                 byProvider: {},
                 recent: []
             }
@@ -262,6 +264,8 @@ class MetricsCollector {
                         batchesFailed: this.operations.profileMatching.batchesFailed,
                         profilesRequested: this.operations.profileMatching.profilesRequested,
                         profilesScored: this.operations.profileMatching.profilesScored,
+                        profilesExplained: this.operations.profileMatching.profilesExplained,
+                        profilesReturned: this.operations.profileMatching.profilesReturned,
                         byProvider: this.operations.profileMatching.byProvider
                     }
                 }
@@ -601,6 +605,8 @@ class MetricsCollector {
         event = 'search',
         profilesRequested = 0,
         profilesScored = 0,
+        profilesExplained = 0,
+        profilesReturned = 0,
         batchesStarted = 0,
         batchesRetried = 0,
         batchesFailed = 0,
@@ -614,7 +620,9 @@ class MetricsCollector {
                 batchesRetried: 0,
                 batchesFailed: 0,
                 profilesRequested: 0,
-                profilesScored: 0
+                profilesScored: 0,
+                profilesExplained: 0,
+                profilesReturned: 0
             };
         }
 
@@ -630,12 +638,16 @@ class MetricsCollector {
         this.operations.profileMatching.batchesFailed += Number(batchesFailed) || 0;
         this.operations.profileMatching.profilesRequested += Number(profilesRequested) || 0;
         this.operations.profileMatching.profilesScored += Number(profilesScored) || 0;
+        this.operations.profileMatching.profilesExplained += Number(profilesExplained) || 0;
+        this.operations.profileMatching.profilesReturned += Number(profilesReturned) || 0;
 
         bucket.batchesStarted += Number(batchesStarted) || 0;
         bucket.batchesRetried += Number(batchesRetried) || 0;
         bucket.batchesFailed += Number(batchesFailed) || 0;
         bucket.profilesRequested += Number(profilesRequested) || 0;
         bucket.profilesScored += Number(profilesScored) || 0;
+        bucket.profilesExplained += Number(profilesExplained) || 0;
+        bucket.profilesReturned += Number(profilesReturned) || 0;
 
         this.operations.profileMatching.recent.push({
             timestamp: new Date().toISOString(),
@@ -643,6 +655,8 @@ class MetricsCollector {
             event,
             profilesRequested: Number(profilesRequested) || 0,
             profilesScored: Number(profilesScored) || 0,
+            profilesExplained: Number(profilesExplained) || 0,
+            profilesReturned: Number(profilesReturned) || 0,
             batchesStarted: Number(batchesStarted) || 0,
             batchesRetried: Number(batchesRetried) || 0,
             batchesFailed: Number(batchesFailed) || 0,
@@ -997,6 +1011,8 @@ class MetricsCollector {
                     batchesFailed: this.operations.profileMatching.batchesFailed,
                     profilesRequested: this.operations.profileMatching.profilesRequested,
                     profilesScored: this.operations.profileMatching.profilesScored,
+                    profilesExplained: this.operations.profileMatching.profilesExplained,
+                    profilesReturned: this.operations.profileMatching.profilesReturned,
                     byProvider: this.operations.profileMatching.byProvider,
                     recent: this.operations.profileMatching.recent.slice(-10)
                 }
@@ -1074,6 +1090,8 @@ class MetricsCollector {
                 batchesFailed: 0,
                 profilesRequested: 0,
                 profilesScored: 0,
+                profilesExplained: 0,
+                profilesReturned: 0,
                 byProvider: {},
                 recent: []
             }

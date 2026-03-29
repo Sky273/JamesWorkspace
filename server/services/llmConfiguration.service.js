@@ -13,6 +13,48 @@ export function getProviderDefaultModel(provider) {
     return LLM_PROVIDER_DEFAULT_MODELS[provider] || LLM_PROVIDER_DEFAULT_MODELS.openai;
 }
 
+export function inferProviderFallbackModel(provider, model = '') {
+    const normalizedProvider = String(provider || '').trim().toLowerCase();
+    const normalizedModel = String(model || '').trim();
+
+    if (!normalizedModel) {
+        return null;
+    }
+
+    if (normalizedProvider === 'glm') {
+        if (normalizedModel === 'glm-5.1') return 'glm-5';
+        return null;
+    }
+
+    if (normalizedProvider === 'deepseek') {
+        if (normalizedModel === 'deepseek-reasoner') return 'deepseek-chat';
+        return null;
+    }
+
+    if (normalizedProvider === 'openai') {
+        if (normalizedModel === 'gpt-5.4-pro') return 'gpt-5.4';
+        if (normalizedModel === 'gpt-5.2-pro') return 'gpt-5.2';
+        if (normalizedModel === 'gpt-5.1') return 'gpt-5';
+        if (normalizedModel === 'gpt-5') return 'gpt-5-mini';
+        if (normalizedModel === 'gpt-4.1') return 'gpt-4.1-mini';
+        if (normalizedModel === 'gpt-4o') return 'gpt-4o-mini';
+        return null;
+    }
+
+    if (normalizedProvider === 'anthropic') {
+        if (normalizedModel === 'claude-opus-4-1-20250805') return 'claude-opus-4-20250514';
+        if (normalizedModel === 'claude-opus-4-20250514') return 'claude-sonnet-4-20250514';
+        if (normalizedModel === 'claude-3-7-sonnet-20250219') return 'claude-3-5-sonnet-20241022';
+        return null;
+    }
+
+    if (normalizedProvider === 'minimax' && /-highspeed$/i.test(normalizedModel)) {
+        return normalizedModel.replace(/-highspeed$/i, '');
+    }
+
+    return null;
+}
+
 export function isLikelyOpenAIModel(model = '') {
     return /^(gpt|chatgpt|o\d|text-embedding|whisper|davinci|babbage|omni)/i.test(String(model || '').trim());
 }

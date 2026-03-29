@@ -567,7 +567,25 @@ describe('Missions Routes - PUT /api/missions/:id', () => {
             title: 'Updated Camel',
             status: 'closed',
             required_skills: ['TS'],
-            preferred_skills: ['Node']
+            preferred_skills: ['Node'],
+            keywords: null
+        }));
+    });
+
+    it('should invalidate cached mission keywords when title changes', async () => {
+        mockFindMission.mockResolvedValueOnce(makeMissionRow({ firm: 'Test Firm', firm_id: 'firm-123' }));
+        mockGetUserFirmId.mockResolvedValueOnce('firm-123');
+        mockUpdateMission.mockResolvedValueOnce(makeMissionRow({ title: 'Updated Title' }));
+
+        const res = await request(app)
+            .put('/api/missions/mission-123')
+            .set('Authorization', 'Bearer valid-token')
+            .send({ title: 'Updated Title' });
+
+        expect(res.status).toBe(200);
+        expect(mockUpdateMission).toHaveBeenCalledWith('mission-123', expect.objectContaining({
+            title: 'Updated Title',
+            keywords: null
         }));
     });
 

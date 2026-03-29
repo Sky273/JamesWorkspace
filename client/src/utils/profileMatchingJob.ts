@@ -12,6 +12,16 @@ export interface ProfileMatchingJobItem {
   progress?: number;
   resume_id?: string;
   pending_data?: {
+    progressDetails?: {
+      progress?: number;
+      stage?: string;
+      stageLabel?: string;
+      totalResumes?: number;
+      profilesSentToLlm?: number;
+      profilesExplained?: number;
+      profileCount?: number;
+      overallScore?: number | null;
+    };
     profileMatchingResults?: ProfileMatchingResponse;
     detailedProfileAnalysis?: DetailedProfileAnalysisResponse;
   } | null;

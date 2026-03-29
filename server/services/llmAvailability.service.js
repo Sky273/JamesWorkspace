@@ -1,58 +1,99 @@
-import { MINIMAX_ENABLE_HIGHSPEED_MODELS } from '../config/constants.js';
+import { LLM_RUNTIME_UNAVAILABLE_TTL_MS, MINIMAX_ENABLE_HIGHSPEED_MODELS } from '../config/constants.js';
 import { createWithTimeout, selectWithTimeout, updateWithTimeout } from '../utils/postgresHelpers.js';
 import { safeLog } from '../utils/logger.backend.js';
 
 const runtimeUnavailableModels = new Map();
 let availabilityStateInitialized = false;
 let availabilityStateInitializationPromise = null;
+const PROVIDERS_WITH_RUNTIME_AVAILABILITY = ['minimax', 'glm', 'deepseek', 'openai', 'anthropic', 'ollama'];
 
 function buildAvailabilityKey(provider, model) {
     return `${String(provider || '').trim().toLowerCase()}::${String(model || '').trim()}`;
 }
 
-function normalizePersistedAvailabilityState(rawState = {}) {
-    const minimaxEntries = Array.isArray(rawState?.minimax?.runtimeUnavailableModels)
-        ? rawState.minimax.runtimeUnavailableModels
-        : [];
+function toIsoStringOrNull(value) {
+    if (!value) {
+        return null;
+    }
 
-    return {
-        minimax: {
-            runtimeUnavailableModels: minimaxEntries
-                .map(entry => ({
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+}
+
+function computeExpiresAt(markedAt) {
+    return new Date(new Date(markedAt).getTime() + LLM_RUNTIME_UNAVAILABLE_TTL_MS).toISOString();
+}
+
+function isExpiredAvailabilityEntry(entry) {
+    if (!entry?.expiresAt) {
+        return false;
+    }
+
+    const expiresAtMs = new Date(entry.expiresAt).getTime();
+    return Number.isNaN(expiresAtMs) || expiresAtMs <= Date.now();
+}
+
+function pruneExpiredRuntimeUnavailableEntries(entries = []) {
+    return entries.filter(entry => !isExpiredAvailabilityEntry(entry));
+}
+
+function normalizePersistedAvailabilityState(rawState = {}) {
+    return PROVIDERS_WITH_RUNTIME_AVAILABILITY.reduce((state, provider) => {
+        const entries = Array.isArray(rawState?.[provider]?.runtimeUnavailableModels)
+            ? rawState[provider].runtimeUnavailableModels
+            : [];
+
+        state[provider] = {
+            runtimeUnavailableModels: pruneExpiredRuntimeUnavailableEntries(entries
+                .map(entry => {
+                    const markedAt = toIsoStringOrNull(entry?.markedAt) || new Date().toISOString();
+                    return {
                     model: String(entry?.model || '').trim(),
                     reason: String(entry?.reason || 'runtime_unavailable').trim(),
-                    fallbackModel: entry?.fallbackModel ? String(entry.fallbackModel).trim() : null
-                }))
-                .filter(entry => entry.model)
-        }
-    };
+                    fallbackModel: entry?.fallbackModel ? String(entry.fallbackModel).trim() : null,
+                    markedAt,
+                    expiresAt: toIsoStringOrNull(entry?.expiresAt) || computeExpiresAt(markedAt)
+                };
+                })
+                .filter(entry => entry.model))
+        };
+
+        return state;
+    }, {});
 }
 
 function buildPersistedAvailabilityState() {
-    return {
-        minimax: {
+    return PROVIDERS_WITH_RUNTIME_AVAILABILITY.reduce((state, provider) => {
+        state[provider] = {
             runtimeUnavailableModels: Array.from(runtimeUnavailableModels.entries())
-                .filter(([key]) => key.startsWith('minimax::'))
+                .filter(([key]) => key.startsWith(`${provider}::`))
                 .map(([, value]) => ({
                     model: value.model,
                     reason: value.reason,
-                    fallbackModel: value.fallbackModel || null
+                    fallbackModel: value.fallbackModel || null,
+                    markedAt: value.markedAt || null,
+                    expiresAt: value.expiresAt || null
                 }))
-        }
-    };
+        };
+        return state;
+    }, {});
 }
 
 function applyPersistedAvailabilityState(rawState = {}) {
     const normalizedState = normalizePersistedAvailabilityState(rawState);
     runtimeUnavailableModels.clear();
 
-    for (const entry of normalizedState.minimax.runtimeUnavailableModels) {
-        runtimeUnavailableModels.set(buildAvailabilityKey('minimax', entry.model), {
-            provider: 'minimax',
-            model: entry.model,
-            reason: entry.reason,
-            fallbackModel: entry.fallbackModel
-        });
+    for (const provider of PROVIDERS_WITH_RUNTIME_AVAILABILITY) {
+        for (const entry of normalizedState[provider].runtimeUnavailableModels) {
+            runtimeUnavailableModels.set(buildAvailabilityKey(provider, entry.model), {
+                provider,
+                model: entry.model,
+                reason: entry.reason,
+                fallbackModel: entry.fallbackModel,
+                markedAt: entry.markedAt,
+                expiresAt: entry.expiresAt
+            });
+        }
     }
 
     return normalizedState;
@@ -67,6 +108,7 @@ async function invalidateAvailabilityCaches() {
 
         invalidateSettingsCache();
         settingsCache.invalidate('settings');
+        settingsCache.invalidate('llm-settings');
     } catch (error) {
         safeLog('warn', 'Failed to invalidate settings caches after updating LLM availability state', {
             error: error.message
@@ -125,7 +167,9 @@ export async function initializeLLMAvailabilityState({ forceRefresh = false } = 
             availabilityStateInitialized = true;
 
             safeLog('info', 'Loaded persisted LLM availability state', {
-                minimaxRuntimeUnavailableCount: normalizedState.minimax.runtimeUnavailableModels.length
+                runtimeUnavailableCounts: Object.fromEntries(
+                    PROVIDERS_WITH_RUNTIME_AVAILABILITY.map(provider => [provider, normalizedState[provider].runtimeUnavailableModels.length])
+                )
             });
 
             return normalizedState;
@@ -150,16 +194,26 @@ export function syncPersistedAvailabilityState(rawState = {}) {
 }
 
 export function getProviderAvailabilityFlags() {
-    const minimaxRuntimeUnavailableModels = Array.from(runtimeUnavailableModels.entries())
-        .filter(([key]) => key.startsWith('minimax::'))
-        .map(([, value]) => value.model);
+    const flags = {};
 
-    return {
-        minimax: {
-            highspeedEnabled: MINIMAX_ENABLE_HIGHSPEED_MODELS,
-            runtimeUnavailableModels: minimaxRuntimeUnavailableModels
-        }
-    };
+    for (const provider of PROVIDERS_WITH_RUNTIME_AVAILABILITY) {
+        flags[provider] = {
+            runtimeUnavailableModels: Array.from(runtimeUnavailableModels.entries())
+                .filter(([key]) => key.startsWith(`${provider}::`))
+                .filter(([, value]) => {
+                    if (!isExpiredAvailabilityEntry(value)) {
+                        return true;
+                    }
+
+                    runtimeUnavailableModels.delete(buildAvailabilityKey(provider, value.model));
+                    return false;
+                })
+                .map(([, value]) => value.model)
+        };
+    }
+
+    flags.minimax.highspeedEnabled = MINIMAX_ENABLE_HIGHSPEED_MODELS;
+    return flags;
 }
 
 export function getModelAvailability(provider, model) {
@@ -172,6 +226,11 @@ export function getModelAvailability(provider, model) {
 
     const runtimeAvailability = runtimeUnavailableModels.get(buildAvailabilityKey(normalizedProvider, normalizedModel));
     if (runtimeAvailability) {
+        if (isExpiredAvailabilityEntry(runtimeAvailability)) {
+            runtimeUnavailableModels.delete(buildAvailabilityKey(normalizedProvider, normalizedModel));
+            return { available: true, reason: null, fallbackModel: null };
+        }
+
         return {
             available: false,
             reason: runtimeAvailability.reason,
@@ -226,11 +285,14 @@ export async function markModelUnavailable(provider, model, reason, fallbackMode
         return;
     }
 
+    const markedAt = new Date().toISOString();
     runtimeUnavailableModels.set(buildAvailabilityKey(normalizedProvider, normalizedModel), {
         provider: normalizedProvider,
         model: normalizedModel,
         reason: reason || 'runtime_unavailable',
-        fallbackModel
+        fallbackModel,
+        markedAt,
+        expiresAt: computeExpiresAt(markedAt)
     });
 
     availabilityStateInitialized = true;

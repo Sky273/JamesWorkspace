@@ -16,6 +16,16 @@ vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));
 
+const settingsCacheStore = new Map();
+vi.mock('../../services/cache.service.js', () => ({
+    settingsCache: {
+        get: vi.fn((key) => settingsCacheStore.has(key) ? settingsCacheStore.get(key) : null),
+        set: vi.fn((key, value) => settingsCacheStore.set(key, value)),
+        invalidate: vi.fn((key) => settingsCacheStore.delete(key)),
+        size: vi.fn(() => settingsCacheStore.size)
+    }
+}));
+
 vi.mock('../../services/llmAvailability.service.js', () => ({
     resolveAvailableModel: vi.fn((_provider, model) => ({
         model,
@@ -44,6 +54,7 @@ import {
 describe('Settings Service', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        settingsCacheStore.clear();
         invalidateSettingsCache(); // Clear cache before each test
     });
 
@@ -64,7 +75,8 @@ describe('Settings Service', () => {
                 experience_weight: 20,
                 education_weight: 15,
                 ats_weight: 15,
-                hobbies_languages_weight: 10
+                hobbies_languages_weight: 10,
+                profile_matching_local_skill_weight: 9
             };
             selectWithTimeout.mockResolvedValueOnce([dbSettings]);
             
@@ -72,6 +84,7 @@ describe('Settings Service', () => {
             
             expect(result.llmModel).toBe('gpt-4o');
             expect(result.llmProvider).toBe('openai');
+            expect(result['Profile Matching Local Skill Weight']).toBe(9);
         });
 
         it('should return empty object if no settings exist', async () => {

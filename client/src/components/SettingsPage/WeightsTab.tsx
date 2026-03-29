@@ -12,6 +12,13 @@ interface FormData {
   'Education Weight': number;
   'ATS Weight': number;
   'Hobbies Languages Weight': number;
+  'Profile Matching Local Skill Weight': number;
+  'Profile Matching Local Tool Weight': number;
+  'Profile Matching Local Industry Weight': number;
+  'Profile Matching Local Soft Skill Weight': number;
+  'Profile Matching Local Title Exact Weight': number;
+  'Profile Matching Local Title Token Weight': number;
+  'Profile Matching Local Coverage Multiplier': number;
   [key: string]: string | number | boolean;
 }
 
@@ -74,6 +81,15 @@ const WeightsTab = ({ formData, onInputChange, totalWeight, t }: WeightsTabProps
     { key: 'ATS Weight', label: t('settings.weights.ats') },
     { key: 'Hobbies Languages Weight', label: t('settings.weights.hobbiesLanguages') }
   ];
+  const profileMatchingWeights: Array<{ key: string; label: string }> = [
+    { key: 'Profile Matching Local Skill Weight', label: 'Profile matching skills' },
+    { key: 'Profile Matching Local Tool Weight', label: 'Profile matching tools' },
+    { key: 'Profile Matching Local Industry Weight', label: 'Profile matching industries' },
+    { key: 'Profile Matching Local Soft Skill Weight', label: 'Profile matching soft skills' },
+    { key: 'Profile Matching Local Title Exact Weight', label: 'Profile matching exact title' },
+    { key: 'Profile Matching Local Title Token Weight', label: 'Profile matching title tokens' },
+    { key: 'Profile Matching Local Coverage Multiplier', label: 'Profile matching coverage boost' }
+  ];
 
   return (
     <div className="space-y-6">
@@ -123,6 +139,26 @@ const WeightsTab = ({ formData, onInputChange, totalWeight, t }: WeightsTabProps
             {t('settings.weights.mustEqual100')}
           </p>
         )}
+      </div>
+
+      <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+          Profile Matching Local Ranking
+        </h3>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+          Configure the local pre-ranking weights used before sending profiles to the LLM.
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {profileMatchingWeights.map(({ key, label }) => (
+            <WeightSlider
+              key={key}
+              label={label}
+              value={formData[key] as number}
+              onChange={(value) => onInputChange(key, value)}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );

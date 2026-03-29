@@ -10,7 +10,7 @@ interface FormData {
 }
 
 interface LLMAvailability {
-  minimax?: {
+  [provider: string]: {
     highspeedEnabled?: boolean;
     runtimeUnavailableModels?: string[];
   };
@@ -75,6 +75,7 @@ const LLMTab = ({
 }: LLMTabProps): JSX.Element => {
   const provider = formData.llmProvider || 'openai';
   const minimaxHighspeedEnabled = llmAvailability?.minimax?.highspeedEnabled === true;
+  const providerRuntimeUnavailableModels = llmAvailability?.[provider]?.runtimeUnavailableModels || [];
   const minimaxRuntimeUnavailableModels = llmAvailability?.minimax?.runtimeUnavailableModels || [];
 
   const providerOptions = useMemo(() => ([
@@ -99,19 +100,19 @@ const LLMTab = ({
 
   const modelOptions = useMemo(() => {
     if (provider === 'anthropic') {
-      return ANTHROPIC_MODELS;
+      return ANTHROPIC_MODELS.filter(model => !providerRuntimeUnavailableModels.includes(model));
     }
     if (provider === 'deepseek') {
-      return DEEPSEEK_MODELS;
+      return DEEPSEEK_MODELS.filter(model => !providerRuntimeUnavailableModels.includes(model.value));
     }
     if (provider === 'glm') {
-      return GLM_MODELS;
+      return GLM_MODELS.filter(model => !providerRuntimeUnavailableModels.includes(model.value));
     }
     if (provider === 'minimax') {
       return minimaxModels;
     }
-    return OPENAI_MODELS;
-  }, [provider, minimaxModels]);
+    return OPENAI_MODELS.filter(model => !providerRuntimeUnavailableModels.includes(model));
+  }, [provider, minimaxModels, providerRuntimeUnavailableModels]);
 
   const handleProviderChange = (e: ChangeEvent<HTMLSelectElement>): void => {
     const nextProvider = e.target.value as 'openai' | 'anthropic' | 'deepseek' | 'glm' | 'minimax' | 'ollama';
@@ -190,10 +191,12 @@ const LLMTab = ({
             {fallbackText(t, 'settings.llm.minimaxHighspeedDisabled', 'Les modeles MiniMax highspeed sont masques car cette instance n active pas le plan Highspeed.')}
           </p>
         )}
-        {provider === 'minimax' && minimaxRuntimeUnavailableModels.length > 0 && (
+        {providerRuntimeUnavailableModels.length > 0 && (
           <p className="text-sm text-amber-700 dark:text-amber-300 mb-4">
-            {fallbackText(t, 'settings.llm.minimaxRuntimeUnavailable', 'Certains modeles MiniMax sont temporairement masques car l upstream les a refuses pour cette instance.')}{' '}
-            <span className="font-medium">{minimaxRuntimeUnavailableModels.join(', ')}</span>
+            {provider === 'minimax'
+              ? fallbackText(t, 'settings.llm.minimaxRuntimeUnavailable', 'Certains modeles MiniMax sont temporairement masques car l upstream les a refuses pour cette instance.')
+              : fallbackText(t, 'settings.llm.runtimeUnavailable', 'Certains modeles de ce provider sont temporairement masques car l upstream les a refuses pour cette instance.')}{' '}
+            <span className="font-medium">{providerRuntimeUnavailableModels.join(', ')}</span>
           </p>
         )}
       </div>

@@ -20,7 +20,7 @@ interface Settings {
   id?: string;
   llmProvider?: LLMProvider;
   llmModel?: string;
-  llmAvailability?: { minimax?: { highspeedEnabled?: boolean } };
+  llmAvailability?: Record<string, { highspeedEnabled?: boolean; runtimeUnavailableModels?: string[] }>;
   ollamaBaseUrl?: string;
   cvMode?: 'nominative' | 'anonymous';
   chatbotEnabled?: 'on' | 'off';
@@ -35,6 +35,13 @@ interface Settings {
   'Education Weight'?: number;
   'ATS Weight'?: number;
   'Hobbies Languages Weight'?: number;
+  'Profile Matching Local Skill Weight'?: number;
+  'Profile Matching Local Tool Weight'?: number;
+  'Profile Matching Local Industry Weight'?: number;
+  'Profile Matching Local Soft Skill Weight'?: number;
+  'Profile Matching Local Title Exact Weight'?: number;
+  'Profile Matching Local Title Token Weight'?: number;
+  'Profile Matching Local Coverage Multiplier'?: number;
   'DPO Name'?: string;
   'DPO Email'?: string;
   'DPO Phone'?: string;
@@ -59,6 +66,13 @@ interface SettingsFormData {
   'Education Weight': number;
   'ATS Weight': number;
   'Hobbies Languages Weight': number;
+  'Profile Matching Local Skill Weight': number;
+  'Profile Matching Local Tool Weight': number;
+  'Profile Matching Local Industry Weight': number;
+  'Profile Matching Local Soft Skill Weight': number;
+  'Profile Matching Local Title Exact Weight': number;
+  'Profile Matching Local Title Token Weight': number;
+  'Profile Matching Local Coverage Multiplier': number;
   'DPO Name': string;
   'DPO Email': string;
   'DPO Phone': string;
@@ -88,6 +102,13 @@ const defaultFormData: SettingsFormData = {
   'Education Weight': 15,
   'ATS Weight': 15,
   'Hobbies Languages Weight': 10,
+  'Profile Matching Local Skill Weight': 6,
+  'Profile Matching Local Tool Weight': 4,
+  'Profile Matching Local Industry Weight': 3,
+  'Profile Matching Local Soft Skill Weight': 2,
+  'Profile Matching Local Title Exact Weight': 5,
+  'Profile Matching Local Title Token Weight': 2,
+  'Profile Matching Local Coverage Multiplier': 3,
   'DPO Name': '',
   'DPO Email': '',
   'DPO Phone': ''
@@ -140,6 +161,13 @@ const SettingsPage = (): JSX.Element => {
         'Education Weight': data['Education Weight'] || 15,
         'ATS Weight': data['ATS Weight'] || 15,
         'Hobbies Languages Weight': data['Hobbies Languages Weight'] || 10,
+        'Profile Matching Local Skill Weight': data['Profile Matching Local Skill Weight'] || 6,
+        'Profile Matching Local Tool Weight': data['Profile Matching Local Tool Weight'] || 4,
+        'Profile Matching Local Industry Weight': data['Profile Matching Local Industry Weight'] || 3,
+        'Profile Matching Local Soft Skill Weight': data['Profile Matching Local Soft Skill Weight'] || 2,
+        'Profile Matching Local Title Exact Weight': data['Profile Matching Local Title Exact Weight'] || 5,
+        'Profile Matching Local Title Token Weight': data['Profile Matching Local Title Token Weight'] || 2,
+        'Profile Matching Local Coverage Multiplier': data['Profile Matching Local Coverage Multiplier'] || 3,
         'DPO Name': data['DPO Name'] || '',
         'DPO Email': data['DPO Email'] || '',
         'DPO Phone': data['DPO Phone'] || ''
@@ -187,7 +215,14 @@ const SettingsPage = (): JSX.Element => {
         'Experience Weight': Number(formData['Experience Weight']),
         'Education Weight': Number(formData['Education Weight']),
         'ATS Weight': Number(formData['ATS Weight']),
-        'Hobbies Languages Weight': Number(formData['Hobbies Languages Weight'])
+        'Hobbies Languages Weight': Number(formData['Hobbies Languages Weight']),
+        'Profile Matching Local Skill Weight': Number(formData['Profile Matching Local Skill Weight']),
+        'Profile Matching Local Tool Weight': Number(formData['Profile Matching Local Tool Weight']),
+        'Profile Matching Local Industry Weight': Number(formData['Profile Matching Local Industry Weight']),
+        'Profile Matching Local Soft Skill Weight': Number(formData['Profile Matching Local Soft Skill Weight']),
+        'Profile Matching Local Title Exact Weight': Number(formData['Profile Matching Local Title Exact Weight']),
+        'Profile Matching Local Title Token Weight': Number(formData['Profile Matching Local Title Token Weight']),
+        'Profile Matching Local Coverage Multiplier': Number(formData['Profile Matching Local Coverage Multiplier'])
       };
 
       if (formData.llmProvider === 'ollama') {
@@ -250,6 +285,13 @@ const SettingsPage = (): JSX.Element => {
         'Education Weight': defaults['Education Weight'] ?? 15,
         'ATS Weight': defaults['ATS Weight'] ?? 15,
         'Hobbies Languages Weight': defaults['Hobbies Languages Weight'] ?? 10,
+        'Profile Matching Local Skill Weight': defaults['Profile Matching Local Skill Weight'] ?? 6,
+        'Profile Matching Local Tool Weight': defaults['Profile Matching Local Tool Weight'] ?? 4,
+        'Profile Matching Local Industry Weight': defaults['Profile Matching Local Industry Weight'] ?? 3,
+        'Profile Matching Local Soft Skill Weight': defaults['Profile Matching Local Soft Skill Weight'] ?? 2,
+        'Profile Matching Local Title Exact Weight': defaults['Profile Matching Local Title Exact Weight'] ?? 5,
+        'Profile Matching Local Title Token Weight': defaults['Profile Matching Local Title Token Weight'] ?? 2,
+        'Profile Matching Local Coverage Multiplier': defaults['Profile Matching Local Coverage Multiplier'] ?? 3,
         'DPO Name': defaults['DPO Name'] || '',
         'DPO Email': defaults['DPO Email'] || '',
         'DPO Phone': defaults['DPO Phone'] || ''

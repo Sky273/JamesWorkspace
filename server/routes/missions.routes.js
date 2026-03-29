@@ -244,6 +244,16 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateM
         if (normalizedUpdates.preferredSkills !== undefined) {
             updates.preferred_skills = normalizedUpdates.preferredSkills;
         }
+
+        const missionContentChanged =
+            normalizedUpdates.title !== undefined ||
+            normalizedUpdates.content !== undefined ||
+            normalizedUpdates.requiredSkills !== undefined ||
+            normalizedUpdates.preferredSkills !== undefined;
+
+        if (normalizedUpdates.keywords === undefined && missionContentChanged) {
+            updates.keywords = null;
+        }
         
         // Handle client_id update
         if (normalizedUpdates.clientId !== undefined) {

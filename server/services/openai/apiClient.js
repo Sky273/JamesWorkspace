@@ -13,9 +13,23 @@ import { securityLog, LOG_LEVELS, SECURITY_EVENTS } from '../security.service.js
 import { withRetry, getCircuitBreakerStates } from '../retry.service.js';
 import { extractOpenAIResponsesText, flattenLlmTextContent, sanitizeOpenAICompatibleResponseBody } from '../llmContent.service.js';
 import { clampModelMaxOutputTokens } from '../llmModelCapabilities.service.js';
+import { markModelUnavailable } from '../llmAvailability.service.js';
+import { inferProviderFallbackModel } from '../llmConfiguration.service.js';
 
 const OPENAI_CHAT_API_URL = 'https://api.openai.com/v1/chat/completions';
 const OPENAI_RESPONSES_API_URL = 'https://api.openai.com/v1/responses';
+
+function shouldMarkOpenAIModelUnavailable(error) {
+    const status = error?.response?.status;
+    const message = String(error?.response?.data?.error?.message || error?.message || '').toLowerCase();
+
+    return status === 403
+        || status === 404
+        || ((status === 400 || status === 422) && (
+            message.includes('model')
+            && (message.includes('does not exist') || message.includes('do not have access') || message.includes('not found') || message.includes('permission'))
+        ));
+}
 
 /**
  * Call OpenAI API with common error handling and metrics tracking
@@ -202,6 +216,9 @@ export async function callOpenAI({
         return sanitizeOpenAICompatibleResponseBody(response.data);
     } catch (error) {
         metrics.trackLLMRequest(buildLLMMetricLabel('openai', model), 0, false, 0, 0);
+        if (shouldMarkOpenAIModelUnavailable(error)) {
+            void markModelUnavailable('openai', model, 'provider_model_access_denied', inferProviderFallbackModel('openai', model));
+        }
         safeLog('error', 'OpenAI API call failed', {
             error: error.message,
             status: error.response?.status,

@@ -45,6 +45,15 @@ interface JobItem {
     analysis?: Record<string, unknown>;
     text?: string;
     improve?: boolean;
+    progressDetails?: {
+      progress?: number;
+      stage?: string;
+      stageLabel?: string;
+      totalResumes?: number;
+      profilesSentToLlm?: number;
+      profileCount?: number;
+      overallScore?: number | null;
+    };
   };
 }
 
@@ -660,6 +669,15 @@ const JobsTab = (): JSX.Element => {
                                   {job.job_type !== 'deal-export' && item.original_name && item.display_name && (
                                     <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
                                       {item.original_name} Ã¢â€ â€™ <span className="font-medium text-indigo-600 dark:text-indigo-400">{item.display_name}</span>
+                                    </span>
+                                  )}
+                                  {item.status === 'processing' && item.pending_data?.progressDetails?.stageLabel && (
+                                    <span className="text-xs text-cyan-600 dark:text-cyan-400 truncate">
+                                      {item.pending_data.progressDetails.stageLabel}
+                                      {typeof item.pending_data.progressDetails.totalResumes === 'number' && ` · ${item.pending_data.progressDetails.totalResumes} CV`}
+                                      {typeof item.pending_data.progressDetails.profilesSentToLlm === 'number' && ` · ${item.pending_data.progressDetails.profilesSentToLlm} scorés IA`}
+                                      {typeof item.pending_data.progressDetails.profileCount === 'number' && ` · ${item.pending_data.progressDetails.profileCount} résultats`}
+                                      {typeof item.pending_data.progressDetails.overallScore === 'number' && ` · score ${item.pending_data.progressDetails.overallScore}`}
                                     </span>
                                   )}
                                 </div>

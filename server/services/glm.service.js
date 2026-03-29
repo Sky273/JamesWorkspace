@@ -8,11 +8,27 @@ import { validatePromptSize } from '../utils/postgresHelpers.js';
 import { securityLog, LOG_LEVELS, SECURITY_EVENTS } from './security.service.js';
 import { withRetry, getCircuitBreakerStates } from './retry.service.js';
 import { clampModelMaxOutputTokens } from './llmModelCapabilities.service.js';
+import { markModelUnavailable } from './llmAvailability.service.js';
+import { inferProviderFallbackModel } from './llmConfiguration.service.js';
 
 const GLM_CHAT_API_URL = `${GLM_BASE_URL.replace(/\/$/, '')}/chat/completions`;
 
 function extractGLMContent(body = {}) {
     return body?.choices?.[0]?.message?.content || '';
+}
+
+function inferGlmFallbackModel(model = '') {
+    return inferProviderFallbackModel('glm', model);
+}
+
+function shouldMarkGlmModelUnavailable(error) {
+    const status = error?.response?.status;
+    const message = String(error?.response?.data?.error?.message || error?.message || '').toLowerCase();
+
+    return status === 403 && (
+        message.includes('do not have permission') ||
+        message.includes('permission to access')
+    );
 }
 
 export async function callGLM({
@@ -112,6 +128,18 @@ export async function callGLM({
             errorDetails: error.response?.data?.error?.message,
             model
         });
+
+        if (shouldMarkGlmModelUnavailable(error)) {
+            const fallbackModel = inferGlmFallbackModel(model);
+            markModelUnavailable('glm', model, 'glm_model_access_denied', fallbackModel).catch(markError => {
+                safeLog('error', 'Failed to persist GLM model availability state after upstream refusal', {
+                    model,
+                    fallbackModel,
+                    error: markError.message
+                });
+            });
+        }
+
         throw error;
     }
 }

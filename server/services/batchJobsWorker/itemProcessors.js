@@ -721,7 +721,13 @@ export async function processProfileSearchItem(item, job, options) {
         status: options?.status ?? null,
         firm: options?.searchFirmId ?? job.firm_id ?? null,
         weights: options?.weights,
-        dealId: options?.dealId ?? null
+        dealId: options?.dealId ?? null,
+        progressCallback: (details) => updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, {
+            progress: details.progress,
+            result_data: {
+                progressDetails: details
+            }
+        })
     }, {
         source: 'batch-job',
         jobId: job.id,
@@ -733,6 +739,14 @@ export async function processProfileSearchItem(item, job, options) {
     await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, {
         progress: 90,
         result_data: {
+            progressDetails: {
+                progress: 90,
+                stage: 'completed',
+                stageLabel: 'Recherche terminee',
+                totalResumes: results?.totalResumesScanned || 0,
+                profilesSentToLlm: results?.profilesSentToLlm || 0,
+                profileCount: results?.profiles?.length || 0
+            },
             profileMatchingResults: results
         }
     });
@@ -762,12 +776,24 @@ export async function processProfileAnalysisItem(item, job, options) {
         jobId: job.id,
         itemId: item.id,
         userId: job.user_id,
-        firm: job.firm_id
+        firm: job.firm_id,
+        progressCallback: (details) => updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, {
+            progress: details.progress,
+            result_data: {
+                progressDetails: details
+            }
+        })
     });
 
     await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, {
         progress: 90,
         result_data: {
+            progressDetails: {
+                progress: 90,
+                stage: 'completed',
+                stageLabel: 'Analyse terminee',
+                overallScore: analysisResponse?.analysis?.overallScore ?? null
+            },
             detailedProfileAnalysis: analysisResponse
         }
     });

@@ -84,6 +84,11 @@ const safeNumber = (value: unknown, defaultValue = 0): number => {
   return value;
 };
 
+const computeRatio = (numerator: number, denominator: number): number | null => {
+  if (denominator <= 0) return null;
+  return numerator / denominator;
+};
+
 // ============================================
 // MEMOIZED SUB-COMPONENTS
 // ============================================
@@ -194,6 +199,36 @@ interface OperationsMetrics {
       directoriesDeleted?: number;
       orphanExportFilesDeleted?: number;
       staleExportRefsCleared?: number;
+    };
+    profileMatching?: {
+      searches?: number;
+      batchesStarted?: number;
+      batchesRetried?: number;
+      batchesFailed?: number;
+      profilesRequested?: number;
+      profilesScored?: number;
+      profilesExplained?: number;
+      profilesReturned?: number;
+      recent?: Array<{
+        timestamp?: string;
+        provider?: string;
+        event?: string;
+        profilesRequested?: number;
+        profilesScored?: number;
+        profilesExplained?: number;
+        profilesReturned?: number;
+        batchesStarted?: number;
+        batchesRetried?: number;
+        batchesFailed?: number;
+      }>;
+      byProvider?: Record<string, {
+        searches?: number;
+        batchesStarted?: number;
+        batchesRetried?: number;
+        batchesFailed?: number;
+        profilesRequested?: number;
+        profilesScored?: number;
+      }>;
     };
   };
   binaryStorage?: {
@@ -420,6 +455,31 @@ const MetricsPage = (): JSX.Element => {
     );
   }
 
+  const profileMatchingMetrics = operationsMetrics?.operations?.profileMatching;
+  const requestedToScoredRatio = computeRatio(
+    safeNumber(profileMatchingMetrics?.profilesScored),
+    safeNumber(profileMatchingMetrics?.profilesRequested)
+  );
+  const scoredToExplainedRatio = computeRatio(
+    safeNumber(profileMatchingMetrics?.profilesExplained),
+    safeNumber(profileMatchingMetrics?.profilesScored)
+  );
+  const scoredToReturnedRatio = computeRatio(
+    safeNumber(profileMatchingMetrics?.profilesReturned),
+    safeNumber(profileMatchingMetrics?.profilesScored)
+  );
+  const profileMatchingAlerts = [
+    requestedToScoredRatio !== null && requestedToScoredRatio < 0.6
+      ? t('metrics.profileMatchingAlertRequestedScored', 'Profile matching scoring ratio is degraded. Too many requested profiles are not reaching LLM scoring.')
+      : null,
+    scoredToExplainedRatio !== null && scoredToExplainedRatio < 0.2
+      ? t('metrics.profileMatchingAlertScoredExplained', 'Profile matching explanation ratio is low. Explanations are only being generated for a small part of scored profiles.')
+      : null,
+    scoredToReturnedRatio !== null && scoredToReturnedRatio < 0.5
+      ? t('metrics.profileMatchingAlertScoredReturned', 'Profile matching return ratio is degraded. Too many scored profiles are filtered out or failing later in the pipeline.')
+      : null
+  ].filter(Boolean) as string[];
+
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="p-6">      <div className="mb-8">
         <div className="flex items-center justify-between">
@@ -576,7 +636,7 @@ const MetricsPage = (): JSX.Element => {
           )}
 
           {operationsMetrics && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.185 }} className="rounded-xl border bg-sky-50 text-sky-700 border-sky-200 dark:bg-gray-800 dark:text-sky-400 dark:border-sky-700 p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div>
@@ -666,6 +726,127 @@ const MetricsPage = (): JSX.Element => {
                   {' | '}
                   {t('metrics.batchExportsSummary', 'Batch exports')}: {formatBytes(safeNumber(operationsMetrics.storage?.batchExportDirectorySize))} / {safeNumber(operationsMetrics.storage?.batchExportFileCount)} {t('metrics.filesUnit', 'files')}
                 </p>
+              </motion.div>
+
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.195 }} className="rounded-xl border bg-violet-50 text-violet-700 border-violet-200 dark:bg-gray-800 dark:text-violet-400 dark:border-violet-700 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-sm font-medium opacity-80">{t('metrics.profileMatchingTitle', 'Profile matching')}</p>
+                    <p className="text-2xl font-bold mt-1">{formatNumber(safeNumber(operationsMetrics.operations?.profileMatching?.searches))}</p>
+                    <p className="text-xs mt-1 opacity-60">{t('metrics.profileMatchingSubtitle', 'Searches, scoring batches and explained profiles')}</p>
+                  </div>
+                  <SparklesIcon className="w-10 h-10 opacity-50" />
+                </div>
+                <div className="grid grid-cols-2 gap-3 text-sm mb-4">
+                  <div className="bg-violet-100 dark:bg-violet-900/30 rounded-lg p-3">
+                    <p className="opacity-70">{t('metrics.profilesRequested', 'Profiles requested')}</p>
+                    <p className="font-semibold">{formatNumber(safeNumber(operationsMetrics.operations?.profileMatching?.profilesRequested))}</p>
+                  </div>
+                  <div className="bg-violet-100 dark:bg-violet-900/30 rounded-lg p-3">
+                    <p className="opacity-70">{t('metrics.profilesScored', 'Profiles scored')}</p>
+                    <p className="font-semibold">{formatNumber(safeNumber(operationsMetrics.operations?.profileMatching?.profilesScored))}</p>
+                  </div>
+                  <div className="bg-violet-100 dark:bg-violet-900/30 rounded-lg p-3">
+                    <p className="opacity-70">{t('metrics.batchesStarted', 'Batches started')}</p>
+                    <p className="font-semibold">{safeNumber(operationsMetrics.operations?.profileMatching?.batchesStarted)}</p>
+                  </div>
+                  <div className="bg-violet-100 dark:bg-violet-900/30 rounded-lg p-3">
+                    <p className="opacity-70">{t('metrics.batchesRetriedFailed', 'Retried / failed')}</p>
+                    <p className="font-semibold">{safeNumber(operationsMetrics.operations?.profileMatching?.batchesRetried)} / {safeNumber(operationsMetrics.operations?.profileMatching?.batchesFailed)}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3 text-sm mb-4">
+                  <div className="bg-violet-100 dark:bg-violet-900/30 rounded-lg p-3">
+                    <p className="opacity-70">{t('metrics.profilesExplained', 'Profiles explained')}</p>
+                    <p className="font-semibold">{formatNumber(safeNumber(operationsMetrics.operations?.profileMatching?.profilesExplained))}</p>
+                  </div>
+                  <div className="bg-violet-100 dark:bg-violet-900/30 rounded-lg p-3">
+                    <p className="opacity-70">{t('metrics.profilesReturned', 'Profiles returned')}</p>
+                    <p className="font-semibold">{formatNumber(safeNumber(operationsMetrics.operations?.profileMatching?.profilesReturned))}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm mb-4">
+                  <div className="bg-violet-100 dark:bg-violet-900/30 rounded-lg p-3">
+                    <p className="opacity-70">{t('metrics.requestedToScoredRatio', 'Requested -> scored')}</p>
+                    <p className="font-semibold">
+                      {requestedToScoredRatio !== null
+                        ? `${(requestedToScoredRatio * 100).toFixed(1)}%`
+                        : 'N/A'}
+                    </p>
+                  </div>
+                  <div className="bg-violet-100 dark:bg-violet-900/30 rounded-lg p-3">
+                    <p className="opacity-70">{t('metrics.scoredToExplainedRatio', 'Scored -> explained')}</p>
+                    <p className="font-semibold">
+                      {scoredToExplainedRatio !== null
+                        ? `${(scoredToExplainedRatio * 100).toFixed(1)}%`
+                        : 'N/A'}
+                    </p>
+                  </div>
+                  <div className="bg-violet-100 dark:bg-violet-900/30 rounded-lg p-3">
+                    <p className="opacity-70">{t('metrics.scoredToReturnedRatio', 'Scored -> returned')}</p>
+                    <p className="font-semibold">
+                      {scoredToReturnedRatio !== null
+                        ? `${(scoredToReturnedRatio * 100).toFixed(1)}%`
+                        : 'N/A'}
+                    </p>
+                  </div>
+                </div>
+                {profileMatchingAlerts.length > 0 && (
+                  <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-200">
+                    <div className="mb-2 flex items-center gap-2 font-semibold">
+                      <ExclamationTriangleIcon className="h-4 w-4" />
+                      {t('metrics.profileMatchingAlerts', 'Profile matching alerts')}
+                    </div>
+                    <div className="space-y-1">
+                      {profileMatchingAlerts.map((alert, index) => (
+                        <p key={`${alert}-${index}`}>{alert}</p>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {operationsMetrics.operations?.profileMatching?.byProvider && Object.keys(operationsMetrics.operations.profileMatching.byProvider).length > 0 && (
+                  <div className="overflow-x-auto max-h-48">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-violet-200 dark:border-violet-700">
+                          <th className="text-left py-2 px-2 font-medium opacity-70">{t('metrics.model', 'Model')}</th>
+                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.searches', 'Searches')}</th>
+                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.calls', 'Calls')}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Object.entries(operationsMetrics.operations.profileMatching.byProvider)
+                          .sort(([, left], [, right]) => safeNumber(right.searches) - safeNumber(left.searches))
+                          .slice(0, 5)
+                          .map(([provider, stats]) => (
+                            <tr key={provider} className="border-b border-violet-100 dark:border-violet-800">
+                              <td className="py-2 px-2 font-mono text-xs">{provider}</td>
+                              <td className="py-2 px-2 text-right font-semibold">{safeNumber(stats.searches)}</td>
+                              <td className="py-2 px-2 text-right opacity-70">{safeNumber(stats.batchesStarted)}</td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                {operationsMetrics.operations?.profileMatching?.recent && operationsMetrics.operations.profileMatching.recent.length > 0 && (
+                  <div className="mt-4">
+                    <p className="text-xs font-semibold opacity-70 mb-2">{t('metrics.profileMatchingRecent', 'Recent activity')}</p>
+                    <div className="space-y-2 max-h-40 overflow-y-auto">
+                      {operationsMetrics.operations.profileMatching.recent.slice().reverse().map((entry, index) => (
+                        <div key={`${entry.timestamp || 'entry'}-${index}`} className="bg-violet-100 dark:bg-violet-900/30 rounded-lg p-2 text-xs">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-mono">{entry.provider || 'unknown'}</span>
+                            <span className="opacity-60">{entry.timestamp ? formatDateTime(entry.timestamp) : 'N/A'}</span>
+                          </div>
+                          <div className="mt-1 opacity-80">
+                            {entry.event || 'search'} | {t('metrics.profilesRequested', 'Profiles requested')}: {safeNumber(entry.profilesRequested)} | {t('metrics.profilesScored', 'Profiles scored')}: {safeNumber(entry.profilesScored)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </motion.div>
             </div>
           )}

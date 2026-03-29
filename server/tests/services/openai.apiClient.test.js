@@ -36,6 +36,10 @@ vi.mock('../../services/retry.service.js', () => ({
     withRetry: vi.fn((fn) => fn()),
     getCircuitBreakerStates: vi.fn(() => ({ openai: { state: 'CLOSED', failures: 0 } }))
 }));
+const mockMarkModelUnavailable = vi.fn();
+vi.mock('../../services/llmAvailability.service.js', () => ({
+    markModelUnavailable: (...args) => mockMarkModelUnavailable(...args)
+}));
 
 import axios from 'axios';
 import { validatePromptSize } from '../../utils/postgresHelpers.js';
@@ -138,6 +142,20 @@ describe('OpenAI API Client', () => {
                 model: 'gpt-4o',
                 messages: [{ role: 'user', content: 'hi' }]
             })).rejects.toThrow('Rate limit exceeded');
+        });
+
+        it('marks an OpenAI model unavailable on permission denial', async () => {
+            axios.post.mockResolvedValueOnce({
+                status: 403,
+                data: { error: { message: 'You do not have access to this model' } }
+            });
+
+            await expect(callOpenAI({
+                model: 'gpt-4o',
+                messages: [{ role: 'user', content: 'hi' }]
+            })).rejects.toThrow('You do not have access to this model');
+
+            expect(mockMarkModelUnavailable).toHaveBeenCalledWith('openai', 'gpt-4o', 'provider_model_access_denied', 'gpt-4o-mini');
         });
     });
 

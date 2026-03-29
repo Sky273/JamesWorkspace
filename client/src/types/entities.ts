@@ -258,6 +258,8 @@ export interface ProfileMatchingResponse {
   missionTitle: string;
   missionKeywords: MissionKeywords;
   totalResumesScanned: number;
+  profilesSentToLlm?: number;
+  profilesExplained?: number;
   profiles: ProfileMatchResult[];
   weights: ProfileMatchWeights;
   titleRefinementApplied?: boolean; // Legacy field
@@ -310,6 +312,16 @@ export interface DetailedProfileAnalysisResponse {
   candidateTitle: string;
   missionTitle: string;
   analysis: DetailedAnalysis;
+}
+
+export interface ProfileMatchingProgressDetails {
+  progress?: number;
+  stage?: string;
+  stageLabel?: string;
+  totalResumes?: number;
+  profilesSentToLlm?: number;
+  profileCount?: number;
+  overallScore?: number | null;
 }
 
 // ============================================
@@ -560,7 +572,7 @@ export interface Settings {
   id?: string;
   llmProvider?: 'openai' | 'anthropic' | 'deepseek' | 'glm' | 'minimax' | 'ollama';
   llmModel?: string;
-  llmAvailability?: { minimax?: { highspeedEnabled?: boolean } };
+  llmAvailability?: Record<string, { highspeedEnabled?: boolean; runtimeUnavailableModels?: string[] }>;
   ollamaBaseUrl?: string;
   ollamaVisionModel?: string;
   ollamaKeepAlive?: string;

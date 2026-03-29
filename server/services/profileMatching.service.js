@@ -10,7 +10,17 @@ import { callBusinessChatCompletion } from './llmProvider.service.js';
 import { getLLMSettings } from './settings.service.js';
 import { MISSION_KEYWORDS_EXTRACTION_PROMPT, DETAILED_PROFILE_ANALYSIS_PROMPT, BATCH_PROFILE_SCORING_PROMPT } from '../config/prompts.backend.js';
 import { normalizeUtf8Text, parseJsonFromLlmResponse } from './openai/textUtils.js';
-import { PROFILE_MATCHING_LLM_BATCH_SIZE, PROFILE_MATCHING_LLM_MAX_CONCURRENCY } from '../config/constants.js';
+import {
+    PROFILE_MATCHING_LLM_BATCH_SIZE,
+    PROFILE_MATCHING_LLM_MAX_CONCURRENCY,
+    PROFILE_MATCHING_LOCAL_SKILL_WEIGHT,
+    PROFILE_MATCHING_LOCAL_TOOL_WEIGHT,
+    PROFILE_MATCHING_LOCAL_INDUSTRY_WEIGHT,
+    PROFILE_MATCHING_LOCAL_SOFTSKILL_WEIGHT,
+    PROFILE_MATCHING_LOCAL_TITLE_EXACT_WEIGHT,
+    PROFILE_MATCHING_LOCAL_TITLE_TOKEN_WEIGHT,
+    PROFILE_MATCHING_LOCAL_COVERAGE_MULTIPLIER
+} from '../config/constants.js';
 import metrics, { buildLLMMetricLabel } from './metrics.service.js';
 
 /**
@@ -21,6 +31,33 @@ const DEFAULT_WEIGHTS = {
     tools: 25,
     industries: 20,
     softSkills: 15
+};
+
+const PROFILE_MATCHING_MAX_EXPLANATIONS = 5;
+const PROFILE_MATCHING_EXPLANATION_MAX_CONCURRENCY = 5;
+const PROFILE_MATCHING_EXPLANATION_PROMPT = `You are a JSON-only HR explanation API.
+Return a compact JSON object with exactly this structure:
+{
+  "reason": "short string",
+  "keyStrengths": ["string"],
+  "keyGaps": ["string"]
+}
+
+Rules:
+- Reason must stay under 220 characters.
+- keyStrengths: 1 to 3 short items.
+- keyGaps: 0 to 3 short items.
+- No markdown.
+- No text outside JSON.`;
+
+const DEFAULT_LOCAL_RANKING_WEIGHTS = {
+    skillWeight: PROFILE_MATCHING_LOCAL_SKILL_WEIGHT,
+    toolWeight: PROFILE_MATCHING_LOCAL_TOOL_WEIGHT,
+    industryWeight: PROFILE_MATCHING_LOCAL_INDUSTRY_WEIGHT,
+    softSkillWeight: PROFILE_MATCHING_LOCAL_SOFTSKILL_WEIGHT,
+    titleExactWeight: PROFILE_MATCHING_LOCAL_TITLE_EXACT_WEIGHT,
+    titleTokenWeight: PROFILE_MATCHING_LOCAL_TITLE_TOKEN_WEIGHT,
+    coverageMultiplier: PROFILE_MATCHING_LOCAL_COVERAGE_MULTIPLIER
 };
 
 // Note: Fuzzy matching functions removed - all scoring is now done by LLM
@@ -40,6 +77,207 @@ function parseJsonField(value) {
         }
     }
     return [];
+}
+
+function normalizeTag(value) {
+    return String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim()
+        .toLowerCase();
+}
+
+function buildNormalizedTagSet(values = []) {
+    return new Set((values || []).map(normalizeTag).filter(Boolean));
+}
+
+function tokenizeText(value) {
+    return String(value || '')
+        .split(/[^a-zA-Z0-9+.#-]+/)
+        .map(normalizeTag)
+        .filter(token => token && token.length > 1);
+}
+
+function computeCoverageScore(matches, missionValues = []) {
+    const totalTargets = (missionValues || []).filter(Boolean).length;
+    if (totalTargets === 0) {
+        return 0;
+    }
+
+    return matches / totalTargets;
+}
+
+function countMatches(candidateValues = [], missionSet = new Set()) {
+    let matches = 0;
+    for (const value of candidateValues || []) {
+        if (missionSet.has(normalizeTag(value))) {
+            matches += 1;
+        }
+    }
+    return matches;
+}
+
+function getProfileMatchingLocalRankingWeights(settings = {}) {
+    return {
+        skillWeight: Number(settings['Profile Matching Local Skill Weight'] ?? DEFAULT_LOCAL_RANKING_WEIGHTS.skillWeight),
+        toolWeight: Number(settings['Profile Matching Local Tool Weight'] ?? DEFAULT_LOCAL_RANKING_WEIGHTS.toolWeight),
+        industryWeight: Number(settings['Profile Matching Local Industry Weight'] ?? DEFAULT_LOCAL_RANKING_WEIGHTS.industryWeight),
+        softSkillWeight: Number(settings['Profile Matching Local Soft Skill Weight'] ?? DEFAULT_LOCAL_RANKING_WEIGHTS.softSkillWeight),
+        titleExactWeight: Number(settings['Profile Matching Local Title Exact Weight'] ?? DEFAULT_LOCAL_RANKING_WEIGHTS.titleExactWeight),
+        titleTokenWeight: Number(settings['Profile Matching Local Title Token Weight'] ?? DEFAULT_LOCAL_RANKING_WEIGHTS.titleTokenWeight),
+        coverageMultiplier: Number(settings['Profile Matching Local Coverage Multiplier'] ?? DEFAULT_LOCAL_RANKING_WEIGHTS.coverageMultiplier)
+    };
+}
+
+function scoreProfileHeuristically(profile, missionKeywords, rankingWeights = DEFAULT_LOCAL_RANKING_WEIGHTS) {
+    const missionSkillSet = buildNormalizedTagSet(missionKeywords.skills);
+    const missionToolSet = buildNormalizedTagSet(missionKeywords.tools);
+    const missionIndustrySet = buildNormalizedTagSet(missionKeywords.industries);
+    const missionSoftSkillSet = buildNormalizedTagSet(missionKeywords.softSkills);
+
+    const skillMatches = countMatches(profile.resumeTags?.skills, missionSkillSet);
+    const toolMatches = countMatches(profile.resumeTags?.tools, missionToolSet);
+    const industryMatches = countMatches(profile.resumeTags?.industries, missionIndustrySet);
+    const softSkillMatches = countMatches(profile.resumeTags?.softSkills, missionSoftSkillSet);
+
+    const title = normalizeTag(profile.title);
+    const missionTitle = normalizeTag(profile.missionTitle || '');
+    const titleBoost = title && missionTitle && (title.includes(missionTitle) || missionTitle.includes(title)) ? 5 : 0;
+    const missionTitleTokens = buildNormalizedTagSet(tokenizeText(profile.missionTitle || ''));
+    const profileTitleTokens = tokenizeText(profile.title || '');
+    const titleTokenMatches = countMatches(profileTitleTokens, missionTitleTokens);
+    const titleTokenBoost = titleTokenMatches * 2;
+    const qualityBoost = Math.min(Math.max(Number(profile.globalRating) || 0, 0), 100) / 20;
+    const skillCoverage = computeCoverageScore(skillMatches, missionKeywords.skills);
+    const toolCoverage = computeCoverageScore(toolMatches, missionKeywords.tools);
+    const industryCoverage = computeCoverageScore(industryMatches, missionKeywords.industries);
+    const softSkillCoverage = computeCoverageScore(softSkillMatches, missionKeywords.softSkills);
+    const coverageBoost =
+        (skillCoverage * rankingWeights.skillWeight * rankingWeights.coverageMultiplier) +
+        (toolCoverage * rankingWeights.toolWeight * rankingWeights.coverageMultiplier) +
+        (industryCoverage * rankingWeights.industryWeight * rankingWeights.coverageMultiplier) +
+        (softSkillCoverage * rankingWeights.softSkillWeight * rankingWeights.coverageMultiplier);
+
+    return {
+        skillMatches,
+        toolMatches,
+        industryMatches,
+        softSkillMatches,
+        titleTokenMatches,
+        skillCoverage,
+        toolCoverage,
+        industryCoverage,
+        softSkillCoverage,
+        heuristicScore:
+            (skillMatches * rankingWeights.skillWeight) +
+            (toolMatches * rankingWeights.toolWeight) +
+            (industryMatches * rankingWeights.industryWeight) +
+            (softSkillMatches * rankingWeights.softSkillWeight) +
+            ((titleBoost > 0 ? 1 : 0) * rankingWeights.titleExactWeight) +
+            (titleTokenMatches * rankingWeights.titleTokenWeight) +
+            coverageBoost +
+            qualityBoost
+    };
+}
+
+function buildCandidateDataFromProfile(profile) {
+    return {
+        name: profile.name || normalizeUtf8Text('Non sp\u00e9cifi\u00e9'),
+        title: profile.title || normalizeUtf8Text('Non sp\u00e9cifi\u00e9'),
+        globalRating: profile.globalRating || normalizeUtf8Text('Non \u00e9valu\u00e9'),
+        skills: (profile.resumeTags?.skills || []).slice(0, 8),
+        tools: (profile.resumeTags?.tools || []).slice(0, 6),
+        industries: (profile.resumeTags?.industries || []).slice(0, 4),
+        softSkills: (profile.resumeTags?.softSkills || []).slice(0, 5)
+    };
+}
+
+function buildProfileExplanationPrompt(profile, missionRecord, missionKeywords) {
+    const candidate = buildCandidateDataFromProfile(profile);
+
+    return `${PROFILE_MATCHING_EXPLANATION_PROMPT}
+
+MISSION
+- Title: ${missionRecord.title || ''}
+- Content: ${missionRecord.content || normalizeUtf8Text('Non sp\u00e9cifi\u00e9')}
+- Skills: ${(missionKeywords.skills || []).join(', ') || normalizeUtf8Text('Non sp\u00e9cifi\u00e9')}
+- Tools: ${(missionKeywords.tools || []).join(', ') || normalizeUtf8Text('Non sp\u00e9cifi\u00e9')}
+- Industries: ${(missionKeywords.industries || []).join(', ') || normalizeUtf8Text('Non sp\u00e9cifi\u00e9')}
+- Soft skills: ${(missionKeywords.softSkills || []).join(', ') || normalizeUtf8Text('Non sp\u00e9cifi\u00e9')}
+
+CANDIDATE
+- Name: ${candidate.name}
+- Title: ${candidate.title}
+- Rating: ${candidate.globalRating}
+- Skills: ${candidate.skills.join(', ') || normalizeUtf8Text('Non sp\u00e9cifi\u00e9')}
+- Tools: ${candidate.tools.join(', ') || normalizeUtf8Text('Non sp\u00e9cifi\u00e9')}
+- Industries: ${candidate.industries.join(', ') || normalizeUtf8Text('Non sp\u00e9cifi\u00e9')}
+- Soft skills: ${candidate.softSkills.join(', ') || normalizeUtf8Text('Non sp\u00e9cifi\u00e9')}`;
+}
+
+function buildExplanationPayload(explanation = {}) {
+    return {
+        reason: explanation.reason || null,
+        keyStrengths: Array.isArray(explanation.keyStrengths) ? explanation.keyStrengths.slice(0, 3) : [],
+        keyGaps: Array.isArray(explanation.keyGaps) ? explanation.keyGaps.slice(0, 3) : []
+    };
+}
+
+function getExplanationProfileCount(limit = 0, totalProfiles = 0) {
+    if (totalProfiles === 0) {
+        return 0;
+    }
+
+    if (limit > 0) {
+        return Math.min(limit, PROFILE_MATCHING_MAX_EXPLANATIONS, totalProfiles);
+    }
+
+    return Math.min(PROFILE_MATCHING_MAX_EXPLANATIONS, totalProfiles);
+}
+
+function selectProfilesForLlm(allProfiles, missionKeywords, missionTitle, limit = 0, rankingWeights = DEFAULT_LOCAL_RANKING_WEIGHTS) {
+    if (allProfiles.length <= 100) {
+        return allProfiles;
+    }
+
+    const candidateCount = limit > 0
+        ? Math.min(Math.max(limit * 5, 50), 100)
+        : 100;
+
+    return allProfiles
+        .map(profile => ({
+            ...profile,
+            missionTitle,
+            ...scoreProfileHeuristically({ ...profile, missionTitle }, missionKeywords, rankingWeights)
+        }))
+        .sort((a, b) => {
+            if (b.heuristicScore !== a.heuristicScore) {
+                return b.heuristicScore - a.heuristicScore;
+            }
+            return (b.globalRating || 0) - (a.globalRating || 0);
+        })
+        .slice(0, candidateCount)
+        .map(({
+            missionTitle: _missionTitle,
+            heuristicScore: _heuristicScore,
+            skillMatches: _skillMatches,
+            toolMatches: _toolMatches,
+            industryMatches: _industryMatches,
+            softSkillMatches: _softSkillMatches,
+            titleTokenMatches: _titleTokenMatches,
+            skillCoverage: _skillCoverage,
+            toolCoverage: _toolCoverage,
+            industryCoverage: _industryCoverage,
+            softSkillCoverage: _softSkillCoverage,
+            ...profile
+        }) => profile);
+}
+
+async function emitProgress(progressCallback, payload) {
+    if (typeof progressCallback !== 'function') {
+        return;
+    }
+    await progressCallback(payload);
 }
 
 /**
@@ -342,6 +580,110 @@ async function scoreBatchWithLLM(profiles, missionKeywords, missionRecord, userM
     };
 }
 
+async function explainTopProfilesWithLLM(profiles, missionKeywords, missionRecord, userMetadata = null) {
+    if (!profiles || profiles.length === 0) {
+        return {};
+    }
+
+    const settings = await getLLMSettings();
+    const model = settings.llmModel;
+    const provider = settings.llmProvider || 'unknown';
+    const supportsStructuredJsonResponse = provider === 'deepseek';
+    const isDeepSeekReasoner = provider === 'deepseek' && model === 'deepseek-reasoner';
+    const explanationMaxTokens = isDeepSeekReasoner ? 3072 : (provider === 'deepseek' ? 2048 : 1536);
+    const maxConcurrency = PROFILE_MATCHING_LLM_MAX_CONCURRENCY > 0
+        ? Math.min(PROFILE_MATCHING_LLM_MAX_CONCURRENCY, PROFILE_MATCHING_EXPLANATION_MAX_CONCURRENCY)
+        : Math.min(PROFILE_MATCHING_EXPLANATION_MAX_CONCURRENCY, provider === 'deepseek' ? 3 : 5);
+    const metricsProvider = buildLLMMetricLabel(provider, model || '');
+    const explanations = {};
+
+    async function explainSingleProfile(profile) {
+        const prompt = buildProfileExplanationPrompt(profile, missionRecord, missionKeywords);
+
+        async function requestExplanation(compactRetry = false) {
+            const response = await callBusinessChatCompletion({
+                model,
+                messages: [
+                    { role: 'system', content: 'You are a JSON-only HR explanation API. Respond with valid JSON only.' },
+                    {
+                        role: 'user',
+                        content: compactRetry
+                            ? `${prompt}\n\nReturn compact JSON only. No markdown. No extra text.`
+                            : prompt
+                    }
+                ],
+                maxTokens: explanationMaxTokens,
+                temperature: 0.2,
+                responseFormat: supportsStructuredJsonResponse ? { type: 'json_object' } : undefined,
+                userMetadata,
+                operationType: 'Profile Match Explanation'
+            });
+
+            return buildExplanationPayload(parseJsonFromLlmResponse(response.choices[0].message.content));
+        }
+
+        try {
+            return await requestExplanation(false);
+        } catch (error) {
+            if (isRecoverableJsonOutputError(error)) {
+                safeLog('warn', 'Profile match explanation returned malformed JSON, retrying once', {
+                    resumeId: profile.resumeId,
+                    provider,
+                    model,
+                    error: error.message
+                });
+
+                try {
+                    return await requestExplanation(true);
+                } catch (retryError) {
+                    safeLog('error', 'Profile match explanation retry failed', {
+                        resumeId: profile.resumeId,
+                        provider,
+                        model,
+                        error: retryError.message
+                    });
+                }
+            } else {
+                safeLog('error', 'Profile match explanation failed', {
+                    resumeId: profile.resumeId,
+                    provider,
+                    model,
+                    error: error.message
+                });
+            }
+
+            return null;
+        }
+    }
+
+    for (let waveStart = 0; waveStart < profiles.length; waveStart += maxConcurrency) {
+        const wave = profiles.slice(waveStart, waveStart + maxConcurrency);
+        const waveResults = await Promise.all(
+            wave.map(async profile => ({
+                resumeId: profile.resumeId,
+                explanation: await explainSingleProfile(profile)
+            }))
+        );
+
+        for (const result of waveResults) {
+            if (result.explanation) {
+                explanations[result.resumeId] = result.explanation;
+            }
+        }
+    }
+
+    metrics.trackProfileMatchingActivity({
+        provider: metricsProvider,
+        event: 'explanation',
+        profilesExplained: Object.keys(explanations).length,
+        metadata: {
+            profilesExplained: Object.keys(explanations).length
+        }
+    });
+
+    return explanations;
+}
+
 /**
  * Find best matching profiles for a mission
  */
@@ -352,7 +694,8 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
         status = null,
         firm = null,
         weights = DEFAULT_WEIGHTS,
-        dealId = null
+        dealId = null,
+        progressCallback = null
     } = options;
     
     const firmFilter = firm;
@@ -364,9 +707,20 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
     if (!missionRecord) {
         throw new Error('Mission not found');
     }
+    await emitProgress(progressCallback, {
+        progress: 35,
+        stage: 'mission-loaded',
+        stageLabel: 'Mission chargee'
+    });
     
     // 2. Get or extract mission keywords
     const missionKeywords = await getMissionKeywords(missionId, missionRecord, userMetadata);
+    const localRankingWeights = getProfileMatchingLocalRankingWeights(await getLLMSettings());
+    await emitProgress(progressCallback, {
+        progress: 45,
+        stage: 'mission-keywords-ready',
+        stageLabel: 'Mots-cles mission prets'
+    });
     
     // 3. Build query for resumes
     // Include all resumes regardless of status so every CV gets scored
@@ -416,6 +770,12 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
     });
     
     safeLog('info', 'Fetched resumes for matching', { count: resumeRecords.length });
+    await emitProgress(progressCallback, {
+        progress: 55,
+        stage: 'resumes-fetched',
+        stageLabel: 'CV recuperes',
+        totalResumes: resumeRecords.length
+    });
     
     // Debug: Log first few resumes to check tags
     if (resumeRecords.length > 0) {
@@ -462,12 +822,21 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
         };
     });
     
-    // 6. Score all profiles (limit=0 means all)
-    const profilesToScore = allProfiles;
+    // 6. Pre-rank locally to avoid sending the entire firm portfolio to the LLM.
+    const profilesToScore = selectProfilesForLlm(allProfiles, missionKeywords, missionRecord.title, limit, localRankingWeights);
     
     safeLog('info', 'Sending profiles to LLM for scoring', {
         totalProfiles: allProfiles.length,
-        profilesToScore: profilesToScore.length
+        profilesToScore: profilesToScore.length,
+        prefilterApplied: profilesToScore.length !== allProfiles.length
+    });
+    await emitProgress(progressCallback, {
+        progress: 65,
+        stage: 'llm-prefilter-ready',
+        stageLabel: 'Preselection terminee',
+        totalProfiles: allProfiles.length,
+        profilesToScore: profilesToScore.length,
+        prefilterApplied: profilesToScore.length !== allProfiles.length
     });
     
     if (profilesToScore.length === 0) {
@@ -501,6 +870,13 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
         missionRecord,
         userMetadata
     );
+    await emitProgress(progressCallback, {
+        progress: 85,
+        stage: 'llm-scoring-complete',
+        stageLabel: 'Scoring LLM termine',
+        profilesScored: Object.keys(llmResult.scores || {}).length,
+        partial: llmResult.partial || false
+    });
     
     // 8. Apply LLM scores - LLM is the only source of scoring
     let finalProfiles;
@@ -547,13 +923,54 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
         .filter(p => minScore === 0 ? true : p.matchScore >= minScore)
         .sort((a, b) => b.matchScore - a.matchScore);
     const filteredProfiles = limit > 0 ? sortedProfiles.slice(0, limit) : sortedProfiles;
+
+    const profilesToExplain = filteredProfiles.slice(0, getExplanationProfileCount(limit, filteredProfiles.length));
+    const shouldRunExplanationPass = llmScoringApplied
+        && profilesToExplain.length > 0
+        && (profilesToScore.length > profilesToExplain.length || filteredProfiles.length > profilesToExplain.length);
+    const explanationMap = shouldRunExplanationPass
+        ? await explainTopProfilesWithLLM(profilesToExplain, missionKeywords, missionRecord, userMetadata)
+        : {};
+    const enrichedProfiles = filteredProfiles.map(profile => {
+        const explanation = explanationMap[profile.resumeId];
+        if (!explanation) {
+            return profile;
+        }
+
+        return {
+            ...profile,
+            reason: explanation.reason || profile.reason || null,
+            keyStrengths: explanation.keyStrengths?.length ? explanation.keyStrengths : (profile.keyStrengths || []),
+            keyGaps: explanation.keyGaps?.length ? explanation.keyGaps : (profile.keyGaps || [])
+        };
+    });
+    await emitProgress(progressCallback, {
+        progress: 95,
+        stage: 'llm-explanations-complete',
+        stageLabel: 'Explications top profils terminees',
+        profileCount: enrichedProfiles.length,
+        profilesExplained: Object.keys(explanationMap).length
+    });
     
     safeLog('info', 'Profile matching completed', {
         totalResumes: resumeRecords.length,
-        matchingProfiles: filteredProfiles.length,
-        topScore: filteredProfiles[0]?.matchScore || 0,
+        matchingProfiles: enrichedProfiles.length,
+        topScore: enrichedProfiles[0]?.matchScore || 0,
         llmScoringApplied,
-        llmScoringFailed
+        llmScoringFailed,
+        profilesExplained: Object.keys(explanationMap).length
+    });
+
+    const completionSettings = await getLLMSettings();
+    metrics.trackProfileMatchingActivity({
+        provider: buildLLMMetricLabel(completionSettings.llmProvider || 'unknown', completionSettings.llmModel || ''),
+        event: 'complete',
+        profilesReturned: enrichedProfiles.length,
+        profilesExplained: Object.keys(explanationMap).length,
+        metadata: {
+            totalResumes: resumeRecords.length,
+            profilesSentToLlm: profilesToScore.length
+        }
     });
     
     return {
@@ -561,7 +978,9 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
         missionTitle: missionRecord.title,
         missionKeywords,
         totalResumesScanned: resumeRecords.length,
-        profiles: filteredProfiles,
+        profilesSentToLlm: profilesToScore.length,
+        profilesExplained: Object.keys(explanationMap).length,
+        profiles: enrichedProfiles,
         weights,
         llmScoringApplied,
         llmScoringFailed,
@@ -590,12 +1009,18 @@ export async function clearMissionKeywordsCache(missionId) {
  */
 export async function analyzeProfileForMission(missionId, resumeId, userMetadata = null) {
     safeLog('info', 'Starting detailed profile analysis', { resumeId, missionId });
+    const progressCallback = userMetadata?.progressCallback || null;
     
     // 1. Get resume record
     const resumeRecord = await findWithTimeout('resumes', resumeId);
     if (!resumeRecord) {
         throw new Error('Resume not found');
     }
+    await emitProgress(progressCallback, {
+        progress: 45,
+        stage: 'resume-loaded',
+        stageLabel: 'Profil charge'
+    });
     
     // 2. Get mission record and keywords
     const missionRecord = await findWithTimeout('missions', missionId);
@@ -605,6 +1030,11 @@ export async function analyzeProfileForMission(missionId, resumeId, userMetadata
     
     // 3. Get or extract mission keywords
     const missionKeywords = await getMissionKeywords(missionId, missionRecord, userMetadata);
+    await emitProgress(progressCallback, {
+        progress: 60,
+        stage: 'analysis-keywords-ready',
+        stageLabel: 'Contexte mission pret'
+    });
     
     // 4. Get LLM settings
     const settings = await getLLMSettings();
@@ -617,6 +1047,11 @@ export async function analyzeProfileForMission(missionId, resumeId, userMetadata
     if (!model && settings.llmProvider !== 'ollama') {
         throw new Error('LLM model not configured in Settings.');
     }
+    await emitProgress(progressCallback, {
+        progress: 75,
+        stage: 'analysis-llm-request',
+        stageLabel: 'Analyse LLM en cours'
+    });
     
     // 5. Prepare profile data
     const candidateSkills = parseJsonField(resumeRecord.skills);
@@ -705,6 +1140,12 @@ export async function analyzeProfileForMission(missionId, resumeId, userMetadata
     safeLog('info', 'Detailed profile analysis completed', {
         resumeId,
         missionId,
+        overallScore: analysis.overallScore
+    });
+    await emitProgress(progressCallback, {
+        progress: 90,
+        stage: 'analysis-complete',
+        stageLabel: 'Analyse detaillee terminee',
         overallScore: analysis.overallScore
     });
     
