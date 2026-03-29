@@ -33,6 +33,12 @@ global.IntersectionObserver = vi.fn().mockImplementation(() => ({
 // Mock fetch
 global.fetch = vi.fn();
 
+// Prevent jsdom tests from delegating popup handling to the host OS
+Object.defineProperty(window, 'open', {
+  writable: true,
+  value: vi.fn(() => null),
+});
+
 // Mock localStorage
 const localStorageMock = {
   getItem: vi.fn(),
