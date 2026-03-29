@@ -77,6 +77,18 @@ export const swaggerPaths = {
             }
         }
     },
+    '/auth/signout': {
+        post: {
+            tags: ['Authentication'],
+            summary: 'Sign out (alias)',
+            description: 'Alias of /auth/logout. Revoke tokens and clear cookies.',
+            security,
+            responses: {
+                200: { description: 'Signed out successfully' },
+                500: error500
+            }
+        }
+    },
     '/auth/me': {
         get: {
             tags: ['Authentication'],
@@ -109,6 +121,47 @@ export const swaggerPaths = {
             summary: 'Google OAuth callback',
             description: 'Handle Google OAuth callback after user consent',
             responses: { 302: { description: 'Redirect to application with auth result' } }
+        }
+    },
+    '/auth/google/token': {
+        post: {
+            tags: ['Authentication'],
+            summary: 'Sign in with Google ID token',
+            description: 'Authenticate directly with a Google ID token and establish the application session.',
+            requestBody: {
+                required: true,
+                content: {
+                    'application/json': {
+                        schema: {
+                            type: 'object',
+                            required: ['idToken'],
+                            properties: {
+                                idToken: { type: 'string' }
+                            }
+                        }
+                    }
+                }
+            },
+            responses: {
+                200: {
+                    description: 'Authentication successful',
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    user: { $ref: '#/components/schemas/User' }
+                                }
+                            }
+                        }
+                    }
+                },
+                400: validation400,
+                401: { description: 'Invalid Google token or no matching account' },
+                403: { description: 'Account inactive' },
+                429: { description: 'Rate limited' },
+                500: error500
+            }
         }
     },
     '/auth/google/status': {
@@ -384,25 +437,6 @@ export const swaggerPaths = {
             responses: { 200: { description: 'Extracted text' }, 401: auth401 }
         }
     },
-    '/resumes/analyze': {
-        post: {
-            tags: ['Resumes'],
-            summary: 'Analyze resume (deprecated)',
-            description: 'Analyze resume text using AI. Prefer /analyze-text.',
-            security: securityCsrf,
-            responses: { 200: { description: 'Analysis results' }, 401: auth401 }
-        }
-    },
-    '/resumes/analyze-text': {
-        post: {
-            tags: ['Resumes'],
-            summary: 'Analyze resume text',
-            description: 'AI-powered analysis: scores, tags, suggestions. Long-running operation.',
-            security: securityCsrf,
-            requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['text'], properties: { text: { type: 'string' } } } } } },
-            responses: { 200: { description: 'Analysis with scores and tags' }, 401: auth401, 500: error500 }
-        }
-    },
     '/resumes/{id}/ai-modify': {
         post: {
             tags: ['Resumes'],
@@ -412,28 +446,6 @@ export const swaggerPaths = {
             parameters: [paramId],
             requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['content', 'instructions'], properties: { content: { type: 'string' }, instructions: { type: 'string' } } } } } },
             responses: { 200: { description: 'Modified content' }, 401: auth401, 404: notFound404 }
-        }
-    },
-    '/resumes/{id}/match': {
-        post: {
-            tags: ['Resumes'],
-            summary: 'Match resume to mission',
-            description: 'AI analysis of resume-mission match score',
-            security: securityCsrf,
-            parameters: [paramId],
-            requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['missionId'], properties: { missionId: { type: 'string', format: 'uuid' } } } } } },
-            responses: { 200: { description: 'Match analysis' }, 401: auth401, 404: notFound404 }
-        }
-    },
-    '/resumes/{id}/adapt': {
-        post: {
-            tags: ['Adaptations'],
-            summary: 'Create resume adaptation',
-            description: 'AI-powered adaptation of resume for a specific mission. Long-running.',
-            security: securityCsrf,
-            parameters: [paramId],
-            requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['missionId'], properties: { missionId: { type: 'string', format: 'uuid' } } } } } },
-            responses: { 200: { description: 'Adaptation created', content: { 'application/json': { schema: { $ref: '#/components/schemas/Adaptation' } } } }, 401: auth401 }
         }
     },
     '/resumes/stats': {
@@ -1875,6 +1887,16 @@ export const swaggerPaths = {
             responses: { 200: { description: 'Original file info' }, 401: auth401 }
         }
     },
+    '/share/resume/{resumeId}/revoke': {
+        post: {
+            tags: ['Share'],
+            summary: 'Revoke share links',
+            description: 'Revoke all public share links for a resume',
+            security: securityCsrf,
+            parameters: [paramResumeId],
+            responses: { 200: { description: 'Share links revoked' }, 401: auth401, 404: notFound404 }
+        }
+    },
     '/share/pdf/{token}': {
         get: {
             tags: ['Share'],
@@ -2084,6 +2106,12 @@ export const swaggerPaths = {
     '/batch-jobs/improve': {
         post: { tags: ['Resumes'], summary: 'Create batch improve job', security: securityCsrf, responses: { 201: { description: 'Improve job created' }, 401: auth401 } }
     },
+    '/batch-jobs/adapt': {
+        post: { tags: ['Resumes'], summary: 'Create batch adaptation job', security: securityCsrf, responses: { 201: { description: 'Adaptation job created' }, 401: auth401 } }
+    },
+    '/batch-jobs/match': {
+        post: { tags: ['Resumes'], summary: 'Create batch match-analysis job', security: securityCsrf, responses: { 201: { description: 'Match-analysis job created' }, 401: auth401 } }
+    },
     '/batch-jobs/deal-export': {
         post: { tags: ['Resumes'], summary: 'Create deal export job', security: securityCsrf, responses: { 201: { description: 'Export job created' }, 401: auth401 } }
     },
@@ -2125,6 +2153,95 @@ export const swaggerPaths = {
     },
 
     // ============================================
+    // CHATBOT
+    // ============================================
+    '/chatbot/message': {
+        post: {
+            tags: ['Chatbot'],
+            summary: 'Send chatbot message',
+            description: 'Assistant conversationnel adossé au guide utilisateur',
+            security: securityCsrf,
+            requestBody: {
+                required: true,
+                content: {
+                    'application/json': {
+                        schema: {
+                            type: 'object',
+                            required: ['message'],
+                            properties: {
+                                message: { type: 'string' },
+                                conversationHistory: {
+                                    type: 'array',
+                                    items: {
+                                        type: 'object',
+                                        properties: {
+                                            role: { type: 'string', enum: ['user', 'assistant'] },
+                                            content: { type: 'string' }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            responses: { 200: { description: 'Chatbot response' }, 401: auth401, 500: error500 }
+        }
+    },
+    '/chatbot/status': {
+        get: {
+            tags: ['Chatbot'],
+            summary: 'Get chatbot status',
+            security,
+            responses: { 200: { description: 'Chatbot status' }, 401: auth401 }
+        }
+    },
+
+    // ============================================
+    // LLM PROXY
+    // ============================================
+    '/llm/openai': {
+        post: {
+            tags: ['LLM'],
+            summary: 'Proxy OpenAI-compatible request',
+            security: securityCsrf,
+            responses: { 200: { description: 'OpenAI-compatible response' }, 400: validation400, 401: auth401, 500: error500 }
+        }
+    },
+    '/llm/anthropic': {
+        post: {
+            tags: ['LLM'],
+            summary: 'Proxy Anthropic-compatible request',
+            security: securityCsrf,
+            responses: { 200: { description: 'Anthropic-compatible response' }, 400: validation400, 401: auth401, 500: error500 }
+        }
+    },
+    '/llm/chat/completions': {
+        post: {
+            tags: ['LLM'],
+            summary: 'Unified OpenAI-compatible completions proxy',
+            security: securityCsrf,
+            responses: { 200: { description: 'OpenAI-compatible response' }, 400: validation400, 401: auth401, 500: error500 }
+        }
+    },
+    '/llm/messages': {
+        post: {
+            tags: ['LLM'],
+            summary: 'Unified Anthropic-compatible messages proxy',
+            security: securityCsrf,
+            responses: { 200: { description: 'Anthropic-compatible response' }, 400: validation400, 401: auth401, 500: error500 }
+        }
+    },
+    '/llm/circuit-breakers': {
+        get: {
+            tags: ['LLM'],
+            summary: 'Get LLM family circuit-breaker indicators',
+            security,
+            responses: { 200: { description: 'Circuit-breaker indicators' }, 401: auth401, 403: forbidden403 }
+        }
+    },
+
+    // ============================================
     // DOCUMENTATION
     // ============================================
     '/docs': {
@@ -2139,6 +2256,94 @@ export const swaggerPaths = {
             tags: ['Documentation'],
             summary: 'Swagger UI',
             responses: { 200: { description: 'Interactive API documentation page' } }
+        }
+    },
+
+    // ============================================
+    // ROOT DOCUMENT GENERATION PROXIES
+    // ============================================
+    '/generate-pdf': {
+        post: {
+            tags: ['Templates'],
+            summary: 'Generate PDF document via PDF server proxy',
+            description: 'Render HTML content to PDF through the internal PDF server. **Use the Root Server** (`/`) to call this endpoint.',
+            servers: [{ url: '/', description: 'Root Server' }],
+            security,
+            requestBody: {
+                required: true,
+                content: {
+                    'application/json': {
+                        schema: {
+                            type: 'object',
+                            required: ['htmlContent', 'filename'],
+                            properties: {
+                                htmlContent: { type: 'string' },
+                                filename: { type: 'string' },
+                                stylesheet: { type: 'string' },
+                                headerContent: { type: 'string' },
+                                footerContent: { type: 'string' },
+                                footerHeight: { type: 'integer' },
+                                format: { type: 'string', enum: ['pdf'] }
+                            }
+                        }
+                    }
+                }
+            },
+            responses: {
+                200: {
+                    description: 'Generated PDF file',
+                    content: {
+                        'application/pdf': {
+                            schema: { type: 'string', format: 'binary' }
+                        }
+                    }
+                },
+                400: validation400,
+                401: auth401,
+                500: error500
+            }
+        }
+    },
+    '/generate-docx': {
+        post: {
+            tags: ['Templates'],
+            summary: 'Generate DOCX document via PDF server proxy',
+            description: 'Render HTML content to DOCX through the internal PDF server. **Use the Root Server** (`/`) to call this endpoint.',
+            servers: [{ url: '/', description: 'Root Server' }],
+            security,
+            requestBody: {
+                required: true,
+                content: {
+                    'application/json': {
+                        schema: {
+                            type: 'object',
+                            required: ['htmlContent', 'filename'],
+                            properties: {
+                                htmlContent: { type: 'string' },
+                                filename: { type: 'string' },
+                                stylesheet: { type: 'string' },
+                                headerContent: { type: 'string' },
+                                footerContent: { type: 'string' },
+                                footerHeight: { type: 'integer' },
+                                format: { type: 'string', enum: ['doc', 'docx'] }
+                            }
+                        }
+                    }
+                }
+            },
+            responses: {
+                200: {
+                    description: 'Generated DOCX file',
+                    content: {
+                        'application/vnd.openxmlformats-officedocument.wordprocessingml.document': {
+                            schema: { type: 'string', format: 'binary' }
+                        }
+                    }
+                },
+                400: validation400,
+                401: auth401,
+                500: error500
+            }
         }
     }
 };

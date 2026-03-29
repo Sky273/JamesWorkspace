@@ -6,7 +6,7 @@
 import express from 'express';
 import fs from 'fs';
 import { authenticateToken } from '../middleware/auth.middleware.js';
-import { validateBody, validateParams, batchImproveSchema, batchAdaptSchema, batchDealExportSchema, provideNameSchema } from '../utils/validation.js';
+import { validateBody, validateParams, batchImproveSchema, batchAdaptSchema, batchMatchSchema, batchDealExportSchema, provideNameSchema } from '../utils/validation.js';
 import { safeLog } from '../utils/logger.backend.js';
 import multer from 'multer';
 import {
@@ -326,6 +326,63 @@ router.post('/adapt', authenticateToken, validateBody(batchAdaptSchema), async (
     } catch (error) {
         safeLog('error', 'Failed to create batch adaptation job', { error: error.message });
         res.status(500).json({ error: error.message || 'Erreur lors de la cr?ation du job' });
+    }
+});
+
+/**
+ * POST /api/batch-jobs/match
+ * Create a batch match-analysis job for existing resumes and a mission
+ */
+router.post('/match', authenticateToken, validateBody(batchMatchSchema), async (req, res) => {
+    try {
+        const userId = req.user?.id;
+        const isAdmin = req.user?.role === 'admin';
+        const userFirmId = req.user?.firmId || req.user?.firm_id;
+
+        const normalizedPayload = normalizeBatchJobPayload(req.body);
+        const { resumeIds, missionId, options: jobOptions = {} } = normalizedPayload;
+
+        if (!resumeIds || !Array.isArray(resumeIds) || resumeIds.length === 0) {
+            return res.status(400).json({ error: 'Resume IDs requis' });
+        }
+
+        if (!missionId) {
+            return res.status(400).json({ error: 'Mission ID requis' });
+        }
+
+        let firmId = userFirmId;
+        if (isAdmin && normalizedPayload.firm_id) {
+            firmId = normalizedPayload.firm_id;
+        }
+
+        if (!firmId) {
+            return res.status(400).json({ error: 'Firm ID requis' });
+        }
+
+        const job = await createJob({
+            firmId,
+            userId,
+            jobType: 'match',
+            options: {
+                ...jobOptions,
+                missionId,
+                match: true
+            }
+        });
+
+        await addJobResumeIds(job.id, resumeIds);
+        const updatedJob = await getJob(job.id);
+
+        safeLog('info', 'Batch match job created via API', {
+            jobId: job.id,
+            resumeCount: resumeIds.length,
+            missionId
+        });
+
+        res.status(201).json(updatedJob);
+    } catch (error) {
+        safeLog('error', 'Failed to create batch match job', { error: error.message });
+        res.status(500).json({ error: error.message || 'Erreur lors de la création du job' });
     }
 });
 

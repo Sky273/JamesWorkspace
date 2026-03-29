@@ -122,35 +122,38 @@ const PROVIDER_CAPABILITIES = {
         {
             match: /^MiniMax-M2$/i,
             maxOutputTokens: 128000,
-            tokenParameter: 'max_tokens',
+            tokenParameter: 'max_completion_tokens',
             supportsResponseFormat: false,
             temperatureRange: { min: 0, maxExclusive: 1 },
             topPRange: { min: 0, maxInclusive: 1 }
         },
         {
             match: /^MiniMax-M2.7(?:-highspeed)?$/i,
-            tokenParameter: 'max_tokens',
+            maxOutputTokens: 128000,
+            tokenParameter: 'max_completion_tokens',
             supportsResponseFormat: false,
             temperatureRange: { min: 0, maxExclusive: 1 },
             topPRange: { min: 0, maxInclusive: 1 }
         },
         {
             match: /^MiniMax-M2.5(?:-highspeed)?$/i,
-            tokenParameter: 'max_tokens',
+            maxOutputTokens: 128000,
+            tokenParameter: 'max_completion_tokens',
             supportsResponseFormat: false,
             temperatureRange: { min: 0, maxExclusive: 1 },
             topPRange: { min: 0, maxInclusive: 1 }
         },
         {
             match: /^MiniMax-M2.1(?:-highspeed)?$/i,
-            tokenParameter: 'max_tokens',
+            maxOutputTokens: 128000,
+            tokenParameter: 'max_completion_tokens',
             supportsResponseFormat: false,
             temperatureRange: { min: 0, maxExclusive: 1 },
             topPRange: { min: 0, maxInclusive: 1 }
         },
         {
             match: /^M2-her$/i,
-            tokenParameter: 'max_tokens',
+            tokenParameter: 'max_completion_tokens',
             supportsResponseFormat: false,
             temperatureRange: { min: 0, maxExclusive: 1 },
             topPRange: { min: 0, maxInclusive: 1 }

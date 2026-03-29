@@ -6,7 +6,7 @@
 import { selectWithTimeout, updateWithTimeout, createWithTimeout } from '../utils/postgresHelpers.js';
 import { OLLAMA_BASE_URL } from '../config/constants.js';
 import { safeLog } from '../utils/logger.backend.js';
-import { resolveAvailableModel, getProviderAvailabilityFlags } from './llmAvailability.service.js';
+import { resolveAvailableModel, getProviderAvailabilityFlags, syncPersistedAvailabilityState } from './llmAvailability.service.js';
 
 // Cache settings for 5 minutes to reduce database calls
 let settingsCache = null;
@@ -41,6 +41,7 @@ export async function getLLMSettings() {
         }
 
         const dbSettings = settingsRecords[0];
+        syncPersistedAvailabilityState(dbSettings.llm_availability_state || {});
 
         
         // Map PostgreSQL columns to frontend format
@@ -63,7 +64,8 @@ export async function getLLMSettings() {
             'Experience Weight': dbSettings.experience_weight,
             'Education Weight': dbSettings.education_weight,
             'ATS Weight': dbSettings.ats_weight,
-            'Hobbies Languages Weight': dbSettings.hobbies_languages_weight
+            'Hobbies Languages Weight': dbSettings.hobbies_languages_weight,
+            llmAvailabilityState: dbSettings.llm_availability_state || {}
         };
 
         const normalizedModel = resolveAvailableModel(

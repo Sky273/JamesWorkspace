@@ -138,8 +138,8 @@ export async function addJobExportItems(jobId, items) {
 export async function getJobItems(jobId) {
     try {
         const result = await query(`
-            SELECT id, job_id, resume_id, adaptation_id, source_type, file_name, relative_path, status, progress, error_message, 
-                   original_name, display_name, created_at, processed_at
+            SELECT id, job_id, resume_id, adaptation_id, source_type, file_name, relative_path, status, progress, error_message,
+                   original_name, display_name, pending_data, created_at, processed_at
             FROM batch_job_items
             WHERE job_id = $1
             ORDER BY created_at ASC
@@ -201,6 +201,12 @@ export async function updateJobItemStatus(itemId, status, updates = {}) {
         if (updates.display_name) {
             setClauses.push(`display_name = $${paramIndex}`);
             params.push(updates.display_name);
+            paramIndex++;
+        }
+
+        if (updates.result_data !== undefined) {
+            setClauses.push(`pending_data = $${paramIndex}`);
+            params.push(updates.result_data ? JSON.stringify(updates.result_data) : null);
             paramIndex++;
         }
 

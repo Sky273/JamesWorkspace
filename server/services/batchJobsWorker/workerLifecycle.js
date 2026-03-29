@@ -17,7 +17,7 @@ import {
     getFinalJobOutcome
 } from '../batchJobs.service.js';
 import { resetLLMQueue } from './llmIntegration.js';
-import { processImportItem, processImproveItem, processAdaptItem } from './itemProcessors.js';
+import { processImportItem, processImproveItem, processAdaptItem, processMatchItem } from './itemProcessors.js';
 import { generateJobExport } from './exportGenerator.js';
 
 // Worker configuration
@@ -285,6 +285,8 @@ async function processItem(item, job) {
             await processImportItem(item, job, options);
         } else if (job.job_type === 'improve') {
             await processImproveItem(item, job, options);
+        } else if (job.job_type === 'match') {
+            await processMatchItem(item, job, options);
         } else if (job.job_type === 'adapt') {
             await processAdaptItem(item, job, options);
         } else if (job.job_type === 'deal-export') {

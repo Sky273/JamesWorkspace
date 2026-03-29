@@ -9,6 +9,7 @@ const mockTrackLLMRequest = vi.fn();
 const mockSafeLog = vi.fn();
 const mockValidatePromptSize = vi.fn();
 const mockWithRetry = vi.fn();
+const mockMarkModelUnavailable = vi.fn();
 
 vi.mock('axios', () => ({
     default: { post: (...args) => mockAxiosPost(...args) }
@@ -32,6 +33,11 @@ vi.mock('../../services/retry.service.js', () => ({
 
 vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: (...args) => mockSafeLog(...args)
+}));
+
+vi.mock('../../services/llmAvailability.service.js', () => ({
+    isMiniMaxHighspeedModel: (model) => /-highspeed$/i.test(String(model || '')),
+    markModelUnavailable: (...args) => mockMarkModelUnavailable(...args)
 }));
 
 vi.mock('../../utils/postgresHelpers.js', () => ({
@@ -111,5 +117,46 @@ describe('MiniMax Service', () => {
             serviceName: 'minimax',
             operationName: 'MiniMax retry test'
         }));
+    });
+
+    it('falls back from highspeed to standard MiniMax model when upstream rejects it', async () => {
+        mockAxiosPost
+            .mockRejectedValueOnce({
+                message: 'Request failed with status code 500',
+                response: {
+                    status: 500,
+                    statusText: 'Internal Server Error',
+                    headers: {},
+                    data: null
+                }
+            })
+            .mockResolvedValueOnce({
+                data: {
+                    model: 'MiniMax-M2.7',
+                    choices: [{ message: { content: 'Recovered' } }],
+                    usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 }
+                }
+            });
+
+        const result = await callMiniMaxOpenAICompatible({
+            model: 'MiniMax-M2.7-highspeed',
+            messages: [{ role: 'user', content: 'Hello' }],
+            operationType: 'MiniMax highspeed fallback test'
+        });
+
+        expect(mockMarkModelUnavailable).toHaveBeenCalledWith(
+            'minimax',
+            'MiniMax-M2.7-highspeed',
+            'minimax_highspeed_runtime_unavailable',
+            'MiniMax-M2.7'
+        );
+        expect(result.model).toBe('MiniMax-M2.7');
+        expect(result.actualModel).toBe('MiniMax-M2.7');
+        expect(mockAxiosPost).toHaveBeenNthCalledWith(
+            2,
+            'https://api.minimax.io/v1/chat/completions',
+            expect.objectContaining({ model: 'MiniMax-M2.7' }),
+            expect.any(Object)
+        );
     });
 });

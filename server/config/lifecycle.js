@@ -32,6 +32,7 @@ import { destroyGoogleapis } from '../services/mail/gmailProvider.js';
 import { destroyMjml } from '../services/emailTemplates.service.js';
 import { metrics } from '../services/metrics.service.js';
 import { destroySettingsCache } from '../services/settings.service.js';
+import { initializeLLMAvailabilityState } from '../services/llmAvailability.service.js';
 
 // ============================================
 // MEMORY MONITORING
@@ -147,6 +148,13 @@ async function onServerStart(server, protocol, port) {
     const dbInitialized = await initializeDatabase();
     if (dbInitialized) {
         safeLog('info', 'PostgreSQL database initialized successfully');
+
+        try {
+            await initializeLLMAvailabilityState();
+            safeLog('info', 'LLM availability state initialized');
+        } catch (error) {
+            safeLog('error', 'Failed to initialize LLM availability state', { error: error.message });
+        }
 
         // Start backup scheduler (scheduled database backups via FTP/SFTP)
         // Requires schema to be prepared separately via docker-migrate.

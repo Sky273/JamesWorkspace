@@ -13,6 +13,10 @@ import { analyzeResumeWithLLM, analyzeImprovedResumeWithLLM, improveResumeWithLL
 import crypto from 'crypto';
 import { markConsentError, sendConsentRequest } from '../consent.service.js';
 import { executeResumeAdaptation } from '../resumeAdaptation.service.js';
+import { matchResumeWithMission } from '../openai.service.js';
+import { findResumeRecord, findMissionRecord } from '../resumes.service.js';
+import { getLLMSettings } from '../settings.service.js';
+import { DEFAULT_MATCH_ANALYSIS_PROMPT } from '../../config/prompts.backend.js';
 
 /**
  * Process an import item (upload + analyze + optionally improve)
@@ -635,6 +639,69 @@ export async function processAdaptItem(item, job, options) {
         resumeId: item.resume_id,
         missionId,
         adaptationId: result.adaptationRecord.id
+    });
+}
+
+/**
+ * Process a match item (analyze existing resume against a mission)
+ */
+export async function processMatchItem(item, job, options) {
+    const missionId = options?.missionId;
+
+    if (!item.resume_id) {
+        throw new Error('Resume ID manquant');
+    }
+
+    if (!missionId) {
+        throw new Error('Mission ID manquant');
+    }
+
+    await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, { progress: 30 });
+
+    const [resumeRecord, missionRecord, settings] = await Promise.all([
+        findResumeRecord(item.resume_id),
+        findMissionRecord(missionId),
+        getLLMSettings()
+    ]);
+
+    const resumeText = resumeRecord.improved_text || resumeRecord.original_text;
+    if (!resumeText) {
+        throw new Error('Resume has no text content');
+    }
+
+    const model = settings.llmModel;
+    if (!model && settings.llmProvider !== 'ollama') {
+        throw new Error('LLM model not configured in Settings.');
+    }
+
+    const matchPrompt = settings['Match Analysis Prompt'] || DEFAULT_MATCH_ANALYSIS_PROMPT;
+
+    const matchAnalysis = await matchResumeWithMission(
+        resumeText,
+        missionRecord.title || '',
+        missionRecord.content || '',
+        model,
+        matchPrompt,
+        {
+            source: 'batch-job',
+            jobId: job.id,
+            itemId: item.id
+        }
+    );
+
+    await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, {
+        progress: 90,
+        result_data: {
+            missionId,
+            matchAnalysis
+        }
+    });
+
+    safeLog('info', 'Match item processing completed', {
+        itemId: item.id,
+        resumeId: item.resume_id,
+        missionId,
+        hasMatchAnalysis: !!matchAnalysis
     });
 }
 

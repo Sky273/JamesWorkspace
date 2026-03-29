@@ -16,6 +16,7 @@ import { safeLog } from '../utils/logger.backend.js';
 import { validatePromptSize } from '../utils/postgresHelpers.js';
 import { extractTextFromContentBlocks, flattenLlmTextContent } from './llmContent.service.js';
 import { buildCapabilityAwareAnthropicOptions, buildCapabilityAwareOpenAICompatibleParams } from './llmPayloadCapabilities.service.js';
+import { isMiniMaxHighspeedModel, markModelUnavailable } from './llmAvailability.service.js';
 
 function truncateForLog(value, maxLength = 2000) {
     if (value == null) {
@@ -121,6 +122,15 @@ async function postToMiniMax(url, body, headers, timeout, operationType) {
     );
 }
 
+function getMiniMaxStandardFallbackModel(model = '') {
+    return isMiniMaxHighspeedModel(model) ? String(model).replace(/-highspeed$/i, '') : null;
+}
+
+function shouldFallbackFromMiniMaxHighspeed(error) {
+    const status = error?.response?.status;
+    return status === 500 || status === 403 || status === 401;
+}
+
 export async function callMiniMaxOpenAICompatible({
     model,
     messages,
@@ -134,29 +144,27 @@ export async function callMiniMaxOpenAICompatible({
 }) {
     validateMiniMaxRequest(model, messages, maxPromptLength);
 
-    const normalized = buildCapabilityAwareOpenAICompatibleParams('minimax', model, {
-        maxTokens,
-        temperature,
-        topP,
-        responseFormat,
-        additionalParams: { messages },
-        fallbackMaxTokens: 4096
-    });
-
-    const requestParams = normalized.requestParams;
-
-    if (normalized.droppedParams.length > 0) {
-        safeLog('warn', 'Dropped unsupported MiniMax OpenAI-compatible params', {
-            model,
-            operationType,
-            droppedParams: normalized.droppedParams
+    const executeRequest = async (effectiveModel) => {
+        const normalized = buildCapabilityAwareOpenAICompatibleParams('minimax', effectiveModel, {
+            maxTokens,
+            temperature,
+            topP,
+            responseFormat,
+            additionalParams: { messages },
+            fallbackMaxTokens: 4096
         });
-    }
 
-    try {
+        if (normalized.droppedParams.length > 0) {
+            safeLog('warn', 'Dropped unsupported MiniMax OpenAI-compatible params', {
+                model: effectiveModel,
+                operationType,
+                droppedParams: normalized.droppedParams
+            });
+        }
+
         const response = await postToMiniMax(
             `${MINIMAX_OPENAI_BASE_URL.replace(/\/$/, '')}/chat/completions`,
-            requestParams,
+            normalized.requestParams,
             {
                 Authorization: `Bearer ${MINIMAX_API_KEY}`,
                 'Content-Type': 'application/json'
@@ -179,16 +187,36 @@ export async function callMiniMaxOpenAICompatible({
         const inputTokens = usage.input_tokens || usage.prompt_tokens || 0;
         const outputTokens = usage.output_tokens || usage.completion_tokens || 0;
         const totalTokens = usage.total_tokens || (inputTokens + outputTokens);
-        metrics.trackLLMRequest(buildLLMMetricLabel('minimax', response.data?.model || model), totalTokens, true, inputTokens, outputTokens);
+        metrics.trackLLMRequest(buildLLMMetricLabel('minimax', response.data?.model || effectiveModel), totalTokens, true, inputTokens, outputTokens);
 
         return {
             content,
-            model,
-            actualModel: response.data?.model || model,
+            model: effectiveModel,
+            actualModel: response.data?.model || effectiveModel,
             usage,
             raw: response.data
         };
+    };
+
+    try {
+        return await executeRequest(model);
     } catch (error) {
+        const fallbackModel = getMiniMaxStandardFallbackModel(model);
+        if (fallbackModel && shouldFallbackFromMiniMaxHighspeed(error)) {
+            await markModelUnavailable('minimax', model, 'minimax_highspeed_runtime_unavailable', fallbackModel);
+            safeLog('warn', 'MiniMax highspeed model failed, retrying with standard variant', {
+                model,
+                fallbackModel,
+                operationType,
+                ...serializeMiniMaxErrorPayload(error)
+            });
+            try {
+                return await executeRequest(fallbackModel);
+            } catch (fallbackError) {
+                metrics.trackLLMRequest(buildLLMMetricLabel('minimax', fallbackModel), 0, false, 0, 0);
+                throw fallbackError;
+            }
+        }
         metrics.trackLLMRequest(buildLLMMetricLabel('minimax', model), 0, false, 0, 0);
         safeLog('error', 'MiniMax OpenAI-compatible API call failed', {
             model,
@@ -223,40 +251,40 @@ export async function callMiniMaxAnthropicCompatible({
                 : message.content
         }));
 
-    const normalized = buildCapabilityAwareAnthropicOptions('minimax', model, {
-        maxTokens,
-        temperature,
-        topP,
-        fallbackMaxTokens: 4096
-    });
-
-    const requestBody = {
-        model,
-        messages: conversationMessages,
-        max_tokens: normalized.effectiveMaxTokens
-    };
-
-    if (normalized.topP !== undefined) {
-        requestBody.top_p = normalized.topP;
-    }
-
-    if (systemMessage?.content) {
-        requestBody.system = systemMessage.content;
-    }
-
-    if (normalized.temperature !== undefined) {
-        requestBody.temperature = normalized.temperature;
-    }
-
-    if (normalized.droppedParams.length > 0) {
-        safeLog('warn', 'Dropped unsupported MiniMax Anthropic-compatible params', {
-            model,
-            operationType,
-            droppedParams: normalized.droppedParams
+    const executeRequest = async (effectiveModel) => {
+        const normalized = buildCapabilityAwareAnthropicOptions('minimax', effectiveModel, {
+            maxTokens,
+            temperature,
+            topP,
+            fallbackMaxTokens: 4096
         });
-    }
 
-    try {
+        const requestBody = {
+            model: effectiveModel,
+            messages: conversationMessages,
+            max_tokens: normalized.effectiveMaxTokens
+        };
+
+        if (normalized.topP !== undefined) {
+            requestBody.top_p = normalized.topP;
+        }
+
+        if (systemMessage?.content) {
+            requestBody.system = systemMessage.content;
+        }
+
+        if (normalized.temperature !== undefined) {
+            requestBody.temperature = normalized.temperature;
+        }
+
+        if (normalized.droppedParams.length > 0) {
+            safeLog('warn', 'Dropped unsupported MiniMax Anthropic-compatible params', {
+                model: effectiveModel,
+                operationType,
+                droppedParams: normalized.droppedParams
+            });
+        }
+
         const response = await postToMiniMax(
             `${MINIMAX_ANTHROPIC_BASE_URL.replace(/\/$/, '')}/v1/messages`,
             requestBody,
@@ -283,16 +311,36 @@ export async function callMiniMaxAnthropicCompatible({
         const inputTokens = usage.input_tokens || 0;
         const outputTokens = usage.output_tokens || 0;
         const totalTokens = usage.total_tokens || (inputTokens + outputTokens);
-        metrics.trackLLMRequest(buildLLMMetricLabel('minimax', response.data?.model || model), totalTokens, true, inputTokens, outputTokens);
+        metrics.trackLLMRequest(buildLLMMetricLabel('minimax', response.data?.model || effectiveModel), totalTokens, true, inputTokens, outputTokens);
 
         return {
             content,
-            model,
-            actualModel: response.data?.model || model,
+            model: effectiveModel,
+            actualModel: response.data?.model || effectiveModel,
             usage,
             raw: response.data
         };
+    };
+
+    try {
+        return await executeRequest(model);
     } catch (error) {
+        const fallbackModel = getMiniMaxStandardFallbackModel(model);
+        if (fallbackModel && shouldFallbackFromMiniMaxHighspeed(error)) {
+            await markModelUnavailable('minimax', model, 'minimax_highspeed_runtime_unavailable', fallbackModel);
+            safeLog('warn', 'MiniMax highspeed model failed on Anthropic-compatible route, retrying with standard variant', {
+                model,
+                fallbackModel,
+                operationType,
+                ...serializeMiniMaxErrorPayload(error)
+            });
+            try {
+                return await executeRequest(fallbackModel);
+            } catch (fallbackError) {
+                metrics.trackLLMRequest(buildLLMMetricLabel('minimax', fallbackModel), 0, false, 0, 0);
+                throw fallbackError;
+            }
+        }
         metrics.trackLLMRequest(buildLLMMetricLabel('minimax', model), 0, false, 0, 0);
         safeLog('error', 'MiniMax Anthropic-compatible API call failed', {
             model,

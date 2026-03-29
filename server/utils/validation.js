@@ -484,9 +484,9 @@ export const batchImproveSchema = z.object({
 );
 
 export const batchAdaptSchema = z.object({
-  resumeIds: z.array(z.string().uuid()).min(1).max(500).optional(),
-  resume_ids: z.array(z.string().uuid()).min(1).max(500).optional(),
-  missionId: z.string().uuid().optional(),
+    resumeIds: z.array(z.string().uuid()).min(1).max(500).optional(),
+    resume_ids: z.array(z.string().uuid()).min(1).max(500).optional(),
+    missionId: z.string().uuid().optional(),
   mission_id: z.string().uuid().optional(),
   options: z.record(z.string(), z.any()).optional(),
   firm_id: z.union([z.string(), z.number()]).optional(),
@@ -494,10 +494,26 @@ export const batchAdaptSchema = z.object({
 }).strip().refine(
   (data) => Boolean(data.resumeIds || data.resume_ids),
   { message: 'resumeIds is required', path: ['resumeIds'] }
-).refine(
-  (data) => Boolean(data.missionId || data.mission_id),
-  { message: 'missionId is required', path: ['missionId'] }
-);
+  ).refine(
+    (data) => Boolean(data.missionId || data.mission_id),
+    { message: 'missionId is required', path: ['missionId'] }
+  );
+
+export const batchMatchSchema = z.object({
+    resumeIds: z.array(z.string().uuid()).min(1).max(500).optional(),
+    resume_ids: z.array(z.string().uuid()).min(1).max(500).optional(),
+    missionId: z.string().uuid().optional(),
+    mission_id: z.string().uuid().optional(),
+    options: z.record(z.string(), z.any()).optional(),
+    firm_id: z.union([z.string(), z.number()]).optional(),
+    firmId: z.union([z.string(), z.number()]).optional()
+  }).strip().refine(
+    (data) => Boolean(data.resumeIds || data.resume_ids),
+    { message: 'resumeIds is required', path: ['resumeIds'] }
+  ).refine(
+    (data) => Boolean(data.missionId || data.mission_id),
+    { message: 'missionId is required', path: ['missionId'] }
+  );
 
 export const batchDealExportSchema = z.object({
   dealId: z.string().uuid().optional(),

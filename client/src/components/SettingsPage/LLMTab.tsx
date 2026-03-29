@@ -12,6 +12,7 @@ interface FormData {
 interface LLMAvailability {
   minimax?: {
     highspeedEnabled?: boolean;
+    runtimeUnavailableModels?: string[];
   };
 }
 
@@ -69,6 +70,7 @@ const LLMTab = ({
 }: LLMTabProps): JSX.Element => {
   const provider = formData.llmProvider || 'openai';
   const minimaxHighspeedEnabled = llmAvailability?.minimax?.highspeedEnabled === true;
+  const minimaxRuntimeUnavailableModels = llmAvailability?.minimax?.runtimeUnavailableModels || [];
 
   const providerOptions = useMemo(() => ([
     { value: 'openai', label: 'OpenAI' },
@@ -79,11 +81,15 @@ const LLMTab = ({
   ]), []);
 
   const minimaxModels = useMemo(() => {
+    const availableStandardModels = MINIMAX_STANDARD_MODELS.filter(model => !minimaxRuntimeUnavailableModels.includes(model));
     if (minimaxHighspeedEnabled) {
-      return [...MINIMAX_STANDARD_MODELS, ...MINIMAX_HIGHSPEED_MODELS];
+      return [
+        ...availableStandardModels,
+        ...MINIMAX_HIGHSPEED_MODELS.filter(model => !minimaxRuntimeUnavailableModels.includes(model))
+      ];
     }
-    return MINIMAX_STANDARD_MODELS;
-  }, [minimaxHighspeedEnabled]);
+    return availableStandardModels;
+  }, [minimaxHighspeedEnabled, minimaxRuntimeUnavailableModels]);
 
   const modelOptions = useMemo(() => {
     if (provider === 'anthropic') {
@@ -164,6 +170,12 @@ const LLMTab = ({
         {provider === 'minimax' && !minimaxHighspeedEnabled && (
           <p className="text-sm text-amber-700 dark:text-amber-300 mb-4">
             {fallbackText(t, 'settings.llm.minimaxHighspeedDisabled', 'Les modeles MiniMax highspeed sont masques car cette instance n active pas le plan Highspeed.')}
+          </p>
+        )}
+        {provider === 'minimax' && minimaxRuntimeUnavailableModels.length > 0 && (
+          <p className="text-sm text-amber-700 dark:text-amber-300 mb-4">
+            {fallbackText(t, 'settings.llm.minimaxRuntimeUnavailable', 'Certains modeles MiniMax sont temporairement masques car l upstream les a refuses pour cette instance.')}{' '}
+            <span className="font-medium">{minimaxRuntimeUnavailableModels.join(', ')}</span>
           </p>
         )}
       </div>

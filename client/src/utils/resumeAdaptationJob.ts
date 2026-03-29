@@ -7,6 +7,10 @@ export interface ResumeAdaptationJobItem {
   progress?: number;
   resume_id?: string;
   adaptation_id?: string;
+  pending_data?: {
+    missionId?: string;
+    matchAnalysis?: Record<string, unknown>;
+  } | null;
   error_message?: string;
 }
 
@@ -63,6 +67,80 @@ export const fetchResumeAdaptationJob = async (jobId: string, signal?: AbortSign
   }
 
   return response.json() as Promise<ResumeAdaptationJobStatus>;
+};
+
+export const createResumeMatchJob = async ({
+  resumeId,
+  missionId,
+  signal
+}: {
+  resumeId: string;
+  missionId: string;
+  signal?: AbortSignal;
+}): Promise<{ id?: string }> => {
+  const authOptions = await createAuthOptionsWithCsrf({
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ resumeIds: [resumeId], missionId })
+  });
+
+  const response = await fetchWithAuth('/api/batch-jobs/match', {
+    ...authOptions,
+    signal
+  });
+
+  if (!response.ok) {
+    const errorMessage = await getResponseErrorMessage(response, 'Failed to create resume match job');
+    throw new Error(errorMessage);
+  }
+
+  return response.json() as Promise<{ id?: string }>;
+};
+
+export const waitForResumeMatchJobCompletion = async ({
+  jobId,
+  resumeId,
+  signal,
+  timeoutMs = 300000,
+  onJobUpdate
+}: {
+  jobId: string;
+  resumeId: string;
+  signal?: AbortSignal;
+  timeoutMs?: number;
+  onJobUpdate?: (jobData: ResumeAdaptationJobStatus) => void | Promise<void>;
+}): Promise<Record<string, unknown>> => {
+  return pollUntil<ResumeAdaptationJobStatus, Record<string, unknown>>({
+    poll: () => fetchResumeAdaptationJob(jobId, signal),
+    signal,
+    timeoutMs,
+    timeoutMessage: 'Resume match analysis timed out.',
+    onTick: onJobUpdate,
+    isDone: (jobData) => {
+      if (jobData.status === 'failed' || jobData.status === 'cancelled') {
+        throw new Error(jobData.error_message || 'Resume match job failed');
+      }
+
+      const item = jobData.items?.find(currentItem => currentItem.resume_id === resumeId);
+      if (!item) {
+        return false;
+      }
+
+      if (item.status === 'error') {
+        throw new Error(item.error_message || 'Resume match analysis failed');
+      }
+
+      return item.status === 'success' && Boolean(item.pending_data?.matchAnalysis);
+    },
+    mapResult: (jobData) => {
+      const item = jobData.items?.find(currentItem => currentItem.resume_id === resumeId);
+      const matchAnalysis = item?.pending_data?.matchAnalysis;
+      if (!matchAnalysis) {
+        throw new Error('Resume match job completed without match analysis');
+      }
+      return matchAnalysis;
+    }
+  });
 };
 
 export const waitForResumeAdaptationJobCompletion = async ({

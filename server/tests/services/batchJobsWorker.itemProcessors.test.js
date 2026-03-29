@@ -5,7 +5,15 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('../../utils/logger.backend.js', () => ({ safeLog: vi.fn() }));
+vi.mock('../../utils/logger.backend.js', () => ({
+    safeLog: vi.fn(),
+    createModuleLogger: vi.fn(() => ({
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        debug: vi.fn()
+    }))
+}));
 vi.mock('../../utils/tagCleaner.js', () => ({
     processAnalysisTags: vi.fn(() => ({
         rawTags: { skills: ['JS'], industries: ['IT'], tools: ['VS Code'], softSkills: ['Teamwork'] },
@@ -59,6 +67,15 @@ vi.mock('../../services/consent.service.js', () => ({
 const mockExecuteResumeAdaptation = vi.fn();
 vi.mock('../../services/resumeAdaptation.service.js', () => ({
     executeResumeAdaptation: (...args) => mockExecuteResumeAdaptation(...args)
+}));
+
+vi.mock('../../services/openai.service.js', () => ({
+    matchResumeWithMission: vi.fn()
+}));
+
+vi.mock('../../services/resumes.service.js', () => ({
+    findResumeRecord: vi.fn(),
+    findMissionRecord: vi.fn()
 }));
 
 import { processImportItem, processImproveItem, processAdaptItem } from '../../services/batchJobsWorker/itemProcessors.js';

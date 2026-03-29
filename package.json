@@ -17,7 +17,7 @@
     "test:pdf": "vitest run --project pdf-server",
     "test:pdf:watch": "vitest --project pdf-server",
     "test:client": "node scripts/run-client-vitest.mjs run --config client/vitest.config.ts",
-    "test:client:watch": "node scripts/run-client-vitest.mjs --config client/vitest.config.ts",
+    "test:client:watch": "vitest --config client/vitest.config.ts",
     "quickstart": "node scripts/quickstart.js",
     "quickstart:prod": "node scripts/quickstart.js --prod",
     "backup:db": "node server/scripts/backup-db.js",

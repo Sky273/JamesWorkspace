@@ -34,7 +34,8 @@ vi.mock('../../services/batchJobsWorker/llmIntegration.js', () => ({
 vi.mock('../../services/batchJobsWorker/itemProcessors.js', () => ({
     processImportItem: vi.fn(),
     processImproveItem: vi.fn(),
-    processAdaptItem: vi.fn()
+    processAdaptItem: vi.fn(),
+    processMatchItem: vi.fn()
 }));
 vi.mock('../../services/batchJobsWorker/exportGenerator.js', () => ({
     generateJobExport: vi.fn()
@@ -48,7 +49,7 @@ import {
 
 import { query } from '../../config/database.js';
 import { getPendingJobs, getPendingItems, updateJobStatus, updateJobItemStatus, updateJobCounters, isJobComplete } from '../../services/batchJobs.service.js';
-import { processImportItem, processImproveItem, processAdaptItem } from '../../services/batchJobsWorker/itemProcessors.js';
+import { processImportItem, processImproveItem, processAdaptItem, processMatchItem } from '../../services/batchJobsWorker/itemProcessors.js';
 import { resetLLMQueue } from '../../services/batchJobsWorker/llmIntegration.js';
 
 describe('Batch Jobs Worker - Worker Lifecycle', () => {
@@ -120,6 +121,21 @@ describe('Batch Jobs Worker - Worker Lifecycle', () => {
             await stopWorker();
 
             expect(processAdaptItem).toHaveBeenCalledWith(item, job, { missionId: 'm1' });
+        }, 10000);
+
+        it('should process match items', async () => {
+            const job = { id: 'j-match', status: 'pending', job_type: 'match', options: '{"missionId":"m1"}', total_items: 1 };
+            const item = { id: 'i-match', file_name: 'cv.pdf', resume_id: 'r1' };
+
+            getPendingJobs.mockResolvedValueOnce([job]).mockResolvedValue([]);
+            getPendingItems.mockResolvedValueOnce([item]);
+            isJobComplete.mockResolvedValueOnce(true);
+
+            await startWorker();
+            await new Promise(r => setTimeout(r, 6000));
+            await stopWorker();
+
+            expect(processMatchItem).toHaveBeenCalledWith(item, job, { missionId: 'm1' });
         }, 10000);
 
         it('should process improve items', async () => {

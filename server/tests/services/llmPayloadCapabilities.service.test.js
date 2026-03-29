@@ -8,7 +8,7 @@ import {
 describe('llmPayloadCapabilities.service', () => {
     it('drops response_format for MiniMax M2.x models', () => {
         const normalized = buildCapabilityAwareOpenAICompatibleParams('minimax', 'MiniMax-M2.7-highspeed', {
-            maxTokens: 4096,
+            maxTokens: 200000,
             temperature: 0.3,
             topP: 1,
             responseFormat: { type: 'json_object' },
@@ -16,6 +16,8 @@ describe('llmPayloadCapabilities.service', () => {
         });
 
         expect(normalized.requestParams).not.toHaveProperty('response_format');
+        expect(normalized.requestParams.max_completion_tokens).toBe(128000);
+        expect(normalized.requestParams).not.toHaveProperty('max_tokens');
         expect(normalized.droppedParams).toContain('response_format');
     });
 

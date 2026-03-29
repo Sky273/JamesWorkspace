@@ -5,7 +5,12 @@
 
 import { fetchWithAuth, createAuthOptions, createAuthOptionsWithCsrf, getResponseErrorMessage } from './apiInterceptor';
 import { createAndTrackJob } from './longRunningOperation';
-import { createResumeAdaptationJob, waitForResumeAdaptationJobCompletion } from './resumeAdaptationJob';
+import {
+    createResumeAdaptationJob,
+    createResumeMatchJob,
+    waitForResumeAdaptationJobCompletion,
+    waitForResumeMatchJobCompletion
+} from './resumeAdaptationJob';
 import logger from './logger.frontend';
 
 export interface Recommendations {
@@ -58,23 +63,18 @@ export const resumeAdaptationService = {
      */
     async analyzeMatch(resumeId: string, missionId: string): Promise<MatchAnalysis> {
         try {
-            const authOptions = await createAuthOptionsWithCsrf({ 
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ missionId })
+            const { hydrated } = await createAndTrackJob({
+                create: () => createResumeMatchJob({ resumeId, missionId }),
+                getJobId: created => created.id,
+                track: (jobId) => waitForResumeMatchJobCompletion({ jobId, resumeId }),
+                hydrate: async (matchAnalysis) => matchAnalysis
             });
-            const response = await fetchWithAuth(
-                `/api/resumes/${resumeId}/match`,
-                authOptions,
-                180000 // 3 minutes for LLM match analysis
-            );
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to analyze match');
+            if (!hydrated) {
+                throw new Error('Match analysis job completed without a hydrated result');
             }
 
-            return await response.json();
+            return hydrated as unknown as MatchAnalysis;
         } catch (error) {
             logger.error('Error analyzing resume-mission match:', error);
             throw error;

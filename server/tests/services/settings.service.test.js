@@ -6,12 +6,28 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // Mock postgresHelpers
 vi.mock('../../utils/postgresHelpers.js', () => ({
-    selectWithTimeout: vi.fn()
+    selectWithTimeout: vi.fn(),
+    updateWithTimeout: vi.fn(),
+    createWithTimeout: vi.fn()
 }));
 
 // Mock logger
 vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
+}));
+
+vi.mock('../../services/llmAvailability.service.js', () => ({
+    resolveAvailableModel: vi.fn((_provider, model) => ({
+        model,
+        adjusted: false,
+        reason: null,
+        originalModel: model,
+        fallbackModel: null
+    })),
+    getProviderAvailabilityFlags: vi.fn(() => ({
+        minimax: { highspeedEnabled: false, runtimeUnavailableModels: [] }
+    })),
+    syncPersistedAvailabilityState: vi.fn()
 }));
 
 import { selectWithTimeout } from '../../utils/postgresHelpers.js';

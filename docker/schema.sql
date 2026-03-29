@@ -548,6 +548,7 @@ CREATE TABLE public.llm_settings (
     ollama_vision_model character varying(100) DEFAULT ''::character varying,
     ollama_keep_alive character varying(50) DEFAULT '5m'::character varying,
     ollama_num_ctx integer DEFAULT 8192,
+    llm_availability_state jsonb DEFAULT '{}'::jsonb,
     analysis_prompt text,
     improvement_prompt text,
     match_analysis_prompt text,
