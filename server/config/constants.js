@@ -50,6 +50,10 @@ export const PROFILE_MATCHING_LLM_MAX_CONCURRENCY = Math.min(
     Math.max(parseInt(process.env.PROFILE_MATCHING_LLM_MAX_CONCURRENCY || '0', 10) || 0, 0),
     100
 );
+export const PROFILE_MATCHING_LLM_BATCH_SIZE = Math.min(
+    Math.max(parseInt(process.env.PROFILE_MATCHING_LLM_BATCH_SIZE || '0', 10) || 0, 0),
+    100
+);
 
 // Market Radar - France Travail API (OAuth2)
 export const FRANCE_TRAVAIL_CLIENT_ID = process.env.FRANCE_TRAVAIL_CLIENT_ID;
@@ -130,5 +134,4 @@ export const RATE_LIMIT = {
         max: 50
     }
 };
-
 

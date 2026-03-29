@@ -10,7 +10,8 @@ import { callBusinessChatCompletion } from './llmProvider.service.js';
 import { getLLMSettings } from './settings.service.js';
 import { MISSION_KEYWORDS_EXTRACTION_PROMPT, DETAILED_PROFILE_ANALYSIS_PROMPT, BATCH_PROFILE_SCORING_PROMPT } from '../config/prompts.backend.js';
 import { normalizeUtf8Text, parseJsonFromLlmResponse } from './openai/textUtils.js';
-import { PROFILE_MATCHING_LLM_MAX_CONCURRENCY } from '../config/constants.js';
+import { PROFILE_MATCHING_LLM_BATCH_SIZE, PROFILE_MATCHING_LLM_MAX_CONCURRENCY } from '../config/constants.js';
+import metrics, { buildLLMMetricLabel } from './metrics.service.js';
 
 /**
  * Default weights for scoring categories
@@ -140,6 +141,10 @@ function isRecoverableBatchScoringError(error) {
         || message.includes('DeepSeek response truncated due to token limit');
 }
 
+function isRecoverableJsonOutputError(error) {
+    return isRecoverableBatchScoringError(error);
+}
+
 /**
  * Score profiles using LLM for intelligent semantic matching
  * Processes profiles in batches for cost efficiency
@@ -166,7 +171,10 @@ async function scoreBatchWithLLM(profiles, missionKeywords, missionRecord, userM
     const isDeepSeekProvider = settings.llmProvider === 'deepseek';
     const isDeepSeekReasoner = isDeepSeekProvider && model === 'deepseek-reasoner';
     const supportsStructuredJsonResponse = settings.llmProvider === 'deepseek';
-    const BATCH_SIZE = isDeepSeekProvider ? 4 : (isMiniMaxProvider ? 6 : 12);
+    const providerDefaultBatchSize = isDeepSeekProvider ? 4 : (isMiniMaxProvider ? 6 : 12);
+    const BATCH_SIZE = PROFILE_MATCHING_LLM_BATCH_SIZE > 0
+        ? Math.min(PROFILE_MATCHING_LLM_BATCH_SIZE, 100)
+        : providerDefaultBatchSize;
     const providerDefaultConcurrency = isDeepSeekReasoner ? 2 : (isMiniMaxProvider ? 3 : 5);
     const MAX_CONCURRENCY = PROFILE_MATCHING_LLM_MAX_CONCURRENCY > 0
         ? Math.min(PROFILE_MATCHING_LLM_MAX_CONCURRENCY, 100)
@@ -175,12 +183,26 @@ async function scoreBatchWithLLM(profiles, missionKeywords, missionRecord, userM
     const batches = chunkArray(profiles, BATCH_SIZE);
     const allScores = {};
     let hasErrors = false;
+    const metricsProvider = buildLLMMetricLabel(settings.llmProvider || 'unknown', model || '');
+
+    metrics.trackProfileMatchingActivity({
+        provider: metricsProvider,
+        event: 'search',
+        profilesRequested: profiles.length,
+        batchesStarted: batches.length,
+        metadata: {
+            batchCount: batches.length,
+            batchSize: BATCH_SIZE,
+            maxConcurrency: MAX_CONCURRENCY
+        }
+    });
 
         safeLog('info', 'Starting LLM batch scoring', { 
             totalProfiles: profiles.length, 
             batchCount: batches.length,
             batchSize: BATCH_SIZE,
             maxConcurrency: MAX_CONCURRENCY,
+            providerDefaultBatchSize,
             providerDefaultConcurrency,
             scoringMaxTokens
         });
@@ -244,6 +266,19 @@ async function scoreBatchWithLLM(profiles, missionKeywords, missionRecord, userM
                     error: error.message
                 });
 
+                metrics.trackProfileMatchingActivity({
+                    provider: metricsProvider,
+                    event: 'retry',
+                    batchesRetried: 1,
+                    metadata: {
+                        batchIndex,
+                        batchDepth: depth,
+                        batchSize: batch.length,
+                        leftBatchSize: leftBatch.length,
+                        rightBatchSize: rightBatch.length
+                    }
+                });
+
                 const [leftScores, rightScores] = await Promise.all([
                     processBatch(leftBatch, batchIndex, depth + 1),
                     processBatch(rightBatch, batchIndex, depth + 1)
@@ -277,6 +312,15 @@ async function scoreBatchWithLLM(profiles, missionKeywords, missionRecord, userM
         for (const scores of waveResults) {
             Object.assign(allScores, scores);
         }
+
+        const waveScored = waveResults.reduce((total, scores) => total + Object.keys(scores).length, 0);
+        const failedBatchCount = waveResults.filter(scores => Object.keys(scores).length === 0).length;
+        metrics.trackProfileMatchingActivity({
+            provider: metricsProvider,
+            event: 'wave',
+            profilesScored: waveScored,
+            batchesFailed: failedBatchCount
+        });
 
         safeLog('info', 'Scoring wave completed', {
             waveStart,
@@ -565,6 +609,10 @@ export async function analyzeProfileForMission(missionId, resumeId, userMetadata
     // 4. Get LLM settings
     const settings = await getLLMSettings();
     const model = settings.llmModel;
+    const isDeepSeekProvider = settings.llmProvider === 'deepseek';
+    const isDeepSeekReasoner = isDeepSeekProvider && model === 'deepseek-reasoner';
+    const supportsStructuredJsonResponse = isDeepSeekProvider;
+    const detailedAnalysisMaxTokens = isDeepSeekReasoner ? 8192 : (isDeepSeekProvider ? 4096 : 3072);
     
     if (!model && settings.llmProvider !== 'ollama') {
         throw new Error('LLM model not configured in Settings.');
@@ -591,26 +639,68 @@ export async function analyzeProfileForMission(missionId, resumeId, userMetadata
         .replace('{MISSION_TOOLS}', (missionKeywords.tools || []).join(', ') || normalizeUtf8Text('Non sp\u00e9cifi\u00e9'))
         .replace('{MISSION_INDUSTRIES}', (missionKeywords.industries || []).join(', ') || normalizeUtf8Text('Non sp\u00e9cifi\u00e9'))
         .replace('{MISSION_SOFT_SKILLS}', (missionKeywords.softSkills || []).join(', ') || normalizeUtf8Text('Non sp\u00e9cifi\u00e9'));
-    
-    // 7. Call LLM
-    const response = await callBusinessChatCompletion({
-        model,
-        messages: [
-            { role: 'system', content: 'You are a JSON-only HR analysis API. Respond with valid JSON only.' },
-            { role: 'user', content: prompt }
-        ],
-        maxTokens: 2048,
-        temperature: 0.3,
-        userMetadata,
-        operationType: 'Detailed Profile Analysis'
-    });
-    
+
+    async function requestDetailedAnalysis(compactRetry = false) {
+        const response = await callBusinessChatCompletion({
+            model,
+            messages: [
+                { role: 'system', content: 'You are a JSON-only HR analysis API. Respond with valid JSON only.' },
+                {
+                    role: 'user',
+                    content: compactRetry
+                        ? `${prompt}\n\nRéponse attendue: JSON compact uniquement, sans texte additionnel, sans markdown, sans commentaires.`
+                        : prompt
+                }
+            ],
+            maxTokens: detailedAnalysisMaxTokens,
+            temperature: 0.3,
+            responseFormat: supportsStructuredJsonResponse ? { type: 'json_object' } : undefined,
+            userMetadata,
+            operationType: 'Detailed Profile Analysis'
+        });
+
+        return parseJsonFromLlmResponse(response.choices[0].message.content);
+    }
+
     let analysis;
     try {
-        analysis = parseJsonFromLlmResponse(response.choices[0].message.content);
-    } catch (_parseError) {
-        throw new Error(normalizeUtf8Text("Erreur lors de l'analyse d\u00e9taill\u00e9e du profil."));
-}
+        analysis = await requestDetailedAnalysis(false);
+    } catch (error) {
+        if (isRecoverableJsonOutputError(error)) {
+            safeLog('warn', 'Detailed profile analysis returned malformed JSON, retrying once with compact JSON instruction', {
+                missionId,
+                resumeId,
+                provider: settings.llmProvider,
+                model,
+                maxTokens: detailedAnalysisMaxTokens,
+                error: error.message
+            });
+
+            try {
+                analysis = await requestDetailedAnalysis(true);
+            } catch (retryError) {
+                safeLog('error', 'Detailed profile analysis retry failed', {
+                    missionId,
+                    resumeId,
+                    provider: settings.llmProvider,
+                    model,
+                    maxTokens: detailedAnalysisMaxTokens,
+                    error: retryError.message
+                });
+                throw new Error(normalizeUtf8Text("Erreur lors de l'analyse détaillée du profil."));
+            }
+        } else {
+            safeLog('error', 'Detailed profile analysis failed', {
+                missionId,
+                resumeId,
+                provider: settings.llmProvider,
+                model,
+                maxTokens: detailedAnalysisMaxTokens,
+                error: error.message
+            });
+            throw new Error(normalizeUtf8Text("Erreur lors de l'analyse détaillée du profil."));
+        }
+    }
     
     safeLog('info', 'Detailed profile analysis completed', {
         resumeId,

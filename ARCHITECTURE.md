@@ -1,29 +1,52 @@
-# Architecture Technique - ResumeConverter
+﻿### 📈 Métriques Système
 
-## 📋 Table des Matières
+| Métrique | Description |
+|----------|-------------|
+| **Mémoire** | Heap used/total, RSS, external |
+| **Requêtes** | Count par endpoint, temps moyen |
+| **LLM** | Tokens consommés, coûts estimés |
+| **Profile Matching** | Recherches lancées, profils demandés/scorés, batches démarrés/retriés/en échec |
+| **Cache** | Hit/miss ratio, taille |
+| **Rate Limit** | Hits par type de limite |
+
+### Configuration du profile matching
+
+- `PROFILE_MATCHING_LLM_MAX_CONCURRENCY`
+  - `0` : concurrence par défaut selon le provider
+  - `1..100` : plafond global des appels batch LLM simultanés
+- `PROFILE_MATCHING_LLM_BATCH_SIZE`
+  - `0` : taille de batch par défaut selon le provider
+  - `1..100` : taille de batch forcée pour le scoring de profils
+- Valeurs par défaut actuellement utilisées :
+  - MiniMax : batch `6`, concurrence `3`
+  - DeepSeek : batch `4`, concurrence `2` pour `deepseek-reasoner`
+  - autres providers : batch `12`, concurrence `5`
+
+
+## ðŸ“‹ Table des MatiÃ¨res
 
 1. [Vue d'Ensemble](#vue-densemble)
 2. [Architecture Globale](#architecture-globale)
 3. [Frontend (React 19/TypeScript)](#frontend-react-19--typescript)
 4. [Backend (Node.js/Express)](#backend-nodejsexpress)
-5. [Base de Données (PostgreSQL)](#base-de-données-postgresql)
-6. [Intégrations LLM](#intégrations-llm)
-7. [Intégrations Externes](#intégrations-externes)
-8. [Sécurité](#sécurité)
+5. [Base de DonnÃ©es (PostgreSQL)](#base-de-donnÃ©es-postgresql)
+6. [IntÃ©grations LLM](#intÃ©grations-llm)
+7. [IntÃ©grations Externes](#intÃ©grations-externes)
+8. [SÃ©curitÃ©](#sÃ©curitÃ©)
 9. [Optimisations](#optimisations)
 10. [Gestion des Fichiers Temporaires](#gestion-des-fichiers-temporaires)
 11. [Internationalisation (i18n)](#internationalisation-i18n)
-12. [Qualité du Code](#qualité-du-code)
+12. [QualitÃ© du Code](#qualitÃ©-du-code)
 13. [Points Forts](#-points-forts)
-14. [Points Faibles et Axes d'Amélioration](#-points-faibles-et-axes-damélioration)
-15. [Déploiement Docker](#déploiement-docker)
+14. [Points Faibles et Axes d'AmÃ©lioration](#-points-faibles-et-axes-damÃ©lioration)
+15. [DÃ©ploiement Docker](#dÃ©ploiement-docker)
 16. [Sauvegardes et Planification](#sauvegardes-et-planification)
 
 ---
 
 ## Vue d'Ensemble
 
-**ResumeConverter** est une application web full-stack de gestion et d'optimisation de CV assistée par intelligence artificielle. Elle permet aux entreprises (ESN) de gérer une CVthèque, d'analyser et améliorer les CV, et de les adapter à des missions spécifiques.
+**ResumeConverter** est une application web full-stack de gestion et d'optimisation de CV assistÃ©e par intelligence artificielle. Elle permet aux entreprises (ESN) de gÃ©rer une CVthÃ¨que, d'analyser et amÃ©liorer les CV, et de les adapter Ã  des missions spÃ©cifiques.
 
 ### Stack Technique
 
@@ -31,60 +54,60 @@
 |--------|-------------|
 | **Frontend** | React 19, TypeScript, Vite 8 (Rolldown), TailwindCSS 4, Framer Motion |
 | **Backend** | Node.js, Express.js |
-| **Base de données** | PostgreSQL 18 avec pg (node-postgres) |
+| **Base de donnÃ©es** | PostgreSQL 18 avec pg (node-postgres) |
 | **IA/LLM** | OpenAI (GPT-4/5), Anthropic (Claude), DeepSeek, MiniMax, Ollama distant |
 | **APIs Externes** | France Travail, Adzuna, ROME 4.0, ESCO |
-| **Génération PDF** | Puppeteer (html-pdf-node) |
-| **Éditeur WYSIWYG** | Tiptap 3.x (ProseMirror) |
+| **GÃ©nÃ©ration PDF** | Puppeteer (html-pdf-node) |
+| **Ã‰diteur WYSIWYG** | Tiptap 3.x (ProseMirror) |
 | **Cartographie** | MapLibre GL JS |
 | **Calendrier** | Google Calendar API (OAuth2) |
 | **Authentification** | JWT (Access + Refresh Tokens) |
-| **Sécurité** | Helmet, CSRF (Double Submit), Rate Limiting, SQL Injection Protection |
+| **SÃ©curitÃ©** | Helmet, CSRF (Double Submit), Rate Limiting, SQL Injection Protection |
 
 ---
 
 ## Architecture Globale
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                         CLIENT (Browser)                             │
-│  ┌─────────────────────────────────────────────────────────────┐    │
-│  │                React SPA (Vite 8 / Rolldown)                  │    │
-│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐    │    │
-│  │  │  Pages   │  │Components│  │ Contexts │  │  Hooks   │    │    │
-│  │  └──────────┘  └──────────┘  └──────────┘  └──────────┘    │    │
-│  └─────────────────────────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    │ HTTPS (API Calls)
-                                    ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                      PROXY SERVER (Express)                          │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐            │
-│  │Middleware│  │  Routes  │  │ Services │  │  Utils   │            │
-│  │ - Auth   │  │ - /auth  │  │ - JWT    │  │ - Logger │            │
-│  │ - CSRF   │  │ - /api/* │  │ - LLM    │  │ - Valid. │            │
-│  │ - Rate   │  │ - /llm   │  │ - Cache  │  │ - Sanit. │            │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────┘            │
-└─────────────────────────────────────────────────────────────────────┘
-                    │                           │
-                    │                           │
-                    ▼                           ▼
-        ┌──────────────────┐        ┌──────────────────┐
-        │    PostgreSQL    │        │   LLM Providers  │
-        │   (Database)     │        │ OpenAI/Anthropic │
-        └──────────────────┘        └──────────────────┘
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚                         CLIENT (Browser)                             â”‚
+â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”    â”‚
+â”‚  â”‚                React SPA (Vite 8 / Rolldown)                  â”‚    â”‚
+â”‚  â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”    â”‚    â”‚
+â”‚  â”‚  â”‚  Pages   â”‚  â”‚Componentsâ”‚  â”‚ Contexts â”‚  â”‚  Hooks   â”‚    â”‚    â”‚
+â”‚  â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜    â”‚    â”‚
+â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜    â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+                                    â”‚
+                                    â”‚ HTTPS (API Calls)
+                                    â–¼
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚                      PROXY SERVER (Express)                          â”‚
+â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”            â”‚
+â”‚  â”‚Middlewareâ”‚  â”‚  Routes  â”‚  â”‚ Services â”‚  â”‚  Utils   â”‚            â”‚
+â”‚  â”‚ - Auth   â”‚  â”‚ - /auth  â”‚  â”‚ - JWT    â”‚  â”‚ - Logger â”‚            â”‚
+â”‚  â”‚ - CSRF   â”‚  â”‚ - /api/* â”‚  â”‚ - LLM    â”‚  â”‚ - Valid. â”‚            â”‚
+â”‚  â”‚ - Rate   â”‚  â”‚ - /llm   â”‚  â”‚ - Cache  â”‚  â”‚ - Sanit. â”‚            â”‚
+â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜            â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+                    â”‚                           â”‚
+                    â”‚                           â”‚
+                    â–¼                           â–¼
+        â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”        â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+        â”‚    PostgreSQL    â”‚        â”‚   LLM Providers  â”‚
+        â”‚   (Database)     â”‚        â”‚ OpenAI/Anthropic â”‚
+        â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜        â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 ```
 
-### Flux de Données
+### Flux de DonnÃ©es
 
-1. **Requête utilisateur** → Frontend React
-2. **Appel API** → Proxy Server (avec JWT + CSRF token)
-3. **Validation & Auth** → Middleware chain
-4. **Création de job** → Route backend persistante (`batch_jobs`, `batch_job_items`)
-5. **Exécution asynchrone** → Worker batch → Services métier → PostgreSQL / API LLM
-6. **Suivi d'avancement** → Polling frontend sur `GET /api/batch-jobs/:id`
-7. **Hydratation finale** → JSON → Frontend → UI Update
+1. **RequÃªte utilisateur** â†’ Frontend React
+2. **Appel API** â†’ Proxy Server (avec JWT + CSRF token)
+3. **Validation & Auth** â†’ Middleware chain
+4. **CrÃ©ation de job** â†’ Route backend persistante (`batch_jobs`, `batch_job_items`)
+5. **ExÃ©cution asynchrone** â†’ Worker batch â†’ Services mÃ©tier â†’ PostgreSQL / API LLM
+6. **Suivi d'avancement** â†’ Polling frontend sur `GET /api/batch-jobs/:id`
+7. **Hydratation finale** â†’ JSON â†’ Frontend â†’ UI Update
 
 ---
 
@@ -94,18 +117,18 @@
 
 Vite 8 remplace **Rollup** et **esbuild** par **Rolldown** (bundler Rust) et **OXC** (minificateur) :
 
-| Composant | Avant (Vite 5) | Après (Vite 8) |
+| Composant | Avant (Vite 5) | AprÃ¨s (Vite 8) |
 |-----------|----------------|-----------------|
 | **Bundler** | Rollup | Rolldown |
 | **Dependency optimizer** | esbuild | Rolldown |
 | **Minificateur** | esbuild | OXC (`minify: true`) |
 | **CommonJS** | `@rollup/plugin-commonjs` | Natif Rolldown |
 | **Config optimizeDeps** | `esbuildOptions` | `rolldownOptions` |
-| **Treeshake** | `tryCatchDeoptimization` | Supprimé (inutile) |
+| **Treeshake** | `tryCatchDeoptimization` | SupprimÃ© (inutile) |
 
 ### TailwindCSS 4 (CSS-first)
 
-TailwindCSS 4 utilise une configuration **CSS-first** via `@theme`, `@plugin` et `@variant` directement dans le CSS. Les fichiers `tailwind.config.js` et `postcss.config.js` sont supprimés.
+TailwindCSS 4 utilise une configuration **CSS-first** via `@theme`, `@plugin` et `@variant` directement dans le CSS. Les fichiers `tailwind.config.js` et `postcss.config.js` sont supprimÃ©s.
 
 ```css
 /* src/styles/index.css */
@@ -119,93 +142,93 @@ TailwindCSS 4 utilise une configuration **CSS-first** via `@theme`, `@plugin` et
 }
 ```
 
-| Changement | Avant (v3) | Après (v4) |
+| Changement | Avant (v3) | AprÃ¨s (v4) |
 |------------|------------|------------|
 | **Config** | `tailwind.config.js` + `postcss.config.js` | CSS-first (`@theme`, `@plugin`) |
 | **Plugin Vite** | `postcss` pipeline | `@tailwindcss/vite` (natif) |
 | **Ring** | `ring` = 3px | `ring` = 1px (expliciter `ring-3`) |
 | **Couleurs** | `bg-opacity-50` | `bg-primary-500/50` |
-| **Autoprefixer** | Requis | Intégré |
+| **Autoprefixer** | Requis | IntÃ©grÃ© |
 
 ### Structure des Dossiers
 
 ```
 src/
-├── components/          # Composants réutilisables (80+ fichiers)
-│   ├── ChatBot.tsx      # Assistant IA avec Markdown
-│   ├── Layout.tsx       # Layout principal avec sidebar
-│   ├── ResumeAnalysis/  # Composants d'analyse de CV (8 sous-composants)
-│   ├── HealthIndicator.tsx # Monitoring santé serveur (admin)
-│   ├── Pagination.tsx   # Pagination réutilisable
-│   ├── WebGLBackground.tsx # Animation 3D page d'accueil
-│   ├── ProcessingScreen.tsx # Animation des étapes d'upload/analyse
-│   ├── ImprovementAnimation.tsx # Animation des étapes d'amélioration
-│   ├── TiptapEditor.tsx # Éditeur WYSIWYG Tiptap
-│   ├── market/          # Composants Market Radar (carte France)
-│   ├── ui/              # Composants UI réutilisables (Skeleton, etc.)
-│   └── ...
-├── pages/               # Pages de l'application (33 fichiers)
-│   ├── ResumesPage.tsx  # CVthèque avec pagination serveur
-│   ├── ResumeAnalysisPage.tsx # Analyse de CV détaillée
-│   ├── ResumeImprovePage.tsx  # Amélioration de CV
-│   ├── ResumeExportPage.tsx   # Export de CV
-│   ├── ResumeAdaptPage.tsx    # Adaptation CV/Mission
-│   ├── MissionsPage.tsx # Gestion des missions
-│   ├── AdaptationsPage.tsx # Adaptations CV/Mission
-│   ├── ClientsPage.tsx  # Gestion CRM clients
-│   ├── BatchUploadPage.tsx  # Import batch de CV
-│   ├── BatchJobsPage.tsx    # Suivi des jobs batch
-│   ├── ProfileMatchingPage.tsx # Matching profils/missions
-│   ├── FactsPage.tsx    # Market Radar - Données marché
-│   ├── MetiersPage.tsx  # Référentiel ROME 4.0
-│   ├── GdprAuditPage.tsx # Journal RGPD
-│   ├── BackupPage.tsx   # Configuration sauvegardes (admin)
-│   ├── MetricsPage.tsx  # Métriques système (admin)
-│   ├── admin/EmailTemplatesPage.tsx # Templates email (admin)
-│   └── ...
-├── context/             # Contextes React (3 fichiers)
-│   ├── AuthContext.tsx  # Authentification globale
-│   ├── ResumeContext.tsx # État des CV
-│   └── ChatbotContext.tsx
-├── hooks/               # Hooks personnalisés
-│   ├── useAuthFetch.ts  # Fetch avec auth + CSRF retry
-│   └── useDebounce.ts   # Debounce pour recherche
-├── services/            # Services frontend
-│   └── authService.ts   # Gestion authentification
-├── utils/               # Utilitaires (30+ fichiers)
-│   ├── apiInterceptor.ts # Interception des requêtes
-│   ├── validation.ts    # Validation Zod
-│   ├── templateService.ts # Gestion templates export
-│   ├── resumeService.ts   # Service CV (CRUD, export)
-│   └── sanitizer.frontend.ts
-├── i18n/                # Internationalisation (FR/EN)
-├── types/               # Types TypeScript
-└── styles/              # Styles CSS (TailwindCSS 4 CSS-first config)
+â”œâ”€â”€ components/          # Composants rÃ©utilisables (80+ fichiers)
+â”‚   â”œâ”€â”€ ChatBot.tsx      # Assistant IA avec Markdown
+â”‚   â”œâ”€â”€ Layout.tsx       # Layout principal avec sidebar
+â”‚   â”œâ”€â”€ ResumeAnalysis/  # Composants d'analyse de CV (8 sous-composants)
+â”‚   â”œâ”€â”€ HealthIndicator.tsx # Monitoring santÃ© serveur (admin)
+â”‚   â”œâ”€â”€ Pagination.tsx   # Pagination rÃ©utilisable
+â”‚   â”œâ”€â”€ WebGLBackground.tsx # Animation 3D page d'accueil
+â”‚   â”œâ”€â”€ ProcessingScreen.tsx # Animation des Ã©tapes d'upload/analyse
+â”‚   â”œâ”€â”€ ImprovementAnimation.tsx # Animation des Ã©tapes d'amÃ©lioration
+â”‚   â”œâ”€â”€ TiptapEditor.tsx # Ã‰diteur WYSIWYG Tiptap
+â”‚   â”œâ”€â”€ market/          # Composants Market Radar (carte France)
+â”‚   â”œâ”€â”€ ui/              # Composants UI rÃ©utilisables (Skeleton, etc.)
+â”‚   â””â”€â”€ ...
+â”œâ”€â”€ pages/               # Pages de l'application (33 fichiers)
+â”‚   â”œâ”€â”€ ResumesPage.tsx  # CVthÃ¨que avec pagination serveur
+â”‚   â”œâ”€â”€ ResumeAnalysisPage.tsx # Analyse de CV dÃ©taillÃ©e
+â”‚   â”œâ”€â”€ ResumeImprovePage.tsx  # AmÃ©lioration de CV
+â”‚   â”œâ”€â”€ ResumeExportPage.tsx   # Export de CV
+â”‚   â”œâ”€â”€ ResumeAdaptPage.tsx    # Adaptation CV/Mission
+â”‚   â”œâ”€â”€ MissionsPage.tsx # Gestion des missions
+â”‚   â”œâ”€â”€ AdaptationsPage.tsx # Adaptations CV/Mission
+â”‚   â”œâ”€â”€ ClientsPage.tsx  # Gestion CRM clients
+â”‚   â”œâ”€â”€ BatchUploadPage.tsx  # Import batch de CV
+â”‚   â”œâ”€â”€ BatchJobsPage.tsx    # Suivi des jobs batch
+â”‚   â”œâ”€â”€ ProfileMatchingPage.tsx # Matching profils/missions
+â”‚   â”œâ”€â”€ FactsPage.tsx    # Market Radar - DonnÃ©es marchÃ©
+â”‚   â”œâ”€â”€ MetiersPage.tsx  # RÃ©fÃ©rentiel ROME 4.0
+â”‚   â”œâ”€â”€ GdprAuditPage.tsx # Journal RGPD
+â”‚   â”œâ”€â”€ BackupPage.tsx   # Configuration sauvegardes (admin)
+â”‚   â”œâ”€â”€ MetricsPage.tsx  # MÃ©triques systÃ¨me (admin)
+â”‚   â”œâ”€â”€ admin/EmailTemplatesPage.tsx # Templates email (admin)
+â”‚   â””â”€â”€ ...
+â”œâ”€â”€ context/             # Contextes React (3 fichiers)
+â”‚   â”œâ”€â”€ AuthContext.tsx  # Authentification globale
+â”‚   â”œâ”€â”€ ResumeContext.tsx # Ã‰tat des CV
+â”‚   â””â”€â”€ ChatbotContext.tsx
+â”œâ”€â”€ hooks/               # Hooks personnalisÃ©s
+â”‚   â”œâ”€â”€ useAuthFetch.ts  # Fetch avec auth + CSRF retry
+â”‚   â””â”€â”€ useDebounce.ts   # Debounce pour recherche
+â”œâ”€â”€ services/            # Services frontend
+â”‚   â””â”€â”€ authService.ts   # Gestion authentification
+â”œâ”€â”€ utils/               # Utilitaires (30+ fichiers)
+â”‚   â”œâ”€â”€ apiInterceptor.ts # Interception des requÃªtes
+â”‚   â”œâ”€â”€ validation.ts    # Validation Zod
+â”‚   â”œâ”€â”€ templateService.ts # Gestion templates export
+â”‚   â”œâ”€â”€ resumeService.ts   # Service CV (CRUD, export)
+â”‚   â””â”€â”€ sanitizer.frontend.ts
+â”œâ”€â”€ i18n/                # Internationalisation (FR/EN)
+â”œâ”€â”€ types/               # Types TypeScript
+â””â”€â”€ styles/              # Styles CSS (TailwindCSS 4 CSS-first config)
 ```
 
-### Composants Clés
+### Composants ClÃ©s
 
-| Composant | Rôle |
+| Composant | RÃ´le |
 |-----------|------|
-| `AuthContext` | Gestion de l'état d'authentification, tokens, user |
-| `ResumeContext` | État global des CV, sélection, opérations CRUD |
+| `AuthContext` | Gestion de l'Ã©tat d'authentification, tokens, user |
+| `ResumeContext` | Ã‰tat global des CV, sÃ©lection, opÃ©rations CRUD |
 | `ChatBot` | Assistant IA avec rendu Markdown, redimensionnable |
 | `Layout` | Structure de page avec sidebar, header, navigation |
-| `apiInterceptor` | Interception des requêtes, gestion CSRF, retry automatique |
-| `Pagination` | Composant de pagination réutilisable avec navigation |
-| `HealthIndicator` | Monitoring mémoire et santé serveur (admin) |
-| `ProcessingScreen` | Animation des étapes d'analyse CV |
+| `apiInterceptor` | Interception des requÃªtes, gestion CSRF, retry automatique |
+| `Pagination` | Composant de pagination rÃ©utilisable avec navigation |
+| `HealthIndicator` | Monitoring mÃ©moire et santÃ© serveur (admin) |
+| `ProcessingScreen` | Animation des Ã©tapes d'analyse CV |
 
-### Gestion de l'État
+### Gestion de l'Ã‰tat
 
-- **Contextes React** : État global (Auth, Resume, Chatbot)
-- **useState/useEffect** : État local des composants
-- **Pas de Redux** : Simplicité privilégiée pour cette taille de projet
+- **Contextes React** : Ã‰tat global (Auth, Resume, Chatbot)
+- **useState/useEffect** : Ã‰tat local des composants
+- **Pas de Redux** : SimplicitÃ© privilÃ©giÃ©e pour cette taille de projet
 
 ### Routing (React Router 7)
 
 ```typescript
-// Routes protégées par authentification
+// Routes protÃ©gÃ©es par authentification
 <ProtectedRoute>
   <Route path="resumes" element={<ResumesPage />} />
   <Route path="missions" element={<MissionsPage />} />
@@ -225,70 +248,70 @@ src/
 ### Architecture du Serveur Proxy
 
 Le backend est un **serveur proxy** (`proxy-server.js`) qui :
-- Sécurise les clés API (OpenAI, Anthropic)
+- SÃ©curise les clÃ©s API (OpenAI, Anthropic)
 - Centralise l'authentification et l'autorisation
-- Applique les politiques de sécurité (CORS, CSP, Rate Limiting)
-- Gère les connexions PostgreSQL avec pooling et retry automatique
+- Applique les politiques de sÃ©curitÃ© (CORS, CSP, Rate Limiting)
+- GÃ¨re les connexions PostgreSQL avec pooling et retry automatique
 
 ### Structure des Routes
 
 ```
 server/routes/
-├── auth/                    # Authentification (modulaire)
-│   ├── signin.routes.js     # Login, 2FA, password
-│   ├── google.routes.js     # Google OAuth SSO
-│   └── users.routes.js      # Gestion utilisateurs (admin)
-├── resumes/                 # CV (modulaire)
-│   ├── crud.routes.js       # CRUD CV, pagination, filtres
-│   ├── upload.routes.js     # Upload fichier + RGPD
-│   ├── llm.handlers.js      # Analyse, amélioration, adaptation
-│   ├── versions.routes.js   # Historique des versions
-│   └── stats.routes.js      # Statistiques CV
-├── adaptations.routes.js    # Adaptations CV/Mission
-├── missions.routes.js       # CRUD missions
-├── clients.routes.js        # CRM clients/prospects
-├── resumeComments.routes.js # Commentaires sur CV
-├── resumeSubmissions.routes.js # Envoi de CV à des clients
-├── pipeline.routes.js       # Pipeline de recrutement
-├── deals.routes.js          # Affaires commerciales
-├── batchJobs.routes.js      # Jobs backend (import, amélioration, matching, adaptation, missions)
-├── batchExport.routes.js    # Export batch (ZIP)
-├── templates/crud.routes.js # Templates d'export PDF
-├── llm.routes.js            # Proxy LLM (OpenAI/Anthropic)
-├── chatbot.routes.js        # Assistant IA contextuel
-├── settings.routes.js       # Configuration application
-├── firms.routes.js          # Gestion des cabinets
-├── tags.routes.js           # Gestion des tags avec cache
-├── consent.routes.js        # Consentement RGPD candidats
-├── gdprAudit.routes.js      # Journal d'audit RGPD
-├── gdprMail.routes.js       # Envoi emails RGPD
-├── mail.routes.js           # Envoi emails (Gmail/SMTP)
-├── emailTemplates.routes.js # Templates email MJML
-├── calendar.routes.js       # Google Calendar (entretiens)
-├── share.routes.js          # Partage public de CV (QR code)
-├── backup.routes.js         # Sauvegarde/restauration
-├── marketRadar/             # Données marché (modulaire)
-│   ├── facts.routes.js      # Statistiques marché
-│   ├── trends.routes.js     # Tendances salariales
-│   ├── search.routes.js     # Recherche offres
-│   ├── collection.routes.js # Collecte données
-│   └── reference.routes.js  # Référentiels ROME/ESCO
-├── rome.routes.js           # Référentiel ROME 4.0 métiers
-├── metrics.routes.js        # Métriques et monitoring
-├── health.routes.js         # Health check + memory stats
-├── admin.routes.js          # Routes administration (security logs)
-└── docs.routes.js           # Documentation Swagger
+â”œâ”€â”€ auth/                    # Authentification (modulaire)
+â”‚   â”œâ”€â”€ signin.routes.js     # Login, 2FA, password
+â”‚   â”œâ”€â”€ google.routes.js     # Google OAuth SSO
+â”‚   â””â”€â”€ users.routes.js      # Gestion utilisateurs (admin)
+â”œâ”€â”€ resumes/                 # CV (modulaire)
+â”‚   â”œâ”€â”€ crud.routes.js       # CRUD CV, pagination, filtres
+â”‚   â”œâ”€â”€ upload.routes.js     # Upload fichier + RGPD
+â”‚   â”œâ”€â”€ llm.handlers.js      # Analyse, amÃ©lioration, adaptation
+â”‚   â”œâ”€â”€ versions.routes.js   # Historique des versions
+â”‚   â””â”€â”€ stats.routes.js      # Statistiques CV
+â”œâ”€â”€ adaptations.routes.js    # Adaptations CV/Mission
+â”œâ”€â”€ missions.routes.js       # CRUD missions
+â”œâ”€â”€ clients.routes.js        # CRM clients/prospects
+â”œâ”€â”€ resumeComments.routes.js # Commentaires sur CV
+â”œâ”€â”€ resumeSubmissions.routes.js # Envoi de CV Ã  des clients
+â”œâ”€â”€ pipeline.routes.js       # Pipeline de recrutement
+â”œâ”€â”€ deals.routes.js          # Affaires commerciales
+â”œâ”€â”€ batchJobs.routes.js      # Jobs backend (import, amÃ©lioration, matching, adaptation, missions)
+â”œâ”€â”€ batchExport.routes.js    # Export batch (ZIP)
+â”œâ”€â”€ templates/crud.routes.js # Templates d'export PDF
+â”œâ”€â”€ llm.routes.js            # Proxy LLM (OpenAI/Anthropic)
+â”œâ”€â”€ chatbot.routes.js        # Assistant IA contextuel
+â”œâ”€â”€ settings.routes.js       # Configuration application
+â”œâ”€â”€ firms.routes.js          # Gestion des cabinets
+â”œâ”€â”€ tags.routes.js           # Gestion des tags avec cache
+â”œâ”€â”€ consent.routes.js        # Consentement RGPD candidats
+â”œâ”€â”€ gdprAudit.routes.js      # Journal d'audit RGPD
+â”œâ”€â”€ gdprMail.routes.js       # Envoi emails RGPD
+â”œâ”€â”€ mail.routes.js           # Envoi emails (Gmail/SMTP)
+â”œâ”€â”€ emailTemplates.routes.js # Templates email MJML
+â”œâ”€â”€ calendar.routes.js       # Google Calendar (entretiens)
+â”œâ”€â”€ share.routes.js          # Partage public de CV (QR code)
+â”œâ”€â”€ backup.routes.js         # Sauvegarde/restauration
+â”œâ”€â”€ marketRadar/             # DonnÃ©es marchÃ© (modulaire)
+â”‚   â”œâ”€â”€ facts.routes.js      # Statistiques marchÃ©
+â”‚   â”œâ”€â”€ trends.routes.js     # Tendances salariales
+â”‚   â”œâ”€â”€ search.routes.js     # Recherche offres
+â”‚   â”œâ”€â”€ collection.routes.js # Collecte donnÃ©es
+â”‚   â””â”€â”€ reference.routes.js  # RÃ©fÃ©rentiels ROME/ESCO
+â”œâ”€â”€ rome.routes.js           # RÃ©fÃ©rentiel ROME 4.0 mÃ©tiers
+â”œâ”€â”€ metrics.routes.js        # MÃ©triques et monitoring
+â”œâ”€â”€ health.routes.js         # Health check + memory stats
+â”œâ”€â”€ admin.routes.js          # Routes administration (security logs)
+â””â”€â”€ docs.routes.js           # Documentation Swagger
 ```
 
 ### Services Backend
 
-| Service | Rôle |
+| Service | RÃ´le |
 |---------|------|
-| `jwt.service.js` | Génération/vérification JWT, révocation |
-| `llm.service.js` | Orchestration LLM métier indépendante du provider |
-| `cache.service.js` | Cache en mémoire avec TTL et cleanup |
+| `jwt.service.js` | GÃ©nÃ©ration/vÃ©rification JWT, rÃ©vocation |
+| `llm.service.js` | Orchestration LLM mÃ©tier indÃ©pendante du provider |
+| `cache.service.js` | Cache en mÃ©moire avec TTL et cleanup |
 | `database.service.js` | Pool PostgreSQL avec retry |
-| `tokenBlacklist.service.js` | Révocation tokens, blacklist users |
+| `tokenBlacklist.service.js` | RÃ©vocation tokens, blacklist users |
 | `googleAuth.service.js` | Google OAuth SSO |
 | `consent.service.js` | Consentement RGPD candidats |
 | `gdprAudit.service.js` | Journal d'audit RGPD |
@@ -298,30 +321,31 @@ server/routes/
 | `calendar.service.js` | Google Calendar (entretiens) |
 | `deals.service.js` | Affaires commerciales |
 | `candidatePipeline.service.js` | Pipeline de recrutement |
-| `batchJobs.service.js` | Gestion des jobs backend persistés et de leurs items |
-| `batchJobsWorker/` | Worker d'exécution batch (import, extraction, LLM, matching, adaptation, export) |
-| `llmAvailability.service.js` | Disponibilité runtime/persistée des modèles selon entitlement et fallback |
-| `llmModelCapabilities.service.js` | Registre central des capacités et limites par modèle |
+| `batchJobs.service.js` | Gestion des jobs backend persistÃ©s et de leurs items |
+| `batchJobsWorker/` | Worker d'exÃ©cution batch (import, extraction, LLM, matching, adaptation, export) |
+| `llmAvailability.service.js` | DisponibilitÃ© runtime/persistÃ©e des modÃ¨les selon entitlement et fallback |
+| `llmModelCapabilities.service.js` | Registre central des capacitÃ©s et limites par modÃ¨le |
 | `llmPayloadCapabilities.service.js` | Construction/sanitation des payloads LLM par capacités |
+| `profileMatching.service.js` | Matching mission/profils avec batch scoring LLM, retries par sous-batches et concurrence configurable |
 | `backup.service.js` | Sauvegarde/restauration PostgreSQL |
 | `backup-scheduler.service.js` | Planification sauvegardes automatiques |
-| `industry.service.js` | Gestion des secteurs d'activité |
+| `industry.service.js` | Gestion des secteurs d'activitÃ© |
 | `franceTravail.service.js` | API France Travail (offres, stats) |
 | `adzuna.service.js` | API Adzuna (offres emploi) |
-| `marketFacts.service.js` | Agrégation données marché |
+| `marketFacts.service.js` | AgrÃ©gation donnÃ©es marchÃ© |
 | `marketTrends/` | Tendances salariales (collector, cache, API) |
-| `escoService.js` | Classification ESCO compétences |
+| `escoService.js` | Classification ESCO compÃ©tences |
 | `resumeVersions.service.js` | Historique des versions de CV |
 
 ### Middleware Chain
 
 ```javascript
-// Ordre d'exécution des middlewares
-app.use(helmet());           // 1. Headers sécurité
+// Ordre d'exÃ©cution des middlewares
+app.use(helmet());           // 1. Headers sÃ©curitÃ©
 app.use(cors());             // 2. CORS
 app.use(compression());      // 3. Compression gzip
 app.use(cookieParser());     // 4. Parsing cookies
-app.use(metricsMiddleware);  // 5. Tracking métriques
+app.use(metricsMiddleware);  // 5. Tracking mÃ©triques
 app.use(csrfProtection);     // 6. Protection CSRF
 app.use(rateLimiter);        // 7. Rate limiting
 app.use(authenticateToken);  // 8. Auth JWT (par route)
@@ -329,29 +353,29 @@ app.use(authenticateToken);  // 8. Auth JWT (par route)
 
 ---
 
-## Base de Données (PostgreSQL)
+## Base de DonnÃ©es (PostgreSQL)
 
 ### Choix de PostgreSQL
 
-PostgreSQL est utilisé comme base de données relationnelle :
-- **Performance** : Requêtes optimisées avec indexes
-- **Scalabilité** : Support de volumes de données importants
-- **Intégrité** : Contraintes, transactions ACID, UUIDs
-- **Sécurité** : Protection SQL injection via requêtes paramétrées
+PostgreSQL est utilisÃ© comme base de donnÃ©es relationnelle :
+- **Performance** : RequÃªtes optimisÃ©es avec indexes
+- **ScalabilitÃ©** : Support de volumes de donnÃ©es importants
+- **IntÃ©gritÃ©** : Contraintes, transactions ACID, UUIDs
+- **SÃ©curitÃ©** : Protection SQL injection via requÃªtes paramÃ©trÃ©es
 
-### Schéma Principal
+### SchÃ©ma Principal
 
 #### Tables Principales
 
 | Table | Contenu |
 |-------|---------|
 | `firms` | Cabinets/organisations, statut, logo |
-| `users` | Utilisateurs, rôles, statuts, mots de passe hashés, 2FA (TOTP) |
+| `users` | Utilisateurs, rÃ´les, statuts, mots de passe hashÃ©s, 2FA (TOTP) |
 | `resumes` | CV, analyses, scores, tags (JSON), consentement RGPD |
-| `resume_versions` | Historique des versions de CV améliorés |
-| `resume_comments` | Commentaires sur les CV (privés/publics) |
-| `missions` | Offres d'emploi, descriptions, compétences requises |
-| `resume_adaptations` | CV adaptés pour missions, score de matching |
+| `resume_versions` | Historique des versions de CV amÃ©liorÃ©s |
+| `resume_comments` | Commentaires sur les CV (privÃ©s/publics) |
+| `missions` | Offres d'emploi, descriptions, compÃ©tences requises |
+| `resume_adaptations` | CV adaptÃ©s pour missions, score de matching |
 | `templates` | Templates d'export PDF (HTML/CSS) |
 
 #### Tables CRM
@@ -359,22 +383,22 @@ PostgreSQL est utilisé comme base de données relationnelle :
 | Table | Contenu |
 |-------|---------|
 | `clients` | Clients/prospects (type, statut, secteur) |
-| `client_contacts` | Contacts des clients (email, téléphone) |
+| `client_contacts` | Contacts des clients (email, tÃ©lÃ©phone) |
 | `resume_submissions` | Historique d'envoi de CV aux clients |
 | `candidate_pipeline` | Pipeline de recrutement (stages) |
 | `pipeline_history` | Historique des changements de stage |
-| `pipeline_interviews` | Entretiens planifiés (Google Calendar) |
+| `pipeline_interviews` | Entretiens planifiÃ©s (Google Calendar) |
 
 #### Tables Market Data
 
 | Table | Contenu |
 |-------|---------|
-| `rome_metiers` | Référentiel ROME 4.0 des métiers IT |
-| `market_facts` | Données marché (France Travail, Adzuna) |
-| `market_trends` | Tendances salariales par région/métier |
-| `industry_aliases` | Alias de secteurs d'activité |
+| `rome_metiers` | RÃ©fÃ©rentiel ROME 4.0 des mÃ©tiers IT |
+| `market_facts` | DonnÃ©es marchÃ© (France Travail, Adzuna) |
+| `market_trends` | Tendances salariales par rÃ©gion/mÃ©tier |
+| `industry_aliases` | Alias de secteurs d'activitÃ© |
 
-#### Tables Configuration & Sécurité
+#### Tables Configuration & SÃ©curitÃ©
 
 | Table | Contenu |
 |-------|---------|
@@ -382,14 +406,14 @@ PostgreSQL est utilisé comme base de données relationnelle :
 | `email_templates` | Templates email MJML par cabinet |
 | `backup_settings` | Configuration sauvegarde FTP/SFTP |
 | `backup_history` | Historique des sauvegardes |
-| `token_blacklist` | Tokens JWT révoqués |
-| `user_blacklist` | Utilisateurs bloqués |
+| `token_blacklist` | Tokens JWT rÃ©voquÃ©s |
+| `user_blacklist` | Utilisateurs bloquÃ©s |
 | `user_mail_tokens` | Tokens OAuth Gmail/Outlook |
 | `user_calendar_tokens` | Tokens OAuth Google Calendar |
 | `firm_gdpr_mail_tokens` | Tokens email RGPD par cabinet |
 | `global_gdpr_mail_token` | Token email RGPD global |
 | `gdpr_audit_log` | Journal d'audit RGPD |
-| `schema_migrations` | Suivi des migrations de schéma |
+| `schema_migrations` | Suivi des migrations de schÃ©ma |
 
 ### Configuration PostgreSQL
 
@@ -414,10 +438,10 @@ const pool = new pg.Pool({
 ```javascript
 // src/utils/postgresHelpers.js
 
-// Requête avec timeout et retry automatique
+// RequÃªte avec timeout et retry automatique
 export async function queryWithTimeout(sql, params, timeout = 30000);
 
-// Select sécurisé avec whitelist de tables
+// Select sÃ©curisÃ© avec whitelist de tables
 export async function selectWithTimeout(table, options);
 
 // Insert/Update/Delete avec validation
@@ -426,10 +450,10 @@ export async function updateRecord(table, id, data);
 export async function deleteRecord(table, id);
 ```
 
-### Triggers de Dénormalisation
+### Triggers de DÃ©normalisation
 
 ```sql
--- Synchronisation automatique customer_name dans les tables liées
+-- Synchronisation automatique customer_name dans les tables liÃ©es
 CREATE TRIGGER sync_customer_name_to_users
 AFTER UPDATE OF name ON customers
 FOR EACH ROW
@@ -438,19 +462,19 @@ EXECUTE FUNCTION sync_customer_name();
 
 ---
 
-## Intégrations LLM
+## IntÃ©grations LLM
 
-### Providers Supportés
+### Providers SupportÃ©s
 
-| Provider | Modèles | Usage |
+| Provider | ModÃ¨les | Usage |
 |----------|---------|-------|
-| **OpenAI** | GPT-5.4 / GPT-5.4-pro / GPT-5.2 / GPT-5.1 / GPT-5, GPT-4.1, GPT-4o | Analyse, amélioration, adaptation |
-| **Anthropic** | Claude Opus 4.x, Claude Sonnet 4, Claude 3.7, Claude 3.5 | Alternative à OpenAI |
+| **OpenAI** | GPT-5.4 / GPT-5.4-pro / GPT-5.2 / GPT-5.1 / GPT-5, GPT-4.1, GPT-4o | Analyse, amÃ©lioration, adaptation |
+| **Anthropic** | Claude Opus 4.x, Claude Sonnet 4, Claude 3.7, Claude 3.5 | Alternative Ã  OpenAI |
 | **DeepSeek** | DeepSeek-V3.2 via `deepseek-chat` et `deepseek-reasoner` | Alternative OpenAI-compatible avec deux modes d'appel : standard et raisonnement |
-| **MiniMax** | MiniMax-M2.7, MiniMax-M2.5, MiniMax-M2.1, MiniMax-M2, M2-her, variantes `highspeed` conditionnelles | Alternative API-compatible pour analyse, amélioration, adaptation avec filtrage selon disponibilité de plan |
-| **Ollama (distant)** | Modèles exposés par une instance Ollama externe | Exécution via une URL Ollama distante, sans moteur Ollama embarqué dans le conteneur |
+| **MiniMax** | MiniMax-M2.7, MiniMax-M2.5, MiniMax-M2.1, MiniMax-M2, M2-her, variantes `highspeed` conditionnelles | Alternative API-compatible pour analyse, amÃ©lioration, adaptation avec filtrage selon disponibilitÃ© de plan |
+| **Ollama (distant)** | ModÃ¨les exposÃ©s par une instance Ollama externe | ExÃ©cution via une URL Ollama distante, sans moteur Ollama embarquÃ© dans le conteneur |
 
-### Gateway LLM Unifié
+### Gateway LLM UnifiÃ©
 
 ```javascript
 // server/services/llmGateway.service.js
@@ -463,92 +487,92 @@ export async function callLLM(messages, options) {
 
 
 
-### Compatibilité Modèles
+### CompatibilitÃ© ModÃ¨les
 
-Le service gère automatiquement les différences entre modèles :
+Le service gÃ¨re automatiquement les diffÃ©rences entre modÃ¨les :
 - `max_tokens` vs `max_completion_tokens` (GPT-5+)
-- support ou suppression de `temperature` / `top_p` selon les capacités du modèle
-- suppression automatique de `response_format` quand un modèle ne le supporte pas (ex. famille MiniMax M2.x)
-- clamp centralisé des plafonds de sortie connus par modèle/provider
+- support ou suppression de `temperature` / `top_p` selon les capacitÃ©s du modÃ¨le
+- suppression automatique de `response_format` quand un modÃ¨le ne le supporte pas (ex. famille MiniMax M2.x)
+- clamp centralisÃ© des plafonds de sortie connus par modÃ¨le/provider
 - support OpenAI-compatible DeepSeek
 - APIs compatibles OpenAI et Anthropic pour MiniMax
-- connexion HTTP vers une instance Ollama distante configurée dans les paramètres
-- cas Ollama sans `llmModel` obligatoire côté application lorsque le modèle est piloté par l'instance distante
+- connexion HTTP vers une instance Ollama distante configurÃ©e dans les paramÃ¨tres
+- cas Ollama sans `llmModel` obligatoire cÃ´tÃ© application lorsque le modÃ¨le est pilotÃ© par l'instance distante
 
-La compatibilité de payload est pilotée par deux couches distinctes :
-- `llmModelCapabilities.service.js` : capacités techniques d'un modèle/provider (tokens, paramètres supportés, plafonds, etc.)
-- `llmPayloadCapabilities.service.js` : construction et sanitation du payload réellement envoyé à l'API upstream
+La compatibilitÃ© de payload est pilotÃ©e par deux couches distinctes :
+- `llmModelCapabilities.service.js` : capacitÃ©s techniques d'un modÃ¨le/provider (tokens, paramÃ¨tres supportÃ©s, plafonds, etc.)
+- `llmPayloadCapabilities.service.js` : construction et sanitation du payload rÃ©ellement envoyÃ© Ã  l'API upstream
 
-La disponibilité métier d'un modèle est traitée séparément de ses capacités techniques :
-- `llmAvailability.service.js` : disponibilité runtime selon la configuration de l'instance
-- exemple actuel : les modèles MiniMax `*-highspeed` sont masqués et normalisés vers leur variante standard tant que `MINIMAX_ENABLE_HIGHSPEED_MODELS=true` n'est pas activé
+La disponibilitÃ© mÃ©tier d'un modÃ¨le est traitÃ©e sÃ©parÃ©ment de ses capacitÃ©s techniques :
+- `llmAvailability.service.js` : disponibilitÃ© runtime selon la configuration de l'instance
+- exemple actuel : les modÃ¨les MiniMax `*-highspeed` sont masquÃ©s et normalisÃ©s vers leur variante standard tant que `MINIMAX_ENABLE_HIGHSPEED_MODELS=true` n'est pas activÃ©
 
 ### Services LLM
 
-Les responsabilités sont maintenant séparées :
-- `llmConfiguration.service.js` : résolution runtime provider / modèle
+Les responsabilitÃ©s sont maintenant sÃ©parÃ©es :
+- `llmConfiguration.service.js` : rÃ©solution runtime provider / modÃ¨le
 - `llmGateway.service.js` : gateway unique, agnostique du provider hors configuration
-- `openaiChat.service.js`, `anthropic.service.js`, `deepseek.service.js`, `minimax.service.js`, `ollama.service.js` : implémentations provider
+- `openaiChat.service.js`, `anthropic.service.js`, `deepseek.service.js`, `minimax.service.js`, `ollama.service.js` : implÃ©mentations provider
 - `llmContent.service.js` : normalisation/sanitation des sorties
-- `llmProviderCommon.service.js` : règles communes de payloads/réponses compatibles
+- `llmProviderCommon.service.js` : rÃ¨gles communes de payloads/rÃ©ponses compatibles
 
-### Résilience et observabilité
+### RÃ©silience et observabilitÃ©
 
 - Retry et circuit breaker pour `openai`, `anthropic`, `deepseek` et `minimax`
-- Retry réseau léger pour `ollama` sur les appels data plane et control plane, sans circuit breaker
-- L'indicateur `ollama` dans `/api/llm/circuit-breakers` reste volontairement `NOT_APPLICABLE` pour refléter ce choix d'architecture
-- Indicateur d'état par famille via `/api/llm/circuit-breakers`
+- Retry rÃ©seau lÃ©ger pour `ollama` sur les appels data plane et control plane, sans circuit breaker
+- L'indicateur `ollama` dans `/api/llm/circuit-breakers` reste volontairement `NOT_APPLICABLE` pour reflÃ©ter ce choix d'architecture
+- Indicateur d'Ã©tat par famille via `/api/llm/circuit-breakers`
 - Health checks profonds via `/api/health?deep=true`
-- Métriques LLM normalisées et bornées pour éviter la cardinalité non contrôlée en mémoire
+- MÃ©triques LLM normalisÃ©es et bornÃ©es pour Ã©viter la cardinalitÃ© non contrÃ´lÃ©e en mÃ©moire
 
 ---
 
-## Intégrations Externes
+## IntÃ©grations Externes
 
 ### France Travail API
 
 | Endpoint | Usage |
 |----------|-------|
-| `/offres` | Récupération des offres d'emploi IT |
-| `/stats` | Statistiques marché par région/métier |
-| `/rome` | Référentiel ROME 4.0 des métiers |
+| `/offres` | RÃ©cupÃ©ration des offres d'emploi IT |
+| `/stats` | Statistiques marchÃ© par rÃ©gion/mÃ©tier |
+| `/rome` | RÃ©fÃ©rentiel ROME 4.0 des mÃ©tiers |
 
 ### Adzuna API
 
 | Endpoint | Usage |
 |----------|-------|
-| `/jobs` | Offres d'emploi complémentaires |
-| `/salary` | Données salariales par région |
+| `/jobs` | Offres d'emploi complÃ©mentaires |
+| `/salary` | DonnÃ©es salariales par rÃ©gion |
 
 ### ESCO (European Skills Classification)
 
-- Classification européenne des compétences
+- Classification europÃ©enne des compÃ©tences
 - Mapping automatique des skills extraits des CV
 - Normalisation des tags pour le matching
 
 ### Market Radar
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    Market Radar Flow                         │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  1. Sélection région sur carte France (MapLibre)            │
-│  2. Sélection métier (référentiel ROME 4.0)                 │
-│  3. Appel APIs France Travail + Adzuna                      │
-│  4. Agrégation données marché (offres, salaires, tension)   │
-│  5. Affichage tendances et statistiques                     │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚                    Market Radar Flow                         â”‚
+â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤
+â”‚                                                              â”‚
+â”‚  1. SÃ©lection rÃ©gion sur carte France (MapLibre)            â”‚
+â”‚  2. SÃ©lection mÃ©tier (rÃ©fÃ©rentiel ROME 4.0)                 â”‚
+â”‚  3. Appel APIs France Travail + Adzuna                      â”‚
+â”‚  4. AgrÃ©gation donnÃ©es marchÃ© (offres, salaires, tension)   â”‚
+â”‚  5. Affichage tendances et statistiques                     â”‚
+â”‚                                                              â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 ```
 
-### Génération PDF
+### GÃ©nÃ©ration PDF
 
 ```javascript
-// pdf-server/server.cjs - Serveur dédié Puppeteer
+// pdf-server/server.cjs - Serveur dÃ©diÃ© Puppeteer
 const htmlPdf = require('html-pdf-node');
 
-// Génération PDF depuis HTML avec templates personnalisables
+// GÃ©nÃ©ration PDF depuis HTML avec templates personnalisables
 app.post('/generate-pdf', async (req, res) => {
   const { html, options } = req.body;
   const pdfBuffer = await htmlPdf.generatePdf({ content: html }, options);
@@ -558,32 +582,32 @@ app.post('/generate-pdf', async (req, res) => {
 
 ---
 
-## Sécurité
+## SÃ©curitÃ©
 
-### 🔐 Authentification JWT
+### ðŸ” Authentification JWT
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    JWT Authentication Flow                   │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  1. Login → Credentials validation                          │
-│  2. Generate Access Token (1h) + Refresh Token (7d)         │
-│  3. Tokens stored in httpOnly cookies (not localStorage!)   │
-│  4. Each request: Access Token verified                     │
-│  5. Token expired? → Automatic refresh with Refresh Token   │
-│  6. Logout → Tokens blacklisted                             │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚                    JWT Authentication Flow                   â”‚
+â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤
+â”‚                                                              â”‚
+â”‚  1. Login â†’ Credentials validation                          â”‚
+â”‚  2. Generate Access Token (1h) + Refresh Token (7d)         â”‚
+â”‚  3. Tokens stored in httpOnly cookies (not localStorage!)   â”‚
+â”‚  4. Each request: Access Token verified                     â”‚
+â”‚  5. Token expired? â†’ Automatic refresh with Refresh Token   â”‚
+â”‚  6. Logout â†’ Tokens blacklisted                             â”‚
+â”‚                                                              â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 ```
 
-**Caractéristiques :**
-- Algorithme HS256 explicite (prévention attaque algorithm confusion)
-- Secrets séparés pour Access et Refresh tokens
+**CaractÃ©ristiques :**
+- Algorithme HS256 explicite (prÃ©vention attaque algorithm confusion)
+- Secrets sÃ©parÃ©s pour Access et Refresh tokens
 - JTI unique pour chaque token (support blacklist)
-- Vérification statut utilisateur dans le token
+- VÃ©rification statut utilisateur dans le token
 
-### 🛡️ Protection CSRF (Double Submit Cookie)
+### ðŸ›¡ï¸ Protection CSRF (Double Submit Cookie)
 
 ```javascript
 // Configuration CSRF
@@ -598,9 +622,9 @@ const csrfProtection = doubleCsrf({
 });
 ```
 
-**Mécanisme :**
-1. Token CSRF généré côté serveur
-2. Stocké dans cookie httpOnly + envoyé au client
+**MÃ©canisme :**
+1. Token CSRF gÃ©nÃ©rÃ© cÃ´tÃ© serveur
+2. StockÃ© dans cookie httpOnly + envoyÃ© au client
 3. Client renvoie le token dans header `x-csrf-token`
 4. Serveur compare cookie et header
 
@@ -620,28 +644,28 @@ export const fetchWithCsrfRetry = async (url, options) => {
 };
 ```
 
-### 🚦 Rate Limiting Multi-Niveaux
+### ðŸš¦ Rate Limiting Multi-Niveaux
 
-| Type | Limite | Fenêtre | Cible |
+| Type | Limite | FenÃªtre | Cible |
 |------|--------|---------|-------|
 | **Global** | 1000 req | 15 min | Par IP |
 | **Auth** | 20 req | 15 min | Tentatives login |
-| **User** | 50 req | 15 min | Par utilisateur authentifié |
+| **User** | 50 req | 15 min | Par utilisateur authentifiÃ© |
 | **Upload** | 50 req | 15 min | Upload fichiers |
 | **LLM** | 100 req | 1 heure | Appels IA |
 | **Combined** | 30 req | 1 min | IP + User (anti-bypass) |
 
-### 🔒 Content Security Policy (CSP)
+### ðŸ”’ Content Security Policy (CSP)
 
-**Score Mozilla HTTP Observatory : A+** ✅
+**Score Mozilla HTTP Observatory : A+** âœ…
 
-L'application implémente une CSP stricte avec `default-src 'none'`, ce qui garantit que toutes les ressources doivent être explicitement autorisées.
+L'application implÃ©mente une CSP stricte avec `default-src 'none'`, ce qui garantit que toutes les ressources doivent Ãªtre explicitement autorisÃ©es.
 
 ```javascript
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
-      defaultSrc: ["'none'"],                    // Strict: tout bloqué par défaut
+      defaultSrc: ["'none'"],                    // Strict: tout bloquÃ© par dÃ©faut
       scriptSrc: ["'self'", "https://basemaps.cartocdn.com", "https://*.basemaps.cartocdn.com"],
       scriptSrcAttr: ["'none'"],                 // Bloque les event handlers inline
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://unpkg.com", "https://basemaps.cartocdn.com"],
@@ -655,7 +679,7 @@ app.use(helmet({
       objectSrc: ["'none'"],                     // Bloque Flash, Java, etc.
       mediaSrc: ["'self'"],
       manifestSrc: ["'self'"],
-      baseUri: ["'self'"],                       // Prévient base tag hijacking
+      baseUri: ["'self'"],                       // PrÃ©vient base tag hijacking
       formAction: ["'self'"],
       upgradeInsecureRequests: []                // Force HTTPS
     }
@@ -663,47 +687,47 @@ app.use(helmet({
 }));
 ```
 
-#### Directives de sécurité
+#### Directives de sÃ©curitÃ©
 
-| Directive | Valeur | Sécurité |
+| Directive | Valeur | SÃ©curitÃ© |
 |-----------|--------|----------|
-| `default-src` | `'none'` | ✅ Strict - tout bloqué par défaut |
-| `script-src` | `'self'` | ✅ Pas de `'unsafe-inline'` ni `'unsafe-eval'` |
-| `script-src-attr` | `'none'` | ✅ Bloque les event handlers inline |
-| `style-src` | `'self' 'unsafe-inline'` | ⚠️ Requis par Tiptap/ProseMirror (voir note) |
-| `object-src` | `'none'` | ✅ Bloque plugins dangereux |
-| `frame-ancestors` | `'self'` | ✅ Protection clickjacking |
-| `base-uri` | `'self'` | ✅ Prévient base tag hijacking |
+| `default-src` | `'none'` | âœ… Strict - tout bloquÃ© par dÃ©faut |
+| `script-src` | `'self'` | âœ… Pas de `'unsafe-inline'` ni `'unsafe-eval'` |
+| `script-src-attr` | `'none'` | âœ… Bloque les event handlers inline |
+| `style-src` | `'self' 'unsafe-inline'` | âš ï¸ Requis par Tiptap/ProseMirror (voir note) |
+| `object-src` | `'none'` | âœ… Bloque plugins dangereux |
+| `frame-ancestors` | `'self'` | âœ… Protection clickjacking |
+| `base-uri` | `'self'` | âœ… PrÃ©vient base tag hijacking |
 
-#### Extraction PDF côté serveur
+#### Extraction PDF cÃ´tÃ© serveur
 
-Pour éliminer `'unsafe-eval'` de la CSP, l'extraction de texte PDF a été migrée du client vers le serveur :
+Pour Ã©liminer `'unsafe-eval'` de la CSP, l'extraction de texte PDF a Ã©tÃ© migrÃ©e du client vers le serveur :
 
 ```
-Client (avant)                    Serveur (après)
-┌─────────────────┐              ┌─────────────────┐
-│  pdfjs-dist     │    ──►       │  pdfjs-dist     │
-│  (unsafe-eval)  │              │  /legacy        │
-│  Tesseract.js   │              │  Tesseract.js   │
-│  (OCR client)   │              │  (OCR serveur)  │
-└─────────────────┘              └─────────────────┘
+Client (avant)                    Serveur (aprÃ¨s)
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”              â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚  pdfjs-dist     â”‚    â”€â”€â–º       â”‚  pdfjs-dist     â”‚
+â”‚  (unsafe-eval)  â”‚              â”‚  /legacy        â”‚
+â”‚  Tesseract.js   â”‚              â”‚  Tesseract.js   â”‚
+â”‚  (OCR client)   â”‚              â”‚  (OCR serveur)  â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜              â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 ```
 
 **Endpoint** : `POST /api/resumes/extract-pdf`
 - Extraction texte via `pdfjs-dist/legacy`
-- OCR automatique pour PDFs scannés (Tesseract.js)
-- Support français + anglais
+- OCR automatique pour PDFs scannÃ©s (Tesseract.js)
+- Support franÃ§ais + anglais
 
 #### Note sur `'unsafe-inline'` dans `style-src`
 
-Tiptap/ProseMirror nécessite `'unsafe-inline'` dans `style-src` pour le formatage inline (gras, couleurs, alignement, etc.) car l'éditeur applique des styles directement sur les éléments DOM.
+Tiptap/ProseMirror nÃ©cessite `'unsafe-inline'` dans `style-src` pour le formatage inline (gras, couleurs, alignement, etc.) car l'Ã©diteur applique des styles directement sur les Ã©lÃ©ments DOM.
 
 **Mitigations :**
-- Sanitization côté client avec DOMPurify
-- Sanitization côté serveur avec sanitize-html
-- Validation stricte des entrées utilisateur
+- Sanitization cÃ´tÃ© client avec DOMPurify
+- Sanitization cÃ´tÃ© serveur avec sanitize-html
+- Validation stricte des entrÃ©es utilisateur
 
-### 🧹 Sanitization
+### ðŸ§¹ Sanitization
 
 **Backend :**
 ```javascript
@@ -728,24 +752,24 @@ export function sanitizeHtml(html: string): string {
 }
 ```
 
-### 📝 Token Blacklist
+### ðŸ“ Token Blacklist
 
 ```javascript
-// Révocation immédiate des tokens
+// RÃ©vocation immÃ©diate des tokens
 export function blacklistToken(tokenId, expiresAt, reason, userId) {
   blacklistedTokens.set(tokenId, { expiresAt, reason, userId, blacklistedAt: Date.now() });
 }
 
-// Blacklist tous les tokens d'un utilisateur (désactivation compte)
+// Blacklist tous les tokens d'un utilisateur (dÃ©sactivation compte)
 export function blacklistUser(userId, reason) {
   blacklistedUsers.set(userId, { blacklistedAt: Date.now(), reason });
 }
 ```
 
-### 📊 Security Logging
+### ðŸ“Š Security Logging
 
 ```javascript
-// Événements de sécurité loggés
+// Ã‰vÃ©nements de sÃ©curitÃ© loggÃ©s
 SECURITY_EVENTS = {
   AUTH_SUCCESS, AUTH_FAILURE, AUTH_BLOCKED,
   RATE_LIMIT_HIT, INVALID_TOKEN, TOKEN_EXPIRED,
@@ -759,34 +783,33 @@ SECURITY_EVENTS = {
 
 ## Monitoring & APM
 
-### 📊 APM Interne
+### ðŸ“Š APM Interne
 
-L'application intègre un middleware APM (`apm.middleware.js`) pour le suivi des performances :
+L'application intÃ¨gre un middleware APM (`apm.middleware.js`) pour le suivi des performances :
 
 ```javascript
 // Configuration APM
 const APM_CONFIG = {
-    slowRequestThreshold: 1000,      // 1s = requête lente
-    verySlowRequestThreshold: 5000,  // 5s = très lente
+    slowRequestThreshold: 1000,      // 1s = requÃªte lente
+    verySlowRequestThreshold: 5000,  // 5s = trÃ¨s lente
     criticalRequestThreshold: 30000, // 30s = critique
-    traceSamplingRate: 1.0,          // 100% des requêtes tracées
+    traceSamplingRate: 1.0,          // 100% des requÃªtes tracÃ©es
     maxSlowRequests: 100             // Buffer circulaire
 };
 ```
 
-**Fonctionnalités :**
-- Détection automatique des requêtes lentes
-- Classification par sévérité (slow, very_slow, critical)
-- Breakdown timing détaillé avec `req.apmMark()`
-- Normalisation des endpoints pour agrégation
-- Buffer circulaire des 100 dernières requêtes lentes
+**FonctionnalitÃ©s :**
+- DÃ©tection automatique des requÃªtes lentes
+- Classification par sÃ©vÃ©ritÃ© (slow, very_slow, critical)
+- Breakdown timing dÃ©taillÃ© avec `req.apmMark()`
+- Normalisation des endpoints pour agrÃ©gation
+- Buffer circulaire des 100 derniÃ¨res requÃªtes lentes
 - Statistiques par endpoint (count, avg, max)
 
 **API :**
 - `GET /api/metrics/apm` - Statistiques APM
-- `GET /api/metrics/apm/slow-requests` - Liste des requêtes lentes
+- `GET /api/metrics/apm/slow-requests` - Liste des requÃªtes lentes
 - `DELETE /api/metrics/apm/slow-requests` - Vider le buffer
-
 ### 📈 Métriques Système
 
 | Métrique | Description |
@@ -794,27 +817,41 @@ const APM_CONFIG = {
 | **Mémoire** | Heap used/total, RSS, external |
 | **Requêtes** | Count par endpoint, temps moyen |
 | **LLM** | Tokens consommés, coûts estimés |
+| **Profile Matching** | Recherches lancées, profils demandés/scorés, batches démarrés/retriés/en échec |
 | **Cache** | Hit/miss ratio, taille |
 | **Rate Limit** | Hits par type de limite |
 
-### 🔮 Améliorations Futures (APM Externe)
+### Configuration du profile matching
 
-Pour une mise en production à grande échelle, un APM externe apporterait :
+- `PROFILE_MATCHING_LLM_MAX_CONCURRENCY`
+  - `0` : concurrence par défaut selon le provider
+  - `1..100` : plafond global des appels batch LLM simultanés
+- `PROFILE_MATCHING_LLM_BATCH_SIZE`
+  - `0` : taille de batch par défaut selon le provider
+  - `1..100` : taille de batch forcée pour le scoring de profils
+- Valeurs par défaut actuellement utilisées :
+  - MiniMax : batch `6`, concurrence `3`
+  - DeepSeek : batch `4`, concurrence `2` pour `deepseek-reasoner`
+  - autres providers : batch `12`, concurrence `5`
 
-| Fonctionnalité | APM Interne | APM Externe (Datadog, New Relic) |
+### ðŸ”® AmÃ©liorations Futures (APM Externe)
+
+Pour une mise en production Ã  grande Ã©chelle, un APM externe apporterait :
+
+| FonctionnalitÃ© | APM Interne | APM Externe (Datadog, New Relic) |
 |----------------|-------------|----------------------------------|
-| Requêtes lentes | ✅ | ✅ |
-| Tracing distribué | ❌ | ✅ |
-| Alerting avancé | ❌ | ✅ |
-| Dashboards historiques | ❌ | ✅ |
-| Corrélation logs/traces | ❌ | ✅ |
-| Profiling code | ❌ | ✅ |
+| RequÃªtes lentes | âœ… | âœ… |
+| Tracing distribuÃ© | âŒ | âœ… |
+| Alerting avancÃ© | âŒ | âœ… |
+| Dashboards historiques | âŒ | âœ… |
+| CorrÃ©lation logs/traces | âŒ | âœ… |
+| Profiling code | âŒ | âœ… |
 
 ---
 
 ## Optimisations
 
-### ⚡ Cache en Mémoire
+### âš¡ Cache en MÃ©moire
 
 ```javascript
 // src/services/cache.service.js
@@ -835,11 +872,11 @@ export const templatesCache = new SimpleCache(10 * 60 * 1000); // 10 min
 export const customersCache = new SimpleCache(15 * 60 * 1000); // 15 min
 ```
 
-### 📦 Compression
+### ðŸ“¦ Compression
 
 ```javascript
 // Backend: compression middleware Express
-app.use(compression()); // Gzip automatique des réponses API
+app.use(compression()); // Gzip automatique des rÃ©ponses API
 
 // Frontend Dev: compression middleware Vite
 server.middlewares.use((req, res, next) => {
@@ -849,7 +886,7 @@ server.middlewares.use((req, res, next) => {
   res.setHeader('Content-Encoding', useBrotli ? 'br' : 'gzip');
 });
 
-// Frontend Prod: fichiers pré-compressés (.br, .gz) servis par Express
+// Frontend Prod: fichiers prÃ©-compressÃ©s (.br, .gz) servis par Express
 app.use((req, res, next) => {
   // Sert automatiquement les fichiers .br ou .gz si disponibles
   if (acceptEncoding.includes('br') && fs.existsSync(filePath + '.br')) {
@@ -859,10 +896,10 @@ app.use((req, res, next) => {
 });
 ```
 
-### 🗂️ Cache Assets Statiques
+### ðŸ—‚ï¸ Cache Assets Statiques
 
 ```javascript
-// Cache agressif pour assets hashés (1 an, immutable)
+// Cache agressif pour assets hashÃ©s (1 an, immutable)
 app.use(express.static(distPath, {
   setHeaders: (res, filePath) => {
     if (filePath.match(/\.[a-f0-9]{8,}\.(js|css|woff2?)$/i)) {
@@ -874,7 +911,7 @@ app.use(express.static(distPath, {
 }));
 ```
 
-### 🔄 Connection Pooling (Axios)
+### ðŸ”„ Connection Pooling (Axios)
 
 ```javascript
 // src/config/axios.js
@@ -882,20 +919,20 @@ export const httpAgent = new http.Agent({ keepAlive: true, maxSockets: 50 });
 export const httpsAgent = new https.Agent({ keepAlive: true, maxSockets: 50 });
 ```
 
-### 📄 Lazy Loading
+### ðŸ“„ Lazy Loading
 
 ```javascript
-// Chargement différé des librairies lourdes via React.lazy() et dynamic imports
-// Les libs PDF (pdfjs-dist) et OCR (Tesseract) sont extraites côté serveur uniquement
+// Chargement diffÃ©rÃ© des librairies lourdes via React.lazy() et dynamic imports
+// Les libs PDF (pdfjs-dist) et OCR (Tesseract) sont extraites cÃ´tÃ© serveur uniquement
 // Les composants lourds (TiptapEditor, MapLibre, Three.js) sont lazy-loaded via React.lazy()
 ```
 
-### 🧹 Cleanup Automatique
+### ðŸ§¹ Cleanup Automatique
 
 - **Rate Limit Stores** : Nettoyage toutes les heures
-- **Token Blacklist** : Suppression tokens expirés
-- **Cache** : Éviction entrées expirées + limite taille
-- **Fichiers temporaires** : Nettoyage multi-répertoires (voir section dédiée)
+- **Token Blacklist** : Suppression tokens expirÃ©s
+- **Cache** : Ã‰viction entrÃ©es expirÃ©es + limite taille
+- **Fichiers temporaires** : Nettoyage multi-rÃ©pertoires (voir section dÃ©diÃ©e)
 
 ---
 
@@ -903,40 +940,40 @@ export const httpsAgent = new https.Agent({ keepAlive: true, maxSockets: 50 });
 
 ### Architecture de Nettoyage
 
-Le système gère automatiquement les fichiers temporaires générés côté serveur pour éviter l'accumulation sur le disque.
+Le systÃ¨me gÃ¨re automatiquement les fichiers temporaires gÃ©nÃ©rÃ©s cÃ´tÃ© serveur pour Ã©viter l'accumulation sur le disque.
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                      FileCleanupManager                              │
-│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐   │
-│  │    uploads/      │  │  batch-exports/  │  │     shared/      │   │
-│  │    TTL: 1h       │  │    TTL: 24h      │  │    TTL: 30j      │   │
-│  │  Fichiers upload │  │  ZIPs d'export   │  │  PDFs partagés   │   │
-│  └──────────────────┘  └──────────────────┘  └──────────────────┘   │
-│  ┌──────────────────┐                                               │
-│  │   server/temp/   │                                               │
-│  │    TTL: 1h       │                                               │
-│  │ Fichiers backup  │                                               │
-│  └──────────────────┘                                               │
-└─────────────────────────────────────────────────────────────────────┘
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚                      FileCleanupManager                              â”‚
+â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”   â”‚
+â”‚  â”‚    uploads/      â”‚  â”‚  batch-exports/  â”‚  â”‚     shared/      â”‚   â”‚
+â”‚  â”‚    TTL: 1h       â”‚  â”‚    TTL: 24h      â”‚  â”‚    TTL: 30j      â”‚   â”‚
+â”‚  â”‚  Fichiers upload â”‚  â”‚  ZIPs d'export   â”‚  â”‚  PDFs partagÃ©s   â”‚   â”‚
+â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜   â”‚
+â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”                                               â”‚
+â”‚  â”‚   server/temp/   â”‚                                               â”‚
+â”‚  â”‚    TTL: 1h       â”‚                                               â”‚
+â”‚  â”‚ Fichiers backup  â”‚                                               â”‚
+â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜                                               â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 ```
 
-### Répertoires Gérés
+### RÃ©pertoires GÃ©rÃ©s
 
-| Répertoire | TTL | Contenu | Nettoyage |
+| RÃ©pertoire | TTL | Contenu | Nettoyage |
 |------------|-----|---------|-----------|
-| `./uploads/` | 1 heure | Fichiers uploadés (CVs) | Périodique |
-| `os.tmpdir()/batch-exports/` | 24 heures | ZIPs d'export batch | Périodique + après téléchargement |
-| `./uploads/shared/` | 30 jours | PDFs partagés publiquement | Périodique |
-| `./server/temp/` | 1 heure | Fichiers temporaires backup | Périodique |
-| `./uploads/logos/` | ∞ | Logos des firms | Persistants (non nettoyés) |
+| `./uploads/` | 1 heure | Fichiers uploadÃ©s (CVs) | PÃ©riodique |
+| `os.tmpdir()/batch-exports/` | 24 heures | ZIPs d'export batch | PÃ©riodique + aprÃ¨s tÃ©lÃ©chargement |
+| `./uploads/shared/` | 30 jours | PDFs partagÃ©s publiquement | PÃ©riodique |
+| `./server/temp/` | 1 heure | Fichiers temporaires backup | PÃ©riodique |
+| `./uploads/logos/` | âˆž | Logos des firms | Persistants (non nettoyÃ©s) |
 
-### Mécanismes de Nettoyage
+### MÃ©canismes de Nettoyage
 
 ```javascript
 // server/utils/fileCleanup.js
 
-// Configuration des répertoires avec TTL
+// Configuration des rÃ©pertoires avec TTL
 const CLEANUP_DIRS = {
     uploads: { path: UPLOAD_DIR, maxAgeMs: 60 * 60 * 1000 },        // 1h
     batchExports: { path: BATCH_EXPORTS_DIR, maxAgeMs: 24 * 60 * 60 * 1000 }, // 24h
@@ -944,13 +981,13 @@ const CLEANUP_DIRS = {
     sharedPdfs: { path: SHARED_DIR, maxAgeMs: 30 * 24 * 60 * 60 * 1000 }  // 30j
 };
 
-// Nettoyage périodique (toutes les heures)
+// Nettoyage pÃ©riodique (toutes les heures)
 startPeriodicCleanup(60 * 60 * 1000);
 ```
 
-### Suppression Après Téléchargement
+### Suppression AprÃ¨s TÃ©lÃ©chargement
 
-Les fichiers ZIP d'export batch sont automatiquement supprimés après téléchargement :
+Les fichiers ZIP d'export batch sont automatiquement supprimÃ©s aprÃ¨s tÃ©lÃ©chargement :
 
 ```javascript
 // server/routes/batchJobs.routes.js
@@ -984,13 +1021,13 @@ Response:
 }
 ```
 
-### Fonctions Exportées
+### Fonctions ExportÃ©es
 
 | Fonction | Description |
 |----------|-------------|
-| `startPeriodicCleanup(intervalMs)` | Démarre le nettoyage périodique |
-| `stopPeriodicCleanup()` | Arrête le timer de nettoyage |
-| `cleanupOldFiles(dir, maxAgeMs)` | Nettoie un répertoire spécifique |
+| `startPeriodicCleanup(intervalMs)` | DÃ©marre le nettoyage pÃ©riodique |
+| `stopPeriodicCleanup()` | ArrÃªte le timer de nettoyage |
+| `cleanupOldFiles(dir, maxAgeMs)` | Nettoie un rÃ©pertoire spÃ©cifique |
 | `getStorageStats()` | Retourne les statistiques d'espace disque |
 | `getFileCleanupStats()` | Retourne les statistiques de nettoyage |
 
@@ -1016,21 +1053,21 @@ i18n
   });
 ```
 
-### Langues Supportées
+### Langues SupportÃ©es
 
-| Langue | Fichier | Clés |
+| Langue | Fichier | ClÃ©s |
 |--------|---------|------|
-| **Français** | `locales/fr.json` | ~1000 clés |
-| **Anglais** | `locales/en.json` | ~1000 clés |
+| **FranÃ§ais** | `locales/fr.json` | ~1000 clÃ©s |
+| **Anglais** | `locales/en.json` | ~1000 clÃ©s |
 
 ### Structure des Traductions
 
 ```json
 {
   "common": { "save": "Enregistrer", "cancel": "Annuler" },
-  "resumes": { "title": "CVthèque", "filters": { "skills": "Compétences" } },
-  "resume": { "analysis": { "categories": { "technicalskills": "Compétences techniques" } } },
-  "navigation": { "home": "Accueil", "resumes": "CVthèque" },
+  "resumes": { "title": "CVthÃ¨que", "filters": { "skills": "CompÃ©tences" } },
+  "resume": { "analysis": { "categories": { "technicalskills": "CompÃ©tences techniques" } } },
+  "navigation": { "home": "Accueil", "resumes": "CVthÃ¨que" },
   "processing": { "steps": { "upload": { "title": "...", "steps": ["..."] } } }
 }
 ```
@@ -1050,14 +1087,14 @@ const Component = () => {
 ### Audit des Traductions
 
 ```bash
-# Script d'audit pour détecter les clés manquantes/inutilisées
+# Script d'audit pour dÃ©tecter les clÃ©s manquantes/inutilisÃ©es
 node scripts/audit-translations.js
-node scripts/audit-translations.js --fix  # Ajoute les clés manquantes
+node scripts/audit-translations.js --fix  # Ajoute les clÃ©s manquantes
 ```
 
 ---
 
-## Qualité du Code
+## QualitÃ© du Code
 
 ### TypeScript
 
@@ -1091,7 +1128,7 @@ npm run lint        # ESLint
 npm run typecheck   # TypeScript check
 ```
 
-### Logging Structuré
+### Logging StructurÃ©
 
 ```javascript
 // Backend: Winston avec rotation
@@ -1107,156 +1144,156 @@ const logger = {
 
 ### Documentation API
 
-- **Swagger/OpenAPI** : Documentation interactive à `/api/docs/ui`
-- **Schémas** : Tous les endpoints documentés
+- **Swagger/OpenAPI** : Documentation interactive Ã  `/api/docs/ui`
+- **SchÃ©mas** : Tous les endpoints documentÃ©s
 
 ---
 
-## ✅ Points Forts
+## âœ… Points Forts
 
 ### Architecture
 
 | Point Fort | Description |
 |------------|-------------|
-| **Séparation claire** | Frontend/Backend bien découplés via API REST |
-| **Proxy sécurisé** | Clés API jamais exposées côté client |
-| **TypeScript** | Typage fort réduisant les bugs runtime |
-| **Modularité** | Services, routes, composants bien organisés |
+| **SÃ©paration claire** | Frontend/Backend bien dÃ©couplÃ©s via API REST |
+| **Proxy sÃ©curisÃ©** | ClÃ©s API jamais exposÃ©es cÃ´tÃ© client |
+| **TypeScript** | Typage fort rÃ©duisant les bugs runtime |
+| **ModularitÃ©** | Services, routes, composants bien organisÃ©s |
 
-### Sécurité
+### SÃ©curitÃ©
 
 | Point Fort | Description |
 |------------|-------------|
-| **Defense in Depth** | Multiples couches de sécurité (JWT, CSRF, Rate Limit, CSP) |
+| **Defense in Depth** | Multiples couches de sÃ©curitÃ© (JWT, CSRF, Rate Limit, CSP) |
 | **Tokens httpOnly** | Protection XSS des tokens d'authentification |
-| **Blacklist tokens** | Révocation immédiate possible |
-| **2FA TOTP** | Authentification à deux facteurs avec codes temporels (speakeasy) |
+| **Blacklist tokens** | RÃ©vocation immÃ©diate possible |
+| **2FA TOTP** | Authentification Ã  deux facteurs avec codes temporels (speakeasy) |
 | **Sanitization** | Double sanitization (frontend + backend) |
-| **Logging sécurité** | Traçabilité des événements critiques |
+| **Logging sÃ©curitÃ©** | TraÃ§abilitÃ© des Ã©vÃ©nements critiques |
 
-### Expérience Développeur
+### ExpÃ©rience DÃ©veloppeur
 
 | Point Fort | Description |
 |------------|-------------|
-| **Hot Reload** | Vite pour développement rapide |
-| **Proxy dev** | Configuration proxy intégrée |
-| **i18n** | Internationalisation FR/EN complète |
+| **Hot Reload** | Vite pour dÃ©veloppement rapide |
+| **Proxy dev** | Configuration proxy intÃ©grÃ©e |
+| **i18n** | Internationalisation FR/EN complÃ¨te |
 | **Documentation** | Guide utilisateur, changelog, architecture |
 
-### Fonctionnalités
+### FonctionnalitÃ©s
 
 | Point Fort | Description |
 |------------|-------------|
 | **Multi-LLM** | Support OpenAI et Anthropic interchangeables |
 | **Chatbot IA** | Assistant contextuel avec guide utilisateur |
 | **Export multi-format** | Word, PDF avec templates personnalisables |
-| **Métriques** | Dashboard de monitoring intégré |
+| **MÃ©triques** | Dashboard de monitoring intÃ©grÃ© |
 
 ---
 
-## ⚠️ Points Faibles et Axes d'Amélioration
+## âš ï¸ Points Faibles et Axes d'AmÃ©lioration
 
 ### Architecture
 
-| Point Faible | Impact | Amélioration Suggérée |
+| Point Faible | Impact | AmÃ©lioration SuggÃ©rÃ©e |
 |--------------|--------|----------------------|
-| **Cache en mémoire** | Perdu au redémarrage, non partagé multi-instances | Redis pour cache distribué |
-| **Token blacklist en mémoire** | Idem | Redis ou table DB pour persistance |
-| **Monolithe** | Tout dans un seul serveur | Microservices si besoin de scaling indépendant |
+| **Cache en mÃ©moire** | Perdu au redÃ©marrage, non partagÃ© multi-instances | Redis pour cache distribuÃ© |
+| **Token blacklist en mÃ©moire** | Idem | Redis ou table DB pour persistance |
+| **Monolithe** | Tout dans un seul serveur | Microservices si besoin de scaling indÃ©pendant |
 
-### Sécurité
+### SÃ©curitÃ©
 
-| Point Faible | Impact | Amélioration Suggérée |
+| Point Faible | Impact | AmÃ©lioration SuggÃ©rÃ©e |
 |--------------|--------|----------------------|
-| **CSP permissive** | `unsafe-inline` dans style-src pour Tiptap | Évaluer nonce-based CSP pour les styles inline |
+| **CSP permissive** | `unsafe-inline` dans style-src pour Tiptap | Ã‰valuer nonce-based CSP pour les styles inline |
 | **Secrets en .env** | Gestion manuelle | Vault (HashiCorp) ou AWS Secrets Manager |
 
 ### Performance
 
-| Point Faible | Impact | Amélioration Suggérée |
+| Point Faible | Impact | AmÃ©lioration SuggÃ©rÃ©e |
 |--------------|--------|----------------------|
 | **Bundle size** | ~2.5MB JS (gzip ~665KB) | Code splitting plus agressif, lazy loading |
 | **Pas de CDN** | Assets servis par le serveur | CloudFront/Cloudflare pour assets statiques |
-| **Pas de SSR** | SEO limité (SPA) | Next.js si SEO critique |
+| **Pas de SSR** | SEO limitÃ© (SPA) | Next.js si SEO critique |
 
-### Qualité
+### QualitÃ©
 
-| Point Faible | Impact | Amélioration Suggérée |
+| Point Faible | Impact | AmÃ©lioration SuggÃ©rÃ©e |
 |--------------|--------|----------------------|
-| **Couverture tests** | Tests limités | Augmenter couverture (unit + integration + e2e) |
-| **Pas de CI/CD documenté** | Déploiement manuel | GitHub Actions / GitLab CI |
-| **APM interne uniquement** | Pas de tracing distribué | APM externe (Datadog, New Relic) pour tracing cross-service, alerting avancé, dashboards historiques |
+| **Couverture tests** | Tests limitÃ©s | Augmenter couverture (unit + integration + e2e) |
+| **Pas de CI/CD documentÃ©** | DÃ©ploiement manuel | GitHub Actions / GitLab CI |
+| **APM interne uniquement** | Pas de tracing distribuÃ© | APM externe (Datadog, New Relic) pour tracing cross-service, alerting avancÃ©, dashboards historiques |
 
 ### Fonctionnel
 
-| Point Faible | Impact | Amélioration Suggérée |
+| Point Faible | Impact | AmÃ©lioration SuggÃ©rÃ©e |
 |--------------|--------|----------------------|
-| **Pas de mode offline** | Dépendance réseau | Service Worker + IndexedDB |
-| **Pas de notifications push** | UX limitée | Web Push API |
-| **Export PDF basique** | Qualité variable | Puppeteer headless pour rendu fidèle |
+| **Pas de mode offline** | DÃ©pendance rÃ©seau | Service Worker + IndexedDB |
+| **Pas de notifications push** | UX limitÃ©e | Web Push API |
+| **Export PDF basique** | QualitÃ© variable | Puppeteer headless pour rendu fidÃ¨le |
 
 ---
 
-## Déploiement Docker
+## DÃ©ploiement Docker
 
 ### Architecture du Conteneur
 
-L'application peut être déployée via un conteneur Docker tout-en-un qui inclut tous les composants nécessaires :
+L'application peut Ãªtre dÃ©ployÃ©e via un conteneur Docker tout-en-un qui inclut tous les composants nÃ©cessaires :
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                      Conteneur Docker                                │
-│  ┌─────────────────────────────────────────────────────────────┐    │
-│  │                     Supervisor                               │    │
-│  │  ┌──────────────────┐  ┌──────────────────┐                 │    │
-│  │  │   Proxy Server   │  │    PDF Server    │                 │    │
-│  │  │   (Express.js)   │  │   (Puppeteer)    │                 │    │
-│  │  │   Port: 3443     │  │   Port: 3002     │                 │    │
-│  │  └──────────────────┘  └──────────────────┘                 │    │
-│  └─────────────────────────────────────────────────────────────┘    │
-│                              │                                       │
-│  ┌─────────────────────────────────────────────────────────────┐    │
-│  │                   PostgreSQL 18                              │    │
-│  │                   Port: 5432 (interne)                       │    │
-│  └──────────────────────────┬──────────────────────────────────┘    │
-└─────────────────────────────┼───────────────────────────────────────┘
-                              │
-              ┌───────────────▼───────────────┐
-              │     Volume Docker             │
-              │   resumeconverter-pgdata      │
-              │   (données persistantes)      │
-              └───────────────────────────────┘
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚                      Conteneur Docker                                â”‚
+â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”    â”‚
+â”‚  â”‚                     Supervisor                               â”‚    â”‚
+â”‚  â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”                 â”‚    â”‚
+â”‚  â”‚  â”‚   Proxy Server   â”‚  â”‚    PDF Server    â”‚                 â”‚    â”‚
+â”‚  â”‚  â”‚   (Express.js)   â”‚  â”‚   (Puppeteer)    â”‚                 â”‚    â”‚
+â”‚  â”‚  â”‚   Port: 3443     â”‚  â”‚   Port: 3002     â”‚                 â”‚    â”‚
+â”‚  â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜                 â”‚    â”‚
+â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜    â”‚
+â”‚                              â”‚                                       â”‚
+â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”    â”‚
+â”‚  â”‚                   PostgreSQL 18                              â”‚    â”‚
+â”‚  â”‚                   Port: 5432 (interne)                       â”‚    â”‚
+â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜    â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¼â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+                              â”‚
+              â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â–¼â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+              â”‚     Volume Docker             â”‚
+              â”‚   resumeconverter-pgdata      â”‚
+              â”‚   (donnÃ©es persistantes)      â”‚
+              â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 ```
 
 ### Composants Docker
 
-| Fichier | Rôle |
+| Fichier | RÃ´le |
 |---------|------|
 | `Dockerfile` | Image Ubuntu 22.04 avec Node.js 20, PostgreSQL 18, Google Chrome |
-| `docker/entrypoint.sh` | Script de démarrage avec init DB et migrations automatiques |
+| `docker/entrypoint.sh` | Script de dÃ©marrage avec init DB et migrations automatiques |
 | `docker/supervisord.conf` | Gestionnaire de processus (proxy + PDF servers) |
-| `docker/init-db.sql` | Schéma complet de la base de données |
-| `docker/migrations/` | Scripts de migration incrémentaux |
+| `docker/init-db.sql` | SchÃ©ma complet de la base de donnÃ©es |
+| `docker/migrations/` | Scripts de migration incrÃ©mentaux |
 
-### Persistance des Données
+### Persistance des DonnÃ©es
 
-Les données sont stockées dans des **répertoires locaux** (pas des volumes Docker) pour une meilleure portabilité :
+Les donnÃ©es sont stockÃ©es dans des **rÃ©pertoires locaux** (pas des volumes Docker) pour une meilleure portabilitÃ© :
 
 | Chemin local | Chemin conteneur | Description |
 |--------------|------------------|-------------|
-| `./data/postgresql` | `/var/lib/postgresql/18/main` | Base de données PostgreSQL |
-| `./uploads` | `/app/uploads` | Fichiers CV uploadés |
+| `./data/postgresql` | `/var/lib/postgresql/18/main` | Base de donnÃ©es PostgreSQL |
+| `./uploads` | `/app/uploads` | Fichiers CV uploadÃ©s |
 | `./logs` | `/app/logs` | Logs applicatifs |
 
-✅ Les données survivent aux rebuilds d'image et aux suppressions de conteneur.
+âœ… Les donnÃ©es survivent aux rebuilds d'image et aux suppressions de conteneur.
 
-### Système de Migrations
+### SystÃ¨me de Migrations
 
-Le conteneur gère automatiquement les migrations de base de données :
+Le conteneur gÃ¨re automatiquement les migrations de base de donnÃ©es :
 
-1. **Premier lancement** : Exécute `init-db.sql` complet, marque toutes les migrations comme appliquées
-2. **Lancements suivants** : Vérifie la table `schema_migrations`, applique uniquement les nouvelles migrations
-3. **Mise à jour d'image** : Applique automatiquement les migrations manquantes
+1. **Premier lancement** : ExÃ©cute `init-db.sql` complet, marque toutes les migrations comme appliquÃ©es
+2. **Lancements suivants** : VÃ©rifie la table `schema_migrations`, applique uniquement les nouvelles migrations
+3. **Mise Ã  jour d'image** : Applique automatiquement les migrations manquantes
 
 ```sql
 -- Table de suivi des migrations
@@ -1271,25 +1308,25 @@ CREATE TABLE schema_migrations (
 
 | Variable | Requis | Description |
 |----------|--------|-------------|
-| `JWT_SECRET` | ✅ | Secret JWT (min 32 caractères) |
-| `JWT_REFRESH_SECRET` | ✅ | Secret refresh token |
-| `REFRESH_TOKEN_SECRET` | ✅ | Secret token additionnel |
-| `CSRF_SECRET` | ✅ | Secret CSRF |
-| `OPENAI_API_KEY` | Optionnel | Clé API OpenAI |
-| `ANTHROPIC_API_KEY` | Optionnel | Clé API Anthropic |
-| `ANTHROPIC_MODEL` | Optionnel | Modèle Anthropic par défaut |
-| `DEEPSEEK_API_KEY` | Optionnel | Clé API DeepSeek |
+| `JWT_SECRET` | âœ… | Secret JWT (min 32 caractÃ¨res) |
+| `JWT_REFRESH_SECRET` | âœ… | Secret refresh token |
+| `REFRESH_TOKEN_SECRET` | âœ… | Secret token additionnel |
+| `CSRF_SECRET` | âœ… | Secret CSRF |
+| `OPENAI_API_KEY` | Optionnel | ClÃ© API OpenAI |
+| `ANTHROPIC_API_KEY` | Optionnel | ClÃ© API Anthropic |
+| `ANTHROPIC_MODEL` | Optionnel | ModÃ¨le Anthropic par dÃ©faut |
+| `DEEPSEEK_API_KEY` | Optionnel | ClÃ© API DeepSeek |
 | `DEEPSEEK_BASE_URL` | Optionnel | URL base DeepSeek |
-| `MINIMAX_API_KEY` | Optionnel | Clé API MiniMax |
+| `MINIMAX_API_KEY` | Optionnel | ClÃ© API MiniMax |
 | `MINIMAX_OPENAI_BASE_URL` | Optionnel | URL base OpenAI-compatible MiniMax |
 | `MINIMAX_ANTHROPIC_BASE_URL` | Optionnel | URL base Anthropic-compatible MiniMax |
-| `MINIMAX_ENABLE_HIGHSPEED_MODELS` | Optionnel | Active l'exposition et l'utilisation des modèles MiniMax `highspeed` sur les instances disposant du plan adapté |
+| `MINIMAX_ENABLE_HIGHSPEED_MODELS` | Optionnel | Active l'exposition et l'utilisation des modÃ¨les MiniMax `highspeed` sur les instances disposant du plan adaptÃ© |
 | `OLLAMA_BASE_URL` | Optionnel | URL de l'instance Ollama distante |
-| `OLLAMA_AUTO_PULL` | Optionnel | Auto-pull du modèle Ollama si nécessaire |
+| `OLLAMA_AUTO_PULL` | Optionnel | Auto-pull du modÃ¨le Ollama si nÃ©cessaire |
 | `OLLAMA_REQUEST_TIMEOUT_MS` | Optionnel | Timeout global des appels Ollama |
 | `GOOGLE_CLIENT_ID` | Optionnel | Client ID Google OAuth |
 | `GOOGLE_CLIENT_SECRET` | Optionnel | Secret Google OAuth |
-| `MAIL_TOKEN_ENCRYPTION_KEY` | Optionnel | Clé de chiffrement tokens mail |
+| `MAIL_TOKEN_ENCRYPTION_KEY` | Optionnel | ClÃ© de chiffrement tokens mail |
 
 ### Identifiants PostgreSQL Docker
 
@@ -1308,9 +1345,9 @@ CREATE TABLE schema_migrations (
 | Script | Description |
 |--------|-------------|
 | `docker-build.bat` | Construire l'image Docker |
-| `docker-run.bat` | Démarrer le conteneur |
-| `docker-stop.bat` | Arrêter et supprimer le conteneur |
-| `docker-logs.bat` | Voir les logs en temps réel |
+| `docker-run.bat` | DÃ©marrer le conteneur |
+| `docker-stop.bat` | ArrÃªter et supprimer le conteneur |
+| `docker-logs.bat` | Voir les logs en temps rÃ©el |
 | `docker-shell.bat` | Ouvrir un shell dans le conteneur |
 
 #### Linux/Mac
@@ -1328,7 +1365,7 @@ CREATE TABLE schema_migrations (
 # Shell
 ./docker/docker-build.sh shell
 
-# Arrêt
+# ArrÃªt
 ./docker/docker-build.sh stop
 ```
 
@@ -1338,57 +1375,57 @@ CREATE TABLE schema_migrations (
 
 ### Architecture des Sauvegardes
 
-L'application intègre un système complet de sauvegarde automatique de la base de données avec support FTP/SFTP et stockage local.
+L'application intÃ¨gre un systÃ¨me complet de sauvegarde automatique de la base de donnÃ©es avec support FTP/SFTP et stockage local.
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                      Backup Scheduler Service                        │
-│  ┌──────────────────────────────────────────────────────────────┐   │
-│  │              setInterval (toutes les 30 secondes)             │   │
-│  │                                                               │   │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐          │   │
-│  │  │   Daily     │  │   Weekly    │  │   Monthly   │          │   │
-│  │  │  Backup     │  │   Backup    │  │   Backup    │          │   │
-│  │  │  (HH:MM)    │  │ (Jour+HH:MM)│  │(Jour+HH:MM) │          │   │
-│  │  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘          │   │
-│  └─────────┼────────────────┼────────────────┼──────────────────┘   │
-│            │                │                │                       │
-│            ▼                ▼                ▼                       │
-│  ┌──────────────────────────────────────────────────────────────┐   │
-│  │                     Backup Service                            │   │
-│  │  1. pg_dump → SQL                                            │   │
-│  │  2. gzip compression                                         │   │
-│  │  3. Upload FTP/SFTP ou stockage local                        │   │
-│  │  4. Cleanup anciens backups (rétention configurable)         │   │
-│  └──────────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────────┘
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚                      Backup Scheduler Service                        â”‚
+â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”   â”‚
+â”‚  â”‚              setInterval (toutes les 30 secondes)             â”‚   â”‚
+â”‚  â”‚                                                               â”‚   â”‚
+â”‚  â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”          â”‚   â”‚
+â”‚  â”‚  â”‚   Daily     â”‚  â”‚   Weekly    â”‚  â”‚   Monthly   â”‚          â”‚   â”‚
+â”‚  â”‚  â”‚  Backup     â”‚  â”‚   Backup    â”‚  â”‚   Backup    â”‚          â”‚   â”‚
+â”‚  â”‚  â”‚  (HH:MM)    â”‚  â”‚ (Jour+HH:MM)â”‚  â”‚(Jour+HH:MM) â”‚          â”‚   â”‚
+â”‚  â”‚  â””â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”˜  â””â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”˜  â””â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”˜          â”‚   â”‚
+â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¼â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¼â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¼â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜   â”‚
+â”‚            â”‚                â”‚                â”‚                       â”‚
+â”‚            â–¼                â–¼                â–¼                       â”‚
+â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”   â”‚
+â”‚  â”‚                     Backup Service                            â”‚   â”‚
+â”‚  â”‚  1. pg_dump â†’ SQL                                            â”‚   â”‚
+â”‚  â”‚  2. gzip compression                                         â”‚   â”‚
+â”‚  â”‚  3. Upload FTP/SFTP ou stockage local                        â”‚   â”‚
+â”‚  â”‚  4. Cleanup anciens backups (rÃ©tention configurable)         â”‚   â”‚
+â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜   â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 ```
 
 ### Planification des Sauvegardes
 
-Le scheduler utilise `setInterval` avec vérification toutes les 30 secondes pour déclencher les sauvegardes à l'heure configurée (timezone Europe/Paris).
+Le scheduler utilise `setInterval` avec vÃ©rification toutes les 30 secondes pour dÃ©clencher les sauvegardes Ã  l'heure configurÃ©e (timezone Europe/Paris).
 
-| Type | Fréquence | Configuration |
+| Type | FrÃ©quence | Configuration |
 |------|-----------|---------------|
 | **Daily** | Tous les jours | Heure (HH:MM) |
 | **Weekly** | Une fois par semaine | Jour de la semaine + Heure |
 | **Monthly** | Une fois par mois | Jour du mois + Heure |
 
-**Mécanisme de déclenchement :**
+**MÃ©canisme de dÃ©clenchement :**
 ```javascript
 // server/services/backup-scheduler.service.js
 function checkAndExecuteBackups() {
     const { hours, minutes, dayOfWeek, dayOfMonth } = getParisTime();
     
-    // Daily: vérifie heure + évite double exécution le même jour
+    // Daily: vÃ©rifie heure + Ã©vite double exÃ©cution le mÃªme jour
     if (settings.daily_enabled && timeMatches(settings.daily_time, hours, minutes)) {
         if (lastExecuted.daily !== todayKey) {
             lastExecuted.daily = todayKey;
             executeBackup('daily');
         }
     }
-    // Weekly: vérifie jour de semaine + heure
-    // Monthly: vérifie jour du mois + heure
+    // Weekly: vÃ©rifie jour de semaine + heure
+    // Monthly: vÃ©rifie jour du mois + heure
 }
 ```
 
@@ -1399,20 +1436,20 @@ function checkAndExecuteBackups() {
 | **FTP** | FTP avec TLS explicite | Host, port, user, password |
 | **FTPS** | FTP over TLS | Host, port, user, password, tls_mode |
 | **SFTP** | SSH File Transfer | Host, port, user, password |
-| **Local** | Système de fichiers | Répertoire `/app/server/backups` |
+| **Local** | SystÃ¨me de fichiers | RÃ©pertoire `/app/server/backups` |
 
-### Politique de Rétention
+### Politique de RÃ©tention
 
-Chaque type de sauvegarde a sa propre politique de rétention configurable :
+Chaque type de sauvegarde a sa propre politique de rÃ©tention configurable :
 
-| Type | Rétention par défaut | Description |
+| Type | RÃ©tention par dÃ©faut | Description |
 |------|---------------------|-------------|
-| **Daily** | 7 jours | Conserve les 7 dernières sauvegardes quotidiennes |
-| **Weekly** | 4 semaines | Conserve les 4 dernières sauvegardes hebdomadaires |
-| **Monthly** | 12 mois | Conserve les 12 dernières sauvegardes mensuelles |
-| **Manual** | 30 jours | Sauvegardes manuelles déclenchées via l'interface |
+| **Daily** | 7 jours | Conserve les 7 derniÃ¨res sauvegardes quotidiennes |
+| **Weekly** | 4 semaines | Conserve les 4 derniÃ¨res sauvegardes hebdomadaires |
+| **Monthly** | 12 mois | Conserve les 12 derniÃ¨res sauvegardes mensuelles |
+| **Manual** | 30 jours | Sauvegardes manuelles dÃ©clenchÃ©es via l'interface |
 
-Le nettoyage s'applique automatiquement après chaque sauvegarde, tant sur le serveur distant (FTP/SFTP) que localement.
+Le nettoyage s'applique automatiquement aprÃ¨s chaque sauvegarde, tant sur le serveur distant (FTP/SFTP) que localement.
 
 ### Format des Fichiers de Sauvegarde
 
@@ -1428,7 +1465,7 @@ Exemples:
 
 ### Historique des Sauvegardes
 
-Chaque sauvegarde est enregistrée dans la table `backup_history` :
+Chaque sauvegarde est enregistrÃ©e dans la table `backup_history` :
 
 ```sql
 CREATE TABLE backup_history (
@@ -1446,22 +1483,22 @@ CREATE TABLE backup_history (
 
 ### Configuration via Interface
 
-L'écran de configuration des sauvegardes (`/dashboard/backup`) permet de :
+L'Ã©cran de configuration des sauvegardes (`/dashboard/backup`) permet de :
 
 - **Configurer la cible** : Local, FTP, FTPS ou SFTP
-- **Tester la connexion** : Vérification avant sauvegarde
+- **Tester la connexion** : VÃ©rification avant sauvegarde
 - **Planifier les sauvegardes** : Daily, Weekly, Monthly avec horaires
-- **Définir la rétention** : Nombre de sauvegardes à conserver par type
-- **Déclencher manuellement** : Sauvegarde immédiate
+- **DÃ©finir la rÃ©tention** : Nombre de sauvegardes Ã  conserver par type
+- **DÃ©clencher manuellement** : Sauvegarde immÃ©diate
 - **Consulter l'historique** : Liste des sauvegardes avec statut
-- **Restaurer** : Téléchargement et restauration d'une sauvegarde
+- **Restaurer** : TÃ©lÃ©chargement et restauration d'une sauvegarde
 
 ### Gestion des Erreurs
 
-Le système garantit qu'aucune erreur ne passe silencieusement :
+Le systÃ¨me garantit qu'aucune erreur ne passe silencieusement :
 
 ```javascript
-// Logging détaillé en cas d'erreur
+// Logging dÃ©taillÃ© en cas d'erreur
 safeLog('error', 'BACKUP FAILED - Scheduled daily backup failed', {
     type,
     error: error.message,
@@ -1472,57 +1509,57 @@ safeLog('error', 'BACKUP FAILED - Scheduled daily backup failed', {
 console.error(`[BackupScheduler] BACKUP FAILED: ${type} - ${error.message}`);
 ```
 
-| Niveau | Événement | Action |
+| Niveau | Ã‰vÃ©nement | Action |
 |--------|-----------|--------|
-| **INFO** | Démarrage backup | Log avec timestamp et type |
-| **INFO** | Backup réussi | Log avec filename, taille, durée |
-| **ERROR** | Connexion FTP échouée | Log avec host, port, code erreur |
-| **ERROR** | Upload échoué | Log + conservation locale du fichier |
-| **ERROR** | Backup échoué | Log complet avec stack trace |
+| **INFO** | DÃ©marrage backup | Log avec timestamp et type |
+| **INFO** | Backup rÃ©ussi | Log avec filename, taille, durÃ©e |
+| **ERROR** | Connexion FTP Ã©chouÃ©e | Log avec host, port, code erreur |
+| **ERROR** | Upload Ã©chouÃ© | Log + conservation locale du fichier |
+| **ERROR** | Backup Ã©chouÃ© | Log complet avec stack trace |
 
 ### Services et Fichiers
 
-| Fichier | Rôle |
+| Fichier | RÃ´le |
 |---------|------|
 | `backup-scheduler.service.js` | Planification avec setInterval |
-| `backup.service.js` | Création, upload, restauration, nettoyage |
+| `backup.service.js` | CrÃ©ation, upload, restauration, nettoyage |
 | `backup.routes.js` | API REST pour configuration et actions |
 
 ### API Backup
 
-| Endpoint | Méthode | Description |
+| Endpoint | MÃ©thode | Description |
 |----------|---------|-------------|
-| `/api/backup/settings` | GET | Récupérer la configuration |
-| `/api/backup/settings` | PUT | Mettre à jour la configuration |
+| `/api/backup/settings` | GET | RÃ©cupÃ©rer la configuration |
+| `/api/backup/settings` | PUT | Mettre Ã  jour la configuration |
 | `/api/backup/test-connection` | POST | Tester la connexion FTP/SFTP |
-| `/api/backup/create` | POST | Déclencher une sauvegarde manuelle |
+| `/api/backup/create` | POST | DÃ©clencher une sauvegarde manuelle |
 | `/api/backup/history` | GET | Historique des sauvegardes |
 | `/api/backup/restore/:filename` | POST | Restaurer une sauvegarde |
-| `/api/backup/download/:filename` | GET | Télécharger une sauvegarde |
+| `/api/backup/download/:filename` | GET | TÃ©lÃ©charger une sauvegarde |
 
 ---
 
 ## Conclusion
 
-ResumeConverter est une application **bien architecturée** avec une attention particulière portée à la **sécurité** (authentification JWT robuste, protection CSRF, rate limiting multi-niveaux, protection SQL injection). L'utilisation de **PostgreSQL** comme base de données offre performance, scalabilité et intégrité des données.
+ResumeConverter est une application **bien architecturÃ©e** avec une attention particuliÃ¨re portÃ©e Ã  la **sÃ©curitÃ©** (authentification JWT robuste, protection CSRF, rate limiting multi-niveaux, protection SQL injection). L'utilisation de **PostgreSQL** comme base de donnÃ©es offre performance, scalabilitÃ© et intÃ©gritÃ© des donnÃ©es.
 
-Pour une mise en production à grande échelle, les priorités seraient :
-1. Cache distribué (Redis)
+Pour une mise en production Ã  grande Ã©chelle, les prioritÃ©s seraient :
+1. Cache distribuÃ© (Redis)
 2. CDN pour les assets
 3. Monitoring APM
-4. CI/CD automatisé
-5. Réplication PostgreSQL pour haute disponibilité
+4. CI/CD automatisÃ©
+5. RÃ©plication PostgreSQL pour haute disponibilitÃ©
 
-L'architecture actuelle est **adaptée pour un usage PME/ESN** et peut supporter des volumes importants grâce à PostgreSQL.
+L'architecture actuelle est **adaptÃ©e pour un usage PME/ESN** et peut supporter des volumes importants grÃ¢ce Ã  PostgreSQL.
 
 ---
 
-*Document mis à jour le 17 mars 2026*
+*Document mis Ã  jour le 17 mars 2026*
 *Version: 1.8.6*
 
-### Changelog technique récent
+### Changelog technique rÃ©cent
 
-| Package | Avant | Après | Notes |
+| Package | Avant | AprÃ¨s | Notes |
 |---------|-------|-------|-------|
 | Vite | 5.x | 8.0 | Rolldown remplace Rollup/esbuild, OXC pour minification |
 | @vitejs/plugin-react | 4.x | 6.0 | |
@@ -1535,5 +1572,5 @@ L'architecture actuelle est **adaptée pour un usage PME/ESN** et peut supporter
 | jsdom | 28.x | 29.0 | |
 | three | 0.182 | 0.183 | |
 | dotenv | 16.x | 17.3 | |
-| autoprefixer | 10.x | — | Supprimé (intégré dans TailwindCSS 4) |
-| @rollup/plugin-commonjs | 28.x | — | Supprimé (Rolldown gère CJS nativement) |
+| autoprefixer | 10.x | â€” | SupprimÃ© (intÃ©grÃ© dans TailwindCSS 4) |
+| @rollup/plugin-commonjs | 28.x | â€” | SupprimÃ© (Rolldown gÃ¨re CJS nativement) |

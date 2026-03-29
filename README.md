@@ -1,4 +1,4 @@
-# Resume Converter
+﻿# Resume Converter
 
 [![Version](https://img.shields.io/badge/version-1.7.8-blue.svg)](./CHANGELOG.md)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-green.svg)](https://nodejs.org/)
@@ -6,26 +6,22 @@
 [![React](https://img.shields.io/badge/React-18.2-61dafb.svg)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue.svg)](https://www.typescriptlang.org/)
 
-Application professionnelle de gestion et d'analyse de CVs avec intelligence artificielle, matching de profils et radar du marché de l'emploi intégré.
+Application professionnelle de gestion et d'analyse de CVs avec intelligence artificielle, matching de profils et radar du marchÃƒÂ© de l'emploi intÃƒÂ©grÃƒÂ©.
 
-## 🚀 Fonctionnalités
+## Ã°Å¸Å¡â‚¬ FonctionnalitÃƒÂ©s
 
 ### Gestion des CVs
 - **Upload et parsing** : Support PDF, DOCX, DOC avec OCR (Tesseract.js)
-- **Analyse IA** : Extraction automatique des compétences, expériences et formations via GPT-5/Claude
-- **Tags ESCO** : Classification automatique selon le référentiel européen des compétences
-- **Édition enrichie** : Éditeur TinyMCE intégré pour la mise en forme
-- **Export PDF** : Génération de CVs formatés avec templates personnalisables
-- **Amélioration IA** : Suggestions d'amélioration automatiques du contenu
+- **Analyse IA** : Extraction automatique des compÃƒÂ©tences, expÃƒÂ©riences et formations via GPT-5/Claude
+- **Tags ESCO** : Classification automatique selon le rÃƒÂ©fÃƒÂ©rentiel europÃƒÂ©en des compÃƒÂ©tences
+- **Ãƒâ€°dition enrichie** : Ãƒâ€°diteur TinyMCE intÃƒÂ©grÃƒÂ© pour la mise en forme
+- **Export PDF** : GÃƒÂ©nÃƒÂ©ration de CVs formatÃƒÂ©s avec templates personnalisables
+- **AmÃƒÂ©lioration IA** : Suggestions d'amÃƒÂ©lioration automatiques du contenu
 
-### Matching Profil / Mission
-- **Analyse de compatibilité** : Score de matching entre CV et offre d'emploi
-- **Adaptations de CV** : Génération de versions adaptées à une mission spécifique
-- **Comparaison détaillée** : Visualisation des écarts compétences/expériences
-- **Exécution asynchrone** : Recherche de profils, analyse détaillée, match et adaptation sont exécutés via des jobs backend suivis par polling
+- **Scoring LLM pilotable** : La concurrence et la taille des batches du profile matching sont configurables par environnement
 
 ### Gestion des Missions
-- **Création et suivi** : Gestion complète des offres d'emploi
+- **CrÃƒÂ©ation et suivi** : Gestion complÃƒÂ¨te des offres d'emploi
 - **Association CV** : Lien entre missions et candidats
 - **Historique** : Suivi des adaptations et matchings
 
@@ -33,298 +29,94 @@ Application professionnelle de gestion et d'analyse de CVs avec intelligence art
 - **Multi-cabinets** : Support de plusieurs cabinets de recrutement
 - **Association utilisateurs** : Gestion des droits par cabinet
 
-### Radar du Marché
-- **Tendances du marché** : Visualisation des offres d'emploi, tensions de recrutement, embauches
-- **Carte de France interactive** : Répartition géographique par région avec MapLibre GL
-- **Données France Travail** : Intégration API officielle (offres, tensions, BMO)
-- **Données Adzuna** : Agrégation multi-sources d'offres d'emploi
-- **Filtres avancés** : Par type de données, région, métier (code ROME)
-- **Métiers ROME** : Référentiel complet avec recherche et navigation
+### Radar du MarchÃƒÂ©
+- **Tendances du marchÃƒÂ©** : Visualisation des offres d'emploi, tensions de recrutement, embauches
+- **Carte de France interactive** : RÃƒÂ©partition gÃƒÂ©ographique par rÃƒÂ©gion avec MapLibre GL
+- **DonnÃƒÂ©es France Travail** : IntÃƒÂ©gration API officielle (offres, tensions, BMO)
+- **DonnÃƒÂ©es Adzuna** : AgrÃƒÂ©gation multi-sources d'offres d'emploi
+- **Filtres avancÃƒÂ©s** : Par type de donnÃƒÂ©es, rÃƒÂ©gion, mÃƒÂ©tier (code ROME)
+- **MÃƒÂ©tiers ROME** : RÃƒÂ©fÃƒÂ©rentiel complet avec recherche et navigation
 
 ### Chatbot IA
-- **Assistant conversationnel** : Aide à la rédaction et conseils carrière
-- **Multi-modèles** : Support OpenAI (GPT-5.4 / GPT-5.4-pro / GPT-5.2 / GPT-5.1 / GPT-5 / GPT-4.1 / GPT-4o), Anthropic (Claude Opus 4.x / Sonnet 4 / Claude 3.7 / Claude 3.5), DeepSeek (DeepSeek-V3.2 via `deepseek-chat` et `deepseek-reasoner`), MiniMax et Ollama distant
-- **Contexte CV** : Réponses personnalisées basées sur le profil
+- **Assistant conversationnel** : Aide ÃƒÂ  la rÃƒÂ©daction et conseils carriÃƒÂ¨re
+- **Multi-modÃƒÂ¨les** : Support OpenAI (GPT-5.4 / GPT-5.4-pro / GPT-5.2 / GPT-5.1 / GPT-5 / GPT-4.1 / GPT-4o), Anthropic (Claude Opus 4.x / Sonnet 4 / Claude 3.7 / Claude 3.5), DeepSeek (DeepSeek-V3.2 via `deepseek-chat` et `deepseek-reasoner`), MiniMax et Ollama distant
+- **Contexte CV** : RÃƒÂ©ponses personnalisÃƒÂ©es basÃƒÂ©es sur le profil
 
 ### Administration
-- **Gestion utilisateurs** : CRUD complet avec rôles (admin, user)
-- **Métriques LLM** : Suivi des appels API, tokens consommés, coûts
-- **Logs de sécurité** : Audit des actions sensibles
-- **Paramètres** : Configuration LLM, collecte de données, etc.
+- **Gestion utilisateurs** : CRUD complet avec rÃƒÂ´les (admin, user)
+### Métriques LLM
+- Nombre d'appels par modèle
+- Tokens consommés (input/output)
+- Coûts estimés
+- Temps de réponse moyen
+- Taux d'erreur
+- Opérations de profile matching : recherches, profils demandés/scorés, batches démarrés/retriés/en échec
 
-### Sécurité
-- **Authentification JWT** : Tokens sécurisés avec refresh automatique
-- **Protection CSRF** : Double-submit cookie pattern
-- **Rate limiting** : Protection contre les abus par endpoint
-- **Helmet** : Headers de sécurité HTTP
-- **Blacklist tokens** : Invalidation des tokens à la déconnexion
+### Réglages de performance du profile matching
+- `PROFILE_MATCHING_LLM_MAX_CONCURRENCY`
+  - `0` : valeurs par défaut par provider
+  - `1..100` : plafond de parallélisme des appels batch
+- `PROFILE_MATCHING_LLM_BATCH_SIZE`
+  - `0` : valeurs par défaut par provider
+  - `1..100` : taille forcée des batches envoyés au LLM
+- Valeurs par défaut :
+  - MiniMax : `6`
+  - DeepSeek : `4`
+  - autres providers : `12`
 
-## 📋 Prérequis
-
-- **Node.js** >= 18.0.0
-- **PostgreSQL** >= 18
-- **npm** >= 9.0.0
-
-## 🛠️ Installation
-
-### 1. Cloner le projet
-
-```bash
-git clone <repository-url>
-cd ResumeConverter
-git checkout develop
-```
-
-> **Note** : La branche active de développement est `develop`.
-
-### 2. Installer les dépendances
-
-```bash
-npm install
-```
-
-### 3. Configurer les variables d'environnement
-
-Créer un fichier `.env` à la racine :
-
-```env
-# Base de données PostgreSQL
-POSTGRES_HOST=localhost
-POSTGRES_PORT=5432
-POSTGRES_DB=resumeconverter
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=your-password
-
-# Sécurité (minimum 32 caractères chacun)
-JWT_SECRET=your-super-secret-jwt-key-min-32-chars
-REFRESH_TOKEN_SECRET=your-refresh-token-secret-min-32-chars
-CSRF_SECRET=your-csrf-secret-key-min-32-chars
-
-# APIs LLM (optionnel)
-OPENAI_API_KEY=sk-...
-ANTHROPIC_API_KEY=sk-ant-...
-DEEPSEEK_API_KEY=sk-...
-DEEPSEEK_BASE_URL=https://api.deepseek.com
-MINIMAX_API_KEY=sk-api-...
-MINIMAX_OPENAI_BASE_URL=https://api.minimax.io/v1
-MINIMAX_ANTHROPIC_BASE_URL=https://api.minimax.io/anthropic
-# Ollama distant uniquement
-OLLAMA_BASE_URL=http://192.168.1.20:11434
-OLLAMA_AUTO_PULL=true
-OLLAMA_REQUEST_TIMEOUT_MS=300000
-
-# Serveur
-HTTPS_ENABLED=true
-HTTPS_PORT=3443
-```
-
-### 4. Initialiser ou migrer la base de données
-
-```bash
-# Créer la base de données
-psql -U postgres -c "CREATE DATABASE resumeconverter;"
-
-# Appliquer le schéma et les migrations applicatives
-npm run migrate
-```
-
-Windows :
-```batch
-migrate-server.bat
-
-Pour une base vide, le bootstrap applique désormais le schéma canonique `docker/schema.sql` avant de marquer les migrations SQL existantes comme déjà couvertes. `docker/init-db.sql` n'est plus qu'un relais de compatibilité vers ce schéma canonique.
-```
-
-### 5. Démarrer l'application
-
-```bash
-# Démarrage rapide (tous les services)
-npm run quickstart
-
-# Ou démarrer les services séparément :
-npm run dev          # Frontend Vite (port 5173)
-npm run start:proxy  # Backend API (port 3001)
-npm run start:pdf    # Serveur PDF (port 3002)
-```
-
-## 📁 Structure du projet
-
-```
-ResumeConverter/
-├── client/                       # Frontend React/TypeScript
-│   ├── src/
-│   │   ├── components/           # Composants React
-│   │   │   ├── market/          # Radar du marché (carte, tendances)
-│   │   │   ├── ResumeAnalysis/  # Analyse de CVs
-│   │   │   ├── MissionsPage/    # Gestion des missions
-│   │   │   ├── ResumesPage/     # Liste et gestion CVs
-│   │   │   ├── SettingsPage/    # Paramètres application
-│   │   │   ├── UsersManagement/ # Gestion utilisateurs
-│   │   │   ├── ChatBot.tsx      # Assistant IA conversationnel
-│   │   │   └── ...
-│   │   ├── pages/               # Pages principales
-│   │   │   ├── HomePage.tsx     # Dashboard accueil
-│   │   │   ├── ResumesPage.tsx  # Liste des CVs
-│   │   │   ├── MissionsPage.tsx # Gestion missions
-│   │   │   ├── AdaptationsPage.tsx # Adaptations CV
-│   │   │   ├── ProfileMatchingPage.tsx # Matching profil/mission
-│   │   │   ├── FactsPage.tsx    # Faits du marché
-│   │   │   ├── MetiersPage.tsx  # Référentiel ROME
-│   │   │   ├── MetricsPage.tsx  # Métriques LLM
-│   │   │   └── ...
-│   │   ├── services/            # Services API frontend
-│   │   ├── context/             # Contextes React (Auth)
-│   │   ├── hooks/               # Hooks personnalisés
-│   │   ├── i18n/                # Traductions (FR/EN)
-│   │   ├── types/               # Types TypeScript
-│   │   └── utils/               # Utilitaires
-│   └── public/                  # Assets statiques
-│
-├── server/                       # Backend Node.js/Express
-│   ├── routes/                  # Routes API
-│   │   ├── auth.routes.js       # Authentification
-│   │   ├── resumes.routes.js    # Gestion CVs
-│   │   ├── missions.routes.js   # Gestion missions
-│   │   ├── adaptations.routes.js # Adaptations CV
-│   │   ├── marketRadar.routes.js # Radar du marché
-│   │   ├── tags.routes.js       # Tags et compétences
-│   │   ├── llm.routes.js        # Proxy LLM (OpenAI/Anthropic)
-│   │   ├── firms.routes.js      # Gestion cabinets
-│   │   ├── rome.routes.js       # Référentiel ROME
-│   │   ├── metrics.routes.js    # Métriques
-│   │   └── ...
-│   ├── services/                # Services métier
-│   │   ├── openai.service.js    # Intégration OpenAI
-│   │   ├── llm.service.js       # Abstraction LLM
-│   │   ├── marketTrends.service.js # Tendances marché
-│   │   ├── franceTravail.service.js # API France Travail
-│   │   ├── adzuna.service.js    # API Adzuna
-│   │   ├── rome.service.js      # Service ROME
-│   │   ├── profileMatching.service.js # Matching profils via jobs backend
-│   │   ├── escoService.js       # Classification ESCO
-│   │   └── ...
-│   ├── database/                # Base de données
-│   │   ├── migrations/          # Scripts de migration
-│   │   └── create_database.sql  # Schéma initial
-│   ├── middleware/              # Middlewares Express
-│   ├── config/                  # Configuration
-│   ├── utils/                   # Utilitaires (validation, etc.)
-│   ├── tests/                   # Tests Vitest
-│   └── proxy-server.js          # Point d'entrée serveur API
-│
-├── pdf-server/                   # Serveur génération PDF (Puppeteer)
-│   └── server.cjs
-│
-├── docs/                         # Documentation
-│   └── ANALYSE_ALTERNATIVES_LLM.md
-│
-├── scripts/                      # Scripts utilitaires
-│   └── quickstart.js            # Démarrage rapide
-│
-├── docker/                       # Configuration Docker
-└── uploads/                      # Fichiers uploadés
-```
-
-## 🔧 Scripts disponibles
-
-| Script | Description |
-|--------|-------------|
-| `npm run dev` | Démarre le frontend Vite en mode développement (port 5173) |
-| `npm run start:proxy` | Démarre le serveur API backend (port 3001) |
-| `npm run start:pdf` | Démarre le serveur de génération PDF (port 3002) |
-| `npm run quickstart` | Démarre tous les services en parallèle |
-| `npm run quickstart:prod` | Démarre en mode production |
-| `npm run build` | Build de production |
-| `npm run test` | Lance les tests Vitest |
-| `npm run test:watch` | Tests en mode watch |
-| `npm run test:coverage` | Tests avec couverture |
-| `npm run lint` | Vérifie le code avec ESLint |
-| `npm run lint:fix` | Corrige automatiquement les erreurs ESLint |
-| `npm run typecheck` | Vérifie les types TypeScript |
-| `npm run backup:db` | Sauvegarde la base de données |
-| `npm run knip` | Détecte le code inutilisé |
-
-## 🗄️ Base de données
-
-### Tables principales
-
-- **users** : Utilisateurs et authentification (rôles admin/user)
-- **resumes** : CVs stockés avec métadonnées et contenu analysé
-- **missions** : Offres d'emploi et missions de recrutement
-- **adaptations** : Versions de CV adaptées à une mission
-- **templates** : Modèles de CV personnalisables
-- **firms** : Cabinets de recrutement
-- **market_trends** : Tendances du marché (tensions, embauches, BMO)
-- **market_facts** : Faits du marché (offres d'emploi par région/métier)
-- **metiers** : Référentiel des métiers ROME
-- **tags** : Tags et compétences extraits des CVs
-- **llm_metrics** : Métriques d'utilisation des LLMs
-- **security_logs** : Logs d'audit de sécurité
-- **settings** : Paramètres de l'application
-
-### Maintenance
-
-```bash
-# Sauvegarde
-npm run backup:db
-
-# Restauration
-psql -U postgres -d resume_converter < backup.sql
-```
-
-## 🌐 API Endpoints
+## Ã°Å¸Å’Â API Endpoints
 
 ### Authentification
 - `POST /api/auth/login` - Connexion
 - `POST /api/auth/register` - Inscription
-- `POST /api/auth/refresh` - Rafraîchir le token
-- `POST /api/auth/logout` - Déconnexion
+- `POST /api/auth/refresh` - RafraÃƒÂ®chir le token
+- `POST /api/auth/logout` - DÃƒÂ©connexion
 
 ### CVs
 - `GET /api/resumes` - Liste des CVs
-- `POST /api/resumes` - Créer un CV
-- `GET /api/resumes/:id` - Détails d'un CV
+- `POST /api/resumes` - CrÃƒÂ©er un CV
+- `GET /api/resumes/:id` - DÃƒÂ©tails d'un CV
 - `PUT /api/resumes/:id` - Modifier un CV
 - `DELETE /api/resumes/:id` - Supprimer un CV
 - `POST /api/resumes/upload` - Upload fichier CV
 - `POST /api/resumes/:id/analyze` - Analyser un CV avec IA
-- `POST /api/resumes/:id/improve` - Améliorer un CV avec IA
+- `POST /api/resumes/:id/improve` - AmÃƒÂ©liorer un CV avec IA
 
 ### Missions
 - `GET /api/missions` - Liste des missions
-- `POST /api/missions` - Créer une mission
-- `GET /api/missions/:id` - Détails d'une mission
+- `POST /api/missions` - CrÃƒÂ©er une mission
+- `GET /api/missions/:id` - DÃƒÂ©tails d'une mission
 - `PUT /api/missions/:id` - Modifier une mission
 - `DELETE /api/missions/:id` - Supprimer une mission
-- `DELETE /api/missions/:missionId/keywords-cache` - Vider le cache de mots-clés d'une mission
+- `DELETE /api/missions/:missionId/keywords-cache` - Vider le cache de mots-clÃƒÂ©s d'une mission
 
 ### Jobs backend pour missions et matching
 - `POST /api/batch-jobs/profile-search` - Lancer une recherche de profils pour une mission
-- `POST /api/batch-jobs/profile-analysis` - Lancer une analyse détaillée d'un profil pour une mission
+- `POST /api/batch-jobs/profile-analysis` - Lancer une analyse dÃƒÂ©taillÃƒÂ©e d'un profil pour une mission
 - `POST /api/batch-jobs/match` - Lancer une analyse de match mission/CV
 - `POST /api/batch-jobs/adapt` - Lancer une adaptation de CV pour une mission
-- `GET /api/batch-jobs/:id` - Suivre l'avancement et récupérer les résultats d'un job
+- `GET /api/batch-jobs/:id` - Suivre l'avancement et rÃƒÂ©cupÃƒÂ©rer les rÃƒÂ©sultats d'un job
 
 ### Adaptations
 - `GET /api/adaptations` - Liste des adaptations
-- `POST /api/adaptations` - Créer une adaptation CV/Mission
-- `GET /api/adaptations/:id` - Détails d'une adaptation
+- `POST /api/adaptations` - CrÃƒÂ©er une adaptation CV/Mission
+- `GET /api/adaptations/:id` - DÃƒÂ©tails d'une adaptation
 
 ### Matching
 - `POST /api/batch-jobs/match` - Lancer une analyse de matching CV/Mission
-- `GET /api/batch-jobs/:id` - Suivre l'avancement et récupérer le résultat du matching
+- `GET /api/batch-jobs/:id` - Suivre l'avancement et rÃƒÂ©cupÃƒÂ©rer le rÃƒÂ©sultat du matching
 
-### Radar du Marché
-- `GET /api/market-radar/trends` - Tendances paginées
+### Radar du MarchÃƒÂ©
+- `GET /api/market-radar/trends` - Tendances paginÃƒÂ©es
 - `GET /api/market-radar/trends/all` - Toutes les tendances (carte)
 - `GET /api/market-radar/trends/:id/metadata` - Metadata d'une tendance
-- `GET /api/market-radar/facts` - Faits du marché
-- `POST /api/market-radar/collect` - Collecter nouvelles données
+- `GET /api/market-radar/facts` - Faits du marchÃƒÂ©
+- `POST /api/market-radar/collect` - Collecter nouvelles donnÃƒÂ©es
 
-### Métiers ROME
-- `GET /api/rome/metiers` - Liste des métiers
-- `GET /api/rome/metiers/:code` - Détails d'un métier
-- `GET /api/rome/search` - Recherche de métiers
+### MÃƒÂ©tiers ROME
+- `GET /api/rome/metiers` - Liste des mÃƒÂ©tiers
+- `GET /api/rome/metiers/:code` - DÃƒÂ©tails d'un mÃƒÂ©tier
+- `GET /api/rome/search` - Recherche de mÃƒÂ©tiers
 
 ### Tags
 - `GET /api/tags` - Liste des tags
@@ -334,25 +126,25 @@ psql -U postgres -d resume_converter < backup.sql
 - `POST /api/llm/openai` - Proxy OpenAI (GPT-5, GPT-4o) avec routage compatible DeepSeek / MiniMax / Ollama selon configuration
 - `POST /api/llm/anthropic` - Proxy Anthropic (Claude) avec routage compatible MiniMax selon configuration
 - `POST /api/llm/messages` - Proxy Anthropic / providers compatibles
-- `POST /api/llm/chat/completions` - Proxy OpenAI-compatible unifié (OpenAI, DeepSeek, MiniMax, Ollama selon configuration)
+- `POST /api/llm/chat/completions` - Proxy OpenAI-compatible unifiÃƒÂ© (OpenAI, DeepSeek, MiniMax, Ollama selon configuration)
 - `GET /api/llm/circuit-breakers` - Etat des familles LLM (`openai`, `anthropic`, `deepseek`, `minimax`, `ollama`)
 
 ### Cabinets (Firms)
 - `GET /api/firms` - Liste des cabinets
-- `POST /api/firms` - Créer un cabinet
+- `POST /api/firms` - CrÃƒÂ©er un cabinet
 - `PUT /api/firms/:id` - Modifier un cabinet
 
 ### Administration
 - `GET /api/users` - Liste des utilisateurs (admin)
-- `GET /api/metrics` - Métriques LLM
-- `GET /api/settings` - Paramètres application
-- `PUT /api/settings` - Modifier les paramètres
+- `GET /api/metrics` - MÃƒÂ©triques LLM
+- `GET /api/settings` - ParamÃƒÂ¨tres application
+- `PUT /api/settings` - Modifier les paramÃƒÂ¨tres
 
-### Santé
-- `GET /api/health` - État général
-- `GET /api/health/memory` - Stats mémoire détaillées
+### SantÃƒÂ©
+- `GET /api/health` - Ãƒâ€°tat gÃƒÂ©nÃƒÂ©ral
+- `GET /api/health/memory` - Stats mÃƒÂ©moire dÃƒÂ©taillÃƒÂ©es
 
-## 🧪 Tests
+## Ã°Å¸Â§Âª Tests
 
 ```bash
 # Lancer tous les tests
@@ -365,62 +157,56 @@ npm run test:watch
 npm run test:coverage
 ```
 
-## 📊 Monitoring
+## Ã°Å¸â€œÅ  Monitoring
 
-L'application inclut un monitoring mémoire accessible via :
-- **Header** : Indicateur de santé avec tooltip détaillé
-- **API** : `/api/health/memory` pour les stats complètes
-- **Page Métriques** : Dashboard complet des appels LLM
+L'application inclut un monitoring mÃƒÂ©moire accessible via :
+- **Header** : Indicateur de santÃƒÂ© avec tooltip dÃƒÂ©taillÃƒÂ©
+- **API** : `/api/health/memory` pour les stats complÃƒÂ¨tes
+- **Page MÃƒÂ©triques** : Dashboard complet des appels LLM
 
-### Caches monitorés
-- ESCO Cache (compétences)
-- Trends Cache (tendances marché)
-- Facts Cache (faits marché)
-- Métiers Cache (référentiel ROME)
+### Caches monitorÃƒÂ©s
+- ESCO Cache (compÃƒÂ©tences)
+- Trends Cache (tendances marchÃƒÂ©)
+- Facts Cache (faits marchÃƒÂ©)
+- MÃƒÂ©tiers Cache (rÃƒÂ©fÃƒÂ©rentiel ROME)
 - Tags Cache (tags extraits)
 
-### Métriques LLM
-- Nombre d'appels par modèle
-- Tokens consommés (input/output)
-- Coûts estimés
-- Temps de réponse moyen
-- Taux d'erreur
 
-## 🤖 Intégration LLM
+## Ã°Å¸Â¤â€“ IntÃƒÂ©gration LLM
 
 L'application supporte plusieurs fournisseurs LLM :
 
 ### OpenAI
 - **GPT-5.4 / GPT-5.4-pro / GPT-5.2 / GPT-5.2-pro / GPT-5.1 / GPT-5** : famille de raisonnement principale (Responses API)
-- **GPT-5-mini / GPT-5-nano** : variantes plus légères pour tâches rapides ou à coût réduit
-- **GPT-4.1 / GPT-4.1-mini / GPT-4.1-nano** : famille non-reasoning à grande fenêtre de contexte
+- **GPT-5-mini / GPT-5-nano** : variantes plus lÃƒÂ©gÃƒÂ¨res pour tÃƒÂ¢ches rapides ou ÃƒÂ  coÃƒÂ»t rÃƒÂ©duit
+- **GPT-4.1 / GPT-4.1-mini / GPT-4.1-nano** : famille non-reasoning ÃƒÂ  grande fenÃƒÂªtre de contexte
 - **GPT-4o / GPT-4o-mini** : alternatives rapides et polyvalentes
 
 ### Anthropic
-- **Claude Opus 4.1 / Opus 4** : qualité maximale
-- **Claude Sonnet 4** : meilleur compromis performance / coût
-- **Claude 3.7 Sonnet** : génération longue avec sortie élevée
-- **Claude 3.5 Sonnet / Haiku** : modèles plus compacts et économiques
+- **Claude Opus 4.1 / Opus 4** : qualitÃƒÂ© maximale
+- **Claude Sonnet 4** : meilleur compromis performance / coÃƒÂ»t
+- **Claude 3.7 Sonnet** : gÃƒÂ©nÃƒÂ©ration longue avec sortie ÃƒÂ©levÃƒÂ©e
+- **Claude 3.5 Sonnet / Haiku** : modÃƒÂ¨les plus compacts et ÃƒÂ©conomiques
 
 ### DeepSeek
-- **DeepSeek-V3.2 - Standard** : appelé via l'identifiant API `deepseek-chat`
-- **DeepSeek-V3.2 - Raisonnement** : appelé via l'identifiant API `deepseek-reasoner`, avec sanitation serveur du `reasoning_content`
+- **DeepSeek-V3.2 - Standard** : appelÃƒÂ© via l'identifiant API `deepseek-chat`
+- **DeepSeek-V3.2 - Raisonnement** : appelÃƒÂ© via l'identifiant API `deepseek-reasoner`, avec sanitation serveur du `reasoning_content`
 
 ### MiniMax
-- **MiniMax-M2.7 / MiniMax-M2.7-highspeed** : modèles principaux côté MiniMax
-- **MiniMax-M2.5 / MiniMax-M2.5-highspeed** : alternatives orientées performance / latence
+- **MiniMax-M2.7 / MiniMax-M2.7-highspeed** : modÃƒÂ¨les principaux cÃƒÂ´tÃƒÂ© MiniMax
+- **MiniMax-M2.5 / MiniMax-M2.5-highspeed** : alternatives orientÃƒÂ©es performance / latence
 - **MiniMax-M2.1 / MiniMax-M2.1-highspeed / MiniMax-M2 / M2-her** : variantes compatibles selon le cas d'usage
 
 ### Ollama (distant)
 - Instance Ollama distante uniquement
-- URL configurable dans les paramètres LLM
-- `keep_alive` et `num_ctx` pilotables via les paramètres stockés
+- URL configurable dans les paramÃƒÂ¨tres LLM
+- `keep_alive` et `num_ctx` pilotables via les paramÃƒÂ¨tres stockÃƒÂ©s
 
-Configuration via les paramètres de l'application ou variables d'environnement. L'orchestration serveur passe par un gateway LLM unique avec retries, circuit breakers, sanitation du contenu et métriques bornées. Les providers distants (`openai`, `anthropic`, `deepseek`, `minimax`) utilisent retry + circuit breaker, tandis que `ollama` utilise uniquement un retry réseau léger, sans circuit breaker.
+Configuration via les paramÃƒÂ¨tres de l'application ou variables d'environnement. L'orchestration serveur passe par un gateway LLM unique avec retries, circuit breakers, sanitation du contenu et mÃƒÂ©triques bornÃƒÂ©es. Les providers distants (`openai`, `anthropic`, `deepseek`, `minimax`) utilisent retry + circuit breaker, tandis que `ollama` utilise uniquement un retry rÃƒÂ©seau lÃƒÂ©ger, sans circuit breaker.
 
-## 🐳 Docker
+## Ã°Å¸ÂÂ³ Docker
 
-L'application peut être déployée via Docker avec tous les services intégrés (PostgreSQL 18, Node.js, Google Chrome pour PDF).
+L'application peut ÃƒÂªtre dÃƒÂ©ployÃƒÂ©e via Docker avec tous les services intÃƒÂ©grÃƒÂ©s (PostgreSQL 18, Node.js, Google Chrome pour PDF).
 
 ```bash
 # Build de l'image
@@ -435,31 +221,32 @@ docker run -d \
     resumeconverter:latest
 ```
 
-**Accès** : https://localhost:3443  
+**AccÃƒÂ¨s** : https://localhost:3443  
 **Identifiants** : `admin@resumeconverter.local` / `admin123`
 
-Voir le dossier `docker/` et `docker/README.md` pour les configurations détaillées.
+Voir le dossier `docker/` et `docker/README.md` pour les configurations dÃƒÂ©taillÃƒÂ©es.
 
-## 📚 Documentation
+## Ã°Å¸â€œÅ¡ Documentation
 
-- [ARCHITECTURE.md](./ARCHITECTURE.md) - Architecture technique détaillée
+- [ARCHITECTURE.md](./ARCHITECTURE.md) - Architecture technique dÃƒÂ©taillÃƒÂ©e
 - [USER_GUIDE.md](./USER_GUIDE.md) - Guide utilisateur complet
-- [SECURITY.md](./SECURITY.md) - Politique de sécurité
-- [MEMORY_AUDIT.md](./MEMORY_AUDIT.md) - Audit mémoire et optimisations
+- [SECURITY.md](./SECURITY.md) - Politique de sÃƒÂ©curitÃƒÂ©
+- [MEMORY_AUDIT.md](./MEMORY_AUDIT.md) - Audit mÃƒÂ©moire et optimisations
 - [docs/ANALYSE_ALTERNATIVES_LLM.md](./docs/ANALYSE_ALTERNATIVES_LLM.md) - Analyse des alternatives LLM
 
-## 🔄 Changelog
+## Ã°Å¸â€â€ž Changelog
 
 Voir [CHANGELOG.md](./CHANGELOG.md) pour l'historique des versions.
 
-## 📝 Licence
+## Ã°Å¸â€œÂ Licence
 
-Voir [LICENSE](./LICENSE) pour les détails.
+Voir [LICENSE](./LICENSE) pour les dÃƒÂ©tails.
 
-## 👥 Contributeurs
+## Ã°Å¸â€˜Â¥ Contributeurs
 
-- Équipe Resume Converter
+- Ãƒâ€°quipe Resume Converter
 
 
 
-Le mode hors Docker utilise le même bootstrap canonique : `npm run migrate` applique `docker/schema.sql` sur une base vide, puis les migrations incrémentales restantes.
+Le mode hors Docker utilise le mÃƒÂªme bootstrap canonique : `npm run migrate` applique `docker/schema.sql` sur une base vide, puis les migrations incrÃƒÂ©mentales restantes.
+

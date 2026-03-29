@@ -33,6 +33,15 @@ vi.mock('../../services/settings.service.js', () => ({
     getLLMSettings: vi.fn()
 }));
 
+// Mock metrics service
+vi.mock('../../services/metrics.service.js', () => ({
+    __esModule: true,
+    default: {
+        trackProfileMatchingActivity: vi.fn()
+    },
+    buildLLMMetricLabel: vi.fn((provider, model = '') => model ? `${provider}:${model}` : provider)
+}));
+
 // Mock prompts
 vi.mock('../../config/prompts.backend.js', () => ({
     MISSION_KEYWORDS_EXTRACTION_PROMPT: 'mock extraction prompt {MISSION_TITLE} {MISSION_CONTENT}',
@@ -45,12 +54,14 @@ vi.mock('../../config/prompts.backend.js', () => ({
 import { selectWithTimeout, findWithTimeout, updateWithTimeout } from '../../utils/postgresHelpers.js';
 import { callBusinessChatCompletion } from '../../services/llmProvider.service.js';
 import { getLLMSettings } from '../../services/settings.service.js';
+import metrics from '../../services/metrics.service.js';
 
 // Import the service (after mocks are set up)
 import profileMatchingService from '../../services/profileMatching.service.js';
 
 // Extract functions from default export
 const { findMatchingProfiles, DEFAULT_WEIGHTS } = profileMatchingService;
+const { analyzeProfileForMission } = profileMatchingService;
 
 // ============================================
 // TEST DATA
@@ -143,6 +154,23 @@ const mockLLMScoringResponse = {
                         keyGaps: ['Pas de React', 'Profil infra vs dev']
                     }
                 }
+            })
+        }
+    }]
+};
+
+const mockDetailedAnalysisResponse = {
+    choices: [{
+        message: {
+            content: JSON.stringify({
+                overallScore: 82,
+                verdict: 'Bon match',
+                summary: 'Très bon alignement global.',
+                strengths: [{ category: 'skills', item: 'React', explanation: 'Compétence clé présente' }],
+                gaps: [{ category: 'tools', item: 'AWS', severity: 'important', explanation: 'Outil peu démontré' }],
+                recommendations: [{ type: 'highlight', suggestion: 'Mettre en avant les projets React' }],
+                interviewQuestions: ['Décrivez un projet React complexe.'],
+                riskAssessment: { level: 'medium', factors: ['AWS peu détaillé'] }
             })
         }
     }]
@@ -378,6 +406,10 @@ describe('Profile Matching Service', () => {
             // Should have called LLM multiple times for batches
             // (exact count depends on pre-filtering)
             expect(callBusinessChatCompletion).toHaveBeenCalled();
+            expect(metrics.trackProfileMatchingActivity).toHaveBeenCalledWith(expect.objectContaining({
+                event: 'search',
+                profilesRequested: 25
+            }));
         });
 
         it('should handle partial LLM failures gracefully', async () => {
@@ -455,6 +487,10 @@ describe('Profile Matching Service', () => {
             expect(result.llmScoringFailed).toBe(false);
             expect(result.profiles).toHaveLength(6);
             expect(callBusinessChatCompletion).toHaveBeenCalledTimes(3);
+            expect(metrics.trackProfileMatchingActivity).toHaveBeenCalledWith(expect.objectContaining({
+                event: 'retry',
+                batchesRetried: 1
+            }));
         });
 
         it('should retry DeepSeek token-limit truncation with smaller sub-batches', async () => {
@@ -516,6 +552,60 @@ describe('Profile Matching Service', () => {
             const total = DEFAULT_WEIGHTS.skills + DEFAULT_WEIGHTS.tools + 
                          DEFAULT_WEIGHTS.industries + DEFAULT_WEIGHTS.softSkills;
             expect(total).toBe(100);
+        });
+    });
+
+    describe('analyzeProfileForMission', () => {
+        beforeEach(() => {
+            findWithTimeout
+                .mockResolvedValueOnce({
+                    id: 'resume-1',
+                    name: 'Jean Dupont',
+                    title: 'Lead Developer React',
+                    global_rating: 85,
+                    skills: JSON.stringify(['React', 'TypeScript']),
+                    tools: JSON.stringify(['Git', 'Docker']),
+                    industries: JSON.stringify(['Banque']),
+                    soft_skills: JSON.stringify(['Communication'])
+                })
+                .mockResolvedValueOnce(mockMissionRecord);
+            callBusinessChatCompletion.mockResolvedValue(mockDetailedAnalysisResponse);
+        });
+
+        it('should request structured JSON response for DeepSeek detailed analysis', async () => {
+            getLLMSettings.mockResolvedValue({ llmModel: 'deepseek-reasoner', llmProvider: 'deepseek' });
+
+            const result = await analyzeProfileForMission('mission-1', 'resume-1');
+
+            expect(result.analysis.overallScore).toBe(82);
+            expect(callBusinessChatCompletion).toHaveBeenCalledWith(expect.objectContaining({
+                operationType: 'Detailed Profile Analysis',
+                responseFormat: { type: 'json_object' },
+                maxTokens: 8192
+            }));
+        });
+
+        it('should retry recoverable malformed JSON once for detailed analysis', async () => {
+            getLLMSettings.mockResolvedValue({ llmModel: 'deepseek-reasoner', llmProvider: 'deepseek' });
+            callBusinessChatCompletion
+                .mockRejectedValueOnce(new Error('DeepSeek response truncated due to token limit'))
+                .mockResolvedValueOnce(mockDetailedAnalysisResponse);
+
+            const result = await analyzeProfileForMission('mission-1', 'resume-1');
+
+            expect(result.analysis.verdict).toBe('Bon match');
+            expect(callBusinessChatCompletion).toHaveBeenCalledTimes(2);
+        });
+
+        it('should throw a user-facing error when detailed analysis still fails after retry', async () => {
+            getLLMSettings.mockResolvedValue({ llmModel: 'deepseek-reasoner', llmProvider: 'deepseek' });
+            callBusinessChatCompletion
+                .mockRejectedValueOnce(new Error('DeepSeek response truncated due to token limit'))
+                .mockRejectedValueOnce(new Error('Unexpected end of JSON input'));
+
+            await expect(analyzeProfileForMission('mission-1', 'resume-1'))
+                .rejects
+                .toThrow("Erreur lors de l'analyse détaillée du profil.");
         });
     });
 });

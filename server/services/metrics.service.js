@@ -109,6 +109,16 @@ class MetricsCollector {
                 orphanExportFilesDeleted: 0,
                 staleExportRefsCleared: 0,
                 recent: []
+            },
+            profileMatching: {
+                searches: 0,
+                batchesStarted: 0,
+                batchesRetried: 0,
+                batchesFailed: 0,
+                profilesRequested: 0,
+                profilesScored: 0,
+                byProvider: {},
+                recent: []
             }
         };
         
@@ -179,6 +189,11 @@ class MetricsCollector {
                         ...(data.operations.cleanup || {}),
                         recent: []
                     };
+                    this.operations.profileMatching = {
+                        ...this.operations.profileMatching,
+                        ...(data.operations.profileMatching || {}),
+                        recent: []
+                    };
                 }
                 
                 log.debug('Metrics loaded from file');
@@ -239,6 +254,15 @@ class MetricsCollector {
                         directoriesDeleted: this.operations.cleanup.directoriesDeleted,
                         orphanExportFilesDeleted: this.operations.cleanup.orphanExportFilesDeleted,
                         staleExportRefsCleared: this.operations.cleanup.staleExportRefsCleared
+                    },
+                    profileMatching: {
+                        searches: this.operations.profileMatching.searches,
+                        batchesStarted: this.operations.profileMatching.batchesStarted,
+                        batchesRetried: this.operations.profileMatching.batchesRetried,
+                        batchesFailed: this.operations.profileMatching.batchesFailed,
+                        profilesRequested: this.operations.profileMatching.profilesRequested,
+                        profilesScored: this.operations.profileMatching.profilesScored,
+                        byProvider: this.operations.profileMatching.byProvider
                     }
                 }
             };
@@ -572,6 +596,63 @@ class MetricsCollector {
         }
     }
 
+    trackProfileMatchingActivity({
+        provider = 'unknown',
+        event = 'search',
+        profilesRequested = 0,
+        profilesScored = 0,
+        batchesStarted = 0,
+        batchesRetried = 0,
+        batchesFailed = 0,
+        metadata = {}
+    } = {}) {
+        const providerKey = this.normalizeLLMProviderKey(provider);
+        if (!this.operations.profileMatching.byProvider[providerKey]) {
+            this.operations.profileMatching.byProvider[providerKey] = {
+                searches: 0,
+                batchesStarted: 0,
+                batchesRetried: 0,
+                batchesFailed: 0,
+                profilesRequested: 0,
+                profilesScored: 0
+            };
+        }
+
+        const bucket = this.operations.profileMatching.byProvider[providerKey];
+
+        if (event === 'search') {
+            this.operations.profileMatching.searches++;
+            bucket.searches++;
+        }
+
+        this.operations.profileMatching.batchesStarted += Number(batchesStarted) || 0;
+        this.operations.profileMatching.batchesRetried += Number(batchesRetried) || 0;
+        this.operations.profileMatching.batchesFailed += Number(batchesFailed) || 0;
+        this.operations.profileMatching.profilesRequested += Number(profilesRequested) || 0;
+        this.operations.profileMatching.profilesScored += Number(profilesScored) || 0;
+
+        bucket.batchesStarted += Number(batchesStarted) || 0;
+        bucket.batchesRetried += Number(batchesRetried) || 0;
+        bucket.batchesFailed += Number(batchesFailed) || 0;
+        bucket.profilesRequested += Number(profilesRequested) || 0;
+        bucket.profilesScored += Number(profilesScored) || 0;
+
+        this.operations.profileMatching.recent.push({
+            timestamp: new Date().toISOString(),
+            provider: providerKey,
+            event,
+            profilesRequested: Number(profilesRequested) || 0,
+            profilesScored: Number(profilesScored) || 0,
+            batchesStarted: Number(batchesStarted) || 0,
+            batchesRetried: Number(batchesRetried) || 0,
+            batchesFailed: Number(batchesFailed) || 0,
+            ...metadata
+        });
+        if (this.operations.profileMatching.recent.length > 50) {
+            this.operations.profileMatching.recent.shift();
+        }
+    }
+
     // Calculate percentiles
     calculatePercentile(percentile) {
         if (this.requests.responseTimes.length === 0) return 0;
@@ -886,6 +967,40 @@ class MetricsCollector {
                     ? `${(((this.llm.requests - this.llm.errors) / this.llm.requests) * 100).toFixed(2)}%`
                     : '0%'
             },
+            operations: {
+                uploads: {
+                    total: this.operations.uploads.total,
+                    successful: this.operations.uploads.successful,
+                    failed: this.operations.uploads.failed,
+                    bytesReceived: this.operations.uploads.bytesReceived,
+                    bytesStoredInDb: this.operations.uploads.bytesStoredInDb
+                },
+                ocr: {
+                    runs: this.operations.ocr.runs,
+                    successfulRuns: this.operations.ocr.successfulRuns,
+                    failedRuns: this.operations.ocr.failedRuns,
+                    pagesProcessed: this.operations.ocr.pagesProcessed,
+                    scannedPagesDetected: this.operations.ocr.scannedPagesDetected,
+                    failedPages: this.operations.ocr.failedPages
+                },
+                cleanup: {
+                    runs: this.operations.cleanup.runs,
+                    filesDeleted: this.operations.cleanup.filesDeleted,
+                    directoriesDeleted: this.operations.cleanup.directoriesDeleted,
+                    orphanExportFilesDeleted: this.operations.cleanup.orphanExportFilesDeleted,
+                    staleExportRefsCleared: this.operations.cleanup.staleExportRefsCleared
+                },
+                profileMatching: {
+                    searches: this.operations.profileMatching.searches,
+                    batchesStarted: this.operations.profileMatching.batchesStarted,
+                    batchesRetried: this.operations.profileMatching.batchesRetried,
+                    batchesFailed: this.operations.profileMatching.batchesFailed,
+                    profilesRequested: this.operations.profileMatching.profilesRequested,
+                    profilesScored: this.operations.profileMatching.profilesScored,
+                    byProvider: this.operations.profileMatching.byProvider,
+                    recent: this.operations.profileMatching.recent.slice(-10)
+                }
+            },
             memory: {
                 heapUsed: process.memoryUsage().heapUsed,
                 heapTotal: process.memoryUsage().heapTotal,
@@ -950,6 +1065,16 @@ class MetricsCollector {
                 directoriesDeleted: 0,
                 orphanExportFilesDeleted: 0,
                 staleExportRefsCleared: 0,
+                recent: []
+            },
+            profileMatching: {
+                searches: 0,
+                batchesStarted: 0,
+                batchesRetried: 0,
+                batchesFailed: 0,
+                profilesRequested: 0,
+                profilesScored: 0,
+                byProvider: {},
                 recent: []
             }
         };
