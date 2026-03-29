@@ -31,6 +31,7 @@ vi.mock('../../services/llmAvailability.service.js', () => ({
 }));
 
 import { selectWithTimeout } from '../../utils/postgresHelpers.js';
+import { resolveAvailableModel } from '../../services/llmAvailability.service.js';
 import {
     getLLMSettings,
     getLLMModel,
@@ -79,6 +80,17 @@ describe('Settings Service', () => {
             const result = await getLLMSettings();
             
             expect(result).toEqual({});
+        });
+
+        it('should normalize configured models with the provider default fallback', async () => {
+            selectWithTimeout.mockResolvedValueOnce([{
+                llm_model: 'glm-5.1',
+                llm_provider: 'glm'
+            }]);
+
+            await getLLMSettings();
+
+            expect(resolveAvailableModel).toHaveBeenCalledWith('glm', 'glm-5.1', 'glm-5.1');
         });
 
         it('should use cache on subsequent calls', async () => {

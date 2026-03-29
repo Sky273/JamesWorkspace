@@ -44,6 +44,7 @@ const mockFindMission = vi.fn();
 const mockUpdateMission = vi.fn();
 const mockDeleteMission = vi.fn();
 const mockListMissionAdaptations = vi.fn();
+const mockClearMissionKeywordsCache = vi.fn();
 
 vi.mock('../../services/missions.service.js', () => ({
     listMissions: (...args) => mockListMissions(...args),
@@ -59,6 +60,10 @@ vi.mock('../../services/missions.service.js', () => ({
     updateMission: (...args) => mockUpdateMission(...args),
     deleteMission: (...args) => mockDeleteMission(...args),
     listMissionAdaptations: (...args) => mockListMissionAdaptations(...args)
+}));
+
+vi.mock('../../services/profileMatching.service.js', () => ({
+    clearMissionKeywordsCache: (...args) => mockClearMissionKeywordsCache(...args)
 }));
 
 // Mock firmHelpers
@@ -736,5 +741,42 @@ describe('Missions Routes - GET /api/missions/:missionId/adaptations', () => {
 
         expect(res.status).toBe(200);
         expect(Array.isArray(res.body)).toBe(true);
+    });
+});
+
+// ============================================
+// DELETE /api/missions/:missionId/keywords-cache
+// ============================================
+describe('Missions Routes - DELETE /api/missions/:missionId/keywords-cache', () => {
+    let app;
+
+    beforeEach(() => {
+        vi.resetAllMocks();
+        app = createTestApp();
+    });
+
+    it('should clear cached keywords for an authorized user matched by firm_id', async () => {
+        mockFindMission.mockResolvedValueOnce(makeMissionRow({ firm: 'Other Firm', firm_id: 'firm-123' }));
+        mockGetUserFirmId.mockResolvedValueOnce('firm-123');
+        mockClearMissionKeywordsCache.mockResolvedValueOnce(undefined);
+
+        const res = await request(app)
+            .delete('/api/missions/mission-123/keywords-cache')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(200);
+        expect(mockClearMissionKeywordsCache).toHaveBeenCalledWith('mission-123');
+    });
+
+    it('should return 403 when the mission belongs to another firm', async () => {
+        mockFindMission.mockResolvedValueOnce(makeMissionRow({ firm: 'Other Firm', firm_id: 'firm-other' }));
+        mockGetUserFirmId.mockResolvedValueOnce('firm-123');
+
+        const res = await request(app)
+            .delete('/api/missions/mission-123/keywords-cache')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(403);
+        expect(mockClearMissionKeywordsCache).not.toHaveBeenCalled();
     });
 });

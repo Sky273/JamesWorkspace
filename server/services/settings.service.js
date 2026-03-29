@@ -7,6 +7,7 @@ import { selectWithTimeout, updateWithTimeout, createWithTimeout } from '../util
 import { OLLAMA_BASE_URL } from '../config/constants.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { resolveAvailableModel, getProviderAvailabilityFlags, syncPersistedAvailabilityState } from './llmAvailability.service.js';
+import { getProviderDefaultModel } from './llmConfiguration.service.js';
 
 // Cache settings for 5 minutes to reduce database calls
 let settingsCache = null;
@@ -71,7 +72,7 @@ export async function getLLMSettings() {
         const normalizedModel = resolveAvailableModel(
             settings.llmProvider,
             settings.llmModel,
-            settings.llmProvider === 'minimax' ? 'MiniMax-M2.7' : undefined
+            getProviderDefaultModel(settings.llmProvider)
         );
 
         if (normalizedModel.adjusted) {

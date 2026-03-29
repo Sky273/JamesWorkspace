@@ -9,6 +9,10 @@ export const LLM_PROVIDER_DEFAULT_MODELS = {
     ollama: null
 };
 
+export function getProviderDefaultModel(provider) {
+    return LLM_PROVIDER_DEFAULT_MODELS[provider] || LLM_PROVIDER_DEFAULT_MODELS.openai;
+}
+
 export function isLikelyOpenAIModel(model = '') {
     return /^(gpt|chatgpt|o\d|text-embedding|whisper|davinci|babbage|omni)/i.test(String(model || '').trim());
 }
@@ -36,9 +40,9 @@ export function resolveLLMProvider(settings = {}) {
 export function resolveLLMModel({ provider, settings = {}, requestedModel } = {}) {
     const candidateModel = provider === 'ollama'
         ? (requestedModel || settings.llmModel || null)
-        : (requestedModel || settings.llmModel || LLM_PROVIDER_DEFAULT_MODELS[provider] || LLM_PROVIDER_DEFAULT_MODELS.openai);
+        : (requestedModel || settings.llmModel || getProviderDefaultModel(provider));
 
-    const resolved = resolveAvailableModel(provider, candidateModel, LLM_PROVIDER_DEFAULT_MODELS[provider] || LLM_PROVIDER_DEFAULT_MODELS.openai);
+    const resolved = resolveAvailableModel(provider, candidateModel, getProviderDefaultModel(provider));
     return resolved.model;
 }
 
@@ -67,11 +71,11 @@ export function resolveCompatibleProviderRuntimeConfig({ settings = {}, requeste
             };
         }
 
-        return {
-            provider: 'anthropic',
-            model: isLikelyAnthropicModel(candidateModel) ? candidateModel : LLM_PROVIDER_DEFAULT_MODELS.anthropic
-        };
-    }
+            return {
+                provider: 'anthropic',
+                model: isLikelyAnthropicModel(candidateModel) ? candidateModel : getProviderDefaultModel('anthropic')
+            };
+        }
 
     if (configuredProvider === 'glm' || (candidateModel && isLikelyGlmModel(candidateModel))) {
         if (responseShape === 'openai') {
@@ -81,11 +85,11 @@ export function resolveCompatibleProviderRuntimeConfig({ settings = {}, requeste
             };
         }
 
-        return {
-            provider: 'anthropic',
-            model: isLikelyAnthropicModel(candidateModel) ? candidateModel : LLM_PROVIDER_DEFAULT_MODELS.anthropic
-        };
-    }
+            return {
+                provider: 'anthropic',
+                model: isLikelyAnthropicModel(candidateModel) ? candidateModel : getProviderDefaultModel('anthropic')
+            };
+        }
 
     if (configuredProvider === 'minimax' || (candidateModel && isLikelyMiniMaxModel(candidateModel))) {
         return {

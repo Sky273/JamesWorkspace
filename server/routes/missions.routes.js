@@ -377,11 +377,12 @@ router.delete('/:missionId/keywords-cache', authenticateToken, validateParams('m
         
         const isAdmin = req.user?.role === 'admin';
         const userFirm = req.user?.firm || req.user?.firm_id;
+        const userFirmId = await getUserFirmId(req);
         
         // Verify mission access
         const missionRecord = await missionsService.findMission(missionId);
         
-        if (!isAdmin && missionRecord.firm !== userFirm) {
+        if (!isAdmin && missionRecord.firm !== userFirm && missionRecord.firm_id !== userFirmId) {
             return res.status(403).json({ error: 'Access denied' });
         }
         

@@ -9,6 +9,7 @@ import { normalizeWeights, DEFAULT_ANALYSIS_PROMPT, DEFAULT_IMPROVEMENT_PROMPT, 
 import { safeLog } from '../utils/logger.backend.js';
 import { mapSettingsToFrontend, mapSettingsFromFrontend } from '../utils/mappers.js';
 import { getProviderAvailabilityFlags, resolveAvailableModel } from '../services/llmAvailability.service.js';
+import { getProviderDefaultModel } from '../services/llmConfiguration.service.js';
 
 const router = express.Router();
 
@@ -20,11 +21,7 @@ function normalizeRequestedSettingsModel(settingsData = {}) {
     const normalizedModel = resolveAvailableModel(
         settingsData.llmProvider,
         settingsData.llmModel,
-        settingsData.llmProvider === 'minimax'
-            ? 'MiniMax-M2.7'
-            : settingsData.llmProvider === 'glm'
-                ? 'glm-5.1'
-                : undefined
+        getProviderDefaultModel(settingsData.llmProvider)
     );
 
     if (normalizedModel.adjusted) {
