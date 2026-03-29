@@ -24,7 +24,7 @@ export async function addJobItems(jobId, items) {
 
             normalizedItems.forEach((item, index) => {
                 const offset = index * 6;
-                valuePlaceholders.push(`(${offset + 1}, ${offset + 2}, ${offset + 3}, ${offset + 4}, ${offset + 5}, ${offset + 6})`);
+                valuePlaceholders.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6})`);
                 params.push(jobId, item.fileName, item.fileData, item.fileMimeType, item.relativePath || null, ITEM_STATUS.PENDING);
             });
 
