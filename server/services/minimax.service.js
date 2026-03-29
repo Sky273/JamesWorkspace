@@ -17,6 +17,29 @@ import { validatePromptSize } from '../utils/postgresHelpers.js';
 import { extractTextFromContentBlocks, flattenLlmTextContent } from './llmContent.service.js';
 import { buildOpenAICompatibleParams } from './llmProviderCommon.service.js';
 
+function truncateForLog(value, maxLength = 2000) {
+    if (value == null) {
+        return value;
+    }
+
+    const asString = typeof value === 'string' ? value : JSON.stringify(value);
+    if (asString.length <= maxLength) {
+        return asString;
+    }
+
+    return `${asString.slice(0, maxLength)}... [truncated]`;
+}
+
+function serializeMiniMaxErrorPayload(error) {
+    return {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        responseHeaders: error.response?.headers || null,
+        errorDetails: error.response?.data ?? null,
+        errorPreview: truncateForLog(error.response?.data)
+    };
+}
+
 function validateMiniMaxRequest(model, messages, maxPromptLength = MAX_PROMPT_LENGTH) {
     if (!MINIMAX_API_KEY) {
         throw new Error('MiniMax API key not configured on server');
@@ -161,9 +184,9 @@ export async function callMiniMaxOpenAICompatible({
         safeLog('error', 'MiniMax OpenAI-compatible API call failed', {
             model,
             operationType,
+            url: `${MINIMAX_OPENAI_BASE_URL.replace(/\/$/, '')}/chat/completions`,
             error: error.message,
-            status: error.response?.status,
-            errorDetails: error.response?.data
+            ...serializeMiniMaxErrorPayload(error)
         });
         throw error;
     }
@@ -247,9 +270,9 @@ export async function callMiniMaxAnthropicCompatible({
         safeLog('error', 'MiniMax Anthropic-compatible API call failed', {
             model,
             operationType,
+            url: `${MINIMAX_ANTHROPIC_BASE_URL.replace(/\/$/, '')}/v1/messages`,
             error: error.message,
-            status: error.response?.status,
-            errorDetails: error.response?.data
+            ...serializeMiniMaxErrorPayload(error)
         });
         throw error;
     }

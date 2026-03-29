@@ -403,25 +403,6 @@ export const swaggerPaths = {
             responses: { 200: { description: 'Analysis with scores and tags' }, 401: auth401, 500: error500 }
         }
     },
-    '/resumes/improve': {
-        post: {
-            tags: ['Resumes'],
-            summary: 'Improve resume text',
-            description: 'AI-powered resume improvement with re-analysis. Long-running operation.',
-            security: securityCsrf,
-            requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['text'], properties: { text: { type: 'string' }, analysis: { type: 'object' } } } } } },
-            responses: { 200: { description: 'Improved text and new analysis' }, 401: auth401, 500: error500 }
-        }
-    },
-    '/resumes/{id}/improve': {
-        post: {
-            tags: ['Resumes'],
-            summary: 'Improve specific resume',
-            security: securityCsrf,
-            parameters: [paramId],
-            responses: { 200: { description: 'Resume improved' }, 401: auth401, 404: notFound404 }
-        }
-    },
     '/resumes/{id}/ai-modify': {
         post: {
             tags: ['Resumes'],

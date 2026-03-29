@@ -10,26 +10,27 @@ vi.mock('../../utils/trigram.js', () => ({ generateTrigram: vi.fn(name => (name 
 
 const mockFindResume = vi.fn();
 const mockFindMission = vi.fn();
-const mockCreateAdaptation = vi.fn();
 const mockUpdateResume = vi.fn();
 vi.mock('../../services/resumes.service.js', () => ({
     findResumeRecord: (...a) => mockFindResume(...a),
     findMissionRecord: (...a) => mockFindMission(...a),
-    createAdaptation: (...a) => mockCreateAdaptation(...a),
     updateResume: (...a) => mockUpdateResume(...a)
 }));
 
 const mockAnalyzeResume = vi.fn();
 const mockImproveResume = vi.fn();
 const mockMatchResume = vi.fn();
-const mockAdaptResume = vi.fn();
 const mockCleanupText = vi.fn(t => t);
 vi.mock('../../services/openai.service.js', () => ({
     analyzeResume: (...a) => mockAnalyzeResume(...a),
     improveResume: (...a) => mockImproveResume(...a),
     matchResumeWithMission: (...a) => mockMatchResume(...a),
-    adaptResumeToMission: (...a) => mockAdaptResume(...a),
     cleanupText: (...a) => mockCleanupText(...a)
+}));
+
+const mockExecuteResumeAdaptation = vi.fn();
+vi.mock('../../services/resumeAdaptation.service.js', () => ({
+    executeResumeAdaptation: (...a) => mockExecuteResumeAdaptation(...a)
 }));
 
 vi.mock('../../services/security.service.js', () => ({
@@ -294,19 +295,22 @@ describe('LLM Handlers', () => {
 
         it('should adapt resume and save adaptation', async () => {
             mockFindResume.mockResolvedValueOnce({ id: 'r1', firm_name: 'TestFirm', improved_text: 'CV', name: 'Bob' });
-            mockFindMission.mockResolvedValueOnce({ id: 'm1', title: 'Dev', content: 'Job' });
-            mockMatchResume.mockResolvedValueOnce({ matchScore: '65%' });
-            mockAdaptResume.mockResolvedValueOnce({ adaptedText: '<p>adapted</p>', adaptedTitle: 'Adapted Dev' });
-            mockCreateAdaptation.mockResolvedValueOnce({ id: 'a1' });
+            mockExecuteResumeAdaptation.mockResolvedValueOnce({
+                adaptedText: '<p>adapted</p>',
+                adaptedTitle: 'Adapted Dev',
+                matchAnalysis: { matchScore: '65%' },
+                adaptationRecord: { id: 'a1' },
+                structuredAdaptation: null,
+                adaptationNotes: null
+            });
 
             const { req, res } = mockReqRes({ id: 'r1' }, { missionId: 'm1' });
 
             await adaptHandler(req, res);
 
-            expect(mockCreateAdaptation).toHaveBeenCalledWith(expect.objectContaining({
-                resume_id: 'r1',
-                mission_id: 'm1',
-                match_score: 65
+            expect(mockExecuteResumeAdaptation).toHaveBeenCalledWith(expect.objectContaining({
+                resumeId: 'r1',
+                missionId: 'm1'
             }));
             expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
                 adaptedText: '<p>adapted</p>',

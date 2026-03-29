@@ -3,9 +3,10 @@
  * Handles analyze, improve, match, and adapt operations
  */
 
-import { findResumeRecord, findMissionRecord, createAdaptation, updateResume } from '../../services/resumes.service.js';
+import { findResumeRecord, findMissionRecord, updateResume } from '../../services/resumes.service.js';
 import { safeLog } from '../../utils/logger.backend.js';
-import { analyzeResume, improveResume, matchResumeWithMission, adaptResumeToMission, cleanupText } from '../../services/openai.service.js';
+import { analyzeResume, improveResume, matchResumeWithMission, cleanupText } from '../../services/openai.service.js';
+import { executeResumeAdaptation } from '../../services/resumeAdaptation.service.js';
 import { getRequestMetadata } from '../../services/security.service.js';
 import { getLLMSettings, calculateWeightedGlobalRating } from '../../services/settings.service.js';
 import { getAcceptedIndustriesString, getIndustryMappingString } from '../../services/industry.service.js';
@@ -570,9 +571,7 @@ export async function adaptHandler(req, res) {
         }
 
         const resumeRecord = await findResumeRecord(id);
-        const missionRecord = await findMissionRecord(missionId);
-        
-        // Check firm access
+
         const isAdmin = req.user?.role === 'admin';
         const userFirm = req.user?.firm || req.user?.customer;
         
@@ -580,123 +579,21 @@ export async function adaptHandler(req, res) {
             return res.status(403).json({ error: 'Access denied: You can only adapt resumes from your firm' });
         }
 
-        const resumeText = resumeRecord.improved_text || resumeRecord.original_text;
-        const missionTitle = missionRecord.title || '';
-        const missionContent = missionRecord.content || '';
-
-        const settings = await getLLMSettings();
-        const model = settings.llmModel;
-        const cvMode = settings.cvMode || 'nominative';
-        let adaptationPrompt = settings['Adaptation Prompt'] || DEFAULT_ADAPTATION_PROMPT;
-
-        if (!model && settings.llmProvider !== 'ollama') {
-            return res.status(500).json({ error: 'LLM model not configured in Settings.' });
-        }
-
-        // Get original filename for injection
-        const originalFileName = resumeRecord.original_file_name || resumeRecord.name || null;
-        const fileNameValue = originalFileName || 'Non disponible';
-
-        // Inject accepted industries into the adaptation prompt (no mapping lexique needed for adaptation)
-        const acceptedIndustries = await getAcceptedIndustriesString();
-        adaptationPrompt = adaptationPrompt.replace('{ACCEPTED_INDUSTRIES}', acceptedIndustries);
-
-        // Inject anonymization rules based on cvMode (with FILENAME replaced)
-        let anonymizationRules = cvMode === 'anonymous' ? ANONYMIZATION_RULES_ANONYMOUS : ANONYMIZATION_RULES_NOMINATIVE;
-        anonymizationRules = anonymizationRules.replace(/{FILENAME}/g, fileNameValue);
-        adaptationPrompt = adaptationPrompt.replace('{ANONYMIZATION_RULES}', anonymizationRules);
-
-        // Inject filename into adaptation prompt
-        adaptationPrompt = adaptationPrompt.replace('{FILENAME}', fileNameValue);
-
-        safeLog('debug', 'Injected industries, anonymization rules and filename into adaptation prompt', {
-            industriesCount: acceptedIndustries.split(',').length,
-            cvMode,
-            fileName: fileNameValue
-        });
-
-        // First do match analysis
-        let matchPrompt = settings['Match Analysis Prompt'] || DEFAULT_MATCH_ANALYSIS_PROMPT;
-        const matchAnalysis = await matchResumeWithMission(resumeText, missionTitle, missionContent, model, matchPrompt, userMetadata);
-
-        const adaptationResult = await adaptResumeToMission({
-            resumeText,
-            missionTitle,
-            missionContent,
-            matchAnalysis,
-            model,
-            adaptationPrompt,
+        const result = await executeResumeAdaptation({
+            resumeId: id,
+            missionId,
             userMetadata
         });
-        
-        // Extract adaptedText, adaptedTitle, and structuredData from result
-        const adaptedText = typeof adaptationResult === 'string' ? adaptationResult : adaptationResult.adaptedText;
-        const adaptedTitle = typeof adaptationResult === 'string' ? null : (adaptationResult.adaptedTitle || null);
-        const structuredData = typeof adaptationResult === 'string' ? null : (adaptationResult.structuredData || null);
 
-        // Parse match score (can be "32%" or 32 or null)
-        let matchScoreNum = null;
-        if (matchAnalysis?.matchScore) {
-            const scoreStr = String(matchAnalysis.matchScore).replace('%', '');
-            const parsed = parseFloat(scoreStr);
-            if (!isNaN(parsed)) {
-                matchScoreNum = parsed;
-            }
-        }
-
-        // Extract adaptation notes from structured data for storage
-        const adaptationNotes = structuredData?.adaptationNotes 
-            ? JSON.stringify(structuredData.adaptationNotes) 
-            : null;
-
-        // Save adaptation to database
-        safeLog('debug', 'Creating adaptation with data', {
-            resumeId: resumeRecord.id,
-            resumeName: resumeRecord.name,
-            candidateName: resumeRecord.candidate_name,
-            adaptedTitle: adaptedTitle,
-            missionId: missionRecord.id,
-            missionTitle: missionTitle,
-            firm: resumeRecord.firm_name,
-            hasStructuredData: !!structuredData
-        });
-
-        const adaptationData = {
-            resume_id: resumeRecord.id,
-            mission_id: missionRecord.id,
-            resume_name: resumeRecord.name || null,
-            candidate_name: resumeRecord.candidate_name || null,
-            adapted_title: adaptedTitle,
-            mission_title: missionTitle || null,
-            mission_content: missionContent || null,
-            firm: resumeRecord.firm_name || null,
-            adapted_text: adaptedText,
-            adaptation_notes: adaptationNotes,
-            match_score: matchScoreNum,
-            match_analysis: matchAnalysis ? JSON.stringify(matchAnalysis) : null,
-            status: 'completed'
-        };
-
-        const adaptationRecord = await createAdaptation(adaptationData);
-
-        // Return full response with structured data for frontend
         res.json({
-            adaptedText,
-            adaptedTitle,
-            matchAnalysis,
-            adaptationId: adaptationRecord.id,
-            // Include structured data for enhanced frontend display
-            structuredAdaptation: structuredData,
-            adaptationNotes: structuredData?.adaptationNotes || null
+            adaptedText: result.adaptedText,
+            adaptedTitle: result.adaptedTitle,
+            matchAnalysis: result.matchAnalysis,
+            adaptationId: result.adaptationRecord.id,
+            structuredAdaptation: result.structuredAdaptation,
+            adaptationNotes: result.adaptationNotes
         });
     } catch (error) {
         handleLLMError(error, res, 'adapting resume to mission');
     }
 }
-
-
-
-
-
-
-

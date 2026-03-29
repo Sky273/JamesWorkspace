@@ -3,6 +3,7 @@ import { ANTHROPIC_API_KEY } from '../config/constants.js';
 import { buildLLMMetricLabel, metrics } from './metrics.service.js';
 import { extractTextFromContentBlocks } from './llmContent.service.js';
 import { normalizeAnthropicContent } from './llmProviderCommon.service.js';
+import { clampModelMaxOutputTokens } from './llmModelCapabilities.service.js';
 
 export async function callAnthropicChat(messages, model, options = {}) {
     if (!ANTHROPIC_API_KEY) {
@@ -17,10 +18,12 @@ export async function callAnthropicChat(messages, model, options = {}) {
             content: normalizeAnthropicContent(message.content)
         }));
 
+    const { effectiveMaxTokens } = clampModelMaxOutputTokens('anthropic', model, options.max_tokens || 1000, 1000);
+
     const requestBody = {
         model,
         messages: conversationMessages,
-        max_tokens: options.max_tokens || 1000
+        max_tokens: effectiveMaxTokens
     };
 
     if (systemMessages.length > 0) {
@@ -88,11 +91,13 @@ export async function callAnthropicVision(systemPrompt, userContent, model, opti
         return { type: 'text', text: item.text || item.content || '' };
     });
 
+    const { effectiveMaxTokens } = clampModelMaxOutputTokens('anthropic', model, options.max_tokens || 4000, 4000);
+
     const requestBody = {
         model,
         system: [{ type: 'text', text: systemPrompt }],
         messages: [{ role: 'user', content: anthropicContent }],
-        max_tokens: options.max_tokens || 4000
+        max_tokens: effectiveMaxTokens
     };
 
     if (options.temperature !== undefined) {

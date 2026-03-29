@@ -16,13 +16,16 @@ interface LLMTabProps {
 }
 
 const OPENAI_MODELS = [
-  'gpt-5.4', 'gpt-5.4-pro', 'gpt-5.2', 'gpt-5.2-pro', 'gpt-5.1', 'gpt-5',
+  'gpt-5.2', 'gpt-5.2-pro', 'gpt-5.1', 'gpt-5', 'gpt-5-mini', 'gpt-5-nano',
+  'gpt-4.1', 'gpt-4.1-mini', 'gpt-4.1-nano',
   'gpt-4o', 'gpt-4o-mini'
 ];
 
 const ANTHROPIC_MODELS = [
-  'claude-sonnet-4.6',
-  'claude-opus-4.6',
+  'claude-opus-4-1-20250805',
+  'claude-opus-4-20250514',
+  'claude-sonnet-4-20250514',
+  'claude-3-7-sonnet-20250219',
   'claude-3-5-sonnet-20241022',
   'claude-3-5-haiku-20241022'
 ];
@@ -34,8 +37,10 @@ const DEEPSEEK_MODELS = [
 
 const MINIMAX_MODELS = [
   'MiniMax-M2.7',
+  'MiniMax-M2.7-highspeed',
   'MiniMax-M2.5',
   'MiniMax-M2.5-highspeed',
+  'M2-her',
   'MiniMax-M2.1',
   'MiniMax-M2.1-highspeed',
   'MiniMax-M2'
@@ -79,7 +84,7 @@ const LLMTab = ({
     onInputChange('llmProvider', nextProvider);
 
     if (nextProvider === 'anthropic' && !ANTHROPIC_MODELS.includes(formData.llmModel)) {
-      onInputChange('llmModel', 'claude-sonnet-4.6');
+      onInputChange('llmModel', 'claude-sonnet-4-20250514');
     }
 
     if (nextProvider === 'deepseek' && !DEEPSEEK_MODELS.some(model => model.value === formData.llmModel)) {

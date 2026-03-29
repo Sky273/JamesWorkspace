@@ -3,6 +3,7 @@ import { OLLAMA_AUTO_PULL, OLLAMA_BASE_URL, OLLAMA_REQUEST_TIMEOUT_MS } from '..
 import { safeLog } from '../utils/logger.backend.js';
 import { extractTextFromContentBlocks } from './llmContent.service.js';
 import { stripLlmThinkingContent } from './openai/textUtils.js';
+import { withRetry } from './retry.service.js';
 
 const OLLAMA_OPERATION_TIMEOUTS_MS = {
     'Resume Analysis': 20 * 60 * 1000,
@@ -14,6 +15,12 @@ const OLLAMA_OPERATION_TIMEOUTS_MS = {
     'Batch Profile Scoring': 10 * 60 * 1000,
     'Detailed Profile Analysis': 10 * 60 * 1000,
     'Resume AI Modification': 10 * 60 * 1000
+};
+
+const OLLAMA_NETWORK_RETRY_CONFIG = {
+    maxRetries: 1,
+    initialDelayMs: 500,
+    maxDelayMs: 2000
 };
 
 function normalizeBaseUrl(baseUrl = OLLAMA_BASE_URL) {
@@ -119,6 +126,40 @@ function extractOllamaContent(payload = {}) {
     return '';
 }
 
+async function postToOllamaChat(baseUrl, requestBody, timeout, operationName) {
+    return withRetry(
+        () => axios.post(
+            `${baseUrl}/api/chat`,
+            requestBody,
+            { timeout }
+        ),
+        {
+            operationName,
+            retryConfig: OLLAMA_NETWORK_RETRY_CONFIG
+        }
+    );
+}
+
+async function getFromOllama(baseUrl, pathName, timeout, operationName) {
+    return withRetry(
+        () => axios.get(`${baseUrl}${pathName}`, { timeout }),
+        {
+            operationName,
+            retryConfig: OLLAMA_NETWORK_RETRY_CONFIG
+        }
+    );
+}
+
+async function postToOllama(baseUrl, pathName, body, timeout, operationName) {
+    return withRetry(
+        () => axios.post(`${baseUrl}${pathName}`, body, { timeout }),
+        {
+            operationName,
+            retryConfig: OLLAMA_NETWORK_RETRY_CONFIG
+        }
+    );
+}
+
 async function pullModelIfNeeded(baseUrl, model, options = {}) {
     if (!OLLAMA_AUTO_PULL) {
         throw new Error(`Ollama model "${model}" is not available and automatic pull is disabled`);
@@ -126,19 +167,22 @@ async function pullModelIfNeeded(baseUrl, model, options = {}) {
 
     safeLog('warn', 'Ollama model missing, pulling automatically', { model, baseUrl });
 
-    await axios.post(
-        `${baseUrl}/api/pull`,
+    await postToOllama(
+        baseUrl,
+        '/api/pull',
         { model, stream: false },
-        {
-            timeout: Math.max(resolveOllamaTimeoutMs(options), 15 * 60 * 1000)
-        }
+        Math.max(resolveOllamaTimeoutMs(options), 15 * 60 * 1000),
+        `Ollama ${model} pull request`
     );
 }
 
 async function ensureModelAvailable(baseUrl, model, options = {}) {
-    const response = await axios.get(`${baseUrl}/api/tags`, {
-        timeout: resolveOllamaControlPlaneTimeoutMs(options)
-    });
+    const response = await getFromOllama(
+        baseUrl,
+        '/api/tags',
+        resolveOllamaControlPlaneTimeoutMs(options),
+        `Ollama ${model} tags request`
+    );
 
     const models = response.data?.models || [];
     const exists = models.some(entry => entry?.name === model || entry?.model === model);
@@ -169,9 +213,12 @@ async function resolveModelName(baseUrl, model, options = {}) {
 
 export async function listOllamaModels(baseUrl = OLLAMA_BASE_URL, options = {}) {
     const normalizedBaseUrl = normalizeBaseUrl(baseUrl);
-    const response = await axios.get(`${normalizedBaseUrl}/api/tags`, {
-        timeout: resolveOllamaControlPlaneTimeoutMs(options)
-    });
+    const response = await getFromOllama(
+        normalizedBaseUrl,
+        '/api/tags',
+        resolveOllamaControlPlaneTimeoutMs(options),
+        'Ollama list models request'
+    );
 
     return (response.data?.models || []).map(model => ({
         name: model.name || model.model,
@@ -182,9 +229,12 @@ export async function listOllamaModels(baseUrl = OLLAMA_BASE_URL, options = {}) 
 
 export async function getOllamaRuntimeStatus(baseUrl = OLLAMA_BASE_URL, options = {}) {
     const normalizedBaseUrl = normalizeBaseUrl(baseUrl);
-    const response = await axios.get(`${normalizedBaseUrl}/api/ps`, {
-        timeout: resolveOllamaControlPlaneTimeoutMs(options)
-    });
+    const response = await getFromOllama(
+        normalizedBaseUrl,
+        '/api/ps',
+        resolveOllamaControlPlaneTimeoutMs(options),
+        'Ollama runtime status request'
+    );
 
     const runningModels = (response.data?.models || []).map(model => ({
         name: model.name || model.model,
@@ -206,12 +256,12 @@ export async function pullOllamaModel(model, settings = {}) {
     const resolvedSettings = resolveOllamaSettings(settings);
     const baseUrl = normalizeBaseUrl(resolvedSettings.ollamaBaseUrl);
 
-    const response = await axios.post(
-        `${baseUrl}/api/pull`,
+    const response = await postToOllama(
+        baseUrl,
+        '/api/pull',
         { model: normalizedModel, stream: false },
-        {
-            timeout: Math.max(resolveOllamaTimeoutMs(resolvedSettings), 15 * 60 * 1000)
-        }
+        Math.max(resolveOllamaTimeoutMs(resolvedSettings), 15 * 60 * 1000),
+        `Ollama ${normalizedModel} pull model request`
     );
 
     return {
@@ -227,16 +277,16 @@ export async function runOllamaModel(model, settings = {}) {
 
     await ensureModelAvailable(baseUrl, normalizedModel, resolvedSettings);
 
-    await axios.post(
-        `${baseUrl}/api/generate`,
+    await postToOllama(
+        baseUrl,
+        '/api/generate',
         {
             model: normalizedModel,
             prompt: '',
             stream: false
         },
-        {
-            timeout: Math.max(resolveOllamaTimeoutMs(resolvedSettings), 2 * 60 * 1000)
-        }
+        Math.max(resolveOllamaTimeoutMs(resolvedSettings), 2 * 60 * 1000),
+        `Ollama ${normalizedModel} run request`
     );
 
     return {
@@ -250,17 +300,17 @@ export async function stopOllamaModel(model, settings = {}) {
     const resolvedSettings = resolveOllamaSettings(settings);
     const baseUrl = normalizeBaseUrl(resolvedSettings.ollamaBaseUrl);
 
-    await axios.post(
-        `${baseUrl}/api/generate`,
+    await postToOllama(
+        baseUrl,
+        '/api/generate',
         {
             model: normalizedModel,
             prompt: '',
             stream: false,
             keep_alive: 0
         },
-        {
-            timeout: Math.max(resolveOllamaControlPlaneTimeoutMs(resolvedSettings), 30000)
-        }
+        Math.max(resolveOllamaControlPlaneTimeoutMs(resolvedSettings), 30000),
+        `Ollama ${normalizedModel} stop request`
     );
 
     return {
@@ -288,12 +338,11 @@ export async function callOllama(messages, model, settings = {}, options = {}) {
         requestBody.keep_alive = keepAlive;
     }
 
-    const response = await axios.post(
-        `${baseUrl}/api/chat`,
+    const response = await postToOllamaChat(
+        baseUrl,
         requestBody,
-        {
-            timeout: resolveOllamaTimeoutMs(requestOptions)
-        }
+        resolveOllamaTimeoutMs(requestOptions),
+        `Ollama ${resolvedModel} chat request`
     );
 
     const content = extractOllamaContent(response.data);
@@ -367,12 +416,11 @@ export async function callOllamaWithVision(systemPrompt, userContent, model, set
         requestBody.keep_alive = keepAlive;
     }
 
-    const response = await axios.post(
-        `${baseUrl}/api/chat`,
+    const response = await postToOllamaChat(
+        baseUrl,
         requestBody,
-        {
-            timeout: Math.max(resolveOllamaTimeoutMs(requestOptions), 10 * 60 * 1000)
-        }
+        Math.max(resolveOllamaTimeoutMs(requestOptions), 10 * 60 * 1000),
+        `Ollama ${resolvedModel} vision request`
     );
 
     const content = extractOllamaContent(response.data);

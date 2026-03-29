@@ -33,7 +33,8 @@ export {
     updateCollectionJobProgress,
     updateJobExportFile,
     clearJobExportFile,
-    isJobComplete
+    isJobComplete,
+    getFinalJobOutcome
 } from './batchJobs/jobCrud.js';
 
 // Item CRUD

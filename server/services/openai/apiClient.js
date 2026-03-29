@@ -12,6 +12,7 @@ import { validatePromptSize } from '../../utils/postgresHelpers.js';
 import { securityLog, LOG_LEVELS, SECURITY_EVENTS } from '../security.service.js';
 import { withRetry, getCircuitBreakerStates } from '../retry.service.js';
 import { extractOpenAIResponsesText, flattenLlmTextContent, sanitizeOpenAICompatibleResponseBody } from '../llmContent.service.js';
+import { clampModelMaxOutputTokens } from '../llmModelCapabilities.service.js';
 
 const OPENAI_CHAT_API_URL = 'https://api.openai.com/v1/chat/completions';
 const OPENAI_RESPONSES_API_URL = 'https://api.openai.com/v1/responses';
@@ -52,6 +53,17 @@ export async function callOpenAI({
         throw new Error('Messages array is required and must not be empty');
     }
 
+    const { requestedMaxTokens, effectiveMaxTokens, providerCap, capabilities } = clampModelMaxOutputTokens('openai', model, maxTokens, 4096);
+
+    if (providerCap && effectiveMaxTokens !== requestedMaxTokens) {
+        safeLog('warn', 'Clamped OpenAI max tokens to model limit', {
+            model,
+            requestedMaxTokens,
+            effectiveMaxTokens,
+            providerCap
+        });
+    }
+
     // Validate prompt size if maxPromptLength is specified
     if (maxPromptLength) {
         const combinedPrompt = messages.map(m => flattenLlmTextContent(m.content)).join('\n');
@@ -72,7 +84,7 @@ export async function callOpenAI({
         metadata: { 
             model: model,
             messageCount: messages.length,
-            maxTokens: maxTokens
+            maxTokens: effectiveMaxTokens
         }
     });
 
@@ -89,14 +101,13 @@ export async function callOpenAI({
             
             // gpt-5.x-pro models only support: 'medium', 'high', 'xhigh'
             // gpt-5.x (non-pro) supports: 'none', 'low', 'medium', 'high', 'xhigh'
-            const isProModel = model.match(/gpt-5\.\d+-pro/i);
-            const reasoningEffort = isProModel ? "medium" : "none";
+            const reasoningEffort = capabilities?.defaultReasoningEffort || 'medium';
             
             requestParams = {
                 model: model,
                 input: messages,
                 reasoning: { effort: reasoningEffort },
-                max_output_tokens: maxTokens
+                max_output_tokens: effectiveMaxTokens
             };
             
             // In Responses API, response_format has moved to text.format
@@ -104,8 +115,7 @@ export async function callOpenAI({
                 requestParams.text = { format: responseFormat };
             }
             
-            // Temperature only supported with reasoning.effort = "none"
-            if (!isProModel && temperature !== undefined) {
+            if (temperature !== undefined) {
                 requestParams.temperature = temperature;
             }
             
@@ -114,13 +124,13 @@ export async function callOpenAI({
                 requestParams.top_p = topP;
             }
             
-            safeLog('info', 'LLM Request', { model, messageCount: messages.length, maxTokens, reasoningEffort, temperature, topP });
+            safeLog('info', 'LLM Request', { model, messageCount: messages.length, maxTokens: effectiveMaxTokens, reasoningEffort, temperature, topP });
         } else {
             // Standard models use Chat Completions API
             apiUrl = OPENAI_CHAT_API_URL;
             
             requestParams = buildOpenAICompatibleParams(model, {
-                maxTokens,
+                maxTokens: effectiveMaxTokens,
                 temperature,
                 topP,
                 additionalParams: {
@@ -129,7 +139,7 @@ export async function callOpenAI({
                 }
             });
             
-            safeLog('info', 'LLM Request', { model, messageCount: messages.length, maxTokens, temperature, topP });
+            safeLog('info', 'LLM Request', { model, messageCount: messages.length, maxTokens: effectiveMaxTokens, temperature, topP });
         }
 
         const response = await axios.post(apiUrl, requestParams, {

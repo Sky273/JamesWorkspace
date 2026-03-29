@@ -61,10 +61,10 @@ export async function addJobResumeIds(jobId, resumeIds) {
         for (const resumeId of resumeIds) {
             // Get resume name for display
             const resumeResult = await query(`
-                SELECT "Name" FROM resumes WHERE id = $1
+                SELECT name FROM resumes WHERE id = $1
             `, [resumeId]);
             
-            const fileName = resumeResult.rows[0]?.Name || `Resume ${resumeId}`;
+            const fileName = resumeResult.rows[0]?.name || `Resume ${resumeId}`;
 
             await query(`
                 INSERT INTO batch_job_items (job_id, resume_id, file_name, status)
@@ -183,6 +183,12 @@ export async function updateJobItemStatus(itemId, status, updates = {}) {
         if (updates.resume_id) {
             setClauses.push(`resume_id = $${paramIndex}`);
             params.push(updates.resume_id);
+            paramIndex++;
+        }
+
+        if (updates.adaptation_id) {
+            setClauses.push(`adaptation_id = $${paramIndex}`);
+            params.push(updates.adaptation_id);
             paramIndex++;
         }
 

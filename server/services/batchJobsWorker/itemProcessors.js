@@ -9,9 +9,10 @@ import { processAnalysisTags } from '../../utils/tagCleaner.js';
 import { ITEM_STATUS, updateJobItemStatus } from '../batchJobs.service.js';
 import { parseScore, generateTrigram } from './helpers.js';
 import { extractTextFromBuffer } from './textExtraction.js';
-import { analyzeResumeWithLLM, improveResumeWithLLM } from './llmIntegration.js';
+import { analyzeResumeWithLLM, analyzeImprovedResumeWithLLM, improveResumeWithLLM } from './llmIntegration.js';
 import crypto from 'crypto';
 import { markConsentError, sendConsentRequest } from '../consent.service.js';
+import { executeResumeAdaptation } from '../resumeAdaptation.service.js';
 
 /**
  * Process an import item (upload + analyze + optionally improve)
@@ -448,7 +449,14 @@ async function processImprovement(item, resumeId, text, analysis, job) {
     }
 
     if (improvedResult && improvedResult.text && improvedResult.text.trim().length > 0) {
-        await saveImprovedData(item, resumeId, improvedResult);
+        safeLog('info', 'Starting post-improvement analysis', { itemId: item.id, resumeId });
+        await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, { progress: 80 });
+        const improvedAnalysis = await analyzeImprovedResumeWithLLM(improvedResult.text, job.firm_id, item.file_name);
+        await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, { progress: 90 });
+        await saveImprovedData(item, resumeId, {
+            ...improvedResult,
+            analysis: improvedAnalysis
+        });
     } else {
         safeLog('error', 'Improvement returned empty or no result after successful call', { 
             itemId: item.id, 
@@ -592,6 +600,45 @@ async function saveImprovedData(item, resumeId, improvedResult) {
 }
 
 /**
+ * Process an adaptation item (adapt existing resume to a mission)
+ */
+export async function processAdaptItem(item, job, options) {
+    const missionId = options?.missionId;
+
+    if (!item.resume_id) {
+        throw new Error('Resume ID manquant');
+    }
+
+    if (!missionId) {
+        throw new Error('Mission ID manquant');
+    }
+
+    await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, { progress: 30 });
+
+    const result = await executeResumeAdaptation({
+        resumeId: item.resume_id,
+        missionId,
+        userMetadata: {
+            source: 'batch-job',
+            jobId: job.id,
+            itemId: item.id
+        }
+    });
+
+    await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, {
+        progress: 90,
+        adaptation_id: result.adaptationRecord.id
+    });
+
+    safeLog('info', 'Adapt item processing completed', {
+        itemId: item.id,
+        resumeId: item.resume_id,
+        missionId,
+        adaptationId: result.adaptationRecord.id
+    });
+}
+
+/**
  * Process an improve item (improve existing resume)
  */
 export async function processImproveItem(item, job, _options) {
@@ -689,10 +736,18 @@ export async function processImproveItem(item, job, _options) {
         throw new Error('L\'amélioration a retourné un texte vide. Le CV n\'a pas pu être amélioré.');
     }
 
+    safeLog('info', 'Starting post-improvement analysis (improve job)', { itemId: item.id, resumeId: item.resume_id });
     await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, { progress: 80 });
 
+    const improvedAnalysis = await analyzeImprovedResumeWithLLM(improvedResult.text, job.firm_id, item.file_name);
+
+    await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, { progress: 90 });
+
     // Save improved data (reuse the same function)
-    await saveImprovedData(item, item.resume_id, improvedResult);
+    await saveImprovedData(item, item.resume_id, {
+        ...improvedResult,
+        analysis: improvedAnalysis
+    });
 
     safeLog('info', 'Improve item processing completed', { itemId: item.id, resumeId: item.resume_id });
     await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, { progress: 95 });

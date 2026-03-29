@@ -42,7 +42,7 @@ Application professionnelle de gestion et d'analyse de CVs avec intelligence art
 
 ### Chatbot IA
 - **Assistant conversationnel** : Aide à la rédaction et conseils carrière
-- **Multi-modèles** : Support OpenAI (GPT-5, GPT-4o), Anthropic (Claude), DeepSeek (DeepSeek-V3.2 via `deepseek-chat` et `deepseek-reasoner`), MiniMax et Ollama distant
+- **Multi-modèles** : Support OpenAI (GPT-5.2 / GPT-5.1 / GPT-5 / GPT-4.1 / GPT-4o), Anthropic (Claude Opus 4.x / Sonnet 4 / Claude 3.7 / Claude 3.5), DeepSeek (DeepSeek-V3.2 via `deepseek-chat` et `deepseek-reasoner`), MiniMax et Ollama distant
 - **Contexte CV** : Réponses personnalisées basées sur le profil
 
 ### Administration
@@ -324,7 +324,7 @@ psql -U postgres -d resume_converter < backup.sql
 - `POST /api/llm/openai` - Proxy OpenAI (GPT-5, GPT-4o) avec routage compatible DeepSeek / MiniMax / Ollama selon configuration
 - `POST /api/llm/anthropic` - Proxy Anthropic (Claude) avec routage compatible MiniMax selon configuration
 - `POST /api/llm/messages` - Proxy Anthropic / providers compatibles
-- `POST /api/llm/chat/completions` - Proxy OpenAI-compatible unifie (OpenAI, DeepSeek, MiniMax, Ollama selon configuration)
+- `POST /api/llm/chat/completions` - Proxy OpenAI-compatible unifié (OpenAI, DeepSeek, MiniMax, Ollama selon configuration)
 - `GET /api/llm/circuit-breakers` - Etat des familles LLM (`openai`, `anthropic`, `deepseek`, `minimax`, `ollama`)
 
 ### Cabinets (Firms)
@@ -381,29 +381,32 @@ L'application inclut un monitoring mémoire accessible via :
 L'application supporte plusieurs fournisseurs LLM :
 
 ### OpenAI
-- **GPT-5.2** : Modèle principal (Responses API)
-- **GPT-4o** : Alternative rapide
-- **GPT-4o-mini** : Tâches simples
+- **GPT-5.2 / GPT-5.2-pro / GPT-5.1 / GPT-5** : famille de raisonnement principale (Responses API)
+- **GPT-5-mini / GPT-5-nano** : variantes plus légères pour tâches rapides ou à coût réduit
+- **GPT-4.1 / GPT-4.1-mini / GPT-4.1-nano** : famille non-reasoning à grande fenêtre de contexte
+- **GPT-4o / GPT-4o-mini** : alternatives rapides et polyvalentes
 
 ### Anthropic
-- **Claude 4.6 Sonnet** : Qualité maximale
-- **Claude 4.5 Sonnet** : Meilleur rapport qualité/prix
-- **Claude 3.5 Sonnet** : Fallback économique
+- **Claude Opus 4.1 / Opus 4** : qualité maximale
+- **Claude Sonnet 4** : meilleur compromis performance / coût
+- **Claude 3.7 Sonnet** : génération longue avec sortie élevée
+- **Claude 3.5 Sonnet / Haiku** : modèles plus compacts et économiques
 
 ### DeepSeek
 - **DeepSeek-V3.2 - Standard** : appelé via l'identifiant API `deepseek-chat`
 - **DeepSeek-V3.2 - Raisonnement** : appelé via l'identifiant API `deepseek-reasoner`, avec sanitation serveur du `reasoning_content`
 
 ### MiniMax
-- **MiniMax-M2.7** : modèle principal côté MiniMax
-- **MiniMax-M2.5 / M2.1** : alternatives compatibles OpenAI et Anthropic
+- **MiniMax-M2.7 / MiniMax-M2.7-highspeed** : modèles principaux côté MiniMax
+- **MiniMax-M2.5 / MiniMax-M2.5-highspeed** : alternatives orientées performance / latence
+- **MiniMax-M2.1 / MiniMax-M2.1-highspeed / MiniMax-M2 / M2-her** : variantes compatibles selon le cas d'usage
 
 ### Ollama (distant)
 - Instance Ollama distante uniquement
 - URL configurable dans les paramètres LLM
 - `keep_alive` et `num_ctx` pilotables via les paramètres stockés
 
-Configuration via les paramètres de l'application ou variables d'environnement. L'orchestration serveur passe par un gateway LLM unique avec retries, circuit breakers, sanitation du contenu et métriques bornées.
+Configuration via les paramètres de l'application ou variables d'environnement. L'orchestration serveur passe par un gateway LLM unique avec retries, circuit breakers, sanitation du contenu et métriques bornées. Les providers distants (`openai`, `anthropic`, `deepseek`, `minimax`) utilisent retry + circuit breaker, tandis que `ollama` utilise uniquement un retry réseau léger, sans circuit breaker.
 
 ## 🐳 Docker
 

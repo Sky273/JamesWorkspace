@@ -20,7 +20,7 @@ vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));
 
-import { callOllama, callOllamaWithVision } from '../../services/ollama.service.js';
+import { callOllama, callOllamaWithVision, listOllamaModels, getOllamaRuntimeStatus, pullOllamaModel, runOllamaModel, stopOllamaModel } from '../../services/ollama.service.js';
 
 describe('ollama.service', () => {
     beforeEach(() => {
@@ -30,6 +30,44 @@ describe('ollama.service', () => {
                 models: [{ name: 'qwen3:14b' }]
             }
         });
+    });
+
+    it('retries transient network errors on list models requests', async () => {
+        const timeoutError = new Error('request timeout');
+        timeoutError.code = 'ETIMEDOUT';
+
+        mockAxiosGet
+            .mockRejectedValueOnce(timeoutError)
+            .mockResolvedValueOnce({
+                data: {
+                    models: [{ name: 'qwen3:14b' }]
+                }
+            });
+
+        const result = await listOllamaModels('http://ollama.test:11434');
+
+        expect(result).toHaveLength(1);
+        expect(result[0].name).toBe('qwen3:14b');
+        expect(mockAxiosGet).toHaveBeenCalledTimes(2);
+    });
+
+    it('retries transient network errors on runtime status requests', async () => {
+        const resetError = new Error('socket hang up');
+        resetError.code = 'ECONNRESET';
+
+        mockAxiosGet
+            .mockRejectedValueOnce(resetError)
+            .mockResolvedValueOnce({
+                data: {
+                    models: [{ name: 'qwen3:14b' }]
+                }
+            });
+
+        const result = await getOllamaRuntimeStatus('http://ollama.test:11434');
+
+        expect(result.running).toBe(true);
+        expect(result.activeModel).toBe('qwen3:14b');
+        expect(mockAxiosGet).toHaveBeenCalledTimes(2);
     });
 
     it('strips think blocks from Ollama chat responses', async () => {
@@ -101,6 +139,97 @@ describe('ollama.service', () => {
             expect.objectContaining({ keep_alive: 0 }),
             expect.any(Object)
         );
+    });
+
+    it('retries transient network errors on chat requests', async () => {
+        const timeoutError = new Error('socket hang up');
+        timeoutError.code = 'ECONNRESET';
+
+        mockAxiosPost
+            .mockRejectedValueOnce(timeoutError)
+            .mockResolvedValueOnce({
+                data: {
+                    model: 'qwen3:14b',
+                    message: { content: 'Recovered answer' },
+                    prompt_eval_count: 10,
+                    eval_count: 5
+                }
+            });
+
+        const result = await callOllama(
+            [{ role: 'user', content: 'Analyse ce CV' }],
+            'qwen3:14b',
+            { ollamaBaseUrl: 'http://ollama.test:11434' },
+            { operationType: 'Resume Analysis' }
+        );
+
+        expect(result.content).toBe('Recovered answer');
+        expect(mockAxiosPost).toHaveBeenCalledTimes(2);
+    });
+
+    it('retries transient network errors on vision requests', async () => {
+        const timeoutError = new Error('request timeout');
+        timeoutError.code = 'ETIMEDOUT';
+
+        mockAxiosPost
+            .mockRejectedValueOnce(timeoutError)
+            .mockResolvedValueOnce({
+                data: {
+                    model: 'qwen3:14b',
+                    message: { content: 'Recovered vision answer' },
+                    prompt_eval_count: 10,
+                    eval_count: 5
+                }
+            });
+
+        const result = await callOllamaWithVision(
+            'System prompt',
+            [{ type: 'text', text: 'Describe this image' }],
+            'qwen3:14b',
+            { ollamaBaseUrl: 'http://ollama.test:11434' },
+            { operationType: 'Resume Analysis' }
+        );
+
+        expect(result.content).toBe('Recovered vision answer');
+        expect(mockAxiosPost).toHaveBeenCalledTimes(2);
+    });
+
+    it('retries transient network errors on pull model requests', async () => {
+        const resetError = new Error('socket hang up');
+        resetError.code = 'ECONNRESET';
+
+        mockAxiosPost
+            .mockRejectedValueOnce(resetError)
+            .mockResolvedValueOnce({ data: { status: 'success' } });
+
+        const result = await pullOllamaModel('qwen3:14b', { ollamaBaseUrl: 'http://ollama.test:11434' });
+
+        expect(result.status).toBe('success');
+        expect(mockAxiosPost).toHaveBeenCalledTimes(2);
+    });
+
+    it('retries transient network errors on run and stop requests', async () => {
+        const timeoutError = new Error('request timeout');
+        timeoutError.code = 'ETIMEDOUT';
+
+        mockAxiosGet.mockResolvedValue({
+            data: {
+                models: [{ name: 'qwen3:14b' }]
+            }
+        });
+
+        mockAxiosPost
+            .mockRejectedValueOnce(timeoutError)
+            .mockResolvedValueOnce({ data: {} })
+            .mockRejectedValueOnce(timeoutError)
+            .mockResolvedValueOnce({ data: {} });
+
+        const runResult = await runOllamaModel('qwen3:14b', { ollamaBaseUrl: 'http://ollama.test:11434' });
+        const stopResult = await stopOllamaModel('qwen3:14b', { ollamaBaseUrl: 'http://ollama.test:11434' });
+
+        expect(runResult.status).toBe('running');
+        expect(stopResult.status).toBe('stopped');
+        expect(mockAxiosPost).toHaveBeenCalledTimes(4);
     });
 
     it('rejects responses that only contain reasoning fields', async () => {

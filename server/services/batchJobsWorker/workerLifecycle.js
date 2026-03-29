@@ -13,10 +13,11 @@ import {
     updateJobStatus,
     updateJobItemStatus,
     updateJobCounters,
-    isJobComplete
+    isJobComplete,
+    getFinalJobOutcome
 } from '../batchJobs.service.js';
 import { resetLLMQueue } from './llmIntegration.js';
-import { processImportItem, processImproveItem } from './itemProcessors.js';
+import { processImportItem, processImproveItem, processAdaptItem } from './itemProcessors.js';
 import { generateJobExport } from './exportGenerator.js';
 
 // Worker configuration
@@ -205,8 +206,17 @@ async function processNextBatch() {
                         await updateJobCounters(job.id);
                     }
                     
-                    await updateJobStatus(job.id, JOB_STATUS.COMPLETED);
-                    safeLog('info', 'Batch job completed', { jobId: job.id });
+                    const outcome = await getFinalJobOutcome(job.id);
+                    await updateJobStatus(job.id, outcome.status, {
+                        processed_items: outcome.counters.processed_items,
+                        success_count: outcome.counters.success_count,
+                        error_count: outcome.counters.error_count,
+                        ...(outcome.status === JOB_STATUS.FAILED ? { error_message: 'One or more batch items failed' } : {})
+                    });
+                    safeLog('info', outcome.status === JOB_STATUS.FAILED ? 'Batch job failed with item errors' : 'Batch job completed', {
+                        jobId: job.id,
+                        ...outcome.counters
+                    });
                 }
                 continue;
             }
@@ -233,8 +243,17 @@ async function processNextBatch() {
                     await updateJobCounters(job.id);
                 }
                 
-                await updateJobStatus(job.id, JOB_STATUS.COMPLETED);
-                safeLog('info', 'Batch job completed', { jobId: job.id });
+                const outcome = await getFinalJobOutcome(job.id);
+                await updateJobStatus(job.id, outcome.status, {
+                    processed_items: outcome.counters.processed_items,
+                    success_count: outcome.counters.success_count,
+                    error_count: outcome.counters.error_count,
+                    ...(outcome.status === JOB_STATUS.FAILED ? { error_message: 'One or more batch items failed' } : {})
+                });
+                safeLog('info', outcome.status === JOB_STATUS.FAILED ? 'Batch job failed with item errors' : 'Batch job completed', {
+                    jobId: job.id,
+                    ...outcome.counters
+                });
             }
         } catch (error) {
             safeLog('error', 'Error processing job', { jobId: job.id, error: error.message });
@@ -266,6 +285,8 @@ async function processItem(item, job) {
             await processImportItem(item, job, options);
         } else if (job.job_type === 'improve') {
             await processImproveItem(item, job, options);
+        } else if (job.job_type === 'adapt') {
+            await processAdaptItem(item, job, options);
         } else if (job.job_type === 'deal-export') {
             // Deal-export items don't need individual processing - 
             // the actual export happens in generateJobExport when the job completes

@@ -3,7 +3,9 @@
  * Handles API calls for adapting resumes to specific job missions/offers
  */
 
-import { fetchWithAuth, createAuthOptions, createAuthOptionsWithCsrf } from './apiInterceptor';
+import { fetchWithAuth, createAuthOptions, createAuthOptionsWithCsrf, getResponseErrorMessage } from './apiInterceptor';
+import { createAndTrackJob } from './longRunningOperation';
+import { createResumeAdaptationJob, waitForResumeAdaptationJobCompletion } from './resumeAdaptationJob';
 import logger from './logger.frontend';
 
 export interface Recommendations {
@@ -30,10 +32,18 @@ export interface Adaptation {
     resumeId: string;
     missionId: string;
     adaptedText?: string;
+    adaptedTitle?: string | null;
+    matchScore?: string | number;
     analysis?: MatchAnalysis;
+    matchAnalysis?: MatchAnalysis;
+    adaptationId?: string;
     status?: string;
     createdAt?: string;
     updatedAt?: string;
+    'Adapted Text'?: string;
+    'Adapted Title'?: string | null;
+    'Match Score'?: string | number;
+    'Match Analysis'?: MatchAnalysis;
 }
 
 export interface AdaptationFilters {
@@ -76,24 +86,44 @@ export const resumeAdaptationService = {
      */
     async createAdaptation(resumeId: string, missionId: string): Promise<Adaptation> {
         try {
-            const authOptions = await createAuthOptionsWithCsrf({ 
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ missionId })
-            });
-            // Use 180 second timeout for adaptation (involves multiple LLM calls)
-            const response = await fetchWithAuth(
-                `/api/resumes/${resumeId}/adapt`,
-                authOptions,
-                180000
-            );
+            const { hydrated } = await createAndTrackJob({
+                create: () => createResumeAdaptationJob({ resumeId, missionId }),
+                getJobId: created => created.id,
+                track: (jobId) => waitForResumeAdaptationJobCompletion({ jobId, resumeId }),
+                hydrate: async (adaptationId) => {
+                    const response = await fetchWithAuth(
+                        `/api/adaptations/${adaptationId}`,
+                        createAuthOptions({ method: 'GET' })
+                    );
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to create adaptation');
+                    if (!response.ok) {
+                        const errorMessage = await getResponseErrorMessage(response, 'Failed to fetch completed adaptation');
+                        throw new Error(errorMessage);
+                    }
+
+                    const data = await response.json();
+                    return {
+                        id: data.id,
+                        resumeId: data['Resume ID'],
+                        missionId: data['Mission ID'],
+                        adaptedText: data['Adapted Text'],
+                        analysis: data['Match Analysis'],
+                        matchAnalysis: data['Match Analysis'],
+                        adaptationId: data.id,
+                        adaptedTitle: data['Adapted Title'],
+                        matchScore: data['Match Score'],
+                        status: data.Status,
+                        createdAt: data['Created At'],
+                        updatedAt: data['Updated At']
+                    } satisfies Adaptation & Record<string, unknown>;
+                }
+            });
+
+            if (!hydrated) {
+                throw new Error('Adaptation job completed without a hydrated result');
             }
 
-            return await response.json();
+            return hydrated as Adaptation;
         } catch (error) {
             logger.error('Error creating resume adaptation:', error);
             throw error;

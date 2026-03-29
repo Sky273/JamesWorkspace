@@ -440,10 +440,10 @@ EXECUTE FUNCTION sync_customer_name();
 
 | Provider | Modèles | Usage |
 |----------|---------|-------|
-| **OpenAI** | GPT-4, GPT-4o, GPT-5.x | Analyse, amélioration, adaptation |
-| **Anthropic** | Claude 3.x / Claude 4.x | Alternative à OpenAI |
+| **OpenAI** | GPT-5.2 / GPT-5.1 / GPT-5, GPT-4.1, GPT-4o | Analyse, amélioration, adaptation |
+| **Anthropic** | Claude Opus 4.x, Claude Sonnet 4, Claude 3.7, Claude 3.5 | Alternative à OpenAI |
 | **DeepSeek** | DeepSeek-V3.2 via `deepseek-chat` et `deepseek-reasoner` | Alternative OpenAI-compatible avec deux modes d'appel : standard et raisonnement |
-| **MiniMax** | MiniMax-M2.7, MiniMax-M2.5, MiniMax-M2.1 | Alternative API-compatible pour analyse, amélioration, adaptation |
+| **MiniMax** | MiniMax-M2.7, MiniMax-M2.7-highspeed, MiniMax-M2.5, MiniMax-M2.5-highspeed, MiniMax-M2.1, MiniMax-M2, M2-her | Alternative API-compatible pour analyse, amélioration, adaptation |
 | **Ollama (distant)** | Modèles exposés par une instance Ollama externe | Exécution via une URL Ollama distante, sans moteur Ollama embarqué dans le conteneur |
 
 ### Gateway LLM Unifié
@@ -482,6 +482,8 @@ Les responsabilités sont maintenant séparées :
 ### Résilience et observabilité
 
 - Retry et circuit breaker pour `openai`, `anthropic`, `deepseek` et `minimax`
+- Retry réseau léger pour `ollama` sur les appels data plane et control plane, sans circuit breaker
+- L'indicateur `ollama` dans `/api/llm/circuit-breakers` reste volontairement `NOT_APPLICABLE` pour refléter ce choix d'architecture
 - Indicateur d'état par famille via `/api/llm/circuit-breakers`
 - Health checks profonds via `/api/health?deep=true`
 - Métriques LLM normalisées et bornées pour éviter la cardinalité non contrôlée en mémoire

@@ -6,7 +6,7 @@
 import express from 'express';
 import fs from 'fs';
 import { authenticateToken } from '../middleware/auth.middleware.js';
-import { validateBody, validateParams, batchImproveSchema, batchDealExportSchema, provideNameSchema } from '../utils/validation.js';
+import { validateBody, validateParams, batchImproveSchema, batchAdaptSchema, batchDealExportSchema, provideNameSchema } from '../utils/validation.js';
 import { safeLog } from '../utils/logger.backend.js';
 import multer from 'multer';
 import {
@@ -55,7 +55,8 @@ function normalizeBatchJobPayload(payload = {}) {
         dealId: getFirstDefinedValue(payload, ['dealId', 'deal_id']),
         profileType: getFirstDefinedValue(payload, ['profileType', 'profile_type']),
         candidateName: getFirstDefinedValue(payload, ['candidateName', 'candidate_name']),
-        candidateEmail: getFirstDefinedValue(payload, ['candidateEmail', 'candidate_email'])
+        candidateEmail: getFirstDefinedValue(payload, ['candidateEmail', 'candidate_email']),
+        missionId: getFirstDefinedValue(payload, ['missionId', 'mission_id'])
     };
 }
 
@@ -219,6 +220,15 @@ router.post('/improve', authenticateToken, validateBody(batchImproveSchema), asy
         const normalizedPayload = normalizeBatchJobPayload(req.body);
         const { resumeIds, options: jobOptions = {} } = normalizedPayload;
 
+        safeLog('info', 'Batch improvement job request received', {
+            userId,
+            isAdmin,
+            userFirmId,
+            requestedFirmId: normalizedPayload.firm_id || null,
+            resumeCount: Array.isArray(resumeIds) ? resumeIds.length : 0,
+            hasOptions: !!jobOptions && Object.keys(jobOptions).length > 0
+        });
+
         if (!resumeIds || !Array.isArray(resumeIds) || resumeIds.length === 0) {
             return res.status(400).json({ error: 'Resume IDs requis' });
         }
@@ -259,6 +269,63 @@ router.post('/improve', authenticateToken, validateBody(batchImproveSchema), asy
     } catch (error) {
         safeLog('error', 'Failed to create batch improvement job', { error: error.message });
         res.status(500).json({ error: error.message || 'Erreur lors de la création du job' });
+    }
+});
+
+/**
+ * POST /api/batch-jobs/adapt
+ * Create a batch adaptation job for existing resumes and a mission
+ */
+router.post('/adapt', authenticateToken, validateBody(batchAdaptSchema), async (req, res) => {
+    try {
+        const userId = req.user?.id;
+        const isAdmin = req.user?.role === 'admin';
+        const userFirmId = req.user?.firmId || req.user?.firm_id;
+
+        const normalizedPayload = normalizeBatchJobPayload(req.body);
+        const { resumeIds, missionId, options: jobOptions = {} } = normalizedPayload;
+
+        if (!resumeIds || !Array.isArray(resumeIds) || resumeIds.length === 0) {
+            return res.status(400).json({ error: 'Resume IDs requis' });
+        }
+
+        if (!missionId) {
+            return res.status(400).json({ error: 'Mission ID requis' });
+        }
+
+        let firmId = userFirmId;
+        if (isAdmin && normalizedPayload.firm_id) {
+            firmId = normalizedPayload.firm_id;
+        }
+
+        if (!firmId) {
+            return res.status(400).json({ error: 'Firm ID requis' });
+        }
+
+        const job = await createJob({
+            firmId,
+            userId,
+            jobType: 'adapt',
+            options: {
+                ...jobOptions,
+                missionId,
+                adapt: true
+            }
+        });
+
+        await addJobResumeIds(job.id, resumeIds);
+        const updatedJob = await getJob(job.id);
+
+        safeLog('info', 'Batch adaptation job created via API', {
+            jobId: job.id,
+            resumeCount: resumeIds.length,
+            missionId
+        });
+
+        res.status(201).json(updatedJob);
+    } catch (error) {
+        safeLog('error', 'Failed to create batch adaptation job', { error: error.message });
+        res.status(500).json({ error: error.message || 'Erreur lors de la cr?ation du job' });
     }
 });
 

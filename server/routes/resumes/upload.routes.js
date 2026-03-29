@@ -13,6 +13,7 @@ import { authenticateToken } from '../../middleware/auth.middleware.js';
 import { uploadLimiter } from '../../middleware/rateLimit.middleware.js';
 import { safeLog } from '../../utils/logger.backend.js';
 import { metrics } from '../../services/metrics.service.js';
+import { loadPdfDocument } from '../../utils/pdfjs.server.js';
 import { getUserFirmId, isValidUUID, getFirmById } from '../../utils/firmHelpers.js';
 import * as resumesService from '../../services/resumes.service.js';
 
@@ -251,11 +252,9 @@ router.post('/extract-pdf', authenticateToken, uploadLimiter, uploadPdfFile, asy
             fileName: req.file.originalname,
             fileSize: fileBuffer.length
         });
-
-        const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
         const uint8Array = new Uint8Array(fileBuffer);
 
-        const loadingTask = pdfjsLib.getDocument({ data: uint8Array });
+        const loadingTask = await loadPdfDocument(uint8Array);
         const pdf = await loadingTask.promise;
 
         if (pdf.numPages > MAX_PDF_EXTRACTION_PAGES) {

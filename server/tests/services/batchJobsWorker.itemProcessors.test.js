@@ -54,7 +54,12 @@ vi.mock('../../services/consent.service.js', () => ({
     markConsentError: (...args) => mockMarkConsentError(...args)
 }));
 
-import { processImportItem, processImproveItem } from '../../services/batchJobsWorker/itemProcessors.js';
+const mockExecuteResumeAdaptation = vi.fn();
+vi.mock('../../services/resumeAdaptation.service.js', () => ({
+    executeResumeAdaptation: (...args) => mockExecuteResumeAdaptation(...args)
+}));
+
+import { processImportItem, processImproveItem, processAdaptItem } from '../../services/batchJobsWorker/itemProcessors.js';
 import { updateJobItemStatus } from '../../services/batchJobs.service.js';
 
 describe('Batch Jobs Worker - Item Processors', () => {
@@ -223,6 +228,30 @@ describe('Batch Jobs Worker - Item Processors', () => {
             expect(mockImprove).toHaveBeenCalled();
             // Should save improved data
             expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('improved_text'), expect.any(Array));
+        });
+    });
+
+    describe('processAdaptItem', () => {
+        it('should throw if no resume_id', async () => {
+            await expect(processAdaptItem({ id: 'ia1' }, job, { missionId: 'm1' })).rejects.toThrow('Resume ID manquant');
+        });
+
+        it('should throw if no missionId in job options', async () => {
+            await expect(processAdaptItem({ id: 'ia2', resume_id: 'res-1' }, job, {})).rejects.toThrow('Mission ID manquant');
+        });
+
+        it('should create an adaptation and persist adaptation_id on the job item', async () => {
+            mockExecuteResumeAdaptation.mockResolvedValueOnce({
+                adaptationRecord: { id: 'adapt-1' }
+            });
+
+            await processAdaptItem({ id: 'ia3', resume_id: 'res-1', file_name: 'cv.pdf' }, job, { missionId: 'm1' });
+
+            expect(mockExecuteResumeAdaptation).toHaveBeenCalledWith(expect.objectContaining({
+                resumeId: 'res-1',
+                missionId: 'm1'
+            }));
+            expect(updateJobItemStatus).toHaveBeenCalledWith('ia3', 'processing', expect.objectContaining({ adaptation_id: 'adapt-1' }));
         });
     });
 

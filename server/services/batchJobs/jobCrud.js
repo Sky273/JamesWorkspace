@@ -349,3 +349,31 @@ export async function isJobComplete(jobId) {
         return false;
     }
 }
+
+
+export async function getFinalJobOutcome(jobId) {
+    try {
+        const result = await query(`
+            SELECT
+                COUNT(*) FILTER (WHERE status IN ('success', 'error', 'skipped'))::int AS processed_items,
+                COUNT(*) FILTER (WHERE status = 'success')::int AS success_count,
+                COUNT(*) FILTER (WHERE status = 'error')::int AS error_count
+            FROM batch_job_items
+            WHERE job_id = $1
+        `, [jobId]);
+
+        const counters = result.rows[0] || {
+            processed_items: 0,
+            success_count: 0,
+            error_count: 0
+        };
+
+        return {
+            status: counters.error_count > 0 ? JOB_STATUS.FAILED : JOB_STATUS.COMPLETED,
+            counters
+        };
+    } catch (error) {
+        safeLog('error', 'Failed to derive final batch job outcome', { error: error.message, jobId });
+        throw error;
+    }
+}

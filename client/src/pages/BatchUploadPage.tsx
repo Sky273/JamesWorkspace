@@ -167,9 +167,6 @@ const BatchUploadPage = (): JSX.Element => {
     filesRef,
     isMountedRef,
     abortControllerRef,
-    processedResumeIdsRef,
-    keepAliveIntervalRef,
-    timeoutRefs,
     isAdmin,
     selectedFirmId,
     improveOption,
@@ -177,12 +174,9 @@ const BatchUploadPage = (): JSX.Element => {
     exportFormats,
     selectedTemplate,
     deleteAfterExport,
-    isProcessing,
     setFiles,
     setIsProcessing,
     updateFileStatus,
-    startBatchExport,
-    deleteProcessedResumes,
   });
 
   // --- Dropzone ---

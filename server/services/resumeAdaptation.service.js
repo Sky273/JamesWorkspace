@@ -1,0 +1,122 @@
+import { findResumeRecord, findMissionRecord, createAdaptation } from './resumes.service.js';
+import { matchResumeWithMission, adaptResumeToMission } from './openai.service.js';
+import { getLLMSettings } from './settings.service.js';
+import { getAcceptedIndustriesString } from './industry.service.js';
+import {
+    DEFAULT_MATCH_ANALYSIS_PROMPT,
+    DEFAULT_ADAPTATION_PROMPT,
+    ANONYMIZATION_RULES_ANONYMOUS,
+    ANONYMIZATION_RULES_NOMINATIVE
+} from '../config/prompts.backend.js';
+import { safeLog } from '../utils/logger.backend.js';
+
+function parseMatchScore(matchAnalysis) {
+    if (!matchAnalysis?.matchScore) {
+        return null;
+    }
+
+    const parsed = parseFloat(String(matchAnalysis.matchScore).replace('%', ''));
+    return Number.isNaN(parsed) ? null : parsed;
+}
+
+export async function executeResumeAdaptation({
+    resumeId,
+    missionId,
+    userMetadata = null
+}) {
+    if (!missionId) {
+        throw new Error('Mission ID is required');
+    }
+
+    const resumeRecord = await findResumeRecord(resumeId);
+    const missionRecord = await findMissionRecord(missionId);
+
+    const resumeText = resumeRecord.improved_text || resumeRecord.original_text;
+    const missionTitle = missionRecord.title || '';
+    const missionContent = missionRecord.content || '';
+
+    if (!resumeText) {
+        throw new Error('Resume has no text content');
+    }
+
+    const settings = await getLLMSettings();
+    const model = settings.llmModel;
+    const cvMode = settings.cvMode || 'nominative';
+
+    if (!model && settings.llmProvider !== 'ollama') {
+        throw new Error('LLM model not configured in Settings.');
+    }
+
+    const originalFileName = resumeRecord.original_file_name || resumeRecord.name || null;
+    const fileNameValue = originalFileName || 'Non disponible';
+
+    const acceptedIndustries = await getAcceptedIndustriesString();
+    let adaptationPrompt = settings['Adaptation Prompt'] || DEFAULT_ADAPTATION_PROMPT;
+    adaptationPrompt = adaptationPrompt.replace('{ACCEPTED_INDUSTRIES}', acceptedIndustries);
+
+    let anonymizationRules = cvMode === 'anonymous' ? ANONYMIZATION_RULES_ANONYMOUS : ANONYMIZATION_RULES_NOMINATIVE;
+    anonymizationRules = anonymizationRules.replace(/{FILENAME}/g, fileNameValue);
+    adaptationPrompt = adaptationPrompt.replace('{ANONYMIZATION_RULES}', anonymizationRules);
+    adaptationPrompt = adaptationPrompt.replace('{FILENAME}', fileNameValue);
+
+    const matchPrompt = settings['Match Analysis Prompt'] || DEFAULT_MATCH_ANALYSIS_PROMPT;
+    const matchAnalysis = await matchResumeWithMission(
+        resumeText,
+        missionTitle,
+        missionContent,
+        model,
+        matchPrompt,
+        userMetadata
+    );
+
+    const adaptationResult = await adaptResumeToMission({
+        resumeText,
+        missionTitle,
+        missionContent,
+        matchAnalysis,
+        model,
+        adaptationPrompt,
+        userMetadata
+    });
+
+    const adaptedText = typeof adaptationResult === 'string' ? adaptationResult : adaptationResult.adaptedText;
+    const adaptedTitle = typeof adaptationResult === 'string' ? null : (adaptationResult.adaptedTitle || null);
+    const structuredData = typeof adaptationResult === 'string' ? null : (adaptationResult.structuredData || null);
+    const adaptationNotes = structuredData?.adaptationNotes
+        ? JSON.stringify(structuredData.adaptationNotes)
+        : null;
+
+    const adaptationRecord = await createAdaptation({
+        resume_id: resumeRecord.id,
+        mission_id: missionRecord.id,
+        resume_name: resumeRecord.name || null,
+        candidate_name: resumeRecord.candidate_name || null,
+        adapted_title: adaptedTitle,
+        mission_title: missionTitle || null,
+        mission_content: missionContent || null,
+        firm: resumeRecord.firm_name || null,
+        adapted_text: adaptedText,
+        adaptation_notes: adaptationNotes,
+        match_score: parseMatchScore(matchAnalysis),
+        match_analysis: matchAnalysis ? JSON.stringify(matchAnalysis) : null,
+        status: 'completed'
+    });
+
+    safeLog('info', 'Resume adaptation created', {
+        resumeId: resumeRecord.id,
+        missionId: missionRecord.id,
+        adaptationId: adaptationRecord.id,
+        model
+    });
+
+    return {
+        resumeRecord,
+        missionRecord,
+        adaptationRecord,
+        matchAnalysis,
+        adaptedText,
+        adaptedTitle,
+        structuredAdaptation: structuredData,
+        adaptationNotes: structuredData?.adaptationNotes || null
+    };
+}

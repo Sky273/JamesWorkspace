@@ -2,6 +2,7 @@ import axios from 'axios';
 import { OPENAI_API_KEY } from '../config/constants.js';
 import { buildLLMMetricLabel, metrics } from './metrics.service.js';
 import { getOpenAICompatibleTokenParam, supportsCustomTemperatureForOpenAICompatible } from './llmProviderCommon.service.js';
+import { clampModelMaxOutputTokens } from './llmModelCapabilities.service.js';
 import { stripLlmThinkingContent } from './openai/textUtils.js';
 
 export async function callOpenAIChat(messages, model, options = {}) {
@@ -9,10 +10,12 @@ export async function callOpenAIChat(messages, model, options = {}) {
         throw new Error('OpenAI API key not configured');
     }
 
+    const { effectiveMaxTokens } = clampModelMaxOutputTokens('openai', model, options.max_tokens || 1000, 1000);
+
     const requestBody = {
         model,
         messages,
-        ...getOpenAICompatibleTokenParam(model, options.max_tokens || 1000)
+        ...getOpenAICompatibleTokenParam(model, effectiveMaxTokens)
     };
 
     if (options.temperature !== undefined && supportsCustomTemperatureForOpenAICompatible(model)) {
@@ -69,10 +72,12 @@ export async function callOpenAIVisionChat(systemPrompt, userContent, model, opt
         { role: 'user', content: userContent }
     ];
 
+    const { effectiveMaxTokens } = clampModelMaxOutputTokens('openai', visionModel, options.max_tokens || 4000, 4000);
+
     const requestBody = {
         model: visionModel,
         messages,
-        ...getOpenAICompatibleTokenParam(visionModel, options.max_tokens || 4000)
+        ...getOpenAICompatibleTokenParam(visionModel, effectiveMaxTokens)
     };
 
     if (options.temperature !== undefined && supportsCustomTemperatureForOpenAICompatible(visionModel)) {

@@ -108,6 +108,7 @@ vi.mock('../../utils/validation.js', () => ({
     validateBody: () => (req, res, next) => next(),
     validateParams: () => (req, res, next) => next(),
     batchImproveSchema: {},
+    batchAdaptSchema: {},
     batchDealExportSchema: {},
     provideNameSchema: {}
 }));
@@ -481,6 +482,42 @@ describe('Batch Jobs Routes - POST /api/batch-jobs/improve', () => {
 
         expect(res.status).toBe(201);
         expect(mockCreateJob).toHaveBeenCalledWith(expect.objectContaining({ firmId: 'firm-override', jobType: 'improve' }));
+    });
+});
+
+describe('Batch Jobs Routes - POST /api/batch-jobs/adapt', () => {
+    let app;
+
+    beforeEach(() => {
+        vi.resetAllMocks();
+        app = createTestApp();
+    });
+
+    it('should create adapt job with missionId and camelCase firmId', async () => {
+        mockCreateJob.mockResolvedValueOnce({ id: 'job-adapt', status: 'pending' });
+        mockAddJobResumeIds.mockResolvedValueOnce(1);
+        mockGetJob.mockResolvedValueOnce({ id: 'job-adapt', status: 'pending', firm_id: 'firm-override' });
+
+        const res = await request(app)
+            .post('/api/batch-jobs/adapt')
+            .set('Authorization', 'Bearer valid-token')
+            .set('x-test-role', 'admin')
+            .send({
+                resumeIds: ['123e4567-e89b-12d3-a456-426614174000'],
+                missionId: '123e4567-e89b-12d3-a456-426614174001',
+                firmId: 'firm-override',
+                options: { mode: 'targeted' }
+            });
+
+        expect(res.status).toBe(201);
+        expect(mockCreateJob).toHaveBeenCalledWith(expect.objectContaining({
+            firmId: 'firm-override',
+            jobType: 'adapt',
+            options: expect.objectContaining({
+                missionId: '123e4567-e89b-12d3-a456-426614174001',
+                adapt: true
+            })
+        }));
     });
 });
 

@@ -7,6 +7,7 @@ import { safeLog } from '../utils/logger.backend.js';
 import { validatePromptSize } from '../utils/postgresHelpers.js';
 import { securityLog, LOG_LEVELS, SECURITY_EVENTS } from './security.service.js';
 import { withRetry, getCircuitBreakerStates } from './retry.service.js';
+import { clampModelMaxOutputTokens } from './llmModelCapabilities.service.js';
 
 const DEEPSEEK_CHAT_API_URL = `${DEEPSEEK_BASE_URL.replace(/\/$/, '')}/chat/completions`;
 
@@ -34,6 +35,17 @@ export async function callDeepSeek({
         throw new Error('Messages array is required and must not be empty');
     }
 
+    const { requestedMaxTokens, effectiveMaxTokens, providerCap } = clampModelMaxOutputTokens('deepseek', model, maxTokens, 4096);
+
+    if (effectiveMaxTokens !== requestedMaxTokens) {
+        safeLog('warn', 'Clamped DeepSeek max tokens to provider limit', {
+            model,
+            requestedMaxTokens,
+            effectiveMaxTokens,
+            providerCap
+        });
+    }
+
     if (maxPromptLength) {
         const combinedPrompt = messages.map(message => flattenLlmTextContent(message.content)).join('\n');
         const promptValidation = validatePromptSize(combinedPrompt, maxPromptLength);
@@ -52,13 +64,13 @@ export async function callDeepSeek({
         metadata: {
             model,
             messageCount: messages.length,
-            maxTokens
+            maxTokens: effectiveMaxTokens
         }
     });
 
     try {
         const requestParams = buildOpenAICompatibleParams(model, {
-            maxTokens,
+            maxTokens: effectiveMaxTokens,
             temperature,
             topP,
             additionalParams: {
@@ -70,7 +82,7 @@ export async function callDeepSeek({
         safeLog('info', 'DeepSeek request', {
             model,
             messageCount: messages.length,
-            maxTokens,
+            maxTokens: effectiveMaxTokens,
             temperature,
             topP
         });

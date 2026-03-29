@@ -5,7 +5,7 @@
 
 import { safeLog } from '../../utils/logger.backend.js';
 import { JOB_STATUS, ITEM_STATUS, WORKER_INTERVAL } from './constants.js';
-import { getPendingJobs, updateJobStatus, updateJobCounters, isJobComplete } from './jobCrud.js';
+import { getPendingJobs, updateJobStatus, updateJobCounters, isJobComplete, getFinalJobOutcome } from './jobCrud.js';
 import { getPendingItems, updateJobItemStatus } from './itemCrud.js';
 
 // Worker state
@@ -68,8 +68,17 @@ async function processNextBatch(processItemFn) {
             // No more items, check if job is complete
             if (await isJobComplete(job.id)) {
                 await updateJobCounters(job.id);
-                await updateJobStatus(job.id, JOB_STATUS.COMPLETED);
-                safeLog('info', 'Batch job completed', { jobId: job.id });
+                const outcome = await getFinalJobOutcome(job.id);
+                await updateJobStatus(job.id, outcome.status, {
+                    processed_items: outcome.counters.processed_items,
+                    success_count: outcome.counters.success_count,
+                    error_count: outcome.counters.error_count,
+                    ...(outcome.status === JOB_STATUS.FAILED ? { error_message: 'One or more batch items failed' } : {})
+                });
+                safeLog('info', outcome.status === JOB_STATUS.FAILED ? 'Batch job failed with item errors' : 'Batch job completed', {
+                    jobId: job.id,
+                    ...outcome.counters
+                });
             }
             continue;
         }
@@ -100,8 +109,17 @@ async function processNextBatch(processItemFn) {
 
         // Check if job is complete
         if (await isJobComplete(job.id)) {
-            await updateJobStatus(job.id, JOB_STATUS.COMPLETED);
-            safeLog('info', 'Batch job completed', { jobId: job.id });
+            const outcome = await getFinalJobOutcome(job.id);
+            await updateJobStatus(job.id, outcome.status, {
+                processed_items: outcome.counters.processed_items,
+                success_count: outcome.counters.success_count,
+                error_count: outcome.counters.error_count,
+                ...(outcome.status === JOB_STATUS.FAILED ? { error_message: 'One or more batch items failed' } : {})
+            });
+            safeLog('info', outcome.status === JOB_STATUS.FAILED ? 'Batch job failed with item errors' : 'Batch job completed', {
+                jobId: job.id,
+                ...outcome.counters
+            });
         }
     }
 }

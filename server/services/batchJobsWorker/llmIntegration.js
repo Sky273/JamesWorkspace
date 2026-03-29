@@ -130,10 +130,10 @@ export async function analyzeResumeWithLLM(text, _firmId, originalFileName = nul
  * @param {string} originalFileName - Original file name for name extraction hint
  */
 export async function improveResumeWithLLM(text, analysis, _firmId, originalFileName = null) {
-    const { improveResume, cleanupText, analyzeResume } = await import('../openai.service.js');
-    const { getLLMSettings, calculateWeightedGlobalRating } = await import('../settings.service.js');
-    const { getAcceptedIndustriesString, getIndustryMappingString } = await import('../industry.service.js');
-    const { DEFAULT_IMPROVEMENT_PROMPT, DEFAULT_ANALYSIS_PROMPT, ANONYMIZATION_RULES_ANONYMOUS, ANONYMIZATION_RULES_NOMINATIVE } = await import('../../config/prompts.backend.js');
+    const { improveResume } = await import('../openai.service.js');
+    const { getLLMSettings } = await import('../settings.service.js');
+    const { getAcceptedIndustriesString } = await import('../industry.service.js');
+    const { DEFAULT_IMPROVEMENT_PROMPT, ANONYMIZATION_RULES_ANONYMOUS, ANONYMIZATION_RULES_NOMINATIVE } = await import('../../config/prompts.backend.js');
 
     const settings = await getLLMSettings();
     const model = settings.llmModel;
@@ -144,37 +144,27 @@ export async function improveResumeWithLLM(text, analysis, _firmId, originalFile
         throw new Error('LLM model not configured');
     }
 
-    // Get filename value for injection
     const fileNameValue = originalFileName || 'Non disponible';
-    
-    // Inject accepted industries (no mapping lexique needed for improvement)
     const acceptedIndustries = await getAcceptedIndustriesString();
     improvementPrompt = improvementPrompt.replace('{ACCEPTED_INDUSTRIES}', acceptedIndustries);
-    
-    // Inject anonymization rules based on cvMode (with FILENAME replaced)
+
     let anonymizationRules = cvMode === 'anonymous' ? ANONYMIZATION_RULES_ANONYMOUS : ANONYMIZATION_RULES_NOMINATIVE;
     anonymizationRules = anonymizationRules.replace(/{FILENAME}/g, fileNameValue);
     improvementPrompt = improvementPrompt.replace('{ANONYMIZATION_RULES}', anonymizationRules);
 
-    // Preserve the structured resume markup for improvement; stripping HTML here flattens the CV.
     const improvementInput = typeof text === 'string' ? text : '';
 
-    // Acquire LLM slot for improvement (rate limiting)
     await acquireLLMSlot();
     let improveResult;
     try {
-        // improveResume returns { text, analysis } object
         improveResult = await improveResume(improvementInput, analysis, model, improvementPrompt, originalFileName);
     } finally {
         releaseLLMSlot();
     }
 
-    // Extract the actual text from the result (improveResume returns { text, analysis })
     const improvedText = typeof improveResult === 'string' ? improveResult : improveResult?.text;
-    
-    // Validate that we have actual content (not null, undefined, or empty string)
     if (!improvedText || improvedText.trim().length === 0) {
-        throw new Error('L\'amélioration LLM a retourné un texte vide. Le CV n\'a pas pu être amélioré.');
+        throw new Error('Improvement LLM returned empty text. Resume could not be improved.');
     }
 
     if (looksLikeHtml(text) && !looksLikeHtml(improvedText)) {
@@ -191,21 +181,45 @@ export async function improveResumeWithLLM(text, analysis, _firmId, originalFile
         textPreview: improvedText?.substring(0, 100)
     });
 
-    // Re-analyze the improved text (with rate limiting)
-    const industryMapping = await getIndustryMappingString();
+    return {
+        text: improvedText,
+        analysis: typeof improveResult === 'string' ? null : (improveResult?.analysis || null)
+    };
+}
+
+export async function analyzeImprovedResumeWithLLM(text, _firmId, originalFileName = null) {
+    const { analyzeResume } = await import('../openai.service.js');
+    const { getLLMSettings, calculateWeightedGlobalRating } = await import('../settings.service.js');
+    const { getAcceptedIndustriesString, getIndustryMappingString } = await import('../industry.service.js');
+    const { DEFAULT_ANALYSIS_PROMPT, ANONYMIZATION_RULES_ANONYMOUS, ANONYMIZATION_RULES_NOMINATIVE } = await import('../../config/prompts.backend.js');
+
+    const settings = await getLLMSettings();
+    const model = settings.llmModel;
+    const cvMode = settings.cvMode || 'nominative';
     let analysisPrompt = settings['Analysis Prompt'] || DEFAULT_ANALYSIS_PROMPT;
+
+    if (!model && settings.llmProvider !== 'ollama') {
+        throw new Error('LLM model not configured');
+    }
+
+    const fileNameValue = originalFileName || 'Non disponible';
+    const acceptedIndustries = await getAcceptedIndustriesString();
+    const industryMapping = await getIndustryMappingString();
     analysisPrompt = analysisPrompt.replace('{ACCEPTED_INDUSTRIES}', acceptedIndustries);
     analysisPrompt = analysisPrompt.replace('{INDUSTRY_MAPPING}', industryMapping);
+
+    let anonymizationRules = cvMode === 'anonymous' ? ANONYMIZATION_RULES_ANONYMOUS : ANONYMIZATION_RULES_NOMINATIVE;
+    anonymizationRules = anonymizationRules.replace(/{FILENAME}/g, fileNameValue);
     analysisPrompt = analysisPrompt.replace('{ANONYMIZATION_RULES}', anonymizationRules);
 
     await acquireLLMSlot();
     let improvedAnalysis;
     try {
-        improvedAnalysis = await analyzeResume(improvedText, model, analysisPrompt, null, true);
+        improvedAnalysis = await analyzeResume(text, model, analysisPrompt, null, true);
     } finally {
         releaseLLMSlot();
     }
-    
+
     improvedAnalysis = await calculateWeightedGlobalRating(improvedAnalysis, settings);
 
     safeLog('debug', 'Post-improvement analysis completed', {
@@ -217,14 +231,7 @@ export async function improveResumeWithLLM(text, analysis, _firmId, originalFile
         tagsKeys: improvedAnalysis?.tags ? Object.keys(improvedAnalysis.tags) : []
     });
 
-    return {
-        text: improvedText,
-        analysis: improvedAnalysis
-    };
+    return improvedAnalysis;
 }
-
-
-
-
 
 

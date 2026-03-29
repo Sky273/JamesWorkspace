@@ -4,19 +4,18 @@
  */
 
 import { safeLog } from '../../utils/logger.backend.js';
+import { loadPdfDocument } from '../../utils/pdfjs.server.js';
 
 /**
  * Extract text from PDF using pdfjs-dist (more reliable than pdf-parse)
  * Improved to better preserve structure, trigrams, and candidate names
  */
 export async function extractTextFromPDFBuffer(buffer) {
-    const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
-    
     // Convert Buffer to Uint8Array (required by pdfjs-dist)
     const uint8Array = new Uint8Array(buffer);
     
     // Load the PDF document
-    const loadingTask = pdfjsLib.getDocument({ data: uint8Array });
+    const loadingTask = await loadPdfDocument(uint8Array);
     const pdf = await loadingTask.promise;
     
     let fullText = '';

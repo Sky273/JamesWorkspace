@@ -10,12 +10,11 @@ import { createAuthOptionsWithCsrf, fetchWithAuth, fetchWithCsrfRetry, getRespon
 import logger from '../utils/logger.frontend';
 import { showCaughtError, getUserFriendlyMessage } from '../components/errorToast.helpers';
 import { applyResumeUpdate, normalizeResume, normalizeResumeList } from '../utils/resumeNormalization';
-import { createAndTrackJob, pollUntil } from '../utils/longRunningOperation';
+import { createAndTrackJob } from '../utils/longRunningOperation';
+import { deriveResumeImprovementProcessingStep, waitForResumeImprovementJobCompletion } from '../utils/resumeImprovementJob';
 
 import { Resume } from '../types/entities';
 import {
-  FRONTEND_LLM_IMPROVEMENT_TIMEOUT_MS,
-  FRONTEND_RESUME_SAVE_TIMEOUT_MS,
   FRONTEND_SINGLE_UPLOAD_JOB_TIMEOUT_MS,
 } from '../constants/llmTimeouts';
 
@@ -57,8 +56,6 @@ const ResumeContext = createContext<ResumeContextType | undefined>(undefined);
 
 const SINGLE_UPLOAD_JOB_POLL_INTERVAL_MS = 2000;
 const SINGLE_UPLOAD_JOB_TIMEOUT_MS = FRONTEND_SINGLE_UPLOAD_JOB_TIMEOUT_MS;
-const POST_IMPROVEMENT_REFRESH_INTERVAL_MS = 2000;
-const POST_IMPROVEMENT_REFRESH_MAX_ATTEMPTS = 45;
 const getResumeIdentifier = (resume: Resume | null | undefined): string | undefined => {
   if (!resume) return undefined;
   const candidates = [resume.id, resume['ID']];
@@ -171,21 +168,6 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
     return 'upload';
   };
 
-  const hasImprovedSuggestions = (resume: Resume): boolean => {
-    const rawSuggestions = resume['Improved Key Improvements'] || resume.improvedKeyImprovements;
-    if (!rawSuggestions) return false;
-
-    try {
-      const parsed = typeof rawSuggestions === 'string' ? JSON.parse(rawSuggestions) : rawSuggestions;
-      if (!parsed || typeof parsed !== 'object') return false;
-      return Object.values(parsed as Record<string, unknown>).some(value =>
-        Array.isArray(value) ? value.length > 0 : Boolean(value)
-      );
-    } catch {
-      return false;
-    }
-  };
-
   const fetchResumeById = useCallback(async (resumeId: string, signal: AbortSignal): Promise<Resume> => {
     const fetchOptions = await createAuthOptionsWithCsrf({ method: 'GET' });
     const response = await fetchWithAuth(`/api/resumes/${resumeId}`, {
@@ -201,35 +183,6 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
     return normalizeResume(await response.json());
   }, []);
 
-  const refreshResumeAfterDeferredPostAnalysis = useCallback((resumeId: string): void => {
-    void (async () => {
-      let attempts = 0;
-
-      try {
-        const refreshedResume = await pollUntil({
-          poll: async () => {
-            attempts += 1;
-            return fetchResumeById(resumeId, new AbortController().signal);
-          },
-          isDone: hasImprovedSuggestions,
-          intervalMs: POST_IMPROVEMENT_REFRESH_INTERVAL_MS,
-          timeoutMs: POST_IMPROVEMENT_REFRESH_INTERVAL_MS * POST_IMPROVEMENT_REFRESH_MAX_ATTEMPTS,
-          timeoutMessage: 'Deferred post-improvement suggestions did not arrive in time'
-        });
-
-        setResumes(prev => prev.map(resume => (resume.id === resumeId ? refreshedResume : resume)));
-        setCurrentResumeState(prev => (prev?.id === resumeId ? refreshedResume : prev));
-        logger.info('[ResumeContext] Deferred post-improvement suggestions loaded', { resumeId, attempt: attempts });
-      } catch (error) {
-        if (error instanceof Error && error.message === 'Deferred post-improvement suggestions did not arrive in time') {
-          logger.warn('[ResumeContext] Deferred post-improvement suggestions did not arrive in time', { resumeId });
-          return;
-        }
-
-        logger.warn('[ResumeContext] Deferred post-improvement refresh failed', { resumeId, attempt: attempts, error });
-      }
-    })();
-  }, [fetchResumeById, setResumes]);
 
   const waitForUploadJobCompletion = useCallback(async (jobId: string, signal: AbortSignal): Promise<string> => {
     const startedAt = Date.now();
@@ -393,137 +346,52 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
       throw new Error('Resume ID is missing for improvement');
     }
 
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     setLoading(true);
     setProcessingStep('improving');
 
     try {
-      const text = currentResume['Original Text'];
-      const currentAnalysis = {
-        globalRating: currentResume['Global Rating'],
-        skillsRating: currentResume['Skills Score'],
-        experiencesRating: currentResume['Experience Score'],
-        educationRating: currentResume['Education Score'],
-        atsOptimizationRating: currentResume['ATS Score'],
-        executiveSummaryRating: currentResume['Executive Summary Score'],
-        hobbiesLanguagesRating: currentResume['Hobbies Languages Score'],
-        suggestions: currentResume['Key Improvements'] ? JSON.parse(String(currentResume['Key Improvements'])) : {},
-        name: currentResume['Name'],
-        originalName: currentResume['Original Name'] || currentResume['Name'],
-        title: currentResume['Title']
-      };
+      const authOptions = await createAuthOptionsWithCsrf({
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resumeIds: [resumeId] })
+      });
 
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), FRONTEND_LLM_IMPROVEMENT_TIMEOUT_MS);
+      const { hydrated: improvedResume } = await createAndTrackJob({
+        create: async () => {
+          const response = await fetchWithAuth('/api/batch-jobs/improve', {
+            ...authOptions,
+            signal: controller.signal
+          });
 
-      let response: Response;
-      try {
-        const authOptions = await createAuthOptionsWithCsrf({
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({})
-        });
-        response = await fetchWithCsrfRetry('/api/resumes/' + encodeURIComponent(String(resumeId)) + '/improve', {
-          ...authOptions,
-          signal: controller.signal
-        }, FRONTEND_LLM_IMPROVEMENT_TIMEOUT_MS);
-        clearTimeout(timeoutId);
-      } catch (fetchError) {
-        clearTimeout(timeoutId);
-        logger.error('Fetch error:', fetchError);
-        if (fetchError instanceof Error && fetchError.name === 'AbortError') {
-          throw new Error('Request timed out after 25 minutes.');
-        }
-        throw new Error('Network error: Unable to connect to the server.');
-      }
-
-      if (!response.ok) {
-        const contentType = response.headers.get('content-type') || '';
-        let backendMessage = '';
-        let backendDetails = '';
-
-        if (contentType.includes('application/json')) {
-          const errorData = await response.json().catch(() => null) as Record<string, unknown> | null;
-          const nestedError = errorData?.error;
-
-          if (typeof nestedError === 'string') {
-            backendMessage = nestedError;
-          } else if (nestedError && typeof nestedError === 'object') {
-            backendMessage = String((nestedError as Record<string, unknown>).message || '');
-            backendDetails = JSON.stringify(nestedError);
+          if (!response.ok) {
+            const errorMessage = await getResponseErrorMessage(response, 'Failed to create resume improvement job');
+            throw new Error(errorMessage);
           }
 
-          if (!backendMessage && typeof errorData?.message === 'string') {
-            backendMessage = errorData.message;
+          return response.json() as Promise<{ id?: string }>;
+        },
+        getJobId: created => created.id,
+        track: (jobId) => waitForResumeImprovementJobCompletion({
+          jobId,
+          resumeId,
+          signal: controller.signal,
+          onJobUpdate: (jobData) => {
+            setProcessingStep(deriveResumeImprovementProcessingStep(jobData));
           }
+        }),
+        hydrate: () => fetchResumeById(resumeId, controller.signal)
+      });
 
-          if (!backendDetails && errorData) {
-            backendDetails = JSON.stringify(errorData);
-          }
-        } else {
-          backendDetails = await response.text().catch(() => '');
-          backendMessage = backendDetails.trim();
-        }
-
-        const finalMessage = backendMessage || ('Resume improvement failed (' + response.status + ' ' + response.statusText + ')');
-        logger.error('Resume improvement API error', {
-          status: response.status,
-          statusText: response.statusText,
-          contentType,
-          backendMessage,
-          backendDetails
-        });
-        throw new Error(finalMessage);
+      if (!improvedResume) {
+        throw new Error('Resume improvement job completed without a hydrated resume');
       }
 
-      const responseData = await response.json();
-      const { text: improvedText, analysis: improvedAnalysis, savedResume, postAnalysisPending } = responseData;
-
-      if (savedResume) {
-        const normalizedSavedResume = normalizeResume(savedResume);
-        setResumes(prev => prev.map(resume => (resume.id === resumeId ? normalizedSavedResume : resume)));
-        setCurrentResume(normalizedSavedResume);
-        if (postAnalysisPending) {
-          refreshResumeAfterDeferredPostAnalysis(resumeId);
-        }
-        return normalizedSavedResume;
-      }
-
-      setProcessingStep('analyzing');
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      const improvedSuggestions = improvedAnalysis?.suggestions || improvedAnalysis?.['Key Improvements'] || {};
-      const getScore = (primary: number | string | undefined, fallback: number | string | undefined): number => {
-        if (primary !== undefined && primary !== null) return typeof primary === 'number' ? primary : parseInt(String(primary).replace('%', ''), 10) || 0;
-        if (fallback !== undefined && fallback !== null) return typeof fallback === 'number' ? fallback : parseInt(String(fallback).replace('%', ''), 10) || 0;
-        return 0;
-      };
-
-      const updatePayload = {
-        'Original Text': text,
-        'Improved Text': improvedText,
-        'Improved Global Rating': String(getScore(improvedAnalysis?.globalRating, improvedAnalysis?.['Global Rating'])),
-        'Improved Skills Score': String(getScore(improvedAnalysis?.skillsRating, improvedAnalysis?.['Skills'])),
-        'Improved Experience Score': String(getScore(improvedAnalysis?.experiencesRating, improvedAnalysis?.['Experience'])),
-        'Improved Education Score': String(getScore(improvedAnalysis?.educationRating, improvedAnalysis?.['Education'])),
-        'Improved ATS Score': String(getScore(improvedAnalysis?.atsOptimizationRating, improvedAnalysis?.['ATS Compatibility'])),
-        'Improved Executive Summary Score': String(getScore(improvedAnalysis?.executiveSummaryRating, improvedAnalysis?.['Executive Summary'])),
-        'Improved Hobbies Languages Score': String(getScore(improvedAnalysis?.hobbiesLanguagesRating, improvedAnalysis?.['Hobbies Languages'])),
-        'Improved Skills': JSON.stringify(improvedAnalysis?.tags?.skills || []),
-        'Improved Industries': JSON.stringify(improvedAnalysis?.tags?.industries || []),
-        'Improved Tools': JSON.stringify(improvedAnalysis?.tags?.tools || []),
-        'Improved Soft Skills': JSON.stringify(improvedAnalysis?.tags?.softSkills || []),
-        'Improved Key Improvements': JSON.stringify(improvedSuggestions),
-        'Status': 'Improved' as const,
-        'Last Improved': new Date().toISOString(),
-        'FirmName': user?.firm || undefined
-      };
-
-      try {
-        return await updateResumeAnalysis(resumeId, updatePayload, FRONTEND_RESUME_SAVE_TIMEOUT_MS);
-      } catch (saveError) {
-        logger.error('Error saving improved resume after successful LLM response:', saveError);
-        throw new Error('Failed to save improved resume');
-      }
+      setResumes(prev => prev.map(resume => (resume.id === resumeId ? improvedResume : resume)));
+      setCurrentResume(improvedResume);
+      return improvedResume;
     } catch (error) {
       logger.error('Error improving resume:', error);
       showCaughtError(error);
@@ -532,7 +400,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
       setLoading(false);
       setProcessingStep(null);
     }
-  }, [currentResume, refreshResumeAfterDeferredPostAnalysis, setCurrentResume, setResumes, updateResumeAnalysis, user]);
+  }, [currentResume, fetchResumeById, setCurrentResume, setResumes]);
 
   const updateImprovedContent = useCallback(async (resumeId: string, content: string): Promise<{ success: boolean; currentVersion?: number }> => {
     const updateOptions = await createAuthOptionsWithCsrf({
