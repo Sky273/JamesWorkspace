@@ -50,6 +50,19 @@ vi.mock('../../services/settings.service.js', () => ({
     createSettings: (...args) => mockCreateSettings(...args)
 }));
 
+vi.mock('../../services/llmAvailability.service.js', () => ({
+    getProviderAvailabilityFlags: vi.fn(() => ({
+        minimax: { highspeedEnabled: false }
+    })),
+    resolveAvailableModel: vi.fn((_provider, model) => ({
+        model,
+        adjusted: false,
+        reason: null,
+        originalModel: model,
+        fallbackModel: null
+    }))
+}));
+
 // Mock prompts
 vi.mock('../../config/prompts.backend.js', () => ({
     normalizeWeights: (data) => data,
@@ -62,7 +75,46 @@ vi.mock('../../config/prompts.backend.js', () => ({
 // Mock logger
 vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn(),
-    createModuleLogger: vi.fn(() => vi.fn())
+    createModuleLogger: vi.fn(() => ({
+        info: vi.fn(),
+        error: vi.fn(),
+        warn: vi.fn(),
+        debug: vi.fn()
+    }))
+}));
+
+// Mock security service
+vi.mock('../../services/security.service.js', () => ({
+    securityLog: vi.fn(),
+    getRequestMetadata: vi.fn(() => ({})),
+    LOG_LEVELS: { SECURITY: 'SECURITY' },
+    SECURITY_EVENTS: { SETTINGS_CHANGED: 'SETTINGS_CHANGED' }
+}));
+
+// Mock mappers
+vi.mock('../../utils/mappers.js', () => ({
+    mapSettingsToFrontend: vi.fn((settings) => settings ? ({
+        id: settings.id ?? null,
+        llmModel: settings.llm_model ?? settings.llmModel ?? null,
+        llmProvider: settings.llm_provider ?? settings.llmProvider ?? 'openai',
+        cvMode: settings.cv_mode ?? settings.cvMode ?? 'nominative',
+        chatbotEnabled: settings.chatbot_enabled ?? settings.chatbotEnabled ?? 'on',
+        webglEnabled: settings.webgl_enabled ?? settings.webglEnabled ?? 'on',
+        'Analysis Prompt': settings.analysis_prompt ?? settings['Analysis Prompt'] ?? '',
+        'Improvement Prompt': settings.improvement_prompt ?? settings['Improvement Prompt'] ?? '',
+        'Match Analysis Prompt': settings.match_analysis_prompt ?? settings['Match Analysis Prompt'] ?? '',
+        'Adaptation Prompt': settings.adaptation_prompt ?? settings['Adaptation Prompt'] ?? '',
+        'Executive Summary Weight': settings.executive_summary_weight ?? settings['Executive Summary Weight'] ?? 20,
+        'Skills Weight': settings.skills_weight ?? settings['Skills Weight'] ?? 20,
+        'Experience Weight': settings.experience_weight ?? settings['Experience Weight'] ?? 20,
+        'Education Weight': settings.education_weight ?? settings['Education Weight'] ?? 15,
+        'ATS Weight': settings.ats_weight ?? settings['ATS Weight'] ?? 15,
+        'Hobbies Languages Weight': settings.hobbies_languages_weight ?? settings['Hobbies Languages Weight'] ?? 10,
+        'DPO Name': settings.dpo_name ?? settings['DPO Name'] ?? '',
+        'DPO Email': settings.dpo_email ?? settings['DPO Email'] ?? '',
+        'DPO Phone': settings.dpo_phone ?? settings['DPO Phone'] ?? ''
+    }) : null),
+    mapSettingsFromFrontend: vi.fn((settings) => settings)
 }));
 
 // Mock validation

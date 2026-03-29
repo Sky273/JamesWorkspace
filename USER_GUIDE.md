@@ -1612,11 +1612,12 @@ Cette fonctionnalité permet de créer automatiquement un modèle à partir d'un
 #### Onglet Modèle LLM
 
 **Choix du Modèle IA** :
-- **OpenAI** : `gpt-5.2`, `gpt-5.2-pro`, `gpt-5.1`, `gpt-5`, `gpt-5-mini`, `gpt-5-nano`, `gpt-4.1`, `gpt-4.1-mini`, `gpt-4.1-nano`, `gpt-4o`, `gpt-4o-mini`
+- **OpenAI** : `gpt-5.4`, `gpt-5.4-pro`, `gpt-5.2`, `gpt-5.2-pro`, `gpt-5.1`, `gpt-5`, `gpt-5-mini`, `gpt-5-nano`, `gpt-4.1`, `gpt-4.1-mini`, `gpt-4.1-nano`, `gpt-4o`, `gpt-4o-mini`
 - **Anthropic** : `claude-opus-4-1-20250805`, `claude-opus-4-20250514`, `claude-sonnet-4-20250514`, `claude-3-7-sonnet-20250219`, `claude-3-5-sonnet-20241022`, `claude-3-5-haiku-20241022`
 - **DeepSeek** : DeepSeek-V3.2 en mode standard (`deepseek-chat`) ou raisonnement (`deepseek-reasoner`)
 - **MiniMax** : `MiniMax-M2.7`, `MiniMax-M2.7-highspeed`, `MiniMax-M2.5`, `MiniMax-M2.5-highspeed`, `M2-her`, `MiniMax-M2.1`, `MiniMax-M2.1-highspeed`, `MiniMax-M2`
 - **Ollama** : provider distant. Le modèle effectif vient de l'instance Ollama configurée.
+- **Modèle personnalisé** : si votre compte expose un alias spécifique, vous pouvez sélectionner un modèle personnalisé et saisir un identifiant comme `gpt-5.4:latest`.
 
 **Choix du provider** :
 - **OpenAI** : choix général par défaut

@@ -31,6 +31,7 @@ vi.mock('../../services/minimax.service.js', () => ({
 }));
 
 vi.mock('../../services/metrics.service.js', () => ({
+    buildLLMMetricLabel: vi.fn((provider, model) => `${provider}:${model}`),
     metrics: { trackLLMRequest: vi.fn() }
 }));
 

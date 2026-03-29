@@ -34,7 +34,7 @@ describe('Batch Jobs - Item CRUD', () => {
 
     describe('addJobItems', () => {
         it('should insert items and update total count', async () => {
-            // Each item insert + final total_items update
+            // Bulk insert + final total_items update
             query.mockResolvedValue({ rows: [] });
 
             const items = [
@@ -45,10 +45,9 @@ describe('Batch Jobs - Item CRUD', () => {
             const count = await addJobItems('j1', items);
 
             expect(count).toBe(2);
-            // 2 inserts + 1 update total_items
-            expect(query).toHaveBeenCalledTimes(3);
+            expect(query).toHaveBeenCalledTimes(2);
             expect(query.mock.calls[0][0]).toContain('INSERT INTO batch_job_items');
-            expect(query.mock.calls[2][0]).toContain('UPDATE batch_jobs');
+            expect(query.mock.calls[1][0]).toContain('UPDATE batch_jobs');
         });
 
         it('should throw on DB error', async () => {
@@ -60,7 +59,7 @@ describe('Batch Jobs - Item CRUD', () => {
     describe('addJobResumeIds', () => {
         it('should look up resume names and insert items', async () => {
             // First call: SELECT Name for resume 1
-            query.mockResolvedValueOnce({ rows: [{ Name: 'John Doe' }] });
+            query.mockResolvedValueOnce({ rows: [{ name: 'John Doe' }] });
             // Second call: INSERT item
             query.mockResolvedValueOnce({ rows: [] });
             // Third call: UPDATE total_items
@@ -69,7 +68,7 @@ describe('Batch Jobs - Item CRUD', () => {
             const count = await addJobResumeIds('j1', ['r1']);
 
             expect(count).toBe(1);
-            expect(query.mock.calls[0][0]).toContain('SELECT "Name" FROM resumes');
+            expect(query.mock.calls[0][0]).toContain('SELECT name FROM resumes');
             expect(query.mock.calls[1][0]).toContain('INSERT INTO batch_job_items');
         });
 

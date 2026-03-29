@@ -5,7 +5,7 @@
 
 import axios from 'axios';
 import { OPENAI_API_KEY, MAX_PROMPT_LENGTH } from '../../config/constants.js';
-import { buildOpenAICompatibleParams } from '../llmProviderCommon.service.js';
+import { buildCapabilityAwareOpenAICompatibleParams } from '../llmPayloadCapabilities.service.js';
 import { buildLLMMetricLabel, metrics } from '../metrics.service.js';
 import { safeLog } from '../../utils/logger.backend.js';
 import { validatePromptSize } from '../../utils/postgresHelpers.js';
@@ -129,15 +129,16 @@ export async function callOpenAI({
             // Standard models use Chat Completions API
             apiUrl = OPENAI_CHAT_API_URL;
             
-            requestParams = buildOpenAICompatibleParams(model, {
+            const normalized = buildCapabilityAwareOpenAICompatibleParams('openai', model, {
                 maxTokens: effectiveMaxTokens,
                 temperature,
                 topP,
-                additionalParams: {
-                    messages,
-                    ...(responseFormat && { response_format: responseFormat })
-                }
+                responseFormat,
+                additionalParams: { messages },
+                fallbackMaxTokens: 4096
             });
+
+            requestParams = normalized.requestParams;
             
             safeLog('info', 'LLM Request', { model, messageCount: messages.length, maxTokens: effectiveMaxTokens, temperature, topP });
         }

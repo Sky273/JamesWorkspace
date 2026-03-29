@@ -22,6 +22,7 @@ vi.mock('../../config/constants.js', () => ({
 }));
 
 vi.mock('../../services/metrics.service.js', () => ({
+    buildLLMMetricLabel: (...args) => args.filter(Boolean).join(':'),
     metrics: { trackLLMRequest: (...args) => mockTrackLLMRequest(...args) }
 }));
 

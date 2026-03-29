@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, MAX_PROMPT_LENGTH } from '../config/constants.js';
-import { buildOpenAICompatibleParams } from './llmProviderCommon.service.js';
+import { buildCapabilityAwareOpenAICompatibleParams } from './llmPayloadCapabilities.service.js';
 import { extractDeepSeekContent, flattenLlmTextContent, sanitizeOpenAICompatibleResponseBody } from './llmContent.service.js';
 import { buildLLMMetricLabel, metrics } from './metrics.service.js';
 import { safeLog } from '../utils/logger.backend.js';
@@ -69,15 +69,16 @@ export async function callDeepSeek({
     });
 
     try {
-        const requestParams = buildOpenAICompatibleParams(model, {
+        const normalized = buildCapabilityAwareOpenAICompatibleParams('deepseek', model, {
             maxTokens: effectiveMaxTokens,
             temperature,
             topP,
-            additionalParams: {
-                messages,
-                ...(responseFormat && { response_format: responseFormat })
-            }
+            responseFormat,
+            additionalParams: { messages },
+            fallbackMaxTokens: 4096
         });
+
+        const requestParams = normalized.requestParams;
 
         safeLog('info', 'DeepSeek request', {
             model,

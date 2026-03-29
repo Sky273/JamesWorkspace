@@ -9,14 +9,21 @@ interface FormData {
   [key: string]: string | number | boolean | undefined;
 }
 
+interface LLMAvailability {
+  minimax?: {
+    highspeedEnabled?: boolean;
+  };
+}
+
 interface LLMTabProps {
   formData: FormData;
   onInputChange: (key: string, value: string | number) => void;
   t: (key: string) => string;
+  llmAvailability?: LLMAvailability;
 }
 
 const OPENAI_MODELS = [
-  'gpt-5.2', 'gpt-5.2-pro', 'gpt-5.1', 'gpt-5', 'gpt-5-mini', 'gpt-5-nano',
+  'gpt-5.4', 'gpt-5.4-pro', 'gpt-5.2', 'gpt-5.2-pro', 'gpt-5.1', 'gpt-5', 'gpt-5-mini', 'gpt-5-nano',
   'gpt-4.1', 'gpt-4.1-mini', 'gpt-4.1-nano',
   'gpt-4o', 'gpt-4o-mini'
 ];
@@ -35,15 +42,18 @@ const DEEPSEEK_MODELS = [
   { value: 'deepseek-reasoner', label: 'DeepSeek-V3.2 - Raisonnement (API: deepseek-reasoner)' }
 ];
 
-const MINIMAX_MODELS = [
+const MINIMAX_STANDARD_MODELS = [
   'MiniMax-M2.7',
-  'MiniMax-M2.7-highspeed',
   'MiniMax-M2.5',
-  'MiniMax-M2.5-highspeed',
   'M2-her',
   'MiniMax-M2.1',
-  'MiniMax-M2.1-highspeed',
   'MiniMax-M2'
+];
+
+const MINIMAX_HIGHSPEED_MODELS = [
+  'MiniMax-M2.7-highspeed',
+  'MiniMax-M2.5-highspeed',
+  'MiniMax-M2.1-highspeed'
 ];
 
 const fallbackText = (t: (key: string) => string, key: string, fallback: string): string => {
@@ -54,9 +64,11 @@ const fallbackText = (t: (key: string) => string, key: string, fallback: string)
 const LLMTab = ({
   formData,
   onInputChange,
-  t
+  t,
+  llmAvailability
 }: LLMTabProps): JSX.Element => {
   const provider = formData.llmProvider || 'openai';
+  const minimaxHighspeedEnabled = llmAvailability?.minimax?.highspeedEnabled === true;
 
   const providerOptions = useMemo(() => ([
     { value: 'openai', label: 'OpenAI' },
@@ -66,6 +78,13 @@ const LLMTab = ({
     { value: 'ollama', label: 'Ollama' }
   ]), []);
 
+  const minimaxModels = useMemo(() => {
+    if (minimaxHighspeedEnabled) {
+      return [...MINIMAX_STANDARD_MODELS, ...MINIMAX_HIGHSPEED_MODELS];
+    }
+    return MINIMAX_STANDARD_MODELS;
+  }, [minimaxHighspeedEnabled]);
+
   const modelOptions = useMemo(() => {
     if (provider === 'anthropic') {
       return ANTHROPIC_MODELS;
@@ -74,10 +93,10 @@ const LLMTab = ({
       return DEEPSEEK_MODELS;
     }
     if (provider === 'minimax') {
-      return MINIMAX_MODELS;
+      return minimaxModels;
     }
     return OPENAI_MODELS;
-  }, [provider]);
+  }, [provider, minimaxModels]);
 
   const handleProviderChange = (e: ChangeEvent<HTMLSelectElement>): void => {
     const nextProvider = e.target.value as 'openai' | 'anthropic' | 'deepseek' | 'minimax' | 'ollama';
@@ -91,7 +110,7 @@ const LLMTab = ({
       onInputChange('llmModel', 'deepseek-chat');
     }
 
-    if (nextProvider === 'minimax' && !MINIMAX_MODELS.includes(formData.llmModel)) {
+    if (nextProvider === 'minimax' && !minimaxModels.includes(formData.llmModel)) {
       onInputChange('llmModel', 'MiniMax-M2.7');
     }
 
@@ -107,6 +126,7 @@ const LLMTab = ({
   const handleModelChange = (e: ChangeEvent<HTMLSelectElement>): void => {
     onInputChange('llmModel', e.target.value);
   };
+
   const currentModelLabel = useMemo(() => {
     if (provider === 'deepseek') {
       return DEEPSEEK_MODELS.find(model => model.value === formData.llmModel)?.label || formData.llmModel;
@@ -141,6 +161,11 @@ const LLMTab = ({
                 ? fallbackText(t, 'settings.llm.minimaxDescription', 'Selectionnez un modele MiniMax. L application utilisera l API MiniMax cote serveur.')
                 : fallbackText(t, 'settings.llm.description', 'Selectionnez le provider et le modele LLM a utiliser pour l analyse et l amelioration des CV.')}
         </p>
+        {provider === 'minimax' && !minimaxHighspeedEnabled && (
+          <p className="text-sm text-amber-700 dark:text-amber-300 mb-4">
+            {fallbackText(t, 'settings.llm.minimaxHighspeedDisabled', 'Les modeles MiniMax highspeed sont masques car cette instance n active pas le plan Highspeed.')}
+          </p>
+        )}
       </div>
 
       <div>

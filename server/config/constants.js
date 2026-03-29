@@ -42,6 +42,7 @@ export const DEEPSEEK_BASE_URL = process.env.DEEPSEEK_BASE_URL || 'https://api.d
 export const MINIMAX_API_KEY = process.env.MINIMAX_API_KEY;
 export const MINIMAX_OPENAI_BASE_URL = process.env.MINIMAX_OPENAI_BASE_URL || 'https://api.minimax.io/v1';
 export const MINIMAX_ANTHROPIC_BASE_URL = process.env.MINIMAX_ANTHROPIC_BASE_URL || 'https://api.minimax.io/anthropic';
+export const MINIMAX_ENABLE_HIGHSPEED_MODELS = process.env.MINIMAX_ENABLE_HIGHSPEED_MODELS === 'true';
 export const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || '';
 export const OLLAMA_AUTO_PULL = process.env.OLLAMA_AUTO_PULL !== 'false';
 export const OLLAMA_REQUEST_TIMEOUT_MS = parseInt(process.env.OLLAMA_REQUEST_TIMEOUT_MS || '300000', 10);

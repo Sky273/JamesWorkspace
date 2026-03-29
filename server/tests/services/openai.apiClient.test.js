@@ -18,6 +18,7 @@ vi.mock('../../services/llm.service.js', () => ({
     }))
 }));
 vi.mock('../../services/metrics.service.js', () => ({
+    buildLLMMetricLabel: vi.fn((provider, model) => `${provider}:${model}`),
     metrics: { trackLLMRequest: vi.fn() }
 }));
 vi.mock('../../utils/logger.backend.js', () => ({
@@ -169,7 +170,7 @@ describe('OpenAI API Client', () => {
             );
         });
 
-        it('should set reasoning effort to medium for pro models', async () => {
+        it('should set reasoning effort to medium for GPT-5.4 pro models', async () => {
             axios.post.mockResolvedValueOnce({
                 status: 200,
                 data: {
@@ -181,14 +182,13 @@ describe('OpenAI API Client', () => {
             });
 
             await callOpenAI({
-                model: 'gpt-5.1-pro',
+                model: 'gpt-5.4-pro',
                 messages: [{ role: 'user', content: 'hi' }]
             });
 
             const requestBody = axios.post.mock.calls[0][1];
             expect(requestBody.reasoning.effort).toBe('medium');
-            // Pro models should not have temperature
-            expect(requestBody.temperature).toBeUndefined();
+            expect(requestBody.temperature).toBe(0);
         });
     });
 

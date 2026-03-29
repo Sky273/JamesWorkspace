@@ -17,7 +17,11 @@ vi.mock('../../services/batchJobs/jobCrud.js', () => ({
     getPendingJobs: vi.fn(() => []),
     updateJobStatus: vi.fn(),
     updateJobCounters: vi.fn(),
-    isJobComplete: vi.fn(() => false)
+    isJobComplete: vi.fn(() => false),
+    getFinalJobOutcome: vi.fn(() => ({
+        status: 'completed',
+        counters: { processed_items: 0, success_count: 0, error_count: 0 }
+    }))
 }));
 vi.mock('../../services/batchJobs/itemCrud.js', () => ({
     getPendingItems: vi.fn(() => []),
@@ -98,7 +102,7 @@ describe('Batch Jobs Worker', () => {
             stopWorker();
 
             expect(updateJobCounters).toHaveBeenCalledWith('job-1');
-            expect(updateJobStatus).toHaveBeenCalledWith('job-1', 'completed');
+            expect(updateJobStatus).toHaveBeenLastCalledWith('job-1', 'completed', expect.objectContaining({ processed_items: 0, success_count: 0, error_count: 0 }));
         });
     });
 });

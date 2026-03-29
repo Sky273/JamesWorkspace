@@ -150,6 +150,7 @@ export function getEnvironmentInfo() {
         hasAnthropic: !!process.env.ANTHROPIC_API_KEY,
         hasDeepSeek: !!process.env.DEEPSEEK_API_KEY,
         hasMiniMax: !!process.env.MINIMAX_API_KEY,
+        minimaxHighspeedEnabled: process.env.MINIMAX_ENABLE_HIGHSPEED_MODELS === 'true',
         hasCsrf: !!process.env.CSRF_SECRET,
         hasPdfServerToken: !!process.env.PDF_SERVER_INTERNAL_TOKEN
     };

@@ -1,3 +1,5 @@
+import { resolveAvailableModel } from './llmAvailability.service.js';
+
 export const LLM_PROVIDER_DEFAULT_MODELS = {
     openai: 'gpt-4o',
     anthropic: 'claude-3-5-sonnet-20241022',
@@ -27,11 +29,12 @@ export function resolveLLMProvider(settings = {}) {
 }
 
 export function resolveLLMModel({ provider, settings = {}, requestedModel } = {}) {
-    if (provider === 'ollama') {
-        return requestedModel || settings.llmModel || null;
-    }
+    const candidateModel = provider === 'ollama'
+        ? (requestedModel || settings.llmModel || null)
+        : (requestedModel || settings.llmModel || LLM_PROVIDER_DEFAULT_MODELS[provider] || LLM_PROVIDER_DEFAULT_MODELS.openai);
 
-    return requestedModel || settings.llmModel || LLM_PROVIDER_DEFAULT_MODELS[provider] || LLM_PROVIDER_DEFAULT_MODELS.openai;
+    const resolved = resolveAvailableModel(provider, candidateModel, LLM_PROVIDER_DEFAULT_MODELS[provider] || LLM_PROVIDER_DEFAULT_MODELS.openai);
+    return resolved.model;
 }
 
 export function resolveLLMRuntimeConfig(settings = {}, requestedModel) {

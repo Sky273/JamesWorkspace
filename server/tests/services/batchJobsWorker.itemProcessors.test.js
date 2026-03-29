@@ -29,9 +29,11 @@ vi.mock('../../services/batchJobsWorker/textExtraction.js', () => ({
 
 const mockAnalyze = vi.fn();
 const mockImprove = vi.fn();
+const mockAnalyzeImproved = vi.fn();
 vi.mock('../../services/batchJobsWorker/llmIntegration.js', () => ({
     analyzeResumeWithLLM: (...args) => mockAnalyze(...args),
-    improveResumeWithLLM: (...args) => mockImprove(...args)
+    improveResumeWithLLM: (...args) => mockImprove(...args),
+    analyzeImprovedResumeWithLLM: (...args) => mockAnalyzeImproved(...args)
 }));
 
 vi.mock('../../services/batchJobsWorker/helpers.js', () => ({
@@ -65,6 +67,14 @@ import { updateJobItemStatus } from '../../services/batchJobs.service.js';
 describe('Batch Jobs Worker - Item Processors', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        mockQuery.mockReset();
+        mockExtractText.mockReset();
+        mockAnalyze.mockReset();
+        mockImprove.mockReset();
+        mockAnalyzeImproved.mockReset();
+        mockSendConsentRequest.mockReset();
+        mockMarkConsentError.mockReset();
+        mockExecuteResumeAdaptation.mockReset();
     });
 
     const job = { id: 'job-1', firm_id: 'firm-1', firm_name: 'TestFirm' };
@@ -222,6 +232,12 @@ describe('Batch Jobs Worker - Item Processors', () => {
                     suggestions: {}
                 }
             });
+            mockAnalyzeImproved.mockResolvedValueOnce({
+                skillsRating: 90, experiencesRating: 85, educationRating: 88,
+                atsOptimizationRating: 85, executiveSummaryRating: 90, hobbiesLanguagesRating: 75,
+                tags: { skills: ['React'], industries: ['Tech'], tools: ['Git'], softSkills: ['Leadership'] },
+                suggestions: {}
+            });
 
             await processImportItem(item, job, { improve: true });
 
@@ -263,7 +279,7 @@ describe('Batch Jobs Worker - Item Processors', () => {
         it('should throw if resume not found', async () => {
             mockQuery.mockResolvedValueOnce({ rows: [] });
 
-            await expect(processImproveItem({ id: 'i1', resume_id: 'res-1' }, job, {})).rejects.toThrow('CV non trouvé');
+            await expect(processImproveItem({ id: 'i1', resume_id: 'res-1' }, job, {})).rejects.toThrow('CV non trouv');
         });
 
         it('should throw if resume has no text', async () => {
@@ -294,6 +310,12 @@ describe('Batch Jobs Worker - Item Processors', () => {
                     tags: { skills: [], industries: [], tools: [], softSkills: [] },
                     suggestions: {}
                 }
+            });
+            mockAnalyzeImproved.mockResolvedValueOnce({
+                skillsRating: 80, experiencesRating: 78, educationRating: 75,
+                atsOptimizationRating: 82, executiveSummaryRating: 85, hobbiesLanguagesRating: 70,
+                tags: { skills: [], industries: [], tools: [], softSkills: [] },
+                suggestions: {}
             });
 
             await processImproveItem({ id: 'i2', resume_id: 'res-1', file_name: 'bob.pdf' }, job, {});

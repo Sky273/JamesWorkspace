@@ -15,7 +15,7 @@ import { withRetry } from './retry.service.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { validatePromptSize } from '../utils/postgresHelpers.js';
 import { extractTextFromContentBlocks, flattenLlmTextContent } from './llmContent.service.js';
-import { buildOpenAICompatibleParams } from './llmProviderCommon.service.js';
+import { buildCapabilityAwareAnthropicOptions, buildCapabilityAwareOpenAICompatibleParams } from './llmPayloadCapabilities.service.js';
 
 function truncateForLog(value, maxLength = 2000) {
     if (value == null) {
@@ -134,15 +134,24 @@ export async function callMiniMaxOpenAICompatible({
 }) {
     validateMiniMaxRequest(model, messages, maxPromptLength);
 
-    const requestParams = buildOpenAICompatibleParams(model, {
+    const normalized = buildCapabilityAwareOpenAICompatibleParams('minimax', model, {
         maxTokens,
         temperature,
         topP,
-        additionalParams: {
-            messages,
-            ...(responseFormat && { response_format: responseFormat })
-        }
+        responseFormat,
+        additionalParams: { messages },
+        fallbackMaxTokens: 4096
     });
+
+    const requestParams = normalized.requestParams;
+
+    if (normalized.droppedParams.length > 0) {
+        safeLog('warn', 'Dropped unsupported MiniMax OpenAI-compatible params', {
+            model,
+            operationType,
+            droppedParams: normalized.droppedParams
+        });
+    }
 
     try {
         const response = await postToMiniMax(
@@ -214,19 +223,37 @@ export async function callMiniMaxAnthropicCompatible({
                 : message.content
         }));
 
+    const normalized = buildCapabilityAwareAnthropicOptions('minimax', model, {
+        maxTokens,
+        temperature,
+        topP,
+        fallbackMaxTokens: 4096
+    });
+
     const requestBody = {
         model,
         messages: conversationMessages,
-        max_tokens: maxTokens,
-        top_p: topP
+        max_tokens: normalized.effectiveMaxTokens
     };
+
+    if (normalized.topP !== undefined) {
+        requestBody.top_p = normalized.topP;
+    }
 
     if (systemMessage?.content) {
         requestBody.system = systemMessage.content;
     }
 
-    if (temperature !== undefined) {
-        requestBody.temperature = temperature;
+    if (normalized.temperature !== undefined) {
+        requestBody.temperature = normalized.temperature;
+    }
+
+    if (normalized.droppedParams.length > 0) {
+        safeLog('warn', 'Dropped unsupported MiniMax Anthropic-compatible params', {
+            model,
+            operationType,
+            droppedParams: normalized.droppedParams
+        });
     }
 
     try {

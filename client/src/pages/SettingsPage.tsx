@@ -20,6 +20,7 @@ interface Settings {
   id?: string;
   llmProvider?: LLMProvider;
   llmModel?: string;
+  llmAvailability?: { minimax?: { highspeedEnabled?: boolean } };
   ollamaBaseUrl?: string;
   cvMode?: 'nominative' | 'anonymous';
   chatbotEnabled?: 'on' | 'off';
@@ -93,7 +94,7 @@ const defaultFormData: SettingsFormData = {
 };
 
 const getDefaultModelForProvider = (provider?: LLMProvider): string => {
-  if (provider === 'anthropic') return 'claude-sonnet-4.6';
+  if (provider === 'anthropic') return 'claude-sonnet-4-20250514';
   if (provider === 'deepseek') return 'deepseek-chat';
   if (provider === 'minimax') return 'MiniMax-M2.7';
   return 'gpt-4o';
@@ -335,6 +336,7 @@ const SettingsPage = (): JSX.Element => {
             formData={formData}
             onInputChange={handleInputChange}
             t={t}
+            llmAvailability={settings?.llmAvailability}
           />
         )}
 

@@ -86,17 +86,23 @@ describe('longRunningOperation', () => {
   it('throws the provided timeout message when polling never completes', async () => {
     const poll = vi.fn().mockResolvedValue({ status: 'pending' });
 
-    const promise = pollUntil<{ status: string }>({
+    const result = pollUntil<{ status: string }>({
       poll,
       isDone: () => false,
       intervalMs: 1000,
       timeoutMs: 2500,
       timeoutMessage: 'Timed out'
-    });
+    }).then(
+      () => ({ ok: true as const, error: null }),
+      (error) => ({ ok: false as const, error })
+    );
 
     await Promise.resolve();
     await vi.advanceTimersByTimeAsync(3000);
 
-    await expect(promise).rejects.toThrow('Timed out');
+    await expect(result).resolves.toMatchObject({
+      ok: false,
+      error: expect.objectContaining({ message: 'Timed out' })
+    });
   });
 });

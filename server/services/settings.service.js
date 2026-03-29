@@ -6,6 +6,7 @@
 import { selectWithTimeout, updateWithTimeout, createWithTimeout } from '../utils/postgresHelpers.js';
 import { OLLAMA_BASE_URL } from '../config/constants.js';
 import { safeLog } from '../utils/logger.backend.js';
+import { resolveAvailableModel, getProviderAvailabilityFlags } from './llmAvailability.service.js';
 
 // Cache settings for 5 minutes to reduce database calls
 let settingsCache = null;
@@ -64,6 +65,24 @@ export async function getLLMSettings() {
             'ATS Weight': dbSettings.ats_weight,
             'Hobbies Languages Weight': dbSettings.hobbies_languages_weight
         };
+
+        const normalizedModel = resolveAvailableModel(
+            settings.llmProvider,
+            settings.llmModel,
+            settings.llmProvider === 'minimax' ? 'MiniMax-M2.7' : undefined
+        );
+
+        if (normalizedModel.adjusted) {
+            safeLog('warn', 'Normalized unavailable configured LLM model', {
+                provider: settings.llmProvider,
+                originalModel: normalizedModel.originalModel,
+                effectiveModel: normalizedModel.model,
+                reason: normalizedModel.reason
+            });
+            settings.llmModel = normalizedModel.model;
+        }
+
+        settings.llmAvailability = getProviderAvailabilityFlags();
 
         // Update cache
         settingsCache = settings;

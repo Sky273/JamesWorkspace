@@ -50,10 +50,40 @@ vi.mock('../../utils/firmHelpers.js', () => ({
     isValidUUID: vi.fn((id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id))
 }));
 
+// Mock OpenAI service
+vi.mock('../../services/openai.service.js', () => ({
+    analyzeResume: vi.fn(),
+    cleanupText: vi.fn((text) => text)
+}));
+
+// Mock settings + industry + DB side services imported by the route
+vi.mock('../../services/settings.service.js', () => ({
+    getLLMSettings: vi.fn(async () => ({ cvMode: 'nominative' })),
+    calculateWeightedGlobalRating: vi.fn(() => 0)
+}));
+vi.mock('../../services/industry.service.js', () => ({
+    getAcceptedIndustriesString: vi.fn(async () => ''),
+    getIndustryMappingString: vi.fn(async () => '')
+}));
+vi.mock('../../services/database.service.js', () => ({
+    query: vi.fn()
+}));
+vi.mock('../../services/security.service.js', () => ({
+    securityLog: vi.fn(),
+    getRequestMetadata: vi.fn(() => ({})),
+    LOG_LEVELS: { SECURITY: 'SECURITY' },
+    SECURITY_EVENTS: { RESUME_UPDATED: 'RESUME_UPDATED', RESUME_DELETED: 'RESUME_DELETED' }
+}));
+
 // Mock logger
 vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn(),
-    createModuleLogger: vi.fn(() => vi.fn())
+    createModuleLogger: vi.fn(() => ({
+        info: vi.fn(),
+        error: vi.fn(),
+        warn: vi.fn(),
+        debug: vi.fn()
+    }))
 }));
 
 // Mock tagCleaner

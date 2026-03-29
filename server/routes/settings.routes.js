@@ -8,12 +8,44 @@ import { invalidateSettingsCache, getSettings, upsertSettings, createSettings } 
 import { normalizeWeights, DEFAULT_ANALYSIS_PROMPT, DEFAULT_IMPROVEMENT_PROMPT, DEFAULT_MATCH_ANALYSIS_PROMPT, DEFAULT_ADAPTATION_PROMPT } from '../config/prompts.backend.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { mapSettingsToFrontend, mapSettingsFromFrontend } from '../utils/mappers.js';
+import { getProviderAvailabilityFlags, resolveAvailableModel } from '../services/llmAvailability.service.js';
 
 const router = express.Router();
 
-// ============================================
-// SETTINGS ROUTES (PostgreSQL)
-// ============================================
+function normalizeRequestedSettingsModel(settingsData = {}) {
+    if (!settingsData.llmProvider || !settingsData.llmModel) {
+        return settingsData;
+    }
+
+    const normalizedModel = resolveAvailableModel(
+        settingsData.llmProvider,
+        settingsData.llmModel,
+        settingsData.llmProvider === 'minimax' ? 'MiniMax-M2.7' : undefined
+    );
+
+    if (normalizedModel.adjusted) {
+        safeLog('warn', 'Normalized unavailable LLM model in settings payload', {
+            provider: settingsData.llmProvider,
+            originalModel: normalizedModel.originalModel,
+            effectiveModel: normalizedModel.model,
+            reason: normalizedModel.reason
+        });
+
+        return {
+            ...settingsData,
+            llmModel: normalizedModel.model
+        };
+    }
+
+    return settingsData;
+}
+
+function decorateSettingsResponse(settings) {
+    return {
+        ...settings,
+        llmAvailability: getProviderAvailabilityFlags()
+    };
+}
 
 // GET /api/settings - Get settings
 router.get('/', authenticateToken, async (req, res) => {
@@ -24,16 +56,16 @@ router.get('/', authenticateToken, async (req, res) => {
             safeLog('debug', 'Returning cached settings');
             return res.json(cachedSettings);
         }
-        
+
         metrics.trackCacheMiss();
         safeLog('debug', 'Cache miss - fetching settings from PostgreSQL');
-        
+
         const settings = await getSettings();
 
         if (!settings) {
             safeLog('info', 'No settings found, returning defaults');
-            
-            const defaultSettings = {
+
+            const defaultSettings = decorateSettingsResponse({
                 id: null,
                 llmModel: null,
                 cvMode: 'nominative',
@@ -49,19 +81,19 @@ router.get('/', authenticateToken, async (req, res) => {
                 'Education Weight': 15,
                 'ATS Weight': 15,
                 'Hobbies Languages Weight': 10
-            };
-            
+            });
+
             return res.json(defaultSettings);
         }
 
-        const responseData = mapSettingsToFrontend(settings);
-        
+        const responseData = decorateSettingsResponse(normalizeRequestedSettingsModel(mapSettingsToFrontend(settings)));
+
         settingsCache.set('settings', responseData);
-        
+
         res.json(responseData);
     } catch (error) {
         safeLog('error', 'Error fetching settings', { error: error.message });
-        return res.status(500).json({ 
+        return res.status(500).json({
             error: 'Failed to fetch settings'
         });
     }
@@ -69,7 +101,7 @@ router.get('/', authenticateToken, async (req, res) => {
 
 // GET /api/settings/defaults - Get default prompts and weights
 router.get('/defaults', authenticateToken, requireAdmin, (req, res) => {
-    res.json({
+    res.json(decorateSettingsResponse({
         llmModel: 'chatgpt-4o-latest',
         cvMode: 'nominative',
         chatbotEnabled: 'on',
@@ -87,7 +119,7 @@ router.get('/defaults', authenticateToken, requireAdmin, (req, res) => {
         'DPO Name': '',
         'DPO Email': '',
         'DPO Phone': ''
-    });
+    }));
 });
 
 // PUT /api/settings/:id - Update settings (or create if not exists)
@@ -95,22 +127,20 @@ router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), valida
     try {
         const { id } = req.params;
         let updateData = req.body;
-        
+
         settingsCache.invalidate('settings');
         invalidateSettingsCache();
 
         safeLog('info', 'Updating settings', { settingsId: id });
 
         delete updateData.id;
-        updateData = normalizeWeights(updateData);
+        updateData = normalizeRequestedSettingsModel(normalizeWeights(updateData));
 
         safeLog('debug', 'Settings normalized', { fields: Object.keys(updateData) });
-        
-        // Map frontend fields to PostgreSQL columns
-        const fieldsToUpdate = mapSettingsFromFrontend(updateData);
 
+        const fieldsToUpdate = mapSettingsFromFrontend(updateData);
         const result = await upsertSettings(id, fieldsToUpdate);
-        
+
         securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.SETTINGS_CHANGED, {
             ...getRequestMetadata(req),
             settingsId: id,
@@ -119,11 +149,11 @@ router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), valida
             message: 'LLM settings updated by admin',
             metadata: { fields: Object.keys(updateData) }
         });
-        
-        res.json(mapSettingsToFrontend(result));
+
+        res.json(decorateSettingsResponse(mapSettingsToFrontend(result)));
     } catch (error) {
         safeLog('error', 'Error updating settings', { error: error.message });
-        return res.status(500).json({ 
+        return res.status(500).json({
             error: 'Failed to update settings'
         });
     }
@@ -133,13 +163,12 @@ router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), valida
 router.post('/', authenticateToken, requireAdmin, validateBody(updateSettingsSchema), async (req, res) => {
     try {
         let settingsData = req.body;
-        
+
         settingsCache.invalidate('settings');
         invalidateSettingsCache();
 
-        settingsData = normalizeWeights(settingsData);
+        settingsData = normalizeRequestedSettingsModel(normalizeWeights(settingsData));
 
-        // Map frontend fields to PostgreSQL columns
         const fieldsToCreate = {
             name: settingsData.llmModel || 'Default Settings',
             ...mapSettingsFromFrontend(settingsData),
@@ -147,18 +176,18 @@ router.post('/', authenticateToken, requireAdmin, validateBody(updateSettingsSch
         };
 
         const result = await createSettings(fieldsToCreate);
-        
+
         securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.SETTINGS_CHANGED, {
             ...getRequestMetadata(req),
             changedBy: req.user.id,
             action: 'SETTINGS_CREATED',
             message: 'LLM settings created by admin'
         });
-        
-        res.status(201).json(mapSettingsToFrontend(result));
+
+        res.status(201).json(decorateSettingsResponse(mapSettingsToFrontend(result)));
     } catch (error) {
         safeLog('error', 'Error creating settings', { error: error.message });
-        return res.status(500).json({ 
+        return res.status(500).json({
             error: 'Failed to create settings'
         });
     }

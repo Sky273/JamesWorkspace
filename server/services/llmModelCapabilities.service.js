@@ -6,6 +6,23 @@
 const PROVIDER_CAPABILITIES = {
     openai: [
         {
+            match: /^gpt-5.4-pro(?:$|-)/i,
+            maxOutputTokens: 128000,
+            tokenParameter: 'max_completion_tokens',
+            defaultReasoningEffort: 'medium',
+            reasoningEfforts: ['medium', 'high', 'xhigh'],
+            responsesPreferred: true,
+            responsesOnly: true
+        },
+        {
+            match: /^gpt-5.4(?:$|-)/i,
+            maxOutputTokens: 128000,
+            tokenParameter: 'max_completion_tokens',
+            defaultReasoningEffort: 'none',
+            reasoningEfforts: ['none', 'low', 'medium', 'high', 'xhigh'],
+            responsesPreferred: true
+        },
+        {
             match: /^gpt-5.2-pro(?:$|-)/i,
             maxOutputTokens: 128000,
             tokenParameter: 'max_completion_tokens',
@@ -106,30 +123,35 @@ const PROVIDER_CAPABILITIES = {
             match: /^MiniMax-M2$/i,
             maxOutputTokens: 128000,
             tokenParameter: 'max_tokens',
+            supportsResponseFormat: false,
             temperatureRange: { min: 0, maxExclusive: 1 },
             topPRange: { min: 0, maxInclusive: 1 }
         },
         {
             match: /^MiniMax-M2.7(?:-highspeed)?$/i,
             tokenParameter: 'max_tokens',
+            supportsResponseFormat: false,
             temperatureRange: { min: 0, maxExclusive: 1 },
             topPRange: { min: 0, maxInclusive: 1 }
         },
         {
             match: /^MiniMax-M2.5(?:-highspeed)?$/i,
             tokenParameter: 'max_tokens',
+            supportsResponseFormat: false,
             temperatureRange: { min: 0, maxExclusive: 1 },
             topPRange: { min: 0, maxInclusive: 1 }
         },
         {
             match: /^MiniMax-M2.1(?:-highspeed)?$/i,
             tokenParameter: 'max_tokens',
+            supportsResponseFormat: false,
             temperatureRange: { min: 0, maxExclusive: 1 },
             topPRange: { min: 0, maxInclusive: 1 }
         },
         {
             match: /^M2-her$/i,
             tokenParameter: 'max_tokens',
+            supportsResponseFormat: false,
             temperatureRange: { min: 0, maxExclusive: 1 },
             topPRange: { min: 0, maxInclusive: 1 }
         }

@@ -440,10 +440,10 @@ EXECUTE FUNCTION sync_customer_name();
 
 | Provider | Modèles | Usage |
 |----------|---------|-------|
-| **OpenAI** | GPT-5.2 / GPT-5.1 / GPT-5, GPT-4.1, GPT-4o | Analyse, amélioration, adaptation |
+| **OpenAI** | GPT-5.4 / GPT-5.4-pro / GPT-5.2 / GPT-5.1 / GPT-5, GPT-4.1, GPT-4o | Analyse, amélioration, adaptation |
 | **Anthropic** | Claude Opus 4.x, Claude Sonnet 4, Claude 3.7, Claude 3.5 | Alternative à OpenAI |
 | **DeepSeek** | DeepSeek-V3.2 via `deepseek-chat` et `deepseek-reasoner` | Alternative OpenAI-compatible avec deux modes d'appel : standard et raisonnement |
-| **MiniMax** | MiniMax-M2.7, MiniMax-M2.7-highspeed, MiniMax-M2.5, MiniMax-M2.5-highspeed, MiniMax-M2.1, MiniMax-M2, M2-her | Alternative API-compatible pour analyse, amélioration, adaptation |
+| **MiniMax** | MiniMax-M2.7, MiniMax-M2.5, MiniMax-M2.1, MiniMax-M2, M2-her, variantes `highspeed` conditionnelles | Alternative API-compatible pour analyse, am?lioration, adaptation avec filtrage selon disponibilit? de plan |
 | **Ollama (distant)** | Modèles exposés par une instance Ollama externe | Exécution via une URL Ollama distante, sans moteur Ollama embarqué dans le conteneur |
 
 ### Gateway LLM Unifié
@@ -459,16 +459,25 @@ export async function callLLM(messages, options) {
 
 
 
-### Compatibilité Modèles
+### Compatibilit? Mod?les
 
-Le service gère automatiquement les différences entre modèles :
+Le service g?re automatiquement les diff?rences entre mod?les :
 - `max_tokens` vs `max_completion_tokens` (GPT-5+)
-- Support température (non supporté par GPT-5)
-- Format messages (OpenAI vs Anthropic)
-- Support OpenAI-compatible DeepSeek
+- support ou suppression de `temperature` / `top_p` selon les capacit?s du mod?le
+- suppression automatique de `response_format` quand un mod?le ne le supporte pas (ex. famille MiniMax M2.x)
+- clamp centralis? des plafonds de sortie connus par mod?le/provider
+- support OpenAI-compatible DeepSeek
 - APIs compatibles OpenAI et Anthropic pour MiniMax
-- Connexion HTTP vers une instance Ollama distante configurée dans les paramètres
-- Cas Ollama sans `llmModel` obligatoire côté application lorsque le modèle est piloté par l'instance distante
+- connexion HTTP vers une instance Ollama distante configur?e dans les param?tres
+- cas Ollama sans `llmModel` obligatoire c?t? application lorsque le mod?le est pilot? par l'instance distante
+
+La compatibilit? de payload est pilot?e par deux couches distinctes :
+- `llmModelCapabilities.service.js` : capacit?s techniques d'un mod?le/provider (tokens, param?tres support?s, plafonds, etc.)
+- `llmPayloadCapabilities.service.js` : construction et sanitation du payload r?ellement envoy? ? l'API upstream
+
+La disponibilit? m?tier d'un mod?le est trait?e s?par?ment de ses capacit?s techniques :
+- `llmAvailability.service.js` : disponibilit? runtime selon la configuration de l'instance
+- exemple actuel : les mod?les MiniMax `*-highspeed` sont masqu?s et normalis?s vers leur variante standard tant que `MINIMAX_ENABLE_HIGHSPEED_MODELS=true` n'est pas activ?
 
 ### Services LLM
 
@@ -1270,6 +1279,7 @@ CREATE TABLE schema_migrations (
 | `MINIMAX_API_KEY` | Optionnel | Clé API MiniMax |
 | `MINIMAX_OPENAI_BASE_URL` | Optionnel | URL base OpenAI-compatible MiniMax |
 | `MINIMAX_ANTHROPIC_BASE_URL` | Optionnel | URL base Anthropic-compatible MiniMax |
+| `MINIMAX_ENABLE_HIGHSPEED_MODELS` | Optionnel | Active l'exposition et l'utilisation des mod?les MiniMax `highspeed` sur les instances disposant du plan adapt? |
 | `OLLAMA_BASE_URL` | Optionnel | URL de l'instance Ollama distante |
 | `OLLAMA_AUTO_PULL` | Optionnel | Auto-pull du modèle Ollama si nécessaire |
 | `OLLAMA_REQUEST_TIMEOUT_MS` | Optionnel | Timeout global des appels Ollama |

@@ -22,7 +22,11 @@ vi.mock('../../services/batchJobs.service.js', () => ({
     updateJobStatus: vi.fn(),
     updateJobItemStatus: vi.fn(),
     updateJobCounters: vi.fn(),
-    isJobComplete: vi.fn(() => false)
+    isJobComplete: vi.fn(() => false),
+    getFinalJobOutcome: vi.fn(() => ({
+        status: 'completed',
+        counters: { processed_items: 0, success_count: 0, error_count: 0 }
+    }))
 }));
 vi.mock('../../services/batchJobsWorker/llmIntegration.js', () => ({
     resetLLMQueue: vi.fn()
@@ -161,7 +165,7 @@ describe('Batch Jobs Worker - Worker Lifecycle', () => {
             await stopWorker();
 
             expect(updateJobCounters).toHaveBeenCalledWith('j4');
-            expect(updateJobStatus).toHaveBeenCalledWith('j4', 'completed');
+            expect(updateJobStatus).toHaveBeenLastCalledWith('j4', 'completed', expect.objectContaining({ processed_items: 0, success_count: 0, error_count: 0 }));
         }, 10000);
 
         it('should handle unknown job type with error', async () => {

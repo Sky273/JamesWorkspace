@@ -560,6 +560,7 @@ export interface Settings {
   id?: string;
   llmProvider?: 'openai' | 'anthropic' | 'deepseek' | 'minimax' | 'ollama';
   llmModel?: string;
+  llmAvailability?: { minimax?: { highspeedEnabled?: boolean } };
   ollamaBaseUrl?: string;
   ollamaVisionModel?: string;
   ollamaKeepAlive?: string;
