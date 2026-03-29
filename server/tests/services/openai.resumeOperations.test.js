@@ -223,6 +223,39 @@ describe('OpenAI Resume Operations', () => {
 
             expect(result.text).toBe('<h2>Competences</h2><ul><li>Architecture</li></ul>');
         });
+        it('should keep explicit tags and avoid deriving suggestions from unrelated summary fields', async () => {
+            callBusinessChatCompletion.mockResolvedValueOnce({
+                choices: [{
+                    message: {
+                        content: JSON.stringify({
+                            improvedText: '<h2>Resume</h2><p>Improved</p>',
+                            name: 'JCH',
+                            summary: {
+                                title: 'Consultant Independant',
+                                targetRole: 'Consultant Transformation',
+                                industries: ['Assurance']
+                            },
+                            skills: ['TOGAF', 'SAFe'],
+                            industries: ['Conseil', 'Assurance']
+                        })
+                    }
+                }]
+            });
+
+            const result = await improveResume(
+                '<h2>Resume</h2><p>Source</p>'.repeat(5),
+                { name: 'John', skillsRating: 77 },
+                'deepseek-reasoner',
+                '{TEXT} {ANALYSIS} {FILENAME}'
+            );
+
+            expect(result.analysis.skillsRating).toBeUndefined();
+            expect(result.analysis.tags.skills).toEqual(['TOGAF', 'SAFe']);
+            expect(result.analysis.tags.industries).toEqual(['Conseil', 'Assurance']);
+            expect(result.analysis.suggestions.executiveSummary).toEqual([]);
+            expect(result.analysis.suggestions.skills).toEqual([]);
+        });
+
         it('should handle HTML fallback response', async () => {
             callBusinessChatCompletion.mockResolvedValueOnce({
                 choices: [{

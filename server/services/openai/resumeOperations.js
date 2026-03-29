@@ -17,6 +17,16 @@ function pickNumericScore(...values) {
     return 0;
 }
 
+function pickNumericScoreOrUndefined(...values) {
+    for (const value of values) {
+        if (value === undefined || value === null || value === '') continue;
+        if (typeof value === 'number' && Number.isFinite(value)) return Math.round(value);
+        const parsed = parseInt(String(value).replace('%', '').trim(), 10);
+        if (!Number.isNaN(parsed)) return parsed;
+    }
+    return undefined;
+}
+
 function extractSuggestionText(value) {
     if (value === null || value === undefined) return [];
 
@@ -87,6 +97,45 @@ function collectImprovementCandidates(...candidates) {
         .filter(candidate => typeof candidate === 'string')
         .map(candidate => candidate.trim())
         .filter(Boolean);
+}
+
+function normalizeStringArray(value) {
+    if (value === null || value === undefined) return [];
+
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        return trimmed ? [trimmed] : [];
+    }
+
+    if (Array.isArray(value)) {
+        return [...new Set(value.flatMap(normalizeStringArray).filter(Boolean))];
+    }
+
+    if (typeof value === 'object') {
+        const directValues = ['label', 'name', 'title', 'text', 'value']
+            .map((key) => value[key])
+            .filter((candidate) => typeof candidate === 'string' && candidate.trim())
+            .map((candidate) => candidate.trim());
+
+        if (directValues.length > 0) {
+            return [...new Set(directValues)];
+        }
+
+        return [...new Set(Object.values(value).flatMap(normalizeStringArray).filter(Boolean))];
+    }
+
+    return [];
+}
+
+function pickFirstNonEmptyArray(...values) {
+    for (const value of values) {
+        const normalized = normalizeStringArray(value);
+        if (normalized.length > 0) {
+            return normalized;
+        }
+    }
+
+    return [];
 }
 
 function pickImprovedHtmlCandidate(...candidates) {
@@ -164,14 +213,59 @@ function extractImprovementEnvelope(parsed) {
         htmlAlternatives: htmlCandidates,
         summary: parsed?.summary || envelope?.summary || {},
         improvements: parsed?.improvements || parsed?.scores || parsed?.analysis || envelope?.improvements || envelope?.scores || envelope?.analysis || {},
-        tags: parsed?.tags || envelope?.tags || {},
+        tags: {
+            ...(parsed?.tags && typeof parsed.tags === 'object' ? parsed.tags : {}),
+            ...(envelope?.tags && typeof envelope.tags === 'object' ? envelope.tags : {}),
+            skills: pickFirstNonEmptyArray(
+                parsed?.tags?.skills,
+                envelope?.tags?.skills,
+                parsed?.skills,
+                envelope?.skills,
+                parsed?.competencies,
+                envelope?.competencies,
+                parsed?.keywords,
+                envelope?.keywords,
+                parsed?.summary?.skills,
+                envelope?.summary?.skills
+            ),
+            industries: pickFirstNonEmptyArray(
+                parsed?.tags?.industries,
+                envelope?.tags?.industries,
+                parsed?.industries,
+                envelope?.industries,
+                parsed?.summary?.industries,
+                envelope?.summary?.industries
+            ),
+            tools: pickFirstNonEmptyArray(
+                parsed?.tags?.tools,
+                envelope?.tags?.tools,
+                parsed?.tools,
+                envelope?.tools,
+                parsed?.technologies,
+                envelope?.technologies,
+                parsed?.summary?.tools,
+                envelope?.summary?.tools
+            ),
+            softSkills: pickFirstNonEmptyArray(
+                parsed?.tags?.softSkills,
+                envelope?.tags?.softSkills,
+                parsed?.tags?.soft_skills,
+                envelope?.tags?.soft_skills,
+                parsed?.softSkills,
+                envelope?.softSkills,
+                parsed?.soft_skills,
+                envelope?.soft_skills,
+                parsed?.summary?.softSkills,
+                envelope?.summary?.softSkills
+            )
+        },
         name: parsed?.name || envelope?.name || '',
         title: parsed?.title || envelope?.title || '',
         experienceYears: parsed?.experienceYears ?? parsed?.experience_years ?? envelope?.experienceYears ?? envelope?.experience_years,
         educationLevel: parsed?.educationLevel ?? parsed?.education_level ?? envelope?.educationLevel ?? envelope?.education_level,
         certifications: parsed?.certifications ?? envelope?.certifications,
         languages: parsed?.languages ?? envelope?.languages,
-        suggestionsSource: parsed?.suggestions || parsed?.['Key Improvements'] || parsed?.keyImprovements || envelope?.suggestions || envelope?.['Key Improvements'] || envelope?.keyImprovements || parsed,
+        suggestionsSource: parsed?.suggestions || parsed?.['Key Improvements'] || parsed?.keyImprovements || parsed?.recommendations || parsed?.sectionSuggestions || parsed?.section_improvements || envelope?.suggestions || envelope?.['Key Improvements'] || envelope?.keyImprovements || envelope?.recommendations || envelope?.sectionSuggestions || envelope?.section_improvements || null,
     };
 }
 
@@ -376,6 +470,7 @@ export async function improveResume(text, analysis, model, improvementPromptTemp
         ],
         maxTokens: 16384,
         temperature: 0.3,
+        responseFormat: { type: "json_object" },
         timeout: 300000,
         userMetadata,
         operationType: 'Resume Improvement'
@@ -414,31 +509,42 @@ export async function improveResume(text, analysis, model, improvementPromptTemp
             const tags = improvementPayload.tags || {};
             const normalizedSuggestions = normalizeSuggestionsBySection(improvementPayload.suggestionsSource);
 
+            const analysisResult = {
+                suggestions: normalizedSuggestions,
+                tags: {
+                    skills: pickFirstNonEmptyArray(tags.skills, summary.skills),
+                    industries: pickFirstNonEmptyArray(tags.industries, summary.industries),
+                    tools: pickFirstNonEmptyArray(tags.tools, summary.tools),
+                    softSkills: pickFirstNonEmptyArray(tags.softSkills, tags.soft_skills, summary.softSkills)
+                },
+                name: improvementPayload.name || summary.name || analysis?.name || '',
+                title: summary.targetRole || summary.title || improvementPayload.title || analysis?.title || '',
+                summary: extractStructuredSummaryText(summary),
+                experienceYears: improvementPayload.experienceYears,
+                educationLevel: improvementPayload.educationLevel,
+                certifications: improvementPayload.certifications,
+                languages: improvementPayload.languages
+            };
+
+            const globalRating = pickNumericScoreOrUndefined(improvements.overall, improvements.globalRating, improvements.global, parsed.globalRating);
+            const executiveSummaryRating = pickNumericScoreOrUndefined(improvements.executiveSummary, improvements.executive_summary, improvements.executiveSummaryRating, improvements.summary);
+            const skillsRating = pickNumericScoreOrUndefined(improvements.skills, improvements.skillsRating, improvements.competencies);
+            const experiencesRating = pickNumericScoreOrUndefined(improvements.experience, improvements.experiences, improvements.experienceRating, improvements.experiencesRating);
+            const educationRating = pickNumericScoreOrUndefined(improvements.education, improvements.educationRating, improvements.formation);
+            const atsOptimizationRating = pickNumericScoreOrUndefined(improvements.atsOptimization, improvements.ats, improvements.atsOptimizationRating);
+            const hobbiesLanguagesRating = pickNumericScoreOrUndefined(improvements.languagesInterests, improvements.hobbiesLanguages, improvements.languages, improvements.hobbiesLanguagesRating);
+
+            if (globalRating !== undefined) analysisResult.globalRating = globalRating;
+            if (executiveSummaryRating !== undefined) analysisResult.executiveSummaryRating = executiveSummaryRating;
+            if (skillsRating !== undefined) analysisResult.skillsRating = skillsRating;
+            if (experiencesRating !== undefined) analysisResult.experiencesRating = experiencesRating;
+            if (educationRating !== undefined) analysisResult.educationRating = educationRating;
+            if (atsOptimizationRating !== undefined) analysisResult.atsOptimizationRating = atsOptimizationRating;
+            if (hobbiesLanguagesRating !== undefined) analysisResult.hobbiesLanguagesRating = hobbiesLanguagesRating;
+
             const result = {
                 text: cleanedText,
-                analysis: {
-                    globalRating: pickNumericScore(improvements.overall, improvements.globalRating, improvements.global, parsed.globalRating),
-                    executiveSummaryRating: pickNumericScore(improvements.executiveSummary, improvements.executive_summary, improvements.executiveSummaryRating, improvements.summary),
-                    skillsRating: pickNumericScore(improvements.skills, improvements.skillsRating, improvements.competencies),
-                    experiencesRating: pickNumericScore(improvements.experience, improvements.experiences, improvements.experienceRating, improvements.experiencesRating),
-                    educationRating: pickNumericScore(improvements.education, improvements.educationRating, improvements.formation),
-                    atsOptimizationRating: pickNumericScore(improvements.atsOptimization, improvements.ats, improvements.atsOptimizationRating),
-                    hobbiesLanguagesRating: pickNumericScore(improvements.languagesInterests, improvements.hobbiesLanguages, improvements.languages, improvements.hobbiesLanguagesRating),
-                    suggestions: normalizedSuggestions,
-                    tags: {
-                        skills: tags.skills || summary.skills || [],
-                        industries: tags.industries || summary.industries || [],
-                        tools: tags.tools || summary.tools || [],
-                        softSkills: tags.softSkills || tags.soft_skills || summary.softSkills || []
-                    },
-                    name: improvementPayload.name || summary.name || analysis?.name || '',
-                    title: summary.targetRole || summary.title || improvementPayload.title || analysis?.title || '',
-                    summary: extractStructuredSummaryText(summary),
-                    experienceYears: improvementPayload.experienceYears,
-                    educationLevel: improvementPayload.educationLevel,
-                    certifications: improvementPayload.certifications,
-                    languages: improvementPayload.languages
-                }
+                analysis: analysisResult
             };
 
             safeLog('info', 'Parsed improvement result:', {
@@ -451,6 +557,7 @@ export async function improveResume(text, analysis, model, improvementPromptTemp
         } catch (parseError) {
             safeLog('error', 'Failed to parse LLM improvement response as JSON', {
                 error: parseError.message,
+                model,
                 responsePreview: rawContent.substring(0, 500)
             });
             throw new Error(normalizeUtf8Text("Le mod\u00e8le LLM a retourn\u00e9 une r\u00e9ponse JSON invalide pour l'am\u00e9lioration. Veuillez r\u00e9essayer ou contacter le support si le probl\u00e8me persiste."));

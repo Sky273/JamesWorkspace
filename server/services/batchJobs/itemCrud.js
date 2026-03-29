@@ -15,17 +15,25 @@ import { ITEM_STATUS, BATCH_SIZE } from './constants.js';
  */
 export async function addJobItems(jobId, items) {
     try {
-        let addedCount = 0;
+        const normalizedItems = Array.isArray(items) ? items : [];
+        const addedCount = normalizedItems.length;
 
-        for (const item of items) {
+        if (addedCount > 0) {
+            const valuePlaceholders = [];
+            const params = [];
+
+            normalizedItems.forEach((item, index) => {
+                const offset = index * 6;
+                valuePlaceholders.push(`(${offset + 1}, ${offset + 2}, ${offset + 3}, ${offset + 4}, ${offset + 5}, ${offset + 6})`);
+                params.push(jobId, item.fileName, item.fileData, item.fileMimeType, item.relativePath || null, ITEM_STATUS.PENDING);
+            });
+
             await query(`
                 INSERT INTO batch_job_items (job_id, file_name, file_data, file_mime_type, relative_path, status)
-                VALUES ($1, $2, $3, $4, $5, $6)
-            `, [jobId, item.fileName, item.fileData, item.fileMimeType, item.relativePath || null, ITEM_STATUS.PENDING]);
-            addedCount++;
+                VALUES ${valuePlaceholders.join(', ')}
+            `, params);
         }
 
-        // Update total_items count
         await query(`
             UPDATE batch_jobs 
             SET total_items = (SELECT COUNT(*) FROM batch_job_items WHERE job_id = $1)

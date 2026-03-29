@@ -321,131 +321,136 @@ export async function analyzeTextHandler(req, res) {
 }
 
 /**
+ * Shared improvement flow for all LLM providers.
+ */
+async function executeImprovementFlow({ req, res, text, analysis = {}, fileName = null, resumeId = null, resumeRecord = null }) {
+    const userMetadata = getRequestMetadata(req);
+
+    if (!text) {
+        return res.status(400).json({ error: 'Resume text is required' });
+    }
+
+    const settings = await getLLMSettings();
+    const model = settings.llmModel;
+    const cvMode = settings.cvMode || 'nominative';
+    let improvementPrompt = settings['Improvement Prompt'] || DEFAULT_IMPROVEMENT_PROMPT;
+
+    if (!model && settings.llmProvider !== 'ollama') {
+        return res.status(500).json({ error: 'LLM model not configured in Settings.' });
+    }
+
+    const fileNameValue = fileName || 'Non disponible';
+    const acceptedIndustries = await getAcceptedIndustriesString();
+    improvementPrompt = improvementPrompt.replace('{ACCEPTED_INDUSTRIES}', acceptedIndustries);
+
+    let anonymizationRules = cvMode === 'anonymous' ? ANONYMIZATION_RULES_ANONYMOUS : ANONYMIZATION_RULES_NOMINATIVE;
+    anonymizationRules = anonymizationRules.replace(/{FILENAME}/g, fileNameValue);
+    improvementPrompt = improvementPrompt.replace('{ANONYMIZATION_RULES}', anonymizationRules);
+
+    safeLog('debug', 'Injected accepted industries and anonymization rules into prompts', {
+        industriesCount: acceptedIndustries.split(',').length,
+        industriesPreview: acceptedIndustries.substring(0, 100) + '...',
+        cvMode,
+        fileName: fileNameValue,
+        resumeId: resumeId || null
+    });
+
+    safeLog('debug', 'Text prepared before improvement', {
+        originalLength: text.length,
+        containsHtml: /<\/?[a-z][^>]*>/i.test(text),
+        cvMode,
+        fileName: fileNameValue,
+        resumeId: resumeId || null
+    });
+
+    const improved = await improveResume(text, analysis, model, improvementPrompt, fileName, userMetadata);
+
+    let mergedAnalysis = {
+        ...analysis,
+        ...improved.analysis,
+        suggestions: improved.analysis?.suggestions || analysis?.suggestions || {},
+        tags: improved.analysis?.tags || analysis?.tags || {
+            skills: [],
+            industries: [],
+            tools: [],
+            softSkills: []
+        }
+    };
+
+    try {
+        mergedAnalysis = await calculateWeightedGlobalRating(mergedAnalysis, settings);
+    } catch (weightError) {
+        safeLog('warn', 'Failed to recalculate weighted score after resume improvement', {
+            error: weightError.message,
+            provider: settings.llmProvider,
+            model,
+            resumeId: resumeId || null
+        });
+    }
+
+    let savedResume = null;
+    let finalAnalysis = mergedAnalysis;
+
+    if (resumeId) {
+        const record = resumeRecord || await findResumeRecord(resumeId);
+        const isAdmin = req.user?.role === 'admin';
+        const userFirm = req.user?.firm || req.user?.customer;
+
+        if (!isAdmin && record.firm_name !== userFirm) {
+            return res.status(403).json({ error: 'Access denied: You can only improve resumes from your firm' });
+        }
+
+        const shouldCreateVersion = await hasImprovedTextChanged(resumeId, improved.text);
+        const { updatedRecord, postImprovementAnalysis } = await persistPostImprovementAnalysis({
+            resumeId,
+            improvedText: improved.text,
+            model,
+            settings,
+            acceptedIndustries,
+            anonymizationRules,
+            originalFileName: fileName,
+            userMetadata,
+            userId: req.user?.id,
+            shouldCreateVersion
+        });
+        savedResume = mapResumeToFrontend(updatedRecord);
+        finalAnalysis = postImprovementAnalysis;
+    }
+
+    if (text && /<\/?[a-z][^>]*>/i.test(text) && improved.text && !/<\/?[a-z][^>]*>/i.test(improved.text)) {
+        safeLog('warn', 'Improved resume output is plain text despite HTML input', {
+            resumeId: resumeId || null,
+            inputLength: text.length,
+            outputLength: improved.text.length
+        });
+    }
+
+    safeLog('info', 'Improvement complete with fully persisted post-analysis', {
+        resumeId: resumeId || null,
+        hasImprovedText: !!improved.text,
+        hasSuggestions: hasSuggestionContent(finalAnalysis.suggestions),
+        suggestionsKeys: Object.keys(finalAnalysis.suggestions || {}),
+        tagsSkillsCount: Array.isArray(finalAnalysis.tags?.skills) ? finalAnalysis.tags.skills.length : 0,
+        calculatedGlobalRating: finalAnalysis.globalRating,
+        postAnalysisPending: false
+    });
+
+    return res.json({
+        text: improved.text,
+        analysis: finalAnalysis,
+        savedResume,
+        postAnalysisPending: false
+    });
+}
+
+/**
  * POST /api/resumes/improve - Improve resume (text and analysis in body)
  * Returns improved text + post-improvement analysis with suggestions
  */
 export async function improveHandler(req, res) {
     try {
         const { text, analysis, fileName, resumeId } = req.body;
-        const userMetadata = getRequestMetadata(req);
-        
-        if (!text) {
-            return res.status(400).json({ error: 'Resume text is required' });
-        }
-
-        const settings = await getLLMSettings();
-        const model = settings.llmModel;
-        const cvMode = settings.cvMode || 'nominative';
-        let improvementPrompt = settings['Improvement Prompt'] || DEFAULT_IMPROVEMENT_PROMPT;
-
-        if (!model && settings.llmProvider !== 'ollama') {
-            return res.status(500).json({ error: 'LLM model not configured in Settings.' });
-        }
-
-        // Get filename value for injection
-        const fileNameValue = fileName || 'Non disponible';
-        
-        // Inject accepted industries into BOTH prompts, mapping lexique only into analysis prompt
-        const acceptedIndustries = await getAcceptedIndustriesString();
-        improvementPrompt = improvementPrompt.replace('{ACCEPTED_INDUSTRIES}', acceptedIndustries);
-        
-        // Inject anonymization rules based on cvMode into BOTH prompts (with FILENAME replaced)
-        let anonymizationRules = cvMode === 'anonymous' ? ANONYMIZATION_RULES_ANONYMOUS : ANONYMIZATION_RULES_NOMINATIVE;
-        anonymizationRules = anonymizationRules.replace(/{FILENAME}/g, fileNameValue);
-        improvementPrompt = improvementPrompt.replace('{ANONYMIZATION_RULES}', anonymizationRules);
-        
-        safeLog('debug', 'Injected accepted industries and anonymization rules into prompts', { 
-            industriesCount: acceptedIndustries.split(',').length,
-            industriesPreview: acceptedIndustries.substring(0, 100) + '...',
-            cvMode,
-            fileName: fileNameValue
-        });
-
-        // Preserve the structured resume markup for improvement; stripping HTML here flattens the CV.
-        safeLog('debug', 'Text prepared before improvement', {
-            originalLength: text.length,
-            containsHtml: /<\/?[a-z][^>]*>/i.test(text)
-        });
-
-        // Step 1: Improve the resume
-        const improved = await improveResume(text, analysis, model, improvementPrompt, fileName || null, userMetadata);
-        
-        // Do not trigger a second LLM call here.
-        // The improvement response is already the completion of this operation.
-        let mergedAnalysis = {
-            ...analysis,
-            ...improved.analysis,
-            suggestions: improved.analysis?.suggestions || analysis?.suggestions || {},
-            tags: improved.analysis?.tags || analysis?.tags || {
-                skills: [],
-                industries: [],
-                tools: [],
-                softSkills: []
-            }
-        };
-
-        try {
-            mergedAnalysis = await calculateWeightedGlobalRating(mergedAnalysis, settings);
-        } catch (weightError) {
-            safeLog('warn', 'Failed to recalculate weighted score after resume improvement', {
-                error: weightError.message,
-                provider: settings.llmProvider,
-                model
-            });
-        }
-
-        let savedResume = null;
-        let finalAnalysis = mergedAnalysis;
-
-        if (resumeId) {
-            const resumeRecord = await findResumeRecord(resumeId);
-            const isAdmin = req.user?.role === 'admin';
-            const userFirm = req.user?.firm || req.user?.customer;
-
-            if (!isAdmin && resumeRecord.firm_name !== userFirm) {
-                return res.status(403).json({ error: 'Access denied: You can only improve resumes from your firm' });
-            }
-
-            const shouldCreateVersion = await hasImprovedTextChanged(resumeId, improved.text);
-            const { updatedRecord, postImprovementAnalysis } = await persistPostImprovementAnalysis({
-                resumeId,
-                improvedText: improved.text,
-                model,
-                settings,
-                acceptedIndustries,
-                anonymizationRules,
-                originalFileName: fileName || null,
-                userMetadata,
-                userId: req.user?.id,
-                shouldCreateVersion
-            });
-            savedResume = mapResumeToFrontend(updatedRecord);
-            finalAnalysis = postImprovementAnalysis;
-        }
-
-        if (text && /<\/?[a-z][^>]*>/i.test(text) && improved.text && !/<\/?[a-z][^>]*>/i.test(improved.text)) {
-            safeLog('warn', 'Improved resume output is plain text despite HTML input', {
-                resumeId: resumeId || null,
-                inputLength: text.length,
-                outputLength: improved.text.length
-            });
-        }
-
-        safeLog('info', 'Improvement complete with fully persisted post-analysis', {
-            resumeId: resumeId || null,
-            hasImprovedText: !!improved.text,
-            hasSuggestions: hasSuggestionContent(finalAnalysis.suggestions),
-            suggestionsKeys: Object.keys(finalAnalysis.suggestions || {}),
-            tagsSkillsCount: Array.isArray(finalAnalysis.tags?.skills) ? finalAnalysis.tags.skills.length : 0,
-            calculatedGlobalRating: finalAnalysis.globalRating,
-            postAnalysisPending: false
-        });
-        res.json({
-            text: improved.text,
-            analysis: finalAnalysis,
-            savedResume,
-            postAnalysisPending: false
-        });
+        return await executeImprovementFlow({ req, res, text, analysis, fileName: fileName || null, resumeId: resumeId || null });
     } catch (error) {
         handleLLMError(error, res, 'improving resume');
     }
@@ -457,28 +462,32 @@ export async function improveHandler(req, res) {
 export async function improveByIdHandler(req, res) {
     try {
         const { id } = req.params;
-        const userMetadata = getRequestMetadata(req);
         const resumeRecord = await findResumeRecord(id);
-        
-        // Check firm access
+
         const isAdmin = req.user?.role === 'admin';
         const userFirm = req.user?.firm || req.user?.customer;
-        
+
         if (!isAdmin && resumeRecord.firm_name !== userFirm) {
             return res.status(403).json({ error: 'Access denied: You can only improve resumes from your firm' });
         }
-        
+
         const resumeText = resumeRecord.original_text;
-        
+
         if (!resumeText) {
             return res.status(400).json({ error: 'Resume has no original text' });
         }
 
-        // Build analysis object from resume fields
         const analysis = {
             name: resumeRecord.name,
             title: resumeRecord.title,
             globalRating: resumeRecord.global_rating,
+            skillsRating: resumeRecord.skills_score,
+            experiencesRating: resumeRecord.experience_score,
+            educationRating: resumeRecord.education_score,
+            atsOptimizationRating: resumeRecord.ats_score,
+            executiveSummaryRating: resumeRecord.executive_summary_score,
+            hobbiesLanguagesRating: resumeRecord.hobbies_languages_score,
+            suggestions: resumeRecord.improvement_suggestions || {},
             tags: {
                 skills: resumeRecord.skills || [],
                 industries: resumeRecord.industries || [],
@@ -487,43 +496,17 @@ export async function improveByIdHandler(req, res) {
             }
         };
 
-        const settings = await getLLMSettings();
-        const model = settings.llmModel;
-        const cvMode = settings.cvMode || 'nominative';
-        let improvementPrompt = settings['Improvement Prompt'] || DEFAULT_IMPROVEMENT_PROMPT;
-
-        if (!model && settings.llmProvider !== 'ollama') {
-            return res.status(500).json({ error: 'LLM model not configured in Settings.' });
-        }
-
-        // Get original filename for name extraction hint
         const originalFileName = resumeRecord.original_file_name || resumeRecord.name || null;
-        const fileNameValue = originalFileName || 'Non disponible';
-        
-        // Inject accepted industries into the prompt (no mapping lexique needed for improvement)
-        const acceptedIndustries = await getAcceptedIndustriesString();
-        improvementPrompt = improvementPrompt.replace('{ACCEPTED_INDUSTRIES}', acceptedIndustries);
-        
-        // Inject anonymization rules based on cvMode (with FILENAME replaced)
-        let anonymizationRules = cvMode === 'anonymous' ? ANONYMIZATION_RULES_ANONYMOUS : ANONYMIZATION_RULES_NOMINATIVE;
-        anonymizationRules = anonymizationRules.replace(/{FILENAME}/g, fileNameValue);
-        improvementPrompt = improvementPrompt.replace('{ANONYMIZATION_RULES}', anonymizationRules);
 
-        // Preserve the structured resume markup for improvement; stripping HTML here flattens the CV.
-        safeLog('debug', 'Text prepared before improvement (by ID)', {
-            originalLength: resumeText.length,
-            containsHtml: /<\/?[a-z][^>]*>/i.test(resumeText),
-            cvMode,
-            fileName: fileNameValue
+        return await executeImprovementFlow({
+            req,
+            res,
+            text: resumeText,
+            analysis,
+            fileName: originalFileName,
+            resumeId: id,
+            resumeRecord
         });
-        
-        const improved = await improveResume(resumeText, analysis, model, improvementPrompt, originalFileName, userMetadata);
-        // Recalculate globalRating based on admin-defined weights
-        if (improved.analysis) {
-            improved.analysis = await calculateWeightedGlobalRating(improved.analysis, settings);
-        }
-        
-        res.json(improved);
     } catch (error) {
         handleLLMError(error, res, 'improving resume');
     }

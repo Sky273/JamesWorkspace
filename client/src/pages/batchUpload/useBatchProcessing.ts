@@ -9,7 +9,8 @@
 import { useCallback, type MutableRefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { fetchWithAuth, createAuthOptionsWithCsrf } from '../../utils/apiInterceptor';
+import { fetchWithAuth, createAuthOptionsWithCsrf, getResponseErrorMessage } from '../../utils/apiInterceptor';
+import { createAndTrackJob } from '../../utils/longRunningOperation';
 import logger from '../../utils/logger.frontend';
 import toast from 'react-hot-toast';
 import type { FileStatus, ExportFormats } from '../batchUpload.utils';
@@ -189,79 +190,25 @@ export function useBatchProcessing({
       if (improveOption) {
         updateFileStatus(index, { status: 'improving', progress: 85 });
         
-        // Build analysis object like improveCurrentResume does
-        const currentAnalysis = {
-          globalRating: analysis.globalRating,
-          skillsRating: analysis.skillsRating,
-          experiencesRating: analysis.experiencesRating,
-          educationRating: analysis.educationRating,
-          atsOptimizationRating: analysis.atsOptimizationRating,
-          executiveSummaryRating: analysis.executiveSummaryRating,
-          hobbiesLanguagesRating: analysis.hobbiesLanguagesRating,
-          suggestions: suggestions,
-          name: analysis.name,
-          originalName: analysis.originalName || analysis.name,
-          title: analysis.title
-        };
-        
         const improveOptions = await createAuthOptionsWithCsrf({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            text: originalText,
-            analysis: currentAnalysis
-          })
+          body: JSON.stringify({})
         });
         
-        // Use /api/resumes/improve (same as improveCurrentResume) for full post-improvement analysis
-        const improveResponse = await fetchWithAuth('/api/resumes/improve', {
+        const improveResponse = await fetchWithAuth('/api/resumes/' + encodeURIComponent(String(uploadedResume.id)) + '/improve', {
           ...improveOptions,
           signal
         }, FRONTEND_LLM_IMPROVEMENT_TIMEOUT_MS);
         
-        if (improveResponse.ok) {
-          const { text: improvedText, analysis: improvedAnalysis } = await improveResponse.json();
-          
-          // Helper to get score value (handles 0 as valid value)
-          const getScore = (primary: number | string | undefined, fallback: number | string | undefined): number => {
-            if (primary !== undefined && primary !== null) return typeof primary === 'number' ? primary : parseInt(String(primary).replace('%', ''), 10) || 0;
-            if (fallback !== undefined && fallback !== null) return typeof fallback === 'number' ? fallback : parseInt(String(fallback).replace('%', ''), 10) || 0;
-            return 0;
-          };
-          
-          // Save improved text and all improved scores (same as improveCurrentResume)
-          const improvedSuggestions = improvedAnalysis?.suggestions || improvedAnalysis?.['Key Improvements'] || {};
-          
-          const saveImprovedOptions = await createAuthOptionsWithCsrf({
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              'Improved Text': improvedText,
-              'Improved Global Rating': String(getScore(improvedAnalysis?.globalRating, improvedAnalysis?.['Global Rating'])),
-              'Improved Skills Score': String(getScore(improvedAnalysis?.skillsRating, improvedAnalysis?.['Skills'])),
-              'Improved Experience Score': String(getScore(improvedAnalysis?.experiencesRating, improvedAnalysis?.['Experience'])),
-              'Improved Education Score': String(getScore(improvedAnalysis?.educationRating, improvedAnalysis?.['Education'])),
-              'Improved ATS Score': String(getScore(improvedAnalysis?.atsOptimizationRating, improvedAnalysis?.['ATS Compatibility'])),
-              'Improved Executive Summary Score': String(getScore(improvedAnalysis?.executiveSummaryRating, improvedAnalysis?.['Executive Summary'])),
-              'Improved Hobbies Languages Score': String(getScore(improvedAnalysis?.hobbiesLanguagesRating, improvedAnalysis?.['Hobbies Languages'])),
-              'Improved Skills': JSON.stringify(improvedAnalysis?.tags?.skills || []),
-              'Improved Industries': JSON.stringify(improvedAnalysis?.tags?.industries || []),
-              'Improved Tools': JSON.stringify(improvedAnalysis?.tags?.tools || []),
-              'Improved Soft Skills': JSON.stringify(improvedAnalysis?.tags?.softSkills || []),
-              'Improved Key Improvements': JSON.stringify(improvedSuggestions),
-              'Status': 'Improved',
-              'Last Improved': new Date().toISOString()
-            })
-          });
-          
-          await fetchWithAuth(`/api/resumes/${uploadedResume.id}`, {
-            ...saveImprovedOptions,
-            signal
-          });
-        }
-        // Don't fail if improvement fails, just log it
-        else {
+        if (!improveResponse.ok) {
           logger.warn(`[BatchUpload] Improvement failed for ${fileStatus.file.name}, continuing...`);
+        } else {
+          const { savedResume } = await improveResponse.json();
+
+          if (!savedResume) {
+            logger.warn(`[BatchUpload] Improvement completed without persisted resume payload for ${fileStatus.file.name}`);
+          }
         }
       }
       
@@ -317,21 +264,26 @@ export function useBatchProcessing({
       // Create the job - get CSRF token and send with FormData
       // IMPORTANT: Don't set Content-Type header - browser will set it with correct boundary for multipart/form-data
       const csrfOptions = await createAuthOptionsWithCsrf({ method: 'POST' });
-      const response = await fetchWithAuth('/api/batch-jobs', {
-        method: 'POST',
-        headers: {
-          'x-csrf-token': ((csrfOptions.headers as Record<string, string>)?.['x-csrf-token']) || ''
+      const { created: job } = await createAndTrackJob({
+        create: async () => {
+          const response = await fetchWithAuth('/api/batch-jobs', {
+            method: 'POST',
+            headers: {
+              'x-csrf-token': ((csrfOptions.headers as Record<string, string>)?.['x-csrf-token']) || ''
+            },
+            credentials: 'include',
+            body: formData
+          });
+          
+          if (!response.ok) {
+            const errorMessage = await getResponseErrorMessage(response, 'Erreur lors de la creation du job');
+            throw new Error(errorMessage);
+          }
+          
+          return response.json() as Promise<{ id?: string; total_items?: number }>;
         },
-        credentials: 'include',
-        body: formData
+        getJobId: created => created.id
       });
-      
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Erreur lors de la création du job');
-      }
-      
-      const job = await response.json();
       logger.info('[BatchUpload] Job created', { jobId: job.id, itemCount: job.total_items });
       
       // Mark all files as processing (backend handles the rest)

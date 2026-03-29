@@ -27,7 +27,8 @@ import {
     getItemsPendingName,
     getDealForExport,
     getResumesForDeal,
-    getAdaptationsForDeal
+    getAdaptationsForDeal,
+    updateJobStatus
 } from '../services/batchJobs.service.js';
 
 const router = express.Router();
@@ -135,53 +136,70 @@ router.post('/', authenticateToken, upload.array('files', 200), async (req, res)
             options
         });
 
-        // Add files to the job
-        if (req.files && req.files.length > 0) {
-            // Parse relative paths if provided (JSON array matching files order)
-            let relativePaths = [];
-            if (normalizedPayload.relativePaths) {
-                try {
-                    relativePaths = typeof normalizedPayload.relativePaths === 'string' 
-                        ? JSON.parse(normalizedPayload.relativePaths) 
-                        : normalizedPayload.relativePaths;
-                } catch {
-                    relativePaths = [];
-                }
+        let relativePaths = [];
+        if (normalizedPayload.relativePaths) {
+            try {
+                relativePaths = typeof normalizedPayload.relativePaths === 'string' 
+                    ? JSON.parse(normalizedPayload.relativePaths) 
+                    : normalizedPayload.relativePaths;
+            } catch {
+                relativePaths = [];
             }
-
-            const items = req.files.map((file, index) => ({
-                fileName: file.originalname,
-                fileData: file.buffer,
-                fileMimeType: file.mimetype,
-                relativePath: relativePaths[index] || null
-            }));
-
-            safeLog('info', 'Adding items to job', { 
-                jobId: job.id, 
-                itemCount: items.length,
-                fileNames: items.map(i => i.fileName),
-                fileSizes: items.map(i => i.fileData?.length || 0),
-                hasRelativePaths: relativePaths.length > 0,
-                relativePaths: relativePaths.slice(0, 5) // Log first 5 paths for debugging
-            });
-
-            const addedCount = await addJobItems(job.id, items);
-            safeLog('info', 'Items added to job', { jobId: job.id, addedCount });
-        } else {
-            safeLog('warn', 'No files received for batch job', { jobId: job.id });
         }
 
-        // Get updated job with counts
-        const updatedJob = await getJob(job.id);
+        const items = (req.files || []).map((file, index) => ({
+            fileName: file.originalname,
+            fileData: file.buffer,
+            fileMimeType: file.mimetype,
+            relativePath: relativePaths[index] || null
+        }));
+
+        const responsePayload = {
+            id: job.id,
+            status: job.status,
+            firm_id: job.firm_id,
+            user_id: job.user_id,
+            job_type: job.job_type,
+            total_items: req.files?.length || 0,
+            processed_items: job.processed_items || 0,
+            success_count: job.success_count || 0,
+            error_count: job.error_count || 0,
+            options: job.options,
+            created_at: job.created_at
+        };
 
         safeLog('info', 'Batch job created via API', { 
             jobId: job.id, 
-            fileCount: req.files?.length || 0,
-            totalItems: updatedJob?.total_items,
+            fileCount: items.length,
+            totalItems: responsePayload.total_items,
             options 
         });
 
-        res.status(201).json(updatedJob);
+        res.status(201).json(responsePayload);
+
+        void (async () => {
+            try {
+                if (items.length === 0) {
+                    safeLog('warn', 'No files received for batch job', { jobId: job.id });
+                    return;
+                }
+
+                safeLog('info', 'Adding items to job', { 
+                    jobId: job.id, 
+                    itemCount: items.length,
+                    fileNames: items.map(i => i.fileName),
+                    fileSizes: items.map(i => i.fileData?.length || 0),
+                    hasRelativePaths: relativePaths.length > 0,
+                    relativePaths: relativePaths.slice(0, 5)
+                });
+
+                const addedCount = await addJobItems(job.id, items);
+                safeLog('info', 'Items added to job', { jobId: job.id, addedCount });
+            } catch (stagingError) {
+                safeLog('error', 'Failed to stage items for batch job after job creation', { jobId: job.id, error: stagingError.message });
+                await updateJobStatus(job.id, JOB_STATUS.FAILED, { error_message: stagingError.message });
+            }
+        })();
     } catch (error) {
         safeLog('error', 'Failed to create batch job', { error: error.message });
         res.status(500).json({ error: error.message || 'Erreur lors de la création du job' });

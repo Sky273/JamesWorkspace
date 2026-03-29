@@ -211,20 +211,53 @@ describe('LLM Handlers', () => {
             expect(res.status).toHaveBeenCalledWith(400);
         });
 
-        it('should improve resume by ID', async () => {
+        it('should improve resume by ID and persist the post-improvement analysis', async () => {
             mockFindResume.mockResolvedValueOnce({
-                firm_name: 'TestFirm', original_text: 'Original text',
-                name: 'Bob', title: 'Dev', global_rating: 70,
-                skills: ['JS'], industries: ['IT'], tools: [], soft_skills: []
+                id: '1',
+                firm_name: 'TestFirm',
+                original_text: 'Original text',
+                original_file_name: 'Bob.pdf',
+                name: 'Bob',
+                title: 'Dev',
+                global_rating: 70,
+                skills_score: 65,
+                experience_score: 66,
+                education_score: 67,
+                ats_score: 68,
+                executive_summary_score: 69,
+                hobbies_languages_score: 70,
+                skills: ['JS'],
+                industries: ['IT'],
+                tools: [],
+                soft_skills: [],
+                improvement_suggestions: { skills: ['Keep JS first'] }
             });
-            mockImproveResume.mockResolvedValueOnce({ text: '<p>better</p>', analysis: { globalRating: 82 } });
+            mockImproveResume.mockResolvedValueOnce({
+                text: '<p>better</p>',
+                analysis: {
+                    globalRating: 82,
+                    tags: { skills: ['Architecture'], industries: ['IT'], tools: [], softSkills: [] },
+                    suggestions: { skills: ['Clarify stack'] }
+                }
+            });
+            mockAnalyzeResume.mockResolvedValueOnce({
+                globalRating: 88,
+                suggestions: { skills: ['Clarify stack'] },
+                tags: { skills: ['Architecture'], industries: ['IT'], tools: [], softSkills: [] }
+            });
+            mockUpdateResume.mockResolvedValueOnce({ id: '1', improved_text: '<p>better</p>', improved_global_rating: 88 });
 
             const { req, res } = mockReqRes({ id: '1' });
 
             await improveByIdHandler(req, res);
 
-            expect(mockImproveResume).toHaveBeenCalledWith('Original text', expect.any(Object), 'gpt-4o', expect.any(String), 'Bob', expect.any(Object));
-            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ text: '<p>better</p>' }));
+            expect(mockImproveResume).toHaveBeenCalledWith('Original text', expect.objectContaining({ globalRating: 70 }), 'gpt-4o', expect.any(String), 'Bob.pdf', expect.any(Object));
+            expect(mockAnalyzeResume).toHaveBeenCalled();
+            expect(mockUpdateResume).toHaveBeenCalled();
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+                text: '<p>better</p>',
+                savedResume: expect.objectContaining({ id: '1', improved_text: '<p>better</p>' })
+            }));
         });
     });
 
