@@ -2,6 +2,7 @@ import { callOllama, callOllamaWithVision } from './ollama.service.js';
 import { callMiniMaxOpenAICompatible } from './minimax.service.js';
 import { callAnthropicChat, callAnthropicVision } from './anthropic.service.js';
 import { callDeepSeekChat } from './deepseek.service.js';
+import { callGLMChat } from './glm.service.js';
 import { callOpenAI } from './openai/apiClient.js';
 import { callOpenAIVisionChat } from './openaiChat.service.js';
 import { buildLLMMetricLabel, metrics } from './metrics.service.js';
@@ -61,6 +62,14 @@ async function invokeDeepSeekVision() {
     throw new Error('DeepSeek vision is not supported by this integration');
 }
 
+async function invokeGLMChat({ model, messages, options }) {
+    return callGLMChat(messages, model, options);
+}
+
+async function invokeGLMVision() {
+    throw new Error('GLM vision is not supported by this integration');
+}
+
 async function invokeOllamaChat({ model, messages, settings, options }) {
     const result = await callOllama(messages, model, settings, buildRequestOptions(options));
     metrics.trackLLMRequest(getMetricsProviderLabel('ollama', result.actualModel || model), result.usage?.total_tokens || 0, true, result.usage?.prompt_tokens || 0, result.usage?.completion_tokens || 0);
@@ -103,6 +112,10 @@ const LLM_PROVIDER_REGISTRY = {
     deepseek: {
         chat: invokeDeepSeekChat,
         vision: invokeDeepSeekVision
+    },
+    glm: {
+        chat: invokeGLMChat,
+        vision: invokeGLMVision
     },
     minimax: {
         chat: invokeMiniMaxChat,

@@ -32,6 +32,18 @@ describe('llmPayloadCapabilities.service', () => {
         expect(normalized.providerCap).toBe(128000);
     });
 
+    it('keeps response_format for GLM-5.1 and clamps max_tokens to its provider limit', () => {
+        const normalized = buildCapabilityAwareOpenAICompatibleParams('glm', 'glm-5.1', {
+            maxTokens: 100000,
+            responseFormat: { type: 'json_object' },
+            additionalParams: { messages: [{ role: 'user', content: 'Hello' }] }
+        });
+
+        expect(normalized.requestParams.response_format).toEqual({ type: 'json_object' });
+        expect(normalized.requestParams.max_tokens).toBe(65536);
+        expect(normalized.providerCap).toBe(65536);
+    });
+
     it('drops unsupported temperature for Anthropic models that disallow it', () => {
         const normalized = buildCapabilityAwareAnthropicOptions('anthropic', 'claude-opus-4-1-20250805', {
             maxTokens: 4000,

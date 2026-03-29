@@ -15,7 +15,7 @@ import logger from '../utils/logger.frontend';
 import { LLMTab, PromptsTab, WeightsTab, ChatbotTab, GdprTab, DpoTab } from '../components/SettingsPage';
 
 type HeroIcon = ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, 'ref'> & { title?: string; titleId?: string } & RefAttributes<SVGSVGElement>>;
-type LLMProvider = 'openai' | 'anthropic' | 'deepseek' | 'minimax' | 'ollama';
+type LLMProvider = 'openai' | 'anthropic' | 'deepseek' | 'glm' | 'minimax' | 'ollama';
 interface Settings {
   id?: string;
   llmProvider?: LLMProvider;
@@ -96,6 +96,7 @@ const defaultFormData: SettingsFormData = {
 const getDefaultModelForProvider = (provider?: LLMProvider): string => {
   if (provider === 'anthropic') return 'claude-sonnet-4-20250514';
   if (provider === 'deepseek') return 'deepseek-chat';
+  if (provider === 'glm') return 'glm-5.1';
   if (provider === 'minimax') return 'MiniMax-M2.7';
   return 'gpt-4o';
 };

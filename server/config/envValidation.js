@@ -19,6 +19,7 @@ const RECOMMENDED_VARS = [
     { name: 'OPENAI_API_KEY', description: 'OpenAI API key for LLM features' },
     { name: 'ANTHROPIC_API_KEY', description: 'Anthropic API key for Claude' },
     { name: 'DEEPSEEK_API_KEY', description: 'DeepSeek API key for DeepSeek models' },
+    { name: 'GLM_API_KEY', description: 'GLM API key for GLM models' },
     { name: 'MINIMAX_API_KEY', description: 'MiniMax API key for MiniMax models' },
     { name: 'NODE_ENV', description: 'Environment (development/production)' }
 ];
@@ -149,6 +150,7 @@ export function getEnvironmentInfo() {
         hasOpenAI: !!process.env.OPENAI_API_KEY,
         hasAnthropic: !!process.env.ANTHROPIC_API_KEY,
         hasDeepSeek: !!process.env.DEEPSEEK_API_KEY,
+        hasGlm: !!process.env.GLM_API_KEY,
         hasMiniMax: !!process.env.MINIMAX_API_KEY,
         minimaxHighspeedEnabled: process.env.MINIMAX_ENABLE_HIGHSPEED_MODELS === 'true',
         hasCsrf: !!process.env.CSRF_SECRET,

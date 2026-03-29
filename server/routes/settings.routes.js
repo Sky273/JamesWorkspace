@@ -20,7 +20,11 @@ function normalizeRequestedSettingsModel(settingsData = {}) {
     const normalizedModel = resolveAvailableModel(
         settingsData.llmProvider,
         settingsData.llmModel,
-        settingsData.llmProvider === 'minimax' ? 'MiniMax-M2.7' : undefined
+        settingsData.llmProvider === 'minimax'
+            ? 'MiniMax-M2.7'
+            : settingsData.llmProvider === 'glm'
+                ? 'glm-5.1'
+                : undefined
     );
 
     if (normalizedModel.adjusted) {

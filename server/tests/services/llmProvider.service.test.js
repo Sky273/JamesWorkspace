@@ -4,6 +4,16 @@ vi.mock('../../services/settings.service.js', () => ({
     getLLMSettings: vi.fn()
 }));
 
+vi.mock('../../services/llmAvailability.service.js', () => ({
+    resolveAvailableModel: vi.fn((provider, model, fallbackModel) => ({
+        model: provider === 'ollama' ? (model ?? null) : (model || fallbackModel || null),
+        adjusted: false,
+        reason: null,
+        originalModel: provider === 'ollama' ? (model ?? null) : (model || fallbackModel || null),
+        fallbackModel: fallbackModel || null
+    }))
+}));
+
 vi.mock('../../services/openai/apiClient.js', () => ({
     callOpenAI: vi.fn()
 }));
@@ -19,6 +29,10 @@ vi.mock('../../services/anthropic.service.js', () => ({
 
 vi.mock('../../services/deepseek.service.js', () => ({
     callDeepSeekChat: vi.fn()
+}));
+
+vi.mock('../../services/glm.service.js', () => ({
+    callGLMChat: vi.fn()
 }));
 
 vi.mock('../../services/ollama.service.js', () => ({
@@ -48,6 +62,7 @@ vi.mock('../../utils/logger.backend.js', () => ({
 import { getLLMSettings } from '../../services/settings.service.js';
 import { callOpenAI } from '../../services/openai/apiClient.js';
 import { callDeepSeekChat } from '../../services/deepseek.service.js';
+import { callGLMChat } from '../../services/glm.service.js';
 import { callOllama } from '../../services/ollama.service.js';
 import { callMiniMaxOpenAICompatible } from '../../services/minimax.service.js';
 import { callBusinessChatCompletion } from '../../services/llmProvider.service.js';
@@ -148,6 +163,37 @@ describe('llmProvider.service', () => {
             timeout: 20 * 60 * 1000
         }));
         expect(result.choices[0].message.content).toBe('ok minimax');
+    });
+
+    it('routes GLM business calls through the GLM service', async () => {
+        getLLMSettings.mockResolvedValueOnce({
+            llmProvider: 'glm',
+            llmModel: 'glm-5.1'
+        });
+        callGLMChat.mockResolvedValueOnce({
+            content: 'ok glm',
+            model: 'glm-5.1',
+            actualModel: 'glm-5.1',
+            usage: { prompt_tokens: 1, completion_tokens: 2, total_tokens: 3 }
+        });
+
+        const result = await callBusinessChatCompletion({
+            messages: [{ role: 'user', content: 'Analyse ce CV' }],
+            operationType: 'Resume Analysis'
+        });
+
+        expect(callGLMChat).toHaveBeenCalledWith(
+            [{ role: 'user', content: 'Analyse ce CV' }],
+            'glm-5.1',
+            expect.objectContaining({
+                max_tokens: 4096,
+                temperature: 0,
+                timeout: 20 * 60 * 1000,
+                operationType: 'Resume Analysis'
+            })
+        );
+        expect(result.choices[0].message.content).toBe('ok glm');
+        expect(result.model).toBe('glm-5.1');
     });
 
     it('uses the configured default OpenAI model when none is passed explicitly', async () => {

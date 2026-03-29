@@ -1,6 +1,6 @@
 import express from 'express';
 import axios from 'axios';
-import { OPENAI_API_KEY, ANTHROPIC_API_KEY, DEEPSEEK_API_KEY, MAX_PROMPT_LENGTH, MINIMAX_API_KEY } from '../config/constants.js';
+import { OPENAI_API_KEY, ANTHROPIC_API_KEY, DEEPSEEK_API_KEY, GLM_API_KEY, MAX_PROMPT_LENGTH, MINIMAX_API_KEY } from '../config/constants.js';
 import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
 import { llmLimiter, combinedRateLimit } from '../middleware/rateLimit.middleware.js';
 import { buildLLMMetricLabel, metrics } from '../services/metrics.service.js';
@@ -11,6 +11,7 @@ import { withRetry, getCircuitBreakerStates } from '../services/retry.service.js
 import { validateBody, openaiRequestSchema, anthropicRequestSchema } from '../utils/validation.js';
 import { callOllama } from '../services/ollama.service.js';
 import { callDeepSeek } from '../services/deepseek.service.js';
+import { callGLM } from '../services/glm.service.js';
 import { callMiniMaxOpenAICompatible, callMiniMaxAnthropicCompatible } from '../services/minimax.service.js';
 import { extractOpenAIResponsesText, flattenLlmTextContent, sanitizeOpenAICompatibleResponseBody } from '../services/llmContent.service.js';
 import { normalizeAnthropicRequestBody, toAnthropicCompatibleResponse, toOpenAICompatibleResponse } from '../services/llmProviderCommon.service.js';
@@ -18,7 +19,7 @@ import { resolveCompatibleProviderRuntimeConfig } from '../services/llmConfigura
 
 const router = express.Router();
 
-const LLM_FAMILY_INDICATORS = ['openai', 'anthropic', 'deepseek', 'minimax', 'ollama'];
+const LLM_FAMILY_INDICATORS = ['openai', 'anthropic', 'deepseek', 'glm', 'minimax', 'ollama'];
 
 function normalizeCircuitBreakerIndicator(provider, indicator) {
     if (indicator && typeof indicator === 'object' && !Array.isArray(indicator)) {
@@ -155,6 +156,34 @@ async function handleDeepSeekRequest(req, res, model, metadata) {
     return res.json(sanitizeOpenAICompatibleResponseBody(response));
 }
 
+async function handleGLMRequest(req, res, model, metadata) {
+    if (!GLM_API_KEY) {
+        return res.status(500).json({ error: 'GLM API key not configured on server.' });
+    }
+
+    securityLog(LOG_LEVELS.INFO, SECURITY_EVENTS.LLM_REQUEST, {
+        ...metadata,
+        message: 'GLM API request',
+        metadata: {
+            model,
+            messageCount: req.body.messages?.length || 0
+        }
+    });
+
+    const response = await callGLM({
+        model,
+        messages: req.body.messages || [],
+        maxTokens: getRequestedMaxTokens(req.body),
+        temperature: req.body.temperature,
+        topP: req.body.top_p,
+        responseFormat: req.body.response_format,
+        timeout: 120000,
+        operationType: `GLM ${model} request`
+    });
+
+    return res.json(sanitizeOpenAICompatibleResponseBody(response));
+}
+
 async function maybeHandleCompatibleProviderRequest(req, res, settings, responseShape, model, metadata) {
     const { provider } = resolveCompatibleProviderRuntimeConfig({
         settings,
@@ -175,6 +204,11 @@ async function maybeHandleCompatibleProviderRequest(req, res, settings, response
     if (provider === 'deepseek' && responseShape === 'openai') {
         safeLog('info', 'Routing openai-compatible request through DeepSeek', { model, provider });
         return handleDeepSeekRequest(req, res, model, metadata);
+    }
+
+    if (provider === 'glm' && responseShape === 'openai') {
+        safeLog('info', 'Routing openai-compatible request through GLM', { model, provider });
+        return handleGLMRequest(req, res, model, metadata);
     }
 
     return null;
@@ -434,6 +468,7 @@ router.get('/circuit-breakers', authenticateToken, requireAdmin, (req, res) => {
     indicators.openai.configured = Boolean(OPENAI_API_KEY);
     indicators.anthropic.configured = Boolean(ANTHROPIC_API_KEY);
     indicators.deepseek.configured = Boolean(DEEPSEEK_API_KEY);
+    indicators.glm.configured = Boolean(GLM_API_KEY);
     indicators.minimax.configured = Boolean(MINIMAX_API_KEY);
     indicators.ollama.configured = true;
 

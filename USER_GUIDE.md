@@ -1410,6 +1410,7 @@ L'assistant et les fonctions d'analyse utilisent le provider configuré par l'ad
 - **OpenAI** : usage général, GPT-5 / GPT-4o
 - **Anthropic** : alternative Claude
 - **DeepSeek** : DeepSeek-V3.2, disponible en mode standard (`deepseek-chat`) ou raisonnement (`deepseek-reasoner`)
+- **GLM** : famille GLM via Z.AI, avec `glm-5.1` et `glm-5`
 - **MiniMax** : `MiniMax-M2.7` et variantes compatibles
 - **Ollama** : instance distante gérée par votre organisation
 
@@ -1617,6 +1618,7 @@ Cette fonctionnalité permet de créer automatiquement un modèle à partir d'un
 - **OpenAI** : `gpt-5.4`, `gpt-5.4-pro`, `gpt-5.2`, `gpt-5.2-pro`, `gpt-5.1`, `gpt-5`, `gpt-5-mini`, `gpt-5-nano`, `gpt-4.1`, `gpt-4.1-mini`, `gpt-4.1-nano`, `gpt-4o`, `gpt-4o-mini`
 - **Anthropic** : `claude-opus-4-1-20250805`, `claude-opus-4-20250514`, `claude-sonnet-4-20250514`, `claude-3-7-sonnet-20250219`, `claude-3-5-sonnet-20241022`, `claude-3-5-haiku-20241022`
 - **DeepSeek** : DeepSeek-V3.2 en mode standard (`deepseek-chat`) ou raisonnement (`deepseek-reasoner`)
+- **GLM** : `glm-5.1`, `glm-5`
 - **MiniMax** : `MiniMax-M2.7`, `MiniMax-M2.7-highspeed`, `MiniMax-M2.5`, `MiniMax-M2.5-highspeed`, `M2-her`, `MiniMax-M2.1`, `MiniMax-M2.1-highspeed`, `MiniMax-M2`
 - **Ollama** : provider distant. Le modèle effectif vient de l'instance Ollama configurée.
 - **Modèle personnalisé** : si votre compte expose un alias spécifique, vous pouvez sélectionner un modèle personnalisé et saisir un identifiant comme `gpt-5.4:latest`.
@@ -1625,6 +1627,7 @@ Cette fonctionnalité permet de créer automatiquement un modèle à partir d'un
 - **OpenAI** : choix général par défaut
 - **Anthropic** : utile si vous standardisez sur Claude
 - **DeepSeek** : bon compromis coût / qualité, avec `deepseek-chat` pour le standard et `deepseek-reasoner` pour les tâches de raisonnement
+- **GLM** : alternative OpenAI-compatible via Z.AI, pratique si vous standardisez sur la famille GLM
 - **MiniMax** : alternative compatible avec les proxys OpenAI et Anthropic, avec plusieurs variantes orientées qualité ou latence
 - **Ollama** : exécution sur une instance distante que vous contrôlez
 
@@ -1646,7 +1649,7 @@ Le mode anonyme supprime automatiquement :
 
 **Observabilité admin** :
 - La page d'administration expose les métriques LLM par famille
-- L'endpoint circuit breaker indique l'état de `openai`, `anthropic`, `deepseek`, `minimax` et `ollama`
+- L'endpoint circuit breaker indique l'état de `openai`, `anthropic`, `deepseek`, `glm`, `minimax` et `ollama`
 - Le health check profond permet de confirmer la connectivité des providers configurés
 
 #### Onglet Pondération

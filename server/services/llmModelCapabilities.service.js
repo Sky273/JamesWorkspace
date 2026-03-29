@@ -118,6 +118,20 @@ const PROVIDER_CAPABILITIES = {
             tokenParameter: 'max_tokens'
         }
     ],
+    glm: [
+        {
+            match: /^glm-5\.1(?:$|-)/i,
+            maxOutputTokens: 65536,
+            tokenParameter: 'max_tokens',
+            supportsResponseFormat: true
+        },
+        {
+            match: /^glm-5(?:$|-)/i,
+            maxOutputTokens: 65536,
+            tokenParameter: 'max_tokens',
+            supportsResponseFormat: true
+        }
+    ],
     minimax: [
         {
             match: /^MiniMax-M2$/i,

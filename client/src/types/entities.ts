@@ -558,7 +558,7 @@ export interface EmailTemplateKeywords {
 
 export interface Settings {
   id?: string;
-  llmProvider?: 'openai' | 'anthropic' | 'deepseek' | 'minimax' | 'ollama';
+  llmProvider?: 'openai' | 'anthropic' | 'deepseek' | 'glm' | 'minimax' | 'ollama';
   llmModel?: string;
   llmAvailability?: { minimax?: { highspeedEnabled?: boolean } };
   ollamaBaseUrl?: string;

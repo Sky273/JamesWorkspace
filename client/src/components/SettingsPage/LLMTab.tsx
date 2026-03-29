@@ -1,7 +1,7 @@
 import { ChangeEvent, useMemo } from 'react';
 
 interface FormData {
-  llmProvider: 'openai' | 'anthropic' | 'deepseek' | 'minimax' | 'ollama';
+  llmProvider: 'openai' | 'anthropic' | 'deepseek' | 'glm' | 'minimax' | 'ollama';
   llmModel: string;
   ollamaBaseUrl?: string;
   cvMode?: 'nominative' | 'anonymous';
@@ -43,6 +43,11 @@ const DEEPSEEK_MODELS = [
   { value: 'deepseek-reasoner', label: 'DeepSeek-V3.2 - Raisonnement (API: deepseek-reasoner)' }
 ];
 
+const GLM_MODELS = [
+  { value: 'glm-5.1', label: 'GLM-5.1' },
+  { value: 'glm-5', label: 'GLM-5' }
+];
+
 const MINIMAX_STANDARD_MODELS = [
   'MiniMax-M2.7',
   'MiniMax-M2.5',
@@ -76,6 +81,7 @@ const LLMTab = ({
     { value: 'openai', label: 'OpenAI' },
     { value: 'anthropic', label: 'Anthropic' },
     { value: 'deepseek', label: 'DeepSeek' },
+    { value: 'glm', label: 'GLM (Z.AI)' },
     { value: 'minimax', label: 'MiniMax' },
     { value: 'ollama', label: 'Ollama' }
   ]), []);
@@ -98,6 +104,9 @@ const LLMTab = ({
     if (provider === 'deepseek') {
       return DEEPSEEK_MODELS;
     }
+    if (provider === 'glm') {
+      return GLM_MODELS;
+    }
     if (provider === 'minimax') {
       return minimaxModels;
     }
@@ -105,7 +114,7 @@ const LLMTab = ({
   }, [provider, minimaxModels]);
 
   const handleProviderChange = (e: ChangeEvent<HTMLSelectElement>): void => {
-    const nextProvider = e.target.value as 'openai' | 'anthropic' | 'deepseek' | 'minimax' | 'ollama';
+    const nextProvider = e.target.value as 'openai' | 'anthropic' | 'deepseek' | 'glm' | 'minimax' | 'ollama';
     onInputChange('llmProvider', nextProvider);
 
     if (nextProvider === 'anthropic' && !ANTHROPIC_MODELS.includes(formData.llmModel)) {
@@ -114,6 +123,10 @@ const LLMTab = ({
 
     if (nextProvider === 'deepseek' && !DEEPSEEK_MODELS.some(model => model.value === formData.llmModel)) {
       onInputChange('llmModel', 'deepseek-chat');
+    }
+
+    if (nextProvider === 'glm' && !GLM_MODELS.some(model => model.value === formData.llmModel)) {
+      onInputChange('llmModel', 'glm-5.1');
     }
 
     if (nextProvider === 'minimax' && !minimaxModels.includes(formData.llmModel)) {
@@ -136,6 +149,9 @@ const LLMTab = ({
   const currentModelLabel = useMemo(() => {
     if (provider === 'deepseek') {
       return DEEPSEEK_MODELS.find(model => model.value === formData.llmModel)?.label || formData.llmModel;
+    }
+    if (provider === 'glm') {
+      return GLM_MODELS.find(model => model.value === formData.llmModel)?.label || formData.llmModel;
     }
     return formData.llmModel;
   }, [provider, formData.llmModel]);
@@ -163,6 +179,8 @@ const LLMTab = ({
             ? fallbackText(t, 'settings.llm.ollamaDescription', 'Configurez uniquement l adresse de votre hote Ollama. Le modele actif sera detecte automatiquement sur votre machine.')
             : provider === 'deepseek'
               ? fallbackText(t, 'settings.llm.deepseekDescription', 'Selectionnez le mode API DeepSeek a utiliser. Les identifiants appeles restent deepseek-chat et deepseek-reasoner, tous deux mappes sur DeepSeek-V3.2 cote API.')
+              : provider === 'glm'
+                ? fallbackText(t, 'settings.llm.glmDescription', 'Selectionnez un modele GLM. L application utilisera l API OpenAI-compatible de Z.AI cote serveur.')
               : provider === 'minimax'
                 ? fallbackText(t, 'settings.llm.minimaxDescription', 'Selectionnez un modele MiniMax. L application utilisera l API MiniMax cote serveur.')
                 : fallbackText(t, 'settings.llm.description', 'Selectionnez le provider et le modele LLM a utiliser pour l analyse et l amelioration des CV.')}

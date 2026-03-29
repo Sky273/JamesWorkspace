@@ -55,7 +55,7 @@
 | **Frontend** | React 19, TypeScript, Vite 8 (Rolldown), TailwindCSS 4, Framer Motion |
 | **Backend** | Node.js, Express.js |
 | **Base de donnÃ©es** | PostgreSQL 18 avec pg (node-postgres) |
-| **IA/LLM** | OpenAI (GPT-4/5), Anthropic (Claude), DeepSeek, MiniMax, Ollama distant |
+| **IA/LLM** | OpenAI (GPT-4/5), Anthropic (Claude), DeepSeek, GLM, MiniMax, Ollama distant |
 | **APIs Externes** | France Travail, Adzuna, ROME 4.0, ESCO |
 | **GÃ©nÃ©ration PDF** | Puppeteer (html-pdf-node) |
 | **Ã‰diteur WYSIWYG** | Tiptap 3.x (ProseMirror) |
@@ -471,6 +471,7 @@ EXECUTE FUNCTION sync_customer_name();
 | **OpenAI** | GPT-5.4 / GPT-5.4-pro / GPT-5.2 / GPT-5.1 / GPT-5, GPT-4.1, GPT-4o | Analyse, amÃ©lioration, adaptation |
 | **Anthropic** | Claude Opus 4.x, Claude Sonnet 4, Claude 3.7, Claude 3.5 | Alternative Ã  OpenAI |
 | **DeepSeek** | DeepSeek-V3.2 via `deepseek-chat` et `deepseek-reasoner` | Alternative OpenAI-compatible avec deux modes d'appel : standard et raisonnement |
+| **GLM (Z.AI)** | `glm-5.1`, `glm-5` | Alternative OpenAI-compatible via l'API Z.AI |
 | **MiniMax** | MiniMax-M2.7, MiniMax-M2.5, MiniMax-M2.1, MiniMax-M2, M2-her, variantes `highspeed` conditionnelles | Alternative API-compatible pour analyse, amÃ©lioration, adaptation avec filtrage selon disponibilitÃ© de plan |
 | **Ollama (distant)** | ModÃ¨les exposÃ©s par une instance Ollama externe | ExÃ©cution via une URL Ollama distante, sans moteur Ollama embarquÃ© dans le conteneur |
 
@@ -495,6 +496,7 @@ Le service gÃ¨re automatiquement les diffÃ©rences entre modÃ¨les :
 - suppression automatique de `response_format` quand un modÃ¨le ne le supporte pas (ex. famille MiniMax M2.x)
 - clamp centralisÃ© des plafonds de sortie connus par modÃ¨le/provider
 - support OpenAI-compatible DeepSeek
+- support OpenAI-compatible GLM (Z.AI)
 - APIs compatibles OpenAI et Anthropic pour MiniMax
 - connexion HTTP vers une instance Ollama distante configurÃ©e dans les paramÃ¨tres
 - cas Ollama sans `llmModel` obligatoire cÃ´tÃ© application lorsque le modÃ¨le est pilotÃ© par l'instance distante
@@ -512,13 +514,13 @@ La disponibilitÃ© mÃ©tier d'un modÃ¨le est traitÃ©e sÃ©parÃ©ment de 
 Les responsabilitÃ©s sont maintenant sÃ©parÃ©es :
 - `llmConfiguration.service.js` : rÃ©solution runtime provider / modÃ¨le
 - `llmGateway.service.js` : gateway unique, agnostique du provider hors configuration
-- `openaiChat.service.js`, `anthropic.service.js`, `deepseek.service.js`, `minimax.service.js`, `ollama.service.js` : implÃ©mentations provider
+- `openaiChat.service.js`, `anthropic.service.js`, `deepseek.service.js`, `glm.service.js`, `minimax.service.js`, `ollama.service.js` : implÃ©mentations provider
 - `llmContent.service.js` : normalisation/sanitation des sorties
 - `llmProviderCommon.service.js` : rÃ¨gles communes de payloads/rÃ©ponses compatibles
 
 ### RÃ©silience et observabilitÃ©
 
-- Retry et circuit breaker pour `openai`, `anthropic`, `deepseek` et `minimax`
+- Retry et circuit breaker pour `openai`, `anthropic`, `deepseek`, `glm` et `minimax`
 - Retry rÃ©seau lÃ©ger pour `ollama` sur les appels data plane et control plane, sans circuit breaker
 - L'indicateur `ollama` dans `/api/llm/circuit-breakers` reste volontairement `NOT_APPLICABLE` pour reflÃ©ter ce choix d'architecture
 - Indicateur d'Ã©tat par famille via `/api/llm/circuit-breakers`
@@ -1317,6 +1319,8 @@ CREATE TABLE schema_migrations (
 | `ANTHROPIC_MODEL` | Optionnel | ModÃ¨le Anthropic par dÃ©faut |
 | `DEEPSEEK_API_KEY` | Optionnel | ClÃ© API DeepSeek |
 | `DEEPSEEK_BASE_URL` | Optionnel | URL base DeepSeek |
+| `GLM_API_KEY` | Optionnel | ClÃ© API GLM / Z.AI |
+| `GLM_BASE_URL` | Optionnel | URL base OpenAI-compatible GLM (`https://api.z.ai/api/paas/v4`) |
 | `MINIMAX_API_KEY` | Optionnel | ClÃ© API MiniMax |
 | `MINIMAX_OPENAI_BASE_URL` | Optionnel | URL base OpenAI-compatible MiniMax |
 | `MINIMAX_ANTHROPIC_BASE_URL` | Optionnel | URL base Anthropic-compatible MiniMax |

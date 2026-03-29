@@ -1,5 +1,5 @@
 import express from 'express';
-import { OPENAI_API_KEY, ANTHROPIC_API_KEY, DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, MINIMAX_API_KEY, MINIMAX_ANTHROPIC_BASE_URL, OLLAMA_BASE_URL } from '../config/constants.js';
+import { OPENAI_API_KEY, ANTHROPIC_API_KEY, DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, GLM_API_KEY, GLM_BASE_URL, MINIMAX_API_KEY, MINIMAX_ANTHROPIC_BASE_URL, OLLAMA_BASE_URL } from '../config/constants.js';
 import { settingsCache, templatesCache, firmsCache } from '../services/cache.service.js';
 import { checkDatabaseHealth } from '../services/health.service.js';
 import { getTrendsCacheStats } from '../services/marketTrends.service.js';
@@ -68,6 +68,7 @@ router.get('/', async (req, res) => {
         openai: { status: 'unknown' },
         anthropic: { status: 'unknown' },
         deepseek: { status: 'unknown' },
+        glm: { status: 'unknown' },
         minimax: { status: 'unknown' },
         ollama: { status: 'unknown' },
         memory: { status: 'ok' },
@@ -229,6 +230,38 @@ router.get('/', async (req, res) => {
         }
     } else {
         checks.deepseek = getNotConfiguredCheck();
+    }
+
+    if (GLM_API_KEY) {
+        if (deepCheck) {
+            try {
+                checks.glm = await runConnectivityCheck({
+                    fetchUrl: `${GLM_BASE_URL.replace(/\/$/, '')}/chat/completions`,
+                    fetchOptions: {
+                        method: 'POST',
+                        headers: {
+                            Authorization: `Bearer ${GLM_API_KEY}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            model: 'glm-5',
+                            messages: [{ role: 'user', content: 'ping' }],
+                            max_tokens: 1
+                        })
+                    },
+                    connectedStatuses: [400]
+                });
+                if (checks.glm.status === 'error') {
+                    overallStatus = overallStatus === 'healthy' ? 'degraded' : overallStatus;
+                }
+            } catch (error) {
+                checks.glm = getFailedConnectivityCheck(error);
+            }
+        } else {
+            checks.glm = getConfiguredCheck();
+        }
+    } else {
+        checks.glm = getNotConfiguredCheck();
     }
 
     if (MINIMAX_API_KEY) {

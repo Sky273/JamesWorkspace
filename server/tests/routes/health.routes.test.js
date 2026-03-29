@@ -18,6 +18,8 @@ vi.mock('../../config/constants.js', () => ({
     ANTHROPIC_API_KEY: 'test-anthropic-key',
     DEEPSEEK_API_KEY: 'test-deepseek-key',
     DEEPSEEK_BASE_URL: 'https://api.deepseek.com',
+    GLM_API_KEY: 'test-glm-key',
+    GLM_BASE_URL: 'https://api.z.ai/api/paas/v4',
     MINIMAX_API_KEY: 'test-minimax-key',
     MINIMAX_ANTHROPIC_BASE_URL: 'https://api.minimax.io/anthropic',
     OLLAMA_BASE_URL: 'http://127.0.0.1:11434',
@@ -111,6 +113,7 @@ describe('Health Routes', () => {
             expect(response.checks.openai.status).toBe('configured');
             expect(response.checks.anthropic.status).toBe('configured');
             expect(response.checks.deepseek.status).toBe('configured');
+            expect(response.checks.glm.status).toBe('configured');
             expect(response.checks.minimax.status).toBe('configured');
             expect(response.checks.cache.status).toBe('ok');
         });
@@ -220,6 +223,7 @@ describe('Health Routes', () => {
                 .mockResolvedValueOnce({ ok: true, status: 200 })
                 .mockResolvedValueOnce({ ok: true, status: 200 })
                 .mockResolvedValueOnce({ ok: true, status: 200 })
+                .mockResolvedValueOnce({ ok: true, status: 200 })
                 .mockResolvedValueOnce({ ok: true, status: 200 });
 
             dbQuery.mockResolvedValueOnce({ rows: [{ connected: 1 }] });
@@ -236,10 +240,12 @@ describe('Health Routes', () => {
             expect(response.checks.openai.status).toBe('ok');
             expect(response.checks.anthropic.status).toBe('ok');
             expect(response.checks.deepseek.status).toBe('ok');
+            expect(response.checks.glm.status).toBe('ok');
             expect(response.checks.minimax.status).toBe('ok');
-            expect(global.fetch).toHaveBeenCalledTimes(5);
+            expect(global.fetch).toHaveBeenCalledTimes(6);
             expect(global.fetch.mock.calls[2][0]).toBe('https://api.deepseek.com/chat/completions');
-            expect(global.fetch.mock.calls[3][0]).toBe('https://api.minimax.io/anthropic/v1/messages');
+            expect(global.fetch.mock.calls[3][0]).toBe('https://api.z.ai/api/paas/v4/chat/completions');
+            expect(global.fetch.mock.calls[4][0]).toBe('https://api.minimax.io/anthropic/v1/messages');
         });
     });
 });

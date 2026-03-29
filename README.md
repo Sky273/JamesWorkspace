@@ -39,7 +39,7 @@ Application professionnelle de gestion et d'analyse de CVs avec intelligence art
 
 ### Chatbot IA
 - **Assistant conversationnel** : Aide ÃƒÂ  la rÃƒÂ©daction et conseils carriÃƒÂ¨re
-- **Multi-modÃƒÂ¨les** : Support OpenAI (GPT-5.4 / GPT-5.4-pro / GPT-5.2 / GPT-5.1 / GPT-5 / GPT-4.1 / GPT-4o), Anthropic (Claude Opus 4.x / Sonnet 4 / Claude 3.7 / Claude 3.5), DeepSeek (DeepSeek-V3.2 via `deepseek-chat` et `deepseek-reasoner`), MiniMax et Ollama distant
+- **Multi-modÃƒÂ¨les** : Support OpenAI (GPT-5.4 / GPT-5.4-pro / GPT-5.2 / GPT-5.1 / GPT-5 / GPT-4.1 / GPT-4o), Anthropic (Claude Opus 4.x / Sonnet 4 / Claude 3.7 / Claude 3.5), DeepSeek (DeepSeek-V3.2 via `deepseek-chat` et `deepseek-reasoner`), GLM (`glm-5.1`, `glm-5`), MiniMax et Ollama distant
 - **Contexte CV** : RÃƒÂ©ponses personnalisÃƒÂ©es basÃƒÂ©es sur le profil
 
 ### Administration
@@ -123,11 +123,11 @@ Application professionnelle de gestion et d'analyse de CVs avec intelligence art
 - `POST /api/tags/extract` - Extraire les tags d'un texte
 
 ### LLM (Proxy)
-- `POST /api/llm/openai` - Proxy OpenAI (GPT-5, GPT-4o) avec routage compatible DeepSeek / MiniMax / Ollama selon configuration
+- `POST /api/llm/openai` - Proxy OpenAI (GPT-5, GPT-4o) avec routage compatible DeepSeek / GLM / MiniMax / Ollama selon configuration
 - `POST /api/llm/anthropic` - Proxy Anthropic (Claude) avec routage compatible MiniMax selon configuration
 - `POST /api/llm/messages` - Proxy Anthropic / providers compatibles
-- `POST /api/llm/chat/completions` - Proxy OpenAI-compatible unifiÃƒÂ© (OpenAI, DeepSeek, MiniMax, Ollama selon configuration)
-- `GET /api/llm/circuit-breakers` - Etat des familles LLM (`openai`, `anthropic`, `deepseek`, `minimax`, `ollama`)
+- `POST /api/llm/chat/completions` - Proxy OpenAI-compatible unifiÃƒÂ© (OpenAI, DeepSeek, GLM, MiniMax, Ollama selon configuration)
+- `GET /api/llm/circuit-breakers` - Etat des familles LLM (`openai`, `anthropic`, `deepseek`, `glm`, `minimax`, `ollama`)
 
 ### Cabinets (Firms)
 - `GET /api/firms` - Liste des cabinets
@@ -192,6 +192,11 @@ L'application supporte plusieurs fournisseurs LLM :
 - **DeepSeek-V3.2 - Standard** : appelÃƒÂ© via l'identifiant API `deepseek-chat`
 - **DeepSeek-V3.2 - Raisonnement** : appelÃƒÂ© via l'identifiant API `deepseek-reasoner`, avec sanitation serveur du `reasoning_content`
 
+### GLM (Z.AI)
+- **GLM-5.1** : modÃƒÂ¨le par dÃƒÂ©faut de la famille GLM dans l'application
+- **GLM-5** : variante compatible OpenAI-compatible via l'API Z.AI
+- Endpoint serveur : `GLM_BASE_URL` (par dÃƒÂ©faut `https://api.z.ai/api/paas/v4`)
+
 ### MiniMax
 - **MiniMax-M2.7 / MiniMax-M2.7-highspeed** : modÃƒÂ¨les principaux cÃƒÂ´tÃƒÂ© MiniMax
 - **MiniMax-M2.5 / MiniMax-M2.5-highspeed** : alternatives orientÃƒÂ©es performance / latence
@@ -202,7 +207,7 @@ L'application supporte plusieurs fournisseurs LLM :
 - URL configurable dans les paramÃƒÂ¨tres LLM
 - `keep_alive` et `num_ctx` pilotables via les paramÃƒÂ¨tres stockÃƒÂ©s
 
-Configuration via les paramÃƒÂ¨tres de l'application ou variables d'environnement. L'orchestration serveur passe par un gateway LLM unique avec retries, circuit breakers, sanitation du contenu et mÃƒÂ©triques bornÃƒÂ©es. Les providers distants (`openai`, `anthropic`, `deepseek`, `minimax`) utilisent retry + circuit breaker, tandis que `ollama` utilise uniquement un retry rÃƒÂ©seau lÃƒÂ©ger, sans circuit breaker.
+Configuration via les paramÃƒÂ¨tres de l'application ou variables d'environnement. L'orchestration serveur passe par un gateway LLM unique avec retries, circuit breakers, sanitation du contenu et mÃƒÂ©triques bornÃƒÂ©es. Les providers distants (`openai`, `anthropic`, `deepseek`, `glm`, `minimax`) utilisent retry + circuit breaker, tandis que `ollama` utilise uniquement un retry rÃƒÂ©seau lÃƒÂ©ger, sans circuit breaker.
 
 ## Ã°Å¸ÂÂ³ Docker
 

@@ -21,6 +21,7 @@ vi.mock('../../config/constants.js', () => ({
     OPENAI_API_KEY: 'test-openai-key',
     ANTHROPIC_API_KEY: 'test-anthropic-key',
     DEEPSEEK_API_KEY: 'test-deepseek-key',
+    GLM_API_KEY: 'test-glm-key',
     MAX_PROMPT_LENGTH: 10000,
     MINIMAX_API_KEY: 'test-minimax-key'
 }));
@@ -55,12 +56,23 @@ vi.mock('../../services/settings.service.js', () => ({
     getLLMSettings: (...args) => mockGetLLMSettings(...args)
 }));
 
+vi.mock('../../services/llmAvailability.service.js', () => ({
+    resolveAvailableModel: vi.fn((provider, model, fallbackModel) => ({
+        model: provider === 'ollama' ? (model ?? null) : (model || fallbackModel || null),
+        adjusted: false,
+        reason: null,
+        originalModel: provider === 'ollama' ? (model ?? null) : (model || fallbackModel || null),
+        fallbackModel: fallbackModel || null
+    }))
+}));
+
 vi.mock('../../services/retry.service.js', () => ({
     withRetry: (fn) => fn(),
     getCircuitBreakerStates: vi.fn().mockReturnValue({
         openai: { state: 'CLOSED', failures: 0, lastFailureTime: null },
         anthropic: { state: 'CLOSED', failures: 0, lastFailureTime: null },
         deepseek: { state: 'CLOSED', failures: 1, lastFailureTime: 12345 },
+        glm: { state: 'CLOSED', failures: 0, lastFailureTime: null },
         minimax: { state: 'HALF_OPEN', failures: 2, lastFailureTime: 67890 }
     })
 }));
@@ -102,6 +114,11 @@ vi.mock('../../services/ollama.service.js', () => ({
 const mockCallDeepSeek = vi.fn();
 vi.mock('../../services/deepseek.service.js', () => ({
     callDeepSeek: (...args) => mockCallDeepSeek(...args)
+}));
+
+const mockCallGLM = vi.fn();
+vi.mock('../../services/glm.service.js', () => ({
+    callGLM: (...args) => mockCallGLM(...args)
 }));
 
 const mockCallMiniMaxOpenAICompatible = vi.fn();
@@ -217,6 +234,23 @@ describe('LLM Routes', () => {
 
             expect(res.status).toBe(200);
             expect(res.body.choices[0].message.content).toBe('Hi from MiniMax');
+        });
+
+        it('routes through GLM when configured', async () => {
+            mockGetLLMSettings.mockResolvedValueOnce({ llmProvider: 'glm', llmModel: 'glm-5.1' });
+            mockCallGLM.mockResolvedValueOnce({
+                model: 'glm-5.1',
+                choices: [{ message: { content: 'Hi from GLM' } }],
+                usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 }
+            });
+
+            const res = await request(app)
+                .post('/api/llm/openai')
+                .set(AUTH)
+                .send({ messages: [{ role: 'user', content: 'Hello' }] });
+
+            expect(res.status).toBe(200);
+            expect(res.body.choices[0].message.content).toBe('Hi from GLM');
         });
 
         it('should return 400 for message exceeding max length', async () => {
@@ -377,6 +411,7 @@ describe('LLM Routes', () => {
                 openai: { provider: 'openai', supported: true, configured: true, state: 'CLOSED', failures: 0, lastFailureTime: null },
                 anthropic: { provider: 'anthropic', supported: true, configured: true, state: 'CLOSED', failures: 0, lastFailureTime: null },
                 deepseek: { provider: 'deepseek', supported: true, configured: true, state: 'CLOSED', failures: 1, lastFailureTime: 12345 },
+                glm: { provider: 'glm', supported: true, configured: true, state: 'CLOSED', failures: 0, lastFailureTime: null },
                 minimax: { provider: 'minimax', supported: true, configured: true, state: 'HALF_OPEN', failures: 2, lastFailureTime: 67890 },
                 ollama: { provider: 'ollama', supported: false, configured: true, state: 'NOT_APPLICABLE', failures: 0, lastFailureTime: null }
             });
