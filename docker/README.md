@@ -82,7 +82,7 @@ cd ResumeConverter
 git checkout develop
 
 docker-build.bat   # Build the Docker image (⚠️ requires .env.docker)
-docker-run.bat     # Start the container (⚠️ requires Administrator terminal)
+docker-run.bat     # Start the stack (⚠️ requires Administrator terminal)
 ```
 
 > ⚠️ **Administrator terminal required**: `docker-run.bat` automatically configures a port forwarding rule (`netsh interface portproxy`) for external access via Cloudflare (port 443 → localhost:3443). This `netsh` command requires Administrator privileges.
@@ -143,8 +143,8 @@ After starting the container:
 | Script | Description |
 |--------|-------------|
 | `docker-build.bat` | Build the Docker image |
-| `docker-run.bat` | Start the container (⚠️ Admin terminal) |
-| `docker-stop.bat` | Stop and remove the container |
+| `docker-run.bat` | Start the stack (⚠️ Admin terminal) |
+| `docker-stop.bat` | Stop and remove the stack |
 | `docker-logs.bat` | View logs in real-time |
 | `docker-shell.bat` | Open a shell in the container |
 
@@ -204,10 +204,30 @@ Le conteneur démarre maintenant aussi un service Redis interne pour le cache ap
 - persistance locale :
   - `./data/redis` monté dans `/app/data/redis`
 - vérification runtime :
-  - `GET /health` en admin
-  - champ `checks.cache.backend`
-  - champ `checks.cache.connected`
-  - champ `checks.cache.fallbackReason`
+- `GET /health` en admin
+- champ `checks.cache.backend`
+- champ `checks.cache.connected`
+- champ `checks.cache.fallbackReason`
+
+### Variante multi-service
+
+Le workflow standard Windows sort maintenant Redis du conteneur applicatif :
+
+- `docker-compose.redis.yml`
+- `docker-run.bat`
+- `docker-stop.bat`
+
+Dans ce mode :
+- Redis tourne dans un conteneur dédié `resumeconverter-redis`
+- l'application pointe vers `redis://redis:6379`
+- Redis interne est désactivé dans le conteneur applicatif (`DISABLE_INTERNAL_REDIS=true`)
+- les données Redis persistent toujours dans `./data/redis`
+
+Ce mode est préférable si vous voulez vous rapprocher d'un déploiement multi-instance sans refondre l'image applicative immédiatement.
+
+Scripts de compatibilité conservés :
+- `docker-run-compose.bat` -> alias vers `docker-run.bat`
+- `docker-stop-compose.bat` -> alias vers `docker-stop.bat`
 
 ### Manual Docker Run
 

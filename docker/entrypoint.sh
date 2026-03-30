@@ -108,10 +108,27 @@ npm run docker-migrate
 # Start all services via Supervisor
 # =============================================================================
 echo "[5/5] Starting application servers..."
+
+SUPERVISOR_CONF="/etc/supervisor/conf.d/supervisord.conf"
+if [ "$DISABLE_INTERNAL_REDIS" = "true" ]; then
+    echo "Internal Redis disabled; using external/shared Redis backend."
+    awk '
+        BEGIN { skip = 0 }
+        /^\[program:redis\]/ { skip = 1; next }
+        skip && /^\[program:/ { skip = 0 }
+        !skip { print }
+    ' "$SUPERVISOR_CONF" > /tmp/supervisord-runtime.conf
+    SUPERVISOR_CONF="/tmp/supervisord-runtime.conf"
+fi
+
 echo ""
 echo "=============================================="
 echo "  Services:"
-echo "  - Redis Cache:   redis://127.0.0.1:6379 (internal)"
+if [ "$DISABLE_INTERNAL_REDIS" = "true" ]; then
+    echo "  - Redis Cache:   $CACHE_REDIS_URL (external)"
+else
+    echo "  - Redis Cache:   redis://127.0.0.1:6379 (internal)"
+fi
 echo "  - Proxy Server:  https://localhost:3443"
 echo "  - PDF Server:    http://localhost:3002 (internal)"
 echo "  - PostgreSQL:    localhost:5432 (internal)"
@@ -121,4 +138,4 @@ echo "Default login: admin@resumeconverter.local / admin123"
 echo ""
 
 # Start supervisor (manages all Node.js processes)
-exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
+exec /usr/bin/supervisord -c "$SUPERVISOR_CONF"

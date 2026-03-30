@@ -165,6 +165,7 @@ ENV POSTGRES_PASSWORD=RcV2026!PgSecure#Db
 ENV CACHE_BACKEND=redis
 ENV CACHE_REDIS_URL=redis://127.0.0.1:6379
 ENV CACHE_KEY_PREFIX=resumeconverter
+ENV DISABLE_INTERNAL_REDIS=false
 ENV JWT_SECRET=docker-jwt-secret-change-in-production-min32chars
 ENV JWT_REFRESH_SECRET=docker-jwt-refresh-secret-change-in-production-min32chars
 ENV REFRESH_TOKEN_SECRET=docker-refresh-token-secret-change-in-production-min32chars

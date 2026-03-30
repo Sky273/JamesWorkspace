@@ -227,6 +227,9 @@ L'application inclut un monitoring mémoire accessible via :
 - diagnostics visibles :
   - `/health` expose `checks.cache.backend`, `checks.cache.connected`, `checks.cache.fallbackReason`
   - la page métriques admin affiche aussi le backend effectif et la raison éventuelle du fallback
+- en Docker :
+  - `docker-run.bat` démarre la pile standard `app + redis`
+  - `docker-run-compose.bat` reste un alias de compatibilité vers `docker-run.bat`
 
 
 ## 🤖 Intégration LLM
@@ -287,6 +290,23 @@ docker run -d \
 **Identifiants** : `admin@resumeconverter.local` / `admin123`
 
 Voir le dossier `docker/` et `docker/README.md` pour les configurations détaillées.
+
+### Mode Docker standard avec Redis séparé
+
+Le workflow principal Windows démarre maintenant Redis dans un service séparé :
+
+```bash
+docker-run.bat
+```
+
+Ce mode démarre :
+- `resumeconverter-app`
+- `resumeconverter-redis`
+
+Fichiers associés :
+- `docker-compose.redis.yml`
+- `docker-run.bat`
+- `docker-stop.bat`
 
 ## 📚 Documentation
 

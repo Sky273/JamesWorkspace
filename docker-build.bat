@@ -30,11 +30,11 @@ if errorlevel 1 (
 )
 
 echo.
-echo [2/2] Starting container via docker-run.bat...
+echo [2/2] Starting stack via docker-run.bat...
 call "%RUN_SCRIPT%"
 if errorlevel 1 (
     echo.
-    echo Container startup failed! Check the errors above.
+    echo Stack startup failed! Check the errors above.
     pause
     exit /b 1
 )

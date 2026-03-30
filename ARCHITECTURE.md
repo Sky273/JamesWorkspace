@@ -927,17 +927,21 @@ Variables d'environnement:
 - `CACHE_REDIS_URL=redis://127.0.0.1:6379`
 - `CACHE_KEY_PREFIX=resumeconverter`
 
-Caches d?j? migr?s:
+Caches déjà migrés:
 - `settings`
 - `templates`
 - `firms`
-- ?tat de disponibilit? runtime LLM
+- état de disponibilité runtime LLM
 
 Diagnostic runtime:
 - `/health` expose `checks.cache.backend`
 - `/health` expose `checks.cache.connected`
 - `/health` expose `checks.cache.fallbackReason`
 - `/api/admin/cache-stats` remonte aussi ce diagnostic de manière consolidée
+
+Déploiement Docker:
+- mode historique: Redis embarqué dans le conteneur principal
+- mode recommandé pour préparer le multi-instance: `docker-compose.redis.yml` avec Redis séparé
 
 ### 📦 Compression
 
