@@ -446,6 +446,56 @@ describe('Profile Matching Service', () => {
             expect(candidateIdCount).toBeLessThanOrEqual(100);
         });
 
+        it('should send all in-scope resumes to the batching pipeline when the prefilter cap is disabled', async () => {
+            const originalPrefilterCap = process.env.PROFILE_MATCHING_LLM_PREFILTER_CAP;
+            process.env.PROFILE_MATCHING_LLM_PREFILTER_CAP = '0';
+            vi.resetModules();
+
+            try {
+                const refreshedService = await import('../../services/profileMatching.service.js');
+                const refreshedFindMatchingProfiles = refreshedService.default.findMatchingProfiles;
+
+                const manyResumes = Array.from({ length: 150 }, (_, i) => ({
+                    ...mockResumeRecords[0],
+                    id: `resume-${i}`,
+                    name: `Candidate ${i}`
+                }));
+
+                findWithTimeout.mockResolvedValue(mockMissionRecord);
+                selectWithTimeout.mockResolvedValue(manyResumes);
+                callBusinessChatCompletion.mockResolvedValue({
+                    choices: [{
+                        message: {
+                            content: JSON.stringify({
+                                scores: Object.fromEntries(
+                                    manyResumes.map(r => [r.id, { score: 72, confidence: 'medium', reason: 'Test' }])
+                                )
+                            })
+                        }
+                    }]
+                });
+
+                const result = await refreshedFindMatchingProfiles('mission-1', { limit: 0 });
+                const totalCandidatesSent = callBusinessChatCompletion.mock.calls.reduce((total, call) => {
+                    const llmPayload = call[0];
+                    const serializedCandidates = llmPayload.messages[1].content;
+                    return total + (serializedCandidates.match(/"id":/g) || []).length;
+                }, 0);
+
+                expect(result.totalResumesScanned).toBe(150);
+                expect(result.profilesSentToLlm).toBe(150);
+                expect(totalCandidatesSent).toBe(150);
+                expect(callBusinessChatCompletion.mock.calls.length).toBeGreaterThan(1);
+            } finally {
+                if (originalPrefilterCap === undefined) {
+                    delete process.env.PROFILE_MATCHING_LLM_PREFILTER_CAP;
+                } else {
+                    process.env.PROFILE_MATCHING_LLM_PREFILTER_CAP = originalPrefilterCap;
+                }
+                vi.resetModules();
+            }
+        });
+
         it('should handle partial LLM failures gracefully', async () => {
             // First batch succeeds, second fails
             callBusinessChatCompletion

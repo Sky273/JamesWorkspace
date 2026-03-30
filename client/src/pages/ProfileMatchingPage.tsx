@@ -128,7 +128,10 @@ const ProfileMatchingPage = (): JSX.Element => {
       if (data.profiles.length === 0) {
         toast(t('profileMatching.noResults'), { icon: '🔍' });
       } else {
-        toast.success(t('profileMatching.resultsFound', { count: data.profiles.length }));
+        const scannedCount = data.totalResumesScanned;
+        const sentToLlmCount = data.profilesSentToLlm ?? scannedCount;
+        const returnedCount = data.profiles.length;
+        toast.success(`${scannedCount} CV analyses, ${sentToLlmCount} envoyes au LLM, ${returnedCount} resultats retournes`);
       }
     } catch (error) {
       logger.error('Error searching profiles:', error);
@@ -270,9 +273,20 @@ const ProfileMatchingPage = (): JSX.Element => {
               {t('profileMatching.extractedKeywords')}
             </h2>
             {renderKeywordsBadges(results.missionKeywords)}
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
-              {t('profileMatching.scannedResumes', { count: results.totalResumesScanned })}
-            </p>
+            <div className="mt-3 space-y-1 text-xs text-gray-500 dark:text-gray-400">
+              <p>
+                {t('profileMatching.scannedResumes', { count: results.totalResumesScanned })}
+              </p>
+              <p>
+                {results.profilesSentToLlm ?? results.totalResumesScanned} envoyes au LLM
+                {typeof results.profilesExplained === 'number'
+                  ? ` - ${results.profilesExplained} expliques`
+                  : ''}
+              </p>
+              <p>
+                {results.profiles.length} retournes
+              </p>
+            </div>
           </div>
 
           {/* Profile list */}

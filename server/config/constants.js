@@ -56,6 +56,10 @@ export const PROFILE_MATCHING_LLM_BATCH_SIZE = Math.min(
     Math.max(parseInt(process.env.PROFILE_MATCHING_LLM_BATCH_SIZE || '0', 10) || 0, 0),
     100
 );
+export const PROFILE_MATCHING_LLM_PREFILTER_CAP = Math.max(
+    parseInt(process.env.PROFILE_MATCHING_LLM_PREFILTER_CAP || '100', 10) || 0,
+    0
+);
 export const PROFILE_MATCHING_LOCAL_SKILL_WEIGHT = Math.max(parseInt(process.env.PROFILE_MATCHING_LOCAL_SKILL_WEIGHT || '6', 10) || 6, 0);
 export const PROFILE_MATCHING_LOCAL_TOOL_WEIGHT = Math.max(parseInt(process.env.PROFILE_MATCHING_LOCAL_TOOL_WEIGHT || '4', 10) || 4, 0);
 export const PROFILE_MATCHING_LOCAL_INDUSTRY_WEIGHT = Math.max(parseInt(process.env.PROFILE_MATCHING_LOCAL_INDUSTRY_WEIGHT || '3', 10) || 3, 0);

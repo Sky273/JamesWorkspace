@@ -13,6 +13,7 @@ import { normalizeUtf8Text, parseJsonFromLlmResponse } from './openai/textUtils.
 import {
     PROFILE_MATCHING_LLM_BATCH_SIZE,
     PROFILE_MATCHING_LLM_MAX_CONCURRENCY,
+    PROFILE_MATCHING_LLM_PREFILTER_CAP,
     PROFILE_MATCHING_LOCAL_SKILL_WEIGHT,
     PROFILE_MATCHING_LOCAL_TOOL_WEIGHT,
     PROFILE_MATCHING_LOCAL_INDUSTRY_WEIGHT,
@@ -235,14 +236,21 @@ function getExplanationProfileCount(limit = 0, totalProfiles = 0) {
     return Math.min(PROFILE_MATCHING_MAX_EXPLANATIONS, totalProfiles);
 }
 
-function selectProfilesForLlm(allProfiles, missionKeywords, missionTitle, limit = 0, rankingWeights = DEFAULT_LOCAL_RANKING_WEIGHTS) {
-    if (allProfiles.length <= 100) {
+function selectProfilesForLlm(
+    allProfiles,
+    missionKeywords,
+    missionTitle,
+    limit = 0,
+    rankingWeights = DEFAULT_LOCAL_RANKING_WEIGHTS,
+    prefilterCap = PROFILE_MATCHING_LLM_PREFILTER_CAP
+) {
+    if (prefilterCap === 0 || allProfiles.length <= prefilterCap) {
         return allProfiles;
     }
 
     const candidateCount = limit > 0
-        ? Math.min(Math.max(limit * 5, 50), 100)
-        : 100;
+        ? Math.min(Math.max(limit * 5, 50), prefilterCap)
+        : prefilterCap;
 
     return allProfiles
         .map(profile => ({
@@ -823,7 +831,14 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
     });
     
     // 6. Pre-rank locally to avoid sending the entire firm portfolio to the LLM.
-    const profilesToScore = selectProfilesForLlm(allProfiles, missionKeywords, missionRecord.title, limit, localRankingWeights);
+    const profilesToScore = selectProfilesForLlm(
+        allProfiles,
+        missionKeywords,
+        missionRecord.title,
+        limit,
+        localRankingWeights,
+        PROFILE_MATCHING_LLM_PREFILTER_CAP
+    );
     
     safeLog('info', 'Sending profiles to LLM for scoring', {
         totalProfiles: allProfiles.length,
