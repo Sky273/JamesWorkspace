@@ -14,6 +14,37 @@ import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.j
 
 const router = express.Router();
 
+function getCacheBackendSummary(cacheRegistry = {}) {
+    const effectiveBackends = Object.values(cacheRegistry)
+        .map(stats => stats?.effectiveBackend || stats?.backend)
+        .filter(Boolean);
+
+    if (effectiveBackends.length === 0) {
+        return 'unknown';
+    }
+
+    const uniqueBackends = [...new Set(effectiveBackends)];
+    return uniqueBackends.length === 1 ? uniqueBackends[0] : uniqueBackends.join(',');
+}
+
+function getCacheDiagnosticSummary(cacheRegistry = {}) {
+    const registryEntries = Object.values(cacheRegistry);
+    const connectedFlags = registryEntries
+        .map(stats => stats?.connected)
+        .filter(flag => typeof flag === 'boolean');
+    const disabledReasons = [...new Set(
+        registryEntries
+            .map(stats => stats?.disabledReason)
+            .filter(Boolean)
+    )];
+
+    return {
+        backend: getCacheBackendSummary(cacheRegistry),
+        connected: connectedFlags.length > 0 ? connectedFlags.every(Boolean) : null,
+        fallbackReason: disabledReasons.length === 0 ? null : disabledReasons.join(',')
+    };
+}
+
 async function runConnectivityCheck({
     fetchUrl,
     fetchOptions,
@@ -317,8 +348,13 @@ router.get('/', async (req, res) => {
         getCacheRegistryStats()
     ]);
 
+    const cacheDiagnostics = getCacheDiagnosticSummary(cacheRegistry);
+
     checks.cache = {
         status: 'ok',
+        backend: cacheDiagnostics.backend,
+        connected: cacheDiagnostics.connected,
+        fallbackReason: cacheDiagnostics.fallbackReason,
         settings: settingsCacheSize,
         templates: templatesCacheSize,
         firms: firmsCacheSize,
@@ -359,6 +395,7 @@ router.get('/memory', authenticateToken, requireAdmin, async (req, res) => {
 
     const cacheStats = {
         simpleCache: {
+            ...getCacheDiagnosticSummary(cacheRegistry),
             settings: settingsCacheSize,
             templates: templatesCacheSize,
             firms: firmsCacheSize,

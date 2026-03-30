@@ -909,26 +909,35 @@ Pour une mise en production à grande échelle, un APM externe apporterait :
 
 ## Optimisations
 
-### ⚡ Cache en Mémoire
+### Cache applicatif
 
 ```javascript
-// src/services/cache.service.js
-class SimpleCache {
-  constructor(ttl = 600000, maxSize = 1000) {
-    this.cache = new Map();
-    this.ttl = ttl;
-    this.maxSize = maxSize;
-    
-    // Cleanup automatique toutes les 5 minutes
-    setInterval(() => this.cleanup(), 5 * 60 * 1000);
-  }
-}
+// server/services/cache.service.js
+await cache.get(key);
+await cache.set(key, value);
+await cache.invalidate(key);
 
-// Instances de cache
-export const settingsCache = new SimpleCache(10 * 60 * 1000);  // 10 min
-export const templatesCache = new SimpleCache(10 * 60 * 1000); // 10 min
-export const customersCache = new SimpleCache(15 * 60 * 1000); // 15 min
+// Backends disponibles:
+// - memory (défaut)
+// - redis   (si CACHE_BACKEND=redis)
 ```
+
+Variables d'environnement:
+- `CACHE_BACKEND=memory|redis`
+- `CACHE_REDIS_URL=redis://127.0.0.1:6379`
+- `CACHE_KEY_PREFIX=resumeconverter`
+
+Caches d?j? migr?s:
+- `settings`
+- `templates`
+- `firms`
+- ?tat de disponibilit? runtime LLM
+
+Diagnostic runtime:
+- `/health` expose `checks.cache.backend`
+- `/health` expose `checks.cache.connected`
+- `/health` expose `checks.cache.fallbackReason`
+- `/api/admin/cache-stats` remonte aussi ce diagnostic de manière consolidée
 
 ### 📦 Compression
 

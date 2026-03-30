@@ -204,6 +204,18 @@ router.get('/security-stats', authenticateToken, requireAdmin, (req, res) => {
 router.get('/cache-stats', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const memUsage = process.memoryUsage();
+        const settingsCacheStats = await getSettingsCacheStats();
+        const cacheBackendDiagnostics = settingsCacheStats?.cache
+            ? {
+                backend: settingsCacheStats.cache.effectiveBackend || settingsCacheStats.cache.backend || 'unknown',
+                connected: typeof settingsCacheStats.cache.connected === 'boolean' ? settingsCacheStats.cache.connected : null,
+                fallbackReason: settingsCacheStats.cache.disabledReason || null
+            }
+            : {
+                backend: 'unknown',
+                connected: null,
+                fallbackReason: null
+            };
         const stats = {
             timestamp: new Date().toISOString(),
             memory: {
@@ -212,9 +224,10 @@ router.get('/cache-stats', authenticateToken, requireAdmin, async (req, res) => 
                 heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024),
                 external: Math.round(memUsage.external / 1024 / 1024)
             },
+            cacheBackend: cacheBackendDiagnostics,
             caches: {
                 tokenBlacklist: getBlacklistStats(),
-                settings: await getSettingsCacheStats(),
+                settings: settingsCacheStats,
                 resumeStats: getStatsCacheStats(),
                 marketFacts: getFactsCacheStats(),
                 marketTrends: getTrendsCacheStats(),

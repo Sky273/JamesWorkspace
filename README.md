@@ -1,4 +1,4 @@
-﻿# Resume Converter
+# Resume Converter
 
 [![Version](https://img.shields.io/badge/version-1.7.8-blue.svg)](./CHANGELOG.md)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-green.svg)](https://nodejs.org/)
@@ -224,6 +224,9 @@ L'application inclut un monitoring mémoire accessible via :
   - `templates`
   - `firms`
   - disponibilité runtime LLM via `settings`
+- diagnostics visibles :
+  - `/health` expose `checks.cache.backend`, `checks.cache.connected`, `checks.cache.fallbackReason`
+  - la page métriques admin affiche aussi le backend effectif et la raison éventuelle du fallback
 
 
 ## 🤖 Intégration LLM

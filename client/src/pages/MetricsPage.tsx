@@ -171,6 +171,25 @@ interface DatabaseMetrics {
   timestamp?: string;
 }
 
+interface CacheAdminMetrics {
+  cacheBackend?: {
+    backend?: string;
+    connected?: boolean | null;
+    fallbackReason?: string | null;
+  };
+  caches?: {
+    settings?: {
+      entries?: number;
+      cache?: {
+        backend?: string;
+        effectiveBackend?: string;
+        connected?: boolean | null;
+        disabledReason?: string | null;
+      };
+    };
+  };
+}
+
 interface OperationsMetrics {
   operations?: {
     uploads?: {
@@ -352,6 +371,7 @@ const MetricsPage = (): JSX.Element => {
   const { t } = useTranslation();
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [dbMetrics, setDbMetrics] = useState<DatabaseMetrics | null>(null);
+  const [cacheAdminMetrics, setCacheAdminMetrics] = useState<CacheAdminMetrics | null>(null);
   const [apmMetrics, setApmMetrics] = useState<APMMetrics | null>(null);
   const [operationsMetrics, setOperationsMetrics] = useState<OperationsMetrics | null>(null);
   const [operationsMetricsError, setOperationsMetricsError] = useState<string | null>(null);
@@ -382,10 +402,19 @@ const MetricsPage = (): JSX.Element => {
 
   const fetchDbMetrics = useCallback(async (): Promise<void> => {
     try {
-      const response = await fetchWithAuth('/api/metrics/database', createAuthOptions());
-      if (response.ok) {
-        const data = await response.json();
+      const [databaseResponse, cacheResponse] = await Promise.all([
+        fetchWithAuth('/api/metrics/database', createAuthOptions()),
+        fetchWithAuth('/api/admin/cache-stats', createAuthOptions())
+      ]);
+
+      if (databaseResponse.ok) {
+        const data = await databaseResponse.json();
         setDbMetrics(data);
+      }
+
+      if (cacheResponse.ok) {
+        const cacheData = await cacheResponse.json();
+        setCacheAdminMetrics(cacheData);
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '';
@@ -449,6 +478,7 @@ const MetricsPage = (): JSX.Element => {
         exportedAt: new Date().toISOString(),
         metrics,
         database: dbMetrics,
+        cacheAdmin: cacheAdminMetrics,
         operations: operationsMetrics
       };
       content = JSON.stringify(exportData, null, 2);
@@ -527,6 +557,9 @@ const MetricsPage = (): JSX.Element => {
   const profileMatchingMetrics = operationsMetrics?.operations?.profileMatching;
   const improvementMetrics = operationsMetrics?.operations?.improvement;
   const adaptationMetrics = operationsMetrics?.operations?.adaptation;
+  const cacheBackend = cacheAdminMetrics?.cacheBackend?.backend || 'unknown';
+  const cacheConnected = cacheAdminMetrics?.cacheBackend?.connected;
+  const cacheFallbackReason = cacheAdminMetrics?.cacheBackend?.fallbackReason;
   const requestedToScoredRatio = computeRatio(
     safeNumber(profileMatchingMetrics?.profilesScored),
     safeNumber(profileMatchingMetrics?.profilesRequested)
@@ -637,6 +670,26 @@ const MetricsPage = (): JSX.Element => {
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div className="bg-green-100 dark:bg-green-900/30 rounded-lg p-3"><p className="opacity-70">{t('metrics.cacheHits')}</p><p className="font-semibold">{formatNumber(safeNumber(metrics.cache?.hits))}</p></div>
                 <div className="bg-green-100 dark:bg-green-900/30 rounded-lg p-3"><p className="opacity-70">{t('metrics.cacheMisses')}</p><p className="font-semibold">{formatNumber(safeNumber(metrics.cache?.misses))}</p></div>
+              </div>
+              <div className="grid grid-cols-3 gap-4 text-sm mt-4">
+                <div className="bg-green-100 dark:bg-green-900/30 rounded-lg p-3">
+                  <p className="opacity-70">{t('metrics.cacheBackend', 'Cache backend')}</p>
+                  <p className="font-semibold uppercase">{cacheBackend}</p>
+                </div>
+                <div className="bg-green-100 dark:bg-green-900/30 rounded-lg p-3">
+                  <p className="opacity-70">{t('metrics.cacheConnected', 'Redis connected')}</p>
+                  <p className="font-semibold">
+                    {cacheConnected === null || cacheConnected === undefined
+                      ? t('metrics.notApplicable', 'N/A')
+                      : cacheConnected
+                        ? t('common.yes', 'Oui')
+                        : t('common.no', 'Non')}
+                  </p>
+                </div>
+                <div className="bg-green-100 dark:bg-green-900/30 rounded-lg p-3">
+                  <p className="opacity-70">{t('metrics.cacheFallbackReason', 'Fallback')}</p>
+                  <p className="font-semibold break-words">{cacheFallbackReason || t('metrics.none', 'Aucun')}</p>
+                </div>
               </div>
             </motion.div>
           </div>

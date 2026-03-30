@@ -12,9 +12,9 @@ vi.mock('../../services/cache.service.js', () => ({
     templatesCache: { size: () => 3 },
     firmsCache: { size: () => 2 },
     getCacheRegistryStats: () => ({
-        settings: { name: 'settings', size: 5 },
-        templates: { name: 'templates', size: 3 },
-        firms: { name: 'firms', size: 2 }
+        settings: { name: 'settings', size: 5, backend: 'redis', effectiveBackend: 'redis', connected: true, disabledReason: null },
+        templates: { name: 'templates', size: 3, backend: 'redis', effectiveBackend: 'redis', connected: true, disabledReason: null },
+        firms: { name: 'firms', size: 2, backend: 'redis', effectiveBackend: 'redis', connected: true, disabledReason: null }
     })
 }));
 
@@ -121,6 +121,9 @@ describe('Health Routes', () => {
             expect(response.checks.glm.status).toBe('configured');
             expect(response.checks.minimax.status).toBe('configured');
             expect(response.checks.cache.status).toBe('ok');
+            expect(response.checks.cache.backend).toBe('redis');
+            expect(response.checks.cache.connected).toBe(true);
+            expect(response.checks.cache.fallbackReason).toBeNull();
         });
 
         it('should return unhealthy status when database fails', async () => {

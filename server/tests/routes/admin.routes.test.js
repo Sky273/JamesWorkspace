@@ -32,7 +32,15 @@ vi.mock('../../services/tokenBlacklist.service.js', () => ({
     getBlacklistStats: () => ({ size: 5 })
 }));
 vi.mock('../../services/settings.service.js', () => ({
-    getSettingsCacheStats: () => ({ entries: 2 })
+    getSettingsCacheStats: () => ({
+        entries: 2,
+        cache: {
+            backend: 'redis',
+            effectiveBackend: 'redis',
+            connected: true,
+            disabledReason: null
+        }
+    })
 }));
 vi.mock('../../services/marketFacts.service.js', () => ({
     getFactsCacheStats: () => ({ entries: 100 })
@@ -230,6 +238,22 @@ describe('Admin Routes', () => {
     });
 
     describe('GET /cache-stats', () => {
+        it('should expose cache backend diagnostics', async () => {
+            const res = await request(app)
+                .get('/api/admin/cache-stats')
+                .set(AUTH);
+
+            expect(res.status).toBe(200);
+            expect(res.body.cacheBackend).toEqual({
+                backend: 'redis',
+                connected: true,
+                fallbackReason: null
+            });
+            expect(res.body.caches.settings.entries).toBe(2);
+        });
+    });
+
+    describe('GET /cache-stats', () => {
         it('should return cache statistics', async () => {
             const res = await request(app)
                 .get('/api/admin/cache-stats')
@@ -239,9 +263,22 @@ describe('Admin Routes', () => {
             expect(res.body.timestamp).toBeDefined();
             expect(res.body.memory).toBeDefined();
             expect(res.body.memory.heapUsed).toBeGreaterThan(0);
+            expect(res.body.cacheBackend).toEqual({
+                backend: 'redis',
+                connected: true,
+                fallbackReason: null
+            });
             expect(res.body.caches).toBeDefined();
             expect(res.body.caches.tokenBlacklist).toEqual({ size: 5 });
-            expect(res.body.caches.settings).toEqual({ entries: 2 });
+            expect(res.body.caches.settings).toEqual({
+                entries: 2,
+                cache: {
+                    backend: 'redis',
+                    effectiveBackend: 'redis',
+                    connected: true,
+                    disabledReason: null
+                }
+            });
         });
     });
 

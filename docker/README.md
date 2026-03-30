@@ -194,6 +194,21 @@ export OLLAMA_BASE_URL="http://192.168.1.20:11434"
 ./docker/docker-build.sh run
 ```
 
+### Cache partagé Redis
+
+Le conteneur démarre maintenant aussi un service Redis interne pour le cache applicatif partagé.
+
+- backend par défaut dans `.env.docker` :
+  - `CACHE_BACKEND=redis`
+  - `CACHE_REDIS_URL=redis://127.0.0.1:6379`
+- persistance locale :
+  - `./data/redis` monté dans `/app/data/redis`
+- vérification runtime :
+  - `GET /health` en admin
+  - champ `checks.cache.backend`
+  - champ `checks.cache.connected`
+  - champ `checks.cache.fallbackReason`
+
 ### Manual Docker Run
 
 For more control, run Docker directly:
