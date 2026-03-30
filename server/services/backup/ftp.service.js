@@ -14,6 +14,46 @@ import { safeLog } from '../../utils/logger.backend.js';
 let SftpClientModule = null;
 let basicFtpModule = null;
 
+function normalizeBackupConnectionError(error) {
+    const message = String(error?.message || error || '').trim();
+    const lowerMessage = message.toLowerCase();
+    const code = String(error?.code || '').toLowerCase();
+
+    if (
+        lowerMessage.includes('self-signed certificate') ||
+        lowerMessage.includes('unable to verify the first certificate') ||
+        lowerMessage.includes('unable to get local issuer certificate') ||
+        lowerMessage.includes('certificate has expired') ||
+        lowerMessage.includes('hostname/ip does not match certificate') ||
+        code === 'depth_zero_self_signed_cert'
+    ) {
+        return 'Le certificat TLS du serveur distant n’est pas valide ou n’est pas reconnu. Vérifiez le certificat, la chaîne de confiance, ou autorisez explicitement les certificats auto-signés côté serveur.';
+    }
+
+    if (lowerMessage.includes('timed out') || lowerMessage.includes('timeout') || code === 'etimedout') {
+        return 'La connexion au serveur distant a expiré. Vérifiez l’hôte, le port et l’accessibilité réseau.';
+    }
+
+    if (lowerMessage.includes('econnrefused') || code === 'econnrefused') {
+        return 'Le serveur distant a refusé la connexion. Vérifiez l’hôte, le port et le service FTP/SFTP.';
+    }
+
+    if (
+        lowerMessage.includes('all configured authentication methods failed') ||
+        lowerMessage.includes('auth fail') ||
+        lowerMessage.includes('authentication failed') ||
+        lowerMessage.includes('login failed')
+    ) {
+        return 'L’authentification au serveur distant a échoué. Vérifiez le nom d’utilisateur et le mot de passe.';
+    }
+
+    if (lowerMessage.includes('no such file') || lowerMessage.includes('not found')) {
+        return 'Le chemin distant configuré est introuvable. Vérifiez le répertoire de sauvegarde.';
+    }
+
+    return message || 'Connexion au serveur distant impossible.';
+}
+
 /**
  * Get SFTP client class (lazy loaded and cached)
  */
@@ -186,12 +226,13 @@ export async function testConnection(settings) {
         
         return { success: true, message: 'Connection successful' };
     } catch (error) {
+        const userMessage = normalizeBackupConnectionError(error);
         safeLog('error', 'Backup connection test failed', { 
             error: error.message,
             protocol: settings.protocol,
             host: settings.host
         });
-        return { success: false, message: error.message };
+        return { success: false, message: userMessage };
     } finally {
         await closeClient(clientWrapper);
     }
@@ -288,7 +329,7 @@ export async function listRemoteBackups(settings) {
         return { success: true, files };
     } catch (_error) {
         safeLog('error', 'Failed to list remote backups', { error: _error.message });
-        return { success: false, files: [], message: _error.message };
+        return { success: false, files: [], message: normalizeBackupConnectionError(_error) };
     } finally {
         await closeClient(clientWrapper);
     }

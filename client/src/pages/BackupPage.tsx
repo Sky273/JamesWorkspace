@@ -16,6 +16,23 @@ import BackupConfigSection from './BackupConfigSection';
 import BackupHistorySection from './BackupHistorySection';
 import BackupRestoreSection from './BackupRestoreSection';
 
+function getBackupErrorMessage(rawMessage: string | undefined, fallbackMessage: string): string {
+    const message = String(rawMessage || '').trim();
+    const lowerMessage = message.toLowerCase();
+
+    if (
+        lowerMessage.includes('self-signed certificate') ||
+        lowerMessage.includes('unable to verify the first certificate') ||
+        lowerMessage.includes('unable to get local issuer certificate') ||
+        lowerMessage.includes('certificate has expired') ||
+        lowerMessage.includes('hostname/ip does not match certificate')
+    ) {
+        return 'Le certificat TLS du serveur distant est invalide ou non reconnu.';
+    }
+
+    return message || fallbackMessage;
+}
+
 const BackupPage = (): JSX.Element => {
     const { t } = useTranslation();
     const { authGet, authPost, authPut, authDelete } = useAuthFetch();
@@ -79,7 +96,7 @@ const BackupPage = (): JSX.Element => {
                 if (data.success) {
                     setRemoteFiles(data.files || []);
                 } else {
-                    toast.error(data.message || t('backup.remoteListError'));
+                    toast.error(getBackupErrorMessage(data.message, t('backup.remoteListError')));
                 }
             }
         } catch (error) {
@@ -134,7 +151,7 @@ const BackupPage = (): JSX.Element => {
             if (data.success) {
                 toast.success(t('backup.connectionSuccess'));
             } else {
-                toast.error(data.message || t('backup.connectionError'));
+                toast.error(getBackupErrorMessage(data.message, t('backup.connectionError')));
             }
         } catch (error) {
             logger.error('Connection test failed:', error);

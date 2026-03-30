@@ -1,16 +1,16 @@
-{
+﻿{
   "backup": {
     "pageTitle": "Sauvegarde de la Base de Données",
     "pageDescription": "Configurez les sauvegardes automatiques de votre base de données.",
     "configTab": "Configuration",
     "historyTab": "Historique",
     "restoreTab": "Restauration",
-    "targetTitle": "Destination de la Sauvegarde",
+    "targetTitle": "Destination de la sauvegarde",
     "targetLocal": "Local uniquement (disque serveur)",
     "targetRemote": "Serveur distant (FTP/SFTP)",
     "localWarning": "Les sauvegardes locales sont stockées sur le serveur. Pour une reprise après sinistre, envisagez la sauvegarde distante.",
-    "connectionTitle": "Connexion au Serveur",
-    "scheduleTitle": "Planification des Sauvegardes",
+    "connectionTitle": "Connexion au serveur",
+    "scheduleTitle": "Planification des sauvegardes",
     "protocol": "Protocole",
     "tlsMode": "Mode TLS",
     "tlsExplicit": "Explicite (AUTH TLS) - Recommandé",
@@ -44,7 +44,7 @@
     "runNow": "Exécuter maintenant",
     "backupSuccess": "Sauvegarde créée avec succès",
     "backupError": "Erreur lors de la sauvegarde",
-    "historyTitle": "Historique des Sauvegardes",
+    "historyTitle": "Historique des sauvegardes",
     "noHistory": "Aucune sauvegarde effectuée",
     "status": "Statut",
     "type": "Type",
@@ -53,14 +53,14 @@
     "date": "Date",
     "uploaded": "Envoyé",
     "historyDeleted": "Entrée supprimée",
-    "remoteBackups": "Sauvegardes Disponibles",
+    "remoteBackups": "Sauvegardes disponibles",
     "noRemoteBackups": "Aucune sauvegarde trouvée sur le serveur",
     "remoteListError": "Erreur lors de la récupération des sauvegardes",
     "restore": "Restaurer",
     "restoreConfirm": "Êtes-vous sûr de vouloir restaurer cette sauvegarde ? Cette action écrasera toutes les données actuelles de la base de données.",
     "restoreSuccess": "Base de données restaurée avec succès",
     "restoreError": "Erreur lors de la restauration",
-    "restoreWarningTitle": "Attention - Zone Dangereuse",
+    "restoreWarningTitle": "Attention - Zone dangereuse",
     "restoreWarning": "La restauration d'une sauvegarde écrasera toutes les données actuelles de la base de données. Cette action est irréversible. Assurez-vous d'avoir une sauvegarde récente avant de procéder."
   }
 }

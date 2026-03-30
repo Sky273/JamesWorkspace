@@ -189,7 +189,19 @@ describe('Backup FTP/SFTP Service', () => {
             const result = await testConnection(sftpSettings);
 
             expect(result.success).toBe(false);
-            expect(result.message).toBe('Timeout');
+            expect(result.message).toContain('expiré');
+        });
+
+        it('should normalize self-signed certificate errors', async () => {
+            const error = new Error('self-signed certificate');
+            error.code = 'DEPTH_ZERO_SELF_SIGNED_CERT';
+            mockSftpConnect.mockRejectedValueOnce(error);
+
+            const result = await testConnection(sftpSettings);
+
+            expect(result.success).toBe(false);
+            expect(result.message).toContain('certificat TLS');
+            expect(result.message).not.toContain('self-signed certificate');
         });
     });
 

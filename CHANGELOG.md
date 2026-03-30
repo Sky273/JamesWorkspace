@@ -1,3 +1,41 @@
+## v1.8.8 - 2026-03-30
+### Fiabilisation plateforme, backup, cache et refactors structurels
+
+#### Résilience et observabilité
+- Alignement du diagnostic `État du système` avec l’architecture réelle : santé plateforme, backend cache, Redis, mémoire, providers LLM et circuit breakers.
+- Ajout de l’affichage mémoire consommée / max dans l’indicateur système, avec seuils visuels adaptés.
+- Réduction de l’impact des familles LLM sur l’état global : tant qu’au moins un provider reste exploitable, le badge système n’est plus dégradé par redondance.
+- Exposition du backend de cache effectif (`redis`, `memory`, `memory-fallback`) dans `/health`, `/api/admin/cache-stats` et l’admin.
+
+#### Backup et diagnostics utilisateurs
+- Correction des erreurs FTP/SFTP remontées brutes dans l’UI backup.
+- Mapping explicite des erreurs techniques de connexion distante : certificat TLS invalide, timeout, refus de connexion, échec d’authentification, chemin distant introuvable.
+- Le cas `self-signed certificate` n’est plus affiché tel quel à l’utilisateur.
+- Nettoyage de la locale FR backup et des libellés visibles de la page de sauvegarde.
+
+#### Cache et déploiement
+- Abstraction de cache finalisée avec backend `memory|redis`.
+- Intégration Redis dans le setup Docker et ajout d’un mode avec Redis séparé du conteneur applicatif.
+- Harmonisation des scripts `docker-build.bat`, `docker-run.bat`, `docker-stop.bat` et `.env.docker` autour de cette architecture.
+
+#### Refactors backend
+- Découpage de `metrics.service.js` en modules dédiés : état, LLM, persistance, snapshots, opérations.
+- Découpage de `openai/resumeOperations.js` avec extraction de la normalisation CV.
+- Découpage de `openai/missionOperations.js` avec extraction de la normalisation matching/adaptation.
+- Découpage du domaine `marketTrends` en façade, runtime de collecte, extracteurs et persistance.
+- Découpage de `marketFacts.service.js` en façade, cache et persistance.
+
+#### Refactors front et i18n
+- Découpage supplémentaire des pages lourdes : métriques, settings, écrans `Resume*`.
+- Modularisation des locales `fr` et `en` par domaines logiques pour améliorer la maintenabilité.
+- Nettoyage et centralisation des chaînes UI visibles sur les écrans principaux.
+
+#### Qualité
+- Les suites client et serveur restent vertes après ces changements.
+- Tests ciblés ajoutés pour les erreurs TLS backup et les nouveaux chemins normalisés.
+
+---
+
 ## v1.8.7 - 2026-03-21
 ### 📊 Suivi de Progression des Collectes Market Radar
 
