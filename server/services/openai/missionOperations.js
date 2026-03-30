@@ -14,6 +14,7 @@ import {
 } from '../llmConfiguration.service.js';
 import { normalizeUtf8Text, parseJsonFromLlmResponse, stripLlmThinkingContent } from './textUtils.js';
 import { validateAdaptationPayload, validateMatchAnalysisPayload } from './contracts.js';
+import { buildAdaptationResult, normalizeMatchAnalysis } from './missionNormalization.js';
 
 function inferMetricsProvider(model) {
     if (isLikelyAnthropicModel(model)) return 'anthropic';
@@ -98,94 +99,6 @@ export async function matchResumeWithMission(resumeText, missionTitle, missionCo
 }
 
 /**
- * Normalize match analysis response to ensure frontend compatibility
- * Handles both old format (simple arrays) and new format (structured objects)
- * @param {Object} analysis - Raw LLM analysis response
- * @returns {Object} - Normalized analysis with both legacy and new fields
- */
-function normalizeMatchAnalysis(analysis) {
-    const normalized = { ...analysis };
-    
-    // Normalize matchScore (ensure it's a number)
-    if (typeof normalized.matchScore === 'string') {
-        normalized.matchScore = parseInt(normalized.matchScore.replace('%', ''), 10) || 0;
-    }
-    
-    // Normalize strengths: convert [{item, evidence, coverage}] to string[] for frontend
-    if (Array.isArray(normalized.strengths) && normalized.strengths.length > 0) {
-        if (typeof normalized.strengths[0] === 'object' && normalized.strengths[0].item) {
-            // New format: preserve original and create legacy format
-            normalized._strengthsDetailed = normalized.strengths;
-            normalized.strengths = normalized.strengths.map(s => {
-                const coverage = s.coverage === 'explicit' ? '\u2713' : s.coverage === 'partial' ? '~' : '';
-                return `${coverage} ${s.item}${s.evidence ? ` (${s.evidence})` : ''}`.trim();
-            });
-        }
-    }
-    
-    // Normalize gaps: convert [{item, reason, severity}] to string[] for frontend
-    if (Array.isArray(normalized.gaps) && normalized.gaps.length > 0) {
-        if (typeof normalized.gaps[0] === 'object' && normalized.gaps[0].item) {
-            // New format: preserve original and create legacy format
-            normalized._gapsDetailed = normalized.gaps;
-            normalized.gaps = normalized.gaps.map(g => {
-                const severity = g.severity === 'high' ? '\u26a0\ufe0f' : g.severity === 'medium' ? '\u26a1' : '';
-                return `${severity} ${g.item}${g.reason ? ` - ${g.reason}` : ''}`.trim();
-            });
-        }
-    }
-    
-    // Normalize keywordAnalysis to legacy keywordMatches/missingKeywords
-    if (normalized.keywordAnalysis) {
-        normalized._keywordAnalysisDetailed = normalized.keywordAnalysis;
-        
-        // Extract matched keywords
-        if (normalized.keywordAnalysis.matchedKeywords) {
-            normalized.keywordMatches = normalized.keywordAnalysis.matchedKeywords.map(k => 
-                typeof k === 'string' ? k : k.keyword
-            );
-        }
-        
-        // Extract partial keywords and add to matches with indicator
-        if (normalized.keywordAnalysis.partialKeywords) {
-            const partialKeywords = normalized.keywordAnalysis.partialKeywords.map(k => 
-                typeof k === 'string' ? `~${k}` : `~${k.keyword}`
-            );
-            normalized.keywordMatches = [...(normalized.keywordMatches || []), ...partialKeywords];
-        }
-        
-        // Extract missing keywords
-        if (normalized.keywordAnalysis.missingKeywords) {
-            normalized.missingKeywords = normalized.keywordAnalysis.missingKeywords.map(k => 
-                typeof k === 'string' ? k : k.keyword
-            );
-        }
-    }
-    
-    // Normalize recommendations to legacy format if needed
-    if (normalized.recommendations && typeof normalized.recommendations === 'object') {
-        // New format has executiveSummary, title, skills, experience, education, atsOptimization, priorityActions
-        // Legacy format expects executiveSummary, skills, experience, education, atsOptimization
-        // Keep as-is since frontend already handles object format
-        normalized._recommendationsDetailed = normalized.recommendations;
-    }
-    
-    // Preserve summary, scoreBreakdown, requirementsAnalysis, rewriteGuardrails for detailed views
-    // These are new fields that the frontend can optionally display
-    
-    safeLog('debug', 'Normalized match analysis', {
-        hasScoreBreakdown: !!normalized.scoreBreakdown,
-        hasSummary: !!normalized.summary,
-        strengthsCount: normalized.strengths?.length || 0,
-        gapsCount: normalized.gaps?.length || 0,
-        keywordMatchesCount: normalized.keywordMatches?.length || 0,
-        missingKeywordsCount: normalized.missingKeywords?.length || 0
-    });
-    
-    return normalized;
-}
-
-/**
  * Adapt resume to mission using OpenAI
  * @param {Object} params - Adaptation parameters
  * @param {string} params.resumeText - Resume text
@@ -254,78 +167,18 @@ Respond in the same language as the resume.`;
     // Parse the structured JSON response
     try {
         const parsed = validateAdaptationPayload(parseJsonFromLlmResponse(content));
-        
-        // New format: { name, summary, improvedText, improvements }
-        if (parsed.improvedText) {
-            const adaptedTitle = parsed.summary?.title || parsed.summary?.targetRole || null;
-            metrics.trackAdaptationActivity({
-                provider: metricsProvider,
-                event: 'run',
-                successfulRuns: 1,
-                structuredRuns: 1,
-                inputChars,
-                outputChars: parsed.improvedText.length,
-                metadata: { source: 'structured-json' }
-            });
-            return {
-                adaptedText: parsed.improvedText,
-                adaptedTitle: adaptedTitle,
-                structuredData: parsed
-            };
-        }
-
-        // Legacy structured format with targetedTitle, professionalSummary, etc.
-        if (parsed.targetedTitle !== undefined) {
-            // Convert structured JSON to HTML for display
-            const adaptedText = convertAdaptationToHtml(parsed);
-            metrics.trackAdaptationActivity({
-                provider: metricsProvider,
-                event: 'run',
-                successfulRuns: 1,
-                structuredRuns: 1,
-                inputChars,
-                outputChars: adaptedText.length,
-                metadata: { source: 'legacy-structured-json' }
-            });
-            return {
-                adaptedText,
-                adaptedTitle: parsed.targetedTitle || null,
-                structuredData: parsed
-            };
-        }
-        
-        // Legacy format support: {adaptedTitle, adaptedText}
-        if (parsed.adaptedText && parsed.adaptedTitle) {
-            metrics.trackAdaptationActivity({
-                provider: metricsProvider,
-                event: 'run',
-                successfulRuns: 1,
-                structuredRuns: 1,
-                inputChars,
-                outputChars: parsed.adaptedText.length,
-                metadata: { source: 'legacy-json' }
-            });
-            return {
-                adaptedText: parsed.adaptedText,
-                adaptedTitle: parsed.adaptedTitle
-            };
-        }
-        
-        // If JSON but unknown format, return as-is
-        safeLog('warn', 'adaptResumeToMission: Unknown JSON format, returning raw content');
+        const result = buildAdaptationResult(parsed, content);
         metrics.trackAdaptationActivity({
             provider: metricsProvider,
             event: 'run',
             successfulRuns: 1,
-            fallbackRuns: 1,
             inputChars,
-            outputChars: content.length,
-            metadata: { source: 'unknown-json-format' }
+            ...result.tracking
         });
         return {
-            adaptedText: content,
-            adaptedTitle: null,
-            structuredData: parsed
+            adaptedText: result.adaptedText,
+            adaptedTitle: result.adaptedTitle,
+            ...(result.structuredData ? { structuredData: result.structuredData } : {})
         };
     } catch {
         // If JSON parsing fails, fall back to treating the whole content as adaptedText
@@ -345,66 +198,6 @@ Respond in the same language as the resume.`;
         adaptedText: content,
         adaptedTitle: null
     };
-}
-
-/**
- * Convert structured adaptation JSON to HTML for display
- * @param {Object} data - Structured adaptation data
- * @returns {string} - HTML representation
- */
-function convertAdaptationToHtml(data) {
-    const sections = [];
-    
-    // Professional Summary
-    if (data.professionalSummary) {
-        sections.push(`<h2>R\u00e9sum\u00e9 Professionnel</h2>\n<p>${data.professionalSummary}</p>`);
-    }
-    
-    // Key Skills
-    if (data.keySkills && data.keySkills.length > 0) {
-        sections.push(`<h2>Comp\u00e9tences Cl\u00e9s</h2>\n<ul>\n${data.keySkills.map(s => `  <li>${s}</li>`).join('\n')}\n</ul>`);
-    }
-    
-    // Tools and Technologies
-    if (data.toolsAndTechnologies && data.toolsAndTechnologies.length > 0) {
-        sections.push(`<h2>Outils et Technologies</h2>\n<p>${data.toolsAndTechnologies.join(', ')}</p>`);
-    }
-    
-    // Professional Experience
-    if (data.professionalExperience && data.professionalExperience.length > 0) {
-        const expHtml = data.professionalExperience.map(exp => {
-            const header = `<h3>${exp.jobTitle || ''}${exp.company ? ` - ${exp.company}` : ''}${exp.dates ? ` (${exp.dates})` : ''}</h3>`;
-            const context = exp.context ? `<p><em>${exp.context}</em></p>` : '';
-            const missions = exp.missions && exp.missions.length > 0 
-                ? `<ul>\n${exp.missions.map(m => `  <li>${m}</li>`).join('\n')}\n</ul>` 
-                : '';
-            const techs = exp.technologies && exp.technologies.length > 0 
-                ? `<p><strong>Technologies:</strong> ${exp.technologies.join(', ')}</p>` 
-                : '';
-            return `${header}\n${context}${missions}${techs}`;
-        }).join('\n\n');
-        sections.push(`<h2>Exp\u00e9rience Professionnelle</h2>\n${expHtml}`);
-    }
-    
-    // Education
-    if (data.education && data.education.length > 0) {
-        const eduItems = Array.isArray(data.education) 
-            ? data.education.map(e => typeof e === 'string' ? e : `${e.degree || ''} - ${e.institution || ''} ${e.year || ''}`).join('</li>\n  <li>')
-            : data.education;
-        sections.push(`<h2>Formation</h2>\n<ul>\n  <li>${eduItems}</li>\n</ul>`);
-    }
-    
-    // Certifications
-    if (data.certifications && data.certifications.length > 0) {
-        sections.push(`<h2>Certifications</h2>\n<ul>\n${data.certifications.map(c => `  <li>${c}</li>`).join('\n')}\n</ul>`);
-    }
-    
-    // Languages
-    if (data.languages && data.languages.length > 0) {
-        sections.push(`<h2>Langues</h2>\n<ul>\n${data.languages.map(l => `  <li>${l}</li>`).join('\n')}\n</ul>`);
-    }
-    
-    return sections.join('\n\n');
 }
 
 
