@@ -1,4 +1,27 @@
 {
+  "adaptation": {
+    "title": "Adaptation du CV à une mission",
+    "selectedMission": "Mission sélectionnée",
+    "analyzing": "Analyse d'adéquation en cours...",
+    "analysisComplete": "Analyse d'adéquation terminée",
+    "analysisError": "Erreur lors de l'analyse d'adéquation",
+    "generating": "Génération du CV adapté en cours...",
+    "generatingTime": "Cette étape peut prendre jusqu'à une minute selon la longueur de la mission.",
+    "generationComplete": "CV adapté généré avec succès",
+    "generationError": "Erreur lors de la génération du CV adapté",
+    "result": "Résultat de l'adaptation",
+    "newAdaptation": "Nouvelle adaptation",
+    "viewAdaptation": "Voir l'adaptation",
+    "tabs": {
+      "analysis": "Analyse d'adéquation",
+      "adapted": "CV adapté"
+    },
+    "steps": {
+      "selectMission": "Sélection de la mission",
+      "analyze": "Analyse",
+      "adapt": "Adaptation"
+    }
+  },
   "adaptations": {
     "title": "Adaptations de CV",
     "results": "adaptations de CV",

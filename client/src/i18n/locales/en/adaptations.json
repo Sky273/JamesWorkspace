@@ -1,4 +1,27 @@
 {
+  "adaptation": {
+    "title": "Adapt Resume to a Mission",
+    "selectedMission": "Selected mission",
+    "analyzing": "Running match analysis...",
+    "analysisComplete": "Match analysis completed",
+    "analysisError": "Error while running the match analysis",
+    "generating": "Generating the adapted resume...",
+    "generatingTime": "This step can take up to a minute depending on the mission length.",
+    "generationComplete": "Adapted resume generated successfully",
+    "generationError": "Error while generating the adapted resume",
+    "result": "Adaptation result",
+    "newAdaptation": "New adaptation",
+    "viewAdaptation": "View adaptation",
+    "tabs": {
+      "analysis": "Match analysis",
+      "adapted": "Adapted resume"
+    },
+    "steps": {
+      "selectMission": "Select mission",
+      "analyze": "Analyze",
+      "adapt": "Adapt"
+    }
+  },
   "adaptations": {
     "title": "Resume Adaptations",
     "subtitle": "History of resumes adapted to missions",
