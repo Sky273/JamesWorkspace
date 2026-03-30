@@ -43,10 +43,24 @@ data/
 
 # Testing
 coverage/
+playwright-report/
+test-results/
+test-results.json
+vitest-report/
 
 # Temporary files
 *.tmp
 *.temp
+*.bak
+*.orig
+*.rej
+*.timestamp-*.mjs
+tmp-*.cjs
+tmp-*.js
+temp_*.html
+temp-*.html
+temp_*.txt
+temp-*.txt
 
 # SSL Certificates (sensitive)
 certificates/
@@ -55,3 +69,7 @@ certificates/
 audit.json
 logs_temp.txt
 *.txt.tmp
+eslint-output.json
+built_improve.txt
+docker_logs.txt
+docker-logs-*.txt
