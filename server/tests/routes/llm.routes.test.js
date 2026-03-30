@@ -117,9 +117,9 @@ vi.mock('../../services/deepseek.service.js', () => ({
     callDeepSeek: (...args) => mockCallDeepSeek(...args)
 }));
 
-const mockCallGLM = vi.fn();
+const mockCallGLMWithCircuitBreaker = vi.fn();
 vi.mock('../../services/glm.service.js', () => ({
-    callGLM: (...args) => mockCallGLM(...args)
+    callGLMWithCircuitBreaker: (...args) => mockCallGLMWithCircuitBreaker(...args)
 }));
 
 const mockCallMiniMaxOpenAICompatible = vi.fn();
@@ -247,7 +247,7 @@ describe('LLM Routes', () => {
 
         it('routes through GLM when configured', async () => {
             mockGetLLMSettings.mockResolvedValueOnce({ llmProvider: 'glm', llmModel: 'glm-5.1' });
-            mockCallGLM.mockResolvedValueOnce({
+            mockCallGLMWithCircuitBreaker.mockResolvedValueOnce({
                 model: 'glm-5.1',
                 choices: [{ message: { content: 'Hi from GLM' } }],
                 usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 }
@@ -260,6 +260,10 @@ describe('LLM Routes', () => {
 
             expect(res.status).toBe(200);
             expect(res.body.choices[0].message.content).toBe('Hi from GLM');
+            expect(mockCallGLMWithCircuitBreaker).toHaveBeenCalledWith(expect.objectContaining({
+                model: 'glm-5.1',
+                messages: [{ role: 'user', content: 'Hello' }]
+            }));
         });
 
         it('should return 400 for message exceeding max length', async () => {
@@ -406,6 +410,9 @@ describe('LLM Routes', () => {
                 .send({ messages: [{ role: 'user', content: 'Hi' }] });
 
             expect(res.status).toBe(200);
+            expect(mockWithRetry).toHaveBeenCalledWith(expect.any(Function), expect.objectContaining({
+                serviceName: 'anthropic'
+            }));
         });
     });
 

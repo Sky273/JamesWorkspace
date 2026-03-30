@@ -19,6 +19,9 @@ vi.mock('../../services/llmPayloadCapabilities.service.js', () => ({
         effectiveMaxTokens: options.maxTokens || options.fallbackMaxTokens || 1000
     }))
 }));
+vi.mock('../../services/retry.service.js', () => ({
+    withRetry: vi.fn((fn) => fn())
+}));
 
 const mockMarkModelUnavailable = vi.fn();
 vi.mock('../../services/llmAvailability.service.js', () => ({

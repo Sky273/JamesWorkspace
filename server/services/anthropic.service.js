@@ -6,6 +6,7 @@ import { normalizeAnthropicContent } from './llmProviderCommon.service.js';
 import { buildCapabilityAwareAnthropicOptions } from './llmPayloadCapabilities.service.js';
 import { markModelUnavailable } from './llmAvailability.service.js';
 import { inferProviderFallbackModel } from './llmConfiguration.service.js';
+import { withRetry } from './retry.service.js';
 
 function shouldMarkAnthropicModelUnavailable(error) {
     const status = error?.response?.status;
@@ -60,16 +61,27 @@ export async function callAnthropicChat(messages, model, options = {}) {
     }
 
     try {
-        const response = await axios.post(
-            'https://api.anthropic.com/v1/messages',
-            requestBody,
+        const response = await withRetry(
+            () => axios.post(
+                'https://api.anthropic.com/v1/messages',
+                requestBody,
+                {
+                    headers: {
+                        'x-api-key': ANTHROPIC_API_KEY,
+                        'anthropic-version': '2023-06-01',
+                        'Content-Type': 'application/json'
+                    },
+                    timeout: options.timeout || 300000
+                }
+            ),
             {
-                headers: {
-                    'x-api-key': ANTHROPIC_API_KEY,
-                    'anthropic-version': '2023-06-01',
-                    'Content-Type': 'application/json'
-                },
-                timeout: 300000
+                serviceName: 'anthropic',
+                operationName: options.operationType || `Anthropic ${model} chat request`,
+                retryConfig: {
+                    maxRetries: 3,
+                    initialDelayMs: 2000,
+                    maxDelayMs: 60000
+                }
             }
         );
 
@@ -145,16 +157,27 @@ export async function callAnthropicVision(systemPrompt, userContent, model, opti
     }
 
     try {
-        const response = await axios.post(
-            'https://api.anthropic.com/v1/messages',
-            requestBody,
+        const response = await withRetry(
+            () => axios.post(
+                'https://api.anthropic.com/v1/messages',
+                requestBody,
+                {
+                    headers: {
+                        'x-api-key': ANTHROPIC_API_KEY,
+                        'anthropic-version': '2023-06-01',
+                        'Content-Type': 'application/json'
+                    },
+                    timeout: options.timeout || 600000
+                }
+            ),
             {
-                headers: {
-                    'x-api-key': ANTHROPIC_API_KEY,
-                    'anthropic-version': '2023-06-01',
-                    'Content-Type': 'application/json'
-                },
-                timeout: 600000
+                serviceName: 'anthropic',
+                operationName: options.operationType || `Anthropic ${model} vision request`,
+                retryConfig: {
+                    maxRetries: 3,
+                    initialDelayMs: 2000,
+                    maxDelayMs: 60000
+                }
             }
         );
 

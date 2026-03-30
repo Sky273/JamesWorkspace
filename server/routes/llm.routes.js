@@ -11,7 +11,7 @@ import { withRetry, getCircuitBreakerStates } from '../services/retry.service.js
 import { validateBody, openaiRequestSchema, anthropicRequestSchema } from '../utils/validation.js';
 import { callOllama } from '../services/ollama.service.js';
 import { callDeepSeek } from '../services/deepseek.service.js';
-import { callGLM } from '../services/glm.service.js';
+import { callGLMWithCircuitBreaker } from '../services/glm.service.js';
 import { callMiniMaxOpenAICompatible, callMiniMaxAnthropicCompatible } from '../services/minimax.service.js';
 import { extractOpenAIResponsesText, flattenLlmTextContent, sanitizeOpenAICompatibleResponseBody } from '../services/llmContent.service.js';
 import { normalizeAnthropicRequestBody, toAnthropicCompatibleResponse, toOpenAICompatibleResponse } from '../services/llmProviderCommon.service.js';
@@ -184,7 +184,7 @@ async function handleGLMRequest(req, res, model, metadata) {
         }
     });
 
-    const response = await callGLM({
+    const response = await callGLMWithCircuitBreaker({
         model,
         messages: req.body.messages || [],
         maxTokens: getRequestedMaxTokens(req.body),
@@ -466,7 +466,7 @@ router.post('/messages', authenticateToken, llmLimiter, combinedRateLimit(30, 60
             return compatibleResponse;
         }
 
-        return await proxyAnthropicRequest(req, res, model, metadata, { useRetry: false });
+        return await proxyAnthropicRequest(req, res, model, metadata, { useRetry: true });
     } catch (error) {
         metrics.trackLLMRequest(buildLLMMetricLabel('anthropic', req.body.model || model), 0, false, 0, 0);
         const statusCode = error.response ? error.response.status : 500;

@@ -32,7 +32,7 @@ vi.mock('../../services/deepseek.service.js', () => ({
 }));
 
 vi.mock('../../services/glm.service.js', () => ({
-    callGLMChat: vi.fn()
+    callGLMWithCircuitBreaker: vi.fn()
 }));
 
 vi.mock('../../services/ollama.service.js', () => ({
@@ -62,7 +62,7 @@ vi.mock('../../utils/logger.backend.js', () => ({
 import { getLLMSettings } from '../../services/settings.service.js';
 import { callOpenAI } from '../../services/openai/apiClient.js';
 import { callDeepSeekWithCircuitBreaker } from '../../services/deepseek.service.js';
-import { callGLMChat } from '../../services/glm.service.js';
+import { callGLMWithCircuitBreaker } from '../../services/glm.service.js';
 import { callOllama } from '../../services/ollama.service.js';
 import { callMiniMaxOpenAICompatible } from '../../services/minimax.service.js';
 import { callBusinessChatCompletion } from '../../services/llmProvider.service.js';
@@ -167,10 +167,9 @@ describe('llmProvider.service', () => {
             llmProvider: 'glm',
             llmModel: 'glm-5.1'
         });
-        callGLMChat.mockResolvedValueOnce({
-            content: 'ok glm',
+        callGLMWithCircuitBreaker.mockResolvedValueOnce({
             model: 'glm-5.1',
-            actualModel: 'glm-5.1',
+            choices: [{ message: { content: 'ok glm' } }],
             usage: { prompt_tokens: 1, completion_tokens: 2, total_tokens: 3 }
         });
 
@@ -179,16 +178,14 @@ describe('llmProvider.service', () => {
             operationType: 'Resume Analysis'
         });
 
-        expect(callGLMChat).toHaveBeenCalledWith(
-            [{ role: 'user', content: 'Analyse ce CV' }],
-            'glm-5.1',
-            expect.objectContaining({
-                max_tokens: 4096,
-                temperature: 0,
-                timeout: 20 * 60 * 1000,
-                operationType: 'Resume Analysis'
-            })
-        );
+        expect(callGLMWithCircuitBreaker).toHaveBeenCalledWith(expect.objectContaining({
+            model: 'glm-5.1',
+            messages: [{ role: 'user', content: 'Analyse ce CV' }],
+            maxTokens: 4096,
+            temperature: 0,
+            timeout: 20 * 60 * 1000,
+            operationType: 'Resume Analysis'
+        }));
         expect(result.choices[0].message.content).toBe('ok glm');
         expect(result.model).toBe('glm-5.1');
     });
