@@ -199,6 +199,7 @@ export function extractImprovementEnvelope(parsedInput) {
     );
 
     return {
+        parsed,
         envelope,
         improvedText: htmlCandidates[0] || textCandidates[0] || '',
         htmlAlternatives: htmlCandidates,

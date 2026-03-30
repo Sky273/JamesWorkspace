@@ -29,6 +29,12 @@ function inferMetricsProvider(model) {
     return 'openai';
 }
 
+function isRecoverableStructuredJsonError(error) {
+    const message = error?.message || '';
+    return message.includes('Unexpected end of JSON input')
+        || message.includes('Unterminated string in JSON')
+        || message.includes('response truncated due to token limit');
+}
 
 export async function analyzeResume(resumeText, model, analysisPrompt, userMetadata = null, isImprovedCV = false, originalFileName = null) {
     let prompt = analysisPrompt.replace('{TEXT}', resumeText);
@@ -40,30 +46,49 @@ export async function analyzeResume(resumeText, model, analysisPrompt, userMetad
     }
     
     const systemMessage = 'You are a JSON-only resume analysis API. Respond with valid JSON only.';
+    const operationType = isImprovedCV ? 'Improved Resume Analysis' : 'Resume Analysis';
 
-    const response = await callBusinessChatCompletion({
-        model,
-        messages: [
-            { role: 'system', content: systemMessage },
-            { role: 'user', content: prompt }
-        ],
-        maxTokens: 16000,
-        temperature: 0.3,
-        responseFormat: { type: "json_object" },
-        maxPromptLength: 120000,
-        userMetadata,
-        operationType: isImprovedCV ? 'Improved Resume Analysis' : 'Resume Analysis'
-    });
+    async function requestAnalysis(compactRetry = false) {
+        return callBusinessChatCompletion({
+            model,
+            messages: [
+                { role: 'system', content: systemMessage },
+                {
+                    role: 'user',
+                    content: compactRetry
+                        ? `${prompt}\n\nReturn compact JSON only. Keep string fields concise. No markdown. No commentary outside the JSON object.`
+                        : prompt
+                }
+            ],
+            maxTokens: 16000,
+            temperature: 0.3,
+            responseFormat: { type: "json_object" },
+            maxPromptLength: 120000,
+            userMetadata,
+            operationType
+        });
+    }
+
+    let response = await requestAnalysis(false);
 
     let rawAnalysis;
     try {
         rawAnalysis = parseJsonFromLlmResponse(response.choices[0].message.content);
     } catch (parseError) {
+        if (isRecoverableStructuredJsonError(parseError)) {
+            safeLog('warn', 'Resume analysis returned malformed JSON, retrying once with compact JSON instructions', {
+                error: parseError.message,
+                operationType
+            });
+            response = await requestAnalysis(true);
+            rawAnalysis = parseJsonFromLlmResponse(response.choices[0].message.content);
+        } else {
         safeLog('error', 'Failed to parse LLM analysis response as JSON', {
             error: parseError.message,
             responsePreview: response.choices[0].message.content.substring(0, 500)
         });
         throw new Error(normalizeUtf8Text('Le mod\u00e8le LLM a retourn\u00e9 une r\u00e9ponse invalide. Veuillez r\u00e9essayer ou contacter le support si le probl\u00e8me persiste.'));
+        }
 }
     
     safeLog('debug', 'Raw analysis from LLM', {
@@ -122,14 +147,17 @@ export async function improveResume(text, analysis, model, improvementPromptTemp
 }
 
     const metricsProvider = buildLLMMetricLabel(inferMetricsProvider(model), model);
-
-    let response;
-    try {
-        response = await callBusinessChatCompletion({
+    async function requestImprovement(compactRetry = false) {
+        return callBusinessChatCompletion({
             model,
             messages: [
                 { role: 'system', content: 'You are a professional resume improvement assistant. You MUST respond with valid JSON only, following the exact structure specified in the user prompt. Do not include any text outside the JSON object.' },
-                { role: 'user', content: improvementPrompt }
+                {
+                    role: 'user',
+                    content: compactRetry
+                        ? `${improvementPrompt}\n\nReturn compact JSON only. Keep string fields concise. Preserve the same JSON structure. No markdown.`
+                        : improvementPrompt
+                }
             ],
             maxTokens: 16384,
             temperature: 0.3,
@@ -138,6 +166,11 @@ export async function improveResume(text, analysis, model, improvementPromptTemp
             userMetadata,
             operationType: 'Resume Improvement'
         });
+    }
+
+    let response;
+    try {
+        response = await requestImprovement(false);
     } catch (error) {
         metrics.trackImprovementActivity({
             provider: metricsProvider,
@@ -165,9 +198,9 @@ export async function improveResume(text, analysis, model, improvementPromptTemp
 
             if (!cleanedText || cleanedText.trim().length === 0) {
                 safeLog('error', 'LLM returned empty improved text in JSON response', {
-                    topLevelKeys: Object.keys(parsed || {}),
+                    topLevelKeys: Object.keys(improvementPayload.parsed || {}),
                     envelopeKeys: Object.keys(improvementPayload.envelope || {}),
-                    hasTopLevelImprovedText: !!parsed.improvedText,
+                    hasTopLevelImprovedText: !!improvementPayload.parsed?.improvedText,
                     hasEnvelopeImprovedText: !!improvementPayload.envelope?.improvedText,
                     hasEnvelopeStructuredText: !!improvementPayload.envelope?.structuredText,
                     improvedTextLength: improvementPayload.improvedText?.length || 0,
@@ -199,6 +232,46 @@ export async function improveResume(text, analysis, model, improvementPromptTemp
 
             return result;
         } catch (parseError) {
+            if (isRecoverableStructuredJsonError(parseError)) {
+                safeLog('warn', 'Resume improvement returned malformed JSON, retrying once with compact JSON instructions', {
+                    error: parseError.message,
+                    model
+                });
+
+                try {
+                    response = await requestImprovement(true);
+                    const retriedRawContent = stripLlmThinkingContent(response.choices[0].message.content);
+                    const improvementPayload = extractImprovementEnvelope(parseJsonFromLlmResponse(retriedRawContent));
+                    const cleanedText = cleanupHtml(improvementPayload.improvedText || '');
+
+                    if (!cleanedText || cleanedText.trim().length === 0) {
+                        throw new Error(normalizeUtf8Text('Le mod\u00e8le LLM a retourn\u00e9 un CV am\u00e9lior\u00e9 vide. Veuillez r\u00e9essayer.'));
+                    }
+
+                    const result = {
+                        text: cleanedText,
+                        analysis: buildImprovementAnalysisResult(improvementPayload, analysis)
+                    };
+
+                    metrics.trackImprovementActivity({
+                        provider: metricsProvider,
+                        event: 'run',
+                        successfulRuns: 1,
+                        structuredRuns: 1,
+                        inputChars: text.length,
+                        outputChars: cleanedText.length,
+                        metadata: { source: 'structured-json-retry-success' }
+                    });
+
+                    return result;
+                } catch (retryError) {
+                    safeLog('error', 'Resume improvement retry failed', {
+                        error: retryError.message,
+                        model
+                    });
+                }
+            }
+
             safeLog('error', 'Failed to parse LLM improvement response as JSON', {
                 error: parseError.message,
                 model,

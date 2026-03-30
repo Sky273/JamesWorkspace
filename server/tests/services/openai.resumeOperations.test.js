@@ -195,6 +195,29 @@ describe('OpenAI Resume Operations', () => {
 
             await expect(analyzeResume('text', 'gpt-4o', '{TEXT} {FILENAME}')).rejects.toThrow();
         });
+
+        it('should retry once when analysis JSON is truncated and succeed on compact retry', async () => {
+            callBusinessChatCompletion
+                .mockResolvedValueOnce({
+                    choices: [{
+                        message: {
+                            content: '{"name":"John","globalRating":"85%","summary":"truncated'
+                        }
+                    }]
+                })
+                .mockResolvedValueOnce({
+                    choices: [{
+                        message: {
+                            content: JSON.stringify(mockAnalysis)
+                        }
+                    }]
+                });
+
+            const result = await analyzeResume('resume text', 'gpt-4o', '{TEXT} {FILENAME}');
+
+            expect(result.name).toBe('John Doe');
+            expect(callBusinessChatCompletion).toHaveBeenCalledTimes(2);
+        });
     });
 
     describe('improveResume', () => {
@@ -405,6 +428,42 @@ describe('OpenAI Resume Operations', () => {
             );
 
             expect(result.text).toBe('<p>Clean</p>');
+        });
+
+        it('should retry once when improvement JSON is truncated and succeed on compact retry', async () => {
+            callBusinessChatCompletion
+                .mockResolvedValueOnce({
+                    choices: [{
+                        message: {
+                            content: '{"improvedText":"<p>Improved CV</p>","summary":{"title":"Lead'
+                        }
+                    }]
+                })
+                .mockResolvedValueOnce({
+                    choices: [{
+                        message: {
+                            content: JSON.stringify({
+                                improvedText: '<p>Improved CV</p>',
+                                improvements: { overall: 90, skills: 85 },
+                                summary: { title: 'Lead Developer' }
+                            })
+                        }
+                    }]
+                });
+
+            const result = await improveResume(
+                'A'.repeat(200),
+                { name: 'John' },
+                'gpt-4o',
+                '{TEXT} {ANALYSIS} {FILENAME}'
+            );
+
+            expect(result.text).toBe('<p>Improved CV</p>');
+            expect(result.analysis.title).toBe('Lead Developer');
+            expect(callBusinessChatCompletion).toHaveBeenCalledTimes(2);
+            expect(metrics.trackImprovementActivity).toHaveBeenCalledWith(expect.objectContaining({
+                metadata: expect.objectContaining({ source: 'structured-json-retry-success' })
+            }));
         });
     });
 });

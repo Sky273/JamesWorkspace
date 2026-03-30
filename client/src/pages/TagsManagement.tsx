@@ -3,7 +3,7 @@
  * TypeScript version
  */
 
-import { useState, useEffect, ChangeEvent, KeyboardEvent, ForwardRefExoticComponent, RefAttributes, SVGProps, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import { tagService } from '../utils/tagService';
@@ -13,55 +13,19 @@ import {
   TagIcon,
   PencilSquareIcon,
   ArrowPathIcon,
-  XMarkIcon,
   WrenchScrewdriverIcon,
   BriefcaseIcon,
   SparklesIcon,
   HeartIcon,
-  MagnifyingGlassIcon,
   BeakerIcon,
-  DocumentTextIcon,
   GlobeEuropeAfricaIcon
 } from '@heroicons/react/24/outline';
-
-type HeroIcon = ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, 'ref'> & { title?: string; titleId?: string } & RefAttributes<SVGSVGElement>>;
-
-interface CategoryConfig {
-  icon: HeroIcon;
-  color: string;
-  bgLight: string;
-  textColor: string;
-  tagBg: string;
-  tagText: string;
-  tagBorder: string;
-}
-
-interface Tags {
-  [category: string]: string[];
-}
-
-interface EditingTag {
-  category: string;
-  tag: string;
-}
-
-interface CleanedTags {
-  [category: string]: string[];
-}
-
-interface EscoTagItem {
-  label: string;
-  uri: string;
-}
-
-interface EscoTags {
-  skills: EscoTagItem[];
-  industries: EscoTagItem[];
-  tools: EscoTagItem[];
-  softSkills: EscoTagItem[];
-}
-
-type TabType = 'raw' | 'cleaned' | 'esco';
+import type { CategoryConfig, CleanedTags, EditingTag, EscoTagItem, EscoTags, TabType, Tags } from '../components/TagsManagement/types';
+import TagsStatsGrid from '../components/TagsManagement/TagsStatsGrid';
+import TagsToolbar from '../components/TagsManagement/TagsToolbar';
+import TagsDescriptionBanner from '../components/TagsManagement/TagsDescriptionBanner';
+import TagsCategoryGrid from '../components/TagsManagement/TagsCategoryGrid';
+import TagEditModal from '../components/TagsManagement/TagEditModal';
 
 const categoryConfig: Record<string, CategoryConfig> = {
   'Skills': { 
@@ -341,251 +305,44 @@ const TagsManagement = (): JSX.Element => {
         <p className="text-gray-500 dark:text-gray-400 ml-[1.75rem]">{t('tags.subtitle')}</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
-        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg"><TagIcon className="w-6 h-6 text-blue-600 dark:text-blue-400" /></div>
-            <div><div className="text-sm text-gray-600 dark:text-gray-400">{t('tags.stats.totalTags')}</div><div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{totalTags}</div></div>
-          </div>
-        </motion.div>
-        {Object.entries(categoryConfig).map(([category, config], index) => {
-          const IconComponent = config.icon;
-          const count = tags[category]?.length || 0;
-          return (
-            <motion.div key={category} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1 * (index + 1) }} className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-              <div className="flex items-center gap-3">
-                <div className={`p-2 ${config.bgLight} rounded-lg`}><IconComponent className={`w-6 h-6 ${config.textColor}`} /></div>
-                <div><div className="text-sm text-gray-600 dark:text-gray-400">{category}</div><div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{count}</div></div>
-              </div>
-            </motion.div>
-          );
-        })}
-      </div>
+      <TagsStatsGrid tags={tags} totalTags={totalTags} categoryConfig={categoryConfig} t={t} />
 
-      {/* Tabs */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
-        <div className="border-b border-gray-200 dark:border-gray-700">
-          <nav className="flex -mb-px">
-            <button
-              onClick={() => setActiveTab('raw')}
-              className={`flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === 'raw'
-                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:border-gray-300'
-              }`}
-            >
-              <DocumentTextIcon className="w-5 h-5" />
-              {t('tags.tabs.raw')}
-              <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
-                {totalTags}
-              </span>
-            </button>
-            <button
-              onClick={() => setActiveTab('cleaned')}
-              className={`flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === 'cleaned'
-                  ? 'border-green-500 text-green-600 dark:text-green-400'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:border-gray-300'
-              }`}
-            >
-              <BeakerIcon className="w-5 h-5" />
-              {t('tags.tabs.cleaned')}
-              <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
-                {totalCleanedTags}
-              </span>
-            </button>
-            <button
-              onClick={() => setActiveTab('esco')}
-              className={`flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === 'esco'
-                  ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:border-gray-300'
-              }`}
-            >
-              <GlobeEuropeAfricaIcon className="w-5 h-5" />
-              {t('tags.tabs.esco')}
-              <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
-                {totalEscoTags}
-              </span>
-            </button>
-          </nav>
-        </div>
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between p-4 gap-4">
-          <div className="relative flex-1 max-w-md">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input type="text" placeholder={t('tags.searchPlaceholder')} value={searchTerm} onChange={(e: ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500" />
-          </div>
-          <div className="flex gap-2">
-            {activeTab === 'cleaned' && (
-              <button
-                onClick={handleRecalculateCleanedTags}
-                disabled={savingCleanedTags}
-                className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {savingCleanedTags ? (
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <ArrowPathIcon className="w-5 h-5" />
-                )}
-                {t('tags.recalculateCleanedTags')}
-              </button>
-            )}
-            {activeTab === 'esco' && (
-              <button
-                onClick={handleRecalculateEscoTags}
-                disabled={convertingToEsco}
-                className="flex items-center gap-2 px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {convertingToEsco ? (
-                  <ArrowPathIcon className="w-5 h-5 animate-spin" />
-                ) : (
-                  <GlobeEuropeAfricaIcon className="w-5 h-5" />
-                )}
-                {t('tags.recalculateEscoTags')}
-              </button>
-            )}
-            <button onClick={fetchTags} className="btn btn-primary flex items-center gap-2 px-4 py-2">
-              <ArrowPathIcon className="w-5 h-5" />{t('tags.refresh')}
-            </button>
-          </div>
-        </div>
-      </div>
+      <TagsToolbar
+        activeTab={activeTab}
+        searchTerm={searchTerm}
+        totalTags={totalTags}
+        totalCleanedTags={totalCleanedTags}
+        totalEscoTags={totalEscoTags}
+        savingCleanedTags={savingCleanedTags}
+        convertingToEsco={convertingToEsco}
+        onTabChange={setActiveTab}
+        onSearchChange={setSearchTerm}
+        onRecalculateCleanedTags={handleRecalculateCleanedTags}
+        onRecalculateEscoTags={handleRecalculateEscoTags}
+        onRefresh={() => { void fetchTags(); }}
+        t={t}
+      />
 
-      {/* Tab description */}
-      {activeTab === 'cleaned' && (
-        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-6">
-          <p className="text-sm text-green-700 dark:text-green-300">
-            <strong>{t('tags.cleanedDescription.title')}</strong>{' '}
-            {t('tags.cleanedDescription.text')}
-          </p>
-        </div>
-      )}
-      {activeTab === 'esco' && (
-        <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg p-4 mb-6">
-          <p className="text-sm text-indigo-700 dark:text-indigo-300">
-            <strong>{t('tags.escoDescription.title')}</strong>{' '}
-            {t('tags.escoDescription.text')}
-          </p>
-        </div>
-      )}
+      <TagsDescriptionBanner activeTab={activeTab} t={t} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Raw and Cleaned tabs */}
-        {activeTab !== 'esco' && Object.entries(activeTab === 'raw' ? filteredTags : filteredCleanedTags).map(([category, tagList], categoryIndex) => {
-          const config = categoryConfig[category] || categoryConfig['Skills'];
-          const IconComponent = config.icon;
-          const translatedCategory = t(`tags.categories.${category}`, { defaultValue: category });
-          const isCleanedTab = activeTab === 'cleaned';
-          const borderClass = isCleanedTab ? 'border-green-200 dark:border-green-800' : 'border-gray-200 dark:border-gray-700';
-          return (
-            <motion.div key={`${activeTab}-${category}`} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: categoryIndex * 0.1 }} className={`bg-white dark:bg-gray-800 rounded-lg shadow border ${borderClass}`}>
-              <div className={`flex items-center gap-3 p-4 border-b ${borderClass}`}>
-                <div className={`p-2 ${config.bgLight} rounded-lg`}><IconComponent className={`w-5 h-5 ${config.textColor}`} /></div>
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{translatedCategory}</h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{tagList?.length || 0} {t('tags.tagsCount')}</p>
-                </div>
-                {isCleanedTab && (
-                  <span className="ml-auto px-2 py-1 text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded">
-                    {t('tags.cleaned')}
-                  </span>
-                )}
-              </div>
-              <div className="p-4 max-h-96 overflow-y-auto">
-                {tagList && tagList.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {tagList.map((tag: string, index: number) => (
-                      <motion.div 
-                        key={`${activeTab}-${category}-${tag}-${index}`} 
-                        initial={{ opacity: 0, scale: 0.8 }} 
-                        animate={{ opacity: 1, scale: 1 }} 
-                        transition={{ delay: Math.min(index * 0.01, 0.5) }} 
-                        className={`group inline-flex items-center gap-1 px-3 py-1.5 ${config.tagBg} ${config.tagText} ${config.tagBorder} border rounded-full text-sm font-medium transition-all hover:shadow-md`}
-                      >
-                        <span>{tag}</span>
-                        {(activeTab === 'raw' || activeTab === 'cleaned') && (
-                          <button onClick={() => openEditModal(category, tag)} className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-white/50 dark:hover:bg-gray-700/50 rounded" title={t('tags.editTag')}>
-                            <PencilSquareIcon className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </motion.div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-gray-500 dark:text-gray-400 text-sm italic">{t('tags.noTags')}</p>
-                )}
-              </div>
-            </motion.div>
-          );
-        })}
-        {/* ESCO tab with links */}
-        {activeTab === 'esco' && Object.entries(filteredEscoTags).map(([category, tagList], categoryIndex) => {
-          const config = categoryConfig[category] || categoryConfig['Skills'];
-          const IconComponent = config.icon;
-          const translatedCategory = t(`tags.categories.${category}`, { defaultValue: category });
-          const borderClass = 'border-indigo-200 dark:border-indigo-800';
-          return (
-            <motion.div key={`esco-${category}`} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: categoryIndex * 0.1 }} className={`bg-white dark:bg-gray-800 rounded-lg shadow border ${borderClass}`}>
-              <div className={`flex items-center gap-3 p-4 border-b ${borderClass}`}>
-                <div className={`p-2 ${config.bgLight} rounded-lg`}><IconComponent className={`w-5 h-5 ${config.textColor}`} /></div>
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{translatedCategory}</h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{tagList?.length || 0} {t('tags.tagsCount')}</p>
-                </div>
-                <span className="ml-auto px-2 py-1 text-xs font-medium bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded">
-                  ESCO
-                </span>
-              </div>
-              <div className="p-4 max-h-96 overflow-y-auto">
-                {tagList && tagList.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {tagList.map((item: EscoTagItem, index: number) => (
-                      <motion.a 
-                        key={`esco-${category}-${item.uri}-${index}`}
-                        href={item.uri}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        initial={{ opacity: 0, scale: 0.8 }} 
-                        animate={{ opacity: 1, scale: 1 }} 
-                        transition={{ delay: Math.min(index * 0.01, 0.5) }} 
-                        className={`group inline-flex items-center gap-1 px-3 py-1.5 ${config.tagBg} ${config.tagText} ${config.tagBorder} border rounded-full text-sm font-medium transition-all hover:shadow-md hover:scale-105 cursor-pointer`}
-                        title={t('tags.viewEscoDefinition')}
-                      >
-                        <span>{item.label}</span>
-                        <svg className="w-3 h-3 opacity-50 group-hover:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                        </svg>
-                      </motion.a>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-gray-500 dark:text-gray-400 text-sm italic">{t('tags.noTags')}</p>
-                )}
-              </div>
-            </motion.div>
-          );
-        })}
-      </div>
+      <TagsCategoryGrid
+        activeTab={activeTab}
+        filteredTags={filteredTags}
+        filteredCleanedTags={filteredCleanedTags}
+        filteredEscoTags={filteredEscoTags}
+        categoryConfig={categoryConfig}
+        onEditTag={openEditModal}
+        t={t}
+      />
 
-      {editingTag && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
-            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">{t('tags.editTag')}</h3>
-              <button onClick={closeEditModal} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"><XMarkIcon className="w-6 h-6" /></button>
-            </div>
-            <div className="p-4">
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{t('tags.editingIn')} <span className="font-medium">{editingTag.category}</span></p>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('tags.tagName')}</label>
-              <input type="text" className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 mb-4" value={newTagName} onChange={(e: ChangeEvent<HTMLInputElement>) => setNewTagName(e.target.value)} onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && handleEditConfirm()} autoFocus />
-              <div className="flex justify-end gap-3">
-                <button onClick={closeEditModal} className="btn btn-secondary px-4 py-2">{t('tags.cancel')}</button>
-                <button onClick={handleEditConfirm} disabled={!newTagName.trim()} className={`btn btn-primary px-4 py-2 ${!newTagName.trim() ? 'opacity-50 cursor-not-allowed' : ''}`}>{t('tags.save')}</button>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-      )}
+      <TagEditModal
+        editingTag={editingTag}
+        newTagName={newTagName}
+        onClose={closeEditModal}
+        onChange={setNewTagName}
+        onConfirm={() => { void handleEditConfirm(); }}
+        t={t}
+      />
     </motion.div>
   );
 };

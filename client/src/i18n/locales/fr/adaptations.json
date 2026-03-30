@@ -24,8 +24,12 @@
   },
   "adaptations": {
     "title": "Adaptations de CV",
+    "subtitle": "Historique des CV adaptés aux missions",
     "results": "adaptations de CV",
-    "subtitle": "Historique des CVs adaptés aux missions",
+    "details": "Détail adaptation",
+    "viewMode": "Affichage",
+    "viewByDeal": "Par affaire",
+    "viewList": "Liste",
     "noAdaptations": "Aucune adaptation",
     "noAdaptationsFiltered": "Aucun résultat",
     "noAdaptationsPrompt": "Adaptez un CV à une mission pour commencer.",
@@ -56,7 +60,7 @@
     "candidateName": "Nom du candidat",
     "adaptedTitle": "Titre professionnel adapté",
     "tabs": {
-      "adaptedCV": "CV Adapté",
+      "adaptedCV": "CV adapté",
       "analysis": "Analyse",
       "mission": "Mission"
     },
@@ -67,8 +71,8 @@
       "close": "Fermer",
       "tabs": {
         "mission": "Mission",
-        "analysis": "Analyse d'Adéquation",
-        "adapted": "CV Adapté"
+        "analysis": "Analyse d'adéquation",
+        "adapted": "CV adapté"
       },
       "mission": {
         "client": "Entreprise",
@@ -80,9 +84,14 @@
       "saving": "Enregistrement..."
     },
     "messages": {
+      "loadError": "Erreur lors du chargement des adaptations",
       "saveSuccess": "CV adapté enregistré avec succès",
       "saveError": "Erreur lors de l'enregistrement du CV adapté",
-      "deleteError": "Erreur lors de la suppression"
+      "deleteConfirm": "Êtes-vous sûr de vouloir supprimer cette adaptation ?",
+      "deleteSuccess": "Adaptation supprimée",
+      "deleteError": "Erreur lors de la suppression",
+      "exportSuccess": "PDF exporté avec succès",
+      "exportError": "Erreur lors de l'export PDF"
     },
     "card": {
       "noName": "CV sans nom",
