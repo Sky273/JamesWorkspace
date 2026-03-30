@@ -1,0 +1,57 @@
+{
+  "missions": {
+    "title": "Mission Offers",
+    "subtitle": "Manage your mission offers for resume adaptation",
+    "noMissions": "No missions found",
+    "results": "missions",
+    "noResults": "No missions match your search",
+    "createFirst": "Create your first mission to get started",
+    "noDescription": "No description",
+    "searchPlaceholder": "Search a mission...",
+    "addMission": "Add mission",
+    "editMission": "Edit mission",
+    "missionTitle": "Title",
+    "missionContent": "Description",
+    "missionStatus": "Status",
+    "titlePlaceholder": "E.g.: Full Stack Developer",
+    "editorHelp": "Use the editor to format your text",
+    "create": "Create",
+    "update": "Update",
+    "view": "View",
+    "refresh": "Refresh",
+    "status": {
+      "Active": "Active",
+      "Closed": "Closed",
+      "Draft": "Draft",
+      "active": "Active",
+      "closed": "Closed",
+      "draft": "Draft"
+    },
+    "stats": {
+      "total": "Total missions",
+      "firms": "Firms",
+      "active": "Active missions"
+    },
+    "description": "Description",
+    "extractedKeywords": "Extracted keywords",
+    "noTitle": "No title",
+    "deal": "Deal",
+    "selectDeal": "No deal (optional)",
+    "client": "Client / Prospect",
+    "selectClient": "Select a client",
+    "selectClientFirst": "Select a client first",
+    "contact": "Contact",
+    "selectContact": "Select a contact",
+    "noFirm": "No firm",
+    "grouped": {
+      "noMissions": "No mission associated with this deal",
+      "showMore": "Show {{count}} more mission(s)",
+      "showLess": "Show less",
+      "fetchError": "Error while loading",
+      "deals": "deals",
+      "unassigned": "unassigned",
+      "unassignedTitle": "Missions without deal",
+      "noSearchResults": "No mission matches your search."
+    }
+  }
+}

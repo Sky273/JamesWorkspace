@@ -1,0 +1,83 @@
+{
+  "resumes": {
+    "title": "CVthèque",
+    "subtitle": "Gérez et analysez les profils de vos consultants",
+    "uploadButton": "Télécharger un nouveau CV",
+    "batchUploadButton": "Import par lot",
+    "searchPlaceholder": "Rechercher des CV...",
+    "filterButton": "Filtrer",
+    "noResults": "Aucun CV trouvé",
+    "results": "résultats",
+    "noResultsFiltered": "Essayez de modifier vos filtres de recherche",
+    "uploadFirst": "Téléchargez votre premier CV pour commencer",
+    "score_label": "Score",
+    "deleteResume": "Supprimer le CV",
+    "downloadResume": "Télécharger le CV",
+    "confirmDeleteTitle": "Confirmer la suppression",
+    "view": "Voir",
+    "refresh": "Actualiser",
+    "untitled": "CV sans titre",
+    "activeFilters": "Filtres actifs",
+    "more": "de plus",
+    "showLess": "Voir moins",
+    "filters": {
+      "skills": "Compétences",
+      "industries": "Secteurs",
+      "tools": "Outils",
+      "softskills": "Soft Skills"
+    },
+    "status": {
+      "new": "Nouveau",
+      "improved": "Amélioré",
+      "processing": "En cours",
+      "analyzed": "Analysé",
+      "error": "Erreur",
+      "active": "Actif"
+    },
+    "stats": {
+      "total": "Total CVs",
+      "improved": "Améliorés",
+      "processing": "En cours",
+      "avgScore": "Score moyen"
+    },
+    "deleteConfirm": {
+      "title": "Confirmer la suppression"
+    },
+    "confirmDeleteMessage": "Êtes-vous sûr de vouloir supprimer ce CV ? Cette action est irréversible.",
+    "filterByDeal": "Filtrer par affaire",
+    "allDeals": "Toutes les affaires",
+    "viewMode": "Affichage",
+    "viewList": "Liste",
+    "viewByDeal": "Par affaire",
+    "backToDealsView": "Retour à la vue par affaire",
+    "groupedView": {
+      "deals": "affaires",
+      "assigned": "CVs affectés",
+      "unassigned": "non affectés",
+      "noResumes": "Aucun CV associé à cette affaire",
+      "noDeals": "Aucune affaire créée. Créez une affaire dans l'onglet CRM pour commencer.",
+      "unassignedTitle": "CVs non affectés à une affaire",
+      "errorLoading": "Erreur lors du chargement",
+      "dropHere": "Déposer ici pour ajouter à cette affaire",
+      "moving": "Déplacement du CV...",
+      "moved": "CV déplacé vers « {{deal}} »",
+      "added": "CV ajouté à « {{deal}} »",
+      "dropError": "Erreur lors du déplacement",
+      "missions": "Missions",
+      "adaptations": "adaptation(s)",
+      "cvs": "CVs",
+      "deal": "Affaire",
+      "dealContent": "Contenu de l'affaire",
+      "showMore": "Voir {{count}} CV(s) supplémentaire(s)",
+      "showLess": "Voir moins"
+    },
+    "preview": {
+      "title": "Aperçu du CV",
+      "improved": "Amélioré",
+      "analyzed": "Analysé",
+      "openFull": "Analyse complète",
+      "keyImprovements": "Améliorations clés",
+      "noContent": "Aucun contenu disponible"
+    }
+  }
+}

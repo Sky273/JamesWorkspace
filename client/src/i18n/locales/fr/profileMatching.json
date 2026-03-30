@@ -1,0 +1,108 @@
+{
+  "profileMatching": {
+    "title": "Matching Profils",
+    "subtitle": "Trouvez les meilleurs CVs correspondant à une mission",
+    "selectDeal": "Filtrer par affaire",
+    "allDeals": "Toutes les affaires",
+    "selectMission": "Sélectionnez une mission",
+    "loadingMissions": "Chargement des missions...",
+    "noMissions": "Aucune mission disponible",
+    "advancedOptions": "Options avancées",
+    "maxResults": "Nombre max de résultats",
+    "minScore": "Score minimum (%)",
+    "weights": "Pondération des critères",
+    "weightsTotal": "Total",
+    "resetWeights": "Réinitialiser les pondérations",
+    "search": "Rechercher les profils",
+    "searching": "Recherche en cours...",
+    "noResults": "Aucun profil ne correspond aux critères",
+    "resultsFound": "{{count}} profil(s) trouvé(s)",
+    "results": "Profils correspondants",
+    "matchScore": "Score",
+    "extractedKeywords": "Mots-clés extraits de la mission",
+    "scannedResumes": "{{count}} CVs analysés",
+    "matchedTags": "Compétences correspondantes",
+    "missingTags": "Compétences manquantes",
+    "noMatchedTags": "Aucune correspondance",
+    "noMissingTags": "Toutes les compétences requises sont présentes",
+    "viewResume": "Voir le CV",
+    "noTitle": "Sans titre",
+    "noProfilesFound": "Aucun profil trouvé avec ces critères",
+    "keywordsRefreshed": "Mots-clés de la mission actualisés",
+    "refreshKeywordsTooltip": "Actualiser les mots-clés de la mission",
+    "categories": {
+      "skills": "Compétences",
+      "tools": "Outils",
+      "industries": "Secteurs",
+      "softSkills": "Soft Skills"
+    },
+    "emptyState": {
+      "title": "Recherchez des profils",
+      "description": "Sélectionnez une mission et lancez la recherche pour trouver les CVs les plus adaptés."
+    },
+    "errors": {
+      "loadMissions": "Erreur lors du chargement des missions",
+      "selectMission": "Veuillez sélectionner une mission",
+      "search": "Erreur lors de la recherche de profils",
+      "refreshKeywords": "Erreur lors de l'actualisation des mots-clés",
+      "resumeNotFound": "CV non trouvé dans la liste",
+      "analysis": "Erreur lors de l'analyse détaillée du profil"
+    },
+    "analyzeProfile": "Analyser le profil",
+    "viewAnalysis": "Voir l'analyse",
+    "analyzing": "Analyse en cours...",
+    "analysisComplete": "Analyse détaillée terminée",
+    "searchingProfiles": "Recherche de profils en cours...",
+    "searchingProfilesDescription": "L'IA analyse les CVs de votre base pour trouver les meilleurs profils pour cette mission.",
+    "searchingLoadingSteps": [
+      "Extraction des mots-clés de la mission...",
+      "Analyse des compétences requises...",
+      "Parcours de la base de CVs...",
+      "Scoring intelligent par l'IA...",
+      "Comparaison des profils...",
+      "Classement des meilleurs matchs..."
+    ],
+    "searchingEstimatedTime": "Cela peut prendre 1 à 5 minutes selon le nombre de CVs",
+    "analyzingProfile": "Analyse du profil en cours...",
+    "analyzingProfileDescription": "L'IA génère une analyse détaillée de l'adéquation entre ce profil et la mission.",
+    "analyzingLoadingSteps": [
+      "Lecture approfondie du CV...",
+      "Comparaison avec les exigences...",
+      "Évaluation des compétences clés...",
+      "Rédaction de la synthèse IA..."
+    ],
+    "overlay": {
+      "stepKeywords": "Mots-clés",
+      "stepScan": "Scan CVs",
+      "stepScoring": "Scoring IA",
+      "stepRanking": "Classement",
+      "stepReading": "Lecture CV",
+      "stepEvaluation": "Évaluation",
+      "stepSynthesis": "Synthèse"
+    },
+    "titleAdjustment": "Ajustement titre",
+    "llmScored": "Score IA",
+    "confidence": {
+      "high": "confiance élevée",
+      "medium": "confiance moyenne",
+      "low": "confiance faible"
+    },
+    "llmScoringApplied": "Scoring intelligent IA appliqué",
+    "llmScoringFailed": "Scoring IA indisponible, mode dégradé",
+    "detailedAnalysis": {
+      "title": "Analyse détaillée IA",
+      "verdict": "Verdict",
+      "strengths": "Points forts",
+      "gaps": "Lacunes identifiées",
+      "recommendations": "Recommandations",
+      "interviewQuestions": "Questions d'entretien suggérées",
+      "riskLevel": "Niveau de risque"
+    },
+    "sentToLlm": "{{count}} envoyés au LLM",
+    "explainedCount": "{{count}} expliqués",
+    "returnedCount": "{{count}} retournés",
+    "maxResultsPlaceholder": "0 = tous",
+    "dealSeparator": "•",
+    "resultsToast": "{{scanned}} CV analysés, {{sent}} envoyés au LLM, {{returned}} résultats retournés"
+  }
+}

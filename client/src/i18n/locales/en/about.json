@@ -1,0 +1,9 @@
+{
+  "about": {
+    "title": "About ResumeConverter",
+    "description": "ResumeConverter is a solution developed by Aptea in order to support its needs for resume analysis and improvement, and export to various templates.",
+    "changelog": "Changelog",
+    "errorLoadingChangelog": "Could not load changelog.",
+    "allRightsReserved": "All rights reserved"
+  }
+}

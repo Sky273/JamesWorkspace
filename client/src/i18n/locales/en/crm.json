@@ -1,0 +1,90 @@
+{
+  "crm": {
+    "title": "CRM",
+    "subtitle": "Manage your clients, prospects and deals",
+    "tabs": {
+      "clients": "Clients & Prospects",
+      "deals": "Deals"
+    },
+    "deals": {
+      "title": "Deals",
+      "subtitle": "Manage your deals and business opportunities",
+      "addDeal": "New deal",
+      "editDeal": "Edit deal",
+      "searchPlaceholder": "Search deals...",
+      "results": "deals",
+      "noDeals": "No deals found",
+      "viewDeals": "Deals",
+      "allClients": "All clients",
+      "allStatuses": "All statuses",
+      "filterByClient": "Filter by client",
+      "filterByStatus": "Filter by status",
+      "name": "Deal name",
+      "namePlaceholder": "E.g.: Senior developer recruitment",
+      "client": "Client",
+      "selectClient": "Select a client",
+      "contact": "Contact person",
+      "selectContact": "Select a contact",
+      "noContactsForClient": "No contacts for this client",
+      "status": "Status",
+      "priority": "Priority",
+      "description": "Description",
+      "descriptionPlaceholder": "Deal description...",
+      "expectedCloseDate": "Expected close date",
+      "cvCount": "Associated CVs",
+      "missions": "mission(s)",
+      "statuses": {
+        "open": "Open",
+        "won": "Won",
+        "lost": "Lost",
+        "on_hold": "On hold"
+      },
+      "priorities": {
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High",
+        "urgent": "Urgent"
+      },
+      "messages": {
+        "dealCreated": "Deal created successfully",
+        "dealUpdated": "Deal updated successfully",
+        "dealDeleted": "Deal deleted successfully",
+        "errorFetching": "Error loading deals",
+        "errorCreating": "Error creating deal",
+        "errorUpdating": "Error updating deal",
+        "errorDeleting": "Error deleting deal",
+        "confirmDelete": "Are you sure you want to delete the deal \"{{name}}\"?",
+        "saving": "Saving..."
+      },
+      "modal": {
+        "manageDeals": "Manage deals",
+        "associatedDeals": "Associated deals",
+        "addToDeal": "Add to a deal",
+        "searchDeal": "Search a deal...",
+        "noDealsAssociated": "This resume is not associated with any deal",
+        "allDealsAssociated": "All deals are already associated",
+        "noDealFound": "No deal found",
+        "cvAdded": "Resume added to the deal",
+        "cvRemoved": "Resume removed from the deal",
+        "errorAdding": "Error while adding to the deal",
+        "errorRemoving": "Error while removing from the deal",
+        "removeFromDeal": "Remove from this deal"
+      },
+      "createTitle": "New deal",
+      "editTitle": "Edit deal",
+      "add": "New deal",
+      "selectClientFirst": "Select a client first",
+      "startDate": "Expected start date",
+      "endDate": "Expected end date",
+      "titleRequired": "Deal name is required",
+      "created": "Deal created",
+      "updated": "Deal updated",
+      "deleted": "Deal deleted",
+      "errorSaving": "Error while saving",
+      "errorDeleting": "Error while deleting",
+      "confirmDelete": "Confirm deletion",
+      "deleteWarning": "Are you sure you want to delete the deal",
+      "resumesAssociatedWarning": "{{count}} CV(s) are associated with this deal."
+    }
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "navigation": {
+    "home": "Home",
+    "resumes": "Resume Library",
+    "templates": "Resume Templates",
+    "emailTemplates": "Email Templates",
+    "dashboard": "Dashboard",
+    "tags": "Tags",
+    "users": "Users",
+    "settings": "Settings",
+    "missions": "Missions",
+    "metrics": "Metrics",
+    "marketRadar": "Market Radar",
+    "metiers": "Jobs & Skills",
+    "security": "Security Logs",
+    "securityLogs": "Security Logs",
+    "gdprAudit": "GDPR Audit Log",
+    "backup": "Backup",
+    "jobs": "Jobs",
+    "clients": "Clients & Prospects",
+    "crm": "CRM",
+    "profileMatching": "Profile Matching",
+    "adaptations": "Adaptations",
+    "userGuide": "User Guide",
+    "upload": "Upload Resume",
+    "sectionGestion": "Management",
+    "sectionAdmin": "Admin"
+  }
+}

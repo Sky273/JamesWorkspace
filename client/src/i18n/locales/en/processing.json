@@ -1,0 +1,33 @@
+{
+  "processing": {
+    "steps": {
+      "upload": {
+        "title": "Uploading Resume",
+        "description": "Processing your file...",
+        "steps": [
+          "Receiving file",
+          "Validating format",
+          "Preparing for extraction"
+        ]
+      },
+      "extract": {
+        "title": "Extracting Content",
+        "description": "Reading resume content...",
+        "steps": [
+          "Analyzing document structure",
+          "Extracting text",
+          "Identifying sections"
+        ]
+      },
+      "analyze": {
+        "title": "AI Analysis",
+        "description": "Analyzing with advanced AI...",
+        "steps": [
+          "Analyzing skills",
+          "Evaluating experience",
+          "Generating recommendations"
+        ]
+      }
+    }
+  }
+}

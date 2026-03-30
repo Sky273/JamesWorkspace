@@ -1,0 +1,54 @@
+{
+  "batchJobs": {
+    "title": "Processing Jobs",
+    "subtitle": "Track imports, improvements, and exports running in the background.",
+    "refresh": "Refresh",
+    "noJobs": "No processing jobs",
+    "noItems": "No items",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "download": "Download export",
+    "downloadStarted": "Download started",
+    "nameRequired": "Please enter the candidate name",
+    "nameProvided": "Name provided, processing in progress...",
+    "enterCandidateName": "Candidate name...",
+    "submitName": "Submit name",
+    "jobCreated": "Job created with {{count}} file(s). Check the Jobs tab to track progress.",
+    "jobCancelled": "Job cancelled",
+    "jobDeleted": "Job deleted",
+    "sourceRelativePath": "Source relative path",
+    "sourceFile": "Source file",
+    "serverInfo": {
+      "title": "Background Processing",
+      "description": "Jobs are processed on the server. You can navigate freely in the application without interrupting the processing."
+    },
+    "status": {
+      "pending": "Pending",
+      "processing": "Processing",
+      "completed": "Completed",
+      "failed": "Failed",
+      "cancelled": "Cancelled"
+    },
+    "type": {
+      "import": "Import",
+      "improve": "Improvement",
+      "adapt": "Adaptation",
+      "match": "Match analysis",
+      "profileSearch": "Profile search",
+      "profileAnalysis": "Detailed profile analysis",
+      "importImprove": "Import + Improvement",
+      "collectTrends": "Market trends collection",
+      "collectFacts": "Job offers collection",
+      "collectFactsSource": "Job offers collection ({{source}})",
+      "collectMetiers": "Jobs & skills collection",
+      "dealExport": "Deal export",
+      "dealExportNamed": "Deal export: {{title}}"
+    },
+    "collection": {
+      "processed": "Processed",
+      "success": "Success",
+      "errors": "Errors",
+      "startedAt": "Started"
+    }
+  }
+}

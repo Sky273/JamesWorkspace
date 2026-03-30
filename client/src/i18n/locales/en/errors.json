@@ -1,0 +1,20 @@
+{
+  "errors": {
+    "required": "This field is required",
+    "passwordLength": "Password must be at least 8 characters long",
+    "passwordMismatch": "Passwords do not match",
+    "unauthorized": "Invalid email or password",
+    "serverError": "An error occurred. Please try again later.",
+    "loadResume": "Error loading resume",
+    "resumeNotFound": "Resume not found",
+    "resumeNotFoundDescription": "The requested resume does not exist or has been deleted.",
+    "loadMission": "Error loading mission",
+    "missionNotFound": "Mission not found",
+    "missionNotFoundDescription": "The requested mission does not exist or has been deleted.",
+    "loadAdaptation": "Error loading adaptation",
+    "adaptationNotFound": "Adaptation not found",
+    "adaptationNotFoundDescription": "The requested adaptation does not exist or has been deleted.",
+    "exportFailed": "[FR] Export Failed",
+    "saveFailed": "[FR] Save Failed"
+  }
+}

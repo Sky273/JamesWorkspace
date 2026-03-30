@@ -1,0 +1,112 @@
+{
+  "resume": {
+    "analysis": {
+      "title": "Resume Analysis",
+      "original": "Original",
+      "improved": "Improved",
+      "suggestions": "Suggestions",
+      "suggestionsFromOriginal": "These suggestions were made based on the original CV, before its automatic improvement by AI.",
+      "globalRating": "Global Rating",
+      "originalScore": "Original Score",
+      "improvedScore": "Improved Score",
+      "sectionScores": "Section Scores",
+      "criticalImprovements": "Critical Improvements Needed",
+      "recommendedImprovements": "Recommended Improvements",
+      "optionalEnhancements": "Optional Enhancements",
+      "originalText": "Original Text",
+      "originalTextDescription": "Content extracted from the original resume",
+      "originalTextDescriptionEditable": "Edit the extracted text before improvement",
+      "improvedText": "Improved Text",
+      "improvedTextDescription": "Here is the improved version of your resume by the AI",
+      "scoreImprovedBy": "Your resume score improved by",
+      "scoreDegradedBy": "Your resume score degraded by",
+      "clickImproveHint": "Click \"Improve with AI\" to enhance your resume",
+      "candidateName": "Candidate Name",
+      "candidateNamePlaceholder": "Enter candidate name",
+      "professionalTitle": "Professional Title",
+      "professionalTitlePlaceholder": "Enter professional title",
+      "originalResume": "Original Resume",
+      "improvedResume": "Improved Resume",
+      "tabs": {
+        "overview": "Overview",
+        "skills": "Skills & Tags",
+        "skillsTags": "Skills & Tags",
+        "original": "Original",
+        "improved": "Improved",
+        "compare": "Compare",
+        "export": "Export",
+        "pipeline": "Selection",
+        "initialAnalysis": "Initial Analysis",
+        "postImprovementAnalysis": "Post-Improvement Analysis"
+      },
+      "sections": {
+        "executiveBrief": "Executive Brief",
+        "skillsKeywords": "Skills & Keywords",
+        "experience": "Experience",
+        "education": "Education",
+        "atsOptimization": "ATS Optimization",
+        "hobbiesLanguages": "Hobbies & Languages"
+      },
+      "categories": {
+        "skills": "Skills",
+        "technicalskills": "Technical Skills",
+        "tools": "Tools",
+        "industries": "Industries",
+        "softskills": "Soft Skills"
+      },
+      "exportOptions": {
+        "title": "Export Options",
+        "template": "Template",
+        "selectTemplate": "Select a template",
+        "loadingTemplates": "Loading templates...",
+        "noTemplates": "No templates available",
+        "preview": "Preview",
+        "format": "Format",
+        "export": "Export",
+        "exportPDF": "Export as PDF",
+        "exporting": "Exporting...",
+        "sendEmail": "Send by email"
+      }
+    },
+    "actions": {
+      "improveWithAI": "Improve with AI",
+      "improving": "Improving...",
+      "exporting": "Exporting...",
+      "saveChanges": "Save Changes",
+      "saving": "Saving...",
+      "adaptToMission": "Adapt to Mission",
+      "improve": "Improve",
+      "improveNow": "Improve Now",
+      "export": "Export",
+      "viewImproved": "View Improved",
+      "view": "View"
+    },
+    "steps": {
+      "analysis": "Analysis",
+      "viewImproved": "View Improved",
+      "view": "View",
+      "export": "Export",
+      "improve": "Improvement"
+    },
+    "improve": {
+      "title": "Resume Improvement",
+      "notYetImproved": "Resume not yet improved",
+      "description": "Use AI to automatically improve this resume by optimizing its structure, content and ATS score."
+    },
+    "export": {
+      "title": "Resume Export",
+      "needsImprovement": "Improvement Required",
+      "needsImprovementDescription": "Please improve the resume first before exporting.",
+      "exportingImproved": "Exporting improved CV",
+      "exportingOriginal": "Exporting original CV",
+      "improveFirst": "Improve first?"
+    },
+    "improveSuccess": "Resume improved successfully",
+    "improveError": "Error improving resume",
+    "exportSuccess": "Resume exported successfully",
+    "exportError": "Error exporting resume",
+    "saveSuccess": "Changes saved",
+    "saveError": "Error saving changes",
+    "unsavedChanges": "You have unsaved changes"
+  }
+}

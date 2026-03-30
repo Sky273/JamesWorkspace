@@ -1,0 +1,108 @@
+{
+  "home": {
+    "nav": {
+      "hero": "Accueil",
+      "dashboard": "Tableau de bord",
+      "howItWorks": "Comment ça marche",
+      "features": "Fonctionnalités clés"
+    },
+    "hero": {
+      "title1": "Votre CVthèque.",
+      "title2": "Optimisée. Activée.",
+      "description": "Standardisez, améliorez et déclinez vos CV par client ou mission. Des profils cohérents, prêts à envoyer, en quelques minutes.",
+      "startButton": "Importer un CV",
+      "analysisComplete": "Analyse terminée",
+      "aiSuggestion": "Suggestion IA",
+      "suggestionText": "Augmentez l'impact de cette section en utilisant des verbes d'action plus forts.",
+      "badges": {
+        "atsFriendly": "Compatible ATS",
+        "fastAnalysis": "Analyse rapide",
+        "secure": "100% Sécurisé",
+        "gdprCompliant": "Compatible RGPD"
+      }
+    },
+    "tabs": {
+      "all": "Accueil",
+      "resumes": "Tous les CV",
+      "myResumes": "Mes CV",
+      "recommendations": "Recommandations"
+    },
+    "dashboard": {
+      "title": "Tableau de bord",
+      "kpis": {
+        "totalResumes": "CV dans la CVthèque",
+        "analyzed": "CV analysés",
+        "averageScore": "Score moyen",
+        "activeMissions": "Missions actives",
+        "totalMissions": "{{count}} au total",
+        "thisMonth": "{{count}} ce mois",
+        "afterImprovement": "après amélioration"
+      },
+      "recentActivity": "Activité récente",
+      "today": "Aujourd'hui",
+      "thisWeek": "Cette semaine",
+      "thisMonth": "Ce mois",
+      "improvements": "Améliorations",
+      "improved": "CV améliorés",
+      "avgBefore": "Score moyen avant",
+      "avgAfter": "Score moyen après",
+      "adaptations": "Adaptations",
+      "totalAdaptations": "Total adaptations",
+      "missions": "Missions",
+      "active": "Actives",
+      "quickActions": "Actions rapides",
+      "actions": {
+        "importResume": "Importer un CV",
+        "importResumeDesc": "Ajouter un nouveau profil à la CVthèque",
+        "viewLibrary": "Voir la CVthèque",
+        "viewLibraryDesc": "Consulter et gérer les profils",
+        "createMission": "Voir les missions",
+        "createMissionDesc": "Consulter les offres de mission",
+        "viewAdaptations": "Voir les adaptations",
+        "viewAdaptationsDesc": "Gérer les CV adaptés"
+      }
+    },
+    "howItWorks": {
+      "title": "Comment ça marche",
+      "step1": {
+        "title": "Importez vos profils",
+        "description": "Importez les CV de vos consultants au format PDF, DOC ou DOCX. Notre système les analyse et les standardise automatiquement."
+      },
+      "step2": {
+        "title": "Optimisez avec l'IA",
+        "description": "Notre IA analyse chaque profil, fournit un score détaillé et propose des améliorations ciblées pour maximiser l'impact."
+      },
+      "step3": {
+        "title": "Adaptez et exportez",
+        "description": "Personnalisez chaque profil selon vos missions et exportez-les selon divers modèles, prêts à envoyer."
+      }
+    },
+    "features": {
+      "title": "Fonctionnalités clés",
+      "ai": {
+        "title": "Analyse & Suggestions IA",
+        "description": "Notre IA analyse chaque profil, identifie les points d'amélioration et propose des suggestions ciblées."
+      },
+      "improvement": {
+        "title": "Amélioration automatique",
+        "description": "Optimisez vos CV en un clic grâce à notre IA qui reformule et enrichit automatiquement chaque section."
+      },
+      "scoring": {
+        "title": "Notation détaillée",
+        "description": "Recevez des scores complets dans plusieurs catégories pour comprendre les points forts de chaque profil."
+      },
+      "ocr": {
+        "title": "Extraction intelligente",
+        "description": "Technologie OCR avancée pour extraire automatiquement le texte des CV scannés ou en format image."
+      },
+      "adaptation": {
+        "title": "Adaptation aux missions",
+        "description": "Personnalisez chaque profil en fonction d'une offre de mission spécifique pour maximiser vos chances."
+      },
+      "templates": {
+        "title": "Modèles professionnels",
+        "description": "Choisissez parmi une variété de modèles de CV conçus professionnellement."
+      }
+    }
+  }
+}

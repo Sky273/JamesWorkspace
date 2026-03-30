@@ -1,0 +1,14 @@
+{
+  "improvementAnimation": {
+    "steps": {
+      "improving": {
+        "label": "Improving Resume",
+        "description": "AI is enhancing your resume based on improvement suggestions..."
+      },
+      "analyzing": {
+        "label": "Analyzing Improvements",
+        "description": "Evaluating changes and calculating new scores..."
+      }
+    }
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "userProfile": {
+    "anonymous": "User",
+    "noCompany": "No Company",
+    "roles": {
+      "admin": "Administrator",
+      "user": "User"
+    },
+    "title": "My account",
+    "subtitle": "Manage your profile and security settings",
+    "tabs": {
+      "profile": "My profile",
+      "security": "Security"
+    },
+    "personalInfo": "Personal information",
+    "fullName": "Full name",
+    "email": "Email",
+    "emailReadonly": "Email cannot be changed",
+    "jobTitle": "Job title",
+    "jobTitlePlaceholder": "E.g. HR Consultant",
+    "phone": "Phone",
+    "phonePlaceholder": "E.g. +33 6 12 34 56 78",
+    "firm": "Firm",
+    "passwordTitle": "Password",
+    "passwordHelp": "To change your password, contact your administrator.",
+    "updateSuccess": "Profile updated",
+    "updateError": "Error updating profile"
+  }
+}

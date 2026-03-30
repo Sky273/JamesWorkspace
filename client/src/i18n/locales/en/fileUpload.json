@@ -1,0 +1,28 @@
+{
+  "fileUpload": {
+    "dragAndDropYourResumeHere": "Drag and drop your resume here",
+    "dropYourResumeHere": "Drop your resume here",
+    "or": "or click to select a file",
+    "supportedFormats": "Supported formats: PDF, DOC, DOCX (<2 MB)",
+    "gdpr": {
+      "title": "Candidate Information",
+      "profileType": "Profile Type",
+      "employee": "Employee",
+      "external": "External",
+      "candidateName": "Candidate Full Name",
+      "namePlaceholder": "e.g. John Doe",
+      "nameHint": "This name will be used for GDPR consent (separate from the CV display name)",
+      "candidateEmail": "Candidate Email",
+      "emailPlaceholder": "candidate@email.com",
+      "emailHint": "A GDPR consent request email will be sent automatically",
+      "externalInfo": "For external candidates, a GDPR consent request email will be sent automatically after uploading the CV.",
+      "continue": "Continue to upload",
+      "modify": "Modify",
+      "errors": {
+        "nameRequired": "Name is required",
+        "emailRequired": "Email is required for external candidates",
+        "emailInvalid": "Invalid email format"
+      }
+    }
+  }
+}

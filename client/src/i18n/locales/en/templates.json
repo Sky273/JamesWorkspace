@@ -1,0 +1,121 @@
+{
+  "templates": {
+    "title": "Resume Templates",
+    "subtitle": "Choose from our collection of professional resume templates",
+    "newTemplate": "New Template",
+    "searchPlaceholder": "Search for a template...",
+    "results": "templates",
+    "refresh": "Refresh",
+    "noResults": "No templates match your search",
+    "createFirst": "Create your first template to get started",
+    "stats": {
+      "total": "Total Templates",
+      "popular": "Popular Templates",
+      "active": "Active Templates"
+    },
+    "sort": {
+      "popular": "Popular First",
+      "name": "Name"
+    },
+    "card": {
+      "popular": "Popular",
+      "preview": "Preview",
+      "noDescription": "No description",
+      "global": "Global (all firms)"
+    },
+    "status": {
+      "error": "Failed to load templates",
+      "empty": "No templates available",
+      "deleteSuccess": "Template deleted successfully",
+      "deleting": "Deleting...",
+      "deleteError": "Failed to delete template"
+    },
+    "actions": {
+      "edit": "Edit Template",
+      "delete": "Delete Template"
+    },
+    "editor": {
+      "title": {
+        "new": "New Template",
+        "edit": "Edit Template"
+      },
+      "name": {
+        "label": "Template Name",
+        "placeholder": "Enter template name"
+      },
+      "description": {
+        "label": "Description",
+        "placeholder": "Enter template description"
+      },
+      "header": {
+        "label": "Header",
+        "hint": "Optional - appears at the top of each page"
+      },
+      "content": {
+        "label": "Template Body"
+      },
+      "footer": {
+        "label": "Footer",
+        "hint": "Optional - appears at the bottom of each page"
+      },
+      "stylesheet": {
+        "label": "Stylesheet",
+        "placeholder": "Add custom CSS styles here"
+      },
+      "popular": {
+        "label": "Mark as Popular"
+      },
+      "statusField": {
+        "label": "Status",
+        "active": "Active",
+        "inactive": "Inactive"
+      },
+      "validation": {
+        "nameRequired": "Template name is required",
+        "contentRequired": "Template content is required"
+      },
+      "success": {
+        "create": "Template created successfully",
+        "update": "Template updated successfully"
+      },
+      "error": {
+        "load": "Failed to load template"
+      }
+    },
+    "delete": {
+      "title": "Delete Template"
+    },
+    "selectTemplate": "Select Template",
+    "extract": {
+      "title": "Extract from CV",
+      "subtitle": "Automatically create a template from an existing CV",
+      "buttonShort": "Extract",
+      "dragDrop": "Drag and drop a CV here or click to select",
+      "dropHere": "Drop the file here...",
+      "supportedFormats": "Supported formats: PDF, DOCX (max 10 MB)",
+      "clickToChange": "Click to change file",
+      "howItWorks": "How does it work?",
+      "step1": "Upload a CV in PDF or Word format",
+      "step2": "AI analyzes the document structure and style",
+      "step3": "A reusable template is automatically generated",
+      "step4": "Customize the template before saving",
+      "analyzing": "Analyzing CV...",
+      "pleaseWait": "AI is extracting the document structure and styles",
+      "longOperation": "This operation may take 1 to 3 minutes depending on document complexity.",
+      "extractButton": "Extract Template",
+      "extractionComplete": "Extraction complete!",
+      "usedModel": "AI model used",
+      "preview": "Template Preview",
+      "reviewNote": "Review and adjust the extracted template before saving. AI may require manual corrections.",
+      "createTemplate": "Create Template",
+      "templateLoaded": "Extracted template loaded in editor",
+      "success": "Template extracted successfully!",
+      "error": "Error extracting template",
+      "errorTitle": "Extraction Failed",
+      "tryAgain": "Try Again",
+      "extractedColors": "Extracted colors",
+      "extractedFonts": "Extracted fonts",
+      "extractionMethod": "Extraction method"
+    }
+  }
+}

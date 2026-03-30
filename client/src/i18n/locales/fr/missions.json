@@ -1,0 +1,58 @@
+{
+  "missions": {
+    "title": "Offres de Mission",
+    "subtitle": "Gérez vos offres de mission pour l'adaptation des CV",
+    "noMissions": "Aucune mission",
+    "noResults": "Aucun résultat",
+    "createFirst": "Créez votre première mission pour commencer.",
+    "noDescription": "Aucune description",
+    "searchPlaceholder": "Rechercher une mission...",
+    "addMission": "Ajouter une mission",
+    "editMission": "Modifier la mission",
+    "missionTitle": "Titre",
+    "missionContent": "Description",
+    "missionStatus": "Statut",
+    "titlePlaceholder": "Ex: Développeur Full Stack",
+    "editorHelp": "Utilisez l'éditeur pour formater votre texte",
+    "create": "Créer",
+    "update": "Mettre à jour",
+    "view": "Voir",
+    "refresh": "Rafraîchir",
+    "status": {
+      "Active": "Active",
+      "Closed": "Clôturée",
+      "Draft": "Brouillon",
+      "active": "Active",
+      "closed": "Clôturée",
+      "draft": "Brouillon"
+    },
+    "stats": {
+      "total": "Total missions",
+      "firms": "Cabinets",
+      "active": "Missions actives"
+    },
+    "description": "Description",
+    "extractedKeywords": "Mots-clés extraits",
+    "noTitle": "Sans titre",
+    "results": "missions",
+    "deal": "Affaire",
+    "selectDeal": "Aucune affaire (optionnel)",
+    "client": "Client / Prospect",
+    "selectClient": "Sélectionner un client",
+    "selectClientFirst": "Sélectionner d'abord un client",
+    "contact": "Interlocuteur",
+    "selectContact": "Sélectionner un interlocuteur",
+    "noFirm": "Aucun cabinet",
+    "adaptations": "adaptation(s)",
+    "grouped": {
+      "noMissions": "Aucune mission associée à cette affaire",
+      "showMore": "Voir {{count}} mission(s) supplémentaire(s)",
+      "showLess": "Voir moins",
+      "fetchError": "Erreur lors du chargement",
+      "deals": "affaires",
+      "unassigned": "sans affaire",
+      "unassignedTitle": "Missions sans affaire",
+      "noSearchResults": "Aucune mission ne correspond à votre recherche."
+    }
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "twoFactor": {
+    "title": "Two-Factor Authentication (2FA)",
+    "enabled": "2FA enabled",
+    "disabled": "2FA not enabled",
+    "enabledAt": "Enabled on {{date}}",
+    "backupCodesRemaining": "{{count}} backup codes remaining",
+    "regenerateWarning": "(Consider regenerating them)",
+    "regenerateButton": "Regenerate backup codes",
+    "disableButton": "Disable 2FA",
+    "enableButton": "Enable 2FA",
+    "description": "Protect your account with two-factor authentication. You will need an app like Google Authenticator or Authy.",
+    "loginOnlyNotice": "This feature only applies to email/password login. Google sign-in (OAuth2) uses your Google account security.",
+    "verifyTitle": "2FA Verification",
+    "verifyDescription": "Enter the code from your authenticator app",
+    "verifyButton": "Verify",
+    "cancelButton": "Cancel",
+    "codePlaceholder": "000000",
+    "backupCodeHint": "Or use a backup code (8 characters)",
+    "invalidCode": "Invalid code",
+    "success": "Login successful!",
+    "connectionError": "Server connection error"
+  }
+}

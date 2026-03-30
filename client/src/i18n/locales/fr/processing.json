@@ -1,0 +1,33 @@
+{
+  "processing": {
+    "steps": {
+      "upload": {
+        "title": "Téléchargement du CV",
+        "description": "Traitement de votre fichier...",
+        "steps": [
+          "Réception du fichier",
+          "Validation du format",
+          "Préparation pour l'extraction"
+        ]
+      },
+      "extract": {
+        "title": "Extraction du Contenu",
+        "description": "Lecture du contenu du CV...",
+        "steps": [
+          "Analyse de la structure du document",
+          "Extraction du texte",
+          "Identification des sections"
+        ]
+      },
+      "analyze": {
+        "title": "Analyse IA",
+        "description": "Analyse avec l'IA avancée...",
+        "steps": [
+          "Analyse des compétences",
+          "Évaluation de l'expérience",
+          "Génération des recommandations"
+        ]
+      }
+    }
+  }
+}

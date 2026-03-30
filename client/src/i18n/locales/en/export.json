@@ -1,0 +1,7 @@
+{
+  "export": {
+    "loadingTemplates": "Loading templates...",
+    "noTemplates": "No templates available",
+    "selectTemplate": "Select a template"
+  }
+}

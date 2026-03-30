@@ -1,0 +1,16 @@
+{
+  "chatbot": {
+    "title": "AI Assistant",
+    "subtitle": "I'm here to help you",
+    "openChat": "Open chat",
+    "closeChat": "Close chat",
+    "placeholder": "Ask your question...",
+    "send": "Send",
+    "clear": "Clear",
+    "clearChat": "Clear conversation",
+    "resetSize": "Reset size",
+    "needHelp": "Need help?",
+    "welcomeMessage": "👋 **Hello!** I'm your AI assistant.\n\nI can help you with:\n- 📄 **Managing the resume library** (import, analysis, improvement)\n- 🎯 **Creating missions** and adapting profiles\n- ⚙️ **Using the features** of the application\n- ❓ **Answering your questions**\n\nHow can I help you?",
+    "errorMessage": "Sorry, I couldn't process your request. Please try again."
+  }
+}

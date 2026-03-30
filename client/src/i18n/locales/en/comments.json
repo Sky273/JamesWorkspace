@@ -1,0 +1,24 @@
+{
+  "comments": {
+    "title": "Comments",
+    "comment": "comment",
+    "comments": "comments",
+    "placeholder": "Add a comment...",
+    "private": "Private (only visible to me)",
+    "privateLabel": "Private",
+    "post": "Post",
+    "posting": "Posting...",
+    "edit": "Edit",
+    "delete": "Delete",
+    "save": "Save",
+    "cancel": "Cancel",
+    "edited": "edited",
+    "loading": "Loading comments...",
+    "empty": "No comments yet. Be the first to add one!",
+    "fetchError": "Failed to load comments",
+    "addError": "Failed to add comment",
+    "updateError": "Failed to update comment",
+    "deleteError": "Failed to delete comment",
+    "confirmDelete": "Are you sure you want to delete this comment?"
+  }
+}

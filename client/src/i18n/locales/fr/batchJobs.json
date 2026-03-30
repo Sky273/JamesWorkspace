@@ -1,0 +1,54 @@
+{
+  "batchJobs": {
+    "title": "Jobs de traitement",
+    "subtitle": "Suivez les imports, améliorations et exports lancés en arrière-plan.",
+    "refresh": "Actualiser",
+    "noJobs": "Aucun job de traitement",
+    "noItems": "Aucun élément",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "download": "Télécharger l'export",
+    "downloadStarted": "Téléchargement démarré",
+    "nameRequired": "Veuillez saisir le nom du candidat",
+    "nameProvided": "Nom fourni, traitement en cours...",
+    "enterCandidateName": "Nom du candidat...",
+    "submitName": "Valider le nom",
+    "jobCreated": "Job créé avec {{count}} fichier(s). Consultez l'onglet Jobs pour suivre la progression.",
+    "jobCancelled": "Job annulé",
+    "jobDeleted": "Job supprimé",
+    "sourceRelativePath": "Chemin relatif source",
+    "sourceFile": "Fichier source",
+    "serverInfo": {
+      "title": "Traitement en arrière-plan",
+      "description": "Les jobs sont traités sur le serveur. Vous pouvez naviguer librement dans l'application sans interrompre le traitement."
+    },
+    "status": {
+      "pending": "En attente",
+      "processing": "En cours",
+      "completed": "Terminé",
+      "failed": "Échoué",
+      "cancelled": "Annulé"
+    },
+    "type": {
+      "import": "Import",
+      "improve": "Amélioration",
+      "adapt": "Adaptation",
+      "match": "Analyse de match",
+      "profileSearch": "Recherche de profils",
+      "profileAnalysis": "Analyse détaillée de profil",
+      "importImprove": "Import + Amélioration",
+      "collectTrends": "Collecte tendances marché",
+      "collectFacts": "Collecte offres d'emploi",
+      "collectFactsSource": "Collecte offres ({{source}})",
+      "collectMetiers": "Collecte métiers & compétences",
+      "dealExport": "Export affaire",
+      "dealExportNamed": "Export affaire : {{title}}"
+    },
+    "collection": {
+      "processed": "Traités",
+      "success": "Succès",
+      "errors": "Erreurs",
+      "startedAt": "Démarré"
+    }
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "export": {
+    "loadingTemplates": "Chargement des modèles...",
+    "noTemplates": "Aucun modèle disponible",
+    "selectTemplate": "Sélectionner un modèle"
+  }
+}

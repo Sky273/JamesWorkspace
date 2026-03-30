@@ -1,0 +1,108 @@
+{
+  "home": {
+    "nav": {
+      "hero": "Home",
+      "dashboard": "Dashboard",
+      "howItWorks": "How It Works",
+      "features": "Key Features"
+    },
+    "hero": {
+      "title1": "Your Resume Library.",
+      "title2": "Optimized. Activated.",
+      "description": "Standardize, improve and tailor your resumes by client or mission. Consistent profiles, ready to send, in just minutes.",
+      "startButton": "Import a Resume",
+      "analysisComplete": "Analysis Complete",
+      "aiSuggestion": "AI Suggestion",
+      "suggestionText": "Increase the impact of this section by using stronger action verbs.",
+      "badges": {
+        "atsFriendly": "ATS Friendly",
+        "fastAnalysis": "Fast Analysis",
+        "secure": "100% Secure",
+        "gdprCompliant": "GDPR Compliant"
+      }
+    },
+    "tabs": {
+      "all": "Home",
+      "resumes": "All Resumes",
+      "myResumes": "My Resumes",
+      "recommendations": "Recommendations"
+    },
+    "dashboard": {
+      "title": "Dashboard",
+      "kpis": {
+        "totalResumes": "Resumes in Library",
+        "analyzed": "Analyzed Resumes",
+        "averageScore": "Average Score",
+        "activeMissions": "Active Missions",
+        "totalMissions": "{{count}} total",
+        "thisMonth": "{{count}} this month",
+        "afterImprovement": "after improvement"
+      },
+      "recentActivity": "Recent Activity",
+      "today": "Today",
+      "thisWeek": "This Week",
+      "thisMonth": "This Month",
+      "improvements": "Improvements",
+      "improved": "Improved Resumes",
+      "avgBefore": "Avg. Score Before",
+      "avgAfter": "Avg. Score After",
+      "adaptations": "Adaptations",
+      "totalAdaptations": "Total Adaptations",
+      "missions": "Missions",
+      "active": "Active",
+      "quickActions": "Quick Actions",
+      "actions": {
+        "importResume": "Import Resume",
+        "importResumeDesc": "Add a new profile to the library",
+        "viewLibrary": "View Library",
+        "viewLibraryDesc": "Browse and manage profiles",
+        "createMission": "View Missions",
+        "createMissionDesc": "Browse job offers",
+        "viewAdaptations": "View Adaptations",
+        "viewAdaptationsDesc": "Manage adapted resumes"
+      }
+    },
+    "howItWorks": {
+      "title": "How It Works",
+      "step1": {
+        "title": "Import Your Profiles",
+        "description": "Import your consultants' resumes in PDF, DOC, or DOCX format. Our system analyzes and standardizes them automatically."
+      },
+      "step2": {
+        "title": "Optimize with AI",
+        "description": "Our AI analyzes each profile, provides a detailed score, and suggests targeted improvements to maximize impact."
+      },
+      "step3": {
+        "title": "Adapt & Export",
+        "description": "Customize each profile for your missions and export them in your preferred format, ready to send."
+      }
+    },
+    "features": {
+      "title": "Key Features",
+      "ai": {
+        "title": "AI Analysis & Suggestions",
+        "description": "Our AI analyzes each profile, identifies areas for improvement, and provides targeted suggestions."
+      },
+      "improvement": {
+        "title": "Auto-Enhancement",
+        "description": "Optimize your resumes in one click with our AI that automatically rewrites and enriches each section."
+      },
+      "scoring": {
+        "title": "Detailed Scoring",
+        "description": "Receive comprehensive scores across multiple categories to understand each profile's strengths."
+      },
+      "ocr": {
+        "title": "Smart Extraction",
+        "description": "Advanced OCR technology to automatically extract text from scanned or image-based resumes."
+      },
+      "adaptation": {
+        "title": "Mission Adaptation",
+        "description": "Customize each profile based on a specific job offer to maximize your chances."
+      },
+      "templates": {
+        "title": "Professional Templates",
+        "description": "Choose from a variety of professionally designed resume templates."
+      }
+    }
+  }
+}

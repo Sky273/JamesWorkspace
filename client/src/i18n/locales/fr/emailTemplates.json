@@ -1,0 +1,47 @@
+{
+  "emailTemplates": {
+    "title": "Templates d'Email",
+    "subtitle": "Gérez vos templates d'email pour l'envoi de CVs",
+    "createNew": "Nouveau template",
+    "editTemplate": "Modifier le template",
+    "noTemplates": "Aucun template créé. Créez votre premier template ou dupliquez le template système.",
+    "systemTemplate": "Template système (lecture seule)",
+    "defaultTemplate": "Template par défaut",
+    "duplicate": "Dupliquer",
+    "confirmDelete": "Êtes-vous sûr de vouloir supprimer ce template ?",
+    "setAsDefault": "Définir comme template par défaut",
+    "preview": "Aperçu",
+    "desktopView": "Vue bureau",
+    "mobileView": "Vue mobile",
+    "loadingPreview": "Chargement de l'aperçu...",
+    "noPreview": "Aucun aperçu disponible",
+    "refreshPreview": "Actualiser l'aperçu",
+    "nameLabel": "Nom du template",
+    "namePlaceholder": "Ex: Candidature standard",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "Description du template...",
+    "subjectLabel": "Objet de l'email",
+    "contentLabel": "Contenu de l'email",
+    "blockPlaceholder": "Saisissez le contenu...",
+    "logoPlaceholder": "Logo du cabinet (sera affiché automatiquement)",
+    "insertKeyword": "Insérer un mot-clé",
+    "errors": {
+      "loadFailed": "Erreur lors du chargement des templates",
+      "createFailed": "Erreur lors de la création du template",
+      "updateFailed": "Erreur lors de la mise à jour du template",
+      "deleteFailed": "Erreur lors de la suppression du template",
+      "duplicateFailed": "Erreur lors de la duplication du template",
+      "previewFailed": "Erreur lors de la prévisualisation",
+      "compileFailed": "Erreur de compilation MJML",
+      "requiredFields": "Veuillez remplir tous les champs obligatoires",
+      "cannotEditSystem": "Impossible de modifier un template système",
+      "cannotDeleteSystem": "Impossible de supprimer un template système"
+    },
+    "success": {
+      "created": "Template créé avec succès",
+      "updated": "Template mis à jour avec succès",
+      "deleted": "Template supprimé avec succès",
+      "duplicated": "Template dupliqué avec succès"
+    }
+  }
+}

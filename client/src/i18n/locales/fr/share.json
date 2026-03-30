@@ -1,0 +1,25 @@
+{
+  "share": {
+    "title": "Partager le CV",
+    "button": "Partager",
+    "scanQR": "Scannez ce QR code pour accéder au CV",
+    "copyLink": "Copier le lien",
+    "copied": "Copié !",
+    "downloadQR": "Télécharger le QR code",
+    "generating": "Génération du lien de partage...",
+    "originalFile": "CV Original",
+    "improvedCV": "CV Amélioré",
+    "cvTitle": "Export CV",
+    "error": "Échec de la génération du lien de partage",
+    "loading": "Chargement du CV...",
+    "notFound": "Fichier introuvable ou lien expiré",
+    "fetchError": "Échec du chargement du fichier",
+    "errorTitle": "Impossible de charger le CV",
+    "downloadStarted": "Téléchargement démarré",
+    "downloadDescription": "Le fichier CV est en cours de téléchargement sur votre appareil.",
+    "mobileDescription": "Choisissez comment consulter ce CV",
+    "openPdf": "Ouvrir le PDF",
+    "downloadPdf": "Télécharger",
+    "originalWarning": "Vous êtes sur le point de partager la version originale de ce CV, et non la version améliorée."
+  }
+}

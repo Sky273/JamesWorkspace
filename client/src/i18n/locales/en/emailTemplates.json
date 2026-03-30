@@ -1,0 +1,47 @@
+{
+  "emailTemplates": {
+    "title": "Email Templates",
+    "subtitle": "Manage your email templates for CV submissions",
+    "createNew": "New template",
+    "editTemplate": "Edit template",
+    "noTemplates": "No templates created. Create your first template or duplicate the system template.",
+    "systemTemplate": "System template (read-only)",
+    "defaultTemplate": "Default template",
+    "duplicate": "Duplicate",
+    "confirmDelete": "Are you sure you want to delete this template?",
+    "setAsDefault": "Set as default template",
+    "preview": "Preview",
+    "desktopView": "Desktop view",
+    "mobileView": "Mobile view",
+    "loadingPreview": "Loading preview...",
+    "noPreview": "No preview available",
+    "refreshPreview": "Refresh preview",
+    "nameLabel": "Template name",
+    "namePlaceholder": "E.g.: Standard application",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "Template description...",
+    "subjectLabel": "Email subject",
+    "contentLabel": "Email content",
+    "blockPlaceholder": "Enter content...",
+    "logoPlaceholder": "Firm logo (will be displayed automatically)",
+    "insertKeyword": "Insert keyword",
+    "errors": {
+      "loadFailed": "Error loading templates",
+      "createFailed": "Error creating template",
+      "updateFailed": "Error updating template",
+      "deleteFailed": "Error deleting template",
+      "duplicateFailed": "Error duplicating template",
+      "previewFailed": "Error previewing template",
+      "compileFailed": "MJML compilation error",
+      "requiredFields": "Please fill in all required fields",
+      "cannotEditSystem": "Cannot edit system template",
+      "cannotDeleteSystem": "Cannot delete system template"
+    },
+    "success": {
+      "created": "Template created successfully",
+      "updated": "Template updated successfully",
+      "deleted": "Template deleted successfully",
+      "duplicated": "Template duplicated successfully"
+    }
+  }
+}

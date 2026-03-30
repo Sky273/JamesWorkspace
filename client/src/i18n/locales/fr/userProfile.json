@@ -1,0 +1,29 @@
+{
+  "userProfile": {
+    "anonymous": "Utilisateur",
+    "noCompany": "Sans entreprise",
+    "roles": {
+      "admin": "Administrateur",
+      "user": "Utilisateur"
+    },
+    "title": "Mon compte",
+    "subtitle": "Gérez votre profil et vos paramètres de sécurité",
+    "tabs": {
+      "profile": "Mon profil",
+      "security": "Sécurité"
+    },
+    "personalInfo": "Informations personnelles",
+    "fullName": "Nom complet",
+    "email": "Email",
+    "emailReadonly": "L'email ne peut pas être modifié",
+    "jobTitle": "Fonction",
+    "jobTitlePlaceholder": "Ex: Consultant RH",
+    "phone": "Téléphone",
+    "phonePlaceholder": "Ex: +33 6 12 34 56 78",
+    "firm": "Cabinet",
+    "passwordTitle": "Mot de passe",
+    "passwordHelp": "Pour changer votre mot de passe, contactez votre administrateur.",
+    "updateSuccess": "Profil mis à jour",
+    "updateError": "Erreur lors de la mise à jour"
+  }
+}

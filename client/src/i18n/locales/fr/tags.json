@@ -1,0 +1,48 @@
+{
+  "tags": {
+    "title": "Gestion des tags",
+    "subtitle": "Visualisez et gérez les tags extraits de la CVthèque",
+    "loadError": "Échec du chargement des tags",
+    "renameError": "Échec du renommage du tag",
+    "editTag": "Modifier le tag",
+    "editingIn": "Modification dans la catégorie",
+    "tagName": "Nom du tag",
+    "back": "Retour",
+    "cancel": "Annuler",
+    "save": "Enregistrer",
+    "refresh": "Actualiser",
+    "searchPlaceholder": "Rechercher un tag...",
+    "tagsCount": "tags",
+    "noTags": "Aucun tag dans cette catégorie",
+    "stats": {
+      "totalTags": "Total des tags"
+    },
+    "cleaned": "Nettoyé",
+    "viewEscoDefinition": "Voir la définition ESCO",
+    "recalculateCleanedTags": "Recalculer les tags nettoyés",
+    "recalculateEscoTags": "Recalculer les tags ESCO",
+    "cleanedTagsRecalculated": "Tags nettoyés recalculés avec succès",
+    "cleanedTagsRecalculateError": "Erreur lors du recalcul des tags nettoyés",
+    "escoTagsRecalculated": "Tags ESCO recalculés avec succès",
+    "escoTagsRecalculateError": "Erreur lors du recalcul des tags ESCO",
+    "tabs": {
+      "raw": "Tags bruts",
+      "cleaned": "Tags nettoyés",
+      "esco": "Tags ESCO"
+    },
+    "cleanedDescription": {
+      "title": "Tags nettoyés :",
+      "text": "Les tags sont convertis en minuscules, découpés sur les séparateurs (/, ,, ;, |) et les composés sont détectés (ex : \"Java Spring\" → \"java\" + \"spring\")."
+    },
+    "escoDescription": {
+      "title": "Tags ESCO :",
+      "text": "Les tags sont normalisés selon la classification européenne ESCO (European Skills, Competences, Qualifications and Occupations). Cliquez sur \"Convertir en ESCO\" pour mettre à jour."
+    },
+    "categories": {
+      "Skills": "Compétences",
+      "Industries": "Secteurs",
+      "Tools": "Outils",
+      "Soft Skills": "Soft skills"
+    }
+  }
+}

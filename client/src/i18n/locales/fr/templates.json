@@ -1,0 +1,121 @@
+{
+  "templates": {
+    "title": "Modèles de CV",
+    "results": "modèles",
+    "subtitle": "Choisissez parmi notre collection de modèles de CV professionnels",
+    "newTemplate": "Nouveau modèle",
+    "searchPlaceholder": "Rechercher un modèle...",
+    "refresh": "Actualiser",
+    "noResults": "Aucun modèle ne correspond à votre recherche",
+    "createFirst": "Créez votre premier modèle pour commencer",
+    "stats": {
+      "total": "Total des modèles",
+      "popular": "Modèles populaires",
+      "active": "Modèles actifs"
+    },
+    "sort": {
+      "popular": "Plus populaires",
+      "name": "Nom"
+    },
+    "card": {
+      "popular": "Populaire",
+      "preview": "Aperçu",
+      "noDescription": "Aucune description",
+      "global": "Global (tous les cabinets)"
+    },
+    "status": {
+      "error": "Échec du chargement des modèles",
+      "empty": "Aucun modèle disponible",
+      "deleteSuccess": "Modèle supprimé avec succès",
+      "deleting": "Suppression en cours...",
+      "deleteError": "Échec de la suppression du modèle"
+    },
+    "actions": {
+      "edit": "Modifier le modèle",
+      "delete": "Supprimer le modèle"
+    },
+    "delete": {
+      "title": "Supprimer le modèle"
+    },
+    "editor": {
+      "title": {
+        "new": "Nouveau modèle",
+        "edit": "Modifier le modèle"
+      },
+      "name": {
+        "label": "Nom du modèle",
+        "placeholder": "Entrez le nom du modèle"
+      },
+      "description": {
+        "label": "Description",
+        "placeholder": "Entrez la description du modèle"
+      },
+      "header": {
+        "label": "En-tête",
+        "hint": "Optionnel - apparaît en haut de chaque page"
+      },
+      "content": {
+        "label": "Corps du modèle"
+      },
+      "footer": {
+        "label": "Pied de page",
+        "hint": "Optionnel - apparaît en bas de chaque page"
+      },
+      "stylesheet": {
+        "label": "Feuille de style",
+        "placeholder": "Ajoutez des styles CSS personnalisés ici"
+      },
+      "popular": {
+        "label": "Marquer comme populaire"
+      },
+      "statusField": {
+        "label": "Statut",
+        "active": "Actif",
+        "inactive": "Inactif"
+      },
+      "validation": {
+        "nameRequired": "Le nom du modèle est requis",
+        "contentRequired": "Le contenu du modèle est requis"
+      },
+      "success": {
+        "create": "Modèle créé avec succès",
+        "update": "Modèle mis à jour avec succès"
+      },
+      "error": {
+        "load": "Échec du chargement du modèle"
+      }
+    },
+    "selectTemplate": "Sélectionner un modèle",
+    "extract": {
+      "title": "Extraire depuis un CV",
+      "subtitle": "Créez automatiquement un modèle à partir d'un CV existant",
+      "buttonShort": "Extraire",
+      "dragDrop": "Glissez-déposez un CV ici ou cliquez pour sélectionner",
+      "dropHere": "Déposez le fichier ici...",
+      "supportedFormats": "Formats supportés : PDF, DOCX (max 10 Mo)",
+      "clickToChange": "Cliquez pour changer de fichier",
+      "howItWorks": "Comment ça fonctionne ?",
+      "step1": "Chargez un CV au format PDF ou Word",
+      "step2": "L'IA analyse la structure et le style du document",
+      "step3": "Un modèle réutilisable est généré automatiquement",
+      "step4": "Personnalisez le modèle avant de l'enregistrer",
+      "analyzing": "Analyse du CV en cours...",
+      "pleaseWait": "L'IA extrait la structure et les styles du document",
+      "longOperation": "Cette opération peut prendre 1 à 3 minutes selon la complexité du document.",
+      "extractButton": "Extraire le modèle",
+      "extractionComplete": "Extraction terminée !",
+      "usedModel": "Modèle IA utilisé",
+      "preview": "Aperçu du modèle",
+      "reviewNote": "Vérifiez et ajustez le modèle extrait avant de l'enregistrer. L'IA peut nécessiter des corrections manuelles.",
+      "createTemplate": "Créer le modèle",
+      "templateLoaded": "Modèle extrait chargé dans l'éditeur",
+      "success": "Modèle extrait avec succès !",
+      "error": "Erreur lors de l'extraction du modèle",
+      "errorTitle": "Échec de l'extraction",
+      "tryAgain": "Réessayer",
+      "extractedColors": "Couleurs extraites",
+      "extractedFonts": "Polices extraites",
+      "extractionMethod": "Méthode d'extraction"
+    }
+  }
+}

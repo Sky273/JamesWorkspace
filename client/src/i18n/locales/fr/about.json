@@ -1,0 +1,9 @@
+{
+  "about": {
+    "title": "À propos de ResumeConverter",
+    "description": "ResumeConverter est une solution développée par Aptea pour répondre à ses besoins d'analyse et d'amélioration des CV, et d'export vers différents modèles.",
+    "changelog": "Journal des modifications",
+    "errorLoadingChangelog": "Impossible de charger le journal des modifications.",
+    "allRightsReserved": "Tous droits réservés"
+  }
+}

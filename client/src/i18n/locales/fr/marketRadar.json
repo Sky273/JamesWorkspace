@@ -1,0 +1,174 @@
+{
+  "marketRadar": {
+    "title": "Radar du Marché IS/IT",
+    "subtitle": "Collecte et analyse des offres d'emploi IT en France",
+    "details": {
+      "totalShare": "du total",
+      "breakdown": "Répartition",
+      "minimum": "Min",
+      "maximum": "Max",
+      "median": "Médian",
+      "byCategory": "Par catégorie",
+      "beginner": "Débutant",
+      "averageLevel": "Moyen",
+      "experienced": "Expérimenté",
+      "positiveDynamic": "Dynamique positive",
+      "negativeDynamic": "Dynamique négative",
+      "stableDynamic": "Dynamique stable",
+      "marketGrowing": "Le marché de l'emploi est en croissance",
+      "marketDeclining": "Le marché de l'emploi est en recul",
+      "marketStable": "Le marché de l'emploi est stable",
+      "updatedAt": "Mis à jour",
+      "evolution": "évolution",
+      "genre": "Genre",
+      "contracts": "Contrats",
+      "qualification": "Qualification",
+      "experience": "Expérience",
+      "age": "Âge",
+      "training": "Formation",
+      "ageRanges": "Tranches d'âge",
+      "genreAgeDetail": "Détail Genre × Âge",
+      "people": "pers.",
+      "cdi": "CDI",
+      "cdd": "CDD",
+      "other": "Autres",
+      "executives": "Cadres",
+      "technicians": "Techniciens",
+      "employees": "Employés",
+      "workers": "Ouvriers",
+      "underBac": "< Bac"
+    },
+    "dataTypes": {
+      "offres": "Offres d'emploi",
+      "tension": "Tensions recrutement",
+      "dynamique_emploi": "Dynamique emploi",
+      "embauche": "Embauches",
+      "demandeur": "Demandeurs d'emploi",
+      "demandeur_entrant": "Nouveaux demandeurs"
+    },
+    "tabs": {
+      "map": "Carte France",
+      "trends": "Tendances Marché",
+      "facts": "Offres",
+      "metiers": "Métiers & Compétences"
+    },
+    "map": {
+      "title": "Données par région",
+      "subtitle": "Cliquez sur une région pour voir le détail des métiers",
+      "loading": "Chargement de la carte...",
+      "noData": "Aucune donnée régionale",
+      "noDataOffres": "Lancez une collecte France Travail pour voir les données sur la carte.",
+      "noDataTrends": "Lancez une collecte des tendances marché pour voir les données sur la carte.",
+      "selectDataType": "Type de données",
+      "regionsCovered": "Régions couvertes",
+      "topRegion": "Région #1",
+      "itJobs": "Métiers IS/IT",
+      "totalOffers": "Offres IT totales",
+      "total": "Total",
+      "average": "Moyenne",
+      "metierBreakdown": "Répartition par métier",
+      "searchMetier": "Rechercher un métier...",
+      "legend": "Légende",
+      "low": "Faible",
+      "medium": "Moyen",
+      "high": "Élevé",
+      "clickToFilter": "Cliquez sur une bulle pour filtrer par type",
+      "bubbleSizeInfo": "Taille des bulles proportionnelle à la valeur",
+      "refresh": "Actualiser"
+    },
+    "trends": {
+      "title": "Tendances du Marché",
+      "loading": "Chargement des tendances...",
+      "noData": "Aucune donnée disponible",
+      "results": "tendances",
+      "filters": {
+        "allTypes": "Tous les types",
+        "allRegions": "Toutes les régions"
+      },
+      "collection": {
+        "button": "Collecter les tendances",
+        "started": "Collecte lancée en arrière-plan. Durée estimée : 30-60 minutes."
+      },
+      "refresh": "Actualiser"
+    },
+    "facts": {
+      "results": "faits",
+      "filters": {
+        "source": "Source",
+        "allSources": "Toutes les sources",
+        "allMetiers": "Tous les métiers",
+        "region": "Région",
+        "keyword": "Métier"
+      },
+      "stats": {
+        "totalJobs": "Total offres",
+        "regions": "Régions",
+        "keywords": "Mots-clés"
+      },
+      "table": {
+        "date": "Date",
+        "source": "Source",
+        "metier": "Métier",
+        "region": "Région",
+        "offers": "Offres"
+      },
+      "collection": {
+        "title": "Collecte de données",
+        "overlayTitle": "Collecte en cours",
+        "overlayDescription": "Récupération des données du marché IS/IT depuis les APIs.",
+        "overlayWarning": "Cette opération peut prendre plusieurs minutes. Ne fermez pas cette page.",
+        "startCollection": "Lancer la collecte",
+        "success": "Collecte terminée",
+        "factsCollected": "Facts collectés",
+        "stored": "Stockés",
+        "failed": "Échecs",
+        "duration": "Durée",
+        "noData": "Aucun fact collecté",
+        "noDataDescription": "Lancez une collecte pour récupérer les données du marché IS/IT.",
+        "error": "Erreur lors de la collecte",
+        "collectFranceTravail": "Collecter France Travail"
+      },
+      "sections": {
+        "allFacts": "Toutes les offres"
+      }
+    },
+    "metiers": {
+      "title": "Métiers & Compétences",
+      "subtitle": "Référentiel ROME 4.0 - Informatique et Télécommunications",
+      "loading": "Chargement des métiers...",
+      "noData": "Aucun métier trouvé",
+      "results": "métiers",
+      "noDataSearch": "Aucun résultat pour cette recherche.",
+      "noDataEmpty": "Lancez une collecte pour récupérer les métiers IS/IT.",
+      "searchPlaceholder": "Rechercher un métier...",
+      "stats": {
+        "totalMetiers": "Métiers IS/IT",
+        "totalCompetences": "Compétences totales",
+        "lastUpdate": "Dernière MAJ"
+      },
+      "card": {
+        "competences": "compétences",
+        "enjeuxDomaines": "Enjeux / Domaines",
+        "competencesDetaillees": "Compétences Détaillées",
+        "macroSavoirFaire": "Macro Savoir-Faire",
+        "savoirs": "Savoirs",
+        "updatedAt": "Mis à jour"
+      },
+      "collection": {
+        "title": "Collecte en cours",
+        "description": "Récupération des métiers IS/IT depuis l'API Rome 4.0.",
+        "warning": "Cette opération peut prendre jusqu'à 20 minutes. Ne fermez pas cette page.",
+        "button": "Collecter les métiers",
+        "success": "Collecte terminée",
+        "processed": "métiers traités",
+        "created": "créés",
+        "updated": "mis à jour",
+        "errors": "erreurs"
+      },
+      "refresh": "Actualiser"
+    },
+    "errors": {
+      "loadFailed": "Échec du chargement des données"
+    }
+  }
+}

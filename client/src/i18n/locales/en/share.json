@@ -1,0 +1,25 @@
+{
+  "share": {
+    "title": "Share CV",
+    "button": "Share",
+    "scanQR": "Scan this QR code to access the CV",
+    "copyLink": "Copy link",
+    "copied": "Copied!",
+    "downloadQR": "Download QR code",
+    "generating": "Generating shareable link...",
+    "originalFile": "Original CV",
+    "improvedCV": "Improved CV",
+    "cvTitle": "CV Export",
+    "error": "Failed to generate share link",
+    "loading": "Loading CV...",
+    "notFound": "File not found or link expired",
+    "fetchError": "Failed to load file",
+    "errorTitle": "Unable to load CV",
+    "downloadStarted": "Download started",
+    "downloadDescription": "The CV file is being downloaded to your device.",
+    "mobileDescription": "Choose how to view this CV",
+    "openPdf": "Open PDF",
+    "downloadPdf": "Download",
+    "originalWarning": "You are about to share the original version of this CV, not the improved version."
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "improvementAnimation": {
+    "steps": {
+      "improving": {
+        "label": "Amélioration du CV",
+        "description": "L'IA améliore votre CV en fonction des suggestions d'amélioration..."
+      },
+      "analyzing": {
+        "label": "Analyse des Améliorations",
+        "description": "Évaluation des changements et calcul des nouveaux scores..."
+      }
+    }
+  }
+}

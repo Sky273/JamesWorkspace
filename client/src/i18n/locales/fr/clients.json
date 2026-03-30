@@ -1,0 +1,89 @@
+{
+  "clients": {
+    "title": "Clients & Prospects",
+    "subtitle": "Gérez vos clients et prospects destinataires des CVs",
+    "addClient": "Ajouter",
+    "addContact": "Ajouter un contact",
+    "searchPlaceholder": "Rechercher un client ou prospect...",
+    "results": "résultats",
+    "noClients": "Aucun client ou prospect trouvé",
+    "noContacts": "Aucun contact pour ce client",
+    "noSubmissions": "Aucun envoi de CV pour ce client",
+    "contactsLabel": "contacts",
+    "submissionsLabel": "envois",
+    "contactsTitle": "Interlocuteurs",
+    "submissionsTitle": "Historique des envois",
+    "sentTo": "Envoyé à",
+    "by": "par",
+    "viewVersion": "Voir la version",
+    "primaryContact": "Contact principal",
+    "tabs": {
+      "all": "Tous",
+      "clients": "Clients",
+      "prospects": "Prospects",
+      "contacts": "Contacts",
+      "submissions": "Envois"
+    },
+    "types": {
+      "client": "Client",
+      "prospect": "Prospect"
+    },
+    "status": {
+      "active": "Actif",
+      "inactive": "Inactif"
+    },
+    "submissionStatus": {
+      "sent": "Envoyé",
+      "viewed": "Consulté",
+      "rejected": "Refusé",
+      "accepted": "Accepté",
+      "pending": "En attente"
+    },
+    "stats": {
+      "clients": "Clients",
+      "prospects": "Prospects",
+      "contacts": "Contacts",
+      "submissions": "Envois"
+    },
+    "modal": {
+      "addClient": "Ajouter un client/prospect",
+      "editClient": "Modifier le client/prospect",
+      "addContact": "Ajouter un contact",
+      "editContact": "Modifier le contact",
+      "name": "Nom",
+      "type": "Type",
+      "status": "Statut",
+      "industry": "Secteur d'activité",
+      "industryPlaceholder": "Ex: Banque, Assurance, IT...",
+      "website": "Site web",
+      "address": "Adresse",
+      "addressPlaceholder": "Adresse postale complète",
+      "notes": "Notes",
+      "notesPlaceholder": "Notes internes sur ce client...",
+      "contactName": "Nom du contact",
+      "role": "Fonction",
+      "rolePlaceholder": "Ex: DRH, Responsable recrutement...",
+      "email": "Email",
+      "phone": "Téléphone",
+      "primaryContact": "Contact principal",
+      "selectIndustry": "Sélectionner un secteur"
+    },
+    "messages": {
+      "clientCreated": "Client créé avec succès",
+      "clientUpdated": "Client mis à jour avec succès",
+      "clientDeleted": "Client supprimé avec succès",
+      "contactCreated": "Contact créé avec succès",
+      "contactUpdated": "Contact mis à jour avec succès",
+      "contactDeleted": "Contact supprimé avec succès",
+      "errorFetching": "Erreur lors du chargement des clients",
+      "errorCreatingClient": "Erreur lors de la création du client",
+      "errorUpdatingClient": "Erreur lors de la mise à jour du client",
+      "errorCreatingContact": "Erreur lors de la création du contact",
+      "errorUpdatingContact": "Erreur lors de la mise à jour du contact",
+      "errorDeleting": "Erreur lors de la suppression",
+      "confirmDeleteClient": "Êtes-vous sûr de vouloir supprimer le client \"{{name}}\" ?",
+      "confirmDeleteContact": "Êtes-vous sûr de vouloir supprimer le contact \"{{name}}\" ?",
+      "cannotDeleteWithSubmissions": "Impossible de supprimer : des envois de CV sont associés"
+    }
+  }
+}

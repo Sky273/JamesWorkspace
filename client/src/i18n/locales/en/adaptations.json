@@ -1,0 +1,89 @@
+{
+  "adaptations": {
+    "title": "Resume Adaptations",
+    "subtitle": "History of resumes adapted to missions",
+    "noAdaptations": "No adaptations found",
+    "results": "adaptations",
+    "noAdaptationsFiltered": "Try modifying your search filters",
+    "noAdaptationsPrompt": "Start by adapting a resume to a mission",
+    "viewAdaptation": "View adaptation",
+    "delete": "Delete",
+    "exportPDF": "Export PDF",
+    "sendEmail": "Send by email",
+    "mission": "Mission",
+    "searchPlaceholder": "Search by resume or mission...",
+    "filterStatus": "All statuses",
+    "refresh": "Refresh",
+    "stats": {
+      "total": "Total adaptations",
+      "completed": "Completed",
+      "processing": "Processing",
+      "failed": "Failed",
+      "avgScore": "Average score"
+    },
+    "status": {
+      "completed": "Completed",
+      "processing": "Processing",
+      "failed": "Failed"
+    },
+    "adaptationDetails": "Adaptation Details",
+    "adaptedTitlePlaceholder": "Adapted professional title...",
+    "noAdaptedTitle": "No adapted title",
+    "editAdaptedTitle": "Edit adapted title",
+    "candidateName": "Candidate name",
+    "adaptedTitle": "Adapted professional title",
+    "tabs": {
+      "adaptedCV": "Adapted CV",
+      "analysis": "Analysis",
+      "mission": "Mission"
+    },
+    "noAdaptedText": "No adapted text available",
+    "noAnalysis": "No analysis available",
+    "modal": {
+      "title": "Resume Adaptation",
+      "close": "Close",
+      "tabs": {
+        "mission": "Mission",
+        "analysis": "Match Analysis",
+        "adapted": "Adapted Resume"
+      },
+      "mission": {
+        "client": "Company",
+        "location": "Location",
+        "description": "Description",
+        "noDescription": "No description available for this mission"
+      },
+      "save": "Save",
+      "saving": "Saving..."
+    },
+    "messages": {
+      "saveSuccess": "Adapted resume saved successfully",
+      "saveError": "Error saving adapted resume",
+      "deleteError": "Error deleting adaptation"
+    },
+    "card": {
+      "noName": "Resume without name",
+      "unknownMission": "Unknown mission"
+    },
+    "exportModal": {
+      "description": "The adapted resume will be exported with the selected template"
+    },
+    "actions": {
+      "delete": "[FR] Delete",
+      "export": "[FR] Export",
+      "view": "[FR] View"
+    },
+    "exportSuccess": "[FR] Export Success",
+    "grouped": {
+      "showMore": "Show {{count}} more adaptation(s)",
+      "showLess": "Show less",
+      "noAdaptations": "No adaptations in this deal",
+      "fetchError": "Error while loading",
+      "searchPlaceholder": "Search an adaptation...",
+      "deals": "deals",
+      "unassigned": "unassigned",
+      "unassignedTitle": "Missions without deal",
+      "noSearchResults": "No adaptation matches your search."
+    }
+  }
+}

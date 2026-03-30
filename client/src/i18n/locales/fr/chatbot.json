@@ -1,0 +1,16 @@
+{
+  "chatbot": {
+    "title": "Assistant IA",
+    "subtitle": "Je suis là pour vous aider",
+    "openChat": "Ouvrir le chat",
+    "closeChat": "Fermer le chat",
+    "placeholder": "Posez votre question...",
+    "send": "Envoyer",
+    "clear": "Effacer",
+    "clearChat": "Effacer la conversation",
+    "resetSize": "Réinitialiser la taille",
+    "needHelp": "Besoin d'aide ?",
+    "welcomeMessage": "👋 **Bonjour !** Je suis votre assistant IA.\n\nJe peux vous aider à :\n- 📄 **Gérer la CVthèque** (import, analyse, amélioration)\n- 🎯 **Créer des missions** et adapter les profils\n- ⚙️ **Utiliser les fonctionnalités** de l'application\n- ❓ **Répondre à vos questions**\n\nComment puis-je vous aider ?",
+    "errorMessage": "Désolé, je n'ai pas pu traiter votre demande. Veuillez réessayer."
+  }
+}

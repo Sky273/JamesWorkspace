@@ -1,0 +1,90 @@
+{
+  "adaptations": {
+    "title": "Adaptations de CV",
+    "results": "adaptations de CV",
+    "subtitle": "Historique des CVs adaptés aux missions",
+    "noAdaptations": "Aucune adaptation",
+    "noAdaptationsFiltered": "Aucun résultat",
+    "noAdaptationsPrompt": "Adaptez un CV à une mission pour commencer.",
+    "viewAdaptation": "Voir l'adaptation",
+    "delete": "Supprimer",
+    "exportPDF": "Exporter PDF",
+    "sendEmail": "Envoyer par email",
+    "mission": "Mission",
+    "searchPlaceholder": "Rechercher par CV ou mission...",
+    "filterStatus": "Tous les statuts",
+    "refresh": "Actualiser",
+    "stats": {
+      "total": "Total adaptations",
+      "completed": "Terminées",
+      "processing": "En cours",
+      "failed": "Échouées",
+      "avgScore": "Score moyen"
+    },
+    "status": {
+      "completed": "Terminé",
+      "processing": "En cours",
+      "failed": "Échoué"
+    },
+    "adaptationDetails": "Détails de l'adaptation",
+    "adaptedTitlePlaceholder": "Titre professionnel adapté...",
+    "noAdaptedTitle": "Aucun titre adapté",
+    "editAdaptedTitle": "Modifier le titre adapté",
+    "candidateName": "Nom du candidat",
+    "adaptedTitle": "Titre professionnel adapté",
+    "tabs": {
+      "adaptedCV": "CV Adapté",
+      "analysis": "Analyse",
+      "mission": "Mission"
+    },
+    "noAdaptedText": "Aucun texte adapté disponible",
+    "noAnalysis": "Aucune analyse disponible",
+    "modal": {
+      "title": "Adaptation de CV",
+      "close": "Fermer",
+      "tabs": {
+        "mission": "Mission",
+        "analysis": "Analyse d'Adéquation",
+        "adapted": "CV Adapté"
+      },
+      "mission": {
+        "client": "Entreprise",
+        "location": "Localisation",
+        "description": "Description",
+        "noDescription": "Aucune description disponible pour cette mission"
+      },
+      "save": "Enregistrer",
+      "saving": "Enregistrement..."
+    },
+    "messages": {
+      "saveSuccess": "CV adapté enregistré avec succès",
+      "saveError": "Erreur lors de l'enregistrement du CV adapté",
+      "deleteError": "Erreur lors de la suppression"
+    },
+    "card": {
+      "noName": "CV sans nom",
+      "unknownMission": "Mission inconnue"
+    },
+    "exportModal": {
+      "description": "Le CV adapté sera exporté avec le template sélectionné"
+    },
+    "actions": {
+      "delete": "Supprimer",
+      "export": "Exporter",
+      "view": "Voir"
+    },
+    "exportSuccess": "Export réussi",
+    "adaptation": "adaptation",
+    "grouped": {
+      "showMore": "Voir {{count}} adaptation(s) supplémentaire(s)",
+      "showLess": "Voir moins",
+      "noAdaptations": "Aucune adaptation dans cette affaire",
+      "fetchError": "Erreur lors du chargement",
+      "searchPlaceholder": "Rechercher une adaptation...",
+      "deals": "affaires",
+      "unassigned": "sans affaire",
+      "unassignedTitle": "Missions sans affaire",
+      "noSearchResults": "Aucune adaptation ne correspond à votre recherche."
+    }
+  }
+}

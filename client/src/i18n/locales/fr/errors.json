@@ -1,0 +1,20 @@
+{
+  "errors": {
+    "required": "Ce champ est obligatoire",
+    "passwordLength": "Le mot de passe doit contenir au moins 8 caractères",
+    "passwordMismatch": "Les mots de passe ne correspondent pas",
+    "unauthorized": "Email ou mot de passe invalide",
+    "serverError": "Une erreur s'est produite. Veuillez réessayer plus tard.",
+    "loadResume": "Erreur lors du chargement du CV",
+    "resumeNotFound": "CV non trouvé",
+    "resumeNotFoundDescription": "Le CV demandé n'existe pas ou a été supprimé.",
+    "loadMission": "Erreur lors du chargement de la mission",
+    "missionNotFound": "Mission non trouvée",
+    "missionNotFoundDescription": "La mission demandée n'existe pas ou a été supprimée.",
+    "loadAdaptation": "Erreur lors du chargement de l'adaptation",
+    "adaptationNotFound": "Adaptation non trouvée",
+    "adaptationNotFoundDescription": "L'adaptation demandée n'existe pas ou a été supprimée.",
+    "exportFailed": "Échec de l'export",
+    "saveFailed": "Échec de l'enregistrement"
+  }
+}

@@ -1,0 +1,83 @@
+{
+  "resumes": {
+    "title": "Resume Library",
+    "subtitle": "Manage and analyze your consultants' profiles",
+    "uploadButton": "Upload New Resume",
+    "batchUploadButton": "Batch Import",
+    "searchPlaceholder": "Search resumes...",
+    "filterButton": "Filter",
+    "noResults": "No resumes found",
+    "results": "results",
+    "noResultsFiltered": "Try modifying your search filters",
+    "uploadFirst": "Upload your first resume to get started",
+    "score_label": "Score",
+    "deleteResume": "Delete resume",
+    "downloadResume": "Download resume",
+    "confirmDeleteTitle": "Confirm Deletion",
+    "view": "View",
+    "refresh": "Refresh",
+    "untitled": "Untitled Resume",
+    "activeFilters": "Active filters",
+    "more": "more",
+    "showLess": "Show less",
+    "filters": {
+      "skills": "Skills",
+      "industries": "Industries",
+      "tools": "Tools",
+      "softskills": "Soft Skills"
+    },
+    "status": {
+      "new": "New",
+      "improved": "Improved",
+      "processing": "Processing",
+      "analyzed": "Analyzed",
+      "error": "Error",
+      "active": "Active"
+    },
+    "stats": {
+      "total": "Total Resumes",
+      "improved": "Improved",
+      "processing": "Processing",
+      "avgScore": "Average Score"
+    },
+    "deleteConfirm": {
+      "title": "Confirm Deletion"
+    },
+    "confirmDeleteMessage": "Are you sure you want to delete this resume? This action cannot be undone.",
+    "filterByDeal": "Filter by deal",
+    "allDeals": "All deals",
+    "viewMode": "View",
+    "viewList": "List",
+    "viewByDeal": "By deal",
+    "backToDealsView": "Back to deals view",
+    "groupedView": {
+      "deals": "deals",
+      "assigned": "assigned CVs",
+      "unassigned": "unassigned",
+      "noResumes": "No CVs associated with this deal",
+      "noDeals": "No deals created. Create a deal in the CRM tab to get started.",
+      "unassignedTitle": "CVs not assigned to a deal",
+      "errorLoading": "Error while loading",
+      "dropHere": "Drop here to add to this deal",
+      "moving": "Moving CV...",
+      "moved": "CV moved to \"{{deal}}\"",
+      "added": "CV added to \"{{deal}}\"",
+      "dropError": "Error moving CV",
+      "missions": "Missions",
+      "adaptations": "adaptation(s)",
+      "cvs": "CVs",
+      "deal": "Deal",
+      "dealContent": "Deal content",
+      "showMore": "Show {{count}} more CV(s)",
+      "showLess": "Show less"
+    },
+    "preview": {
+      "title": "Resume preview",
+      "improved": "Improved",
+      "analyzed": "Analyzed",
+      "openFull": "Full analysis",
+      "keyImprovements": "Key improvements",
+      "noContent": "No content available"
+    }
+  }
+}

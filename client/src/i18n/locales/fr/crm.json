@@ -1,0 +1,91 @@
+{
+  "crm": {
+    "title": "CRM",
+    "subtitle": "Gérez vos clients, prospects et affaires",
+    "tabs": {
+      "clients": "Clients & Prospects",
+      "deals": "Affaires"
+    },
+    "deals": {
+      "title": "Affaires",
+      "subtitle": "Gérez vos affaires et opportunités commerciales",
+      "addDeal": "Nouvelle affaire",
+      "editDeal": "Modifier l'affaire",
+      "searchPlaceholder": "Rechercher une affaire...",
+      "results": "affaires",
+      "noDeals": "Aucune affaire trouvée",
+      "viewDeals": "Affaires",
+      "allClients": "Tous les clients",
+      "allStatuses": "Tous les statuts",
+      "filterByClient": "Filtrer par client",
+      "filterByStatus": "Filtrer par statut",
+      "name": "Nom de l'affaire",
+      "namePlaceholder": "Ex: Recrutement développeur senior",
+      "client": "Client",
+      "selectClient": "Sélectionner un client",
+      "contact": "Interlocuteur",
+      "selectContact": "Sélectionner un interlocuteur",
+      "noContactsForClient": "Aucun contact pour ce client",
+      "status": "Statut",
+      "priority": "Priorité",
+      "description": "Description",
+      "descriptionPlaceholder": "Description de l'affaire...",
+      "expectedCloseDate": "Date de clôture prévue",
+      "cvCount": "CVs associés",
+      "missions": "mission(s)",
+      "statuses": {
+        "open": "En cours",
+        "won": "Gagnée",
+        "lost": "Perdue",
+        "on_hold": "En attente"
+      },
+      "priorities": {
+        "low": "Basse",
+        "medium": "Moyenne",
+        "high": "Haute",
+        "urgent": "Urgente"
+      },
+      "messages": {
+        "dealCreated": "Affaire créée avec succès",
+        "dealUpdated": "Affaire mise à jour avec succès",
+        "dealDeleted": "Affaire supprimée avec succès",
+        "saving": "Enregistrement en cours...",
+        "errorFetching": "Erreur lors du chargement des affaires",
+        "errorCreating": "Erreur lors de la création de l'affaire",
+        "errorUpdating": "Erreur lors de la mise à jour de l'affaire",
+        "errorDeleting": "Erreur lors de la suppression de l'affaire",
+        "confirmDelete": "Êtes-vous sûr de vouloir supprimer l'affaire \"{{name}}\" ?"
+      },
+      "modal": {
+        "manageDeals": "Gérer les affaires",
+        "associatedDeals": "Affaires associées",
+        "addToDeal": "Ajouter à une affaire",
+        "searchDeal": "Rechercher une affaire...",
+        "noDealsAssociated": "Ce CV n'est associé à aucune affaire",
+        "allDealsAssociated": "Toutes les affaires sont déjà associées",
+        "noDealFound": "Aucune affaire trouvée",
+        "cvAdded": "CV ajouté à l'affaire",
+        "cvRemoved": "CV retiré de l'affaire",
+        "errorAdding": "Erreur lors de l'ajout à l'affaire",
+        "errorRemoving": "Erreur lors du retrait de l'affaire",
+        "removeFromDeal": "Retirer de cette affaire"
+      },
+      "createTitle": "Nouvelle affaire",
+      "editTitle": "Modifier l'affaire",
+      "add": "Nouvelle affaire",
+      "createFirst": "Créer une affaire",
+      "selectClientFirst": "Sélectionnez d'abord un client",
+      "startDate": "Date début prévue",
+      "endDate": "Date fin prévue",
+      "titleRequired": "Le nom de l'affaire est requis",
+      "created": "Affaire créée",
+      "updated": "Affaire mise à jour",
+      "deleted": "Affaire supprimée",
+      "errorSaving": "Erreur lors de la sauvegarde",
+      "errorDeleting": "Erreur lors de la suppression",
+      "confirmDelete": "Confirmer la suppression",
+      "deleteWarning": "Êtes-vous sûr de vouloir supprimer l'affaire",
+      "resumesAssociatedWarning": "{{count}} CV(s) sont associés à cette affaire."
+    }
+  }
+}

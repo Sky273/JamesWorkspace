@@ -1,0 +1,48 @@
+{
+  "mail": {
+    "modal": {
+      "title": "Send CV by email",
+      "connectTitle": "Connect your email",
+      "connectDescription": "Connect to Gmail to create an email draft with the CV attached.",
+      "connectGmail": "Connect with Gmail",
+      "connectedAs": "Connected as {{email}}",
+      "disconnect": "Disconnect",
+      "selectClient": "Client / Prospect",
+      "chooseClient": "Select a client...",
+      "selectContact": "Contact",
+      "chooseContact": "Select a contact...",
+      "selectTemplate": "Email template",
+      "noTemplate": "No template",
+      "default": "default",
+      "system": "system",
+      "previewTemplate": "Preview template",
+      "templatePreview": "Template preview",
+      "loadingPreview": "Loading preview...",
+      "template": "Template",
+      "noEmail": "No email",
+      "to": "To",
+      "subject": "Subject",
+      "attachment": "Attachment",
+      "createDraft": "Create draft",
+      "creating": "Creating draft...",
+      "successTitle": "Draft created!",
+      "successDescription": "The draft has been created in your Gmail inbox. Click below to open and send it.",
+      "openDraft": "Open in Gmail",
+      "errorTitle": "Error",
+      "retry": "Retry",
+      "ssoReconnectMessage": "Your Gmail session has expired. Please log in again to reactivate email sending.",
+      "reconnectApp": "Log in again"
+    },
+    "errors": {
+      "loadClients": "Error loading clients",
+      "connectFailed": "Failed to connect to Gmail",
+      "noEmail": "This contact has no email address",
+      "needsReauth": "Your session has expired. Please reconnect.",
+      "previewFailed": "Error previewing template"
+    },
+    "success": {
+      "draftCreated": "Draft created successfully",
+      "disconnected": "Email disconnected"
+    }
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "security": {
+    "title": "Security Logs",
+    "subtitle": "Real-time security event monitoring",
+    "loading": "Loading security logs...",
+    "accessDenied": "Access denied. You must be an administrator to view security logs.",
+    "sessionExpired": "Session expired. Please log in again.",
+    "refresh": "Refresh",
+    "autoRefresh": "Auto-refresh (30s)",
+    "totalLogs": "Total Logs",
+    "lastHour": "Last Hour",
+    "last24h": "Last 24h",
+    "errors": "Errors",
+    "filters": {
+      "level": "Level",
+      "event": "Event",
+      "source": "Source",
+      "all": "All",
+      "allSources": "All"
+    },
+    "table": {
+      "timestamp": "Timestamp",
+      "source": "Source",
+      "level": "Level",
+      "event": "Event",
+      "user": "User",
+      "customer": "Customer",
+      "ip": "IP",
+      "action": "Action",
+      "status": "Status",
+      "message": "Message",
+      "duration": "Duration"
+    },
+    "badges": {
+      "security": "🔒 Security",
+      "proxy": "🌐 Proxy"
+    },
+    "noLogs": "No security logs found",
+    "logs": "[FR] Logs"
+  }
+}

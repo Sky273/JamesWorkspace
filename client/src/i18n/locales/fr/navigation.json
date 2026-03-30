@@ -1,0 +1,29 @@
+{
+  "navigation": {
+    "home": "Accueil",
+    "resumes": "CVthèque",
+    "templates": "Modèles de CVs",
+    "emailTemplates": "Templates Email",
+    "dashboard": "Tableau de bord",
+    "tags": "Étiquettes",
+    "users": "Utilisateurs",
+    "settings": "Paramètres",
+    "missions": "Missions",
+    "clients": "Clients & Prospects",
+    "crm": "CRM",
+    "profileMatching": "Matching Profils",
+    "adaptations": "Adaptations",
+    "security": "Logs de Sécurité",
+    "securityLogs": "Logs de Sécurité",
+    "gdprAudit": "Journal RGPD",
+    "backup": "Sauvegarde",
+    "jobs": "Jobs",
+    "metrics": "Métriques",
+    "marketRadar": "Radar du Marché",
+    "metiers": "Métiers & Compétences",
+    "userGuide": "Guide Utilisateur",
+    "upload": "Télécharger un CV",
+    "sectionGestion": "Gestion",
+    "sectionAdmin": "Admin"
+  }
+}

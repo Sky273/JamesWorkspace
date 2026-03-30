@@ -1,0 +1,13 @@
+{
+  "header": {
+    "changeLanguage": "Changer de langue",
+    "theme": {
+      "light": "Mode clair",
+      "dark": "Mode sombre"
+    },
+    "language": {
+      "en": "Anglais",
+      "fr": "Français"
+    }
+  }
+}

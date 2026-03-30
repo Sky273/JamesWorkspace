@@ -1,0 +1,28 @@
+{
+  "fileUpload": {
+    "dragAndDropYourResumeHere": "Glissez et déposez votre CV ici",
+    "dropYourResumeHere": "Déposez votre CV ici",
+    "or": "ou cliquez pour choisir un fichier",
+    "supportedFormats": "Formats supportés : PDF, DOC, DOCX (<2 Mo)",
+    "gdpr": {
+      "title": "Informations du candidat",
+      "profileType": "Type de profil",
+      "employee": "Collaborateur",
+      "external": "Externe",
+      "candidateName": "Nom complet du candidat",
+      "namePlaceholder": "Ex: Jean Dupont",
+      "nameHint": "Ce nom sera utilisé pour le consentement RGPD (distinct du nom affiché sur le CV)",
+      "candidateEmail": "Email du candidat",
+      "emailPlaceholder": "candidat@email.com",
+      "emailHint": "Un email de demande de consentement RGPD sera envoyé automatiquement",
+      "externalInfo": "Pour les candidats externes, un email de demande de consentement RGPD sera envoyé automatiquement après l'upload du CV.",
+      "continue": "Continuer vers l'upload",
+      "modify": "Modifier",
+      "errors": {
+        "nameRequired": "Le nom est requis",
+        "emailRequired": "L'email est requis pour les externes",
+        "emailInvalid": "Format d'email invalide"
+      }
+    }
+  }
+}

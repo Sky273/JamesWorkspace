@@ -1,0 +1,24 @@
+{
+  "twoFactor": {
+    "title": "Authentification à deux facteurs (2FA)",
+    "enabled": "2FA activé",
+    "disabled": "2FA non activé",
+    "enabledAt": "Activé le {{date}}",
+    "backupCodesRemaining": "{{count}} codes de secours restants",
+    "regenerateWarning": "(Pensez à les régénérer)",
+    "regenerateButton": "Régénérer les codes de secours",
+    "disableButton": "Désactiver 2FA",
+    "enableButton": "Activer 2FA",
+    "description": "Protégez votre compte avec l'authentification à deux facteurs. Vous aurez besoin d'une application comme Google Authenticator ou Authy.",
+    "loginOnlyNotice": "Cette fonctionnalité s'applique uniquement à la connexion par email/mot de passe. La connexion via Google (OAuth2) utilise la sécurité de votre compte Google.",
+    "verifyTitle": "Vérification 2FA",
+    "verifyDescription": "Entrez le code de votre application d'authentification",
+    "verifyButton": "Vérifier",
+    "cancelButton": "Annuler",
+    "codePlaceholder": "000000",
+    "backupCodeHint": "Ou utilisez un code de secours (8 caractères)",
+    "invalidCode": "Code invalide",
+    "success": "Connexion réussie !",
+    "connectionError": "Erreur de connexion au serveur"
+  }
+}

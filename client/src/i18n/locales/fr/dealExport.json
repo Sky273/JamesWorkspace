@@ -1,0 +1,15 @@
+{
+  "dealExport": {
+    "title": "Exporter l'affaire",
+    "buttonTitle": "Exporter cette affaire",
+    "template": "Modèle de CV",
+    "formats": "Formats de sortie",
+    "adaptations": "adaptation",
+    "noTemplates": "Aucun modèle disponible. Créez un modèle dans la section Modèles.",
+    "errorLoadingTemplates": "Erreur lors du chargement des modèles",
+    "summary": "{{total}} éléments à {{formats}} format(s)",
+    "launch": "Lancer l'export",
+    "creating": "Création...",
+    "jobCreated": "Export lancé ! {{total}} éléments à traiter."
+  }
+}

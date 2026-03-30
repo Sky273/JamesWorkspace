@@ -1,0 +1,89 @@
+{
+  "clients": {
+    "title": "Clients & Prospects",
+    "subtitle": "Manage your clients and prospects for CV submissions",
+    "addClient": "Add",
+    "addContact": "Add contact",
+    "searchPlaceholder": "Search clients or prospects...",
+    "results": "results",
+    "noClients": "No clients or prospects found",
+    "noContacts": "No contacts for this client",
+    "noSubmissions": "No CV submissions for this client",
+    "contactsLabel": "contacts",
+    "submissionsLabel": "submissions",
+    "contactsTitle": "Contacts",
+    "submissionsTitle": "Submission History",
+    "sentTo": "Sent to",
+    "by": "by",
+    "viewVersion": "View version",
+    "primaryContact": "Primary contact",
+    "tabs": {
+      "all": "All",
+      "clients": "Clients",
+      "prospects": "Prospects",
+      "contacts": "Contacts",
+      "submissions": "Submissions"
+    },
+    "types": {
+      "client": "Client",
+      "prospect": "Prospect"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "submissionStatus": {
+      "sent": "Sent",
+      "viewed": "Viewed",
+      "rejected": "Rejected",
+      "accepted": "Accepted",
+      "pending": "Pending"
+    },
+    "stats": {
+      "clients": "Clients",
+      "prospects": "Prospects",
+      "contacts": "Contacts",
+      "submissions": "Submissions"
+    },
+    "modal": {
+      "addClient": "Add client/prospect",
+      "editClient": "Edit client/prospect",
+      "addContact": "Add contact",
+      "editContact": "Edit contact",
+      "name": "Name",
+      "type": "Type",
+      "status": "Status",
+      "industry": "Industry",
+      "industryPlaceholder": "e.g., Banking, Insurance, IT...",
+      "website": "Website",
+      "address": "Address",
+      "addressPlaceholder": "Full postal address",
+      "notes": "Notes",
+      "notesPlaceholder": "Internal notes about this client...",
+      "contactName": "Contact name",
+      "role": "Role",
+      "rolePlaceholder": "e.g., HR Director, Recruitment Manager...",
+      "email": "Email",
+      "phone": "Phone",
+      "primaryContact": "Primary contact",
+      "selectIndustry": "Select an industry"
+    },
+    "messages": {
+      "clientCreated": "Client created successfully",
+      "clientUpdated": "Client updated successfully",
+      "clientDeleted": "Client deleted successfully",
+      "contactCreated": "Contact created successfully",
+      "contactUpdated": "Contact updated successfully",
+      "contactDeleted": "Contact deleted successfully",
+      "errorFetching": "Error loading clients",
+      "errorCreatingClient": "Error creating client",
+      "errorUpdatingClient": "Error updating client",
+      "errorCreatingContact": "Error creating contact",
+      "errorUpdatingContact": "Error updating contact",
+      "errorDeleting": "Error deleting",
+      "confirmDeleteClient": "Are you sure you want to delete the client \"{{name}}\"?",
+      "confirmDeleteContact": "Are you sure you want to delete the contact \"{{name}}\"?",
+      "cannotDeleteWithSubmissions": "Cannot delete: CV submissions are associated"
+    }
+  }
+}

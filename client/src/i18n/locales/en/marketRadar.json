@@ -1,0 +1,174 @@
+{
+  "marketRadar": {
+    "title": "IS/IT Market Radar",
+    "subtitle": "IT job offers collection and analysis in France",
+    "details": {
+      "totalShare": "of total",
+      "breakdown": "Breakdown",
+      "minimum": "Min",
+      "maximum": "Max",
+      "median": "Median",
+      "byCategory": "By category",
+      "beginner": "Beginner",
+      "averageLevel": "Average",
+      "experienced": "Experienced",
+      "positiveDynamic": "Positive momentum",
+      "negativeDynamic": "Negative momentum",
+      "stableDynamic": "Stable momentum",
+      "marketGrowing": "The job market is growing",
+      "marketDeclining": "The job market is declining",
+      "marketStable": "The job market is stable",
+      "updatedAt": "Updated",
+      "evolution": "change",
+      "genre": "Gender",
+      "contracts": "Contracts",
+      "qualification": "Qualification",
+      "experience": "Experience",
+      "age": "Age",
+      "training": "Education",
+      "ageRanges": "Age ranges",
+      "genreAgeDetail": "Gender × Age detail",
+      "people": "people",
+      "cdi": "Permanent",
+      "cdd": "Fixed-term",
+      "other": "Other",
+      "executives": "Executives",
+      "technicians": "Technicians",
+      "employees": "Employees",
+      "workers": "Workers",
+      "underBac": "< High school"
+    },
+    "dataTypes": {
+      "offres": "Job offers",
+      "tension": "Recruitment tensions",
+      "dynamique_emploi": "Employment dynamics",
+      "embauche": "Hirings",
+      "demandeur": "Job seekers",
+      "demandeur_entrant": "New job seekers"
+    },
+    "tabs": {
+      "map": "France Map",
+      "trends": "Market Trends",
+      "facts": "Job Offers",
+      "metiers": "Jobs & Skills"
+    },
+    "map": {
+      "title": "Data by region",
+      "subtitle": "Click on a region to see job details",
+      "loading": "Loading map...",
+      "noData": "No regional data",
+      "noDataOffres": "Run a France Travail collection to see data on the map.",
+      "noDataTrends": "Run a market trends collection to see data on the map.",
+      "selectDataType": "Data type",
+      "regionsCovered": "Regions covered",
+      "topRegion": "Top region",
+      "itJobs": "IS/IT Jobs",
+      "totalOffers": "Total IT offers",
+      "total": "Total",
+      "average": "Average",
+      "metierBreakdown": "Breakdown by job",
+      "searchMetier": "Search for a job...",
+      "legend": "Legend",
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "clickToFilter": "Click on a bubble to filter by type",
+      "bubbleSizeInfo": "Bubble size proportional to value",
+      "refresh": "[FR] Refresh"
+    },
+    "trends": {
+      "title": "Market Trends",
+      "loading": "Loading trends...",
+      "noData": "No data available",
+      "results": "trends",
+      "filters": {
+        "allTypes": "All types",
+        "allRegions": "All regions"
+      },
+      "collection": {
+        "button": "Collect trends",
+        "started": "Collection started in background. Estimated duration: 30-60 minutes."
+      },
+      "refresh": "[FR] Refresh"
+    },
+    "facts": {
+      "results": "facts",
+      "filters": {
+        "source": "Source",
+        "allSources": "All sources",
+        "allMetiers": "All jobs",
+        "region": "Region",
+        "keyword": "Job"
+      },
+      "stats": {
+        "totalJobs": "Total offers",
+        "regions": "Regions",
+        "keywords": "Keywords"
+      },
+      "table": {
+        "date": "Date",
+        "source": "Source",
+        "metier": "Job",
+        "region": "Region",
+        "offers": "Offers"
+      },
+      "collection": {
+        "title": "Data collection",
+        "overlayTitle": "Collection in progress",
+        "overlayDescription": "Retrieving IS/IT market data from APIs.",
+        "overlayWarning": "This operation can take several minutes. Do not close this page.",
+        "startCollection": "Start collection",
+        "success": "Collection completed",
+        "factsCollected": "Facts collected",
+        "stored": "Stored",
+        "failed": "Failed",
+        "duration": "Duration",
+        "noData": "No facts collected",
+        "noDataDescription": "Run a collection to retrieve IS/IT market data.",
+        "error": "Collection error",
+        "collectFranceTravail": "Collect France Travail"
+      },
+      "sections": {
+        "allFacts": "All offers"
+      }
+    },
+    "metiers": {
+      "title": "Jobs & Skills",
+      "subtitle": "ROME 4.0 Reference - IT and Telecommunications",
+      "loading": "Loading jobs...",
+      "noData": "No jobs found",
+      "results": "jobs",
+      "noDataSearch": "No results for this search.",
+      "noDataEmpty": "Run a collection to retrieve IS/IT jobs.",
+      "searchPlaceholder": "Search for a job...",
+      "stats": {
+        "totalMetiers": "IS/IT Jobs",
+        "totalCompetences": "Total skills",
+        "lastUpdate": "Last update"
+      },
+      "card": {
+        "competences": "skills",
+        "enjeuxDomaines": "Issues / Domains",
+        "competencesDetaillees": "Detailed Skills",
+        "macroSavoirFaire": "Macro Know-How",
+        "savoirs": "Knowledge",
+        "updatedAt": "Updated"
+      },
+      "collection": {
+        "title": "Collection in progress",
+        "description": "Retrieving IS/IT jobs from Rome 4.0 API.",
+        "warning": "This operation can take up to 20 minutes. Do not close this page.",
+        "button": "Collect jobs",
+        "success": "Collection completed",
+        "processed": "jobs processed",
+        "created": "created",
+        "updated": "updated",
+        "errors": "errors"
+      },
+      "refresh": "[FR] Refresh"
+    },
+    "errors": {
+      "loadFailed": "Failed to load data"
+    }
+  }
+}

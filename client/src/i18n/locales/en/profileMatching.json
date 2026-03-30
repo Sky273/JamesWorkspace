@@ -1,0 +1,99 @@
+{
+  "profileMatching": {
+    "title": "Profile Matching",
+    "subtitle": "Find the best CVs matching a mission",
+    "selectDeal": "Filter by deal",
+    "allDeals": "All deals",
+    "selectMission": "Select a mission",
+    "loadingMissions": "Loading missions...",
+    "noMissions": "No missions available",
+    "advancedOptions": "Advanced options",
+    "maxResults": "Max results",
+    "minScore": "Minimum score (%)",
+    "weights": "Criteria weights",
+    "weightsTotal": "Total",
+    "resetWeights": "Reset weights",
+    "search": "Search profiles",
+    "searching": "Searching...",
+    "noResults": "No profiles match the criteria",
+    "resultsFound": "{{count}} profile(s) found",
+    "results": "Matching profiles",
+    "matchScore": "Score",
+    "extractedKeywords": "Keywords extracted from mission",
+    "scannedResumes": "{{count}} CVs scanned",
+    "matchedTags": "Matching skills",
+    "missingTags": "Missing skills",
+    "noMatchedTags": "No matches",
+    "noMissingTags": "All required skills are present",
+    "viewResume": "View CV",
+    "noTitle": "No title",
+    "noProfilesFound": "No profiles found with these criteria",
+    "keywordsRefreshed": "Mission keywords refreshed",
+    "refreshKeywordsTooltip": "Refresh mission keywords",
+    "categories": {
+      "skills": "Skills",
+      "tools": "Tools",
+      "industries": "Industries",
+      "softSkills": "Soft Skills"
+    },
+    "emptyState": {
+      "title": "Search for profiles",
+      "description": "Select a mission and start the search to find the most suitable CVs."
+    },
+    "errors": {
+      "loadMissions": "Error loading missions",
+      "selectMission": "Please select a mission",
+      "search": "Error searching profiles",
+      "refreshKeywords": "Error refreshing keywords",
+      "resumeNotFound": "CV not found in the list",
+      "analysis": "Error during detailed profile analysis"
+    },
+    "analyzeProfile": "Analyze profile",
+    "viewAnalysis": "View analysis",
+    "analyzing": "Analyzing...",
+    "analysisComplete": "Detailed analysis complete",
+    "searchingProfiles": "Searching profiles...",
+    "searchingProfilesDescription": "AI is analyzing CVs in your database to find the best profiles for this mission.",
+    "searchingLoadingSteps": [
+      "Extracting mission keywords...",
+      "Analyzing required skills...",
+      "Scanning the CV database...",
+      "Intelligent AI scoring...",
+      "Comparing profiles...",
+      "Ranking the best matches..."
+    ],
+    "searchingEstimatedTime": "This may take 1 to 5 minutes depending on the number of CVs",
+    "analyzingProfile": "Analyzing profile...",
+    "analyzingProfileDescription": "AI is generating a detailed analysis of the match between this profile and the mission.",
+    "analyzingLoadingSteps": [
+      "Deep reading the CV...",
+      "Comparing with requirements...",
+      "Evaluating key skills...",
+      "Writing the AI summary..."
+    ],
+    "titleAdjustment": "Title adjustment",
+    "llmScored": "AI Score",
+    "confidence": {
+      "high": "high confidence",
+      "medium": "medium confidence",
+      "low": "low confidence"
+    },
+    "llmScoringApplied": "Intelligent AI scoring applied",
+    "llmScoringFailed": "AI scoring unavailable, fallback mode",
+    "detailedAnalysis": {
+      "title": "AI Detailed Analysis",
+      "verdict": "Verdict",
+      "strengths": "Strengths",
+      "gaps": "Identified gaps",
+      "recommendations": "Recommendations",
+      "interviewQuestions": "Suggested interview questions",
+      "riskLevel": "Risk level"
+    },
+    "sentToLlm": "{{count}} sent to the LLM",
+    "explainedCount": "{{count}} explained",
+    "returnedCount": "{{count}} returned",
+    "maxResultsPlaceholder": "0 = all",
+    "dealSeparator": "?",
+    "resultsToast": "{{scanned}} CVs scanned, {{sent}} sent to the LLM, {{returned}} results returned"
+  }
+}

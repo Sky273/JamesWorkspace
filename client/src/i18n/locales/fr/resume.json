@@ -1,0 +1,112 @@
+{
+  "resume": {
+    "analysis": {
+      "title": "Analyse du CV",
+      "original": "Original",
+      "improved": "Amélioré",
+      "suggestions": "Suggestions",
+      "suggestionsFromOriginal": "Ces suggestions ont été formulées sur le CV original, avant son amélioration automatique par l'IA.",
+      "globalRating": "Note globale",
+      "originalScore": "Note originale",
+      "improvedScore": "Note améliorée",
+      "sectionScores": "Notes par section",
+      "criticalImprovements": "Améliorations critiques nécessaires",
+      "recommendedImprovements": "Améliorations recommandées",
+      "optionalEnhancements": "Améliorations optionnelles",
+      "originalText": "Texte Original",
+      "originalTextDescription": "Contenu extrait du CV original",
+      "originalTextDescriptionEditable": "Modifiez le texte extrait avant l'amélioration",
+      "improvedText": "Contenu Amélioré",
+      "improvedTextDescription": "Voici la version améliorée par l'IA de votre CV",
+      "scoreImprovedBy": "Votre score CV a été amélioré de",
+      "scoreDegradedBy": "Votre score CV a été dégradé de",
+      "clickImproveHint": "Cliquez sur \"Améliorer avec l'IA\" pour optimiser votre CV",
+      "candidateName": "Nom du candidat",
+      "candidateNamePlaceholder": "Entrez le nom du candidat",
+      "professionalTitle": "Titre professionnel",
+      "professionalTitlePlaceholder": "Entrez le titre professionnel",
+      "originalResume": "CV Original",
+      "improvedResume": "CV Amélioré",
+      "tabs": {
+        "overview": "Aperçu",
+        "skills": "Compétences & Tags",
+        "skillsTags": "Compétences & Tags",
+        "original": "Original",
+        "improved": "Amélioré",
+        "compare": "Comparer",
+        "export": "Exporter",
+        "pipeline": "Sélection",
+        "initialAnalysis": "Analyse initiale",
+        "postImprovementAnalysis": "Analyse post-amélioration"
+      },
+      "sections": {
+        "executiveBrief": "Résumé exécutif",
+        "skillsKeywords": "Compétences & Mots-clés",
+        "experience": "Expérience",
+        "education": "Formation",
+        "atsOptimization": "Optimisation ATS",
+        "hobbiesLanguages": "Loisirs & Langues"
+      },
+      "categories": {
+        "skills": "Compétences",
+        "technicalskills": "Compétences techniques",
+        "tools": "Outils",
+        "industries": "Secteurs d'activité",
+        "softskills": "Soft Skills"
+      },
+      "exportOptions": {
+        "title": "Options d'exportation",
+        "template": "Modèle",
+        "selectTemplate": "Sélectionner un modèle",
+        "loadingTemplates": "Chargement des modèles...",
+        "noTemplates": "Aucun modèle disponible",
+        "preview": "Aperçu",
+        "format": "Format",
+        "export": "Exporter",
+        "exportPDF": "Exporter en PDF",
+        "exporting": "Exportation...",
+        "sendEmail": "Envoyer par email"
+      }
+    },
+    "actions": {
+      "improveWithAI": "Améliorer avec l'IA",
+      "improving": "Amélioration en cours...",
+      "exporting": "Exportation...",
+      "saveChanges": "Enregistrer les modifications",
+      "saving": "Enregistrement...",
+      "adaptToMission": "Adapter à une mission",
+      "improve": "Améliorer",
+      "improveNow": "Améliorer maintenant",
+      "export": "Exporter",
+      "viewImproved": "Voir l'amélioration",
+      "view": "Voir"
+    },
+    "steps": {
+      "analysis": "Analyse",
+      "improve": "Améliorer",
+      "viewImproved": "Voir l'amélioration",
+      "view": "Voir",
+      "export": "Exporter"
+    },
+    "improve": {
+      "title": "Amélioration du CV",
+      "notYetImproved": "CV non encore amélioré",
+      "description": "Utilisez l'IA pour améliorer automatiquement ce CV en optimisant sa structure, son contenu et son score ATS."
+    },
+    "export": {
+      "title": "Export du CV",
+      "needsImprovement": "Amélioration requise",
+      "needsImprovementDescription": "Veuillez d'abord améliorer le CV avant de l'exporter.",
+      "exportingImproved": "Export du CV amélioré",
+      "exportingOriginal": "Export du CV original",
+      "improveFirst": "Améliorer d'abord ?"
+    },
+    "improveSuccess": "CV amélioré avec succès",
+    "improveError": "Erreur lors de l'amélioration du CV",
+    "exportSuccess": "CV exporté avec succès",
+    "exportError": "Erreur lors de l'export du CV",
+    "saveSuccess": "Modifications enregistrées",
+    "saveError": "Erreur lors de l'enregistrement",
+    "unsavedChanges": "Vous avez des modifications non enregistrées"
+  }
+}

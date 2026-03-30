@@ -1,0 +1,48 @@
+{
+  "mail": {
+    "modal": {
+      "title": "Envoyer le CV par email",
+      "connectTitle": "Connectez votre messagerie",
+      "connectDescription": "Connectez-vous à Gmail pour créer un brouillon d'email avec le CV en pièce jointe.",
+      "connectGmail": "Se connecter avec Gmail",
+      "connectedAs": "Connecté en tant que {{email}}",
+      "disconnect": "Déconnecter",
+      "selectClient": "Client / Prospect",
+      "chooseClient": "Sélectionner un client...",
+      "selectContact": "Interlocuteur",
+      "chooseContact": "Sélectionner un contact...",
+      "selectTemplate": "Template d'email",
+      "noTemplate": "Sans template",
+      "default": "par défaut",
+      "system": "système",
+      "previewTemplate": "Prévisualiser le template",
+      "templatePreview": "Aperçu du template",
+      "loadingPreview": "Chargement de l'aperçu...",
+      "template": "Template",
+      "noEmail": "Pas d'email",
+      "to": "À",
+      "subject": "Sujet",
+      "attachment": "Pièce jointe",
+      "createDraft": "Créer le brouillon",
+      "creating": "Création du brouillon...",
+      "successTitle": "Brouillon créé !",
+      "successDescription": "Le brouillon a été créé dans votre boîte Gmail. Cliquez ci-dessous pour l'ouvrir et l'envoyer.",
+      "openDraft": "Ouvrir dans Gmail",
+      "errorTitle": "Erreur",
+      "retry": "Réessayer",
+      "ssoReconnectMessage": "Votre session Gmail a expiré. Veuillez vous reconnecter à l'application pour réactiver l'envoi d'emails.",
+      "reconnectApp": "Se reconnecter"
+    },
+    "errors": {
+      "loadClients": "Erreur lors du chargement des clients",
+      "connectFailed": "Échec de la connexion à Gmail",
+      "noEmail": "Ce contact n'a pas d'adresse email",
+      "needsReauth": "Votre session a expiré. Veuillez vous reconnecter.",
+      "previewFailed": "Erreur lors de la prévisualisation du template"
+    },
+    "success": {
+      "draftCreated": "Brouillon créé avec succès",
+      "disconnected": "Messagerie déconnectée"
+    }
+  }
+}

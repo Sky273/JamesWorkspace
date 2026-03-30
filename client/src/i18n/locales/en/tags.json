@@ -1,0 +1,48 @@
+{
+  "tags": {
+    "title": "Tags Management",
+    "subtitle": "View and manage tags extracted from the resume library",
+    "loadError": "Failed to load tags",
+    "renameError": "Failed to rename tag",
+    "editTag": "Edit tag",
+    "editingIn": "Editing in category",
+    "tagName": "Tag name",
+    "back": "Back",
+    "cancel": "Cancel",
+    "save": "Save",
+    "refresh": "Refresh",
+    "searchPlaceholder": "Search for a tag...",
+    "tagsCount": "tags",
+    "noTags": "No tags in this category",
+    "stats": {
+      "totalTags": "Total tags"
+    },
+    "cleaned": "Cleaned",
+    "viewEscoDefinition": "View ESCO definition",
+    "recalculateCleanedTags": "Recalculate cleaned tags",
+    "recalculateEscoTags": "Recalculate ESCO tags",
+    "cleanedTagsRecalculated": "Cleaned tags recalculated successfully",
+    "cleanedTagsRecalculateError": "Failed to recalculate cleaned tags",
+    "escoTagsRecalculated": "ESCO tags recalculated successfully",
+    "escoTagsRecalculateError": "Failed to recalculate ESCO tags",
+    "tabs": {
+      "raw": "Raw tags",
+      "cleaned": "Cleaned tags",
+      "esco": "ESCO tags"
+    },
+    "cleanedDescription": {
+      "title": "Cleaned tags:",
+      "text": "Tags are lowercased, split on separators (/, ,, ;, |), and compound tags are detected (for example: \"Java Spring\" ? \"java\" + \"spring\")."
+    },
+    "escoDescription": {
+      "title": "ESCO tags:",
+      "text": "Tags are normalized using the European ESCO classification (European Skills, Competences, Qualifications and Occupations). Click \"Convert to ESCO\" to update."
+    },
+    "categories": {
+      "Skills": "Skills",
+      "Industries": "Industries",
+      "Tools": "Tools",
+      "Soft Skills": "Soft Skills"
+    }
+  }
+}

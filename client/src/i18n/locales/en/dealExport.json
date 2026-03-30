@@ -1,0 +1,15 @@
+{
+  "dealExport": {
+    "title": "Export deal",
+    "buttonTitle": "Export this deal",
+    "template": "CV template",
+    "formats": "Output formats",
+    "adaptations": "adaptation",
+    "noTemplates": "No templates available. Create a template in the Templates section.",
+    "errorLoadingTemplates": "Error loading templates",
+    "summary": "{{total}} items ? {{formats}} format(s)",
+    "launch": "Start export",
+    "creating": "Creating...",
+    "jobCreated": "Export started! {{total}} items to process."
+  }
+}

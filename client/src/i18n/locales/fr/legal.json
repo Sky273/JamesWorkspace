@@ -1,0 +1,118 @@
+{
+  "legal": {
+    "privacy": {
+      "title": "Politique de confidentialité",
+      "lastUpdated": "Dernière mise à jour",
+      "sections": {
+        "introduction": {
+          "title": "Introduction",
+          "content": "Aptea (« nous », « notre » ou « nos ») s'engage à protéger votre vie privée. Cette Politique de confidentialité explique comment nous collectons, utilisons, divulguons et protégeons vos informations lorsque vous utilisez notre service Resume Converter."
+        },
+        "dataCollection": {
+          "title": "Informations que nous collectons",
+          "content": "Nous collectons les informations que vous nous fournissez directement :",
+          "items": {
+            "personal": "Informations personnelles (nom, adresse email, entreprise)",
+            "resume": "Données de CV téléchargées pour analyse et amélioration",
+            "usage": "Données d'utilisation et interaction avec nos services",
+            "technical": "Données techniques (adresse IP, type de navigateur, informations sur l'appareil)"
+          }
+        },
+        "dataUse": {
+          "title": "Comment nous utilisons vos informations",
+          "content": "Nous utilisons les informations collectées pour :",
+          "items": {
+            "service": "Fournir, maintenir et améliorer nos services",
+            "improvement": "Analyser et améliorer le contenu des CV grâce à l'IA",
+            "communication": "Communiquer avec vous concernant nos services",
+            "legal": "Respecter nos obligations légales"
+          }
+        },
+        "dataProtection": {
+          "title": "Protection des données",
+          "content": "Nous mettons en œuvre des mesures techniques et organisationnelles appropriées pour protéger vos données personnelles contre tout accès, modification, divulgation ou destruction non autorisés. Toutes les données sont chiffrées en transit et au repos."
+        },
+        "gdpr": {
+          "title": "Vos droits (RGPD)",
+          "content": "En vertu du Règlement Général sur la Protection des Données (RGPD), vous disposez des droits suivants :",
+          "rights": {
+            "access": "Droit d'accès à vos données personnelles",
+            "rectification": "Droit de rectification des données inexactes",
+            "erasure": "Droit à l'effacement (« droit à l'oubli »)",
+            "portability": "Droit à la portabilité des données",
+            "objection": "Droit d'opposition au traitement"
+          }
+        },
+        "cookies": {
+          "title": "Cookies",
+          "content": "Nous utilisons des cookies essentiels pour assurer le bon fonctionnement de notre service. Ces cookies sont nécessaires à l'authentification et à la sécurité."
+        },
+        "contact": {
+          "title": "Nous contacter",
+          "content": "Si vous avez des questions concernant cette Politique de confidentialité ou nos pratiques en matière de données, veuillez nous contacter :"
+        }
+      }
+    },
+    "terms": {
+      "title": "Conditions d'utilisation",
+      "lastUpdated": "Dernière mise à jour",
+      "sections": {
+        "acceptance": {
+          "title": "Acceptation des conditions",
+          "content": "En accédant ou en utilisant le service Resume Converter fourni par Aptea, vous acceptez d'être lié par ces Conditions d'utilisation. Si vous n'acceptez pas ces conditions, veuillez ne pas utiliser notre service."
+        },
+        "description": {
+          "title": "Description du service",
+          "content": "Resume Converter est une plateforme alimentée par l'IA conçue pour les ESN (Entreprises de Services du Numérique) et les cabinets de recrutement. Elle permet de gérer une CVthèque, d'analyser et d'améliorer les CV, d'adapter ces CV à un contexte mission spécifique et de les exporter selon divers modèles."
+        },
+        "account": {
+          "title": "Comptes utilisateurs",
+          "content": "Pour utiliser notre service, vous devez créer un compte. Vous êtes responsable de :",
+          "items": {
+            "accurate": "Fournir des informations exactes et complètes",
+            "security": "Maintenir la sécurité de vos identifiants de compte",
+            "responsibility": "Toutes les activités qui se produisent sous votre compte"
+          }
+        },
+        "usage": {
+          "title": "Utilisation acceptable",
+          "content": "Vous acceptez d'utiliser notre service uniquement à des fins légales. Vous ne devez pas :",
+          "items": {
+            "lawful": "Utiliser le service à des fins illégales",
+            "noHarm": "Télécharger du contenu malveillant ou tenter de nuire au service",
+            "noAbuse": "Abuser, harceler ou discriminer autrui",
+            "noUnauthorized": "Tenter d'accéder de manière non autorisée à nos systèmes"
+          }
+        },
+        "intellectual": {
+          "title": "Propriété intellectuelle",
+          "content": "Le service, y compris son contenu original, ses fonctionnalités et ses fonctions, est la propriété d'Aptea et est protégé par les lois internationales sur le droit d'auteur, les marques et autres droits de propriété intellectuelle."
+        },
+        "userContent": {
+          "title": "Contenu utilisateur",
+          "content": "Vous conservez la propriété des CV et du contenu que vous téléchargez. En utilisant notre service, vous nous accordez une licence limitée pour traiter votre contenu uniquement dans le but de fournir le service."
+        },
+        "disclaimer": {
+          "title": "Exclusion de garanties",
+          "content": "Le service est fourni « tel quel » sans garantie d'aucune sorte. Nous ne garantissons pas que les suggestions générées par l'IA seront exactes ou adaptées à vos besoins spécifiques."
+        },
+        "limitation": {
+          "title": "Limitation de responsabilité",
+          "content": "Aptea ne sera pas responsable des dommages indirects, accessoires, spéciaux, consécutifs ou punitifs résultant de votre utilisation du service."
+        },
+        "termination": {
+          "title": "Résiliation",
+          "content": "Nous pouvons résilier ou suspendre votre compte à tout moment en cas de violation de ces conditions. À la résiliation, votre droit d'utiliser le service cessera immédiatement."
+        },
+        "governing": {
+          "title": "Droit applicable",
+          "content": "Ces conditions seront régies et interprétées conformément aux lois de la France, sans tenir compte de ses dispositions relatives aux conflits de lois."
+        },
+        "contact": {
+          "title": "Nous contacter",
+          "content": "Si vous avez des questions concernant ces Conditions d'utilisation, veuillez nous contacter :"
+        }
+      }
+    }
+  }
+}

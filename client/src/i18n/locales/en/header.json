@@ -1,0 +1,13 @@
+{
+  "header": {
+    "changeLanguage": "Change language",
+    "theme": {
+      "light": "Light Mode",
+      "dark": "Dark Mode"
+    },
+    "language": {
+      "en": "English",
+      "fr": "French"
+    }
+  }
+}

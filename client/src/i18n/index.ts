@@ -6,8 +6,8 @@ type SupportedLanguage = 'en' | 'fr';
 
 const FALLBACK_LANGUAGE: SupportedLanguage = 'fr';
 const LANGUAGE_LOADERS: Record<SupportedLanguage, () => Promise<{ default: Record<string, unknown> }>> = {
-  en: () => import('./locales/en.json'),
-  fr: () => import('./locales/fr.json'),
+  en: () => import('./locales/en'),
+  fr: () => import('./locales/fr'),
 };
 const loadedLanguages = new Set<SupportedLanguage>();
 
