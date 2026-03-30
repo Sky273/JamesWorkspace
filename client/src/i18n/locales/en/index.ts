@@ -42,6 +42,7 @@ import BackupMessages from "./backup.json";
 import BatchUploadMessages from "./batchUpload.json";
 import BatchJobsMessages from "./batchJobs.json";
 import DealExportMessages from "./dealExport.json";
+import HealthMessages from "./health.json";
 
 const enMessages = {
   ...UserProfileMessages,
@@ -88,6 +89,7 @@ const enMessages = {
   ...BatchUploadMessages,
   ...BatchJobsMessages,
   ...DealExportMessages,
+  ...HealthMessages,
 };
 
 export default enMessages;

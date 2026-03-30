@@ -594,7 +594,7 @@ const MetricsPage = (): JSX.Element => {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
     
-    toast.success(t('metrics.exportSuccess', `Métriques exportées (${format.toUpperCase()})`));
+    toast.success(`${t('metrics.exportSuccess')} (${format.toUpperCase()})`);
   };
 
   useEffect(() => {

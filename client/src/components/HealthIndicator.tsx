@@ -1,9 +1,4 @@
-/**
- * Health Indicator Component
- * Shows system health status in the header (admin only)
- */
-
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { formatDateTime } from '../utils/dateFormatter';
@@ -12,45 +7,24 @@ import { SignalIcon } from '@heroicons/react/24/outline';
 
 interface HealthCheck {
   status: string;
+  message?: string;
   error?: string;
   latency?: string;
-  size?: string;
-  tables?: Record<string, number>;
+  uptime?: string;
+  heapUsed?: string;
+  heapTotal?: string;
+  heapPercent?: string;
+  backend?: string;
+  connected?: boolean | null;
+  fallbackReason?: string | null;
+  settings?: number;
+  templates?: number;
+  firms?: number;
 }
 
-interface CacheDetails {
-  size?: number;
-  maxSize?: number;
-  ttlMinutes?: number;
-  ttlHours?: number;
-  ageMs?: number | null;
-  hasData?: boolean;
-  hasFilterOptions?: boolean;
-  hasSummary?: boolean;
-}
-
-interface MemoryStats {
-  timestamp: string;
-  process: {
-    heapUsed: string;
-    heapTotal: string;
-    rss: string;
-    external: string;
-    arrayBuffers: string;
-  };
-  caches: {
-    simpleCache: { estimated: string; details: { settings: number; templates: number; firms: number } };
-    trends: { estimated: string; details: CacheDetails };
-    facts: { estimated: string; details: CacheDetails };
-    metiers: { estimated: string; details: CacheDetails };
-    esco: { estimated: string; details: CacheDetails };
-    tags: { estimated: string; details: { cleanedTags: { hasData: boolean; ageMs: number | null }; escoTags: { hasData: boolean; ageMs: number | null }; ttlMinutes: number } };
-    security: { estimated: string; details: { blacklistedTokens: number; blacklistedUsers: number } };
-  };
-  summary: {
-    totalCacheEntries: number;
-    gcAvailable: boolean;
-  };
+interface ProviderCheck {
+  status: string;
+  message?: string;
 }
 
 interface HealthStatus {
@@ -58,13 +32,41 @@ interface HealthStatus {
   responseTime?: string;
   timestamp?: string;
   checks?: {
-    server?: { status: string; uptime?: string };
+    server?: HealthCheck;
     database?: HealthCheck;
-    memory?: { status: string; heapUsed?: string; heapTotal?: string; percentage?: number };
+    memory?: HealthCheck;
     cache?: HealthCheck;
-    apiKeys?: { status: string; openai?: boolean; anthropic?: boolean };
+    openai?: ProviderCheck;
+    anthropic?: ProviderCheck;
+    deepseek?: ProviderCheck;
+    glm?: ProviderCheck;
+    minimax?: ProviderCheck;
+    ollama?: ProviderCheck;
   };
   issues?: string[];
+}
+
+interface CacheBackendDiagnostics {
+  backend: string;
+  connected: boolean | null;
+  fallbackReason: string | null;
+}
+
+interface CacheAdminMetrics {
+  cacheBackend?: CacheBackendDiagnostics;
+}
+
+interface CircuitBreakerState {
+  provider: string;
+  supported: boolean;
+  state: string;
+  failures: number;
+  lastFailureTime: string | null;
+  configured?: boolean;
+}
+
+interface CircuitBreakerMap {
+  [provider: string]: CircuitBreakerState;
 }
 
 interface HealthIndicatorProps {
@@ -72,84 +74,304 @@ interface HealthIndicatorProps {
   variant?: 'default' | 'header';
 }
 
+const PROVIDERS = ['openai', 'anthropic', 'deepseek', 'glm', 'minimax', 'ollama'] as const;
+
+type StatusLevel = 'healthy' | 'degraded' | 'unhealthy' | 'unknown';
+const MEMORY_WARNING_MB = 300;
+const MEMORY_ERROR_MB = 1024;
+
+function tr(t: ((key: string, options?: Record<string, unknown>) => string) | undefined, key: string, fallback: string, options?: Record<string, unknown>): string {
+  if (!t) return fallback;
+  const translated = t(key, options);
+  return translated === key ? fallback : translated;
+}
+
+function buildIssues(t: (key: string, options?: Record<string, unknown>) => string, health: HealthStatus, cacheBackend: CacheBackendDiagnostics | null): string[] {
+  const issues: string[] = [];
+
+  if (health.checks?.database?.status === 'error') {
+    issues.push(`Base de données: ${health.checks.database.error || 'connexion indisponible'}`);
+  }
+
+  const memoryStatus = getMemoryStatus(health.checks?.memory);
+  if (memoryStatus && memoryStatus !== 'ok') {
+    const memoryLabel = health.checks?.memory?.heapPercent || health.checks?.memory?.heapUsed || memoryStatus;
+    issues.push(`Mémoire: ${memoryLabel}`);
+  }
+
+  if (cacheBackend?.backend === 'memory-fallback') {
+    issues.push(`Cache: fallback mémoire${cacheBackend.fallbackReason ? ` (${cacheBackend.fallbackReason})` : ''}`);
+  }
+
+  for (const provider of PROVIDERS) {
+    const check = health.checks?.[provider];
+    if (check?.status === 'error') {
+      issues.push(tr(t, 'health.issueProvider', `${provider}: ${check.message || 'erreur provider'}`, { provider, message: check.message || 'erreur provider' }));
+    }
+  }
+
+  return issues;
+}
+
+function parseMemoryValueToMb(value?: string): number | null {
+  if (!value) return null;
+  const normalized = value.trim().replace(',', '.');
+  const match = normalized.match(/^([\d.]+)\s*(B|KB|MB|GB|TB)$/i);
+  if (!match) return null;
+
+  const amount = Number.parseFloat(match[1]);
+  const unit = match[2].toUpperCase();
+  if (Number.isNaN(amount)) return null;
+
+  switch (unit) {
+    case 'B':
+      return amount / (1024 * 1024);
+    case 'KB':
+      return amount / 1024;
+    case 'MB':
+      return amount;
+    case 'GB':
+      return amount * 1024;
+    case 'TB':
+      return amount * 1024 * 1024;
+    default:
+      return null;
+  }
+}
+
+function getMemoryStatus(memory?: HealthCheck): 'ok' | 'warning' | 'error' | undefined {
+  if (!memory) return undefined;
+  const heapUsedMb = parseMemoryValueToMb(memory.heapUsed);
+  if (heapUsedMb === null) {
+    return memory.status as 'ok' | 'warning' | 'error' | undefined;
+  }
+  if (heapUsedMb > MEMORY_ERROR_MB) return 'error';
+  if (heapUsedMb > MEMORY_WARNING_MB) return 'warning';
+  return 'ok';
+}
+
+function normalizeStatusLevel(status?: string): StatusLevel {
+  switch (status) {
+    case 'ok':
+    case 'healthy':
+    case 'configured':
+    case 'closed':
+    case 'not_applicable':
+      return 'healthy';
+    case 'warning':
+    case 'degraded':
+    case 'slow':
+    case 'half_open':
+      return 'degraded';
+    case 'error':
+    case 'unhealthy':
+    case 'open':
+    case 'not_configured':
+      return 'unhealthy';
+    default:
+      return 'unknown';
+  }
+}
+
+function getWorstStatus(current: StatusLevel, next: StatusLevel): StatusLevel {
+  const rank: Record<StatusLevel, number> = {
+    healthy: 0,
+    unknown: 1,
+    degraded: 2,
+    unhealthy: 3
+  };
+
+  return rank[next] > rank[current] ? next : current;
+}
+
+function hasAtLeastOneConfiguredLlm(health: HealthStatus, circuitBreakers: CircuitBreakerMap): boolean {
+  return PROVIDERS.some((provider) => {
+    const providerStatus = health.checks?.[provider]?.status;
+    const breakerState = circuitBreakers[provider]?.state?.toLowerCase();
+
+    const providerConfigured = providerStatus === 'configured' || providerStatus === 'ok' || providerStatus === 'healthy';
+    const breakerUsable = !breakerState || breakerState === 'closed' || breakerState === 'half_open' || breakerState === 'not_applicable';
+
+    return providerConfigured && breakerUsable;
+  });
+}
+
+function getOverallHealthStatus(health: HealthStatus, cacheBackend: CacheBackendDiagnostics | null, circuitBreakers: CircuitBreakerMap): StatusLevel {
+  let overall = normalizeStatusLevel(health.status);
+
+  overall = getWorstStatus(overall, normalizeStatusLevel(health.checks?.database?.status));
+  overall = getWorstStatus(overall, normalizeStatusLevel(getMemoryStatus(health.checks?.memory)));
+  overall = getWorstStatus(overall, normalizeStatusLevel(health.checks?.cache?.status));
+
+  if (cacheBackend?.backend === 'memory-fallback' || cacheBackend?.connected === false) {
+    overall = getWorstStatus(overall, 'degraded');
+  }
+
+  const hasConfiguredLlm = hasAtLeastOneConfiguredLlm(health, circuitBreakers);
+
+  if (!hasConfiguredLlm) {
+    for (const provider of PROVIDERS) {
+      overall = getWorstStatus(overall, normalizeStatusLevel(health.checks?.[provider]?.status));
+      overall = getWorstStatus(overall, normalizeStatusLevel(circuitBreakers[provider]?.state?.toLowerCase()));
+    }
+  }
+
+  return overall;
+}
+
+function getMemorySummary(memory?: HealthCheck): string | null {
+  if (!memory) return null;
+  if (memory.heapUsed && memory.heapTotal) {
+    return `${memory.heapUsed} / ${memory.heapTotal}`;
+  }
+  if (memory.heapPercent && memory.heapUsed) {
+    return `${memory.heapUsed} (${memory.heapPercent})`;
+  }
+  return memory.heapPercent || memory.heapUsed || memory.heapTotal || null;
+}
+
+function getStatusTone(status?: string): string {
+  switch (status) {
+    case 'ok':
+    case 'healthy':
+    case 'configured':
+    case 'closed':
+    case 'not_applicable':
+      return 'bg-green-500';
+    case 'warning':
+    case 'degraded':
+    case 'slow':
+    case 'half_open':
+      return 'bg-yellow-500';
+    case 'error':
+    case 'unhealthy':
+    case 'open':
+    case 'not_configured':
+      return 'bg-red-500';
+    default:
+      return 'bg-gray-400';
+  }
+}
+
+function getStatusLabel(t?: (key: string) => string, status?: string): string {
+  const translate = t || ((key: string) => key);
+  switch (status) {
+    case 'ok':
+    case 'healthy':
+      return tr(translate, 'health.status.ok', 'OK');
+    case 'configured':
+      return tr(translate, 'health.status.configured', 'Config');
+    case 'slow':
+      return tr(translate, 'health.status.slow', 'Lent');
+    case 'warning':
+    case 'degraded':
+    case 'half_open':
+      return tr(translate, 'health.status.warning', 'Alerte');
+    case 'error':
+    case 'unhealthy':
+      return tr(translate, 'health.status.error', 'Erreur');
+    case 'open':
+      return tr(translate, 'health.status.open', 'Ouvert');
+    case 'closed':
+      return 'Fermé';
+    case 'not_configured':
+      return tr(translate, 'health.status.notConfigured', 'Absent');
+    case 'not_applicable':
+      return tr(translate, 'health.status.notApplicable', 'N/A');
+    default:
+      return tr(translate, 'health.status.unknown', 'Inconnu');
+  }
+}
+
+function statusBadge(t: ((key: string) => string) | undefined, status?: string): JSX.Element {
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold text-white ${getStatusTone(status)}`}>
+      {getStatusLabel(t, status)}
+    </span>
+  );
+}
+
+function IndicatorRow({ label, meta, status, t }: { label: string; meta?: string | null; status?: string; t?: (key: string) => string }): JSX.Element {
+  return (
+    <div className="flex items-center justify-between gap-3 text-xs">
+      <span className="text-gray-600 dark:text-gray-400">{label}</span>
+      <div className="flex items-center gap-2">
+        {meta ? <span className="font-mono text-[10px] text-gray-400">{meta}</span> : null}
+        {statusBadge(t, status)}
+      </div>
+    </div>
+  );
+}
+
 const HealthIndicator = ({ showAlways = false, variant = 'default' }: HealthIndicatorProps): JSX.Element | null => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const [health, setHealth] = useState<HealthStatus>({ status: 'unknown' });
-  const [memoryStats, setMemoryStats] = useState<MemoryStats | null>(null);
+  const [cacheMetrics, setCacheMetrics] = useState<CacheAdminMetrics | null>(null);
+  const [circuitBreakers, setCircuitBreakers] = useState<CircuitBreakerMap>({});
   const [isHovered, setIsHovered] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const isHeader = variant === 'header';
-
   const isAdmin = user?.role === 'admin';
 
-  const fetchMemoryStats = async (): Promise<void> => {
-    try {
-      const response = await fetchWithAuth('/health/memory', createAuthOptions({ method: 'GET' }));
-      if (response.ok) {
-        const data = await response.json();
-        setMemoryStats(data);
-      }
-    } catch {
-      // Silently fail - memory stats are optional
-    }
+  const tf = (key: string, fallback: string): string => {
+    const translated = t(key);
+    return translated === key ? fallback : translated;
   };
 
-  const fetchHealth = async (): Promise<void> => {
-    try {
-      const response = await fetchWithAuth('/health', createAuthOptions({ method: 'GET' }));
-      if (response.ok) {
-        const data = await response.json();
+  const refreshStatus = async (): Promise<void> => {
+    const [healthResult, cacheResult, breakerResult] = await Promise.allSettled([
+      fetchWithAuth('/health', createAuthOptions({ method: 'GET' })),
+      fetchWithAuth('/api/admin/cache-stats', createAuthOptions({ method: 'GET' })),
+      fetchWithAuth('/api/llm/circuit-breakers', createAuthOptions({ method: 'GET' }))
+    ]);
 
-        const issues: string[] = [];
+    let nextHealth: HealthStatus = { status: 'unknown' };
+    let nextCache: CacheAdminMetrics | null = null;
+    let nextBreakers: CircuitBreakerMap = {};
 
-        if (data.checks?.database?.status === 'error') {
-          issues.push(`Base de données : ${data.checks.database.error || 'Connexion échouée'}`);
-        }
-        if (data.checks?.memory?.percentage && data.checks.memory.percentage > 90) {
-          issues.push(`Mémoire critique : ${data.checks.memory.percentage.toFixed(0)}% utilisée`);
-        }
-        if (data.checks?.cache?.status === 'error') {
-          issues.push(`Cache : ${data.checks.cache.error || 'Erreur'}`);
-        }
-        if (data.checks?.apiKeys?.status === 'warning') {
-          const missing = [];
-          if (!data.checks.apiKeys.openai) missing.push('OpenAI');
-          if (!data.checks.apiKeys.anthropic) missing.push('Anthropic');
-          if (missing.length > 0) {
-            issues.push(`Clés API manquantes : ${missing.join(', ')}`);
-          }
-        }
-
-        setHealth({
+    if (healthResult.status === 'fulfilled') {
+      if (healthResult.value.ok) {
+        const data = await healthResult.value.json();
+        nextHealth = {
           status: data.status || 'unknown',
           responseTime: data.responseTime,
           timestamp: data.timestamp,
-          checks: data.checks,
-          issues,
-        });
+          checks: data.checks
+        };
       } else {
-        const errorText = await response.text().catch(() => 'Erreur inconnue');
-        setHealth({
+        const errorText = await healthResult.value.text().catch(() => 'Erreur inconnue');
+        nextHealth = {
           status: 'unhealthy',
-          issues: [`Serveur inaccessible (${response.status}) : ${errorText.substring(0, 100)}`],
-        });
+          issues: [tr(t, 'health.serverUnavailable', `Serveur inaccessible (${healthResult.value.status}): ${errorText.substring(0, 100)}`, { status: healthResult.value.status, message: errorText.substring(0, 100) })]
+        };
       }
-    } catch (error) {
-      setHealth({
+    } else {
+      nextHealth = {
         status: 'unhealthy',
-        issues: [`Impossible de contacter le serveur : ${error instanceof Error ? error.message : 'Erreur réseau'}`],
-      });
+        issues: [`Impossible de contacter le serveur: ${healthResult.reason instanceof Error ? healthResult.reason.message : 'erreur réseau'}`]
+      };
     }
+
+    if (cacheResult.status === 'fulfilled' && cacheResult.value.ok) {
+      nextCache = await cacheResult.value.json();
+    }
+
+    if (breakerResult.status === 'fulfilled' && breakerResult.value.ok) {
+      nextBreakers = await breakerResult.value.json();
+    }
+
+    nextHealth.issues = nextHealth.issues?.length ? nextHealth.issues : buildIssues(t, nextHealth, nextCache?.cacheBackend || null);
+    setHealth(nextHealth);
+    setCacheMetrics(nextCache);
+    setCircuitBreakers(nextBreakers);
   };
 
   useEffect(() => {
     if (isAdmin || showAlways) {
-      fetchHealth();
-      fetchMemoryStats();
+      void refreshStatus();
       const interval = setInterval(() => {
-        fetchHealth();
-        fetchMemoryStats();
+        void refreshStatus();
       }, 60000);
       return () => clearInterval(interval);
     }
@@ -157,8 +379,7 @@ const HealthIndicator = ({ showAlways = false, variant = 'default' }: HealthIndi
 
   useEffect(() => {
     if (isHovered || isExpanded) {
-      fetchHealth();
-      fetchMemoryStats();
+      void refreshStatus();
     }
   }, [isHovered, isExpanded]);
 
@@ -166,45 +387,10 @@ const HealthIndicator = ({ showAlways = false, variant = 'default' }: HealthIndi
     return null;
   }
 
-  const getStatusColor = (): string => {
-    switch (health.status) {
-      case 'healthy':
-        return 'bg-green-500';
-      case 'degraded':
-        return 'bg-yellow-500';
-      case 'unhealthy':
-        return 'bg-red-500';
-      default:
-        return 'bg-gray-400';
-    }
-  };
-
-  const getStatusText = (): string => {
-    switch (health.status) {
-      case 'healthy':
-        return t('health.healthy', 'Système OK');
-      case 'degraded':
-        return t('health.degraded', 'Dégradé');
-      case 'unhealthy':
-        return t('health.unhealthy', 'Problème');
-      default:
-        return t('health.unknown', 'Vérification...');
-    }
-  };
-
-  const getCheckIcon = (status?: string): string => {
-    if (status === 'ok' || status === 'healthy') return '✓';
-    if (status === 'warning' || status === 'degraded') return '⚠';
-    if (status === 'error' || status === 'unhealthy') return '✕';
-    return '?';
-  };
-
-  const getCheckColor = (status?: string): string => {
-    if (status === 'ok' || status === 'healthy') return 'text-green-500';
-    if (status === 'warning' || status === 'degraded') return 'text-yellow-500';
-    if (status === 'error' || status === 'unhealthy') return 'text-red-500';
-    return 'text-gray-400';
-  };
+  const cacheBackend = cacheMetrics?.cacheBackend || null;
+  const issueCount = health.issues?.length || 0;
+  const overallStatus = getOverallHealthStatus(health, cacheBackend, circuitBreakers);
+  const memorySummary = getMemorySummary(health.checks?.memory);
 
   return (
     <div
@@ -227,207 +413,101 @@ const HealthIndicator = ({ showAlways = false, variant = 'default' }: HealthIndi
             : 'h-4 w-4 text-gray-400 dark:text-gray-500'}
           aria-hidden="true"
         />
-        <span className={`h-2.5 w-2.5 rounded-full ${getStatusColor()} ${health.status !== 'healthy' ? 'animate-pulse' : ''}`} />
+        <span className={`h-2.5 w-2.5 rounded-full ${getStatusTone(overallStatus)} ${overallStatus !== 'healthy' ? 'animate-pulse' : ''}`} />
         <span className={isHeader ? 'hidden text-xs text-slate-600 dark:text-slate-300 sm:inline' : 'hidden text-xs text-gray-500 dark:text-gray-400 sm:inline'}>
-          {getStatusText()}
+          {overallStatus === 'healthy'
+            ? tf('health.healthy', 'Système OK')
+            : overallStatus === 'degraded'
+              ? tf('health.degraded', 'Dégradé')
+              : overallStatus === 'unhealthy'
+                ? tf('health.unhealthy', 'Problème')
+                : tf('health.unknown', 'Vérification...')}
         </span>
-        {health.issues && health.issues.length > 0 && (
-          <span className="text-xs font-medium text-red-500">({health.issues.length})</span>
-        )}
+        {memorySummary ? (
+          <span className={isHeader ? 'hidden text-[11px] text-slate-500 dark:text-slate-400 sm:inline' : 'hidden text-[11px] text-gray-500 dark:text-gray-400 sm:inline'}>
+            {tf('health.memoryShort', 'Mémoire')}: {memorySummary}
+          </span>
+        ) : null}
+        {issueCount > 0 ? <span className="text-xs font-medium text-red-500">({issueCount})</span> : null}
       </div>
 
       {(isHovered || isExpanded) && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-80 rounded-lg border border-gray-200 bg-white p-4 shadow-lg dark:border-gray-700 dark:bg-gray-800">
-          <div className="text-sm">
-            <div className="mb-3 flex items-center justify-between border-b border-gray-200 pb-2 dark:border-gray-700">
+        <div className="absolute right-0 top-full z-50 mt-2 w-[28rem] rounded-lg border border-gray-200 bg-white p-4 shadow-lg dark:border-gray-700 dark:bg-gray-800">
+          <div className="space-y-4 text-sm">
+            <div className="flex items-center justify-between border-b border-gray-200 pb-2 dark:border-gray-700">
               <span className="font-semibold text-gray-700 dark:text-gray-300">
-                {t('health.systemHealth', 'État du système')}
+                {tf('health.systemHealth', 'État du système')}
               </span>
-              <span
-                className={`rounded px-2 py-0.5 text-xs font-medium ${
-                  health.status === 'healthy'
-                    ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
-                    : health.status === 'degraded'
-                      ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'
-                      : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
-                }`}
-              >
-                {getStatusText()}
-              </span>
+              {statusBadge(t, overallStatus)}
             </div>
 
-            {health.issues && health.issues.length > 0 && (
-              <div className="mb-3 rounded-md border border-red-200 bg-red-50 p-2 dark:border-red-800 dark:bg-red-900/20">
+            {issueCount > 0 && (
+              <div className="rounded-md border border-red-200 bg-red-50 p-3 dark:border-red-800 dark:bg-red-900/20">
                 <div className="mb-1 text-xs font-medium text-red-700 dark:text-red-300">
-                  {t('health.issues', 'Problèmes détectés')}:
+                  {tf('health.issues', 'Problèmes détectés')}
                 </div>
                 <ul className="space-y-1 text-xs text-red-600 dark:text-red-400">
-                  {health.issues.map((issue, index) => (
-                    <li key={index} className="flex items-start gap-1">
-                      <span className="mt-0.5 text-red-500">•</span>
-                      <span>{issue}</span>
-                    </li>
+                  {health.issues?.map((issue, index) => (
+                    <li key={`${issue}-${index}`}>{issue}</li>
                   ))}
                 </ul>
               </div>
             )}
 
-            {health.responseTime && (
-              <div className="mb-2 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                <span>{t('health.responseTime', 'Latence')}</span>
-                <span className="font-mono">{health.responseTime}</span>
+            <div className="space-y-2">
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                {tf('health.platform', 'Plateforme')}
               </div>
-            )}
+              <IndicatorRow label={tf('health.server', 'Serveur')} meta={health.checks?.server?.uptime || null} status={health.checks?.server?.status} t={t} />
+              <IndicatorRow label={tf('health.database', 'Base de données')} meta={health.checks?.database?.latency || null} status={health.checks?.database?.status} />
+              <IndicatorRow label={tf('health.memory', 'Mémoire')} meta={memorySummary} status={getMemoryStatus(health.checks?.memory)} />
+              <IndicatorRow label={tf('health.responseTime', 'Latence')} meta={health.responseTime || null} status={overallStatus === 'healthy' ? 'ok' : overallStatus} t={t} />
+            </div>
 
             <div className="space-y-2">
-              {health.checks?.server && (
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-gray-600 dark:text-gray-400">{t('health.server', 'Serveur')}</span>
-                  <div className="flex items-center gap-2">
-                    {health.checks.server.uptime && (
-                      <span className="font-mono text-[10px] text-gray-400">{health.checks.server.uptime}</span>
-                    )}
-                    <span className={getCheckColor(health.checks.server.status)}>{getCheckIcon(health.checks.server.status)}</span>
-                  </div>
-                </div>
-              )}
-
-              {health.checks?.database && (
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-gray-600 dark:text-gray-400">{t('health.database', 'Base de données')}</span>
-                  <div className="flex items-center gap-2">
-                    {health.checks.database.latency && (
-                      <span className="font-mono text-[10px] text-gray-400">{health.checks.database.latency}</span>
-                    )}
-                    {health.checks.database.size && (
-                      <span className="font-mono text-[10px] text-gray-400">{health.checks.database.size}</span>
-                    )}
-                    <span className={getCheckColor(health.checks.database.status)}>{getCheckIcon(health.checks.database.status)}</span>
-                  </div>
-                </div>
-              )}
-
-              {health.checks?.memory && (
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-gray-600 dark:text-gray-400">{t('health.memory', 'Mémoire')}</span>
-                  <div className="flex items-center gap-2">
-                    {health.checks.memory.heapUsed && health.checks.memory.heapTotal && (
-                      <span className="font-mono text-[10px] text-gray-400">
-                        {health.checks.memory.heapUsed}/{health.checks.memory.heapTotal}
-                      </span>
-                    )}
-                    <span className={getCheckColor(health.checks.memory.status)}>{getCheckIcon(health.checks.memory.status)}</span>
-                  </div>
-                </div>
-              )}
-
-              <div className="text-xs">
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">{t('health.cache', 'Cache')}</span>
-                  <div className="flex items-center gap-2">
-                    {memoryStats && (
-                      <span className="font-mono text-[10px] text-gray-400">
-                        {memoryStats.summary.totalCacheEntries} entrées
-                      </span>
-                    )}
-                    <span className={getCheckColor(health.checks?.cache?.status || 'ok')}>
-                      {getCheckIcon(health.checks?.cache?.status || 'ok')}
-                    </span>
-                  </div>
-                </div>
-
-                {memoryStats && (
-                  <div className="mt-2 ml-2 space-y-1.5 border-l-2 border-gray-200 pl-2 dark:border-gray-600">
-                    <div className="border-b border-gray-100 pb-1 text-[10px] text-gray-500 dark:border-gray-700 dark:text-gray-400">
-                      <span className="font-medium">Processus:</span> {memoryStats.process.heapUsed} / {memoryStats.process.heapTotal}
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-500 dark:text-gray-400">Settings/Templates/Firms</span>
-                      <span className="font-mono text-gray-600 dark:text-gray-300">
-                        {memoryStats.caches.simpleCache.details.settings}/{memoryStats.caches.simpleCache.details.templates}/{memoryStats.caches.simpleCache.details.firms}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-500 dark:text-gray-400">Tendances</span>
-                      <div className="flex items-center gap-1">
-                        <span className="font-mono text-gray-600 dark:text-gray-300">{memoryStats.caches.trends.details.size || 0}</span>
-                        <span className="text-gray-400">/ {memoryStats.caches.trends.details.maxSize}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-500 dark:text-gray-400">Faits marché</span>
-                      <div className="flex items-center gap-1">
-                        <span className="font-mono text-gray-600 dark:text-gray-300">{memoryStats.caches.facts.details.size || 0}</span>
-                        <span className="text-gray-400">/ {memoryStats.caches.facts.details.maxSize}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-500 dark:text-gray-400">Métiers ROME</span>
-                      <div className="flex items-center gap-1">
-                        <span className="font-mono text-gray-600 dark:text-gray-300">{memoryStats.caches.metiers.details.size || 0}</span>
-                        <span className="text-gray-400">/ {memoryStats.caches.metiers.details.maxSize}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-500 dark:text-gray-400">ESCO</span>
-                      <div className="flex items-center gap-1">
-                        <span className="font-mono text-gray-600 dark:text-gray-300">{memoryStats.caches.esco.details.size || 0}</span>
-                        <span className="text-gray-400">/ {memoryStats.caches.esco.details.maxSize}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-500 dark:text-gray-400">Tags</span>
-                      <div className="flex items-center gap-1">
-                        <span className={memoryStats.caches.tags.details.cleanedTags.hasData ? 'text-green-500' : 'text-gray-400'}>
-                          C{memoryStats.caches.tags.details.cleanedTags.hasData ? '✓' : '○'}
-                        </span>
-                        <span className={memoryStats.caches.tags.details.escoTags.hasData ? 'text-green-500' : 'text-gray-400'}>
-                          E{memoryStats.caches.tags.details.escoTags.hasData ? '✓' : '○'}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-500 dark:text-gray-400">Sécurité (blacklist)</span>
-                      <span className="font-mono text-gray-600 dark:text-gray-300">
-                        {memoryStats.caches.security.details.blacklistedTokens} tokens, {memoryStats.caches.security.details.blacklistedUsers} users
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between border-t border-gray-100 pt-1 dark:border-gray-700">
-                      <span className="text-gray-500 dark:text-gray-400">Garbage Collector</span>
-                      <span className={memoryStats.summary.gcAvailable ? 'text-green-500' : 'text-gray-400'}>
-                        {memoryStats.summary.gcAvailable ? 'Disponible' : 'Non exposé'}
-                      </span>
-                    </div>
-                  </div>
-                )}
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                {tf('health.cacheSection', 'Cache')}
               </div>
-
-              {health.checks?.apiKeys && (
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-gray-600 dark:text-gray-400">{t('health.apiKeys', 'Clés API')}</span>
-                  <div className="flex items-center gap-1">
-                    <span className={health.checks.apiKeys.openai ? 'text-green-500' : 'text-red-500'} title="OpenAI">
-                      O{health.checks.apiKeys.openai ? '✓' : '✕'}
-                    </span>
-                    <span className={health.checks.apiKeys.anthropic ? 'text-green-500' : 'text-red-500'} title="Anthropic">
-                      A{health.checks.apiKeys.anthropic ? '✓' : '✕'}
-                    </span>
-                  </div>
+              <IndicatorRow label={tf('health.backend', 'Backend')} meta={cacheBackend?.backend || health.checks?.cache?.backend || 'unknown'} status={health.checks?.cache?.status || 'ok'} t={t} />
+              <IndicatorRow label={tf('health.redisConnection', 'Connexion Redis')} meta={cacheBackend?.connected === null ? tf('health.notApplicable', 'n/a') : cacheBackend?.connected ? tf('health.yes', 'oui') : tf('health.no', 'non')} status={cacheBackend?.connected === false ? 'warning' : 'ok'} t={t} />
+              <IndicatorRow label={tf('health.namespaces', 'Namespaces')} meta={health.checks?.cache ? `${health.checks.cache.settings || 0}/${health.checks.cache.templates || 0}/${health.checks.cache.firms || 0}` : null} status='ok' t={t} />
+              {cacheBackend?.fallbackReason ? (
+                <div className="text-xs text-amber-600 dark:text-amber-300">
+                  {tf('health.fallback', 'Fallback')}: {cacheBackend.fallbackReason}
                 </div>
-              )}
+              ) : null}
+            </div>
+
+            <div className="space-y-2">
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                {tf('health.llmFamilies', 'Familles LLM')}
+              </div>
+              {PROVIDERS.map((provider) => {
+                const providerCheck = health.checks?.[provider];
+                const breaker = circuitBreakers[provider];
+                const meta = breaker?.supported === false
+                  ? providerCheck?.message || tf('health.withoutCircuitBreaker', 'sans circuit breaker')
+                  : tr(t, 'health.providerMeta', `${providerCheck?.status || 'unknown'} / CB ${breaker?.state || 'UNKNOWN'}`, { status: providerCheck?.status || 'unknown', state: breaker?.state || 'UNKNOWN' });
+
+                const status = breaker?.state?.toLowerCase() === 'open'
+                  ? 'open'
+                  : providerCheck?.status || breaker?.state?.toLowerCase() || 'unknown';
+
+                return (
+                  <IndicatorRow
+                    key={provider}
+                    label={provider}
+                    meta={meta}
+                    status={status}
+                    t={t}
+                  />
+                );
+              })}
             </div>
 
             {health.timestamp && (
-              <div className="mt-3 border-t border-gray-200 pt-2 text-[10px] text-gray-400 dark:border-gray-700">
-                {t('health.lastCheck', 'Dernière vérification')}: {formatDateTime(health.timestamp)}
+              <div className="border-t border-gray-200 pt-2 text-[10px] text-gray-400 dark:border-gray-700">
+                {tf('health.lastCheck', 'Dernière vérification')}: {formatDateTime(health.timestamp)}
               </div>
             )}
           </div>
