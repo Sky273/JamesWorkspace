@@ -219,6 +219,35 @@ interface OperationsMetrics {
       orphanExportFilesDeleted?: number;
       staleExportRefsCleared?: number;
     };
+    batchImports?: {
+      runs?: number;
+      successfulRuns?: number;
+      failedRuns?: number;
+      pendingNameRuns?: number;
+      improvementRequestedRuns?: number;
+      resumeRecordsCreated?: number;
+      textExtractionRuns?: number;
+      textExtractionFailures?: number;
+      analysisRuns?: number;
+      totalInputBytes?: number;
+      totalExtractedChars?: number;
+      totalDurationMs?: number;
+      byMimeType?: Record<string, number>;
+      stageFailures?: Record<string, number>;
+      recent?: Array<{
+        timestamp?: string;
+        event?: string;
+        mimeType?: string;
+        fileSize?: number;
+        extractedChars?: number;
+        durationMs?: number;
+        successfulRuns?: number;
+        failedRuns?: number;
+        pendingNameRuns?: number;
+        stage?: string | null;
+        error?: string;
+      }>;
+    };
     improvement?: {
       runs?: number;
       successfulRuns?: number;
@@ -506,6 +535,7 @@ const MetricsPage = (): JSX.Element => {
         [t('metrics.uploadFilesTotalCsv', 'Upload Files Total'), String(operationsMetrics?.operations?.uploads?.total || 0)],
         [t('metrics.ocrRunsCsv', 'OCR Runs'), String(operationsMetrics?.operations?.ocr?.runs || 0)],
         [t('metrics.cleanupRunsCsv', 'Cleanup Runs'), String(operationsMetrics?.operations?.cleanup?.runs || 0)],
+        [t('metrics.batchImportRunsCsv', 'Batch Import Runs'), String(operationsMetrics?.operations?.batchImports?.runs || 0)],
         [t('metrics.improvementRunsCsv', 'Resume Improvement Runs'), String(operationsMetrics?.operations?.improvement?.runs || 0)],
         [t('metrics.adaptationRunsCsv', 'Resume Adaptation Runs'), String(operationsMetrics?.operations?.adaptation?.runs || 0)],
         ['DB Connections Total', String(dbMetrics?.connections?.total || 0)],
@@ -555,6 +585,7 @@ const MetricsPage = (): JSX.Element => {
   }
 
   const profileMatchingMetrics = operationsMetrics?.operations?.profileMatching;
+  const batchImportMetrics = operationsMetrics?.operations?.batchImports;
   const improvementMetrics = operationsMetrics?.operations?.improvement;
   const adaptationMetrics = operationsMetrics?.operations?.adaptation;
   const cacheBackend = cacheAdminMetrics?.cacheBackend?.backend || 'unknown';
@@ -586,6 +617,10 @@ const MetricsPage = (): JSX.Element => {
   const improvementSuccessRatio = computeRatio(
     safeNumber(improvementMetrics?.successfulRuns),
     safeNumber(improvementMetrics?.runs)
+  );
+  const batchImportSuccessRatio = computeRatio(
+    safeNumber(batchImportMetrics?.successfulRuns),
+    safeNumber(batchImportMetrics?.runs)
   );
   const adaptationSuccessRatio = computeRatio(
     safeNumber(adaptationMetrics?.successfulRuns),
@@ -858,6 +893,98 @@ const MetricsPage = (): JSX.Element => {
                   {' | '}
                   {t('metrics.batchExportsSummary', 'Batch exports')}: {formatBytes(safeNumber(operationsMetrics.storage?.batchExportDirectorySize))} / {safeNumber(operationsMetrics.storage?.batchExportFileCount)} {t('metrics.filesUnit', 'files')}
                 </p>
+              </motion.div>
+
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.19 }} className="rounded-xl border bg-amber-50 text-amber-700 border-amber-200 dark:bg-gray-800 dark:text-amber-300 dark:border-amber-700 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-sm font-medium opacity-80">{t('metrics.batchImportPipeline', 'Batch import pipeline')}</p>
+                    <p className="text-2xl font-bold mt-1">{formatNumber(safeNumber(batchImportMetrics?.runs))}</p>
+                    <p className="text-xs mt-1 opacity-60">{t('metrics.batchImportSubtitle', 'Imports CV, extraction de texte et analyse initiale')}</p>
+                  </div>
+                  <ArrowDownTrayIcon className="w-10 h-10 opacity-50" />
+                </div>
+                <div className="grid grid-cols-2 gap-3 text-sm mb-4">
+                  <div className="bg-amber-100 dark:bg-amber-900/30 rounded-lg p-3">
+                    <p className="opacity-70">{t('metrics.successFailures', 'Success / failures')}</p>
+                    <p className="font-semibold">{safeNumber(batchImportMetrics?.successfulRuns)} / {safeNumber(batchImportMetrics?.failedRuns)}</p>
+                  </div>
+                  <div className="bg-amber-100 dark:bg-amber-900/30 rounded-lg p-3">
+                    <p className="opacity-70">{t('metrics.successRatio', 'Success ratio')}</p>
+                    <p className="font-semibold">{batchImportSuccessRatio !== null ? `${(batchImportSuccessRatio * 100).toFixed(1)}%` : 'N/A'}</p>
+                  </div>
+                  <div className="bg-amber-100 dark:bg-amber-900/30 rounded-lg p-3">
+                    <p className="opacity-70">{t('metrics.pendingName', 'Pending name')}</p>
+                    <p className="font-semibold">{safeNumber(batchImportMetrics?.pendingNameRuns)}</p>
+                  </div>
+                  <div className="bg-amber-100 dark:bg-amber-900/30 rounded-lg p-3">
+                    <p className="opacity-70">{t('metrics.improvementRequested', 'Improve requested')}</p>
+                    <p className="font-semibold">{safeNumber(batchImportMetrics?.improvementRequestedRuns)}</p>
+                  </div>
+                  <div className="bg-amber-100 dark:bg-amber-900/30 rounded-lg p-3">
+                    <p className="opacity-70">{t('metrics.textExtraction', 'Text extraction')}</p>
+                    <p className="font-semibold">{safeNumber(batchImportMetrics?.textExtractionRuns)} / {safeNumber(batchImportMetrics?.textExtractionFailures)}</p>
+                  </div>
+                  <div className="bg-amber-100 dark:bg-amber-900/30 rounded-lg p-3">
+                    <p className="opacity-70">{t('metrics.analysisRuns', 'Analysis runs')}</p>
+                    <p className="font-semibold">{safeNumber(batchImportMetrics?.analysisRuns)}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3 text-sm mb-4">
+                  <div className="bg-amber-100 dark:bg-amber-900/30 rounded-lg p-3">
+                    <p className="opacity-70">{t('metrics.inputBytes', 'Input bytes')}</p>
+                    <p className="font-semibold">{formatBytes(safeNumber(batchImportMetrics?.totalInputBytes))}</p>
+                  </div>
+                  <div className="bg-amber-100 dark:bg-amber-900/30 rounded-lg p-3">
+                    <p className="opacity-70">{t('metrics.extractedChars', 'Extracted chars')}</p>
+                    <p className="font-semibold">{formatNumber(safeNumber(batchImportMetrics?.totalExtractedChars))}</p>
+                  </div>
+                </div>
+                {batchImportMetrics?.stageFailures && Object.keys(batchImportMetrics.stageFailures).length > 0 && (
+                  <div className="overflow-x-auto max-h-32 mb-4">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-amber-200 dark:border-amber-700">
+                          <th className="text-left py-2 px-2 font-medium opacity-70">{t('metrics.stage', 'Stage')}</th>
+                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.failures', 'Failures')}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Object.entries(batchImportMetrics.stageFailures)
+                          .sort(([, left], [, right]) => safeNumber(right) - safeNumber(left))
+                          .map(([stage, count]) => (
+                            <tr key={stage} className="border-b border-amber-100 dark:border-amber-800">
+                              <td className="py-2 px-2 font-mono text-xs">{stage}</td>
+                              <td className="py-2 px-2 text-right font-semibold">{safeNumber(count)}</td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                {batchImportMetrics?.recent && batchImportMetrics.recent.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold opacity-70 mb-2">{t('metrics.recentActivity', 'Recent activity')}</p>
+                    <div className="space-y-2 max-h-32 overflow-y-auto">
+                      {batchImportMetrics.recent.slice().reverse().map((entry, index) => (
+                        <div key={`${entry.timestamp || 'entry'}-${index}`} className="bg-amber-100 dark:bg-amber-900/30 rounded-lg p-2 text-xs">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-mono">{entry.event || 'run'}{entry.stage ? ` | ${entry.stage}` : ''}</span>
+                            <span className="opacity-60">{entry.timestamp ? formatDateTime(entry.timestamp) : 'N/A'}</span>
+                          </div>
+                          <div className="mt-1 opacity-80">
+                            {entry.mimeType || 'unknown'} | {t('metrics.duration', 'Duration')}: {safeNumber(entry.durationMs)}ms
+                            {entry.extractedChars ? ` | ${t('metrics.extractedChars', 'Extracted chars')}: ${formatNumber(safeNumber(entry.extractedChars))}` : ''}
+                          </div>
+                          <div className="mt-1 opacity-70">
+                            {t('metrics.successFailures', 'Success / failures')}: {safeNumber(entry.successfulRuns)} / {safeNumber(entry.failedRuns)}
+                            {entry.error ? ` | ${t('common.error', 'Error')}: ${entry.error}` : ''}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </motion.div>
 
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.195 }} className="rounded-xl border bg-violet-50 text-violet-700 border-violet-200 dark:bg-gray-800 dark:text-violet-400 dark:border-violet-700 p-6">

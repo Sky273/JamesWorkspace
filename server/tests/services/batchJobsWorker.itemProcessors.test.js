@@ -57,6 +57,13 @@ vi.mock('../../services/settings.service.js', () => ({
     }))
 }));
 
+const mockTrackBatchImportActivity = vi.fn();
+vi.mock('../../services/metrics.service.js', () => ({
+    metrics: {
+        trackBatchImportActivity: (...args) => mockTrackBatchImportActivity(...args)
+    }
+}));
+
 const mockSendConsentRequest = vi.fn();
 const mockMarkConsentError = vi.fn();
 vi.mock('../../services/consent.service.js', () => ({
@@ -92,6 +99,7 @@ describe('Batch Jobs Worker - Item Processors', () => {
         mockSendConsentRequest.mockReset();
         mockMarkConsentError.mockReset();
         mockExecuteResumeAdaptation.mockReset();
+        mockTrackBatchImportActivity.mockReset();
     });
 
     const job = { id: 'job-1', firm_id: 'firm-1', firm_name: 'TestFirm' };
@@ -132,6 +140,8 @@ describe('Batch Jobs Worker - Item Processors', () => {
             expect(mockAnalyze).toHaveBeenCalledWith(expect.any(String), 'firm-1', 'cv.pdf');
             // Should update resume with analysis
             expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('UPDATE resumes SET'), expect.any(Array));
+            expect(mockTrackBatchImportActivity).toHaveBeenCalledWith(expect.objectContaining({ event: 'run', mimeType: 'application/pdf' }));
+            expect(mockTrackBatchImportActivity).toHaveBeenCalledWith(expect.objectContaining({ event: 'completed', successfulRuns: 1 }));
         });
 
         it('should throw on text too short', async () => {
@@ -140,6 +150,12 @@ describe('Batch Jobs Worker - Item Processors', () => {
             mockExtractText.mockResolvedValueOnce('short');
 
             await expect(processImportItem(item, job, {})).rejects.toThrow("extraire le texte");
+            expect(mockTrackBatchImportActivity).toHaveBeenCalledWith(expect.objectContaining({
+                event: 'extract-failed',
+                textExtractionFailures: 1,
+                failedRuns: 1,
+                stage: 'extract-text'
+            }));
         });
 
         it('should pause item when name extraction fails', async () => {
@@ -161,6 +177,10 @@ describe('Batch Jobs Worker - Item Processors', () => {
 
             expect(updateJobItemStatus).toHaveBeenCalledWith('item-1', 'pending_name', expect.objectContaining({
                 error_message: expect.stringContaining('nom du candidat')
+            }));
+            expect(mockTrackBatchImportActivity).toHaveBeenCalledWith(expect.objectContaining({
+                event: 'pending-name',
+                pendingNameRuns: 1
             }));
         });
 

@@ -110,6 +110,23 @@ class MetricsCollector {
                 staleExportRefsCleared: 0,
                 recent: []
             },
+            batchImports: {
+                runs: 0,
+                successfulRuns: 0,
+                failedRuns: 0,
+                pendingNameRuns: 0,
+                improvementRequestedRuns: 0,
+                resumeRecordsCreated: 0,
+                textExtractionRuns: 0,
+                textExtractionFailures: 0,
+                analysisRuns: 0,
+                totalInputBytes: 0,
+                totalExtractedChars: 0,
+                totalDurationMs: 0,
+                byMimeType: {},
+                stageFailures: {},
+                recent: []
+            },
             improvement: {
                 runs: 0,
                 successfulRuns: 0,
@@ -215,6 +232,13 @@ class MetricsCollector {
                         ...(data.operations.cleanup || {}),
                         recent: []
                     };
+                    this.operations.batchImports = {
+                        ...this.operations.batchImports,
+                        ...(data.operations.batchImports || {}),
+                        byMimeType: data.operations.batchImports?.byMimeType || {},
+                        stageFailures: data.operations.batchImports?.stageFailures || {},
+                        recent: []
+                    };
                     this.operations.improvement = {
                         ...this.operations.improvement,
                         ...(data.operations.improvement || {}),
@@ -292,6 +316,22 @@ class MetricsCollector {
                         directoriesDeleted: this.operations.cleanup.directoriesDeleted,
                         orphanExportFilesDeleted: this.operations.cleanup.orphanExportFilesDeleted,
                         staleExportRefsCleared: this.operations.cleanup.staleExportRefsCleared
+                    },
+                    batchImports: {
+                        runs: this.operations.batchImports.runs,
+                        successfulRuns: this.operations.batchImports.successfulRuns,
+                        failedRuns: this.operations.batchImports.failedRuns,
+                        pendingNameRuns: this.operations.batchImports.pendingNameRuns,
+                        improvementRequestedRuns: this.operations.batchImports.improvementRequestedRuns,
+                        resumeRecordsCreated: this.operations.batchImports.resumeRecordsCreated,
+                        textExtractionRuns: this.operations.batchImports.textExtractionRuns,
+                        textExtractionFailures: this.operations.batchImports.textExtractionFailures,
+                        analysisRuns: this.operations.batchImports.analysisRuns,
+                        totalInputBytes: this.operations.batchImports.totalInputBytes,
+                        totalExtractedChars: this.operations.batchImports.totalExtractedChars,
+                        totalDurationMs: this.operations.batchImports.totalDurationMs,
+                        byMimeType: this.operations.batchImports.byMimeType,
+                        stageFailures: this.operations.batchImports.stageFailures
                     },
                     improvement: {
                         runs: this.operations.improvement.runs,
@@ -655,6 +695,73 @@ class MetricsCollector {
         });
         if (this.operations.cleanup.recent.length > 50) {
             this.operations.cleanup.recent.shift();
+        }
+    }
+
+    trackBatchImportActivity({
+        event = 'run',
+        mimeType = 'unknown',
+        fileSize = 0,
+        extractedChars = 0,
+        durationMs = 0,
+        resumeRecordsCreated = 0,
+        textExtractionRuns = 0,
+        textExtractionFailures = 0,
+        analysisRuns = 0,
+        successfulRuns = 0,
+        failedRuns = 0,
+        pendingNameRuns = 0,
+        improvementRequestedRuns = 0,
+        stage = null,
+        metadata = {}
+    } = {}) {
+        const normalizedMimeType = typeof mimeType === 'string' && mimeType.trim().length > 0
+            ? mimeType.trim().toLowerCase()
+            : 'unknown';
+
+        if (event === 'run') {
+            this.operations.batchImports.runs++;
+            this.operations.batchImports.totalInputBytes += Number(fileSize) || 0;
+            this.operations.batchImports.byMimeType[normalizedMimeType] =
+                (this.operations.batchImports.byMimeType[normalizedMimeType] || 0) + 1;
+        }
+
+        this.operations.batchImports.successfulRuns += Number(successfulRuns) || 0;
+        this.operations.batchImports.failedRuns += Number(failedRuns) || 0;
+        this.operations.batchImports.pendingNameRuns += Number(pendingNameRuns) || 0;
+        this.operations.batchImports.improvementRequestedRuns += Number(improvementRequestedRuns) || 0;
+        this.operations.batchImports.resumeRecordsCreated += Number(resumeRecordsCreated) || 0;
+        this.operations.batchImports.textExtractionRuns += Number(textExtractionRuns) || 0;
+        this.operations.batchImports.textExtractionFailures += Number(textExtractionFailures) || 0;
+        this.operations.batchImports.analysisRuns += Number(analysisRuns) || 0;
+        this.operations.batchImports.totalExtractedChars += Number(extractedChars) || 0;
+        this.operations.batchImports.totalDurationMs += Number(durationMs) || 0;
+
+        if ((Number(failedRuns) || 0) > 0 && stage) {
+            this.operations.batchImports.stageFailures[stage] =
+                (this.operations.batchImports.stageFailures[stage] || 0) + (Number(failedRuns) || 0);
+        }
+
+        this.operations.batchImports.recent.push({
+            timestamp: new Date().toISOString(),
+            event,
+            mimeType: normalizedMimeType,
+            fileSize: Number(fileSize) || 0,
+            extractedChars: Number(extractedChars) || 0,
+            durationMs: Number(durationMs) || 0,
+            resumeRecordsCreated: Number(resumeRecordsCreated) || 0,
+            textExtractionRuns: Number(textExtractionRuns) || 0,
+            textExtractionFailures: Number(textExtractionFailures) || 0,
+            analysisRuns: Number(analysisRuns) || 0,
+            successfulRuns: Number(successfulRuns) || 0,
+            failedRuns: Number(failedRuns) || 0,
+            pendingNameRuns: Number(pendingNameRuns) || 0,
+            improvementRequestedRuns: Number(improvementRequestedRuns) || 0,
+            stage,
+            ...metadata
+        });
+        if (this.operations.batchImports.recent.length > 50) {
+            this.operations.batchImports.recent.shift();
         }
     }
 
@@ -1196,6 +1303,23 @@ class MetricsCollector {
                     orphanExportFilesDeleted: this.operations.cleanup.orphanExportFilesDeleted,
                     staleExportRefsCleared: this.operations.cleanup.staleExportRefsCleared
                 },
+                batchImports: {
+                    runs: this.operations.batchImports.runs,
+                    successfulRuns: this.operations.batchImports.successfulRuns,
+                    failedRuns: this.operations.batchImports.failedRuns,
+                    pendingNameRuns: this.operations.batchImports.pendingNameRuns,
+                    improvementRequestedRuns: this.operations.batchImports.improvementRequestedRuns,
+                    resumeRecordsCreated: this.operations.batchImports.resumeRecordsCreated,
+                    textExtractionRuns: this.operations.batchImports.textExtractionRuns,
+                    textExtractionFailures: this.operations.batchImports.textExtractionFailures,
+                    analysisRuns: this.operations.batchImports.analysisRuns,
+                    totalInputBytes: this.operations.batchImports.totalInputBytes,
+                    totalExtractedChars: this.operations.batchImports.totalExtractedChars,
+                    totalDurationMs: this.operations.batchImports.totalDurationMs,
+                    byMimeType: this.operations.batchImports.byMimeType,
+                    stageFailures: this.operations.batchImports.stageFailures,
+                    recent: this.operations.batchImports.recent.slice(-10)
+                },
                 improvement: {
                     runs: this.operations.improvement.runs,
                     successfulRuns: this.operations.improvement.successfulRuns,
@@ -1297,6 +1421,23 @@ class MetricsCollector {
                 directoriesDeleted: 0,
                 orphanExportFilesDeleted: 0,
                 staleExportRefsCleared: 0,
+                recent: []
+            },
+            batchImports: {
+                runs: 0,
+                successfulRuns: 0,
+                failedRuns: 0,
+                pendingNameRuns: 0,
+                improvementRequestedRuns: 0,
+                resumeRecordsCreated: 0,
+                textExtractionRuns: 0,
+                textExtractionFailures: 0,
+                analysisRuns: 0,
+                totalInputBytes: 0,
+                totalExtractedChars: 0,
+                totalDurationMs: 0,
+                byMimeType: {},
+                stageFailures: {},
                 recent: []
             },
             improvement: {
