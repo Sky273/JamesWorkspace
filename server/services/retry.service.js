@@ -153,6 +153,8 @@ function isRetryableError(error, config) {
     const errorMessage = error.message?.toLowerCase() || '';
     if (errorMessage.includes('timeout') || 
         errorMessage.includes('network') ||
+        errorMessage === 'aborted' ||
+        errorMessage.includes('abort') ||
         errorMessage.includes('econnreset') ||
         errorMessage.includes('socket hang up')) {
         return true;

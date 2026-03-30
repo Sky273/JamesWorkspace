@@ -5,11 +5,26 @@
 
 import { safeLog } from '../../utils/logger.backend.js';
 import { callBusinessChatCompletion } from '../llmProvider.service.js';
+import metrics, { buildLLMMetricLabel } from '../metrics.service.js';
+import {
+    isLikelyAnthropicModel,
+    isLikelyDeepSeekModel,
+    isLikelyGlmModel,
+    isLikelyMiniMaxModel
+} from '../llmConfiguration.service.js';
 import { cleanupHtml, normalizeUtf8Text, parseJsonFromLlmResponse, stripLlmThinkingContent } from './textUtils.js';
 import {
     validateResumeAnalysisPayload,
     validateResumeImprovementEnvelope
 } from './contracts.js';
+
+function inferMetricsProvider(model) {
+    if (isLikelyAnthropicModel(model)) return 'anthropic';
+    if (isLikelyDeepSeekModel(model)) return 'deepseek';
+    if (isLikelyGlmModel(model)) return 'glm';
+    if (isLikelyMiniMaxModel(model)) return 'minimax';
+    return 'openai';
+}
 
 function pickNumericScore(...values) {
     for (const value of values) {
@@ -467,19 +482,33 @@ export async function improveResume(text, analysis, model, improvementPromptTemp
         throw new Error(normalizeUtf8Text('Le texte du CV est trop court pour \u00eatre am\u00e9lior\u00e9 (minimum 100 caract\u00e8res).'));
 }
 
-    const response = await callBusinessChatCompletion({
-        model,
-        messages: [
-            { role: 'system', content: 'You are a professional resume improvement assistant. You MUST respond with valid JSON only, following the exact structure specified in the user prompt. Do not include any text outside the JSON object.' },
-            { role: 'user', content: improvementPrompt }
-        ],
-        maxTokens: 16384,
-        temperature: 0.3,
-        responseFormat: { type: "json_object" },
-        timeout: 300000,
-        userMetadata,
-        operationType: 'Resume Improvement'
-    });
+    const metricsProvider = buildLLMMetricLabel(inferMetricsProvider(model), model);
+
+    let response;
+    try {
+        response = await callBusinessChatCompletion({
+            model,
+            messages: [
+                { role: 'system', content: 'You are a professional resume improvement assistant. You MUST respond with valid JSON only, following the exact structure specified in the user prompt. Do not include any text outside the JSON object.' },
+                { role: 'user', content: improvementPrompt }
+            ],
+            maxTokens: 16384,
+            temperature: 0.3,
+            responseFormat: { type: "json_object" },
+            timeout: 300000,
+            userMetadata,
+            operationType: 'Resume Improvement'
+        });
+    } catch (error) {
+        metrics.trackImprovementActivity({
+            provider: metricsProvider,
+            event: 'run',
+            failedRuns: 1,
+            inputChars: text.length,
+            metadata: { source: 'provider-call', error: error.message }
+        });
+        throw error;
+    }
 
     const rawContent = stripLlmThinkingContent(response.choices[0].message.content);
 
@@ -552,6 +581,16 @@ export async function improveResume(text, analysis, model, improvementPromptTemp
                 analysis: analysisResult
             };
 
+            metrics.trackImprovementActivity({
+                provider: metricsProvider,
+                event: 'run',
+                successfulRuns: 1,
+                structuredRuns: 1,
+                inputChars: text.length,
+                outputChars: cleanedText.length,
+                metadata: { source: 'structured-json' }
+            });
+
             safeLog('info', 'Parsed improvement result:', {
                 hasText: !!result.text,
                 textLength: result.text?.length,
@@ -564,6 +603,13 @@ export async function improveResume(text, analysis, model, improvementPromptTemp
                 error: parseError.message,
                 model,
                 responsePreview: rawContent.substring(0, 500)
+            });
+            metrics.trackImprovementActivity({
+                provider: metricsProvider,
+                event: 'run',
+                failedRuns: 1,
+                inputChars: text.length,
+                metadata: { source: 'structured-json', error: parseError.message }
             });
             throw new Error(normalizeUtf8Text("Le mod\u00e8le LLM a retourn\u00e9 une r\u00e9ponse JSON invalide pour l'am\u00e9lioration. Veuillez r\u00e9essayer ou contacter le support si le probl\u00e8me persiste."));
 }
@@ -583,6 +629,16 @@ export async function improveResume(text, analysis, model, improvementPromptTemp
         });
         throw new Error(normalizeUtf8Text('Le mod\u00e8le LLM a retourn\u00e9 une r\u00e9ponse vide. Veuillez r\u00e9essayer.'));
 }
+
+    metrics.trackImprovementActivity({
+        provider: metricsProvider,
+        event: 'run',
+        successfulRuns: 1,
+        fallbackRuns: 1,
+        inputChars: text.length,
+        outputChars: cleanedText.length,
+        metadata: { source: 'plain-text-fallback' }
+    });
     
     return {
         text: cleanedText,

@@ -117,6 +117,21 @@ describe('Retry Service', () => {
             expect(fn).toHaveBeenCalledTimes(2);
         });
 
+        it('should retry on aborted transport errors', async () => {
+            const fn = vi.fn()
+                .mockRejectedValueOnce(new Error('aborted'))
+                .mockResolvedValueOnce('ok');
+
+            const result = await withRetry(fn, {
+                serviceName: 'deepseek',
+                operationName: 'deepseek-test',
+                retryConfig: { maxRetries: 2, initialDelayMs: 1, maxDelayMs: 10 }
+            });
+
+            expect(result).toBe('ok');
+            expect(fn).toHaveBeenCalledTimes(2);
+        });
+
         it('should throw on non-retryable error immediately', async () => {
             const fn = vi.fn().mockRejectedValue(new Error('bad request'));
 

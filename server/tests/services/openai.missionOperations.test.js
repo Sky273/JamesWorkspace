@@ -13,7 +13,23 @@ vi.mock('../../services/llmProvider.service.js', () => ({
     callBusinessChatCompletion: vi.fn()
 }));
 
+vi.mock('../../services/metrics.service.js', () => ({
+    __esModule: true,
+    default: {
+        trackAdaptationActivity: vi.fn()
+    },
+    buildLLMMetricLabel: vi.fn((provider, model = '') => model ? `${provider}:${model}` : provider)
+}));
+
+vi.mock('../../services/llmConfiguration.service.js', () => ({
+    isLikelyAnthropicModel: vi.fn((model) => /^claude/i.test(String(model || ''))),
+    isLikelyDeepSeekModel: vi.fn((model) => /^deepseek/i.test(String(model || ''))),
+    isLikelyGlmModel: vi.fn((model) => /^glm/i.test(String(model || ''))),
+    isLikelyMiniMaxModel: vi.fn((model) => /^minimax/i.test(String(model || '')))
+}));
+
 import { callBusinessChatCompletion } from '../../services/llmProvider.service.js';
+import metrics from '../../services/metrics.service.js';
 import { matchResumeWithMission, adaptResumeToMission } from '../../services/openai/missionOperations.js';
 
 describe('OpenAI Mission Operations', () => {
@@ -164,6 +180,10 @@ describe('OpenAI Mission Operations', () => {
 
             expect(result.adaptedText).toBe('<p>Adapted CV</p>');
             expect(result.adaptedTitle).toBe('Dev Senior');
+            expect(metrics.trackAdaptationActivity).toHaveBeenCalledWith(expect.objectContaining({
+                successfulRuns: 1,
+                structuredRuns: 1
+            }));
         });
 
         it('should return adaptedText from legacy format (targetedTitle)', async () => {

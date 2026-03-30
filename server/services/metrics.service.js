@@ -110,6 +110,29 @@ class MetricsCollector {
                 staleExportRefsCleared: 0,
                 recent: []
             },
+            improvement: {
+                runs: 0,
+                successfulRuns: 0,
+                failedRuns: 0,
+                fallbackRuns: 0,
+                structuredRuns: 0,
+                inputChars: 0,
+                outputChars: 0,
+                byProvider: {},
+                recent: []
+            },
+            adaptation: {
+                runs: 0,
+                matchRuns: 0,
+                successfulRuns: 0,
+                failedRuns: 0,
+                fallbackRuns: 0,
+                structuredRuns: 0,
+                inputChars: 0,
+                outputChars: 0,
+                byProvider: {},
+                recent: []
+            },
             profileMatching: {
                 searches: 0,
                 batchesStarted: 0,
@@ -192,6 +215,18 @@ class MetricsCollector {
                         ...(data.operations.cleanup || {}),
                         recent: []
                     };
+                    this.operations.improvement = {
+                        ...this.operations.improvement,
+                        ...(data.operations.improvement || {}),
+                        byProvider: data.operations.improvement?.byProvider || {},
+                        recent: []
+                    };
+                    this.operations.adaptation = {
+                        ...this.operations.adaptation,
+                        ...(data.operations.adaptation || {}),
+                        byProvider: data.operations.adaptation?.byProvider || {},
+                        recent: []
+                    };
                     this.operations.profileMatching = {
                         ...this.operations.profileMatching,
                         ...(data.operations.profileMatching || {}),
@@ -257,6 +292,27 @@ class MetricsCollector {
                         directoriesDeleted: this.operations.cleanup.directoriesDeleted,
                         orphanExportFilesDeleted: this.operations.cleanup.orphanExportFilesDeleted,
                         staleExportRefsCleared: this.operations.cleanup.staleExportRefsCleared
+                    },
+                    improvement: {
+                        runs: this.operations.improvement.runs,
+                        successfulRuns: this.operations.improvement.successfulRuns,
+                        failedRuns: this.operations.improvement.failedRuns,
+                        fallbackRuns: this.operations.improvement.fallbackRuns,
+                        structuredRuns: this.operations.improvement.structuredRuns,
+                        inputChars: this.operations.improvement.inputChars,
+                        outputChars: this.operations.improvement.outputChars,
+                        byProvider: this.operations.improvement.byProvider
+                    },
+                    adaptation: {
+                        runs: this.operations.adaptation.runs,
+                        matchRuns: this.operations.adaptation.matchRuns,
+                        successfulRuns: this.operations.adaptation.successfulRuns,
+                        failedRuns: this.operations.adaptation.failedRuns,
+                        fallbackRuns: this.operations.adaptation.fallbackRuns,
+                        structuredRuns: this.operations.adaptation.structuredRuns,
+                        inputChars: this.operations.adaptation.inputChars,
+                        outputChars: this.operations.adaptation.outputChars,
+                        byProvider: this.operations.adaptation.byProvider
                     },
                     profileMatching: {
                         searches: this.operations.profileMatching.searches,
@@ -674,6 +730,135 @@ class MetricsCollector {
         }
     }
 
+    ensureOperationProviderBucket(operationKey, providerKey, initialState) {
+        if (!this.operations[operationKey].byProvider[providerKey]) {
+            this.operations[operationKey].byProvider[providerKey] = { ...initialState };
+        }
+
+        return this.operations[operationKey].byProvider[providerKey];
+    }
+
+    trackImprovementActivity({
+        provider = 'unknown',
+        event = 'run',
+        successfulRuns = 0,
+        failedRuns = 0,
+        fallbackRuns = 0,
+        structuredRuns = 0,
+        inputChars = 0,
+        outputChars = 0,
+        metadata = {}
+    } = {}) {
+        const providerKey = this.normalizeLLMProviderKey(provider);
+        const bucket = this.ensureOperationProviderBucket('improvement', providerKey, {
+            runs: 0,
+            successfulRuns: 0,
+            failedRuns: 0,
+            fallbackRuns: 0,
+            structuredRuns: 0,
+            inputChars: 0,
+            outputChars: 0
+        });
+
+        if (event === 'run') {
+            this.operations.improvement.runs++;
+            bucket.runs++;
+        }
+
+        this.operations.improvement.successfulRuns += Number(successfulRuns) || 0;
+        this.operations.improvement.failedRuns += Number(failedRuns) || 0;
+        this.operations.improvement.fallbackRuns += Number(fallbackRuns) || 0;
+        this.operations.improvement.structuredRuns += Number(structuredRuns) || 0;
+        this.operations.improvement.inputChars += Number(inputChars) || 0;
+        this.operations.improvement.outputChars += Number(outputChars) || 0;
+
+        bucket.successfulRuns += Number(successfulRuns) || 0;
+        bucket.failedRuns += Number(failedRuns) || 0;
+        bucket.fallbackRuns += Number(fallbackRuns) || 0;
+        bucket.structuredRuns += Number(structuredRuns) || 0;
+        bucket.inputChars += Number(inputChars) || 0;
+        bucket.outputChars += Number(outputChars) || 0;
+
+        this.operations.improvement.recent.push({
+            timestamp: new Date().toISOString(),
+            provider: providerKey,
+            event,
+            successfulRuns: Number(successfulRuns) || 0,
+            failedRuns: Number(failedRuns) || 0,
+            fallbackRuns: Number(fallbackRuns) || 0,
+            structuredRuns: Number(structuredRuns) || 0,
+            inputChars: Number(inputChars) || 0,
+            outputChars: Number(outputChars) || 0,
+            ...metadata
+        });
+        if (this.operations.improvement.recent.length > 50) {
+            this.operations.improvement.recent.shift();
+        }
+    }
+
+    trackAdaptationActivity({
+        provider = 'unknown',
+        event = 'run',
+        matchRuns = 0,
+        successfulRuns = 0,
+        failedRuns = 0,
+        fallbackRuns = 0,
+        structuredRuns = 0,
+        inputChars = 0,
+        outputChars = 0,
+        metadata = {}
+    } = {}) {
+        const providerKey = this.normalizeLLMProviderKey(provider);
+        const bucket = this.ensureOperationProviderBucket('adaptation', providerKey, {
+            runs: 0,
+            matchRuns: 0,
+            successfulRuns: 0,
+            failedRuns: 0,
+            fallbackRuns: 0,
+            structuredRuns: 0,
+            inputChars: 0,
+            outputChars: 0
+        });
+
+        if (event === 'run') {
+            this.operations.adaptation.runs++;
+            bucket.runs++;
+        }
+
+        this.operations.adaptation.matchRuns += Number(matchRuns) || 0;
+        this.operations.adaptation.successfulRuns += Number(successfulRuns) || 0;
+        this.operations.adaptation.failedRuns += Number(failedRuns) || 0;
+        this.operations.adaptation.fallbackRuns += Number(fallbackRuns) || 0;
+        this.operations.adaptation.structuredRuns += Number(structuredRuns) || 0;
+        this.operations.adaptation.inputChars += Number(inputChars) || 0;
+        this.operations.adaptation.outputChars += Number(outputChars) || 0;
+
+        bucket.matchRuns += Number(matchRuns) || 0;
+        bucket.successfulRuns += Number(successfulRuns) || 0;
+        bucket.failedRuns += Number(failedRuns) || 0;
+        bucket.fallbackRuns += Number(fallbackRuns) || 0;
+        bucket.structuredRuns += Number(structuredRuns) || 0;
+        bucket.inputChars += Number(inputChars) || 0;
+        bucket.outputChars += Number(outputChars) || 0;
+
+        this.operations.adaptation.recent.push({
+            timestamp: new Date().toISOString(),
+            provider: providerKey,
+            event,
+            matchRuns: Number(matchRuns) || 0,
+            successfulRuns: Number(successfulRuns) || 0,
+            failedRuns: Number(failedRuns) || 0,
+            fallbackRuns: Number(fallbackRuns) || 0,
+            structuredRuns: Number(structuredRuns) || 0,
+            inputChars: Number(inputChars) || 0,
+            outputChars: Number(outputChars) || 0,
+            ...metadata
+        });
+        if (this.operations.adaptation.recent.length > 50) {
+            this.operations.adaptation.recent.shift();
+        }
+    }
+
     // Calculate percentiles
     calculatePercentile(percentile) {
         if (this.requests.responseTimes.length === 0) return 0;
@@ -1011,6 +1196,29 @@ class MetricsCollector {
                     orphanExportFilesDeleted: this.operations.cleanup.orphanExportFilesDeleted,
                     staleExportRefsCleared: this.operations.cleanup.staleExportRefsCleared
                 },
+                improvement: {
+                    runs: this.operations.improvement.runs,
+                    successfulRuns: this.operations.improvement.successfulRuns,
+                    failedRuns: this.operations.improvement.failedRuns,
+                    fallbackRuns: this.operations.improvement.fallbackRuns,
+                    structuredRuns: this.operations.improvement.structuredRuns,
+                    inputChars: this.operations.improvement.inputChars,
+                    outputChars: this.operations.improvement.outputChars,
+                    byProvider: this.operations.improvement.byProvider,
+                    recent: this.operations.improvement.recent.slice(-10)
+                },
+                adaptation: {
+                    runs: this.operations.adaptation.runs,
+                    matchRuns: this.operations.adaptation.matchRuns,
+                    successfulRuns: this.operations.adaptation.successfulRuns,
+                    failedRuns: this.operations.adaptation.failedRuns,
+                    fallbackRuns: this.operations.adaptation.fallbackRuns,
+                    structuredRuns: this.operations.adaptation.structuredRuns,
+                    inputChars: this.operations.adaptation.inputChars,
+                    outputChars: this.operations.adaptation.outputChars,
+                    byProvider: this.operations.adaptation.byProvider,
+                    recent: this.operations.adaptation.recent.slice(-10)
+                },
                 profileMatching: {
                     searches: this.operations.profileMatching.searches,
                     batchesStarted: this.operations.profileMatching.batchesStarted,
@@ -1089,6 +1297,29 @@ class MetricsCollector {
                 directoriesDeleted: 0,
                 orphanExportFilesDeleted: 0,
                 staleExportRefsCleared: 0,
+                recent: []
+            },
+            improvement: {
+                runs: 0,
+                successfulRuns: 0,
+                failedRuns: 0,
+                fallbackRuns: 0,
+                structuredRuns: 0,
+                inputChars: 0,
+                outputChars: 0,
+                byProvider: {},
+                recent: []
+            },
+            adaptation: {
+                runs: 0,
+                matchRuns: 0,
+                successfulRuns: 0,
+                failedRuns: 0,
+                fallbackRuns: 0,
+                structuredRuns: 0,
+                inputChars: 0,
+                outputChars: 0,
+                byProvider: {},
                 recent: []
             },
             profileMatching: {

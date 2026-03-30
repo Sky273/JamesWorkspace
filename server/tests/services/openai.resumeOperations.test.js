@@ -13,6 +13,21 @@ vi.mock('../../services/llmProvider.service.js', () => ({
     callBusinessChatCompletion: vi.fn()
 }));
 
+vi.mock('../../services/metrics.service.js', () => ({
+    __esModule: true,
+    default: {
+        trackImprovementActivity: vi.fn()
+    },
+    buildLLMMetricLabel: vi.fn((provider, model = '') => model ? `${provider}:${model}` : provider)
+}));
+
+vi.mock('../../services/llmConfiguration.service.js', () => ({
+    isLikelyAnthropicModel: vi.fn((model) => /^claude/i.test(String(model || ''))),
+    isLikelyDeepSeekModel: vi.fn((model) => /^deepseek/i.test(String(model || ''))),
+    isLikelyGlmModel: vi.fn((model) => /^glm/i.test(String(model || ''))),
+    isLikelyMiniMaxModel: vi.fn((model) => /^minimax/i.test(String(model || '')))
+}));
+
 vi.mock('../../services/openai/textUtils.js', async (importOriginal) => {
     const actual = await importOriginal();
     return {
@@ -22,6 +37,7 @@ vi.mock('../../services/openai/textUtils.js', async (importOriginal) => {
 });
 
 import { callBusinessChatCompletion } from '../../services/llmProvider.service.js';
+import metrics from '../../services/metrics.service.js';
 import { analyzeResume, improveResume } from '../../services/openai/resumeOperations.js';
 
 describe('OpenAI Resume Operations', () => {
@@ -205,6 +221,10 @@ describe('OpenAI Resume Operations', () => {
             expect(result.text).toBe('<p>Improved CV</p>');
             expect(result.analysis.globalRating).toBe(90);
             expect(result.analysis.skillsRating).toBe(85);
+            expect(metrics.trackImprovementActivity).toHaveBeenCalledWith(expect.objectContaining({
+                successfulRuns: 1,
+                structuredRuns: 1
+            }));
         });
 
         it('should prefer structured HTML over flattened improvedText when both are present', async () => {

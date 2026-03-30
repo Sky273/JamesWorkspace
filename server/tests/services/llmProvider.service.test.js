@@ -28,7 +28,7 @@ vi.mock('../../services/anthropic.service.js', () => ({
 }));
 
 vi.mock('../../services/deepseek.service.js', () => ({
-    callDeepSeekChat: vi.fn()
+    callDeepSeekWithCircuitBreaker: vi.fn()
 }));
 
 vi.mock('../../services/glm.service.js', () => ({
@@ -61,7 +61,7 @@ vi.mock('../../utils/logger.backend.js', () => ({
 
 import { getLLMSettings } from '../../services/settings.service.js';
 import { callOpenAI } from '../../services/openai/apiClient.js';
-import { callDeepSeekChat } from '../../services/deepseek.service.js';
+import { callDeepSeekWithCircuitBreaker } from '../../services/deepseek.service.js';
 import { callGLMChat } from '../../services/glm.service.js';
 import { callOllama } from '../../services/ollama.service.js';
 import { callMiniMaxOpenAICompatible } from '../../services/minimax.service.js';
@@ -114,10 +114,9 @@ describe('llmProvider.service', () => {
             llmProvider: 'deepseek',
             llmModel: 'deepseek-reasoner'
         });
-        callDeepSeekChat.mockResolvedValueOnce({
-            content: 'ok deepseek',
+        callDeepSeekWithCircuitBreaker.mockResolvedValueOnce({
             model: 'deepseek-reasoner',
-            actualModel: 'deepseek-reasoner',
+            choices: [{ message: { content: 'ok deepseek' } }],
             usage: { prompt_tokens: 1, completion_tokens: 2, total_tokens: 3 }
         });
 
@@ -126,16 +125,14 @@ describe('llmProvider.service', () => {
             operationType: 'Resume Analysis'
         });
 
-        expect(callDeepSeekChat).toHaveBeenCalledWith(
-            [{ role: 'user', content: 'Analyse ce CV' }],
-            'deepseek-reasoner',
-            expect.objectContaining({
-                max_tokens: 4096,
-                temperature: 0,
-                timeout: 20 * 60 * 1000,
-                operationType: 'Resume Analysis'
-            })
-        );
+        expect(callDeepSeekWithCircuitBreaker).toHaveBeenCalledWith(expect.objectContaining({
+            model: 'deepseek-reasoner',
+            messages: [{ role: 'user', content: 'Analyse ce CV' }],
+            maxTokens: 4096,
+            temperature: 0,
+            timeout: 20 * 60 * 1000,
+            operationType: 'Resume Analysis'
+        }));
         expect(result.choices[0].message.content).toBe('ok deepseek');
         expect(result.model).toBe('deepseek-reasoner');
     });

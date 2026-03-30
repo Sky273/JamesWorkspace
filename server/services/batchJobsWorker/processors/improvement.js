@@ -1,4 +1,4 @@
-import { safeLog } from '../../../utils/logger.backend.js';
+﻿import { safeLog } from '../../../utils/logger.backend.js';
 import { query } from '../../../config/database.js';
 import { ITEM_STATUS, updateJobItemStatus } from '../../batchJobs.service.js';
 import { parseScore } from '../helpers.js';
@@ -309,3 +309,4 @@ export async function processImproveItem(item, job) {
     safeLog('info', 'Improve item processing completed', { itemId: item.id, resumeId: item.resume_id });
     await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, { progress: 95 });
 }
+

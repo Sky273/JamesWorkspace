@@ -200,6 +200,69 @@ interface OperationsMetrics {
       orphanExportFilesDeleted?: number;
       staleExportRefsCleared?: number;
     };
+    improvement?: {
+      runs?: number;
+      successfulRuns?: number;
+      failedRuns?: number;
+      fallbackRuns?: number;
+      structuredRuns?: number;
+      inputChars?: number;
+      outputChars?: number;
+      recent?: Array<{
+        timestamp?: string;
+        provider?: string;
+        event?: string;
+        successfulRuns?: number;
+        failedRuns?: number;
+        fallbackRuns?: number;
+        structuredRuns?: number;
+        inputChars?: number;
+        outputChars?: number;
+        source?: string;
+      }>;
+      byProvider?: Record<string, {
+        runs?: number;
+        successfulRuns?: number;
+        failedRuns?: number;
+        fallbackRuns?: number;
+        structuredRuns?: number;
+        inputChars?: number;
+        outputChars?: number;
+      }>;
+    };
+    adaptation?: {
+      runs?: number;
+      matchRuns?: number;
+      successfulRuns?: number;
+      failedRuns?: number;
+      fallbackRuns?: number;
+      structuredRuns?: number;
+      inputChars?: number;
+      outputChars?: number;
+      recent?: Array<{
+        timestamp?: string;
+        provider?: string;
+        event?: string;
+        matchRuns?: number;
+        successfulRuns?: number;
+        failedRuns?: number;
+        fallbackRuns?: number;
+        structuredRuns?: number;
+        inputChars?: number;
+        outputChars?: number;
+        source?: string;
+      }>;
+      byProvider?: Record<string, {
+        runs?: number;
+        matchRuns?: number;
+        successfulRuns?: number;
+        failedRuns?: number;
+        fallbackRuns?: number;
+        structuredRuns?: number;
+        inputChars?: number;
+        outputChars?: number;
+      }>;
+    };
     profileMatching?: {
       searches?: number;
       batchesStarted?: number;
@@ -413,6 +476,8 @@ const MetricsPage = (): JSX.Element => {
         [t('metrics.uploadFilesTotalCsv', 'Upload Files Total'), String(operationsMetrics?.operations?.uploads?.total || 0)],
         [t('metrics.ocrRunsCsv', 'OCR Runs'), String(operationsMetrics?.operations?.ocr?.runs || 0)],
         [t('metrics.cleanupRunsCsv', 'Cleanup Runs'), String(operationsMetrics?.operations?.cleanup?.runs || 0)],
+        [t('metrics.improvementRunsCsv', 'Resume Improvement Runs'), String(operationsMetrics?.operations?.improvement?.runs || 0)],
+        [t('metrics.adaptationRunsCsv', 'Resume Adaptation Runs'), String(operationsMetrics?.operations?.adaptation?.runs || 0)],
         ['DB Connections Total', String(dbMetrics?.connections?.total || 0)],
         ['DB Connections Active', String(dbMetrics?.connections?.active || 0)]
       ];
@@ -462,6 +527,8 @@ const MetricsPage = (): JSX.Element => {
   }
 
   const profileMatchingMetrics = operationsMetrics?.operations?.profileMatching;
+  const improvementMetrics = operationsMetrics?.operations?.improvement;
+  const adaptationMetrics = operationsMetrics?.operations?.adaptation;
   const requestedToScoredRatio = computeRatio(
     safeNumber(profileMatchingMetrics?.profilesScored),
     safeNumber(profileMatchingMetrics?.profilesRequested)
@@ -485,6 +552,14 @@ const MetricsPage = (): JSX.Element => {
       ? t('metrics.profileMatchingAlertScoredReturned', 'Profile matching return ratio is degraded. Too many scored profiles are filtered out or failing later in the pipeline.')
       : null
   ].filter(Boolean) as string[];
+  const improvementSuccessRatio = computeRatio(
+    safeNumber(improvementMetrics?.successfulRuns),
+    safeNumber(improvementMetrics?.runs)
+  );
+  const adaptationSuccessRatio = computeRatio(
+    safeNumber(adaptationMetrics?.successfulRuns),
+    safeNumber(adaptationMetrics?.runs)
+  );
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="p-6">      <div className="mb-8">
@@ -862,6 +937,178 @@ const MetricsPage = (): JSX.Element => {
                               {entry.source ? ` | ${t('metrics.source', 'Source')}: ${entry.source}` : ''}
                             </div>
                           )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="rounded-xl border bg-amber-50 text-amber-700 border-amber-200 dark:bg-gray-800 dark:text-amber-400 dark:border-amber-700 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-sm font-medium opacity-80">{t('metrics.resumeImprovementTitle', 'Resume improvement')}</p>
+                    <p className="text-2xl font-bold mt-1">{formatNumber(safeNumber(improvementMetrics?.runs))}</p>
+                    <p className="text-xs mt-1 opacity-60">{t('metrics.resumeImprovementSubtitle', 'Improvement calls, structured outputs and fallback usage')}</p>
+                  </div>
+                  <ArrowDownTrayIcon className="w-10 h-10 opacity-50" />
+                </div>
+                <div className="grid grid-cols-2 gap-3 text-sm mb-4">
+                  <div className="bg-amber-100 dark:bg-amber-900/30 rounded-lg p-3">
+                    <p className="opacity-70">{t('metrics.successFailures', 'Success / failures')}</p>
+                    <p className="font-semibold">{safeNumber(improvementMetrics?.successfulRuns)} / {safeNumber(improvementMetrics?.failedRuns)}</p>
+                  </div>
+                  <div className="bg-amber-100 dark:bg-amber-900/30 rounded-lg p-3">
+                    <p className="opacity-70">{t('metrics.structuredFallback', 'Structured / fallback')}</p>
+                    <p className="font-semibold">{safeNumber(improvementMetrics?.structuredRuns)} / {safeNumber(improvementMetrics?.fallbackRuns)}</p>
+                  </div>
+                  <div className="bg-amber-100 dark:bg-amber-900/30 rounded-lg p-3">
+                    <p className="opacity-70">{t('metrics.inputChars', 'Input chars')}</p>
+                    <p className="font-semibold">{formatNumber(safeNumber(improvementMetrics?.inputChars))}</p>
+                  </div>
+                  <div className="bg-amber-100 dark:bg-amber-900/30 rounded-lg p-3">
+                    <p className="opacity-70">{t('metrics.outputChars', 'Output chars')}</p>
+                    <p className="font-semibold">{formatNumber(safeNumber(improvementMetrics?.outputChars))}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3 text-sm mb-4">
+                  <div className="bg-amber-100 dark:bg-amber-900/30 rounded-lg p-3">
+                    <p className="opacity-70">{t('metrics.successRatio', 'Success ratio')}</p>
+                    <p className="font-semibold">{improvementSuccessRatio !== null ? `${(improvementSuccessRatio * 100).toFixed(1)}%` : 'N/A'}</p>
+                  </div>
+                </div>
+                {improvementMetrics?.byProvider && Object.keys(improvementMetrics.byProvider).length > 0 && (
+                  <div className="overflow-x-auto max-h-40 mb-4">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-amber-200 dark:border-amber-700">
+                          <th className="text-left py-2 px-2 font-medium opacity-70">{t('metrics.model', 'Model')}</th>
+                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.calls', 'Calls')}</th>
+                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.successes', 'Successes')}</th>
+                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.fallbacks', 'Fallbacks')}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Object.entries(improvementMetrics.byProvider)
+                          .sort(([, left], [, right]) => safeNumber(right.runs) - safeNumber(left.runs))
+                          .slice(0, 5)
+                          .map(([provider, stats]) => (
+                            <tr key={provider} className="border-b border-amber-100 dark:border-amber-800">
+                              <td className="py-2 px-2 font-mono text-xs">{provider}</td>
+                              <td className="py-2 px-2 text-right font-semibold">{safeNumber(stats.runs)}</td>
+                              <td className="py-2 px-2 text-right opacity-70">{safeNumber(stats.successfulRuns)}</td>
+                              <td className="py-2 px-2 text-right opacity-70">{safeNumber(stats.fallbackRuns)}</td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                {improvementMetrics?.recent && improvementMetrics.recent.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold opacity-70 mb-2">{t('metrics.resumeImprovementRecent', 'Recent activity')}</p>
+                    <div className="space-y-2 max-h-32 overflow-y-auto">
+                      {improvementMetrics.recent.slice().reverse().map((entry, index) => (
+                        <div key={`${entry.timestamp || 'entry'}-${index}`} className="bg-amber-100 dark:bg-amber-900/30 rounded-lg p-2 text-xs">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-mono">{entry.provider || 'unknown'}</span>
+                            <span className="opacity-60">{entry.timestamp ? formatDateTime(entry.timestamp) : 'N/A'}</span>
+                          </div>
+                          <div className="mt-1 opacity-80">
+                            {entry.event || 'run'} | {t('metrics.successFailures', 'Success / failures')}: {safeNumber(entry.successfulRuns)} / {safeNumber(entry.failedRuns)}
+                          </div>
+                          <div className="mt-1 opacity-70">
+                            {t('metrics.structuredFallback', 'Structured / fallback')}: {safeNumber(entry.structuredRuns)} / {safeNumber(entry.fallbackRuns)}
+                            {entry.source ? ` | ${t('metrics.source', 'Source')}: ${entry.source}` : ''}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.205 }} className="rounded-xl border bg-rose-50 text-rose-700 border-rose-200 dark:bg-gray-800 dark:text-rose-400 dark:border-rose-700 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-sm font-medium opacity-80">{t('metrics.resumeAdaptationTitle', 'Resume adaptation')}</p>
+                    <p className="text-2xl font-bold mt-1">{formatNumber(safeNumber(adaptationMetrics?.runs))}</p>
+                    <p className="text-xs mt-1 opacity-60">{t('metrics.resumeAdaptationSubtitle', 'Match analyses, adaptation calls and structured outputs')}</p>
+                  </div>
+                  <SparklesIcon className="w-10 h-10 opacity-50" />
+                </div>
+                <div className="grid grid-cols-2 gap-3 text-sm mb-4">
+                  <div className="bg-rose-100 dark:bg-rose-900/30 rounded-lg p-3">
+                    <p className="opacity-70">{t('metrics.successFailures', 'Success / failures')}</p>
+                    <p className="font-semibold">{safeNumber(adaptationMetrics?.successfulRuns)} / {safeNumber(adaptationMetrics?.failedRuns)}</p>
+                  </div>
+                  <div className="bg-rose-100 dark:bg-rose-900/30 rounded-lg p-3">
+                    <p className="opacity-70">{t('metrics.matchRuns', 'Match runs')}</p>
+                    <p className="font-semibold">{safeNumber(adaptationMetrics?.matchRuns)}</p>
+                  </div>
+                  <div className="bg-rose-100 dark:bg-rose-900/30 rounded-lg p-3">
+                    <p className="opacity-70">{t('metrics.structuredFallback', 'Structured / fallback')}</p>
+                    <p className="font-semibold">{safeNumber(adaptationMetrics?.structuredRuns)} / {safeNumber(adaptationMetrics?.fallbackRuns)}</p>
+                  </div>
+                  <div className="bg-rose-100 dark:bg-rose-900/30 rounded-lg p-3">
+                    <p className="opacity-70">{t('metrics.successRatio', 'Success ratio')}</p>
+                    <p className="font-semibold">{adaptationSuccessRatio !== null ? `${(adaptationSuccessRatio * 100).toFixed(1)}%` : 'N/A'}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3 text-sm mb-4">
+                  <div className="bg-rose-100 dark:bg-rose-900/30 rounded-lg p-3">
+                    <p className="opacity-70">{t('metrics.inputChars', 'Input chars')}</p>
+                    <p className="font-semibold">{formatNumber(safeNumber(adaptationMetrics?.inputChars))}</p>
+                  </div>
+                  <div className="bg-rose-100 dark:bg-rose-900/30 rounded-lg p-3">
+                    <p className="opacity-70">{t('metrics.outputChars', 'Output chars')}</p>
+                    <p className="font-semibold">{formatNumber(safeNumber(adaptationMetrics?.outputChars))}</p>
+                  </div>
+                </div>
+                {adaptationMetrics?.byProvider && Object.keys(adaptationMetrics.byProvider).length > 0 && (
+                  <div className="overflow-x-auto max-h-40 mb-4">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-rose-200 dark:border-rose-700">
+                          <th className="text-left py-2 px-2 font-medium opacity-70">{t('metrics.model', 'Model')}</th>
+                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.calls', 'Calls')}</th>
+                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.matchRuns', 'Match runs')}</th>
+                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.fallbacks', 'Fallbacks')}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Object.entries(adaptationMetrics.byProvider)
+                          .sort(([, left], [, right]) => safeNumber(right.runs) - safeNumber(left.runs))
+                          .slice(0, 5)
+                          .map(([provider, stats]) => (
+                            <tr key={provider} className="border-b border-rose-100 dark:border-rose-800">
+                              <td className="py-2 px-2 font-mono text-xs">{provider}</td>
+                              <td className="py-2 px-2 text-right font-semibold">{safeNumber(stats.runs)}</td>
+                              <td className="py-2 px-2 text-right opacity-70">{safeNumber(stats.matchRuns)}</td>
+                              <td className="py-2 px-2 text-right opacity-70">{safeNumber(stats.fallbackRuns)}</td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                {adaptationMetrics?.recent && adaptationMetrics.recent.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold opacity-70 mb-2">{t('metrics.resumeAdaptationRecent', 'Recent activity')}</p>
+                    <div className="space-y-2 max-h-32 overflow-y-auto">
+                      {adaptationMetrics.recent.slice().reverse().map((entry, index) => (
+                        <div key={`${entry.timestamp || 'entry'}-${index}`} className="bg-rose-100 dark:bg-rose-900/30 rounded-lg p-2 text-xs">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-mono">{entry.provider || 'unknown'}</span>
+                            <span className="opacity-60">{entry.timestamp ? formatDateTime(entry.timestamp) : 'N/A'}</span>
+                          </div>
+                          <div className="mt-1 opacity-80">
+                            {entry.event || 'run'} | {t('metrics.matchRuns', 'Match runs')}: {safeNumber(entry.matchRuns)} | {t('metrics.successFailures', 'Success / failures')}: {safeNumber(entry.successfulRuns)} / {safeNumber(entry.failedRuns)}
+                          </div>
+                          <div className="mt-1 opacity-70">
+                            {t('metrics.structuredFallback', 'Structured / fallback')}: {safeNumber(entry.structuredRuns)} / {safeNumber(entry.fallbackRuns)}
+                            {entry.source ? ` | ${t('metrics.source', 'Source')}: ${entry.source}` : ''}
+                          </div>
                         </div>
                       ))}
                     </div>

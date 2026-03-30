@@ -1,7 +1,7 @@
 import { callOllama, callOllamaWithVision } from './ollama.service.js';
 import { callMiniMaxOpenAICompatible } from './minimax.service.js';
 import { callAnthropicChat, callAnthropicVision } from './anthropic.service.js';
-import { callDeepSeekChat } from './deepseek.service.js';
+import { callDeepSeekWithCircuitBreaker } from './deepseek.service.js';
 import { callGLMChat } from './glm.service.js';
 import { callOpenAI } from './openai/apiClient.js';
 import { callOpenAIVisionChat } from './openaiChat.service.js';
@@ -55,7 +55,34 @@ async function invokeOpenAIChat({ model, messages, options }) {
 }
 
 async function invokeDeepSeekChat({ model, messages, options }) {
-    return callDeepSeekChat(messages, model, options);
+    return callDeepSeekWithCircuitBreaker({
+        model,
+        messages,
+        maxTokens: options.max_tokens || options.max_completion_tokens || options.max_output_tokens || 1000,
+        temperature: options.temperature,
+        topP: options.top_p,
+        responseFormat: options.response_format,
+        timeout: options.timeout || 120000,
+        maxPromptLength: options.maxPromptLength,
+        userMetadata: options.userMetadata,
+        operationType: options.operationType || 'DeepSeek chat request'
+    }).then((response) => {
+        const choices = response?.choices;
+        const content = choices?.[0]?.message?.content;
+        if (!Array.isArray(choices) || !content) {
+            if (response?.choices?.[0]?.finish_reason === 'length') {
+                throw new Error('DeepSeek response truncated due to token limit');
+            }
+            throw new Error('DeepSeek returned empty content');
+        }
+
+        return {
+            content,
+            model,
+            actualModel: response.model || model,
+            usage: response.usage
+        };
+    });
 }
 
 async function invokeDeepSeekVision() {

@@ -5,8 +5,23 @@
 
 import { safeLog } from '../../utils/logger.backend.js';
 import { callBusinessChatCompletion } from '../llmProvider.service.js';
+import metrics, { buildLLMMetricLabel } from '../metrics.service.js';
+import {
+    isLikelyAnthropicModel,
+    isLikelyDeepSeekModel,
+    isLikelyGlmModel,
+    isLikelyMiniMaxModel
+} from '../llmConfiguration.service.js';
 import { normalizeUtf8Text, parseJsonFromLlmResponse, stripLlmThinkingContent } from './textUtils.js';
 import { validateAdaptationPayload, validateMatchAnalysisPayload } from './contracts.js';
+
+function inferMetricsProvider(model) {
+    if (isLikelyAnthropicModel(model)) return 'anthropic';
+    if (isLikelyDeepSeekModel(model)) return 'deepseek';
+    if (isLikelyGlmModel(model)) return 'glm';
+    if (isLikelyMiniMaxModel(model)) return 'minimax';
+    return 'openai';
+}
 
 /**
  * Match resume with mission using OpenAI
@@ -23,29 +38,60 @@ export async function matchResumeWithMission(resumeText, missionTitle, missionCo
         .replace('{MISSION_TITLE}', missionTitle)
         .replace('{MISSION_CONTENT}', missionContent);
 
-    const response = await callBusinessChatCompletion({
-        model,
-        messages: [
-            { role: 'system', content: 'You are a JSON-only resume-mission matching API. Respond with valid JSON only.' },
-            { role: 'user', content: prompt }
-        ],
-        maxTokens: 4096,
-        temperature: 0.3,
-        responseFormat: { type: "json_object" },
-        userMetadata,
-        operationType: 'Resume-Mission Matching'
-    });
+    const metricsProvider = buildLLMMetricLabel(inferMetricsProvider(model), model);
+    let response;
+    try {
+        response = await callBusinessChatCompletion({
+            model,
+            messages: [
+                { role: 'system', content: 'You are a JSON-only resume-mission matching API. Respond with valid JSON only.' },
+                { role: 'user', content: prompt }
+            ],
+            maxTokens: 4096,
+            temperature: 0.3,
+            responseFormat: { type: "json_object" },
+            userMetadata,
+            operationType: 'Resume-Mission Matching'
+        });
+    } catch (error) {
+        metrics.trackAdaptationActivity({
+            provider: metricsProvider,
+            event: 'match',
+            matchRuns: 1,
+            failedRuns: 1,
+            inputChars: resumeText.length + missionTitle.length + missionContent.length,
+            metadata: { source: 'match-provider-call', error: error.message }
+        });
+        throw error;
+    }
 
     try {
         const rawAnalysis = validateMatchAnalysisPayload(
             parseJsonFromLlmResponse(response.choices[0].message.content)
         );
+        metrics.trackAdaptationActivity({
+            provider: metricsProvider,
+            event: 'match',
+            matchRuns: 1,
+            structuredRuns: 1,
+            inputChars: resumeText.length + missionTitle.length + missionContent.length,
+            outputChars: JSON.stringify(rawAnalysis).length,
+            metadata: { source: 'match-analysis' }
+        });
         // Normalize the response to ensure frontend compatibility while preserving full data
         return normalizeMatchAnalysis(rawAnalysis);
     } catch (parseError) {
         safeLog('error', 'Failed to parse LLM matching response as JSON', {
             error: parseError.message,
             responsePreview: response.choices[0].message.content.substring(0, 500)
+        });
+        metrics.trackAdaptationActivity({
+            provider: metricsProvider,
+            event: 'match',
+            matchRuns: 1,
+            failedRuns: 1,
+            inputChars: resumeText.length + missionTitle.length + missionContent.length,
+            metadata: { source: 'match-analysis', error: parseError.message }
         });
         throw new Error(normalizeUtf8Text('Le mod\u00e8le LLM a retourn\u00e9 une r\u00e9ponse invalide pour le matching. Veuillez r\u00e9essayer ou contacter le support si le probl\u00e8me persiste.'));
 }
@@ -174,19 +220,33 @@ You must respond with a valid JSON object following the exact structure specifie
 Do NOT wrap your response in markdown code blocks. Return ONLY the JSON object.
 Respond in the same language as the resume.`;
 
-    const response = await callBusinessChatCompletion({
-        model,
-        messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: prompt }
-        ],
-        maxTokens: 8192,
-        temperature: 0.4,
-        timeout: 120000,
-        responseFormat: { type: "json_object" },
-        userMetadata,
-        operationType: 'Resume Adaptation'
-    });
+    const metricsProvider = buildLLMMetricLabel(inferMetricsProvider(model), model);
+    const inputChars = resumeText.length + missionTitle.length + missionContent.length;
+    let response;
+    try {
+        response = await callBusinessChatCompletion({
+            model,
+            messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: prompt }
+            ],
+            maxTokens: 8192,
+            temperature: 0.4,
+            timeout: 120000,
+            responseFormat: { type: "json_object" },
+            userMetadata,
+            operationType: 'Resume Adaptation'
+        });
+    } catch (error) {
+        metrics.trackAdaptationActivity({
+            provider: metricsProvider,
+            event: 'run',
+            failedRuns: 1,
+            inputChars,
+            metadata: { source: 'adapt-provider-call', error: error.message }
+        });
+        throw error;
+    }
 
     // Clean markdown code blocks if present
     const content = stripLlmThinkingContent(response.choices[0].message.content);
@@ -198,6 +258,15 @@ Respond in the same language as the resume.`;
         // New format: { name, summary, improvedText, improvements }
         if (parsed.improvedText) {
             const adaptedTitle = parsed.summary?.title || parsed.summary?.targetRole || null;
+            metrics.trackAdaptationActivity({
+                provider: metricsProvider,
+                event: 'run',
+                successfulRuns: 1,
+                structuredRuns: 1,
+                inputChars,
+                outputChars: parsed.improvedText.length,
+                metadata: { source: 'structured-json' }
+            });
             return {
                 adaptedText: parsed.improvedText,
                 adaptedTitle: adaptedTitle,
@@ -209,6 +278,15 @@ Respond in the same language as the resume.`;
         if (parsed.targetedTitle !== undefined) {
             // Convert structured JSON to HTML for display
             const adaptedText = convertAdaptationToHtml(parsed);
+            metrics.trackAdaptationActivity({
+                provider: metricsProvider,
+                event: 'run',
+                successfulRuns: 1,
+                structuredRuns: 1,
+                inputChars,
+                outputChars: adaptedText.length,
+                metadata: { source: 'legacy-structured-json' }
+            });
             return {
                 adaptedText,
                 adaptedTitle: parsed.targetedTitle || null,
@@ -218,6 +296,15 @@ Respond in the same language as the resume.`;
         
         // Legacy format support: {adaptedTitle, adaptedText}
         if (parsed.adaptedText && parsed.adaptedTitle) {
+            metrics.trackAdaptationActivity({
+                provider: metricsProvider,
+                event: 'run',
+                successfulRuns: 1,
+                structuredRuns: 1,
+                inputChars,
+                outputChars: parsed.adaptedText.length,
+                metadata: { source: 'legacy-json' }
+            });
             return {
                 adaptedText: parsed.adaptedText,
                 adaptedTitle: parsed.adaptedTitle
@@ -226,6 +313,15 @@ Respond in the same language as the resume.`;
         
         // If JSON but unknown format, return as-is
         safeLog('warn', 'adaptResumeToMission: Unknown JSON format, returning raw content');
+        metrics.trackAdaptationActivity({
+            provider: metricsProvider,
+            event: 'run',
+            successfulRuns: 1,
+            fallbackRuns: 1,
+            inputChars,
+            outputChars: content.length,
+            metadata: { source: 'unknown-json-format' }
+        });
         return {
             adaptedText: content,
             adaptedTitle: null,
@@ -235,6 +331,15 @@ Respond in the same language as the resume.`;
         // If JSON parsing fails, fall back to treating the whole content as adaptedText
         safeLog('warn', 'adaptResumeToMission: Could not parse JSON response, falling back to plain text');
     }
+    metrics.trackAdaptationActivity({
+        provider: metricsProvider,
+        event: 'run',
+        successfulRuns: 1,
+        fallbackRuns: 1,
+        inputChars,
+        outputChars: content.length,
+        metadata: { source: 'plain-text-fallback' }
+    });
     
     return {
         adaptedText: content,
