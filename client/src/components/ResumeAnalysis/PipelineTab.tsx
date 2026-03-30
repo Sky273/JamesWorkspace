@@ -1,29 +1,13 @@
-/**
+﻿/**
  * Pipeline Tab Component for Resume Analysis
  * Displays candidate selection pipeline entries and interviews for a resume
  */
 
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  PlusIcon,
-  CalendarIcon,
-  ClockIcon,
-  MapPinIcon,
-  LinkIcon,
-  UserGroupIcon,
-  ChevronRightIcon,
-  TrashIcon,
-  CheckCircleIcon,
-  XCircleIcon,
-  ArrowPathIcon
-} from '@heroicons/react/24/outline';
+import { ArrowPathIcon } from '@heroicons/react/24/outline';
 import { toast } from 'react-hot-toast';
 import {
-  PipelineEntry,
-  PipelineStage,
-  Interview,
-  PipelineHistory,
   getStages,
   getPipelineByResumeId,
   addToPipeline,
@@ -42,18 +26,21 @@ import PipelineAddModal from './PipelineAddModal';
 import PipelineScheduleModal from './PipelineScheduleModal';
 import PipelineCompleteModal from './PipelineCompleteModal';
 import PipelineHistoryModal from './PipelineHistoryModal';
-
-interface Mission {
-  id: string;
-  title: string;
-  client: string;
-}
-
-interface Client {
-  id: string;
-  name: string;
-  type?: string;
-}
+import PipelineTabHeader from './pipelineTab/PipelineTabHeader';
+import PipelineCard from './pipelineTab/PipelineCard';
+import { formatPipelineDate, formatRelativePipelineTime } from './pipelineTab/helpers';
+import type {
+  Client,
+  Interview,
+  InterviewOutcomeState,
+  Mission,
+  NewInterviewState,
+  NewPipelineState,
+  PipelineEntry,
+  PipelineHistory,
+  PipelineStage,
+  PipelineTabTranslateFn,
+} from './pipelineTab/types';
 
 interface PipelineTabProps {
   resumeId: string;
@@ -63,8 +50,9 @@ interface PipelineTabProps {
 export default function PipelineTab({ resumeId, resumeName: _resumeName }: PipelineTabProps) {
   const { t, i18n } = useTranslation();
   const isEnglish = i18n.language === 'en';
+  const locale = isEnglish ? 'en-US' : 'fr-FR';
+  const tr = useCallback<PipelineTabTranslateFn>((key: string, options?: unknown) => String(t(key, options as never)), [t]);
 
-  // State
   const [stages, setStages] = useState<PipelineStage[]>([]);
   const [pipelines, setPipelines] = useState<PipelineEntry[]>([]);
   const [missions, setMissions] = useState<Mission[]>([]);
@@ -73,21 +61,15 @@ export default function PipelineTab({ resumeId, resumeName: _resumeName }: Pipel
   const [selectedPipeline, setSelectedPipeline] = useState<PipelineEntry | null>(null);
   const [interviews, setInterviews] = useState<Interview[]>([]);
   const [history, setHistory] = useState<PipelineHistory[]>([]);
-  
-  // Modal states
+
   const [showAddModal, setShowAddModal] = useState(false);
   const [showInterviewModal, setShowInterviewModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [selectedInterview, setSelectedInterview] = useState<Interview | null>(null);
 
-  // Form states
-  const [newPipeline, setNewPipeline] = useState({
-    missionId: '',
-    clientId: '',
-    notes: ''
-  });
-  const [newInterview, setNewInterview] = useState({
+  const [newPipeline, setNewPipeline] = useState<NewPipelineState>({ missionId: '', clientId: '', notes: '' });
+  const [newInterview, setNewInterview] = useState<NewInterviewState>({
     title: '',
     description: '',
     interviewType: 'client',
@@ -95,14 +77,10 @@ export default function PipelineTab({ resumeId, resumeName: _resumeName }: Pipel
     durationMinutes: 60,
     location: '',
     meetingLink: '',
-    attendees: [] as { name: string; email: string }[]
+    attendees: []
   });
-  const [interviewOutcome, setInterviewOutcome] = useState({
-    outcome: '',
-    outcomeNotes: ''
-  });
+  const [interviewOutcome, setInterviewOutcome] = useState<InterviewOutcomeState>({ outcome: '', outcomeNotes: '' });
 
-  // Load data
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
@@ -114,8 +92,7 @@ export default function PipelineTab({ resumeId, resumeName: _resumeName }: Pipel
       ]);
       setStages(stagesData);
       setPipelines(pipelinesData);
-      
-      // Parse missions
+
       if (missionsRes.ok) {
         const missionsData = await missionsRes.json();
         setMissions((missionsData.data || missionsData || []).map((m: { id: string; Title?: string; title?: string; 'Client Name'?: string; client_name?: string }) => ({
@@ -124,8 +101,7 @@ export default function PipelineTab({ resumeId, resumeName: _resumeName }: Pipel
           client: m['Client Name'] || m.client_name || ''
         })));
       }
-      
-      // Parse clients (prospects/clients)
+
       if (clientsRes.ok) {
         const clientsData = await clientsRes.json();
         const clientsList = clientsData.data || clientsData || [];
@@ -134,8 +110,7 @@ export default function PipelineTab({ resumeId, resumeName: _resumeName }: Pipel
           name: c.name,
           type: c.type
         })));
-        
-        }
+      }
     } catch (error) {
       logger.error('[PipelineTab] Error loading data:', error);
       toast.error(t('pipeline.errors.loadFailed'));
@@ -145,25 +120,18 @@ export default function PipelineTab({ resumeId, resumeName: _resumeName }: Pipel
   }, [resumeId, t]);
 
   useEffect(() => {
-    loadData();
+    void loadData();
   }, [loadData]);
 
-  // Load interviews when pipeline is selected
   useEffect(() => {
     if (selectedPipeline) {
-      getInterviews(selectedPipeline.id)
+      void getInterviews(selectedPipeline.id)
         .then(setInterviews)
         .catch(err => logger.error('[PipelineTab] Error loading interviews:', err));
     }
   }, [selectedPipeline]);
 
-  // Get stage info
-  const getStageInfo = (stageId: string) => {
-    return stages.find(s => s.id === stageId) || { label: stageId, labelEn: stageId, color: '#6B7280' };
-  };
-
-  // Handle add to pipeline
-  const handleAddToPipeline = async () => {
+  const handleAddToPipeline = useCallback(async () => {
     try {
       await addToPipeline({
         resumeId,
@@ -174,42 +142,38 @@ export default function PipelineTab({ resumeId, resumeName: _resumeName }: Pipel
       toast.success(t('pipeline.addedSuccess'));
       setShowAddModal(false);
       setNewPipeline({ missionId: '', clientId: '', notes: '' });
-      loadData();
+      void loadData();
     } catch (error) {
       logger.error('[PipelineTab] Error adding to pipeline:', error);
       toast.error(t('pipeline.errors.addFailed'));
     }
-  };
+  }, [loadData, newPipeline, resumeId, t]);
 
-  // Handle stage change
-  const handleStageChange = async (pipelineId: string, newStage: string) => {
+  const handleStageChange = useCallback(async (pipelineId: string, newStage: string) => {
     try {
       await moveToStage(pipelineId, newStage);
       toast.success(t('pipeline.stageUpdated'));
-      loadData();
+      void loadData();
     } catch (error) {
       logger.error('[PipelineTab] Error changing stage:', error);
       toast.error(t('pipeline.errors.updateFailed'));
     }
-  };
+  }, [loadData, t]);
 
-  // Handle remove from pipeline
-  const handleRemove = async (pipelineId: string) => {
+  const handleRemove = useCallback(async (pipelineId: string) => {
     if (!window.confirm(t('pipeline.confirmRemove'))) return;
-    
     try {
       await removeFromPipeline(pipelineId);
       toast.success(t('pipeline.removedSuccess'));
       setSelectedPipeline(null);
-      loadData();
+      void loadData();
     } catch (error) {
       logger.error('[PipelineTab] Error removing from pipeline:', error);
       toast.error(t('pipeline.errors.removeFailed'));
     }
-  };
+  }, [loadData, t]);
 
-  // Handle schedule interview
-  const handleScheduleInterview = async () => {
+  const handleScheduleInterview = useCallback(async () => {
     if (!selectedPipeline || !newInterview.title || !newInterview.scheduledAt) {
       toast.error(t('pipeline.errors.interviewRequired'));
       return;
@@ -238,49 +202,40 @@ export default function PipelineTab({ resumeId, resumeName: _resumeName }: Pipel
         meetingLink: '',
         attendees: []
       });
-      // Reload interviews
       const updatedInterviews = await getInterviews(selectedPipeline.id);
       setInterviews(updatedInterviews);
-      loadData();
+      void loadData();
     } catch (error) {
       logger.error('[PipelineTab] Error scheduling interview:', error);
       toast.error(t('pipeline.errors.scheduleFailed'));
     }
-  };
+  }, [loadData, newInterview, selectedPipeline, t]);
 
-  // Handle complete interview
-  const handleCompleteInterview = async () => {
+  const handleCompleteInterview = useCallback(async () => {
     if (!selectedInterview || !interviewOutcome.outcome) {
       toast.error(t('pipeline.errors.outcomeRequired'));
       return;
     }
 
     try {
-      await completeInterview(
-        selectedInterview.id,
-        interviewOutcome.outcome,
-        interviewOutcome.outcomeNotes
-      );
+      await completeInterview(selectedInterview.id, interviewOutcome.outcome, interviewOutcome.outcomeNotes);
       toast.success(t('pipeline.interviewCompleted'));
       setShowCompleteModal(false);
       setSelectedInterview(null);
       setInterviewOutcome({ outcome: '', outcomeNotes: '' });
-      // Reload
       if (selectedPipeline) {
         const updatedInterviews = await getInterviews(selectedPipeline.id);
         setInterviews(updatedInterviews);
       }
-      loadData();
+      void loadData();
     } catch (error) {
       logger.error('[PipelineTab] Error completing interview:', error);
       toast.error(t('pipeline.errors.completeFailed'));
     }
-  };
+  }, [interviewOutcome, loadData, selectedInterview, selectedPipeline, t]);
 
-  // Handle cancel interview
-  const handleCancelInterview = async (interviewId: string) => {
+  const handleCancelInterview = useCallback(async (interviewId: string) => {
     if (!window.confirm(t('pipeline.confirmCancelInterview'))) return;
-
     try {
       await cancelInterview(interviewId);
       toast.success(t('pipeline.interviewCancelled'));
@@ -292,10 +247,9 @@ export default function PipelineTab({ resumeId, resumeName: _resumeName }: Pipel
       logger.error('[PipelineTab] Error cancelling interview:', error);
       toast.error(t('pipeline.errors.cancelFailed'));
     }
-  };
+  }, [selectedPipeline, t]);
 
-  // Handle view history
-  const handleViewHistory = async (pipeline: PipelineEntry) => {
+  const handleViewHistory = useCallback(async (pipeline: PipelineEntry) => {
     try {
       const historyData = await getPipelineHistory(pipeline.id);
       setHistory(historyData);
@@ -304,32 +258,18 @@ export default function PipelineTab({ resumeId, resumeName: _resumeName }: Pipel
       logger.error('[PipelineTab] Error loading history:', error);
       toast.error(t('pipeline.errors.historyFailed'));
     }
-  };
+  }, [t]);
 
-  // Format date
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString(isEnglish ? 'en-US' : 'fr-FR', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
+  const handlePipelineNotesChange = useCallback((pipelineId: string, notes: string) => {
+    setPipelines(prev => prev.map(p => (p.id === pipelineId ? { ...p, notes } : p)));
+  }, []);
 
-  // Format relative time
-  const formatRelativeTime = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diffMs = date.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 0) return isEnglish ? 'Today' : "Aujourd'hui";
-    if (diffDays === 1) return isEnglish ? 'Tomorrow' : 'Demain';
-    if (diffDays > 0 && diffDays <= 7) return isEnglish ? `In ${diffDays} days` : `Dans ${diffDays} jours`;
-    return formatDate(dateStr);
-  };
+  const handlePipelineNotesBlur = useCallback((pipelineId: string, notes: string) => {
+    void updatePipelineNotes(pipelineId, notes);
+  }, []);
+
+  const formatDate = useCallback((value: string) => formatPipelineDate(value, locale), [locale]);
+  const formatRelativeTime = useCallback((value: string) => formatRelativePipelineTime(value, locale, isEnglish), [isEnglish, locale]);
 
   if (loading) {
     return (
@@ -341,311 +281,38 @@ export default function PipelineTab({ resumeId, resumeName: _resumeName }: Pipel
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-            {t('pipeline.title')}
-          </h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            {t('pipeline.description')}
-          </p>
-        </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <PlusIcon className="h-5 w-5" />
-          {t('pipeline.addToProcess')}
-        </button>
-      </div>
+      <PipelineTabHeader hasEntries={pipelines.length > 0} onAdd={() => setShowAddModal(true)} t={tr} />
 
-      {/* Pipeline entries */}
-      {pipelines.length === 0 ? (
-        <div className="text-center py-12 bg-gray-50 dark:bg-gray-800 rounded-lg">
-          <UserGroupIcon className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-          <p className="text-gray-500 dark:text-gray-400">
-            {t('pipeline.noEntries')}
-          </p>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="mt-4 text-blue-600 hover:text-blue-700 font-medium"
-          >
-            {t('pipeline.addFirst')}
-          </button>
-        </div>
-      ) : (
+      {pipelines.length > 0 && (
         <div className="grid gap-4">
-          {pipelines.map((pipeline) => {
-            const stageInfo = getStageInfo(pipeline.stage);
-            const isSelected = selectedPipeline?.id === pipeline.id;
-
-            return (
-              <div
-                key={pipeline.id}
-                className={`bg-white dark:bg-gray-800 rounded-lg border-2 transition-all ${
-                  isSelected
-                    ? 'border-blue-500 shadow-lg'
-                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
-                }`}
-              >
-                {/* Card header */}
-                <div
-                  className="p-4 cursor-pointer"
-                  onClick={() => setSelectedPipeline(isSelected ? null : pipeline)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      {/* Stage badge */}
-                      <span
-                        className="px-3 py-1 rounded-full text-sm font-medium text-white"
-                        style={{ backgroundColor: stageInfo.color }}
-                      >
-                        {isEnglish ? stageInfo.labelEn : stageInfo.label}
-                      </span>
-                      
-                      {/* Mission/Client info */}
-                      <div>
-                        {pipeline.mission_title && (
-                          <span className="text-gray-900 dark:text-gray-100 font-medium">
-                            {pipeline.mission_title}
-                          </span>
-                        )}
-                        {pipeline.client_name && (
-                          <span className="text-gray-500 dark:text-gray-400 ml-2">
-                            @ {pipeline.client_name}
-                          </span>
-                        )}
-                        {!pipeline.mission_title && !pipeline.client_name && (
-                          <span className="text-gray-500 dark:text-gray-400 italic">
-                            {t('pipeline.noMissionAssigned')}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-4">
-                      {/* Next interview indicator */}
-                      {pipeline.next_interview && (
-                        <div className="flex items-center gap-1 text-sm text-orange-600 dark:text-orange-400">
-                          <CalendarIcon className="h-4 w-4" />
-                          {formatRelativeTime(pipeline.next_interview)}
-                        </div>
-                      )}
-                      
-                      {/* Interview count */}
-                      {pipeline.interview_count && pipeline.interview_count > 0 && (
-                        <span className="text-sm text-gray-500 dark:text-gray-400">
-                          {pipeline.interview_count} {t('pipeline.interviews')}
-                        </span>
-                      )}
-
-                      <ChevronRightIcon
-                        className={`h-5 w-5 text-gray-400 transition-transform ${
-                          isSelected ? 'rotate-90' : ''
-                        }`}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Expanded content */}
-                {isSelected && (
-                  <div className="border-t border-gray-200 dark:border-gray-700 p-4 space-y-4">
-                    {/* Stage selector */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        {t('pipeline.changeStage')}
-                      </label>
-                      <div className="flex flex-wrap gap-2">
-                        {stages.map((stage) => (
-                          <button
-                            key={stage.id}
-                            onClick={() => handleStageChange(pipeline.id, stage.id)}
-                            className={`px-3 py-1 rounded-full text-sm font-medium transition-all ${
-                              pipeline.stage === stage.id
-                                ? 'text-white'
-                                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:opacity-80'
-                            }`}
-                            style={
-                              pipeline.stage === stage.id
-                                ? { backgroundColor: stage.color }
-                                : undefined
-                            }
-                          >
-                            {isEnglish ? stage.labelEn : stage.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Notes */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        {t('pipeline.notes')}
-                      </label>
-                      <textarea
-                        value={pipeline.notes || ''}
-                        onChange={(e) => {
-                          const newNotes = e.target.value;
-                          setPipelines(prev =>
-                            prev.map(p =>
-                              p.id === pipeline.id ? { ...p, notes: newNotes } : p
-                            )
-                          );
-                        }}
-                        onBlur={() => {
-                          if (pipeline.notes !== null) {
-                            updatePipelineNotes(pipeline.id, pipeline.notes || '');
-                          }
-                        }}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                        rows={2}
-                        placeholder={t('pipeline.notesPlaceholder')}
-                      />
-                    </div>
-
-                    {/* Interviews section */}
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          {t('pipeline.scheduledInterviews')}
-                        </label>
-                        <button
-                          onClick={() => setShowInterviewModal(true)}
-                          className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
-                        >
-                          <PlusIcon className="h-4 w-4" />
-                          {t('pipeline.scheduleInterview')}
-                        </button>
-                      </div>
-
-                      {interviews.length === 0 ? (
-                        <p className="text-sm text-gray-500 dark:text-gray-400 italic">
-                          {t('pipeline.noInterviews')}
-                        </p>
-                      ) : (
-                        <div className="space-y-2">
-                          {interviews.map((interview) => (
-                            <div
-                              key={interview.id}
-                              className={`p-3 rounded-lg border ${
-                                interview.status === 'cancelled'
-                                  ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
-                                  : interview.status === 'completed'
-                                  ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
-                                  : 'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600'
-                              }`}
-                            >
-                              <div className="flex items-start justify-between">
-                                <div>
-                                  <h4 className="font-medium text-gray-900 dark:text-gray-100">
-                                    {interview.title}
-                                  </h4>
-                                  <div className="flex items-center gap-4 mt-1 text-sm text-gray-500 dark:text-gray-400">
-                                    <span className="flex items-center gap-1">
-                                      <CalendarIcon className="h-4 w-4" />
-                                      {formatDate(interview.scheduled_at)}
-                                    </span>
-                                    <span className="flex items-center gap-1">
-                                      <ClockIcon className="h-4 w-4" />
-                                      {interview.duration_minutes} min
-                                    </span>
-                                    {interview.location && (
-                                      <span className="flex items-center gap-1">
-                                        <MapPinIcon className="h-4 w-4" />
-                                        {interview.location}
-                                      </span>
-                                    )}
-                                    {interview.meeting_link && (
-                                      <a
-                                        href={interview.meeting_link}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex items-center gap-1 text-blue-600 hover:text-blue-700"
-                                      >
-                                        <LinkIcon className="h-4 w-4" />
-                                        {t('pipeline.joinMeeting')}
-                                      </a>
-                                    )}
-                                  </div>
-                                  {interview.outcome && (
-                                    <div className="mt-2 text-sm flex items-center gap-2">
-                                      <span className="font-medium">{t('pipeline.outcome')}:</span>
-                                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-                                        interview.outcome === 'positive' 
-                                          ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300'
-                                          : interview.outcome === 'negative'
-                                          ? 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300'
-                                          : interview.outcome === 'neutral'
-                                          ? 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-                                          : 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300'
-                                      }`}>
-                                        {interview.outcome === 'positive' && '? '}
-                                        {interview.outcome === 'negative' && '? '}
-                                        {interview.outcome === 'to_follow_up' && '? '}
-                                        {t(`pipeline.outcomes.${interview.outcome === 'to_follow_up' ? 'toFollowUp' : interview.outcome}`)}
-                                      </span>
-                                      {interview.outcome_notes && (
-                                        <span className="text-gray-500 dark:text-gray-400 italic">- {interview.outcome_notes}</span>
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
-
-                                {interview.status === 'scheduled' && (
-                                  <div className="flex items-center gap-2">
-                                    <button
-                                      onClick={() => {
-                                        setSelectedInterview(interview);
-                                        setShowCompleteModal(true);
-                                      }}
-                                      className="p-1 text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30 rounded"
-                                      title={t('pipeline.markComplete')}
-                                    >
-                                      <CheckCircleIcon className="h-5 w-5" />
-                                    </button>
-                                    <button
-                                      onClick={() => handleCancelInterview(interview.id)}
-                                      className="p-1 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30 rounded"
-                                      title={t('pipeline.cancelInterview')}
-                                    >
-                                      <XCircleIcon className="h-5 w-5" />
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
-                      <button
-                        onClick={() => handleViewHistory(pipeline)}
-                        className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
-                      >
-                        {t('pipeline.viewHistory')}
-                      </button>
-                      <button
-                        onClick={() => handleRemove(pipeline.id)}
-                        className="text-sm text-red-600 hover:text-red-700 flex items-center gap-1"
-                      >
-                        <TrashIcon className="h-4 w-4" />
-                        {t('pipeline.remove')}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+          {pipelines.map((pipeline) => (
+            <PipelineCard
+              key={pipeline.id}
+              pipeline={pipeline}
+              stages={stages}
+              interviews={selectedPipeline?.id === pipeline.id ? interviews : []}
+              isSelected={selectedPipeline?.id === pipeline.id}
+              isEnglish={isEnglish}
+              formatDate={formatDate}
+              formatRelativeTime={formatRelativeTime}
+              onSelect={() => setSelectedPipeline(selectedPipeline?.id === pipeline.id ? null : pipeline)}
+              onChangeStage={handleStageChange}
+              onNotesChange={handlePipelineNotesChange}
+              onNotesBlur={handlePipelineNotesBlur}
+              onScheduleInterview={() => setShowInterviewModal(true)}
+              onOpenCompleteInterview={(interview) => {
+                setSelectedInterview(interview);
+                setShowCompleteModal(true);
+              }}
+              onCancelInterview={handleCancelInterview}
+              onViewHistory={handleViewHistory}
+              onRemove={handleRemove}
+              t={tr}
+            />
+          ))}
         </div>
       )}
 
-      {/* Add to Pipeline Modal */}
       {showAddModal && (
         <PipelineAddModal
           missions={missions}
@@ -657,7 +324,6 @@ export default function PipelineTab({ resumeId, resumeName: _resumeName }: Pipel
         />
       )}
 
-      {/* Schedule Interview Modal */}
       {showInterviewModal && (
         <PipelineScheduleModal
           newInterview={newInterview}
@@ -667,7 +333,6 @@ export default function PipelineTab({ resumeId, resumeName: _resumeName }: Pipel
         />
       )}
 
-      {/* Complete Interview Modal */}
       {showCompleteModal && selectedInterview && (
         <PipelineCompleteModal
           interviewOutcome={interviewOutcome}
@@ -680,7 +345,6 @@ export default function PipelineTab({ resumeId, resumeName: _resumeName }: Pipel
         />
       )}
 
-      {/* History Modal */}
       {showHistoryModal && (
         <PipelineHistoryModal
           history={history}
