@@ -1,6 +1,6 @@
 import express from 'express';
 import { OPENAI_API_KEY, ANTHROPIC_API_KEY, DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, GLM_API_KEY, GLM_BASE_URL, MINIMAX_API_KEY, MINIMAX_ANTHROPIC_BASE_URL, OLLAMA_BASE_URL } from '../config/constants.js';
-import { settingsCache, templatesCache, firmsCache } from '../services/cache.service.js';
+import { settingsCache, templatesCache, firmsCache, getCacheRegistryStats } from '../services/cache.service.js';
 import { checkDatabaseHealth } from '../services/health.service.js';
 import { getTrendsCacheStats } from '../services/marketTrends.service.js';
 import { getFactsCacheStats } from '../services/marketFacts.service.js';
@@ -314,7 +314,8 @@ router.get('/', async (req, res) => {
         status: 'ok',
         settings: settingsCache.size(),
         templates: templatesCache.size(),
-        firms: firmsCache.size()
+        firms: firmsCache.size(),
+        registry: getCacheRegistryStats()
     };
 
     const responseTime = Date.now() - startTime;
@@ -347,7 +348,8 @@ router.get('/memory', authenticateToken, requireAdmin, async (req, res) => {
         simpleCache: {
             settings: settingsCache.size(),
             templates: templatesCache.size(),
-            firms: firmsCache.size()
+            firms: firmsCache.size(),
+            registry: getCacheRegistryStats()
         },
         trends: getTrendsCacheStats(),
         facts: getFactsCacheStats(),

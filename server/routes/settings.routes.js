@@ -2,7 +2,7 @@ import express from 'express';
 import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
 import { validateParams, validateBody, updateSettingsSchema } from '../utils/validation.js';
 import { securityLog, getRequestMetadata, LOG_LEVELS, SECURITY_EVENTS } from '../services/security.service.js';
-import { settingsCache } from '../services/cache.service.js';
+import { settingsCache, CACHE_KEYS } from '../services/cache.service.js';
 import { metrics } from '../services/metrics.service.js';
 import { invalidateSettingsCache, getSettings, getLLMSettings, upsertSettings, createSettings } from '../services/settings.service.js';
 import { normalizeWeights, DEFAULT_ANALYSIS_PROMPT, DEFAULT_IMPROVEMENT_PROMPT, DEFAULT_MATCH_ANALYSIS_PROMPT, DEFAULT_ADAPTATION_PROMPT } from '../config/prompts.backend.js';
@@ -97,7 +97,7 @@ function mergeCanonicalLlmSettings(settingsData, canonicalLlmSettings = {}) {
 // GET /api/settings - Get settings
 router.get('/', authenticateToken, async (req, res) => {
     try {
-        const cachedSettings = settingsCache.get('settings');
+        const cachedSettings = settingsCache.get(CACHE_KEYS.settings.UI_SETTINGS);
         if (cachedSettings) {
             metrics.trackCacheHit();
             safeLog('debug', 'Returning cached settings');
@@ -148,7 +148,7 @@ router.get('/', authenticateToken, async (req, res) => {
             canonicalLlmSettings
         );
 
-        settingsCache.set('settings', responseData);
+        settingsCache.set(CACHE_KEYS.settings.UI_SETTINGS, responseData);
 
         res.json(responseData);
     } catch (error) {
@@ -195,7 +195,6 @@ router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), valida
         const { id } = req.params;
         let updateData = req.body;
 
-        settingsCache.invalidate('settings');
         invalidateSettingsCache();
 
         safeLog('info', 'Updating settings', { settingsId: id });
@@ -231,7 +230,6 @@ router.post('/', authenticateToken, requireAdmin, validateBody(updateSettingsSch
     try {
         let settingsData = req.body;
 
-        settingsCache.invalidate('settings');
         invalidateSettingsCache();
 
         settingsData = normalizeRequestedSettingsModel(normalizeWeights(settingsData));

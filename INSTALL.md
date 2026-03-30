@@ -154,18 +154,18 @@ ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3001,https://localhost:34
 OPENAI_API_KEY=sk-votre-cle-openai
 
 # Anthropic (Claude)
-# Obtenir une cl?: https://console.anthropic.com/
+# Obtenir une clé: https://console.anthropic.com/
 ANTHROPIC_API_KEY=sk-ant-votre-cle-anthropic
 
 # MiniMax
-# Obtenir une cl?: https://platform.minimax.io/
+# Obtenir une clé: https://platform.minimax.io/
 MINIMAX_API_KEY=sk-api-votre-cle-minimax
 # Optionnel: surcharger les endpoints compatibles OpenAI / Anthropic
 MINIMAX_OPENAI_BASE_URL=https://api.minimax.io/v1
 MINIMAX_ANTHROPIC_BASE_URL=https://api.minimax.io/anthropic
 
 # Ollama distant
-# URL de votre instance Ollama externe. Ollama n'est pas embarqu? dans le conteneur ResumeConverter.
+# URL de votre instance Ollama externe. Ollama n'est pas embarquée dans le conteneur ResumeConverter.
 # Exemples: http://192.168.1.20:11434 ou https://ollama.votre-domaine.tld
 OLLAMA_BASE_URL=http://192.168.1.20:11434
 # Timeout global de secours pour les appels Ollama (en ms)
@@ -540,10 +540,10 @@ La configuration complète du fichier `.env` est détaillée dans la section [In
 
 | Variable | Description | Où l'obtenir |
 |----------|-------------|--------------|
-| `OPENAI_API_KEY` | Cl? API OpenAI (GPT-4/GPT-5) | https://platform.openai.com/api-keys |
-| `ANTHROPIC_API_KEY` | Cl? API Anthropic (Claude) | https://console.anthropic.com/ |
-| `MINIMAX_API_KEY` | Cl? API MiniMax | https://platform.minimax.io/ |
-| `OLLAMA_BASE_URL` | URL de l'instance Ollama distante | Votre instance Ollama auto-h?berg?e |
+| `OPENAI_API_KEY` | Clé API OpenAI (GPT-4/GPT-5) | https://platform.openai.com/api-keys |
+| `ANTHROPIC_API_KEY` | Clé API Anthropic (Claude) | https://console.anthropic.com/ |
+| `MINIMAX_API_KEY` | Clé API MiniMax | https://platform.minimax.io/ |
+| `OLLAMA_BASE_URL` | URL de l'instance Ollama distante | Votre instance Ollama auto-hébergée |
 
 #### Variables optionnelles par fonctionnalité
 
@@ -555,12 +555,12 @@ La configuration complète du fichier `.env` est détaillée dans la section [In
 | **Market Radar FR** | `FRANCE_TRAVAIL_CLIENT_ID`, `FRANCE_TRAVAIL_CLIENT_SECRET` |
 | **Market Radar INT** | `ADZUNA_APP_ID`, `ADZUNA_APP_KEY` |
 
-### Notes LLM suppl?mentaires
+### Notes LLM supplémentaires
 
 - **MiniMax** : le provider `minimax` utilise `MINIMAX_API_KEY`. Les URLs `MINIMAX_OPENAI_BASE_URL` et `MINIMAX_ANTHROPIC_BASE_URL` sont optionnelles.
-- **Ollama** : seule une instance **distante** est support?e. ResumeConverter n'embarque plus de runtime Ollama dans le conteneur.
-- Si vous utilisez Ollama, configurez l'URL distante dans `OLLAMA_BASE_URL` et aussi dans les param?tres de l'application (`ollamaBaseUrl`).
-- Avec Ollama, l'application peut fonctionner sans `llmModel` explicite si l'instance distante impose d?j? son mod?le.
+- **Ollama** : seule une instance **distante** est supportée. ResumeConverter n'embarque plus de runtime Ollama dans le conteneur.
+- Si vous utilisez Ollama, configurez l'URL distante dans `OLLAMA_BASE_URL` et aussi dans les paramètres de l'application (`ollamaBaseUrl`).
+- Avec Ollama, l'application peut fonctionner sans `llmModel` explicite si l'instance distante impose déjà son modèle.
 
 ### Configuration HTTPS (hors Docker)
 

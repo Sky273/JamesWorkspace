@@ -10,7 +10,12 @@ vi.mock('../../config/database.js', () => ({
 vi.mock('../../services/cache.service.js', () => ({
     settingsCache: { size: () => 5 },
     templatesCache: { size: () => 3 },
-    firmsCache: { size: () => 2 }
+    firmsCache: { size: () => 2 },
+    getCacheRegistryStats: () => ({
+        settings: { name: 'settings', size: 5 },
+        templates: { name: 'templates', size: 3 },
+        firms: { name: 'firms', size: 2 }
+    })
 }));
 
 vi.mock('../../config/constants.js', () => ({

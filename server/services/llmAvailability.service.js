@@ -6,9 +6,31 @@ const runtimeUnavailableModels = new Map();
 let availabilityStateInitialized = false;
 let availabilityStateInitializationPromise = null;
 const PROVIDERS_WITH_RUNTIME_AVAILABILITY = ['minimax', 'glm', 'deepseek', 'openai', 'anthropic', 'ollama'];
+const CANONICAL_LLM_SETTINGS_KEY = 'default';
 
 function buildAvailabilityKey(provider, model) {
     return `${String(provider || '').trim().toLowerCase()}::${String(model || '').trim()}`;
+}
+
+async function findCanonicalOrLatestSettingsRecord(columns = ['id']) {
+    const canonicalRecords = await selectWithTimeout('llm_settings', {
+        columns,
+        where: 'settings_key = $1',
+        params: [CANONICAL_LLM_SETTINGS_KEY],
+        limit: 1
+    });
+
+    if (canonicalRecords.length > 0) {
+        return canonicalRecords[0];
+    }
+
+    const legacyRecords = await selectWithTimeout('llm_settings', {
+        columns,
+        limit: 1,
+        orderBy: "CASE WHEN status = 'active' THEN 0 ELSE 1 END, updated_at DESC NULLS LAST, created_at DESC NULLS LAST, id DESC"
+    });
+
+    return legacyRecords[0] || null;
 }
 
 function toIsoStringOrNull(value) {
@@ -101,14 +123,13 @@ function applyPersistedAvailabilityState(rawState = {}) {
 
 async function invalidateAvailabilityCaches() {
     try {
-        const [{ invalidateSettingsCache }, { settingsCache }] = await Promise.all([
+        const [{ invalidateSettingsCache }, { invalidateSettingsCaches }] = await Promise.all([
             import('./settings.service.js'),
             import('./cache.service.js')
         ]);
 
         invalidateSettingsCache();
-        settingsCache.invalidate('settings');
-        settingsCache.invalidate('llm-settings');
+        invalidateSettingsCaches();
     } catch (error) {
         safeLog('warn', 'Failed to invalidate settings caches after updating LLM availability state', {
             error: error.message
@@ -118,19 +139,19 @@ async function invalidateAvailabilityCaches() {
 
 async function persistAvailabilityState() {
     const persistedState = buildPersistedAvailabilityState();
-    const settingsRecords = await selectWithTimeout('llm_settings', {
-        columns: ['id'],
-        limit: 1,
-        orderBy: 'created_at DESC'
-    });
+    const settingsRecord = await findCanonicalOrLatestSettingsRecord(['id']);
 
-    if (settingsRecords.length > 0) {
-        await updateWithTimeout('llm_settings', settingsRecords[0].id, {
+    if (settingsRecord) {
+        await updateWithTimeout('llm_settings', settingsRecord.id, {
+            settings_key: CANONICAL_LLM_SETTINGS_KEY,
+            name: 'Default Settings',
+            status: 'active',
             llm_availability_state: persistedState
         });
     } else {
         await createWithTimeout('llm_settings', {
             fields: {
+                settings_key: CANONICAL_LLM_SETTINGS_KEY,
                 name: 'Default Settings',
                 status: 'active',
                 llm_availability_state: persistedState
@@ -156,13 +177,9 @@ export async function initializeLLMAvailabilityState({ forceRefresh = false } = 
 
     availabilityStateInitializationPromise = (async () => {
         try {
-            const settingsRecords = await selectWithTimeout('llm_settings', {
-                columns: ['llm_availability_state'],
-                limit: 1,
-                orderBy: 'created_at DESC'
-            });
+            const settingsRecord = await findCanonicalOrLatestSettingsRecord(['llm_availability_state']);
 
-            const persistedState = settingsRecords[0]?.llm_availability_state || {};
+            const persistedState = settingsRecord?.llm_availability_state || {};
             const normalizedState = applyPersistedAvailabilityState(persistedState);
             availabilityStateInitialized = true;
 

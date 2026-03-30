@@ -18,12 +18,24 @@ vi.mock('../../utils/logger.backend.js', () => ({
 
 const settingsCacheStore = new Map();
 vi.mock('../../services/cache.service.js', () => ({
+    CACHE_KEYS: {
+        settings: {
+            UI_SETTINGS: 'settings',
+            LLM_SETTINGS: 'llm-settings'
+        }
+    },
     settingsCache: {
         get: vi.fn((key) => settingsCacheStore.has(key) ? settingsCacheStore.get(key) : null),
         set: vi.fn((key, value) => settingsCacheStore.set(key, value)),
         invalidate: vi.fn((key) => settingsCacheStore.delete(key)),
-        size: vi.fn(() => settingsCacheStore.size)
-    }
+        size: vi.fn(() => settingsCacheStore.size),
+        ttl: 60000,
+        getStats: vi.fn(() => ({ name: 'settings', size: settingsCacheStore.size }))
+    },
+    invalidateSettingsCaches: vi.fn(() => {
+        settingsCacheStore.delete('settings');
+        settingsCacheStore.delete('llm-settings');
+    })
 }));
 
 vi.mock('../../services/llmAvailability.service.js', () => ({
@@ -48,8 +60,12 @@ import {
     getLLMProvider,
     invalidateSettingsCache,
     getPrompts,
-    calculateWeightedGlobalRating
+    calculateWeightedGlobalRating,
+    getSettings,
+    upsertSettings,
+    createSettings
 } from '../../services/settings.service.js';
+import { updateWithTimeout, createWithTimeout } from '../../utils/postgresHelpers.js';
 
 describe('Settings Service', () => {
     beforeEach(() => {
@@ -85,14 +101,48 @@ describe('Settings Service', () => {
             expect(result.llmModel).toBe('gpt-4o');
             expect(result.llmProvider).toBe('openai');
             expect(result['Profile Matching Local Skill Weight']).toBe(9);
+            expect(selectWithTimeout).toHaveBeenCalledWith('llm_settings', expect.objectContaining({
+                where: 'settings_key = $1',
+                params: ['default'],
+                limit: 1
+            }));
         });
 
         it('should return empty object if no settings exist', async () => {
-            selectWithTimeout.mockResolvedValueOnce([]);
+            selectWithTimeout
+                .mockResolvedValueOnce([])
+                .mockResolvedValueOnce([]);
             
             const result = await getLLMSettings();
             
             expect(result).toEqual({});
+        });
+
+        it('should auto-promote the latest legacy settings row to canonical when settings_key is missing', async () => {
+            selectWithTimeout
+                .mockResolvedValueOnce([])
+                .mockResolvedValueOnce([{
+                    id: 'legacy-1',
+                    name: 'Legacy Settings',
+                    status: 'inactive',
+                    llm_model: 'gpt-4o'
+                }]);
+            updateWithTimeout.mockResolvedValueOnce({
+                id: 'legacy-1',
+                settings_key: 'default',
+                name: 'Legacy Settings',
+                status: 'inactive',
+                llm_model: 'gpt-4o'
+            });
+
+            const result = await getLLMSettings();
+
+            expect(updateWithTimeout).toHaveBeenCalledWith('llm_settings', 'legacy-1', expect.objectContaining({
+                settings_key: 'default',
+                name: 'Legacy Settings',
+                status: 'inactive'
+            }));
+            expect(result.llmModel).toBe('gpt-4o');
         });
 
         it('should normalize configured models with the provider default fallback', async () => {
@@ -255,6 +305,55 @@ describe('Settings Service', () => {
             
             expect(result.llmModel).toBe('claude-3-5-sonnet');
             expect(selectWithTimeout).toHaveBeenCalledTimes(2);
+        });
+    });
+
+    describe('canonical persistence', () => {
+        it('should return the canonical settings record', async () => {
+            selectWithTimeout.mockResolvedValueOnce([{ id: 'set-1', settings_key: 'default' }]);
+
+            const result = await getSettings();
+
+            expect(result).toEqual({ id: 'set-1', settings_key: 'default' });
+            expect(selectWithTimeout).toHaveBeenCalledWith('llm_settings', expect.objectContaining({
+                where: 'settings_key = $1',
+                params: ['default'],
+                limit: 1
+            }));
+        });
+
+        it('should upsert against the canonical settings record even if a stale id is provided', async () => {
+            selectWithTimeout.mockResolvedValueOnce([{ id: 'canonical-1', settings_key: 'default' }]);
+            updateWithTimeout.mockResolvedValueOnce([{ id: 'canonical-1', llm_model: 'gpt-4o' }]);
+
+            const result = await upsertSettings('stale-id', { llm_model: 'gpt-4o' });
+
+            expect(updateWithTimeout).toHaveBeenCalledWith('llm_settings', [{ id: 'canonical-1', fields: expect.objectContaining({
+                settings_key: 'default',
+                name: 'Default Settings',
+                status: 'active',
+                llm_model: 'gpt-4o'
+            }) }]);
+            expect(result).toEqual({ id: 'canonical-1', llm_model: 'gpt-4o' });
+        });
+
+        it('should create the canonical settings record when none exists', async () => {
+            selectWithTimeout
+                .mockResolvedValueOnce([])
+                .mockResolvedValueOnce([]);
+            createWithTimeout.mockResolvedValueOnce({ id: 'canonical-1', settings_key: 'default' });
+
+            const result = await createSettings({ llm_model: 'gpt-4o' });
+
+            expect(createWithTimeout).toHaveBeenCalledWith('llm_settings', {
+                fields: expect.objectContaining({
+                    settings_key: 'default',
+                    name: 'Default Settings',
+                    status: 'active',
+                    llm_model: 'gpt-4o'
+                })
+            });
+            expect(result).toEqual({ id: 'canonical-1', settings_key: 'default' });
         });
     });
 });

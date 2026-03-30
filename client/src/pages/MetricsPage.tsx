@@ -822,6 +822,7 @@ const MetricsPage = (): JSX.Element => {
                           <th className="text-left py-2 px-2 font-medium opacity-70">{t('metrics.model', 'Model')}</th>
                           <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.searches', 'Searches')}</th>
                           <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.calls', 'Calls')}</th>
+                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.profileNormalizationEventsShort', 'Normalized')}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -833,6 +834,7 @@ const MetricsPage = (): JSX.Element => {
                               <td className="py-2 px-2 font-mono text-xs">{provider}</td>
                               <td className="py-2 px-2 text-right font-semibold">{safeNumber(stats.searches)}</td>
                               <td className="py-2 px-2 text-right opacity-70">{safeNumber(stats.batchesStarted)}</td>
+                              <td className="py-2 px-2 text-right opacity-70">{safeNumber(stats.normalizationEvents)}</td>
                             </tr>
                           ))}
                       </tbody>
@@ -852,6 +854,14 @@ const MetricsPage = (): JSX.Element => {
                           <div className="mt-1 opacity-80">
                             {entry.event || 'search'} | {t('metrics.profilesRequested', 'Profiles requested')}: {safeNumber(entry.profilesRequested)} | {t('metrics.profilesScored', 'Profiles scored')}: {safeNumber(entry.profilesScored)}
                           </div>
+                          {(safeNumber(entry.normalizationEvents) > 0 || entry.field || entry.inputType) && (
+                            <div className="mt-1 opacity-70">
+                              {t('metrics.profileNormalizationEvents', 'Normalized LLM fields')}: {safeNumber(entry.normalizationEvents)}
+                              {entry.field ? ` | ${t('metrics.field', 'Field')}: ${entry.field}` : ''}
+                              {entry.inputType ? ` | ${t('metrics.inputType', 'Input type')}: ${entry.inputType}` : ''}
+                              {entry.source ? ` | ${t('metrics.source', 'Source')}: ${entry.source}` : ''}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>

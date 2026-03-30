@@ -357,7 +357,7 @@ docker-run.bat  # or ./docker/docker-build.sh run
 3. **API keys** are passed as environment variables (not stored in image)
 4. **HTTPS** should be configured via reverse proxy (nginx, traefik) in production
 
-## � Viewing Logs
+## 📜 Viewing Logs
 
 The container runs two services via Supervisor. Use these scripts to view logs:
 
@@ -394,7 +394,7 @@ docker logs -f resumeconverter-app
 | `/var/log/supervisor/pdf-server.err.log` | PDF server stderr |
 | `/var/log/supervisor/supervisord.log` | Supervisor manager |
 
-## �🐛 Troubleshooting
+## 🐛 Troubleshooting
 
 ### Container won't start
 

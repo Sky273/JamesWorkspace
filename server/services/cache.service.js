@@ -6,10 +6,17 @@ import { safeLog } from '../utils/logger.backend.js';
 // ============================================
 
 class SimpleCache {
-    constructor(ttl = 600000, maxSize = 1000) {
+    constructor(name, ttl = 600000, maxSize = 1000) {
+        this.name = name;
         this.cache = new Map();
         this.ttl = ttl;
         this.maxSize = maxSize;
+        this.stats = {
+            hits: 0,
+            misses: 0,
+            sets: 0,
+            invalidations: 0
+        };
         
         // Periodic cleanup every 5 minutes to remove expired entries
         this.cleanupInterval = setInterval(() => {
@@ -18,6 +25,7 @@ class SimpleCache {
     }
 
     set(key, value) {
+        this.stats.sets++;
         this.cache.set(key, {
             value,
             timestamp: Date.now()
@@ -26,18 +34,24 @@ class SimpleCache {
 
     get(key) {
         const item = this.cache.get(key);
-        if (!item) return null;
+        if (!item) {
+            this.stats.misses++;
+            return null;
+        }
 
         const age = Date.now() - item.timestamp;
         if (age > this.ttl) {
             this.cache.delete(key);
+            this.stats.misses++;
             return null;
         }
 
+        this.stats.hits++;
         return item.value;
     }
 
     invalidate(key) {
+        this.stats.invalidations++;
         this.cache.delete(key);
     }
 
@@ -47,6 +61,15 @@ class SimpleCache {
 
     size() {
         return this.cache.size;
+    }
+
+    getStats() {
+        return {
+            name: this.name,
+            ttl: this.ttl,
+            size: this.cache.size,
+            ...this.stats
+        };
     }
     
     cleanup() {
@@ -71,7 +94,11 @@ class SimpleCache {
         }
         
         if (cleaned > 0) {
-            safeLog('debug', 'Cache cleanup completed', { entriesRemoved: cleaned, cacheSize: this.cache.size });
+            safeLog('debug', 'Cache cleanup completed', {
+                cacheName: this.name,
+                entriesRemoved: cleaned,
+                cacheSize: this.cache.size
+            });
         }
     }
     
@@ -84,10 +111,36 @@ class SimpleCache {
     }
 }
 
+export const CACHE_KEYS = {
+    settings: {
+        UI_SETTINGS: 'settings',
+        LLM_SETTINGS: 'llm-settings'
+    },
+    templates: {
+        ALL_TEMPLATES: 'all_templates'
+    },
+    firms: {
+        ALL_FIRMS: 'all_firms'
+    }
+};
+
 // Create cache instances
-export const settingsCache = new SimpleCache(CACHE_TTL.SETTINGS);
-export const templatesCache = new SimpleCache(CACHE_TTL.TEMPLATES);
-export const firmsCache = new SimpleCache(CACHE_TTL.FIRMS);
+export const settingsCache = new SimpleCache('settings', CACHE_TTL.SETTINGS);
+export const templatesCache = new SimpleCache('templates', CACHE_TTL.TEMPLATES);
+export const firmsCache = new SimpleCache('firms', CACHE_TTL.FIRMS);
+
+export function invalidateSettingsCaches() {
+    settingsCache.invalidate(CACHE_KEYS.settings.UI_SETTINGS);
+    settingsCache.invalidate(CACHE_KEYS.settings.LLM_SETTINGS);
+}
+
+export function getCacheRegistryStats() {
+    return {
+        settings: settingsCache.getStats(),
+        templates: templatesCache.getStats(),
+        firms: firmsCache.getStats()
+    };
+}
 
 // Initialize cache system
 safeLog('info', 'Cache system initialized', {

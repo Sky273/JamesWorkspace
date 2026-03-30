@@ -102,6 +102,36 @@ describe('OpenAI Mission Operations', () => {
             expect(result.missingKeywords).toContain('angular');
         });
 
+        it('should normalize malformed match analysis fields', async () => {
+            callBusinessChatCompletion.mockResolvedValueOnce({
+                choices: [{
+                    message: {
+                        content: JSON.stringify({
+                            matchScore: '82%',
+                            strengths: 'React; Node.js',
+                            gaps: { first: 'AWS' },
+                            keywordAnalysis: {
+                                matchedKeywords: 'react, node',
+                                partialKeywords: { first: 'typescript' },
+                                missingKeywords: ['aws']
+                            }
+                        })
+                    }
+                }]
+            });
+
+            const result = await matchResumeWithMission(
+                'resume', 'Job', 'Content', 'gpt-4o', '{RESUME_TEXT}{MISSION_TITLE}{MISSION_CONTENT}'
+            );
+
+            expect(result.matchScore).toBe(82);
+            expect(result.strengths).toEqual(['React', 'Node.js']);
+            expect(result.gaps).toEqual(['AWS']);
+            expect(result.keywordMatches).toContain('react');
+            expect(result.keywordMatches).toContain('~typescript');
+            expect(result.missingKeywords).toContain('aws');
+        });
+
         it('should throw on invalid JSON response', async () => {
             callBusinessChatCompletion.mockResolvedValueOnce({
                 choices: [{ message: { content: 'not json' } }]
@@ -158,6 +188,39 @@ describe('OpenAI Mission Operations', () => {
             expect(result.adaptedTitle).toBe('Dev Lead');
             expect(result.adaptedText).toContain('Experienced dev');
             expect(result.structuredData).toBeDefined();
+        });
+
+        it('should normalize malformed adaptation payload fields', async () => {
+            callBusinessChatCompletion.mockResolvedValueOnce({
+                choices: [{
+                    message: {
+                        content: JSON.stringify({
+                            improvedText: '<p>Adapted CV</p>',
+                            summary: {
+                                title: 42,
+                                targetRole: 'Delivery Lead'
+                            },
+                            keySkills: 'React, TypeScript',
+                            toolsAndTechnologies: { one: 'Docker', two: 'AWS' },
+                            certifications: 'AWS Solution Architect',
+                            languages: { first: 'French', second: 'English' }
+                        })
+                    }
+                }]
+            });
+
+            const result = await adaptResumeToMission({
+                resumeText: 'text', missionTitle: 'Job', missionContent: 'content',
+                matchAnalysis: {}, model: 'gpt-4o',
+                adaptationPrompt: '{RESUME_TEXT}{MISSION_TITLE}{MISSION_CONTENT}{MATCH_ANALYSIS_JSON}'
+            });
+
+            expect(result.adaptedText).toBe('<p>Adapted CV</p>');
+            expect(result.adaptedTitle).toBe('Delivery Lead');
+            expect(result.structuredData.keySkills).toEqual(['React', 'TypeScript']);
+            expect(result.structuredData.toolsAndTechnologies).toEqual(['Docker', 'AWS']);
+            expect(result.structuredData.certifications).toEqual(['AWS Solution Architect']);
+            expect(result.structuredData.languages).toEqual(['French', 'English']);
         });
 
         it('should handle non-JSON response as plain text', async () => {

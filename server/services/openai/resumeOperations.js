@@ -6,6 +6,10 @@
 import { safeLog } from '../../utils/logger.backend.js';
 import { callBusinessChatCompletion } from '../llmProvider.service.js';
 import { cleanupHtml, normalizeUtf8Text, parseJsonFromLlmResponse, stripLlmThinkingContent } from './textUtils.js';
+import {
+    validateResumeAnalysisPayload,
+    validateResumeImprovementEnvelope
+} from './contracts.js';
 
 function pickNumericScore(...values) {
     for (const value of values) {
@@ -320,6 +324,7 @@ function normalizeSuggestionsBySection(source) {
 }
 
 function normalizeAnalysisResponse(analysis) {
+    analysis = validateResumeAnalysisPayload(analysis);
     const hobbiesRating = analysis.hobbiesLanguagesRating 
         || analysis['Hobbies Languages'] 
         || analysis['hobbiesLanguages']
@@ -487,7 +492,7 @@ export async function improveResume(text, analysis, model, improvementPromptTemp
 
     if (rawContent.startsWith('{')) {
         try {
-            const parsed = parseJsonFromLlmResponse(rawContent);
+            const parsed = validateResumeImprovementEnvelope(parseJsonFromLlmResponse(rawContent));
             const improvementPayload = extractImprovementEnvelope(parsed);
             const cleanedText = cleanupHtml(improvementPayload.improvedText || '');
 

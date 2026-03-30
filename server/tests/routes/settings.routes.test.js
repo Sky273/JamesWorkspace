@@ -31,11 +31,18 @@ vi.mock('../../config/constants.js', () => ({
 
 // Mock cache service
 vi.mock('../../services/cache.service.js', () => ({
+    CACHE_KEYS: {
+        settings: {
+            UI_SETTINGS: 'settings',
+            LLM_SETTINGS: 'llm-settings'
+        }
+    },
     settingsCache: {
         get: vi.fn(() => null),
         set: vi.fn(),
         invalidate: vi.fn()
-    }
+    },
+    invalidateSettingsCaches: vi.fn()
 }));
 
 // Mock metrics

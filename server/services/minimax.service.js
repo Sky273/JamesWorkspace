@@ -122,6 +122,35 @@ async function postToMiniMax(url, body, headers, timeout, operationType) {
     );
 }
 
+async function postToMiniMaxWithoutRetry(url, body, headers, timeout) {
+    return axios.post(url, body, {
+        headers,
+        timeout
+    });
+}
+
+async function executeMiniMaxPost(url, body, headers, timeout, operationType, useRetry = true) {
+    if (!useRetry) {
+        return postToMiniMaxWithoutRetry(url, body, headers, timeout);
+    }
+
+    return withRetry(
+        () => axios.post(url, body, {
+            headers,
+            timeout
+        }),
+        {
+            serviceName: 'minimax',
+            operationName: operationType,
+            retryConfig: {
+                maxRetries: 3,
+                initialDelayMs: 2000,
+                maxDelayMs: 60000
+            }
+        }
+    );
+}
+
 function getMiniMaxStandardFallbackModel(model = '') {
     return isMiniMaxHighspeedModel(model) ? String(model).replace(/-highspeed$/i, '') : null;
 }
@@ -152,7 +181,8 @@ export async function callMiniMaxOpenAICompatible({
     responseFormat = null,
     timeout = 90000,
     maxPromptLength = MAX_PROMPT_LENGTH,
-    operationType = 'MiniMax OpenAI-compatible request'
+    operationType = 'MiniMax OpenAI-compatible request',
+    useRetry = true
 }) {
     validateMiniMaxRequest(model, messages, maxPromptLength);
 
@@ -174,7 +204,7 @@ export async function callMiniMaxOpenAICompatible({
             });
         }
 
-        const response = await postToMiniMax(
+        const response = await executeMiniMaxPost(
             `${MINIMAX_OPENAI_BASE_URL.replace(/\/$/, '')}/chat/completions`,
             normalized.requestParams,
             {
@@ -182,7 +212,8 @@ export async function callMiniMaxOpenAICompatible({
                 'Content-Type': 'application/json'
             },
             timeout,
-            operationType
+            operationType,
+            useRetry
         );
 
         const content = extractMiniMaxOpenAIContent(response.data);
@@ -249,7 +280,8 @@ export async function callMiniMaxAnthropicCompatible({
     topP = 1,
     timeout = 90000,
     maxPromptLength = MAX_PROMPT_LENGTH,
-    operationType = 'MiniMax Anthropic-compatible request'
+    operationType = 'MiniMax Anthropic-compatible request',
+    useRetry = true
 }) {
     validateMiniMaxRequest(model, messages, maxPromptLength);
 
@@ -297,7 +329,7 @@ export async function callMiniMaxAnthropicCompatible({
             });
         }
 
-        const response = await postToMiniMax(
+        const response = await executeMiniMaxPost(
             `${MINIMAX_ANTHROPIC_BASE_URL.replace(/\/$/, '')}/v1/messages`,
             requestBody,
             {
@@ -306,7 +338,8 @@ export async function callMiniMaxAnthropicCompatible({
                 'Content-Type': 'application/json'
             },
             timeout,
-            operationType
+            operationType,
+            useRetry
         );
 
         const content = extractTextFromContentBlocks(response.data?.content);

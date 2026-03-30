@@ -254,13 +254,45 @@ describe('Profile Matching Service', () => {
 
             expect(topProfile.keyStrengths).toEqual(['React', 'TypeScript']);
             expect(topProfile.keyGaps).toEqual(['AWS', 'Finance']);
-            expect(metrics.trackProfileMatchingActivity).toHaveBeenCalledWith(expect.objectContaining({
+            expect(metrics.trackProfileMatchingActivity).not.toHaveBeenCalledWith(expect.objectContaining({
                 event: 'normalization',
-                normalizationEvents: 1,
                 metadata: expect.objectContaining({
                     source: 'batch-scoring'
                 })
             }));
+        });
+
+        it('should normalize mission keywords returned by extraction before scoring', async () => {
+            findWithTimeout.mockResolvedValueOnce({
+                ...mockMissionRecord,
+                keywords: null
+            });
+            selectWithTimeout.mockResolvedValueOnce(mockResumeRecords);
+            callBusinessChatCompletion
+                .mockResolvedValueOnce({
+                    choices: [{
+                        message: {
+                            content: JSON.stringify({
+                                skills: 'React, TypeScript',
+                                tools: { first: 'Docker', second: 'Git' },
+                                industries: ['Banque'],
+                                softSkills: 'Communication; Leadership',
+                                experienceLevel: 7
+                            })
+                        }
+                    }]
+                })
+                .mockResolvedValueOnce(mockLLMScoringResponse);
+
+            const result = await findMatchingProfiles('mission-1', { limit: 10 });
+
+            expect(result.missionKeywords).toEqual({
+                skills: ['React', 'TypeScript'],
+                tools: ['Docker', 'Git'],
+                industries: ['Banque'],
+                softSkills: ['Communication', 'Leadership'],
+                experienceLevel: '7'
+            });
         });
 
         it('should return empty profiles when LLM fails', async () => {
@@ -766,6 +798,47 @@ describe('Profile Matching Service', () => {
 
             expect(result.analysis.verdict).toBe('Bon match');
             expect(callBusinessChatCompletion).toHaveBeenCalledTimes(2);
+        });
+
+        it('should normalize detailed analysis payload fields', async () => {
+            getLLMSettings.mockResolvedValue({ llmModel: 'gpt-4o', llmProvider: 'openai' });
+            callBusinessChatCompletion.mockResolvedValueOnce({
+                choices: [{
+                    message: {
+                        content: JSON.stringify({
+                            overallScore: '91',
+                            verdict: 'Excellent match',
+                            summary: 'Tres bon alignement',
+                            strengths: { invalid: true },
+                            gaps: [{
+                                category: 'tools',
+                                item: 'AWS',
+                                severity: 'important',
+                                explanation: 'Experience faible'
+                            }],
+                            recommendations: [{
+                                type: 'highlight',
+                                suggestion: 'Mettre en avant React'
+                            }],
+                            interviewQuestions: 'Question 1; Question 2',
+                            riskAssessment: {
+                                level: 'HIGH',
+                                factors: 'AWS'
+                            }
+                        })
+                    }
+                }]
+            });
+
+            const result = await analyzeProfileForMission('mission-1', 'resume-1');
+
+            expect(result.analysis.overallScore).toBe(91);
+            expect(result.analysis.strengths).toEqual([]);
+            expect(result.analysis.interviewQuestions).toEqual(['Question 1', 'Question 2']);
+            expect(result.analysis.riskAssessment).toEqual({
+                level: 'high',
+                factors: ['AWS']
+            });
         });
 
         it('should throw a user-facing error when detailed analysis still fails after retry', async () => {

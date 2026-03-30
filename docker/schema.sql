@@ -542,6 +542,7 @@ COMMENT ON TABLE public.industry_aliases IS 'Industry name mappings and aliases'
 CREATE TABLE public.llm_settings (
     id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     name character varying(255) NOT NULL,
+    settings_key character varying(50) DEFAULT 'default'::character varying NOT NULL,
     llm_provider character varying(20) DEFAULT 'openai'::character varying,
     llm_model character varying(100),
     ollama_base_url character varying(500) DEFAULT 'http://127.0.0.1:11434'::character varying,
@@ -1669,6 +1670,14 @@ ALTER TABLE ONLY public.industry_aliases
 
 ALTER TABLE ONLY public.llm_settings
     ADD CONSTRAINT llm_settings_name_key UNIQUE (name);
+
+
+--
+-- Name: llm_settings llm_settings_settings_key_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.llm_settings
+    ADD CONSTRAINT llm_settings_settings_key_key UNIQUE (settings_key);
 
 
 --

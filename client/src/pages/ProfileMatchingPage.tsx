@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Profile Matching Page
  * Find best matching CVs for a mission
  */
@@ -131,7 +131,7 @@ const ProfileMatchingPage = (): JSX.Element => {
         const scannedCount = data.totalResumesScanned;
         const sentToLlmCount = data.profilesSentToLlm ?? scannedCount;
         const returnedCount = data.profiles.length;
-        toast.success(`${scannedCount} CV analyses, ${sentToLlmCount} envoyes au LLM, ${returnedCount} resultats retournes`);
+        toast.success(`${scannedCount} CV analysés, ${sentToLlmCount} envoyés au LLM, ${returnedCount} résultats retournés`);
       }
     } catch (error) {
       logger.error('Error searching profiles:', error);
@@ -278,13 +278,13 @@ const ProfileMatchingPage = (): JSX.Element => {
                 {t('profileMatching.scannedResumes', { count: results.totalResumesScanned })}
               </p>
               <p>
-                {results.profilesSentToLlm ?? results.totalResumesScanned} envoyes au LLM
+                {results.profilesSentToLlm ?? results.totalResumesScanned} envoyés au LLM
                 {typeof results.profilesExplained === 'number'
-                  ? ` - ${results.profilesExplained} expliques`
+                  ? ` - ${results.profilesExplained} expliqués`
                   : ''}
               </p>
               <p>
-                {results.profiles.length} retournes
+                {results.profiles.length} retournés
               </p>
             </div>
           </div>

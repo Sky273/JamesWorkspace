@@ -66,8 +66,9 @@ vi.mock('../../services/llmAvailability.service.js', () => ({
     }))
 }));
 
+const mockWithRetry = vi.fn(async (fn) => fn());
 vi.mock('../../services/retry.service.js', () => ({
-    withRetry: (fn) => fn(),
+    withRetry: (...args) => mockWithRetry(...args),
     getCircuitBreakerStates: vi.fn().mockReturnValue({
         openai: { state: 'CLOSED', failures: 0, lastFailureTime: null },
         anthropic: { state: 'CLOSED', failures: 0, lastFailureTime: null },
@@ -145,6 +146,7 @@ describe('LLM Routes', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mockGetLLMSettings.mockResolvedValue({ llmModel: 'gpt-4o' });
+        mockWithRetry.mockImplementation(async (fn) => fn());
         app = createTestApp();
     });
 
@@ -234,6 +236,13 @@ describe('LLM Routes', () => {
 
             expect(res.status).toBe(200);
             expect(res.body.choices[0].message.content).toBe('Hi from MiniMax');
+            expect(mockWithRetry).toHaveBeenCalledWith(expect.any(Function), expect.objectContaining({
+                serviceName: 'minimax',
+                operationName: 'MiniMax MiniMax-M2.7 openai-compatible request'
+            }));
+            expect(mockCallMiniMaxOpenAICompatible).toHaveBeenCalledWith(expect.objectContaining({
+                useRetry: false
+            }));
         });
 
         it('routes through GLM when configured', async () => {
@@ -314,10 +323,17 @@ describe('LLM Routes', () => {
             const res = await request(app)
                 .post('/api/llm/anthropic')
                 .set(AUTH)
-                .send({ messages: [{ role: 'user', content: 'Hello' }] });
+                .send({ model: 'MiniMax-M2.7', messages: [{ role: 'user', content: 'Hello' }] });
 
             expect(res.status).toBe(200);
             expect(res.body.content[0].text).toBe('Hi from MiniMax');
+            expect(mockWithRetry).toHaveBeenCalledWith(expect.any(Function), expect.objectContaining({
+                serviceName: 'minimax',
+                operationName: 'MiniMax MiniMax-M2.7 anthropic-compatible request'
+            }));
+            expect(mockCallMiniMaxAnthropicCompatible).toHaveBeenCalledWith(expect.objectContaining({
+                useRetry: false
+            }));
         });
     });
 

@@ -17,10 +17,63 @@ import {
 import { safeLog } from '../utils/logger.backend.js';
 import { resolveAvailableModel, getProviderAvailabilityFlags, syncPersistedAvailabilityState } from './llmAvailability.service.js';
 import { getProviderDefaultModel } from './llmConfiguration.service.js';
-import { settingsCache as sharedSettingsCache } from './cache.service.js';
+import { settingsCache as sharedSettingsCache, CACHE_KEYS, invalidateSettingsCaches as invalidateSharedSettingsCaches } from './cache.service.js';
 
-const LLM_SETTINGS_CACHE_KEY = 'llm-settings';
+const LLM_SETTINGS_CACHE_KEY = CACHE_KEYS.settings.LLM_SETTINGS;
+const CANONICAL_LLM_SETTINGS_KEY = 'default';
 let cacheTimestamp = null;
+
+function buildCanonicalSettingsDefaults(fields = {}) {
+    return {
+        settings_key: CANONICAL_LLM_SETTINGS_KEY,
+        name: 'Default Settings',
+        status: 'active',
+        ...fields
+    };
+}
+
+async function findCanonicalSettingsRecord() {
+    const records = await selectWithTimeout('llm_settings', {
+        where: 'settings_key = $1',
+        params: [CANONICAL_LLM_SETTINGS_KEY],
+        limit: 1
+    });
+
+    return records[0] || null;
+}
+
+async function findLatestLegacySettingsRecord() {
+    const records = await selectWithTimeout('llm_settings', {
+        limit: 1,
+        orderBy: "CASE WHEN status = 'active' THEN 0 ELSE 1 END, updated_at DESC NULLS LAST, created_at DESC NULLS LAST, id DESC"
+    });
+
+    return records[0] || null;
+}
+
+export async function getCanonicalSettingsRecord({ createIfMissing = false, initialFields = {} } = {}) {
+    const canonical = await findCanonicalSettingsRecord();
+    if (canonical) {
+        return canonical;
+    }
+
+    const legacyRecord = await findLatestLegacySettingsRecord();
+    if (legacyRecord) {
+        return updateWithTimeout('llm_settings', legacyRecord.id, buildCanonicalSettingsDefaults({
+            settings_key: CANONICAL_LLM_SETTINGS_KEY,
+            name: legacyRecord.name || 'Default Settings',
+            status: legacyRecord.status || 'active'
+        }));
+    }
+
+    if (!createIfMissing) {
+        return null;
+    }
+
+    return createWithTimeout('llm_settings', {
+        fields: buildCanonicalSettingsDefaults(initialFields)
+    });
+}
 
 /**
  * Get LLM settings from PostgreSQL with caching
@@ -39,17 +92,12 @@ export async function getLLMSettings() {
 
         // Fetch fresh settings
         safeLog('debug', 'Fetching fresh LLM settings from PostgreSQL');
-        const settingsRecords = await selectWithTimeout('llm_settings', {
-            limit: 1,
-            orderBy: 'created_at DESC'
-        });
+        const dbSettings = await getCanonicalSettingsRecord();
 
-        if (settingsRecords.length === 0) {
+        if (!dbSettings) {
             safeLog('warn', 'No LLM settings found in database');
             return {};
         }
-
-        const dbSettings = settingsRecords[0];
         syncPersistedAvailabilityState(dbSettings.llm_availability_state || {});
 
         
@@ -152,7 +200,7 @@ export async function getLLMProvider() {
  */
 export function invalidateSettingsCache() {
     safeLog('info', 'Settings cache invalidated');
-    sharedSettingsCache.invalidate(LLM_SETTINGS_CACHE_KEY);
+    invalidateSharedSettingsCaches();
     cacheTimestamp = null;
 }
 
@@ -161,7 +209,7 @@ export function invalidateSettingsCache() {
  * Alias for invalidateSettingsCache for consistency with other cache services
  */
 export function destroySettingsCache() {
-    sharedSettingsCache.invalidate(LLM_SETTINGS_CACHE_KEY);
+    invalidateSharedSettingsCaches();
     cacheTimestamp = null;
     safeLog('info', 'Settings cache destroyed');
 }
@@ -174,7 +222,9 @@ export function getSettingsCacheStats() {
         hasCache: !!sharedSettingsCache.get(LLM_SETTINGS_CACHE_KEY),
         entries: sharedSettingsCache.size(),
         ageMs: cacheTimestamp ? Date.now() - cacheTimestamp : null,
-        ttlMs: null
+        ttlMs: sharedSettingsCache.ttl,
+        key: LLM_SETTINGS_CACHE_KEY,
+        cache: sharedSettingsCache.getStats()
     };
 }
 
@@ -218,11 +268,7 @@ function parseRating(rating) {
  * @returns {Promise<Object|null>} Raw settings record or null
  */
 export async function getSettings() {
-    const records = await selectWithTimeout('llm_settings', {
-        limit: 1,
-        orderBy: 'created_at DESC'
-    });
-    return records.length > 0 ? records[0] : null;
+    return getCanonicalSettingsRecord();
 }
 
 /**
@@ -234,7 +280,7 @@ export async function getSettings() {
 export async function updateSettings(id, fields) {
     const records = await updateWithTimeout('llm_settings', [{
         id,
-        fields
+        fields: buildCanonicalSettingsDefaults(fields)
     }]);
     return records[0];
 }
@@ -246,35 +292,14 @@ export async function updateSettings(id, fields) {
  * @returns {Promise<Object>} Updated or created record
  */
 export async function upsertSettings(id, fields) {
-    try {
-        return await updateSettings(id, fields);
-    } catch (error) {
-        if (error.statusCode === 404 || error.message.includes('not found')) {
-            const existing = await selectWithTimeout('llm_settings', {
-                limit: 1,
-                orderBy: 'created_at DESC'
-            });
-
-            if (existing.length > 0) {
-                const records = await updateWithTimeout('llm_settings', [{
-                    id: existing[0].id,
-                    fields
-                }]);
-                return records[0];
-            } else {
-                const fieldsToCreate = {
-                    name: 'Default Settings',
-                    ...fields,
-                    status: 'active'
-                };
-                const records = await createWithTimeout('llm_settings', [{
-                    fields: fieldsToCreate
-                }]);
-                return records[0];
-            }
-        }
-        throw error;
+    const canonical = await getCanonicalSettingsRecord();
+    if (canonical) {
+        return updateSettings(canonical.id, fields);
     }
+
+    return createWithTimeout('llm_settings', {
+        fields: buildCanonicalSettingsDefaults(fields)
+    });
 }
 
 /**
@@ -283,10 +308,14 @@ export async function upsertSettings(id, fields) {
  * @returns {Promise<Object>} Created record
  */
 export async function createSettings(fields) {
-    const records = await createWithTimeout('llm_settings', [{
-        fields
-    }]);
-    return records[0];
+    const canonical = await getCanonicalSettingsRecord();
+    if (canonical) {
+        return updateSettings(canonical.id, fields);
+    }
+
+    return createWithTimeout('llm_settings', {
+        fields: buildCanonicalSettingsDefaults(fields)
+    });
 }
 
 export async function calculateWeightedGlobalRating(analysis, settings = null) {

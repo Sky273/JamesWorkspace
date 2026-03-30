@@ -98,32 +98,46 @@ async function handleOllamaRequest(req, res, settings, responseShape, model) {
 }
 
 async function handleMiniMaxRequest(req, res, responseShape, model) {
-    let result;
+    const requestFactory = async () => {
+        if (responseShape === 'anthropic') {
+            return callMiniMaxAnthropicCompatible({
+                model,
+                messages: req.body.messages || [],
+                maxTokens: getRequestedMaxTokens(req.body),
+                temperature: req.body.temperature,
+                topP: req.body.top_p,
+                timeout: 120000,
+                operationType: `MiniMax ${model} anthropic-compatible request`,
+                useRetry: false
+            });
+        }
 
-    if (responseShape === 'anthropic') {
-        result = await callMiniMaxAnthropicCompatible({
+        return callMiniMaxOpenAICompatible({
             model,
             messages: req.body.messages || [],
             maxTokens: getRequestedMaxTokens(req.body),
             temperature: req.body.temperature,
             topP: req.body.top_p,
+            responseFormat: req.body.response_format,
             timeout: 120000,
-            operationType: `MiniMax ${model} anthropic-compatible request`
+            operationType: `MiniMax ${model} openai-compatible request`,
+            useRetry: false
         });
+    };
 
+    const result = await withRetry(requestFactory, {
+        serviceName: 'minimax',
+        operationName: `MiniMax ${model} ${responseShape}-compatible request`,
+        retryConfig: {
+            maxRetries: 3,
+            initialDelayMs: 2000,
+            maxDelayMs: 60000
+        }
+    });
+
+    if (responseShape === 'anthropic') {
         return res.json(toAnthropicCompatibleResponse(result, 'minimax'));
     }
-
-    result = await callMiniMaxOpenAICompatible({
-        model,
-        messages: req.body.messages || [],
-        maxTokens: getRequestedMaxTokens(req.body),
-        temperature: req.body.temperature,
-        topP: req.body.top_p,
-        responseFormat: req.body.response_format,
-        timeout: 120000,
-        operationType: `MiniMax ${model} openai-compatible request`
-    });
 
     return res.json(toOpenAICompatibleResponse(result, 'minimax'));
 }

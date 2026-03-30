@@ -6,6 +6,7 @@
 import { safeLog } from '../../utils/logger.backend.js';
 import { callBusinessChatCompletion } from '../llmProvider.service.js';
 import { normalizeUtf8Text, parseJsonFromLlmResponse, stripLlmThinkingContent } from './textUtils.js';
+import { validateAdaptationPayload, validateMatchAnalysisPayload } from './contracts.js';
 
 /**
  * Match resume with mission using OpenAI
@@ -36,7 +37,9 @@ export async function matchResumeWithMission(resumeText, missionTitle, missionCo
     });
 
     try {
-        const rawAnalysis = parseJsonFromLlmResponse(response.choices[0].message.content);
+        const rawAnalysis = validateMatchAnalysisPayload(
+            parseJsonFromLlmResponse(response.choices[0].message.content)
+        );
         // Normalize the response to ensure frontend compatibility while preserving full data
         return normalizeMatchAnalysis(rawAnalysis);
     } catch (parseError) {
@@ -190,10 +193,10 @@ Respond in the same language as the resume.`;
     
     // Parse the structured JSON response
     try {
-        const parsed = parseJsonFromLlmResponse(content);
+        const parsed = validateAdaptationPayload(parseJsonFromLlmResponse(content));
         
         // New format: { name, summary, improvedText, improvements }
-        if (parsed.improvedText !== undefined) {
+        if (parsed.improvedText) {
             const adaptedTitle = parsed.summary?.title || parsed.summary?.targetRole || null;
             return {
                 adaptedText: parsed.improvedText,

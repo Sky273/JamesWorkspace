@@ -9,7 +9,7 @@ const mockSelectWithTimeout = vi.fn();
 const mockUpdateWithTimeout = vi.fn();
 const mockCreateWithTimeout = vi.fn();
 const mockInvalidateSettingsCache = vi.fn();
-const mockSettingsCacheInvalidate = vi.fn();
+const mockInvalidateSettingsCaches = vi.fn();
 const mockSafeLog = vi.fn();
 
 vi.mock('../../utils/postgresHelpers.js', () => ({
@@ -23,9 +23,7 @@ vi.mock('../../services/settings.service.js', () => ({
 }));
 
 vi.mock('../../services/cache.service.js', () => ({
-    settingsCache: {
-        invalidate: (...args) => mockSettingsCacheInvalidate(...args)
-    }
+    invalidateSettingsCaches: (...args) => mockInvalidateSettingsCaches(...args)
 }));
 
 vi.mock('../../utils/logger.backend.js', () => ({
@@ -109,6 +107,12 @@ describe('llmAvailability.service', () => {
 
         await initializeLLMAvailabilityState();
 
+        expect(mockSelectWithTimeout).toHaveBeenCalledWith('llm_settings', expect.objectContaining({
+            where: 'settings_key = $1',
+            params: ['default'],
+            limit: 1
+        }));
+
         expect(getProviderAvailabilityFlags()).toEqual(expect.objectContaining({
             minimax: {
                 highspeedEnabled: false,
@@ -151,39 +155,88 @@ describe('llmAvailability.service', () => {
 
     it('persists runtime-unavailable models after marking them', async () => {
         mockSelectWithTimeout
-            .mockResolvedValueOnce([])
             .mockResolvedValueOnce([{ id: 'settings-1' }]);
-        mockCreateWithTimeout.mockResolvedValueOnce([{ id: 'settings-1' }]);
+        mockUpdateWithTimeout.mockResolvedValueOnce({ id: 'settings-1' });
+
+        await markModelUnavailable('minimax', 'MiniMax-M2.7-highspeed', 'minimax_highspeed_runtime_unavailable', 'MiniMax-M2.7');
+
+        expect(mockUpdateWithTimeout).toHaveBeenCalledWith('llm_settings', 'settings-1', expect.objectContaining({
+            settings_key: 'default',
+            name: 'Default Settings',
+            status: 'active',
+            llm_availability_state: expect.objectContaining({
+                minimax: {
+                    runtimeUnavailableModels: [expect.objectContaining({
+                        model: 'MiniMax-M2.7-highspeed',
+                        reason: 'minimax_highspeed_runtime_unavailable',
+                        fallbackModel: 'MiniMax-M2.7',
+                        markedAt: expect.any(String),
+                        expiresAt: expect.any(String)
+                    })]
+                }
+            })
+        }));
+        expect(mockCreateWithTimeout).not.toHaveBeenCalled();
+        expect(mockInvalidateSettingsCache).toHaveBeenCalled();
+        expect(mockInvalidateSettingsCaches).toHaveBeenCalled();
+    });
+
+    it('promotes the latest legacy settings row when persisting availability state without a canonical key', async () => {
+        mockSelectWithTimeout
+            .mockResolvedValueOnce([])
+            .mockResolvedValueOnce([{ id: 'legacy-1' }]);
+        mockUpdateWithTimeout.mockResolvedValueOnce({ id: 'legacy-1' });
+
+        await markModelUnavailable('glm', 'glm-5.1', 'glm_model_access_denied', 'glm-5');
+
+        expect(mockUpdateWithTimeout).toHaveBeenCalledWith('llm_settings', 'legacy-1', expect.objectContaining({
+            settings_key: 'default',
+            name: 'Default Settings',
+            status: 'active',
+            llm_availability_state: expect.objectContaining({
+                glm: {
+                    runtimeUnavailableModels: [expect.objectContaining({
+                        model: 'glm-5.1',
+                        reason: 'glm_model_access_denied',
+                        fallbackModel: 'glm-5'
+                    })]
+                }
+            })
+        }));
+    });
+
+    it('creates the canonical settings record when persisting availability state without any existing settings row', async () => {
+        mockSelectWithTimeout
+            .mockResolvedValueOnce([])
+            .mockResolvedValueOnce([]);
+        mockCreateWithTimeout.mockResolvedValueOnce({ id: 'settings-1' });
 
         await markModelUnavailable('minimax', 'MiniMax-M2.7-highspeed', 'minimax_highspeed_runtime_unavailable', 'MiniMax-M2.7');
 
         expect(mockCreateWithTimeout).toHaveBeenCalledWith('llm_settings', {
             fields: expect.objectContaining({
+                settings_key: 'default',
                 name: 'Default Settings',
                 status: 'active',
                 llm_availability_state: expect.objectContaining({
                     minimax: {
-                        runtimeUnavailableModels: [{
+                        runtimeUnavailableModels: [expect.objectContaining({
                             model: 'MiniMax-M2.7-highspeed',
                             reason: 'minimax_highspeed_runtime_unavailable',
                             fallbackModel: 'MiniMax-M2.7',
                             markedAt: expect.any(String),
                             expiresAt: expect.any(String)
-                        }]
+                        })]
                     }
                 })
             })
         });
-        expect(mockInvalidateSettingsCache).toHaveBeenCalled();
-        expect(mockSettingsCacheInvalidate).toHaveBeenCalledWith('settings');
-        expect(mockSettingsCacheInvalidate).toHaveBeenCalledWith('llm-settings');
     });
 
     it('tracks runtime-unavailable GLM models generically', async () => {
         mockSelectWithTimeout
-            .mockResolvedValueOnce([])
             .mockResolvedValueOnce([{ id: 'settings-1' }]);
-        mockCreateWithTimeout.mockResolvedValueOnce([{ id: 'settings-1' }]);
+        mockUpdateWithTimeout.mockResolvedValueOnce({ id: 'settings-1' });
 
         await markModelUnavailable('glm', 'glm-5.1', 'glm_model_access_denied', 'glm-5');
 

@@ -127,6 +127,40 @@ describe('OpenAI Resume Operations', () => {
             expect(result.suggestions.hobbiesLanguages).toEqual(['Make language levels explicit']);
         });
 
+        it('should normalize malformed analysis tag and suggestion payloads', async () => {
+            callBusinessChatCompletion.mockResolvedValueOnce({
+                choices: [{
+                    message: {
+                        content: JSON.stringify({
+                            name: 42,
+                            globalRating: 81,
+                            tags: {
+                                skills: 'React; Node.js',
+                                industries: { primary: 'IT' },
+                                tools: ['VS Code', { label: 'Docker' }],
+                                soft_skills: 'Communication, Leadership'
+                            },
+                            suggestions: {
+                                executiveSummary: 'Add a sharper summary',
+                                skills: { first: 'Group keywords' }
+                            }
+                        })
+                    }
+                }]
+            });
+
+            const result = await analyzeResume('resume text', 'gpt-4o', '{TEXT} {FILENAME}');
+
+            expect(result.name).toBe('42');
+            expect(result.globalRating).toBe('81%');
+            expect(result.tags.skills).toEqual(['React', 'Node.js']);
+            expect(result.tags.industries).toEqual(['IT']);
+            expect(result.tags.tools).toEqual(['VS Code', 'Docker']);
+            expect(result.tags.softSkills).toEqual(['Communication', 'Leadership']);
+            expect(result.suggestions.executiveSummary).toEqual(['Add a sharper summary']);
+            expect(result.suggestions.skills).toEqual(['Group keywords']);
+        });
+
         it('should inject filename into prompt', async () => {
             callBusinessChatCompletion.mockResolvedValueOnce({
                 choices: [{ message: { content: JSON.stringify(mockAnalysis) } }]
@@ -254,6 +288,45 @@ describe('OpenAI Resume Operations', () => {
             expect(result.analysis.tags.industries).toEqual(['Conseil', 'Assurance']);
             expect(result.analysis.suggestions.executiveSummary).toEqual([]);
             expect(result.analysis.suggestions.skills).toEqual([]);
+        });
+
+        it('should normalize malformed improvement envelope fields', async () => {
+            callBusinessChatCompletion.mockResolvedValueOnce({
+                choices: [{
+                    message: {
+                        content: JSON.stringify({
+                            improvedText: '<p>Improved CV</p>',
+                            summary: {
+                                title: 123,
+                                targetRole: 'Lead Developer',
+                                industries: { primary: 'Finance' }
+                            },
+                            tags: {
+                                skills: 'React, TypeScript',
+                                tools: { one: 'Docker', two: 'Git' },
+                                soft_skills: 'Communication; Leadership'
+                            },
+                            certifications: 'AWS',
+                            languages: { first: 'French', second: 'English' }
+                        })
+                    }
+                }]
+            });
+
+            const result = await improveResume(
+                'A'.repeat(200),
+                { name: 'John' },
+                'gpt-4o',
+                '{TEXT} {ANALYSIS} {FILENAME}'
+            );
+
+            expect(result.text).toBe('<p>Improved CV</p>');
+            expect(result.analysis.title).toBe('Lead Developer');
+            expect(result.analysis.tags.skills).toEqual(['React', 'TypeScript']);
+            expect(result.analysis.tags.tools).toEqual(['Docker', 'Git']);
+            expect(result.analysis.tags.softSkills).toEqual(['Communication', 'Leadership']);
+            expect(result.analysis.languages).toEqual(['French', 'English']);
+            expect(result.analysis.certifications).toEqual(['AWS']);
         });
 
         it('should handle HTML fallback response', async () => {
