@@ -110,7 +110,7 @@ const DealSection = ({
   return (
     <div
       role="region"
-      aria-label={`${t('resumes.groupedView.deal', 'Affaire')}: ${deal.title}`}
+      aria-label={`${t('resumes.groupedView.deal')}: ${deal.title}`}
       className={`rounded-xl shadow-sm border overflow-hidden transition-all duration-200 ${
         isDragOver
           ? 'bg-purple-50 dark:bg-purple-900/20 ring-2 ring-purple-400 dark:ring-purple-500 ring-offset-1 border-purple-300 dark:border-purple-600'
@@ -128,7 +128,7 @@ const DealSection = ({
         onClick={onToggle}
         aria-expanded={isExpanded}
         aria-controls={`deal-content-${deal.id}`}
-        aria-label={`${isExpanded ? t('common.collapse', 'Réduire') : t('common.expand', 'Développer')} ${deal.title}`}
+        aria-label={`${isExpanded ? t('common.collapse') : t('common.expand')} ${deal.title}`}
         className={`group w-full flex items-center justify-between px-4 py-3 transition-colors text-left ${
           isDragOver
             ? 'bg-purple-100/50 dark:bg-purple-900/30'
@@ -184,7 +184,7 @@ const DealSection = ({
           <span
             role="button"
             tabIndex={0}
-            title={t('dealExport.buttonTitle', 'Exporter cette affaire')}
+            title={t('dealExport.buttonTitle')}
             onClick={(e) => {
               e.stopPropagation();
               onExportDeal(originalDeal);
@@ -201,7 +201,7 @@ const DealSection = ({
       {isDragOver && !isExpanded && (
         <div className="px-4 py-3 border-t border-purple-200 dark:border-purple-700 bg-purple-50/50 dark:bg-purple-900/20">
           <p className="text-center text-sm text-purple-600 dark:text-purple-400 font-medium">
-            ↓ {t('resumes.groupedView.dropHere', 'Déposer ici pour ajouter à cette affaire')}
+            ↓ {t('resumes.groupedView.dropHere')}
           </p>
         </div>
       )}
@@ -212,7 +212,7 @@ const DealSection = ({
           <motion.div
             id={`deal-content-${deal.id}`}
             role="region"
-            aria-label={t('resumes.groupedView.dealContent', 'Contenu de l\'affaire')}
+            aria-label={t('resumes.groupedView.dealContent')}
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
@@ -223,7 +223,7 @@ const DealSection = ({
               {isDragOver && (
                 <div className="mt-3 mb-2 py-2 border-2 border-dashed border-purple-300 dark:border-purple-600 rounded-lg bg-purple-50/50 dark:bg-purple-900/10">
                   <p className="text-center text-sm text-purple-500 dark:text-purple-400">
-                    ↓ {t('resumes.groupedView.dropHere', 'Déposer ici pour ajouter à cette affaire')}
+                    ↓ {t('resumes.groupedView.dropHere')}
                   </p>
                 </div>
               )}
@@ -232,7 +232,7 @@ const DealSection = ({
                 <div className="pt-4 mb-4">
                   <h4 className="text-sm font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
                     <BriefcaseIcon className="icon-sm" />
-                    {t('resumes.groupedView.missions', 'Missions')} ({deal.missions.length})
+                    {t('resumes.groupedView.missions')} ({deal.missions.length})
                   </h4>
                   <div className="space-y-3">
                     {deal.missions.map((mission, missionIndex) => (
@@ -258,7 +258,7 @@ const DealSection = ({
                             </span>
                           </div>
                           <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
-                            {mission.adaptations_count || 0} {t('resumes.groupedView.adaptations', 'adaptation(s)')}
+                            {mission.adaptations_count || 0} {t('resumes.groupedView.adaptations')}
                           </span>
                         </div>
                         {/* Adaptations under this mission */}
@@ -287,7 +287,7 @@ const DealSection = ({
                                   <div className="flex items-center gap-2 min-w-0 flex-1">
                                     <DocumentTextIcon className="icon-sm text-blue-500" />
                                     <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                                      {adaptation.resume_name || adaptation.candidate_name || t('adaptations.card.noName', 'Sans nom')}
+                                      {adaptation.resume_name || adaptation.candidate_name || t('adaptations.card.noName')}
                                     </span>
                                     {adaptation.adapted_title && (
                                       <span className="text-xs text-blue-600 dark:text-blue-400 italic truncate max-w-[200px]">
@@ -324,14 +324,14 @@ const DealSection = ({
               {/* Resumes section */}
               {deal.resumes.length === 0 && !isDragOver && (!deal.missions || deal.missions.length === 0) ? (
                 <p className="text-center text-sm text-gray-500 dark:text-gray-400 py-6">
-                  {t('resumes.groupedView.noResumes', 'Aucun CV associé à cette affaire')}
+                  {t('resumes.groupedView.noResumes')}
                 </p>
               ) : deal.resumes.length > 0 ? (
                 <div className="space-y-3 pt-4">
                   {deal.resumes.length > 0 && deal.missions && deal.missions.length > 0 && (
                     <h4 className="text-sm font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                       <DocumentTextIcon className="icon-sm" />
-                      {t('resumes.groupedView.cvs', 'CVs')} ({deal.resumes.length})
+                      {t('resumes.groupedView.cvs')} ({deal.resumes.length})
                     </h4>
                   )}
                   {(() => {
@@ -349,7 +349,7 @@ const DealSection = ({
                             }}
                             className="w-full py-3 mt-4 text-sm text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-colors font-medium"
                           >
-                            {t('resumes.groupedView.showMore', 'Voir {{count}} CV(s) supplémentaire(s)').replace('{{count}}', String(hiddenCount))}
+                            {t('resumes.groupedView.showMore', { count: hiddenCount })}
                           </button>
                         )}
                         {isFullyExpanded && deal.resumes.length > INITIAL_RESUMES_LIMIT && (
@@ -364,7 +364,7 @@ const DealSection = ({
                             }}
                             className="w-full py-3 mt-4 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/30 rounded-lg transition-colors"
                           >
-                            {t('resumes.groupedView.showLess', 'Voir moins')}
+                            {t('resumes.groupedView.showLess')}
                           </button>
                         )}
                       </>

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * DealsTab - Manage deals (affaires) within CRM page
  * Displays deals with filtering by client and status
  */
@@ -113,7 +113,7 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
       }
     } catch (error) {
       logger.error('Error fetching deals:', error);
-      toast.error(t('crm.deals.errorFetching', 'Erreur lors du chargement des affaires'));
+      toast.error(t('crm.deals.messages.errorFetching'));
     } finally {
       setLoading(false);
     }
@@ -142,12 +142,12 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title.trim()) {
-      toast.error(t('crm.deals.titleRequired', 'Le nom de l\'affaire est requis'));
+      toast.error(t('crm.deals.titleRequired'));
       return;
     }
 
     setSaving(true);
-    const toastId = toast.loading(t('crm.deals.messages.saving', 'Enregistrement en cours...'));
+    const toastId = toast.loading(t('crm.deals.messages.saving'));
     
     try {
       const url = selectedDeal ? `/api/deals/${selectedDeal.id}` : '/api/deals';
@@ -180,8 +180,8 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
         const deal = await response.json();
         logger.log('Deal created/updated:', deal);
         toast.success(selectedDeal 
-          ? t('crm.deals.updated', 'Affaire mise à jour')
-          : t('crm.deals.created', 'Affaire créée'),
+          ? t('crm.deals.updated')
+          : t('crm.deals.created'),
           { id: toastId }
         );
         setFormModalOpen(false);
@@ -197,7 +197,7 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
       const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
       logger.error('Error saving deal:', error);
       toast.error(
-        t('crm.deals.errorSaving', 'Erreur lors de la sauvegarde') + ': ' + errorMessage,
+        t('crm.deals.errorSaving') + ': ' + errorMessage,
         { id: toastId, duration: 5000 }
       );
     } finally {
@@ -215,7 +215,7 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
       const response = await fetchWithAuth(`/api/deals/${selectedDeal.id}`, options);
       
       if (response.ok) {
-        toast.success(t('crm.deals.deleted', 'Affaire supprimée'));
+        toast.success(t('crm.deals.deleted'));
         setDeleteModalOpen(false);
         setSelectedDeal(null);
         fetchDeals();
@@ -224,7 +224,7 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
       }
     } catch (error) {
       logger.error('Error deleting deal:', error);
-      toast.error(t('crm.deals.errorDeleting', 'Erreur lors de la suppression'));
+      toast.error(t('crm.deals.errorDeleting'));
     } finally {
       setSaving(false);
     }
@@ -288,7 +288,7 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
               onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
               className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm"
             >
-              <option value="all">{t('crm.deals.allStatuses', 'Tous les statuts')}</option>
+              <option value="all">{t('crm.deals.allStatuses')}</option>
               <option value="open">{STATUS_CONFIG.open.label}</option>
               <option value="won">{STATUS_CONFIG.won.label}</option>
               <option value="lost">{STATUS_CONFIG.lost.label}</option>
@@ -301,10 +301,10 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
               onChange={(e) => { setClientFilter(e.target.value); setPage(1); }}
               className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm min-w-[200px]"
             >
-              <option value="">{t('crm.deals.allClients', 'Tous les clients')}</option>
+              <option value="">{t('crm.deals.allClients')}</option>
               {clients.map(client => (
                 <option key={client.id} value={client.id}>
-                  {client.name} ({client.type === 'client' ? 'Client' : 'Prospect'})
+                  {client.name} ({client.type === 'client' ? t('clients.types.client') : t('clients.types.prospect')})
                 </option>
               ))}
             </select>
@@ -315,7 +315,7 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
                 className="inline-flex items-center gap-1 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
               >
                 <XMarkIcon className="w-4 h-4" />
-                {t('common.resetFilters', 'Réinitialiser')}
+                {t('common.resetFilters')}
               </button>
             )}
           </div>
@@ -324,7 +324,7 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
             <button
               onClick={fetchDeals}
               className="p-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-              title={t('common.refresh', 'Actualiser')}
+              title={t('common.refresh')}
             >
               <ArrowPathIcon className="w-5 h-5" />
             </button>
@@ -333,7 +333,7 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
               className="btn btn-primary flex items-center gap-2 px-4 py-2"
             >
               <PlusIcon className="w-5 h-5" />
-              {t('crm.deals.add', 'Nouvelle affaire')}
+              {t('crm.deals.add')}
             </button>
           </div>
         </div>
@@ -344,7 +344,7 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
             <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
-              placeholder={t('crm.deals.searchPlaceholder', 'Rechercher une affaire...')}
+              placeholder={t('crm.deals.searchPlaceholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
@@ -355,7 +355,7 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
 
       {/* Results count */}
       <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
-        {totalCount} {t('crm.deals.results', 'affaire(s)')}
+        {totalCount} {t('crm.deals.results')}
       </div>
 
       {/* Deals grid */}
@@ -373,14 +373,14 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">
           <BriefcaseIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />
           <p className="text-gray-600 dark:text-gray-400">
-            {t('crm.deals.noDeals', 'Aucune affaire trouvée')}
+            {t('crm.deals.noDeals')}
           </p>
           <button
             onClick={openCreateModal}
             className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
           >
             <PlusIcon className="w-5 h-5" />
-            {t('crm.deals.createFirst', 'Créer une affaire')}
+            {t('crm.deals.createFirst')}
           </button>
         </div>
       ) : (
@@ -405,7 +405,7 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
             disabled={page === 1}
             className="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg disabled:opacity-50"
           >
-            {t('common.previous', 'Précédent')}
+            {t('common.previous')}
           </button>
           <span className="px-4 py-2 text-gray-600 dark:text-gray-400">
             {page} / {totalPages}
@@ -415,7 +415,7 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
             disabled={page === totalPages}
             className="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg disabled:opacity-50"
           >
-            {t('common.next', 'Suivant')}
+            {t('common.next')}
           </button>
         </div>
       )}
@@ -447,3 +447,4 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
 };
 
 export default DealsTab;
+

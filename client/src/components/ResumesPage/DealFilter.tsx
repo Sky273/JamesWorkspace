@@ -57,7 +57,7 @@ const DealFilter = ({ selectedDealId, onDealChange, t }: DealFilterProps): JSX.E
         disabled={loading}
         className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm min-w-[200px]"
       >
-        <option value="">{t('resumes.allDeals') || 'Toutes les affaires'}</option>
+        <option value="">{t('resumes.allDeals')}</option>
         {deals.map(deal => (
           <option key={deal.id} value={deal.id}>
             {deal.title} {deal.client_name ? `(${deal.client_name})` : ''} - {deal.resumes_count} CV
@@ -68,7 +68,7 @@ const DealFilter = ({ selectedDealId, onDealChange, t }: DealFilterProps): JSX.E
         <button
           onClick={() => onDealChange('')}
           className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-          title={t('common.clear') || 'Effacer'}
+          title={t('common.clear')}
         >
           <XMarkIcon className="w-4 h-4" />
         </button>

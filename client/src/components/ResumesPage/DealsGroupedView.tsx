@@ -186,7 +186,7 @@ const DealsGroupedView = ({ allTags }: DealsGroupedViewProps): JSX.Element => {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 p-12 text-center">
         <BriefcaseIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-        <p className="text-gray-600 dark:text-gray-400">{t('resumes.groupedView.errorLoading', 'Erreur lors du chargement')}</p>
+        <p className="text-gray-600 dark:text-gray-400">{t('resumes.groupedView.errorLoading')}</p>
       </div>
     );
   }
@@ -285,19 +285,19 @@ const DealsGroupedView = ({ allTags }: DealsGroupedViewProps): JSX.Element => {
         <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
           <BriefcaseIcon className="w-4 h-4 text-purple-500" />
           <span className="font-semibold text-gray-900 dark:text-gray-100">{visibleData.totalDeals}</span>
-          <span>{t('resumes.groupedView.deals', 'affaires')}</span>
+          <span>{t('resumes.groupedView.deals')}</span>
         </div>
         <div className="w-px h-4 bg-gray-200 dark:bg-gray-700" />
         <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
           <DocumentTextIcon className="w-4 h-4 text-blue-500" />
           <span className="font-semibold text-gray-900 dark:text-gray-100">{visibleData.totalAssigned}</span>
-          <span>{t('resumes.groupedView.assigned', 'CVs affectés')}</span>
+          <span>{t('resumes.groupedView.assigned')}</span>
         </div>
         <div className="w-px h-4 bg-gray-200 dark:bg-gray-700" />
         <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
           <FolderOpenIcon className="w-4 h-4 text-amber-500" />
           <span className="font-semibold text-gray-900 dark:text-gray-100">{visibleData.totalUnassigned}</span>
-          <span>{t('resumes.groupedView.unassigned', 'non affectés')}</span>
+          <span>{t('resumes.groupedView.unassigned')}</span>
         </div>
       </div>
 
@@ -341,7 +341,7 @@ const DealsGroupedView = ({ allTags }: DealsGroupedViewProps): JSX.Element => {
       {visibleData.deals.length === 0 && !hasActiveFilters && (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 p-8 text-center">
           <BriefcaseIcon className="w-12 h-12 mx-auto text-gray-400 mb-3" />
-          <p className="text-gray-600 dark:text-gray-400">{t('resumes.groupedView.noDeals', 'Aucune affaire créée')}</p>
+          <p className="text-gray-600 dark:text-gray-400">{t('resumes.groupedView.noDeals')}</p>
         </div>
       )}
 
@@ -376,7 +376,7 @@ const DealsGroupedView = ({ allTags }: DealsGroupedViewProps): JSX.Element => {
               )}
               <FolderOpenIcon className="w-5 h-5 text-gray-400" />
               <h3 className="font-semibold text-gray-700 dark:text-gray-300">
-                {t('resumes.groupedView.unassignedTitle', 'CVs non affectés à une affaire')}
+                {t('resumes.groupedView.unassignedTitle')}
               </h3>
             </div>
             <span className="ml-4 flex-shrink-0 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2.5 py-1 rounded-full text-sm font-medium">
@@ -412,7 +412,7 @@ const DealsGroupedView = ({ allTags }: DealsGroupedViewProps): JSX.Element => {
                               }}
                               className="w-full py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/30 rounded-lg transition-colors font-medium"
                             >
-                              {t('resumes.groupedView.showMore', 'Voir {{count}} CV(s) supplémentaire(s)').replace('{{count}}', String(hiddenCount))}
+                              {t('resumes.groupedView.showMore', { count: hiddenCount })}
                             </button>
                           )}
                           {isFullyExpanded && visibleData.unassigned.length > INITIAL_RESUMES_LIMIT && (
@@ -427,7 +427,7 @@ const DealsGroupedView = ({ allTags }: DealsGroupedViewProps): JSX.Element => {
                               }}
                               className="w-full py-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/30 rounded-lg transition-colors"
                             >
-                              {t('resumes.groupedView.showLess', 'Voir moins')}
+                              {t('resumes.groupedView.showLess')}
                             </button>
                           )}
                         </>

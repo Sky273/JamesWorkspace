@@ -165,7 +165,7 @@ const JobsTab = (): JSX.Element => {
       const response = await fetchWithAuth(`/api/batch-jobs/${jobId}/cancel`, options);
       
       if (response.ok) {
-        toast.success(t('batchJobs.jobCancelled', 'Job annulé'));
+        toast.success(t('batchJobs.jobCancelled'));
         fetchJobs();
       } else {
         const error = await response.json();
@@ -183,7 +183,7 @@ const JobsTab = (): JSX.Element => {
       const response = await fetchWithAuth(`/api/batch-jobs/${jobId}`, options);
       
       if (response.ok) {
-        toast.success(t('batchJobs.jobDeleted', 'Job supprimé'));
+        toast.success(t('batchJobs.jobDeleted'));
         setJobs(prev => prev.filter(j => j.id !== jobId));
       } else {
         const error = await response.json();
@@ -209,7 +209,7 @@ const JobsTab = (): JSX.Element => {
         a.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
-        toast.success(t('batchJobs.downloadStarted', 'Téléchargement démarré'));
+        toast.success(t('batchJobs.downloadStarted'));
       } else {
         const error = await response.json();
         toast.error(error.error || 'Erreur lors du téléchargement');
@@ -223,7 +223,7 @@ const JobsTab = (): JSX.Element => {
   const handleProvideName = async (itemId: string) => {
     const name = pendingNameInputs[itemId]?.trim();
     if (!name) {
-      toast.error(t('batchJobs.nameRequired', 'Veuillez saisir le nom du candidat'));
+      toast.error(t('batchJobs.nameRequired'));
       return;
     }
 
@@ -237,7 +237,7 @@ const JobsTab = (): JSX.Element => {
       const response = await fetchWithAuth(`/api/batch-jobs/items/${itemId}/provide-name`, options);
       
       if (response.ok) {
-        toast.success(t('batchJobs.nameProvided', 'Nom fourni, traitement en cours...'));
+        toast.success(t('batchJobs.nameProvided'));
         setPendingNameInputs(prev => {
           const updated = { ...prev };
           delete updated[itemId];
@@ -298,11 +298,11 @@ const JobsTab = (): JSX.Element => {
 
   const getStatusText = (status: Job['status']) => {
     switch (status) {
-      case 'pending': return t('batchJobs.status.pending', 'En attente');
-      case 'processing': return t('batchJobs.status.processing', 'En cours');
-      case 'completed': return t('batchJobs.status.completed', 'Terminé');
-      case 'failed': return t('batchJobs.status.failed', 'Échoué');
-      case 'cancelled': return t('batchJobs.status.cancelled', 'Annulé');
+      case 'pending': return t('batchJobs.status.pending');
+      case 'processing': return t('batchJobs.status.processing');
+      case 'completed': return t('batchJobs.status.completed');
+      case 'failed': return t('batchJobs.status.failed');
+      case 'cancelled': return t('batchJobs.status.cancelled');
       default: return status;
     }
   };
@@ -369,45 +369,45 @@ const JobsTab = (): JSX.Element => {
 
   const getJobTypeText = (job: Job) => {
     if (job.job_type === 'improve') {
-      return t('batchJobs.type.improve', 'Am?lioration');
+      return t('batchJobs.type.improve');
     }
     if (job.job_type === 'adapt') {
-      return t('batchJobs.type.adapt', 'Adaptation');
+      return t('batchJobs.type.adapt');
     }
     if (job.job_type === 'match') {
-      return t('batchJobs.type.match', 'Analyse de match');
+      return t('batchJobs.type.match');
     }
     if (job.job_type === 'profile-search') {
-      return t('batchJobs.type.profileSearch', 'Recherche de profils');
+      return t('batchJobs.type.profileSearch');
     }
     if (job.job_type === 'profile-analysis') {
-      return t('batchJobs.type.profileAnalysis', 'Analyse détaillée de profil');
+      return t('batchJobs.type.profileAnalysis');
     }
     if (job.job_type === 'deal-export') {
       const options = typeof job.options === 'string' ? JSON.parse(job.options) : job.options;
       const dealTitle = options?.dealTitle || '';
       return dealTitle
-        ? t('batchJobs.type.dealExportNamed', 'Export affaire : {{title}}', { title: dealTitle })
-        : t('batchJobs.type.dealExport', 'Export affaire');
+        ? t('batchJobs.type.dealExportNamed', { title: dealTitle })
+        : t('batchJobs.type.dealExport');
     }
     if (job.job_type === 'collect-trends') {
-      return t('batchJobs.type.collectTrends', 'Collecte tendances marché');
+      return t('batchJobs.type.collectTrends');
     }
     if (job.job_type === 'collect-facts') {
       const options = typeof job.options === 'string' ? JSON.parse(job.options) : job.options;
       const source = options?.source || 'all';
       return source === 'all'
-        ? t('batchJobs.type.collectFacts', 'Collecte offres d\'emploi')
-        : t('batchJobs.type.collectFactsSource', 'Collecte offres ({{source}})', { source });
+        ? t('batchJobs.type.collectFacts')
+        : t('batchJobs.type.collectFactsSource', { source });
     }
     if (job.job_type === 'collect-metiers') {
-      return t('batchJobs.type.collectMetiers', 'Collecte métiers & compétences');
+      return t('batchJobs.type.collectMetiers');
     }
     const options = typeof job.options === 'string' ? JSON.parse(job.options) : job.options;
     if (options?.improve) {
-      return t('batchJobs.type.importImprove', 'Import + Amélioration');
+      return t('batchJobs.type.importImprove');
     }
-    return t('batchJobs.type.import', 'Import');
+    return t('batchJobs.type.import');
   };
 
   if (loading) {
@@ -423,7 +423,7 @@ const JobsTab = (): JSX.Element => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-          {t('batchJobs.title', 'Jobs de traitement')}
+          {t('batchJobs.title')}
         </h2>
         <button
           onClick={handleRefresh}
@@ -431,7 +431,7 @@ const JobsTab = (): JSX.Element => {
           className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
         >
           <ArrowPathIcon className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-          {t('batchJobs.refresh', 'Actualiser')}
+          {t('batchJobs.refresh')}
         </button>
       </div>
 
@@ -443,9 +443,9 @@ const JobsTab = (): JSX.Element => {
           </svg>
         </div>
         <div className="text-sm text-blue-700 dark:text-blue-300">
-          <p className="font-medium">{t('batchJobs.serverInfo.title', 'Traitement en arrière-plan')}</p>
+          <p className="font-medium">{t('batchJobs.serverInfo.title')}</p>
           <p className="mt-1 text-blue-600 dark:text-blue-400">
-            {t('batchJobs.serverInfo.description', 'Les jobs sont traités sur le serveur. Vous pouvez naviguer librement dans l\'application sans interrompre le traitement.')}
+            {t('batchJobs.serverInfo.description')}
           </p>
         </div>
       </div>
@@ -454,7 +454,7 @@ const JobsTab = (): JSX.Element => {
       {jobs.length === 0 ? (
         <div className="text-center py-12 text-gray-500 dark:text-gray-400">
           <ClockIcon className="w-12 h-12 mx-auto mb-4 opacity-50" />
-          <p>{t('batchJobs.noJobs', 'Aucun job de traitement')}</p>
+          <p>{t('batchJobs.noJobs')}</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -485,7 +485,7 @@ const JobsTab = (): JSX.Element => {
                       </div>
                       <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                         {formatDate(job.created_at)}
-                        {job.user_name && ` • ${job.user_name}`}
+                          {job.user_name && ` • ${job.user_name}`}
                       </div>
                     </div>
                   </div>
@@ -541,7 +541,7 @@ const JobsTab = (): JSX.Element => {
                         <button
                           onClick={(e) => { e.stopPropagation(); handleDownloadExport(job.id, job.export_file_name!); }}
                           className="p-1.5 text-green-500 hover:text-green-600 transition-colors"
-                          title={t('batchJobs.download', 'Télécharger l\'export')}
+                        title={t('batchJobs.download')}
                         >
                           <ArrowDownTrayIcon className="w-5 h-5" />
                         </button>
@@ -550,7 +550,7 @@ const JobsTab = (): JSX.Element => {
                         <button
                           onClick={(e) => { e.stopPropagation(); handleCancelJob(job.id); }}
                           className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"
-                          title={t('batchJobs.cancel', 'Annuler')}
+                        title={t('batchJobs.cancel')}
                         >
                           <XCircleIcon className="w-5 h-5" />
                         </button>
@@ -559,7 +559,7 @@ const JobsTab = (): JSX.Element => {
                         <button
                           onClick={(e) => { e.stopPropagation(); handleDeleteJob(job.id); }}
                           className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"
-                          title={t('batchJobs.delete', 'Supprimer')}
+                        title={t('batchJobs.delete')}
                         >
                           <TrashIcon className="w-5 h-5" />
                         </button>
@@ -586,20 +586,20 @@ const JobsTab = (): JSX.Element => {
                     <div className="p-4 bg-gray-50 dark:bg-gray-900/50">
                       <div className="grid grid-cols-2 gap-3 text-sm">
                         <div className="flex justify-between px-3 py-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
-                          <span className="text-gray-500 dark:text-gray-400">{t('batchJobs.collection.processed', 'Traités')}</span>
+                      <span className="text-gray-500 dark:text-gray-400">{t('batchJobs.collection.processed')}</span>
                           <span className="font-medium text-gray-900 dark:text-gray-100">{job.processed_items}</span>
                         </div>
                         <div className="flex justify-between px-3 py-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
-                          <span className="text-gray-500 dark:text-gray-400">{t('batchJobs.collection.success', 'Succès')}</span>
+                      <span className="text-gray-500 dark:text-gray-400">{t('batchJobs.collection.success')}</span>
                           <span className="font-medium text-green-600 dark:text-green-400">{job.success_count}</span>
                         </div>
                         <div className="flex justify-between px-3 py-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
-                          <span className="text-gray-500 dark:text-gray-400">{t('batchJobs.collection.errors', 'Erreurs')}</span>
+                      <span className="text-gray-500 dark:text-gray-400">{t('batchJobs.collection.errors')}</span>
                           <span className={`font-medium ${job.error_count > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'}`}>{job.error_count}</span>
                         </div>
                         {job.started_at && (
                           <div className="flex justify-between px-3 py-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
-                            <span className="text-gray-500 dark:text-gray-400">{t('batchJobs.collection.startedAt', 'Démarré')}</span>
+                      <span className="text-gray-500 dark:text-gray-400">{t('batchJobs.collection.startedAt')}</span>
                             <span className="font-medium text-gray-900 dark:text-gray-100">{formatDate(job.started_at)}</span>
                           </div>
                         )}
@@ -622,7 +622,7 @@ const JobsTab = (): JSX.Element => {
                     <div className="p-4 bg-gray-50 dark:bg-gray-900/50 max-h-64 overflow-y-auto">
                       {job.items.length === 0 ? (
                         <p className="text-sm text-gray-500 dark:text-gray-400">
-                          {t('batchJobs.noItems', 'Aucun élément')}
+                        {t('batchJobs.noItems')}
                         </p>
                       ) : (
                         <div className="space-y-2">
@@ -712,7 +712,7 @@ const JobsTab = (): JSX.Element => {
                                     value={pendingNameInputs[item.id] || ''}
                                     onChange={(e) => setPendingNameInputs(prev => ({ ...prev, [item.id]: e.target.value }))}
                                     onKeyDown={(e) => e.key === 'Enter' && handleProvideName(item.id)}
-                                    placeholder={t('batchJobs.enterCandidateName', 'Nom du candidat...')}
+                                  placeholder={t('batchJobs.enterCandidateName')}
                                     className="w-40 px-2 py-1 text-sm border border-orange-300 dark:border-orange-600 rounded focus:ring-2 focus:ring-orange-500 focus:border-orange-500 dark:bg-gray-700 dark:text-gray-100"
                                     disabled={submittingName === item.id}
                                   />
@@ -720,7 +720,7 @@ const JobsTab = (): JSX.Element => {
                                     onClick={() => handleProvideName(item.id)}
                                     disabled={submittingName === item.id || !pendingNameInputs[item.id]?.trim()}
                                     className="p-1.5 text-white bg-orange-500 hover:bg-orange-600 disabled:bg-gray-300 disabled:cursor-not-allowed rounded transition-colors"
-                                    title={t('batchJobs.submitName', 'Valider le nom')}
+                                  title={t('batchJobs.submitName')}
                                   >
                                     {submittingName === item.id ? (
                                       <ArrowPathIcon className="w-4 h-4 animate-spin" />

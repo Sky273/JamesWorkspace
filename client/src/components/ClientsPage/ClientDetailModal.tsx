@@ -104,7 +104,7 @@ const ClientDetailModal = ({
               className="btn btn-primary flex items-center gap-2 px-3 py-2 text-sm"
             >
               <FolderIcon className="w-4 h-4" />
-              Affaires
+              {t('crm.tabs.deals')}
             </button>
             <button
               onClick={onEditClient}
@@ -281,7 +281,7 @@ const ClientDetailModal = ({
                       </div>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
                         {t('clients.sentTo')}: {submission.contact_name}
-                        {submission.mission_title && ` • ${submission.mission_title}`}
+                        {submission.mission_title && ` ? ${submission.mission_title}`}
                       </p>
                       <p className="text-xs text-gray-400 dark:text-gray-500">
                         {new Date(submission.sent_at).toLocaleDateString()} {t('clients.by')} {submission.sent_by_name}

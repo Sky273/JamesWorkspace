@@ -328,7 +328,7 @@ router.post('/adapt', authenticateToken, validateBody(batchAdaptSchema), async (
         res.status(201).json(updatedJob);
     } catch (error) {
         safeLog('error', 'Failed to create batch adaptation job', { error: error.message });
-        res.status(500).json({ error: error.message || 'Erreur lors de la cr?ation du job' });
+        res.status(500).json({ error: error.message || 'Erreur lors de la création du job' });
     }
 });
 

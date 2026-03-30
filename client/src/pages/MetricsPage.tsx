@@ -474,7 +474,7 @@ const MetricsPage = (): JSX.Element => {
       const response = await fetchWithAuth('/api/metrics/operations', createAuthOptions());
       if (!response.ok) {
         setOperationsMetrics(null);
-        setOperationsMetricsError(`${t('metrics.operationsUnavailable', 'Operational metrics unavailable')} (${response.status})`);
+        setOperationsMetricsError(`${t('metrics.operationsUnavailable')} (${response.status})`);
         return;
       }
       const data = await response.json();
@@ -486,7 +486,7 @@ const MetricsPage = (): JSX.Element => {
         logger.error('Error fetching operations metrics:', error);
       }
       setOperationsMetrics(null);
-      setOperationsMetricsError(t('metrics.operationsUnavailable', 'Operational metrics unavailable'));
+      setOperationsMetricsError(t('metrics.operationsUnavailable'));
     }
   }, [t]);
 
@@ -531,14 +531,14 @@ const MetricsPage = (): JSX.Element => {
         ['LLM Requests', String(metrics.llm?.requests || 0)],
         ['LLM Total Tokens', String(metrics.llm?.totalTokens || 0)],
         ['DB Size', dbMetrics?.database?.sizePretty || 'N/A'],
-        [t('metrics.resumeBinaryStorageCsv', 'Resume Binary Storage'), formatBytes(operationsMetrics?.binaryStorage?.resumeBinaryBytes)],
-        [t('metrics.batchFileDataStorageCsv', 'Batch File Data Storage'), formatBytes(operationsMetrics?.binaryStorage?.batchFileDataBytes)],
-        [t('metrics.uploadFilesTotalCsv', 'Upload Files Total'), String(operationsMetrics?.operations?.uploads?.total || 0)],
-        [t('metrics.ocrRunsCsv', 'OCR Runs'), String(operationsMetrics?.operations?.ocr?.runs || 0)],
-        [t('metrics.cleanupRunsCsv', 'Cleanup Runs'), String(operationsMetrics?.operations?.cleanup?.runs || 0)],
-        [t('metrics.batchImportRunsCsv', 'Batch Import Runs'), String(operationsMetrics?.operations?.batchImports?.runs || 0)],
-        [t('metrics.improvementRunsCsv', 'Resume Improvement Runs'), String(operationsMetrics?.operations?.improvement?.runs || 0)],
-        [t('metrics.adaptationRunsCsv', 'Resume Adaptation Runs'), String(operationsMetrics?.operations?.adaptation?.runs || 0)],
+        [t('metrics.resumeBinaryStorageCsv'), formatBytes(operationsMetrics?.binaryStorage?.resumeBinaryBytes)],
+        [t('metrics.batchFileDataStorageCsv'), formatBytes(operationsMetrics?.binaryStorage?.batchFileDataBytes)],
+        [t('metrics.uploadFilesTotalCsv'), String(operationsMetrics?.operations?.uploads?.total || 0)],
+        [t('metrics.ocrRunsCsv'), String(operationsMetrics?.operations?.ocr?.runs || 0)],
+        [t('metrics.cleanupRunsCsv'), String(operationsMetrics?.operations?.cleanup?.runs || 0)],
+        [t('metrics.batchImportRunsCsv'), String(operationsMetrics?.operations?.batchImports?.runs || 0)],
+        [t('metrics.improvementRunsCsv'), String(operationsMetrics?.operations?.improvement?.runs || 0)],
+        [t('metrics.adaptationRunsCsv'), String(operationsMetrics?.operations?.adaptation?.runs || 0)],
         ['DB Connections Total', String(dbMetrics?.connections?.total || 0)],
         ['DB Connections Active', String(dbMetrics?.connections?.active || 0)]
       ];
@@ -606,13 +606,13 @@ const MetricsPage = (): JSX.Element => {
   );
   const profileMatchingAlerts = [
     requestedToScoredRatio !== null && requestedToScoredRatio < 0.6
-      ? t('metrics.profileMatchingAlertRequestedScored', 'Profile matching scoring ratio is degraded. Too many requested profiles are not reaching LLM scoring.')
+      ? t('metrics.profileMatchingAlertRequestedScored')
       : null,
     scoredToExplainedRatio !== null && scoredToExplainedRatio < 0.2
-      ? t('metrics.profileMatchingAlertScoredExplained', 'Profile matching explanation ratio is low. Explanations are only being generated for a small part of scored profiles.')
+      ? t('metrics.profileMatchingAlertScoredExplained')
       : null,
     scoredToReturnedRatio !== null && scoredToReturnedRatio < 0.5
-      ? t('metrics.profileMatchingAlertScoredReturned', 'Profile matching return ratio is degraded. Too many scored profiles are filtered out or failing later in the pipeline.')
+      ? t('metrics.profileMatchingAlertScoredReturned')
       : null
   ].filter(Boolean) as string[];
   const improvementSuccessRatio = computeRatio(
@@ -651,7 +651,7 @@ const MetricsPage = (): JSX.Element => {
             <div className="relative group">
               <button className="btn btn-secondary flex items-center gap-2 px-4 py-2">
                 <ArrowDownTrayIcon className="w-4 h-4" />
-                {t('metrics.export', 'Export')}
+                {t('metrics.export')}
               </button>
               <div className="absolute right-0 mt-2 w-32 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
                 <button onClick={() => exportMetrics('json')} className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-t-lg">
@@ -710,22 +710,22 @@ const MetricsPage = (): JSX.Element => {
               </div>
               <div className="grid grid-cols-3 gap-4 text-sm mt-4">
                 <div className="bg-green-100 dark:bg-green-900/30 rounded-lg p-3">
-                  <p className="opacity-70">{t('metrics.cacheBackend', 'Cache backend')}</p>
+                  <p className="opacity-70">{t('metrics.cacheBackend')}</p>
                   <p className="font-semibold uppercase">{cacheBackend}</p>
                 </div>
                 <div className="bg-green-100 dark:bg-green-900/30 rounded-lg p-3">
-                  <p className="opacity-70">{t('metrics.cacheConnected', 'Redis connected')}</p>
+                  <p className="opacity-70">{t('metrics.cacheConnected')}</p>
                   <p className="font-semibold">
                     {cacheConnected === null || cacheConnected === undefined
-                      ? t('metrics.notApplicable', 'N/A')
+                      ? t('metrics.notApplicable')
                       : cacheConnected
                         ? t('common.yes', 'Oui')
                         : t('common.no', 'Non')}
                   </p>
                 </div>
                 <div className="bg-green-100 dark:bg-green-900/30 rounded-lg p-3">
-                  <p className="opacity-70">{t('metrics.cacheFallbackReason', 'Fallback')}</p>
-                  <p className="font-semibold break-words">{cacheFallbackReason || t('metrics.none', 'Aucun')}</p>
+                  <p className="opacity-70">{t('metrics.cacheFallbackReason')}</p>
+                  <p className="font-semibold break-words">{cacheFallbackReason || t('metrics.none')}</p>
                 </div>
               </div>
             </motion.div>
@@ -737,35 +737,35 @@ const MetricsPage = (): JSX.Element => {
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="rounded-xl border bg-orange-50 text-orange-600 border-orange-200 dark:bg-gray-800 dark:text-orange-400 dark:border-orange-700 p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <p className="text-sm font-medium opacity-80">{t('metrics.database', 'Base de données')}</p>
+                    <p className="text-sm font-medium opacity-80">{t('metrics.database')}</p>
                     <p className="text-2xl font-bold mt-1">{dbMetrics.database?.sizePretty || 'N/A'}</p>
-                    <p className="text-xs mt-1 opacity-60">{t('metrics.dbSize', 'Taille totale')}</p>
+                    <p className="text-xs mt-1 opacity-60">{t('metrics.dbSize')}</p>
                   </div>
                   <TableCellsIcon className="w-10 h-10 opacity-50" />
                 </div>
                 <div className="grid grid-cols-3 gap-3 text-sm mb-4">
                   <div className="bg-orange-100 dark:bg-orange-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.connections', 'Connexions')}</p>
+                    <p className="opacity-70">{t('metrics.connections')}</p>
                     <p className="font-semibold">{safeNumber(dbMetrics.connections?.total)}</p>
                   </div>
                   <div className="bg-orange-100 dark:bg-orange-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.active', 'Actives')}</p>
+                    <p className="opacity-70">{t('metrics.active')}</p>
                     <p className="font-semibold">{safeNumber(dbMetrics.connections?.active)}</p>
                   </div>
                   <div className="bg-orange-100 dark:bg-orange-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.idle', 'Inactives')}</p>
+                    <p className="opacity-70">{t('metrics.idle')}</p>
                     <p className="font-semibold">{safeNumber(dbMetrics.connections?.idle)}</p>
                   </div>
                 </div>
-                <p className="text-xs opacity-60">{t('metrics.queryTime', 'Temps de requête')}: {dbMetrics.queryTime || 'N/A'}</p>
+                <p className="text-xs opacity-60">{t('metrics.queryTime')}: {dbMetrics.queryTime || 'N/A'}</p>
               </motion.div>
 
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }} className="rounded-xl border bg-orange-50 text-orange-600 border-orange-200 dark:bg-gray-800 dark:text-orange-400 dark:border-orange-700 p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <p className="text-sm font-medium opacity-80">{t('metrics.tables', 'Tables')}</p>
+                    <p className="text-sm font-medium opacity-80">{t('metrics.tables')}</p>
                     <p className="text-2xl font-bold mt-1">{dbMetrics.tables?.length || 0}</p>
-                    <p className="text-xs mt-1 opacity-60">{t('metrics.topTables', 'Tables principales')}</p>
+                    <p className="text-xs mt-1 opacity-60">{t('metrics.topTables')}</p>
                   </div>
                   <ServerIcon className="w-10 h-10 opacity-50" />
                 </div>
@@ -773,9 +773,9 @@ const MetricsPage = (): JSX.Element => {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-orange-200 dark:border-orange-700">
-                        <th className="text-left py-2 px-2 font-medium opacity-70">{t('metrics.tableName', 'Table')}</th>
-                        <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.rows', 'Lignes')}</th>
-                        <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.deadRows', 'Mortes')}</th>
+                        <th className="text-left py-2 px-2 font-medium opacity-70">{t('metrics.tableName')}</th>
+                        <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.rows')}</th>
+                        <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.deadRows')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -797,10 +797,10 @@ const MetricsPage = (): JSX.Element => {
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.185 }} className="rounded-xl border bg-amber-50 text-amber-700 border-amber-200 dark:bg-gray-800 dark:text-amber-400 dark:border-amber-700 p-6 mb-8">
               <div className="flex items-center gap-3 mb-2">
                 <ExclamationTriangleIcon className="w-6 h-6 opacity-80" />
-                <p className="text-sm font-semibold">{t('metrics.operationsUnavailable', 'Operational metrics unavailable')}</p>
+                <p className="text-sm font-semibold">{t('metrics.operationsUnavailable')}</p>
               </div>
               <p className="text-sm opacity-80">{operationsMetricsError}</p>
-              <p className="text-xs opacity-60 mt-2">{t('metrics.operationsHint', 'Deploy the backend exposing /api/metrics/operations to enable uploads, OCR, storage and cleanup metrics.')}</p>
+              <p className="text-xs opacity-60 mt-2">{t('metrics.operationsHint')}</p>
             </motion.div>
           )}
 
@@ -809,37 +809,37 @@ const MetricsPage = (): JSX.Element => {
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.185 }} className="rounded-xl border bg-sky-50 text-sky-700 border-sky-200 dark:bg-gray-800 dark:text-sky-400 dark:border-sky-700 p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <p className="text-sm font-medium opacity-80">{t('metrics.operationsUploadsTitle', 'Uploads and binary storage')}</p>
+                    <p className="text-sm font-medium opacity-80">{t('metrics.operationsUploadsTitle')}</p>
                     <p className="text-2xl font-bold mt-1">{formatNumber(safeNumber(operationsMetrics.operations?.uploads?.total))}</p>
-                    <p className="text-xs mt-1 opacity-60">{t('metrics.operationsUploadsSubtitle', 'Files received, stored and kept in the database')}</p>
+                    <p className="text-xs mt-1 opacity-60">{t('metrics.operationsUploadsSubtitle')}</p>
                   </div>
                   <ArrowDownTrayIcon className="w-10 h-10 opacity-50" />
                 </div>
                 <div className="grid grid-cols-2 gap-3 text-sm mb-4">
                   <div className="bg-sky-100 dark:bg-sky-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.successFailures', 'Success / failures')}</p>
+                    <p className="opacity-70">{t('metrics.successFailures')}</p>
                     <p className="font-semibold">{safeNumber(operationsMetrics.operations?.uploads?.successful)} / {safeNumber(operationsMetrics.operations?.uploads?.failed)}</p>
                   </div>
                   <div className="bg-sky-100 dark:bg-sky-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.receivedStoredDb', 'Received / stored in DB')}</p>
+                    <p className="opacity-70">{t('metrics.receivedStoredDb')}</p>
                     <p className="font-semibold">{formatBytes(safeNumber(operationsMetrics.operations?.uploads?.bytesReceived))} / {formatBytes(safeNumber(operationsMetrics.operations?.uploads?.bytesStoredInDb))}</p>
                   </div>
                   <div className="bg-sky-100 dark:bg-sky-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.binaryResumes', 'Binary resumes')}</p>
+                    <p className="opacity-70">{t('metrics.binaryResumes')}</p>
                     <p className="font-semibold">{safeNumber(operationsMetrics.binaryStorage?.resumesWithBinary)}</p>
                   </div>
                   <div className="bg-sky-100 dark:bg-sky-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.binaryStorage', 'Binary storage')}</p>
+                    <p className="opacity-70">{t('metrics.binaryStorage')}</p>
                     <p className="font-semibold">{formatBytes(safeNumber(operationsMetrics.binaryStorage?.resumeBinaryBytes))}</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div className="bg-sky-100 dark:bg-sky-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.averagePerResume', 'Average per resume')}</p>
+                    <p className="opacity-70">{t('metrics.averagePerResume')}</p>
                     <p className="font-semibold">{formatBytes(safeNumber(operationsMetrics.binaryStorage?.avgResumeBinaryBytes))}</p>
                   </div>
                   <div className="bg-sky-100 dark:bg-sky-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.batchFileData', 'Batch file_data')}</p>
+                    <p className="opacity-70">{t('metrics.batchFileData')}</p>
                     <p className="font-semibold">{formatBytes(safeNumber(operationsMetrics.binaryStorage?.batchFileDataBytes))}</p>
                   </div>
                 </div>
@@ -848,52 +848,52 @@ const MetricsPage = (): JSX.Element => {
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.19 }} className="rounded-xl border bg-teal-50 text-teal-700 border-teal-200 dark:bg-gray-800 dark:text-teal-400 dark:border-teal-700 p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <p className="text-sm font-medium opacity-80">{t('metrics.operationsOcrTitle', 'OCR and cleanup')}</p>
+                    <p className="text-sm font-medium opacity-80">{t('metrics.operationsOcrTitle')}</p>
                     <p className="text-2xl font-bold mt-1">{formatNumber(safeNumber(operationsMetrics.operations?.ocr?.runs))}</p>
-                    <p className="text-xs mt-1 opacity-60">{t('metrics.operationsOcrSubtitle', 'Scanned PDF extraction, temporary files and batch exports')}</p>
+                    <p className="text-xs mt-1 opacity-60">{t('metrics.operationsOcrSubtitle')}</p>
                   </div>
                   <BoltIcon className="w-10 h-10 opacity-50" />
                 </div>
                 <div className="grid grid-cols-2 gap-3 text-sm mb-4">
                   <div className="bg-teal-100 dark:bg-teal-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.ocrSuccessFailures', 'OCR success / failures')}</p>
+                    <p className="opacity-70">{t('metrics.ocrSuccessFailures')}</p>
                     <p className="font-semibold">{safeNumber(operationsMetrics.operations?.ocr?.successfulRuns)} / {safeNumber(operationsMetrics.operations?.ocr?.failedRuns)}</p>
                   </div>
                   <div className="bg-teal-100 dark:bg-teal-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.ocrPagesFailures', 'OCR pages / failures')}</p>
+                    <p className="opacity-70">{t('metrics.ocrPagesFailures')}</p>
                     <p className="font-semibold">{safeNumber(operationsMetrics.operations?.ocr?.scannedPagesDetected)} / {safeNumber(operationsMetrics.operations?.ocr?.failedPages)}</p>
                   </div>
                   <div className="bg-teal-100 dark:bg-teal-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.averageConfidence', 'Average confidence')}</p>
+                    <p className="opacity-70">{t('metrics.averageConfidence')}</p>
                     <p className="font-semibold">{safeNumber(operationsMetrics.operations?.ocr?.confidenceSamples) > 0 ? ((safeNumber(operationsMetrics.operations?.ocr?.totalConfidence) / safeNumber(operationsMetrics.operations?.ocr?.confidenceSamples)).toFixed(1) + '%') : 'N/A'}</p>
                   </div>
                   <div className="bg-teal-100 dark:bg-teal-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.cumulativeOcrTime', 'Cumulative OCR time')}</p>
+                    <p className="opacity-70">{t('metrics.cumulativeOcrTime')}</p>
                     <p className="font-semibold">{Math.round(safeNumber(operationsMetrics.operations?.ocr?.totalExtractionTimeMs) / 1000) + 's'}</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3 text-sm mb-4">
                   <div className="bg-teal-100 dark:bg-teal-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.cleanupRuns', 'Cleanup runs')}</p>
+                    <p className="opacity-70">{t('metrics.cleanupRuns')}</p>
                     <p className="font-semibold">{safeNumber(operationsMetrics.operations?.cleanup?.runs)}</p>
                   </div>
                   <div className="bg-teal-100 dark:bg-teal-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.filesDirsDeleted', 'Files / directories deleted')}</p>
+                    <p className="opacity-70">{t('metrics.filesDirsDeleted')}</p>
                     <p className="font-semibold">{safeNumber(operationsMetrics.operations?.cleanup?.filesDeleted)} / {safeNumber(operationsMetrics.operations?.cleanup?.directoriesDeleted)}</p>
                   </div>
                   <div className="bg-teal-100 dark:bg-teal-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.orphanBatchExports', 'Orphan batch exports')}</p>
+                    <p className="opacity-70">{t('metrics.orphanBatchExports')}</p>
                     <p className="font-semibold">{safeNumber(operationsMetrics.operations?.cleanup?.orphanExportFilesDeleted)}</p>
                   </div>
                   <div className="bg-teal-100 dark:bg-teal-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.staleBatchRefs', 'Cleared batch references')}</p>
+                    <p className="opacity-70">{t('metrics.staleBatchRefs')}</p>
                     <p className="font-semibold">{safeNumber(operationsMetrics.operations?.cleanup?.staleExportRefsCleared)}</p>
                   </div>
                 </div>
                 <p className="text-xs opacity-60">
-                  {t('metrics.tempStorageSummary', 'Temp')}: {formatBytes(safeNumber(operationsMetrics.storage?.tempDirectorySize))} / {safeNumber(operationsMetrics.storage?.tempFileCount)} {t('metrics.filesUnit', 'files')}
+                  {t('metrics.tempStorageSummary')}: {formatBytes(safeNumber(operationsMetrics.storage?.tempDirectorySize))} / {safeNumber(operationsMetrics.storage?.tempFileCount)} {t('metrics.filesUnit')}
                   {' | '}
-                  {t('metrics.batchExportsSummary', 'Batch exports')}: {formatBytes(safeNumber(operationsMetrics.storage?.batchExportDirectorySize))} / {safeNumber(operationsMetrics.storage?.batchExportFileCount)} {t('metrics.filesUnit', 'files')}
+                  {t('metrics.batchExportsSummary')}: {formatBytes(safeNumber(operationsMetrics.storage?.batchExportDirectorySize))} / {safeNumber(operationsMetrics.storage?.batchExportFileCount)} {t('metrics.filesUnit')}
                 </p>
               </motion.div>
 
@@ -909,47 +909,47 @@ const MetricsPage = (): JSX.Element => {
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.195 }} className="rounded-xl border bg-violet-50 text-violet-700 border-violet-200 dark:bg-gray-800 dark:text-violet-400 dark:border-violet-700 p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <p className="text-sm font-medium opacity-80">{t('metrics.profileMatchingTitle', 'Profile matching')}</p>
+                    <p className="text-sm font-medium opacity-80">{t('metrics.profileMatchingTitle')}</p>
                     <p className="text-2xl font-bold mt-1">{formatNumber(safeNumber(operationsMetrics.operations?.profileMatching?.searches))}</p>
-                    <p className="text-xs mt-1 opacity-60">{t('metrics.profileMatchingSubtitle', 'Searches, scoring batches and explained profiles')}</p>
+                    <p className="text-xs mt-1 opacity-60">{t('metrics.profileMatchingSubtitle')}</p>
                   </div>
                   <SparklesIcon className="w-10 h-10 opacity-50" />
                 </div>
                 <div className="grid grid-cols-2 gap-3 text-sm mb-4">
                   <div className="bg-violet-100 dark:bg-violet-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.profilesRequested', 'Profiles requested')}</p>
+                    <p className="opacity-70">{t('metrics.profilesRequested')}</p>
                     <p className="font-semibold">{formatNumber(safeNumber(operationsMetrics.operations?.profileMatching?.profilesRequested))}</p>
                   </div>
                   <div className="bg-violet-100 dark:bg-violet-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.profilesScored', 'Profiles scored')}</p>
+                    <p className="opacity-70">{t('metrics.profilesScored')}</p>
                     <p className="font-semibold">{formatNumber(safeNumber(operationsMetrics.operations?.profileMatching?.profilesScored))}</p>
                   </div>
                   <div className="bg-violet-100 dark:bg-violet-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.batchesStarted', 'Batches started')}</p>
+                    <p className="opacity-70">{t('metrics.batchesStarted')}</p>
                     <p className="font-semibold">{safeNumber(operationsMetrics.operations?.profileMatching?.batchesStarted)}</p>
                   </div>
                   <div className="bg-violet-100 dark:bg-violet-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.batchesRetriedFailed', 'Retried / failed')}</p>
+                    <p className="opacity-70">{t('metrics.batchesRetriedFailed')}</p>
                     <p className="font-semibold">{safeNumber(operationsMetrics.operations?.profileMatching?.batchesRetried)} / {safeNumber(operationsMetrics.operations?.profileMatching?.batchesFailed)}</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3 text-sm mb-4">
                   <div className="bg-violet-100 dark:bg-violet-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.profilesExplained', 'Profiles explained')}</p>
+                    <p className="opacity-70">{t('metrics.profilesExplained')}</p>
                     <p className="font-semibold">{formatNumber(safeNumber(operationsMetrics.operations?.profileMatching?.profilesExplained))}</p>
                   </div>
                   <div className="bg-violet-100 dark:bg-violet-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.profilesReturned', 'Profiles returned')}</p>
+                    <p className="opacity-70">{t('metrics.profilesReturned')}</p>
                     <p className="font-semibold">{formatNumber(safeNumber(operationsMetrics.operations?.profileMatching?.profilesReturned))}</p>
                   </div>
                   <div className="bg-violet-100 dark:bg-violet-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.profileNormalizationEvents', 'Normalized LLM fields')}</p>
+                    <p className="opacity-70">{t('metrics.profileNormalizationEvents')}</p>
                     <p className="font-semibold">{formatNumber(safeNumber(operationsMetrics.operations?.profileMatching?.normalizationEvents))}</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm mb-4">
                   <div className="bg-violet-100 dark:bg-violet-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.requestedToScoredRatio', 'Requested -> scored')}</p>
+                    <p className="opacity-70">{t('metrics.requestedToScoredRatio')}</p>
                     <p className="font-semibold">
                       {requestedToScoredRatio !== null
                         ? `${(requestedToScoredRatio * 100).toFixed(1)}%`
@@ -957,7 +957,7 @@ const MetricsPage = (): JSX.Element => {
                     </p>
                   </div>
                   <div className="bg-violet-100 dark:bg-violet-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.scoredToExplainedRatio', 'Scored -> explained')}</p>
+                    <p className="opacity-70">{t('metrics.scoredToExplainedRatio')}</p>
                     <p className="font-semibold">
                       {scoredToExplainedRatio !== null
                         ? `${(scoredToExplainedRatio * 100).toFixed(1)}%`
@@ -965,7 +965,7 @@ const MetricsPage = (): JSX.Element => {
                     </p>
                   </div>
                   <div className="bg-violet-100 dark:bg-violet-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.scoredToReturnedRatio', 'Scored -> returned')}</p>
+                    <p className="opacity-70">{t('metrics.scoredToReturnedRatio')}</p>
                     <p className="font-semibold">
                       {scoredToReturnedRatio !== null
                         ? `${(scoredToReturnedRatio * 100).toFixed(1)}%`
@@ -977,7 +977,7 @@ const MetricsPage = (): JSX.Element => {
                   <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-200">
                     <div className="mb-2 flex items-center gap-2 font-semibold">
                       <ExclamationTriangleIcon className="h-4 w-4" />
-                      {t('metrics.profileMatchingAlerts', 'Profile matching alerts')}
+                      {t('metrics.profileMatchingAlerts')}
                     </div>
                     <div className="space-y-1">
                       {profileMatchingAlerts.map((alert, index) => (
@@ -991,10 +991,10 @@ const MetricsPage = (): JSX.Element => {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-violet-200 dark:border-violet-700">
-                          <th className="text-left py-2 px-2 font-medium opacity-70">{t('metrics.model', 'Model')}</th>
-                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.searches', 'Searches')}</th>
-                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.calls', 'Calls')}</th>
-                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.profileNormalizationEventsShort', 'Normalized')}</th>
+                          <th className="text-left py-2 px-2 font-medium opacity-70">{t('metrics.model')}</th>
+                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.searches')}</th>
+                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.calls')}</th>
+                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.profileNormalizationEventsShort')}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1015,7 +1015,7 @@ const MetricsPage = (): JSX.Element => {
                 )}
                 {operationsMetrics.operations?.profileMatching?.recent && operationsMetrics.operations.profileMatching.recent.length > 0 && (
                   <div className="mt-4">
-                    <p className="text-xs font-semibold opacity-70 mb-2">{t('metrics.profileMatchingRecent', 'Recent activity')}</p>
+                    <p className="text-xs font-semibold opacity-70 mb-2">{t('metrics.profileMatchingRecent')}</p>
                     <div className="space-y-2 max-h-40 overflow-y-auto">
                       {operationsMetrics.operations.profileMatching.recent.slice().reverse().map((entry, index) => (
                         <div key={`${entry.timestamp || 'entry'}-${index}`} className="bg-violet-100 dark:bg-violet-900/30 rounded-lg p-2 text-xs">
@@ -1024,14 +1024,14 @@ const MetricsPage = (): JSX.Element => {
                             <span className="opacity-60">{entry.timestamp ? formatDateTime(entry.timestamp) : 'N/A'}</span>
                           </div>
                           <div className="mt-1 opacity-80">
-                            {entry.event || 'search'} | {t('metrics.profilesRequested', 'Profiles requested')}: {safeNumber(entry.profilesRequested)} | {t('metrics.profilesScored', 'Profiles scored')}: {safeNumber(entry.profilesScored)}
+                            {entry.event || 'search'} | {t('metrics.profilesRequested')}: {safeNumber(entry.profilesRequested)} | {t('metrics.profilesScored')}: {safeNumber(entry.profilesScored)}
                           </div>
                           {(safeNumber(entry.normalizationEvents) > 0 || entry.field || entry.inputType) && (
                             <div className="mt-1 opacity-70">
-                              {t('metrics.profileNormalizationEvents', 'Normalized LLM fields')}: {safeNumber(entry.normalizationEvents)}
-                              {entry.field ? ` | ${t('metrics.field', 'Field')}: ${entry.field}` : ''}
-                              {entry.inputType ? ` | ${t('metrics.inputType', 'Input type')}: ${entry.inputType}` : ''}
-                              {entry.source ? ` | ${t('metrics.source', 'Source')}: ${entry.source}` : ''}
+                              {t('metrics.profileNormalizationEvents')}: {safeNumber(entry.normalizationEvents)}
+                              {entry.field ? ` | ${t('metrics.field')}: ${entry.field}` : ''}
+                              {entry.inputType ? ` | ${t('metrics.inputType')}: ${entry.inputType}` : ''}
+                              {entry.source ? ` | ${t('metrics.source')}: ${entry.source}` : ''}
                             </div>
                           )}
                         </div>
@@ -1044,33 +1044,33 @@ const MetricsPage = (): JSX.Element => {
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="rounded-xl border bg-amber-50 text-amber-700 border-amber-200 dark:bg-gray-800 dark:text-amber-400 dark:border-amber-700 p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <p className="text-sm font-medium opacity-80">{t('metrics.resumeImprovementTitle', 'Resume improvement')}</p>
+                    <p className="text-sm font-medium opacity-80">{t('metrics.resumeImprovementTitle')}</p>
                     <p className="text-2xl font-bold mt-1">{formatNumber(safeNumber(improvementMetrics?.runs))}</p>
-                    <p className="text-xs mt-1 opacity-60">{t('metrics.resumeImprovementSubtitle', 'Improvement calls, structured outputs and fallback usage')}</p>
+                    <p className="text-xs mt-1 opacity-60">{t('metrics.resumeImprovementSubtitle')}</p>
                   </div>
                   <ArrowDownTrayIcon className="w-10 h-10 opacity-50" />
                 </div>
                 <div className="grid grid-cols-2 gap-3 text-sm mb-4">
                   <div className="bg-amber-100 dark:bg-amber-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.successFailures', 'Success / failures')}</p>
+                    <p className="opacity-70">{t('metrics.successFailures')}</p>
                     <p className="font-semibold">{safeNumber(improvementMetrics?.successfulRuns)} / {safeNumber(improvementMetrics?.failedRuns)}</p>
                   </div>
                   <div className="bg-amber-100 dark:bg-amber-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.structuredFallback', 'Structured / fallback')}</p>
+                    <p className="opacity-70">{t('metrics.structuredFallback')}</p>
                     <p className="font-semibold">{safeNumber(improvementMetrics?.structuredRuns)} / {safeNumber(improvementMetrics?.fallbackRuns)}</p>
                   </div>
                   <div className="bg-amber-100 dark:bg-amber-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.inputChars', 'Input chars')}</p>
+                    <p className="opacity-70">{t('metrics.inputChars')}</p>
                     <p className="font-semibold">{formatNumber(safeNumber(improvementMetrics?.inputChars))}</p>
                   </div>
                   <div className="bg-amber-100 dark:bg-amber-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.outputChars', 'Output chars')}</p>
+                    <p className="opacity-70">{t('metrics.outputChars')}</p>
                     <p className="font-semibold">{formatNumber(safeNumber(improvementMetrics?.outputChars))}</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3 text-sm mb-4">
                   <div className="bg-amber-100 dark:bg-amber-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.successRatio', 'Success ratio')}</p>
+                    <p className="opacity-70">{t('metrics.successRatio')}</p>
                     <p className="font-semibold">{improvementSuccessRatio !== null ? `${(improvementSuccessRatio * 100).toFixed(1)}%` : 'N/A'}</p>
                   </div>
                 </div>
@@ -1079,10 +1079,10 @@ const MetricsPage = (): JSX.Element => {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-amber-200 dark:border-amber-700">
-                          <th className="text-left py-2 px-2 font-medium opacity-70">{t('metrics.model', 'Model')}</th>
-                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.calls', 'Calls')}</th>
-                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.successes', 'Successes')}</th>
-                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.fallbacks', 'Fallbacks')}</th>
+                          <th className="text-left py-2 px-2 font-medium opacity-70">{t('metrics.model')}</th>
+                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.calls')}</th>
+                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.successes')}</th>
+                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.fallbacks')}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1103,7 +1103,7 @@ const MetricsPage = (): JSX.Element => {
                 )}
                 {improvementMetrics?.recent && improvementMetrics.recent.length > 0 && (
                   <div>
-                    <p className="text-xs font-semibold opacity-70 mb-2">{t('metrics.resumeImprovementRecent', 'Recent activity')}</p>
+                    <p className="text-xs font-semibold opacity-70 mb-2">{t('metrics.resumeImprovementRecent')}</p>
                     <div className="space-y-2 max-h-32 overflow-y-auto">
                       {improvementMetrics.recent.slice().reverse().map((entry, index) => (
                         <div key={`${entry.timestamp || 'entry'}-${index}`} className="bg-amber-100 dark:bg-amber-900/30 rounded-lg p-2 text-xs">
@@ -1112,11 +1112,11 @@ const MetricsPage = (): JSX.Element => {
                             <span className="opacity-60">{entry.timestamp ? formatDateTime(entry.timestamp) : 'N/A'}</span>
                           </div>
                           <div className="mt-1 opacity-80">
-                            {entry.event || 'run'} | {t('metrics.successFailures', 'Success / failures')}: {safeNumber(entry.successfulRuns)} / {safeNumber(entry.failedRuns)}
+                            {entry.event || 'run'} | {t('metrics.successFailures')}: {safeNumber(entry.successfulRuns)} / {safeNumber(entry.failedRuns)}
                           </div>
                           <div className="mt-1 opacity-70">
-                            {t('metrics.structuredFallback', 'Structured / fallback')}: {safeNumber(entry.structuredRuns)} / {safeNumber(entry.fallbackRuns)}
-                            {entry.source ? ` | ${t('metrics.source', 'Source')}: ${entry.source}` : ''}
+                            {t('metrics.structuredFallback')}: {safeNumber(entry.structuredRuns)} / {safeNumber(entry.fallbackRuns)}
+                            {entry.source ? ` | ${t('metrics.source')}: ${entry.source}` : ''}
                           </div>
                         </div>
                       ))}
@@ -1128,37 +1128,37 @@ const MetricsPage = (): JSX.Element => {
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.205 }} className="rounded-xl border bg-rose-50 text-rose-700 border-rose-200 dark:bg-gray-800 dark:text-rose-400 dark:border-rose-700 p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <p className="text-sm font-medium opacity-80">{t('metrics.resumeAdaptationTitle', 'Resume adaptation')}</p>
+                    <p className="text-sm font-medium opacity-80">{t('metrics.resumeAdaptationTitle')}</p>
                     <p className="text-2xl font-bold mt-1">{formatNumber(safeNumber(adaptationMetrics?.runs))}</p>
-                    <p className="text-xs mt-1 opacity-60">{t('metrics.resumeAdaptationSubtitle', 'Match analyses, adaptation calls and structured outputs')}</p>
+                    <p className="text-xs mt-1 opacity-60">{t('metrics.resumeAdaptationSubtitle')}</p>
                   </div>
                   <SparklesIcon className="w-10 h-10 opacity-50" />
                 </div>
                 <div className="grid grid-cols-2 gap-3 text-sm mb-4">
                   <div className="bg-rose-100 dark:bg-rose-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.successFailures', 'Success / failures')}</p>
+                    <p className="opacity-70">{t('metrics.successFailures')}</p>
                     <p className="font-semibold">{safeNumber(adaptationMetrics?.successfulRuns)} / {safeNumber(adaptationMetrics?.failedRuns)}</p>
                   </div>
                   <div className="bg-rose-100 dark:bg-rose-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.matchRuns', 'Match runs')}</p>
+                    <p className="opacity-70">{t('metrics.matchRuns')}</p>
                     <p className="font-semibold">{safeNumber(adaptationMetrics?.matchRuns)}</p>
                   </div>
                   <div className="bg-rose-100 dark:bg-rose-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.structuredFallback', 'Structured / fallback')}</p>
+                    <p className="opacity-70">{t('metrics.structuredFallback')}</p>
                     <p className="font-semibold">{safeNumber(adaptationMetrics?.structuredRuns)} / {safeNumber(adaptationMetrics?.fallbackRuns)}</p>
                   </div>
                   <div className="bg-rose-100 dark:bg-rose-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.successRatio', 'Success ratio')}</p>
+                    <p className="opacity-70">{t('metrics.successRatio')}</p>
                     <p className="font-semibold">{adaptationSuccessRatio !== null ? `${(adaptationSuccessRatio * 100).toFixed(1)}%` : 'N/A'}</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3 text-sm mb-4">
                   <div className="bg-rose-100 dark:bg-rose-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.inputChars', 'Input chars')}</p>
+                    <p className="opacity-70">{t('metrics.inputChars')}</p>
                     <p className="font-semibold">{formatNumber(safeNumber(adaptationMetrics?.inputChars))}</p>
                   </div>
                   <div className="bg-rose-100 dark:bg-rose-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.outputChars', 'Output chars')}</p>
+                    <p className="opacity-70">{t('metrics.outputChars')}</p>
                     <p className="font-semibold">{formatNumber(safeNumber(adaptationMetrics?.outputChars))}</p>
                   </div>
                 </div>
@@ -1167,10 +1167,10 @@ const MetricsPage = (): JSX.Element => {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-rose-200 dark:border-rose-700">
-                          <th className="text-left py-2 px-2 font-medium opacity-70">{t('metrics.model', 'Model')}</th>
-                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.calls', 'Calls')}</th>
-                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.matchRuns', 'Match runs')}</th>
-                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.fallbacks', 'Fallbacks')}</th>
+                          <th className="text-left py-2 px-2 font-medium opacity-70">{t('metrics.model')}</th>
+                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.calls')}</th>
+                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.matchRuns')}</th>
+                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.fallbacks')}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1191,7 +1191,7 @@ const MetricsPage = (): JSX.Element => {
                 )}
                 {adaptationMetrics?.recent && adaptationMetrics.recent.length > 0 && (
                   <div>
-                    <p className="text-xs font-semibold opacity-70 mb-2">{t('metrics.resumeAdaptationRecent', 'Recent activity')}</p>
+                    <p className="text-xs font-semibold opacity-70 mb-2">{t('metrics.resumeAdaptationRecent')}</p>
                     <div className="space-y-2 max-h-32 overflow-y-auto">
                       {adaptationMetrics.recent.slice().reverse().map((entry, index) => (
                         <div key={`${entry.timestamp || 'entry'}-${index}`} className="bg-rose-100 dark:bg-rose-900/30 rounded-lg p-2 text-xs">
@@ -1200,11 +1200,11 @@ const MetricsPage = (): JSX.Element => {
                             <span className="opacity-60">{entry.timestamp ? formatDateTime(entry.timestamp) : 'N/A'}</span>
                           </div>
                           <div className="mt-1 opacity-80">
-                            {entry.event || 'run'} | {t('metrics.matchRuns', 'Match runs')}: {safeNumber(entry.matchRuns)} | {t('metrics.successFailures', 'Success / failures')}: {safeNumber(entry.successfulRuns)} / {safeNumber(entry.failedRuns)}
+                            {entry.event || 'run'} | {t('metrics.matchRuns')}: {safeNumber(entry.matchRuns)} | {t('metrics.successFailures')}: {safeNumber(entry.successfulRuns)} / {safeNumber(entry.failedRuns)}
                           </div>
                           <div className="mt-1 opacity-70">
-                            {t('metrics.structuredFallback', 'Structured / fallback')}: {safeNumber(entry.structuredRuns)} / {safeNumber(entry.fallbackRuns)}
-                            {entry.source ? ` | ${t('metrics.source', 'Source')}: ${entry.source}` : ''}
+                            {t('metrics.structuredFallback')}: {safeNumber(entry.structuredRuns)} / {safeNumber(entry.fallbackRuns)}
+                            {entry.source ? ` | ${t('metrics.source')}: ${entry.source}` : ''}
                           </div>
                         </div>
                       ))}
@@ -1220,25 +1220,25 @@ const MetricsPage = (): JSX.Element => {
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.19 }} className="rounded-xl border bg-rose-50 text-rose-600 border-rose-200 dark:bg-gray-800 dark:text-rose-400 dark:border-rose-700 p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <p className="text-sm font-medium opacity-80">{t('metrics.apm', 'Performance (APM)')}</p>
+                    <p className="text-sm font-medium opacity-80">{t('metrics.apm')}</p>
                     <p className="text-2xl font-bold mt-1">{safeNumber(apmMetrics?.summary?.totalTracked)}</p>
-                    <p className="text-xs mt-1 opacity-60">{t('metrics.slowRequests', 'Requêtes lentes')} ({t('metrics.last5min', '5 min')}: {safeNumber(apmMetrics?.summary?.last5min)})</p>
+                    <p className="text-xs mt-1 opacity-60">{t('metrics.slowRequests')} ({t('metrics.last5min')}: {safeNumber(apmMetrics?.summary?.last5min)})</p>
                   </div>
                   <BoltIcon className="w-10 h-10 opacity-50" />
                 </div>
                 <div className="grid grid-cols-3 gap-3 text-sm mb-4">
                   <div className="bg-rose-100 dark:bg-rose-900/30 rounded-lg p-3">
-                    <p className="opacity-70 text-xs">{t('metrics.slow', 'Lentes')}</p>
+                    <p className="opacity-70 text-xs">{t('metrics.slow')}</p>
                     <p className="font-semibold">{safeNumber(apmMetrics?.summary?.severityCounts?.slow)}</p>
                     <p className="text-xs opacity-50">&gt; {apmMetrics?.config?.slowThreshold || 1000}ms</p>
                   </div>
                   <div className="bg-rose-100 dark:bg-rose-900/30 rounded-lg p-3">
-                    <p className="opacity-70 text-xs">{t('metrics.verySlow', 'Très lentes')}</p>
+                    <p className="opacity-70 text-xs">{t('metrics.verySlow')}</p>
                     <p className="font-semibold">{safeNumber(apmMetrics?.summary?.severityCounts?.very_slow)}</p>
                     <p className="text-xs opacity-50">&gt; {apmMetrics?.config?.verySlowThreshold || 5000}ms</p>
                   </div>
                   <div className="bg-rose-100 dark:bg-rose-900/30 rounded-lg p-3">
-                    <p className="opacity-70 text-xs">{t('metrics.critical', 'Critiques')}</p>
+                    <p className="opacity-70 text-xs">{t('metrics.critical')}</p>
                     <p className="font-semibold text-rose-700 dark:text-rose-300">{safeNumber(apmMetrics?.summary?.severityCounts?.critical)}</p>
                     <p className="text-xs opacity-50">&gt; {apmMetrics?.config?.criticalThreshold || 30000}ms</p>
                   </div>
@@ -1246,12 +1246,12 @@ const MetricsPage = (): JSX.Element => {
                 {safeNumber(apmMetrics?.summary?.totalTracked) === 0 && (
                   <p className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
                     <span className="inline-block w-2 h-2 bg-green-500 rounded-full"></span>
-                    {t('metrics.noSlowRequests', 'Aucune requête lente détectée')}
+                    {t('metrics.noSlowRequests')}
                   </p>
                 )}
                 {safeNumber(apmMetrics?.summary?.avgDuration) > 0 && (
                   <p className="text-xs opacity-60 mt-2">
-                    {t('metrics.avgDuration', 'Durée moyenne')}: {safeNumber(apmMetrics?.summary?.avgDuration)}ms
+                    {t('metrics.avgDuration')}: {safeNumber(apmMetrics?.summary?.avgDuration)}ms
                   </p>
                 )}
               </motion.div>
@@ -1259,9 +1259,9 @@ const MetricsPage = (): JSX.Element => {
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.21 }} className="rounded-xl border bg-rose-50 text-rose-600 border-rose-200 dark:bg-gray-800 dark:text-rose-400 dark:border-rose-700 p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <p className="text-sm font-medium opacity-80">{t('metrics.slowEndpoints', 'Endpoints lents')}</p>
+                    <p className="text-sm font-medium opacity-80">{t('metrics.slowEndpoints')}</p>
                     <p className="text-2xl font-bold mt-1">{apmMetrics?.topSlowEndpoints?.length || 0}</p>
-                    <p className="text-xs mt-1 opacity-60">{t('metrics.topSlowEndpoints', 'Endpoints les plus lents')}</p>
+                    <p className="text-xs mt-1 opacity-60">{t('metrics.topSlowEndpoints')}</p>
                   </div>
                   <ClockIcon className="w-10 h-10 opacity-50" />
                 </div>
@@ -1270,10 +1270,10 @@ const MetricsPage = (): JSX.Element => {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-rose-200 dark:border-rose-700">
-                          <th className="text-left py-2 px-2 font-medium opacity-70">{t('metrics.endpoint', 'Endpoint')}</th>
-                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.count', 'Nb')}</th>
-                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.avgMs', 'Moy.')}</th>
-                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.maxMs', 'Max')}</th>
+                          <th className="text-left py-2 px-2 font-medium opacity-70">{t('metrics.endpoint')}</th>
+                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.count')}</th>
+                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.avgMs')}</th>
+                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.maxMs')}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1289,7 +1289,7 @@ const MetricsPage = (): JSX.Element => {
                     </table>
                   </div>
                 ) : (
-                  <p className="text-sm opacity-60 text-center py-4">{t('metrics.noData', 'Aucune donnée')}</p>
+                  <p className="text-sm opacity-60 text-center py-4">{t('metrics.noData')}</p>
                 )}
               </motion.div>
             </div>

@@ -10,6 +10,7 @@ import {
   BriefcaseIcon,
   MapPinIcon
 } from '@heroicons/react/24/outline';
+import { useTranslation } from 'react-i18next';
 import { formatDate } from '../../utils/dateFormatter';
 import type { ParsedMetadata } from './marketTrends.types';
 import type { MarketTrend } from '../../services/marketRadarService';
@@ -22,6 +23,7 @@ interface TrendCardProps {
 }
 
 export default function TrendCard({ trend, type, parsed, romeLabel }: TrendCardProps) {
+  const { t } = useTranslation();
   // Format number based on type
   const formatNumber = (value: number | string | undefined, valueType?: 'nombre' | 'montant' | 'taux') => {
     if (value === undefined || value === null) return '—';
@@ -132,7 +134,7 @@ export default function TrendCard({ trend, type, parsed, romeLabel }: TrendCardP
               ? `${Number(parsed.valeurSecondaire).toFixed(1)}%`
               : formatNumber(parsed.valeurSecondaire, parsed.valeurSecondarieType as 'nombre' | 'montant' | undefined)
             }
-            {parsed.valeurSecondarieType === 'pourcentage' && ' du total'}
+            {parsed.valeurSecondarieType === 'pourcentage' && ` ${t('marketRadar.details.totalShare')}`}
           </div>
         )}
       </div>
@@ -152,7 +154,7 @@ export default function TrendCard({ trend, type, parsed, romeLabel }: TrendCardP
        !['demandeur', 'demandeur_entrant', 'offre', 'embauche'].includes(trend.Type) && (
         <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
           <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
-            {parsed.nomenclature || 'Répartition'}
+            {parsed.nomenclature || t('marketRadar.details.breakdown')}
           </div>
           <div className="space-y-1.5 max-h-64 overflow-y-auto">
             {parsed.caracteristiques.map((c, i) => (
@@ -191,6 +193,7 @@ export default function TrendCard({ trend, type, parsed, romeLabel }: TrendCardP
 // ============================================
 
 function TensionContent({ parsed }: { parsed: ParsedMetadata }) {
+  const { t } = useTranslation();
   return (
     <div className="space-y-3">
       {/* Main tension level badge */}
@@ -253,26 +256,27 @@ function TensionContent({ parsed }: { parsed: ParsedMetadata }) {
 }
 
 function SalaireContent({ parsed }: { parsed: ParsedMetadata }) {
+  const { t } = useTranslation();
   return (
     <div className="space-y-3">
       {/* Summary stats */}
       {parsed.typeSpecific?.salaireMin !== undefined && parsed.typeSpecific?.salaireMax !== undefined && (
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
           <div>
-            <span className="text-gray-500 dark:text-gray-400">Min: </span>
+            <span className="text-gray-500 dark:text-gray-400">{t('marketRadar.details.minimum')}: </span>
             <span className="font-medium text-gray-900 dark:text-gray-100">
               {parsed.typeSpecific.salaireMin.toLocaleString('fr-FR')} €
             </span>
           </div>
           <div>
-            <span className="text-gray-500 dark:text-gray-400">Max: </span>
+            <span className="text-gray-500 dark:text-gray-400">{t('marketRadar.details.maximum')}: </span>
             <span className="font-medium text-gray-900 dark:text-gray-100">
               {parsed.typeSpecific.salaireMax.toLocaleString('fr-FR')} €
             </span>
           </div>
           {parsed.typeSpecific?.salaireMedian !== undefined && (
             <div>
-              <span className="text-gray-500 dark:text-gray-400">Médian: </span>
+              <span className="text-gray-500 dark:text-gray-400">{t('marketRadar.details.median')}: </span>
               <span className="font-medium text-emerald-600 dark:text-emerald-400">
                 {parsed.typeSpecific.salaireMedian.toLocaleString('fr-FR')} €
               </span>
@@ -284,7 +288,7 @@ function SalaireContent({ parsed }: { parsed: ParsedMetadata }) {
       {/* Detailed breakdown by activity */}
       {parsed.typeSpecific?.salairesParActivite && parsed.typeSpecific.salairesParActivite.length > 0 && (
         <div className="mt-2 space-y-2">
-          <div className="text-xs font-medium text-gray-700 dark:text-gray-300">Par catégorie :</div>
+          <div className="text-xs font-medium text-gray-700 dark:text-gray-300">{t('marketRadar.details.byCategory')} :</div>
           <div className="space-y-2 max-h-48 overflow-y-auto">
             {parsed.typeSpecific.salairesParActivite.map((activite, idx) => (
               <div key={idx} className="p-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-600">
@@ -294,7 +298,7 @@ function SalaireContent({ parsed }: { parsed: ParsedMetadata }) {
                 <div className="grid grid-cols-3 gap-1 text-xs">
                   {activite.salaireDebutant !== undefined && (
                     <div className="text-center">
-                      <div className="text-gray-500 dark:text-gray-400">Débutant</div>
+                      <div className="text-gray-500 dark:text-gray-400">{t('marketRadar.details.beginner')}</div>
                       <div className="font-semibold text-blue-600 dark:text-blue-400">
                         {activite.salaireDebutant.toLocaleString('fr-FR')} €
                       </div>
@@ -302,7 +306,7 @@ function SalaireContent({ parsed }: { parsed: ParsedMetadata }) {
                   )}
                   {activite.salaireMoyen !== undefined && (
                     <div className="text-center">
-                      <div className="text-gray-500 dark:text-gray-400">Moyen</div>
+                      <div className="text-gray-500 dark:text-gray-400">{t('marketRadar.details.averageLevel')}</div>
                       <div className="font-semibold text-emerald-600 dark:text-emerald-400">
                         {activite.salaireMoyen.toLocaleString('fr-FR')} €
                       </div>
@@ -310,7 +314,7 @@ function SalaireContent({ parsed }: { parsed: ParsedMetadata }) {
                   )}
                   {activite.salaireExperimente !== undefined && (
                     <div className="text-center">
-                      <div className="text-gray-500 dark:text-gray-400">Expérimenté</div>
+                      <div className="text-gray-500 dark:text-gray-400">{t('marketRadar.details.experienced')}</div>
                       <div className="font-semibold text-purple-600 dark:text-purple-400">
                         {activite.salaireExperimente.toLocaleString('fr-FR')} €
                       </div>
@@ -330,6 +334,7 @@ function SalaireContent({ parsed }: { parsed: ParsedMetadata }) {
 }
 
 function DynamiqueContent({ parsed }: { parsed: ParsedMetadata }) {
+  const { t } = useTranslation();
   const dynDetails = parsed.typeSpecific?.dynamiqueDetails;
   return (
     <div className="space-y-3">
@@ -344,8 +349,8 @@ function DynamiqueContent({ parsed }: { parsed: ParsedMetadata }) {
             {parsed.typeSpecific.tendance === 'hausse' && <ArrowTrendingUpIcon className="h-4 w-4 mr-1" />}
             {parsed.typeSpecific.tendance === 'baisse' && <ArrowTrendingDownIcon className="h-4 w-4 mr-1" />}
             {parsed.typeSpecific.tendanceLabel || (
-              parsed.typeSpecific.tendance === 'hausse' ? 'Dynamique positive' :
-              parsed.typeSpecific.tendance === 'baisse' ? 'Dynamique négative' : 'Dynamique stable'
+              parsed.typeSpecific.tendance === 'hausse' ? t('marketRadar.details.positiveDynamic') :
+              parsed.typeSpecific.tendance === 'baisse' ? t('marketRadar.details.negativeDynamic') : t('marketRadar.details.stableDynamic')
             )}
           </div>
         </div>
@@ -393,7 +398,7 @@ function DynamiqueContent({ parsed }: { parsed: ParsedMetadata }) {
           {/* Date de mise à jour */}
           {(dynDetails.dateMaj || dynDetails.dateMajGlobale) && (
             <div className="text-xs text-gray-400 dark:text-gray-500 pt-1">
-              Mis à jour : {formatDate(dynDetails.dateMaj || dynDetails.dateMajGlobale, 'long')}
+              {t('marketRadar.details.updatedAt')} : {formatDate(dynDetails.dateMaj || dynDetails.dateMajGlobale, 'long')}
             </div>
           )}
         </div>
@@ -408,6 +413,7 @@ function DynamiqueContent({ parsed }: { parsed: ParsedMetadata }) {
 }
 
 function EmbaucheContent({ parsed }: { parsed: ParsedMetadata }) {
+  const { t } = useTranslation();
   const details = parsed.typeSpecific?.embaucheDetails;
   return (
     <div className="space-y-3">
@@ -418,7 +424,7 @@ function EmbaucheContent({ parsed }: { parsed: ParsedMetadata }) {
           parsed.typeSpecific.evolutionPercent < 0 ? 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300' :
           'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
         }`}>
-          {parsed.typeSpecific.evolutionPercent > 0 ? '+' : ''}{Number(parsed.typeSpecific.evolutionPercent).toFixed(1)}% évolution
+          {parsed.typeSpecific.evolutionPercent > 0 ? '+' : ''}{Number(parsed.typeSpecific.evolutionPercent).toFixed(1)}% {t('marketRadar.details.evolution')}
         </div>
       )}
       
@@ -428,7 +434,7 @@ function EmbaucheContent({ parsed }: { parsed: ParsedMetadata }) {
           {/* Genre breakdown */}
           {details.genre && (
             <div className="flex items-center gap-2 text-xs">
-              <span className="text-gray-500 dark:text-gray-400 w-16">Genre:</span>
+              <span className="text-gray-500 dark:text-gray-400 w-16">{t('marketRadar.details.genre')}:</span>
               <div className="flex-1 flex items-center gap-1">
                 <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden flex">
                   <div className="h-full bg-blue-500" style={{ width: `${details.genre.hommes}%` }} />
@@ -443,14 +449,14 @@ function EmbaucheContent({ parsed }: { parsed: ParsedMetadata }) {
           {/* Contract type breakdown */}
           {details.contrats && (
             <div className="flex items-center gap-2 text-xs">
-              <span className="text-gray-500 dark:text-gray-400 w-16">Contrats:</span>
+              <span className="text-gray-500 dark:text-gray-400 w-16">{t('marketRadar.details.contracts')}:</span>
               <div className="flex-1 flex items-center gap-1">
                 <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden flex">
-                  <div className="h-full bg-green-500" style={{ width: `${details.contrats.cdi}%` }} title="CDI" />
+                  <div className="h-full bg-green-500" style={{ width: `${details.contrats.cdi}%` }} title={t('marketRadar.details.cdi')} />
                   <div className="h-full bg-yellow-500" style={{ width: `${details.contrats.cdd}%` }} title="CDD" />
-                  <div className="h-full bg-gray-400" style={{ width: `${details.contrats.autres}%` }} title="Autres" />
+                  <div className="h-full bg-gray-400" style={{ width: `${details.contrats.autres}%` }} title={t('marketRadar.details.other')} />
                 </div>
-                <span className="text-green-600 dark:text-green-400 text-[10px]">CDI {details.contrats.cdi}%</span>
+                <span className="text-green-600 dark:text-green-400 text-[10px]">{t('marketRadar.details.cdi')} {details.contrats.cdi}%</span>
               </div>
             </div>
           )}
@@ -458,14 +464,14 @@ function EmbaucheContent({ parsed }: { parsed: ParsedMetadata }) {
           {/* Qualification breakdown */}
           {details.qualification && (
             <div className="flex items-center gap-2 text-xs">
-              <span className="text-gray-500 dark:text-gray-400 w-16">Qualif:</span>
+              <span className="text-gray-500 dark:text-gray-400 w-16">{t('marketRadar.details.qualification')}:</span>
               <div className="flex-1 flex items-center gap-1">
                 <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden flex">
-                  <div className="h-full bg-purple-500" style={{ width: `${details.qualification.cadres}%` }} title="Cadres" />
-                  <div className="h-full bg-indigo-400" style={{ width: `${details.qualification.techniciens}%` }} title="Techniciens" />
-                  <div className="h-full bg-gray-400" style={{ width: `${details.qualification.employes}%` }} title="Employés" />
+                  <div className="h-full bg-purple-500" style={{ width: `${details.qualification.cadres}%` }} title={t('marketRadar.details.executives')} />
+                  <div className="h-full bg-indigo-400" style={{ width: `${details.qualification.techniciens}%` }} title={t('marketRadar.details.technicians')} />
+                  <div className="h-full bg-gray-400" style={{ width: `${details.qualification.employes}%` }} title={t('marketRadar.details.employees')} />
                 </div>
-                <span className="text-purple-600 dark:text-purple-400 text-[10px]">Cadres {details.qualification.cadres}%</span>
+                <span className="text-purple-600 dark:text-purple-400 text-[10px]">{t('marketRadar.details.executives')} {details.qualification.cadres}%</span>
               </div>
             </div>
           )}
@@ -473,13 +479,13 @@ function EmbaucheContent({ parsed }: { parsed: ParsedMetadata }) {
           {/* Experience breakdown */}
           {details.experience && (
             <div className="flex items-center gap-2 text-xs">
-              <span className="text-gray-500 dark:text-gray-400 w-16">Exp:</span>
+              <span className="text-gray-500 dark:text-gray-400 w-16">{t('marketRadar.details.experience')}:</span>
               <div className="flex-1 flex items-center gap-1">
                 <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden flex">
-                  <div className="h-full bg-teal-400" style={{ width: `${details.experience.debutant}%` }} title="Débutant" />
-                  <div className="h-full bg-teal-600" style={{ width: `${details.experience.experimente}%` }} title="Expérimenté" />
+                  <div className="h-full bg-teal-400" style={{ width: `${details.experience.debutant}%` }} title={t('marketRadar.details.beginner')} />
+                  <div className="h-full bg-teal-600" style={{ width: `${details.experience.experimente}%` }} title={t('marketRadar.details.experienced')} />
                 </div>
-                <span className="text-teal-600 dark:text-teal-400 text-[10px]">Exp. {details.experience.experimente}%</span>
+                <span className="text-teal-600 dark:text-teal-400 text-[10px]">{t('marketRadar.details.experience')} {details.experience.experimente}%</span>
               </div>
             </div>
           )}
@@ -487,7 +493,7 @@ function EmbaucheContent({ parsed }: { parsed: ParsedMetadata }) {
           {/* Age breakdown (for demandeur_entrant) */}
           {details.age && (
             <div className="flex items-center gap-2 text-xs">
-              <span className="text-gray-500 dark:text-gray-400 w-16">Âge:</span>
+              <span className="text-gray-500 dark:text-gray-400 w-16">{t('marketRadar.details.age')}:</span>
               <div className="flex-1 flex items-center gap-1">
                 <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden flex">
                   <div className="h-full bg-amber-400" style={{ width: `${details.age.jeunes}%` }} title="15-24 ans" />
@@ -502,10 +508,10 @@ function EmbaucheContent({ parsed }: { parsed: ParsedMetadata }) {
           {/* Formation breakdown (for demandeur_entrant) */}
           {details.formation && (
             <div className="flex items-center gap-2 text-xs">
-              <span className="text-gray-500 dark:text-gray-400 w-16">Form:</span>
+              <span className="text-gray-500 dark:text-gray-400 w-16">{t('marketRadar.details.training')}:</span>
               <div className="flex-1 flex items-center gap-1">
                 <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden flex">
-                  <div className="h-full bg-rose-400" style={{ width: `${details.formation.sansQualif}%` }} title="< Bac" />
+                  <div className="h-full bg-rose-400" style={{ width: `${details.formation.sansQualif}%` }} title={t('marketRadar.details.underBac')} />
                   <div className="h-full bg-rose-500" style={{ width: `${details.formation.bac}%` }} title="Bac" />
                   <div className="h-full bg-rose-600" style={{ width: `${details.formation.bacPlus}%` }} title="Bac+" />
                 </div>
@@ -525,7 +531,7 @@ function EmbaucheContent({ parsed }: { parsed: ParsedMetadata }) {
                 {/* Genre section */}
                 {genreData.length > 0 && (
                   <div className="bg-gradient-to-r from-blue-50 to-pink-50 dark:from-blue-900/20 dark:to-pink-900/20 rounded-lg p-2">
-                    <div className="text-[10px] font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-1.5">Genre</div>
+                    <div className="text-[10px] font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-1.5">{t('marketRadar.details.genre')}</div>
                     <div className="flex gap-3">
                       {genreData.map((g, i) => (
                         <div key={i} className="flex-1">
@@ -541,7 +547,7 @@ function EmbaucheContent({ parsed }: { parsed: ParsedMetadata }) {
                               style={{ width: `${g.pourcentage}%` }}
                             />
                           </div>
-                          <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5 text-center">{g.nombre} pers.</div>
+                          <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5 text-center">{g.nombre} {t('marketRadar.details.people')}</div>
                         </div>
                       ))}
                     </div>
@@ -551,7 +557,7 @@ function EmbaucheContent({ parsed }: { parsed: ParsedMetadata }) {
                 {/* Age section */}
                 {ageData.length > 0 && (
                   <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-lg p-2">
-                    <div className="text-[10px] font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-1.5">Tranches d'âge</div>
+                    <div className="text-[10px] font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-1.5">{t('marketRadar.details.ageRanges')}</div>
                     <div className="space-y-1.5">
                       {ageData.slice(0, 5).map((a, i) => (
                         <div key={i} className="flex items-center gap-2">
@@ -576,7 +582,7 @@ function EmbaucheContent({ parsed }: { parsed: ParsedMetadata }) {
                   <details className="group">
                     <summary className="cursor-pointer text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide flex items-center gap-1 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
                       <span className="group-open:rotate-90 transition-transform">▶</span>
-                      Détail Genre × Âge ({genreAgeData.length})
+                      {t('marketRadar.details.genreAgeDetail')} ({genreAgeData.length})
                     </summary>
                     <div className="mt-2 grid grid-cols-2 gap-1.5 max-h-32 overflow-y-auto">
                       {genreAgeData.map((ga, i) => (

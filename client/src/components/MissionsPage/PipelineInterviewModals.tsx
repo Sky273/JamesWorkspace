@@ -167,15 +167,15 @@ export function PipelineInterviewsListModal({
                             ? 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
                             : 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300'
                         }`}>
-                          {interview.outcome === 'positive' && '✓ '}
-                          {interview.outcome === 'negative' && '✗ '}
-                          {interview.outcome === 'to_follow_up' && '→ '}
+                          {interview.outcome === 'positive' && '? '}
+                          {interview.outcome === 'negative' && '? '}
+                          {interview.outcome === 'to_follow_up' && '? '}
                           {t(`pipeline.outcomes.${interview.outcome === 'to_follow_up' ? 'toFollowUp' : interview.outcome}`)}
                         </span>
                       )}
                       {interview.status === 'cancelled' && (
                         <span className="text-xs text-gray-500">
-                          {isEnglish ? 'Cancelled' : 'Annulé'}
+                          {isEnglish ? 'Cancelled' : 'Annul?'}
                         </span>
                       )}
                     </div>
@@ -318,7 +318,7 @@ export function PipelineScheduleInterviewModal({
             {newInterview.interviewType === 'client' && (
               <p className="mt-1 text-xs text-blue-600 dark:text-blue-400">
                 {isEnglish 
-                  ? '→ This will move the candidate to "Interview Scheduled" stage'
+                  ? '? This will move the candidate to "Interview Scheduled" stage'
                   : '→ Cela déplacera le candidat à l\'étape "Entretien planifié"'}
               </p>
             )}

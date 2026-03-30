@@ -4,6 +4,7 @@
  */
 
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 // Types for metadata parsing
 interface PeriodeData {
@@ -533,6 +534,7 @@ interface TrendMetadataDisplayProps {
  * Component to display parsed trend metadata
  */
 export default function TrendMetadataDisplay({ metadata, type, value, compact = false, className = '' }: TrendMetadataDisplayProps) {
+  const { t } = useTranslation();
   const parsed = useMemo(() => parseMetadata(metadata, type, value), [metadata, type, value]);
   
   if (!parsed) {
@@ -564,7 +566,7 @@ export default function TrendMetadataDisplay({ metadata, type, value, compact = 
             </div>
             {embauche?.pourcentageTotal !== undefined && (
               <div className="text-gray-500 dark:text-gray-400">
-                {embauche.pourcentageTotal.toFixed(1)}% du total
+                {embauche.pourcentageTotal.toFixed(1)}% {t('marketRadar.details.totalShare')}
               </div>
             )}
           </div>
@@ -577,7 +579,7 @@ export default function TrendMetadataDisplay({ metadata, type, value, compact = 
               ? 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300' 
               : 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300'
           }`}>
-            {parsed.valeurSecondaire >= 0 ? '+' : ''}{parsed.valeurSecondaire.toFixed(1)}% évolution
+            {parsed.valeurSecondaire >= 0 ? '+' : ''}{parsed.valeurSecondaire.toFixed(1)}% {t('marketRadar.details.evolution')}
           </div>
         )}
         
@@ -607,7 +609,7 @@ export default function TrendMetadataDisplay({ metadata, type, value, compact = 
         {/* Genre breakdown with visual bars */}
         {embauche?.genre && (embauche.genre.hommes > 0 || embauche.genre.femmes > 0) && (
           <div className="mt-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded">
-            <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">GENRE</div>
+            <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{t('marketRadar.details.genre').toUpperCase()}</div>
             <div className="flex items-center gap-2">
               <span className="text-blue-600 dark:text-blue-400 font-medium">Hommes</span>
               <span className="font-bold">{embauche.genre.hommes.toFixed(0)}%</span>
@@ -620,8 +622,8 @@ export default function TrendMetadataDisplay({ metadata, type, value, compact = 
             </div>
             {(embauche.genre.hommesNombre || embauche.genre.femmesNombre) && (
               <div className="flex justify-between text-[10px] text-gray-500 mt-0.5">
-                <span>{embauche.genre.hommesNombre?.toLocaleString('fr-FR')} pers.</span>
-                <span>{embauche.genre.femmesNombre?.toLocaleString('fr-FR')} pers.</span>
+                <span>{embauche.genre.hommesNombre?.toLocaleString('fr-FR')} {t('marketRadar.details.people')}</span>
+                <span>{embauche.genre.femmesNombre?.toLocaleString('fr-FR')} {t('marketRadar.details.people')}</span>
               </div>
             )}
           </div>
@@ -630,7 +632,7 @@ export default function TrendMetadataDisplay({ metadata, type, value, compact = 
         {/* Tranches d'âge détaillées */}
         {embauche?.ageDetaille && embauche.ageDetaille.length > 0 && (
           <div className="mt-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded">
-            <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">TRANCHES D'ÂGE</div>
+            <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{t('marketRadar.details.ageRanges').toUpperCase()}</div>
             <div className="space-y-1">
               {embauche.ageDetaille.map((age, idx) => (
                 <div key={idx} className="flex items-center gap-2">
@@ -648,19 +650,19 @@ export default function TrendMetadataDisplay({ metadata, type, value, compact = 
         {/* Qualification breakdown */}
         {embauche?.qualification && (
           <div className="mt-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded">
-            <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">QUALIFICATION</div>
+            <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{t('marketRadar.details.qualification').toUpperCase()}</div>
             <div className="space-y-1">
               {embauche.qualification.cadres > 0 && (
-                <ProgressBar value={embauche.qualification.cadres} color="purple" label="Cadres" />
+                <ProgressBar value={embauche.qualification.cadres} color="purple" label={t('marketRadar.details.executives')} />
               )}
               {embauche.qualification.techniciens > 0 && (
-                <ProgressBar value={embauche.qualification.techniciens} color="blue" label="Tech." />
+                <ProgressBar value={embauche.qualification.techniciens} color="blue" label={t('marketRadar.details.technicians')} />
               )}
               {embauche.qualification.employes > 0 && (
-                <ProgressBar value={embauche.qualification.employes} color="teal" label="Employés" />
+                <ProgressBar value={embauche.qualification.employes} color="teal" label={t('marketRadar.details.employees')} />
               )}
               {embauche.qualification.ouvriers && embauche.qualification.ouvriers > 0 && (
-                <ProgressBar value={embauche.qualification.ouvriers} color="orange" label="Ouvriers" />
+                <ProgressBar value={embauche.qualification.ouvriers} color="orange" label={t('marketRadar.details.workers')} />
               )}
             </div>
           </div>
@@ -669,10 +671,10 @@ export default function TrendMetadataDisplay({ metadata, type, value, compact = 
         {/* Experience breakdown */}
         {embauche?.experience && (
           <div className="mt-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded">
-            <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">EXPÉRIENCE</div>
+            <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{t('marketRadar.details.experience').toUpperCase()}</div>
             <div className="space-y-1">
-              <ProgressBar value={embauche.experience.debutant} color="teal" label="Débutant" />
-              <ProgressBar value={embauche.experience.experimente} color="indigo" label="Expérimenté" />
+              <ProgressBar value={embauche.experience.debutant} color="teal" label={t('marketRadar.details.beginner')} />
+              <ProgressBar value={embauche.experience.experimente} color="indigo" label={t('marketRadar.details.experienced')} />
             </div>
           </div>
         )}
@@ -680,7 +682,7 @@ export default function TrendMetadataDisplay({ metadata, type, value, compact = 
         {/* Formation détaillée */}
         {embauche?.formationDetaille && embauche.formationDetaille.length > 0 && (
           <div className="mt-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded">
-            <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">FORMATION</div>
+            <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{t('marketRadar.details.training').toUpperCase()}</div>
             <div className="space-y-1">
               {embauche.formationDetaille.map((form, idx) => (
                 <div key={idx} className="flex items-center gap-2">
@@ -722,7 +724,7 @@ export default function TrendMetadataDisplay({ metadata, type, value, compact = 
       
       {parsed.valeurSecondaire !== undefined && parsed.valeurSecondarieType === 'pourcentage' && (
         <div className={`text-sm font-medium ${parsed.valeurSecondaire >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-          {parsed.valeurSecondaire >= 0 ? '↑' : '↓'} {Math.abs(parsed.valeurSecondaire).toFixed(1)}% évolution
+          {parsed.valeurSecondaire >= 0 ? '↑' : '↓'} {Math.abs(parsed.valeurSecondaire).toFixed(1)}% {t('marketRadar.details.evolution')}
         </div>
       )}
       
@@ -756,25 +758,25 @@ export default function TrendMetadataDisplay({ metadata, type, value, compact = 
       {/* Detailed breakdowns */}
       {parsed.typeSpecific?.embaucheDetails?.contrats && (
         <div className="space-y-1 mt-2">
-          <div className="text-xs font-medium text-gray-700 dark:text-gray-300">Contrats</div>
-          <ProgressBar value={parsed.typeSpecific.embaucheDetails.contrats.cdi} color="green" label="CDI" />
-          <ProgressBar value={parsed.typeSpecific.embaucheDetails.contrats.cdd} color="orange" label="CDD" />
+          <div className="text-xs font-medium text-gray-700 dark:text-gray-300">{t('marketRadar.details.contracts')}</div>
+          <ProgressBar value={parsed.typeSpecific.embaucheDetails.contrats.cdi} color="green" label={t('marketRadar.details.cdi')} />
+          <ProgressBar value={parsed.typeSpecific.embaucheDetails.contrats.cdd} color="orange" label={t('marketRadar.details.cdd')} />
         </div>
       )}
       
       {parsed.typeSpecific?.embaucheDetails?.qualification && (
         <div className="space-y-1 mt-2">
-          <div className="text-xs font-medium text-gray-700 dark:text-gray-300">Qualification</div>
-          <ProgressBar value={parsed.typeSpecific.embaucheDetails.qualification.cadres} color="purple" label="Cadres" />
-          <ProgressBar value={parsed.typeSpecific.embaucheDetails.qualification.techniciens} color="blue" label="Tech." />
+          <div className="text-xs font-medium text-gray-700 dark:text-gray-300">{t('marketRadar.details.qualification')}</div>
+          <ProgressBar value={parsed.typeSpecific.embaucheDetails.qualification.cadres} color="purple" label={t('marketRadar.details.executives')} />
+          <ProgressBar value={parsed.typeSpecific.embaucheDetails.qualification.techniciens} color="blue" label={t('marketRadar.details.technicians')} />
         </div>
       )}
       
       {parsed.typeSpecific?.embaucheDetails?.experience && (
         <div className="space-y-1 mt-2">
-          <div className="text-xs font-medium text-gray-700 dark:text-gray-300">Expérience</div>
-          <ProgressBar value={parsed.typeSpecific.embaucheDetails.experience.debutant} color="teal" label="Débutant" />
-          <ProgressBar value={parsed.typeSpecific.embaucheDetails.experience.experimente} color="indigo" label="Expérimenté" />
+          <div className="text-xs font-medium text-gray-700 dark:text-gray-300">{t('marketRadar.details.experience')}</div>
+          <ProgressBar value={parsed.typeSpecific.embaucheDetails.experience.debutant} color="teal" label={t('marketRadar.details.beginner')} />
+          <ProgressBar value={parsed.typeSpecific.embaucheDetails.experience.experimente} color="indigo" label={t('marketRadar.details.experienced')} />
         </div>
       )}
     </div>

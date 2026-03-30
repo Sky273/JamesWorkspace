@@ -581,9 +581,9 @@ export default function PipelineTab({ resumeId, resumeName: _resumeName }: Pipel
                                           ? 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
                                           : 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300'
                                       }`}>
-                                        {interview.outcome === 'positive' && '✓ '}
-                                        {interview.outcome === 'negative' && '✗ '}
-                                        {interview.outcome === 'to_follow_up' && '→ '}
+                                        {interview.outcome === 'positive' && '? '}
+                                        {interview.outcome === 'negative' && '? '}
+                                        {interview.outcome === 'to_follow_up' && '? '}
                                         {t(`pipeline.outcomes.${interview.outcome === 'to_follow_up' ? 'toFollowUp' : interview.outcome}`)}
                                       </span>
                                       {interview.outcome_notes && (

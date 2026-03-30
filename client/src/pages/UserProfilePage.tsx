@@ -30,7 +30,7 @@ interface UserProfile {
 }
 
 const UserProfilePage = (): JSX.Element => {
-  useTranslation();
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { authGet, authPut } = useAuthFetch();
   const [activeTab, setActiveTab] = useState<'profile' | 'security'>('profile');
@@ -77,21 +77,21 @@ const UserProfilePage = (): JSX.Element => {
       });
 
       if (response.ok) {
-        toast.success('Profil mis à jour');
+        toast.success(t('userProfile.updateSuccess'));
         fetchProfile();
       } else {
-        toast.error('Erreur lors de la mise à jour');
+        toast.error(t('userProfile.updateError'));
       }
     } catch {
-      toast.error('Erreur lors de la mise à jour');
+      toast.error(t('userProfile.updateError'));
     } finally {
       setSaving(false);
     }
   };
 
   const tabs = [
-    { id: 'profile' as const, name: 'Mon profil', icon: UserCircleIcon },
-    { id: 'security' as const, name: 'Sécurité', icon: ShieldCheckIcon }
+    { id: 'profile' as const, name: t('userProfile.tabs.profile'), icon: UserCircleIcon },
+    { id: 'security' as const, name: t('userProfile.tabs.security'), icon: ShieldCheckIcon }
   ];
 
   if (loading) {
@@ -113,11 +113,11 @@ const UserProfilePage = (): JSX.Element => {
         <div className="flex items-center gap-3 mb-1">
           <div className="w-1 h-8 rounded-full bg-primary-500" />
           <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-gray-100">
-            Mon compte
+            {t('userProfile.title')}
           </h1>
         </div>
         <p className="text-gray-500 dark:text-gray-400 ml-[1.75rem]">
-          Gérez votre profil et vos paramètres de sécurité
+          {t('userProfile.subtitle')}
         </p>
       </div>
 
@@ -152,14 +152,14 @@ const UserProfilePage = (): JSX.Element => {
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
               <UserCircleIcon className="h-6 w-6 text-blue-600" />
-              Informations personnelles
+              {t('userProfile.personalInfo')}
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Name */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Nom complet
+                  {t('userProfile.fullName')}
                 </label>
                 <div className="relative">
                   <UserCircleIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -175,7 +175,7 @@ const UserProfilePage = (): JSX.Element => {
               {/* Email (read-only) */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Email
+                  {t('userProfile.email')}
                 </label>
                 <div className="relative">
                   <EnvelopeIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -186,13 +186,13 @@ const UserProfilePage = (): JSX.Element => {
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed"
                   />
                 </div>
-                <p className="text-xs text-gray-500 mt-1">L'email ne peut pas être modifié</p>
+                <p className="text-xs text-gray-500 mt-1">{t('userProfile.emailReadonly')}</p>
               </div>
 
               {/* Job Title */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Fonction
+                  {t('userProfile.jobTitle')}
                 </label>
                 <div className="relative">
                   <BriefcaseIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -200,7 +200,7 @@ const UserProfilePage = (): JSX.Element => {
                     type="text"
                     value={formData.jobTitle}
                     onChange={(e) => setFormData({ ...formData, jobTitle: e.target.value })}
-                    placeholder="Ex: Consultant RH"
+                    placeholder={t('userProfile.jobTitlePlaceholder')}
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -209,7 +209,7 @@ const UserProfilePage = (): JSX.Element => {
               {/* Phone */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Téléphone
+                  {t('userProfile.phone')}
                 </label>
                 <div className="relative">
                   <PhoneIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -217,7 +217,7 @@ const UserProfilePage = (): JSX.Element => {
                     type="tel"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    placeholder="Ex: +33 6 12 34 56 78"
+                    placeholder={t('userProfile.phonePlaceholder')}
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -228,7 +228,7 @@ const UserProfilePage = (): JSX.Element => {
             {profile?.firm && (
               <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  <span className="font-medium">Cabinet :</span> {profile.firm}
+                  <span className="font-medium">{t('userProfile.firm')} :</span> {profile.firm}
                 </p>
               </div>
             )}
@@ -242,10 +242,10 @@ const UserProfilePage = (): JSX.Element => {
                 {saving ? (
                   <>
                     <span className="animate-spin">⏳</span>
-                    Enregistrement...
+                    {t('common.saving')}
                   </>
                 ) : (
-                  'Enregistrer'
+                  t('common.save')
                 )}
               </button>
             </div>
@@ -255,10 +255,10 @@ const UserProfilePage = (): JSX.Element => {
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
               <KeyIcon className="h-6 w-6 text-blue-600" />
-              Mot de passe
+              {t('userProfile.passwordTitle')}
             </h3>
             <p className="text-gray-600 dark:text-gray-400 mb-4">
-              Pour changer votre mot de passe, contactez votre administrateur.
+              {t('userProfile.passwordHelp')}
             </p>
           </div>
         </div>

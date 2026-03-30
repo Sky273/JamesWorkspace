@@ -173,29 +173,29 @@ const LLMTab = ({
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
-          {fallbackText(t, 'settings.llm.title', 'Modele LLM')}
+          {t('settings.llm.title')}
         </h2>
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
           {provider === 'ollama'
-            ? fallbackText(t, 'settings.llm.ollamaDescription', 'Configurez uniquement l adresse de votre hote Ollama. Le modele actif sera detecte automatiquement sur votre machine.')
+            ? t('settings.llm.ollamaDescription')
             : provider === 'deepseek'
-              ? fallbackText(t, 'settings.llm.deepseekDescription', 'Selectionnez le mode API DeepSeek a utiliser. Les identifiants appeles restent deepseek-chat et deepseek-reasoner, tous deux mappes sur DeepSeek-V3.2 cote API.')
+              ? t('settings.llm.deepseekDescription')
               : provider === 'glm'
-                ? fallbackText(t, 'settings.llm.glmDescription', 'Selectionnez un modele GLM. L application utilisera l API OpenAI-compatible de Z.AI cote serveur.')
+                ? t('settings.llm.glmDescription')
               : provider === 'minimax'
-                ? fallbackText(t, 'settings.llm.minimaxDescription', 'Selectionnez un modele MiniMax. L application utilisera l API MiniMax cote serveur.')
-                : fallbackText(t, 'settings.llm.description', 'Selectionnez le provider et le modele LLM a utiliser pour l analyse et l amelioration des CV.')}
+                ? t('settings.llm.minimaxDescription')
+                : t('settings.llm.description')}
         </p>
         {provider === 'minimax' && !minimaxHighspeedEnabled && (
           <p className="text-sm text-amber-700 dark:text-amber-300 mb-4">
-            {fallbackText(t, 'settings.llm.minimaxHighspeedDisabled', 'Les modeles MiniMax highspeed sont masques car cette instance n active pas le plan Highspeed.')}
+            {t('settings.llm.minimaxHighspeedDisabled')}
           </p>
         )}
         {providerRuntimeUnavailableModels.length > 0 && (
           <p className="text-sm text-amber-700 dark:text-amber-300 mb-4">
             {provider === 'minimax'
-              ? fallbackText(t, 'settings.llm.minimaxRuntimeUnavailable', 'Certains modeles MiniMax sont temporairement masques car l upstream les a refuses pour cette instance.')
-              : fallbackText(t, 'settings.llm.runtimeUnavailable', 'Certains modeles de ce provider sont temporairement masques car l upstream les a refuses pour cette instance.')}{' '}
+              ? t('settings.llm.minimaxRuntimeUnavailable')
+              : t('settings.llm.runtimeUnavailable')}{' '}
             <span className="font-medium">{providerRuntimeUnavailableModels.join(', ')}</span>
           </p>
         )}
@@ -203,7 +203,7 @@ const LLMTab = ({
 
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          {fallbackText(t, 'settings.llm.provider', 'Provider LLM')}
+          {t('settings.llm.provider')}
         </label>
         <select
           value={provider}
@@ -219,7 +219,7 @@ const LLMTab = ({
       {provider !== 'ollama' && (
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            {fallbackText(t, 'settings.llm.model', 'Modele')}
+          {t('settings.llm.model')}
           </label>
           <select
             value={formData.llmModel}
@@ -234,7 +234,7 @@ const LLMTab = ({
             })}
           </select>
           <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-            {fallbackText(t, 'settings.currentModel', 'Modele actuel')} : <span className="font-semibold">{currentModelLabel}</span>
+            {t('settings.currentModel')} : <span className="font-semibold">{currentModelLabel}</span>
           </p>
         </div>
       )}
@@ -243,7 +243,7 @@ const LLMTab = ({
         <div className="space-y-4 rounded-lg border border-blue-200 bg-blue-50/60 p-4 dark:border-blue-900/60 dark:bg-blue-950/20">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              {fallbackText(t, 'settings.llm.ollamaBaseUrl', 'URL Ollama')}
+              {t('settings.llm.ollamaBaseUrl')}
             </label>
             <input
               type="url"
@@ -253,7 +253,7 @@ const LLMTab = ({
               placeholder="https://ollama.example.com"
             />
             <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-              {fallbackText(t, 'settings.llm.ollamaHelp', 'Renseignez l URL complete de votre instance Ollama distante. Le modele actif sera utilise automatiquement.')}
+              {t('settings.llm.ollamaHelp')}
             </p>
           </div>
         </div>
@@ -261,7 +261,7 @@ const LLMTab = ({
 
       <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          {fallbackText(t, 'settings.llm.cvMode', 'Mode de generation du CV')}
+          {t('settings.llm.cvMode')}
         </label>
         <select
           value={formData.cvMode || 'nominative'}
@@ -273,8 +273,8 @@ const LLMTab = ({
         </select>
         <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
           {formData.cvMode === 'anonymous'
-            ? fallbackText(t, 'settings.llm.cvModeAnonymousDescription', 'Le CV ameliore sera anonymise.')
-            : fallbackText(t, 'settings.llm.cvModeNominativeDescription', 'Le CV ameliore conserve les informations nominatives.')}
+            ? fallbackText(t, 'settings.llm.cvModeAnonymousDescription', 'Le CV amélioré sera anonymisé.')
+            : fallbackText(t, 'settings.llm.cvModeNominativeDescription', 'Le CV amélioré conserve les informations nominatives.')}
         </p>
       </div>
 
@@ -288,10 +288,10 @@ const LLMTab = ({
           />
           <div>
             <span className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              {fallbackText(t, 'settings.llm.webglEnabled', 'Activer les arriere-plans WebGL')}
+              {t('settings.llm.webglEnabled')}
             </span>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              {fallbackText(t, 'settings.llm.webglEnabledDescription', 'Affiche les fonds visuels animes de l application quand le navigateur et l appareil le permettent.')}
+              {t('settings.llm.webglEnabledDescription')}
             </p>
           </div>
         </label>

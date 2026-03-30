@@ -200,7 +200,7 @@ const SettingsPage = (): JSX.Element => {
         Number(formData['Hobbies Languages Weight']);
 
       if (totalWeight !== 100) {
-        toast.error(`La somme des poids doit etre egale a 100% (actuellement: ${totalWeight}%)`);
+        toast.error(t('settings.weights.totalMustEqualCurrent', { total: totalWeight }));
         setSaving(false);
         return;
       }

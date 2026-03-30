@@ -123,7 +123,7 @@ const AdaptationCardInMission = ({ adaptation, index }: { adaptation: Adaptation
   const { t } = useTranslation();
   const navigate = useNavigate();
   const score = adaptation.match_score || 0;
-  const displayName = adaptation.resume_name || adaptation.candidate_name || t('adaptations.card.noName', 'Sans nom');
+  const displayName = adaptation.resume_name || adaptation.candidate_name || t('adaptations.card.noName');
   
   // Alternating row background (striping)
   const stripingClass = index % 2 === 1 
@@ -203,7 +203,7 @@ const MissionSection = ({ mission, missionIndex }: { mission: GroupedMission; mi
           </span>
         </div>
         <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0">
-          {mission.adaptations_count} {t('adaptations.adaptation', 'adaptation')}{mission.adaptations_count !== 1 ? 's' : ''}
+          {mission.adaptations_count} {t('adaptations.adaptation')}{mission.adaptations_count !== 1 ? 's' : ''}
         </span>
       </button>
 
@@ -225,7 +225,7 @@ const MissionSection = ({ mission, missionIndex }: { mission: GroupedMission; mi
                   onClick={(e) => { e.stopPropagation(); setShowAll(true); }}
                   className="w-full py-1.5 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors font-medium"
                 >
-                  {t('adaptations.grouped.showMore', `Voir ${hiddenCount} adaptation(s) supplémentaire(s)`)}
+                  {t('adaptations.grouped.showMore', { count: hiddenCount })}
                 </button>
               )}
               {showAll && mission.adaptations.length > INITIAL_ADAPTATIONS_LIMIT && (
@@ -233,7 +233,7 @@ const MissionSection = ({ mission, missionIndex }: { mission: GroupedMission; mi
                   onClick={(e) => { e.stopPropagation(); setShowAll(false); }}
                   className="w-full py-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/30 rounded-lg transition-colors"
                 >
-                  {t('adaptations.grouped.showLess', 'Voir moins')}
+                  {t('adaptations.grouped.showLess')}
                 </button>
               )}
             </div>
@@ -320,7 +320,7 @@ const DealSection = ({
             <div className="px-4 pb-4 border-t border-gray-100 dark:border-gray-700">
               {deal.missions.length === 0 ? (
                 <p className="text-center text-sm text-gray-500 dark:text-gray-400 py-4">
-                  {t('adaptations.grouped.noAdaptations', 'Aucune adaptation dans cette affaire')}
+                  {t('adaptations.grouped.noAdaptations')}
                 </p>
               ) : (
                 <div className="space-y-2 pt-3">
@@ -382,7 +382,7 @@ const AdaptationsDealsGroupedView = (): JSX.Element => {
       const errorMessage = error instanceof Error ? error.message : '';
       if (!errorMessage.includes('Session expired')) {
         logger.error('Error fetching grouped adaptations:', error);
-        toast.error(t('adaptations.grouped.fetchError', 'Erreur lors du chargement'));
+        toast.error(t('adaptations.grouped.fetchError'));
       }
     } finally {
       setLoading(false);
@@ -452,7 +452,7 @@ const AdaptationsDealsGroupedView = (): JSX.Element => {
             <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
             <input
               type="text"
-              placeholder={t('adaptations.grouped.searchPlaceholder', 'Rechercher une adaptation...')}
+              placeholder={t('adaptations.grouped.searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
@@ -462,7 +462,7 @@ const AdaptationsDealsGroupedView = (): JSX.Element => {
             <button
               onClick={fetchGroupedData}
               className="p-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-              title={t('common.refresh', 'Rafraîchir')}
+              title={t('common.refresh')}
             >
               <ArrowPathIcon className="w-5 h-5" />
             </button>
@@ -484,11 +484,11 @@ const AdaptationsDealsGroupedView = (): JSX.Element => {
           {totalAdaptations} adaptation{totalAdaptations !== 1 ? 's' : ''}
         </span>
         <span>•</span>
-        <span>{filteredDeals.length} {t('adaptations.grouped.deals', 'affaire(s)')}</span>
+        <span>{filteredDeals.length} {t('adaptations.grouped.deals')}</span>
         {filteredUnassigned.length > 0 && (
           <>
             <span>•</span>
-            <span>{filteredUnassigned.reduce((s, m) => s + m.adaptations_count, 0)} {t('adaptations.grouped.unassigned', 'sans affaire')}</span>
+            <span>{filteredUnassigned.reduce((s, m) => s + m.adaptations_count, 0)} {t('adaptations.grouped.unassigned')}</span>
           </>
         )}
       </div>
@@ -518,7 +518,7 @@ const AdaptationsDealsGroupedView = (): JSX.Element => {
               )}
               <FolderOpenIcon className="w-5 h-5 text-gray-400 flex-shrink-0" />
               <h3 className="font-semibold text-gray-600 dark:text-gray-300">
-                {t('adaptations.grouped.unassignedTitle', 'Missions sans affaire')}
+                {t('adaptations.grouped.unassignedTitle')}
               </h3>
             </div>
             <span className="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2.5 py-1 rounded-full text-sm font-medium">
@@ -552,13 +552,13 @@ const AdaptationsDealsGroupedView = (): JSX.Element => {
           <SparklesIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />
           <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
             {debouncedSearch
-              ? t('adaptations.noAdaptationsFiltered', 'Aucun résultat')
-              : t('adaptations.noAdaptations', 'Aucune adaptation')}
+              ? t('adaptations.noAdaptationsFiltered')
+              : t('adaptations.noAdaptations')}
           </h3>
           <p className="text-gray-600 dark:text-gray-400">
             {debouncedSearch
-              ? t('adaptations.grouped.noSearchResults', 'Aucune adaptation ne correspond à votre recherche.')
-              : t('adaptations.noAdaptationsPrompt', 'Adaptez un CV à une mission pour commencer.')}
+              ? t('adaptations.grouped.noSearchResults')
+              : t('adaptations.noAdaptationsPrompt')}
           </p>
         </div>
       )}

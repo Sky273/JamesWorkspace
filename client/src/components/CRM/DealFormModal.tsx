@@ -1,9 +1,4 @@
-/**
- * DealFormModal - Create/edit deal form modal
- * Extracted from DealsTab.tsx
- */
-
-import { useTranslation } from 'react-i18next';
+﻿import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Client, Contact, DealFormData, STATUS_CONFIG, PRIORITY_CONFIG } from './dealsTab.types';
 
@@ -53,17 +48,13 @@ export default function DealFormModal({
           >
             <div className="p-6">
               <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-                {isEditing 
-                  ? t('crm.deals.editTitle', 'Modifier l\'affaire')
-                  : t('crm.deals.createTitle', 'Nouvelle affaire')
-                }
+                {isEditing ? t('crm.deals.editTitle') : t('crm.deals.createTitle')}
               </h2>
 
               <form onSubmit={onSubmit} className="space-y-4">
-                {/* Title */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('crm.deals.name', 'Nom de l\'affaire')} *
+                    {t('crm.deals.name')} *
                   </label>
                   <input
                     type="text"
@@ -74,10 +65,9 @@ export default function DealFormModal({
                   />
                 </div>
 
-                {/* Client */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('crm.deals.client', 'Client / Prospect')}
+                    {t('crm.deals.client')}
                   </label>
                   <select
                     value={formData.client_id || ''}
@@ -87,19 +77,18 @@ export default function DealFormModal({
                     }}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   >
-                    <option value="">{t('crm.deals.selectClient', 'Sélectionner...')}</option>
+                    <option value="">{t('crm.deals.selectClient')}</option>
                     {clients.map(client => (
                       <option key={client.id} value={client.id}>
-                        {client.name} ({client.type === 'client' ? 'Client' : 'Prospect'})
+                        {client.name} ({client.type === 'client' ? t('clients.types.client') : t('clients.types.prospect')})
                       </option>
                     ))}
                   </select>
                 </div>
 
-                {/* Contact */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('crm.deals.contact', 'Interlocuteur')}
+                    {t('crm.deals.contact')}
                   </label>
                   <select
                     value={formData.contact_id || ''}
@@ -107,7 +96,7 @@ export default function DealFormModal({
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                     disabled={!formData.client_id}
                   >
-                    <option value="">{t('crm.deals.selectContact', 'Sélectionner...')}</option>
+                    <option value="">{t('crm.deals.selectContact')}</option>
                     {contacts.map(contact => (
                       <option key={contact.id} value={contact.id}>
                         {contact.name} {contact.role ? `(${contact.role})` : ''}
@@ -116,16 +105,15 @@ export default function DealFormModal({
                   </select>
                   {!formData.client_id && (
                     <p className="text-xs text-gray-500 mt-1">
-                      {t('crm.deals.selectClientFirst', 'Sélectionnez d\'abord un client')}
+                      {t('crm.deals.selectClientFirst')}
                     </p>
                   )}
                 </div>
 
-                {/* Status & Priority */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      {t('crm.deals.status', 'Statut')}
+                      {t('crm.deals.status')}
                     </label>
                     <select
                       value={formData.status}
@@ -140,7 +128,7 @@ export default function DealFormModal({
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      {t('crm.deals.priority', 'Priorité')}
+                      {t('crm.deals.priority')}
                     </label>
                     <select
                       value={formData.priority}
@@ -155,11 +143,10 @@ export default function DealFormModal({
                   </div>
                 </div>
 
-                {/* Dates */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      {t('crm.deals.startDate', 'Date début prévue')}
+                      {t('crm.deals.startDate')}
                     </label>
                     <input
                       type="date"
@@ -170,7 +157,7 @@ export default function DealFormModal({
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      {t('crm.deals.endDate', 'Date fin prévue')}
+                      {t('crm.deals.endDate')}
                     </label>
                     <input
                       type="date"
@@ -181,10 +168,9 @@ export default function DealFormModal({
                   </div>
                 </div>
 
-                {/* Description */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('crm.deals.description', 'Description')}
+                    {t('crm.deals.description')}
                   </label>
                   <textarea
                     value={formData.description || ''}
@@ -194,21 +180,12 @@ export default function DealFormModal({
                   />
                 </div>
 
-                {/* Actions */}
                 <div className="flex justify-end gap-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    className="btn btn-secondary px-4 py-2"
-                  >
-                    {t('common.cancel', 'Annuler')}
+                  <button type="button" onClick={onClose} className="btn btn-secondary px-4 py-2">
+                    {t('common.cancel')}
                   </button>
-                  <button
-                    type="submit"
-                    disabled={saving}
-                    className={`btn btn-primary px-4 py-2 ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  >
-                    {saving ? t('common.saving', 'Enregistrement...') : t('common.save', 'Enregistrer')}
+                  <button type="submit" disabled={saving} className={`btn btn-primary px-4 py-2 ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                    {saving ? t('common.saving') : t('common.save')}
                   </button>
                 </div>
               </form>

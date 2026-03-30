@@ -32,7 +32,7 @@ interface WeightsTabProps {
   formData: FormData;
   onInputChange: (key: string, value: string) => void;
   totalWeight: number;
-  t: (key: string) => string;
+  t: (key: string, options?: Record<string, unknown>) => string;
 }
 
 const WeightSlider = ({ label, value, onChange }: WeightSliderProps): JSX.Element => {
@@ -82,13 +82,13 @@ const WeightsTab = ({ formData, onInputChange, totalWeight, t }: WeightsTabProps
     { key: 'Hobbies Languages Weight', label: t('settings.weights.hobbiesLanguages') }
   ];
   const profileMatchingWeights: Array<{ key: string; label: string }> = [
-    { key: 'Profile Matching Local Skill Weight', label: 'Profile matching skills' },
-    { key: 'Profile Matching Local Tool Weight', label: 'Profile matching tools' },
-    { key: 'Profile Matching Local Industry Weight', label: 'Profile matching industries' },
-    { key: 'Profile Matching Local Soft Skill Weight', label: 'Profile matching soft skills' },
-    { key: 'Profile Matching Local Title Exact Weight', label: 'Profile matching exact title' },
-    { key: 'Profile Matching Local Title Token Weight', label: 'Profile matching title tokens' },
-    { key: 'Profile Matching Local Coverage Multiplier', label: 'Profile matching coverage boost' }
+    { key: 'Profile Matching Local Skill Weight', label: t('settings.weights.profileMatchingSkill') },
+    { key: 'Profile Matching Local Tool Weight', label: t('settings.weights.profileMatchingTool') },
+    { key: 'Profile Matching Local Industry Weight', label: t('settings.weights.profileMatchingIndustry') },
+    { key: 'Profile Matching Local Soft Skill Weight', label: t('settings.weights.profileMatchingSoftSkill') },
+    { key: 'Profile Matching Local Title Exact Weight', label: t('settings.weights.profileMatchingTitleExact') },
+    { key: 'Profile Matching Local Title Token Weight', label: t('settings.weights.profileMatchingTitleToken') },
+    { key: 'Profile Matching Local Coverage Multiplier', label: t('settings.weights.profileMatchingCoverage') }
   ];
 
   return (
@@ -136,17 +136,17 @@ const WeightsTab = ({ formData, onInputChange, totalWeight, t }: WeightsTabProps
         </div>
         {totalWeight !== 100 && (
           <p className="mt-2 text-sm text-red-600 dark:text-red-400">
-            {t('settings.weights.mustEqual100')}
+            {t('settings.weights.totalMustEqualCurrent', { total: totalWeight })}
           </p>
         )}
       </div>
 
       <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-          Profile Matching Local Ranking
+          {t('settings.weights.localRankingTitle')}
         </h3>
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-          Configure the local pre-ranking weights used before sending profiles to the LLM.
+          {t('settings.weights.localRankingDescription')}
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

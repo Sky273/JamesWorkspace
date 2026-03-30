@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ResumeAnalysisPage Component
  * Dedicated page for resume analysis step
  */
@@ -47,7 +47,7 @@ const ResumeAnalysisPage = (): JSX.Element => {
   useEffect(() => {
     const loadResume = async () => {
       if (!id) {
-        setError('No resume ID provided');
+        setError(t('errors.resumeNotFound'));
         setLoading(false);
         return;
       }
@@ -78,11 +78,11 @@ const ResumeAnalysisPage = (): JSX.Element => {
           logger.info('[ResumeAnalysisPage] Resume fetched successfully');
           setCurrentResume(resume as Resume);
         } else {
-          setError('Resume not found');
+          setError(t('errors.resumeNotFound'));
         }
       } catch (err) {
         logger.error('[ResumeAnalysisPage] Error fetching resume:', err);
-        setError('Failed to load resume');
+        setError(t('errors.loadResume'));
         toast.error(t('errors.loadResume'));
       } finally {
         setLoading(false);
@@ -102,7 +102,7 @@ const ResumeAnalysisPage = (): JSX.Element => {
     
     if (!currentResume) {
       logger.error('[ResumeAnalysisPage] No currentResume available for improvement');
-      toast.error('CV non chargé. Veuillez rafraîchir la page.');
+      toast.error('CV non chargÃ©. Veuillez rafraÃ®chir la page.');
       return;
     }
     
@@ -192,7 +192,7 @@ const ResumeAnalysisPage = (): JSX.Element => {
           return;
         }
 
-        toast.error(t('share.error', 'Failed to generate share link'));
+        toast.error(t('share.error'));
         setShowShareModal(false);
         return;
       }
@@ -203,12 +203,12 @@ const ResumeAnalysisPage = (): JSX.Element => {
       if (data.success && data.token) {
         setShareUrl(`${window.location.origin}/share/file/${data.token}`);
       } else {
-        toast.error(t('share.error', 'Failed to generate share link'));
+        toast.error(t('share.error'));
         setShowShareModal(false);
       }
     } catch (err) {
       logger.error('Failed to get share URL:', err);
-      toast.error(t('share.error', 'Failed to generate share link'));
+      toast.error(t('share.error'));
       setShowShareModal(false);
     } finally {
       setShareLoading(false);
@@ -231,7 +231,7 @@ const ResumeAnalysisPage = (): JSX.Element => {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
         <div className="max-w-7xl mx-auto px-4 text-center">
-          <p className="text-red-500 dark:text-red-400">{error || 'Resume not found'}</p>
+          <p className="text-red-500 dark:text-red-400">{error || t('errors.resumeNotFound')}</p>
           <Link to="/resumes" className="text-blue-500 hover:underline mt-4 inline-block">
             {t('common.backToList')}
           </Link>
@@ -263,7 +263,7 @@ const ResumeAnalysisPage = (): JSX.Element => {
             className="inline-flex items-center gap-2 px-3 py-1.5 mb-3 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
           >
             <ArrowLeftIcon className="w-4 h-4" />
-            {t('resumes.backToDealsView', 'Retour à la vue par affaire')}
+            {t('resumes.backToDealsView')}
           </button>
         )}
         {/* Header with navigation */}
@@ -299,10 +299,10 @@ const ResumeAnalysisPage = (): JSX.Element => {
               <button
                 onClick={handleShare}
                 className="btn btn-secondary inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 text-sm sm:text-base"
-                title={t('share.button', 'Share')}
+                title={t('share.button')}
               >
                 <ShareIcon className="w-4 h-4 sm:w-5 sm:h-5" />
-                <span className="hidden sm:inline">{t('share.button', 'Share')}</span>
+                <span className="hidden sm:inline">{t('share.button')}</span>
               </button>
               
               {hasImprovedText ? (
@@ -345,7 +345,7 @@ const ResumeAnalysisPage = (): JSX.Element => {
           className="mb-6"
         >
           <div className="flex items-center">
-            {/* Step 1 — Analysis (active) */}
+            {/* Step 1 - Analysis (active) */}
             <div className="flex items-center gap-2">
               <motion.div
                 className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center shadow-md shadow-indigo-500/25"
@@ -359,7 +359,7 @@ const ResumeAnalysisPage = (): JSX.Element => {
               </span>
             </div>
 
-            {/* Connector 1→2 */}
+            {/* Connector 1->2 */}
             <div className="w-10 sm:w-16 h-[3px] mx-2 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700">
               <motion.div
                 className="h-full rounded-full bg-gradient-to-r from-indigo-400 to-emerald-500"
@@ -369,14 +369,14 @@ const ResumeAnalysisPage = (): JSX.Element => {
               />
             </div>
 
-            {/* Step 2 — Improve */}
+            {/* Step 2 - Improve */}
             {hasImprovedText ? (
               <Link to={`/resumes/${id}/improve`} className="flex items-center gap-2 group">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-green-600 flex items-center justify-center shadow-sm shadow-green-500/20">
                   <CheckCircleIcon className="w-4 h-4 text-white" />
                 </div>
                 <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400 group-hover:underline">
-                  {t('resume.steps.improve')} ✓
+                  {t('resume.steps.improve')} âœ“
                 </span>
               </Link>
             ) : (
@@ -390,7 +390,7 @@ const ResumeAnalysisPage = (): JSX.Element => {
               </button>
             )}
 
-            {/* Connector 2→3 */}
+            {/* Connector 2->3 */}
             <div className="w-10 sm:w-16 h-[3px] mx-2 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700">
               <motion.div
                 className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-purple-500"
@@ -400,7 +400,7 @@ const ResumeAnalysisPage = (): JSX.Element => {
               />
             </div>
 
-            {/* Step 3 — Export */}
+            {/* Step 3 - Export */}
             <Link to={`/resumes/${id}/export`} className="flex items-center gap-2 group">
               <div className="w-8 h-8 rounded-full border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center group-hover:border-purple-400 transition-colors">
                 <ArrowDownTrayIcon className="w-4 h-4 text-gray-400 dark:text-gray-500 group-hover:text-purple-500 transition-colors" />
@@ -487,14 +487,15 @@ const ResumeAnalysisPage = (): JSX.Element => {
         isOpen={showShareModal}
         onClose={() => setShowShareModal(false)}
         url={shareUrl}
-        title={hasImprovedText ? t('share.improvedCV', 'Improved CV') : t('share.originalFile', 'Original CV')}
+        title={hasImprovedText ? t('share.improvedCV') : t('share.originalFile')}
         candidateName={currentResume['Name'] || 'CV'}
         isLoading={shareLoading}
-        warning={hasImprovedText ? undefined : t('share.originalWarning', 'You are about to share the original version of this CV, not the improved version.')}
+        warning={hasImprovedText ? undefined : t('share.originalWarning')}
       />
     </div>
   );
 };
 
 export default ResumeAnalysisPage;
+
 

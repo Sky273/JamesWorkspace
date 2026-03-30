@@ -66,7 +66,7 @@ const TagsWithTooltip = memo(({ skills, industries, resumeTags, hasAnyTags, tagC
             <div className="space-y-2">
               {(resumeTags.skills?.length || 0) > 0 && (
                 <div>
-                  <div className="text-xs font-semibold text-blue-700 dark:text-blue-300 mb-1">{t('resumes.filters.skills', 'Compétences')}</div>
+                  <div className="text-xs font-semibold text-blue-700 dark:text-blue-300 mb-1">{t('resumes.filters.skills')}</div>
                   <div className="flex flex-wrap gap-1">
                     {resumeTags.skills.map((tag, i) => (
                       <span key={`ts-${i}`} className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{tag}</span>
@@ -76,7 +76,7 @@ const TagsWithTooltip = memo(({ skills, industries, resumeTags, hasAnyTags, tagC
               )}
               {(resumeTags.industries?.length || 0) > 0 && (
                 <div>
-                  <div className="text-xs font-semibold text-purple-700 dark:text-purple-300 mb-1">{t('resumes.filters.industries', 'Secteurs')}</div>
+                  <div className="text-xs font-semibold text-purple-700 dark:text-purple-300 mb-1">{t('resumes.filters.industries')}</div>
                   <div className="flex flex-wrap gap-1">
                     {resumeTags.industries.map((tag, i) => (
                       <span key={`ti-${i}`} className="text-xs px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">{tag}</span>
@@ -86,7 +86,7 @@ const TagsWithTooltip = memo(({ skills, industries, resumeTags, hasAnyTags, tagC
               )}
               {(resumeTags.tools?.length || 0) > 0 && (
                 <div>
-                  <div className="text-xs font-semibold text-green-700 dark:text-green-300 mb-1">{t('resumes.filters.tools', 'Outils')}</div>
+                  <div className="text-xs font-semibold text-green-700 dark:text-green-300 mb-1">{t('resumes.filters.tools')}</div>
                   <div className="flex flex-wrap gap-1">
                     {resumeTags.tools.map((tag, i) => (
                       <span key={`tt-${i}`} className="text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300">{tag}</span>
@@ -96,7 +96,7 @@ const TagsWithTooltip = memo(({ skills, industries, resumeTags, hasAnyTags, tagC
               )}
               {(resumeTags.soft_skills?.length || 0) > 0 && (
                 <div>
-                  <div className="text-xs font-semibold text-yellow-700 dark:text-yellow-300 mb-1">{t('resumes.filters.softskills', 'Soft Skills')}</div>
+                  <div className="text-xs font-semibold text-yellow-700 dark:text-yellow-300 mb-1">{t('resumes.filters.softskills')}</div>
                   <div className="flex flex-wrap gap-1">
                     {resumeTags.soft_skills.map((tag, i) => (
                       <span key={`tss-${i}`} className="text-xs px-2 py-0.5 rounded-full bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300">{tag}</span>

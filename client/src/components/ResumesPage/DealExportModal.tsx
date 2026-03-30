@@ -55,7 +55,7 @@ const DealExportModal = ({ dealId, dealTitle, resumeCount, adaptationCount, onCl
         }
       } catch (err) {
         logger.error('Failed to load templates:', err);
-        toast.error(t('dealExport.errorLoadingTemplates', 'Erreur lors du chargement des modèles'));
+        toast.error(t('dealExport.errorLoadingTemplates'));
       } finally {
         setLoadingTemplates(false);
       }
@@ -93,7 +93,7 @@ const DealExportModal = ({ dealId, dealTitle, resumeCount, adaptationCount, onCl
 
       const job = await response.json();
       toast.success(
-        t('dealExport.jobCreated', 'Export lancé ! {{total}} éléments à traiter.', { total: job.total_items }),
+        t('dealExport.jobCreated', { total: job.total_items }),
         { duration: 5000 }
       );
       onClose();
@@ -124,7 +124,7 @@ const DealExportModal = ({ dealId, dealTitle, resumeCount, adaptationCount, onCl
             </div>
             <div>
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                {t('dealExport.title', 'Exporter l\'affaire')}
+                {t('dealExport.title')}
               </h2>
               <p className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-[300px]">{dealTitle}</p>
             </div>
@@ -144,19 +144,19 @@ const DealExportModal = ({ dealId, dealTitle, resumeCount, adaptationCount, onCl
             </div>
             <div className="flex items-center gap-1.5 text-gray-700 dark:text-gray-300">
               <BriefcaseIcon className="w-4 h-4 text-indigo-500" />
-              <span><strong>{adaptationCount}</strong> {t('dealExport.adaptations', 'adaptation')}{adaptationCount !== 1 ? 's' : ''}</span>
+              <span><strong>{adaptationCount}</strong> {t('dealExport.adaptations')}{adaptationCount !== 1 ? 's' : ''}</span>
             </div>
           </div>
 
           {/* Template selection */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              {t('dealExport.template', 'Modèle de CV')}
+              {t('dealExport.template')}
             </label>
             {loadingTemplates ? (
               <div className="h-10 bg-gray-100 dark:bg-gray-700 rounded-lg animate-pulse" />
             ) : templates.length === 0 ? (
-              <p className="text-sm text-red-500">{t('dealExport.noTemplates', 'Aucun modèle disponible. Créez un modèle dans la section Modèles.')}</p>
+              <p className="text-sm text-red-500">{t('dealExport.noTemplates')}</p>
             ) : (
               <select
                 value={selectedTemplateId}
@@ -173,7 +173,7 @@ const DealExportModal = ({ dealId, dealTitle, resumeCount, adaptationCount, onCl
           {/* Format selection */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              {t('dealExport.formats', 'Formats de sortie')}
+              {t('dealExport.formats')}
             </label>
             <div className="flex gap-2">
               {EXPORT_FORMATS.map(({ id, label }) => {
@@ -200,7 +200,7 @@ const DealExportModal = ({ dealId, dealTitle, resumeCount, adaptationCount, onCl
         {/* Footer */}
         <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            {t('dealExport.summary', '{{total}} éléments × {{formats}} format(s)', {
+            {t('dealExport.summary', {
               total: totalItems,
               formats: selectedFormats.size
             })}
@@ -210,7 +210,7 @@ const DealExportModal = ({ dealId, dealTitle, resumeCount, adaptationCount, onCl
               onClick={onClose}
               className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
             >
-              {t('common.cancel', 'Annuler')}
+              {t('common.cancel')}
             </button>
             <button
               onClick={handleSubmit}
@@ -223,12 +223,12 @@ const DealExportModal = ({ dealId, dealTitle, resumeCount, adaptationCount, onCl
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                   </svg>
-                  {t('dealExport.creating', 'Création...')}
+                  {t('dealExport.creating')}
                 </>
               ) : (
                 <>
                   <ArrowDownTrayIcon className="w-4 h-4" />
-                  {t('dealExport.launch', 'Lancer l\'export')}
+                  {t('dealExport.launch')}
                 </>
               )}
             </button>

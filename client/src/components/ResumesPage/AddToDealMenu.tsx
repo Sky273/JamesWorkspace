@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FolderIcon, 
@@ -43,14 +44,8 @@ interface ManageResumeDealsModalProps {
   onSuccess?: () => void;
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  open: 'En cours',
-  won: 'Gagnée',
-  lost: 'Perdue',
-  on_hold: 'En attente'
-};
-
 const ManageResumeDealsModal = ({ resumeId, onSuccess }: ManageResumeDealsModalProps): JSX.Element => {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [allDeals, setAllDeals] = useState<Deal[]>([]);
   const [resumeDeals, setResumeDeals] = useState<ResumeDeal[]>([]);
@@ -82,7 +77,7 @@ const ManageResumeDealsModal = ({ resumeId, onSuccess }: ManageResumeDealsModalP
       }
     } catch (error) {
       logger.error('Error fetching deals:', error);
-      toast.error('Erreur lors du chargement des affaires');
+      toast.error(t('crm.deals.messages.errorFetching'));
     } finally {
       setLoading(false);
     }
@@ -111,7 +106,7 @@ const ManageResumeDealsModal = ({ resumeId, onSuccess }: ManageResumeDealsModalP
       const response = await fetchWithAuth(`/api/deals/${dealId}/resumes`, options);
       
       if (response.ok) {
-        toast.success('CV ajouté à l\'affaire');
+        toast.success(t('crm.deals.modal.cvAdded'));
         await fetchData();
         setShowAddSection(false);
         setSearchTerm('');
@@ -122,7 +117,7 @@ const ManageResumeDealsModal = ({ resumeId, onSuccess }: ManageResumeDealsModalP
       }
     } catch (error) {
       logger.error('Error adding to deal:', error);
-      toast.error('Erreur lors de l\'ajout');
+      toast.error(t('crm.deals.modal.errorAdding'));
     } finally {
       setSaving(false);
     }
@@ -135,7 +130,7 @@ const ManageResumeDealsModal = ({ resumeId, onSuccess }: ManageResumeDealsModalP
       const response = await fetchWithAuth(`/api/deals/${dealId}/resumes/${resumeId}`, options);
       
       if (response.ok) {
-        toast.success('CV retiré de l\'affaire');
+        toast.success(t('crm.deals.modal.cvRemoved'));
         setResumeDeals(prev => prev.filter(rd => rd.deal_id !== dealId));
         onSuccess?.();
       } else {
@@ -143,7 +138,7 @@ const ManageResumeDealsModal = ({ resumeId, onSuccess }: ManageResumeDealsModalP
       }
     } catch (error) {
       logger.error('Error removing from deal:', error);
-      toast.error('Erreur lors de la suppression');
+      toast.error(t('crm.deals.modal.errorRemoving'));
     } finally {
       setSaving(false);
     }
@@ -166,7 +161,7 @@ const ManageResumeDealsModal = ({ resumeId, onSuccess }: ManageResumeDealsModalP
       <button
         onClick={openModal}
         className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors rounded-lg cursor-pointer"
-        title="Gérer les affaires"
+        title={t('crm.deals.modal.manageDeals')}
       >
         <FolderIcon className="w-5 h-5" />
       </button>
@@ -192,7 +187,7 @@ const ManageResumeDealsModal = ({ resumeId, onSuccess }: ManageResumeDealsModalP
               <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
                 <div>
                   <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                    Affaires du CV
+                    {t('crm.deals.modal.manageDeals')}
                   </h2>
                   <p className="text-sm text-gray-500 dark:text-gray-400 font-mono">
                     ID: {resumeId}
@@ -218,7 +213,7 @@ const ManageResumeDealsModal = ({ resumeId, onSuccess }: ManageResumeDealsModalP
                     <div className="mb-6">
                       <div className="flex items-center justify-between mb-3">
                         <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Affaires associées ({resumeDeals.length})
+                          {t('crm.deals.modal.associatedDeals')} ({resumeDeals.length})
                         </h3>
                         {!showAddSection && (
                           <button
@@ -226,7 +221,7 @@ const ManageResumeDealsModal = ({ resumeId, onSuccess }: ManageResumeDealsModalP
                             className="flex items-center gap-1 px-3 py-1.5 text-sm bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
                           >
                             <PlusIcon className="w-4 h-4" />
-                            Ajouter
+                            {t('common.add')}
                           </button>
                         )}
                       </div>
@@ -235,7 +230,7 @@ const ManageResumeDealsModal = ({ resumeId, onSuccess }: ManageResumeDealsModalP
                         <div className="text-center py-6 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                           <FolderIcon className="w-10 h-10 mx-auto text-gray-400 mb-2" />
                           <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Ce CV n'est associé à aucune affaire
+                            {t('crm.deals.modal.noDealsAssociated')}
                           </p>
                         </div>
                       ) : (
@@ -256,7 +251,7 @@ const ManageResumeDealsModal = ({ resumeId, onSuccess }: ManageResumeDealsModalP
                                     deal.status === 'lost' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' :
                                     'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300'
                                   }`}>
-                                    {STATUS_LABELS[deal.status] || deal.status}
+                                    {t(`crm.deals.statuses.${deal.status}`, deal.status)}
                                   </span>
                                 </div>
                                 <div className="flex items-center gap-3 mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -278,7 +273,7 @@ const ManageResumeDealsModal = ({ resumeId, onSuccess }: ManageResumeDealsModalP
                                 onClick={() => removeFromDeal(deal.deal_id)}
                                 disabled={saving}
                                 className="p-2 text-red-500 hover:text-red-700 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors disabled:opacity-50"
-                                title="Retirer de cette affaire"
+                                title={t('crm.deals.modal.removeFromDeal')}
                               >
                                 <TrashIcon className="w-4 h-4" />
                               </button>
@@ -299,7 +294,7 @@ const ManageResumeDealsModal = ({ resumeId, onSuccess }: ManageResumeDealsModalP
                         >
                           <div className="flex items-center justify-between mb-3">
                             <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Ajouter à une affaire
+                              {t('crm.deals.modal.addToDeal')}
                             </h3>
                             <button
                               onClick={() => {
@@ -308,7 +303,7 @@ const ManageResumeDealsModal = ({ resumeId, onSuccess }: ManageResumeDealsModalP
                               }}
                               className="text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
                             >
-                              Annuler
+                              {t('common.cancel')}
                             </button>
                           </div>
 
@@ -319,7 +314,7 @@ const ManageResumeDealsModal = ({ resumeId, onSuccess }: ManageResumeDealsModalP
                               type="text"
                               value={searchTerm}
                               onChange={(e) => setSearchTerm(e.target.value)}
-                              placeholder="Rechercher une affaire..."
+                              placeholder={t('crm.deals.modal.searchDeal')}
                               className="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                             />
                           </div>
@@ -328,7 +323,9 @@ const ManageResumeDealsModal = ({ resumeId, onSuccess }: ManageResumeDealsModalP
                           <div className="max-h-48 overflow-y-auto space-y-1">
                             {availableDeals.length === 0 ? (
                               <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
-                                {searchTerm ? 'Aucune affaire trouvée' : 'Toutes les affaires sont déjà associées'}
+                                {searchTerm
+                                  ? t('crm.deals.modal.noDealFound')
+                                  : t('crm.deals.modal.allDealsAssociated')}
                               </p>
                             ) : (
                               availableDeals.map(deal => (
@@ -366,7 +363,7 @@ const ManageResumeDealsModal = ({ resumeId, onSuccess }: ManageResumeDealsModalP
                   onClick={closeModal}
                   className="w-full px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                 >
-                  Fermer
+                  {t('common.close')}
                 </button>
               </div>
             </motion.div>

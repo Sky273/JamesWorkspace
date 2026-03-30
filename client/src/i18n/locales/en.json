@@ -5,7 +5,26 @@
     "roles": {
       "admin": "Administrator",
       "user": "User"
-    }
+    },
+    "title": "My account",
+    "subtitle": "Manage your profile and security settings",
+    "tabs": {
+      "profile": "My profile",
+      "security": "Security"
+    },
+    "personalInfo": "Personal information",
+    "fullName": "Full name",
+    "email": "Email",
+    "emailReadonly": "Email cannot be changed",
+    "jobTitle": "Job title",
+    "jobTitlePlaceholder": "E.g. HR Consultant",
+    "phone": "Phone",
+    "phonePlaceholder": "E.g. +33 6 12 34 56 78",
+    "firm": "Firm",
+    "passwordTitle": "Password",
+    "passwordHelp": "To change your password, contact your administrator.",
+    "updateSuccess": "Profile updated",
+    "updateError": "Error updating profile"
   },
   "twoFactor": {
     "title": "Two-Factor Authentication (2FA)",
@@ -60,7 +79,10 @@
     "selectFirm": "Firm",
     "myFirm": "My firm (default)",
     "adminFirmHint": "As an admin, you can create this item for another firm",
-    "refresh": "Refresh"
+    "refresh": "Refresh",
+    "expand": "Expand",
+    "collapse": "Collapse",
+    "retry": "Retry"
   },
   "header": {
     "changeLanguage": "Change language",
@@ -325,7 +347,7 @@
       "noResumes": "No CVs associated with this deal",
       "noDeals": "No deals created. Create a deal in the CRM tab to get started.",
       "unassignedTitle": "CVs not assigned to a deal",
-      "errorLoading": "Error loading data",
+      "errorLoading": "Error while loading",
       "dropHere": "Drop here to add to this deal",
       "moving": "Moving CV...",
       "moved": "CV moved to \"{{deal}}\"",
@@ -333,7 +355,19 @@
       "dropError": "Error moving CV",
       "missions": "Missions",
       "adaptations": "adaptation(s)",
-      "cvs": "CVs"
+      "cvs": "CVs",
+      "deal": "Deal",
+      "dealContent": "Deal content",
+      "showMore": "Show {{count}} more CV(s)",
+      "showLess": "Show less"
+    },
+    "preview": {
+      "title": "Resume preview",
+      "improved": "Improved",
+      "analyzed": "Analyzed",
+      "openFull": "Full analysis",
+      "keyImprovements": "Key improvements",
+      "noContent": "No content available"
     }
   },
   "upload": {
@@ -784,6 +818,23 @@
     "route": "Route",
     "calls": "Calls",
     "model": "Model",
+    "export": "Export",
+    "cacheBackend": "Cache backend",
+    "cacheConnected": "Redis connected",
+    "cacheFallbackReason": "Fallback",
+    "notApplicable": "N/A",
+    "none": "None",
+    "database": "Database",
+    "dbSize": "Total size",
+    "connections": "Connections",
+    "active": "Active",
+    "idle": "Idle",
+    "queryTime": "Query time",
+    "tables": "Tables",
+    "topTables": "Top tables",
+    "tableName": "Table",
+    "rows": "Rows",
+    "deadRows": "Dead",
     "operationsUploadsTitle": "Uploads and binary storage",
     "operationsUploadsSubtitle": "Files received, stored and kept in the database",
     "successFailures": "Success / failures",
@@ -810,8 +861,74 @@
     "uploadFilesTotalCsv": "Upload Files Total",
     "ocrRunsCsv": "OCR Runs",
     "cleanupRunsCsv": "Cleanup Runs",
+    "batchImportRunsCsv": "Batch Import Runs",
+    "improvementRunsCsv": "Resume Improvement Runs",
+    "adaptationRunsCsv": "Resume Adaptation Runs",
     "operationsUnavailable": "Operational metrics unavailable",
-    "operationsHint": "Deploy the backend exposing /api/metrics/operations to enable uploads, OCR, storage and cleanup metrics"
+    "operationsHint": "Deploy the backend exposing /api/metrics/operations to enable uploads, OCR, storage and cleanup metrics.",
+    "batchImportPipeline": "Batch import pipeline",
+    "batchImportSubtitle": "CV import, text extraction and initial analysis",
+    "pendingName": "Pending name",
+    "improvementRequested": "Improve requested",
+    "textExtraction": "Text extraction",
+    "analysisRuns": "Analysis runs",
+    "inputBytes": "Input bytes",
+    "extractedChars": "Extracted chars",
+    "stage": "Stage",
+    "failures": "Failures",
+    "recentActivity": "Recent activity",
+    "duration": "Duration",
+    "profileMatchingTitle": "Profile matching",
+    "profileMatchingSubtitle": "Searches, scoring batches and explained profiles",
+    "profilesRequested": "Profiles requested",
+    "profilesScored": "Profiles scored",
+    "batchesStarted": "Batches started",
+    "batchesRetriedFailed": "Retried / failed",
+    "profilesExplained": "Profiles explained",
+    "profilesReturned": "Profiles returned",
+    "profileNormalizationEvents": "Normalized LLM fields",
+    "requestedToScoredRatio": "Requested -> scored",
+    "scoredToExplainedRatio": "Scored -> explained",
+    "scoredToReturnedRatio": "Scored -> returned",
+    "profileMatchingAlerts": "Profile matching alerts",
+    "profileMatchingAlertRequestedScored": "Profile matching scoring ratio is degraded. Too many requested profiles are not reaching LLM scoring.",
+    "profileMatchingAlertScoredExplained": "Profile matching explanation ratio is low. Explanations are only being generated for a small part of scored profiles.",
+    "profileMatchingAlertScoredReturned": "Profile matching return ratio is degraded. Too many scored profiles are filtered out or failing later in the pipeline.",
+    "profileNormalizationEventsShort": "Normalized",
+    "profileMatchingRecent": "Recent activity",
+    "field": "Field",
+    "inputType": "Input type",
+    "source": "Source",
+    "searches": "Searches",
+    "resumeImprovementTitle": "Resume improvement",
+    "resumeImprovementSubtitle": "Improvement calls, structured outputs and fallback usage",
+    "structuredFallback": "Structured / fallback",
+    "inputChars": "Input chars",
+    "outputChars": "Output chars",
+    "successRatio": "Success ratio",
+    "successes": "Successes",
+    "fallbacks": "Fallbacks",
+    "resumeImprovementRecent": "Recent activity",
+    "resumeAdaptationTitle": "Resume adaptation",
+    "resumeAdaptationSubtitle": "Match analyses, adaptation calls and structured outputs",
+    "matchRuns": "Match runs",
+    "resumeAdaptationRecent": "Recent activity",
+    "apm": "Performance (APM)",
+    "slowRequests": "Slow requests",
+    "last5min": "5 min",
+    "slow": "Slow",
+    "verySlow": "Very slow",
+    "critical": "Critical",
+    "noSlowRequests": "No slow requests detected",
+    "avgDuration": "Average duration",
+    "slowEndpoints": "Slow endpoints",
+    "topSlowEndpoints": "Slowest endpoints",
+    "endpoint": "Endpoint",
+    "count": "Count",
+    "avgMs": "Avg.",
+    "maxMs": "Max",
+    "noData": "No data",
+    "exportSuccess": "Metrics exported successfully"
   },
   "security": {
     "title": "Security Logs",
@@ -895,7 +1012,9 @@
       "saveSuccess": "DPO settings saved successfully",
       "saveError": "Error saving DPO settings",
       "infoTitle": "About DPO Settings",
-      "infoContent": "This information will be used in GDPR consent request emails sent to candidates. The DPO email will be provided as the contact for exercising data protection rights."
+      "infoContent": "This information will be used in GDPR consent request emails sent to candidates. The DPO email will be provided as the contact for exercising data protection rights.",
+      "emailPlaceholder": "dpo@example.com",
+      "phonePlaceholder": "+33 1 23 45 67 89"
     },
     "gdpr": {
       "title": "GDPR Configuration",
@@ -998,8 +1117,11 @@
     },
     "llm": {
       "title": "LLM Model Configuration",
+      "provider": "LLM Provider",
       "model": "Model",
       "description": "Select the LLM provider and model to use for resume analysis and improvement.",
+      "ollamaDescription": "Configure only your Ollama host address. The active model will be detected automatically on your machine.",
+      "glmDescription": "Select a GLM model. The application will use the server-side OpenAI-compatible Z.AI API.",
       "cvMode": "CV Generation Mode",
       "cvModeNominative": "Nominative (personal information included)",
       "cvModeAnonymous": "Anonymous (trigram only)",
@@ -1008,7 +1130,12 @@
       "webglEnabled": "Enable WebGL backgrounds",
       "webglEnabledDescription": "Displays animated visual backgrounds when the browser and device support them.",
       "minimaxDescription": "Select a MiniMax model. The application will use the server-side MiniMax API.",
-      "deepseekDescription": "Select the DeepSeek API mode to use. The callable IDs remain deepseek-chat and deepseek-reasoner, both currently mapped to DeepSeek-V3.2 on the API side."
+      "deepseekDescription": "Select the DeepSeek API mode to use. The callable IDs remain deepseek-chat and deepseek-reasoner, both currently mapped to DeepSeek-V3.2 on the API side.",
+      "minimaxHighspeedDisabled": "MiniMax highspeed models are hidden because this instance does not enable the Highspeed plan.",
+      "minimaxRuntimeUnavailable": "Some MiniMax models are temporarily hidden because the upstream refused them for this instance.",
+      "runtimeUnavailable": "Some models for this provider are temporarily hidden because the upstream refused them for this instance.",
+      "ollamaBaseUrl": "Ollama URL",
+      "ollamaHelp": "Provide the full URL of your remote Ollama instance. The active model will be used automatically."
     },
     "prompts": {
       "title": "Prompts Configuration",
@@ -1034,7 +1161,17 @@
       "experience": "Professional Experience",
       "education": "Education",
       "ats": "ATS Optimization",
-      "hobbiesLanguages": "Hobbies & Languages"
+      "hobbiesLanguages": "Hobbies & Languages",
+      "totalMustEqualCurrent": "The sum of weights must equal 100% (currently: {{total}}%)",
+      "localRankingTitle": "Profile matching local ranking",
+      "localRankingDescription": "Configure the local pre-ranking weights used before sending profiles to the LLM.",
+      "profileMatchingSkill": "Profile matching skills",
+      "profileMatchingTool": "Profile matching tools",
+      "profileMatchingIndustry": "Profile matching industries",
+      "profileMatchingSoftSkill": "Profile matching soft skills",
+      "profileMatchingTitleExact": "Profile matching exact title",
+      "profileMatchingTitleToken": "Profile matching title tokens",
+      "profileMatchingCoverage": "Profile matching coverage boost"
     },
     "chatbot": {
       "title": "Chatbot Configuration",
@@ -1068,6 +1205,33 @@
     "noTags": "No tags in this category",
     "stats": {
       "totalTags": "Total tags"
+    },
+    "cleaned": "Cleaned",
+    "viewEscoDefinition": "View ESCO definition",
+    "recalculateCleanedTags": "Recalculate cleaned tags",
+    "recalculateEscoTags": "Recalculate ESCO tags",
+    "cleanedTagsRecalculated": "Cleaned tags recalculated successfully",
+    "cleanedTagsRecalculateError": "Failed to recalculate cleaned tags",
+    "escoTagsRecalculated": "ESCO tags recalculated successfully",
+    "escoTagsRecalculateError": "Failed to recalculate ESCO tags",
+    "tabs": {
+      "raw": "Raw tags",
+      "cleaned": "Cleaned tags",
+      "esco": "ESCO tags"
+    },
+    "cleanedDescription": {
+      "title": "Cleaned tags:",
+      "text": "Tags are lowercased, split on separators (/, ,, ;, |), and compound tags are detected (for example: \"Java Spring\" ? \"java\" + \"spring\")."
+    },
+    "escoDescription": {
+      "title": "ESCO tags:",
+      "text": "Tags are normalized using the European ESCO classification (European Skills, Competences, Qualifications and Occupations). Click \"Convert to ESCO\" to update."
+    },
+    "categories": {
+      "Skills": "Skills",
+      "Industries": "Industries",
+      "Tools": "Tools",
+      "Soft Skills": "Soft Skills"
     }
   },
   "missions": {
@@ -1078,7 +1242,7 @@
     "noResults": "No missions match your search",
     "createFirst": "Create your first mission to get started",
     "noDescription": "No description",
-    "searchPlaceholder": "Search for a mission...",
+    "searchPlaceholder": "Search a mission...",
     "addMission": "Add mission",
     "editMission": "Edit mission",
     "missionTitle": "Title",
@@ -1113,7 +1277,17 @@
     "selectClientFirst": "Select a client first",
     "contact": "Contact",
     "selectContact": "Select a contact",
-    "noFirm": "No firm"
+    "noFirm": "No firm",
+    "grouped": {
+      "noMissions": "No mission associated with this deal",
+      "showMore": "Show {{count}} more mission(s)",
+      "showLess": "Show less",
+      "fetchError": "Error while loading",
+      "deals": "deals",
+      "unassigned": "unassigned",
+      "unassignedTitle": "Missions without deal",
+      "noSearchResults": "No mission matches your search."
+    }
   },
   "adaptations": {
     "title": "Resume Adaptations",
@@ -1189,7 +1363,18 @@
       "export": "[FR] Export",
       "view": "[FR] View"
     },
-    "exportSuccess": "[FR] Export Success"
+    "exportSuccess": "[FR] Export Success",
+    "grouped": {
+      "showMore": "Show {{count}} more adaptation(s)",
+      "showLess": "Show less",
+      "noAdaptations": "No adaptations in this deal",
+      "fetchError": "Error while loading",
+      "searchPlaceholder": "Search an adaptation...",
+      "deals": "deals",
+      "unassigned": "unassigned",
+      "unassignedTitle": "Missions without deal",
+      "noSearchResults": "No adaptation matches your search."
+    }
   },
   "navigation": {
     "home": "Home",
@@ -1239,6 +1424,42 @@
   "marketRadar": {
     "title": "IS/IT Market Radar",
     "subtitle": "IT job offers collection and analysis in France",
+    "details": {
+      "totalShare": "of total",
+      "breakdown": "Breakdown",
+      "minimum": "Min",
+      "maximum": "Max",
+      "median": "Median",
+      "byCategory": "By category",
+      "beginner": "Beginner",
+      "averageLevel": "Average",
+      "experienced": "Experienced",
+      "positiveDynamic": "Positive momentum",
+      "negativeDynamic": "Negative momentum",
+      "stableDynamic": "Stable momentum",
+      "marketGrowing": "The job market is growing",
+      "marketDeclining": "The job market is declining",
+      "marketStable": "The job market is stable",
+      "updatedAt": "Updated",
+      "evolution": "change",
+      "genre": "Gender",
+      "contracts": "Contracts",
+      "qualification": "Qualification",
+      "experience": "Experience",
+      "age": "Age",
+      "training": "Education",
+      "ageRanges": "Age ranges",
+      "genreAgeDetail": "Gender × Age detail",
+      "people": "people",
+      "cdi": "Permanent",
+      "cdd": "Fixed-term",
+      "other": "Other",
+      "executives": "Executives",
+      "technicians": "Technicians",
+      "employees": "Employees",
+      "workers": "Workers",
+      "underBac": "< High school"
+    },
     "dataTypes": {
       "offres": "Job offers",
       "tension": "Recruitment tensions",
@@ -1425,24 +1646,24 @@
     "viewAnalysis": "View analysis",
     "analyzing": "Analyzing...",
     "analysisComplete": "Detailed analysis complete",
-    "searchingProfiles": "Searching profiles…",
+    "searchingProfiles": "Searching profiles...",
     "searchingProfilesDescription": "AI is analyzing CVs in your database to find the best profiles for this mission.",
     "searchingLoadingSteps": [
-      "Extracting mission keywords…",
-      "Analyzing required skills…",
-      "Scanning the CV database…",
-      "Intelligent AI scoring…",
-      "Comparing profiles…",
-      "Ranking the best matches…"
+      "Extracting mission keywords...",
+      "Analyzing required skills...",
+      "Scanning the CV database...",
+      "Intelligent AI scoring...",
+      "Comparing profiles...",
+      "Ranking the best matches..."
     ],
     "searchingEstimatedTime": "This may take 1 to 5 minutes depending on the number of CVs",
-    "analyzingProfile": "Analyzing profile…",
+    "analyzingProfile": "Analyzing profile...",
     "analyzingProfileDescription": "AI is generating a detailed analysis of the match between this profile and the mission.",
     "analyzingLoadingSteps": [
-      "Deep reading the CV…",
-      "Comparing with requirements…",
-      "Evaluating key skills…",
-      "Writing the AI summary…"
+      "Deep reading the CV...",
+      "Comparing with requirements...",
+      "Evaluating key skills...",
+      "Writing the AI summary..."
     ],
     "titleAdjustment": "Title adjustment",
     "llmScored": "AI Score",
@@ -1461,7 +1682,13 @@
       "recommendations": "Recommendations",
       "interviewQuestions": "Suggested interview questions",
       "riskLevel": "Risk level"
-    }
+    },
+    "sentToLlm": "{{count}} sent to the LLM",
+    "explainedCount": "{{count}} explained",
+    "returnedCount": "{{count}} returned",
+    "maxResultsPlaceholder": "0 = all",
+    "dealSeparator": "?",
+    "resultsToast": "{{scanned}} CVs scanned, {{sent}} sent to the LLM, {{returned}} results returned"
   },
   "export": {
     "loadingTemplates": "Loading templates...",
@@ -1609,22 +1836,38 @@
         "errorCreating": "Error creating deal",
         "errorUpdating": "Error updating deal",
         "errorDeleting": "Error deleting deal",
-        "confirmDelete": "Are you sure you want to delete the deal \"{{name}}\"?"
+        "confirmDelete": "Are you sure you want to delete the deal \"{{name}}\"?",
+        "saving": "Saving..."
       },
       "modal": {
-        "manageDeals": "CV Deals",
+        "manageDeals": "Manage deals",
         "associatedDeals": "Associated deals",
         "addToDeal": "Add to a deal",
         "searchDeal": "Search a deal...",
-        "noDealsAssociated": "This CV is not associated with any deal",
+        "noDealsAssociated": "This resume is not associated with any deal",
         "allDealsAssociated": "All deals are already associated",
         "noDealFound": "No deal found",
-        "cvAdded": "CV added to deal",
-        "cvRemoved": "CV removed from deal",
-        "errorAdding": "Error adding",
-        "errorRemoving": "Error removing",
+        "cvAdded": "Resume added to the deal",
+        "cvRemoved": "Resume removed from the deal",
+        "errorAdding": "Error while adding to the deal",
+        "errorRemoving": "Error while removing from the deal",
         "removeFromDeal": "Remove from this deal"
-      }
+      },
+      "createTitle": "New deal",
+      "editTitle": "Edit deal",
+      "add": "New deal",
+      "selectClientFirst": "Select a client first",
+      "startDate": "Expected start date",
+      "endDate": "Expected end date",
+      "titleRequired": "Deal name is required",
+      "created": "Deal created",
+      "updated": "Deal updated",
+      "deleted": "Deal deleted",
+      "errorSaving": "Error while saving",
+      "errorDeleting": "Error while deleting",
+      "confirmDelete": "Confirm deletion",
+      "deleteWarning": "Are you sure you want to delete the deal",
+      "resumesAssociatedWarning": "{{count}} CV(s) are associated with this deal."
     }
   },
   "mail": {
@@ -2243,6 +2486,10 @@
     "delete": "Delete",
     "download": "Download export",
     "downloadStarted": "Download started",
+    "nameRequired": "Please enter the candidate name",
+    "nameProvided": "Name provided, processing in progress...",
+    "enterCandidateName": "Candidate name...",
+    "submitName": "Submit name",
     "jobCreated": "Job created with {{count}} file(s). Check the Jobs tab to track progress.",
     "jobCancelled": "Job cancelled",
     "jobDeleted": "Job deleted",
@@ -2262,9 +2509,23 @@
     "type": {
       "import": "Import",
       "improve": "Improvement",
+      "adapt": "Adaptation",
+      "match": "Match analysis",
+      "profileSearch": "Profile search",
+      "profileAnalysis": "Detailed profile analysis",
       "importImprove": "Import + Improvement",
+      "collectTrends": "Market trends collection",
+      "collectFacts": "Job offers collection",
+      "collectFactsSource": "Job offers collection ({{source}})",
+      "collectMetiers": "Jobs & skills collection",
       "dealExport": "Deal export",
       "dealExportNamed": "Deal export: {{title}}"
+    },
+    "collection": {
+      "processed": "Processed",
+      "success": "Success",
+      "errors": "Errors",
+      "startedAt": "Started"
     }
   },
   "dealExport": {
@@ -2275,7 +2536,7 @@
     "adaptations": "adaptation",
     "noTemplates": "No templates available. Create a template in the Templates section.",
     "errorLoadingTemplates": "Error loading templates",
-    "summary": "{{total}} items × {{formats}} format(s)",
+    "summary": "{{total}} items ? {{formats}} format(s)",
     "launch": "Start export",
     "creating": "Creating...",
     "jobCreated": "Export started! {{total}} items to process."

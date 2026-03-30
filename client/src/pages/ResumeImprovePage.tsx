@@ -188,7 +188,7 @@ const ResumeImprovePage = (): JSX.Element => {
       setLocalResume(updated);
     } catch (err) {
       logger.error(`Error updating ${field}:`, err);
-      toast.error(`Failed to update ${field}`);
+      toast.error(t('resume.saveError'));
     }
   }, [currentResume, setCurrentResume]);
 
@@ -255,12 +255,12 @@ const ResumeImprovePage = (): JSX.Element => {
         const shareUrl = `${window.location.origin}/share/pdf/${data.token}`;
         setShareUrl(shareUrl);
       } else {
-        toast.error(t('share.error', 'Failed to generate share link'));
+        toast.error(t('share.error'));
         setShowShareModal(false);
       }
     } catch (err) {
       logger.error('Failed to generate share URL:', err);
-      toast.error(t('share.error', 'Failed to generate share link'));
+      toast.error(t('share.error'));
       setShowShareModal(false);
     } finally {
       setShareLoading(false);
@@ -342,7 +342,7 @@ const ResumeImprovePage = (): JSX.Element => {
                   >
                     <RocketLaunchIcon className="h-4 w-4 sm:h-5 sm:w-5" />
                     <span className="hidden sm:inline">{t('resume.actions.adaptToMission')}</span>
-                    <span className="sm:hidden">{t('resume.actions.adapt', 'Adapter')}</span>
+                    <span className="sm:hidden">{t('resume.actions.adapt')}</span>
                   </button>
                   
                   {/* Save changes - Secondary */}
@@ -363,7 +363,7 @@ const ResumeImprovePage = (): JSX.Element => {
                       <>
                         <CheckIcon className="h-4 w-4 sm:h-5 sm:w-5" />
                         <span className="hidden sm:inline">{t('resume.actions.saveChanges')}</span>
-                        <span className="sm:hidden">{t('common.save', 'Enregistrer')}</span>
+                        <span className="sm:hidden">{t('common.save')}</span>
                       </>
                     )}
                   </button>
@@ -372,10 +372,10 @@ const ResumeImprovePage = (): JSX.Element => {
                   <button
                     onClick={handleShare}
                     className="btn btn-secondary inline-flex items-center gap-2 px-4 py-2 text-sm sm:text-base"
-                    title={t('share.button', 'Share')}
+                    title={t('share.button')}
                   >
                     <ShareIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-                    <span className="hidden sm:inline">{t('share.button', 'Share')}</span>
+                    <span className="hidden sm:inline">{t('share.button')}</span>
                   </button>
                 </div>
               )}
@@ -390,7 +390,7 @@ const ResumeImprovePage = (): JSX.Element => {
           className="mb-6"
         >
           <div className="flex items-center">
-            {/* Step 1 — Analysis (past) */}
+            {/* Step 1 - Analysis (past) */}
             <Link to={`/resumes/${id}/analysis`} className="flex items-center gap-2 group">
               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-green-600 flex items-center justify-center shadow-sm shadow-green-500/20">
                 <CheckCircleIcon className="w-4 h-4 text-white" />
@@ -400,10 +400,10 @@ const ResumeImprovePage = (): JSX.Element => {
               </span>
             </Link>
 
-            {/* Connector 1→2 */}
+            {/* Connector 1->2 */}
             <div className="w-10 sm:w-16 h-[3px] mx-2 bg-gradient-to-r from-emerald-400 to-indigo-500 rounded-full" />
 
-            {/* Step 2 — Improve (active) */}
+            {/* Step 2 - Improve (active) */}
             <div className="flex items-center gap-2">
               <motion.div
                 className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center shadow-md shadow-indigo-500/25"
@@ -417,7 +417,7 @@ const ResumeImprovePage = (): JSX.Element => {
               </span>
             </div>
 
-            {/* Connector 2→3 */}
+            {/* Connector 2->3 */}
             <div className="w-10 sm:w-16 h-[3px] mx-2 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700">
               <motion.div
                 className="h-full rounded-full bg-gradient-to-r from-indigo-400 to-purple-500"
@@ -427,7 +427,7 @@ const ResumeImprovePage = (): JSX.Element => {
               />
             </div>
 
-            {/* Step 3 — Export */}
+            {/* Step 3 - Export */}
             {hasImprovedText ? (
               <Link to={`/resumes/${id}/export`} className="flex items-center gap-2 group">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-400 to-fuchsia-600 flex items-center justify-center shadow-sm shadow-purple-500/20">
@@ -507,7 +507,7 @@ const ResumeImprovePage = (): JSX.Element => {
               </motion.button>
 
               <p className="text-xs text-gray-400 dark:text-gray-500 mt-4">
-                {t('resume.improve.duration', 'Environ 30–90 secondes')}
+                {t('resume.improve.duration')}
               </p>
             </div>
           </motion.div>
@@ -609,7 +609,7 @@ const ResumeImprovePage = (): JSX.Element => {
         isOpen={showShareModal}
         onClose={() => setShowShareModal(false)}
         url={shareUrl}
-        title={t('share.improvedCV', 'Improved CV')}
+        title={t('share.improvedCV')}
         candidateName={localResume?.['Name'] || 'CV'}
         isLoading={shareLoading}
       />

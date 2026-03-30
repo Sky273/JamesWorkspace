@@ -221,9 +221,9 @@ const TagsManagement = (): JSX.Element => {
       await tagService.recalculateCleanedTags();
       const freshCleanedTags = await tagService.getCleanedTags();
       setCleanedTags(freshCleanedTags as unknown as CleanedTags);
-      toast.success(t('tags.cleanedTagsRecalculated', { defaultValue: 'Tags nettoyés recalculés avec succès' }));
+      toast.success(t('tags.cleanedTagsRecalculated'));
     } catch (err) {
-      toast.error(t('tags.cleanedTagsRecalculateError', { defaultValue: 'Erreur lors du recalcul des tags nettoyés' }));
+      toast.error(t('tags.cleanedTagsRecalculateError'));
       logger.error('Error recalculating cleaned tags:', err);
     } finally {
       setSavingCleanedTags(false);
@@ -237,9 +237,9 @@ const TagsManagement = (): JSX.Element => {
       await tagService.recalculateEscoTags('fr');
       const freshEscoTags = await tagService.getEscoTags();
       setEscoTags(freshEscoTags as unknown as EscoTags);
-      toast.success(t('tags.escoTagsRecalculated', { defaultValue: 'Tags ESCO recalculés avec succès' }));
+      toast.success(t('tags.escoTagsRecalculated'));
     } catch (err) {
-      toast.error(t('tags.escoTagsRecalculateError', { defaultValue: 'Erreur lors du recalcul des tags ESCO' }));
+      toast.error(t('tags.escoTagsRecalculateError'));
       logger.error('Error recalculating ESCO tags:', err);
     } finally {
       setConvertingToEsco(false);
@@ -375,7 +375,7 @@ const TagsManagement = (): JSX.Element => {
               }`}
             >
               <DocumentTextIcon className="w-5 h-5" />
-              {t('tags.tabs.raw', { defaultValue: 'Tags bruts' })}
+              {t('tags.tabs.raw')}
               <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
                 {totalTags}
               </span>
@@ -389,7 +389,7 @@ const TagsManagement = (): JSX.Element => {
               }`}
             >
               <BeakerIcon className="w-5 h-5" />
-              {t('tags.tabs.cleaned', { defaultValue: 'Tags nettoyés' })}
+              {t('tags.tabs.cleaned')}
               <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
                 {totalCleanedTags}
               </span>
@@ -403,7 +403,7 @@ const TagsManagement = (): JSX.Element => {
               }`}
             >
               <GlobeEuropeAfricaIcon className="w-5 h-5" />
-              {t('tags.tabs.esco', { defaultValue: 'Tags ESCO' })}
+              {t('tags.tabs.esco')}
               <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
                 {totalEscoTags}
               </span>
@@ -427,7 +427,7 @@ const TagsManagement = (): JSX.Element => {
                 ) : (
                   <ArrowPathIcon className="w-5 h-5" />
                 )}
-                {t('tags.recalculateCleanedTags', { defaultValue: 'Recalculer les tags nettoyés' })}
+                {t('tags.recalculateCleanedTags')}
               </button>
             )}
             {activeTab === 'esco' && (
@@ -441,7 +441,7 @@ const TagsManagement = (): JSX.Element => {
                 ) : (
                   <GlobeEuropeAfricaIcon className="w-5 h-5" />
                 )}
-                {t('tags.recalculateEscoTags', { defaultValue: 'Recalculer les tags ESCO' })}
+                {t('tags.recalculateEscoTags')}
               </button>
             )}
             <button onClick={fetchTags} className="btn btn-primary flex items-center gap-2 px-4 py-2">
@@ -455,16 +455,16 @@ const TagsManagement = (): JSX.Element => {
       {activeTab === 'cleaned' && (
         <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-6">
           <p className="text-sm text-green-700 dark:text-green-300">
-            <strong>{t('tags.cleanedDescription.title', { defaultValue: 'Tags nettoyés :' })}</strong>{' '}
-            {t('tags.cleanedDescription.text', { defaultValue: 'Les tags sont convertis en minuscules, découpés sur les séparateurs (/, ,, ;, |) et les composés sont détectés (ex: "Java Spring" → "java" + "spring").' })}
+            <strong>{t('tags.cleanedDescription.title')}</strong>{' '}
+            {t('tags.cleanedDescription.text')}
           </p>
         </div>
       )}
       {activeTab === 'esco' && (
         <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg p-4 mb-6">
           <p className="text-sm text-indigo-700 dark:text-indigo-300">
-            <strong>{t('tags.escoDescription.title', { defaultValue: 'Tags ESCO :' })}</strong>{' '}
-            {t('tags.escoDescription.text', { defaultValue: 'Les tags sont normalisés selon la classification européenne ESCO (European Skills, Competences, Qualifications and Occupations). Cliquez sur "Convertir en ESCO" pour mettre à jour.' })}
+            <strong>{t('tags.escoDescription.title')}</strong>{' '}
+            {t('tags.escoDescription.text')}
           </p>
         </div>
       )}
@@ -487,7 +487,7 @@ const TagsManagement = (): JSX.Element => {
                 </div>
                 {isCleanedTab && (
                   <span className="ml-auto px-2 py-1 text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded">
-                    {t('tags.cleaned', { defaultValue: 'Nettoyé' })}
+                    {t('tags.cleaned')}
                   </span>
                 )}
               </div>
@@ -549,7 +549,7 @@ const TagsManagement = (): JSX.Element => {
                         animate={{ opacity: 1, scale: 1 }} 
                         transition={{ delay: Math.min(index * 0.01, 0.5) }} 
                         className={`group inline-flex items-center gap-1 px-3 py-1.5 ${config.tagBg} ${config.tagText} ${config.tagBorder} border rounded-full text-sm font-medium transition-all hover:shadow-md hover:scale-105 cursor-pointer`}
-                        title={t('tags.viewEscoDefinition', { defaultValue: 'Voir la définition ESCO' })}
+                        title={t('tags.viewEscoDefinition')}
                       >
                         <span>{item.label}</span>
                         <svg className="w-3 h-3 opacity-50 group-hover:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -62,45 +62,45 @@ export default function BatchImportMetricsCard({
     >
       <div className="flex items-center justify-between mb-4">
         <div>
-          <p className="text-sm font-medium opacity-80">{t('metrics.batchImportPipeline', 'Batch import pipeline')}</p>
+          <p className="text-sm font-medium opacity-80">{t('metrics.batchImportPipeline')}</p>
           <p className="text-2xl font-bold mt-1">{formatNumber(safeNumber(metrics.runs))}</p>
-          <p className="text-xs mt-1 opacity-60">{t('metrics.batchImportSubtitle', 'Imports CV, extraction de texte et analyse initiale')}</p>
+          <p className="text-xs mt-1 opacity-60">{t('metrics.batchImportSubtitle')}</p>
         </div>
         <ArrowDownTrayIcon className="w-10 h-10 opacity-50" />
       </div>
       <div className="grid grid-cols-2 gap-3 text-sm mb-4">
         <div className="bg-amber-100 dark:bg-amber-900/30 rounded-lg p-3">
-          <p className="opacity-70">{t('metrics.successFailures', 'Success / failures')}</p>
+          <p className="opacity-70">{t('metrics.successFailures')}</p>
           <p className="font-semibold">{safeNumber(metrics.successfulRuns)} / {safeNumber(metrics.failedRuns)}</p>
         </div>
         <div className="bg-amber-100 dark:bg-amber-900/30 rounded-lg p-3">
-          <p className="opacity-70">{t('metrics.successRatio', 'Success ratio')}</p>
+          <p className="opacity-70">{t('metrics.successRatio')}</p>
           <p className="font-semibold">{successRatio !== null ? `${(successRatio * 100).toFixed(1)}%` : 'N/A'}</p>
         </div>
         <div className="bg-amber-100 dark:bg-amber-900/30 rounded-lg p-3">
-          <p className="opacity-70">{t('metrics.pendingName', 'Pending name')}</p>
+          <p className="opacity-70">{t('metrics.pendingName')}</p>
           <p className="font-semibold">{safeNumber(metrics.pendingNameRuns)}</p>
         </div>
         <div className="bg-amber-100 dark:bg-amber-900/30 rounded-lg p-3">
-          <p className="opacity-70">{t('metrics.improvementRequested', 'Improve requested')}</p>
+          <p className="opacity-70">{t('metrics.improvementRequested')}</p>
           <p className="font-semibold">{safeNumber(metrics.improvementRequestedRuns)}</p>
         </div>
         <div className="bg-amber-100 dark:bg-amber-900/30 rounded-lg p-3">
-          <p className="opacity-70">{t('metrics.textExtraction', 'Text extraction')}</p>
+          <p className="opacity-70">{t('metrics.textExtraction')}</p>
           <p className="font-semibold">{safeNumber(metrics.textExtractionRuns)} / {safeNumber(metrics.textExtractionFailures)}</p>
         </div>
         <div className="bg-amber-100 dark:bg-amber-900/30 rounded-lg p-3">
-          <p className="opacity-70">{t('metrics.analysisRuns', 'Analysis runs')}</p>
+          <p className="opacity-70">{t('metrics.analysisRuns')}</p>
           <p className="font-semibold">{safeNumber(metrics.analysisRuns)}</p>
         </div>
       </div>
       <div className="grid grid-cols-2 gap-3 text-sm mb-4">
         <div className="bg-amber-100 dark:bg-amber-900/30 rounded-lg p-3">
-          <p className="opacity-70">{t('metrics.inputBytes', 'Input bytes')}</p>
+          <p className="opacity-70">{t('metrics.inputBytes')}</p>
           <p className="font-semibold">{formatBytes(safeNumber(metrics.totalInputBytes))}</p>
         </div>
         <div className="bg-amber-100 dark:bg-amber-900/30 rounded-lg p-3">
-          <p className="opacity-70">{t('metrics.extractedChars', 'Extracted chars')}</p>
+          <p className="opacity-70">{t('metrics.extractedChars')}</p>
           <p className="font-semibold">{formatNumber(safeNumber(metrics.totalExtractedChars))}</p>
         </div>
       </div>
@@ -109,8 +109,8 @@ export default function BatchImportMetricsCard({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-amber-200 dark:border-amber-700">
-                <th className="text-left py-2 px-2 font-medium opacity-70">{t('metrics.stage', 'Stage')}</th>
-                <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.failures', 'Failures')}</th>
+                <th className="text-left py-2 px-2 font-medium opacity-70">{t('metrics.stage')}</th>
+                <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.failures')}</th>
               </tr>
             </thead>
             <tbody>
@@ -130,7 +130,7 @@ export default function BatchImportMetricsCard({
         <div>
           <div className="mb-2 flex items-center gap-2 text-xs font-semibold opacity-70">
             <ExclamationTriangleIcon className="h-4 w-4" />
-            <span>{t('metrics.recentActivity', 'Recent activity')}</span>
+            <span>{t('metrics.recentActivity')}</span>
           </div>
           <div className="space-y-2 max-h-32 overflow-y-auto">
             {metrics.recent.slice().reverse().map((entry, index) => (
@@ -140,12 +140,12 @@ export default function BatchImportMetricsCard({
                   <span className="opacity-60">{entry.timestamp ? formatDateTime(entry.timestamp) : 'N/A'}</span>
                 </div>
                 <div className="mt-1 opacity-80">
-                  {entry.mimeType || 'unknown'} | {t('metrics.duration', 'Duration')}: {safeNumber(entry.durationMs)}ms
-                  {entry.extractedChars ? ` | ${t('metrics.extractedChars', 'Extracted chars')}: ${formatNumber(safeNumber(entry.extractedChars))}` : ''}
+                  {entry.mimeType || 'unknown'} | {t('metrics.duration')}: {safeNumber(entry.durationMs)}ms
+                  {entry.extractedChars ? ` | ${t('metrics.extractedChars')}: ${formatNumber(safeNumber(entry.extractedChars))}` : ''}
                 </div>
                 <div className="mt-1 opacity-70">
-                  {t('metrics.successFailures', 'Success / failures')}: {safeNumber(entry.successfulRuns)} / {safeNumber(entry.failedRuns)}
-                  {entry.error ? ` | ${t('common.error', 'Error')}: ${entry.error}` : ''}
+                  {t('metrics.successFailures')}: {safeNumber(entry.successfulRuns)} / {safeNumber(entry.failedRuns)}
+                  {entry.error ? ` | ${t('common.error')}: ${entry.error}` : ''}
                 </div>
               </div>
             ))}

@@ -94,7 +94,7 @@ function HeroVisual(): JSX.Element {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
               </span>
-              {t('home.hero.analysisComplete', 'Analyse terminée')}
+              {t('home.hero.analysisComplete')}
             </div>
           </div>
 
@@ -125,7 +125,7 @@ function HeroVisual(): JSX.Element {
                 <div className="p-1 bg-primary-200 dark:bg-primary-500/20 rounded-md">
                   <SparklesIcon className="w-3 h-3 text-primary-600 dark:text-primary-400" />
                 </div>
-                <span className="text-xs font-medium text-primary-700 dark:text-primary-200">{t('home.hero.aiSuggestion', 'Suggestion IA')}</span>
+                <span className="text-xs font-medium text-primary-700 dark:text-primary-200">{t('home.hero.aiSuggestion')}</span>
               </div>
               <p className="text-[10px] text-primary-700/80 dark:text-primary-200/70 leading-relaxed">
                 {t('home.hero.suggestionText', "Augmentez l'impact de cette section en utilisant des verbes d'action plus forts.")}
@@ -224,10 +224,10 @@ function HomePage(): JSX.Element {
   useEffect(() => fetchWebglSetting(), [fetchWebglSetting]);
   
   const navSections: NavSection[] = useMemo(() => [
-    { id: 'hero', label: t('home.nav.hero', 'Accueil') },
-    { id: 'dashboard', label: t('home.nav.dashboard', 'Tableau de bord') },
-    { id: 'how-it-works', label: t('home.nav.howItWorks', 'Comment ça marche') },
-    { id: 'features', label: t('home.nav.features', 'Fonctionnalités clés') }
+    { id: 'hero', label: t('home.nav.hero') },
+    { id: 'dashboard', label: t('home.nav.dashboard') },
+    { id: 'how-it-works', label: t('home.nav.howItWorks') },
+    { id: 'features', label: t('home.nav.features') }
    
   ], [t]);
 
@@ -425,26 +425,26 @@ function HomePage(): JSX.Element {
                       <circle cx="12" cy="12" r="10" />
                       <path d="m9 12 2 2 4-4" />
                     </svg>
-                    <span className="text-sm font-medium">{t('home.hero.badges.atsFriendly', 'ATS Friendly')}</span>
+                    <span className="text-sm font-medium">{t('home.hero.badges.atsFriendly')}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-400">
                       <path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z" />
                     </svg>
-                    <span className="text-sm font-medium">{t('home.hero.badges.fastAnalysis', 'Analyse rapide')}</span>
+                    <span className="text-sm font-medium">{t('home.hero.badges.fastAnalysis')}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-400">
                       <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
                     </svg>
-                    <span className="text-sm font-medium">{t('home.hero.badges.secure', '100% Sécurisé')}</span>
+                    <span className="text-sm font-medium">{t('home.hero.badges.secure')}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-400">
                       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />
                       <path d="m9 12 2 2 4-4" />
                     </svg>
-                    <span className="text-sm font-medium">{t('home.hero.badges.gdprCompliant', 'Compatible RGPD')}</span>
+                    <span className="text-sm font-medium">{t('home.hero.badges.gdprCompliant')}</span>
                   </div>
                 </motion.div>
               </motion.div>

@@ -126,15 +126,15 @@ export default function ResumePreviewPanel({ resumeId, onClose, onOpenFull }: Re
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-wider">
-              {t('resumes.preview.title', 'Aperçu du CV')}
+              {t('resumes.preview.title')}
             </span>
             {isImproved ? (
               <span className="px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                {t('resumes.preview.improved', 'Amélioré')}
+                {t('resumes.preview.improved')}
               </span>
             ) : status === 'analyzed' ? (
               <span className="px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
-                {t('resumes.preview.analyzed', 'Analysé')}
+                {t('resumes.preview.analyzed')}
               </span>
             ) : null}
           </div>
@@ -142,15 +142,15 @@ export default function ResumePreviewPanel({ resumeId, onClose, onOpenFull }: Re
             <button
               onClick={(e) => { e.stopPropagation(); onOpenFull(resumeId); }}
               className="flex items-center gap-1 px-2 py-1 text-xs text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
-              title={t('resumes.preview.openFull', 'Ouvrir l\'analyse complète')}
+              title={t('resumes.preview.openFull')}
             >
               <ArrowTopRightOnSquareIcon className="w-3.5 h-3.5" />
-              {t('resumes.preview.openFull', 'Analyse complète')}
+              {t('resumes.preview.openFull')}
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); onClose(); }}
               className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors rounded"
-              title={t('common.close', 'Fermer')}
+              title={t('common.close')}
             >
               <XMarkIcon className="w-4 h-4" />
             </button>
@@ -162,7 +162,7 @@ export default function ResumePreviewPanel({ resumeId, onClose, onOpenFull }: Re
           <div className="flex items-center justify-center py-8">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-500" />
             <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">
-              {t('common.loading', 'Chargement...')}
+              {t('common.loading')}
             </span>
           </div>
         )}
@@ -182,7 +182,7 @@ export default function ResumePreviewPanel({ resumeId, onClose, onOpenFull }: Re
               }}
               className="mt-2 text-xs text-blue-600 hover:underline"
             >
-              {t('common.retry', 'Réessayer')}
+              {t('common.retry')}
             </button>
           </div>
         )}
@@ -209,7 +209,7 @@ export default function ResumePreviewPanel({ resumeId, onClose, onOpenFull }: Re
             {improvements.length > 0 && (
               <div>
                 <h5 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
-                  {t('resumes.preview.keyImprovements', 'Améliorations clés')}
+                  {t('resumes.preview.keyImprovements')}
                 </h5>
                 <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-0.5">
                   {improvements.slice(0, 3).map((imp, i) => (
@@ -220,7 +220,7 @@ export default function ResumePreviewPanel({ resumeId, onClose, onOpenFull }: Re
                   ))}
                   {improvements.length > 3 && (
                     <li className="text-gray-400 dark:text-gray-500 italic pl-4">
-                      +{improvements.length - 3} {t('resumes.more', 'de plus')}
+                      +{improvements.length - 3} {t('resumes.more')}
                     </li>
                   )}
                 </ul>
@@ -242,7 +242,7 @@ export default function ResumePreviewPanel({ resumeId, onClose, onOpenFull }: Re
             ) : (
               <div className="text-center py-6 text-sm text-gray-400 dark:text-gray-500">
                 <DocumentTextIcon className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                {t('resumes.preview.noContent', 'Aucun contenu disponible')}
+                {t('resumes.preview.noContent')}
               </div>
             )}
           </div>

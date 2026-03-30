@@ -153,11 +153,11 @@ const ResumeAdaptPage = (): JSX.Element => {
       if (result.matchAnalysis) setMatchAnalysis(result.matchAnalysis);
       setAdaptation(result);
       setStep('show-result');
-      toast.success(t('adaptation.generationComplete', 'CV adapté généré avec succès'));
+      toast.success(t('adaptation.generationComplete'));
     } catch (err) {
       logger.error('Error creating adaptation:', err);
       setError((err as Error).message || 'Erreur lors de la génération');
-      toast.error(t('adaptation.generationError', 'Erreur lors de la génération du CV adapté'));
+      toast.error(t('adaptation.generationError'));
       setStep('show-analysis');
     }
   };
@@ -197,7 +197,7 @@ const ResumeAdaptPage = (): JSX.Element => {
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 text-center">
             <DocumentTextIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />
             <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-              {t('errors.resumeNotFound', 'CV non trouvé')}
+              {t('errors.resumeNotFound')}
             </h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6">{error}</p>
             <button
@@ -205,7 +205,7 @@ const ResumeAdaptPage = (): JSX.Element => {
               className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
               <ArrowLeftIcon className="w-5 h-5" />
-              {t('common.backToResumes', 'Retour aux CVs')}
+              {t('common.backToResumes')}
             </button>
           </div>
         </div>
@@ -231,10 +231,10 @@ const ResumeAdaptPage = (): JSX.Element => {
             </button>
             <div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                {t('adaptation.title', 'Adapter le CV à une Mission')}
+                {t('adaptation.title')}
               </h1>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                CV: {resume.Name || t('common.unnamed', 'Sans nom')}
+                CV: {resume.Name || t('common.unnamed')}
               </p>
             </div>
           </div>
@@ -246,21 +246,21 @@ const ResumeAdaptPage = (): JSX.Element => {
             {[
               {
                 key: 'select',
-                label: t('adaptation.steps.selectMission', 'Sélectionner'),
+                label: t('adaptation.steps.selectMission'),
                 icon: BriefcaseIcon,
                 completed: ['analyzing', 'show-analysis', 'adapting', 'show-result'].includes(step),
                 active: step === 'select-mission',
               },
               {
                 key: 'analyze',
-                label: t('adaptation.steps.analyze', 'Analyser'),
+                label: t('adaptation.steps.analyze'),
                 icon: DocumentTextIcon,
                 completed: ['adapting', 'show-result'].includes(step),
                 active: ['analyzing', 'show-analysis'].includes(step),
               },
               {
                 key: 'adapt',
-                label: t('adaptation.steps.adapt', 'Adapter'),
+                label: t('adaptation.steps.adapt'),
                 icon: SparklesIcon,
                 completed: step === 'show-result',
                 active: step === 'adapting',
@@ -474,7 +474,7 @@ const ResumeAdaptPage = (): JSX.Element => {
                 <div className="mb-6">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2 flex items-center gap-2">
                     <BriefcaseIcon className="w-5 h-5 text-blue-500" />
-                    {t('adaptation.selectedMission', 'Mission Sélectionnée')}
+                    {t('adaptation.selectedMission')}
                   </h3>
                   <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg">
                     <p className="font-medium text-gray-900 dark:text-gray-100">{selectedMission?.Title || 'Sans titre'}</p>
@@ -577,7 +577,7 @@ const ResumeAdaptPage = (): JSX.Element => {
                 </div>
 
                 <h3 className="relative text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                  {t('adaptation.generating', 'Génération du CV adapté…')}
+                  {t('adaptation.generating')}
                 </h3>
 
                 {/* Cycling sub-message */}
@@ -606,7 +606,7 @@ const ResumeAdaptPage = (): JSX.Element => {
                 </div>
 
                 <p className="relative text-xs text-gray-400 dark:text-gray-500">
-                  {t('adaptation.generatingTime', 'Cela peut prendre 30–90 secondes')}
+                  {t('adaptation.generatingTime')}
                 </p>
 
                 {/* Bouncing dots */}
@@ -662,7 +662,7 @@ const ResumeAdaptPage = (): JSX.Element => {
                           : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
                       }`}
                     >
-                      {t('adaptation.tabs.adapted', 'CV Adapté')}
+                      {t('adaptation.tabs.adapted')}
                     </button>
                   </nav>
                 </div>
@@ -703,7 +703,7 @@ const ResumeAdaptPage = (): JSX.Element => {
                     onClick={() => setStep('select-mission')}
                     className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                   >
-                    {t('adaptation.newAdaptation', 'Nouvelle adaptation')}
+                    {t('adaptation.newAdaptation')}
                   </button>
                   <button
                     onClick={handleViewAdaptation}
