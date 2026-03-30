@@ -1039,10 +1039,10 @@
       "cvModeAnonymous": "Anonyme (trigramme uniquement)",
       "cvModeNominativeDescription": "Le CV amélioré contiendra toutes les informations personnelles du candidat (nom complet, coordonnées, etc.).",
       "cvModeAnonymousDescription": "Le CV amélioré sera anonymisé : seul le trigramme du candidat sera affiché, sans informations personnelles identifiantes.",
-      "webglEnabled": "Activer les arri?re-plans WebGL",
-      "webglEnabledDescription": "Affiche les fonds visuels anim?s de l'application quand le navigateur et l'appareil le permettent.",
-      "minimaxDescription": "Selectionnez un modele MiniMax. L application utilisera l API MiniMax cote serveur.",
-      "deepseekDescription": "Selectionnez le mode API DeepSeek a utiliser. Les identifiants appeles restent deepseek-chat et deepseek-reasoner, tous deux mappes sur DeepSeek-V3.2 cote API."
+      "webglEnabled": "Activer les arrière-plans WebGL",
+      "webglEnabledDescription": "Affiche les fonds visuels animés de l'application quand le navigateur et l'appareil le permettent.",
+      "minimaxDescription": "Sélectionnez un modèle MiniMax. L'application utilisera l'API MiniMax côté serveur.",
+      "deepseekDescription": "Sélectionnez le mode API DeepSeek à utiliser. Les identifiants appelés restent deepseek-chat et deepseek-reasoner, tous deux mappés sur DeepSeek-V3.2 côté API."
     },
     "prompts": {
       "title": "Configuration des Prompts",
