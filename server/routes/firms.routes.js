@@ -74,7 +74,7 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
 // POST /api/firms - Create firm
 router.post('/', authenticateToken, requireAdmin, validateBody(createFirmSchema), async (req, res) => {
     try {
-        invalidateFirmsCaches();
+        await invalidateFirmsCaches();
         
         const firmData = {
             name: req.body.name,
@@ -105,7 +105,7 @@ router.post('/', authenticateToken, requireAdmin, validateBody(createFirmSchema)
 // PUT /api/firms/:id - Update firm
 router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), validateBody(updateFirmSchema), async (req, res) => {
     try {
-        invalidateFirmsCaches();
+        await invalidateFirmsCaches();
         
         const { id } = req.params;
         const firmData = {
@@ -151,7 +151,7 @@ router.delete('/:id', authenticateToken, requireAdmin, validateParams('id'), asy
             });
         }
         
-        invalidateFirmsCaches();
+        await invalidateFirmsCaches();
         await firmsService.deleteFirm(id);
         
         securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.FIRM_DELETED, {
@@ -192,7 +192,7 @@ router.post('/:id/logo', authenticateToken, requireAdmin, validateParams('id'), 
         
         const logoUrl = await firmsService.uploadFirmLogo(id, logoData, logoMimeType);
         
-        invalidateFirmsCaches();
+        await invalidateFirmsCaches();
         
         safeLog('info', 'Firm logo uploaded to database', { firmId: id, mimeType: logoMimeType, size: logoData.length });
         
@@ -241,7 +241,7 @@ router.delete('/:id/logo', authenticateToken, requireAdmin, validateParams('id')
         
         await firmsService.deleteFirmLogo(id);
         
-        invalidateFirmsCaches();
+        await invalidateFirmsCaches();
         
         safeLog('info', 'Firm logo deleted', { firmId: id });
         

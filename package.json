@@ -98,6 +98,7 @@
     "react-intersection-observer": "^10.0.3",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.13.1",
+    "redis": "^4.7.0",
     "remark-gfm": "^4.0.1",
     "sanitize-html": "^2.17.1",
     "ssh2-sftp-client": "^12.1.0",

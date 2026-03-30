@@ -298,7 +298,7 @@ export function startServer(app, serverDir) {
             // Cleanup intervals and caches
             cleanupMemoryMonitor();
             cleanupRateLimitStore();
-            cleanupAllCaches();
+            await cleanupAllCaches();
             destroyBlacklist();
             stopPeriodicCleanup();
             stopMarketRadarCacheCleanup();
@@ -316,7 +316,7 @@ export function startServer(app, serverDir) {
             destroyCalendarService();
             await stopBatchJobsWorker();
             destroyMjml();
-            destroySettingsCache();
+            await destroySettingsCache();
             stopScheduler();
             stopBackupScheduler();
             safeLog('info', 'All caches destroyed');

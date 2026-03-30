@@ -201,7 +201,7 @@ router.get('/security-stats', authenticateToken, requireAdmin, (req, res) => {
 });
 
 // GET /api/admin/cache-stats - Get unified cache statistics (admin only)
-router.get('/cache-stats', authenticateToken, requireAdmin, (req, res) => {
+router.get('/cache-stats', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const memUsage = process.memoryUsage();
         const stats = {
@@ -214,7 +214,7 @@ router.get('/cache-stats', authenticateToken, requireAdmin, (req, res) => {
             },
             caches: {
                 tokenBlacklist: getBlacklistStats(),
-                settings: getSettingsCacheStats(),
+                settings: await getSettingsCacheStats(),
                 resumeStats: getStatsCacheStats(),
                 marketFacts: getFactsCacheStats(),
                 marketTrends: getTrendsCacheStats(),

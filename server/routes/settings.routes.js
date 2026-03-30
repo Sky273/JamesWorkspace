@@ -97,7 +97,7 @@ function mergeCanonicalLlmSettings(settingsData, canonicalLlmSettings = {}) {
 // GET /api/settings - Get settings
 router.get('/', authenticateToken, async (req, res) => {
     try {
-        const cachedSettings = settingsCache.get(CACHE_KEYS.settings.UI_SETTINGS);
+        const cachedSettings = await settingsCache.get(CACHE_KEYS.settings.UI_SETTINGS);
         if (cachedSettings) {
             metrics.trackCacheHit();
             safeLog('debug', 'Returning cached settings');
@@ -148,7 +148,7 @@ router.get('/', authenticateToken, async (req, res) => {
             canonicalLlmSettings
         );
 
-        settingsCache.set(CACHE_KEYS.settings.UI_SETTINGS, responseData);
+        await settingsCache.set(CACHE_KEYS.settings.UI_SETTINGS, responseData);
 
         res.json(responseData);
     } catch (error) {
@@ -195,7 +195,7 @@ router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), valida
         const { id } = req.params;
         let updateData = req.body;
 
-        invalidateSettingsCache();
+        await invalidateSettingsCache();
 
         safeLog('info', 'Updating settings', { settingsId: id });
 
@@ -230,7 +230,7 @@ router.post('/', authenticateToken, requireAdmin, validateBody(updateSettingsSch
     try {
         let settingsData = req.body;
 
-        invalidateSettingsCache();
+        await invalidateSettingsCache();
 
         settingsData = normalizeRequestedSettingsModel(normalizeWeights(settingsData));
 

@@ -23,6 +23,7 @@ docker stop resumeconverter-app 2>nul
 docker rm resumeconverter-app 2>nul
 
 if not exist "%cd%\data\postgresql" mkdir "%cd%\data\postgresql"
+if not exist "%cd%\data\redis" mkdir "%cd%\data\redis"
 if not exist "%cd%\uploads" mkdir "%cd%\uploads"
 if not exist "%cd%\logs" mkdir "%cd%\logs"
 
@@ -31,6 +32,7 @@ docker run -d ^
     -p 3443:3443 ^
     -p 5433:5432 ^
     -v "%cd%\data\postgresql:/var/lib/postgresql/18/main" ^
+    -v "%cd%\data\redis:/app/data/redis" ^
     -v "%cd%\uploads:/app/uploads" ^
     -v "%cd%\logs:/app/logs" ^
     --restart unless-stopped ^

@@ -128,8 +128,8 @@ async function invalidateAvailabilityCaches() {
             import('./cache.service.js')
         ]);
 
-        invalidateSettingsCache();
-        invalidateSettingsCaches();
+        await invalidateSettingsCache();
+        await invalidateSettingsCaches();
     } catch (error) {
         safeLog('warn', 'Failed to invalidate settings caches after updating LLM availability state', {
             error: error.message

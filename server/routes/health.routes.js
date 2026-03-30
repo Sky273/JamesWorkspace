@@ -310,12 +310,19 @@ router.get('/', async (req, res) => {
         checks.ollama = { status: 'error', message: 'Ollama unreachable' };
     }
 
+    const [settingsCacheSize, templatesCacheSize, firmsCacheSize, cacheRegistry] = await Promise.all([
+        settingsCache.size(),
+        templatesCache.size(),
+        firmsCache.size(),
+        getCacheRegistryStats()
+    ]);
+
     checks.cache = {
         status: 'ok',
-        settings: settingsCache.size(),
-        templates: templatesCache.size(),
-        firms: firmsCache.size(),
-        registry: getCacheRegistryStats()
+        settings: settingsCacheSize,
+        templates: templatesCacheSize,
+        firms: firmsCacheSize,
+        registry: cacheRegistry
     };
 
     const responseTime = Date.now() - startTime;
@@ -343,13 +350,19 @@ router.get('/', async (req, res) => {
 
 router.get('/memory', authenticateToken, requireAdmin, async (req, res) => {
     const memoryUsage = process.memoryUsage();
+    const [settingsCacheSize, templatesCacheSize, firmsCacheSize, cacheRegistry] = await Promise.all([
+        settingsCache.size(),
+        templatesCache.size(),
+        firmsCache.size(),
+        getCacheRegistryStats()
+    ]);
 
     const cacheStats = {
         simpleCache: {
-            settings: settingsCache.size(),
-            templates: templatesCache.size(),
-            firms: firmsCache.size(),
-            registry: getCacheRegistryStats()
+            settings: settingsCacheSize,
+            templates: templatesCacheSize,
+            firms: firmsCacheSize,
+            registry: cacheRegistry
         },
         trends: getTrendsCacheStats(),
         facts: getFactsCacheStats(),

@@ -213,6 +213,18 @@ L'application inclut un monitoring mémoire accessible via :
 - Métiers Cache (référentiel ROME)
 - Tags Cache (tags extraits)
 
+### Backend de cache
+- `CACHE_BACKEND=memory` : cache local au process, adapté au mono-instance
+- `CACHE_BACKEND=redis` : cache partagé entre instances
+- variables associées :
+  - `CACHE_REDIS_URL`
+  - `CACHE_KEY_PREFIX`
+- caches applicatifs déjà branchés sur cette abstraction :
+  - `settings`
+  - `templates`
+  - `firms`
+  - disponibilité runtime LLM via `settings`
+
 
 ## 🤖 Intégration LLM
 

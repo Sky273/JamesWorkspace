@@ -110,7 +110,7 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
 // POST /api/templates - Create template
 router.post('/', authenticateToken, requireAdmin, validateBody(createTemplateSchema), async (req, res) => {
     try {
-        invalidateTemplatesCaches();
+        await invalidateTemplatesCaches();
         
         const isAdmin = isUserAdmin(req);
         const userFirmId = await getUserFirmId(req);
@@ -165,7 +165,7 @@ router.post('/', authenticateToken, requireAdmin, validateBody(createTemplateSch
 // PUT /api/templates/:id - Update template
 router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), validateBody(updateTemplateSchema), async (req, res) => {
     try {
-        invalidateTemplatesCaches();
+        await invalidateTemplatesCaches();
         
         const { id } = req.params;
         const isAdmin = isUserAdmin(req);
@@ -229,7 +229,7 @@ router.delete('/:id', authenticateToken, requireAdmin, validateParams('id'), asy
     try {
         const { id } = req.params;
         
-        invalidateTemplatesCaches();
+        await invalidateTemplatesCaches();
         await templatesService.deleteTemplate(id);
         
         securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.TEMPLATE_DELETED, {

@@ -87,7 +87,7 @@ export async function getCanonicalSettingsRecord({ createIfMissing = false, init
 export async function getLLMSettings() {
     try {
         const now = Date.now();
-        const cachedSettings = sharedSettingsCache.get(LLM_SETTINGS_CACHE_KEY);
+        const cachedSettings = await sharedSettingsCache.get(LLM_SETTINGS_CACHE_KEY);
         if (cachedSettings) {
             safeLog('debug', 'Using cached LLM settings', {
                 age: Math.round((now - cacheTimestamp) / 1000) + 's'
@@ -156,7 +156,7 @@ export async function getLLMSettings() {
         settings.llmAvailability = getProviderAvailabilityFlags();
 
         // Update cache
-        sharedSettingsCache.set(LLM_SETTINGS_CACHE_KEY, settings);
+        await sharedSettingsCache.set(LLM_SETTINGS_CACHE_KEY, settings);
         cacheTimestamp = now;
 
         safeLog('debug', 'LLM settings loaded from PostgreSQL', {
@@ -171,7 +171,7 @@ export async function getLLMSettings() {
         });
 
         // Return cached settings if available, even if expired
-        const cachedSettings = sharedSettingsCache.get(LLM_SETTINGS_CACHE_KEY);
+        const cachedSettings = await sharedSettingsCache.get(LLM_SETTINGS_CACHE_KEY);
         if (cachedSettings) {
             safeLog('warn', 'Using stale cached settings due to error');
             return cachedSettings;
@@ -203,9 +203,9 @@ export async function getLLMProvider() {
 /**
  * Invalidate the settings cache (call after settings update)
  */
-export function invalidateSettingsCache() {
+export async function invalidateSettingsCache() {
     safeLog('info', 'Settings cache invalidated');
-    invalidateSharedSettingsCaches();
+    await invalidateSharedSettingsCaches();
     cacheTimestamp = null;
 }
 
@@ -213,8 +213,8 @@ export function invalidateSettingsCache() {
  * Destroy settings cache (for graceful shutdown)
  * Alias for invalidateSettingsCache for consistency with other cache services
  */
-export function destroySettingsCache() {
-    invalidateSharedSettingsCaches();
+export async function destroySettingsCache() {
+    await invalidateSharedSettingsCaches();
     cacheTimestamp = null;
     safeLog('info', 'Settings cache destroyed');
 }
@@ -222,14 +222,20 @@ export function destroySettingsCache() {
 /**
  * Get settings cache statistics
  */
-export function getSettingsCacheStats() {
+export async function getSettingsCacheStats() {
+    const [hasCache, entries, cache] = await Promise.all([
+        sharedSettingsCache.get(LLM_SETTINGS_CACHE_KEY),
+        sharedSettingsCache.size(),
+        getNamedCacheStats('settings')
+    ]);
+
     return {
-        hasCache: !!sharedSettingsCache.get(LLM_SETTINGS_CACHE_KEY),
-        entries: sharedSettingsCache.size(),
+        hasCache: !!hasCache,
+        entries,
         ageMs: cacheTimestamp ? Date.now() - cacheTimestamp : null,
         ttlMs: sharedSettingsCache.ttl,
         key: LLM_SETTINGS_CACHE_KEY,
-        cache: getNamedCacheStats('settings')
+        cache
     };
 }
 

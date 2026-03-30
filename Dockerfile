@@ -29,6 +29,7 @@ RUN apt-get update && apt-get install -y \
     # PostgreSQL 18
     postgresql-18 \
     postgresql-contrib-18 \
+    redis-server \
     # Puppeteer/Chrome dependencies
     fonts-liberation \
     libappindicator3-1 \
@@ -161,6 +162,9 @@ ENV POSTGRES_PORT=5432
 ENV POSTGRES_DB=resumeconverter
 ENV POSTGRES_USER=resumeconverter
 ENV POSTGRES_PASSWORD=RcV2026!PgSecure#Db
+ENV CACHE_BACKEND=redis
+ENV CACHE_REDIS_URL=redis://127.0.0.1:6379
+ENV CACHE_KEY_PREFIX=resumeconverter
 ENV JWT_SECRET=docker-jwt-secret-change-in-production-min32chars
 ENV JWT_REFRESH_SECRET=docker-jwt-refresh-secret-change-in-production-min32chars
 ENV REFRESH_TOKEN_SECRET=docker-refresh-token-secret-change-in-production-min32chars
@@ -168,7 +172,7 @@ ENV CSRF_SECRET=docker-csrf-secret-change-in-production-min32chars
 ENV SKIP_ENV_VALIDATION=true
 
 # Create required directories
-RUN mkdir -p /app/logs /app/uploads /app/uploads/logos /app/data /var/log/supervisor /app/server/backups /app/server/temp
+RUN mkdir -p /app/logs /app/uploads /app/uploads/logos /app/data /app/data/redis /var/log/supervisor /app/server/backups /app/server/temp
 
 # =============================================================================
 # Expose Ports

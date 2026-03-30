@@ -21,6 +21,7 @@ const RECOMMENDED_VARS = [
     { name: 'DEEPSEEK_API_KEY', description: 'DeepSeek API key for DeepSeek models' },
     { name: 'GLM_API_KEY', description: 'GLM API key for GLM models' },
     { name: 'MINIMAX_API_KEY', description: 'MiniMax API key for MiniMax models' },
+    { name: 'CACHE_BACKEND', description: 'Cache backend (memory or redis)' },
     { name: 'NODE_ENV', description: 'Environment (development/production)' }
 ];
 
@@ -76,6 +77,10 @@ export function validateEnvironment() {
         } else if (looksLikePlaceholder(value)) {
             warnings.push(`${varConfig.name} appears to still use an example or placeholder value`);
         }
+    }
+
+    if (process.env.CACHE_BACKEND && !['memory', 'redis'].includes(process.env.CACHE_BACKEND.toLowerCase())) {
+        warnings.push('CACHE_BACKEND should be either "memory" or "redis"');
     }
 
     const pdfServerToken = process.env.PDF_SERVER_INTERNAL_TOKEN;
@@ -152,6 +157,8 @@ export function getEnvironmentInfo() {
         hasDeepSeek: !!process.env.DEEPSEEK_API_KEY,
         hasGlm: !!process.env.GLM_API_KEY,
         hasMiniMax: !!process.env.MINIMAX_API_KEY,
+        cacheBackend: process.env.CACHE_BACKEND || 'memory',
+        hasRedisUrl: !!process.env.CACHE_REDIS_URL,
         minimaxHighspeedEnabled: process.env.MINIMAX_ENABLE_HIGHSPEED_MODELS === 'true',
         hasCsrf: !!process.env.CSRF_SECRET,
         hasPdfServerToken: !!process.env.PDF_SERVER_INTERNAL_TOKEN

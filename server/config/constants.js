@@ -114,6 +114,11 @@ export const CACHE_TTL = {
     TEMPLATES: 10 * 60 * 1000,
     FIRMS: 15 * 60 * 1000
 };
+export const CACHE_BACKEND = ['memory', 'redis'].includes((process.env.CACHE_BACKEND || '').toLowerCase())
+    ? process.env.CACHE_BACKEND.toLowerCase()
+    : 'memory';
+export const CACHE_REDIS_URL = process.env.CACHE_REDIS_URL || 'redis://127.0.0.1:6379';
+export const CACHE_KEY_PREFIX = process.env.CACHE_KEY_PREFIX || 'resumeconverter';
 
 // SMTP Configuration for GDPR consent emails
 export const SMTP_CONFIG = {

@@ -5,6 +5,7 @@
 This Docker setup creates a **single, fully autonomous container** that includes:
 
 - **PostgreSQL 18** - Database server
+- **Redis** - Shared application cache
 - **Node.js 20** - Runtime environment
 - **Google Chrome** - For PDF generation (Puppeteer)
 - **Proxy Server** (port 3443 HTTPS) - Main application server
@@ -33,6 +34,11 @@ POSTGRES_PORT=5432
 POSTGRES_DB=resumeconverter
 POSTGRES_USER=resumeconverter
 POSTGRES_PASSWORD=your_password
+
+# Shared application cache
+CACHE_BACKEND=redis
+CACHE_REDIS_URL=redis://127.0.0.1:6379
+CACHE_KEY_PREFIX=resumeconverter
 
 # Security (minimum 32 characters each)
 JWT_SECRET=your-jwt-secret-min-32-chars
