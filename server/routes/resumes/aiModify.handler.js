@@ -2,6 +2,7 @@ import { callBusinessChatCompletion } from '../../services/llmProvider.service.j
 import { getLLMSettings } from '../../services/settings.service.js';
 import { safeLog } from '../../utils/logger.backend.js';
 import { getRequestMetadata } from '../../services/security.service.js';
+import metrics, { buildLLMMetricLabel } from '../../services/metrics.service.js';
 import { normalizeUtf8Text, parseJsonFromLlmResponse, stripLlmThinkingContent } from '../../services/openai/textUtils.js';
 
 /**
@@ -20,6 +21,8 @@ export async function aiModifyHandler(req, res) {
         const model = settings.llmModel;
         const userMetadata = getRequestMetadata(req);
         const hasSelection = selectedText && selectedText.trim().length > 0;
+        const metricsProvider = buildLLMMetricLabel(settings.llmProvider || 'openai', model || 'unknown');
+        const inputChars = (content?.length || 0) + (instructions?.length || 0) + (selectedText?.length || 0);
 
         if (!model && settings.llmProvider !== 'ollama') {
             return res.status(500).json({ error: 'LLM model not configured in Settings.' });
@@ -90,12 +93,14 @@ IMPORTANT : Retourne UNIQUEMENT ce JSON, sans texte avant ou après.`);
         });
 
         // Call LLM with strict system prompt
-        const response = await callBusinessChatCompletion({
-            model,
-            messages: [
-                { 
-                    role: 'system', 
-                    content: `You are a professional resume editor assistant with STRICT limitations:
+        let response;
+        try {
+            response = await callBusinessChatCompletion({
+                model,
+                messages: [
+                    {
+                        role: 'system',
+                        content: `You are a professional resume editor assistant with STRICT limitations:
 
 ALLOWED ACTIONS:
 - Edit resume text content (wording, phrasing, formatting)
@@ -125,25 +130,38 @@ OUTPUT REQUIREMENTS:
 - Preserve HTML structure and CSS classes in the content
 
 If the user's instructions are not related to resume editing, refuse politely and return the original content with an appropriate message.`
-                },
-                { role: 'user', content: modificationPrompt }
-            ],
-            maxTokens: 8192,
-            temperature: 0.3,
-            timeout: 90000,
-            userMetadata,
-            operationType: 'Resume AI Modification'
-        });
+                    },
+                    { role: 'user', content: modificationPrompt }
+                ],
+                maxTokens: 8192,
+                temperature: 0.3,
+                timeout: 90000,
+                userMetadata,
+                operationType: 'Resume AI Modification'
+            });
+        } catch (error) {
+            metrics.trackAiModifyActivity({
+                provider: metricsProvider,
+                event: 'run',
+                failedRuns: 1,
+                selectionRuns: hasSelection ? 1 : 0,
+                inputChars,
+                metadata: { source: 'provider-call', error: error.message }
+            });
+            throw error;
+        }
 
         const rawResponse = stripLlmThinkingContent(response.choices[0].message.content);
 
         // Parse the JSON response from LLM
+        let usedFallback = false;
         let parsedResponse;
         try {
             parsedResponse = parseJsonFromLlmResponse(rawResponse);
         } catch (parseError) {
             safeLog('error', 'Failed to parse LLM JSON response', { error: parseError.message, rawResponse: rawResponse.substring(0, 500) });
             // Fallback: treat the entire response as HTML content
+            usedFallback = true;
             if (hasSelection) {
                 parsedResponse = {
                     modifiedSelection: rawResponse,
@@ -177,6 +195,17 @@ If the user's instructions are not related to resume editing, refuse politely an
         } else if (modifiedContent) {
             responseData.modifiedContent = modifiedContent;
         }
+
+        metrics.trackAiModifyActivity({
+            provider: metricsProvider,
+            event: 'run',
+            successfulRuns: 1,
+            fallbackRuns: usedFallback ? 1 : 0,
+            selectionRuns: hasSelection ? 1 : 0,
+            inputChars,
+            outputChars: (modifiedSelection?.length || 0) + (modifiedContent?.length || 0),
+            metadata: { source: usedFallback ? 'plain-text-fallback' : 'structured-json' }
+        });
 
         res.json(responseData);
 

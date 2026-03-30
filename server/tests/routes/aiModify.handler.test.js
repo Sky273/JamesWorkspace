@@ -29,6 +29,14 @@ vi.mock('../../services/security.service.js', () => ({
     getRequestMetadata: vi.fn(() => ({ ip: '127.0.0.1' }))
 }));
 
+const mockTrackAiModifyActivity = vi.fn();
+vi.mock('../../services/metrics.service.js', () => ({
+    default: {
+        trackAiModifyActivity: (...args) => mockTrackAiModifyActivity(...args)
+    },
+    buildLLMMetricLabel: (provider, model) => `${provider}:${model}`
+}));
+
 import { aiModifyHandler } from '../../routes/resumes/aiModify.handler.js';
 
 function mockReqRes(body = {}) {
@@ -43,7 +51,7 @@ function mockReqRes(body = {}) {
 describe('aiModifyHandler', () => {
     beforeEach(() => {
         vi.resetAllMocks();
-        mockGetLLMSettings.mockResolvedValue({ llmModel: 'gpt-4o' });
+        mockGetLLMSettings.mockResolvedValue({ llmProvider: 'openai', llmModel: 'gpt-4o' });
     });
 
     it('should return 400 if content is missing', async () => {
@@ -86,6 +94,11 @@ describe('aiModifyHandler', () => {
             modifiedContent: '<p>Fixed CV</p>',
             message: 'Fixed typos'
         }));
+        expect(mockTrackAiModifyActivity).toHaveBeenCalledWith(expect.objectContaining({
+            provider: 'openai:gpt-4o',
+            successfulRuns: 1,
+            fallbackRuns: 0
+        }));
     });
 
     it('should handle selection-based modification', async () => {
@@ -119,6 +132,11 @@ describe('aiModifyHandler', () => {
         expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
             modifiedContent: '<p>Raw HTML response</p>'
         }));
+        expect(mockTrackAiModifyActivity).toHaveBeenCalledWith(expect.objectContaining({
+            provider: 'openai:gpt-4o',
+            successfulRuns: 1,
+            fallbackRuns: 1
+        }));
     });
 
     it('should strip markdown code blocks from LLM response', async () => {
@@ -145,5 +163,9 @@ describe('aiModifyHandler', () => {
         await aiModifyHandler(req, res);
 
         expect(res.status).toHaveBeenCalledWith(429);
+        expect(mockTrackAiModifyActivity).toHaveBeenCalledWith(expect.objectContaining({
+            provider: 'openai:gpt-4o',
+            failedRuns: 1
+        }));
     });
 });

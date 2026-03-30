@@ -127,6 +127,17 @@ class MetricsCollector {
                 stageFailures: {},
                 recent: []
             },
+            aiModify: {
+                runs: 0,
+                successfulRuns: 0,
+                failedRuns: 0,
+                fallbackRuns: 0,
+                selectionRuns: 0,
+                inputChars: 0,
+                outputChars: 0,
+                byProvider: {},
+                recent: []
+            },
             improvement: {
                 runs: 0,
                 successfulRuns: 0,
@@ -239,6 +250,12 @@ class MetricsCollector {
                         stageFailures: data.operations.batchImports?.stageFailures || {},
                         recent: []
                     };
+                    this.operations.aiModify = {
+                        ...this.operations.aiModify,
+                        ...(data.operations.aiModify || {}),
+                        byProvider: data.operations.aiModify?.byProvider || {},
+                        recent: []
+                    };
                     this.operations.improvement = {
                         ...this.operations.improvement,
                         ...(data.operations.improvement || {}),
@@ -332,6 +349,16 @@ class MetricsCollector {
                         totalDurationMs: this.operations.batchImports.totalDurationMs,
                         byMimeType: this.operations.batchImports.byMimeType,
                         stageFailures: this.operations.batchImports.stageFailures
+                    },
+                    aiModify: {
+                        runs: this.operations.aiModify.runs,
+                        successfulRuns: this.operations.aiModify.successfulRuns,
+                        failedRuns: this.operations.aiModify.failedRuns,
+                        fallbackRuns: this.operations.aiModify.fallbackRuns,
+                        selectionRuns: this.operations.aiModify.selectionRuns,
+                        inputChars: this.operations.aiModify.inputChars,
+                        outputChars: this.operations.aiModify.outputChars,
+                        byProvider: this.operations.aiModify.byProvider
                     },
                     improvement: {
                         runs: this.operations.improvement.runs,
@@ -903,6 +930,64 @@ class MetricsCollector {
         }
     }
 
+    trackAiModifyActivity({
+        provider = 'unknown',
+        event = 'run',
+        successfulRuns = 0,
+        failedRuns = 0,
+        fallbackRuns = 0,
+        selectionRuns = 0,
+        inputChars = 0,
+        outputChars = 0,
+        metadata = {}
+    } = {}) {
+        const providerKey = this.normalizeLLMProviderKey(provider);
+        const bucket = this.ensureOperationProviderBucket('aiModify', providerKey, {
+            runs: 0,
+            successfulRuns: 0,
+            failedRuns: 0,
+            fallbackRuns: 0,
+            selectionRuns: 0,
+            inputChars: 0,
+            outputChars: 0
+        });
+
+        if (event === 'run') {
+            this.operations.aiModify.runs++;
+            bucket.runs++;
+        }
+
+        this.operations.aiModify.successfulRuns += Number(successfulRuns) || 0;
+        this.operations.aiModify.failedRuns += Number(failedRuns) || 0;
+        this.operations.aiModify.fallbackRuns += Number(fallbackRuns) || 0;
+        this.operations.aiModify.selectionRuns += Number(selectionRuns) || 0;
+        this.operations.aiModify.inputChars += Number(inputChars) || 0;
+        this.operations.aiModify.outputChars += Number(outputChars) || 0;
+
+        bucket.successfulRuns += Number(successfulRuns) || 0;
+        bucket.failedRuns += Number(failedRuns) || 0;
+        bucket.fallbackRuns += Number(fallbackRuns) || 0;
+        bucket.selectionRuns += Number(selectionRuns) || 0;
+        bucket.inputChars += Number(inputChars) || 0;
+        bucket.outputChars += Number(outputChars) || 0;
+
+        this.operations.aiModify.recent.push({
+            timestamp: new Date().toISOString(),
+            provider: providerKey,
+            event,
+            successfulRuns: Number(successfulRuns) || 0,
+            failedRuns: Number(failedRuns) || 0,
+            fallbackRuns: Number(fallbackRuns) || 0,
+            selectionRuns: Number(selectionRuns) || 0,
+            inputChars: Number(inputChars) || 0,
+            outputChars: Number(outputChars) || 0,
+            ...metadata
+        });
+        if (this.operations.aiModify.recent.length > 50) {
+            this.operations.aiModify.recent.shift();
+        }
+    }
+
     trackAdaptationActivity({
         provider = 'unknown',
         event = 'run',
@@ -1320,6 +1405,17 @@ class MetricsCollector {
                     stageFailures: this.operations.batchImports.stageFailures,
                     recent: this.operations.batchImports.recent.slice(-10)
                 },
+                aiModify: {
+                    runs: this.operations.aiModify.runs,
+                    successfulRuns: this.operations.aiModify.successfulRuns,
+                    failedRuns: this.operations.aiModify.failedRuns,
+                    fallbackRuns: this.operations.aiModify.fallbackRuns,
+                    selectionRuns: this.operations.aiModify.selectionRuns,
+                    inputChars: this.operations.aiModify.inputChars,
+                    outputChars: this.operations.aiModify.outputChars,
+                    byProvider: this.operations.aiModify.byProvider,
+                    recent: this.operations.aiModify.recent.slice(-10)
+                },
                 improvement: {
                     runs: this.operations.improvement.runs,
                     successfulRuns: this.operations.improvement.successfulRuns,
@@ -1440,6 +1536,17 @@ class MetricsCollector {
                 stageFailures: {},
                 recent: []
             },
+            aiModify: {
+                runs: 0,
+                successfulRuns: 0,
+                failedRuns: 0,
+                fallbackRuns: 0,
+                selectionRuns: 0,
+                inputChars: 0,
+                outputChars: 0,
+                byProvider: {},
+                recent: []
+            },
             improvement: {
                 runs: 0,
                 successfulRuns: 0,
@@ -1511,7 +1618,6 @@ class MetricsCollector {
 export const metrics = new MetricsCollector();
 
 export default metrics;
-
 
 
 

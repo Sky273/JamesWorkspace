@@ -10,7 +10,7 @@ import { getLLMSettings } from '../services/settings.service.js';
 import { withRetry, getCircuitBreakerStates } from '../services/retry.service.js';
 import { validateBody, openaiRequestSchema, anthropicRequestSchema } from '../utils/validation.js';
 import { callOllama } from '../services/ollama.service.js';
-import { callDeepSeek } from '../services/deepseek.service.js';
+import { callDeepSeekWithCircuitBreaker } from '../services/deepseek.service.js';
 import { callGLMWithCircuitBreaker } from '../services/glm.service.js';
 import { callMiniMaxOpenAICompatible, callMiniMaxAnthropicCompatible } from '../services/minimax.service.js';
 import { extractOpenAIResponsesText, flattenLlmTextContent, sanitizeOpenAICompatibleResponseBody } from '../services/llmContent.service.js';
@@ -156,7 +156,7 @@ async function handleDeepSeekRequest(req, res, model, metadata) {
         }
     });
 
-    const response = await callDeepSeek({
+    const response = await callDeepSeekWithCircuitBreaker({
         model,
         messages: req.body.messages || [],
         maxTokens: getRequestedMaxTokens(req.body),

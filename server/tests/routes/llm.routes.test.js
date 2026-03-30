@@ -112,9 +112,9 @@ vi.mock('../../services/ollama.service.js', () => ({
     callOllama: (...args) => mockCallOllama(...args)
 }));
 
-const mockCallDeepSeek = vi.fn();
+const mockCallDeepSeekWithCircuitBreaker = vi.fn();
 vi.mock('../../services/deepseek.service.js', () => ({
-    callDeepSeek: (...args) => mockCallDeepSeek(...args)
+    callDeepSeekWithCircuitBreaker: (...args) => mockCallDeepSeekWithCircuitBreaker(...args)
 }));
 
 const mockCallGLMWithCircuitBreaker = vi.fn();
@@ -210,7 +210,7 @@ describe('LLM Routes', () => {
 
         it('routes through DeepSeek when configured', async () => {
             mockGetLLMSettings.mockResolvedValueOnce({ llmProvider: 'deepseek', llmModel: 'deepseek-chat' });
-            mockCallDeepSeek.mockResolvedValueOnce({
+            mockCallDeepSeekWithCircuitBreaker.mockResolvedValueOnce({
                 model: 'deepseek-chat',
                 choices: [{ message: { content: 'Hi from DeepSeek' } }],
                 usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 }
@@ -223,6 +223,10 @@ describe('LLM Routes', () => {
 
             expect(res.status).toBe(200);
             expect(res.body.choices[0].message.content).toBe('Hi from DeepSeek');
+            expect(mockCallDeepSeekWithCircuitBreaker).toHaveBeenCalledWith(expect.objectContaining({
+                model: 'deepseek-chat',
+                messages: [{ role: 'user', content: 'Hello' }]
+            }));
         });
 
         it('routes through MiniMax when configured', async () => {
@@ -361,7 +365,7 @@ describe('LLM Routes', () => {
 
         it('should strip reasoning content from DeepSeek-compatible proxy responses', async () => {
             mockGetLLMSettings.mockResolvedValueOnce({ llmProvider: 'deepseek', llmModel: 'deepseek-reasoner' });
-            mockCallDeepSeek.mockResolvedValueOnce({
+            mockCallDeepSeekWithCircuitBreaker.mockResolvedValueOnce({
                 model: 'deepseek-reasoner',
                 choices: [{ message: { content: 'Answer', reasoning_content: 'internal' } }],
                 usage: { prompt_tokens: 5, completion_tokens: 3, total_tokens: 8 }
