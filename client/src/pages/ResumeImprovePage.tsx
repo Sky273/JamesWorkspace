@@ -6,9 +6,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useResume } from '../context/ResumeContext';
-import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { SparklesIcon, ShareIcon, CheckCircleIcon, ArrowDownTrayIcon, RocketLaunchIcon, CheckIcon } from '@heroicons/react/24/outline';
 import ShareQRCodeModal from '../components/ShareQRCodeModal';
 import { templateService } from '../utils/templateService';
 import { Resume } from '../types/entities';
@@ -17,8 +15,10 @@ import toast from 'react-hot-toast';
 import logger from '../utils/logger.frontend';
 import { SkeletonCard } from '../components/ui/Skeleton';
 import ImprovementAnimation from '../components/ImprovementAnimation';
-import ConsentBadge, { ConsentStatus } from '../components/ConsentBadge';
 import ImprovedTextTab from '../components/ResumeAnalysis/ImprovedTextTab';
+import ResumeImproveHeader from '../components/ResumeImprove/ResumeImproveHeader';
+import ResumeImproveStepIndicator from '../components/ResumeImprove/ResumeImproveStepIndicator';
+import ResumeImproveEmptyState from '../components/ResumeImprove/ResumeImproveEmptyState';
 import CompareTab from '../components/ResumeAnalysis/CompareTab';
 import OverviewTab from '../components/ResumeAnalysis/OverviewTab';
 import PipelineTab from '../components/ResumeAnalysis/PipelineTab';
@@ -306,211 +306,32 @@ const ResumeImprovePage = (): JSX.Element => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
       <div className="max-w-7xl mx-auto px-4">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6"
-        >
-          <div className="flex items-start justify-between">
-              <div>
-                <div className="flex items-center gap-3">
-                  <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                    {resumeName}
-                  </h1>
-                  {localResume?.consent_status && (
-                    <ConsentBadge
-                      status={localResume.consent_status as ConsentStatus}
-                      candidateName={localResume?.candidate_name as string | undefined}
-                      candidateEmail={localResume?.candidate_email as string | undefined}
-                      consentTokenExpiresAt={localResume?.consent_token_expires_at as string | null | undefined}
-                      retentionUntil={localResume?.retention_until as string | null | undefined}
-                      compact={true}
-                    />
-                  )}
-                </div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {t('resume.improve.title')}
-                </p>
-              </div>
-              {hasImprovedText && (
-                <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-                  {/* Adapt to mission - Primary CTA */}
-                  <button
-                    onClick={() => navigate(`/resumes/${id}/adapt`)}
-                    className="btn btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm sm:text-base"
-                  >
-                    <RocketLaunchIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-                    <span className="hidden sm:inline">{t('resume.actions.adaptToMission')}</span>
-                    <span className="sm:hidden">{t('resume.actions.adapt')}</span>
-                  </button>
-                  
-                  {/* Save changes - Secondary */}
-                  <button
-                    onClick={handleSaveImprovedContent}
-                    disabled={isSaving || !editorReady}
-                    className={`btn btn-secondary inline-flex items-center gap-2 px-4 py-2 text-sm sm:text-base ${isSaving || !editorReady ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  >
-                    {isSaving ? (
-                      <>
-                        <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        <span className="hidden sm:inline">{t('resume.actions.saving')}</span>
-                      </>
-                    ) : (
-                      <>
-                        <CheckIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-                        <span className="hidden sm:inline">{t('resume.actions.saveChanges')}</span>
-                        <span className="sm:hidden">{t('common.save')}</span>
-                      </>
-                    )}
-                  </button>
-                  
-                  {/* Share - Secondary */}
-                  <button
-                    onClick={handleShare}
-                    className="btn btn-secondary inline-flex items-center gap-2 px-4 py-2 text-sm sm:text-base"
-                    title={t('share.button')}
-                  >
-                    <ShareIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-                    <span className="hidden sm:inline">{t('share.button')}</span>
-                  </button>
-                </div>
-              )}
-            </div>
-        </motion.div>
+        <ResumeImproveHeader
+          resume={localResume}
+          resumeName={resumeName}
+          hasImprovedText={hasImprovedText}
+          isSaving={isSaving}
+          editorReady={editorReady}
+          onSave={handleSaveImprovedContent}
+          onShare={handleShare}
+          onAdapt={() => navigate(`/resumes/${id}/adapt`)}
+          t={t}
+        />
 
-        {/* Step indicator */}
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="mb-6"
-        >
-          <div className="flex items-center">
-            {/* Step 1 - Analysis (past) */}
-            <Link to={`/resumes/${id}/analysis`} className="flex items-center gap-2 group">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-green-600 flex items-center justify-center shadow-sm shadow-green-500/20">
-                <CheckCircleIcon className="w-4 h-4 text-white" />
-              </div>
-              <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400 group-hover:underline">
-                {t('resume.steps.analysis')}
-              </span>
-            </Link>
-
-            {/* Connector 1->2 */}
-            <div className="w-10 sm:w-16 h-[3px] mx-2 bg-gradient-to-r from-emerald-400 to-indigo-500 rounded-full" />
-
-            {/* Step 2 - Improve (active) */}
-            <div className="flex items-center gap-2">
-              <motion.div
-                className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center shadow-md shadow-indigo-500/25"
-                animate={{ scale: [1, 1.1, 1] }}
-                transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-              >
-                <SparklesIcon className="w-4 h-4 text-white" />
-              </motion.div>
-              <span className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">
-                {t('resume.steps.improve')}
-              </span>
-            </div>
-
-            {/* Connector 2->3 */}
-            <div className="w-10 sm:w-16 h-[3px] mx-2 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700">
-              <motion.div
-                className="h-full rounded-full bg-gradient-to-r from-indigo-400 to-purple-500"
-                initial={false}
-                animate={{ width: hasImprovedText ? '100%' : '30%' }}
-                transition={{ duration: 0.6, ease: 'easeOut' }}
-              />
-            </div>
-
-            {/* Step 3 - Export */}
-            {hasImprovedText ? (
-              <Link to={`/resumes/${id}/export`} className="flex items-center gap-2 group">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-400 to-fuchsia-600 flex items-center justify-center shadow-sm shadow-purple-500/20">
-                  <ArrowDownTrayIcon className="w-4 h-4 text-white" />
-                </div>
-                <span className="text-sm font-medium text-purple-600 dark:text-purple-400 group-hover:underline">
-                  {t('resume.steps.export')}
-                </span>
-              </Link>
-            ) : (
-              <div className="flex items-center gap-2 opacity-50">
-                <div className="w-8 h-8 rounded-full border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center">
-                  <ArrowDownTrayIcon className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                </div>
-                <span className="text-sm text-gray-400 dark:text-gray-500">
-                  {t('resume.steps.export')}
-                </span>
-              </div>
-            )}
-          </div>
-        </motion.div>
+        {id && (
+          <ResumeImproveStepIndicator
+            resumeId={id}
+            hasImprovedText={hasImprovedText}
+            t={t}
+          />
+        )}
 
         {/* Content */}
         {!hasImprovedText ? (
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-            className="relative bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden"
-          >
-            {/* Gradient background */}
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-50/60 via-transparent to-indigo-50/40 dark:from-blue-950/20 dark:via-transparent dark:to-indigo-950/15" />
-
-            {/* Floating sparkles */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-              {Array.from({ length: 8 }, (_, i) => (
-                <motion.div
-                  key={i}
-                  className="absolute rounded-full bg-indigo-400/25"
-                  style={{ left: `${12 + i * 11}%`, top: `${20 + (i % 3) * 25}%`, width: 3 + (i % 3), height: 3 + (i % 3) }}
-                  animate={{ y: [0, -14, 0], opacity: [0, 0.6, 0], scale: [0.5, 1.3, 0.5] }}
-                  transition={{ duration: 3 + i * 0.4, delay: i * 0.3, repeat: Infinity, ease: 'easeInOut' }}
-                />
-              ))}
-            </div>
-
-            <div className="relative flex flex-col items-center py-16 px-6">
-              {/* Animated icon */}
-              <motion.div
-                className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-xl shadow-indigo-500/30 mb-6"
-                animate={{ scale: [1, 1.06, 1], rotate: [0, 2, -2, 0] }}
-                transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-              >
-                <SparklesIcon className="w-10 h-10 text-white" />
-                <motion.div
-                  className="absolute inset-0 rounded-2xl bg-gradient-to-r from-transparent via-white/20 to-transparent"
-                  animate={{ x: ['-100%', '200%'] }}
-                  transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut', repeatDelay: 1 }}
-                />
-              </motion.div>
-
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                {t('resume.improve.notYetImproved')}
-              </h2>
-              <p className="text-gray-500 dark:text-gray-400 mb-8 max-w-md mx-auto text-center">
-                {t('resume.improve.description')}
-              </p>
-
-              <motion.button
-                onClick={handleImprove}
-                className="inline-flex items-center gap-2.5 px-7 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-semibold shadow-lg shadow-indigo-500/25 transition-all"
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-              >
-                <SparklesIcon className="w-5 h-5" />
-                {t('resume.actions.improveNow')}
-              </motion.button>
-
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-4">
-                {t('resume.improve.duration')}
-              </p>
-            </div>
-          </motion.div>
+          <ResumeImproveEmptyState
+            onImprove={handleImprove}
+            t={t}
+          />
         ) : (
           <>
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">

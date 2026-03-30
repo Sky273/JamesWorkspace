@@ -24,6 +24,13 @@ import { fetchWithAuth, createAuthOptions } from '../utils/apiInterceptor';
 import logger from '../utils/logger.frontend';
 import { formatDateTime } from '../utils/dateFormatter';
 import BatchImportMetricsCard from '../components/Metrics/BatchImportMetricsCard';
+import AiModifyMetricsCard from '../components/Metrics/AiModifyMetricsCard';
+import ProfileMatchingMetricsCard from '../components/Metrics/ProfileMatchingMetricsCard';
+import OperationLLMCard from '../components/Metrics/OperationLLMCard';
+import ServerHealthCards from '../components/Metrics/ServerHealthCards';
+import DatabaseMetricsCards from '../components/Metrics/DatabaseMetricsCards';
+import OperationsInfraCards from '../components/Metrics/OperationsInfraCards';
+import HttpTrafficCards from '../components/Metrics/HttpTrafficCards';
 
 type HeroIcon = ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, 'ref'> & { title?: string; titleId?: string } & RefAttributes<SVGSVGElement>>;
 
@@ -712,122 +719,23 @@ const MetricsPage = (): JSX.Element => {
             <StatCard title={t('metrics.errorRate')} value={`${(safeNumber(metrics.errors?.rate) * 100).toFixed(2)}%`} subtitle={`${t('metrics.totalErrors')}: ${safeNumber(metrics.errors?.total)}`} icon={ExclamationTriangleIcon} color={safeNumber(metrics.errors?.rate) > 0.05 ? 'red' : 'green'} />
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl border bg-indigo-50 text-indigo-600 border-indigo-200 dark:bg-gray-800 dark:text-indigo-400 dark:border-indigo-700 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <p className="text-sm font-medium opacity-80">{t('metrics.serverMemory')}</p>
-                  <p className="text-2xl font-bold mt-1">{formatBytes(safeNumber(metrics.memory?.heapUsed))}</p>
-                  <p className="text-xs mt-1 opacity-60">{t('metrics.heapUsed', { total: formatBytes(safeNumber(metrics.memory?.heapTotal)) })}</p>
-                </div>
-                <CpuChipIcon className="w-10 h-10 opacity-50" />
-              </div>
-              <div className="w-full bg-indigo-200 dark:bg-indigo-900/50 rounded-full h-2 mb-4">
-                <div className="h-2 rounded-full bg-indigo-500 transition-all duration-500" style={{ width: `${safeNumber(metrics.memory?.heapTotal) > 0 ? (safeNumber(metrics.memory?.heapUsed) / safeNumber(metrics.memory?.heapTotal)) * 100 : 0}%` }} />
-              </div>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div className="bg-indigo-100 dark:bg-indigo-900/30 rounded-lg p-3"><p className="opacity-70">{t('metrics.rss')}</p><p className="font-semibold">{formatBytes(safeNumber(metrics.memory?.rss))}</p></div>
-                <div className="bg-indigo-100 dark:bg-indigo-900/30 rounded-lg p-3"><p className="opacity-70">{t('metrics.external')}</p><p className="font-semibold">{formatBytes(safeNumber(metrics.memory?.external))}</p></div>
-              </div>
-            </motion.div>
+          <ServerHealthCards
+            metrics={metrics}
+            cacheBackend={cacheBackend}
+            cacheConnected={cacheConnected}
+            cacheFallbackReason={cacheFallbackReason}
+            t={t}
+            safeNumber={safeNumber}
+            formatBytes={formatBytes}
+            formatNumber={formatNumber}
+          />
 
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="rounded-xl border bg-green-50 text-green-600 border-green-200 dark:bg-gray-800 dark:text-green-400 dark:border-green-700 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <p className="text-sm font-medium opacity-80">{t('metrics.cachePerformance')}</p>
-                  <p className="text-2xl font-bold mt-1">{(safeNumber(metrics.cache?.hitRate) * 100).toFixed(1)}%</p>
-                  <p className="text-xs mt-1 opacity-60">{t('metrics.cacheHitRate')}</p>
-                </div>
-                <CircleStackIcon className="w-10 h-10 opacity-50" />
-              </div>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div className="bg-green-100 dark:bg-green-900/30 rounded-lg p-3"><p className="opacity-70">{t('metrics.cacheHits')}</p><p className="font-semibold">{formatNumber(safeNumber(metrics.cache?.hits))}</p></div>
-                <div className="bg-green-100 dark:bg-green-900/30 rounded-lg p-3"><p className="opacity-70">{t('metrics.cacheMisses')}</p><p className="font-semibold">{formatNumber(safeNumber(metrics.cache?.misses))}</p></div>
-              </div>
-              <div className="grid grid-cols-3 gap-4 text-sm mt-4">
-                <div className="bg-green-100 dark:bg-green-900/30 rounded-lg p-3">
-                  <p className="opacity-70">{t('metrics.cacheBackend')}</p>
-                  <p className="font-semibold uppercase">{cacheBackend}</p>
-                </div>
-                <div className="bg-green-100 dark:bg-green-900/30 rounded-lg p-3">
-                  <p className="opacity-70">{t('metrics.cacheConnected')}</p>
-                  <p className="font-semibold">
-                    {cacheConnected === null || cacheConnected === undefined
-                      ? t('metrics.notApplicable')
-                      : cacheConnected
-                        ? t('common.yes', 'Oui')
-                        : t('common.no', 'Non')}
-                  </p>
-                </div>
-                <div className="bg-green-100 dark:bg-green-900/30 rounded-lg p-3">
-                  <p className="opacity-70">{t('metrics.cacheFallbackReason')}</p>
-                  <p className="font-semibold break-words">{cacheFallbackReason || t('metrics.none')}</p>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-
-          {/* Database Metrics Section */}
-          {dbMetrics && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="rounded-xl border bg-orange-50 text-orange-600 border-orange-200 dark:bg-gray-800 dark:text-orange-400 dark:border-orange-700 p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <p className="text-sm font-medium opacity-80">{t('metrics.database')}</p>
-                    <p className="text-2xl font-bold mt-1">{dbMetrics.database?.sizePretty || 'N/A'}</p>
-                    <p className="text-xs mt-1 opacity-60">{t('metrics.dbSize')}</p>
-                  </div>
-                  <TableCellsIcon className="w-10 h-10 opacity-50" />
-                </div>
-                <div className="grid grid-cols-3 gap-3 text-sm mb-4">
-                  <div className="bg-orange-100 dark:bg-orange-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.connections')}</p>
-                    <p className="font-semibold">{safeNumber(dbMetrics.connections?.total)}</p>
-                  </div>
-                  <div className="bg-orange-100 dark:bg-orange-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.active')}</p>
-                    <p className="font-semibold">{safeNumber(dbMetrics.connections?.active)}</p>
-                  </div>
-                  <div className="bg-orange-100 dark:bg-orange-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.idle')}</p>
-                    <p className="font-semibold">{safeNumber(dbMetrics.connections?.idle)}</p>
-                  </div>
-                </div>
-                <p className="text-xs opacity-60">{t('metrics.queryTime')}: {dbMetrics.queryTime || 'N/A'}</p>
-              </motion.div>
-
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }} className="rounded-xl border bg-orange-50 text-orange-600 border-orange-200 dark:bg-gray-800 dark:text-orange-400 dark:border-orange-700 p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <p className="text-sm font-medium opacity-80">{t('metrics.tables')}</p>
-                    <p className="text-2xl font-bold mt-1">{dbMetrics.tables?.length || 0}</p>
-                    <p className="text-xs mt-1 opacity-60">{t('metrics.topTables')}</p>
-                  </div>
-                  <ServerIcon className="w-10 h-10 opacity-50" />
-                </div>
-                <div className="overflow-x-auto max-h-48">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-orange-200 dark:border-orange-700">
-                        <th className="text-left py-2 px-2 font-medium opacity-70">{t('metrics.tableName')}</th>
-                        <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.rows')}</th>
-                        <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.deadRows')}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {dbMetrics.tables?.slice(0, 8).map((table, index) => (
-                        <tr key={index} className="border-b border-orange-100 dark:border-orange-800">
-                          <td className="py-2 px-2 font-mono text-xs truncate max-w-[120px]">{table.name}</td>
-                          <td className="py-2 px-2 text-right font-semibold">{formatNumber(table.rowCount)}</td>
-                          <td className="py-2 px-2 text-right opacity-70">{formatNumber(table.deadRows)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </motion.div>
-            </div>
-          )}
+          <DatabaseMetricsCards
+            metrics={dbMetrics}
+            t={t}
+            safeNumber={safeNumber}
+            formatNumber={formatNumber}
+          />
 
           {operationsMetricsError && !operationsMetrics && (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.185 }} className="rounded-xl border bg-amber-50 text-amber-700 border-amber-200 dark:bg-gray-800 dark:text-amber-400 dark:border-amber-700 p-6 mb-8">
@@ -842,96 +750,13 @@ const MetricsPage = (): JSX.Element => {
 
           {operationsMetrics && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.185 }} className="rounded-xl border bg-sky-50 text-sky-700 border-sky-200 dark:bg-gray-800 dark:text-sky-400 dark:border-sky-700 p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <p className="text-sm font-medium opacity-80">{t('metrics.operationsUploadsTitle')}</p>
-                    <p className="text-2xl font-bold mt-1">{formatNumber(safeNumber(operationsMetrics.operations?.uploads?.total))}</p>
-                    <p className="text-xs mt-1 opacity-60">{t('metrics.operationsUploadsSubtitle')}</p>
-                  </div>
-                  <ArrowDownTrayIcon className="w-10 h-10 opacity-50" />
-                </div>
-                <div className="grid grid-cols-2 gap-3 text-sm mb-4">
-                  <div className="bg-sky-100 dark:bg-sky-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.successFailures')}</p>
-                    <p className="font-semibold">{safeNumber(operationsMetrics.operations?.uploads?.successful)} / {safeNumber(operationsMetrics.operations?.uploads?.failed)}</p>
-                  </div>
-                  <div className="bg-sky-100 dark:bg-sky-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.receivedStoredDb')}</p>
-                    <p className="font-semibold">{formatBytes(safeNumber(operationsMetrics.operations?.uploads?.bytesReceived))} / {formatBytes(safeNumber(operationsMetrics.operations?.uploads?.bytesStoredInDb))}</p>
-                  </div>
-                  <div className="bg-sky-100 dark:bg-sky-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.binaryResumes')}</p>
-                    <p className="font-semibold">{safeNumber(operationsMetrics.binaryStorage?.resumesWithBinary)}</p>
-                  </div>
-                  <div className="bg-sky-100 dark:bg-sky-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.binaryStorage')}</p>
-                    <p className="font-semibold">{formatBytes(safeNumber(operationsMetrics.binaryStorage?.resumeBinaryBytes))}</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div className="bg-sky-100 dark:bg-sky-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.averagePerResume')}</p>
-                    <p className="font-semibold">{formatBytes(safeNumber(operationsMetrics.binaryStorage?.avgResumeBinaryBytes))}</p>
-                  </div>
-                  <div className="bg-sky-100 dark:bg-sky-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.batchFileData')}</p>
-                    <p className="font-semibold">{formatBytes(safeNumber(operationsMetrics.binaryStorage?.batchFileDataBytes))}</p>
-                  </div>
-                </div>
-              </motion.div>
-
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.19 }} className="rounded-xl border bg-teal-50 text-teal-700 border-teal-200 dark:bg-gray-800 dark:text-teal-400 dark:border-teal-700 p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <p className="text-sm font-medium opacity-80">{t('metrics.operationsOcrTitle')}</p>
-                    <p className="text-2xl font-bold mt-1">{formatNumber(safeNumber(operationsMetrics.operations?.ocr?.runs))}</p>
-                    <p className="text-xs mt-1 opacity-60">{t('metrics.operationsOcrSubtitle')}</p>
-                  </div>
-                  <BoltIcon className="w-10 h-10 opacity-50" />
-                </div>
-                <div className="grid grid-cols-2 gap-3 text-sm mb-4">
-                  <div className="bg-teal-100 dark:bg-teal-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.ocrSuccessFailures')}</p>
-                    <p className="font-semibold">{safeNumber(operationsMetrics.operations?.ocr?.successfulRuns)} / {safeNumber(operationsMetrics.operations?.ocr?.failedRuns)}</p>
-                  </div>
-                  <div className="bg-teal-100 dark:bg-teal-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.ocrPagesFailures')}</p>
-                    <p className="font-semibold">{safeNumber(operationsMetrics.operations?.ocr?.scannedPagesDetected)} / {safeNumber(operationsMetrics.operations?.ocr?.failedPages)}</p>
-                  </div>
-                  <div className="bg-teal-100 dark:bg-teal-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.averageConfidence')}</p>
-                    <p className="font-semibold">{safeNumber(operationsMetrics.operations?.ocr?.confidenceSamples) > 0 ? ((safeNumber(operationsMetrics.operations?.ocr?.totalConfidence) / safeNumber(operationsMetrics.operations?.ocr?.confidenceSamples)).toFixed(1) + '%') : 'N/A'}</p>
-                  </div>
-                  <div className="bg-teal-100 dark:bg-teal-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.cumulativeOcrTime')}</p>
-                    <p className="font-semibold">{Math.round(safeNumber(operationsMetrics.operations?.ocr?.totalExtractionTimeMs) / 1000) + 's'}</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3 text-sm mb-4">
-                  <div className="bg-teal-100 dark:bg-teal-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.cleanupRuns')}</p>
-                    <p className="font-semibold">{safeNumber(operationsMetrics.operations?.cleanup?.runs)}</p>
-                  </div>
-                  <div className="bg-teal-100 dark:bg-teal-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.filesDirsDeleted')}</p>
-                    <p className="font-semibold">{safeNumber(operationsMetrics.operations?.cleanup?.filesDeleted)} / {safeNumber(operationsMetrics.operations?.cleanup?.directoriesDeleted)}</p>
-                  </div>
-                  <div className="bg-teal-100 dark:bg-teal-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.orphanBatchExports')}</p>
-                    <p className="font-semibold">{safeNumber(operationsMetrics.operations?.cleanup?.orphanExportFilesDeleted)}</p>
-                  </div>
-                  <div className="bg-teal-100 dark:bg-teal-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.staleBatchRefs')}</p>
-                    <p className="font-semibold">{safeNumber(operationsMetrics.operations?.cleanup?.staleExportRefsCleared)}</p>
-                  </div>
-                </div>
-                <p className="text-xs opacity-60">
-                  {t('metrics.tempStorageSummary')}: {formatBytes(safeNumber(operationsMetrics.storage?.tempDirectorySize))} / {safeNumber(operationsMetrics.storage?.tempFileCount)} {t('metrics.filesUnit')}
-                  {' | '}
-                  {t('metrics.batchExportsSummary')}: {formatBytes(safeNumber(operationsMetrics.storage?.batchExportDirectorySize))} / {safeNumber(operationsMetrics.storage?.batchExportFileCount)} {t('metrics.filesUnit')}
-                </p>
-              </motion.div>
+              <OperationsInfraCards
+                metrics={operationsMetrics}
+                t={t}
+                safeNumber={safeNumber}
+                formatNumber={formatNumber}
+                formatBytes={formatBytes}
+              />
 
               <BatchImportMetricsCard
                 metrics={batchImportMetrics}
@@ -941,401 +766,42 @@ const MetricsPage = (): JSX.Element => {
                 formatNumber={formatNumber}
                 formatBytes={formatBytes}
               />
+              <AiModifyMetricsCard
+                metrics={aiModifyMetrics}
+                successRatio={aiModifySuccessRatio}
+                t={t}
+                safeNumber={safeNumber}
+                formatNumber={formatNumber}
+              />
 
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.192 }} className="rounded-xl border bg-sky-50 text-sky-700 border-sky-200 dark:bg-gray-800 dark:text-sky-300 dark:border-sky-700 p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <p className="text-sm font-medium opacity-80">{t('metrics.aiModifyTitle')}</p>
-                    <p className="text-2xl font-bold mt-1">{formatNumber(safeNumber(aiModifyMetrics?.runs))}</p>
-                    <p className="text-xs mt-1 opacity-60">{t('metrics.aiModifySubtitle')}</p>
-                  </div>
-                  <SparklesIcon className="w-10 h-10 opacity-50" />
-                </div>
-                <div className="grid grid-cols-2 gap-3 text-sm mb-4">
-                  <div className="bg-sky-100 dark:bg-sky-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.successFailures')}</p>
-                    <p className="font-semibold">{safeNumber(aiModifyMetrics?.successfulRuns)} / {safeNumber(aiModifyMetrics?.failedRuns)}</p>
-                  </div>
-                  <div className="bg-sky-100 dark:bg-sky-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.successRatio')}</p>
-                    <p className="font-semibold">{aiModifySuccessRatio !== null ? `${(aiModifySuccessRatio * 100).toFixed(1)}%` : 'N/A'}</p>
-                  </div>
-                  <div className="bg-sky-100 dark:bg-sky-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.fallbacks')}</p>
-                    <p className="font-semibold">{safeNumber(aiModifyMetrics?.fallbackRuns)}</p>
-                  </div>
-                  <div className="bg-sky-100 dark:bg-sky-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.selectionRuns')}</p>
-                    <p className="font-semibold">{safeNumber(aiModifyMetrics?.selectionRuns)}</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3 text-sm mb-4">
-                  <div className="bg-sky-100 dark:bg-sky-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.inputChars')}</p>
-                    <p className="font-semibold">{formatNumber(safeNumber(aiModifyMetrics?.inputChars))}</p>
-                  </div>
-                  <div className="bg-sky-100 dark:bg-sky-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.outputChars')}</p>
-                    <p className="font-semibold">{formatNumber(safeNumber(aiModifyMetrics?.outputChars))}</p>
-                  </div>
-                </div>
-                {aiModifyMetrics?.byProvider && Object.keys(aiModifyMetrics.byProvider).length > 0 && (
-                  <div className="overflow-x-auto max-h-40 mb-4">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-sky-200 dark:border-sky-700">
-                          <th className="text-left py-2 px-2 font-medium opacity-70">{t('metrics.model')}</th>
-                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.calls')}</th>
-                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.fallbacks')}</th>
-                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.selectionRuns')}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {Object.entries(aiModifyMetrics.byProvider)
-                          .sort(([, left], [, right]) => safeNumber(right.runs) - safeNumber(left.runs))
-                          .slice(0, 5)
-                          .map(([provider, stats]) => (
-                            <tr key={provider} className="border-b border-sky-100 dark:border-sky-800">
-                              <td className="py-2 px-2 font-mono text-xs">{provider}</td>
-                              <td className="py-2 px-2 text-right font-semibold">{safeNumber(stats.runs)}</td>
-                              <td className="py-2 px-2 text-right opacity-70">{safeNumber(stats.fallbackRuns)}</td>
-                              <td className="py-2 px-2 text-right opacity-70">{safeNumber(stats.selectionRuns)}</td>
-                            </tr>
-                          ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-                {aiModifyMetrics?.recent && aiModifyMetrics.recent.length > 0 && (
-                  <div>
-                    <p className="text-xs font-semibold opacity-70 mb-2">{t('metrics.aiModifyRecent')}</p>
-                    <div className="space-y-2 max-h-32 overflow-y-auto">
-                      {aiModifyMetrics.recent.slice().reverse().map((entry, index) => (
-                        <div key={`${entry.timestamp || 'entry'}-${index}`} className="bg-sky-100 dark:bg-sky-900/30 rounded-lg p-2 text-xs">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="font-mono">{entry.provider || 'unknown'}</span>
-                            <span className="opacity-60">{entry.timestamp ? formatDateTime(entry.timestamp) : 'N/A'}</span>
-                          </div>
-                          <div className="mt-1 opacity-80">
-                            {entry.event || 'run'} | {t('metrics.successFailures')}: {safeNumber(entry.successfulRuns)} / {safeNumber(entry.failedRuns)}
-                          </div>
-                          <div className="mt-1 opacity-70">
-                            {t('metrics.fallbacks')}: {safeNumber(entry.fallbackRuns)} | {t('metrics.selectionRuns')}: {safeNumber(entry.selectionRuns)}
-                            {entry.source ? ` | ${t('metrics.source')}: ${entry.source}` : ''}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </motion.div>
+              <ProfileMatchingMetricsCard
+                metrics={profileMatchingMetrics}
+                requestedToScoredRatio={requestedToScoredRatio}
+                scoredToExplainedRatio={scoredToExplainedRatio}
+                scoredToReturnedRatio={scoredToReturnedRatio}
+                alerts={profileMatchingAlerts}
+                t={t}
+                safeNumber={safeNumber}
+                formatNumber={formatNumber}
+              />
 
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.195 }} className="rounded-xl border bg-violet-50 text-violet-700 border-violet-200 dark:bg-gray-800 dark:text-violet-400 dark:border-violet-700 p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <p className="text-sm font-medium opacity-80">{t('metrics.profileMatchingTitle')}</p>
-                    <p className="text-2xl font-bold mt-1">{formatNumber(safeNumber(operationsMetrics.operations?.profileMatching?.searches))}</p>
-                    <p className="text-xs mt-1 opacity-60">{t('metrics.profileMatchingSubtitle')}</p>
-                  </div>
-                  <SparklesIcon className="w-10 h-10 opacity-50" />
-                </div>
-                <div className="grid grid-cols-2 gap-3 text-sm mb-4">
-                  <div className="bg-violet-100 dark:bg-violet-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.profilesRequested')}</p>
-                    <p className="font-semibold">{formatNumber(safeNumber(operationsMetrics.operations?.profileMatching?.profilesRequested))}</p>
-                  </div>
-                  <div className="bg-violet-100 dark:bg-violet-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.profilesScored')}</p>
-                    <p className="font-semibold">{formatNumber(safeNumber(operationsMetrics.operations?.profileMatching?.profilesScored))}</p>
-                  </div>
-                  <div className="bg-violet-100 dark:bg-violet-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.batchesStarted')}</p>
-                    <p className="font-semibold">{safeNumber(operationsMetrics.operations?.profileMatching?.batchesStarted)}</p>
-                  </div>
-                  <div className="bg-violet-100 dark:bg-violet-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.batchesRetriedFailed')}</p>
-                    <p className="font-semibold">{safeNumber(operationsMetrics.operations?.profileMatching?.batchesRetried)} / {safeNumber(operationsMetrics.operations?.profileMatching?.batchesFailed)}</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3 text-sm mb-4">
-                  <div className="bg-violet-100 dark:bg-violet-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.profilesExplained')}</p>
-                    <p className="font-semibold">{formatNumber(safeNumber(operationsMetrics.operations?.profileMatching?.profilesExplained))}</p>
-                  </div>
-                  <div className="bg-violet-100 dark:bg-violet-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.profilesReturned')}</p>
-                    <p className="font-semibold">{formatNumber(safeNumber(operationsMetrics.operations?.profileMatching?.profilesReturned))}</p>
-                  </div>
-                  <div className="bg-violet-100 dark:bg-violet-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.profileNormalizationEvents')}</p>
-                    <p className="font-semibold">{formatNumber(safeNumber(operationsMetrics.operations?.profileMatching?.normalizationEvents))}</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm mb-4">
-                  <div className="bg-violet-100 dark:bg-violet-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.requestedToScoredRatio')}</p>
-                    <p className="font-semibold">
-                      {requestedToScoredRatio !== null
-                        ? `${(requestedToScoredRatio * 100).toFixed(1)}%`
-                        : 'N/A'}
-                    </p>
-                  </div>
-                  <div className="bg-violet-100 dark:bg-violet-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.scoredToExplainedRatio')}</p>
-                    <p className="font-semibold">
-                      {scoredToExplainedRatio !== null
-                        ? `${(scoredToExplainedRatio * 100).toFixed(1)}%`
-                        : 'N/A'}
-                    </p>
-                  </div>
-                  <div className="bg-violet-100 dark:bg-violet-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.scoredToReturnedRatio')}</p>
-                    <p className="font-semibold">
-                      {scoredToReturnedRatio !== null
-                        ? `${(scoredToReturnedRatio * 100).toFixed(1)}%`
-                        : 'N/A'}
-                    </p>
-                  </div>
-                </div>
-                {profileMatchingAlerts.length > 0 && (
-                  <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-200">
-                    <div className="mb-2 flex items-center gap-2 font-semibold">
-                      <ExclamationTriangleIcon className="h-4 w-4" />
-                      {t('metrics.profileMatchingAlerts')}
-                    </div>
-                    <div className="space-y-1">
-                      {profileMatchingAlerts.map((alert, index) => (
-                        <p key={`${alert}-${index}`}>{alert}</p>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {operationsMetrics.operations?.profileMatching?.byProvider && Object.keys(operationsMetrics.operations.profileMatching.byProvider).length > 0 && (
-                  <div className="overflow-x-auto max-h-48">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-violet-200 dark:border-violet-700">
-                          <th className="text-left py-2 px-2 font-medium opacity-70">{t('metrics.model')}</th>
-                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.searches')}</th>
-                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.calls')}</th>
-                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.profileNormalizationEventsShort')}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {Object.entries(operationsMetrics.operations.profileMatching.byProvider)
-                          .sort(([, left], [, right]) => safeNumber(right.searches) - safeNumber(left.searches))
-                          .slice(0, 5)
-                          .map(([provider, stats]) => (
-                            <tr key={provider} className="border-b border-violet-100 dark:border-violet-800">
-                              <td className="py-2 px-2 font-mono text-xs">{provider}</td>
-                              <td className="py-2 px-2 text-right font-semibold">{safeNumber(stats.searches)}</td>
-                              <td className="py-2 px-2 text-right opacity-70">{safeNumber(stats.batchesStarted)}</td>
-                              <td className="py-2 px-2 text-right opacity-70">{safeNumber(stats.normalizationEvents)}</td>
-                            </tr>
-                          ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-                {operationsMetrics.operations?.profileMatching?.recent && operationsMetrics.operations.profileMatching.recent.length > 0 && (
-                  <div className="mt-4">
-                    <p className="text-xs font-semibold opacity-70 mb-2">{t('metrics.profileMatchingRecent')}</p>
-                    <div className="space-y-2 max-h-40 overflow-y-auto">
-                      {operationsMetrics.operations.profileMatching.recent.slice().reverse().map((entry, index) => (
-                        <div key={`${entry.timestamp || 'entry'}-${index}`} className="bg-violet-100 dark:bg-violet-900/30 rounded-lg p-2 text-xs">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="font-mono">{entry.provider || 'unknown'}</span>
-                            <span className="opacity-60">{entry.timestamp ? formatDateTime(entry.timestamp) : 'N/A'}</span>
-                          </div>
-                          <div className="mt-1 opacity-80">
-                            {entry.event || 'search'} | {t('metrics.profilesRequested')}: {safeNumber(entry.profilesRequested)} | {t('metrics.profilesScored')}: {safeNumber(entry.profilesScored)}
-                          </div>
-                          {(safeNumber(entry.normalizationEvents) > 0 || entry.field || entry.inputType) && (
-                            <div className="mt-1 opacity-70">
-                              {t('metrics.profileNormalizationEvents')}: {safeNumber(entry.normalizationEvents)}
-                              {entry.field ? ` | ${t('metrics.field')}: ${entry.field}` : ''}
-                              {entry.inputType ? ` | ${t('metrics.inputType')}: ${entry.inputType}` : ''}
-                              {entry.source ? ` | ${t('metrics.source')}: ${entry.source}` : ''}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </motion.div>
+              <OperationLLMCard
+                metrics={improvementMetrics}
+                successRatio={improvementSuccessRatio}
+                mode="improvement"
+                t={t}
+                safeNumber={safeNumber}
+                formatNumber={formatNumber}
+              />
 
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="rounded-xl border bg-amber-50 text-amber-700 border-amber-200 dark:bg-gray-800 dark:text-amber-400 dark:border-amber-700 p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <p className="text-sm font-medium opacity-80">{t('metrics.resumeImprovementTitle')}</p>
-                    <p className="text-2xl font-bold mt-1">{formatNumber(safeNumber(improvementMetrics?.runs))}</p>
-                    <p className="text-xs mt-1 opacity-60">{t('metrics.resumeImprovementSubtitle')}</p>
-                  </div>
-                  <ArrowDownTrayIcon className="w-10 h-10 opacity-50" />
-                </div>
-                <div className="grid grid-cols-2 gap-3 text-sm mb-4">
-                  <div className="bg-amber-100 dark:bg-amber-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.successFailures')}</p>
-                    <p className="font-semibold">{safeNumber(improvementMetrics?.successfulRuns)} / {safeNumber(improvementMetrics?.failedRuns)}</p>
-                  </div>
-                  <div className="bg-amber-100 dark:bg-amber-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.structuredFallback')}</p>
-                    <p className="font-semibold">{safeNumber(improvementMetrics?.structuredRuns)} / {safeNumber(improvementMetrics?.fallbackRuns)}</p>
-                  </div>
-                  <div className="bg-amber-100 dark:bg-amber-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.inputChars')}</p>
-                    <p className="font-semibold">{formatNumber(safeNumber(improvementMetrics?.inputChars))}</p>
-                  </div>
-                  <div className="bg-amber-100 dark:bg-amber-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.outputChars')}</p>
-                    <p className="font-semibold">{formatNumber(safeNumber(improvementMetrics?.outputChars))}</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3 text-sm mb-4">
-                  <div className="bg-amber-100 dark:bg-amber-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.successRatio')}</p>
-                    <p className="font-semibold">{improvementSuccessRatio !== null ? `${(improvementSuccessRatio * 100).toFixed(1)}%` : 'N/A'}</p>
-                  </div>
-                </div>
-                {improvementMetrics?.byProvider && Object.keys(improvementMetrics.byProvider).length > 0 && (
-                  <div className="overflow-x-auto max-h-40 mb-4">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-amber-200 dark:border-amber-700">
-                          <th className="text-left py-2 px-2 font-medium opacity-70">{t('metrics.model')}</th>
-                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.calls')}</th>
-                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.successes')}</th>
-                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.fallbacks')}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {Object.entries(improvementMetrics.byProvider)
-                          .sort(([, left], [, right]) => safeNumber(right.runs) - safeNumber(left.runs))
-                          .slice(0, 5)
-                          .map(([provider, stats]) => (
-                            <tr key={provider} className="border-b border-amber-100 dark:border-amber-800">
-                              <td className="py-2 px-2 font-mono text-xs">{provider}</td>
-                              <td className="py-2 px-2 text-right font-semibold">{safeNumber(stats.runs)}</td>
-                              <td className="py-2 px-2 text-right opacity-70">{safeNumber(stats.successfulRuns)}</td>
-                              <td className="py-2 px-2 text-right opacity-70">{safeNumber(stats.fallbackRuns)}</td>
-                            </tr>
-                          ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-                {improvementMetrics?.recent && improvementMetrics.recent.length > 0 && (
-                  <div>
-                    <p className="text-xs font-semibold opacity-70 mb-2">{t('metrics.resumeImprovementRecent')}</p>
-                    <div className="space-y-2 max-h-32 overflow-y-auto">
-                      {improvementMetrics.recent.slice().reverse().map((entry, index) => (
-                        <div key={`${entry.timestamp || 'entry'}-${index}`} className="bg-amber-100 dark:bg-amber-900/30 rounded-lg p-2 text-xs">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="font-mono">{entry.provider || 'unknown'}</span>
-                            <span className="opacity-60">{entry.timestamp ? formatDateTime(entry.timestamp) : 'N/A'}</span>
-                          </div>
-                          <div className="mt-1 opacity-80">
-                            {entry.event || 'run'} | {t('metrics.successFailures')}: {safeNumber(entry.successfulRuns)} / {safeNumber(entry.failedRuns)}
-                          </div>
-                          <div className="mt-1 opacity-70">
-                            {t('metrics.structuredFallback')}: {safeNumber(entry.structuredRuns)} / {safeNumber(entry.fallbackRuns)}
-                            {entry.source ? ` | ${t('metrics.source')}: ${entry.source}` : ''}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </motion.div>
-
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.205 }} className="rounded-xl border bg-rose-50 text-rose-700 border-rose-200 dark:bg-gray-800 dark:text-rose-400 dark:border-rose-700 p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <p className="text-sm font-medium opacity-80">{t('metrics.resumeAdaptationTitle')}</p>
-                    <p className="text-2xl font-bold mt-1">{formatNumber(safeNumber(adaptationMetrics?.runs))}</p>
-                    <p className="text-xs mt-1 opacity-60">{t('metrics.resumeAdaptationSubtitle')}</p>
-                  </div>
-                  <SparklesIcon className="w-10 h-10 opacity-50" />
-                </div>
-                <div className="grid grid-cols-2 gap-3 text-sm mb-4">
-                  <div className="bg-rose-100 dark:bg-rose-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.successFailures')}</p>
-                    <p className="font-semibold">{safeNumber(adaptationMetrics?.successfulRuns)} / {safeNumber(adaptationMetrics?.failedRuns)}</p>
-                  </div>
-                  <div className="bg-rose-100 dark:bg-rose-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.matchRuns')}</p>
-                    <p className="font-semibold">{safeNumber(adaptationMetrics?.matchRuns)}</p>
-                  </div>
-                  <div className="bg-rose-100 dark:bg-rose-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.structuredFallback')}</p>
-                    <p className="font-semibold">{safeNumber(adaptationMetrics?.structuredRuns)} / {safeNumber(adaptationMetrics?.fallbackRuns)}</p>
-                  </div>
-                  <div className="bg-rose-100 dark:bg-rose-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.successRatio')}</p>
-                    <p className="font-semibold">{adaptationSuccessRatio !== null ? `${(adaptationSuccessRatio * 100).toFixed(1)}%` : 'N/A'}</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3 text-sm mb-4">
-                  <div className="bg-rose-100 dark:bg-rose-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.inputChars')}</p>
-                    <p className="font-semibold">{formatNumber(safeNumber(adaptationMetrics?.inputChars))}</p>
-                  </div>
-                  <div className="bg-rose-100 dark:bg-rose-900/30 rounded-lg p-3">
-                    <p className="opacity-70">{t('metrics.outputChars')}</p>
-                    <p className="font-semibold">{formatNumber(safeNumber(adaptationMetrics?.outputChars))}</p>
-                  </div>
-                </div>
-                {adaptationMetrics?.byProvider && Object.keys(adaptationMetrics.byProvider).length > 0 && (
-                  <div className="overflow-x-auto max-h-40 mb-4">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-rose-200 dark:border-rose-700">
-                          <th className="text-left py-2 px-2 font-medium opacity-70">{t('metrics.model')}</th>
-                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.calls')}</th>
-                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.matchRuns')}</th>
-                          <th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.fallbacks')}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {Object.entries(adaptationMetrics.byProvider)
-                          .sort(([, left], [, right]) => safeNumber(right.runs) - safeNumber(left.runs))
-                          .slice(0, 5)
-                          .map(([provider, stats]) => (
-                            <tr key={provider} className="border-b border-rose-100 dark:border-rose-800">
-                              <td className="py-2 px-2 font-mono text-xs">{provider}</td>
-                              <td className="py-2 px-2 text-right font-semibold">{safeNumber(stats.runs)}</td>
-                              <td className="py-2 px-2 text-right opacity-70">{safeNumber(stats.matchRuns)}</td>
-                              <td className="py-2 px-2 text-right opacity-70">{safeNumber(stats.fallbackRuns)}</td>
-                            </tr>
-                          ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-                {adaptationMetrics?.recent && adaptationMetrics.recent.length > 0 && (
-                  <div>
-                    <p className="text-xs font-semibold opacity-70 mb-2">{t('metrics.resumeAdaptationRecent')}</p>
-                    <div className="space-y-2 max-h-32 overflow-y-auto">
-                      {adaptationMetrics.recent.slice().reverse().map((entry, index) => (
-                        <div key={`${entry.timestamp || 'entry'}-${index}`} className="bg-rose-100 dark:bg-rose-900/30 rounded-lg p-2 text-xs">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="font-mono">{entry.provider || 'unknown'}</span>
-                            <span className="opacity-60">{entry.timestamp ? formatDateTime(entry.timestamp) : 'N/A'}</span>
-                          </div>
-                          <div className="mt-1 opacity-80">
-                            {entry.event || 'run'} | {t('metrics.matchRuns')}: {safeNumber(entry.matchRuns)} | {t('metrics.successFailures')}: {safeNumber(entry.successfulRuns)} / {safeNumber(entry.failedRuns)}
-                          </div>
-                          <div className="mt-1 opacity-70">
-                            {t('metrics.structuredFallback')}: {safeNumber(entry.structuredRuns)} / {safeNumber(entry.fallbackRuns)}
-                            {entry.source ? ` | ${t('metrics.source')}: ${entry.source}` : ''}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </motion.div>
+              <OperationLLMCard
+                metrics={adaptationMetrics}
+                successRatio={adaptationSuccessRatio}
+                mode="adaptation"
+                t={t}
+                safeNumber={safeNumber}
+                formatNumber={formatNumber}
+              />
             </div>
           )}
 
@@ -1418,104 +884,13 @@ const MetricsPage = (): JSX.Element => {
               </motion.div>
             </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="rounded-xl border bg-blue-50 text-blue-600 border-blue-200 dark:bg-gray-800 dark:text-blue-400 dark:border-blue-700 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <p className="text-sm font-medium opacity-80">{t('metrics.httpMethods')}</p>
-                  <p className="text-2xl font-bold mt-1">{formatNumber(safeNumber(metrics.requests?.total))}</p>
-                  <p className="text-xs mt-1 opacity-60">{t('metrics.totalApiRequests')}</p>
-                </div>
-                <ChartBarIcon className="w-10 h-10 opacity-50" />
-              </div>
-              <div className="space-y-2">
-                {metrics.requests?.byMethod && Object.entries(metrics.requests.byMethod).map(([method, count]) => (
-                  <ProgressBar key={method} label={method} value={safeNumber(count)} max={safeNumber(metrics.requests?.total, 1)} color={method === 'GET' ? 'blue' : method === 'POST' ? 'green' : method === 'PUT' ? 'yellow' : 'red'} />
-                ))}
-              </div>
-            </motion.div>
-
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="rounded-xl border bg-yellow-50 text-yellow-600 border-yellow-200 dark:bg-gray-800 dark:text-yellow-400 dark:border-yellow-700 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <p className="text-sm font-medium opacity-80">{t('metrics.httpStatus')}</p>
-                  <p className="text-2xl font-bold mt-1">{formatNumber(safeNumber(metrics.requests?.byStatus?.['2xx']))}</p>
-                  <p className="text-xs mt-1 opacity-60">{t('metrics.successfulRequests')}</p>
-                </div>
-                <ExclamationTriangleIcon className="w-10 h-10 opacity-50" />
-              </div>
-              <div className="space-y-2">
-                {metrics.requests?.byStatus && Object.entries(metrics.requests.byStatus).sort(([a], [b]) => a.localeCompare(b)).map(([status, count]) => (
-                  <ProgressBar key={status} label={status} value={safeNumber(count)} max={safeNumber(metrics.requests?.total, 1)} color={status.startsWith('2') ? 'green' : status.startsWith('3') ? 'blue' : status.startsWith('4') ? 'yellow' : 'red'} />
-                ))}
-              </div>
-            </motion.div>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="rounded-xl border bg-purple-50 text-purple-600 border-purple-200 dark:bg-gray-800 dark:text-purple-400 dark:border-purple-700 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <p className="text-sm font-medium opacity-80">{t('metrics.llmUsage')}</p>
-                  <p className="text-2xl font-bold mt-1">{formatNumber(safeNumber(metrics.llm?.requests))}</p>
-                  <p className="text-xs mt-1 opacity-60">{t('metrics.llmCalls')}</p>
-                </div>
-                <SparklesIcon className="w-10 h-10 opacity-50" />
-              </div>
-              <div className="grid grid-cols-2 gap-4 text-sm mb-4">
-                <div className="bg-purple-100 dark:bg-purple-900/30 rounded-lg p-3"><p className="opacity-70">{t('metrics.tokensConsumed')}</p><p className="font-semibold">{formatNumber(safeNumber(metrics.llm?.totalTokens))}</p></div>
-                <div className="bg-purple-100 dark:bg-purple-900/30 rounded-lg p-3"><p className="opacity-70">{t('metrics.estimatedCost')}</p><p className="font-semibold">${parseFloat(String(metrics.llm?.estimatedCost || 0)).toFixed(2)}</p></div>
-              </div>
-              {metrics.llm?.byProvider && Object.keys(metrics.llm.byProvider).length > 0 && (
-                <div className="overflow-x-auto max-h-48">
-                  <table className="w-full text-sm">
-                    <thead><tr className="border-b border-purple-200 dark:border-purple-700"><th className="text-left py-2 px-2 font-medium opacity-70">{t('metrics.model')}</th><th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.calls')}</th></tr></thead>
-                    <tbody>
-                      {Object.entries(metrics.llm.byProvider)
-                        .sort(([, a], [, b]) => {
-                          const countA = typeof a === 'object' ? (a.requests || 0) : (a || 0);
-                          const countB = typeof b === 'object' ? (b.requests || 0) : (b || 0);
-                          return countB - countA;
-                        })
-                        .map(([model, stats]) => {
-                          const count = typeof stats === 'object' ? (stats.requests || 0) : (stats || 0);
-                          return (
-                            <tr key={model} className="border-b border-purple-100 dark:border-purple-800">
-                              <td className="py-2 px-2 font-mono text-xs truncate max-w-[200px]">{model}</td>
-                              <td className="py-2 px-2 text-right font-semibold">{formatNumber(count)}</td>
-                            </tr>
-                          );
-                        })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </motion.div>
-
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="rounded-xl border bg-cyan-50 text-cyan-600 border-cyan-200 dark:bg-gray-800 dark:text-cyan-400 dark:border-cyan-700 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <p className="text-sm font-medium opacity-80">{t('metrics.topEndpoints')}</p>
-                  <p className="text-2xl font-bold mt-1">{metrics.requests?.topEndpoints?.length || 0}</p>
-                  <p className="text-xs mt-1 opacity-60">{t('metrics.activeEndpoints')}</p>
-                </div>
-                <ServerIcon className="w-10 h-10 opacity-50" />
-              </div>
-              <div className="overflow-x-auto max-h-48">
-                <table className="w-full text-sm">
-                  <thead><tr className="border-b border-cyan-200 dark:border-cyan-700"><th className="text-left py-2 px-2 font-medium opacity-70">{t('metrics.route')}</th><th className="text-right py-2 px-2 font-medium opacity-70">{t('metrics.calls')}</th></tr></thead>
-                  <tbody>
-                    {metrics.requests?.topEndpoints?.slice(0, 5).map((endpoint, index) => (
-                      <tr key={index} className="border-b border-cyan-100 dark:border-cyan-800">
-                        <td className="py-2 px-2 font-mono text-xs truncate max-w-[200px]">{endpoint.endpoint || endpoint.path || 'N/A'}</td>
-                        <td className="py-2 px-2 text-right font-semibold">{formatNumber(safeNumber(endpoint.count))}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </motion.div>
-          </div>
+          <HttpTrafficCards
+            metrics={metrics}
+            ProgressBar={ProgressBar}
+            t={t}
+            safeNumber={safeNumber}
+            formatNumber={formatNumber}
+          />
         </>
       ) : (
         <div className="text-center py-12">

@@ -3,7 +3,7 @@
  * TypeScript version
  */
 
-import { useState, useEffect, useCallback, ForwardRefExoticComponent, RefAttributes, SVGProps } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
@@ -13,9 +13,13 @@ import { useChatbot } from '../context/ChatbotContext';
 import logger from '../utils/logger.frontend';
 
 import { LLMTab, PromptsTab, WeightsTab, ChatbotTab, GdprTab, DpoTab } from '../components/SettingsPage';
+import SettingsHeader from '../components/SettingsPage/SettingsHeader';
+import SettingsTabsNav, { type SettingsTabItem } from '../components/SettingsPage/SettingsTabsNav';
+import SettingsApiDocsPanel from '../components/SettingsPage/SettingsApiDocsPanel';
+import SettingsActionsFooter from '../components/SettingsPage/SettingsActionsFooter';
 
-type HeroIcon = ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, 'ref'> & { title?: string; titleId?: string } & RefAttributes<SVGSVGElement>>;
 type LLMProvider = 'openai' | 'anthropic' | 'deepseek' | 'glm' | 'minimax' | 'ollama';
+
 interface Settings {
   id?: string;
   llmProvider?: LLMProvider;
@@ -79,11 +83,6 @@ interface SettingsFormData {
   [key: string]: string | number | boolean;
 }
 
-interface Tab {
-  id: string;
-  name: string;
-  icon: HeroIcon;
-}
 
 const defaultFormData: SettingsFormData = {
   llmProvider: 'openai',
@@ -310,7 +309,7 @@ const SettingsPage = (): JSX.Element => {
     );
   }
 
-  const tabs: Tab[] = [
+  const tabs: SettingsTabItem[] = [
     { id: 'llm', name: t('settings.tabs.llm'), icon: SparklesIcon },
     { id: 'prompts', name: t('settings.tabs.prompts'), icon: Cog6ToothIcon },
     { id: 'weights', name: t('settings.tabs.weights'), icon: ScaleIcon },
@@ -335,42 +334,13 @@ const SettingsPage = (): JSX.Element => {
       transition={{ duration: 0.5 }}
       className="p-6 max-w-6xl mx-auto"
     >
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-1">
-          <div className="w-1 h-8 rounded-full bg-primary-500" />
-          <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-gray-100">
-            {t('settings.title')}
-          </h1>
-        </div>
-        <p className="text-gray-500 dark:text-gray-400 ml-[1.75rem]">
-          {t('settings.subtitle')}
-        </p>
-      </div>
+      <SettingsHeader t={t} />
 
-      <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
-        <nav className="-mb-px flex flex-wrap gap-x-1 gap-y-1">
-          {tabs.map((tab) => {
-            const IconComponent = tab.icon;
-            const isActive = activeTab === tab.id;
-
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={
-                  `flex items-center py-2 px-1.5 border-b-2 font-medium text-[11px] leading-tight ${isActive
-                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                  }`
-                }
-              >
-                <IconComponent className="w-3.5 h-3.5 mr-1 flex-shrink-0" />
-                {tab.name}
-              </button>
-            );
-          })}
-        </nav>
-      </div>
+      <SettingsTabsNav
+        tabs={tabs}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+      />
 
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 overflow-visible">
         {activeTab === 'llm' && (
@@ -408,68 +378,15 @@ const SettingsPage = (): JSX.Element => {
         )}
 
         {activeTab === 'swagger' && (
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
-                {t('settings.apiDocs.title')}
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-4">
-                {t('settings.apiDocs.description')}
-              </p>
-            </div>
-
-            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="font-medium text-gray-900 dark:text-gray-100">{t('settings.apiDocs.swaggerUi')}</h4>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    {t('settings.apiDocs.swaggerUiDescription')}
-                  </p>
-                </div>
-                <button
-                  onClick={() => window.open(`/api/docs/ui?v=${Date.now()}`, '_blank')}
-                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium text-sm"
-                >
-                  <DocumentTextIcon className="w-5 h-5 mr-2" />
-                  {t('settings.apiDocs.openSwagger')}
-                </button>
-              </div>
-            </div>
-
-            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="font-medium text-gray-900 dark:text-gray-100">{t('settings.apiDocs.openApiJson')}</h4>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    {t('settings.apiDocs.openApiJsonDescription')}
-                  </p>
-                </div>
-                <button
-                  onClick={() => window.open(`/api/docs?v=${Date.now()}`, '_blank')}
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-100 dark:hover:bg-gray-600 font-medium text-sm"
-                >
-                  {t('settings.apiDocs.viewJson')}
-                </button>
-              </div>
-            </div>
-          </div>
+          <SettingsApiDocsPanel t={t} />
         )}
 
-        <div className="mt-8 flex items-center justify-between pt-6 border-t border-gray-200 dark:border-gray-700">
-          <button
-            onClick={resetToDefaults}
-            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
-          >
-            {t('settings.reset')}
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className={`btn btn-primary px-6 py-2 font-medium ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}
-          >
-            {saving ? t('settings.saving') : t('settings.save')}
-          </button>
-        </div>
+        <SettingsActionsFooter
+          saving={saving}
+          onReset={resetToDefaults}
+          onSave={handleSave}
+          t={t}
+        />
       </div>
     </motion.div>
   );

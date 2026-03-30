@@ -1,18 +1,11 @@
-﻿/**
- * ResumeAnalysisPage Component
- * Dedicated page for resume analysis step
- */
-
-import { useEffect, useState, useCallback } from 'react';
+﻿import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import { useResume } from '../context/ResumeContext';
-import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { ArrowRightIcon, ArrowLeftIcon, SparklesIcon, CheckCircleIcon, ShareIcon, ArrowDownTrayIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import ShareQRCodeModal from '../components/ShareQRCodeModal';
 import { fetchWithAuth, createAuthOptionsWithCsrf } from '../utils/apiInterceptor';
-import ConsentBadge, { ConsentStatus } from '../components/ConsentBadge';
-import { Resume } from '../types/entities';
+import type { Resume } from '../types/entities';
 import { resumeService } from '../utils/resumeService';
 import { templateService } from '../utils/templateService';
 import toast from 'react-hot-toast';
@@ -20,12 +13,13 @@ import logger from '../utils/logger.frontend';
 import { SkeletonCard } from '../components/ui/Skeleton';
 import ImprovementAnimation from '../components/ImprovementAnimation';
 import { removeSuggestionMarkers } from '../utils/tinymceSuggestionsPlugin';
-
 import OverviewTab from '../components/ResumeAnalysis/OverviewTab';
 import SkillsTagsTab from '../components/ResumeAnalysis/SkillsTagsTab';
 import OriginalTextTab from '../components/ResumeAnalysis/OriginalTextTab';
 import PipelineTab from '../components/ResumeAnalysis/PipelineTab';
 import ResumeComments from '../components/ResumeComments';
+import ResumeAnalysisHeader from '../components/ResumeAnalysisPage/ResumeAnalysisHeader';
+import ResumeAnalysisStepIndicator from '../components/ResumeAnalysisPage/ResumeAnalysisStepIndicator';
 
 const ResumeAnalysisPage = (): JSX.Element => {
   const { id } = useParams<{ id: string }>();
@@ -34,7 +28,15 @@ const ResumeAnalysisPage = (): JSX.Element => {
   const fromDealsView = (location.state as { from?: string } | null)?.from === 'dealsGroupedView'
     || sessionStorage.getItem('dealsGroupedViewState') !== null;
   const { t } = useTranslation();
-  const { currentResume, setCurrentResume, resumes, improveCurrentResume, loading: _contextLoading, processingStep } = useResume();
+  const {
+    currentResume,
+    setCurrentResume,
+    resumes,
+    improveCurrentResume,
+    loading: _contextLoading,
+    processingStep
+  } = useResume();
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'skills' | 'original' | 'pipeline'>('overview');
@@ -42,6 +44,7 @@ const ResumeAnalysisPage = (): JSX.Element => {
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareUrl, setShareUrl] = useState<string>('');
   const [shareLoading, setShareLoading] = useState(false);
+
   const hasImprovedText = !!currentResume?.['Improved Text'];
 
   useEffect(() => {
@@ -54,15 +57,13 @@ const ResumeAnalysisPage = (): JSX.Element => {
 
       logger.info('[ResumeAnalysisPage] Loading resume:', id);
 
-      // Check if currentResume already matches the ID
       if (currentResume?.id === id) {
         logger.info('[ResumeAnalysisPage] Resume already loaded in context');
         setLoading(false);
         return;
       }
 
-      // Check in resumes list
-      const existingResume = resumes.find(r => r.id === id);
+      const existingResume = resumes.find((resume) => resume.id === id);
       if (existingResume) {
         logger.info('[ResumeAnalysisPage] Found resume in resumes list');
         setCurrentResume(existingResume);
@@ -70,7 +71,6 @@ const ResumeAnalysisPage = (): JSX.Element => {
         return;
       }
 
-      // Fetch from API
       try {
         logger.info('[ResumeAnalysisPage] Fetching resume from API');
         const resume = await resumeService.getResume(id);
@@ -90,31 +90,29 @@ const ResumeAnalysisPage = (): JSX.Element => {
     };
 
     loadResume();
-  }, [id, currentResume?.id, resumes, setCurrentResume, t]);
+  }, [currentResume?.id, id, resumes, setCurrentResume, t]);
 
-  // IMPORTANT: All hooks must be called before any conditional returns
   const handleImprove = useCallback(async () => {
-    logger.info('[ResumeAnalysisPage] handleImprove called', { 
-      hasCurrentResume: !!currentResume, 
+    logger.info('[ResumeAnalysisPage] handleImprove called', {
+      hasCurrentResume: !!currentResume,
       isImproving,
-      resumeId: currentResume?.id 
+      resumeId: currentResume?.id
     });
-    
+
     if (!currentResume) {
       logger.error('[ResumeAnalysisPage] No currentResume available for improvement');
-      toast.error('CV non chargÃ©. Veuillez rafraÃ®chir la page.');
+      toast.error('CV non chargé. Veuillez rafraîchir la page.');
       return;
     }
-    
+
     if (isImproving) {
       logger.warn('[ResumeAnalysisPage] Already improving, ignoring click');
       return;
     }
-    
+
     setIsImproving(true);
     logger.info('[ResumeAnalysisPage] isImproving set to true');
-    
-    // Use setTimeout to ensure React renders the animation before starting the async operation
+
     setTimeout(async () => {
       try {
         logger.info('[ResumeAnalysisPage] Starting improvement for resume:', currentResume.id);
@@ -129,15 +127,16 @@ const ResumeAnalysisPage = (): JSX.Element => {
         setIsImproving(false);
       }
     }, 100);
-  }, [currentResume, isImproving, improveCurrentResume, t, navigate, id]);
+  }, [currentResume, id, improveCurrentResume, isImproving, navigate, t]);
 
-  // Share improved PDF when available, otherwise share the original file
   const handleShare = useCallback(async () => {
-    if (!id || !currentResume) return;
-    
+    if (!id || !currentResume) {
+      return;
+    }
+
     setShareLoading(true);
     setShowShareModal(true);
-    
+
     try {
       if (hasImprovedText) {
         const templates = await templateService.getAllTemplates();
@@ -186,7 +185,6 @@ const ResumeAnalysisPage = (): JSX.Element => {
         });
 
         const data = await response.json();
-
         if (data.success && data.token) {
           setShareUrl(`${window.location.origin}/share/pdf/${data.token}`);
           return;
@@ -199,7 +197,7 @@ const ResumeAnalysisPage = (): JSX.Element => {
 
       const response = await fetchWithAuth(`/api/share/resume/${id}/original`);
       const data = await response.json();
-      
+
       if (data.success && data.token) {
         setShareUrl(`${window.location.origin}/share/file/${data.token}`);
       } else {
@@ -213,9 +211,8 @@ const ResumeAnalysisPage = (): JSX.Element => {
     } finally {
       setShareLoading(false);
     }
-  }, [id, currentResume, hasImprovedText, t]);
+  }, [currentResume, hasImprovedText, id, t]);
 
-  // Loading state
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
@@ -226,7 +223,6 @@ const ResumeAnalysisPage = (): JSX.Element => {
     );
   }
 
-  // Error state
   if (error || !currentResume) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
@@ -240,7 +236,6 @@ const ResumeAnalysisPage = (): JSX.Element => {
     );
   }
 
-  // Show improvement animation when actively improving
   if (isImproving) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
@@ -256,7 +251,6 @@ const ResumeAnalysisPage = (): JSX.Element => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
       <div className="max-w-7xl mx-auto px-4">
-        {/* Back to deals view */}
         {fromDealsView && (
           <button
             onClick={() => navigate('/resumes', { state: { viewMode: 'byDeal' } })}
@@ -266,153 +260,28 @@ const ResumeAnalysisPage = (): JSX.Element => {
             {t('resumes.backToDealsView')}
           </button>
         )}
-        {/* Header with navigation */}
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6"
-        >
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-3">
-                <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 truncate max-w-[250px] sm:max-w-none">
-                  {resumeName}
-                </h1>
-                {currentResume?.consent_status && (
-                  <ConsentBadge
-                    status={currentResume.consent_status as ConsentStatus}
-                    candidateName={currentResume?.candidate_name as string | undefined}
-                    candidateEmail={currentResume?.candidate_email as string | undefined}
-                    consentTokenExpiresAt={currentResume?.consent_token_expires_at as string | null | undefined}
-                    retentionUntil={currentResume?.retention_until as string | null | undefined}
-                    compact={true}
-                  />
-                )}
-              </div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                {t('resume.analysis.title')}
-              </p>
-            </div>
-            
-            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-              {/* Share button */}
-              <button
-                onClick={handleShare}
-                className="btn btn-secondary inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 text-sm sm:text-base"
-                title={t('share.button')}
-              >
-                <ShareIcon className="w-4 h-4 sm:w-5 sm:h-5" />
-                <span className="hidden sm:inline">{t('share.button')}</span>
-              </button>
-              
-              {hasImprovedText ? (
-                <Link
-                  to={`/resumes/${id}/improve`}
-                  className="inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 border border-green-600 dark:border-green-500 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/50 rounded-lg font-medium transition-colors text-sm sm:text-base"
-                >
-                  <CheckCircleIcon className="w-4 h-4 sm:w-5 sm:h-5" />
-                  <span className="hidden xs:inline">{t('resume.actions.viewImproved')}</span>
-                  <span className="xs:hidden">{t('resume.actions.view')}</span>
-                  <ArrowRightIcon className="w-4 h-4" />
-                </Link>
-              ) : (
-                <button
-                  onClick={handleImprove}
-                  className="btn btn-primary inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 text-sm sm:text-base"
-                >
-                  <SparklesIcon className="w-4 h-4 sm:w-5 sm:h-5" />
-                  {t('resume.actions.improve')}
-                  <ArrowRightIcon className="w-4 h-4" />
-                </button>
-              )}
-              {/* Export button - always available after analysis */}
-              <Link
-                to={`/resumes/${id}/export`}
-                className="btn btn-secondary inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 text-sm sm:text-base"
-              >
-                {t('resume.actions.export')}
-                <ArrowRightIcon className="w-4 h-4" />
-              </Link>
-            </div>
-          </div>
-        </motion.div>
 
-        {/* Step indicator */}
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="mb-6"
-        >
-          <div className="flex items-center">
-            {/* Step 1 - Analysis (active) */}
-            <div className="flex items-center gap-2">
-              <motion.div
-                className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center shadow-md shadow-indigo-500/25"
-                animate={{ scale: [1, 1.1, 1] }}
-                transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-              >
-                <MagnifyingGlassIcon className="w-4 h-4 text-white" />
-              </motion.div>
-              <span className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">
-                {t('resume.steps.analysis')}
-              </span>
-            </div>
+        {id && (
+          <ResumeAnalysisHeader
+            resume={currentResume}
+            resumeName={resumeName}
+            resumeId={id}
+            hasImprovedText={hasImprovedText}
+            onShare={handleShare}
+            onImprove={handleImprove}
+            t={t}
+          />
+        )}
 
-            {/* Connector 1->2 */}
-            <div className="w-10 sm:w-16 h-[3px] mx-2 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700">
-              <motion.div
-                className="h-full rounded-full bg-gradient-to-r from-indigo-400 to-emerald-500"
-                initial={false}
-                animate={{ width: hasImprovedText ? '100%' : '30%' }}
-                transition={{ duration: 0.6, ease: 'easeOut' }}
-              />
-            </div>
+        {id && (
+          <ResumeAnalysisStepIndicator
+            resumeId={id}
+            hasImprovedText={hasImprovedText}
+            onImprove={handleImprove}
+            t={t}
+          />
+        )}
 
-            {/* Step 2 - Improve */}
-            {hasImprovedText ? (
-              <Link to={`/resumes/${id}/improve`} className="flex items-center gap-2 group">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-green-600 flex items-center justify-center shadow-sm shadow-green-500/20">
-                  <CheckCircleIcon className="w-4 h-4 text-white" />
-                </div>
-                <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400 group-hover:underline">
-                  {t('resume.steps.improve')} âœ“
-                </span>
-              </Link>
-            ) : (
-              <button onClick={handleImprove} className="flex items-center gap-2 group">
-                <div className="w-8 h-8 rounded-full border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center group-hover:border-indigo-400 transition-colors">
-                  <SparklesIcon className="w-4 h-4 text-gray-400 dark:text-gray-500 group-hover:text-indigo-500 transition-colors" />
-                </div>
-                <span className="text-sm text-gray-500 dark:text-gray-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                  {t('resume.steps.improve')}
-                </span>
-              </button>
-            )}
-
-            {/* Connector 2->3 */}
-            <div className="w-10 sm:w-16 h-[3px] mx-2 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700">
-              <motion.div
-                className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-purple-500"
-                initial={false}
-                animate={{ width: hasImprovedText ? '60%' : '0%' }}
-                transition={{ duration: 0.6, ease: 'easeOut' }}
-              />
-            </div>
-
-            {/* Step 3 - Export */}
-            <Link to={`/resumes/${id}/export`} className="flex items-center gap-2 group">
-              <div className="w-8 h-8 rounded-full border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center group-hover:border-purple-400 transition-colors">
-                <ArrowDownTrayIcon className="w-4 h-4 text-gray-400 dark:text-gray-500 group-hover:text-purple-500 transition-colors" />
-              </div>
-              <span className="text-sm text-gray-500 dark:text-gray-400 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
-                {t('resume.steps.export')}
-              </span>
-            </Link>
-          </div>
-        </motion.div>
-
-        {/* Tabs */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
           <div className="border-b border-gray-200 dark:border-gray-700">
             <nav className="flex -mb-px">
@@ -462,9 +331,7 @@ const ResumeAnalysisPage = (): JSX.Element => {
           <div className="p-6">
             {activeTab === 'overview' && <OverviewTab resume={currentResume} t={t} />}
             {activeTab === 'skills' && <SkillsTagsTab resume={currentResume} />}
-            {activeTab === 'original' && (
-              <OriginalTextTab resume={currentResume} />
-            )}
+            {activeTab === 'original' && <OriginalTextTab resume={currentResume} />}
             {activeTab === 'pipeline' && id && (
               <PipelineTab
                 resumeId={id}
@@ -474,7 +341,6 @@ const ResumeAnalysisPage = (): JSX.Element => {
           </div>
         </div>
 
-        {/* Comments section */}
         {id && (
           <div className="mt-6">
             <ResumeComments resumeId={id} />
@@ -482,7 +348,6 @@ const ResumeAnalysisPage = (): JSX.Element => {
         )}
       </div>
 
-      {/* Share QR Code Modal */}
       <ShareQRCodeModal
         isOpen={showShareModal}
         onClose={() => setShowShareModal(false)}
@@ -497,5 +362,3 @@ const ResumeAnalysisPage = (): JSX.Element => {
 };
 
 export default ResumeAnalysisPage;
-
-

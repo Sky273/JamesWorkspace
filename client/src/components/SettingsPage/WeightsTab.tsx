@@ -1,9 +1,4 @@
-/**
- * Weights Configuration Tab for Settings Page
- * TypeScript version
- */
-
-import { ChangeEvent } from 'react';
+﻿import WeightGroupSection from './WeightGroupSection';
 
 interface FormData {
   'Executive Summary Weight': number;
@@ -22,55 +17,12 @@ interface FormData {
   [key: string]: string | number | boolean;
 }
 
-interface WeightSliderProps {
-  label: string;
-  value: number;
-  onChange: (value: string) => void;
-}
-
 interface WeightsTabProps {
   formData: FormData;
   onInputChange: (key: string, value: string) => void;
   totalWeight: number;
   t: (key: string, options?: Record<string, unknown>) => string;
 }
-
-const WeightSlider = ({ label, value, onChange }: WeightSliderProps): JSX.Element => {
-  const handleRangeChange = (e: ChangeEvent<HTMLInputElement>): void => {
-    onChange(e.target.value);
-  };
-
-  const handleNumberChange = (e: ChangeEvent<HTMLInputElement>): void => {
-    onChange(e.target.value);
-  };
-
-  return (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-        {label}
-      </label>
-      <div className="flex items-center space-x-4">
-        <input
-          type="range"
-          min="0"
-          max="50"
-          value={value}
-          onChange={handleRangeChange}
-          className="flex-1"
-        />
-        <input
-          type="number"
-          min="0"
-          max="100"
-          value={value}
-          onChange={handleNumberChange}
-          className="w-20 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-        />
-        <span className="text-gray-600 dark:text-gray-400">%</span>
-      </div>
-    </div>
-  );
-};
 
 const WeightsTab = ({ formData, onInputChange, totalWeight, t }: WeightsTabProps): JSX.Element => {
   const weights: Array<{ key: string; label: string }> = [
@@ -81,6 +33,7 @@ const WeightsTab = ({ formData, onInputChange, totalWeight, t }: WeightsTabProps
     { key: 'ATS Weight', label: t('settings.weights.ats') },
     { key: 'Hobbies Languages Weight', label: t('settings.weights.hobbiesLanguages') }
   ];
+
   const profileMatchingWeights: Array<{ key: string; label: string }> = [
     { key: 'Profile Matching Local Skill Weight', label: t('settings.weights.profileMatchingSkill') },
     { key: 'Profile Matching Local Tool Weight', label: t('settings.weights.profileMatchingTool') },
@@ -102,33 +55,28 @@ const WeightsTab = ({ formData, onInputChange, totalWeight, t }: WeightsTabProps
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {weights.map(({ key, label }) => (
-          <WeightSlider
-            key={key}
-            label={label}
-            value={formData[key] as number}
-            onChange={(value) => onInputChange(key, value)}
-          />
-        ))}
-      </div>
+      <WeightGroupSection
+        weights={weights}
+        formData={formData}
+        onInputChange={onInputChange}
+      />
 
       <div className={`p-4 rounded-lg ${
-        totalWeight === 100 
-          ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800' 
+        totalWeight === 100
+          ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
           : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
       }`}>
         <div className="flex items-center justify-between">
           <span className={`font-medium ${
-            totalWeight === 100 
-              ? 'text-green-800 dark:text-green-300' 
+            totalWeight === 100
+              ? 'text-green-800 dark:text-green-300'
               : 'text-red-800 dark:text-red-300'
           }`}>
             {t('settings.weights.total')}
           </span>
           <span className={`text-2xl font-bold ${
-            totalWeight === 100 
-              ? 'text-green-600 dark:text-green-400' 
+            totalWeight === 100
+              ? 'text-green-600 dark:text-green-400'
               : 'text-red-600 dark:text-red-400'
           }`}>
             {totalWeight}%
@@ -142,23 +90,13 @@ const WeightsTab = ({ formData, onInputChange, totalWeight, t }: WeightsTabProps
       </div>
 
       <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-          {t('settings.weights.localRankingTitle')}
-        </h3>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-          {t('settings.weights.localRankingDescription')}
-        </p>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {profileMatchingWeights.map(({ key, label }) => (
-            <WeightSlider
-              key={key}
-              label={label}
-              value={formData[key] as number}
-              onChange={(value) => onInputChange(key, value)}
-            />
-          ))}
-        </div>
+        <WeightGroupSection
+          title={t('settings.weights.localRankingTitle')}
+          description={t('settings.weights.localRankingDescription')}
+          weights={profileMatchingWeights}
+          formData={formData}
+          onInputChange={onInputChange}
+        />
       </div>
     </div>
   );

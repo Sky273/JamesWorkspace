@@ -1,4 +1,6 @@
-import { ChangeEvent, useMemo } from 'react';
+﻿import { ChangeEvent, useMemo } from 'react';
+import LLMProviderModelSection from './LLMProviderModelSection';
+import LLMPresentationPreferences from './LLMPresentationPreferences';
 
 interface FormData {
   llmProvider: 'openai' | 'anthropic' | 'deepseek' | 'glm' | 'minimax' | 'ollama';
@@ -62,11 +64,6 @@ const MINIMAX_HIGHSPEED_MODELS = [
   'MiniMax-M2.1-highspeed'
 ];
 
-const fallbackText = (t: (key: string) => string, key: string, fallback: string): string => {
-  const translated = t(key);
-  return translated === key ? fallback : translated;
-};
-
 const LLMTab = ({
   formData,
   onInputChange,
@@ -78,55 +75,70 @@ const LLMTab = ({
   const providerRuntimeUnavailableModels = llmAvailability?.[provider]?.runtimeUnavailableModels || [];
   const minimaxRuntimeUnavailableModels = llmAvailability?.minimax?.runtimeUnavailableModels || [];
 
-  const providerOptions = useMemo(() => ([
-    { value: 'openai', label: 'OpenAI' },
-    { value: 'anthropic', label: 'Anthropic' },
-    { value: 'deepseek', label: 'DeepSeek' },
-    { value: 'glm', label: 'GLM (Z.AI)' },
-    { value: 'minimax', label: 'MiniMax' },
-    { value: 'ollama', label: 'Ollama' }
-  ]), []);
+  const providerOptions = useMemo(
+    () => [
+      { value: 'openai', label: 'OpenAI' },
+      { value: 'anthropic', label: 'Anthropic' },
+      { value: 'deepseek', label: 'DeepSeek' },
+      { value: 'glm', label: 'GLM (Z.AI)' },
+      { value: 'minimax', label: 'MiniMax' },
+      { value: 'ollama', label: 'Ollama' }
+    ],
+    []
+  );
 
   const minimaxModels = useMemo(() => {
-    const availableStandardModels = MINIMAX_STANDARD_MODELS.filter(model => !minimaxRuntimeUnavailableModels.includes(model));
+    const availableStandardModels = MINIMAX_STANDARD_MODELS.filter(
+      (model) => !minimaxRuntimeUnavailableModels.includes(model)
+    );
+
     if (minimaxHighspeedEnabled) {
       return [
         ...availableStandardModels,
-        ...MINIMAX_HIGHSPEED_MODELS.filter(model => !minimaxRuntimeUnavailableModels.includes(model))
+        ...MINIMAX_HIGHSPEED_MODELS.filter((model) => !minimaxRuntimeUnavailableModels.includes(model))
       ];
     }
+
     return availableStandardModels;
   }, [minimaxHighspeedEnabled, minimaxRuntimeUnavailableModels]);
 
   const modelOptions = useMemo(() => {
     if (provider === 'anthropic') {
-      return ANTHROPIC_MODELS.filter(model => !providerRuntimeUnavailableModels.includes(model));
+      return ANTHROPIC_MODELS
+        .filter((model) => !providerRuntimeUnavailableModels.includes(model))
+        .map((model) => ({ value: model, label: model }));
     }
+
     if (provider === 'deepseek') {
-      return DEEPSEEK_MODELS.filter(model => !providerRuntimeUnavailableModels.includes(model.value));
+      return DEEPSEEK_MODELS.filter((model) => !providerRuntimeUnavailableModels.includes(model.value));
     }
+
     if (provider === 'glm') {
-      return GLM_MODELS.filter(model => !providerRuntimeUnavailableModels.includes(model.value));
+      return GLM_MODELS.filter((model) => !providerRuntimeUnavailableModels.includes(model.value));
     }
+
     if (provider === 'minimax') {
-      return minimaxModels;
+      return minimaxModels.map((model) => ({ value: model, label: model }));
     }
-    return OPENAI_MODELS.filter(model => !providerRuntimeUnavailableModels.includes(model));
+
+    return OPENAI_MODELS
+      .filter((model) => !providerRuntimeUnavailableModels.includes(model))
+      .map((model) => ({ value: model, label: model }));
   }, [provider, minimaxModels, providerRuntimeUnavailableModels]);
 
-  const handleProviderChange = (e: ChangeEvent<HTMLSelectElement>): void => {
-    const nextProvider = e.target.value as 'openai' | 'anthropic' | 'deepseek' | 'glm' | 'minimax' | 'ollama';
+  const handleProviderChange = (event: ChangeEvent<HTMLSelectElement>): void => {
+    const nextProvider = event.target.value as FormData['llmProvider'];
     onInputChange('llmProvider', nextProvider);
 
     if (nextProvider === 'anthropic' && !ANTHROPIC_MODELS.includes(formData.llmModel)) {
       onInputChange('llmModel', 'claude-sonnet-4-20250514');
     }
 
-    if (nextProvider === 'deepseek' && !DEEPSEEK_MODELS.some(model => model.value === formData.llmModel)) {
+    if (nextProvider === 'deepseek' && !DEEPSEEK_MODELS.some((model) => model.value === formData.llmModel)) {
       onInputChange('llmModel', 'deepseek-chat');
     }
 
-    if (nextProvider === 'glm' && !GLM_MODELS.some(model => model.value === formData.llmModel)) {
+    if (nextProvider === 'glm' && !GLM_MODELS.some((model) => model.value === formData.llmModel)) {
       onInputChange('llmModel', 'glm-5.1');
     }
 
@@ -143,159 +155,74 @@ const LLMTab = ({
     }
   };
 
-  const handleModelChange = (e: ChangeEvent<HTMLSelectElement>): void => {
-    onInputChange('llmModel', e.target.value);
+  const handleModelChange = (event: ChangeEvent<HTMLSelectElement>): void => {
+    onInputChange('llmModel', event.target.value);
   };
 
-  const currentModelLabel = useMemo(() => {
-    if (provider === 'deepseek') {
-      return DEEPSEEK_MODELS.find(model => model.value === formData.llmModel)?.label || formData.llmModel;
-    }
-    if (provider === 'glm') {
-      return GLM_MODELS.find(model => model.value === formData.llmModel)?.label || formData.llmModel;
-    }
-    return formData.llmModel;
-  }, [provider, formData.llmModel]);
-
-  const handleCvModeChange = (e: ChangeEvent<HTMLSelectElement>): void => {
-    onInputChange('cvMode', e.target.value);
+  const handleCvModeChange = (event: ChangeEvent<HTMLSelectElement>): void => {
+    onInputChange('cvMode', event.target.value);
   };
 
   const handleWebglToggle = (): void => {
     onInputChange('webglEnabled', formData.webglEnabled === 'on' ? 'off' : 'on');
   };
 
-  const handleTextChange = (field: string) => (e: ChangeEvent<HTMLInputElement>): void => {
-    onInputChange(field, e.target.value);
+  const handleTextChange = (field: string) => (event: ChangeEvent<HTMLInputElement>): void => {
+    onInputChange(field, event.target.value);
+  };
+
+  const currentModelLabel = useMemo(() => {
+    if (provider === 'deepseek') {
+      return DEEPSEEK_MODELS.find((model) => model.value === formData.llmModel)?.label || formData.llmModel;
+    }
+    if (provider === 'glm') {
+      return GLM_MODELS.find((model) => model.value === formData.llmModel)?.label || formData.llmModel;
+    }
+    return formData.llmModel;
+  }, [formData.llmModel, provider]);
+
+  const providerDescription =
+    provider === 'ollama'
+      ? t('settings.llm.ollamaDescription')
+      : provider === 'deepseek'
+        ? t('settings.llm.deepseekDescription')
+        : provider === 'glm'
+          ? t('settings.llm.glmDescription')
+          : provider === 'minimax'
+            ? t('settings.llm.minimaxDescription')
+            : t('settings.llm.description');
+
+  const fallbackText = (key: string, fallback: string): string => {
+    const translated = t(key);
+    return translated === key ? fallback : translated;
   };
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
-          {t('settings.llm.title')}
-        </h2>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-          {provider === 'ollama'
-            ? t('settings.llm.ollamaDescription')
-            : provider === 'deepseek'
-              ? t('settings.llm.deepseekDescription')
-              : provider === 'glm'
-                ? t('settings.llm.glmDescription')
-              : provider === 'minimax'
-                ? t('settings.llm.minimaxDescription')
-                : t('settings.llm.description')}
-        </p>
-        {provider === 'minimax' && !minimaxHighspeedEnabled && (
-          <p className="text-sm text-amber-700 dark:text-amber-300 mb-4">
-            {t('settings.llm.minimaxHighspeedDisabled')}
-          </p>
-        )}
-        {providerRuntimeUnavailableModels.length > 0 && (
-          <p className="text-sm text-amber-700 dark:text-amber-300 mb-4">
-            {provider === 'minimax'
-              ? t('settings.llm.minimaxRuntimeUnavailable')
-              : t('settings.llm.runtimeUnavailable')}{' '}
-            <span className="font-medium">{providerRuntimeUnavailableModels.join(', ')}</span>
-          </p>
-        )}
-      </div>
+      <LLMProviderModelSection
+        provider={provider}
+        providerDescription={providerDescription}
+        providerOptions={providerOptions}
+        providerRuntimeUnavailableModels={providerRuntimeUnavailableModels}
+        minimaxHighspeedEnabled={minimaxHighspeedEnabled}
+        modelValue={formData.llmModel}
+        modelOptions={modelOptions}
+        currentModelLabel={currentModelLabel}
+        ollamaBaseUrl={formData.ollamaBaseUrl}
+        onProviderChange={handleProviderChange}
+        onModelChange={handleModelChange}
+        onOllamaUrlChange={handleTextChange('ollamaBaseUrl')}
+        t={t}
+      />
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          {t('settings.llm.provider')}
-        </label>
-        <select
-          value={provider}
-          onChange={handleProviderChange}
-          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
-        >
-          {providerOptions.map(option => (
-            <option key={option.value} value={option.value}>{option.label}</option>
-          ))}
-        </select>
-      </div>
-
-      {provider !== 'ollama' && (
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          {t('settings.llm.model')}
-          </label>
-          <select
-            value={formData.llmModel}
-            onChange={handleModelChange}
-            className="w-full px-4 py-2 border rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 border-gray-300 dark:border-gray-600"
-          >
-            {modelOptions.map(model => {
-              if (typeof model === 'string') {
-                return <option key={model} value={model}>{model}</option>;
-              }
-              return <option key={model.value} value={model.value}>{model.label}</option>;
-            })}
-          </select>
-          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-            {t('settings.currentModel')} : <span className="font-semibold">{currentModelLabel}</span>
-          </p>
-        </div>
-      )}
-
-      {provider === 'ollama' && (
-        <div className="space-y-4 rounded-lg border border-blue-200 bg-blue-50/60 p-4 dark:border-blue-900/60 dark:bg-blue-950/20">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              {t('settings.llm.ollamaBaseUrl')}
-            </label>
-            <input
-              type="url"
-              value={formData.ollamaBaseUrl || ''}
-              onChange={handleTextChange('ollamaBaseUrl')}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
-              placeholder="https://ollama.example.com"
-            />
-            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-              {t('settings.llm.ollamaHelp')}
-            </p>
-          </div>
-        </div>
-      )}
-
-      <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          {t('settings.llm.cvMode')}
-        </label>
-        <select
-          value={formData.cvMode || 'nominative'}
-          onChange={handleCvModeChange}
-          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="nominative">{fallbackText(t, 'settings.llm.cvModeNominative', 'Nominatif')}</option>
-          <option value="anonymous">{fallbackText(t, 'settings.llm.cvModeAnonymous', 'Anonyme')}</option>
-        </select>
-        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-          {formData.cvMode === 'anonymous'
-            ? fallbackText(t, 'settings.llm.cvModeAnonymousDescription', 'Le CV amélioré sera anonymisé.')
-            : fallbackText(t, 'settings.llm.cvModeNominativeDescription', 'Le CV amélioré conserve les informations nominatives.')}
-        </p>
-      </div>
-
-      <div className="pt-6 pb-2 border-t border-gray-200 dark:border-gray-700">
-        <label className="flex items-start gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={formData.webglEnabled === 'on'}
-            onChange={handleWebglToggle}
-            className="mt-1 h-5 w-5 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 focus:ring-2 cursor-pointer"
-          />
-          <div>
-            <span className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              {t('settings.llm.webglEnabled')}
-            </span>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              {t('settings.llm.webglEnabledDescription')}
-            </p>
-          </div>
-        </label>
-      </div>
+      <LLMPresentationPreferences
+        cvMode={formData.cvMode}
+        webglEnabled={formData.webglEnabled}
+        onCvModeChange={handleCvModeChange}
+        onWebglToggle={handleWebglToggle}
+        t={t}
+        fallbackText={fallbackText}
+      />
     </div>
   );
 };
