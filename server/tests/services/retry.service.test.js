@@ -188,6 +188,7 @@ describe('Retry Service', () => {
             expect(states.openai).toBeDefined();
             expect(states.anthropic).toBeDefined();
             expect(states.deepseek).toBeDefined();
+            expect(states.glm).toBeDefined();
             expect(states.minimax).toBeDefined();
         });
 
