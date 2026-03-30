@@ -18,14 +18,12 @@ const UploadPage = (): JSX.Element => {
   
   // Use state to track if we're ready to redirect (after clearing old resume)
   const [readyForUpload, setReadyForUpload] = useState(false);
-  const previousResumeIdRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    previousResumeIdRef.current = currentResume?.id || null;
-  }, [currentResume?.id]);
+  const entryResumeIdRef = useRef<string | null>(null);
 
   // Clear current resume immediately when component mounts or location changes
   useEffect(() => {
+    entryResumeIdRef.current = currentResume?.id || null;
+    setReadyForUpload(false);
     // Clear the current resume
     setCurrentResume(null);
     // Mark as ready for new upload after a tick
@@ -35,7 +33,7 @@ const UploadPage = (): JSX.Element => {
 
   // Redirect to analysis page only when a NEW resume is uploaded (after we're ready)
   useEffect(() => {
-    if (readyForUpload && currentResume?.id && currentResume.id !== previousResumeIdRef.current) {
+    if (readyForUpload && currentResume?.id && currentResume.id !== entryResumeIdRef.current) {
       navigate(`/resumes/${currentResume.id}/analysis`);
     }
   }, [currentResume, navigate, readyForUpload]);
