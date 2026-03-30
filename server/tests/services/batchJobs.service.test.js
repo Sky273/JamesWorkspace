@@ -21,11 +21,13 @@ vi.mock('../../services/batchJobs/schema.js', () => ({
 vi.mock('../../services/batchJobs/jobCrud.js', () => ({
     createJob: vi.fn(), getJob: vi.fn(), getJobsByFirm: vi.fn(), getAllJobs: vi.fn(),
     updateJobStatus: vi.fn(), cancelJob: vi.fn(), deleteJob: vi.fn(), getPendingJobs: vi.fn(),
-    updateJobCounters: vi.fn(), updateJobExportFile: vi.fn(), isJobComplete: vi.fn()
+    updateJobCounters: vi.fn(), updateCollectionJobProgress: vi.fn(),
+    updateJobExportFile: vi.fn(), clearJobExportFile: vi.fn(),
+    isJobComplete: vi.fn(), getFinalJobOutcome: vi.fn()
 }));
 
 vi.mock('../../services/batchJobs/itemCrud.js', () => ({
-    addJobItems: vi.fn(), addJobResumeIds: vi.fn(), addJobExportItems: vi.fn(),
+    addJobItems: vi.fn(), addJobResumeIds: vi.fn(), addJobTaskItems: vi.fn(), addJobExportItems: vi.fn(),
     getJobItems: vi.fn(), updateJobItemStatus: vi.fn(), getJobItem: vi.fn(),
     resumeItemWithName: vi.fn(), getItemsPendingName: vi.fn(), getPendingItems: vi.fn()
 }));
@@ -35,7 +37,7 @@ vi.mock('../../services/batchJobs/worker.js', () => ({
 }));
 
 vi.mock('../../services/batchJobs/maintenance.js', () => ({
-    cleanupOldJobs: vi.fn(), getBatchJobsStats: vi.fn()
+    cleanupOldJobs: vi.fn(), cleanupJobExportArtifacts: vi.fn(), getBatchJobsStats: vi.fn()
 }));
 
 import { query } from '../../config/database.js';
