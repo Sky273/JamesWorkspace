@@ -3,7 +3,7 @@
  * TypeScript version
  */
 
-import { useState, useEffect, ChangeEvent, KeyboardEvent, ForwardRefExoticComponent, RefAttributes, SVGProps, useMemo } from 'react';
+import { useState, useEffect, ChangeEvent, KeyboardEvent, ForwardRefExoticComponent, RefAttributes, SVGProps, useMemo, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import { tagService } from '../utils/tagService';
@@ -187,7 +187,7 @@ const TagsManagement = (): JSX.Element => {
   const [savingCleanedTags, setSavingCleanedTags] = useState<boolean>(false);
   const [convertingToEsco, setConvertingToEsco] = useState<boolean>(false);
 
-  const fetchTags = async (): Promise<void> => {
+  const fetchTags = useCallback(async (): Promise<void> => {
     try {
       setLoading(true);
       // Fetch raw tags, cleaned tags, and ESCO tags in parallel
@@ -205,10 +205,9 @@ const TagsManagement = (): JSX.Element => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [t]);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { fetchTags(); }, []);
+  useEffect(() => { void fetchTags(); }, [fetchTags]);
 
   // Display cleaned tags directly from server (no frontend cleaning logic)
   const displayCleanedTags = useMemo(() => {

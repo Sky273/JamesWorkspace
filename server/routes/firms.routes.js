@@ -3,7 +3,7 @@ import multer from 'multer';
 import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
 import { validateBody, validateParams, createFirmSchema, updateFirmSchema } from '../utils/validation.js';
 import { securityLog, getRequestMetadata, LOG_LEVELS, SECURITY_EVENTS } from '../services/security.service.js';
-import { firmsCache } from '../services/cache.service.js';
+import { invalidateFirmsCaches } from '../services/cache.service.js';
 import { safeLog } from '../utils/logger.backend.js';
 import * as firmsService from '../services/firms.service.js';
 
@@ -74,7 +74,7 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
 // POST /api/firms - Create firm
 router.post('/', authenticateToken, requireAdmin, validateBody(createFirmSchema), async (req, res) => {
     try {
-        firmsCache.invalidate('all_firms');
+        invalidateFirmsCaches();
         
         const firmData = {
             name: req.body.name,
@@ -105,7 +105,7 @@ router.post('/', authenticateToken, requireAdmin, validateBody(createFirmSchema)
 // PUT /api/firms/:id - Update firm
 router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), validateBody(updateFirmSchema), async (req, res) => {
     try {
-        firmsCache.invalidate('all_firms');
+        invalidateFirmsCaches();
         
         const { id } = req.params;
         const firmData = {
@@ -151,7 +151,7 @@ router.delete('/:id', authenticateToken, requireAdmin, validateParams('id'), asy
             });
         }
         
-        firmsCache.invalidate('all_firms');
+        invalidateFirmsCaches();
         await firmsService.deleteFirm(id);
         
         securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.FIRM_DELETED, {
@@ -192,7 +192,7 @@ router.post('/:id/logo', authenticateToken, requireAdmin, validateParams('id'), 
         
         const logoUrl = await firmsService.uploadFirmLogo(id, logoData, logoMimeType);
         
-        firmsCache.invalidate('all_firms');
+        invalidateFirmsCaches();
         
         safeLog('info', 'Firm logo uploaded to database', { firmId: id, mimeType: logoMimeType, size: logoData.length });
         
@@ -241,7 +241,7 @@ router.delete('/:id/logo', authenticateToken, requireAdmin, validateParams('id')
         
         await firmsService.deleteFirmLogo(id);
         
-        firmsCache.invalidate('all_firms');
+        invalidateFirmsCaches();
         
         safeLog('info', 'Firm logo deleted', { firmId: id });
         

@@ -32,6 +32,7 @@ vi.mock('../../services/cache.service.js', () => ({
         ttl: 60000,
         getStats: vi.fn(() => ({ name: 'settings', size: settingsCacheStore.size }))
     },
+    getNamedCacheStats: vi.fn(() => ({ name: 'settings', size: settingsCacheStore.size })),
     invalidateSettingsCaches: vi.fn(() => {
         settingsCacheStore.delete('settings');
         settingsCacheStore.delete('llm-settings');

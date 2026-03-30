@@ -4,7 +4,7 @@
  * Admin only access
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { ArrowPathIcon, ServerStackIcon } from '@heroicons/react/24/outline';
@@ -33,13 +33,7 @@ const BackupPage = (): JSX.Element => {
     const [activeSection, setActiveSection] = useState<'config' | 'history' | 'restore'>('config');
 
      
-    useEffect(() => {
-        fetchSettings();
-        fetchHistory();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-
-    const fetchSettings = async () => {
+    const fetchSettings = useCallback(async () => {
         try {
             const response = await authGet('/api/backup/settings');
             if (response.ok) {
@@ -57,9 +51,9 @@ const BackupPage = (): JSX.Element => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [authGet]);
 
-    const fetchHistory = async () => {
+    const fetchHistory = useCallback(async () => {
         try {
             const response = await authGet('/api/backup/history?limit=20');
             if (response.ok) {
@@ -69,7 +63,12 @@ const BackupPage = (): JSX.Element => {
         } catch (error) {
             logger.error('Failed to fetch backup history:', error);
         }
-    };
+    }, [authGet]);
+
+    useEffect(() => {
+        fetchSettings();
+        fetchHistory();
+    }, [fetchSettings, fetchHistory]);
 
     const fetchRemoteFiles = async () => {
         setLoadingRemote(true);

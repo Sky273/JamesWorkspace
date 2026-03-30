@@ -3,7 +3,7 @@
  * TypeScript version
  */
 
-import { useState, useEffect, ForwardRefExoticComponent, RefAttributes, SVGProps } from 'react';
+import { useState, useEffect, useCallback, ForwardRefExoticComponent, RefAttributes, SVGProps } from 'react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
@@ -132,12 +132,7 @@ const SettingsPage = (): JSX.Element => {
   const [activeTab, setActiveTab] = useState<string>('llm');
   const [formData, setFormData] = useState<SettingsFormData>(defaultFormData);
 
-  useEffect(() => {
-    fetchSettings();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const fetchSettings = async (): Promise<void> => {
+  const fetchSettings = useCallback(async (): Promise<void> => {
     try {
       const response = await authGet('/api/settings');
       if (!response.ok) throw new Error('Failed to fetch settings');
@@ -186,7 +181,11 @@ const SettingsPage = (): JSX.Element => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [authGet, t]);
+
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
 
   const handleSave = async (): Promise<void> => {
     try {

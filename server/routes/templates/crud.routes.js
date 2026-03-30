@@ -7,7 +7,7 @@ import express from 'express';
 import { authenticateToken, requireAdmin, isUserAdmin } from '../../middleware/auth.middleware.js';
 import { validateBody, validateParams, createTemplateSchema, updateTemplateSchema } from '../../utils/validation.js';
 import { securityLog, getRequestMetadata, LOG_LEVELS, SECURITY_EVENTS } from '../../services/security.service.js';
-import { templatesCache } from '../../services/cache.service.js';
+import { invalidateTemplatesCaches } from '../../services/cache.service.js';
 import { safeLog } from '../../utils/logger.backend.js';
 import { mapTemplateToFrontend, mapTemplateFromFrontend } from '../../utils/mappers.js';
 import { getUserFirmId } from '../../utils/firmHelpers.js';
@@ -110,7 +110,7 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
 // POST /api/templates - Create template
 router.post('/', authenticateToken, requireAdmin, validateBody(createTemplateSchema), async (req, res) => {
     try {
-        templatesCache.invalidate('all_templates');
+        invalidateTemplatesCaches();
         
         const isAdmin = isUserAdmin(req);
         const userFirmId = await getUserFirmId(req);
@@ -165,7 +165,7 @@ router.post('/', authenticateToken, requireAdmin, validateBody(createTemplateSch
 // PUT /api/templates/:id - Update template
 router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), validateBody(updateTemplateSchema), async (req, res) => {
     try {
-        templatesCache.invalidate('all_templates');
+        invalidateTemplatesCaches();
         
         const { id } = req.params;
         const isAdmin = isUserAdmin(req);
@@ -229,7 +229,7 @@ router.delete('/:id', authenticateToken, requireAdmin, validateParams('id'), asy
     try {
         const { id } = req.params;
         
-        templatesCache.invalidate('all_templates');
+        invalidateTemplatesCaches();
         await templatesService.deleteTemplate(id);
         
         securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.TEMPLATE_DELETED, {

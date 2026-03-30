@@ -20,17 +20,18 @@ const UploadPage = (): JSX.Element => {
   const [readyForUpload, setReadyForUpload] = useState(false);
   const previousResumeIdRef = useRef<string | null>(null);
 
+  useEffect(() => {
+    previousResumeIdRef.current = currentResume?.id || null;
+  }, [currentResume?.id]);
+
   // Clear current resume immediately when component mounts or location changes
   useEffect(() => {
-    // Store the previous resume ID before clearing
-    previousResumeIdRef.current = currentResume?.id || null;
     // Clear the current resume
     setCurrentResume(null);
     // Mark as ready for new upload after a tick
     const timer = setTimeout(() => setReadyForUpload(true), 50);
     return () => clearTimeout(timer);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.key]); // Re-run when navigation key changes (new navigation to /upload)
+  }, [location.key, setCurrentResume]); // Re-run when navigation key changes (new navigation to /upload)
 
   // Redirect to analysis page only when a NEW resume is uploaded (after we're ready)
   useEffect(() => {

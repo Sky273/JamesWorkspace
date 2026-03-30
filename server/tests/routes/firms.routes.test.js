@@ -46,6 +46,7 @@ vi.mock('../../services/firms.service.js', () => ({
 
 // Mock cache service
 vi.mock('../../services/cache.service.js', () => ({
+    invalidateFirmsCaches: vi.fn(),
     firmsCache: {
         get: vi.fn(() => null),
         set: vi.fn(),

@@ -207,8 +207,7 @@ function HomePage(): JSX.Element {
     rootMargin: '320px 0px'
   });
 
-  // Fetch WebGL setting — default is ON, only disable if explicitly 'off'
-  useEffect(() => {
+  const fetchWebglSetting = useCallback(() => {
     let cancelled = false;
     authGet('/api/settings')
       .then(res => res.ok ? res.json() : null)
@@ -219,8 +218,10 @@ function HomePage(): JSX.Element {
       })
       .catch(() => { /* keep default: enabled */ });
     return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [authGet]);
+
+  // Fetch WebGL setting — default is ON, only disable if explicitly 'off'
+  useEffect(() => fetchWebglSetting(), [fetchWebglSetting]);
   
   const navSections: NavSection[] = useMemo(() => [
     { id: 'hero', label: t('home.nav.hero', 'Accueil') },

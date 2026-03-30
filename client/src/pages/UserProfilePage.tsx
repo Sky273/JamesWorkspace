@@ -3,7 +3,7 @@
  * User profile and security settings (accessible to all users)
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
@@ -44,12 +44,7 @@ const UserProfilePage = (): JSX.Element => {
   });
 
    
-  useEffect(() => {
-    fetchProfile();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     try {
       const response = await authGet('/api/auth/me');
       if (response.ok) {
@@ -66,7 +61,11 @@ const UserProfilePage = (): JSX.Element => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [authGet]);
+
+  useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
 
   const handleSave = async () => {
     setSaving(true);

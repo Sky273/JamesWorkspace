@@ -39,6 +39,7 @@ vi.mock('../../services/templates.service.js', () => ({
 
 // Mock cache service
 vi.mock('../../services/cache.service.js', () => ({
+    invalidateTemplatesCaches: vi.fn(),
     templatesCache: {
         get: vi.fn(() => null),
         set: vi.fn(),
@@ -453,7 +454,7 @@ describe('Templates CRUD Routes', () => {
         });
 
         it('should invalidate cache on create', async () => {
-            const { templatesCache } = await import('../../services/cache.service.js');
+            const { invalidateTemplatesCaches } = await import('../../services/cache.service.js');
             mockCreateTemplate.mockResolvedValueOnce(sampleTemplateRow);
 
             await request(app)
@@ -461,7 +462,7 @@ describe('Templates CRUD Routes', () => {
                 .set('Authorization', 'Bearer valid-token')
                 .send(newTemplateBody);
 
-            expect(templatesCache.invalidate).toHaveBeenCalledWith('all_templates');
+            expect(invalidateTemplatesCaches).toHaveBeenCalled();
         });
     });
 
@@ -587,7 +588,7 @@ describe('Templates CRUD Routes', () => {
         });
 
         it('should invalidate cache on update', async () => {
-            const { templatesCache } = await import('../../services/cache.service.js');
+            const { invalidateTemplatesCaches } = await import('../../services/cache.service.js');
             mockGetTemplateById.mockResolvedValueOnce(sampleTemplateRow);
             mockUpdateTemplate.mockResolvedValueOnce(sampleTemplateRow);
 
@@ -596,7 +597,7 @@ describe('Templates CRUD Routes', () => {
                 .set('Authorization', 'Bearer valid-token')
                 .send(updateBody);
 
-            expect(templatesCache.invalidate).toHaveBeenCalledWith('all_templates');
+            expect(invalidateTemplatesCaches).toHaveBeenCalled();
         });
     });
 
@@ -654,14 +655,14 @@ describe('Templates CRUD Routes', () => {
         });
 
         it('should invalidate cache on delete', async () => {
-            const { templatesCache } = await import('../../services/cache.service.js');
+            const { invalidateTemplatesCaches } = await import('../../services/cache.service.js');
             mockDeleteTemplate.mockResolvedValueOnce(true);
 
             await request(app)
                 .delete('/api/templates/tpl-123')
                 .set('Authorization', 'Bearer valid-token');
 
-            expect(templatesCache.invalidate).toHaveBeenCalledWith('all_templates');
+            expect(invalidateTemplatesCaches).toHaveBeenCalled();
         });
     });
 

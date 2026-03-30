@@ -3,7 +3,7 @@
  * TypeScript version
  */
 
-import { useState, useEffect, ChangeEvent, ForwardRefExoticComponent, RefAttributes, SVGProps, memo } from 'react';
+import { useState, useEffect, useCallback, ChangeEvent, ForwardRefExoticComponent, RefAttributes, SVGProps, memo } from 'react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
@@ -359,7 +359,7 @@ const MetricsPage = (): JSX.Element => {
   const [autoRefresh, setAutoRefresh] = useState<boolean>(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  const fetchMetrics = async (): Promise<void> => {
+  const fetchMetrics = useCallback(async (): Promise<void> => {
     try {
       const response = await fetchWithAuth('/api/metrics', createAuthOptions());
       if (!response.ok) {
@@ -378,9 +378,9 @@ const MetricsPage = (): JSX.Element => {
         logger.error('Error fetching metrics:', error);
       }
     }
-  };
+  }, [t]);
 
-  const fetchDbMetrics = async (): Promise<void> => {
+  const fetchDbMetrics = useCallback(async (): Promise<void> => {
     try {
       const response = await fetchWithAuth('/api/metrics/database', createAuthOptions());
       if (response.ok) {
@@ -393,9 +393,9 @@ const MetricsPage = (): JSX.Element => {
         logger.error('Error fetching database metrics:', error);
       }
     }
-  };
+  }, []);
 
-  const fetchApmMetrics = async (): Promise<void> => {
+  const fetchApmMetrics = useCallback(async (): Promise<void> => {
     try {
       const response = await fetchWithAuth('/api/metrics/apm', createAuthOptions());
       if (response.ok) {
@@ -408,9 +408,9 @@ const MetricsPage = (): JSX.Element => {
         logger.error('Error fetching APM metrics:', error);
       }
     }
-  };
+  }, []);
 
-  const fetchOperationsMetrics = async (): Promise<void> => {
+  const fetchOperationsMetrics = useCallback(async (): Promise<void> => {
     try {
       const response = await fetchWithAuth('/api/metrics/operations', createAuthOptions());
       if (!response.ok) {
@@ -429,11 +429,11 @@ const MetricsPage = (): JSX.Element => {
       setOperationsMetrics(null);
       setOperationsMetricsError(t('metrics.operationsUnavailable', 'Operational metrics unavailable'));
     }
-  };
+  }, [t]);
 
-  const refreshAllMetrics = async (): Promise<void> => {
+  const refreshAllMetrics = useCallback(async (): Promise<void> => {
     await Promise.all([fetchMetrics(), fetchDbMetrics(), fetchApmMetrics(), fetchOperationsMetrics()]);
-  };
+  }, [fetchMetrics, fetchDbMetrics, fetchApmMetrics, fetchOperationsMetrics]);
 
   const exportMetrics = (format: 'json' | 'csv'): void => {
     if (!metrics) return;
@@ -506,8 +506,7 @@ const MetricsPage = (): JSX.Element => {
     };
     // Load immediately without delay for faster initial render
     loadData();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [refreshAllMetrics]);
 
   useEffect(() => {
     if (!autoRefresh) return;
@@ -515,8 +514,7 @@ const MetricsPage = (): JSX.Element => {
       await refreshAllMetrics();
     }, 30000);
     return () => clearInterval(interval);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoRefresh]);
+  }, [autoRefresh, refreshAllMetrics]);
 
   if (loading) {
     return (

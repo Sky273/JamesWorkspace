@@ -4,7 +4,7 @@
  * Accessible without authentication via unique token
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
@@ -37,50 +37,7 @@ const ConsentResponsePage = (): JSX.Element => {
     // Check for action in URL (from email links)
     const actionFromUrl = searchParams.get('action');
 
-    useEffect(() => {
-        const fetchConsentInfo = async () => {
-            if (!token) {
-                setError(t('consent.response.errors.noToken'));
-                setPageState('error');
-                return;
-            }
-
-            try {
-                const response = await fetch(`/api/consent/respond/${token}`);
-                const data = await response.json();
-
-                if (!response.ok) {
-                    if (data.code === 'TOKEN_EXPIRED') {
-                        setError(t('consent.response.errors.expired'));
-                    } else if (data.code === 'ALREADY_PROCESSED') {
-                        setError(t('consent.response.errors.alreadyProcessed'));
-                    } else if (data.code === 'INVALID_TOKEN') {
-                        setError(t('consent.response.errors.invalid'));
-                    } else {
-                        setError(data.error || t('consent.response.errors.generic'));
-                    }
-                    setPageState('error');
-                    return;
-                }
-
-                setConsentInfo(data);
-                setPageState('ready');
-
-                // Auto-submit if action is in URL
-                if (actionFromUrl === 'accept' || actionFromUrl === 'refuse') {
-                    handleSubmit(actionFromUrl === 'accept');
-                }
-            } catch {
-                setError(t('consent.response.errors.network'));
-                setPageState('error');
-            }
-        };
-
-        fetchConsentInfo();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [token, t]);
-
-    const handleSubmit = async (accept: boolean) => {
+    const handleSubmit = useCallback(async (accept: boolean) => {
         if (!token) return;
 
         setPageState('submitting');
@@ -112,7 +69,48 @@ const ConsentResponsePage = (): JSX.Element => {
             setError(t('consent.response.errors.network'));
             setPageState('error');
         }
-    };
+    }, [token, t]);
+
+    const fetchConsentInfo = useCallback(async () => {
+        if (!token) {
+            setError(t('consent.response.errors.noToken'));
+            setPageState('error');
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/consent/respond/${token}`);
+            const data = await response.json();
+
+            if (!response.ok) {
+                if (data.code === 'TOKEN_EXPIRED') {
+                    setError(t('consent.response.errors.expired'));
+                } else if (data.code === 'ALREADY_PROCESSED') {
+                    setError(t('consent.response.errors.alreadyProcessed'));
+                } else if (data.code === 'INVALID_TOKEN') {
+                    setError(t('consent.response.errors.invalid'));
+                } else {
+                    setError(data.error || t('consent.response.errors.generic'));
+                }
+                setPageState('error');
+                return;
+            }
+
+            setConsentInfo(data);
+            setPageState('ready');
+
+            if (actionFromUrl === 'accept' || actionFromUrl === 'refuse') {
+                await handleSubmit(actionFromUrl === 'accept');
+            }
+        } catch {
+            setError(t('consent.response.errors.network'));
+            setPageState('error');
+        }
+    }, [actionFromUrl, handleSubmit, t, token]);
+
+    useEffect(() => {
+        void fetchConsentInfo();
+    }, [fetchConsentInfo]);
 
     // Loading state
     if (pageState === 'loading') {

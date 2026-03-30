@@ -17,7 +17,12 @@ import {
 import { safeLog } from '../utils/logger.backend.js';
 import { resolveAvailableModel, getProviderAvailabilityFlags, syncPersistedAvailabilityState } from './llmAvailability.service.js';
 import { getProviderDefaultModel } from './llmConfiguration.service.js';
-import { settingsCache as sharedSettingsCache, CACHE_KEYS, invalidateSettingsCaches as invalidateSharedSettingsCaches } from './cache.service.js';
+import {
+    settingsCache as sharedSettingsCache,
+    CACHE_KEYS,
+    invalidateSettingsCaches as invalidateSharedSettingsCaches,
+    getNamedCacheStats
+} from './cache.service.js';
 
 const LLM_SETTINGS_CACHE_KEY = CACHE_KEYS.settings.LLM_SETTINGS;
 const CANONICAL_LLM_SETTINGS_KEY = 'default';
@@ -224,7 +229,7 @@ export function getSettingsCacheStats() {
         ageMs: cacheTimestamp ? Date.now() - cacheTimestamp : null,
         ttlMs: sharedSettingsCache.ttl,
         key: LLM_SETTINGS_CACHE_KEY,
-        cache: sharedSettingsCache.getStats()
+        cache: getNamedCacheStats('settings')
     };
 }
 

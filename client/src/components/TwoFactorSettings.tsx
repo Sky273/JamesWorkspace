@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ShieldCheckIcon, ShieldExclamationIcon, KeyIcon, TrashIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
@@ -25,7 +25,7 @@ export default function TwoFactorSettings() {
   const [newBackupCodes, setNewBackupCodes] = useState<string[]>([]);
   const [actionLoading, setActionLoading] = useState(false);
 
-  const fetchStatus = async () => {
+  const fetchStatus = useCallback(async () => {
     try {
       const response = await authGet('/api/2fa/status');
       if (response.ok) {
@@ -37,12 +37,11 @@ export default function TwoFactorSettings() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [authGet]);
 
   useEffect(() => {
     fetchStatus();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchStatus]);
 
   const handleDisable = async () => {
     if (!disableCode) {

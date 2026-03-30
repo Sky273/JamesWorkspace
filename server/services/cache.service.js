@@ -134,6 +134,25 @@ export function invalidateSettingsCaches() {
     settingsCache.invalidate(CACHE_KEYS.settings.LLM_SETTINGS);
 }
 
+export function invalidateTemplatesCaches() {
+    templatesCache.invalidate(CACHE_KEYS.templates.ALL_TEMPLATES);
+}
+
+export function invalidateFirmsCaches() {
+    firmsCache.invalidate(CACHE_KEYS.firms.ALL_FIRMS);
+}
+
+export function getNamedCacheStats(cacheName) {
+    const registry = {
+        settings: settingsCache,
+        templates: templatesCache,
+        firms: firmsCache
+    };
+
+    const cache = registry[cacheName];
+    return cache ? cache.getStats() : null;
+}
+
 export function getCacheRegistryStats() {
     return {
         settings: settingsCache.getStats(),
