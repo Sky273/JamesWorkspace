@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Footer Component
  * TypeScript version
  */

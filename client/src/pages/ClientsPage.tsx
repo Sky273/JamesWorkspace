@@ -1,4 +1,4 @@
-﻿/**
+/**
  * CRMPage - Manage clients, prospects and deals
  */
 

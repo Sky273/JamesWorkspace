@@ -1,4 +1,4 @@
-﻿import type { ComponentType, SVGProps } from 'react';
+import type { ComponentType, SVGProps } from 'react';
 
 interface ViewModeOption<T extends string> {
   icon: ComponentType<SVGProps<SVGSVGElement>>;

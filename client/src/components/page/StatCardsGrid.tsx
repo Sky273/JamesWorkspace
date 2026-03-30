@@ -1,4 +1,4 @@
-﻿import type { ComponentType, SVGProps } from 'react';
+import type { ComponentType, SVGProps } from 'react';
 import { motion } from 'framer-motion';
 
 interface StatCardItem {

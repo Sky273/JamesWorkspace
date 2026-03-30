@@ -1,4 +1,4 @@
-﻿/**
+/**
  * MissionCard - Individual mission card in the grid
  * Extracted from MissionsPage.tsx
  */

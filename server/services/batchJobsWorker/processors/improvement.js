@@ -1,4 +1,4 @@
-﻿import { safeLog } from '../../../utils/logger.backend.js';
+import { safeLog } from '../../../utils/logger.backend.js';
 import { query } from '../../../config/database.js';
 import { ITEM_STATUS, updateJobItemStatus } from '../../batchJobs.service.js';
 import { parseScore } from '../helpers.js';

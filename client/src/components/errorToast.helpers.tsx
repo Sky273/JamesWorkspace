@@ -1,4 +1,4 @@
-﻿import toast from 'react-hot-toast';
+import toast from 'react-hot-toast';
 
 import ErrorToast from './ErrorToast';
 import { isSessionRedirectError } from '../utils/apiInterceptor';

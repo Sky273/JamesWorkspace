@@ -1,4 +1,4 @@
-﻿import { ChangeEvent } from 'react';
+import { ChangeEvent } from 'react';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 
 interface SearchFieldProps {

@@ -1,4 +1,4 @@
-﻿import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 
 const WebGLBackground = lazy(() => import('./WebGLBackground'));
 

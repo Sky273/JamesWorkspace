@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Tests for Health Service
  * Tests database health checks and metrics
  */

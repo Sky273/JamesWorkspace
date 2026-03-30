@@ -1,4 +1,4 @@
-﻿import {
+import {
   ArrowPathIcon,
   BriefcaseIcon,
   BuildingOfficeIcon,

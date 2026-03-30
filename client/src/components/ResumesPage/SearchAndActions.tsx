@@ -1,4 +1,4 @@
-﻿import {
+import {
   FunnelIcon,
   ArrowPathIcon,
   PlusIcon,

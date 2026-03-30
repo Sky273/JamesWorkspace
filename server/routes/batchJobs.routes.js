@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Batch Jobs Routes
  * API endpoints for managing batch processing jobs
  */

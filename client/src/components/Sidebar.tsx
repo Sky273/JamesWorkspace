@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Sidebar Component
  * TypeScript version with organized sections
  */

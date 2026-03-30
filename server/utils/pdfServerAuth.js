@@ -1,4 +1,4 @@
-﻿export const PDF_SERVER_AUTH_HEADER = 'x-internal-service-token';
+export const PDF_SERVER_AUTH_HEADER = 'x-internal-service-token';
 
 const DEV_TEST_FALLBACK_TOKEN = 'dev-test-pdf-server-internal-token-32chars';
 const DERIVATION_SALT = 'resumeconverter-pdf-server-internal-token-v1';

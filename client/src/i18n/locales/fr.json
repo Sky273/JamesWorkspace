@@ -1869,7 +1869,7 @@
         },
         "dataProtection": {
           "title": "Protection des données",
-          "content": "Nous mettons en Å“uvre des mesures techniques et organisationnelles appropriées pour protéger vos données personnelles contre tout accès, modification, divulgation ou destruction non autorisés. Toutes les données sont chiffrées en transit et au repos."
+          "content": "Nous mettons en œuvre des mesures techniques et organisationnelles appropriées pour protéger vos données personnelles contre tout accès, modification, divulgation ou destruction non autorisés. Toutes les données sont chiffrées en transit et au repos."
         },
         "gdpr": {
           "title": "Vos droits (RGPD)",

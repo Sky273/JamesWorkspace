@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Tests for PDF Server endpoints
  * Tests health, validation middleware, PDF and DOCX generation routes
  */

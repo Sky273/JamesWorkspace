@@ -1,4 +1,4 @@
-﻿import zlib from 'zlib';
+import zlib from 'zlib';
 
 const COMPRESSIBLE_EXTENSIONS = /\.(js|mjs|css|html|json|svg|txt|xml)(\?.*)?$/i;
 const FAVICON_PATHS = new Set(['/favicon.svg', '/favicon.ico']);

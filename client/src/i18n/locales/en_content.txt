@@ -1,4 +1,4 @@
-﻿{
+{
   "userProfile": {
     "anonymous": "User",
     "noCompany": "No Company",
@@ -724,8 +724,8 @@
       "duration": "Duration"
     },
     "badges": {
-      "security": "ðŸ”’ Security",
-      "proxy": "ðŸŒ Proxy"
+      "security": "🔒 Security",
+      "proxy": "🌐 Proxy"
     },
     "noLogs": "No security logs found",
     "logs": "[FR] Logs"
@@ -997,7 +997,7 @@
     "clearChat": "Clear conversation",
     "resetSize": "Reset size",
     "needHelp": "Need help?",
-    "welcomeMessage": "ðŸ‘‹ **Hello!** I'm your AI assistant.\n\nI can help you with:\n- ðŸ“„ **Managing the resume library** (import, analysis, improvement)\n- ðŸŽ¯ **Creating missions** and adapting profiles\n- âš™ï¸ **Using the features** of the application\n- â“ **Answering your questions**\n\nHow can I help you?",
+    "welcomeMessage": "👋 **Hello!** I'm your AI assistant.\n\nI can help you with:\n- 📄 **Managing the resume library** (import, analysis, improvement)\n- 🎯 **Creating missions** and adapting profiles\n- ⚙️ **Using the features** of the application\n- ❓ **Answering your questions**\n\nHow can I help you?",
     "errorMessage": "Sorry, I couldn't process your request. Please try again."
   },
   "userGuide": {

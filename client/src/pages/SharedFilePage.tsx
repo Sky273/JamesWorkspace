@@ -1,4 +1,4 @@
-﻿/**
+/**
  * SharedFilePage Component
  * Public page to view/download shared CV files via token
  * This page fetches the file from the backend API and displays it

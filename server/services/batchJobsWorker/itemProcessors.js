@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Batch Jobs Worker - Item Processors
  * Handles processing of individual batch job items (import and improve)
  */

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * ErrorToast Component
  * Custom toast component with expandable error details
  */

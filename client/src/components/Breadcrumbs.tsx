@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Breadcrumbs Component
  * Navigation breadcrumbs with automatic route detection
  */

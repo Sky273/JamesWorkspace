@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Profile Matching Page
  * Find best matching CVs for a mission
  */

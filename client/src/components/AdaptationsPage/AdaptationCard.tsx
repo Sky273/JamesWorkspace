@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Adaptation Card Component
  * TypeScript version
  */

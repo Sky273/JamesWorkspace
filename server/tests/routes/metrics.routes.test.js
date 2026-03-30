@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Tests for Metrics routes
  * GET /, GET /summary, GET /performance, GET /errors, GET /cache, GET /llm,
  * POST /reset, GET /database, GET /apm, GET /apm/slow-requests, DELETE /apm/slow-requests

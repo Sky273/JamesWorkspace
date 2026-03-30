@@ -1,4 +1,4 @@
-﻿import { lazy, Suspense, type MouseEvent } from 'react';
+import { lazy, Suspense, type MouseEvent } from 'react';
 import {
   ArrowPathIcon,
   BuildingOfficeIcon,

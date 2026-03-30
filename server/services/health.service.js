@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Health Service
  * Data access layer for health check operations
  * Extracted from routes/health.routes.js

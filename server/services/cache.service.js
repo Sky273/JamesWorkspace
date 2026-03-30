@@ -1,4 +1,4 @@
-﻿import { CACHE_BACKEND, CACHE_KEY_PREFIX, CACHE_REDIS_URL, CACHE_TTL } from '../config/constants.js';
+import { CACHE_BACKEND, CACHE_KEY_PREFIX, CACHE_REDIS_URL, CACHE_TTL } from '../config/constants.js';
 import { safeLog } from '../utils/logger.backend.js';
 
 const DEFAULT_CLEANUP_INTERVAL_MS = 5 * 60 * 1000;

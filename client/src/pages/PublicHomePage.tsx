@@ -1,4 +1,4 @@
-﻿/**
+/**
  * PublicHomePage Component
  * Public landing page for unauthenticated users
  */

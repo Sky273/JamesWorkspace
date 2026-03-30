@@ -1,4 +1,4 @@
-﻿import { BriefcaseIcon, FolderIcon, ListBulletIcon } from '@heroicons/react/24/outline';
+import { BriefcaseIcon, FolderIcon, ListBulletIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
 
 import EmptyStateCard from '../components/page/EmptyStateCard';

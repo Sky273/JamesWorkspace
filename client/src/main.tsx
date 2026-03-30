@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Main Entry Point
  * TypeScript version
  */

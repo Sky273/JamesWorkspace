@@ -1,4 +1,4 @@
-﻿import express from 'express';
+import express from 'express';
 import { metrics } from '../services/metrics.service.js';
 import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
 import { safeLog } from '../utils/logger.backend.js';

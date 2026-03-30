@@ -1,4 +1,4 @@
-﻿import { verifyToken } from '../services/jwt.service.js';
+import { verifyToken } from '../services/jwt.service.js';
 import { safeLog } from '../utils/logger.backend.js';
 
 // ============================================

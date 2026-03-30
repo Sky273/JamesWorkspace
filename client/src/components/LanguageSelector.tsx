@@ -1,4 +1,4 @@
-﻿/**
+/**
  * LanguageSelector Component
  * TypeScript version
  */

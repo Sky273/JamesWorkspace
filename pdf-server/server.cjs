@@ -1,4 +1,4 @@
-﻿/**
+/**
  * PDF Server - Express server for PDF and DOCX generation
  * Uses Puppeteer for PDF generation, Pandoc + LibreOffice for DOCX/DOC conversion
  */

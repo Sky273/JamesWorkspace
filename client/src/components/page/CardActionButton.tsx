@@ -1,4 +1,4 @@
-﻿import type { ComponentType, MouseEvent, SVGProps } from 'react';
+import type { ComponentType, MouseEvent, SVGProps } from 'react';
 
 type IconComponent = ComponentType<SVGProps<SVGSVGElement>>;
 

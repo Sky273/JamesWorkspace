@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Tests for config/envValidation.js
  * validateEnvironment, getEnvironmentInfo
  */

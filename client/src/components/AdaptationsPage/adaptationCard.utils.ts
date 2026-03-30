@@ -1,4 +1,4 @@
-﻿export const getScoreColor = (score: number): string => {
+export const getScoreColor = (score: number): string => {
   if (score >= 80) return 'text-green-700 dark:text-green-400';
   if (score >= 60) return 'text-yellow-700 dark:text-yellow-400';
   return 'text-red-700 dark:text-red-400';

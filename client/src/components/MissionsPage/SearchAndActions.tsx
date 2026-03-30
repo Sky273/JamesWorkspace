@@ -1,4 +1,4 @@
-﻿import { ArrowPathIcon, PlusIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { ArrowPathIcon, PlusIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 import SearchField from '../page/SearchField';
 

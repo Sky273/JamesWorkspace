@@ -1,4 +1,4 @@
-﻿/**
+/**
  * TinyMCE Suggestions Plugin
  * Displays improvement suggestions as inline annotations in the editor
  */

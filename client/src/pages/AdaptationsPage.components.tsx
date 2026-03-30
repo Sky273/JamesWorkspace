@@ -1,4 +1,4 @@
-﻿import { FolderIcon, ListBulletIcon, SparklesIcon } from '@heroicons/react/24/outline';
+import { FolderIcon, ListBulletIcon, SparklesIcon } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 
