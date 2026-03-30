@@ -79,11 +79,13 @@ export async function analyzeResumeWithLLM(text, _firmId, originalFileName = nul
     const { getLLMSettings, calculateWeightedGlobalRating } = await import('../settings.service.js');
     const { getAcceptedIndustriesString, getIndustryMappingString } = await import('../industry.service.js');
     const { DEFAULT_ANALYSIS_PROMPT, ANONYMIZATION_RULES_ANONYMOUS, ANONYMIZATION_RULES_NOMINATIVE } = await import('../../config/prompts.backend.js');
+    const { buildPromptExecutionMetadata } = await import('../../config/llmGovernance.js');
 
     const settings = await getLLMSettings();
     const model = settings.llmModel;
     const cvMode = settings.cvMode || 'nominative';
     let analysisPrompt = settings['Analysis Prompt'] || DEFAULT_ANALYSIS_PROMPT;
+    const analysisPromptMeta = buildPromptExecutionMetadata('DEFAULT_ANALYSIS_PROMPT', settings['Analysis Prompt'] ? 'settings' : 'default');
 
     if (!model && settings.llmProvider !== 'ollama') {
         throw new Error('LLM model not configured');
@@ -111,7 +113,8 @@ export async function analyzeResumeWithLLM(text, _firmId, originalFileName = nul
     let analysis;
     try {
         // Analyze with original filename for name extraction hint
-        analysis = await analyzeResume(cleanedText, model, analysisPrompt, null, false, originalFileName);
+        safeLog('debug', 'Batch analysis using governed prompt', { ...analysisPromptMeta, originalFileName });
+        analysis = await analyzeResume(cleanedText, model, analysisPrompt, { promptMetadata: analysisPromptMeta }, false, originalFileName);
     } finally {
         releaseLLMSlot();
     }
@@ -134,11 +137,13 @@ export async function improveResumeWithLLM(text, analysis, _firmId, originalFile
     const { getLLMSettings } = await import('../settings.service.js');
     const { getAcceptedIndustriesString } = await import('../industry.service.js');
     const { DEFAULT_IMPROVEMENT_PROMPT, ANONYMIZATION_RULES_ANONYMOUS, ANONYMIZATION_RULES_NOMINATIVE } = await import('../../config/prompts.backend.js');
+    const { buildPromptExecutionMetadata } = await import('../../config/llmGovernance.js');
 
     const settings = await getLLMSettings();
     const model = settings.llmModel;
     const cvMode = settings.cvMode || 'nominative';
     let improvementPrompt = settings['Improvement Prompt'] || DEFAULT_IMPROVEMENT_PROMPT;
+    const improvementPromptMeta = buildPromptExecutionMetadata('DEFAULT_IMPROVEMENT_PROMPT', settings['Improvement Prompt'] ? 'settings' : 'default');
 
     if (!model && settings.llmProvider !== 'ollama') {
         throw new Error('LLM model not configured');
@@ -157,7 +162,8 @@ export async function improveResumeWithLLM(text, analysis, _firmId, originalFile
     await acquireLLMSlot();
     let improveResult;
     try {
-        improveResult = await improveResume(improvementInput, analysis, model, improvementPrompt, originalFileName);
+        safeLog('debug', 'Batch improvement using governed prompt', { ...improvementPromptMeta, originalFileName });
+        improveResult = await improveResume(improvementInput, analysis, model, improvementPrompt, originalFileName, { promptMetadata: improvementPromptMeta });
     } finally {
         releaseLLMSlot();
     }
@@ -192,11 +198,13 @@ export async function analyzeImprovedResumeWithLLM(text, _firmId, originalFileNa
     const { getLLMSettings, calculateWeightedGlobalRating } = await import('../settings.service.js');
     const { getAcceptedIndustriesString, getIndustryMappingString } = await import('../industry.service.js');
     const { DEFAULT_ANALYSIS_PROMPT, ANONYMIZATION_RULES_ANONYMOUS, ANONYMIZATION_RULES_NOMINATIVE } = await import('../../config/prompts.backend.js');
+    const { buildPromptExecutionMetadata } = await import('../../config/llmGovernance.js');
 
     const settings = await getLLMSettings();
     const model = settings.llmModel;
     const cvMode = settings.cvMode || 'nominative';
     let analysisPrompt = settings['Analysis Prompt'] || DEFAULT_ANALYSIS_PROMPT;
+    const analysisPromptMeta = buildPromptExecutionMetadata('DEFAULT_ANALYSIS_PROMPT', settings['Analysis Prompt'] ? 'settings' : 'default');
 
     if (!model && settings.llmProvider !== 'ollama') {
         throw new Error('LLM model not configured');
@@ -215,7 +223,8 @@ export async function analyzeImprovedResumeWithLLM(text, _firmId, originalFileNa
     await acquireLLMSlot();
     let improvedAnalysis;
     try {
-        improvedAnalysis = await analyzeResume(text, model, analysisPrompt, null, true);
+        safeLog('debug', 'Batch post-improvement analysis using governed prompt', { ...analysisPromptMeta, originalFileName });
+        improvedAnalysis = await analyzeResume(text, model, analysisPrompt, { promptMetadata: analysisPromptMeta }, true);
     } finally {
         releaseLLMSlot();
     }

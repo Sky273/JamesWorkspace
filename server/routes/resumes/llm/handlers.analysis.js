@@ -11,6 +11,7 @@ import {
     ANONYMIZATION_RULES_ANONYMOUS,
     ANONYMIZATION_RULES_NOMINATIVE
 } from '../../../config/prompts.backend.js';
+import { buildPromptExecutionMetadata } from '../../../config/llmGovernance.js';
 import { generateTrigram } from '../../../utils/trigram.js';
 import { mapResumeToFrontend } from '../helpers.js';
 import { hasImprovedTextChanged } from '../../../services/resumeVersions.service.js';
@@ -51,6 +52,7 @@ function createAnalyzeHandler() {
             const model = settings.llmModel;
             const cvMode = settings.cvMode || 'nominative';
             let analysisPrompt = settings['Analysis Prompt'] || DEFAULT_ANALYSIS_PROMPT;
+            const analysisPromptMeta = buildPromptExecutionMetadata('DEFAULT_ANALYSIS_PROMPT', settings['Analysis Prompt'] ? 'settings' : 'default');
 
             if (!model && settings.llmProvider !== 'ollama') {
                 return res.status(500).json({ error: 'LLM model not configured in Settings.' });
@@ -70,8 +72,11 @@ function createAnalyzeHandler() {
                 industriesCount: acceptedIndustries.split(',').length,
                 industriesPreview: `${acceptedIndustries.substring(0, 100)}...`,
                 cvMode,
-                fileName: fileNameValue
+                fileName: fileNameValue,
+                ...analysisPromptMeta
             });
+
+            const analysisUserMetadata = { ...userMetadata, promptMetadata: analysisPromptMeta };
 
             const cleanedText = cleanupText(resumeText);
             safeLog('debug', 'Text cleaned before analysis', {
@@ -79,7 +84,7 @@ function createAnalyzeHandler() {
                 cleanedLength: cleanedText.length
             });
 
-            let analysis = await analyzeResume(cleanedText, model, analysisPrompt, userMetadata, false, originalFileName);
+            let analysis = await analyzeResume(cleanedText, model, analysisPrompt, analysisUserMetadata, false, originalFileName);
             analysis = await calculateWeightedGlobalRating(analysis, settings);
 
             if (cvMode === 'anonymous' && analysis.name) {
@@ -109,6 +114,7 @@ function createAnalyzeTextHandler() {
             const model = settings.llmModel;
             const cvMode = settings.cvMode || 'nominative';
             let analysisPrompt = settings['Analysis Prompt'] || DEFAULT_ANALYSIS_PROMPT;
+            const analysisPromptMeta = buildPromptExecutionMetadata('DEFAULT_ANALYSIS_PROMPT', settings['Analysis Prompt'] ? 'settings' : 'default');
 
             if (!model && settings.llmProvider !== 'ollama') {
                 return res.status(500).json({ error: 'LLM model not configured in Settings.' });
@@ -123,15 +129,18 @@ function createAnalyzeTextHandler() {
             anonymizationRules = anonymizationRules.replace(/{FILENAME}/g, fileNameValue);
             analysisPrompt = analysisPrompt.replace('{ANONYMIZATION_RULES}', anonymizationRules);
 
+            const analysisUserMetadata = { ...userMetadata, promptMetadata: analysisPromptMeta };
+
             const cleanedText = cleanupText(text);
             safeLog('debug', 'Text cleaned before analysis', {
                 originalLength: text.length,
                 cleanedLength: cleanedText.length,
                 fileName: fileNameValue,
-                cvMode
+                cvMode,
+                ...analysisPromptMeta
             });
 
-            let analysis = await analyzeResume(cleanedText, model, analysisPrompt, userMetadata, false, fileName || null);
+            let analysis = await analyzeResume(cleanedText, model, analysisPrompt, analysisUserMetadata, false, fileName || null);
             analysis = await calculateWeightedGlobalRating(analysis, settings);
 
             if (cvMode === 'anonymous' && analysis.name) {
@@ -158,6 +167,7 @@ async function executeImprovementFlow({ req, res, text, analysis = {}, fileName 
     const model = settings.llmModel;
     const cvMode = settings.cvMode || 'nominative';
     let improvementPrompt = settings['Improvement Prompt'] || DEFAULT_IMPROVEMENT_PROMPT;
+    const improvementPromptMeta = buildPromptExecutionMetadata('DEFAULT_IMPROVEMENT_PROMPT', settings['Improvement Prompt'] ? 'settings' : 'default');
 
     if (!model && settings.llmProvider !== 'ollama') {
         return res.status(500).json({ error: 'LLM model not configured in Settings.' });
@@ -175,8 +185,11 @@ async function executeImprovementFlow({ req, res, text, analysis = {}, fileName 
         industriesPreview: `${acceptedIndustries.substring(0, 100)}...`,
         cvMode,
         fileName: fileNameValue,
-        resumeId: resumeId || null
+        resumeId: resumeId || null,
+        ...improvementPromptMeta
     });
+
+    const improvementUserMetadata = { ...userMetadata, promptMetadata: improvementPromptMeta };
 
     safeLog('debug', 'Text prepared before improvement', {
         originalLength: text.length,
@@ -186,7 +199,7 @@ async function executeImprovementFlow({ req, res, text, analysis = {}, fileName 
         resumeId: resumeId || null
     });
 
-    const improved = await improveResume(text, analysis, model, improvementPrompt, fileName, userMetadata);
+    const improved = await improveResume(text, analysis, model, improvementPrompt, fileName, improvementUserMetadata);
     let mergedAnalysis = {
         ...analysis,
         ...improved.analysis,
@@ -351,12 +364,20 @@ function createMatchHandler() {
             const settings = await getLLMSettings();
             const model = settings.llmModel;
             const matchPrompt = settings['Match Analysis Prompt'] || DEFAULT_MATCH_ANALYSIS_PROMPT;
+            const matchPromptMeta = buildPromptExecutionMetadata('DEFAULT_MATCH_ANALYSIS_PROMPT', settings['Match Analysis Prompt'] ? 'settings' : 'default');
 
             if (!model && settings.llmProvider !== 'ollama') {
                 return res.status(500).json({ error: 'LLM model not configured in Settings.' });
             }
 
-            const matchResult = await matchResumeWithMission(resumeText, missionTitle, missionContent, model, matchPrompt, userMetadata);
+            safeLog('debug', 'Matching resume with mission using governed prompt', {
+                resumeId: id,
+                missionId,
+                ...matchPromptMeta
+            });
+
+            const matchUserMetadata = { ...userMetadata, promptMetadata: matchPromptMeta };
+            const matchResult = await matchResumeWithMission(resumeText, missionTitle, missionContent, model, matchPrompt, matchUserMetadata);
             return res.json(matchResult);
         } catch (error) {
             return handleLLMError(error, res, 'matching resume with mission');

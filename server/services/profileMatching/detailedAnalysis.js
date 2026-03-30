@@ -3,6 +3,7 @@ import { safeLog } from '../../utils/logger.backend.js';
 import { getLLMSettings } from '../settings.service.js';
 import { callBusinessChatCompletion } from '../llmProvider.service.js';
 import { DETAILED_PROFILE_ANALYSIS_PROMPT } from '../../config/prompts.backend.js';
+import { buildPromptExecutionMetadata } from '../../config/llmGovernance.js';
 import { normalizeUtf8Text, parseJsonFromLlmResponse } from '../openai/textUtils.js';
 import { parseJsonField } from './localRanking.js';
 import { validateDetailedProfileAnalysisPayload } from './contracts.js';
@@ -56,6 +57,7 @@ async function analyzeProfileForMission(missionId, resumeId, emitProgress, userM
     const candidateIndustries = parseJsonField(resumeRecord.industries);
     const candidateSoftSkills = parseJsonField(resumeRecord.soft_skills);
 
+    const promptMeta = buildPromptExecutionMetadata('DETAILED_PROFILE_ANALYSIS_PROMPT');
     const prompt = DETAILED_PROFILE_ANALYSIS_PROMPT
         .replace('{CANDIDATE_NAME}', resumeRecord.name || normalizeUtf8Text('Non spécifié'))
         .replace('{CANDIDATE_TITLE}', resumeRecord.title || normalizeUtf8Text('Non spécifié'))
@@ -106,7 +108,8 @@ async function analyzeProfileForMission(missionId, resumeId, emitProgress, userM
                 provider: settings.llmProvider,
                 model,
                 maxTokens: detailedAnalysisMaxTokens,
-                error: error.message
+                error: error.message,
+                ...promptMeta
             });
 
             try {
@@ -118,7 +121,8 @@ async function analyzeProfileForMission(missionId, resumeId, emitProgress, userM
                     provider: settings.llmProvider,
                     model,
                     maxTokens: detailedAnalysisMaxTokens,
-                    error: retryError.message
+                    error: retryError.message,
+                    ...promptMeta
                 });
                 throw new Error(normalizeUtf8Text("Erreur lors de l'analyse détaillée du profil."));
             }
@@ -129,7 +133,8 @@ async function analyzeProfileForMission(missionId, resumeId, emitProgress, userM
                 provider: settings.llmProvider,
                 model,
                 maxTokens: detailedAnalysisMaxTokens,
-                error: error.message
+                error: error.message,
+                ...promptMeta
             });
             throw new Error(normalizeUtf8Text("Erreur lors de l'analyse détaillée du profil."));
         }

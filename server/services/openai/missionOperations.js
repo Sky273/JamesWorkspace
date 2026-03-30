@@ -77,7 +77,7 @@ export async function matchResumeWithMission(resumeText, missionTitle, missionCo
             matchRuns: 1,
             failedRuns: 1,
             inputChars: resumeText.length + missionTitle.length + missionContent.length,
-            metadata: { source: 'match-provider-call', error: error.message }
+            metadata: { source: 'match-provider-call', error: error.message, ...(userMetadata?.promptMetadata || {}) }
         });
         throw error;
     }
@@ -93,7 +93,7 @@ export async function matchResumeWithMission(resumeText, missionTitle, missionCo
             structuredRuns: 1,
             inputChars: resumeText.length + missionTitle.length + missionContent.length,
             outputChars: JSON.stringify(rawAnalysis).length,
-            metadata: { source: 'match-analysis' }
+            metadata: { source: 'match-analysis', ...(userMetadata?.promptMetadata || {}) }
         });
         // Normalize the response to ensure frontend compatibility while preserving full data
         return normalizeMatchAnalysis(rawAnalysis);
@@ -107,7 +107,7 @@ export async function matchResumeWithMission(resumeText, missionTitle, missionCo
                 provider: metricsProvider,
                 event: 'match',
                 matchRuns: 1,
-                metadata: { source: 'match-analysis-retry', error: parseError.message }
+                metadata: { source: 'match-analysis-retry', error: parseError.message, ...(userMetadata?.promptMetadata || {}) }
             });
 
             try {
@@ -122,7 +122,7 @@ export async function matchResumeWithMission(resumeText, missionTitle, missionCo
                     structuredRuns: 1,
                     inputChars: resumeText.length + missionTitle.length + missionContent.length,
                     outputChars: JSON.stringify(rawAnalysis).length,
-                    metadata: { source: 'match-analysis-retry-success' }
+                    metadata: { source: 'match-analysis-retry-success', ...(userMetadata?.promptMetadata || {}) }
                 });
                 return normalizeMatchAnalysis(rawAnalysis);
             } catch (retryError) {
@@ -142,7 +142,7 @@ export async function matchResumeWithMission(resumeText, missionTitle, missionCo
             matchRuns: 1,
             failedRuns: 1,
             inputChars: resumeText.length + missionTitle.length + missionContent.length,
-            metadata: { source: 'match-analysis', error: parseError.message }
+            metadata: { source: 'match-analysis', error: parseError.message, ...(userMetadata?.promptMetadata || {}) }
         });
         throw new Error(normalizeUtf8Text('Le mod\u00e8le LLM a retourn\u00e9 une r\u00e9ponse invalide pour le matching. Veuillez r\u00e9essayer ou contacter le support si le probl\u00e8me persiste.'));
 }
@@ -206,7 +206,7 @@ Respond in the same language as the resume.`;
             event: 'run',
             failedRuns: 1,
             inputChars,
-            metadata: { source: 'adapt-provider-call', error: error.message }
+            metadata: { source: 'adapt-provider-call', error: error.message, ...(userMetadata?.promptMetadata || {}) }
         });
         throw error;
     }
@@ -241,7 +241,7 @@ Respond in the same language as the resume.`;
         fallbackRuns: 1,
         inputChars,
         outputChars: content.length,
-        metadata: { source: 'plain-text-fallback' }
+        metadata: { source: 'plain-text-fallback', ...(userMetadata?.promptMetadata || {}) }
     });
     
     return {

@@ -3,15 +3,17 @@ import { safeLog } from '../../utils/logger.backend.js';
 import { getLLMSettings } from '../settings.service.js';
 import { callBusinessChatCompletion } from '../llmProvider.service.js';
 import { MISSION_KEYWORDS_EXTRACTION_PROMPT } from '../../config/prompts.backend.js';
+import { buildPromptExecutionMetadata } from '../../config/llmGovernance.js';
 import { normalizeUtf8Text, parseJsonFromLlmResponse } from '../openai/textUtils.js';
 import { validateMissionKeywordsPayload } from './contracts.js';
 
 async function extractMissionKeywords(missionTitle, missionContent, model, userMetadata = null) {
+    const promptMeta = buildPromptExecutionMetadata('MISSION_KEYWORDS_EXTRACTION_PROMPT');
     const prompt = MISSION_KEYWORDS_EXTRACTION_PROMPT
         .replace('{MISSION_TITLE}', missionTitle || '')
         .replace('{MISSION_CONTENT}', missionContent || '');
 
-    safeLog('info', 'Extracting mission keywords via LLM', { missionTitle });
+    safeLog('info', 'Extracting mission keywords via LLM', { missionTitle, ...promptMeta });
 
     const response = await callBusinessChatCompletion({
         model,
@@ -31,7 +33,8 @@ async function extractMissionKeywords(missionTitle, missionContent, model, userM
         );
     } catch (parseError) {
         safeLog('error', 'Failed to parse mission keywords response as JSON', {
-            error: parseError.message
+            error: parseError.message,
+            ...promptMeta
         });
         throw new Error(normalizeUtf8Text("Erreur lors de l'extraction des mots-clés de la mission."));
     }

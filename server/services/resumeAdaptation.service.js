@@ -8,6 +8,7 @@ import {
     ANONYMIZATION_RULES_ANONYMOUS,
     ANONYMIZATION_RULES_NOMINATIVE
 } from '../config/prompts.backend.js';
+import { buildPromptExecutionMetadata } from '../config/llmGovernance.js';
 import { safeLog } from '../utils/logger.backend.js';
 
 function parseMatchScore(matchAnalysis) {
@@ -52,6 +53,7 @@ export async function executeResumeAdaptation({
 
     const acceptedIndustries = await getAcceptedIndustriesString();
     let adaptationPrompt = settings['Adaptation Prompt'] || DEFAULT_ADAPTATION_PROMPT;
+    const adaptationPromptMeta = buildPromptExecutionMetadata('DEFAULT_ADAPTATION_PROMPT', settings['Adaptation Prompt'] ? 'settings' : 'default');
     adaptationPrompt = adaptationPrompt.replace('{ACCEPTED_INDUSTRIES}', acceptedIndustries);
 
     let anonymizationRules = cvMode === 'anonymous' ? ANONYMIZATION_RULES_ANONYMOUS : ANONYMIZATION_RULES_NOMINATIVE;
@@ -60,13 +62,17 @@ export async function executeResumeAdaptation({
     adaptationPrompt = adaptationPrompt.replace('{FILENAME}', fileNameValue);
 
     const matchPrompt = settings['Match Analysis Prompt'] || DEFAULT_MATCH_ANALYSIS_PROMPT;
+    const matchPromptMeta = buildPromptExecutionMetadata('DEFAULT_MATCH_ANALYSIS_PROMPT', settings['Match Analysis Prompt'] ? 'settings' : 'default');
+    const matchUserMetadata = { ...userMetadata, promptMetadata: matchPromptMeta };
+    const adaptationUserMetadata = { ...userMetadata, promptMetadata: adaptationPromptMeta };
+
     const matchAnalysis = await matchResumeWithMission(
         resumeText,
         missionTitle,
         missionContent,
         model,
         matchPrompt,
-        userMetadata
+        matchUserMetadata
     );
 
     const adaptationResult = await adaptResumeToMission({
@@ -76,7 +82,7 @@ export async function executeResumeAdaptation({
         matchAnalysis,
         model,
         adaptationPrompt,
-        userMetadata
+        userMetadata: adaptationUserMetadata
     });
 
     const adaptedText = typeof adaptationResult === 'string' ? adaptationResult : adaptationResult.adaptedText;
@@ -106,7 +112,9 @@ export async function executeResumeAdaptation({
         resumeId: resumeRecord.id,
         missionId: missionRecord.id,
         adaptationId: adaptationRecord.id,
-        model
+        model,
+        matchPrompt: matchPromptMeta,
+        adaptationPrompt: adaptationPromptMeta
     });
 
     return {

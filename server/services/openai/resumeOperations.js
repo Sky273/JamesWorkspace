@@ -177,7 +177,7 @@ export async function improveResume(text, analysis, model, improvementPromptTemp
             event: 'run',
             failedRuns: 1,
             inputChars: text.length,
-            metadata: { source: 'provider-call', error: error.message }
+            metadata: { source: 'provider-call', error: error.message, ...(userMetadata?.promptMetadata || {}) }
         });
         throw error;
     }
@@ -221,7 +221,7 @@ export async function improveResume(text, analysis, model, improvementPromptTemp
                 structuredRuns: 1,
                 inputChars: text.length,
                 outputChars: cleanedText.length,
-                metadata: { source: 'structured-json' }
+                metadata: { source: 'structured-json', ...(userMetadata?.promptMetadata || {}) }
             });
 
             safeLog('info', 'Parsed improvement result:', {
@@ -260,7 +260,7 @@ export async function improveResume(text, analysis, model, improvementPromptTemp
                         structuredRuns: 1,
                         inputChars: text.length,
                         outputChars: cleanedText.length,
-                        metadata: { source: 'structured-json-retry-success' }
+                        metadata: { source: 'structured-json-retry-success', ...(userMetadata?.promptMetadata || {}) }
                     });
 
                     return result;
@@ -282,7 +282,7 @@ export async function improveResume(text, analysis, model, improvementPromptTemp
                 event: 'run',
                 failedRuns: 1,
                 inputChars: text.length,
-                metadata: { source: 'structured-json', error: parseError.message }
+                metadata: { source: 'structured-json', error: parseError.message, ...(userMetadata?.promptMetadata || {}) }
             });
             throw new Error(normalizeUtf8Text("Le mod\u00e8le LLM a retourn\u00e9 une r\u00e9ponse JSON invalide pour l'am\u00e9lioration. Veuillez r\u00e9essayer ou contacter le support si le probl\u00e8me persiste."));
 }
@@ -310,7 +310,7 @@ export async function improveResume(text, analysis, model, improvementPromptTemp
         fallbackRuns: 1,
         inputChars: text.length,
         outputChars: cleanedText.length,
-        metadata: { source: 'plain-text-fallback' }
+        metadata: { source: 'plain-text-fallback', ...(userMetadata?.promptMetadata || {}) }
     });
     
     return {

@@ -14,6 +14,11 @@ interface OperationRecentEntry {
   inputChars?: number;
   outputChars?: number;
   source?: string;
+  promptId?: string;
+  promptVersion?: string;
+  contractId?: string;
+  contractVersion?: string;
+  promptSource?: string;
 }
 
 interface OperationMetrics {
@@ -172,6 +177,13 @@ export default function OperationLLMCard({
                   {t('metrics.structuredFallback')}: {safeNumber(entry.structuredRuns)} / {safeNumber(entry.fallbackRuns)}
                   {entry.source ? ` | ${t('metrics.source')}: ${entry.source}` : ''}
                 </div>
+                {(entry.promptId || entry.contractId) && (
+                  <div className="mt-1 opacity-70">
+                    {entry.promptId ? `${t('metrics.prompt')}: ${entry.promptId}${entry.promptVersion ? `@${entry.promptVersion}` : ''}` : ''}
+                    {entry.contractId ? `${entry.promptId ? ' | ' : ''}${t('metrics.contract')}: ${entry.contractId}${entry.contractVersion ? `@${entry.contractVersion}` : ''}` : ''}
+                    {entry.promptSource ? ` | ${t('metrics.promptSource')}: ${entry.promptSource}` : ''}
+                  </div>
+                )}
               </div>
             ))}
           </div>
