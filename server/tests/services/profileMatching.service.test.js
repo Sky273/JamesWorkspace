@@ -230,6 +230,39 @@ describe('Profile Matching Service', () => {
             expect(topProfile.keyGaps).toContain('AWS non mentionné');
         });
 
+        it('should normalize non-array key strengths and key gaps returned by batch scoring', async () => {
+            callBusinessChatCompletion.mockResolvedValue({
+                choices: [{
+                    message: {
+                        content: JSON.stringify({
+                            scores: {
+                                'resume-1': {
+                                    score: 88,
+                                    confidence: 'high',
+          reason: 'Profil aligné',
+                                    keyStrengths: 'React; TypeScript',
+                                    keyGaps: { first: 'AWS', second: 'Finance' }
+                                }
+                            }
+                        })
+                    }
+                }]
+            });
+
+            const result = await findMatchingProfiles('mission-1', { limit: 10 });
+            const topProfile = result.profiles.find(p => p.resumeId === 'resume-1');
+
+            expect(topProfile.keyStrengths).toEqual(['React', 'TypeScript']);
+            expect(topProfile.keyGaps).toEqual(['AWS', 'Finance']);
+            expect(metrics.trackProfileMatchingActivity).toHaveBeenCalledWith(expect.objectContaining({
+                event: 'normalization',
+                normalizationEvents: 1,
+                metadata: expect.objectContaining({
+                    source: 'batch-scoring'
+                })
+            }));
+        });
+
         it('should return empty profiles when LLM fails', async () => {
             callBusinessChatCompletion.mockRejectedValue(new Error('LLM API error'));
             

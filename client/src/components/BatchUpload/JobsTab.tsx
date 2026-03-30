@@ -165,7 +165,7 @@ const JobsTab = (): JSX.Element => {
       const response = await fetchWithAuth(`/api/batch-jobs/${jobId}/cancel`, options);
       
       if (response.ok) {
-        toast.success(t('batchJobs.jobCancelled', 'Job annulÃƒÂ©'));
+        toast.success(t('batchJobs.jobCancelled', 'Job annulé'));
         fetchJobs();
       } else {
         const error = await response.json();
@@ -183,7 +183,7 @@ const JobsTab = (): JSX.Element => {
       const response = await fetchWithAuth(`/api/batch-jobs/${jobId}`, options);
       
       if (response.ok) {
-        toast.success(t('batchJobs.jobDeleted', 'Job supprimÃƒÂ©'));
+        toast.success(t('batchJobs.jobDeleted', 'Job supprimé'));
         setJobs(prev => prev.filter(j => j.id !== jobId));
       } else {
         const error = await response.json();
@@ -209,14 +209,14 @@ const JobsTab = (): JSX.Element => {
         a.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
-        toast.success(t('batchJobs.downloadStarted', 'TÃƒÂ©lÃƒÂ©chargement dÃƒÂ©marrÃƒÂ©'));
+        toast.success(t('batchJobs.downloadStarted', 'Téléchargement démarré'));
       } else {
         const error = await response.json();
-        toast.error(error.error || 'Erreur lors du tÃƒÂ©lÃƒÂ©chargement');
+        toast.error(error.error || 'Erreur lors du téléchargement');
       }
     } catch (error) {
       logger.error('Error downloading export:', error);
-      toast.error('Erreur lors du tÃƒÂ©lÃƒÂ©chargement');
+      toast.error('Erreur lors du téléchargement');
     }
   };
 
@@ -300,9 +300,9 @@ const JobsTab = (): JSX.Element => {
     switch (status) {
       case 'pending': return t('batchJobs.status.pending', 'En attente');
       case 'processing': return t('batchJobs.status.processing', 'En cours');
-      case 'completed': return t('batchJobs.status.completed', 'TerminÃƒÂ©');
-      case 'failed': return t('batchJobs.status.failed', 'Ãƒâ€°chouÃƒÂ©');
-      case 'cancelled': return t('batchJobs.status.cancelled', 'AnnulÃƒÂ©');
+      case 'completed': return t('batchJobs.status.completed', 'Terminé');
+      case 'failed': return t('batchJobs.status.failed', 'Échoué');
+      case 'cancelled': return t('batchJobs.status.cancelled', 'Annulé');
       default: return status;
     }
   };
@@ -369,7 +369,7 @@ const JobsTab = (): JSX.Element => {
 
   const getJobTypeText = (job: Job) => {
     if (job.job_type === 'improve') {
-      return t('batchJobs.type.improve', 'AmÃƒÂ©lioration');
+      return t('batchJobs.type.improve', 'Am?lioration');
     }
     if (job.job_type === 'adapt') {
       return t('batchJobs.type.adapt', 'Adaptation');
@@ -381,7 +381,7 @@ const JobsTab = (): JSX.Element => {
       return t('batchJobs.type.profileSearch', 'Recherche de profils');
     }
     if (job.job_type === 'profile-analysis') {
-      return t('batchJobs.type.profileAnalysis', 'Analyse dÃ©taillÃ©e de profil');
+      return t('batchJobs.type.profileAnalysis', 'Analyse détaillée de profil');
     }
     if (job.job_type === 'deal-export') {
       const options = typeof job.options === 'string' ? JSON.parse(job.options) : job.options;
@@ -391,7 +391,7 @@ const JobsTab = (): JSX.Element => {
         : t('batchJobs.type.dealExport', 'Export affaire');
     }
     if (job.job_type === 'collect-trends') {
-      return t('batchJobs.type.collectTrends', 'Collecte tendances marchÃƒÂ©');
+      return t('batchJobs.type.collectTrends', 'Collecte tendances marché');
     }
     if (job.job_type === 'collect-facts') {
       const options = typeof job.options === 'string' ? JSON.parse(job.options) : job.options;
@@ -401,11 +401,11 @@ const JobsTab = (): JSX.Element => {
         : t('batchJobs.type.collectFactsSource', 'Collecte offres ({{source}})', { source });
     }
     if (job.job_type === 'collect-metiers') {
-      return t('batchJobs.type.collectMetiers', 'Collecte mÃƒÂ©tiers & compÃƒÂ©tences');
+      return t('batchJobs.type.collectMetiers', 'Collecte métiers & compétences');
     }
     const options = typeof job.options === 'string' ? JSON.parse(job.options) : job.options;
     if (options?.improve) {
-      return t('batchJobs.type.importImprove', 'Import + AmÃƒÂ©lioration');
+      return t('batchJobs.type.importImprove', 'Import + Amélioration');
     }
     return t('batchJobs.type.import', 'Import');
   };
@@ -443,9 +443,9 @@ const JobsTab = (): JSX.Element => {
           </svg>
         </div>
         <div className="text-sm text-blue-700 dark:text-blue-300">
-          <p className="font-medium">{t('batchJobs.serverInfo.title', 'Traitement en arriÃƒÂ¨re-plan')}</p>
+          <p className="font-medium">{t('batchJobs.serverInfo.title', 'Traitement en arrière-plan')}</p>
           <p className="mt-1 text-blue-600 dark:text-blue-400">
-            {t('batchJobs.serverInfo.description', 'Les jobs sont traitÃƒÂ©s sur le serveur. Vous pouvez naviguer librement dans l\'application sans interrompre le traitement.')}
+            {t('batchJobs.serverInfo.description', 'Les jobs sont traités sur le serveur. Vous pouvez naviguer librement dans l\'application sans interrompre le traitement.')}
           </p>
         </div>
       </div>
@@ -485,7 +485,7 @@ const JobsTab = (): JSX.Element => {
                       </div>
                       <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                         {formatDate(job.created_at)}
-                        {job.user_name && ` Ã¢â‚¬Â¢ ${job.user_name}`}
+                        {job.user_name && ` • ${job.user_name}`}
                       </div>
                     </div>
                   </div>
@@ -497,7 +497,7 @@ const JobsTab = (): JSX.Element => {
                         {job.processed_items} / {job.total_items}
                       </div>
                       <div className="text-xs text-gray-500 dark:text-gray-400">
-                        {job.success_count} Ã¢Å“â€œ {job.error_count > 0 && `Ã¢â‚¬Â¢ ${job.error_count} Ã¢Å“â€”`}
+                        {job.success_count} succès {job.error_count > 0 && `• ${job.error_count} erreur${job.error_count > 1 ? 's' : ''}`}
                       </div>
                     </div>
 
@@ -541,7 +541,7 @@ const JobsTab = (): JSX.Element => {
                         <button
                           onClick={(e) => { e.stopPropagation(); handleDownloadExport(job.id, job.export_file_name!); }}
                           className="p-1.5 text-green-500 hover:text-green-600 transition-colors"
-                          title={t('batchJobs.download', 'TÃƒÂ©lÃƒÂ©charger l\'export')}
+                          title={t('batchJobs.download', 'Télécharger l\'export')}
                         >
                           <ArrowDownTrayIcon className="w-5 h-5" />
                         </button>
@@ -586,11 +586,11 @@ const JobsTab = (): JSX.Element => {
                     <div className="p-4 bg-gray-50 dark:bg-gray-900/50">
                       <div className="grid grid-cols-2 gap-3 text-sm">
                         <div className="flex justify-between px-3 py-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
-                          <span className="text-gray-500 dark:text-gray-400">{t('batchJobs.collection.processed', 'TraitÃƒÂ©s')}</span>
+                          <span className="text-gray-500 dark:text-gray-400">{t('batchJobs.collection.processed', 'Traités')}</span>
                           <span className="font-medium text-gray-900 dark:text-gray-100">{job.processed_items}</span>
                         </div>
                         <div className="flex justify-between px-3 py-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
-                          <span className="text-gray-500 dark:text-gray-400">{t('batchJobs.collection.success', 'SuccÃƒÂ¨s')}</span>
+                          <span className="text-gray-500 dark:text-gray-400">{t('batchJobs.collection.success', 'Succès')}</span>
                           <span className="font-medium text-green-600 dark:text-green-400">{job.success_count}</span>
                         </div>
                         <div className="flex justify-between px-3 py-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
@@ -599,7 +599,7 @@ const JobsTab = (): JSX.Element => {
                         </div>
                         {job.started_at && (
                           <div className="flex justify-between px-3 py-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
-                            <span className="text-gray-500 dark:text-gray-400">{t('batchJobs.collection.startedAt', 'DÃƒÂ©marrÃƒÂ©')}</span>
+                            <span className="text-gray-500 dark:text-gray-400">{t('batchJobs.collection.startedAt', 'Démarré')}</span>
                             <span className="font-medium text-gray-900 dark:text-gray-100">{formatDate(job.started_at)}</span>
                           </div>
                         )}
@@ -622,7 +622,7 @@ const JobsTab = (): JSX.Element => {
                     <div className="p-4 bg-gray-50 dark:bg-gray-900/50 max-h-64 overflow-y-auto">
                       {job.items.length === 0 ? (
                         <p className="text-sm text-gray-500 dark:text-gray-400">
-                          {t('batchJobs.noItems', 'Aucun ÃƒÂ©lÃƒÂ©ment')}
+                          {t('batchJobs.noItems', 'Aucun élément')}
                         </p>
                       ) : (
                         <div className="space-y-2">
@@ -668,7 +668,7 @@ const JobsTab = (): JSX.Element => {
                                   )}
                                   {job.job_type !== 'deal-export' && item.original_name && item.display_name && (
                                     <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                                      {item.original_name} Ã¢â€ â€™ <span className="font-medium text-indigo-600 dark:text-indigo-400">{item.display_name}</span>
+                                      {item.original_name} → <span className="font-medium text-indigo-600 dark:text-indigo-400">{item.display_name}</span>
                                     </span>
                                   )}
                                   {item.status === 'processing' && item.pending_data?.progressDetails?.stageLabel && (

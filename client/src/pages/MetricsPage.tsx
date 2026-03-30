@@ -205,6 +205,7 @@ interface OperationsMetrics {
       batchesStarted?: number;
       batchesRetried?: number;
       batchesFailed?: number;
+      normalizationEvents?: number;
       profilesRequested?: number;
       profilesScored?: number;
       profilesExplained?: number;
@@ -220,12 +221,17 @@ interface OperationsMetrics {
         batchesStarted?: number;
         batchesRetried?: number;
         batchesFailed?: number;
+        normalizationEvents?: number;
+        field?: string;
+        source?: string;
+        inputType?: string;
       }>;
       byProvider?: Record<string, {
         searches?: number;
         batchesStarted?: number;
         batchesRetried?: number;
         batchesFailed?: number;
+        normalizationEvents?: number;
         profilesRequested?: number;
         profilesScored?: number;
       }>;
@@ -763,6 +769,10 @@ const MetricsPage = (): JSX.Element => {
                   <div className="bg-violet-100 dark:bg-violet-900/30 rounded-lg p-3">
                     <p className="opacity-70">{t('metrics.profilesReturned', 'Profiles returned')}</p>
                     <p className="font-semibold">{formatNumber(safeNumber(operationsMetrics.operations?.profileMatching?.profilesReturned))}</p>
+                  </div>
+                  <div className="bg-violet-100 dark:bg-violet-900/30 rounded-lg p-3">
+                    <p className="opacity-70">{t('metrics.profileNormalizationEvents', 'Normalized LLM fields')}</p>
+                    <p className="font-semibold">{formatNumber(safeNumber(operationsMetrics.operations?.profileMatching?.normalizationEvents))}</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm mb-4">

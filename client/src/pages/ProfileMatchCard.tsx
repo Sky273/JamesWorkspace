@@ -48,6 +48,27 @@ const getScoreBgColor = (score: number): string => {
   return 'bg-red-500';
 };
 
+const asStringArray = (value: unknown): string[] => {
+  if (Array.isArray(value)) {
+    return value.map(item => String(item ?? '').trim()).filter(Boolean);
+  }
+
+  if (typeof value === 'string') {
+    return value
+      .split(/\r?\n|[;,]/)
+      .map(item => item.trim())
+      .filter(Boolean);
+  }
+
+  if (value && typeof value === 'object') {
+    return Object.values(value as Record<string, unknown>)
+      .map(item => String(item ?? '').trim())
+      .filter(Boolean);
+  }
+
+  return [];
+};
+
 export default function ProfileMatchCard({
   profile,
   index,
@@ -59,6 +80,8 @@ export default function ProfileMatchCard({
   onViewResume
 }: ProfileMatchCardProps) {
   const { t } = useTranslation();
+  const keyStrengths = asStringArray(profile.keyStrengths);
+  const keyGaps = asStringArray(profile.keyGaps);
 
   // Alternating row background (striping) - same as DealResumeCard
   // Using bg-gray-700 (solid) for better dark mode contrast
@@ -164,12 +187,12 @@ export default function ProfileMatchCard({
             )}
             {/* Key strengths and gaps */}
             <div className="flex flex-wrap gap-2 mt-1">
-              {profile.keyStrengths?.map((strength, idx) => (
+              {keyStrengths.map((strength, idx) => (
                 <span key={`strength-${idx}`} className="text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400">
                   ✓ {strength}
                 </span>
               ))}
-              {profile.keyGaps?.map((gap, idx) => (
+              {keyGaps.map((gap, idx) => (
                 <span key={`gap-${idx}`} className="text-xs px-2 py-0.5 rounded-full bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400">
                   ✗ {gap}
                 </span>

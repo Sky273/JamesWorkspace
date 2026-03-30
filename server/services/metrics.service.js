@@ -115,6 +115,7 @@ class MetricsCollector {
                 batchesStarted: 0,
                 batchesRetried: 0,
                 batchesFailed: 0,
+                normalizationEvents: 0,
                 profilesRequested: 0,
                 profilesScored: 0,
                 profilesExplained: 0,
@@ -262,6 +263,7 @@ class MetricsCollector {
                         batchesStarted: this.operations.profileMatching.batchesStarted,
                         batchesRetried: this.operations.profileMatching.batchesRetried,
                         batchesFailed: this.operations.profileMatching.batchesFailed,
+                        normalizationEvents: this.operations.profileMatching.normalizationEvents,
                         profilesRequested: this.operations.profileMatching.profilesRequested,
                         profilesScored: this.operations.profileMatching.profilesScored,
                         profilesExplained: this.operations.profileMatching.profilesExplained,
@@ -610,6 +612,7 @@ class MetricsCollector {
         batchesStarted = 0,
         batchesRetried = 0,
         batchesFailed = 0,
+        normalizationEvents = 0,
         metadata = {}
     } = {}) {
         const providerKey = this.normalizeLLMProviderKey(provider);
@@ -619,6 +622,7 @@ class MetricsCollector {
                 batchesStarted: 0,
                 batchesRetried: 0,
                 batchesFailed: 0,
+                normalizationEvents: 0,
                 profilesRequested: 0,
                 profilesScored: 0,
                 profilesExplained: 0,
@@ -636,6 +640,7 @@ class MetricsCollector {
         this.operations.profileMatching.batchesStarted += Number(batchesStarted) || 0;
         this.operations.profileMatching.batchesRetried += Number(batchesRetried) || 0;
         this.operations.profileMatching.batchesFailed += Number(batchesFailed) || 0;
+        this.operations.profileMatching.normalizationEvents += Number(normalizationEvents) || 0;
         this.operations.profileMatching.profilesRequested += Number(profilesRequested) || 0;
         this.operations.profileMatching.profilesScored += Number(profilesScored) || 0;
         this.operations.profileMatching.profilesExplained += Number(profilesExplained) || 0;
@@ -644,6 +649,7 @@ class MetricsCollector {
         bucket.batchesStarted += Number(batchesStarted) || 0;
         bucket.batchesRetried += Number(batchesRetried) || 0;
         bucket.batchesFailed += Number(batchesFailed) || 0;
+        bucket.normalizationEvents += Number(normalizationEvents) || 0;
         bucket.profilesRequested += Number(profilesRequested) || 0;
         bucket.profilesScored += Number(profilesScored) || 0;
         bucket.profilesExplained += Number(profilesExplained) || 0;
@@ -660,6 +666,7 @@ class MetricsCollector {
             batchesStarted: Number(batchesStarted) || 0,
             batchesRetried: Number(batchesRetried) || 0,
             batchesFailed: Number(batchesFailed) || 0,
+            normalizationEvents: Number(normalizationEvents) || 0,
             ...metadata
         });
         if (this.operations.profileMatching.recent.length > 50) {
@@ -1009,6 +1016,7 @@ class MetricsCollector {
                     batchesStarted: this.operations.profileMatching.batchesStarted,
                     batchesRetried: this.operations.profileMatching.batchesRetried,
                     batchesFailed: this.operations.profileMatching.batchesFailed,
+                    normalizationEvents: this.operations.profileMatching.normalizationEvents,
                     profilesRequested: this.operations.profileMatching.profilesRequested,
                     profilesScored: this.operations.profileMatching.profilesScored,
                     profilesExplained: this.operations.profileMatching.profilesExplained,
@@ -1088,6 +1096,7 @@ class MetricsCollector {
                 batchesStarted: 0,
                 batchesRetried: 0,
                 batchesFailed: 0,
+                normalizationEvents: 0,
                 profilesRequested: 0,
                 profilesScored: 0,
                 profilesExplained: 0,

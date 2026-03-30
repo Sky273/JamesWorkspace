@@ -216,12 +216,64 @@ CANDIDATE
 - Soft skills: ${candidate.softSkills.join(', ') || normalizeUtf8Text('Non sp\u00e9cifi\u00e9')}`;
 }
 
-function buildExplanationPayload(explanation = {}) {
+function buildExplanationPayload(explanation = {}, normalizationContext = null) {
     return {
         reason: explanation.reason || null,
-        keyStrengths: Array.isArray(explanation.keyStrengths) ? explanation.keyStrengths.slice(0, 3) : [],
-        keyGaps: Array.isArray(explanation.keyGaps) ? explanation.keyGaps.slice(0, 3) : []
+        keyStrengths: normalizeExplanationItems(explanation.keyStrengths, {
+            ...normalizationContext,
+            field: 'keyStrengths'
+        }),
+        keyGaps: normalizeExplanationItems(explanation.keyGaps, {
+            ...normalizationContext,
+            field: 'keyGaps'
+        })
     };
+}
+
+function normalizeExplanationItems(value, context = null) {
+    const trackedContext = context && context.provider
+        ? {
+            provider: context.provider,
+            event: 'normalization',
+            normalizationEvents: 1,
+            metadata: {
+                field: context.field || 'unknown',
+                source: context.source || 'unknown',
+                inputType: Array.isArray(value) ? 'array' : typeof value,
+                ...(context.resumeId ? { resumeId: context.resumeId } : {})
+            }
+        }
+        : null;
+
+    if (Array.isArray(value)) {
+        return value
+            .map(item => String(item || '').trim())
+            .filter(Boolean)
+            .slice(0, 3);
+    }
+
+    if (typeof value === 'string') {
+        if (trackedContext) {
+            metrics.trackProfileMatchingActivity(trackedContext);
+        }
+        return value
+            .split(/\r?\n|[;,]/)
+            .map(item => item.trim())
+            .filter(Boolean)
+            .slice(0, 3);
+    }
+
+    if (value && typeof value === 'object') {
+        if (trackedContext) {
+            metrics.trackProfileMatchingActivity(trackedContext);
+        }
+        return Object.values(value)
+            .map(item => String(item || '').trim())
+            .filter(Boolean)
+            .slice(0, 3);
+    }
+
+    return [];
 }
 
 function getExplanationProfileCount(limit = 0, totalProfiles = 0) {
@@ -627,7 +679,11 @@ async function explainTopProfilesWithLLM(profiles, missionKeywords, missionRecor
                 operationType: 'Profile Match Explanation'
             });
 
-            return buildExplanationPayload(parseJsonFromLlmResponse(response.choices[0].message.content));
+            return buildExplanationPayload(parseJsonFromLlmResponse(response.choices[0].message.content), {
+                provider: metricsProvider,
+                source: 'explanation-pass',
+                resumeId: profile.resumeId
+            });
         }
 
         try {
@@ -723,7 +779,9 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
     
     // 2. Get or extract mission keywords
     const missionKeywords = await getMissionKeywords(missionId, missionRecord, userMetadata);
-    const localRankingWeights = getProfileMatchingLocalRankingWeights(await getLLMSettings());
+    const currentSettings = await getLLMSettings();
+    const localRankingWeights = getProfileMatchingLocalRankingWeights(currentSettings);
+    const metricsProvider = buildLLMMetricLabel(currentSettings.llmProvider || 'unknown', currentSettings.llmModel || '');
     await emitProgress(progressCallback, {
         progress: 45,
         stage: 'mission-keywords-ready',
@@ -912,8 +970,18 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
                         llmScored: true,
                         confidence: llmScore.confidence || 'medium',
                         reason: llmScore.reason || null,
-                        keyStrengths: llmScore.keyStrengths || [],
-                        keyGaps: llmScore.keyGaps || []
+                        keyStrengths: normalizeExplanationItems(llmScore.keyStrengths, {
+                            provider: metricsProvider,
+                            source: 'batch-scoring',
+                            field: 'keyStrengths',
+                            resumeId: profile.resumeId
+                        }),
+                        keyGaps: normalizeExplanationItems(llmScore.keyGaps, {
+                            provider: metricsProvider,
+                            source: 'batch-scoring',
+                            field: 'keyGaps',
+                            resumeId: profile.resumeId
+                        })
                     };
                 }
                 return null; // Exclude profiles not scored by LLM
