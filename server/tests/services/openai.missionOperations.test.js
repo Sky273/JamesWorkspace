@@ -157,6 +157,44 @@ describe('OpenAI Mission Operations', () => {
                 'resume', 'Job', 'Content', 'gpt-4o', '{RESUME_TEXT}{MISSION_TITLE}{MISSION_CONTENT}'
             )).rejects.toThrow();
         });
+
+        it('should retry once when the matching JSON is truncated and succeed on compact retry', async () => {
+            callBusinessChatCompletion
+                .mockResolvedValueOnce({
+                    choices: [{
+                        message: {
+                            content: '{"matchScore":65,"summary":{"overallAssessment":"truncated'
+                        }
+                    }]
+                })
+                .mockResolvedValueOnce({
+                    choices: [{
+                        message: {
+                            content: JSON.stringify({
+                                matchScore: 65,
+                                strengths: ['Backlog management'],
+                                gaps: ['Senior leadership'],
+                                keywordAnalysis: {
+                                    matchedKeywords: ['product owner'],
+                                    partialKeywords: [],
+                                    missingKeywords: ['roadmap']
+                                }
+                            })
+                        }
+                    }]
+                });
+
+            const result = await matchResumeWithMission(
+                'resume', 'Job', 'Content', 'gpt-4o', '{RESUME_TEXT}{MISSION_TITLE}{MISSION_CONTENT}'
+            );
+
+            expect(result.matchScore).toBe(65);
+            expect(result.strengths).toContain('Backlog management');
+            expect(callBusinessChatCompletion).toHaveBeenCalledTimes(2);
+            expect(metrics.trackAdaptationActivity).toHaveBeenCalledWith(expect.objectContaining({
+                metadata: expect.objectContaining({ source: 'match-analysis-retry' })
+            }));
+        });
     });
 
     describe('adaptResumeToMission', () => {

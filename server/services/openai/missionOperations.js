@@ -24,6 +24,13 @@ function inferMetricsProvider(model) {
     return 'openai';
 }
 
+function isRecoverableMatchingJsonError(error) {
+    const message = error?.message || '';
+    return message.includes('Unexpected end of JSON input')
+        || message.includes('Unterminated string in JSON')
+        || message.includes('response truncated due to token limit');
+}
+
 /**
  * Match resume with mission using OpenAI
  * @param {string} resumeText - Resume text
@@ -40,13 +47,17 @@ export async function matchResumeWithMission(resumeText, missionTitle, missionCo
         .replace('{MISSION_CONTENT}', missionContent);
 
     const metricsProvider = buildLLMMetricLabel(inferMetricsProvider(model), model);
-    let response;
-    try {
-        response = await callBusinessChatCompletion({
+    async function requestMatchAnalysis(compactRetry = false) {
+        return callBusinessChatCompletion({
             model,
             messages: [
                 { role: 'system', content: 'You are a JSON-only resume-mission matching API. Respond with valid JSON only.' },
-                { role: 'user', content: prompt }
+                {
+                    role: 'user',
+                    content: compactRetry
+                        ? `${prompt}\n\nReturn compact JSON only. Keep all string values concise. No markdown. No commentary outside the JSON object.`
+                        : prompt
+                }
             ],
             maxTokens: 4096,
             temperature: 0.3,
@@ -54,6 +65,11 @@ export async function matchResumeWithMission(resumeText, missionTitle, missionCo
             userMetadata,
             operationType: 'Resume-Mission Matching'
         });
+    }
+
+    let response;
+    try {
+        response = await requestMatchAnalysis(false);
     } catch (error) {
         metrics.trackAdaptationActivity({
             provider: metricsProvider,
@@ -82,6 +98,40 @@ export async function matchResumeWithMission(resumeText, missionTitle, missionCo
         // Normalize the response to ensure frontend compatibility while preserving full data
         return normalizeMatchAnalysis(rawAnalysis);
     } catch (parseError) {
+        if (isRecoverableMatchingJsonError(parseError)) {
+            safeLog('warn', 'Matching response returned malformed JSON, retrying once with compact JSON instructions', {
+                error: parseError.message
+            });
+
+            metrics.trackAdaptationActivity({
+                provider: metricsProvider,
+                event: 'match',
+                matchRuns: 1,
+                metadata: { source: 'match-analysis-retry', error: parseError.message }
+            });
+
+            try {
+                response = await requestMatchAnalysis(true);
+                const rawAnalysis = validateMatchAnalysisPayload(
+                    parseJsonFromLlmResponse(response.choices[0].message.content)
+                );
+                metrics.trackAdaptationActivity({
+                    provider: metricsProvider,
+                    event: 'match',
+                    matchRuns: 1,
+                    structuredRuns: 1,
+                    inputChars: resumeText.length + missionTitle.length + missionContent.length,
+                    outputChars: JSON.stringify(rawAnalysis).length,
+                    metadata: { source: 'match-analysis-retry-success' }
+                });
+                return normalizeMatchAnalysis(rawAnalysis);
+            } catch (retryError) {
+                safeLog('error', 'Matching response retry failed', {
+                    error: retryError.message
+                });
+            }
+        }
+
         safeLog('error', 'Failed to parse LLM matching response as JSON', {
             error: parseError.message,
             responsePreview: response.choices[0].message.content.substring(0, 500)
