@@ -15,7 +15,6 @@ import {
   UserIcon,
   DocumentTextIcon,
   FolderOpenIcon,
-  MagnifyingGlassIcon,
   ArrowPathIcon,
   SparklesIcon,
   XMarkIcon,
@@ -25,6 +24,7 @@ import logger from '../../utils/logger.frontend';
 import toast from 'react-hot-toast';
 import { SkeletonAdaptationList } from '../ui/Skeleton';
 import { formatDateTime } from '../../utils/dateFormatter';
+import SearchField from '../page/SearchField';
 
 // ─── Types ────────────────────────────────────────────────
 
@@ -448,16 +448,12 @@ const AdaptationsDealsGroupedView = (): JSX.Element => {
       {/* Search bar */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between p-4 gap-4">
-          <div className="relative flex-1 max-w-md">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder={t('adaptations.grouped.searchPlaceholder')}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+          <SearchField
+            containerClassName="relative flex-1 max-w-md"
+            placeholder={t('adaptations.grouped.searchPlaceholder')}
+            value={searchQuery}
+            onChange={setSearchQuery}
+          />
           <div className="flex items-center gap-3">
             <button
               onClick={fetchGroupedData}

@@ -10,7 +10,6 @@ import toast from 'react-hot-toast';
 import {
   BriefcaseIcon,
   PlusIcon,
-  MagnifyingGlassIcon,
   ArrowPathIcon,
   XMarkIcon
 } from '@heroicons/react/24/outline';
@@ -20,6 +19,7 @@ import { Deal, Client, Contact, DealFormData, DealsTabProps, STATUS_CONFIG } fro
 import DealCard from './DealCard';
 import DealFormModal from './DealFormModal';
 import DealDeleteModal from './DealDeleteModal';
+import SearchField from '../page/SearchField';
 
 const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
   const { t } = useTranslation();
@@ -340,16 +340,12 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
 
         {/* Search */}
         <div className="p-4">
-          <div className="relative">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder={t('crm.deals.searchPlaceholder')}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+          <SearchField
+            containerClassName="relative"
+            placeholder={t('crm.deals.searchPlaceholder')}
+            value={searchTerm}
+            onChange={setSearchTerm}
+          />
         </div>
       </div>
 

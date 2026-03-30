@@ -19,6 +19,7 @@ import { useAuth } from '../context/AuthContext';
 import { useAuthFetch } from '../hooks/useAuthFetch';
 import logger from '../utils/logger.frontend';
 import TwoFactorSettings from '../components/TwoFactorSettings';
+import InputWithLeadingIcon from '../components/form/InputWithLeadingIcon';
 
 interface UserProfile {
   id: string;
@@ -161,15 +162,13 @@ const UserProfilePage = (): JSX.Element => {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   {t('userProfile.fullName')}
                 </label>
-                <div className="relative">
-                  <UserCircleIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
+                <InputWithLeadingIcon
+                  icon={UserCircleIcon}
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  inputClassName="mb-0 w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 pl-14 pr-4 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
+                />
               </div>
 
               {/* Email (read-only) */}
@@ -177,15 +176,13 @@ const UserProfilePage = (): JSX.Element => {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   {t('userProfile.email')}
                 </label>
-                <div className="relative">
-                  <EnvelopeIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <input
-                    type="email"
-                    value={profile?.email || ''}
-                    disabled
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed"
-                  />
-                </div>
+                <InputWithLeadingIcon
+                  icon={EnvelopeIcon}
+                  type="email"
+                  value={profile?.email || ''}
+                  disabled
+                  inputClassName="mb-0 w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-600 py-2.5 pl-14 pr-4 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                />
                 <p className="text-xs text-gray-500 mt-1">{t('userProfile.emailReadonly')}</p>
               </div>
 
@@ -194,16 +191,14 @@ const UserProfilePage = (): JSX.Element => {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   {t('userProfile.jobTitle')}
                 </label>
-                <div className="relative">
-                  <BriefcaseIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <input
-                    type="text"
-                    value={formData.jobTitle}
-                    onChange={(e) => setFormData({ ...formData, jobTitle: e.target.value })}
-                    placeholder={t('userProfile.jobTitlePlaceholder')}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
+                <InputWithLeadingIcon
+                  icon={BriefcaseIcon}
+                  type="text"
+                  value={formData.jobTitle}
+                  onChange={(e) => setFormData({ ...formData, jobTitle: e.target.value })}
+                  placeholder={t('userProfile.jobTitlePlaceholder')}
+                  inputClassName="mb-0 w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 pl-14 pr-4 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500"
+                />
               </div>
 
               {/* Phone */}
@@ -211,16 +206,14 @@ const UserProfilePage = (): JSX.Element => {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   {t('userProfile.phone')}
                 </label>
-                <div className="relative">
-                  <PhoneIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <input
-                    type="tel"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    placeholder={t('userProfile.phonePlaceholder')}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
+                <InputWithLeadingIcon
+                  icon={PhoneIcon}
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  placeholder={t('userProfile.phonePlaceholder')}
+                  inputClassName="mb-0 w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 pl-14 pr-4 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500"
+                />
               </div>
             </div>
 

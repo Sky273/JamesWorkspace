@@ -10,6 +10,7 @@ import {
   EnvelopeIcon,
   PhoneIcon
 } from '@heroicons/react/24/outline';
+import InputWithLeadingIcon from '../form/InputWithLeadingIcon';
 
 interface DpoTabProps {
   formData: {
@@ -51,48 +52,42 @@ export const DpoTab = ({ formData, onInputChange, t }: DpoTabProps): JSX.Element
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               {t('settings.dpo.dpoName')}
             </label>
-            <div className="relative">
-              <UserCircleIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type="text"
-                value={formData['DPO Name'] || ''}
-                onChange={(e) => onInputChange('DPO Name', e.target.value)}
-                placeholder={t('settings.dpo.dpoNamePlaceholder')}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
+            <InputWithLeadingIcon
+              icon={UserCircleIcon}
+              type="text"
+              value={formData['DPO Name'] || ''}
+              onChange={(e) => onInputChange('DPO Name', e.target.value)}
+              placeholder={t('settings.dpo.dpoNamePlaceholder')}
+              inputClassName="mb-0 w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 py-2.5 pl-14 pr-4 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               {t('settings.dpo.dpoEmail')}
             </label>
-            <div className="relative">
-              <EnvelopeIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type="email"
-                value={formData['DPO Email'] || ''}
-                onChange={(e) => onInputChange('DPO Email', e.target.value)}
-                placeholder={t('settings.dpo.emailPlaceholder')}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
+            <InputWithLeadingIcon
+              icon={EnvelopeIcon}
+              type="email"
+              value={formData['DPO Email'] || ''}
+              onChange={(e) => onInputChange('DPO Email', e.target.value)}
+              placeholder={t('settings.dpo.emailPlaceholder')}
+              inputClassName="mb-0 w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 py-2.5 pl-14 pr-4 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               {t('settings.dpo.dpoPhone')}
             </label>
-            <div className="relative">
-              <PhoneIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type="tel"
-                value={formData['DPO Phone'] || ''}
-                onChange={(e) => onInputChange('DPO Phone', e.target.value)}
-                placeholder={t('settings.dpo.phonePlaceholder')}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
+            <InputWithLeadingIcon
+              icon={PhoneIcon}
+              type="tel"
+              value={formData['DPO Phone'] || ''}
+              onChange={(e) => onInputChange('DPO Phone', e.target.value)}
+              placeholder={t('settings.dpo.phonePlaceholder')}
+              inputClassName="mb-0 w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 py-2.5 pl-14 pr-4 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
           </div>
         </div>
       </motion.div>

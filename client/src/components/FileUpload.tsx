@@ -15,6 +15,7 @@ import { useResume } from '../context/ResumeContext';
 import { useAuth } from '../context/AuthContext';
 import ProcessingScreen from './ProcessingScreen';
 import AdminFirmSelector from './AdminFirmSelector';
+import InputWithLeadingIcon from './form/InputWithLeadingIcon';
 import { useTranslation } from 'react-i18next';
 import logger from '../utils/logger.frontend';
 
@@ -218,21 +219,19 @@ const FileUpload = (): JSX.Element => {
           <label htmlFor="candidateName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             {t('fileUpload.gdpr.candidateName', 'Nom complet du candidat')} *
           </label>
-          <div className="relative">
-            <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <input
-              type="text"
-              id="candidateName"
-              value={candidateInfo.candidateName}
-              onChange={(e) => setCandidateInfo(prev => ({ ...prev, candidateName: e.target.value }))}
-              className={`w-full pl-10 pr-4 py-3 rounded-lg border ${
-                formErrors.name 
-                  ? 'border-red-500 focus:ring-red-500' 
-                  : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-              } bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2`}
-              placeholder={t('fileUpload.gdpr.namePlaceholder', 'Ex: Jean Dupont')}
-            />
-          </div>
+          <InputWithLeadingIcon
+            icon={UserIcon}
+            type="text"
+            id="candidateName"
+            value={candidateInfo.candidateName}
+            onChange={(e) => setCandidateInfo(prev => ({ ...prev, candidateName: e.target.value }))}
+            inputClassName={`w-full rounded-xl border ${
+              formErrors.name
+                ? 'border-red-500 focus:ring-red-500'
+                : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+            } mb-0 bg-white dark:bg-gray-700 py-3 pl-14 pr-4 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2`}
+            placeholder={t('fileUpload.gdpr.namePlaceholder', 'Ex: Jean Dupont')}
+          />
           {formErrors.name && (
             <p className="mt-1 text-sm text-red-500">{formErrors.name}</p>
           )}
@@ -251,21 +250,19 @@ const FileUpload = (): JSX.Element => {
             <label htmlFor="candidateEmail" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               {t('fileUpload.gdpr.candidateEmail', 'Email du candidat')} *
             </label>
-            <div className="relative">
-              <EnvelopeIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <input
-                type="email"
-                id="candidateEmail"
-                value={candidateInfo.candidateEmail}
-                onChange={(e) => setCandidateInfo(prev => ({ ...prev, candidateEmail: e.target.value }))}
-                className={`w-full pl-10 pr-4 py-3 rounded-lg border ${
-                  formErrors.email 
-                    ? 'border-red-500 focus:ring-red-500' 
-                    : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-                } bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2`}
-                placeholder={t('fileUpload.gdpr.emailPlaceholder', 'candidat@email.com')}
-              />
-            </div>
+            <InputWithLeadingIcon
+              icon={EnvelopeIcon}
+              type="email"
+              id="candidateEmail"
+              value={candidateInfo.candidateEmail}
+              onChange={(e) => setCandidateInfo(prev => ({ ...prev, candidateEmail: e.target.value }))}
+              inputClassName={`w-full rounded-xl border ${
+                formErrors.email
+                  ? 'border-red-500 focus:ring-red-500'
+                  : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+              } mb-0 bg-white dark:bg-gray-700 py-3 pl-14 pr-4 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2`}
+              placeholder={t('fileUpload.gdpr.emailPlaceholder', 'candidat@email.com')}
+            />
             {formErrors.email && (
               <p className="mt-1 text-sm text-red-500">{formErrors.email}</p>
             )}

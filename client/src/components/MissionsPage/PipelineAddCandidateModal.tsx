@@ -6,11 +6,11 @@
 import { useTranslation } from 'react-i18next';
 import {
   XMarkIcon,
-  MagnifyingGlassIcon,
   ArrowPathIcon
 } from '@heroicons/react/24/outline';
 import { StarIcon } from '@heroicons/react/24/outline';
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
+import SearchField from '../page/SearchField';
 
 interface Resume {
   id: string;
@@ -86,16 +86,12 @@ export default function PipelineAddCandidateModal({
 
         {/* Search */}
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-          <div className="relative">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t('pipeline.searchResumes')}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+          <SearchField
+            containerClassName="relative"
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder={t('pipeline.searchResumes')}
+          />
         </div>
 
         {/* Resume List */}

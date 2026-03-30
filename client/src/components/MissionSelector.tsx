@@ -5,10 +5,11 @@
 
 import { useState, useEffect, useCallback, ChangeEvent } from 'react';
 import { motion } from 'framer-motion';
-import { MagnifyingGlassIcon, BriefcaseIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { BriefcaseIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { useAuthFetch } from '../hooks/useAuthFetch';
 import toast from 'react-hot-toast';
 import logger from '../utils/logger.frontend';
+import SearchField from './page/SearchField';
 
 interface Mission {
   id: string;
@@ -68,10 +69,12 @@ const MissionSelector = ({ onSelect, onClose, selectedMissionId: _selectedMissio
         </div>
 
         <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-          <div className="relative">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input type="text" placeholder="Rechercher une mission..." value={searchTerm} onChange={(e: ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500" />
-          </div>
+          <SearchField
+            containerClassName="relative"
+            placeholder="Rechercher une mission..."
+            value={searchTerm}
+            onChange={setSearchTerm}
+          />
         </div>
 
         <div className="flex-1 overflow-y-auto p-6">

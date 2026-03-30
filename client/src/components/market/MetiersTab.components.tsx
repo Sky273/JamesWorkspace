@@ -1,4 +1,4 @@
-import {
+﻿import {
   AcademicCapIcon,
   ArrowPathIcon,
   BriefcaseIcon,
@@ -95,7 +95,7 @@ export function MetiersHeader({
               <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
             </div>
             <button onClick={onClearError} className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200">
-              <XMarkIcon className="h-5 w-5" />
+              <XMarkIcon className="h-4 w-4" />
             </button>
           </div>
         </div>
@@ -111,17 +111,17 @@ export function MetiersSearchBar({ searchQuery, onSearchQueryChange, onSubmit, o
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
       <form onSubmit={onSubmit} className="flex gap-3">
         <div className="relative flex-1">
-          <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
             value={searchQuery}
             onChange={(event) => onSearchQueryChange(event.target.value)}
             placeholder={t('marketRadar.metiers.searchPlaceholder')}
-            className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+            className="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 pl-10 pr-10 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
           />
           {searchQuery && (
             <button type="button" onClick={onClear} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-              <XMarkIcon className="h-5 w-5" />
+              <XMarkIcon className="h-4 w-4" />
             </button>
           )}
         </div>
@@ -302,7 +302,7 @@ export function MetiersResults({
         <p className="text-gray-500 dark:text-gray-400 mb-4">{searchQuery ? t('marketRadar.metiers.noDataSearch') : t('marketRadar.metiers.noDataEmpty')}</p>
         {isAdmin && !searchQuery && (
           <button onClick={onCollect} className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors">
-            <ArrowPathIcon className="h-5 w-5" />
+            <ArrowPathIcon className="h-4 w-4" />
             {t('marketRadar.metiers.collection.button')}
           </button>
         )}
@@ -324,7 +324,7 @@ export function MetiersResults({
                 <span className="px-3 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-lg font-mono font-semibold">{metier.CodeRome}</span>
                 <div className="text-left">
                   <h3 className="font-semibold text-gray-900 dark:text-gray-100">{metier.Libelle}</h3>
-                  {metier.Enjeux && metier.Enjeux.length > 0 && <p className="text-sm text-gray-500 dark:text-gray-400">{metier.Enjeux.slice(0, 3).map((enjeu) => enjeu.libelle).join(' • ')}</p>}
+                  {metier.Enjeux && metier.Enjeux.length > 0 && <p className="text-sm text-gray-500 dark:text-gray-400">{metier.Enjeux.slice(0, 3).map((enjeu) => enjeu.libelle).join(' â€¢ ')}</p>}
                 </div>
               </div>
               <div className="flex items-center gap-4">
@@ -342,3 +342,4 @@ export function MetiersResults({
     </div>
   );
 }
+
