@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useBatchExport } from './useBatchExport';
+import type { FileStatus } from '../batchUpload.utils';
 
 const {
   fetchWithAuthMock,
@@ -68,7 +69,7 @@ describe('useBatchExport', () => {
   });
 
   it('exports successful resumes as a zip download', async () => {
-    const filesRef = {
+    const filesRef: { current: FileStatus[] } = {
       current: [
         { status: 'success', resumeId: 'resume-1', file: new File(['a'], 'a.pdf'), progress: 100 },
         { status: 'success', resumeId: 'resume-2', file: new File(['b'], 'b.pdf'), progress: 100 },

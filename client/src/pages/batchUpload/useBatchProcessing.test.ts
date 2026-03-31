@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useBatchProcessing } from './useBatchProcessing';
+import type { FileStatus } from '../batchUpload.utils';
 
 const {
   navigateMock,
@@ -56,7 +57,7 @@ describe('useBatchProcessing', () => {
 
   it('creates a batch job, updates statuses and redirects to jobs', async () => {
     const file = new File(['resume'], 'candidate.pdf', { type: 'application/pdf' });
-    const filesRef = {
+    const filesRef: { current: FileStatus[] } = {
       current: [{ file, status: 'pending', progress: 0, relativePath: 'folder/candidate.pdf' }],
     };
     const updateFileStatus = vi.fn();
@@ -114,7 +115,7 @@ describe('useBatchProcessing', () => {
   });
 
   it('returns an estimated processing time based on pending files and improve option', () => {
-    const filesRef = {
+    const filesRef: { current: FileStatus[] } = {
       current: [
         { file: new File(['a'], 'a.pdf'), status: 'pending', progress: 0 },
         { file: new File(['b'], 'b.pdf'), status: 'pending', progress: 0 },

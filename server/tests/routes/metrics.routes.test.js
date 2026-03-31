@@ -44,6 +44,11 @@ vi.mock('../../services/pdfTextExtraction.service.js', () => ({
     getOcrRuntimeDiagnostics: (...args) => mockGetOcrRuntimeDiagnostics(...args)
 }));
 
+const mockGetWordExtractionRuntimeDiagnostics = vi.fn();
+vi.mock('../../services/wordTextExtraction.service.js', () => ({
+    getWordExtractionRuntimeDiagnostics: (...args) => mockGetWordExtractionRuntimeDiagnostics(...args)
+}));
+
 // Mock auth middleware
 vi.mock('../../middleware/auth.middleware.js', () => ({
     authenticateToken: (req, res, next) => {
@@ -107,6 +112,11 @@ describe('Metrics Routes', () => {
             advancedBackendConfigured: 'paddleocr',
             advancedBackendAvailable: true,
             notes: 'OCR runtime fully available'
+        });
+        mockGetWordExtractionRuntimeDiagnostics.mockResolvedValue({
+            sofficeAvailable: true,
+            wordOcrFallbackAvailable: true,
+            notes: 'LibreOffice CLI available for Word to PDF OCR fallback'
         });
     });
 
@@ -324,6 +334,8 @@ describe('Metrics Routes', () => {
             expect(res.body.binaryStorage.batchFileDataBytes).toBe(512);
             expect(res.body.ocrRuntime.preferredEngine).toBe('tesseract-cli');
             expect(res.body.ocrRuntime.advancedBackendConfigured).toBe('paddleocr');
+            expect(res.body.ocrRuntime.sofficeAvailable).toBe(true);
+            expect(res.body.ocrRuntime.wordOcrFallbackAvailable).toBe(true);
         });
     });
     // ==========================================

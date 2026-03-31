@@ -8,7 +8,29 @@
 import logger from './logger.frontend';
 import { fetchWithAuth, createAuthOptionsWithCsrf } from './apiInterceptor';
 
-const loadMammoth = async () => (await import('mammoth')).default;
+async function extractTextFromWordViaServer(file: File): Promise<string> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const options = await createAuthOptionsWithCsrf({
+        method: 'POST',
+        body: formData
+    });
+
+    if (options.headers) {
+        delete options.headers['Content-Type'];
+    }
+
+    const response = await fetchWithAuth('/api/resumes/extract-doc', options);
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to extract text from Word file' }));
+        throw new Error(errorData.error || 'Failed to extract text from Word file');
+    }
+
+    const { text } = await response.json();
+    return text;
+}
 
 /**
  * Extract text from PDF using server-side extraction
@@ -66,12 +88,9 @@ export async function extractTextFromPDF(file: File): Promise<string> {
  */
 export async function extractTextFromDOCX(file: File): Promise<string> {
     try {
-        logger.log('Extracting text from DOCX file...');
-        const arrayBuffer = await file.arrayBuffer();
-        const mammoth = await loadMammoth();
-        const result = await mammoth.extractRawText({ arrayBuffer });
-        const text = result.value.trim();
-        logger.log(`Successfully extracted ${text.length} characters from DOCX`);
+        logger.log('Extracting text from DOCX file via server...');
+        const text = await extractTextFromWordViaServer(file);
+        logger.log(`Successfully extracted ${text.length} characters from DOCX via server`);
         return text;
     } catch (error) {
         logger.error('Error extracting text from DOCX:', error);
@@ -87,30 +106,7 @@ export async function extractTextFromDOCX(file: File): Promise<string> {
 export async function extractTextFromDOC(file: File): Promise<string> {
     try {
         logger.log('Extracting text from DOC file (Word 97-2003) via server...');
-        
-        // DOC files require server-side extraction using word-extractor
-        // because it's a Node.js library that doesn't work in browsers
-        const formData = new FormData();
-        formData.append('file', file);
-        
-        const options = await createAuthOptionsWithCsrf({
-            method: 'POST',
-            body: formData
-        });
-        
-        // Remove Content-Type to let browser set it with boundary
-        if (options.headers) {
-            delete options.headers['Content-Type'];
-        }
-        
-        const response = await fetchWithAuth('/api/resumes/extract-doc', options);
-        
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ error: 'Failed to extract text from DOC' }));
-            throw new Error(errorData.error || 'Failed to extract text from DOC file');
-        }
-        
-        const { text } = await response.json();
+        const text = await extractTextFromWordViaServer(file);
         logger.log(`Successfully extracted ${text.length} characters from DOC via server`);
         return text;
     } catch (error) {

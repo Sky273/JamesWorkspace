@@ -6,8 +6,11 @@ import { MAX_FILE_SIZE, UPLOAD_DIR } from '../../../config/constants.js';
 const GENERIC_FILE_MIME_TYPES = new Set(['', 'application/octet-stream']);
 const PDF_ALLOWED_EXTENSIONS = new Set(['.pdf']);
 const PDF_ALLOWED_MIME_TYPES = new Set(['application/pdf']);
-const DOC_ALLOWED_EXTENSIONS = new Set(['.doc']);
-const DOC_ALLOWED_MIME_TYPES = new Set(['application/msword']);
+const DOC_ALLOWED_EXTENSIONS = new Set(['.doc', '.docx']);
+const DOC_ALLOWED_MIME_TYPES = new Set([
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+]);
 const MAX_PDF_EXTRACTION_PAGES = 50;
 const MAX_SCANNED_OCR_PAGES = 10;
 const MAX_OCR_RENDER_PIXELS = 20_000_000;

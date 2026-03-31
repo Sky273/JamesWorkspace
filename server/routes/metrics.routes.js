@@ -6,6 +6,7 @@ import { getDatabaseMetrics } from '../services/health.service.js';
 import { getStorageStats, getFileCleanupStats } from '../utils/fileCleanup.js';
 import { getAPMStats, getSlowRequests, clearSlowRequests } from '../middleware/apm.middleware.js';
 import { getOcrRuntimeDiagnostics } from '../services/pdfTextExtraction.service.js';
+import { getWordExtractionRuntimeDiagnostics } from '../services/wordTextExtraction.service.js';
 
 const router = express.Router();
 
@@ -153,7 +154,10 @@ router.get('/operations', authenticateToken, requireAdmin, async (req, res) => {
         const { binaryStorageResult, batchStorageResult } = await getDatabaseMetrics();
         const storageStats = await getStorageStats();
         const cleanupStats = getFileCleanupStats();
-        const ocrRuntime = await getOcrRuntimeDiagnostics();
+        const [ocrRuntime, wordRuntime] = await Promise.all([
+            getOcrRuntimeDiagnostics(),
+            getWordExtractionRuntimeDiagnostics()
+        ]);
 
         res.json({
             operations: fullMetrics.operations || {
@@ -161,7 +165,12 @@ router.get('/operations', authenticateToken, requireAdmin, async (req, res) => {
                 ocr: metrics.operations?.ocr || {},
                 cleanup: metrics.operations?.cleanup || {}
             },
-            ocrRuntime,
+            ocrRuntime: {
+                ...ocrRuntime,
+                sofficeAvailable: wordRuntime.sofficeAvailable,
+                wordOcrFallbackAvailable: wordRuntime.wordOcrFallbackAvailable,
+                notes: [ocrRuntime.notes, wordRuntime.notes].filter(Boolean).join(' | ')
+            },
             binaryStorage: {
                 resumesWithBinary: parseInt(binaryStorageResult.rows[0]?.resumes_with_binary || 0),
                 resumeBinaryBytes: parseInt(binaryStorageResult.rows[0]?.resume_binary_bytes || 0),
@@ -311,5 +320,4 @@ router.delete('/apm/slow-requests', authenticateToken, requireAdmin, (req, res) 
 });
 
 export default router;
-
 

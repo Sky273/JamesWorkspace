@@ -53,6 +53,11 @@ vi.mock('../../utils/logger.backend.js', () => ({
     createModuleLogger: () => ({ info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() })
 }));
 
+const mockExtractTextFromWordBuffer = vi.fn();
+vi.mock('../../services/wordTextExtraction.service.js', () => ({
+    extractTextFromWordBuffer: (...args) => mockExtractTextFromWordBuffer(...args)
+}));
+
 const mockUploadLimiter = vi.fn((req, _res, next) => next());
 vi.mock('../../middleware/rateLimit.middleware.js', () => ({
     uploadLimiter: (...args) => mockUploadLimiter(...args)
@@ -142,6 +147,7 @@ describe('Resume Extraction Routes', () => {
         vi.clearAllMocks();
         mockReadFile.mockReset();
         mockUnlink.mockReset();
+        mockExtractTextFromWordBuffer.mockReset();
         app = createTestApp();
         pdfDocuments.length = 0;
         pendingReadFileResolvers.length = 0;
@@ -167,6 +173,42 @@ describe('Resume Extraction Routes', () => {
                 .set({ ...AUTH, 'x-test-no-file': 'true' });
             expect(res.status).toBe(400);
             expect(res.body.error).toContain('No file');
+        });
+
+        it('should accept DOCX uploads and return OCR metadata when server fallback is used', async () => {
+            mockReadFile.mockResolvedValueOnce(Buffer.from('fake docx content'));
+            mockExtractTextFromWordBuffer.mockResolvedValueOnce({
+                text: 'luc . moreau @ gmail . com',
+                ocrUsed: true,
+                ocrPageCount: 1,
+                failedOcrPages: 0,
+                avgOcrConfidence: 91.5,
+                pages: 1,
+                primaryResult: {
+                    engine: 'tesseract-cli',
+                    variant: 'pdftoppm-page',
+                    psm: 6
+                }
+            });
+
+            const res = await request(app)
+                .post('/api/resumes/extract-doc')
+                .set({
+                    ...AUTH,
+                    'x-test-filename': 'resume.docx',
+                    'x-test-mimetype': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                });
+
+            expect(res.status).toBe(200);
+            expect(res.body.text).toBe('luc.moreau@gmail.com');
+            expect(res.body.ocrUsed).toBe(true);
+            expect(mockExtractTextFromWordBuffer).toHaveBeenCalledWith(
+                expect.any(Buffer),
+                expect.objectContaining({
+                    fileName: 'resume.docx',
+                    mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                })
+            );
         });
     });
 

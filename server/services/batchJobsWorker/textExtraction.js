@@ -5,6 +5,7 @@
 
 import { safeLog } from '../../utils/logger.backend.js';
 import { extractPdfTextWithOcr } from '../pdfTextExtraction.service.js';
+import { extractTextFromWordBuffer } from '../wordTextExtraction.service.js';
 
 /**
  * Extract text from PDF using pdfjs-dist (more reliable than pdf-parse)
@@ -75,30 +76,14 @@ export async function extractTextFromBuffer(buffer, mimeType, fileName) {
             safeLog('error', 'PDF extraction with pdfjs-dist failed', { error: pdfError.message, fileName });
             throw new Error(`Failed to extract text from PDF: ${pdfError.message}`);
         }
-    } else if (mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-        const mammoth = await import('mammoth');
-        const result = await mammoth.extractRawText({ buffer });
-        return {
-            text: result.value,
-            ocrUsed: false,
-            ocrPageCount: 0,
-            failedOcrPages: 0,
-            avgOcrConfidence: null
-        };
-    } else if (mimeType === 'application/msword') {
-        // word-extractor is CommonJS
-        const { createRequire } = await import('module');
-        const require = createRequire(import.meta.url);
-        const WordExtractor = require('word-extractor');
-        const extractor = new WordExtractor();
-        const doc = await extractor.extract(buffer);
-        return {
-            text: doc.getBody(),
-            ocrUsed: false,
-            ocrPageCount: 0,
-            failedOcrPages: 0,
-            avgOcrConfidence: null
-        };
+    } else if (
+        mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        || mimeType === 'application/msword'
+    ) {
+        return extractTextFromWordBuffer(buffer, {
+            mimeType,
+            fileName
+        });
     }
     throw new Error(`Unsupported file type: ${mimeType}`);
 }

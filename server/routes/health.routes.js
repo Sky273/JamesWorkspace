@@ -12,6 +12,7 @@ import { safeLog } from '../utils/logger.backend.js';
 import { getStorageStats, getFileCleanupStats } from '../utils/fileCleanup.js';
 import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
 import { getOcrRuntimeDiagnostics } from '../services/pdfTextExtraction.service.js';
+import { getWordExtractionRuntimeDiagnostics } from '../services/wordTextExtraction.service.js';
 
 const router = express.Router();
 
@@ -364,16 +365,21 @@ router.get('/', async (req, res) => {
     };
 
     try {
-        const ocrDiagnostics = await getOcrRuntimeDiagnostics();
+        const [ocrDiagnostics, wordDiagnostics] = await Promise.all([
+            getOcrRuntimeDiagnostics(),
+            getWordExtractionRuntimeDiagnostics()
+        ]);
         checks.ocr = {
             status: ocrDiagnostics.status,
             preferredEngine: ocrDiagnostics.preferredEngine,
             tesseractCliAvailable: ocrDiagnostics.tesseractCliAvailable,
             pdftoppmAvailable: ocrDiagnostics.pdftoppmAvailable,
+            sofficeAvailable: wordDiagnostics.sofficeAvailable,
+            wordOcrFallbackAvailable: wordDiagnostics.wordOcrFallbackAvailable,
             pythonCommand: ocrDiagnostics.pythonCommand,
             advancedBackend: ocrDiagnostics.advancedBackend,
             advancedBackendAvailable: ocrDiagnostics.advancedBackendAvailable,
-            message: ocrDiagnostics.notes
+            message: [ocrDiagnostics.notes, wordDiagnostics.notes].filter(Boolean).join(' | ')
         };
     } catch (error) {
         checks.ocr = {

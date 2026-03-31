@@ -3,6 +3,7 @@ import { safeLog } from '../../../utils/logger.backend.js';
 import { metrics } from '../../../services/metrics.service.js';
 import { extractPdfTextWithOcr } from '../../../services/pdfTextExtraction.service.js';
 import { cleanExtractedResumeText } from '../../../services/ocrTextCleanup.service.js';
+import { extractTextFromWordBuffer } from '../../../services/wordTextExtraction.service.js';
 import {
     MAX_OCR_RENDER_PIXELS,
     MAX_PDF_EXTRACTION_PAGES,
@@ -23,31 +24,29 @@ function createExtractDocHandler() {
             }
 
             const fileBuffer = await fs.readFile(req.file.path);
-            let text = '';
-            try {
-                const WordExtractor = (await import('word-extractor')).default;
-                const extractor = new WordExtractor();
-                const extracted = await extractor.extract(fileBuffer);
-                text = extracted.getBody().trim();
-                safeLog('info', 'Successfully extracted text from DOC file', {
-                    fileName: req.file.originalname,
-                    textLength: text.length
-                });
-            } catch (extractError) {
-                safeLog('error', 'word-extractor failed', { error: extractError.message });
-                try {
-                    const mammoth = (await import('mammoth')).default;
-                    const result = await mammoth.extractRawText({ buffer: fileBuffer });
-                    text = result.value.trim();
-                    safeLog('info', 'Extracted text from DOC using mammoth fallback', {
-                        fileName: req.file.originalname,
-                        textLength: text.length
-                    });
-                } catch (mammothError) {
-                    safeLog('error', 'mammoth fallback also failed', { error: mammothError.message });
-                    throw new Error('Failed to extract text from DOC file. The file may be corrupted or in an unsupported format.');
+            const extractionResult = await extractTextFromWordBuffer(fileBuffer, {
+                fileName: req.file.originalname,
+                mimeType: req.file.mimetype || 'application/msword',
+                minTextLength: 10,
+                pdfOcrOptions: {
+                    maxPdfPages: MAX_PDF_EXTRACTION_PAGES,
+                    maxScannedOcrPages: MAX_SCANNED_OCR_PAGES,
+                    maxOcrRenderPixels: MAX_OCR_RENDER_PIXELS,
+                    forceDocumentOcrTextLength: 10
                 }
-            }
+            });
+            const { text, metadata: textCleanupMetadata } = cleanExtractedResumeText(extractionResult.text, {
+                ocrUsed: !!extractionResult.ocrUsed
+            });
+
+            safeLog('info', 'Completed Word text extraction', {
+                fileName: req.file.originalname,
+                mimeType: req.file.mimetype,
+                textLength: text.length,
+                ocrUsed: extractionResult.ocrUsed,
+                ocrPageCount: extractionResult.ocrPageCount,
+                textCleanupChanged: textCleanupMetadata.changed
+            });
 
             await cleanupTempFile(req.file.path);
             metrics.trackUploadActivity({
@@ -55,8 +54,29 @@ function createExtractDocHandler() {
                 fileSize: req.file.size,
                 mimeType: req.file.mimetype || 'application/msword',
                 success: true,
-                metadata: { textLength: text.length }
+                metadata: {
+                    textLength: text.length,
+                    ocrUsed: extractionResult.ocrUsed,
+                    ocrPageCount: extractionResult.ocrPageCount || 0
+                }
             });
+
+            if (extractionResult.ocrUsed) {
+                metrics.trackOcrActivity({
+                    pages: extractionResult.pages || 0,
+                    ocrPageCount: extractionResult.ocrPageCount || 0,
+                    failedPages: extractionResult.failedOcrPages || 0,
+                    avgConfidence: extractionResult.avgOcrConfidence ?? null,
+                    success: !extractionResult.failedOcrPages,
+                    metadata: {
+                        source: 'extract-doc',
+                        fileName: req.file.originalname,
+                        engine: extractionResult.primaryResult?.engine || null,
+                        variant: extractionResult.primaryResult?.variant || null,
+                        psm: extractionResult.primaryResult?.psm || null
+                    }
+                });
+            }
 
             if (!text || text.length < 10) {
                 return res.status(400).json({
@@ -64,7 +84,12 @@ function createExtractDocHandler() {
                 });
             }
 
-            return res.json({ text });
+            return res.json({
+                text,
+                ocrUsed: extractionResult.ocrUsed,
+                ocrPageCount: extractionResult.ocrPageCount || 0,
+                avgOcrConfidence: extractionResult.avgOcrConfidence ?? null
+            });
         } catch (error) {
             await cleanupTempFile(req.file?.path);
             if (req.file) {

@@ -86,6 +86,14 @@ vi.mock('../../services/pdfTextExtraction.service.js', () => ({
     }))
 }));
 
+vi.mock('../../services/wordTextExtraction.service.js', () => ({
+    getWordExtractionRuntimeDiagnostics: vi.fn(() => ({
+        sofficeAvailable: true,
+        wordOcrFallbackAvailable: true,
+        notes: 'LibreOffice CLI available for Word to PDF OCR fallback'
+    }))
+}));
+
 import { query as dbQuery } from '../../config/database.js';
 
 describe('Health Routes', () => {
@@ -140,6 +148,8 @@ describe('Health Routes', () => {
             expect(response.checks.ocr.status).toBe('ok');
             expect(response.checks.ocr.preferredEngine).toBe('tesseract-cli');
             expect(response.checks.ocr.advancedBackend).toBe('paddleocr');
+            expect(response.checks.ocr.sofficeAvailable).toBe(true);
+            expect(response.checks.ocr.wordOcrFallbackAvailable).toBe(true);
         });
 
         it('should return unhealthy status when database fails', async () => {
