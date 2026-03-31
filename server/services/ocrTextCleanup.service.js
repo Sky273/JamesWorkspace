@@ -56,10 +56,36 @@ function fixCommonOcrWordArtifacts(text) {
 
 function improveSectionBreaks(text) {
     return text
-        .replace(/\b(PROFIL|EXPERIENCE|COMPETENCES|FORMATION|LANGUES)\s+/g, '\n$1\n')
-        .replace(/\s+-\s+/g, '\n- ')
-        .replace(/\s+\|\s+/g, ' | ')
+        .replace(
+            /\b(FORMATIONS?\s+ET\s+DIPLOMES?|FORMATION ACAD[ÉE]MIQUE|EXPERIENCES? PROFESSIONNELLES?|CENTRES D['’ ]INT[ÉE]R[ÊE]T|COORDONNEES|COORDONNÉES|POSTES\s+RECHERCH[ÉE]S|PASSIONS?\s+ET\s+SOFT\s+SKILLS|R[EÉ]SUM[EÉ]|CONTACT|PROFIL|EXPERIENCES?|EXP[ÉE]RIENCES?|COMPETENCES?(?:\s+PROFESSIONNELLES?)?|COMP[ÉE]TENCES?(?:\s+PROFESSIONNELLES?)?|FORMATIONS?|LANGUES?|CERTIFICATIONS?|LOISIRS)\b\s*/gi,
+            '\n$1\n'
+        )
+        .replace(/([a-zÀ-ÿ])\.([A-ZÀ-Ý][A-ZÀ-Ý '&/-]{2,}\s*(?:\(|\d{4}))/g, '$1.\n$2')
+        .replace(/\s+-\s+(?=[A-Za-zÀ-ÿ])/g, '\n- ')
+        .replace(/\s+\|\s+/g, '\n')
+        .replace(/\s*;\s+(?=[A-ZÀ-Ý])/g, '\n')
+        .replace(
+            /\s+(?=(?:Depuis\s+)?(?:(?:0?[1-9]|1[0-2])\/\d{4}|\d{4})\s*(?:-|–|—|à)\s*(?:(?:0?[1-9]|1[0-2])\/\d{4}|\d{4}|Aujourd'hui|Aujourd’hui|Present|Présent))/gi,
+            '\n'
+        )
         .replace(/\n{3,}/g, '\n\n');
+}
+
+function applyMinimalResumeFormatting(text) {
+    return improveSectionBreaks(
+        fixOcrPhoneArtifacts(
+            fixOcrEmailArtifacts(text)
+        )
+    )
+        .replace(/\n(COMP[ÉE]TENCES?|EXP[ÉE]RIENCES?|FORMATIONS?)\n(professionnelles?|techniques?|et dipl[oô]mes?)\b/gi, '\n$1 $2\n')
+        .replace(/((?:0?[1-9]|1[0-2])\/\d{4})\s+((?:0?[1-9]|1[0-2])\/\d{4})/g, '$1 - $2')
+        .replace(/\b((?:19|20)\d{2})\s+((?:19|20)\d{2})\b/g, '$1 - $2')
+        .replace(/\n-\s*\n/g, '\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .split('\n')
+        .map((line) => line.trim())
+        .join('\n')
+        .trim();
 }
 
 export function cleanExtractedResumeText(text, options = {}) {
@@ -88,11 +114,10 @@ export function cleanExtractedResumeText(text, options = {}) {
         .replace(/\n{3,}/g, '\n\n')
         .trim();
 
+    cleaned = applyMinimalResumeFormatting(cleaned);
+
     if (ocrUsed) {
-        cleaned = fixOcrEmailArtifacts(cleaned);
-        cleaned = fixOcrPhoneArtifacts(cleaned);
         cleaned = fixCommonOcrWordArtifacts(cleaned);
-        cleaned = improveSectionBreaks(cleaned);
         cleaned = cleaned
             .replace(/\b([A-Z])\s+([A-Z])\s+([A-Z])\b/g, '$1$2$3')
             .replace(/([A-Za-z])\s+\|\s+([A-Za-z])/g, '$1 | $2')

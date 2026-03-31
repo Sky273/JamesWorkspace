@@ -38,6 +38,7 @@ import { ImageToolbar } from './ImageToolbar';
 import { TableToolbar } from './TableToolbar';
 import { SuggestionsExtension } from './SuggestionsExtension';
 import type { SuggestionsBySection } from './SuggestionsExtension';
+import { normalizeEditorContent } from './contentNormalization';
 import './TiptapEditor.css';
 
 const lowlight = createLowlight(common);
@@ -129,7 +130,7 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
         SuggestionsExtension.configure({ suggestions: suggestions || {} }),
       ],
       editable,
-      content,
+      content: normalizeEditorContent(content),
       onCreate: () => {
         setReady(true);
         onReady?.();
@@ -152,7 +153,7 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
         const currentContent = editor.getHTML();
         // Only set if different from what editor already has
         if (currentContent === '<p></p>' || currentContent === '') {
-          editor.commands.setContent(content, { emitUpdate: false });
+          editor.commands.setContent(normalizeEditorContent(content), { emitUpdate: false });
           contentSetRef.current = true;
         }
       }
@@ -164,7 +165,7 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
       () => ({
         getContent: () => editor?.getHTML() || '',
         setContent: (html: string) => {
-          editor?.commands.setContent(html, { emitUpdate: false });
+          editor?.commands.setContent(normalizeEditorContent(html), { emitUpdate: false });
         },
         getEditor: () => editor,
       }),
