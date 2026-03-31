@@ -72,6 +72,75 @@ def detect_dense_column(gray):
     return max(0, x0 - padding), min(gray.shape[1], x1 + padding)
 
 
+def detect_text_blocks(gray):
+    blurred = cv2.GaussianBlur(gray, (3, 3), 0)
+    threshold = cv2.adaptiveThreshold(
+        blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 31, 12
+    )
+    threshold = remove_speckles(threshold, min_area=24)
+    dilated = cv2.dilate(threshold, np.ones((9, 35), np.uint8), iterations=1)
+
+    contours, _ = cv2.findContours(dilated, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    blocks = []
+    min_area = max(1500, int(gray.shape[0] * gray.shape[1] * 0.0025))
+
+    for contour in contours:
+        x, y, w, h = cv2.boundingRect(contour)
+        area = w * h
+        if area < min_area:
+            continue
+        if w < 120 or h < 40:
+            continue
+        pad_x = max(12, int(w * 0.03))
+        pad_y = max(10, int(h * 0.08))
+        x0 = max(0, x - pad_x)
+        y0 = max(0, y - pad_y)
+        x1 = min(gray.shape[1], x + w + pad_x)
+        y1 = min(gray.shape[0], y + h + pad_y)
+        blocks.append({
+            "x0": int(x0),
+            "y0": int(y0),
+            "x1": int(x1),
+            "y1": int(y1),
+            "width": int(x1 - x0),
+            "height": int(y1 - y0),
+        })
+
+    if not blocks:
+        return []
+
+    median_width = np.median([b["width"] for b in blocks])
+    column_gap = max(40, int(median_width * 0.35))
+    blocks.sort(key=lambda b: (b["x0"], b["y0"]))
+
+    columns = []
+    for block in blocks:
+        center_x = (block["x0"] + block["x1"]) / 2.0
+        matched = None
+        for column in columns:
+            if abs(center_x - column["center_x"]) <= column_gap:
+                matched = column
+                break
+        if matched is None:
+            matched = {"center_x": center_x, "blocks": []}
+            columns.append(matched)
+        matched["blocks"].append(block)
+        matched["center_x"] = np.mean(
+            [((item["x0"] + item["x1"]) / 2.0) for item in matched["blocks"]]
+        )
+
+    columns.sort(key=lambda c: c["center_x"])
+    ordered_blocks = []
+    order = 0
+    for column in columns:
+        for block in sorted(column["blocks"], key=lambda b: (b["y0"], b["x0"])):
+            block["order"] = order
+            ordered_blocks.append(block)
+            order += 1
+
+    return ordered_blocks
+
+
 def build_variants(gray):
     variants = []
 
@@ -142,6 +211,34 @@ def write_variants(variants, output_dir):
     return written
 
 
+def write_blocks(gray, output_dir):
+    blocks = detect_text_blocks(gray)
+    written = []
+
+    for block in blocks:
+        crop = gray[block["y0"]:block["y1"], block["x0"]:block["x1"]]
+        if crop.size == 0:
+            continue
+        crop = upscale_if_needed(crop, min_width=1600)
+        out_path = output_dir / f"block-{block['order']:02d}.png"
+        cv2.imwrite(str(out_path), crop)
+        written.append({
+            "name": f"python-block-{block['order']:02d}",
+            "path": str(out_path),
+            "order": int(block["order"]),
+            "bbox": {
+                "x0": int(block["x0"]),
+                "y0": int(block["y0"]),
+                "x1": int(block["x1"]),
+                "y1": int(block["y1"]),
+            },
+            "width": int(crop.shape[1]),
+            "height": int(crop.shape[0]),
+        })
+
+    return written
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", required=True)
@@ -154,7 +251,8 @@ def main():
     gray = load_grayscale(input_path)
     variants = build_variants(gray)
     written = write_variants(variants, output_dir)
-    print(json.dumps({"variants": written}))
+    blocks = write_blocks(upscale_if_needed(cv2.normalize(gray, None, 0, 255, cv2.NORM_MINMAX)), output_dir)
+    print(json.dumps({"variants": written, "blocks": blocks}))
 
 
 if __name__ == "__main__":

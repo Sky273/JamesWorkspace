@@ -287,4 +287,69 @@ describe('HealthIndicator', () => {
     expect(await screen.findByText('Système OK')).toBeInTheDocument();
     expect(screen.getByText(/Mémoire: 200 MB \/ 2 GB/)).toBeInTheDocument();
   });
+
+  it('shows advanced OCR as optional when the CLI pipeline is already healthy', async () => {
+    mockFetchWithAuth.mockReset();
+    const optionalAdvancedOcrPayload = {
+      status: 'healthy',
+      responseTime: '40ms',
+      timestamp: '2026-03-25T10:00:00.000Z',
+      checks: {
+        server: { status: 'ok', uptime: '1d' },
+        database: { status: 'ok', latency: '12ms' },
+        memory: { status: 'ok', heapUsed: '200 MB', heapTotal: '2 GB' },
+        cache: { status: 'ok', backend: 'redis', settings: 1, templates: 2, firms: 3 },
+        ocr: {
+          status: 'ok',
+          preferredEngine: 'tesseract-cli',
+          tesseractCliAvailable: true,
+          pdftoppmAvailable: true,
+          pythonCommand: 'python3',
+          advancedBackend: 'paddleocr',
+          advancedBackendAvailable: false,
+          advancedBackendStatus: 'not_applicable'
+        },
+        openai: { status: 'configured', message: 'API key present' },
+        anthropic: { status: 'configured', message: 'API key present' },
+        deepseek: { status: 'configured', message: 'API key present' },
+        glm: { status: 'configured', message: 'API key present' },
+        minimax: { status: 'configured', message: 'API key present' },
+        ollama: { status: 'configured', message: 'API key present' }
+      }
+    };
+
+    const healthyCachePayload = {
+      cacheBackend: {
+        backend: 'redis',
+        connected: true,
+        fallbackReason: null
+      }
+    };
+
+    const closedBreakers = {
+      openai: { provider: 'openai', supported: true, state: 'CLOSED', failures: 0, lastFailureTime: null, configured: true },
+      anthropic: { provider: 'anthropic', supported: true, state: 'CLOSED', failures: 0, lastFailureTime: null, configured: true },
+      deepseek: { provider: 'deepseek', supported: true, state: 'CLOSED', failures: 0, lastFailureTime: null, configured: true },
+      glm: { provider: 'glm', supported: true, state: 'CLOSED', failures: 0, lastFailureTime: null, configured: true },
+      minimax: { provider: 'minimax', supported: true, state: 'CLOSED', failures: 0, lastFailureTime: null, configured: true },
+      ollama: { provider: 'ollama', supported: false, state: 'NOT_APPLICABLE', failures: 0, lastFailureTime: null, configured: true }
+    };
+
+    mockFetchWithAuth
+      .mockResolvedValueOnce({ ok: true, json: async () => optionalAdvancedOcrPayload })
+      .mockResolvedValueOnce({ ok: true, json: async () => healthyCachePayload })
+      .mockResolvedValueOnce({ ok: true, json: async () => closedBreakers })
+      .mockResolvedValueOnce({ ok: true, json: async () => optionalAdvancedOcrPayload })
+      .mockResolvedValueOnce({ ok: true, json: async () => healthyCachePayload })
+      .mockResolvedValueOnce({ ok: true, json: async () => closedBreakers });
+
+    render(<HealthIndicator variant="header" showAlways />);
+    expect(await screen.findByText('Système OK')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Système OK').closest('div') as HTMLElement);
+
+    await waitFor(() => {
+      expect(screen.getByText(/optionnel indisponible/i)).toBeInTheDocument();
+    });
+  });
 });

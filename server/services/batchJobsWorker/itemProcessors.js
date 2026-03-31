@@ -270,7 +270,7 @@ export async function processImportItem(item, job, options) {
                     analyzed_at = NOW()
                 WHERE id = $19
             `, [
-                analysis.structuredText || text,
+                text,
                 parseScore(analysis.globalRating),
                 parseScore(analysis.skillsRating),
                 parseScore(analysis.experiencesRating),
@@ -359,7 +359,7 @@ export async function processImportItem(item, job, options) {
                 analyzed_at = NOW()
             WHERE id = $21
         `, [
-            analysis.structuredText || text,
+            text,
             parseScore(analysis.globalRating),
             parseScore(analysis.skillsRating),
             parseScore(analysis.experiencesRating),

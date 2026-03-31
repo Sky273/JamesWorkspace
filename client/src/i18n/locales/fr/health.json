@@ -19,6 +19,7 @@
     "namespaces": "Namespaces",
     "fallback": "Fallback",
     "withoutCircuitBreaker": "sans circuit breaker",
+    "optionalComponentUnavailable": "{{component}} (optionnel indisponible)",
     "yes": "oui",
     "no": "non",
     "notApplicable": "n/a",

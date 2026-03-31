@@ -26,6 +26,7 @@ interface HealthCheck {
   pythonCommand?: string | null;
   advancedBackend?: string | null;
   advancedBackendAvailable?: boolean;
+  advancedBackendStatus?: string;
 }
 
 interface ProviderCheck {
@@ -317,6 +318,29 @@ function formatBooleanMeta(value?: boolean | null, yes = 'oui', no = 'non'): str
   return value ? yes : no;
 }
 
+function getAdvancedOcrMeta(t: (key: string) => string, ocr?: HealthCheck): string | null {
+  if (!ocr?.advancedBackend) {
+    return tfStatic(t, 'health.notApplicable', 'n/a');
+  }
+
+  if (ocr.advancedBackendAvailable) {
+    return ocr.advancedBackend;
+  }
+
+  if (ocr.preferredEngine === 'tesseract-cli') {
+    return tr(t, 'health.optionalComponentUnavailable', '{{component}} (optionnel indisponible)', {
+      component: ocr.advancedBackend
+    });
+  }
+
+  return ocr.advancedBackend;
+}
+
+function tfStatic(t: (key: string) => string, key: string, fallback: string): string {
+  const translated = t(key);
+  return translated === key ? fallback : translated;
+}
+
 const HealthIndicator = ({ showAlways = false, variant = 'default' }: HealthIndicatorProps): JSX.Element | null => {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -522,8 +546,8 @@ const HealthIndicator = ({ showAlways = false, variant = 'default' }: HealthIndi
               />
               <IndicatorRow
                 label={tf('health.advancedOcr', 'OCR avancé')}
-                meta={health.checks?.ocr?.advancedBackend || tf('health.notApplicable', 'n/a')}
-                status={health.checks?.ocr?.advancedBackendAvailable ? 'ok' : (health.checks?.ocr?.advancedBackend ? 'warning' : 'not_applicable')}
+                meta={getAdvancedOcrMeta(t, health.checks?.ocr)}
+                status={health.checks?.ocr?.advancedBackendStatus || 'not_applicable'}
                 t={t}
               />
             </div>

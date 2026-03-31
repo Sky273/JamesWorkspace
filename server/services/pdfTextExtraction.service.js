@@ -21,6 +21,12 @@ const DEFAULT_OCR_BOUNDING_PADDING = 24;
 const DEFAULT_OCR_MIN_CROP_WIDTH = 1800;
 const DEFAULT_OCR_VARIANT_THRESHOLD = 185;
 const DEFAULT_ADVANCED_OCR_TRIGGER_TEXT_LENGTH = 500;
+const DEFAULT_EMBEDDED_IMAGE_TRIGGER_TEXT_LENGTH = 220;
+const DEFAULT_EMBEDDED_IMAGE_STRONG_TEXT_LENGTH = 160;
+const DEFAULT_MAX_EMBEDDED_IMAGES_PER_PAGE = 4;
+const DEFAULT_MAX_VARIANTS_PER_PAGE = 18;
+const DEFAULT_MAX_OCR_TIME_PER_PAGE_MS = 20_000;
+const DEFAULT_EARLY_ACCEPT_SCORE = 260;
 const DEFAULT_ADVANCED_OCR_BACKEND = process.env.OCR_ADVANCED_BACKEND || 'none';
 const PYTHON_CANDIDATES = process.platform === 'win32' ? ['python', 'py'] : ['python3', 'python'];
 
@@ -266,8 +272,67 @@ function scoreOcrResult(text, confidence) {
     return (text?.trim().length || 0) + ((confidence || 0) * 2);
 }
 
+function getTextLength(value) {
+    return value?.text?.trim().length || 0;
+}
+
+function scoreOcrCandidateQuality(text, confidence = 0) {
+    const normalized = normalizeExtractedText(text || '');
+    const length = normalized.length;
+    if (!length) {
+        return 0;
+    }
+
+    const words = normalized.match(/[A-Za-zÀ-ÿ]{2,}/g) || [];
+    const emailMatches = normalized.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g) || [];
+    const phoneMatches = normalized.match(/(?:\+\d{1,3}\s*)?(?:\d[\s.-]*){8,}/g) || [];
+    const yearMatches = normalized.match(/\b(?:19|20)\d{2}\b/g) || [];
+    const sectionMatches = normalized.match(/\b(PROFIL|EXPERIENCE|EXPÉRIENCE|COMPETENCES|COMPÉTENCES|FORMATION|LANGUES|SKILLS|SUMMARY|EDUCATION)\b/gi) || [];
+    const alphaChars = (normalized.match(/[A-Za-zÀ-ÿ]/g) || []).length;
+    const weirdChars = (normalized.match(/[^A-Za-zÀ-ÿ0-9\s@.+,;:()/'"!?&%#\-|]/g) || []).length;
+    const lineCount = normalized.split('\n').filter((line) => line.trim().length > 0).length;
+    const avgWordLength = words.length
+        ? words.reduce((sum, word) => sum + word.length, 0) / words.length
+        : 0;
+
+    let score = 0;
+    score += Math.min(180, length * 0.45);
+    score += Math.min(70, words.length * 3);
+    score += Math.min(35, lineCount * 4);
+    score += emailMatches.length * 40;
+    score += phoneMatches.length * 25;
+    score += Math.min(20, yearMatches.length * 5);
+    score += Math.min(24, sectionMatches.length * 6);
+    score += Math.min(25, confidence * 0.4);
+
+    if (alphaChars > 0) {
+        const weirdRatio = weirdChars / Math.max(alphaChars + weirdChars, 1);
+        const alphaRatio = alphaChars / Math.max(length, 1);
+        score -= weirdRatio * 120;
+        score += alphaRatio * 20;
+    }
+
+    if (avgWordLength < 3.2 && words.length > 20) {
+        score -= 25;
+    }
+
+    return Math.max(0, Math.round(score));
+}
+
+function buildOcrCandidate(variant, recognition) {
+    return {
+        variant,
+        text: recognition.text,
+        confidence: recognition.confidence,
+        score: scoreOcrCandidateQuality(recognition.text, recognition.confidence),
+        engine: recognition.engine,
+        psm: recognition.psm
+    };
+}
+
 let cachedTesseractCliAvailability = null;
 let cachedPdftoppmAvailability = null;
+let cachedPdfimagesAvailability = null;
 let cachedPythonCommand = undefined;
 
 async function hasTesseractCli() {
@@ -300,6 +365,21 @@ async function hasPdftoppmCli() {
     return cachedPdftoppmAvailability;
 }
 
+async function hasPdfimagesCli() {
+    if (cachedPdfimagesAvailability !== null) {
+        return cachedPdfimagesAvailability;
+    }
+
+    try {
+        await execFileAsync('pdfimages', ['-v']);
+        cachedPdfimagesAvailability = true;
+    } catch {
+        cachedPdfimagesAvailability = false;
+    }
+
+    return cachedPdfimagesAvailability;
+}
+
 async function hasAdvancedOcrBackend(backend = DEFAULT_ADVANCED_OCR_BACKEND) {
     if (!backend || backend === 'none') {
         return false;
@@ -315,15 +395,17 @@ async function hasAdvancedOcrBackend(backend = DEFAULT_ADVANCED_OCR_BACKEND) {
 }
 
 export async function getOcrRuntimeDiagnostics() {
-    const [tesseractAvailable, pdftoppmAvailable, pythonCommand] = await Promise.all([
+    const [tesseractAvailable, pdftoppmAvailable, pdfimagesAvailable, pythonCommand] = await Promise.all([
         hasTesseractCli(),
         hasPdftoppmCli(),
+        hasPdfimagesCli(),
         getPythonCommand()
     ]);
 
     const advancedBackend = DEFAULT_ADVANCED_OCR_BACKEND;
     let advancedBackendAvailable = false;
     let preferredEngine = 'tesseract.js';
+    let advancedBackendStatus = 'not_applicable';
 
     if (tesseractAvailable && pdftoppmAvailable) {
         preferredEngine = 'tesseract-cli';
@@ -331,6 +413,11 @@ export async function getOcrRuntimeDiagnostics() {
 
     if (advancedBackend && advancedBackend !== 'none' && pythonCommand) {
         advancedBackendAvailable = await hasAdvancedOcrBackend(advancedBackend);
+        advancedBackendStatus = advancedBackendAvailable
+            ? 'ok'
+            : (preferredEngine === 'tesseract-cli' ? 'not_applicable' : 'warning');
+    } else if (advancedBackend && advancedBackend !== 'none') {
+        advancedBackendStatus = preferredEngine === 'tesseract-cli' ? 'not_applicable' : 'warning';
     }
 
     return {
@@ -338,13 +425,63 @@ export async function getOcrRuntimeDiagnostics() {
         preferredEngine,
         tesseractCliAvailable: tesseractAvailable,
         pdftoppmAvailable,
+        pdfimagesAvailable,
         pythonCommand,
         advancedBackend,
         advancedBackendAvailable,
+        advancedBackendStatus,
         notes: preferredEngine === 'tesseract-cli'
-            ? 'CLI OCR pipeline available'
+            ? (
+                advancedBackend && advancedBackend !== 'none' && !advancedBackendAvailable
+                    ? 'CLI OCR pipeline available; advanced OCR fallback unavailable'
+                    : 'CLI OCR pipeline available'
+            )
             : 'Falling back to tesseract.js OCR pipeline'
     };
+}
+
+async function extractEmbeddedImagesFromPdf(buffer, pageNum) {
+    if (!(await hasPdfimagesCli())) {
+        return [];
+    }
+
+    const basePath = path.join(
+        os.tmpdir(),
+        `resume-ocr-images-${process.pid}-${Date.now()}-${pageNum}`
+    );
+    const pdfPath = `${basePath}.pdf`;
+    const outputPrefix = `${basePath}-img`;
+
+    try {
+        await fs.writeFile(pdfPath, buffer);
+        await execFileAsync('pdfimages', [
+            '-f', String(pageNum),
+            '-l', String(pageNum),
+            '-png',
+            pdfPath,
+            outputPrefix
+        ], {
+            maxBuffer: 10 * 1024 * 1024
+        });
+
+        const dir = path.dirname(outputPrefix);
+        const prefixName = path.basename(outputPrefix);
+        const files = await fs.readdir(dir);
+        const candidates = files
+            .filter((file) => file.startsWith(prefixName) && file.endsWith('.png'))
+            .sort((a, b) => a.localeCompare(b))
+            .map((file, index) => ({
+                name: `pdfimages-${String(index).padStart(2, '0')}`,
+                path: path.join(dir, file),
+                order: index
+            }));
+
+        return candidates;
+    } catch {
+        return [];
+    } finally {
+        await fs.unlink(pdfPath).catch(() => {});
+    }
 }
 
 async function getPythonCommand() {
@@ -426,10 +563,71 @@ async function preparePythonOcrVariants(imagePath, pageNum) {
             '--input', imagePath,
             '--output-dir', outputDir
         ]);
-        return result?.variants || [];
+        return {
+            variants: result?.variants || [],
+            blocks: result?.blocks || []
+        };
     } catch {
-        return [];
+        return { variants: [], blocks: [] };
     }
+}
+
+function scoreBlockSequence(results = []) {
+    return results.reduce((sum, result) => sum + scoreOcrResult(result.text, result.confidence), 0);
+}
+
+function buildBlockSequenceText(results = []) {
+    return results
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+        .map((result) => (result.text || '').trim())
+        .filter(Boolean)
+        .join('\n\n')
+        .trim();
+}
+
+async function recognizeBlockSequence(blocks, recognizer, onOcrVariantAttempt, pageNum, variantPrefix = 'python-blocks') {
+    if (!Array.isArray(blocks) || blocks.length === 0) {
+        return null;
+    }
+
+    const results = [];
+    for (const block of blocks) {
+        const recognition = await recognizer(block.path);
+        const trimmedTextLength = recognition.text?.trim().length || 0;
+        onOcrVariantAttempt?.({
+            pageNum,
+            variant: `${variantPrefix}-${String(block.order ?? 0).padStart(2, '0')}`,
+            confidence: recognition.confidence,
+            textLength: trimmedTextLength,
+            engine: recognition.engine,
+            psm: recognition.psm,
+            blockOrder: block.order ?? null
+        });
+        results.push({
+            ...recognition,
+            order: block.order ?? results.length
+        });
+    }
+
+    const text = buildBlockSequenceText(results);
+    if (!text) {
+        return null;
+    }
+
+    const confidences = results
+        .map((result) => Number(result.confidence) || 0)
+        .filter((value) => value > 0);
+
+    return {
+        variant: variantPrefix,
+        text,
+        confidence: confidences.length
+            ? confidences.reduce((sum, value) => sum + value, 0) / confidences.length
+            : 0,
+        score: scoreBlockSequence(results),
+        engine: results[0]?.engine || 'unknown',
+        psm: 'blocks'
+    };
 }
 
 async function recognizeWithAdvancedOcr(tempPath, backend = DEFAULT_ADVANCED_OCR_BACKEND) {
@@ -551,6 +749,7 @@ export async function extractPdfTextWithOcr(buffer, options = {}) {
         const recentResults = [];
 
         const useCliOcrPipeline = (await hasTesseractCli()) && (await hasPdftoppmCli());
+        const useEmbeddedImagePipeline = (await hasTesseractCli()) && (await hasPdfimagesCli());
 
         const ocrPage = async (page, pageNum, totalTextLength = 0, itemCount = 0) => {
             if (ocrPageCount >= maxScannedOcrPages) {
@@ -571,41 +770,193 @@ export async function extractPdfTextWithOcr(buffer, options = {}) {
             }
 
             let bestVariant = null;
+            const pageStartedAt = Date.now();
+            let evaluatedVariants = 0;
+            const shouldStopExploration = () => (
+                evaluatedVariants >= DEFAULT_MAX_VARIANTS_PER_PAGE
+                || (Date.now() - pageStartedAt) >= DEFAULT_MAX_OCR_TIME_PER_PAGE_MS
+                || ((bestVariant?.score || 0) >= DEFAULT_EARLY_ACCEPT_SCORE)
+            );
+            const recordCandidate = (variant, recognition, extra = {}) => {
+                evaluatedVariants++;
+                const trimmedTextLength = recognition.text?.trim().length || 0;
+                onOcrVariantAttempt?.({
+                    pageNum,
+                    variant,
+                    confidence: recognition.confidence,
+                    textLength: trimmedTextLength,
+                    engine: recognition.engine,
+                    psm: recognition.psm,
+                    ...extra
+                });
+                const candidate = buildOcrCandidate(variant, recognition);
+                if (!bestVariant || candidate.score > bestVariant.score) {
+                    bestVariant = candidate;
+                }
+                return candidate;
+            };
 
             if (useCliOcrPipeline) {
                 const renderedImagePath = await renderPdfPageWithPdftoppm(buffer, pageNum);
                 try {
                     const candidateImages = [{ name: 'pdftoppm-page', path: renderedImagePath }];
-                    const pythonVariants = await preparePythonOcrVariants(renderedImagePath, pageNum);
-                    for (const variant of pythonVariants) {
-                        if (variant?.path) {
-                            candidateImages.push({ name: variant.name, path: variant.path });
+                    const baseRecognition = await recognizeWithTesseractCli(renderedImagePath);
+                    recordCandidate('pdftoppm-page', baseRecognition);
+
+                    let preparedAssets = { variants: [], blocks: [] };
+                    if (!shouldStopExploration()) {
+                        preparedAssets = await preparePythonOcrVariants(renderedImagePath, pageNum);
+                        for (const variant of preparedAssets.variants) {
+                            if (variant?.path) {
+                                candidateImages.push({ name: variant.name, path: variant.path });
+                            }
                         }
                     }
 
-                    for (const imageVariant of candidateImages) {
+                    for (const imageVariant of candidateImages.slice(1)) {
+                        if (shouldStopExploration()) {
+                            break;
+                        }
                         const recognition = await recognizeWithTesseractCli(imageVariant.path);
-                        const trimmedTextLength = recognition.text?.trim().length || 0;
-                        onOcrVariantAttempt?.({
-                            pageNum,
-                            variant: imageVariant.name,
-                            confidence: recognition.confidence,
-                            textLength: trimmedTextLength,
-                            engine: recognition.engine,
-                            psm: recognition.psm
-                        });
+                        recordCandidate(imageVariant.name, recognition);
+                    }
 
-                        const candidate = {
-                            variant: imageVariant.name,
-                            text: recognition.text,
-                            confidence: recognition.confidence,
-                            score: recognition.score,
-                            engine: recognition.engine,
-                            psm: recognition.psm
-                        };
+                    if (!shouldStopExploration() && preparedAssets.blocks.length > 0) {
+                        const blockSequenceCandidate = await recognizeBlockSequence(
+                            preparedAssets.blocks,
+                            async (imagePath) => recognizeWithTesseractCli(imagePath),
+                            onOcrVariantAttempt,
+                            pageNum
+                        );
+                        if (blockSequenceCandidate) {
+                            blockSequenceCandidate.score = scoreOcrCandidateQuality(blockSequenceCandidate.text, blockSequenceCandidate.confidence);
+                            if (!bestVariant || blockSequenceCandidate.score > bestVariant.score) {
+                                bestVariant = blockSequenceCandidate;
+                            }
+                        }
+                    }
 
-                        if (!bestVariant || candidate.score > bestVariant.score) {
-                            bestVariant = candidate;
+                    if (
+                        useEmbeddedImagePipeline
+                        && getTextLength(bestVariant) < DEFAULT_EMBEDDED_IMAGE_TRIGGER_TEXT_LENGTH
+                        && !shouldStopExploration()
+                    ) {
+                        const embeddedImages = (await extractEmbeddedImagesFromPdf(buffer, pageNum))
+                            .slice(0, DEFAULT_MAX_EMBEDDED_IMAGES_PER_PAGE);
+                        try {
+                            const embeddedImageCandidates = [];
+                            for (const embeddedImage of embeddedImages) {
+                                if (shouldStopExploration()) {
+                                    break;
+                                }
+                                embeddedImageCandidates.push(embeddedImage);
+                                const baseRecognition = await recognizeWithTesseractCli(embeddedImage.path);
+                                const baseCandidate = recordCandidate(embeddedImage.name, baseRecognition);
+
+                                if (getTextLength(baseCandidate) < DEFAULT_EMBEDDED_IMAGE_STRONG_TEXT_LENGTH && !shouldStopExploration()) {
+                                    const preparedEmbeddedAssets = await preparePythonOcrVariants(embeddedImage.path, pageNum);
+                                    for (const variant of preparedEmbeddedAssets.variants.slice(0, 4)) {
+                                        if (variant?.path) {
+                                            embeddedImageCandidates.push({
+                                                name: `${embeddedImage.name}-${variant.name}`,
+                                                path: variant.path,
+                                                order: embeddedImage.order
+                                            });
+                                        }
+                                    }
+
+                                    if (!shouldStopExploration()) {
+                                        const embeddedBlocksCandidate = await recognizeBlockSequence(
+                                            preparedEmbeddedAssets.blocks,
+                                            async (imagePath) => recognizeWithTesseractCli(imagePath),
+                                            onOcrVariantAttempt,
+                                            pageNum,
+                                            `${embeddedImage.name}-blocks`
+                                        );
+                                        if (embeddedBlocksCandidate) {
+                                            embeddedBlocksCandidate.score = scoreOcrCandidateQuality(embeddedBlocksCandidate.text, embeddedBlocksCandidate.confidence);
+                                            if (!bestVariant || embeddedBlocksCandidate.score > bestVariant.score) {
+                                                bestVariant = embeddedBlocksCandidate;
+                                            }
+                                        }
+                                    }
+
+                                    for (const blockVariant of preparedEmbeddedAssets.blocks) {
+                                        await fs.unlink(blockVariant.path).catch(() => {});
+                                    }
+                                }
+                            }
+
+                            if (!shouldStopExploration()) {
+                                const embeddedSequenceCandidate = await recognizeBlockSequence(
+                                    embeddedImages,
+                                    async (imagePath) => recognizeWithTesseractCli(imagePath),
+                                    onOcrVariantAttempt,
+                                    pageNum,
+                                    'pdfimages-sequence'
+                                );
+                                if (embeddedSequenceCandidate) {
+                                    embeddedSequenceCandidate.score = scoreOcrCandidateQuality(embeddedSequenceCandidate.text, embeddedSequenceCandidate.confidence);
+                                    if (!bestVariant || embeddedSequenceCandidate.score > bestVariant.score) {
+                                        bestVariant = embeddedSequenceCandidate;
+                                    }
+                                }
+                            }
+
+                            for (const imageVariant of embeddedImageCandidates) {
+                                if (shouldStopExploration()) {
+                                    break;
+                                }
+                                if (embeddedImages.some((embedded) => embedded.path === imageVariant.path)) {
+                                    continue;
+                                }
+                                const recognition = await recognizeWithTesseractCli(imageVariant.path);
+                                recordCandidate(imageVariant.name, recognition);
+                            }
+
+                            if (
+                                bestVariant
+                                && (bestVariant.text?.trim().length || 0) < advancedOcrTriggerTextLength
+                                && DEFAULT_ADVANCED_OCR_BACKEND !== 'none'
+                                && !shouldStopExploration()
+                            ) {
+                                const advancedEmbeddedSequenceCandidate = await recognizeBlockSequence(
+                                    embeddedImages,
+                                    async (imagePath) => {
+                                        const advancedRecognition = await recognizeWithAdvancedOcr(
+                                            imagePath,
+                                            DEFAULT_ADVANCED_OCR_BACKEND
+                                        );
+                                        return advancedRecognition || {
+                                            text: '',
+                                            confidence: 0,
+                                            score: 0,
+                                            engine: DEFAULT_ADVANCED_OCR_BACKEND,
+                                            psm: null
+                                        };
+                                    },
+                                    onOcrVariantAttempt,
+                                    pageNum,
+                                    'pdfimages-sequence-advanced'
+                                );
+                                if (advancedEmbeddedSequenceCandidate) {
+                                    advancedEmbeddedSequenceCandidate.score = scoreOcrCandidateQuality(advancedEmbeddedSequenceCandidate.text, advancedEmbeddedSequenceCandidate.confidence);
+                                    if (!bestVariant || advancedEmbeddedSequenceCandidate.score > bestVariant.score) {
+                                        bestVariant = advancedEmbeddedSequenceCandidate;
+                                    }
+                                }
+                            }
+
+                            for (const embeddedImage of embeddedImages) {
+                                await fs.unlink(embeddedImage.path).catch(() => {});
+                            }
+                            for (const imageVariant of embeddedImageCandidates.filter((item) => !embeddedImages.some((embedded) => embedded.path === item.path))) {
+                                await fs.unlink(imageVariant.path).catch(() => {});
+                            }
+                        } catch {
+                            for (const embeddedImage of embeddedImages) {
+                                await fs.unlink(embeddedImage.path).catch(() => {});
+                            }
                         }
                     }
 
@@ -613,8 +964,12 @@ export async function extractPdfTextWithOcr(buffer, options = {}) {
                         bestVariant
                         && (bestVariant.text?.trim().length || 0) < advancedOcrTriggerTextLength
                         && DEFAULT_ADVANCED_OCR_BACKEND !== 'none'
+                        && !shouldStopExploration()
                     ) {
                         for (const imageVariant of candidateImages) {
+                            if (shouldStopExploration()) {
+                                break;
+                            }
                             const advancedRecognition = await recognizeWithAdvancedOcr(
                                 imageVariant.path,
                                 DEFAULT_ADVANCED_OCR_BACKEND
@@ -622,34 +977,43 @@ export async function extractPdfTextWithOcr(buffer, options = {}) {
                             if (!advancedRecognition) {
                                 continue;
                             }
+                            recordCandidate(`${imageVariant.name}-advanced`, advancedRecognition);
+                        }
 
-                            const trimmedTextLength = advancedRecognition.text?.trim().length || 0;
-                            onOcrVariantAttempt?.({
+                        if (!shouldStopExploration()) {
+                            const advancedBlockCandidate = await recognizeBlockSequence(
+                                preparedAssets.blocks,
+                                async (imagePath) => {
+                                    const advancedRecognition = await recognizeWithAdvancedOcr(
+                                        imagePath,
+                                        DEFAULT_ADVANCED_OCR_BACKEND
+                                    );
+                                    return advancedRecognition || {
+                                        text: '',
+                                        confidence: 0,
+                                        score: 0,
+                                        engine: DEFAULT_ADVANCED_OCR_BACKEND,
+                                        psm: null
+                                    };
+                                },
+                                onOcrVariantAttempt,
                                 pageNum,
-                                variant: `${imageVariant.name}-advanced`,
-                                confidence: advancedRecognition.confidence,
-                                textLength: trimmedTextLength,
-                                engine: advancedRecognition.engine,
-                                psm: advancedRecognition.psm
-                            });
-
-                            const candidate = {
-                                variant: `${imageVariant.name}-advanced`,
-                                text: advancedRecognition.text,
-                                confidence: advancedRecognition.confidence,
-                                score: advancedRecognition.score,
-                                engine: advancedRecognition.engine,
-                                psm: advancedRecognition.psm
-                            };
-
-                            if (!bestVariant || candidate.score > bestVariant.score) {
-                                bestVariant = candidate;
+                                'python-blocks-advanced'
+                            );
+                            if (advancedBlockCandidate) {
+                                advancedBlockCandidate.score = scoreOcrCandidateQuality(advancedBlockCandidate.text, advancedBlockCandidate.confidence);
+                                if (!bestVariant || advancedBlockCandidate.score > bestVariant.score) {
+                                    bestVariant = advancedBlockCandidate;
+                                }
                             }
                         }
                     }
 
                     for (const imageVariant of candidateImages.slice(1)) {
                         await fs.unlink(imageVariant.path).catch(() => {});
+                    }
+                    for (const blockVariant of preparedAssets.blocks) {
+                        await fs.unlink(blockVariant.path).catch(() => {});
                     }
                 } finally {
                     await fs.unlink(renderedImagePath).catch(() => {});
@@ -668,34 +1032,16 @@ export async function extractPdfTextWithOcr(buffer, options = {}) {
                 const variantBuffers = createOcrVariantBuffers(canvasModule, canvas, context);
 
                 for (const variant of variantBuffers) {
+                    if (shouldStopExploration()) {
+                        break;
+                    }
                     const recognition = await recognizeVariantBuffer(
                         tesseractWorker,
                         variant.name,
                         variant.buffer,
                         pageNum
                     );
-                    const trimmedTextLength = recognition.text?.trim().length || 0;
-                    onOcrVariantAttempt?.({
-                        pageNum,
-                        variant: variant.name,
-                        confidence: recognition.confidence,
-                        textLength: trimmedTextLength,
-                        engine: recognition.engine,
-                        psm: recognition.psm
-                    });
-
-                    const candidate = {
-                        variant: variant.name,
-                        text: recognition.text,
-                        confidence: recognition.confidence,
-                        score: recognition.score,
-                        engine: recognition.engine,
-                        psm: recognition.psm
-                    };
-
-                    if (!bestVariant || candidate.score > bestVariant.score) {
-                        bestVariant = candidate;
-                    }
+                    recordCandidate(variant.name, recognition);
                 }
             }
 

@@ -152,6 +152,45 @@ describe('Batch Jobs Worker - Item Processors', () => {
             expect(mockTrackBatchImportActivity).toHaveBeenCalledWith(expect.objectContaining({ event: 'completed', successfulRuns: 1 }));
         });
 
+        it('should persist extracted text as original_text instead of overwriting it with structuredText', async () => {
+            const extractedText = 'OCR extracted text that should remain visible in the original text tab after analysis.';
+
+            mockQuery
+                .mockResolvedValueOnce({ rows: [{ id: 'res-1' }] })
+                .mockResolvedValueOnce({ rows: [] })
+                .mockResolvedValueOnce({ rows: [] });
+
+            mockExtractText.mockResolvedValueOnce({
+                text: extractedText,
+                ocrUsed: true,
+                ocrPageCount: 1,
+                failedOcrPages: 0
+            });
+
+            mockAnalyze.mockResolvedValueOnce({
+                name: 'John Doe',
+                title: 'Developer',
+                globalRating: 75,
+                skillsRating: 80,
+                experiencesRating: 70,
+                educationRating: 65,
+                atsOptimizationRating: 72,
+                executiveSummaryRating: 78,
+                hobbiesLanguagesRating: 60,
+                structuredText: '<p></p>',
+                suggestions: {}
+            });
+
+            await processImportItem(item, job, { improve: false });
+
+            const finalUpdateCall = mockQuery.mock.calls.find(
+                ([sql]) => typeof sql === 'string' && sql.includes("status = 'analyzed'")
+            );
+
+            expect(finalUpdateCall).toBeTruthy();
+            expect(finalUpdateCall[1][0]).toBe(extractedText);
+        });
+
         it('should throw on text too short', async () => {
             mockQuery.mockResolvedValueOnce({ rows: [{ id: 'res-1' }] });
             mockQuery.mockResolvedValueOnce({ rows: [] });
