@@ -1,4 +1,4 @@
-﻿import { analyzeResume, cleanupText } from '../../../services/openai.service.js';
+import { analyzeResume, cleanupText } from '../../../services/openai.service.js';
 import { getLLMSettings, calculateWeightedGlobalRating } from '../../../services/settings.service.js';
 import { getAcceptedIndustriesString, getIndustryMappingString } from '../../../services/industry.service.js';
 import { DEFAULT_ANALYSIS_PROMPT, ANONYMIZATION_RULES_ANONYMOUS, ANONYMIZATION_RULES_NOMINATIVE } from '../../../config/prompts.backend.js';

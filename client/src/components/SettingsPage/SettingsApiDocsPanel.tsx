@@ -1,4 +1,4 @@
-﻿import { DocumentTextIcon } from '@heroicons/react/24/outline';
+import { DocumentTextIcon } from '@heroicons/react/24/outline';
 import type { TFunction } from 'i18next';
 
 interface SettingsApiDocsPanelProps {

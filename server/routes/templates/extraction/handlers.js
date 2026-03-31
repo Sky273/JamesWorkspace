@@ -1,4 +1,4 @@
-﻿import { safeLog } from '../../../utils/logger.backend.js';
+import { safeLog } from '../../../utils/logger.backend.js';
 import { extractFromDOCX, extractFromPDF } from './extractors.js';
 
 function createExtractFromCvHandler() {

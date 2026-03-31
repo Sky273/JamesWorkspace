@@ -1,4 +1,4 @@
-﻿import type {
+import type {
   AgeBreakdown,
   CaracteristiqueData,
   EmbaucheDetails,

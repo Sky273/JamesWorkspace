@@ -1,4 +1,4 @@
-﻿import axios from 'axios';
+import axios from 'axios';
 import { ROME_FICHES_METIERS_API_URL } from '../../config/constants.js';
 import { getAccessToken, getReferentiel } from '../franceTravail.service.js';
 

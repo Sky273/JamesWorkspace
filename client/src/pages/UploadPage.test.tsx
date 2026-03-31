@@ -55,7 +55,11 @@ describe('UploadPage', () => {
     expect(setCurrentResumeMock).toHaveBeenCalledWith(null);
 
     await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 60));
+      resumeContextValue = {
+        currentResume: null,
+        setCurrentResume: setCurrentResumeMock
+      };
+      rerender(<UploadPage />);
     });
 
     resumeContextValue = {
@@ -70,5 +74,28 @@ describe('UploadPage', () => {
     await waitFor(() => {
       expect(navigateMock).toHaveBeenCalledWith('/resumes/new-resume/analysis');
     });
+  });
+
+  it('does not redirect when the context is restored with the same resume id', async () => {
+    const { rerender } = render(<UploadPage />);
+
+    await act(async () => {
+      resumeContextValue = {
+        currentResume: null,
+        setCurrentResume: setCurrentResumeMock
+      };
+      rerender(<UploadPage />);
+    });
+
+    resumeContextValue = {
+      currentResume: { id: 'existing-resume' },
+      setCurrentResume: setCurrentResumeMock
+    };
+
+    await act(async () => {
+      rerender(<UploadPage />);
+    });
+
+    expect(navigateMock).not.toHaveBeenCalled();
   });
 });

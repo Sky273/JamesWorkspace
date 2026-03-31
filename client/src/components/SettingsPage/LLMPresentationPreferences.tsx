@@ -1,4 +1,4 @@
-﻿interface LLMPresentationPreferencesProps {
+interface LLMPresentationPreferencesProps {
   cvMode?: 'nominative' | 'anonymous';
   webglEnabled?: 'on' | 'off';
   onCvModeChange: (event: React.ChangeEvent<HTMLSelectElement>) => void;

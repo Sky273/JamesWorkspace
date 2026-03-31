@@ -1,4 +1,4 @@
-﻿# Gouvernance prompts et contrats LLM
+# Gouvernance prompts et contrats LLM
 
 ## Objectif
 Stabiliser les prompts backend comme des artefacts versionnés, liés à un contrat de sortie explicite.

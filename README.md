@@ -120,9 +120,13 @@ Application professionnelle de gestion et d'analyse de CVs avec intelligence art
 - `GET /api/resumes/:id` - Détails d'un CV
 - `PUT /api/resumes/:id` - Modifier un CV
 - `DELETE /api/resumes/:id` - Supprimer un CV
-- `POST /api/resumes/upload` - Upload fichier CV
-- `POST /api/resumes/:id/analyze` - Analyser un CV avec IA
-- `POST /api/resumes/:id/improve` - Améliorer un CV avec IA
+- `POST /api/resumes/extract-pdf` - Extraire le texte d'un PDF côté serveur
+- `POST /api/resumes/extract-doc` - Extraire le texte d'un DOC côté serveur
+
+### Jobs backend pour CVs
+- `POST /api/batch-jobs` - Lancer l'import, l'extraction et l'analyse d'un ou plusieurs CVs
+- `POST /api/batch-jobs/improve` - Lancer l'amélioration d'un CV
+- `GET /api/batch-jobs/:id` - Suivre l'avancement et récupérer les résultats d'un job
 
 ### Missions
 - `GET /api/missions` - Liste des missions
@@ -197,7 +201,28 @@ npm run test:watch
 
 # Avec couverture
 npm run test:coverage
+
+# Tests frontend
+npm run test:client
+
+# E2E Playwright
+npx playwright test --project=chromium
 ```
+
+### Conventions E2E
+- Les specs Playwright vivent dans `e2e/`.
+- Les parcours authentifiés réutilisent `e2e/helpers/auth.ts`.
+- Le helper bootstrappe un utilisateur `active` en base puis injecte des cookies JWT Playwright au lieu de passer par `/api/auth/signin`.
+- Cette approche évite les collisions avec la spec de rate limiting auth et rend la suite stable en exécution parallèle.
+- Le bootstrap e2e garantit aussi un template d'export actif pour l'utilisateur Playwright.
+- La stack e2e démarre le proxy applicatif et le `pdf-server` via `scripts/start-e2e-stack.mjs`.
+- Pour les uploads e2e, privilégier des fixtures déterministes et assez riches pour passer les seuils métier d'extraction.
+- Les flux métier de référence actuellement couverts sont `upload -> analysis` et `analysis -> improve -> export`.
+
+### Flux métier CV
+- Le flux supporté pour l'import, l'analyse et l'amélioration des CVs passe par `batch-jobs`.
+- Les endpoints `extract-pdf` et `extract-doc` restent exposés pour l'extraction technique utilisée par certains traitements frontend.
+- L'ancien endpoint direct `POST /api/resumes/upload` n'est plus une voie supportée.
 
 ## 📊 Monitoring
 
@@ -331,4 +356,3 @@ Voir [LICENSE](./LICENSE) pour les détails.
 
 
 Le mode hors Docker utilise le même bootstrap canonique : `npm run migrate` applique `docker/schema.sql` sur une base vide, puis les migrations incrémentales restantes.
-

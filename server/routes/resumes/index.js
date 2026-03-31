@@ -4,9 +4,8 @@
  * 
  * Structure:
  * - crud.routes.js     : GET /, GET /:id, PUT /:id, DELETE /:id, GET /:id/download
- * - upload.routes.js   : POST /upload, POST /extract-doc, POST /extract-pdf
+ * - upload.routes.js   : POST /extract-doc, POST /extract-pdf
  * - stats.routes.js    : GET /stats, GET /grouped-by-deal
- * - llm.handlers.js    : analyze, improve, match, adapt handlers
  * - aiModify.handler.js: AI-powered resume modification
  * - versions.routes.js : Version management routes
  * - helpers.js         : Shared utility functions
@@ -34,13 +33,9 @@ const router = express.Router();
 router.use('/', statsRouter);
 
 // ============================================
-// UPLOAD & EXTRACTION ROUTES
+// EXTRACTION ROUTES
 // ============================================
 router.use('/', uploadRouter);
-
-// ============================================
-// LLM ROUTES (delegated to handlers)
-// ============================================
 
 // POST /api/resumes/:id/ai-modify - AI-powered resume modification
 router.post('/:id/ai-modify', authenticateToken, validateParams('id'), userRateLimit(), validateBody(aiModifySchema), aiModifyHandler);

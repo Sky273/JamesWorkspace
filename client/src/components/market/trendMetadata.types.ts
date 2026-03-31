@@ -1,4 +1,4 @@
-﻿export interface PeriodeData {
+export interface PeriodeData {
   libPeriode?: string;
   libActivite?: string;
   libNomenclature?: string;

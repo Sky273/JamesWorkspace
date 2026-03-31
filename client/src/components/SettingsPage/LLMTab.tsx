@@ -1,4 +1,4 @@
-﻿import { ChangeEvent, useMemo } from 'react';
+import { ChangeEvent, useMemo } from 'react';
 import LLMProviderModelSection from './LLMProviderModelSection';
 import LLMPresentationPreferences from './LLMPresentationPreferences';
 

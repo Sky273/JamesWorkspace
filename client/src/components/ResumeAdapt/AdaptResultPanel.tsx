@@ -1,4 +1,4 @@
-﻿import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { SparklesIcon } from '@heroicons/react/24/outline';
 import MatchAnalysisDisplay from '../MatchAnalysisDisplay';
 import AdaptationComparison from '../AdaptationComparison';

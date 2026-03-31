@@ -1,4 +1,4 @@
-﻿import type { PipelineEntry, PipelineHistory, PipelineStage, Interview } from '../../../services/pipelineService';
+import type { PipelineEntry, PipelineHistory, PipelineStage, Interview } from '../../../services/pipelineService';
 
 export interface Mission {
   id: string;

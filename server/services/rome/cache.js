@@ -1,4 +1,4 @@
-﻿const METIERS_CACHE_TTL = 10 * 60 * 1000;
+const METIERS_CACHE_TTL = 10 * 60 * 1000;
 const METIERS_CACHE_MAX_SIZE = 5000;
 
 let metiersCache = null;

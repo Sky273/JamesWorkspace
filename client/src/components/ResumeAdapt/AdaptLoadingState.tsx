@@ -1,4 +1,4 @@
-﻿import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { DocumentTextIcon, SparklesIcon } from '@heroicons/react/24/outline';
 
 interface AdaptLoadingStateProps {

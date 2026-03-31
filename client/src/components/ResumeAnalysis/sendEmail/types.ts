@@ -1,4 +1,4 @@
-﻿import { EmailTemplate, EmailTemplateContext } from '../../../types/entities';
+import { EmailTemplate, EmailTemplateContext } from '../../../types/entities';
 
 export interface MailStatus {
   connected: boolean;

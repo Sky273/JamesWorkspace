@@ -1,4 +1,4 @@
-﻿/**
+/**
  * TrendCard - Individual trend card with rich metadata display
  * Extracted from MarketTrendsTab.tsx
  */

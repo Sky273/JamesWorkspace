@@ -1,4 +1,4 @@
-﻿import fs from 'fs';
+import fs from 'fs';
 import {
     JOB_STATUS,
     ITEM_STATUS,

@@ -1,4 +1,4 @@
-﻿import { query as dbQuery } from '../../config/database.js';
+import { query as dbQuery } from '../../config/database.js';
 
 function extractCompetencesFromFiche(metier) {
     const result = {

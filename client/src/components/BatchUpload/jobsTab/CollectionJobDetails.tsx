@@ -1,4 +1,4 @@
-﻿import type { Job, TranslateFn } from './types';
+import type { Job, TranslateFn } from './types';
 
 interface CollectionJobDetailsProps {
   job: Job;

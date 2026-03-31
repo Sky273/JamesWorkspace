@@ -1,4 +1,4 @@
-﻿/**
+/**
  * TrendMetadataDisplay - Reusable component for displaying trend metadata
  * Used in both MarketTrendsTab (cards) and FranceMapTab (hover tooltips)
  */

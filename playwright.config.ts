@@ -31,7 +31,7 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: 'npm run build && npm run start:proxy',
+    command: 'npm run build && node scripts/start-e2e-stack.mjs',
     url: 'http://localhost:3001/health',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
@@ -40,6 +40,7 @@ export default defineConfig({
       PDF_SERVER_INTERNAL_TOKEN: process.env.PDF_SERVER_INTERNAL_TOKEN || 'playwright-pdf-server-internal-token-32chars',
       REFRESH_TOKEN_SECRET: process.env.REFRESH_TOKEN_SECRET || process.env.JWT_SECRET || 'playwright-refresh-token-secret-minimum-32-chars',
       HTTPS_ENABLED: process.env.HTTPS_ENABLED || 'false',
+      VITE_DISABLE_ASSET_COMPRESSION: 'true',
     },
   },
 });

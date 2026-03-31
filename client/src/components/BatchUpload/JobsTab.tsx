@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowPathIcon, ClockIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';

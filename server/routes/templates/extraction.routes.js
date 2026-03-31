@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Templates - Extraction Routes
  * Endpoint and helpers for extracting templates from uploaded CV files (DOCX/PDF)
  */

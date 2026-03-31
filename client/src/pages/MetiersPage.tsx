@@ -1,6 +1,6 @@
-﻿/**
- * MÃ©tiers et CompÃ©tences Page
- * Interface for querying Rome 4.0 API and managing IT mÃ©tiers
+/**
+ * Métiers et Compétences Page
+ * Interface for querying Rome 4.0 API and managing IT métiers
  */
 
 import { useState, useEffect } from 'react';
@@ -41,7 +41,7 @@ export default function MetiersPage() {
   const [collecting, setCollecting] = useState(false);
   const [collectingSuccess, setCollectingSuccess] = useState(false);
 
-  // Load stored mÃ©tiers on mount
+  // Load stored métiers on mount
   useEffect(() => {
     loadMetiers();
   }, []);
@@ -53,7 +53,7 @@ export default function MetiersPage() {
       const data = await getStoredMetiers(search ? { search } : undefined);
       setMetiers(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur lors du chargement des mÃ©tiers');
+      setError(err instanceof Error ? err.message : 'Erreur lors du chargement des métiers');
     } finally {
       setLoading(false);
     }
@@ -106,7 +106,7 @@ export default function MetiersPage() {
               <>
                 <CheckCircleIcon className="h-16 w-16 text-green-500 mx-auto mb-4 animate-bounce" />
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                  Collecte lancÃ©e !
+                  Collecte lancée !
                 </h3>
                 <p className="text-gray-600 dark:text-gray-400">
                   Redirection vers les jobs...
@@ -132,11 +132,11 @@ export default function MetiersPage() {
               <div className="flex items-center gap-3 mb-1">
                 <div className="w-1 h-8 rounded-full bg-primary-500" />
                 <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-gray-100">
-                  MÃ©tiers et CompÃ©tences
+                  Métiers et Compétences
                 </h1>
               </div>
               <p className="text-gray-500 dark:text-gray-400 ml-[1.75rem]">
-                RÃ©fÃ©rentiel ROME 4.0 - Informatique et TÃ©lÃ©communications
+                Référentiel ROME 4.0 - Informatique et Télécommunications
               </p>
             </div>
             
@@ -147,7 +147,7 @@ export default function MetiersPage() {
                 className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-lg transition-colors"
               >
                 <ArrowPathIcon className={`h-5 w-5 ${collecting ? 'animate-spin' : ''}`} />
-                Collecter les mÃ©tiers IT
+                Collecter les métiers IT
               </button>
             )}
           </div>
@@ -181,7 +181,7 @@ export default function MetiersPage() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Rechercher un mÃ©tier (code ROME ou libellÃ©)..."
+                placeholder="Rechercher un métier (code ROME ou libellé)..."
                 className="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 py-3 pl-10 pr-10 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               />
               {searchQuery && (
@@ -211,7 +211,7 @@ export default function MetiersPage() {
                 <BriefcaseIcon className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
               </div>
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">MÃ©tiers IT</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Métiers IT</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{metiers.length}</p>
               </div>
             </div>
@@ -223,7 +223,7 @@ export default function MetiersPage() {
                 <AcademicCapIcon className="h-6 w-6 text-green-600 dark:text-green-400" />
               </div>
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">CompÃ©tences totales</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Compétences totales</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                   {metiers.reduce((acc, m) => acc + (m.CompetencesDetaillees?.length || 0) + (m.MacroSavoirFaire?.length || 0), 0)}
                 </p>
@@ -237,7 +237,7 @@ export default function MetiersPage() {
                 <ArrowPathIcon className="h-6 w-6 text-purple-600 dark:text-purple-400" />
               </div>
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">DerniÃ¨re MAJ</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Dernière MAJ</p>
                 <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                   {formatDateTime(metiers[0]?.LastUpdated) || '-'}
                 </p>
@@ -246,22 +246,22 @@ export default function MetiersPage() {
           </div>
         </div>
 
-        {/* MÃ©tiers List */}
+        {/* Métiers List */}
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <ArrowPathIcon className="h-8 w-8 text-indigo-600 dark:text-indigo-400 animate-spin" />
-            <span className="ml-3 text-gray-600 dark:text-gray-400">Chargement des mÃ©tiers...</span>
+            <span className="ml-3 text-gray-600 dark:text-gray-400">Chargement des métiers...</span>
           </div>
         ) : metiers.length === 0 ? (
           <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
             <BriefcaseIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
-              Aucun mÃ©tier trouvÃ©
+              Aucun métier trouvé
             </h3>
             <p className="text-gray-500 dark:text-gray-400 mb-4">
               {searchQuery 
-                ? "Aucun rÃ©sultat pour cette recherche." 
-                : "Lancez une collecte pour rÃ©cupÃ©rer les mÃ©tiers IT."}
+                ? "Aucun résultat pour cette recherche."
+                : "Lancez une collecte pour récupérer les métiers IT."}
             </p>
             {isAdmin && !searchQuery && (
               <button
@@ -269,7 +269,7 @@ export default function MetiersPage() {
                 className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
               >
                 <ArrowPathIcon className="h-4 w-4" />
-                Collecter les mÃ©tiers IT
+                Collecter les métiers IT
               </button>
             )}
           </div>
@@ -283,7 +283,7 @@ export default function MetiersPage() {
                   key={metier.CodeRome}
                   className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden"
                 >
-                  {/* MÃ©tier Header */}
+                  {/* Métier Header */}
                   <button
                     onClick={() => toggleMetierExpand(metier.CodeRome)}
                     className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
@@ -305,7 +305,7 @@ export default function MetiersPage() {
                     </div>
                     <div className="flex items-center gap-4">
                       <span className="text-sm text-gray-500 dark:text-gray-400">
-                        {totalCompetences} compÃ©tences
+                        {totalCompetences} compétences
                       </span>
                       {expandedMetiers.has(metier.CodeRome) ? (
                         <ChevronUpIcon className="h-5 w-5 text-gray-400" />
@@ -315,7 +315,7 @@ export default function MetiersPage() {
                     </div>
                   </button>
 
-                  {/* MÃ©tier Details */}
+                  {/* Métier Details */}
                   {expandedMetiers.has(metier.CodeRome) && (
                     <div className="px-6 pb-6 border-t border-gray-200 dark:border-gray-700">
                       {/* Enjeux */}
@@ -340,11 +340,11 @@ export default function MetiersPage() {
                         </div>
                       )}
 
-                      {/* CompÃ©tences DÃ©taillÃ©es */}
+                      {/* Compétences Détaillées */}
                       {metier.CompetencesDetaillees && metier.CompetencesDetaillees.length > 0 && (
                         <div className="mt-4">
                           <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                            CompÃ©tences DÃ©taillÃ©es ({metier.CompetencesDetaillees.length})
+                            Compétences Détaillées ({metier.CompetencesDetaillees.length})
                           </h4>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-64 overflow-y-auto">
                             {metier.CompetencesDetaillees.map((comp, idx) => (
@@ -431,11 +431,11 @@ export default function MetiersPage() {
                       <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
                         {metier.Obsolete && (
                           <span className="px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded">
-                            ObsolÃ¨te
+                            Obsolète
                           </span>
                         )}
                         {metier.LastUpdated && (
-                          <span>Mis Ã  jour: {formatDateTime(metier.LastUpdated)}</span>
+                          <span>Mis à jour: {formatDateTime(metier.LastUpdated)}</span>
                         )}
                       </div>
                     </div>

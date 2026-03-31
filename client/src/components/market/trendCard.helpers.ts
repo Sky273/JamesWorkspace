@@ -1,4 +1,4 @@
-﻿import type { ParsedMetadata } from './marketTrends.types';
+import type { ParsedMetadata } from './marketTrends.types';
 
 export function formatTrendNumber(value: number | string | undefined, type: string, valueType?: 'nombre' | 'montant' | 'taux') {
   if (value === undefined || value === null) return '—';

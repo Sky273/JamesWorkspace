@@ -1,4 +1,4 @@
-﻿import WeightSlider from './WeightSlider';
+import WeightSlider from './WeightSlider';
 
 interface WeightGroupSectionProps {
   title?: string;

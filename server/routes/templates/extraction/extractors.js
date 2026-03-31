@@ -1,4 +1,4 @@
-﻿import multer from 'multer';
+import multer from 'multer';
 import { safeLog } from '../../../utils/logger.backend.js';
 import { extractTemplateFromHTML, extractTemplateFromImage, extractTemplateFromCV } from '../../../services/templateExtraction.service.js';
 import { extractTextFromPDFBuffer } from '../../../services/batchJobsWorker/textExtraction.js';

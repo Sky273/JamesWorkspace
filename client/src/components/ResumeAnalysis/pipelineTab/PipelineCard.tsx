@@ -1,4 +1,4 @@
-﻿import {
+import {
   CalendarIcon,
   CheckCircleIcon,
   ChevronRightIcon,

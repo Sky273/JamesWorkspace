@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Profile Matching Service - PostgreSQL Version
  * Handles matching CVs to missions based on extracted keywords/tags
  * Optimized to minimize LLM usage by using pre-extracted CV tags

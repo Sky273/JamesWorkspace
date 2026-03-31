@@ -1,4 +1,4 @@
-﻿import { motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { ShareIcon, RocketLaunchIcon, CheckIcon } from '@heroicons/react/24/outline';
 import ConsentBadge, { ConsentStatus } from '../ConsentBadge';
 import type { Resume } from '../../types/entities';

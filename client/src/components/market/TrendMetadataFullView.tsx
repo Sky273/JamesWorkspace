@@ -1,4 +1,4 @@
-﻿import { ProgressBar } from './TrendProgressBar';
+import { ProgressBar } from './TrendProgressBar';
 import type { ParsedMetadata } from './trendMetadata.types';
 
 interface FullViewProps {

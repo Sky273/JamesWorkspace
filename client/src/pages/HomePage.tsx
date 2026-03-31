@@ -1,4 +1,4 @@
-﻿import { ForwardRefExoticComponent, RefAttributes, SVGProps, lazy, useState, useEffect, useCallback, useMemo, Suspense } from 'react';
+import { ForwardRefExoticComponent, RefAttributes, SVGProps, lazy, useState, useEffect, useCallback, useMemo, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useInView } from 'react-intersection-observer';

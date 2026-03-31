@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Resume Routes - CRUD Operations
  * GET /, GET /:id, PUT /:id, DELETE /:id
  */

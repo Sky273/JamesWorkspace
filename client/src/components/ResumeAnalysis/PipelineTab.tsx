@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Pipeline Tab Component for Resume Analysis
  * Displays candidate selection pipeline entries and interviews for a resume
  */

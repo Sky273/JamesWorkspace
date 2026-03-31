@@ -1,4 +1,4 @@
-﻿import { query } from '../../config/database.js';
+import { query } from '../../config/database.js';
 import { safeLog } from '../../utils/logger.backend.js';
 import { getPipelineById, moveToStage } from './pipeline.js';
 

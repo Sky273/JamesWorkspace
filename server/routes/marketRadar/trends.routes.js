@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Market Radar - Market Trends Routes
  * Endpoints for France Travail trends collection, retrieval, cache, audit
  */

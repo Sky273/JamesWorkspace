@@ -1,4 +1,4 @@
-﻿/**
+/**
  * ProfileMatchCard - Individual profile matching result card
  * Extracted from ProfileMatchingPage.tsx
  */

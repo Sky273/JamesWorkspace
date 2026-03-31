@@ -1,4 +1,4 @@
-﻿import { analyzeResume, cleanupText } from '../../../services/openai.service.js';
+import { analyzeResume, cleanupText } from '../../../services/openai.service.js';
 import { updateResume } from '../../../services/resumes.service.js';
 import { safeLog } from '../../../utils/logger.backend.js';
 import { calculateWeightedGlobalRating } from '../../../services/settings.service.js';

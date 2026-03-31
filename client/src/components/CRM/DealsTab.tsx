@@ -1,4 +1,4 @@
-﻿/**
+/**
  * DealsTab - Manage deals (affaires) within CRM page
  * Displays deals with filtering by client and status
  */

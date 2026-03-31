@@ -1,4 +1,4 @@
-﻿interface WeightSliderProps {
+interface WeightSliderProps {
   label: string;
   value: number;
   onChange: (value: string) => void;

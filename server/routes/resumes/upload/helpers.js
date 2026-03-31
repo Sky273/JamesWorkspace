@@ -1,15 +1,9 @@
-﻿import multer from 'multer';
+import multer from 'multer';
 import fs from 'fs/promises';
 import path from 'path';
 import { MAX_FILE_SIZE, UPLOAD_DIR } from '../../../config/constants.js';
 
 const GENERIC_FILE_MIME_TYPES = new Set(['', 'application/octet-stream']);
-const RESUME_ALLOWED_EXTENSIONS = new Set(['.pdf', '.doc', '.docx']);
-const RESUME_ALLOWED_MIME_TYPES = new Set([
-    'application/pdf',
-    'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-]);
 const PDF_ALLOWED_EXTENSIONS = new Set(['.pdf']);
 const PDF_ALLOWED_MIME_TYPES = new Set(['application/pdf']);
 const DOC_ALLOWED_EXTENSIONS = new Set(['.doc']);
@@ -104,11 +98,9 @@ async function cleanupTempFile(filePath) {
     await fs.unlink(filePath).catch(() => {});
 }
 
-const resumeUpload = createDiskUpload(RESUME_ALLOWED_EXTENSIONS, RESUME_ALLOWED_MIME_TYPES);
 const pdfExtractionUpload = createDiskUpload(PDF_ALLOWED_EXTENSIONS, PDF_ALLOWED_MIME_TYPES);
 const docExtractionUpload = createDiskUpload(DOC_ALLOWED_EXTENSIONS, DOC_ALLOWED_MIME_TYPES);
 
-const uploadResumeFile = handleSingleFileUpload(resumeUpload.single('file'));
 const uploadPdfFile = handleSingleFileUpload(pdfExtractionUpload.single('file'));
 const uploadDocFile = handleSingleFileUpload(docExtractionUpload.single('file'));
 
@@ -123,6 +115,5 @@ export {
     releasePdfExtractionSlot,
     tryAcquirePdfExtractionSlot,
     uploadDocFile,
-    uploadPdfFile,
-    uploadResumeFile
+    uploadPdfFile
 };

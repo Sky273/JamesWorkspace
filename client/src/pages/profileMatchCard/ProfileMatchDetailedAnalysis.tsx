@@ -1,4 +1,4 @@
-﻿import { SparklesIcon } from '@heroicons/react/24/outline';
+import { SparklesIcon } from '@heroicons/react/24/outline';
 import type { TFunction } from 'i18next';
 import type { DetailedProfileAnalysisResponse } from '../../types/entities';
 import { getScoreColor } from './helpers';

@@ -25,6 +25,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, __dirname, '');
   const httpsEnabled = env.VITE_HTTPS_ENABLED === 'true';
   const httpsPort = env.VITE_HTTPS_PORT || '3443';
+  const disableAssetCompression = env.VITE_DISABLE_ASSET_COMPRESSION === 'true';
 
   console.log(`HTTPS_ENABLED: ${httpsEnabled} (env value: "${env.VITE_HTTPS_ENABLED}")`);
 
@@ -34,20 +35,26 @@ export default defineConfig(({ mode }) => {
       tailwindcss(),
       react(),
       httpConfigPlugin(),
-      compression({
-        algorithm: 'gzip',
-        ext: '.gz',
-        threshold: 1024,
-        deleteOriginFile: false,
-        filter: COMPRESSED_ASSET_FILTER,
-      }),
-      compression({
-        algorithm: 'brotliCompress',
-        ext: '.br',
-        threshold: 1024,
-        deleteOriginFile: false,
-        filter: COMPRESSED_ASSET_FILTER,
-      }),
+      ...(
+        disableAssetCompression
+          ? []
+          : [
+              compression({
+                algorithm: 'gzip',
+                ext: '.gz',
+                threshold: 1024,
+                deleteOriginFile: false,
+                filter: COMPRESSED_ASSET_FILTER,
+              }),
+              compression({
+                algorithm: 'brotliCompress',
+                ext: '.br',
+                threshold: 1024,
+                deleteOriginFile: false,
+                filter: COMPRESSED_ASSET_FILTER,
+              }),
+            ]
+      ),
     ],
     server: {
       host: '0.0.0.0',

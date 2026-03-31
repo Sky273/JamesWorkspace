@@ -1,4 +1,4 @@
-﻿import * as missionsService from '../../services/missions.service.js';
+import * as missionsService from '../../services/missions.service.js';
 import {
     JOB_STATUS,
     createJob,

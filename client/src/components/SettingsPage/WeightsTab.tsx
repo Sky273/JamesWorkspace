@@ -1,4 +1,4 @@
-﻿import WeightGroupSection from './WeightGroupSection';
+import WeightGroupSection from './WeightGroupSection';
 
 interface FormData {
   'Executive Summary Weight': number;

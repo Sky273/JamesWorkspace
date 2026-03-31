@@ -1,4 +1,4 @@
-﻿import { securityLog, getRequestMetadata, LOG_LEVELS, SECURITY_EVENTS } from '../../../services/security.service.js';
+import { securityLog, getRequestMetadata, LOG_LEVELS, SECURITY_EVENTS } from '../../../services/security.service.js';
 import { safeLog } from '../../../utils/logger.backend.js';
 import { getUserFirmId, isUserAdmin } from '../../../utils/firmHelpers.js';
 import { processAnalysisTags } from '../../../utils/tagCleaner.js';

@@ -1,4 +1,4 @@
-﻿import { ForwardRefExoticComponent, RefAttributes, SVGProps } from 'react';
+import { ForwardRefExoticComponent, RefAttributes, SVGProps } from 'react';
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { useTranslation } from 'react-i18next';

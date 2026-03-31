@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Candidate Pipeline Service
  * Manages the selection pipeline for candidates (freelancers, partner employees)
  * Includes interview scheduling with calendar integration

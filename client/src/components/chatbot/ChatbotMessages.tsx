@@ -1,4 +1,4 @@
-﻿import { motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { SparklesIcon, UserCircleIcon } from '@heroicons/react/24/outline';
 import ChatbotMarkdown from './ChatbotMarkdown';
 import type { Message } from './types';

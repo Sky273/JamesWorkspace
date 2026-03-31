@@ -1,7 +1,7 @@
 /**
  * Resumes Service
  * Data access layer for resume CRUD operations
- * Extracted from resumes/crud.routes.js, resumes/upload.routes.js, and resumes/helpers.js
+ * Extracted from resumes/crud.routes.js and resumes/helpers.js
  */
 
 import { query } from '../config/database.js';
@@ -212,60 +212,6 @@ export async function deleteResume(id) {
     }
     return true;
 }
-
-/**
- * Insert a new resume (upload)
- * @param {Object} data
- * @returns {Promise<Object>} created resume
- */
-export async function insertResume(data) {
-    const result = await query(
-        `INSERT INTO resumes (
-            name, title, file_name, resume_file_data, resume_file_size, resume_file_type, 
-            resume_file_url, status, firm_id, firm_name,
-            profile_type, candidate_name, candidate_email, consent_status,
-            consent_token, consent_token_expires_at, consent_requested_at, retention_until
-        )
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
-         RETURNING *`,
-        [
-            data.name, data.title, data.fileName, data.fileBuffer, data.fileSize,
-            data.mimeType, data.fileUrl, data.status, data.firmId, data.firmName,
-            data.profileType, data.candidateName, data.candidateEmail, data.consentStatus,
-            data.consentToken, data.tokenExpiresAt, data.consentRequestedAt, data.retentionUntil
-        ]
-    );
-    return result.rows[0];
-}
-
-/**
- * Update resume file URL after insert
- * @param {string} id
- * @param {string} url
- */
-export async function updateResumeFileUrl(id, url) {
-    await query(
-        `UPDATE resumes SET resume_file_url = $1 WHERE id = $2`,
-        [url, id]
-    );
-}
-
-/**
- * Update resume consent status
- * @param {string} id
- * @param {string} status
- */
-export async function updateConsentStatus(id, status) {
-    await query(`
-        UPDATE resumes 
-        SET consent_status = $1, updated_at = CURRENT_TIMESTAMP
-        WHERE id = $2
-    `, [status, id]);
-}
-
-// ============================================
-// LLM handler helpers (from resumes/llm.handlers.js)
-// ============================================
 
 /**
  * Find a resume record by ID (full record via findWithTimeout)

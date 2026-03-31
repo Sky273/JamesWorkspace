@@ -1,4 +1,4 @@
-﻿/**
+/**
  * ChatBot Component
  * AI-powered assistant chatbot that connects to n8n webhook
  */

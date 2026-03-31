@@ -25,9 +25,9 @@ async function getBrowser() {
     return browserLaunchPromise;
   }
   
-  browserLaunchPromise = puppeteer.launch({
+  const configuredExecutablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+  const launchOptions = {
     headless: 'new',
-    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/google-chrome-stable',
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -35,7 +35,13 @@ async function getBrowser() {
       '--disable-gpu',
       '--disable-software-rasterizer'
     ]
-  });
+  };
+
+  if (configuredExecutablePath) {
+    launchOptions.executablePath = configuredExecutablePath;
+  }
+
+  browserLaunchPromise = puppeteer.launch(launchOptions);
   
   browserInstance = await browserLaunchPromise;
   browserLaunchPromise = null;

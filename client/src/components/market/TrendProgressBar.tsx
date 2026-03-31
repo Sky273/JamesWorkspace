@@ -1,4 +1,4 @@
-﻿import type { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 export function ProgressBar({ value, color = 'indigo', label }: { value: number; color?: string; label?: ReactNode }) {
   const colorClasses: Record<string, string> = {

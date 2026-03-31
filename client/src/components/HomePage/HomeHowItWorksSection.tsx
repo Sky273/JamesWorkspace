@@ -1,4 +1,4 @@
-﻿import { ForwardRefExoticComponent, RefAttributes, SVGProps } from 'react';
+import { ForwardRefExoticComponent, RefAttributes, SVGProps } from 'react';
 import { motion } from 'framer-motion';
 import { CogIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';

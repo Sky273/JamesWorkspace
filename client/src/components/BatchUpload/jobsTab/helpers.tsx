@@ -1,4 +1,4 @@
-﻿import {
+import {
   ArrowDownTrayIcon,
   BriefcaseIcon,
   ChartBarIcon,

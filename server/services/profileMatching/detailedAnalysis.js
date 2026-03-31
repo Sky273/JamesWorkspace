@@ -1,4 +1,4 @@
-﻿import { findWithTimeout } from '../../utils/postgresHelpers.js';
+import { findWithTimeout } from '../../utils/postgresHelpers.js';
 import { safeLog } from '../../utils/logger.backend.js';
 import { getLLMSettings } from '../settings.service.js';
 import { callBusinessChatCompletion } from '../llmProvider.service.js';

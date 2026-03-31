@@ -1,4 +1,4 @@
-﻿import {
+import {
   AcademicCapIcon,
   BuildingOfficeIcon,
   CheckCircleIcon,

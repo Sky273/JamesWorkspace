@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Rome 4.0 API Service
  * Handles fetching métiers and compétences from France Travail APIs
  * - Referentiel API for list of métiers

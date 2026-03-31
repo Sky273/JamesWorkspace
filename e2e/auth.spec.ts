@@ -37,7 +37,7 @@ test.describe('Authentication', () => {
       response.url().includes('/api/auth/signin') && response.request().method() === 'POST'
     );
 
-    await page.getByRole('button', { name: /^se connecter$/i }).click();
+    await page.locator('button[type="submit"]').click();
 
     const signInResponse = await signInResponsePromise;
     expect(signInResponse.status()).toBeGreaterThanOrEqual(400);

@@ -1,4 +1,4 @@
-﻿import { ArrowPathIcon } from '@heroicons/react/24/outline';
+import { ArrowPathIcon } from '@heroicons/react/24/outline';
 import type { TranslateFn } from './types';
 
 interface JobsTabHeaderProps {

@@ -1,4 +1,4 @@
-﻿export interface JobItem {
+export interface JobItem {
   id: string;
   file_name: string;
   relative_path?: string;

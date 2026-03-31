@@ -6,9 +6,8 @@
  * Structure:
  * - ./resumes/index.js         : Main router aggregating all modules
  * - ./resumes/crud.routes.js   : GET /, GET /:id, PUT /:id, DELETE /:id
- * - ./resumes/upload.routes.js : POST /upload, POST /extract-doc, POST /extract-pdf
+ * - ./resumes/upload.routes.js : POST /extract-doc, POST /extract-pdf
  * - ./resumes/stats.routes.js  : GET /stats, GET /grouped-by-deal
- * - ./resumes/llm.handlers.js  : LLM analysis/improvement handlers
  * - ./resumes/aiModify.handler.js : AI modification handler
  * - ./resumes/versions.routes.js : Version management
  * - ./resumes/helpers.js       : Shared utility functions

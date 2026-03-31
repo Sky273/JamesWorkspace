@@ -1,4 +1,4 @@
-﻿export function formatPipelineDate(dateStr: string, locale: string): string {
+export function formatPipelineDate(dateStr: string, locale: string): string {
   const date = new Date(dateStr);
   return date.toLocaleDateString(locale, {
     day: 'numeric',

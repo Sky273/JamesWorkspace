@@ -1,6 +1,18 @@
 ## v1.8.8 - 2026-03-30
 ### Fiabilisation plateforme, backup, cache et refactors structurels
 
+#### Couverture frontend et e2e
+- Renforcement massif de la couverture frontend sur les parcours critiques : routing/protection, upload, analysis, export, adapt, settings et batch upload.
+- Ajout de parcours Playwright authentifiés stables avec bootstrap automatique d'un utilisateur `active` et injection de cookies JWT pour éviter les collisions avec le rate limiting auth.
+- Nouvelles specs e2e métier : navigation protégée, formulaire GDPR upload, flux complet `upload -> analysis` et flux `analysis -> improve -> export`.
+- La stack Playwright démarre désormais le proxy applicatif et le `pdf-server`, avec bootstrap automatique d'un template d'export pour l'utilisateur e2e.
+
+#### Nettoyage des reliquats CV
+- Confirmation et documentation du fait que le flux métier supporté pour l'import, l'analyse et l'amélioration des CVs passe par `batch-jobs`.
+- Suppression de l'ancien endpoint direct `POST /api/resumes/upload` côté serveur.
+- Conservation des endpoints techniques `extract-pdf` et `extract-doc`, encore utilisés par le frontend pour l'extraction de texte.
+- Suppression des handlers LLM legacy non montés dans le routeur `resumes`.
+
 #### Résilience et observabilité
 - Alignement du diagnostic `État du système` avec l’architecture réelle : santé plateforme, backend cache, Redis, mémoire, providers LLM et circuit breakers.
 - Ajout de l’affichage mémoire consommée / max dans l’indicateur système, avec seuils visuels adaptés.

@@ -1,4 +1,4 @@
-﻿import { FRENCH_REGIONS } from '../../services/franceTravail.service.js';
+import { FRENCH_REGIONS } from '../../services/franceTravail.service.js';
 import { getStatDynamiqueEmploi } from '../../services/marketTrends.service.js';
 import { createJob, updateJobStatus, updateCollectionJobProgress, JOB_STATUS } from '../../services/batchJobs.service.js';
 import {
