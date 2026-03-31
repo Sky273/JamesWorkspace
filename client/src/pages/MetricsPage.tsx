@@ -199,6 +199,16 @@ interface CacheAdminMetrics {
 }
 
 interface OperationsMetrics {
+  ocrRuntime?: {
+    status?: string;
+    preferredEngine?: string;
+    tesseractAvailable?: boolean;
+    pdftoppmAvailable?: boolean;
+    pythonCommand?: string | null;
+    advancedBackendConfigured?: string;
+    advancedBackendAvailable?: boolean;
+    notes?: string;
+  };
   operations?: {
     uploads?: {
       total?: number;

@@ -2,6 +2,16 @@ import { motion } from 'framer-motion';
 import { ArrowDownTrayIcon, BoltIcon } from '@heroicons/react/24/outline';
 
 interface OperationsInfraMetrics {
+  ocrRuntime?: {
+    status?: string;
+    preferredEngine?: string;
+    tesseractAvailable?: boolean;
+    pdftoppmAvailable?: boolean;
+    pythonCommand?: string | null;
+    advancedBackendConfigured?: string;
+    advancedBackendAvailable?: boolean;
+    notes?: string;
+  };
   operations?: {
     uploads?: {
       total?: number;
@@ -19,6 +29,21 @@ interface OperationsInfraMetrics {
       totalConfidence?: number;
       confidenceSamples?: number;
       totalExtractionTimeMs?: number;
+      recent?: Array<{
+        timestamp?: string;
+        source?: string;
+        fileName?: string;
+        success?: boolean;
+        pages?: number;
+        ocrPageCount?: number;
+        failedPages?: number;
+        avgConfidence?: number | null;
+        extractionTimeMs?: number;
+        engine?: string | null;
+        variant?: string | null;
+        psm?: string | null;
+        textLength?: number;
+      }>;
     };
     cleanup?: {
       runs?: number;
@@ -58,6 +83,12 @@ export default function OperationsInfraCards({
   formatBytes
 }: OperationsInfraCardsProps): JSX.Element | null {
   if (!metrics) return null;
+
+  const ocrRuntime = metrics.ocrRuntime;
+  const renderAvailability = (value: boolean | null | undefined): string => {
+    if (value === null || value === undefined) return t('metrics.notApplicable');
+    return value ? t('common.yes', 'Oui') : t('common.no', 'Non');
+  };
 
   return (
     <>
@@ -127,6 +158,33 @@ export default function OperationsInfraCards({
             <p className="font-semibold">{Math.round(safeNumber(metrics.operations?.ocr?.totalExtractionTimeMs) / 1000) + 's'}</p>
           </div>
         </div>
+        {ocrRuntime && (
+          <div className="grid grid-cols-2 gap-3 text-sm mb-4">
+            <div className="bg-teal-100 dark:bg-teal-900/30 rounded-lg p-3">
+              <p className="opacity-70">{t('metrics.ocrPipeline')}</p>
+              <p className="font-semibold break-words">{ocrRuntime.preferredEngine || t('metrics.none')}</p>
+            </div>
+            <div className="bg-teal-100 dark:bg-teal-900/30 rounded-lg p-3">
+              <p className="opacity-70">{t('metrics.ocrAdvancedBackend')}</p>
+              <p className="font-semibold break-words">
+                {ocrRuntime.advancedBackendConfigured || t('metrics.none')}
+                {ocrRuntime.advancedBackendConfigured && ` (${renderAvailability(ocrRuntime.advancedBackendAvailable)})`}
+              </p>
+            </div>
+            <div className="bg-teal-100 dark:bg-teal-900/30 rounded-lg p-3">
+              <p className="opacity-70">{t('metrics.ocrTesseract')}</p>
+              <p className="font-semibold">{renderAvailability(ocrRuntime.tesseractAvailable)}</p>
+            </div>
+            <div className="bg-teal-100 dark:bg-teal-900/30 rounded-lg p-3">
+              <p className="opacity-70">{t('metrics.ocrPdftoppm')}</p>
+              <p className="font-semibold">{renderAvailability(ocrRuntime.pdftoppmAvailable)}</p>
+            </div>
+            <div className="bg-teal-100 dark:bg-teal-900/30 rounded-lg p-3 col-span-2">
+              <p className="opacity-70">{t('metrics.ocrPython')}</p>
+              <p className="font-semibold break-words">{ocrRuntime.pythonCommand || t('metrics.notApplicable')}</p>
+            </div>
+          </div>
+        )}
         <div className="grid grid-cols-2 gap-3 text-sm mb-4">
           <div className="bg-teal-100 dark:bg-teal-900/30 rounded-lg p-3">
             <p className="opacity-70">{t('metrics.cleanupRuns')}</p>
@@ -150,6 +208,34 @@ export default function OperationsInfraCards({
           {' | '}
           {t('metrics.batchExportsSummary')}: {formatBytes(safeNumber(metrics.storage?.batchExportDirectorySize))} / {safeNumber(metrics.storage?.batchExportFileCount)} {t('metrics.filesUnit')}
         </p>
+        {ocrRuntime?.notes && <p className="text-xs opacity-60 mt-2">{ocrRuntime.notes}</p>}
+        {metrics.operations?.ocr?.recent && metrics.operations.ocr.recent.length > 0 && (
+          <div className="mt-4">
+            <p className="text-sm font-medium opacity-80 mb-3">{t('metrics.ocrRecentResults')}</p>
+            <div className="space-y-2">
+              {metrics.operations.ocr.recent.slice(-3).reverse().map((entry, index) => (
+                <div key={`${entry.timestamp || 'ocr'}-${index}`} className="bg-teal-100 dark:bg-teal-900/30 rounded-lg p-3 text-xs">
+                  <div className="flex items-center justify-between gap-3 mb-1">
+                    <p className="font-semibold break-words">{entry.fileName || entry.source || t('metrics.ocrRecentUnknown')}</p>
+                    <span className="opacity-70">{entry.success ? t('metrics.successes') : t('metrics.failures')}</span>
+                  </div>
+                  <p className="opacity-80 break-words">
+                    {(entry.engine || t('metrics.none'))}
+                    {entry.variant ? ` | ${entry.variant}` : ''}
+                    {entry.psm ? ` | PSM ${entry.psm}` : ''}
+                  </p>
+                  <p className="opacity-70">
+                    {t('metrics.ocrRecentStats', {
+                      pages: safeNumber(entry.ocrPageCount ?? entry.pages),
+                      textLength: safeNumber(entry.textLength),
+                      duration: Math.round(safeNumber(entry.extractionTimeMs) / 1000)
+                    })}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </motion.div>
     </>
   );

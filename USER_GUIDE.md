@@ -168,6 +168,20 @@ Si vous avez utilisé plusieurs codes de secours ou si vous pensez qu'ils ont é
 - **Microsoft Word** (.docx, .doc)
 - **Taille maximale** : 50 MB
 
+#### OCR pour PDF scannés / image
+
+L'application peut traiter les **PDFs scannés** ou composés d'images :
+
+1. tentative d'extraction du texte natif du PDF
+2. si le PDF n'a pas de vraie couche texte, bascule vers l'OCR serveur
+3. l'analyse IA s'appuie ensuite sur le texte OCR extrait
+
+Notes importantes :
+- un PDF avec **texte sélectionnable** reste le cas le plus fiable
+- un PDF image **flou, bruité, compressé ou très petit** peut rester partiellement mal reconnu
+- en environnement de production Docker, la chaîne OCR recommandée repose sur `pdftoppm` + `tesseract`
+- hors Docker, votre administrateur doit installer les prérequis OCR système pour obtenir le même niveau de fiabilité
+
 #### Processus d'Import
 
 1. Accédez à **"CVthèque"** dans le menu latéral
@@ -2391,7 +2405,8 @@ Utilisez le sélecteur de langue dans la barre supérieure.
 **Solutions** :
 - Vérifiez le format du fichier
 - Réexportez le CV depuis l'application d'origine
-- Utilisez un PDF avec texte sélectionnable
+- Utilisez de préférence un PDF avec texte sélectionnable
+- Si vous devez traiter des PDF scannés, vérifiez avec votre administrateur que la chaîne OCR serveur est bien installée (`tesseract` + `pdftoppm`)
 
 #### L'analyse prend trop de temps
 

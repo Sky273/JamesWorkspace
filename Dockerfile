@@ -30,6 +30,17 @@ RUN apt-get update && apt-get install -y \
     postgresql-18 \
     postgresql-contrib-18 \
     redis-server \
+    # OCR
+    tesseract-ocr \
+    tesseract-ocr-fra \
+    tesseract-ocr-eng \
+    poppler-utils \
+    python3 \
+    python3-pip \
+    python3-opencv \
+    python3-numpy \
+    libglib2.0-0 \
+    libgl1 \
     # Puppeteer/Chrome dependencies
     fonts-liberation \
     libappindicator3-1 \
@@ -89,6 +100,10 @@ COPY client/scripts ./client/scripts/
 
 # Install all dependencies (--legacy-peer-deps for ESLint compatibility)
 RUN npm ci --legacy-peer-deps
+
+# Install advanced OCR fallback (CPU-only)
+RUN python3 -m pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    python3 -m pip install --no-cache-dir paddlepaddle==3.3.1 paddleocr==3.4.0
 
 # Copy application source
 COPY client ./client
@@ -171,6 +186,7 @@ ENV JWT_REFRESH_SECRET=docker-jwt-refresh-secret-change-in-production-min32chars
 ENV REFRESH_TOKEN_SECRET=docker-refresh-token-secret-change-in-production-min32chars
 ENV CSRF_SECRET=docker-csrf-secret-change-in-production-min32chars
 ENV SKIP_ENV_VALIDATION=true
+ENV OCR_ADVANCED_BACKEND=paddleocr
 
 # Create required directories
 RUN mkdir -p /app/logs /app/uploads /app/uploads/logos /app/data /app/data/redis /var/log/supervisor /app/server/backups /app/server/temp

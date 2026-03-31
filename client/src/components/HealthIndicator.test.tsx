@@ -14,6 +14,15 @@ const healthPayload = {
     database: { status: 'error', error: 'Connexion échouée', latency: '42ms' },
     memory: { status: 'warning', heapPercent: '92%', heapUsed: '200 MB' },
     cache: { status: 'ok', backend: 'memory-fallback', settings: 1, templates: 2, firms: 3 },
+    ocr: {
+      status: 'ok',
+      preferredEngine: 'tesseract-cli',
+      tesseractCliAvailable: true,
+      pdftoppmAvailable: true,
+      pythonCommand: 'python3',
+      advancedBackend: 'paddleocr',
+      advancedBackendAvailable: true
+    },
     openai: { status: 'configured', message: 'API key present' },
     anthropic: { status: 'configured', message: 'API key present' },
     deepseek: { status: 'configured', message: 'API key present' },
@@ -87,8 +96,11 @@ describe('HealthIndicator', () => {
 
     expect(screen.getByText('Plateforme')).toBeInTheDocument();
     expect(screen.getByText('Cache')).toBeInTheDocument();
+    expect(screen.getByText('OCR')).toBeInTheDocument();
     expect(screen.getByText('Familles LLM')).toBeInTheDocument();
     expect(screen.getByText(/fallback mémoire/i)).toBeInTheDocument();
+    expect(screen.getByText(/tesseract-cli/i)).toBeInTheDocument();
+    expect(screen.getByText(/paddleocr/i)).toBeInTheDocument();
     expect(screen.getByText(/CB OPEN/i)).toBeInTheDocument();
     expect(screen.getByText((content) => content.includes('formatted:2026-03-25T10:00:00.000Z'))).toBeInTheDocument();
     expect(mockFetchWithAuth).toHaveBeenCalledTimes(6);
@@ -125,6 +137,7 @@ describe('HealthIndicator', () => {
         database: { status: 'ok', latency: '12ms' },
         memory: { status: 'ok', heapUsed: '500 MB', heapTotal: '2 GB' },
         cache: { status: 'ok', backend: 'redis', settings: 1, templates: 2, firms: 3 },
+        ocr: { status: 'ok', preferredEngine: 'tesseract-cli', tesseractCliAvailable: true, pdftoppmAvailable: true, pythonCommand: 'python3', advancedBackend: 'paddleocr', advancedBackendAvailable: true },
         openai: { status: 'configured', message: 'API key present' },
         anthropic: { status: 'configured', message: 'API key present' },
         deepseek: { status: 'configured', message: 'API key present' },
@@ -191,6 +204,7 @@ describe('HealthIndicator', () => {
         database: { status: 'ok', latency: '12ms' },
         memory: { status: 'ok', heapUsed: '200 MB', heapTotal: '2 GB' },
         cache: { status: 'ok', backend: 'redis', settings: 1, templates: 2, firms: 3 },
+        ocr: { status: 'warning', preferredEngine: 'tesseract.js', tesseractCliAvailable: false, pdftoppmAvailable: false, pythonCommand: null, advancedBackend: null, advancedBackendAvailable: false },
         openai: { status: 'configured', message: 'API key present' },
         anthropic: { status: 'error', message: 'Anthropic unavailable' },
         deepseek: { status: 'error', message: 'DeepSeek unavailable' },
@@ -237,6 +251,7 @@ describe('HealthIndicator', () => {
         database: { status: 'ok', latency: '12ms' },
         memory: { status: 'ok', heapUsed: '200 MB', heapTotal: '2 GB' },
         cache: { status: 'ok', backend: 'redis', settings: 1, templates: 2, firms: 3 },
+        ocr: { status: 'warning', preferredEngine: 'tesseract.js', tesseractCliAvailable: false, pdftoppmAvailable: false, pythonCommand: null, advancedBackend: null, advancedBackendAvailable: false },
         openai: { status: 'configured', message: 'API key present' },
         anthropic: { status: 'configured', message: 'API key present' },
         deepseek: { status: 'configured', message: 'API key present' },

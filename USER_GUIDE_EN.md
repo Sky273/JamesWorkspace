@@ -168,6 +168,20 @@ If you've used several backup codes or believe they've been compromised:
 - **Microsoft Word** (.docx, .doc)
 - **Maximum size**: 50 MB
 
+#### OCR for scanned / image PDFs
+
+The application can process **scanned PDFs** or image-based PDFs:
+
+1. native PDF text extraction is attempted first
+2. if the PDF has no usable text layer, the server switches to OCR
+3. AI analysis then runs on the extracted OCR text
+
+Important notes:
+- a PDF with **selectable text** remains the most reliable case
+- a blurred, noisy, heavily compressed, or very small image PDF may still be recognized imperfectly
+- in Docker production, the recommended OCR path is based on `pdftoppm` + `tesseract`
+- outside Docker, your administrator must install the required OCR system binaries to get the same reliability level
+
 #### Import Process
 
 1. Go to **"Resume Library"** in the side menu
@@ -2112,7 +2126,8 @@ Use the language selector in the top bar.
 **Solutions**:
 - Check file format
 - Re-export the resume from the original application
-- Use a PDF with selectable text
+- Prefer a PDF with selectable text
+- If you need to process scanned PDFs, ask your administrator to verify that the OCR server toolchain is installed (`tesseract` + `pdftoppm`)
 
 #### Analysis Takes Too Long
 

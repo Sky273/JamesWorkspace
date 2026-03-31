@@ -10,10 +10,24 @@ import { ITEM_STATUS, updateJobItemStatus } from '../batchJobs.service.js';
 import { parseScore, generateTrigram } from './helpers.js';
 import { extractTextFromBuffer } from './textExtraction.js';
 import { analyzeResumeWithLLM } from './llmIntegration.js';
+import { cleanExtractedResumeText, isPlaceholderCandidateName } from '../ocrTextCleanup.service.js';
 import { buildConsentMetadata, sendConsentRequestIfNeeded } from './processors/shared.js';
 import { processImprovement, processImproveItem } from './processors/improvement.js';
 import { processAdaptItem, processMatchItem, processProfileSearchItem, processProfileAnalysisItem } from './processors/profileAndMatching.js';
 import { metrics } from '../metrics.service.js';
+
+function buildOcrMetricsMetadata(extractionResult, baseMetadata = {}) {
+    return {
+        ...baseMetadata,
+        engine: extractionResult?.primaryResult?.engine || null,
+        variant: extractionResult?.primaryResult?.variant || null,
+        psm: extractionResult?.primaryResult?.psm || null,
+        textLength: extractionResult?.primaryResult?.textLength || 0,
+        recentResults: Array.isArray(extractionResult?.recentResults)
+            ? extractionResult.recentResults.slice(-5)
+            : []
+    };
+}
 
 export async function processImportItem(item, job, options) {
     const { improve = false } = options;
@@ -123,7 +137,11 @@ export async function processImportItem(item, job, options) {
         currentStage = 'extract-text';
         safeLog('info', 'Extracting text from file', { itemId: item.id, fileName: item.file_name });
         const extractionStartedAt = Date.now();
-        const text = await extractTextFromBuffer(item.file_data, item.file_mime_type, item.file_name);
+        const extractionResult = await extractTextFromBuffer(item.file_data, item.file_mime_type, item.file_name);
+        const rawText = extractionResult?.text || '';
+        const { text, metadata: textCleanupMetadata } = cleanExtractedResumeText(rawText, {
+            ocrUsed: !!extractionResult?.ocrUsed
+        });
         metrics.trackBatchImportActivity({
             event: 'extract-text',
             mimeType,
@@ -138,10 +156,31 @@ export async function processImportItem(item, job, options) {
             }
         });
 
+        if (extractionResult?.ocrUsed || extractionResult?.ocrPageCount || extractionResult?.failedOcrPages) {
+            metrics.trackOcrActivity({
+                pages: extractionResult?.pages || 0,
+                ocrPageCount: extractionResult?.ocrPageCount || 0,
+                failedPages: extractionResult?.failedOcrPages || 0,
+                avgConfidence: extractionResult?.avgOcrConfidence ?? null,
+                extractionTimeMs: Date.now() - extractionStartedAt,
+                success: (extractionResult?.ocrUsed && !extractionResult?.failedOcrPages) || false,
+                metadata: buildOcrMetricsMetadata(extractionResult, {
+                    source: 'batch-job',
+                    itemId: item.id,
+                    jobId: job.id,
+                    resumeId,
+                    fileName: item.file_name
+                })
+            });
+        }
+
         safeLog('debug', 'Text extracted - preview', {
             itemId: item.id,
             textLength: text?.length,
-            textPreview: text?.substring(0, 500)
+            textPreview: text?.substring(0, 500),
+            ocrUsed: !!extractionResult?.ocrUsed,
+            textCleanupChanged: textCleanupMetadata.changed,
+            cleanedLength: textCleanupMetadata.cleanedLength
         });
 
         if (!text || text.length < 50) {
@@ -170,7 +209,9 @@ export async function processImportItem(item, job, options) {
 
         if (!analysis) {
             safeLog('info', 'Analyzing CV with LLM', { itemId: item.id, firmId: job.firm_id, fileName: item.file_name });
-            analysis = await analyzeResumeWithLLM(text, job.firm_id, item.file_name);
+            analysis = await analyzeResumeWithLLM(text, job.firm_id, item.file_name, {
+                ocrUsed: !!extractionResult?.ocrUsed
+            });
             metrics.trackBatchImportActivity({
                 event: 'analyze',
                 mimeType,
@@ -185,8 +226,7 @@ export async function processImportItem(item, job, options) {
             safeLog('info', 'CV analyzed', { itemId: item.id, hasAnalysis: !!analysis, globalRating: analysis?.globalRating, name: analysis?.name });
         }
 
-        const nameUpper = analysis.name?.toUpperCase()?.trim();
-        let isNameExtractionFailed = nameUpper === 'XXX' || nameUpper === 'CANDIDAT' || nameUpper === 'CAN';
+        let isNameExtractionFailed = isPlaceholderCandidateName(analysis.name);
 
         if (!isResumedWithName && isNameExtractionFailed && consentMetadata.candidateName) {
             analysis.name = consentMetadata.candidateName;

@@ -2,7 +2,8 @@
 import crypto from 'crypto';
 import { safeLog } from '../../../utils/logger.backend.js';
 import { metrics } from '../../../services/metrics.service.js';
-import { loadPdfDocument } from '../../../utils/pdfjs.server.js';
+import { extractPdfTextWithOcr } from '../../../services/pdfTextExtraction.service.js';
+import { cleanExtractedResumeText } from '../../../services/ocrTextCleanup.service.js';
 import { getUserFirmId, isValidUUID, getFirmById } from '../../../utils/firmHelpers.js';
 import * as resumesService from '../../../services/resumes.service.js';
 import {
@@ -86,7 +87,6 @@ function createExtractDocHandler() {
 
 function createExtractPdfHandler() {
     return async (req, res) => {
-        let tesseractWorker = null;
         let pdfExtractionSlotAcquired = false;
         const pdfExtractionUserKey = getPdfExtractionUserKey(req);
 
@@ -130,127 +130,63 @@ function createExtractPdfHandler() {
                 fileName: req.file.originalname,
                 fileSize: fileBuffer.length
             });
-            const uint8Array = new Uint8Array(fileBuffer);
-            const loadingTask = await loadPdfDocument(uint8Array);
-            const pdf = await loadingTask.promise;
 
-            if (pdf.numPages > MAX_PDF_EXTRACTION_PAGES) {
-                return res.status(400).json({
-                    error: `PDF too large to extract safely. Maximum supported page count is ${MAX_PDF_EXTRACTION_PAGES}.`
-                });
-            }
-
-            let fullText = '';
-            const numPages = pdf.numPages;
-            let ocrUsed = false;
-            let ocrPageCount = 0;
-            let totalOcrConfidence = 0;
-            let failedOcrPages = 0;
-
-            for (let pageNum = 1; pageNum <= numPages; pageNum++) {
-                const page = await pdf.getPage(pageNum);
-                const textContent = await page.getTextContent();
-                const totalTextLength = textContent.items.reduce((sum, item) => sum + (item.str || '').length, 0);
-                const isScannedPage = totalTextLength < 50 || textContent.items.length < 5;
-
-                if (isScannedPage) {
-                    if (ocrPageCount >= MAX_SCANNED_OCR_PAGES) {
-                        return res.status(400).json({
-                            error: `PDF contains too many scanned pages for OCR extraction. Maximum supported scanned pages is ${MAX_SCANNED_OCR_PAGES}.`
-                        });
-                    }
-
+            const result = await extractPdfTextWithOcr(fileBuffer, {
+                maxPdfPages: MAX_PDF_EXTRACTION_PAGES,
+                maxScannedOcrPages: MAX_SCANNED_OCR_PAGES,
+                maxOcrRenderPixels: MAX_OCR_RENDER_PIXELS,
+                forceDocumentOcrTextLength: 50,
+                onOcrProgress: ({ pageNum, progress }) => {
+                    safeLog('debug', `OCR progress page ${pageNum}: ${(progress * 100).toFixed(0)}%`);
+                },
+                onOcrPageDetected: ({ pageNum, totalTextLength }) => {
                     safeLog('info', `Page ${pageNum} appears to be scanned (${totalTextLength} chars), using OCR...`, {
                         fileName: req.file.originalname
                     });
-
-                    try {
-                        if (!tesseractWorker) {
-                            const Tesseract = await import('tesseract.js');
-                            tesseractWorker = await Tesseract.createWorker('fra+eng', 1, {
-                                logger: (message) => {
-                                    if (message.status === 'recognizing text') {
-                                        safeLog('debug', `OCR progress page ${pageNum}: ${(message.progress * 100).toFixed(0)}%`);
-                                    }
-                                }
-                            });
-                        }
-
-                        const scale = 2.0;
-                        const viewport = page.getViewport({ scale });
-                        if ((viewport.width * viewport.height) > MAX_OCR_RENDER_PIXELS) {
-                            throw new Error('Page is too large for OCR rendering');
-                        }
-
-                        const { createCanvas } = await import('canvas');
-                        const canvas = createCanvas(viewport.width, viewport.height);
-                        const context = canvas.getContext('2d');
-                        await page.render({ canvasContext: context, viewport }).promise;
-                        const imageBuffer = canvas.toBuffer('image/png');
-                        const { data: { text: ocrText, confidence } } = await tesseractWorker.recognize(imageBuffer);
-
-                        if (ocrText && ocrText.trim().length > 20) {
-                            fullText += ocrText.trim() + '\n\n';
-                            ocrUsed = true;
-                            ocrPageCount++;
-                            totalOcrConfidence += confidence;
-                            safeLog('info', `OCR completed for page ${pageNum}`, {
-                                confidence: confidence.toFixed(2),
-                                textLength: ocrText.trim().length
-                            });
-                        } else {
-                            ocrPageCount++;
-                            failedOcrPages++;
-                            safeLog('warn', `OCR returned insufficient text for page ${pageNum}`, {
-                                confidence: confidence?.toFixed(2) || 'N/A',
-                                textLength: ocrText?.trim().length || 0
-                            });
-                        }
-                    } catch (ocrError) {
-                        ocrPageCount++;
-                        failedOcrPages++;
-                        safeLog('error', `OCR failed for page ${pageNum}`, { error: ocrError.message });
-                        fullText += `[Page ${pageNum}: OCR error - ${ocrError.message}]\n\n`;
-                    }
-                    continue;
+                },
+                onOcrPageCompleted: ({ pageNum, confidence, textLength, engine, psm }) => {
+                    safeLog('info', `OCR completed for page ${pageNum}`, {
+                        engine,
+                        psm,
+                        confidence: confidence?.toFixed(2),
+                        textLength
+                    });
+                },
+                onOcrPageFailed: ({ pageNum, error, confidence, textLength, variant, engine, psm }) => {
+                    safeLog(error === 'OCR returned insufficient text' ? 'warn' : 'error', `OCR issue on page ${pageNum}`, {
+                        error,
+                        variant,
+                        engine,
+                        psm,
+                        confidence: confidence?.toFixed?.(2) || confidence || 'N/A',
+                        textLength: textLength || 0
+                    });
+                },
+                onOcrVariantAttempt: ({ pageNum, variant, confidence, textLength, engine, psm }) => {
+                    safeLog(textLength > 0 ? 'info' : 'debug', `OCR variant evaluated on page ${pageNum}`, {
+                        variant,
+                        engine,
+                        psm,
+                        confidence: confidence?.toFixed?.(2) || confidence || 'N/A',
+                        textLength: textLength || 0
+                    });
                 }
+            });
 
-                const lines = [];
-                let currentLine = [];
-                let lastY = null;
-                const Y_THRESHOLD = 5;
+            const {
+                text: fullText,
+                pages: numPages,
+                ocrUsed,
+                ocrPageCount,
+                failedOcrPages,
+                avgOcrConfidence
+            } = result;
 
-                for (const item of textContent.items) {
-                    const y = item.transform ? item.transform[5] : 0;
-                    if (lastY !== null && Math.abs(y - lastY) > Y_THRESHOLD) {
-                        if (currentLine.length > 0) {
-                            lines.push(currentLine);
-                            currentLine = [];
-                        }
-                    }
-                    if (item.str && item.str.trim()) {
-                        currentLine.push(item.str);
-                    }
-                    lastY = y;
-                }
-
-                if (currentLine.length > 0) {
-                    lines.push(currentLine);
-                }
-
-                const pageText = lines.map((line) => line.join(' ')).join('\n');
-                fullText += pageText + '\n\n';
-            }
-
-            if (tesseractWorker) {
-                await tesseractWorker.terminate();
-            }
-
-            fullText = fullText.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
             await cleanupTempFile(req.file.path);
 
+            const { text: cleanedText } = cleanExtractedResumeText(fullText, { ocrUsed });
             const extractionTime = Date.now() - startTime;
-            const avgOcrConfidence = ocrPageCount > 0 ? (totalOcrConfidence / ocrPageCount).toFixed(2) : null;
+            const roundedAvgOcrConfidence = avgOcrConfidence !== null ? avgOcrConfidence.toFixed(2) : null;
 
             metrics.trackUploadActivity({
                 endpoint: 'extract-pdf',
@@ -264,24 +200,34 @@ function createExtractPdfHandler() {
                     pages: numPages,
                     ocrPageCount,
                     failedPages: failedOcrPages,
-                    avgConfidence: avgOcrConfidence ? Number(avgOcrConfidence) : null,
+                    avgConfidence: roundedAvgOcrConfidence ? Number(roundedAvgOcrConfidence) : null,
                     extractionTimeMs: extractionTime,
                     success: failedOcrPages === 0,
-                    metadata: { fileName: req.file.originalname }
+                    metadata: {
+                        source: 'extract-pdf',
+                        fileName: req.file.originalname,
+                        engine: result.primaryResult?.engine || null,
+                        variant: result.primaryResult?.variant || null,
+                        psm: result.primaryResult?.psm || null,
+                        textLength: result.primaryResult?.textLength || 0,
+                        recentResults: Array.isArray(result.recentResults)
+                            ? result.recentResults.slice(-5)
+                            : []
+                    }
                 });
             }
 
             safeLog('info', 'PDF extraction completed', {
                 fileName: req.file.originalname,
-                textLength: fullText.length,
+                textLength: cleanedText.length,
                 pages: numPages,
                 ocrUsed,
                 ocrPageCount,
-                avgOcrConfidence,
+                avgOcrConfidence: roundedAvgOcrConfidence,
                 extractionTimeMs: extractionTime
             });
 
-            if (!fullText || fullText.length < 10) {
+            if (!cleanedText || cleanedText.length < 10) {
                 return res.status(400).json({
                     error: 'Could not extract meaningful text from the PDF file. The file may be empty, corrupted, or entirely scanned.',
                     ocrRequired: ocrUsed
@@ -289,17 +235,14 @@ function createExtractPdfHandler() {
             }
 
             return res.json({
-                text: fullText,
+                text: cleanedText,
                 pages: numPages,
                 ocrUsed,
                 ocrPageCount,
-                avgOcrConfidence,
+                avgOcrConfidence: roundedAvgOcrConfidence,
                 extractionTimeMs: extractionTime
             });
         } catch (error) {
-            if (tesseractWorker) {
-                await tesseractWorker.terminate().catch(() => {});
-            }
             await cleanupTempFile(req.file?.path);
             if (req.file) {
                 metrics.trackUploadActivity({

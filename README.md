@@ -11,7 +11,7 @@ Application professionnelle de gestion et d'analyse de CVs avec intelligence art
 ## 🚀 Fonctionnalités
 
 ### Gestion des CVs
-- **Upload et parsing** : Support PDF, DOCX, DOC avec OCR (Tesseract.js)
+- **Upload et parsing** : Support PDF, DOCX, DOC avec OCR serveur. Pour les PDFs scannés, la chaîne préférée est `pdftoppm` + `tesseract` CLI; `tesseract.js` reste un fallback si les binaires système sont absents.
 - **Analyse IA** : Extraction automatique des compétences, expériences et formations via GPT-5/Claude
 - **Tags ESCO** : Classification automatique selon le référentiel européen des compétences
 - **Édition enrichie** : Éditeur TinyMCE intégré pour la mise en forme

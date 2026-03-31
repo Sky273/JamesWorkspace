@@ -32,11 +32,42 @@ Ce guide détaille les procédures d'installation et de lancement de ResumeConve
 | npm | 9.x ou supérieur | `npm --version` |
 | PostgreSQL | 18.x | `psql --version` |
 
+### Prérequis OCR hors Docker
+
+Pour supporter correctement les **PDFs scannés / image** hors Docker, l'installation locale doit fournir les binaires suivants dans le `PATH` :
+
+| Composant | Rôle | Vérification |
+|-----------|------|--------------|
+| `tesseract` | OCR principal | `tesseract --version` |
+| `pdftoppm` | Rendu PDF vers image avant OCR | `pdftoppm -v` |
+
+Notes :
+- sous Windows, installez **Tesseract OCR** et **Poppler for Windows** puis ajoutez leurs dossiers `bin` au `PATH`
+- si ces binaires ne sont pas disponibles, l'application bascule sur un fallback `tesseract.js`, moins robuste pour les PDFs image bruités
+- le support OCR local est surtout pertinent pour les imports PDF scannés; les fichiers DOCX/DOC n'en ont pas besoin
+
 ### Prérequis Docker
 
 | Composant | Version minimale | Vérification |
 |-----------|------------------|--------------|
 | Docker | 20.x ou supérieur | `docker --version` |
+
+### Chaîne OCR Docker
+
+En Docker, l'image installe automatiquement les dépendances OCR serveur :
+
+- `tesseract-ocr`
+- `tesseract-ocr-fra`
+- `tesseract-ocr-eng`
+- `poppler-utils` (`pdftoppm`)
+- pile Python avancée pour les scans difficiles :
+  - `python3`
+  - `python3-opencv`
+  - `python3-numpy`
+  - `paddlepaddle`
+  - `paddleocr`
+
+Il n'y a donc **pas de prérequis OCR supplémentaires** côté hôte Docker.
 
 ---
 
@@ -59,6 +90,22 @@ npm install
 ```
 
 Cette commande installe toutes les dépendances du projet (serveur, client, PDF server).
+
+### Étape 2 bis : vérifier la chaîne OCR locale
+
+Si vous prévoyez de tester des **CVs PDF scannés** hors Docker :
+
+```bash
+# Vérifier le moteur OCR
+tesseract --version
+
+# Vérifier le rendu PDF -> image
+pdftoppm -v
+```
+
+Si une des commandes échoue :
+- l'extraction de texte natif PDF continuera de fonctionner
+- mais les PDFs image/bruités seront traités avec un fallback moins fiable
 
 ### Étape 3 : Configurer l'environnement
 

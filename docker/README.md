@@ -8,6 +8,7 @@ This Docker setup creates a **single, fully autonomous container** that includes
 - **Redis** - Shared application cache
 - **Node.js 20** - Runtime environment
 - **Google Chrome** - For PDF generation (Puppeteer)
+- **Tesseract OCR + Poppler** - For scanned/image PDF OCR (`tesseract` + `pdftoppm`)
 - **Proxy Server** (port 3443 HTTPS) - Main application server
 - **PDF Server** (port 3002) - PDF generation service
 - **Frontend** - Pre-built React application
@@ -171,6 +172,63 @@ After starting the container:
 | `./docker/docker-build.sh clean` | Remove container and image |
 
 ## 🔧 Configuration
+
+## OCR Pipeline
+
+For PDF uploads and batch imports, the server uses the following extraction strategy:
+
+1. native PDF text extraction when a real text layer exists
+2. OCR fallback for scanned/image pages
+3. preferred OCR engine in Docker:
+   - `pdftoppm` to render PDF pages as images
+   - `tesseract` CLI with `fra+eng`
+4. `tesseract.js` remains only as a fallback if the CLI toolchain is unavailable
+
+This is the supported production path for scanned PDFs in Docker.
+
+### OCR-related packages included in the image
+
+The Docker image already installs:
+
+- `tesseract-ocr`
+- `tesseract-ocr-fra`
+- `tesseract-ocr-eng`
+- `poppler-utils`
+- Python OCR stack for difficult scans:
+  - `python3`
+  - `python3-opencv`
+  - `python3-numpy`
+  - `paddlepaddle`
+  - `paddleocr`
+
+No additional OCR setup is required on the Docker host.
+
+### Advanced OCR fallback
+
+For noisy, blurred, or low-quality scanned PDFs, the container now enables an advanced fallback by default:
+
+- `OCR_ADVANCED_BACKEND=paddleocr`
+
+Execution order:
+
+1. native PDF text extraction
+2. `pdftoppm` page render
+3. Python pre-processing variants (crop, denoise, threshold, dense-column crop)
+4. `tesseract` CLI on each variant
+5. `PaddleOCR` fallback when Tesseract output is still too weak
+
+### Verifying OCR inside the container
+
+```bash
+docker exec -it resumeconverter-app tesseract --version
+docker exec -it resumeconverter-app pdftoppm -v
+```
+
+### OCR limitations
+
+- OCR is applied per PDF page
+- noisy, blurred, low-contrast, or very small text may still reduce analysis quality
+- image PDFs can now be processed, but results depend on source quality
 
 ### Environment Variables
 

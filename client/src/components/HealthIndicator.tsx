@@ -20,6 +20,12 @@ interface HealthCheck {
   settings?: number;
   templates?: number;
   firms?: number;
+  preferredEngine?: string;
+  tesseractCliAvailable?: boolean;
+  pdftoppmAvailable?: boolean;
+  pythonCommand?: string | null;
+  advancedBackend?: string | null;
+  advancedBackendAvailable?: boolean;
 }
 
 interface ProviderCheck {
@@ -36,6 +42,7 @@ interface HealthStatus {
     database?: HealthCheck;
     memory?: HealthCheck;
     cache?: HealthCheck;
+    ocr?: HealthCheck;
     openai?: ProviderCheck;
     anthropic?: ProviderCheck;
     deepseek?: ProviderCheck;
@@ -305,6 +312,11 @@ function IndicatorRow({ label, meta, status, t }: { label: string; meta?: string
   );
 }
 
+function formatBooleanMeta(value?: boolean | null, yes = 'oui', no = 'non'): string | null {
+  if (typeof value !== 'boolean') return null;
+  return value ? yes : no;
+}
+
 const HealthIndicator = ({ showAlways = false, variant = 'default' }: HealthIndicatorProps): JSX.Element | null => {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -478,6 +490,42 @@ const HealthIndicator = ({ showAlways = false, variant = 'default' }: HealthIndi
                   {tf('health.fallback', 'Fallback')}: {cacheBackend.fallbackReason}
                 </div>
               ) : null}
+            </div>
+
+            <div className="space-y-2">
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                {tf('health.ocrSection', 'OCR')}
+              </div>
+              <IndicatorRow
+                label={tf('health.ocrPipeline', 'Pipeline')}
+                meta={health.checks?.ocr?.preferredEngine || health.checks?.ocr?.message || null}
+                status={health.checks?.ocr?.status}
+                t={t}
+              />
+              <IndicatorRow
+                label="tesseract"
+                meta={formatBooleanMeta(health.checks?.ocr?.tesseractCliAvailable, tf('health.yes', 'oui'), tf('health.no', 'non'))}
+                status={health.checks?.ocr?.tesseractCliAvailable ? 'ok' : 'warning'}
+                t={t}
+              />
+              <IndicatorRow
+                label="pdftoppm"
+                meta={formatBooleanMeta(health.checks?.ocr?.pdftoppmAvailable, tf('health.yes', 'oui'), tf('health.no', 'non'))}
+                status={health.checks?.ocr?.pdftoppmAvailable ? 'ok' : 'warning'}
+                t={t}
+              />
+              <IndicatorRow
+                label={tf('health.pythonRuntime', 'Python')}
+                meta={health.checks?.ocr?.pythonCommand || tf('health.notApplicable', 'n/a')}
+                status={health.checks?.ocr?.pythonCommand ? 'ok' : 'warning'}
+                t={t}
+              />
+              <IndicatorRow
+                label={tf('health.advancedOcr', 'OCR avancé')}
+                meta={health.checks?.ocr?.advancedBackend || tf('health.notApplicable', 'n/a')}
+                status={health.checks?.ocr?.advancedBackendAvailable ? 'ok' : (health.checks?.ocr?.advancedBackend ? 'warning' : 'not_applicable')}
+                t={t}
+              />
             </div>
 
             <div className="space-y-2">

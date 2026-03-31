@@ -39,6 +39,11 @@ vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));
 
+const mockGetOcrRuntimeDiagnostics = vi.fn();
+vi.mock('../../services/pdfTextExtraction.service.js', () => ({
+    getOcrRuntimeDiagnostics: (...args) => mockGetOcrRuntimeDiagnostics(...args)
+}));
+
 // Mock auth middleware
 vi.mock('../../middleware/auth.middleware.js', () => ({
     authenticateToken: (req, res, next) => {
@@ -93,6 +98,16 @@ describe('Metrics Routes', () => {
         vi.clearAllMocks();
         app = createTestApp();
         mockGetMetrics.mockReturnValue(sampleMetrics);
+        mockGetOcrRuntimeDiagnostics.mockResolvedValue({
+            status: 'ok',
+            preferredEngine: 'tesseract-cli',
+            tesseractAvailable: true,
+            pdftoppmAvailable: true,
+            pythonCommand: 'python3',
+            advancedBackendConfigured: 'paddleocr',
+            advancedBackendAvailable: true,
+            notes: 'OCR runtime fully available'
+        });
     });
 
     // ==========================================
@@ -307,6 +322,8 @@ describe('Metrics Routes', () => {
             expect(res.body.operations.uploads.total).toBe(3);
             expect(res.body.binaryStorage.resumeBinaryBytes).toBe(4096);
             expect(res.body.binaryStorage.batchFileDataBytes).toBe(512);
+            expect(res.body.ocrRuntime.preferredEngine).toBe('tesseract-cli');
+            expect(res.body.ocrRuntime.advancedBackendConfigured).toBe('paddleocr');
         });
     });
     // ==========================================
@@ -373,4 +390,3 @@ describe('Metrics Routes', () => {
         });
     });
 });
-

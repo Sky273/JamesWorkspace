@@ -58,9 +58,11 @@ vi.mock('../../services/settings.service.js', () => ({
 }));
 
 const mockTrackBatchImportActivity = vi.fn();
+const mockTrackOcrActivity = vi.fn();
 vi.mock('../../services/metrics.service.js', () => ({
     metrics: {
-        trackBatchImportActivity: (...args) => mockTrackBatchImportActivity(...args)
+        trackBatchImportActivity: (...args) => mockTrackBatchImportActivity(...args),
+        trackOcrActivity: (...args) => mockTrackOcrActivity(...args)
     }
 }));
 
@@ -100,6 +102,7 @@ describe('Batch Jobs Worker - Item Processors', () => {
         mockMarkConsentError.mockReset();
         mockExecuteResumeAdaptation.mockReset();
         mockTrackBatchImportActivity.mockReset();
+        mockTrackOcrActivity.mockReset();
     });
 
     const job = { id: 'job-1', firm_id: 'firm-1', firm_name: 'TestFirm' };
@@ -114,7 +117,12 @@ describe('Batch Jobs Worker - Item Processors', () => {
                 .mockResolvedValueOnce({ rows: [] }) // UPDATE resume_file_url
                 .mockResolvedValueOnce({ rows: [] }); // UPDATE resume with analysis
 
-            mockExtractText.mockResolvedValueOnce('A long resume text that is more than fifty characters for the check to pass easily.');
+            mockExtractText.mockResolvedValueOnce({
+                text: 'A long resume text that is more than fifty characters for the check to pass easily.',
+                ocrUsed: false,
+                ocrPageCount: 0,
+                failedOcrPages: 0
+            });
 
             mockAnalyze.mockResolvedValueOnce({
                 name: 'John Doe',
@@ -137,7 +145,7 @@ describe('Batch Jobs Worker - Item Processors', () => {
             // Should extract text
             expect(mockExtractText).toHaveBeenCalledWith(item.file_data, item.file_mime_type, item.file_name);
             // Should analyze
-            expect(mockAnalyze).toHaveBeenCalledWith(expect.any(String), 'firm-1', 'cv.pdf');
+            expect(mockAnalyze).toHaveBeenCalledWith(expect.any(String), 'firm-1', 'cv.pdf', expect.objectContaining({ ocrUsed: false }));
             // Should update resume with analysis
             expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('UPDATE resumes SET'), expect.any(Array));
             expect(mockTrackBatchImportActivity).toHaveBeenCalledWith(expect.objectContaining({ event: 'run', mimeType: 'application/pdf' }));
@@ -147,7 +155,7 @@ describe('Batch Jobs Worker - Item Processors', () => {
         it('should throw on text too short', async () => {
             mockQuery.mockResolvedValueOnce({ rows: [{ id: 'res-1' }] });
             mockQuery.mockResolvedValueOnce({ rows: [] });
-            mockExtractText.mockResolvedValueOnce('short');
+            mockExtractText.mockResolvedValueOnce({ text: 'short', ocrUsed: false });
 
             await expect(processImportItem(item, job, {})).rejects.toThrow("extraire le texte");
             expect(mockTrackBatchImportActivity).toHaveBeenCalledWith(expect.objectContaining({
@@ -164,7 +172,12 @@ describe('Batch Jobs Worker - Item Processors', () => {
                 .mockResolvedValueOnce({ rows: [] })
                 .mockResolvedValueOnce({ rows: [] }); // UPDATE with partial analysis
 
-            mockExtractText.mockResolvedValueOnce('A long resume text that is more than fifty characters for validation.');
+            mockExtractText.mockResolvedValueOnce({
+                text: 'A long resume text that is more than fifty characters for validation.',
+                ocrUsed: false,
+                ocrPageCount: 0,
+                failedOcrPages: 0
+            });
             mockAnalyze.mockResolvedValueOnce({
                 name: 'XXX',
                 title: 'Dev',
@@ -190,7 +203,12 @@ describe('Batch Jobs Worker - Item Processors', () => {
                 .mockResolvedValueOnce({ rows: [] })
                 .mockResolvedValueOnce({ rows: [] });
 
-            mockExtractText.mockResolvedValueOnce('A long resume text that is more than fifty characters for the check to pass easily.');
+            mockExtractText.mockResolvedValueOnce({
+                text: 'A long resume text that is more than fifty characters for the check to pass easily.',
+                ocrUsed: false,
+                ocrPageCount: 0,
+                failedOcrPages: 0
+            });
             mockAnalyze.mockResolvedValueOnce({
                 name: 'John Doe',
                 title: 'Developer',
@@ -226,7 +244,12 @@ describe('Batch Jobs Worker - Item Processors', () => {
                 .mockResolvedValueOnce({ rows: [] })
                 .mockResolvedValueOnce({ rows: [] });
 
-            mockExtractText.mockResolvedValueOnce('A long resume text that is more than fifty characters for validation.');
+            mockExtractText.mockResolvedValueOnce({
+                text: 'A long resume text that is more than fifty characters for validation.',
+                ocrUsed: false,
+                ocrPageCount: 0,
+                failedOcrPages: 0
+            });
             mockAnalyze.mockResolvedValueOnce({
                 name: 'XXX',
                 title: 'Dev',
@@ -252,7 +275,10 @@ describe('Batch Jobs Worker - Item Processors', () => {
                 .mockResolvedValueOnce({ rows: [] }) // analysis update
                 .mockResolvedValueOnce({ rows: [] }); // improvement update
 
-            mockExtractText.mockResolvedValueOnce('A long resume text that is more than fifty characters for the check to pass easily.');
+            mockExtractText.mockResolvedValueOnce({
+                text: 'A long resume text that is more than fifty characters for the check to pass easily.',
+                ocrUsed: false
+            });
             mockAnalyze.mockResolvedValueOnce({
                 name: 'Jane Smith', title: 'Engineer',
                 globalRating: 80, skillsRating: 85, experiencesRating: 75,
@@ -281,6 +307,97 @@ describe('Batch Jobs Worker - Item Processors', () => {
             expect(mockImprove).toHaveBeenCalled();
             // Should save improved data
             expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('improved_text'), expect.any(Array));
+        });
+
+        it('should treat OCR placeholder names like CANDIDAT 1 as extraction failure and use provided fallback name', async () => {
+            mockQuery
+                .mockResolvedValueOnce({ rows: [{ id: 'res-1' }] })
+                .mockResolvedValueOnce({ rows: [] })
+                .mockResolvedValueOnce({ rows: [] });
+
+            mockExtractText.mockResolvedValueOnce({
+                text: 'CANDIDAT 1\nDeveloppeur full stack\nEmail luc . moreau @ gmail . com\nExperience detaillee pour passer la validation.',
+                ocrUsed: true
+            });
+            mockAnalyze.mockResolvedValueOnce({
+                name: 'CANDIDAT 1',
+                title: 'Dev',
+                globalRating: 70, skillsRating: 70, experiencesRating: 70,
+                educationRating: 70, atsOptimizationRating: 70,
+                executiveSummaryRating: 70, hobbiesLanguagesRating: 70
+            });
+
+            await processImportItem(item, job, {
+                profileType: 'external',
+                candidateName: 'Luc Moreau'
+            });
+
+            expect(mockAnalyze).toHaveBeenCalledWith(expect.stringContaining('luc.moreau@gmail.com'), 'firm-1', 'cv.pdf', expect.objectContaining({ ocrUsed: true }));
+            expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('name = COALESCE'), expect.arrayContaining(['Luc Moreau']));
+            expect(updateJobItemStatus).not.toHaveBeenCalledWith('item-1', 'pending_name', expect.anything());
+        });
+
+        it('should track OCR metrics for batch imports when OCR was used', async () => {
+            mockQuery
+                .mockResolvedValueOnce({ rows: [{ id: 'res-1' }] })
+                .mockResolvedValueOnce({ rows: [] })
+                .mockResolvedValueOnce({ rows: [] });
+
+            mockExtractText.mockResolvedValueOnce({
+                text: 'A long OCR extracted resume text that is more than fifty characters for the check to pass easily.',
+                ocrUsed: true,
+                pages: 1,
+                ocrPageCount: 1,
+                failedOcrPages: 0,
+                avgOcrConfidence: 88,
+                primaryResult: {
+                    engine: 'tesseract-cli',
+                    variant: 'pdftoppm-page',
+                    psm: '11',
+                    textLength: 120
+                },
+                recentResults: [
+                    {
+                        success: true,
+                        pageNum: 1,
+                        engine: 'tesseract-cli',
+                        variant: 'pdftoppm-page',
+                        psm: '11',
+                        textLength: 120
+                    }
+                ]
+            });
+
+            mockAnalyze.mockResolvedValueOnce({
+                name: 'John Doe',
+                title: 'Developer',
+                globalRating: 75,
+                skillsRating: 80,
+                experiencesRating: 70,
+                educationRating: 65,
+                atsOptimizationRating: 72,
+                executiveSummaryRating: 78,
+                hobbiesLanguagesRating: 60,
+                structuredText: '<p>structured</p>',
+                suggestions: {}
+            });
+
+            await processImportItem(item, job, { improve: false });
+
+            expect(mockTrackOcrActivity).toHaveBeenCalledWith(expect.objectContaining({
+                pages: 1,
+                ocrPageCount: 1,
+                failedPages: 0,
+                avgConfidence: 88,
+                success: true,
+                metadata: expect.objectContaining({
+                    source: 'batch-job',
+                    fileName: 'cv.pdf',
+                    engine: 'tesseract-cli',
+                    variant: 'pdftoppm-page',
+                    psm: '11'
+                })
+            }));
         });
     });
 

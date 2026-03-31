@@ -73,6 +73,19 @@ vi.mock('../../services/tokenBlacklist.service.js', () => ({
     getBlacklistStats: vi.fn(() => ({ blacklistedTokens: 0, blacklistedUsers: 0 }))
 }));
 
+vi.mock('../../services/pdfTextExtraction.service.js', () => ({
+    getOcrRuntimeDiagnostics: vi.fn(() => ({
+        status: 'ok',
+        preferredEngine: 'tesseract-cli',
+        tesseractCliAvailable: true,
+        pdftoppmAvailable: true,
+        pythonCommand: 'python3',
+        advancedBackend: 'paddleocr',
+        advancedBackendAvailable: true,
+        notes: 'CLI OCR pipeline available'
+    }))
+}));
+
 import { query as dbQuery } from '../../config/database.js';
 
 describe('Health Routes', () => {
@@ -124,6 +137,9 @@ describe('Health Routes', () => {
             expect(response.checks.cache.backend).toBe('redis');
             expect(response.checks.cache.connected).toBe(true);
             expect(response.checks.cache.fallbackReason).toBeNull();
+            expect(response.checks.ocr.status).toBe('ok');
+            expect(response.checks.ocr.preferredEngine).toBe('tesseract-cli');
+            expect(response.checks.ocr.advancedBackend).toBe('paddleocr');
         });
 
         it('should return unhealthy status when database fails', async () => {

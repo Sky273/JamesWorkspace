@@ -11,6 +11,7 @@ import { getBlacklistStats } from '../services/tokenBlacklist.service.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { getStorageStats, getFileCleanupStats } from '../utils/fileCleanup.js';
 import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
+import { getOcrRuntimeDiagnostics } from '../services/pdfTextExtraction.service.js';
 
 const router = express.Router();
 
@@ -103,7 +104,8 @@ router.get('/', async (req, res) => {
         minimax: { status: 'unknown' },
         ollama: { status: 'unknown' },
         memory: { status: 'ok' },
-        cache: { status: 'ok' }
+        cache: { status: 'ok' },
+        ocr: { status: 'unknown' }
     };
 
     let overallStatus = 'healthy';
@@ -360,6 +362,25 @@ router.get('/', async (req, res) => {
         firms: firmsCacheSize,
         registry: cacheRegistry
     };
+
+    try {
+        const ocrDiagnostics = await getOcrRuntimeDiagnostics();
+        checks.ocr = {
+            status: ocrDiagnostics.status,
+            preferredEngine: ocrDiagnostics.preferredEngine,
+            tesseractCliAvailable: ocrDiagnostics.tesseractCliAvailable,
+            pdftoppmAvailable: ocrDiagnostics.pdftoppmAvailable,
+            pythonCommand: ocrDiagnostics.pythonCommand,
+            advancedBackend: ocrDiagnostics.advancedBackend,
+            advancedBackendAvailable: ocrDiagnostics.advancedBackendAvailable,
+            message: ocrDiagnostics.notes
+        };
+    } catch (error) {
+        checks.ocr = {
+            status: 'error',
+            message: error.message || 'OCR diagnostics unavailable'
+        };
+    }
 
     const responseTime = Date.now() - startTime;
     const responsePayload = {

@@ -14,6 +14,41 @@ vi.mock('pdfjs-dist/legacy/build/pdf.mjs', () => ({
     getDocument: vi.fn()
 }));
 
+vi.mock('canvas', () => ({
+    ImageData: class MockImageData {
+        constructor(width, height) {
+            this.width = width;
+            this.height = height;
+            this.data = new Uint8ClampedArray(width * height * 4).fill(255);
+        }
+    },
+    createCanvas: vi.fn((width = 1000, height = 1400) => ({
+        width,
+        height,
+        getContext: vi.fn(() => ({
+            getImageData: vi.fn(() => ({
+                data: new Uint8ClampedArray(width * height * 4).fill(255)
+            })),
+            putImageData: vi.fn(),
+            fillRect: vi.fn(),
+            drawImage: vi.fn()
+        })),
+        toBuffer: vi.fn(() => Buffer.from('fake-image'))
+    }))
+}));
+
+vi.mock('tesseract.js', () => ({
+    createWorker: vi.fn(async () => ({
+        recognize: vi.fn(async () => ({
+            data: {
+                text: 'Texte OCR extrait depuis une image de CV avec suffisamment de contenu pour passer la validation.',
+                confidence: 92
+            }
+        })),
+        terminate: vi.fn(async () => {})
+    }))
+}));
+
 // Mock mammoth
 vi.mock('mammoth', () => ({
     extractRawText: vi.fn()
@@ -34,7 +69,7 @@ describe('Batch Jobs Worker - Text Extraction', () => {
                     numPages: 1,
                     getPage: vi.fn().mockResolvedValue({
                         getTextContent: vi.fn().mockResolvedValue({
-                            items: [{ str: 'Hello PDF', transform: [1, 0, 0, 1, 0, 700] }]
+                            items: [{ str: 'Hello PDF with enough native text content to avoid OCR fallback in batch extraction.', transform: [1, 0, 0, 1, 0, 700] }]
                         })
                     })
                 })
@@ -43,7 +78,8 @@ describe('Batch Jobs Worker - Text Extraction', () => {
             const buf = Buffer.from('fake-pdf');
             const result = await extractTextFromBuffer(buf, 'application/pdf', 'test.pdf');
 
-            expect(result).toContain('Hello PDF');
+            expect(result.text).toContain('Hello PDF with enough native text content');
+            expect(result.ocrUsed).toBe(false);
         });
 
         it('should call mammoth for DOCX mime type', async () => {
@@ -57,7 +93,8 @@ describe('Batch Jobs Worker - Text Extraction', () => {
                 'test.docx'
             );
 
-            expect(result).toBe('Hello DOCX');
+            expect(result.text).toBe('Hello DOCX');
+            expect(result.ocrUsed).toBe(false);
             expect(mammoth.extractRawText).toHaveBeenCalledWith({ buffer: buf });
         });
 
@@ -92,11 +129,11 @@ describe('Batch Jobs Worker - Text Extraction', () => {
                     numPages: 2,
                     getPage: vi.fn()
                         .mockResolvedValueOnce(makePage([
-                            { str: 'Page 1 Line 1', transform: [1, 0, 0, 1, 0, 700] },
-                            { str: 'Page 1 Line 2', transform: [1, 0, 0, 1, 0, 680] }
+                            { str: 'Page 1 Line 1 with enough extracted text to keep the native layer active', transform: [1, 0, 0, 1, 0, 700] },
+                            { str: 'Page 1 Line 2 still contributes significant native PDF text length', transform: [1, 0, 0, 1, 0, 680] }
                         ]))
                         .mockResolvedValueOnce(makePage([
-                            { str: 'Page 2 Content', transform: [1, 0, 0, 1, 0, 700] }
+                            { str: 'Page 2 Content remains in native extraction mode as well', transform: [1, 0, 0, 1, 0, 700] }
                         ]))
                 })
             });
@@ -104,9 +141,10 @@ describe('Batch Jobs Worker - Text Extraction', () => {
             const buf = Buffer.from('fake-pdf');
             const result = await extractTextFromPDFBuffer(buf);
 
-            expect(result).toContain('Page 1 Line 1');
-            expect(result).toContain('Page 1 Line 2');
-            expect(result).toContain('Page 2 Content');
+            expect(result.text).toContain('Page 1 Line 1 with enough extracted text');
+            expect(result.text).toContain('Page 1 Line 2 still contributes significant native PDF text length');
+            expect(result.text).toContain('Page 2 Content remains in native extraction mode as well');
+            expect(result.ocrUsed).toBe(false);
         });
 
         it('should group items on same Y coordinate into one line', async () => {
@@ -119,8 +157,8 @@ describe('Batch Jobs Worker - Text Extraction', () => {
                         getTextContent: vi.fn().mockResolvedValue({
                             items: [
                                 { str: 'First', transform: [1, 0, 0, 1, 50, 700] },
-                                { str: 'Same Line', transform: [1, 0, 0, 1, 150, 702] }, // within Y_THRESHOLD=5
-                                { str: 'New Line', transform: [1, 0, 0, 1, 50, 680] }   // different Y
+                                { str: 'Same Line with enough text to remain in native extraction mode', transform: [1, 0, 0, 1, 150, 702] },
+                                { str: 'New Line carries additional text beyond the OCR fallback threshold', transform: [1, 0, 0, 1, 50, 680] }
                             ]
                         })
                     })
@@ -130,8 +168,8 @@ describe('Batch Jobs Worker - Text Extraction', () => {
             const buf = Buffer.from('fake-pdf');
             const result = await extractTextFromPDFBuffer(buf);
 
-            expect(result).toContain('First Same Line');
-            expect(result).toContain('New Line');
+            expect(result.text).toContain('First Same Line with enough text to remain in native extraction mode');
+            expect(result.text).toContain('New Line carries additional text beyond the OCR fallback threshold');
         });
 
         it('should skip empty text items', async () => {
@@ -144,7 +182,7 @@ describe('Batch Jobs Worker - Text Extraction', () => {
                         getTextContent: vi.fn().mockResolvedValue({
                             items: [
                                 { str: '  ', transform: [1, 0, 0, 1, 0, 700] },
-                                { str: 'Visible', transform: [1, 0, 0, 1, 50, 700] },
+                                { str: 'Visible native content with enough text to exceed the OCR fallback threshold safely', transform: [1, 0, 0, 1, 50, 700] },
                                 { str: '', transform: [1, 0, 0, 1, 100, 700] }
                             ]
                         })
@@ -155,7 +193,7 @@ describe('Batch Jobs Worker - Text Extraction', () => {
             const buf = Buffer.from('fake-pdf');
             const result = await extractTextFromPDFBuffer(buf);
 
-            expect(result).toBe('Visible');
+            expect(result.text).toBe('Visible native content with enough text to exceed the OCR fallback threshold safely');
         });
 
         it('should collapse multiple whitespace', async () => {
@@ -167,7 +205,7 @@ describe('Batch Jobs Worker - Text Extraction', () => {
                     getPage: vi.fn().mockResolvedValue({
                         getTextContent: vi.fn().mockResolvedValue({
                             items: [
-                                { str: 'Hello    World', transform: [1, 0, 0, 1, 0, 700] }
+                                { str: 'Hello    World    with    enough    native    content    to    bypass    OCR', transform: [1, 0, 0, 1, 0, 700] }
                             ]
                         })
                     })
@@ -177,7 +215,60 @@ describe('Batch Jobs Worker - Text Extraction', () => {
             const buf = Buffer.from('fake-pdf');
             const result = await extractTextFromPDFBuffer(buf);
 
-            expect(result).toBe('Hello World');
+            expect(result.text).toBe('Hello World with enough native content to bypass OCR');
+        });
+
+        it('should fallback to OCR for scanned PDFs with no usable text layer', async () => {
+            const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
+
+            pdfjsLib.getDocument.mockReturnValue({
+                promise: Promise.resolve({
+                    numPages: 1,
+                    getPage: vi.fn().mockResolvedValue({
+                        getTextContent: vi.fn().mockResolvedValue({
+                            items: [{ str: '', transform: [1, 0, 0, 1, 0, 700] }]
+                        }),
+                        getViewport: vi.fn(() => ({ width: 1000, height: 1400 })),
+                        render: vi.fn(() => ({ promise: Promise.resolve() }))
+                    })
+                })
+            });
+
+            const buf = Buffer.from('scanned-pdf');
+            const result = await extractTextFromPDFBuffer(buf);
+
+            expect(result.text).toContain('Texte OCR extrait depuis une image de CV');
+            expect(result.ocrUsed).toBe(true);
+        });
+
+        it('should fallback to full-document OCR when native extraction stays too short', async () => {
+            const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
+
+            pdfjsLib.getDocument.mockReturnValue({
+                promise: Promise.resolve({
+                    numPages: 1,
+                    getPage: vi.fn().mockResolvedValue({
+                        getTextContent: vi.fn().mockResolvedValue({
+                            items: [
+                                { str: 'a', transform: [1, 0, 0, 1, 0, 700] },
+                                { str: 'b', transform: [1, 0, 0, 1, 10, 700] },
+                                { str: 'c', transform: [1, 0, 0, 1, 20, 700] },
+                                { str: 'd', transform: [1, 0, 0, 1, 30, 700] },
+                                { str: 'e', transform: [1, 0, 0, 1, 40, 700] },
+                                { str: 'f', transform: [1, 0, 0, 1, 50, 700] }
+                            ]
+                        }),
+                        getViewport: vi.fn(() => ({ width: 1000, height: 1400 })),
+                        render: vi.fn(() => ({ promise: Promise.resolve() }))
+                    })
+                })
+            });
+
+            const buf = Buffer.from('pseudo-text-pdf');
+            const result = await extractTextFromPDFBuffer(buf);
+
+            expect(result.text).toContain('Texte OCR extrait depuis une image de CV');
+            expect(result.ocrUsed).toBe(true);
         });
     });
 });

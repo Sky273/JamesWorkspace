@@ -74,7 +74,7 @@ export function resetLLMQueue() {
  * @param {string} _firmId - Firm ID (unused but kept for API consistency)
  * @param {string} originalFileName - Original file name for name extraction hint
  */
-export async function analyzeResumeWithLLM(text, _firmId, originalFileName = null) {
+export async function analyzeResumeWithLLM(text, _firmId, originalFileName = null, options = {}) {
     const { analyzeResume, cleanupText } = await import('../openai.service.js');
     const { getLLMSettings, calculateWeightedGlobalRating } = await import('../settings.service.js');
     const { getAcceptedIndustriesString, getIndustryMappingString } = await import('../industry.service.js');
@@ -107,6 +107,9 @@ export async function analyzeResumeWithLLM(text, _firmId, originalFileName = nul
 
     // Clean text before analysis
     const cleanedText = cleanupText(text);
+    const ocrHint = options.ocrUsed
+        ? '\n\nOCR NOTE: This resume text was extracted from images via OCR. The content may contain recognition noise, missing accents, spacing issues, and generic placeholders. Infer cautiously. Do not treat generic labels such as "CANDIDAT 1", "CANDIDAT", "PROFILE", or "CV" as a real candidate name.'
+        : '';
 
     // Acquire LLM slot (rate limiting)
     await acquireLLMSlot();
@@ -114,7 +117,7 @@ export async function analyzeResumeWithLLM(text, _firmId, originalFileName = nul
     try {
         // Analyze with original filename for name extraction hint
         safeLog('debug', 'Batch analysis using governed prompt', { ...analysisPromptMeta, originalFileName });
-        analysis = await analyzeResume(cleanedText, model, analysisPrompt, { promptMetadata: analysisPromptMeta }, false, originalFileName);
+        analysis = await analyzeResume(cleanedText, model, `${analysisPrompt}${ocrHint}`, { promptMetadata: analysisPromptMeta }, false, originalFileName);
     } finally {
         releaseLLMSlot();
     }
@@ -242,5 +245,4 @@ export async function analyzeImprovedResumeWithLLM(text, _firmId, originalFileNa
 
     return improvedAnalysis;
 }
-
 

@@ -5,6 +5,7 @@ import { safeLog } from '../utils/logger.backend.js';
 import { getDatabaseMetrics } from '../services/health.service.js';
 import { getStorageStats, getFileCleanupStats } from '../utils/fileCleanup.js';
 import { getAPMStats, getSlowRequests, clearSlowRequests } from '../middleware/apm.middleware.js';
+import { getOcrRuntimeDiagnostics } from '../services/pdfTextExtraction.service.js';
 
 const router = express.Router();
 
@@ -152,6 +153,7 @@ router.get('/operations', authenticateToken, requireAdmin, async (req, res) => {
         const { binaryStorageResult, batchStorageResult } = await getDatabaseMetrics();
         const storageStats = await getStorageStats();
         const cleanupStats = getFileCleanupStats();
+        const ocrRuntime = await getOcrRuntimeDiagnostics();
 
         res.json({
             operations: fullMetrics.operations || {
@@ -159,6 +161,7 @@ router.get('/operations', authenticateToken, requireAdmin, async (req, res) => {
                 ocr: metrics.operations?.ocr || {},
                 cleanup: metrics.operations?.cleanup || {}
             },
+            ocrRuntime,
             binaryStorage: {
                 resumesWithBinary: parseInt(binaryStorageResult.rows[0]?.resumes_with_binary || 0),
                 resumeBinaryBytes: parseInt(binaryStorageResult.rows[0]?.resume_binary_bytes || 0),
@@ -308,6 +311,5 @@ router.delete('/apm/slow-requests', authenticateToken, requireAdmin, (req, res) 
 });
 
 export default router;
-
 
 
