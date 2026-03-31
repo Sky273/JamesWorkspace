@@ -13,6 +13,11 @@ vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));
 
+vi.mock('../../utils/secretCrypto.js', () => ({
+    encryptSecret: vi.fn((value) => value ? `enc:v1:test:${value}` : ''),
+    decryptSecret: vi.fn((value) => value?.startsWith('enc:v1:test:') ? value.slice('enc:v1:test:'.length) : value)
+}));
+
 import { query } from '../../config/database.js';
 import {
     initBackupTables,
@@ -75,12 +80,12 @@ describe('Backup Settings Service', () => {
 
     describe('getBackupSettings', () => {
         it('should return settings row', async () => {
-            const settings = { id: 's1', daily_enabled: true, daily_time: '02:00' };
+            const settings = { id: 's1', daily_enabled: true, daily_time: '02:00', password: 'enc:v1:test:secret' };
             query.mockResolvedValueOnce({ rows: [settings] });
 
             const result = await getBackupSettings();
 
-            expect(result).toEqual(settings);
+            expect(result).toEqual({ ...settings, password: 'secret' });
         });
 
         it('should return null if no settings', async () => {
@@ -97,7 +102,7 @@ describe('Backup Settings Service', () => {
     describe('saveBackupSettings', () => {
         it('should update existing settings', async () => {
             // getBackupSettings call
-            query.mockResolvedValueOnce({ rows: [{ id: 's1' }] });
+            query.mockResolvedValueOnce({ rows: [{ id: 's1', password: 'enc:v1:test:secret' }] });
             // UPDATE call
             query.mockResolvedValueOnce({ rows: [{ id: 's1', daily_enabled: true }] });
 
@@ -129,6 +134,16 @@ describe('Backup Settings Service', () => {
             expect(params).toContain('local');   // backup_target default
             expect(params).toContain('ftp');      // protocol default
             expect(params).toContain(21);         // port default
+        });
+
+        it('should encrypt password before persistence', async () => {
+            query.mockResolvedValueOnce({ rows: [] });
+            query.mockResolvedValueOnce({ rows: [{ id: 's4' }] });
+
+            await saveBackupSettings({ host: 'backup.example.com', password: 'plain-secret' });
+
+            expect(query.mock.calls[1][1]).toContain('enc:v1:test:plain-secret');
+            expect(query.mock.calls[1][1]).not.toContain('plain-secret'.toUpperCase());
         });
 
         it('should throw on DB error', async () => {

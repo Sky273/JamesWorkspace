@@ -153,6 +153,7 @@ describe('Calendar Routes', () => {
 
             expect(res.status).toBe(200);
             expect(res.text).toContain('Calendar connected');
+            expect(res.text).toContain('data-target-origin="http://localhost:5173"');
             expect(mockExchangeCalendarCode).toHaveBeenCalledWith('auth-code-123', 'user-123');
         });
 

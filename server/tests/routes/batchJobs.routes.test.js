@@ -7,12 +7,27 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import request from 'supertest';
+import { Readable } from 'stream';
+
+function getImportFileBuffer(filename) {
+    if (filename.endsWith('.pdf')) {
+        return Buffer.from('%PDF-1.7 import');
+    }
+    if (filename.endsWith('.docx')) {
+        return Buffer.from([0x50, 0x4B, 0x03, 0x04, 0x14, 0x00]);
+    }
+    if (filename.endsWith('.doc')) {
+        return Buffer.from([0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1]);
+    }
+    return Buffer.from('invalid');
+}
 
 // Mock constants module FIRST
 vi.mock('../../config/constants.js', () => ({
     JWT_SECRET: 'test-jwt-secret-for-vitest-minimum-32-chars-long',
     REFRESH_TOKEN_SECRET: 'test-refresh-secret-for-vitest-min-32-chars',
     CSRF_SECRET: 'test-csrf-secret-for-vitest-minimum-32-chars',
+    UPLOAD_DIR: '/tmp/uploads',
     SALT_ROUNDS: 10,
     MAX_TEXT_LENGTH: 50000,
     MAX_PROMPT_LENGTH: 100000,
@@ -40,12 +55,48 @@ vi.mock('fs', () => ({
 
 // Mock multer (used for file uploads in POST /)
 vi.mock('multer', () => {
-    const multerMock = () => ({
-        array: () => (req, res, next) => { req.files = req.files || []; if (!req.body) req.body = {}; next(); },
+    const multerMock = (options = {}) => ({
+        array: () => (req, res, next) => {
+            if (req.headers['x-test-invalid-upload'] === 'true' && typeof options.fileFilter === 'function') {
+                options.fileFilter(req, {
+                    originalname: 'resume.pdf',
+                    mimetype: 'application/msword'
+                }, (error) => next(error || undefined));
+                return;
+            }
+            if (req.headers['x-test-invalid-signature'] === 'true') {
+                req.files = [{
+                    originalname: 'resume.pdf',
+                    mimetype: 'application/pdf',
+                    buffer: Buffer.from('not-a-pdf'),
+                    size: 9
+                }];
+            } else if (req.headers['x-test-total-too-large'] === 'true') {
+                req.files = [
+                    {
+                        originalname: 'resume-a.pdf',
+                        mimetype: 'application/pdf',
+                        path: '/tmp/uploads/a.pdf',
+                        size: 150 * 1024 * 1024
+                    },
+                    {
+                        originalname: 'resume-b.pdf',
+                        mimetype: 'application/pdf',
+                        path: '/tmp/uploads/b.pdf',
+                        size: 150 * 1024 * 1024
+                    }
+                ];
+            } else {
+                req.files = req.files || [];
+            }
+            if (!req.body) req.body = {};
+            next();
+        },
         single: () => (req, res, next) => next(),
         none: () => (req, res, next) => next()
     });
     multerMock.memoryStorage = () => ({});
+    multerMock.diskStorage = (config) => config;
     return { default: multerMock };
 });
 
@@ -57,6 +108,7 @@ const mockGetAllJobs = vi.fn();
 const mockDeleteJob = vi.fn();
 const mockGetJobItems = vi.fn();
 const mockAddJobItems = vi.fn();
+const mockAddJobItemsFromUploadedFiles = vi.fn();
 const mockAddJobResumeIds = vi.fn();
 const mockAddJobTaskItems = vi.fn();
 const mockAddJobExportItems = vi.fn();
@@ -65,6 +117,7 @@ const mockGetJobItem = vi.fn();
 const mockResumeItemWithName = vi.fn();
 const mockGetItemsPendingName = vi.fn();
 const mockFindMission = vi.fn();
+const mockClearJobExportFile = vi.fn(() => Promise.resolve());
 
 vi.mock('../../services/batchJobs.service.js', () => ({
     createJob: (...args) => mockCreateJob(...args),
@@ -74,6 +127,7 @@ vi.mock('../../services/batchJobs.service.js', () => ({
     deleteJob: (...args) => mockDeleteJob(...args),
     getJobItems: (...args) => mockGetJobItems(...args),
     addJobItems: (...args) => mockAddJobItems(...args),
+    addJobItemsFromUploadedFiles: (...args) => mockAddJobItemsFromUploadedFiles(...args),
     addJobResumeIds: (...args) => mockAddJobResumeIds(...args),
     addJobTaskItems: (...args) => mockAddJobTaskItems(...args),
     addJobExportItems: (...args) => mockAddJobExportItems(...args),
@@ -81,6 +135,7 @@ vi.mock('../../services/batchJobs.service.js', () => ({
     getJobItem: (...args) => mockGetJobItem(...args),
     resumeItemWithName: (...args) => mockResumeItemWithName(...args),
     getItemsPendingName: (...args) => mockGetItemsPendingName(...args),
+    clearJobExportFile: (...args) => mockClearJobExportFile(...args),
     getDealForExport: (...args) => mockGetDealForExport(...args),
     getResumesForDeal: (...args) => mockGetResumesForDeal(...args),
     getAdaptationsForDeal: (...args) => mockGetAdaptationsForDeal(...args),
@@ -103,6 +158,15 @@ vi.mock('../../utils/firmHelpers.js', () => ({
 vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn(),
     createModuleLogger: vi.fn(() => vi.fn())
+}));
+
+vi.mock('fs/promises', () => ({
+    default: {
+        unlink: vi.fn(() => Promise.resolve()),
+        open: vi.fn()
+    },
+    unlink: vi.fn(() => Promise.resolve()),
+    open: vi.fn()
 }));
 
 // Mock rate limiter (userRateLimit is a factory function)
@@ -299,7 +363,7 @@ describe('Batch Jobs Routes - POST /api/batch-jobs', () => {
 
     it('should create batch job with firm_id from user', async () => {
         mockCreateJob.mockResolvedValueOnce({ id: 'new-job-123', status: 'pending' });
-        mockAddJobItems.mockResolvedValueOnce(0);
+        mockAddJobItemsFromUploadedFiles.mockResolvedValueOnce(0);
         mockGetJob.mockResolvedValueOnce({
             id: 'new-job-123',
             status: 'pending',
@@ -328,6 +392,35 @@ describe('Batch Jobs Routes - POST /api/batch-jobs', () => {
                 candidateEmail: 'jane@example.com'
             })
         }));
+    });
+
+    it('should reject files when extension and mimetype do not match', async () => {
+        const res = await request(app)
+            .post('/api/batch-jobs')
+            .set('Authorization', 'Bearer valid-token')
+            .set('x-test-invalid-upload', 'true');
+
+        expect(res.status).toBe(500);
+    });
+
+    it('should reject files with invalid binary signatures', async () => {
+        const res = await request(app)
+            .post('/api/batch-jobs')
+            .set('Authorization', 'Bearer valid-token')
+            .set('x-test-invalid-signature', 'true');
+
+        expect(res.status).toBe(400);
+        expect(res.body.error).toContain('Invalid file contents');
+    });
+
+    it('should reject batch imports above the total upload size cap', async () => {
+        const res = await request(app)
+            .post('/api/batch-jobs')
+            .set('Authorization', 'Bearer valid-token')
+            .set('x-test-total-too-large', 'true');
+
+        expect(res.status).toBe(413);
+        expect(res.body.error).toContain('250MB');
     });
 });
 
@@ -492,6 +585,39 @@ describe('Batch Jobs Routes - POST /api/batch-jobs/improve', () => {
 
         expect(res.status).toBe(201);
         expect(mockCreateJob).toHaveBeenCalledWith(expect.objectContaining({ firmId: 'firm-override', jobType: 'improve' }));
+    });
+});
+
+describe('Batch Jobs Routes - GET /api/batch-jobs/:id/download', () => {
+    let app;
+
+    beforeEach(async () => {
+        vi.resetAllMocks();
+        app = createTestApp();
+        const fsModule = await import('fs');
+        vi.mocked(fsModule.default.existsSync).mockReturnValue(true);
+        vi.mocked(fsModule.default.createReadStream).mockReturnValue(Readable.from(['zip-content']));
+        vi.mocked(fsModule.default.unlink).mockImplementation((_path, callback) => callback(null));
+    });
+
+    it('should download an available export with safe headers', async () => {
+        mockGetJob.mockResolvedValueOnce({
+            id: 'job-123',
+            firm_id: 'firm-123',
+            export_file_path: 'C:/tmp/export.zip',
+            export_file_name: 'batch export.zip'
+        });
+
+        const res = await request(app)
+            .get('/api/batch-jobs/job-123/download')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(200);
+        expect(res.headers['content-type']).toContain('application/zip');
+        expect(res.headers['content-disposition']).toContain('attachment');
+        expect(res.headers['content-disposition']).toContain('batch_export.zip');
+        expect(res.headers['x-content-type-options']).toBe('nosniff');
+        expect(res.headers['cache-control']).toBe('private, no-store, max-age=0');
     });
 });
 

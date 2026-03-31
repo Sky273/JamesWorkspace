@@ -54,6 +54,15 @@ vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));
 
+vi.mock('../../utils/networkHostSecurity.js', () => ({
+    assertSafeOutboundHost: vi.fn(async (host) => {
+        if (host === '127.0.0.1') {
+            throw new Error('Private or loopback hosts are not allowed');
+        }
+        return true;
+    })
+}));
+
 import {
     getClient,
     closeClient,
@@ -131,6 +140,11 @@ describe('Backup FTP/SFTP Service', () => {
             mockFtpAccess.mockRejectedValueOnce(new Error('Connection refused'));
 
             await expect(getClient(ftpSettings)).rejects.toThrow('Connection refused');
+        });
+
+        it('should reject loopback hosts before connecting', async () => {
+            await expect(getClient({ ...ftpSettings, host: '127.0.0.1' })).rejects.toThrow('Private or loopback hosts are not allowed');
+            expect(mockFtpAccess).not.toHaveBeenCalled();
         });
     });
 

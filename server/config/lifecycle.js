@@ -41,6 +41,11 @@ import { initializeLLMAvailabilityState } from '../services/llmAvailability.serv
 let memoryMonitorInterval = null;
 let marketRadarCleanupInterval = null;
 
+function getPositiveTimeout(envName, defaultValue) {
+    const parsed = Number.parseInt(process.env[envName] || '', 10);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : defaultValue;
+}
+
 function startMemoryMonitor() {
     memoryMonitorInterval = setInterval(() => {
         const memUsage = process.memoryUsage();
@@ -128,17 +133,23 @@ async function onServerStart(server, protocol, port) {
         safeLog('error', 'Error cleaning caches on startup', { error: error.message });
     }
     
-    // Set server timeouts to 70 minutes for long-running requests (trends collection can take up to 1 hour)
-    const SEVENTY_MINUTES = 70 * 60 * 1000;
-    server.timeout = SEVENTY_MINUTES;
-    server.keepAliveTimeout = SEVENTY_MINUTES;
-    server.headersTimeout = SEVENTY_MINUTES + 10000; // Slightly higher than keepAliveTimeout
+    // Keep request timeout configurable for long-running collection jobs, but keep idle connection
+    // timeouts short to reduce socket retention and slow-client exposure.
+    const requestTimeoutMs = getPositiveTimeout('SERVER_REQUEST_TIMEOUT_MS', 70 * 60 * 1000);
+    const keepAliveTimeoutMs = getPositiveTimeout('SERVER_KEEPALIVE_TIMEOUT_MS', 75 * 1000);
+    const headersTimeoutMs = getPositiveTimeout('SERVER_HEADERS_TIMEOUT_MS', keepAliveTimeoutMs + 5 * 1000);
+    server.timeout = requestTimeoutMs;
+    server.keepAliveTimeout = keepAliveTimeoutMs;
+    server.headersTimeout = Math.max(headersTimeoutMs, keepAliveTimeoutMs + 1000);
     
     safeLog('info', 'PROXY SERVER STARTED', {
         port,
         environment: process.env.NODE_ENV || 'development',
         corsOrigins: ALLOWED_ORIGINS,
         protocol,
+        requestTimeoutMs,
+        keepAliveTimeoutMs: server.keepAliveTimeout,
+        headersTimeoutMs: server.headersTimeout,
         modules: ['Health & Metrics', 'Authentication', 'Settings', 'Missions', 'Resumes', 'Templates', 'Firms', 'LLM Proxy', 'Admin'],
         features: ['Rate Limiting', 'CSRF Protection', 'Metrics Tracking', 'Request Logging', 'Compression', 'Security Headers', 'File Cleanup', 'Token Blacklist']
     });

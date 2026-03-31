@@ -7,6 +7,19 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import express from 'express';
 import request from 'supertest';
 
+function getFileSignatureBuffer(mimetype) {
+    switch (mimetype) {
+        case 'application/pdf':
+            return Buffer.from('%PDF-1.7 fake pdf content');
+        case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+            return Buffer.from([0x50, 0x4B, 0x03, 0x04, 0x14, 0x00]);
+        case 'application/msword':
+            return Buffer.from([0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1]);
+        default:
+            return Buffer.from('invalid');
+    }
+}
+
 const { multerCallOptions, pdfDocuments, pendingReadFileResolvers } = vi.hoisted(() => ({
     multerCallOptions: [],
     pdfDocuments: [],
@@ -152,7 +165,7 @@ describe('Resume Extraction Routes', () => {
         pdfDocuments.length = 0;
         pendingReadFileResolvers.length = 0;
         mockUnlink.mockResolvedValue(undefined);
-        mockReadFile.mockResolvedValue(Buffer.from('fake pdf content'));
+        mockReadFile.mockImplementation((_path) => Promise.resolve(getFileSignatureBuffer('application/pdf')));
     });
 
     it('configures multer with a 50MB file size limit', () => {
@@ -176,7 +189,7 @@ describe('Resume Extraction Routes', () => {
         });
 
         it('should accept DOCX uploads and return OCR metadata when server fallback is used', async () => {
-            mockReadFile.mockResolvedValueOnce(Buffer.from('fake docx content'));
+            mockReadFile.mockResolvedValueOnce(getFileSignatureBuffer('application/vnd.openxmlformats-officedocument.wordprocessingml.document'));
             mockExtractTextFromWordBuffer.mockResolvedValueOnce({
                 text: 'luc . moreau @ gmail . com',
                 ocrUsed: true,
@@ -235,11 +248,22 @@ describe('Resume Extraction Routes', () => {
             expect(res.body.error).toContain('Invalid file type');
         });
 
+        it('should reject PDF files with invalid binary signatures', async () => {
+            mockReadFile.mockResolvedValueOnce(Buffer.from('not-a-pdf'));
+
+            const res = await request(app)
+                .post('/api/resumes/extract-pdf')
+                .set(AUTH);
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toContain('Invalid PDF file contents');
+        });
+
         it('should reject PDF extraction when concurrency limit is reached for the same user', async () => {
             mockReadFile
                 .mockImplementationOnce(() => new Promise((resolve) => pendingReadFileResolvers.push(resolve)))
                 .mockImplementationOnce(() => new Promise((resolve) => pendingReadFileResolvers.push(resolve)))
-                .mockResolvedValue(Buffer.from('fake pdf content'));
+                .mockResolvedValue(getFileSignatureBuffer('application/pdf'));
 
             const firstRequestPromise = request(app).post('/api/resumes/extract-pdf').set(AUTH).then((response) => response);
             const secondRequestPromise = request(app).post('/api/resumes/extract-pdf').set(AUTH).then((response) => response);
@@ -257,7 +281,7 @@ describe('Resume Extraction Routes', () => {
             expect(thirdResponse.body.error).toContain('temporarily saturated for this user');
 
             for (const resolvePendingReadFile of pendingReadFileResolvers.splice(0)) {
-                resolvePendingReadFile(Buffer.from('fake pdf content'));
+                resolvePendingReadFile(getFileSignatureBuffer('application/pdf'));
             }
 
             const [firstResponse, secondResponse] = await Promise.all([firstRequestPromise, secondRequestPromise]);
@@ -269,7 +293,7 @@ describe('Resume Extraction Routes', () => {
             mockReadFile
                 .mockImplementationOnce(() => new Promise((resolve) => pendingReadFileResolvers.push(resolve)))
                 .mockImplementationOnce(() => new Promise((resolve) => pendingReadFileResolvers.push(resolve)))
-                .mockResolvedValue(Buffer.from('fake pdf content'));
+                .mockResolvedValue(getFileSignatureBuffer('application/pdf'));
 
             const firstRequestPromise = request(app).post('/api/resumes/extract-pdf').set({ ...AUTH, 'x-test-user-id': 'user-123' }).then((response) => response);
             const secondRequestPromise = request(app).post('/api/resumes/extract-pdf').set({ ...AUTH, 'x-test-user-id': 'user-123' }).then((response) => response);
@@ -286,7 +310,7 @@ describe('Resume Extraction Routes', () => {
             expect(otherUserResponse.body.text).toContain('text content with enough characters');
 
             for (const resolvePendingReadFile of pendingReadFileResolvers.splice(0)) {
-                resolvePendingReadFile(Buffer.from('fake pdf content'));
+                resolvePendingReadFile(getFileSignatureBuffer('application/pdf'));
             }
 
             const [firstResponse, secondResponse] = await Promise.all([firstRequestPromise, secondRequestPromise]);

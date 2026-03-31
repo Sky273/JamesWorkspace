@@ -46,6 +46,7 @@ export function configureStaticFiles(app, serverDir) {
             if (acceptEncoding.includes('br')) {
                 const brPath = filePath + '.br';
                 if (fs.existsSync(brPath)) {
+                    res.set('X-Content-Type-Options', 'nosniff');
                     res.set('Content-Encoding', 'br');
                     res.set('Vary', 'Accept-Encoding');
                     if (mimeType) res.set('Content-Type', mimeType);
@@ -56,6 +57,7 @@ export function configureStaticFiles(app, serverDir) {
             else if (acceptEncoding.includes('gzip')) {
                 const gzPath = filePath + '.gz';
                 if (fs.existsSync(gzPath)) {
+                    res.set('X-Content-Type-Options', 'nosniff');
                     res.set('Content-Encoding', 'gzip');
                     res.set('Vary', 'Accept-Encoding');
                     if (mimeType) res.set('Content-Type', mimeType);
@@ -72,6 +74,7 @@ export function configureStaticFiles(app, serverDir) {
         etag: true,
         lastModified: true,
         setHeaders: (res) => {
+            res.setHeader('X-Content-Type-Options', 'nosniff');
             res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 1 day
         }
     }));
@@ -82,6 +85,7 @@ export function configureStaticFiles(app, serverDir) {
         lastModified: true,
         redirect: false,
         setHeaders: (res, filePath) => {
+            res.setHeader('X-Content-Type-Options', 'nosniff');
             // Hashed assets (contain hash in filename) - cache for 1 year
             if (filePath.match(/\.[a-f0-9]{8,}\.(js|css|woff2?|ttf|eot|svg|png|jpg|jpeg|gif|webp|ico)$/i)) {
                 res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
@@ -113,6 +117,8 @@ export function configureStaticFiles(app, serverDir) {
             return next();
         }
         // Serve index.html for all other routes (SPA client-side routing)
+        res.setHeader('X-Content-Type-Options', 'nosniff');
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
         res.sendFile(path.join(distPath, 'index.html'), (err) => {
             if (err) {
                 safeLog('error', 'Error serving index.html', { error: err.message, path: req.path });

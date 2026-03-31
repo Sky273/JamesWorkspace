@@ -1,4 +1,5 @@
 import { verifyToken } from '../services/jwt.service.js';
+import { findUserById } from '../services/users.service.js';
 import { safeLog } from '../utils/logger.backend.js';
 
 // ============================================
@@ -11,7 +12,7 @@ import { safeLog } from '../utils/logger.backend.js';
  * - Token is not blacklisted
  * - User status is Active (from token payload)
  */
-export function authenticateToken(req, res, next) {
+export async function authenticateToken(req, res, next) {
     // Authentication via httpOnly cookies only
     const token = req.cookies.accessToken;
     
@@ -80,10 +81,17 @@ export function authenticateToken(req, res, next) {
         return res.status(403).json({ error: 'Invalid token payload' });
     }
     
-    // Check user status from token payload
-    // If user was deactivated after token was issued, the blacklist will catch it
-    // This check is for tokens issued when user was already inactive
-    const userStatus = (decoded.status || '').toLowerCase();
+    const currentUser = await findUserById(decoded.id);
+    if (!currentUser) {
+        safeLog('warn', 'Authenticated user no longer exists', { userId: decoded.id });
+        return res.status(401).json({
+            error: 'Invalid or expired token',
+            code: 'TOKEN_INVALID',
+            message: 'Session expired. Please sign in again.'
+        });
+    }
+
+    const userStatus = (currentUser.status || decoded.status || '').toLowerCase();
     if (userStatus === 'inactive') {
         safeLog('warn', 'User account is inactive', { userId: decoded.id });
         return res.status(403).json({ 
@@ -91,8 +99,19 @@ export function authenticateToken(req, res, next) {
             message: 'Your account has been deactivated. Please contact an administrator.'
         });
     }
-    
-    req.user = decoded;
+
+    req.user = {
+        ...decoded,
+        id: currentUser.id,
+        email: currentUser.email,
+        name: currentUser.name,
+        status: currentUser.status,
+        role: currentUser.role,
+        firmId: currentUser.firm_id || null,
+        firm_id: currentUser.firm_id || null,
+        firm: currentUser.firm_name || decoded.firm || null,
+        customer: currentUser.firm_name || decoded.customer || null
+    };
     next();
 }
 
@@ -159,5 +178,4 @@ export function requireFirmAccess(getResourceFirm) {
         }
     };
 }
-
 

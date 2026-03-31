@@ -3,7 +3,7 @@
  * Configuration for GDPR consent email sending via Gmail
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { 
   EnvelopeIcon, 
@@ -33,12 +33,29 @@ export const GdprTab = ({ t }: GdprTabProps): JSX.Element => {
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const [testingSend, setTestingSend] = useState(false);
+  const trustedOrigin = window.location.origin;
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const oauthPopupRef = useRef<Window | null>(null);
+  const oauthMessageHandlerRef = useRef<((event: MessageEvent) => void) | null>(null);
 
-  useEffect(() => {
-    fetchMailStatus();
+  const cleanupOAuthFlow = useCallback(() => {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+
+    if (oauthMessageHandlerRef.current) {
+      window.removeEventListener('message', oauthMessageHandlerRef.current);
+      oauthMessageHandlerRef.current = null;
+    }
+
+    if (oauthPopupRef.current && !oauthPopupRef.current.closed) {
+      oauthPopupRef.current.close();
+    }
+    oauthPopupRef.current = null;
   }, []);
 
-  const fetchMailStatus = async () => {
+  const fetchMailStatus = useCallback(async () => {
     try {
       const options = await createAuthOptionsWithCsrf({ method: 'GET' });
       const response = await fetchWithAuth('/api/gdpr/mail/status', options);
@@ -54,11 +71,18 @@ export const GdprTab = ({ t }: GdprTabProps): JSX.Element => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    void fetchMailStatus();
+    return () => {
+      cleanupOAuthFlow();
+    };
+  }, [cleanupOAuthFlow, fetchMailStatus]);
 
   const handleConnect = async () => {
     setConnecting(true);
-    let pollInterval: NodeJS.Timeout | null = null;
+    cleanupOAuthFlow();
     
     try {
       const options = await createAuthOptionsWithCsrf({ method: 'GET' });
@@ -71,15 +95,53 @@ export const GdprTab = ({ t }: GdprTabProps): JSX.Element => {
           'gdpr-gmail-auth',
           'width=600,height=700,scrollbars=yes'
         );
+        oauthPopupRef.current = popup;
+
+        if (!popup) {
+          toast.error(t('settings.gdpr.errors.connectFailed'));
+          setConnecting(false);
+          return;
+        }
+
+        const handleOAuthMessage = async (event: MessageEvent) => {
+          if (event.origin !== trustedOrigin) {
+            return;
+          }
+
+          const payload = event.data;
+          if (!payload || typeof payload !== 'object') {
+            return;
+          }
+
+          const callbackType = (payload as { type?: string }).type;
+          if (callbackType !== 'gdpr-oauth-success' && callbackType !== 'gdpr-oauth-error') {
+            return;
+          }
+
+          cleanupOAuthFlow();
+
+          if (callbackType === 'gdpr-oauth-success') {
+            toast.success(t('settings.gdpr.connected'));
+          } else {
+            const callbackError = (payload as { error?: string }).error;
+            toast.error(callbackError || t('settings.gdpr.errors.connectFailed'));
+          }
+
+          setConnecting(false);
+          await fetchMailStatus();
+        };
+
+        oauthMessageHandlerRef.current = handleOAuthMessage;
+        window.addEventListener('message', handleOAuthMessage);
         
         // Poll for completion with timeout (max 5 minutes)
         let pollCount = 0;
         const maxPolls = 600; // 5 minutes at 500ms intervals
         
-        pollInterval = setInterval(async () => {
+        pollIntervalRef.current = setInterval(async () => {
           pollCount++;
           if (popup?.closed || pollCount >= maxPolls) {
-            if (pollInterval) clearInterval(pollInterval);
+            cleanupOAuthFlow();
             setConnecting(false);
             // Refresh status
             await fetchMailStatus();
@@ -91,7 +153,8 @@ export const GdprTab = ({ t }: GdprTabProps): JSX.Element => {
     } catch (error) {
       logger.error('[GdprTab] Error connecting Gmail:', error);
       toast.error(t('settings.gdpr.errors.connectFailed'));
-      if (pollInterval) clearInterval(pollInterval);
+      cleanupOAuthFlow();
+      setConnecting(false);
     } finally {
       // Note: setConnecting(false) is handled in the interval callback
       // to avoid premature state change

@@ -13,39 +13,25 @@ import { getStorageStats, getFileCleanupStats } from '../utils/fileCleanup.js';
 import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
 import { getOcrRuntimeDiagnostics } from '../services/pdfTextExtraction.service.js';
 import { getWordExtractionRuntimeDiagnostics } from '../services/wordTextExtraction.service.js';
+import {
+    buildCacheCheck,
+    buildDatabaseCheck,
+    buildHealthResponsePayload,
+    buildMemoryCheck,
+    buildMemoryDiagnosticsPayload,
+    buildOcrCheck,
+    buildPublicHealthResponse,
+    buildServerCheck,
+    getCacheDiagnosticSummary,
+    getHealthStatusCode,
+    getInitialHealthChecks,
+    getNotConfiguredCheck,
+    getConfiguredCheck,
+    getFailedConnectivityCheck,
+    updateOverallStatus
+} from './healthRouteHelpers.js';
 
 const router = express.Router();
-
-function getCacheBackendSummary(cacheRegistry = {}) {
-    const effectiveBackends = Object.values(cacheRegistry)
-        .map(stats => stats?.effectiveBackend || stats?.backend)
-        .filter(Boolean);
-
-    if (effectiveBackends.length === 0) {
-        return 'unknown';
-    }
-
-    const uniqueBackends = [...new Set(effectiveBackends)];
-    return uniqueBackends.length === 1 ? uniqueBackends[0] : uniqueBackends.join(',');
-}
-
-function getCacheDiagnosticSummary(cacheRegistry = {}) {
-    const registryEntries = Object.values(cacheRegistry);
-    const connectedFlags = registryEntries
-        .map(stats => stats?.connected)
-        .filter(flag => typeof flag === 'boolean');
-    const disabledReasons = [...new Set(
-        registryEntries
-            .map(stats => stats?.disabledReason)
-            .filter(Boolean)
-    )];
-
-    return {
-        backend: getCacheBackendSummary(cacheRegistry),
-        connected: connectedFlags.length > 0 ? connectedFlags.every(Boolean) : null,
-        fallbackReason: disabledReasons.length === 0 ? null : disabledReasons.join(',')
-    };
-}
 
 async function runConnectivityCheck({
     fetchUrl,
@@ -67,21 +53,6 @@ async function runConnectivityCheck({
         : { status: 'error', message: `API error: ${response.status}`, latency: `${latency}ms` };
 }
 
-function getConfiguredCheck() {
-    return { status: 'configured', message: 'API key present (use ?deep=true for connectivity test)' };
-}
-
-function getNotConfiguredCheck() {
-    return { status: 'not_configured', message: 'API key missing' };
-}
-
-function getFailedConnectivityCheck(error) {
-    return {
-        status: 'error',
-        message: error.message === 'Timeout' ? 'Connection timeout' : 'Connection failed'
-    };
-}
-
 router.get('/', async (req, res) => {
     const startTime = Date.now();
 
@@ -95,71 +66,18 @@ router.get('/', async (req, res) => {
         }
     })() : false;
 
-    const checks = {
-        server: { status: 'ok' },
-        database: { status: 'unknown' },
-        openai: { status: 'unknown' },
-        anthropic: { status: 'unknown' },
-        deepseek: { status: 'unknown' },
-        glm: { status: 'unknown' },
-        minimax: { status: 'unknown' },
-        ollama: { status: 'unknown' },
-        memory: { status: 'ok' },
-        cache: { status: 'ok' },
-        ocr: { status: 'unknown' }
-    };
+    const checks = getInitialHealthChecks();
 
     let overallStatus = 'healthy';
 
-    const uptime = process.uptime();
-    const memoryUsage = process.memoryUsage();
-    const heapUsedMB = Math.round(memoryUsage.heapUsed / 1024 / 1024);
-    const heapTotalMB = Math.round(memoryUsage.heapTotal / 1024 / 1024);
-    const heapPercent = Math.round((heapUsedMB / heapTotalMB) * 100);
-
-    checks.server = {
-        status: 'ok',
-        uptime: `${Math.floor(uptime / 60)} minutes`,
-        uptimeSeconds: Math.floor(uptime)
-    };
-
-    const MEMORY_WARNING_THRESHOLD_MB = 120;
-    const MEMORY_CRITICAL_THRESHOLD_MB = 1024;
-
-    const memoryStatus = heapUsedMB >= MEMORY_CRITICAL_THRESHOLD_MB ? 'critical' :
-        heapUsedMB >= MEMORY_WARNING_THRESHOLD_MB ? 'warning' : 'ok';
-
-    checks.memory = {
-        status: memoryStatus,
-        heapUsed: `${heapUsedMB} MB`,
-        heapTotal: `${heapTotalMB} MB`,
-        heapPercent: `${heapPercent}%`,
-        rss: `${Math.round(memoryUsage.rss / 1024 / 1024)} MB`
-    };
-
-    if (checks.memory.status !== 'ok') {
-        overallStatus = checks.memory.status === 'critical' ? 'unhealthy' : 'degraded';
-    }
+    checks.server = buildServerCheck(process.uptime());
+    checks.memory = buildMemoryCheck(process.memoryUsage());
+    overallStatus = updateOverallStatus(overallStatus, checks.memory.status);
 
     try {
         const { latency: dbLatency, stats } = await checkDatabaseHealth();
-        const dbSizeMB = Math.round(parseInt(stats.db_size) / 1024 / 1024);
-
-        checks.database = {
-            status: dbLatency > 1000 ? 'slow' : 'ok',
-            message: 'PostgreSQL connected',
-            latency: `${dbLatency}ms`,
-            size: `${dbSizeMB} MB`,
-            tables: {
-                resumes: parseInt(stats.resumes_count),
-                users: parseInt(stats.users_count),
-                missions: parseInt(stats.missions_count)
-            }
-        };
-
-        if (dbLatency > 1000) {
-            overallStatus = overallStatus === 'healthy' ? 'degraded' : overallStatus;
-        }
+        checks.database = buildDatabaseCheck(dbLatency, stats);
+        overallStatus = updateOverallStatus(overallStatus, checks.database.status);
     } catch (error) {
         checks.database = {
             status: 'error',
@@ -188,9 +106,7 @@ router.get('/', async (req, res) => {
                         headers: { Authorization: `Bearer ${OPENAI_API_KEY}` }
                     }
                 });
-                if (checks.openai.status === 'error') {
-                    overallStatus = overallStatus === 'healthy' ? 'degraded' : overallStatus;
-                }
+                overallStatus = updateOverallStatus(overallStatus, checks.openai.status);
             } catch (error) {
                 checks.openai = getFailedConnectivityCheck(error);
             }
@@ -221,9 +137,7 @@ router.get('/', async (req, res) => {
                     },
                     connectedStatuses: [400]
                 });
-                if (checks.anthropic.status === 'error') {
-                    overallStatus = overallStatus === 'healthy' ? 'degraded' : overallStatus;
-                }
+                overallStatus = updateOverallStatus(overallStatus, checks.anthropic.status);
             } catch (error) {
                 checks.anthropic = getFailedConnectivityCheck(error);
             }
@@ -253,9 +167,7 @@ router.get('/', async (req, res) => {
                     },
                     connectedStatuses: [400]
                 });
-                if (checks.deepseek.status === 'error') {
-                    overallStatus = overallStatus === 'healthy' ? 'degraded' : overallStatus;
-                }
+                overallStatus = updateOverallStatus(overallStatus, checks.deepseek.status);
             } catch (error) {
                 checks.deepseek = getFailedConnectivityCheck(error);
             }
@@ -285,9 +197,7 @@ router.get('/', async (req, res) => {
                     },
                     connectedStatuses: [400]
                 });
-                if (checks.glm.status === 'error') {
-                    overallStatus = overallStatus === 'healthy' ? 'degraded' : overallStatus;
-                }
+                overallStatus = updateOverallStatus(overallStatus, checks.glm.status);
             } catch (error) {
                 checks.glm = getFailedConnectivityCheck(error);
             }
@@ -318,9 +228,7 @@ router.get('/', async (req, res) => {
                     },
                     connectedStatuses: [400]
                 });
-                if (checks.minimax.status === 'error') {
-                    overallStatus = overallStatus === 'healthy' ? 'degraded' : overallStatus;
-                }
+                overallStatus = updateOverallStatus(overallStatus, checks.minimax.status);
             } catch (error) {
                 checks.minimax = getFailedConnectivityCheck(error);
             }
@@ -353,34 +261,20 @@ router.get('/', async (req, res) => {
 
     const cacheDiagnostics = getCacheDiagnosticSummary(cacheRegistry);
 
-    checks.cache = {
-        status: 'ok',
-        backend: cacheDiagnostics.backend,
-        connected: cacheDiagnostics.connected,
-        fallbackReason: cacheDiagnostics.fallbackReason,
-        settings: settingsCacheSize,
-        templates: templatesCacheSize,
-        firms: firmsCacheSize,
-        registry: cacheRegistry
-    };
+    checks.cache = buildCacheCheck({
+        cacheDiagnostics,
+        settingsCacheSize,
+        templatesCacheSize,
+        firmsCacheSize,
+        cacheRegistry
+    });
 
     try {
         const [ocrDiagnostics, wordDiagnostics] = await Promise.all([
             getOcrRuntimeDiagnostics(),
             getWordExtractionRuntimeDiagnostics()
         ]);
-        checks.ocr = {
-            status: ocrDiagnostics.status,
-            preferredEngine: ocrDiagnostics.preferredEngine,
-            tesseractCliAvailable: ocrDiagnostics.tesseractCliAvailable,
-            pdftoppmAvailable: ocrDiagnostics.pdftoppmAvailable,
-            sofficeAvailable: wordDiagnostics.sofficeAvailable,
-            wordOcrFallbackAvailable: wordDiagnostics.wordOcrFallbackAvailable,
-            pythonCommand: ocrDiagnostics.pythonCommand,
-            advancedBackend: ocrDiagnostics.advancedBackend,
-            advancedBackendAvailable: ocrDiagnostics.advancedBackendAvailable,
-            message: [ocrDiagnostics.notes, wordDiagnostics.notes].filter(Boolean).join(' | ')
-        };
+        checks.ocr = buildOcrCheck(ocrDiagnostics, wordDiagnostics);
     } catch (error) {
         checks.ocr = {
             status: 'error',
@@ -389,23 +283,18 @@ router.get('/', async (req, res) => {
     }
 
     const responseTime = Date.now() - startTime;
-    const responsePayload = {
-        status: overallStatus,
-        timestamp: new Date().toISOString(),
-        responseTime: `${responseTime}ms`,
+    const responsePayload = buildHealthResponsePayload({
+        overallStatus,
+        responseTime,
         checks,
         version: process.env.npm_package_version || '1.0.0',
         environment: process.env.NODE_ENV || 'development'
-    };
+    });
 
-    const statusCode = overallStatus === 'healthy' ? 200 : overallStatus === 'degraded' ? 200 : 503;
+    const statusCode = getHealthStatusCode(overallStatus);
 
     if (!isAdmin) {
-        return res.status(statusCode).json({
-            status: overallStatus,
-            timestamp: new Date().toISOString(),
-            responseTime: `${responseTime}ms`
-        });
+        return res.status(statusCode).json(buildPublicHealthResponse({ overallStatus, responseTime }));
     }
 
     res.status(statusCode).json(responsePayload);
@@ -436,59 +325,10 @@ router.get('/memory', authenticateToken, requireAdmin, async (req, res) => {
         security: getBlacklistStats()
     };
 
-    const estimatedMemory = {
-        simpleCache: {
-            estimated: `${Math.round((cacheStats.simpleCache.settings + cacheStats.simpleCache.templates + cacheStats.simpleCache.firms) * 1)} KB`,
-            details: cacheStats.simpleCache
-        },
-        trends: {
-            estimated: `${Math.round((cacheStats.trends.size || 0) * 0.5)} KB`,
-            details: cacheStats.trends
-        },
-        facts: {
-            estimated: `${Math.round((cacheStats.facts.size || 0) * 0.5)} KB`,
-            details: cacheStats.facts
-        },
-        metiers: {
-            estimated: `${Math.round((cacheStats.metiers.size || 0) * 0.5)} KB`,
-            details: cacheStats.metiers
-        },
-        esco: {
-            estimated: `${Math.round((cacheStats.esco.size || 0) * 0.5)} KB`,
-            details: cacheStats.esco
-        },
-        tags: {
-            estimated: 'Variable',
-            details: cacheStats.tags
-        },
-        security: {
-            estimated: `${Math.round((cacheStats.security.blacklistedTokens + cacheStats.security.blacklistedUsers) * 0.1)} KB`,
-            details: cacheStats.security
-        }
-    };
-
-    res.json({
-        timestamp: new Date().toISOString(),
-        process: {
-            heapUsed: `${Math.round(memoryUsage.heapUsed / 1024 / 1024)} MB`,
-            heapTotal: `${Math.round(memoryUsage.heapTotal / 1024 / 1024)} MB`,
-            rss: `${Math.round(memoryUsage.rss / 1024 / 1024)} MB`,
-            external: `${Math.round(memoryUsage.external / 1024 / 1024)} MB`,
-            arrayBuffers: `${Math.round((memoryUsage.arrayBuffers || 0) / 1024 / 1024)} MB`
-        },
-        caches: estimatedMemory,
-        summary: {
-            totalCacheEntries:
-                (cacheStats.simpleCache.settings || 0) +
-                (cacheStats.simpleCache.templates || 0) +
-                (cacheStats.simpleCache.firms || 0) +
-                (cacheStats.trends.size || 0) +
-                (cacheStats.facts.size || 0) +
-                (cacheStats.metiers.size || 0) +
-                (cacheStats.esco.size || 0),
-            gcAvailable: typeof global.gc === 'function'
-        }
-    });
+    res.json(buildMemoryDiagnosticsPayload({
+        memoryUsage,
+        cacheStats
+    }));
 });
 
 router.get('/storage', authenticateToken, requireAdmin, async (req, res) => {

@@ -14,6 +14,11 @@ vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));
 
+vi.mock('../../utils/secretCrypto.js', () => ({
+    encryptSecret: vi.fn((value) => value ? `enc:v1:test:${value}` : ''),
+    decryptSecret: vi.fn((value) => value?.startsWith('enc:v1:test:') ? value.slice('enc:v1:test:'.length) : value)
+}));
+
 // Mock fs
 vi.mock('fs', () => ({
     default: {
@@ -36,7 +41,11 @@ vi.mock('fs', () => ({
 
 // Mock child_process
 vi.mock('child_process', () => ({
-    exec: vi.fn((cmd, callback) => callback(null, { stdout: '', stderr: '' }))
+    exec: vi.fn((cmd, callback) => callback(null, { stdout: '', stderr: '' })),
+    execFile: vi.fn((cmd, args, options, callback) => {
+        const normalizedCallback = typeof options === 'function' ? options : callback;
+        normalizedCallback?.(null, { stdout: '', stderr: '' });
+    })
 }));
 
 import { query } from '../../config/database.js';
@@ -71,6 +80,7 @@ describe('Backup Service', () => {
                 host: 'backup.example.com',
                 port: 22,
                 username: 'backup_user',
+                password: 'enc:v1:test:secret',
                 daily_enabled: true,
                 daily_time: '02:00'
             };
@@ -78,7 +88,7 @@ describe('Backup Service', () => {
             
             const result = await getBackupSettings();
             
-            expect(result).toEqual(mockSettings);
+            expect(result).toEqual({ ...mockSettings, password: 'secret' });
         });
 
         it('should throw error on database failure', async () => {

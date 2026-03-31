@@ -5,19 +5,20 @@ import { authenticateToken } from '../../middleware/auth.middleware.js';
 import { userRateLimit } from '../../middleware/rateLimit.middleware.js';
 import { validateBody, generatePdfProxySchema, generateDocxProxySchema } from '../../utils/validation.js';
 import { getPdfServerAuthHeaders } from '../../utils/pdfServerAuth.js';
+import { applySafeBinaryHeaders } from '../../utils/fileResponseSecurity.js';
+
+const DEFAULT_PDF_PROXY_TIMEOUT_MS = 60_000;
 
 async function relayBinaryResponse(response, res, fallbackContentType) {
     const contentType = response.headers.get('Content-Type') || fallbackContentType;
     const contentDisposition = response.headers.get('Content-Disposition');
     const contentLength = response.headers.get('Content-Length');
 
-    res.setHeader('Content-Type', contentType);
-    if (contentDisposition) {
-        res.setHeader('Content-Disposition', contentDisposition);
-    }
-    if (contentLength) {
-        res.setHeader('Content-Length', contentLength);
-    }
+    applySafeBinaryHeaders(res, {
+        contentType,
+        contentDisposition,
+        contentLength
+    });
 
     if (response.body) {
         await pipeline(Readable.fromWeb(response.body), res);
@@ -29,8 +30,32 @@ async function relayBinaryResponse(response, res, fallbackContentType) {
     res.end(buffer);
 }
 
+function getProxyTimeoutMs() {
+    const parsed = Number.parseInt(process.env.PDF_PROXY_TIMEOUT_MS || '', 10);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : DEFAULT_PDF_PROXY_TIMEOUT_MS;
+}
+
+async function fetchWithTimeout(url, options, timeoutMs) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(new Error(`Upstream timeout after ${timeoutMs}ms`)), timeoutMs);
+
+    try {
+        return await fetch(url, {
+            ...options,
+            signal: controller.signal
+        });
+    } finally {
+        clearTimeout(timeoutId);
+    }
+}
+
+function isAbortError(error) {
+    return error?.name === 'AbortError' || /timeout/i.test(error?.message || '');
+}
+
 export function registerProxyRoutes(app) {
     const PDF_SERVER_URL = process.env.PDF_SERVER_URL || 'http://localhost:3002';
+    const proxyTimeoutMs = getProxyTimeoutMs();
     const proxyGuards = [
         authenticateToken,
         userRateLimit(20, 15 * 60 * 1000)
@@ -40,13 +65,13 @@ export function registerProxyRoutes(app) {
         try {
             safeLog('info', 'Proxying PDF generation request to PDF server');
 
-            const response = await fetch(`${PDF_SERVER_URL}/generate-pdf`, {
+            const response = await fetchWithTimeout(`${PDF_SERVER_URL}/generate-pdf`, {
                 method: 'POST',
                 headers: getPdfServerAuthHeaders({
                     'Content-Type': 'application/json'
                 }),
                 body: JSON.stringify(req.body)
-            });
+            }, proxyTimeoutMs);
 
             if (!response.ok) {
                 const errorText = await response.text();
@@ -59,9 +84,13 @@ export function registerProxyRoutes(app) {
             }
             await relayBinaryResponse(response, res, 'application/pdf');
         } catch (error) {
-            safeLog('error', 'PDF proxy error', { error: error.message });
+            const statusCode = isAbortError(error) ? 504 : 500;
+            safeLog(statusCode === 504 ? 'warn' : 'error', 'PDF proxy error', { error: error.message, timeoutMs: proxyTimeoutMs });
             if (!res.headersSent) {
-                res.status(500).json({ error: 'Failed to generate PDF', details: error.message });
+                res.status(statusCode).json({
+                    error: statusCode === 504 ? 'PDF generation timed out' : 'Failed to generate PDF',
+                    details: error.message
+                });
             }
         }
     });
@@ -70,13 +99,13 @@ export function registerProxyRoutes(app) {
         try {
             safeLog('info', 'Proxying DOCX generation request to PDF server');
 
-            const response = await fetch(`${PDF_SERVER_URL}/generate-docx`, {
+            const response = await fetchWithTimeout(`${PDF_SERVER_URL}/generate-docx`, {
                 method: 'POST',
                 headers: getPdfServerAuthHeaders({
                     'Content-Type': 'application/json'
                 }),
                 body: JSON.stringify(req.body)
-            });
+            }, proxyTimeoutMs);
 
             if (!response.ok) {
                 const errorText = await response.text();
@@ -93,9 +122,13 @@ export function registerProxyRoutes(app) {
                 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
             );
         } catch (error) {
-            safeLog('error', 'DOCX proxy error', { error: error.message });
+            const statusCode = isAbortError(error) ? 504 : 500;
+            safeLog(statusCode === 504 ? 'warn' : 'error', 'DOCX proxy error', { error: error.message, timeoutMs: proxyTimeoutMs });
             if (!res.headersSent) {
-                res.status(500).json({ error: 'Failed to generate DOCX', details: error.message });
+                res.status(statusCode).json({
+                    error: statusCode === 504 ? 'DOCX generation timed out' : 'Failed to generate DOCX',
+                    details: error.message
+                });
             }
         }
     });

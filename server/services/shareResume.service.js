@@ -5,11 +5,16 @@
 
 import { query } from '../config/database.js';
 import { safeLog } from '../utils/logger.backend.js';
-import crypto from 'crypto';
 import fs from 'fs/promises';
 import path from 'path';
 import { UPLOAD_DIR } from '../config/constants.js';
 import { assertSchemaRequirements } from './schemaVerification.service.js';
+import {
+    createStoredShareToken,
+    generateShareToken,
+    getStoredShareTokenLookup,
+    readStoredShareToken
+} from '../utils/shareTokenStorage.js';
 
 // Shared PDFs directory
 const SHARED_PDF_DIR = path.join(UPLOAD_DIR, 'shared');
@@ -29,21 +34,19 @@ function isExpired(expiresAt, now = new Date()) {
     return Number.isNaN(expiryDate.getTime()) || expiryDate <= now;
 }
 
-function generateShareToken() {
-    return crypto.randomBytes(32).toString('hex');
-}
-
 async function deleteSharedPdfFile(filePath) {
     if (!filePath) {
-        return;
+        return false;
     }
 
     try {
         await fs.unlink(filePath);
+        return true;
     } catch (error) {
         if (error?.code !== 'ENOENT') {
             safeLog('warn', 'Failed to delete shared PDF file', { filePath, error: error.message });
         }
+        return false;
     }
 }
 
@@ -101,6 +104,7 @@ export async function storeSharedPdf(resumeId, pdfBuffer, filename) {
     try {
         const existingShare = await getShareRowByResumeId(resumeId);
         const token = generateShareToken();
+        const storedToken = createStoredShareToken(token);
         const expiresAt = buildShareExpiryDate();
 
         const safeFilename = filename.replace(/[^a-zA-Z0-9_-]/g, '_') + '.pdf';
@@ -112,7 +116,7 @@ export async function storeSharedPdf(resumeId, pdfBuffer, filename) {
             `UPDATE resumes
              SET shared_pdf_path = $1, shared_pdf_token = $2, shared_pdf_expires_at = $3
              WHERE id = $4`,
-            [pdfPath, token, expiresAt, resumeId]
+            [pdfPath, storedToken, expiresAt, resumeId]
         );
 
         if (existingShare?.shared_pdf_path && existingShare.shared_pdf_path !== pdfPath) {
@@ -140,11 +144,12 @@ export async function storeSharedPdf(resumeId, pdfBuffer, filename) {
  */
 export async function getSharedPdfByToken(token) {
     try {
+        const lookup = getStoredShareTokenLookup(token);
         const result = await query(
             `SELECT id, shared_pdf_path, name, shared_pdf_expires_at
              FROM resumes
-             WHERE shared_pdf_token = $1`,
-            [token]
+             WHERE shared_pdf_token = $1 OR shared_pdf_token LIKE $2`,
+            [lookup.exactToken, lookup.v2Pattern]
         );
 
         if (result.rows.length === 0) {
@@ -244,15 +249,17 @@ export async function getShareStatus(resumeId) {
         const row = result.rows[0];
         const hasSharedPdf = !!row.shared_pdf_token && !isExpired(row.shared_pdf_expires_at);
         const hasSharedFile = !!row.shared_file_token && !isExpired(row.shared_file_expires_at);
+        const pdfToken = hasSharedPdf ? readStoredShareToken(row.shared_pdf_token) : null;
+        const fileToken = hasSharedFile ? readStoredShareToken(row.shared_file_token) : null;
 
         return {
             hasSharedPdf,
-            token: hasSharedPdf ? row.shared_pdf_token : null,
+            token: pdfToken,
             expiresAt: hasSharedPdf ? row.shared_pdf_expires_at : null,
-            pdfToken: hasSharedPdf ? row.shared_pdf_token : null,
+            pdfToken,
             pdfExpiresAt: hasSharedPdf ? row.shared_pdf_expires_at : null,
             hasSharedFile,
-            fileToken: hasSharedFile ? row.shared_file_token : null,
+            fileToken,
             fileExpiresAt: hasSharedFile ? row.shared_file_expires_at : null
         };
     } catch (error) {
@@ -275,15 +282,16 @@ export async function getShareStatus(resumeId) {
 
 export async function getOrCreateSharedPdfToken(resumeId) {
     const share = await getShareRowByResumeId(resumeId);
-    let token = share?.shared_pdf_token;
+    let token = share?.shared_pdf_token ? readStoredShareToken(share.shared_pdf_token) : null;
     let expiresAt = share?.shared_pdf_expires_at;
 
     if (!token || isExpired(expiresAt)) {
         token = generateShareToken();
+        const storedToken = createStoredShareToken(token);
         expiresAt = buildShareExpiryDate();
         await query(
             `UPDATE resumes SET shared_pdf_token = $1, shared_pdf_expires_at = $2 WHERE id = $3`,
-            [token, expiresAt, resumeId]
+            [storedToken, expiresAt, resumeId]
         );
     }
 
@@ -292,15 +300,16 @@ export async function getOrCreateSharedPdfToken(resumeId) {
 
 export async function getOrCreateOriginalFileToken(resumeId) {
     const share = await getShareRowByResumeId(resumeId);
-    let token = share?.shared_file_token;
+    let token = share?.shared_file_token ? readStoredShareToken(share.shared_file_token) : null;
     let expiresAt = share?.shared_file_expires_at;
 
     if (!token || isExpired(expiresAt)) {
         token = generateShareToken();
+        const storedToken = createStoredShareToken(token);
         expiresAt = buildShareExpiryDate();
         await query(
             `UPDATE resumes SET shared_file_token = $1, shared_file_expires_at = $2 WHERE id = $3`,
-            [token, expiresAt, resumeId]
+            [storedToken, expiresAt, resumeId]
         );
     }
 
@@ -328,12 +337,85 @@ export async function revokeShareLinks(resumeId) {
     return true;
 }
 
+export async function cleanupExpiredShareArtifacts(now = new Date()) {
+    try {
+        const result = await query(
+            `SELECT id, shared_pdf_path, shared_pdf_token, shared_pdf_expires_at, shared_file_token, shared_file_expires_at
+             FROM resumes
+             WHERE (shared_pdf_token IS NOT NULL AND shared_pdf_expires_at IS NOT NULL AND shared_pdf_expires_at < $1)
+                OR (shared_file_token IS NOT NULL AND shared_file_expires_at IS NOT NULL AND shared_file_expires_at < $1)`,
+            [now]
+        );
+
+        let expiredPdfLinksCleared = 0;
+        let expiredFileLinksCleared = 0;
+        let expiredPdfFilesDeleted = 0;
+
+        for (const share of result.rows) {
+            const updates = [];
+            const params = [];
+            let paramIndex = 1;
+
+            if (share.shared_pdf_token && isExpired(share.shared_pdf_expires_at, now)) {
+                const deleted = await deleteSharedPdfFile(share.shared_pdf_path);
+                if (deleted) {
+                    expiredPdfFilesDeleted++;
+                }
+                updates.push('shared_pdf_path = NULL');
+                updates.push('shared_pdf_token = NULL');
+                updates.push('shared_pdf_expires_at = NULL');
+                expiredPdfLinksCleared++;
+            }
+
+            if (share.shared_file_token && isExpired(share.shared_file_expires_at, now)) {
+                updates.push('shared_file_token = NULL');
+                updates.push('shared_file_expires_at = NULL');
+                expiredFileLinksCleared++;
+            }
+
+            if (updates.length === 0) {
+                continue;
+            }
+
+            params.push(share.id);
+            await query(
+                `UPDATE resumes
+                 SET ${updates.join(', ')}
+                 WHERE id = $${paramIndex}`,
+                params
+            );
+        }
+
+        if (expiredPdfLinksCleared > 0 || expiredFileLinksCleared > 0 || expiredPdfFilesDeleted > 0) {
+            safeLog('info', 'Expired share artifacts cleaned up', {
+                expiredPdfLinksCleared,
+                expiredFileLinksCleared,
+                expiredPdfFilesDeleted
+            });
+        }
+
+        return {
+            expiredPdfLinksCleared,
+            expiredFileLinksCleared,
+            expiredPdfFilesDeleted
+        };
+    } catch (error) {
+        safeLog('error', 'Failed to cleanup expired share artifacts', { error: error.message });
+        return {
+            expiredPdfLinksCleared: 0,
+            expiredFileLinksCleared: 0,
+            expiredPdfFilesDeleted: 0
+        };
+    }
+}
+
 export async function getResumeFileByToken(token) {
+    const lookup = getStoredShareTokenLookup(token);
     const result = await query(
         `SELECT id, file_name, name, resume_file_data, resume_file_type, resume_file_size, shared_file_expires_at
          FROM resumes
-         WHERE shared_file_token = $1`,
-        [token]
+         WHERE shared_file_token = $1 OR shared_file_token LIKE $2`,
+        [lookup.exactToken, lookup.v2Pattern]
     );
 
     if (result.rows.length === 0) {
@@ -362,5 +444,6 @@ export default {
     getOrCreateSharedPdfToken,
     getOrCreateOriginalFileToken,
     revokeShareLinks,
-    getResumeFileByToken
+    getResumeFileByToken,
+    cleanupExpiredShareArtifacts
 };

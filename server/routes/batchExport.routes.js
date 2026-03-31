@@ -10,8 +10,10 @@ import { validateBody, batchExportSchema } from '../utils/validation.js';
 import { safeLog } from '../utils/logger.backend.js';
 import * as batchExportService from '../services/batchExport.service.js';
 import { getPdfServerAuthHeaders } from '../utils/pdfServerAuth.js';
+import { setSafeFileResponseHeaders } from '../utils/fileResponseSecurity.js';
 
 const router = express.Router();
+const MAX_BATCH_EXPORT_RESUMES = 100;
 
 function getFirstDefinedValue(source, keys) {
     for (const key of keys) {
@@ -82,6 +84,12 @@ router.post('/', authenticateToken, validateBody(batchExportSchema), async (req,
         
         if (!resumeIds || !Array.isArray(resumeIds) || resumeIds.length === 0) {
             return res.status(400).json({ error: 'Resume IDs are required' });
+        }
+
+        if (resumeIds.length > MAX_BATCH_EXPORT_RESUMES) {
+            return res.status(400).json({
+                error: `Batch export is limited to ${MAX_BATCH_EXPORT_RESUMES} resumes per request`
+            });
         }
         
         if (!templateId) {
@@ -208,8 +216,11 @@ router.post('/', authenticateToken, validateBody(batchExportSchema), async (req,
             zipSize: zipBuffer.length
         });
         
-        res.setHeader('Content-Type', 'application/zip');
-        res.setHeader('Content-Disposition', `attachment; filename="batch_export_${Date.now()}.zip"`);
+        setSafeFileResponseHeaders(res, {
+            contentType: 'application/zip',
+            filename: `batch_export_${Date.now()}.zip`,
+            contentLength: zipBuffer.length
+        });
         res.send(zipBuffer);
     } catch (error) {
         safeLog('error', 'Batch export error', { error: error.message });

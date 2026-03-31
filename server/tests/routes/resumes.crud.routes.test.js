@@ -458,6 +458,8 @@ describe('Resume Routes - GET /api/resumes/:id/download', () => {
         expect(res.status).toBe(200);
         expect(res.headers['content-type']).toBe('application/pdf');
         expect(res.headers['content-disposition']).toContain('resume.pdf');
+        expect(res.headers['x-content-type-options']).toBe('nosniff');
+        expect(res.headers['cache-control']).toBe('private, no-store, max-age=0');
     });
 });
 

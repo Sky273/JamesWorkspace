@@ -197,10 +197,16 @@ const BackupPage = (): JSX.Element => {
         if (!window.confirm(t('backup.restoreConfirm'))) {
             return;
         }
+
+        const confirmation = window.prompt('Type RESTORE to confirm this database restore.');
+        if (confirmation !== 'RESTORE') {
+            toast.error('Restore cancelled: confirmation text did not match.');
+            return;
+        }
         
         setRestoring(filename);
         try {
-            const response = await authPost('/api/backup/restore', { filename });
+            const response = await authPost('/api/backup/restore', { filename, confirmText: 'RESTORE' });
             const data = await response.json();
             
             if (data.success) {

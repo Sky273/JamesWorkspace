@@ -16,7 +16,8 @@ import {
     createUserSchema,
     createMissionSchema,
     createTemplateSchema,
-    createFirmSchema
+    createFirmSchema,
+    restoreBackupSchema
 } from '../../utils/validation.js';
 
 describe('Validation Middleware', () => {
@@ -105,6 +106,25 @@ describe('Validation Middleware', () => {
 
             expect(next).toHaveBeenCalled();
             expect(req.body.totpCode).toBe('123456');
+        });
+
+        it('should redact sensitive values in validation logs', () => {
+            const schema = signInSchema;
+            const middleware = validateBody(schema);
+            const req = {
+                body: { email: 'invalid-email', password: 'secret-password', totpCode: '123456' },
+                path: '/api/auth/signin'
+            };
+            const res = {
+                status: vi.fn().mockReturnThis(),
+                json: vi.fn()
+            };
+            const next = vi.fn();
+
+            middleware(req, res, next);
+
+            expect(res.status).toHaveBeenCalledWith(400);
+            expect(res.json).toHaveBeenCalled();
         });
     });
 
@@ -407,6 +427,28 @@ describe('Zod Schemas', () => {
                 name: ''
             };
             expect(() => createFirmSchema.parse(data)).toThrow();
+        });
+    });
+
+    describe('restoreBackupSchema', () => {
+        it('should accept a safe backup filename', () => {
+            expect(() => restoreBackupSchema.parse({
+                filename: 'backup-daily-testdb-2026-03-31T10-30-00.sql.gz',
+                confirmText: 'RESTORE'
+            })).not.toThrow();
+        });
+
+        it('should reject unsafe backup filenames', () => {
+            expect(() => restoreBackupSchema.parse({
+                filename: '../backup.sql.gz',
+                confirmText: 'RESTORE'
+            })).toThrow();
+        });
+
+        it('should reject missing confirmation text', () => {
+            expect(() => restoreBackupSchema.parse({
+                filename: 'backup-daily-testdb-2026-03-31T10-30-00.sql.gz'
+            })).toThrow();
         });
     });
 });

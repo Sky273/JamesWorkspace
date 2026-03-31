@@ -34,9 +34,16 @@ const {
 vi.mock('../../utils/logger.backend.js', () => ({ safeLog: vi.fn() }));
 
 vi.mock('child_process', () => ({
-    exec: vi.fn((cmd, opts, cb) => {
-        if (typeof opts === 'function') { cb = opts; opts = {}; }
-        const result = mockExecAsync(cmd, opts);
+    execFile: vi.fn((file, args, opts, cb) => {
+        if (typeof args === 'function') {
+            cb = args;
+            args = [];
+            opts = {};
+        } else if (typeof opts === 'function') {
+            cb = opts;
+            opts = {};
+        }
+        const result = mockExecAsync(file, args, opts);
         if (result instanceof Error) {
             cb(result);
         } else {
@@ -261,20 +268,20 @@ describe('Backup Core Service', () => {
         it('should throw when settings not configured', async () => {
             mockGetBackupSettings.mockResolvedValue(null);
 
-            await expect(restoreBackup('backup.sql.gz')).rejects.toThrow('Backup settings not configured');
+            await expect(restoreBackup('backup-daily-testdb-2024-06-01T10-00-00.sql.gz')).rejects.toThrow('Backup settings not configured');
         });
 
         it('should throw when no host in settings', async () => {
             mockGetBackupSettings.mockResolvedValue({ host: null });
 
-            await expect(restoreBackup('backup.sql.gz')).rejects.toThrow('Backup settings not configured');
+            await expect(restoreBackup('backup-daily-testdb-2024-06-01T10-00-00.sql.gz')).rejects.toThrow('Backup settings not configured');
         });
 
         it('should restore backup with DROP commands (no truncate)', async () => {
             mockGetBackupSettings.mockResolvedValue({ host: 'ftp.example.com', remote_path: '/backups' });
             mockFs.readFileSync.mockReturnValue('DROP TABLE IF EXISTS resumes CASCADE;');
 
-            const result = await restoreBackup('backup-daily-testdb-2024-06-01.sql.gz');
+            const result = await restoreBackup('backup-daily-testdb-2024-06-01T10-00-00.sql.gz');
 
             expect(result.success).toBe(true);
             expect(mockDownloadFile).toHaveBeenCalled();
@@ -284,11 +291,17 @@ describe('Backup Core Service', () => {
             mockGetBackupSettings.mockResolvedValue({ host: 'ftp.example.com', remote_path: '/backups' });
             mockFs.readFileSync.mockReturnValue('INSERT INTO resumes VALUES (1);');
 
-            const result = await restoreBackup('backup-old.sql.gz');
+            const result = await restoreBackup('backup-manual-testdb-2024-06-01T10-00-00.sql.gz');
 
             expect(result.success).toBe(true);
             // execAsync called 3 times: psql --version, truncate command, restore command
             expect(mockExecAsync).toHaveBeenCalledTimes(3);
+        });
+
+        it('should reject unsafe backup filenames', async () => {
+            mockGetBackupSettings.mockResolvedValue({ host: 'ftp.example.com', remote_path: '/backups' });
+
+            await expect(restoreBackup('../backup.sql.gz')).rejects.toThrow('Invalid backup filename');
         });
     });
 

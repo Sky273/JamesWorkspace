@@ -36,24 +36,47 @@ import {
   triggerSessionExpiry,
 } from './sessionRedirect';
 
-function mergeAbortSignals(...signals: Array<AbortSignal | null | undefined>): AbortSignal | undefined {
+interface MergedAbortSignalResult {
+  signal?: AbortSignal;
+  cleanup: () => void;
+}
+
+function mergeAbortSignals(...signals: Array<AbortSignal | null | undefined>): MergedAbortSignalResult {
   const activeSignals = signals.filter((signal): signal is AbortSignal => Boolean(signal));
   if (activeSignals.length === 0) {
-    return undefined;
+    return {
+      signal: undefined,
+      cleanup: () => {},
+    };
   }
 
   const controller = new AbortController();
-  const abort = () => controller.abort();
+  const cleanupCallbacks: Array<() => void> = [];
+
+  const cleanup = () => {
+    while (cleanupCallbacks.length > 0) {
+      const callback = cleanupCallbacks.pop();
+      callback?.();
+    }
+  };
+
+  const abort = () => {
+    cleanup();
+    if (!controller.signal.aborted) {
+      controller.abort();
+    }
+  };
 
   for (const signal of activeSignals) {
     if (signal.aborted) {
-      controller.abort();
-      return controller.signal;
+      abort();
+      return { signal: controller.signal, cleanup };
     }
     signal.addEventListener('abort', abort, { once: true });
+    cleanupCallbacks.push(() => signal.removeEventListener('abort', abort));
   }
 
-  return controller.signal;
+  return { signal: controller.signal, cleanup };
 }
 
 // ============================================
@@ -149,6 +172,7 @@ const fetchWithTimeout = async (
 ): Promise<Response> => {
   const timeoutController = new AbortController();
   const timeoutId = setTimeout(() => timeoutController.abort(), timeout);
+  const mergedSignal = mergeAbortSignals(options.signal, timeoutController.signal);
   
   const fullUrl = url.startsWith('/') ? `${API_BASE_URL}${url}` : url;
   
@@ -163,10 +187,11 @@ const fetchWithTimeout = async (
     const response = await fetch(fullUrl, {
       ...options,
       headers: headersWithCacheBust,
-      signal: mergeAbortSignals(options.signal, timeoutController.signal),
+      signal: mergedSignal.signal,
       credentials: 'include'
     } as RequestInit);
     clearTimeout(timeoutId);
+    mergedSignal.cleanup();
     
     // Retry once on 400 errors for GET requests (likely stale cache/proxy issue)
     if (response.status === 400 && retryCount < 1 && (!options.method || options.method === 'GET')) {
@@ -178,6 +203,7 @@ const fetchWithTimeout = async (
     return response;
   } catch (error) {
     clearTimeout(timeoutId);
+    mergedSignal.cleanup();
     if (error instanceof Error && error.name === 'AbortError') {
       logger.error(`[API Interceptor] Request timeout after ${timeout}ms:`, url);
       throw new Error(`Request timeout after ${timeout / 1000}s`);

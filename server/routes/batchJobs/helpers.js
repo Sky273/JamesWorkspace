@@ -1,4 +1,14 @@
+import fs from 'fs';
 import multer from 'multer';
+import path from 'path';
+import { inferMimeTypeFromFilename } from '../../utils/uploadFileTypes.js';
+import { UPLOAD_DIR } from '../../config/constants.js';
+
+const ALLOWED_MIME_BY_EXTENSION = new Map([
+    ['.pdf', 'application/pdf'],
+    ['.doc', 'application/msword'],
+    ['.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
+]);
 
 export function getFirstDefinedValue(source, keys) {
     for (const key of keys) {
@@ -76,22 +86,38 @@ export function ensureOwnerAccess(resourceFirmId, userContext, res) {
 }
 
 export function createUploadMiddleware() {
+    const batchUploadDir = path.join(UPLOAD_DIR, 'batch-jobs');
+
     return multer({
-        storage: multer.memoryStorage(),
+        storage: multer.diskStorage({
+            destination: (_req, _file, cb) => {
+                fs.mkdirSync(batchUploadDir, { recursive: true });
+                cb(null, batchUploadDir);
+            },
+            filename: (_req, file, cb) => {
+                const timestamp = Date.now();
+                const randomSuffix = Math.random().toString(36).slice(2, 10);
+                const extension = path.extname(file.originalname || '').toLowerCase();
+                cb(null, `${timestamp}-${randomSuffix}${extension}`);
+            }
+        }),
         limits: {
             fileSize: 50 * 1024 * 1024,
             files: 200
         },
         fileFilter: (_req, file, cb) => {
-            const allowedMimes = [
-                'application/pdf',
-                'application/msword',
-                'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-            ];
-            if (allowedMimes.includes(file.mimetype)) {
+            const extension = path.extname(file.originalname || '').toLowerCase();
+            const expectedMimeType = ALLOWED_MIME_BY_EXTENSION.get(extension);
+            const normalizedMimeType = (file.mimetype || '').toLowerCase();
+            const inferredMimeType = inferMimeTypeFromFilename(file.originalname || '');
+            const mimeMatches = Boolean(expectedMimeType)
+                && inferredMimeType === expectedMimeType
+                && normalizedMimeType === expectedMimeType;
+
+            if (mimeMatches) {
                 cb(null, true);
             } else {
-                cb(new Error(`Type de fichier non supporte : ${file.mimetype}`));
+                cb(new Error(`Type de fichier non supporte : ${file.mimetype || extension || 'inconnu'}`));
             }
         }
     });

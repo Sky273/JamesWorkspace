@@ -21,6 +21,7 @@ let consentCheckInterval = null;
 let reminderInterval = null;
 let purgeInterval = null;
 let tokenRefreshInterval = null;
+let initialChecksTimeout = null;
 
 // Default intervals (in milliseconds)
 const CONSENT_CHECK_INTERVAL = 60 * 60 * 1000; // 1 hour
@@ -111,7 +112,8 @@ export function startScheduler() {
     safeLog('info', '[Scheduler] Starting GDPR consent scheduler');
 
     // Run initial checks after a short delay (let server fully start)
-    setTimeout(async () => {
+    initialChecksTimeout = setTimeout(async () => {
+        initialChecksTimeout = null;
         safeLog('info', '[Scheduler] Running initial consent checks');
         await runConsentCheck();
         await runPurgeCheck();
@@ -119,6 +121,9 @@ export function startScheduler() {
         // Also run token refresh on startup to ensure token is valid
         await runTokenRefresh();
     }, 30000); // 30 seconds after startup
+    if (initialChecksTimeout.unref) {
+        initialChecksTimeout.unref();
+    }
 
     // Schedule periodic consent expiration checks
     consentCheckInterval = setInterval(runConsentCheck, CONSENT_CHECK_INTERVAL);
@@ -176,6 +181,11 @@ export function stopScheduler() {
     if (tokenRefreshInterval) {
         clearInterval(tokenRefreshInterval);
         tokenRefreshInterval = null;
+    }
+
+    if (initialChecksTimeout) {
+        clearTimeout(initialChecksTimeout);
+        initialChecksTimeout = null;
     }
 
     safeLog('info', '[Scheduler] GDPR consent scheduler stopped');

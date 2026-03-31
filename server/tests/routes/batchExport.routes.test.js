@@ -126,6 +126,19 @@ describe('Batch Export Routes', () => {
             expect(res.body.error).toContain('Template ID');
         });
 
+        it('should return 400 if too many resumes are requested', async () => {
+            const res = await request(app)
+                .post('/api/batch-export')
+                .set(AUTH)
+                .send({
+                    resumeIds: Array.from({ length: 101 }, (_, index) => `00000000-0000-0000-0000-${String(index + 1).padStart(12, '0')}`),
+                    templateId: TEMPLATE_UUID
+                });
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toContain('100 resumes');
+        });
+
         it('should return 503 if PDF server is not reachable', async () => {
             mockFetch.mockRejectedValueOnce(new Error('Connection refused'));
 
@@ -177,6 +190,9 @@ describe('Batch Export Routes', () => {
 
             expect(res.status).toBe(200);
             expect(res.headers['content-type']).toContain('application/zip');
+            expect(res.headers['content-disposition']).toContain('attachment');
+            expect(res.headers['x-content-type-options']).toBe('nosniff');
+            expect(res.headers['cache-control']).toBe('private, no-store, max-age=0');
         });
 
         it('should return 500 if no files generated', async () => {

@@ -65,6 +65,15 @@ vi.mock('../../utils/validation.js', () => ({
     restoreBackupSchema: {}
 }));
 
+vi.mock('../../utils/networkHostSecurity.js', () => ({
+    assertSafeOutboundHost: vi.fn(async (host) => {
+        if (host === '127.0.0.1') {
+            throw new Error('Private or loopback hosts are not allowed');
+        }
+        return true;
+    })
+}));
+
 // Mock auth middleware
 vi.mock('../../middleware/auth.middleware.js', () => ({
     authenticateToken: (req, res, next) => {
@@ -256,6 +265,16 @@ describe('Backup Routes', () => {
 
             expect(res.status).toBe(400);
         });
+
+        it('should reject private backup hosts', async () => {
+            const res = await request(app)
+                .post('/api/backup/test-connection')
+                .set(authHeader)
+                .send({ host: '127.0.0.1', username: 'user', password: 'pass' });
+
+            expect(res.status).toBe(400);
+            expect(mockTestConnection).not.toHaveBeenCalled();
+        });
     });
 
     describe('POST /api/backup/restore', () => {
@@ -265,10 +284,10 @@ describe('Backup Routes', () => {
             const res = await request(app)
                 .post('/api/backup/restore')
                 .set(authHeader)
-                .send({ filename: 'backup.sql.gz' });
+                .send({ filename: 'backup-daily-testdb-2026-03-31T10-30-00.sql.gz', confirmText: 'RESTORE' });
 
             expect(res.status).toBe(200);
-            expect(mockRestoreBackup).toHaveBeenCalledWith('backup.sql.gz');
+            expect(mockRestoreBackup).toHaveBeenCalledWith('backup-daily-testdb-2026-03-31T10-30-00.sql.gz');
         });
 
         it('should return 400 if filename missing', async () => {
@@ -286,7 +305,7 @@ describe('Backup Routes', () => {
             const res = await request(app)
                 .post('/api/backup/restore')
                 .set(authHeader)
-                .send({ filename: 'backup.sql.gz' });
+                .send({ filename: 'backup-daily-testdb-2026-03-31T10-30-00.sql.gz', confirmText: 'RESTORE' });
 
             expect(res.status).toBe(500);
         });

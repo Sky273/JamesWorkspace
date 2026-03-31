@@ -14,6 +14,7 @@ import {
     resumeItemWithName
 } from '../../services/batchJobs.service.js';
 import { safeLog } from '../../utils/logger.backend.js';
+import { setSafeFileResponseHeaders } from '../../utils/fileResponseSecurity.js';
 import { ensureOwnerAccess, getUserContext } from './helpers.js';
 
 function withExportAvailability(job) {
@@ -133,8 +134,10 @@ export async function downloadJobExport(req, res) {
             return res.status(404).json({ error: "Fichier d'export non trouvé sur le serveur" });
         }
 
-        res.setHeader('Content-Type', 'application/zip');
-        res.setHeader('Content-Disposition', `attachment; filename="${job.export_file_name}"`);
+        setSafeFileResponseHeaders(res, {
+            contentType: 'application/zip',
+            filename: job.export_file_name
+        });
 
         const fileStream = fs.createReadStream(job.export_file_path);
         fileStream.pipe(res);

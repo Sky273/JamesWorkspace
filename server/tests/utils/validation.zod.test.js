@@ -320,6 +320,20 @@ describe('Zod Validation Schemas', () => {
 
             expect(result.success).toBe(true);
         });
+
+        it('should reject batch export payloads above the resume limit', () => {
+            const tooManyResumeIds = Array.from({ length: 101 }, (_, index) => {
+                return `00000000-0000-0000-0000-${String(index + 1).padStart(12, '0')}`;
+            });
+
+            const result = batchExportSchema.safeParse({
+                resumeIds: tooManyResumeIds,
+                templateId: '123e4567-e89b-12d3-a456-426614174001',
+                format: 'pdf'
+            });
+
+            expect(result.success).toBe(false);
+        });
     });
 
     describe('createMailDraftSchema', () => {

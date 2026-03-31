@@ -40,6 +40,7 @@ export {
 // Item CRUD
 export {
     addJobItems,
+    addJobItemsFromUploadedFiles,
     addJobResumeIds,
     addJobTaskItems,
     addJobExportItems,
@@ -151,7 +152,7 @@ export async function getAdaptationsForDeal(dealId) {
 import { JOB_STATUS, ITEM_STATUS } from './batchJobs/constants.js';
 import { initializeBatchJobsTable } from './batchJobs/schema.js';
 import { createJob, getJob, getJobsByFirm, getAllJobs, updateJobStatus, cancelJob, deleteJob } from './batchJobs/jobCrud.js';
-import { addJobItems, addJobResumeIds, addJobTaskItems, addJobExportItems, getJobItems, updateJobItemStatus } from './batchJobs/itemCrud.js';
+import { addJobItems, addJobItemsFromUploadedFiles, addJobResumeIds, addJobTaskItems, addJobExportItems, getJobItems, updateJobItemStatus } from './batchJobs/itemCrud.js';
 import { startWorker, stopWorker } from './batchJobs/worker.js';
 import { cleanupOldJobs, getBatchJobsStats } from './batchJobs/maintenance.js';
 
@@ -161,6 +162,7 @@ export default {
     initializeBatchJobsTable,
     createJob,
     addJobItems,
+    addJobItemsFromUploadedFiles,
     addJobResumeIds,
     addJobTaskItems,
     addJobExportItems,

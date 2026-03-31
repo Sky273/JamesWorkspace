@@ -4,8 +4,40 @@
  */
 
 import { query } from '../../config/database.js';
+import fs from 'fs/promises';
 import { safeLog } from '../../utils/logger.backend.js';
 import { ITEM_STATUS, BATCH_SIZE } from './constants.js';
+
+const MAX_BATCH_INSERT_BYTES = 64 * 1024 * 1024;
+
+async function insertJobItems(jobId, items) {
+    const normalizedItems = Array.isArray(items) ? items : [];
+    const addedCount = normalizedItems.length;
+
+    if (addedCount > 0) {
+        const valuePlaceholders = [];
+        const params = [];
+
+        normalizedItems.forEach((item, index) => {
+            const offset = index * 6;
+            valuePlaceholders.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6})`);
+            params.push(jobId, item.fileName, item.fileData, item.fileMimeType, item.relativePath || null, ITEM_STATUS.PENDING);
+        });
+
+        await query(`
+            INSERT INTO batch_job_items (job_id, file_name, file_data, file_mime_type, relative_path, status)
+            VALUES ${valuePlaceholders.join(', ')}
+        `, params);
+    }
+
+    return addedCount;
+}
+
+async function cleanupUploadedFile(file) {
+    if (file?.path) {
+        await fs.unlink(file.path).catch(() => {});
+    }
+}
 
 /**
  * Add items to a batch job
@@ -15,24 +47,7 @@ import { ITEM_STATUS, BATCH_SIZE } from './constants.js';
  */
 export async function addJobItems(jobId, items) {
     try {
-        const normalizedItems = Array.isArray(items) ? items : [];
-        const addedCount = normalizedItems.length;
-
-        if (addedCount > 0) {
-            const valuePlaceholders = [];
-            const params = [];
-
-            normalizedItems.forEach((item, index) => {
-                const offset = index * 6;
-                valuePlaceholders.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6})`);
-                params.push(jobId, item.fileName, item.fileData, item.fileMimeType, item.relativePath || null, ITEM_STATUS.PENDING);
-            });
-
-            await query(`
-                INSERT INTO batch_job_items (job_id, file_name, file_data, file_mime_type, relative_path, status)
-                VALUES ${valuePlaceholders.join(', ')}
-            `, params);
-        }
+        const addedCount = await insertJobItems(jobId, items);
 
         await query(`
             UPDATE batch_jobs 
@@ -44,6 +59,58 @@ export async function addJobItems(jobId, items) {
         return addedCount;
     } catch (error) {
         safeLog('error', 'Failed to add items to batch job', { error: error.message, jobId });
+        throw error;
+    }
+}
+
+export async function addJobItemsFromUploadedFiles(jobId, uploadedFiles) {
+    const normalizedFiles = Array.isArray(uploadedFiles) ? uploadedFiles : [];
+    let addedCount = 0;
+    let currentBatch = [];
+    let currentBatchBytes = 0;
+
+    const flushBatch = async () => {
+        if (currentBatch.length === 0) {
+            return;
+        }
+
+        addedCount += await insertJobItems(jobId, currentBatch);
+        currentBatch = [];
+        currentBatchBytes = 0;
+    };
+
+    try {
+        for (const file of normalizedFiles) {
+            const fileBuffer = file?.buffer || await fs.readFile(file.path);
+
+            if (currentBatch.length > 0 && currentBatchBytes + fileBuffer.length > MAX_BATCH_INSERT_BYTES) {
+                await flushBatch();
+            }
+
+            currentBatch.push({
+                fileName: file.originalname,
+                fileData: fileBuffer,
+                fileMimeType: file.fileMimeType || file.mimetype,
+                relativePath: file.relativePath || null
+            });
+            currentBatchBytes += fileBuffer.length;
+
+            await cleanupUploadedFile(file);
+        }
+
+        await flushBatch();
+
+        await query(`
+            UPDATE batch_jobs 
+            SET total_items = (SELECT COUNT(*) FROM batch_job_items WHERE job_id = $1)
+            WHERE id = $1
+        `, [jobId]);
+
+        safeLog('info', 'Added uploaded files to batch job', { jobId, count: addedCount });
+        return addedCount;
+    } catch (error) {
+        await Promise.all(normalizedFiles.map((file) => cleanupUploadedFile(file)));
+        safeLog('error', 'Failed to add uploaded files to batch job', { error: error.message, jobId });
         throw error;
     }
 }

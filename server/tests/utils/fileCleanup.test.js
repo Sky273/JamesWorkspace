@@ -47,6 +47,15 @@ vi.mock('../../services/backup.service.js', () => ({
     cleanupAllLocalBackups: vi.fn().mockResolvedValue({ daily: 0, weekly: 0 })
 }));
 
+vi.mock('../../services/shareResume.service.js', () => ({
+    SHARE_LINK_TTL_MS: 7 * 24 * 60 * 60 * 1000,
+    cleanupExpiredShareArtifacts: vi.fn().mockResolvedValue({
+        expiredPdfLinksCleared: 0,
+        expiredFileLinksCleared: 0,
+        expiredPdfFilesDeleted: 0
+    })
+}));
+
 import fs from 'fs/promises';
 import {
     cleanupOldFiles,
@@ -301,6 +310,7 @@ describe('File Cleanup Utilities', () => {
 
             const stats = getFileCleanupStats();
             expect(stats.timerActive).toBe(true);
+            expect(stats.cleanupStats).toHaveProperty('sharedLinks');
         });
 
         it('should reflect timer stopped after stopPeriodicCleanup', async () => {

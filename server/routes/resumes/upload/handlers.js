@@ -4,6 +4,7 @@ import { metrics } from '../../../services/metrics.service.js';
 import { extractPdfTextWithOcr } from '../../../services/pdfTextExtraction.service.js';
 import { cleanExtractedResumeText } from '../../../services/ocrTextCleanup.service.js';
 import { extractTextFromWordBuffer } from '../../../services/wordTextExtraction.service.js';
+import { isValidFileSignature } from '../../../utils/fileSignature.js';
 import {
     MAX_OCR_RENDER_PIXELS,
     MAX_PDF_EXTRACTION_PAGES,
@@ -24,6 +25,10 @@ function createExtractDocHandler() {
             }
 
             const fileBuffer = await fs.readFile(req.file.path);
+            if (!isValidFileSignature(fileBuffer, req.file.mimetype || 'application/msword')) {
+                await cleanupTempFile(req.file.path);
+                return res.status(400).json({ error: 'Invalid DOC file contents.' });
+            }
             const extractionResult = await extractTextFromWordBuffer(fileBuffer, {
                 fileName: req.file.originalname,
                 mimeType: req.file.mimetype || 'application/msword',
@@ -146,6 +151,10 @@ function createExtractPdfHandler() {
 
             pdfExtractionSlotAcquired = true;
             const fileBuffer = await fs.readFile(req.file.path);
+            if (!isValidFileSignature(fileBuffer, req.file.mimetype || 'application/pdf')) {
+                await cleanupTempFile(req.file.path);
+                return res.status(400).json({ error: 'Invalid PDF file contents.' });
+            }
             const startTime = Date.now();
 
             safeLog('info', 'Starting server-side PDF extraction', {

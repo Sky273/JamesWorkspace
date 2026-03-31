@@ -20,6 +20,15 @@ import {
 
 const router = express.Router();
 
+function getTrustedFrontendOrigin() {
+    const frontendUrl = process.env.FRONTEND_URL || process.env.VITE_APP_URL || 'http://localhost:5173';
+    try {
+        return new URL(frontendUrl).origin;
+    } catch {
+        return 'http://localhost:5173';
+    }
+}
+
 /**
  * GET /api/calendar/status
  * Check if user has calendar connected
@@ -69,11 +78,12 @@ router.get('/callback', async (req, res) => {
         }
         
         await exchangeCalendarCode(code, userId);
+        const targetOrigin = getTrustedFrontendOrigin();
         
         // Close popup and notify parent (no inline scripts for CSP compliance)
         res.send(`
             <html>
-                <body data-callback-type="calendar-connected">
+                <body data-callback-type="calendar-connected" data-target-origin="${targetOrigin}">
                     <p>Calendar connected! You can close this window.</p>
                     <script src="/api/docs/static/oauth-callback.js"></script>
                 </body>
@@ -81,9 +91,10 @@ router.get('/callback', async (req, res) => {
         `);
     } catch (error) {
         safeLog('error', 'Calendar OAuth callback failed', { error: error.message });
+        const targetOrigin = getTrustedFrontendOrigin();
         res.status(500).send(`
             <html>
-                <body data-callback-type="calendar-error" data-callback-error="Connection failed">
+                <body data-callback-type="calendar-error" data-callback-error="Connection failed" data-target-origin="${targetOrigin}">
                     <p>Failed to connect calendar. You can close this window.</p>
                     <script src="/api/docs/static/oauth-callback.js"></script>
                 </body>

@@ -144,6 +144,16 @@ describe('GDPR Mail Routes', () => {
                 .get('/api/gdpr/mail/callback?code=abc&state=invalid-state');
             expect(res.status).toBe(400);
         });
+
+        it('should include a trusted target origin in popup callback HTML', async () => {
+            mockHandleOAuthCallback.mockResolvedValueOnce();
+
+            const res = await request(app)
+                .get(`/api/gdpr/mail/callback?code=abc&state=${'a'.repeat(64)}`);
+
+            expect(res.status).toBe(200);
+            expect(res.text).toContain('data-target-origin="http://localhost:5173"');
+        });
     });
 
     describe('POST /disconnect', () => {

@@ -5,6 +5,7 @@
 
 import path from 'path';
 import { safeLog } from '../../utils/logger.backend.js';
+import { assertSafeOutboundHost } from '../../utils/networkHostSecurity.js';
 
 // ============================================
 // LAZY-LOADED FTP/SFTP MODULES
@@ -80,6 +81,8 @@ async function getBasicFtp() {
  * Get FTP client based on protocol
  */
 export async function getClient(settings) {
+    await assertSafeOutboundHost(settings.host, { allowPrivateHostsEnvVar: 'BACKUP_ALLOW_PRIVATE_HOSTS' });
+
     if (settings.protocol === 'sftp') {
         const SftpClient = await getSftpClient();
         const client = new SftpClient();

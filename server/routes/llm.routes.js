@@ -16,76 +16,15 @@ import { callMiniMaxOpenAICompatible, callMiniMaxAnthropicCompatible } from '../
 import { extractOpenAIResponsesText, flattenLlmTextContent, sanitizeOpenAICompatibleResponseBody } from '../services/llmContent.service.js';
 import { normalizeAnthropicRequestBody, toAnthropicCompatibleResponse, toOpenAICompatibleResponse } from '../services/llmProviderCommon.service.js';
 import { resolveCompatibleProviderRuntimeConfig } from '../services/llmConfiguration.service.js';
+import {
+    buildCircuitBreakerIndicators,
+    buildOpenAIProxyRequest,
+    extractUsageTokens,
+    getRequestedMaxTokens,
+    validateMessageLengths
+} from './llmRouteHelpers.js';
 
 const router = express.Router();
-
-const LLM_FAMILY_INDICATORS = ['openai', 'anthropic', 'deepseek', 'glm', 'minimax', 'ollama'];
-
-function normalizeCircuitBreakerIndicator(provider, indicator) {
-    if (indicator && typeof indicator === 'object' && !Array.isArray(indicator)) {
-        return {
-            provider,
-            supported: provider !== 'ollama',
-            state: indicator.state || 'UNKNOWN',
-            failures: indicator.failures || 0,
-            lastFailureTime: indicator.lastFailureTime || null
-        };
-    }
-
-    if (typeof indicator === 'string') {
-        return {
-            provider,
-            supported: provider !== 'ollama',
-            state: indicator.toUpperCase(),
-            failures: 0,
-            lastFailureTime: null
-        };
-    }
-
-    if (provider === 'ollama') {
-        return {
-            provider,
-            supported: false,
-            state: 'NOT_APPLICABLE',
-            failures: 0,
-            lastFailureTime: null
-        };
-    }
-
-    return {
-        provider,
-        supported: true,
-        state: 'UNKNOWN',
-        failures: 0,
-        lastFailureTime: null
-    };
-}
-
-function buildCircuitBreakerIndicators(states = {}) {
-    return Object.fromEntries(LLM_FAMILY_INDICATORS.map(provider => [
-        provider,
-        normalizeCircuitBreakerIndicator(provider, states[provider])
-    ]));
-}
-
-function validateMessageLengths(messages) {
-    if (!messages || !Array.isArray(messages)) {
-        return null;
-    }
-
-    for (const message of messages) {
-        const content = flattenLlmTextContent(message.content);
-        if (content && content.length > MAX_PROMPT_LENGTH) {
-            return `Message content exceeds maximum length of ${MAX_PROMPT_LENGTH}`;
-        }
-    }
-
-    return null;
-}
-
-function getRequestedMaxTokens(body = {}) {
-    return body.max_tokens || body.max_completion_tokens || body.max_output_tokens || 4096;
-}
 
 async function handleOllamaRequest(req, res, settings, responseShape, model) {
     const result = await callOllama(req.body.messages || [], model, settings, {
@@ -244,38 +183,11 @@ async function proxyOpenAIRequest(req, res, model, metadata, { allowResponsesApi
         }
     });
 
-    const isGPT5Model = allowResponsesApi && model.match(/^gpt-5/i);
-    let openAiUrl;
-    let requestBody;
-
-    if (isGPT5Model) {
-        openAiUrl = 'https://api.openai.com/v1/responses';
-        requestBody = {
-            model,
-            input: req.body.messages || req.body.input
-        };
-        const isProModel = model.match(/gpt-5\.\d+-pro/i);
-        requestBody.reasoning = { effort: isProModel ? 'medium' : 'none' };
-        if (req.body.response_format) {
-            requestBody.text = { format: req.body.response_format };
-        }
-        if (req.body.max_tokens) {
-            requestBody.max_output_tokens = req.body.max_tokens;
-        } else if (req.body.max_completion_tokens) {
-            requestBody.max_output_tokens = req.body.max_completion_tokens;
-        } else if (req.body.max_output_tokens) {
-            requestBody.max_output_tokens = req.body.max_output_tokens;
-        }
-        if (!isProModel && req.body.temperature !== undefined) {
-            requestBody.temperature = req.body.temperature;
-        }
-    } else {
-        openAiUrl = 'https://api.openai.com/v1/chat/completions';
-        requestBody = {
-            ...req.body,
-            model
-        };
-    }
+    const { openAiUrl, requestBody, usesResponsesApi } = buildOpenAIProxyRequest({
+        model,
+        body: req.body,
+        allowResponsesApi
+    });
 
     const response = await withRetry(
         () => axios.post(openAiUrl, requestBody, {
@@ -302,12 +214,10 @@ async function proxyOpenAIRequest(req, res, model, metadata, { allowResponsesApi
     }
 
     const usage = response.data?.usage || {};
-    const inputTokens = usage.input_tokens || usage.prompt_tokens || 0;
-    const outputTokens = usage.output_tokens || usage.completion_tokens || 0;
-    const totalTokens = usage.total_tokens || (inputTokens + outputTokens);
+    const { inputTokens, outputTokens, totalTokens } = extractUsageTokens(usage);
     metrics.trackLLMRequest(buildLLMMetricLabel('openai', model), totalTokens, true, inputTokens, outputTokens);
 
-    if (isGPT5Model && response.data?.output) {
+    if (usesResponsesApi && response.data?.output) {
         const textContent = extractOpenAIResponsesText(response.data.output || []);
 
         return res.json({
@@ -383,7 +293,7 @@ router.post('/openai', authenticateToken, llmLimiter, combinedRateLimit(30, 60 *
 
     try {
         const settings = await getLLMSettings();
-        const validationError = validateMessageLengths(req.body.messages);
+        const validationError = validateMessageLengths(req.body.messages, flattenLlmTextContent, MAX_PROMPT_LENGTH);
         if (validationError) {
             return res.status(400).json({ error: validationError });
         }
@@ -410,7 +320,7 @@ router.post('/anthropic', authenticateToken, llmLimiter, combinedRateLimit(30, 6
 
     try {
         const settings = await getLLMSettings();
-        const validationError = validateMessageLengths(req.body.messages);
+        const validationError = validateMessageLengths(req.body.messages, flattenLlmTextContent, MAX_PROMPT_LENGTH);
         if (validationError) {
             return res.status(400).json({ error: validationError });
         }

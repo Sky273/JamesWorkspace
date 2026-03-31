@@ -134,6 +134,8 @@ describe('Proxy Routes', () => {
         expect(forwardedBody.footerHeight).toBe(25);
         expect(forwardedBody.format).toBeUndefined();
         expect(res.headers['content-type']).toContain('application/pdf');
+        expect(res.headers['x-content-type-options']).toBe('nosniff');
+        expect(res.headers['cache-control']).toBe('private, no-store, max-age=0');
     });
 
     it('rejects unexpected fields on generate-pdf', async () => {
@@ -187,6 +189,24 @@ describe('Proxy Routes', () => {
         const forwardedBody = JSON.parse(mockFetch.mock.calls[0][1].body);
         expect(forwardedBody.format).toBe('doc');
         expect(forwardedBody.filename).toBe('resume.doc');
+        expect(res.headers['x-content-type-options']).toBe('nosniff');
+        expect(res.headers['cache-control']).toBe('private, no-store, max-age=0');
+    });
+
+    it('returns 504 when PDF generation times out', async () => {
+        const app = createTestApp();
+        mockFetch.mockRejectedValueOnce(new Error('Upstream timeout after 60000ms'));
+
+        const res = await request(app)
+            .post('/generate-pdf')
+            .set('x-test-auth', 'ok')
+            .send({
+                htmlContent: '<p>timeout</p>',
+                filename: 'resume.pdf'
+            });
+
+        expect(res.status).toBe(504);
+        expect(res.body.error).toContain('timed out');
     });
 });
 

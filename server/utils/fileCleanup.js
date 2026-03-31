@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import { UPLOAD_DIR } from '../config/constants.js';
 import { safeLog } from './logger.backend.js';
 import { metrics } from '../services/metrics.service.js';
+import { SHARE_LINK_TTL_MS } from '../services/shareResume.service.js';
 
 /**
  * Utility for cleaning up temporary files across multiple directories
@@ -33,7 +34,7 @@ const CLEANUP_DIRS = {
     },
     sharedPdfs: {
         path: path.join(UPLOAD_DIR, 'shared'),
-        maxAgeMs: 30 * 24 * 60 * 60 * 1000,  // 30 days
+        maxAgeMs: SHARE_LINK_TTL_MS,
         description: 'Shared PDF files'
     }
 };
@@ -211,6 +212,19 @@ export async function cleanupOldFiles(directory, maxAgeMs = 60 * 60 * 1000) {
  */
 async function cleanupAllDirectories() {
     const results = {};
+
+    try {
+        const { cleanupExpiredShareArtifacts } = await import('../services/shareResume.service.js');
+        const shareCleanup = await cleanupExpiredShareArtifacts();
+        results.sharedLinks = { success: true, ...shareCleanup };
+        cleanupStats.sharedLinks = {
+            lastCleanup: new Date().toISOString(),
+            ...shareCleanup
+        };
+    } catch (error) {
+        results.sharedLinks = { success: false, error: error.message };
+        safeLog('debug', 'Expired share cleanup skipped', { error: error.message });
+    }
     
     for (const [key, config] of Object.entries(CLEANUP_DIRS)) {
         try {
@@ -364,4 +378,3 @@ export async function cleanupAllFiles() {
         return 0;
     }
 }
-

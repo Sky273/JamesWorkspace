@@ -6,6 +6,12 @@
 import { query } from '../../config/database.js';
 import { safeLog } from '../../utils/logger.backend.js';
 import { assertSchemaRequirements } from '../schemaVerification.service.js';
+import { decryptSecret, encryptSecret } from '../../utils/secretCrypto.js';
+
+const BACKUP_SECRET_OPTIONS = {
+    envVarNames: ['BACKUP_SECRET_ENCRYPTION_KEY', 'MAIL_TOKEN_ENCRYPTION_KEY'],
+    purpose: 'backup-settings'
+};
 
 /**
  * Verify backup schema is present
@@ -38,7 +44,11 @@ export async function getBackupSettings() {
         if (result.rows.length === 0) {
             return null;
         }
-        return result.rows[0];
+        const settings = result.rows[0];
+        return {
+            ...settings,
+            password: settings.password ? decryptSecret(settings.password, BACKUP_SECRET_OPTIONS) : ''
+        };
     } catch (error) {
         safeLog('error', 'Failed to get backup settings', { error: error.message });
         throw error;
@@ -51,6 +61,9 @@ export async function getBackupSettings() {
 export async function saveBackupSettings(settings) {
     try {
         const existingSettings = await getBackupSettings();
+        const encryptedPassword = settings.password
+            ? encryptSecret(settings.password, BACKUP_SECRET_OPTIONS)
+            : '';
 
         if (existingSettings) {
             const result = await query(`
@@ -83,7 +96,7 @@ export async function saveBackupSettings(settings) {
                 settings.host || '',
                 settings.port || 21,
                 settings.username || '',
-                settings.password || '',
+                encryptedPassword,
                 settings.remote_path || '/backups',
                 settings.daily_enabled || false,
                 settings.daily_time || '02:00',
@@ -113,13 +126,13 @@ export async function saveBackupSettings(settings) {
             settings.backup_target || 'local',
             settings.protocol || 'ftp',
             settings.tls_mode || 'explicit',
-            settings.host || '',
-            settings.port || 21,
-            settings.username || '',
-            settings.password || '',
-            settings.remote_path || '/backups',
-            settings.daily_enabled || false,
-            settings.daily_time || '02:00',
+                settings.host || '',
+                settings.port || 21,
+                settings.username || '',
+                encryptedPassword,
+                settings.remote_path || '/backups',
+                settings.daily_enabled || false,
+                settings.daily_time || '02:00',
             settings.daily_retention || 7,
             settings.weekly_enabled || false,
             settings.weekly_day || 0,

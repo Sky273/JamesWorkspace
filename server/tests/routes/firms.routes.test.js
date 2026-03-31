@@ -310,6 +310,22 @@ describe('Firms Routes', () => {
 
             expect(res.status).toBe(200);
             expect(res.headers['content-type']).toContain('image/png');
+            expect(res.headers['x-content-type-options']).toBe('nosniff');
+            expect(res.headers['cache-control']).toBe('public, max-age=86400');
+        });
+
+        it('should force download for legacy svg logos', async () => {
+            const logoBuffer = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"></svg>');
+            mockGetFirmLogo.mockResolvedValue({
+                logo_data: logoBuffer, logo_mime_type: 'image/svg+xml'
+            });
+
+            const res = await request(app).get('/api/firms/f-1/logo/image');
+
+            expect(res.status).toBe(200);
+            expect(res.headers['content-type']).toContain('image/svg+xml');
+            expect(res.headers['content-disposition']).toContain('attachment');
+            expect(res.headers['x-content-type-options']).toBe('nosniff');
         });
 
         it('should return 404 if no logo', async () => {
@@ -324,6 +340,20 @@ describe('Firms Routes', () => {
 
             const res = await request(app).get('/api/firms/nonexistent/logo/image');
             expect(res.status).toBe(404);
+        });
+    });
+
+    describe('POST /api/firms/:id/logo', () => {
+        it('should reject invalid logo binary contents', async () => {
+            mockGetFirmById.mockResolvedValue({ id: 'f-1', name: 'Acme' });
+
+            const res = await request(app)
+                .post('/api/firms/f-1/logo')
+                .set(authHeader)
+                .attach('logo', Buffer.from('not-an-image'), { filename: 'logo.png', contentType: 'image/png' });
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toContain('Invalid logo file contents');
         });
     });
 });

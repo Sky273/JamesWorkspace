@@ -6,6 +6,11 @@ import { securityLog, getRequestMetadata, LOG_LEVELS, SECURITY_EVENTS } from '..
 import { invalidateFirmsCaches } from '../services/cache.service.js';
 import { safeLog } from '../utils/logger.backend.js';
 import * as firmsService from '../services/firms.service.js';
+import { applySafeBinaryHeaders, setSafeFileResponseHeaders } from '../utils/fileResponseSecurity.js';
+import { resolveUploadMimeType } from '../utils/uploadFileTypes.js';
+import { isValidFileSignature } from '../utils/fileSignature.js';
+
+const LOGO_ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
 
 const router = express.Router();
 
@@ -14,11 +19,12 @@ const logoUpload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: 2 * 1024 * 1024 }, // 2MB max
     fileFilter: (req, file, cb) => {
-        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
-        if (allowedTypes.includes(file.mimetype)) {
+        const resolvedMimeType = resolveUploadMimeType(file.originalname, file.mimetype, LOGO_ALLOWED_MIME_TYPES);
+        if (LOGO_ALLOWED_MIME_TYPES.has(resolvedMimeType)) {
+            file.mimetype = resolvedMimeType;
             cb(null, true);
         } else {
-            cb(new Error('Invalid file type. Only JPEG, PNG, GIF, WebP and SVG are allowed.'));
+            cb(new Error('Invalid file type. Only JPEG, PNG, GIF and WebP are allowed.'));
         }
     }
 });
@@ -189,6 +195,9 @@ router.post('/:id/logo', authenticateToken, requireAdmin, validateParams('id'), 
         // Store logo data directly in database
         const logoData = req.file.buffer;
         const logoMimeType = req.file.mimetype;
+        if (!isValidFileSignature(logoData, logoMimeType)) {
+            return res.status(400).json({ error: 'Invalid logo file contents' });
+        }
         
         const logoUrl = await firmsService.uploadFirmLogo(id, logoData, logoMimeType);
         
@@ -221,9 +230,23 @@ router.get('/:id/logo/image', validateParams('id'), async (req, res) => {
         if (!logoResult) {
             return res.status(404).json({ error: 'Logo not found' });
         }
-        
-        res.set('Content-Type', logoResult.logo_mime_type || 'image/png');
-        res.set('Cache-Control', 'public, max-age=86400'); // Cache for 1 day
+
+        const contentType = logoResult.logo_mime_type || 'image/png';
+        const contentLength = logoResult.logo_data?.length;
+        if (contentType === 'image/svg+xml') {
+            setSafeFileResponseHeaders(res, {
+                contentType,
+                filename: `firm-logo-${id}.svg`,
+                contentLength,
+                cacheControl: 'public, max-age=86400'
+            });
+        } else {
+            applySafeBinaryHeaders(res, {
+                contentType,
+                contentLength,
+                cacheControl: 'public, max-age=86400'
+            });
+        }
         res.send(logoResult.logo_data);
     } catch (error) {
         safeLog('error', 'Error serving firm logo', { error: error.message, firmId: req.params.id });

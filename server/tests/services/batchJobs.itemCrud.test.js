@@ -10,13 +10,24 @@ vi.mock('../../config/database.js', () => ({
     query: vi.fn()
 }));
 
+vi.mock('fs/promises', () => ({
+    default: {
+        readFile: vi.fn(),
+        unlink: vi.fn()
+    },
+    readFile: vi.fn(),
+    unlink: vi.fn()
+}));
+
 vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));
 
 import { query } from '../../config/database.js';
+import fs from 'fs/promises';
 import {
     addJobItems,
+    addJobItemsFromUploadedFiles,
     addJobResumeIds,
     addJobExportItems,
     getJobItems,
@@ -53,6 +64,22 @@ describe('Batch Jobs - Item CRUD', () => {
         it('should throw on DB error', async () => {
             query.mockRejectedValueOnce(new Error('DB error'));
             await expect(addJobItems('j1', [{ fileName: 'cv.pdf' }])).rejects.toThrow();
+        });
+
+        it('should stage uploaded files in bounded batches and cleanup temp files', async () => {
+            query.mockResolvedValue({ rows: [] });
+            fs.readFile.mockResolvedValueOnce(Buffer.from('data1')).mockResolvedValueOnce(Buffer.from('data2'));
+            fs.unlink.mockResolvedValue(undefined);
+
+            const count = await addJobItemsFromUploadedFiles('j1', [
+                { path: '/tmp/a.pdf', originalname: 'a.pdf', mimetype: 'application/pdf' },
+                { path: '/tmp/b.pdf', originalname: 'b.pdf', mimetype: 'application/pdf' }
+            ]);
+
+            expect(count).toBe(2);
+            expect(fs.readFile).toHaveBeenCalledTimes(2);
+            expect(fs.unlink).toHaveBeenCalledTimes(2);
+            expect(query).toHaveBeenCalledTimes(2);
         });
     });
 

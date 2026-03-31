@@ -12,6 +12,7 @@ import { safeLog } from '../utils/logger.backend.js';
 import { getPdfServerAuthHeaders } from '../utils/pdfServerAuth.js';
 import { getResumeForAccessCheck } from '../services/resumes.service.js';
 import { getUserFirmId } from '../utils/firmHelpers.js';
+import { setSafeFileResponseHeaders } from '../utils/fileResponseSecurity.js';
 
 const router = Router();
 
@@ -242,9 +243,12 @@ router.get('/pdf/:token', async (req, res) => {
         const pdfBuffer = await fs.readFile(pdfInfo.path);
         const filename = pdfInfo.name ? `${pdfInfo.name.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf` : 'cv.pdf';
 
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
-        res.setHeader('Content-Length', pdfBuffer.length);
+        setSafeFileResponseHeaders(res, {
+            contentType: 'application/pdf',
+            filename,
+            contentLength: pdfBuffer.length,
+            inline: true
+        });
         res.send(pdfBuffer);
     } catch (error) {
         safeLog('error', 'Failed to serve shared PDF', {
@@ -292,9 +296,11 @@ router.get('/file/:token', async (req, res) => {
         const filename = resume.file_name || resume.name || 'cv';
         const contentType = resume.resume_file_type || 'application/octet-stream';
 
-        res.setHeader('Content-Type', contentType);
-        res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(filename)}"`);
-        res.setHeader('Content-Length', resume.resume_file_size || resume.resume_file_data.length);
+        setSafeFileResponseHeaders(res, {
+            contentType,
+            filename,
+            contentLength: resume.resume_file_size || resume.resume_file_data.length
+        });
         res.send(resume.resume_file_data);
     } catch (error) {
         safeLog('error', 'Failed to serve original file', {

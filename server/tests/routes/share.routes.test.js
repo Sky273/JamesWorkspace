@@ -180,6 +180,8 @@ describe('Share Routes', () => {
 
         expect(res.status).toBe(200);
         expect(res.headers['content-type']).toContain('application/pdf');
+        expect(res.headers['content-disposition']).toContain('inline');
+        expect(res.headers['x-content-type-options']).toBe('nosniff');
     });
 
     it('serves an original file only by file token', async () => {
@@ -196,6 +198,8 @@ describe('Share Routes', () => {
 
         expect(res.status).toBe(200);
         expect(res.headers['content-type']).toContain('application/vnd.openxmlformats');
+        expect(res.headers['content-disposition']).toContain('attachment');
+        expect(res.headers['x-content-type-options']).toBe('nosniff');
     });
 
     it('returns 404 for an expired or unknown public file token', async () => {

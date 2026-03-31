@@ -1,0 +1,22 @@
+{
+  "steps": [
+    {
+      "name": "Proxy health warmup",
+      "request": {
+        "method": "GET",
+        "url": "http://localhost:3001/health"
+      },
+      "repeat": 30,
+      "delayMs": 250
+    },
+    {
+      "name": "PDF health warmup",
+      "request": {
+        "method": "GET",
+        "url": "http://localhost:3002/health"
+      },
+      "repeat": 30,
+      "delayMs": 250
+    }
+  ]
+}

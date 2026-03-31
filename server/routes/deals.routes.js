@@ -191,7 +191,9 @@ router.get('/:id/missions', authenticateToken, validateParams('id'), async (req,
 // POST /api/deals - Create a new deal
 router.post('/', authenticateToken, userRateLimit(), validateBody(createDealSchema), async (req, res) => {
     try {
-        safeLog('info', 'Creating deal - request received', { body: req.body });
+        safeLog('info', 'Creating deal - request received', {
+            bodyKeys: Object.keys(req.body || {})
+        });
         
         const userFirmId = await getUserFirmId(req);
         safeLog('info', 'Creating deal - firm check', { userFirmId });

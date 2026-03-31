@@ -19,6 +19,23 @@ const gdprOauthStates = new Map();
 const GDPR_STATE_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
 const MAX_GDPR_OAUTH_STATES = 100; // Prevent memory exhaustion from abuse
 
+function getTrustedFrontendOrigin() {
+    const frontendUrl = process.env.FRONTEND_URL || process.env.VITE_APP_URL || 'http://localhost:5173';
+    try {
+        return new URL(frontendUrl).origin;
+    } catch {
+        return 'http://localhost:5173';
+    }
+}
+
+function escapeHtmlAttribute(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
 function cleanupExpiredGdprStates() {
     const now = Date.now();
     for (const [state, data] of gdprOauthStates.entries()) {
@@ -102,11 +119,12 @@ router.get('/callback', async (req, res) => {
 
         // Exchange code for GLOBAL token (no firmId needed)
         await gdprMailService.handleOAuthCallback(code);
+        const targetOrigin = escapeHtmlAttribute(getTrustedFrontendOrigin());
 
         // Close popup with success message (no inline scripts for CSP compliance)
         res.send(`
             <html>
-                <body data-callback-type="gdpr-oauth-success">
+                <body data-callback-type="gdpr-oauth-success" data-target-origin="${targetOrigin}">
                     <p>Gmail RGPD connecté avec succès ! Ce compte sera utilisé pour tous les emails de consentement RGPD.</p>
                     <script src="/api/docs/static/oauth-callback.js"></script>
                 </body>
@@ -114,10 +132,12 @@ router.get('/callback', async (req, res) => {
         `);
     } catch (error) {
         safeLog('error', 'Error in GDPR OAuth callback', { error: error.message });
+        const targetOrigin = escapeHtmlAttribute(getTrustedFrontendOrigin());
+        const escapedError = escapeHtmlAttribute(error.message);
         res.send(`
             <html>
-                <body data-callback-type="gdpr-oauth-error" data-callback-error="${error.message}">
-                    <p>Erreur de connexion Gmail: ${error.message}</p>
+                <body data-callback-type="gdpr-oauth-error" data-callback-error="${escapedError}" data-target-origin="${targetOrigin}">
+                    <p>Erreur de connexion Gmail: ${escapedError}</p>
                     <script src="/api/docs/static/oauth-callback.js"></script>
                 </body>
             </html>

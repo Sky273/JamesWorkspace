@@ -1,5 +1,7 @@
 import { safeLog } from '../../../utils/logger.backend.js';
 import { extractFromDOCX, extractFromPDF } from './extractors.js';
+import { inferMimeTypeFromFilename } from '../../../utils/uploadFileTypes.js';
+import { isValidFileSignature } from '../../../utils/fileSignature.js';
 
 function createExtractFromCvHandler() {
     return async (req, res) => {
@@ -9,20 +11,24 @@ function createExtractFromCvHandler() {
             }
 
             const { buffer, originalname, mimetype } = req.file;
+            const resolvedMimeType = inferMimeTypeFromFilename(originalname) || mimetype;
+            if (!isValidFileSignature(buffer, resolvedMimeType)) {
+                return res.status(400).json({ error: 'Invalid file contents.' });
+            }
             let result;
 
             safeLog('info', 'Starting template extraction', {
                 fileName: originalname,
-                mimetype,
+                mimetype: resolvedMimeType,
                 fileSize: buffer.length,
                 userId: req.user?.id
             });
 
-            if (mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+            if (resolvedMimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
                 result = await extractFromDOCX(buffer, originalname);
-            } else if (mimetype === 'application/pdf') {
+            } else if (resolvedMimeType === 'application/pdf') {
                 result = await extractFromPDF(buffer, originalname);
-            } else if (mimetype === 'application/msword') {
+            } else if (resolvedMimeType === 'application/msword') {
                 return res.status(400).json({ error: 'Old .doc format is not supported. Please convert to .docx or PDF.' });
             } else {
                 return res.status(400).json({ error: 'Unsupported file type.' });

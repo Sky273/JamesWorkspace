@@ -17,6 +17,10 @@ vi.mock('../config/database.js', () => ({
     query: vi.fn().mockResolvedValue({ rows: [], rowCount: 0 })
 }));
 
+vi.mock('../services/users.service.js', () => ({
+    findUserById: vi.fn()
+}));
+
 import {
   authenticateToken,
   requireAdmin,
@@ -26,6 +30,7 @@ import {
   requireFirmAccess
 } from '../middleware/auth.middleware.js';
 import { generateAccessToken } from '../services/jwt.service.js';
+import { findUserById } from '../services/users.service.js';
 
 describe('Auth Middleware', () => {
   
@@ -34,6 +39,7 @@ describe('Auth Middleware', () => {
   let nextFn;
 
   beforeEach(() => {
+    findUserById.mockResolvedValue(null);
     mockReq = {
       cookies: {},
       user: null
@@ -47,8 +53,8 @@ describe('Auth Middleware', () => {
   });
 
   describe('authenticateToken', () => {
-    it('should return 401 if no token provided', () => {
-      authenticateToken(mockReq, mockRes, nextFn);
+    it('should return 401 if no token provided', async () => {
+      await authenticateToken(mockReq, mockRes, nextFn);
 
       expect(mockRes.status).toHaveBeenCalledWith(401);
       expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({ 
@@ -58,16 +64,16 @@ describe('Auth Middleware', () => {
       expect(nextFn).not.toHaveBeenCalled();
     });
 
-    it('should return 401 for invalid token', () => {
+    it('should return 401 for invalid token', async () => {
       mockReq.cookies.accessToken = 'invalid-token';
 
-      authenticateToken(mockReq, mockRes, nextFn);
+      await authenticateToken(mockReq, mockRes, nextFn);
 
       expect(mockRes.status).toHaveBeenCalledWith(401);
       expect(nextFn).not.toHaveBeenCalled();
     });
 
-    it('should call next() and set req.user for valid token', () => {
+    it('should call next() and set req.user for valid token', async () => {
       const user = {
         id: 'recABCDEFGHIJKLMN',
         email: 'test@example.com',
@@ -77,13 +83,23 @@ describe('Auth Middleware', () => {
       };
       const token = generateAccessToken(user);
       mockReq.cookies.accessToken = token;
+      findUserById.mockResolvedValueOnce({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        status: user.status,
+        role: user.role,
+        firm_id: 'firm-1',
+        firm_name: 'Firm One'
+      });
 
-      authenticateToken(mockReq, mockRes, nextFn);
+      await authenticateToken(mockReq, mockRes, nextFn);
 
       expect(nextFn).toHaveBeenCalled();
       expect(mockReq.user).toBeDefined();
       expect(mockReq.user.id).toBe(user.id);
       expect(mockReq.user.email).toBe(user.email);
+      expect(mockReq.user.firmId).toBe('firm-1');
     });
   });
 
@@ -139,13 +155,13 @@ describe('Auth Middleware', () => {
   });
 
   describe('authenticateToken - branch coverage', () => {
-    it('should return 403 for token with missing id or email', () => {
+    it('should return 403 for token with missing id or email', async () => {
       // Token with id but no email
       const user = { id: 'user-123', email: '', name: 'Test', status: 'Active', role: 'user' };
       const token = generateAccessToken(user);
       mockReq.cookies.accessToken = token;
 
-      authenticateToken(mockReq, mockRes, nextFn);
+      await authenticateToken(mockReq, mockRes, nextFn);
 
       expect(mockRes.status).toHaveBeenCalledWith(403);
       expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({
@@ -154,7 +170,7 @@ describe('Auth Middleware', () => {
       expect(nextFn).not.toHaveBeenCalled();
     });
 
-    it('should return 403 for inactive user', () => {
+    it('should return 403 for inactive user', async () => {
       const user = {
         id: 'user-123',
         email: 'test@example.com',
@@ -164,8 +180,17 @@ describe('Auth Middleware', () => {
       };
       const token = generateAccessToken(user);
       mockReq.cookies.accessToken = token;
+      findUserById.mockResolvedValueOnce({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        status: 'Inactive',
+        role: user.role,
+        firm_id: 'firm-1',
+        firm_name: 'Firm One'
+      });
 
-      authenticateToken(mockReq, mockRes, nextFn);
+      await authenticateToken(mockReq, mockRes, nextFn);
 
       expect(mockRes.status).toHaveBeenCalledWith(403);
       expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({
@@ -174,7 +199,7 @@ describe('Auth Middleware', () => {
       expect(nextFn).not.toHaveBeenCalled();
     });
 
-    it('should set X-Token-Expires-In header on valid token', () => {
+    it('should set X-Token-Expires-In header on valid token', async () => {
       const user = {
         id: 'user-123',
         email: 'test@example.com',
@@ -184,11 +209,47 @@ describe('Auth Middleware', () => {
       };
       const token = generateAccessToken(user);
       mockReq.cookies.accessToken = token;
+      findUserById.mockResolvedValueOnce({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        status: user.status,
+        role: user.role,
+        firm_id: 'firm-1',
+        firm_name: 'Firm One'
+      });
 
-      authenticateToken(mockReq, mockRes, nextFn);
+      await authenticateToken(mockReq, mockRes, nextFn);
 
       expect(mockRes.setHeader).toHaveBeenCalledWith('X-Token-Expires-In', expect.any(String));
       expect(nextFn).toHaveBeenCalled();
+    });
+
+    it('should use current database role and firm instead of stale token claims', async () => {
+      const token = generateAccessToken({
+        id: 'user-123',
+        email: 'test@example.com',
+        name: 'Test User',
+        status: 'Active',
+        role: 'user',
+        firm_id: 'old-firm'
+      });
+      mockReq.cookies.accessToken = token;
+      findUserById.mockResolvedValueOnce({
+        id: 'user-123',
+        email: 'test@example.com',
+        name: 'Test User',
+        status: 'active',
+        role: 'admin',
+        firm_id: 'new-firm',
+        firm_name: 'Updated Firm'
+      });
+
+      await authenticateToken(mockReq, mockRes, nextFn);
+
+      expect(mockReq.user.role).toBe('admin');
+      expect(mockReq.user.firmId).toBe('new-firm');
+      expect(mockReq.user.firm).toBe('Updated Firm');
     });
   });
 

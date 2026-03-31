@@ -27,7 +27,7 @@ vi.mock('../../services/batchJobs/jobCrud.js', () => ({
 }));
 
 vi.mock('../../services/batchJobs/itemCrud.js', () => ({
-    addJobItems: vi.fn(), addJobResumeIds: vi.fn(), addJobTaskItems: vi.fn(), addJobExportItems: vi.fn(),
+    addJobItems: vi.fn(), addJobItemsFromUploadedFiles: vi.fn(), addJobResumeIds: vi.fn(), addJobTaskItems: vi.fn(), addJobExportItems: vi.fn(),
     getJobItems: vi.fn(), updateJobItemStatus: vi.fn(), getJobItem: vi.fn(),
     resumeItemWithName: vi.fn(), getItemsPendingName: vi.fn(), getPendingItems: vi.fn()
 }));

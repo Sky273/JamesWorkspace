@@ -9,14 +9,15 @@
 (function () {
     var type = document.body.getAttribute('data-callback-type') || 'oauth-callback';
     var error = document.body.getAttribute('data-callback-error') || null;
+    var targetOrigin = document.body.getAttribute('data-target-origin') || '';
 
     var message = { type: type };
     if (error) {
         message.error = error;
     }
 
-    if (window.opener) {
-        window.opener.postMessage(message, '*');
+    if (window.opener && targetOrigin) {
+        window.opener.postMessage(message, targetOrigin);
     }
     window.close();
 })();

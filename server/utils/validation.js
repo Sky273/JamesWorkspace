@@ -565,10 +565,12 @@ export const provideNameSchema = z.object({
   name: z.string().min(1).max(255)
 }).strip();
 
+const MAX_BATCH_EXPORT_RESUMES = 100;
+
 // Batch Export schema
 export const batchExportSchema = z.object({
-  resumeIds: z.array(z.string().uuid()).min(1).max(500).optional(),
-  resume_ids: z.array(z.string().uuid()).min(1).max(500).optional(),
+  resumeIds: z.array(z.string().uuid()).min(1).max(MAX_BATCH_EXPORT_RESUMES).optional(),
+  resume_ids: z.array(z.string().uuid()).min(1).max(MAX_BATCH_EXPORT_RESUMES).optional(),
   templateId: z.string().uuid().optional(),
   template_id: z.string().uuid().optional(),
   format: z.enum(['pdf', 'docx']).optional(),
@@ -597,9 +599,15 @@ export const createCalendarEventSchema = z.object({
   })).optional()
 }).strip();
 
+const BACKUP_FILENAME_PATTERN = /^backup-(daily|weekly|monthly|manual)-[A-Za-z0-9_-]+-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.sql\.gz$/;
+
 // Backup Restore schema
 export const restoreBackupSchema = z.object({
-  filename: z.string().min(1).max(500)
+  filename: z.string().min(1).max(255).regex(
+    BACKUP_FILENAME_PATTERN,
+    'Invalid backup filename format'
+  ),
+  confirmText: z.literal('RESTORE')
 }).strip();
 
 // Share PDF schema
@@ -1168,12 +1176,42 @@ export function validateBody(schema) {
           message: err.message || 'Validation error',
           code: err.code
         }));
+
+        const redactSensitiveValues = (value, seen = new WeakSet()) => {
+          if (value === null || value === undefined) {
+            return value;
+          }
+
+          if (typeof value !== 'object') {
+            return value;
+          }
+
+          if (seen.has(value)) {
+            return '[Circular]';
+          }
+          seen.add(value);
+
+          if (Array.isArray(value)) {
+            return value.map((entry) => redactSensitiveValues(entry, seen));
+          }
+
+          const redacted = {};
+          const sensitiveKeyPattern = /(pass(word)?|token|secret|auth|cookie|session|code|key)$/i;
+
+          for (const [key, nestedValue] of Object.entries(value)) {
+            redacted[key] = sensitiveKeyPattern.test(key)
+              ? '[REDACTED]'
+              : redactSensitiveValues(nestedValue, seen);
+          }
+
+          return redacted;
+        };
         
         safeLog('error', 'Request validation failed', {
           path: req.path,
           errors: JSON.stringify(errors),
           receivedFields: Object.keys(req.body || {}),
-          bodyPreview: JSON.stringify(req.body).substring(0, 500)
+          bodyPreview: JSON.stringify(redactSensitiveValues(req.body)).substring(0, 500)
         });
         
         res.status(400).json({

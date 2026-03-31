@@ -61,6 +61,8 @@ temp_*.html
 temp-*.html
 temp_*.txt
 temp-*.txt
+tmp_cv*.png
+tmp_cv*_variants/
 
 # SSL Certificates (sensitive)
 certificates/

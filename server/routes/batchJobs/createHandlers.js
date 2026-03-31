@@ -1,8 +1,9 @@
+import fs from 'fs/promises';
 import * as missionsService from '../../services/missions.service.js';
 import {
     JOB_STATUS,
     createJob,
-    addJobItems,
+    addJobItemsFromUploadedFiles,
     addJobResumeIds,
     addJobTaskItems,
     addJobExportItems,
@@ -13,6 +14,7 @@ import {
     updateJobStatus
 } from '../../services/batchJobs.service.js';
 import { safeLog } from '../../utils/logger.backend.js';
+import { getRequiredSignatureBytes, isValidFileSignature } from '../../utils/fileSignature.js';
 import {
     ensureFirmId,
     ensureOwnerAccess,
@@ -22,6 +24,33 @@ import {
     parseBoolean,
     resolveFirmId
 } from './helpers.js';
+import { resolveUploadMimeType } from '../../utils/uploadFileTypes.js';
+
+const BATCH_IMPORT_ALLOWED_MIME_TYPES = new Set([
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+]);
+const MAX_BATCH_IMPORT_TOTAL_BYTES = 250 * 1024 * 1024;
+
+async function cleanupUploadedFiles(files) {
+    await Promise.all((Array.isArray(files) ? files : []).map(async (file) => {
+        if (file?.path) {
+            await fs.unlink(file.path).catch(() => {});
+        }
+    }));
+}
+
+async function readFileHeader(filePath, bytesToRead) {
+    const handle = await fs.open(filePath, 'r');
+    try {
+        const buffer = Buffer.alloc(bytesToRead);
+        const { bytesRead } = await handle.read(buffer, 0, bytesToRead, 0);
+        return buffer.subarray(0, bytesRead);
+    } finally {
+        await handle.close();
+    }
+}
 
 export async function createImportJob(req, res) {
     try {
@@ -50,20 +79,37 @@ export async function createImportJob(req, res) {
             candidateEmail: normalizedPayload.candidateEmail || undefined
         };
 
+        const relativePaths = parseArrayInput(normalizedPayload.relativePaths, []);
+        const totalUploadBytes = (req.files || []).reduce((sum, file) => sum + (file?.size || 0), 0);
+        if (totalUploadBytes > MAX_BATCH_IMPORT_TOTAL_BYTES) {
+            await cleanupUploadedFiles(req.files);
+            return res.status(413).json({
+                error: `Batch import payload too large. Maximum total upload size is ${Math.round(MAX_BATCH_IMPORT_TOTAL_BYTES / (1024 * 1024))}MB.`
+            });
+        }
+
+        const uploadedFiles = [];
+        for (const [index, file] of (req.files || []).entries()) {
+            const resolvedMimeType = resolveUploadMimeType(file.originalname, file.mimetype, BATCH_IMPORT_ALLOWED_MIME_TYPES);
+            const signatureBytes = getRequiredSignatureBytes(resolvedMimeType);
+            const fileSignatureBuffer = file.buffer || await readFileHeader(file.path, signatureBytes || 12);
+            if (!isValidFileSignature(fileSignatureBuffer, resolvedMimeType)) {
+                await cleanupUploadedFiles(req.files);
+                return res.status(400).json({ error: `Invalid file contents for ${file.originalname}` });
+            }
+            uploadedFiles.push({
+                ...file,
+                fileMimeType: resolvedMimeType,
+                relativePath: relativePaths[index] || null
+            });
+        }
+
         const job = await createJob({
             firmId,
             userId: userContext.userId,
             jobType: 'import',
             options
         });
-
-        const relativePaths = parseArrayInput(normalizedPayload.relativePaths, []);
-        const items = (req.files || []).map((file, index) => ({
-            fileName: file.originalname,
-            fileData: file.buffer,
-            fileMimeType: file.mimetype,
-            relativePath: relativePaths[index] || null
-        }));
 
         const responsePayload = {
             id: job.id,
@@ -81,37 +127,46 @@ export async function createImportJob(req, res) {
 
         safeLog('info', 'Batch job created via API', {
             jobId: job.id,
-            fileCount: items.length,
+            fileCount: uploadedFiles.length,
             totalItems: responsePayload.total_items,
-            options
+            options: {
+                improve: options.improve,
+                export: options.export,
+                exportFormats: options.exportFormats,
+                templateId: options.templateId,
+                deleteAfterExport: options.deleteAfterExport,
+                profileType: options.profileType,
+                hasCandidateName: Boolean(options.candidateName),
+                hasCandidateEmail: Boolean(options.candidateEmail)
+            }
         });
 
         res.status(201).json(responsePayload);
 
         void (async () => {
             try {
-                if (items.length === 0) {
+                if (uploadedFiles.length === 0) {
                     safeLog('warn', 'No files received for batch job', { jobId: job.id });
                     return;
                 }
 
                 safeLog('info', 'Adding items to job', {
                     jobId: job.id,
-                    itemCount: items.length,
-                    fileNames: items.map(i => i.fileName),
-                    fileSizes: items.map(i => i.fileData?.length || 0),
+                    itemCount: uploadedFiles.length,
                     hasRelativePaths: relativePaths.length > 0,
-                    relativePaths: relativePaths.slice(0, 5)
+                    totalFileBytes: uploadedFiles.reduce((sum, item) => sum + (item.size || 0), 0)
                 });
 
-                const addedCount = await addJobItems(job.id, items);
+                const addedCount = await addJobItemsFromUploadedFiles(job.id, uploadedFiles);
                 safeLog('info', 'Items added to job', { jobId: job.id, addedCount });
             } catch (stagingError) {
+                await cleanupUploadedFiles(uploadedFiles);
                 safeLog('error', 'Failed to stage items for batch job after job creation', { jobId: job.id, error: stagingError.message });
                 await updateJobStatus(job.id, JOB_STATUS.FAILED, { error_message: stagingError.message });
             }
         })();
     } catch (error) {
+        await cleanupUploadedFiles(req.files);
         safeLog('error', 'Failed to create batch job', { error: error.message });
         res.status(500).json({ error: error.message || 'Erreur lors de la création du job' });
     }

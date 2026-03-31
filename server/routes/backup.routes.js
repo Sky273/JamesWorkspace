@@ -8,6 +8,7 @@ import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.j
 import { safeLog } from '../utils/logger.backend.js';
 import { validateBody, updateBackupSettingsSchema, testBackupConnectionSchema, restoreBackupSchema } from '../utils/validation.js';
 import { securityLog, getRequestMetadata, LOG_LEVELS, SECURITY_EVENTS } from '../services/security.service.js';
+import { assertSafeOutboundHost } from '../utils/networkHostSecurity.js';
 import {
     getBackupSettings,
     saveBackupSettings,
@@ -85,6 +86,15 @@ router.put('/settings', validateBody(updateBackupSettingsSchema), async (req, re
         
         // Get existing settings to preserve password if not provided
         const existingSettings = await getBackupSettings();
+        const effectiveHost = host || '';
+
+        if (backup_target === 'remote' && effectiveHost) {
+            try {
+                await assertSafeOutboundHost(effectiveHost, { allowPrivateHostsEnvVar: 'BACKUP_ALLOW_PRIVATE_HOSTS' });
+            } catch (validationError) {
+                return res.status(400).json({ error: validationError.message });
+            }
+        }
         
         const settings = await saveBackupSettings({
             backup_target: backup_target || 'local',
@@ -165,6 +175,15 @@ router.post('/test-connection', validateBody(testBackupConnectionSchema), async 
                 message: 'Host and username are required' 
             });
         }
+
+        try {
+            await assertSafeOutboundHost(host, { allowPrivateHostsEnvVar: 'BACKUP_ALLOW_PRIVATE_HOSTS' });
+        } catch (validationError) {
+            return res.status(400).json({
+                success: false,
+                message: validationError.message
+            });
+        }
         
         const connectionParams = {
             protocol: protocol || 'ftp',
@@ -197,6 +216,12 @@ router.post('/test-connection', validateBody(testBackupConnectionSchema), async 
 router.post('/run', async (req, res) => {
     try {
         safeLog('info', 'Manual backup triggered', { userId: req.user.id });
+        securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.ADMIN_ACTION, {
+            ...getRequestMetadata(req),
+            userId: req.user?.id,
+            action: 'BACKUP_RUN',
+            message: 'Manual backup triggered by admin'
+        });
         
         const result = await createBackup('manual');
         
