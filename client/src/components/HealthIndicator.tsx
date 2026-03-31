@@ -197,7 +197,9 @@ function hasAtLeastOneConfiguredLlm(health: HealthStatus, circuitBreakers: Circu
 }
 
 function getOverallHealthStatus(health: HealthStatus, cacheBackend: CacheBackendDiagnostics | null, circuitBreakers: CircuitBreakerMap): StatusLevel {
-  let overall = normalizeStatusLevel(health.status);
+  let overall = health.checks?.server?.status
+    ? normalizeStatusLevel(health.checks.server.status)
+    : normalizeStatusLevel(health.status);
 
   overall = getWorstStatus(overall, normalizeStatusLevel(health.checks?.database?.status));
   overall = getWorstStatus(overall, normalizeStatusLevel(getMemoryStatus(health.checks?.memory)));
