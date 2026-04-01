@@ -17,6 +17,9 @@ const SettingsPage = (): JSX.Element => {
     settings,
     loading,
     saving,
+    ollamaDiscoveryLoading,
+    ollamaModelCatalog,
+    ollamaModelCapabilities,
     activeTab,
     setActiveTab,
     formData,
@@ -57,8 +60,13 @@ const SettingsPage = (): JSX.Element => {
             onInputChange={handleInputChange}
             t={t}
             llmAvailability={settings?.llmAvailability}
-            llmModelCatalog={settings?.llmModelCatalog}
+            llmModelCatalog={{
+              ...(settings?.llmModelCatalog || {}),
+              ollama: ollamaModelCatalog
+            }}
             llmParameterDefinitions={settings?.llmParameterDefinitions}
+            ollamaDiscoveryLoading={ollamaDiscoveryLoading}
+            ollamaModelCapabilities={ollamaModelCapabilities}
           />
         )}
 
@@ -68,6 +76,7 @@ const SettingsPage = (): JSX.Element => {
             onInputChange={handleInputChange}
             t={t}
             promptGovernance={settings?.promptGovernance}
+            promptVersionState={settings?.promptVersionState}
           />
         )}
 

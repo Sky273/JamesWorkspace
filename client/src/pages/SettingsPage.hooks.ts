@@ -16,21 +16,45 @@ import logger from '../utils/logger.frontend';
 import type { SettingsTabItem } from '../components/SettingsPage/SettingsTabsNav';
 
 type LLMProvider = 'openai' | 'anthropic' | 'deepseek' | 'glm' | 'minimax' | 'ollama';
-type LLMModelParameters = Record<string, Record<string, Record<string, string | number>>>;
+type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+type LLMModelParameters = Record<string, Record<string, Record<string, JsonValue>>>;
 type LLMModelCatalog = Record<string, Array<{ value: string; label: string }>>;
-type LLMParameterDefinitions = Record<string, Record<string, Record<string, {
+type ParameterDefinition = {
   key: string;
-  type: 'integer' | 'number' | 'string' | 'enum';
+  type: 'number' | 'integer' | 'string' | 'boolean' | 'enum' | 'object' | 'array' | 'union';
   label: string;
   min?: number;
   max?: number;
   maxInclusive?: number;
   maxExclusive?: number;
   step?: number;
-  defaultValue?: string | number;
-  helpText?: string;
+  defaultValue?: JsonValue;
   options?: Array<{ value: string; label: string }>;
-}>>>;
+  itemType?: string;
+};
+type OllamaModelCapability = {
+  name: string;
+  size: number | null;
+  modifiedAt: string | null;
+  family: string | null;
+  format: string | null;
+  parameterSize: string | null;
+  quantizationLevel: string | null;
+  contextLength: number | null;
+  architecture: string | null;
+};
+
+function stringifyLlmModelParameters(value?: LLMModelParameters): string {
+  return JSON.stringify(value || {}, null, 2);
+}
+
+function parseLlmModelParametersJson(value: string): LLMModelParameters {
+  const parsed = JSON.parse(value || '{}') as unknown;
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('invalid_llm_model_parameters_json');
+  }
+  return parsed as LLMModelParameters;
+}
 
 interface Settings {
   id?: string;
@@ -43,7 +67,9 @@ interface Settings {
   ollamaNumCtx?: number;
   llmModelParameters?: LLMModelParameters;
   llmModelCatalog?: LLMModelCatalog;
-  llmParameterDefinitions?: LLMParameterDefinitions;
+  llmParameterDefinitions?: Record<string, Record<string, Record<string, ParameterDefinition>>>;
+  ollamaDiscoveredModels?: Array<{ value: string; label: string }>;
+  ollamaModelCapabilities?: Record<string, OllamaModelCapability>;
   promptGovernance?: Record<string, {
     settingKey: string;
     promptKey: string;
@@ -55,6 +81,27 @@ interface Settings {
     contractVersion: string | null;
     sourceModule: string | null;
     defaultText: string;
+  }>;
+  promptVersionState?: Record<string, {
+    currentRevision: number;
+    activeSource: 'default' | 'custom';
+    activeTextHash: string;
+    isModified: boolean;
+    lastChangedAt: string | null;
+    history: Array<{
+      revision: number;
+      source: 'default' | 'custom';
+      reason: string;
+      text: string;
+      textHash: string;
+      changedAt: string | null;
+      changedByUserId: string | null;
+      changedByEmail: string | null;
+      promptId: string | null;
+      promptVersion: string | null;
+      contractId: string | null;
+      contractVersion: string | null;
+    }>;
   }>;
   cvMode?: 'nominative' | 'anonymous';
   chatbotEnabled?: 'on' | 'off';
@@ -90,7 +137,7 @@ export interface SettingsFormData {
   ollamaVisionModel: string;
   ollamaKeepAlive: string;
   ollamaNumCtx: number;
-  llmModelParameters: LLMModelParameters;
+  llmModelParametersJson: string;
   cvMode: 'nominative' | 'anonymous';
   chatbotEnabled: 'on' | 'off';
   webglEnabled: 'on' | 'off';
@@ -114,7 +161,7 @@ export interface SettingsFormData {
   'DPO Name': string;
   'DPO Email': string;
   'DPO Phone': string;
-  [key: string]: string | number | boolean | LLMModelParameters;
+  [key: string]: string | number | boolean;
 }
 
 export const defaultFormData: SettingsFormData = {
@@ -124,7 +171,7 @@ export const defaultFormData: SettingsFormData = {
   ollamaVisionModel: '',
   ollamaKeepAlive: '5m',
   ollamaNumCtx: 8192,
-  llmModelParameters: {},
+  llmModelParametersJson: '{}',
   cvMode: 'nominative',
   chatbotEnabled: 'on',
   webglEnabled: 'on',
@@ -155,6 +202,7 @@ export const getDefaultModelForProvider = (provider?: LLMProvider): string => {
   if (provider === 'deepseek') return 'deepseek-chat';
   if (provider === 'glm') return 'glm-5.1';
   if (provider === 'minimax') return 'MiniMax-M2.7';
+  if (provider === 'ollama') return '';
   return 'gpt-4o';
 };
 
@@ -165,7 +213,7 @@ export const toFormData = (settings?: Settings | null): SettingsFormData => ({
   ollamaVisionModel: settings?.ollamaVisionModel || '',
   ollamaKeepAlive: settings?.ollamaKeepAlive || '5m',
   ollamaNumCtx: settings?.ollamaNumCtx || 8192,
-  llmModelParameters: settings?.llmModelParameters || {},
+  llmModelParametersJson: stringifyLlmModelParameters(settings?.llmModelParameters),
   cvMode: settings?.cvMode || 'nominative',
   chatbotEnabled: settings?.chatbotEnabled || 'on',
   webglEnabled: settings?.webglEnabled || 'on',
@@ -195,8 +243,10 @@ export const createSavePayload = (
   formData: SettingsFormData
 ): Record<string, string | number | LLMModelParameters> => {
   const chatbotValue = formData.chatbotEnabled;
+  const llmModelParameters = parseLlmModelParametersJson(formData.llmModelParametersJson);
   const dataToSave: Record<string, string | number | LLMModelParameters> = {
     ...formData,
+    llmModelParameters,
     chatbotEnabled: chatbotValue === 'on' || (chatbotValue as unknown) === true ? 'on' : 'off',
     'Executive Summary Weight': Number(formData['Executive Summary Weight']),
     'Skills Weight': Number(formData['Skills Weight']),
@@ -212,10 +262,7 @@ export const createSavePayload = (
     'Profile Matching Local Title Token Weight': Number(formData['Profile Matching Local Title Token Weight']),
     'Profile Matching Local Coverage Multiplier': Number(formData['Profile Matching Local Coverage Multiplier'])
   };
-
-  if (formData.llmProvider === 'ollama') {
-    dataToSave.llmModel = '';
-  }
+  delete dataToSave.llmModelParametersJson;
 
   return dataToSave;
 };
@@ -235,8 +282,57 @@ export function useSettingsPage() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [ollamaDiscoveryLoading, setOllamaDiscoveryLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('llm');
   const [formData, setFormData] = useState<SettingsFormData>(defaultFormData);
+  const [ollamaModelCatalog, setOllamaModelCatalog] = useState<Array<{ value: string; label: string }>>([]);
+  const [ollamaModelCapabilities, setOllamaModelCapabilities] = useState<Record<string, OllamaModelCapability>>({});
+
+  const fetchOllamaModels = useCallback(async (baseUrl: string, selectedModel?: string): Promise<void> => {
+    if (!baseUrl.trim()) {
+      setOllamaModelCatalog([]);
+      setOllamaModelCapabilities({});
+      return;
+    }
+
+    try {
+      setOllamaDiscoveryLoading(true);
+      const params = new URLSearchParams({ baseUrl });
+      if (selectedModel) {
+        params.set('model', selectedModel);
+      }
+      const response = await authGet(`/api/settings/ollama/models?${params.toString()}`);
+      if (!response.ok) {
+        throw new Error('Failed to discover Ollama models');
+      }
+
+      const data = await response.json() as {
+        models: Array<{ value: string; label: string }>;
+        capabilitiesByModel: Record<string, OllamaModelCapability>;
+        selectedModelExists: boolean;
+      };
+
+      setOllamaModelCatalog(data.models || []);
+      setOllamaModelCapabilities(data.capabilitiesByModel || {});
+
+      if (formData.llmProvider === 'ollama') {
+        const nextModel = selectedModel || formData.llmModel;
+        const stillExists = data.models.some((entry) => entry.value === nextModel);
+        if (!stillExists && data.models[0]) {
+          setFormData((prev) => ({
+            ...prev,
+            llmModel: data.models[0].value
+          }));
+        }
+      }
+    } catch (error) {
+      logger.error('Error discovering Ollama models:', error);
+      setOllamaModelCatalog([]);
+      setOllamaModelCapabilities({});
+    } finally {
+      setOllamaDiscoveryLoading(false);
+    }
+  }, [authGet, formData.llmModel, formData.llmProvider]);
 
   const fetchSettings = useCallback(async (): Promise<void> => {
     try {
@@ -246,6 +342,8 @@ export function useSettingsPage() {
       const data: Settings = await response.json();
       setSettings(data);
       setFormData(toFormData(data));
+      setOllamaModelCatalog(data.ollamaDiscoveredModels || []);
+      setOllamaModelCapabilities(data.ollamaModelCapabilities || {});
 
       logger.log('[Settings] Prompts loaded:', {
         analysisPromptLength: data.analysisPrompt?.length || 0,
@@ -266,6 +364,25 @@ export function useSettingsPage() {
     void fetchSettings();
   }, [fetchSettings]);
 
+  useEffect(() => {
+    if (formData.llmProvider !== 'ollama') {
+      return;
+    }
+
+    const baseUrl = formData.ollamaBaseUrl.trim();
+    if (!baseUrl) {
+      setOllamaModelCatalog([]);
+      setOllamaModelCapabilities({});
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      void fetchOllamaModels(baseUrl, formData.llmModel);
+    }, 400);
+
+    return () => window.clearTimeout(timer);
+  }, [fetchOllamaModels, formData.llmModel, formData.llmProvider, formData.ollamaBaseUrl]);
+
   const handleSave = useCallback(async (): Promise<void> => {
     try {
       setSaving(true);
@@ -277,7 +394,21 @@ export function useSettingsPage() {
         return;
       }
 
-      const dataToSave = createSavePayload(formData);
+      if (formData.llmProvider === 'ollama' && !formData.llmModel.trim()) {
+        toast.error('Selectionnez un modele Ollama distant');
+        setSaving(false);
+        return;
+      }
+
+      let dataToSave: Record<string, string | number | LLMModelParameters>;
+      try {
+        dataToSave = createSavePayload(formData);
+      } catch (error) {
+        logger.error('Invalid LLM parameters JSON:', error);
+        toast.error('JSON invalide dans les parametres LLM');
+        setSaving(false);
+        return;
+      }
       logger.log('[SettingsPage] Saving settings with data:', JSON.stringify(dataToSave, null, 2));
 
       const response = settings?.id
@@ -301,7 +432,7 @@ export function useSettingsPage() {
 
   const handleInputChange = useCallback((
     field: string,
-    value: string | number | boolean | LLMModelParameters
+    value: string | number | boolean
   ): void => {
     setFormData((prev) => ({
       ...prev,
@@ -342,6 +473,9 @@ export function useSettingsPage() {
     settings,
     loading,
     saving,
+    ollamaDiscoveryLoading,
+    ollamaModelCatalog,
+    ollamaModelCapabilities,
     activeTab,
     setActiveTab,
     formData,
@@ -350,5 +484,6 @@ export function useSettingsPage() {
     handleSave,
     handleInputChange,
     resetToDefaults,
+    fetchOllamaModels
   };
 }

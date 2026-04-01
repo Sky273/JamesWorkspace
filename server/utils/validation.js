@@ -57,6 +57,13 @@ export const updateCommentSchema = z.object({
   content: z.string().min(1).max(5000)
 }).strip();
 
+const jsonPrimitiveSchema = z.union([z.string(), z.number().finite(), z.boolean(), z.null()]);
+const jsonValueSchema = z.lazy(() => z.union([
+  jsonPrimitiveSchema,
+  z.array(jsonValueSchema),
+  z.record(z.string(), jsonValueSchema)
+]));
+
 // Tag rename schema
 export const renameTagSchema = z.object({
   category: z.enum(['Skills', 'Industries', 'Tools', 'Soft Skills']),
@@ -519,7 +526,7 @@ export const updateSettingsSchema = z.object({
       z.string(),
       z.record(
         z.string(),
-        z.union([z.string(), z.coerce.number(), z.boolean()])
+        jsonValueSchema
       )
     )
   ).optional(),

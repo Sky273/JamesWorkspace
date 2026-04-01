@@ -72,27 +72,38 @@ export function isGpt5ResponsesModel(model, allowResponsesApi = true) {
 
 export function buildOpenAIProxyRequest({ model, body = {}, allowResponsesApi = true }) {
     if (isGpt5ResponsesModel(model, allowResponsesApi)) {
+        const {
+            messages,
+            input,
+            response_format: responseFormat,
+            reasoning_effort: reasoningEffort,
+            max_tokens: maxTokens,
+            max_completion_tokens: maxCompletionTokens,
+            max_output_tokens: maxOutputTokens,
+            verbosity,
+            ...passthroughBody
+        } = body;
         const requestBody = {
             model,
-            input: body.messages || body.input
+            input: messages || input,
+            ...passthroughBody
         };
         const isProModel = Boolean(model.match(/gpt-5\.\d+-pro/i));
-        requestBody.reasoning = { effort: body.reasoning_effort || (isProModel ? 'medium' : 'none') };
+        requestBody.reasoning = { effort: reasoningEffort || (isProModel ? 'medium' : 'none') };
 
-        if (body.response_format) {
-            requestBody.text = { format: body.response_format };
+        if (responseFormat || verbosity) {
+            requestBody.text = {
+                ...(responseFormat ? { format: responseFormat } : {}),
+                ...(verbosity ? { verbosity } : {})
+            };
         }
 
-        if (body.max_tokens) {
-            requestBody.max_output_tokens = body.max_tokens;
-        } else if (body.max_completion_tokens) {
-            requestBody.max_output_tokens = body.max_completion_tokens;
-        } else if (body.max_output_tokens) {
-            requestBody.max_output_tokens = body.max_output_tokens;
-        }
-
-        if (!isProModel && body.temperature !== undefined) {
-            requestBody.temperature = body.temperature;
+        if (maxTokens) {
+            requestBody.max_output_tokens = maxTokens;
+        } else if (maxCompletionTokens) {
+            requestBody.max_output_tokens = maxCompletionTokens;
+        } else if (maxOutputTokens) {
+            requestBody.max_output_tokens = maxOutputTokens;
         }
 
         return {

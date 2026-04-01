@@ -62,6 +62,7 @@ describe('mapSettingsToFrontend', () => {
         expect(result['Education Weight']).toBe(10);
         expect(result['ATS Weight']).toBe(10);
         expect(result['Hobbies Languages Weight']).toBe(15);
+        expect(result.promptVersionState).toEqual({});
         expect(result['DPO Name']).toBe('DPO Person');
         expect(result['DPO Email']).toBe('dpo@example.com');
         expect(result['DPO Phone']).toBe('+33123456789');
@@ -109,6 +110,11 @@ describe('mapSettingsFromFrontend', () => {
             llmModel: 'gpt-4o',
             cvMode: 'anonymized',
             chatbotEnabled: 'off',
+            promptVersionState: {
+                'Analysis Prompt': {
+                    currentRevision: 2
+                }
+            },
             'Analysis Prompt': 'prompt1',
             'Improvement Prompt': 'prompt2',
             'Match Analysis Prompt': 'prompt3',
@@ -129,6 +135,11 @@ describe('mapSettingsFromFrontend', () => {
         expect(result.llm_model).toBe('gpt-4o');
         expect(result.cv_mode).toBe('anonymized');
         expect(result.chatbot_enabled).toBe('off');
+        expect(result.prompt_versions).toEqual({
+            'Analysis Prompt': {
+                currentRevision: 2
+            }
+        });
         expect(result.analysis_prompt).toBe('prompt1');
         expect(result.improvement_prompt).toBe('prompt2');
         expect(result.match_analysis_prompt).toBe('prompt3');

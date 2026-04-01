@@ -53,8 +53,25 @@ vi.mock('../../services/llmAvailability.service.js', () => ({
     syncPersistedAvailabilityState: vi.fn()
 }));
 
+vi.mock('../../services/llmAdminParameters.service.js', () => ({
+    buildLlmAdminMetadataWithOptions: vi.fn(() => ({
+        llmModelCatalog: {},
+        llmParameterDefinitions: {}
+    })),
+    sanitizeLlmModelParameters: vi.fn((value) => value || {})
+}));
+
+vi.mock('../../services/ollamaAdmin.service.js', () => ({
+    discoverOllamaModels: vi.fn(async () => ({
+        models: [{ name: 'llama3.2:latest' }],
+        modelCatalog: [{ value: 'llama3.2:latest', label: 'llama3.2:latest' }],
+        capabilitiesByModel: {}
+    }))
+}));
+
 import { selectWithTimeout } from '../../utils/postgresHelpers.js';
 import { resolveAvailableModel } from '../../services/llmAvailability.service.js';
+import { discoverOllamaModels } from '../../services/ollamaAdmin.service.js';
 import {
     getLLMSettings,
     getLLMModel,
@@ -102,11 +119,17 @@ describe('Settings Service', () => {
             expect(result.llmModel).toBe('gpt-4o');
             expect(result.llmProvider).toBe('openai');
             expect(result['Profile Matching Local Skill Weight']).toBe(9);
+            expect(result.promptVersionState['Analysis Prompt']).toEqual(expect.objectContaining({
+                currentRevision: 2,
+                isModified: true,
+                activeSource: 'custom'
+            }));
             expect(selectWithTimeout).toHaveBeenCalledWith('llm_settings', expect.objectContaining({
                 where: 'settings_key = $1',
                 params: ['default'],
                 limit: 1
             }));
+            expect(discoverOllamaModels).not.toHaveBeenCalled();
         });
 
         it('should return empty object if no settings exist', async () => {

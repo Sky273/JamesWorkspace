@@ -551,6 +551,7 @@ CREATE TABLE public.llm_settings (
     ollama_num_ctx integer DEFAULT 8192,
     llm_availability_state jsonb DEFAULT '{}'::jsonb,
     llm_model_parameters jsonb DEFAULT '{}'::jsonb NOT NULL,
+    prompt_versions jsonb DEFAULT '{}'::jsonb NOT NULL,
     analysis_prompt text,
     improvement_prompt text,
     match_analysis_prompt text,

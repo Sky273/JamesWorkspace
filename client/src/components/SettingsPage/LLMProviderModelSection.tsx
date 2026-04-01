@@ -20,6 +20,15 @@ interface LLMProviderModelSectionProps {
   modelOptions: ModelOption[];
   currentModelLabel: string;
   ollamaBaseUrl?: string;
+  ollamaDiscoveryLoading?: boolean;
+  ollamaModelCapabilities?: Record<string, {
+    family: string | null;
+    format: string | null;
+    parameterSize: string | null;
+    quantizationLevel: string | null;
+    contextLength: number | null;
+    architecture: string | null;
+  }>;
   onProviderChange: (event: ChangeEvent<HTMLSelectElement>) => void;
   onModelChange: (event: ChangeEvent<HTMLSelectElement>) => void;
   onOllamaUrlChange: (event: ChangeEvent<HTMLInputElement>) => void;
@@ -36,11 +45,14 @@ export default function LLMProviderModelSection({
   modelOptions,
   currentModelLabel,
   ollamaBaseUrl,
+  ollamaDiscoveryLoading,
+  ollamaModelCapabilities,
   onProviderChange,
   onModelChange,
   onOllamaUrlChange,
   t
 }: LLMProviderModelSectionProps): JSX.Element {
+  const selectedOllamaCapabilities = ollamaModelCapabilities?.[modelValue];
   return (
     <>
       <div>
@@ -115,6 +127,38 @@ export default function LLMProviderModelSection({
               {t('settings.llm.ollamaHelp')}
             </p>
           </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t('settings.llm.model')}
+            </label>
+            <select
+              value={modelValue}
+              onChange={onModelChange}
+              className="w-full px-4 py-2 border rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 border-gray-300 dark:border-gray-600"
+            >
+              <option value="">Selectionner un modele distant</option>
+              {modelOptions.map((model) => (
+                <option key={model.value} value={model.value}>{model.label}</option>
+              ))}
+            </select>
+            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+              {ollamaDiscoveryLoading
+                ? 'Interrogation de l instance Ollama distante...'
+                : modelOptions.length > 0
+                  ? `Modeles detectes: ${modelOptions.length}`
+                  : 'Aucun modele detecte sur cette instance.'}
+            </p>
+          </div>
+
+          {selectedOllamaCapabilities && (
+            <div className="grid gap-2 rounded-md border border-blue-200/80 bg-white/70 p-3 text-sm text-gray-700 dark:border-blue-900/70 dark:bg-gray-900/40 dark:text-gray-200 md:grid-cols-2">
+              <div>Famille: <span className="font-medium">{selectedOllamaCapabilities.family || '-'}</span></div>
+              <div>Architecture: <span className="font-medium">{selectedOllamaCapabilities.architecture || '-'}</span></div>
+              <div>Contexte: <span className="font-medium">{selectedOllamaCapabilities.contextLength || '-'}</span></div>
+              <div>Quantization: <span className="font-medium">{selectedOllamaCapabilities.quantizationLevel || '-'}</span></div>
+            </div>
+          )}
         </div>
       )}
     </>

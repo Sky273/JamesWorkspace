@@ -40,6 +40,7 @@ export function mapSettingsToFrontend(row) {
         'Profile Matching Local Title Exact Weight': row.profile_matching_local_title_exact_weight || 5,
         'Profile Matching Local Title Token Weight': row.profile_matching_local_title_token_weight || 2,
         'Profile Matching Local Coverage Multiplier': row.profile_matching_local_coverage_multiplier || 3,
+        promptVersionState: row.prompt_versions || {},
         'DPO Name': row.dpo_name || '',
         'DPO Email': row.dpo_email || '',
         'DPO Phone': row.dpo_phone || ''
@@ -146,6 +147,7 @@ export function mapSettingsFromFrontend(data) {
         profile_matching_local_title_exact_weight: data['Profile Matching Local Title Exact Weight'],
         profile_matching_local_title_token_weight: data['Profile Matching Local Title Token Weight'],
         profile_matching_local_coverage_multiplier: data['Profile Matching Local Coverage Multiplier'],
+        prompt_versions: data.promptVersionState,
         dpo_name: data['DPO Name'],
         dpo_email: data['DPO Email'],
         dpo_phone: data['DPO Phone']

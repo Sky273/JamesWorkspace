@@ -1,7 +1,35 @@
-import { clampModelMaxOutputTokens, getModelCapabilities } from './llmModelCapabilities.service.js';
+import { clampModelMaxOutputTokens, getModelCapabilities, getSupportedParameterDefinitions } from './llmModelCapabilities.service.js';
 
 function isFiniteNumber(value) {
     return typeof value === 'number' && Number.isFinite(value);
+}
+
+function isPlainObject(value) {
+    return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isJsonCompatible(value) {
+    if (value === null) {
+        return true;
+    }
+
+    if (typeof value === 'string' || typeof value === 'boolean') {
+        return true;
+    }
+
+    if (typeof value === 'number') {
+        return Number.isFinite(value);
+    }
+
+    if (Array.isArray(value)) {
+        return value.every(isJsonCompatible);
+    }
+
+    if (isPlainObject(value)) {
+        return Object.values(value).every(isJsonCompatible);
+    }
+
+    return false;
 }
 
 function isWithinRange(value, range = {}) {
@@ -13,134 +41,303 @@ function isWithinRange(value, range = {}) {
     return true;
 }
 
+function toFiniteNumber(value) {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+        return value;
+    }
+
+    if (typeof value === 'string' && value.trim() !== '') {
+        const parsed = Number(value);
+        if (Number.isFinite(parsed)) {
+            return parsed;
+        }
+    }
+
+    return null;
+}
+
+function normalizeArrayValue(value, definition = {}) {
+    if (typeof value === 'string' && definition.itemType === 'string') {
+        const normalized = value.trim();
+        return normalized ? [normalized] : undefined;
+    }
+
+    if (!Array.isArray(value)) {
+        return undefined;
+    }
+
+    const normalized = value.filter(item => {
+        if (definition.itemType === 'object') {
+            return isPlainObject(item) && isJsonCompatible(item);
+        }
+
+        if (definition.itemType === 'string') {
+            return typeof item === 'string' && item.trim();
+        }
+
+        return isJsonCompatible(item);
+    }).map(item => {
+        if (typeof item === 'string') {
+            return item.trim();
+        }
+        return item;
+    });
+
+    return normalized.length > 0 ? normalized : undefined;
+}
+
+function normalizeValueByDefinition(definition, value) {
+    if (!definition) {
+        return undefined;
+    }
+
+    if (definition.type === 'integer' || definition.type === 'number') {
+        const parsed = toFiniteNumber(value);
+        if (parsed === null || !isWithinRange(parsed, definition)) {
+            return undefined;
+        }
+
+        return definition.type === 'integer' ? Math.floor(parsed) : parsed;
+    }
+
+    if (definition.type === 'string') {
+        const normalized = String(value ?? '').trim();
+        if (!normalized) {
+            return undefined;
+        }
+        if (definition.maxLength && normalized.length > definition.maxLength) {
+            return undefined;
+        }
+        return normalized;
+    }
+
+    if (definition.type === 'boolean') {
+        return typeof value === 'boolean' ? value : undefined;
+    }
+
+    if (definition.type === 'enum') {
+        const normalized = String(value ?? '').trim();
+        return definition.options.some(option => option.value === normalized) ? normalized : undefined;
+    }
+
+    if (definition.type === 'object') {
+        return isPlainObject(value) && isJsonCompatible(value) ? value : undefined;
+    }
+
+    if (definition.type === 'array') {
+        return normalizeArrayValue(value, definition);
+    }
+
+    if (definition.type === 'union') {
+        for (const variant of definition.variants || []) {
+            const normalized = normalizeValueByDefinition({ ...definition, type: variant }, value);
+            if (normalized !== undefined) {
+                return normalized;
+            }
+        }
+    }
+
+    return undefined;
+}
+
 export function getEffectiveTokenParameter(provider, model, fallbackParameter = 'max_tokens') {
     const capabilities = getModelCapabilities(provider, model);
     return capabilities?.tokenParameter || fallbackParameter;
 }
 
+function buildInputParameterBag(options = {}) {
+    const parameters = isPlainObject(options.parameters) ? { ...options.parameters } : {};
+
+    if (options.maxTokens !== undefined) {
+        parameters.max_tokens = options.maxTokens;
+    }
+
+    if (options.temperature !== undefined) {
+        parameters.temperature = options.temperature;
+    }
+
+    if (options.topP !== undefined) {
+        parameters.top_p = options.topP;
+    }
+
+    if (options.responseFormat !== undefined) {
+        parameters.response_format = options.responseFormat;
+    }
+
+    return parameters;
+}
+
+function getRequestedMaxTokensFromParameters(parameters = {}, fallbackMaxTokens = 4096) {
+    const maxTokens = parameters.max_output_tokens
+        ?? parameters.max_completion_tokens
+        ?? parameters.max_tokens;
+
+    return Number.isFinite(maxTokens) ? maxTokens : fallbackMaxTokens;
+}
+
+function applyConditionalParameterRules(provider, model, capabilities, normalizedParameters, droppedParams) {
+    const providerKey = String(provider || '').trim().toLowerCase();
+    const normalizedModel = String(model || '').trim().toLowerCase();
+
+    if (providerKey === 'openai') {
+        const reasoningEffort = normalizedParameters.reasoning_effort || capabilities?.defaultReasoningEffort;
+        const restrictedWhenReasoning = ['temperature', 'top_p', 'logprobs', 'top_logprobs'];
+        const isGpt51Style = capabilities?.conditionalSamplingMode === 'gpt5_1_style';
+        const isGpt52Style = capabilities?.conditionalSamplingMode === 'gpt5_2_style';
+
+        if ((isGpt51Style || isGpt52Style) && reasoningEffort && reasoningEffort !== 'none') {
+            for (const key of restrictedWhenReasoning) {
+                if (Object.prototype.hasOwnProperty.call(normalizedParameters, key)) {
+                    delete normalizedParameters[key];
+                    droppedParams.push(key);
+                }
+            }
+        }
+
+        if (/^gpt-5(?:$|-|mini|nano)/i.test(normalizedModel) && !isGpt51Style && !isGpt52Style) {
+            for (const key of restrictedWhenReasoning) {
+                if (Object.prototype.hasOwnProperty.call(normalizedParameters, key)) {
+                    delete normalizedParameters[key];
+                    droppedParams.push(key);
+                }
+            }
+        }
+    }
+}
+
 export function normalizeGenerationOptions(provider, model, {
+    parameters = {},
     maxTokens,
     temperature,
     topP,
     responseFormat,
-    fallbackMaxTokens = 4096,
-    supportsResponseFormatByDefault = true,
-    supportsTemperatureByDefault = true,
-    supportsTopPByDefault = true
+    fallbackMaxTokens = 4096
 } = {}) {
-    const { requestedMaxTokens, effectiveMaxTokens, providerCap, capabilities } = clampModelMaxOutputTokens(
-        provider,
-        model,
+    const capabilities = getModelCapabilities(provider, model);
+    const definitions = getSupportedParameterDefinitions(provider, model);
+    const inputParameters = buildInputParameterBag({
+        parameters,
         maxTokens,
-        fallbackMaxTokens
-    );
+        temperature,
+        topP,
+        responseFormat
+    });
 
+    const requestedMaxTokens = getRequestedMaxTokensFromParameters(inputParameters, fallbackMaxTokens);
+    const tokenParameter = provider === 'ollama' ? null : (capabilities?.tokenParameter || 'max_tokens');
+    const clamped = clampModelMaxOutputTokens(provider, model, requestedMaxTokens, fallbackMaxTokens);
     const droppedParams = [];
+    const normalizedParameters = {};
 
-    const supportsResponseFormat = capabilities?.supportsResponseFormat ?? supportsResponseFormatByDefault;
-    const normalizedResponseFormat = responseFormat && supportsResponseFormat ? responseFormat : null;
-    if (responseFormat && !supportsResponseFormat) {
-        droppedParams.push('response_format');
+    for (const [key, rawValue] of Object.entries(inputParameters)) {
+        if (rawValue === undefined) {
+            continue;
+        }
+
+        if (key === 'max_tokens' || key === 'max_completion_tokens' || key === 'max_output_tokens') {
+            continue;
+        }
+
+        const definition = definitions[key];
+        if (!definition) {
+            droppedParams.push(key);
+            continue;
+        }
+
+        if ((key === 'temperature' || key === 'top_p')
+            && capabilities?.disallowTemperatureAndTopP) {
+            droppedParams.push(key);
+            continue;
+        }
+
+        if (key === 'response_format' && capabilities?.supportsResponseFormat === false) {
+            droppedParams.push(key);
+            continue;
+        }
+
+        if (key === 'temperature' && capabilities?.temperatureRange && !isWithinRange(toFiniteNumber(rawValue), capabilities.temperatureRange)) {
+            droppedParams.push(key);
+            continue;
+        }
+
+        if (key === 'top_p' && capabilities?.topPRange && !isWithinRange(toFiniteNumber(rawValue), capabilities.topPRange)) {
+            droppedParams.push(key);
+            continue;
+        }
+
+        const normalizedValue = normalizeValueByDefinition(definition, rawValue);
+        if (normalizedValue === undefined) {
+            droppedParams.push(key);
+            continue;
+        }
+
+        normalizedParameters[key] = normalizedValue;
     }
 
-    const supportsTemperature = capabilities?.supportsTemperature ?? (!capabilities?.disallowTemperatureAndTopP && supportsTemperatureByDefault);
-    let normalizedTemperature;
-    if (temperature !== undefined && supportsTemperature) {
-        if (!capabilities?.temperatureRange || isWithinRange(temperature, capabilities.temperatureRange)) {
-            normalizedTemperature = temperature;
-        } else {
-            droppedParams.push('temperature');
-        }
-    } else if (temperature !== undefined) {
-        droppedParams.push('temperature');
-    }
-
-    const supportsTopP = capabilities?.supportsTopP ?? (!capabilities?.disallowTemperatureAndTopP && supportsTopPByDefault);
-    let normalizedTopP;
-    if (topP !== undefined && supportsTopP) {
-        if (!capabilities?.topPRange || isWithinRange(topP, capabilities.topPRange)) {
-            normalizedTopP = topP;
-        } else {
-            droppedParams.push('top_p');
-        }
-    } else if (topP !== undefined) {
-        droppedParams.push('top_p');
+    applyConditionalParameterRules(provider, model, capabilities, normalizedParameters, droppedParams);
+    if (tokenParameter) {
+        normalizedParameters[tokenParameter] = clamped.effectiveMaxTokens;
     }
 
     return {
-        requestedMaxTokens,
-        effectiveMaxTokens,
-        providerCap,
+        requestedMaxTokens: clamped.requestedMaxTokens,
+        effectiveMaxTokens: clamped.effectiveMaxTokens,
+        providerCap: clamped.providerCap,
         capabilities,
         droppedParams,
-        temperature: normalizedTemperature,
-        topP: normalizedTopP,
-        responseFormat: normalizedResponseFormat,
-        tokenParameter: getEffectiveTokenParameter(provider, model)
+        tokenParameter,
+        parameters: normalizedParameters,
+        temperature: normalizedParameters.temperature,
+        topP: normalizedParameters.top_p,
+        responseFormat: normalizedParameters.response_format
     };
 }
 
 export function buildCapabilityAwareOpenAICompatibleParams(provider, model, {
+    parameters = {},
     maxTokens,
     temperature,
     topP,
     responseFormat,
     additionalParams = {},
-    fallbackMaxTokens = 4096,
-    supportsResponseFormatByDefault = true,
-    supportsTemperatureByDefault = true,
-    supportsTopPByDefault = true
+    fallbackMaxTokens = 4096
 } = {}) {
     const normalized = normalizeGenerationOptions(provider, model, {
+        parameters,
         maxTokens,
         temperature,
         topP,
         responseFormat,
-        fallbackMaxTokens,
-        supportsResponseFormatByDefault,
-        supportsTemperatureByDefault,
-        supportsTopPByDefault
+        fallbackMaxTokens
     });
 
-    const params = {
-        model,
-        [normalized.tokenParameter]: normalized.effectiveMaxTokens,
-        ...additionalParams
-    };
-
-    if (normalized.temperature !== undefined) {
-        params.temperature = normalized.temperature;
-    }
-
-    if (normalized.topP !== undefined) {
-        params.top_p = normalized.topP;
-    }
-
-    if (normalized.responseFormat) {
-        params.response_format = normalized.responseFormat;
-    }
-
     return {
-        requestParams: params,
+        requestParams: {
+            model,
+            ...normalized.parameters,
+            ...additionalParams
+        },
         ...normalized
     };
 }
 
 export function buildCapabilityAwareAnthropicOptions(provider, model, {
+    parameters = {},
     maxTokens,
     temperature,
     topP,
-    fallbackMaxTokens = 4096,
-    supportsTemperatureByDefault = true,
-    supportsTopPByDefault = true
+    fallbackMaxTokens = 4096
 } = {}) {
-    return normalizeGenerationOptions(provider, model, {
+    const normalized = normalizeGenerationOptions(provider, model, {
+        parameters,
         maxTokens,
         temperature,
         topP,
-        fallbackMaxTokens,
-        supportsResponseFormatByDefault: false,
-        supportsTemperatureByDefault,
-        supportsTopPByDefault
+        fallbackMaxTokens
     });
+
+    return {
+        requestParams: normalized.parameters,
+        ...normalized
+    };
 }

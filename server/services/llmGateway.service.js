@@ -10,11 +10,8 @@ import { safeLog } from '../utils/logger.backend.js';
 
 function buildRequestOptions(options = {}) {
     return {
-        temperature: options.temperature,
-        max_tokens: options.max_tokens || options.max_completion_tokens || options.max_output_tokens,
-        timeout: options.timeout,
-        operationType: options.operationType,
-        num_ctx: options.num_ctx
+        ...options,
+        max_tokens: options.max_tokens || options.max_completion_tokens || options.max_output_tokens
     };
 }
 
@@ -41,14 +38,12 @@ async function invokeOpenAIChat({ model, messages, options }) {
     const response = await callOpenAI({
         model,
         messages,
+        ...options,
         maxTokens: options.max_tokens || options.max_completion_tokens || options.max_output_tokens || 1000,
         temperature: options.temperature,
         topP: options.top_p,
         responseFormat: options.response_format,
-        timeout: options.timeout || 90000,
-        maxPromptLength: options.maxPromptLength,
-        userMetadata: options.userMetadata,
-        operationType: options.operationType
+        timeout: options.timeout || 90000
     });
 
     return unwrapOpenAICompatibleResponse(response, model);
@@ -58,13 +53,12 @@ async function invokeDeepSeekChat({ model, messages, options }) {
     return callDeepSeekWithCircuitBreaker({
         model,
         messages,
+        ...options,
         maxTokens: options.max_tokens || options.max_completion_tokens || options.max_output_tokens || 1000,
         temperature: options.temperature,
         topP: options.top_p,
         responseFormat: options.response_format,
         timeout: options.timeout || 120000,
-        maxPromptLength: options.maxPromptLength,
-        userMetadata: options.userMetadata,
         operationType: options.operationType || 'DeepSeek chat request'
     }).then((response) => {
         const choices = response?.choices;
@@ -93,13 +87,12 @@ async function invokeGLMChat({ model, messages, options }) {
     return callGLMWithCircuitBreaker({
         model,
         messages,
+        ...options,
         maxTokens: options.max_tokens || options.max_completion_tokens || options.max_output_tokens || 1000,
         temperature: options.temperature,
         topP: options.top_p,
         responseFormat: options.response_format,
         timeout: options.timeout || 120000,
-        maxPromptLength: options.maxPromptLength,
-        userMetadata: options.userMetadata,
         operationType: options.operationType || 'GLM chat request'
     }).then((response) => {
         const choices = response?.choices;
@@ -140,12 +133,12 @@ async function invokeMiniMaxChat({ model, messages, options }) {
     return callMiniMaxOpenAICompatible({
         model,
         messages,
+        ...options,
         maxTokens: options.max_tokens || options.max_completion_tokens || options.max_output_tokens || 1000,
         temperature: options.temperature,
         topP: options.top_p,
         responseFormat: options.response_format,
         timeout: options.timeout || 300000,
-        maxPromptLength: options.maxPromptLength,
         operationType: options.operationType || 'MiniMax OpenAI-compatible request'
     });
 }

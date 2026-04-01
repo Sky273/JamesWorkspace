@@ -20,6 +20,28 @@ interface PromptGovernanceEntry {
   defaultText: string;
 }
 
+interface PromptVersionStateEntry {
+  currentRevision: number;
+  activeSource: 'default' | 'custom';
+  activeTextHash: string;
+  isModified: boolean;
+  lastChangedAt: string | null;
+  history: Array<{
+    revision: number;
+    source: 'default' | 'custom';
+    reason: string;
+    text: string;
+    textHash: string;
+    changedAt: string | null;
+    changedByUserId: string | null;
+    changedByEmail: string | null;
+    promptId: string | null;
+    promptVersion: string | null;
+    contractId: string | null;
+    contractVersion: string | null;
+  }>;
+}
+
 interface PromptTextareaProps {
   label: string;
   value: string;
@@ -27,6 +49,7 @@ interface PromptTextareaProps {
   helpText: string;
   placeholders: string[];
   governance?: PromptGovernanceEntry;
+  versionState?: PromptVersionStateEntry;
   t: (key: string) => string;
 }
 
@@ -34,12 +57,20 @@ interface PromptsTabProps {
   formData: FormData;
   onInputChange: (key: string, value: string) => void;
   promptGovernance?: Record<string, PromptGovernanceEntry>;
+  promptVersionState?: Record<string, PromptVersionStateEntry>;
   t: (key: string) => string;
 }
 
 interface MetadataItemProps {
   label: string;
   value: string;
+}
+
+interface PromptHistoryItemProps {
+  entry: PromptVersionStateEntry['history'][number];
+  isActive: boolean;
+  onRestore: (text: string) => void;
+  t: (key: string) => string;
 }
 
 const fallbackText = (t: (key: string) => string, key: string, fallback: string): string => {
@@ -54,26 +85,66 @@ const MetadataItem = ({ label, value }: MetadataItemProps): JSX.Element => (
   </div>
 );
 
+const PromptHistoryItem = ({
+  entry,
+  isActive,
+  onRestore,
+  t,
+}: PromptHistoryItemProps): JSX.Element => {
+  const sourceLabel = entry.source === 'default'
+    ? fallbackText(t, 'settings.prompts.governance.defaultStatus', 'Par defaut')
+    : fallbackText(t, 'settings.prompts.governance.customStatus', 'Personnalise');
+
+  return (
+    <div className="rounded-md border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-950/40">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 dark:border-slate-600 dark:text-slate-200">
+            {`v${entry.revision}`}
+          </span>
+          <span className="text-xs text-slate-500 dark:text-slate-400">{sourceLabel}</span>
+          <span className="text-xs text-slate-500 dark:text-slate-400">{entry.reason}</span>
+        </div>
+        <button
+          type="button"
+          onClick={() => onRestore(entry.text)}
+          disabled={isActive}
+          className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
+        >
+          {isActive
+            ? fallbackText(t, 'settings.prompts.governance.currentVersion', 'Version active')
+            : fallbackText(t, 'settings.prompts.governance.restoreAction', 'Restaurer dans l editeur')}
+        </button>
+      </div>
+      <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+        {entry.changedAt || '-'}
+      </div>
+    </div>
+  );
+};
+
 const PromptGovernancePanel = ({
   governance,
+  versionState,
   value,
   t,
 }: {
   governance?: PromptGovernanceEntry;
+  versionState?: PromptVersionStateEntry;
   value: string;
   t: (key: string) => string;
 }): JSX.Element | null => {
-  if (!governance) {
+  if (!governance && !versionState) {
     return null;
   }
 
-  const isDefaultPrompt = value.trim() === governance.defaultText.trim();
-  const statusLabel = isDefaultPrompt
-    ? fallbackText(t, 'settings.prompts.governance.defaultStatus', 'Par defaut')
-    : fallbackText(t, 'settings.prompts.governance.customStatus', 'Personnalise');
-  const statusClassName = isDefaultPrompt
-    ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300'
-    : 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300';
+  const isModified = versionState?.isModified ?? (governance ? value.trim() !== governance.defaultText.trim() : false);
+  const statusLabel = isModified
+    ? fallbackText(t, 'settings.prompts.governance.customStatus', 'Personnalise')
+    : fallbackText(t, 'settings.prompts.governance.defaultStatus', 'Par defaut');
+  const statusClassName = isModified
+    ? 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300'
+    : 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300';
 
   return (
     <div className="mb-3 rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/50">
@@ -86,30 +157,46 @@ const PromptGovernancePanel = ({
         </span>
       </div>
 
-      <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+        <MetadataItem
+          label={fallbackText(t, 'settings.prompts.governance.revision', 'Revision')}
+          value={String(versionState?.currentRevision || 1)}
+        />
+        <MetadataItem
+          label={fallbackText(t, 'settings.prompts.governance.historyCount', 'Historique')}
+          value={String(versionState?.history.length || 1)}
+        />
+        <MetadataItem
+          label={fallbackText(t, 'settings.prompts.governance.lastChangedAt', 'Dernier changement')}
+          value={versionState?.lastChangedAt || '-'}
+        />
+        <MetadataItem
+          label={fallbackText(t, 'settings.prompts.governance.activeSource', 'Source active')}
+          value={versionState?.activeSource || '-'}
+        />
         <MetadataItem
           label={fallbackText(t, 'settings.prompts.governance.promptId', 'Prompt ID')}
-          value={governance.promptId || '-'}
+          value={governance?.promptId || '-'}
         />
         <MetadataItem
           label={fallbackText(t, 'settings.prompts.governance.promptVersion', 'Version prompt')}
-          value={governance.promptVersion || '-'}
+          value={governance?.promptVersion || '-'}
         />
         <MetadataItem
           label={fallbackText(t, 'settings.prompts.governance.contractId', 'Contract ID')}
-          value={governance.contractId || '-'}
+          value={governance?.contractId || '-'}
         />
         <MetadataItem
           label={fallbackText(t, 'settings.prompts.governance.contractVersion', 'Version contrat')}
-          value={governance.contractVersion || '-'}
+          value={governance?.contractVersion || '-'}
         />
         <MetadataItem
           label={fallbackText(t, 'settings.prompts.governance.domain', 'Domaine')}
-          value={governance.promptDomain || '-'}
+          value={governance?.promptDomain || '-'}
         />
         <MetadataItem
           label={fallbackText(t, 'settings.prompts.governance.operation', 'Operation')}
-          value={governance.promptOperation || '-'}
+          value={governance?.promptOperation || '-'}
         />
       </div>
     </div>
@@ -123,11 +210,13 @@ const PromptTextarea = ({
   helpText,
   placeholders,
   governance,
+  versionState,
   t,
 }: PromptTextareaProps): JSX.Element => {
   const handleChange = (e: ChangeEvent<HTMLTextAreaElement>): void => {
     onChange(e.target.value);
   };
+  const history = versionState?.history ? [...versionState.history].sort((a, b) => b.revision - a.revision) : [];
 
   return (
     <div>
@@ -135,7 +224,7 @@ const PromptTextarea = ({
         {label}
       </label>
 
-      <PromptGovernancePanel governance={governance} value={value} t={t} />
+      <PromptGovernancePanel governance={governance} versionState={versionState} value={value} t={t} />
 
       <textarea
         value={value}
@@ -153,11 +242,39 @@ const PromptTextarea = ({
           </span>
         ))}
       </p>
+
+      {history.length > 1 && (
+        <details className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/50">
+          <summary className="cursor-pointer text-sm font-medium text-slate-900 dark:text-slate-100">
+            {fallbackText(t, 'settings.prompts.governance.historyTitle', 'Historique des versions')}
+          </summary>
+          <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+            {fallbackText(t, 'settings.prompts.governance.historyHelp', 'Choisissez une ancienne version pour la recharger dans l editeur, puis enregistrez.')}
+          </p>
+          <div className="mt-3 space-y-2">
+            {history.map((entry) => (
+              <PromptHistoryItem
+                key={`${entry.revision}-${entry.textHash}`}
+                entry={entry}
+                isActive={entry.textHash === versionState?.activeTextHash}
+                onRestore={onChange}
+                t={t}
+              />
+            ))}
+          </div>
+        </details>
+      )}
     </div>
   );
 };
 
-const PromptsTab = ({ formData, onInputChange, promptGovernance, t }: PromptsTabProps): JSX.Element => {
+const PromptsTab = ({
+  formData,
+  onInputChange,
+  promptGovernance,
+  promptVersionState,
+  t,
+}: PromptsTabProps): JSX.Element => {
   return (
     <div className="space-y-6">
       <div>
@@ -172,20 +289,22 @@ const PromptsTab = ({ formData, onInputChange, promptGovernance, t }: PromptsTab
       <PromptTextarea
         label={t('settings.prompts.analysis')}
         value={formData['Analysis Prompt']}
-        onChange={(value) => onInputChange('Analysis Prompt', value)}
+        onChange={(nextValue) => onInputChange('Analysis Prompt', nextValue)}
         helpText={t('settings.prompts.analysisHelp')}
         placeholders={['{TEXT}']}
         governance={promptGovernance?.['Analysis Prompt']}
+        versionState={promptVersionState?.['Analysis Prompt']}
         t={t}
       />
 
       <PromptTextarea
         label={t('settings.prompts.improvement')}
         value={formData['Improvement Prompt']}
-        onChange={(value) => onInputChange('Improvement Prompt', value)}
+        onChange={(nextValue) => onInputChange('Improvement Prompt', nextValue)}
         helpText={t('settings.prompts.improvementHelp')}
         placeholders={['{TEXT}', '{ANALYSIS}']}
         governance={promptGovernance?.['Improvement Prompt']}
+        versionState={promptVersionState?.['Improvement Prompt']}
         t={t}
       />
 
@@ -198,20 +317,22 @@ const PromptsTab = ({ formData, onInputChange, promptGovernance, t }: PromptsTab
       <PromptTextarea
         label={t('settings.prompts.matchAnalysis')}
         value={formData['Match Analysis Prompt']}
-        onChange={(value) => onInputChange('Match Analysis Prompt', value)}
+        onChange={(nextValue) => onInputChange('Match Analysis Prompt', nextValue)}
         helpText={t('settings.prompts.matchAnalysisHelp')}
         placeholders={['{RESUME_TEXT}', '{MISSION_TITLE}', '{MISSION_CONTENT}']}
         governance={promptGovernance?.['Match Analysis Prompt']}
+        versionState={promptVersionState?.['Match Analysis Prompt']}
         t={t}
       />
 
       <PromptTextarea
         label={t('settings.prompts.adaptation')}
         value={formData['Adaptation Prompt']}
-        onChange={(value) => onInputChange('Adaptation Prompt', value)}
+        onChange={(nextValue) => onInputChange('Adaptation Prompt', nextValue)}
         helpText={t('settings.prompts.adaptationHelp')}
         placeholders={['{RESUME_TEXT}', '{RESUME_ANALYSIS}', '{MISSION_TITLE}', '{MISSION_CONTENT}', '{MATCH_ANALYSIS}']}
         governance={promptGovernance?.['Adaptation Prompt']}
+        versionState={promptVersionState?.['Adaptation Prompt']}
         t={t}
       />
     </div>

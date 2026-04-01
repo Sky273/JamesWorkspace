@@ -45,17 +45,36 @@ function extractImageData(dataUrl) {
 
 function buildOllamaOptions(_settings = {}, options = {}) {
     const ollamaOptions = {};
+    const supportedOptionKeys = [
+        'temperature',
+        'num_ctx',
+        'repeat_last_n',
+        'repeat_penalty',
+        'seed',
+        'stop',
+        'num_predict',
+        'top_k',
+        'top_p',
+        'min_p'
+    ];
 
-    if (typeof options.temperature === 'number') {
-        ollamaOptions.temperature = options.temperature;
-    }
-
-    const explicitNumCtx = Number(options.num_ctx);
-    if (Number.isFinite(explicitNumCtx) && explicitNumCtx > 0) {
-        ollamaOptions.num_ctx = explicitNumCtx;
+    for (const key of supportedOptionKeys) {
+        if (options[key] !== undefined) {
+            ollamaOptions[key] = options[key];
+        }
     }
 
     return ollamaOptions;
+}
+
+function applyOllamaTopLevelParameters(requestBody, options = {}) {
+    const passthroughTopLevelKeys = ['tools', 'format', 'stream', 'think', 'logprobs', 'top_logprobs'];
+
+    for (const key of passthroughTopLevelKeys) {
+        if (options[key] !== undefined) {
+            requestBody[key] = options[key];
+        }
+    }
 }
 
 function resolveOllamaKeepAlive(settings = {}, options = {}) {
@@ -223,8 +242,24 @@ export async function listOllamaModels(baseUrl = OLLAMA_BASE_URL, options = {}) 
     return (response.data?.models || []).map(model => ({
         name: model.name || model.model,
         size: model.size || null,
-        modifiedAt: model.modified_at || null
+        modifiedAt: model.modified_at || null,
+        digest: model.digest || null,
+        details: model.details || null
     }));
+}
+
+export async function showOllamaModelDetails(model, baseUrl = OLLAMA_BASE_URL, options = {}) {
+    const normalizedBaseUrl = normalizeBaseUrl(baseUrl);
+    const normalizedModel = ensureModelName(model);
+    const response = await postToOllama(
+        normalizedBaseUrl,
+        '/api/show',
+        { model: normalizedModel },
+        resolveOllamaControlPlaneTimeoutMs(options),
+        `Ollama ${normalizedModel} show request`
+    );
+
+    return response.data || {};
 }
 
 export async function getOllamaRuntimeStatus(baseUrl = OLLAMA_BASE_URL, options = {}) {
@@ -332,6 +367,7 @@ export async function callOllama(messages, model, settings = {}, options = {}) {
         stream: false,
         options: buildOllamaOptions(resolvedSettings, options)
     };
+    applyOllamaTopLevelParameters(requestBody, requestOptions);
 
     const keepAlive = resolveOllamaKeepAlive(resolvedSettings, options);
     if (keepAlive !== undefined) {
@@ -410,6 +446,7 @@ export async function callOllamaWithVision(systemPrompt, userContent, model, set
         stream: false,
         options: buildOllamaOptions(resolvedSettings, options)
     };
+    applyOllamaTopLevelParameters(requestBody, requestOptions);
 
     const keepAlive = resolveOllamaKeepAlive(resolvedSettings, options);
     if (keepAlive !== undefined) {

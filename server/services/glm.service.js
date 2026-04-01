@@ -41,7 +41,8 @@ export async function callGLM({
     timeout = 120000,
     maxPromptLength = MAX_PROMPT_LENGTH,
     userMetadata = null,
-    operationType = 'GLM API request'
+    operationType = 'GLM API request',
+    ...providerParameters
 }) {
     if (!GLM_API_KEY) {
         throw new Error('GLM API key not configured on server');
@@ -90,6 +91,7 @@ export async function callGLM({
 
     try {
         const normalized = buildCapabilityAwareOpenAICompatibleParams('glm', model, {
+            parameters: providerParameters,
             maxTokens: effectiveMaxTokens,
             temperature,
             topP,

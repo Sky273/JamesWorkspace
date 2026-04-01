@@ -7,6 +7,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import request from 'supertest';
+import { discoverOllamaModels } from '../../services/ollamaAdmin.service.js';
 
 // Mock constants
 vi.mock('../../config/constants.js', () => ({
@@ -79,6 +80,36 @@ vi.mock('../../services/llmAvailability.service.js', () => ({
     }))
 }));
 
+vi.mock('../../services/llmAdminParameters.service.js', () => ({
+    buildLlmAdminMetadataWithOptions: vi.fn(() => ({
+        llmModelCatalog: {},
+        llmParameterDefinitions: {}
+    })),
+    sanitizeLlmModelParameters: vi.fn((value) => value || {})
+}));
+
+vi.mock('../../services/ollamaAdmin.service.js', () => ({
+    discoverOllamaModels: vi.fn(async () => ({
+        models: [{ name: 'llama3.2:latest' }],
+        modelCatalog: [{ value: 'llama3.2:latest', label: 'llama3.2:latest' }],
+        capabilitiesByModel: {
+            'llama3.2:latest': {
+                name: 'llama3.2:latest',
+                family: 'llama',
+                architecture: 'llama',
+                contextLength: 8192,
+                quantizationLevel: 'Q4_K_M'
+            }
+        }
+    })),
+    validateOllamaModelExists: vi.fn(async (_baseUrl, model) => ({
+        exists: model === 'llama3.2:latest',
+        discovery: {
+            modelCatalog: [{ value: 'llama3.2:latest', label: 'llama3.2:latest' }]
+        }
+    }))
+}));
+
 // Mock prompts
 vi.mock('../../config/prompts.backend.js', () => ({
     normalizeWeights: (data) => data,
@@ -86,6 +117,53 @@ vi.mock('../../config/prompts.backend.js', () => ({
     DEFAULT_IMPROVEMENT_PROMPT: 'default-improvement',
     DEFAULT_MATCH_ANALYSIS_PROMPT: 'default-match',
     DEFAULT_ADAPTATION_PROMPT: 'default-adaptation'
+}));
+
+vi.mock('../../config/llmGovernance.js', () => ({
+    getPromptDefinition: vi.fn((key) => ({
+        DEFAULT_ANALYSIS_PROMPT: {
+            key,
+            id: 'resume.analysis.default',
+            version: '1.8.8',
+            domain: 'resume',
+            operation: 'resume-analysis',
+            sourceModule: './prompts/resume.prompts.js',
+            text: 'default-analysis'
+        },
+        DEFAULT_IMPROVEMENT_PROMPT: {
+            key,
+            id: 'resume.improvement.default',
+            version: '1.8.8',
+            domain: 'resume',
+            operation: 'resume-improvement',
+            sourceModule: './prompts/resume.prompts.js',
+            text: 'default-improvement'
+        },
+        DEFAULT_MATCH_ANALYSIS_PROMPT: {
+            key,
+            id: 'mission.match.default',
+            version: '1.8.8',
+            domain: 'mission',
+            operation: 'resume-mission-match',
+            sourceModule: './prompts/resume.prompts.js',
+            text: 'default-match'
+        },
+        DEFAULT_ADAPTATION_PROMPT: {
+            key,
+            id: 'mission.adaptation.default',
+            version: '1.8.8',
+            domain: 'mission',
+            operation: 'resume-mission-adaptation',
+            sourceModule: './prompts/resume.prompts.js',
+            text: 'default-adaptation'
+        }
+    }[key] || null)),
+    getPromptContract: vi.fn((key) => ({
+        DEFAULT_ANALYSIS_PROMPT: { id: 'resume_analysis_v1', version: '1.0.0' },
+        DEFAULT_IMPROVEMENT_PROMPT: { id: 'resume_improvement_v1', version: '1.0.0' },
+        DEFAULT_MATCH_ANALYSIS_PROMPT: { id: 'mission_match_v1', version: '1.0.0' },
+        DEFAULT_ADAPTATION_PROMPT: { id: 'mission_adaptation_v1', version: '1.0.0' }
+    }[key] || null))
 }));
 
 // Mock logger
@@ -188,6 +266,7 @@ describe('Settings Routes', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mockGetLLMSettings.mockResolvedValue({});
+        mockGetSettings.mockResolvedValue(null);
         app = createTestApp();
     });
 
@@ -226,6 +305,11 @@ describe('Settings Routes', () => {
                 contractId: 'resume_analysis_v1',
                 contractVersion: '1.0.0'
             }));
+            expect(res.body.promptVersionState['Analysis Prompt']).toEqual(expect.objectContaining({
+                currentRevision: 2,
+                isModified: true
+            }));
+            expect(discoverOllamaModels).not.toHaveBeenCalled();
         });
 
         it('should overlay canonical LLM settings on the general settings payload', async () => {
@@ -266,6 +350,10 @@ describe('Settings Routes', () => {
             expect(res.body.promptGovernance['Adaptation Prompt']).toEqual(expect.objectContaining({
                 promptId: 'mission.adaptation.default',
                 promptVersion: '1.8.8'
+            }));
+            expect(res.body.promptVersionState['Analysis Prompt']).toEqual(expect.objectContaining({
+                currentRevision: 1,
+                isModified: false
             }));
         });
 
@@ -313,6 +401,18 @@ describe('Settings Routes', () => {
         });
     });
 
+    describe('GET /api/settings/ollama/models', () => {
+        it('returns remote ollama models for admins', async () => {
+            const res = await request(app)
+                .get('/api/settings/ollama/models?baseUrl=http://ollama.local:11434&model=llama3.2:latest')
+                .set(authHeader);
+
+            expect(res.status).toBe(200);
+            expect(res.body.models).toEqual([{ value: 'llama3.2:latest', label: 'llama3.2:latest' }]);
+            expect(res.body.selectedModelExists).toBe(true);
+        });
+    });
+
     describe('PUT /api/settings/:id', () => {
         it('should update settings', async () => {
             const updatedRecord = {
@@ -344,6 +444,13 @@ describe('Settings Routes', () => {
             expect(res.status).toBe(200);
             expect(res.body.llmModel).toBe('gpt-4-turbo');
             expect(res.body.cvMode).toBe('anonymous');
+            expect(mockUpsertSettings).toHaveBeenCalledWith('set-1', expect.objectContaining({
+                promptVersionState: expect.objectContaining({
+                    'Analysis Prompt': expect.objectContaining({
+                        currentRevision: 1
+                    })
+                })
+            }));
         });
 
         it('should return 403 for non-admin', async () => {
@@ -393,6 +500,20 @@ describe('Settings Routes', () => {
                 .send({ llmModel: 'gpt-4' });
 
             expect(res.status).toBe(500);
+        });
+
+        it('rejects unavailable ollama models', async () => {
+            const res = await request(app)
+                .put('/api/settings/set-1')
+                .set(authHeader)
+                .send({
+                    llmProvider: 'ollama',
+                    ollamaBaseUrl: 'http://ollama.local:11434',
+                    llmModel: 'missing-model'
+                });
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toContain('Selected Ollama model');
         });
     });
 

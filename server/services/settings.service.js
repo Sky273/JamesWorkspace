@@ -17,7 +17,8 @@ import {
 import { safeLog } from '../utils/logger.backend.js';
 import { resolveAvailableModel, getProviderAvailabilityFlags, syncPersistedAvailabilityState } from './llmAvailability.service.js';
 import { getProviderDefaultModel } from './llmConfiguration.service.js';
-import { buildLlmAdminMetadata, sanitizeLlmModelParameters } from './llmAdminParameters.service.js';
+import { buildLlmAdminMetadataWithOptions, sanitizeLlmModelParameters } from './llmAdminParameters.service.js';
+import { extractPromptTextsFromSettingsRecord, resolvePromptVersionState } from './promptVersioning.service.js';
 import {
     settingsCache as sharedSettingsCache,
     CACHE_KEYS,
@@ -106,16 +107,17 @@ export async function getLLMSettings() {
         }
         syncPersistedAvailabilityState(dbSettings.llm_availability_state || {});
 
-        
+        const ollamaBaseUrl = dbSettings.ollama_base_url || OLLAMA_BASE_URL || '';
+
         // Map PostgreSQL columns to frontend format
         const settings = {
             llmModel: dbSettings.llm_model,
             llmProvider: dbSettings.llm_provider || 'openai',
-            ollamaBaseUrl: dbSettings.ollama_base_url || OLLAMA_BASE_URL || '',
+            ollamaBaseUrl,
             ollamaVisionModel: dbSettings.ollama_vision_model || '',
             ollamaKeepAlive: dbSettings.ollama_keep_alive || '5m',
             ollamaNumCtx: dbSettings.ollama_num_ctx || 8192,
-            llmModelParameters: sanitizeLlmModelParameters(dbSettings.llm_model_parameters || {}),
+            llmModelParameters: sanitizeLlmModelParameters(dbSettings.llm_model_parameters || {}, getProviderAvailabilityFlags()),
             cvMode: dbSettings.cv_mode,
             chatbotEnabled: dbSettings.chatbot_enabled,
             webglEnabled: dbSettings.webgl_enabled,
@@ -136,7 +138,14 @@ export async function getLLMSettings() {
             'Profile Matching Local Title Exact Weight': dbSettings.profile_matching_local_title_exact_weight ?? PROFILE_MATCHING_LOCAL_TITLE_EXACT_WEIGHT,
             'Profile Matching Local Title Token Weight': dbSettings.profile_matching_local_title_token_weight ?? PROFILE_MATCHING_LOCAL_TITLE_TOKEN_WEIGHT,
             'Profile Matching Local Coverage Multiplier': dbSettings.profile_matching_local_coverage_multiplier ?? PROFILE_MATCHING_LOCAL_COVERAGE_MULTIPLIER,
-            llmAvailabilityState: dbSettings.llm_availability_state || {}
+            promptVersionState: resolvePromptVersionState({
+                storedState: dbSettings.prompt_versions || {},
+                promptTexts: extractPromptTextsFromSettingsRecord(dbSettings),
+                fallbackTimestamp: dbSettings.updated_at || dbSettings.created_at || null
+            }),
+            llmAvailabilityState: dbSettings.llm_availability_state || {},
+            ollamaDiscoveredModels: [],
+            ollamaModelCapabilities: {}
         };
 
         const normalizedModel = resolveAvailableModel(
@@ -156,7 +165,9 @@ export async function getLLMSettings() {
         }
 
         settings.llmAvailability = getProviderAvailabilityFlags();
-        Object.assign(settings, buildLlmAdminMetadata(settings.llmAvailability));
+        Object.assign(settings, buildLlmAdminMetadataWithOptions(settings.llmAvailability, {
+            ollamaModels: []
+        }));
 
         // Update cache
         await sharedSettingsCache.set(LLM_SETTINGS_CACHE_KEY, settings);

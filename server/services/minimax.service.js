@@ -182,12 +182,14 @@ export async function callMiniMaxOpenAICompatible({
     timeout = 90000,
     maxPromptLength = MAX_PROMPT_LENGTH,
     operationType = 'MiniMax OpenAI-compatible request',
-    useRetry = true
+    useRetry = true,
+    ...providerParameters
 }) {
     validateMiniMaxRequest(model, messages, maxPromptLength);
 
     const executeRequest = async (effectiveModel) => {
         const normalized = buildCapabilityAwareOpenAICompatibleParams('minimax', effectiveModel, {
+            parameters: providerParameters,
             maxTokens,
             temperature,
             topP,
@@ -281,7 +283,8 @@ export async function callMiniMaxAnthropicCompatible({
     timeout = 90000,
     maxPromptLength = MAX_PROMPT_LENGTH,
     operationType = 'MiniMax Anthropic-compatible request',
-    useRetry = true
+    useRetry = true,
+    ...providerParameters
 }) {
     validateMiniMaxRequest(model, messages, maxPromptLength);
 
@@ -297,6 +300,7 @@ export async function callMiniMaxAnthropicCompatible({
 
     const executeRequest = async (effectiveModel) => {
         const normalized = buildCapabilityAwareAnthropicOptions('minimax', effectiveModel, {
+            parameters: providerParameters,
             maxTokens,
             temperature,
             topP,
@@ -308,17 +312,11 @@ export async function callMiniMaxAnthropicCompatible({
             messages: conversationMessages,
             max_tokens: normalized.effectiveMaxTokens
         };
-
-        if (normalized.topP !== undefined) {
-            requestBody.top_p = normalized.topP;
-        }
+        Object.assign(requestBody, normalized.requestParams);
+        requestBody.max_tokens = normalized.effectiveMaxTokens;
 
         if (systemMessage?.content) {
             requestBody.system = systemMessage.content;
-        }
-
-        if (normalized.temperature !== undefined) {
-            requestBody.temperature = normalized.temperature;
         }
 
         if (normalized.droppedParams.length > 0) {

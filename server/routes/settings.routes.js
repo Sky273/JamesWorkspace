@@ -10,8 +10,15 @@ import { safeLog } from '../utils/logger.backend.js';
 import { mapSettingsToFrontend, mapSettingsFromFrontend } from '../utils/mappers.js';
 import { getProviderAvailabilityFlags, resolveAvailableModel } from '../services/llmAvailability.service.js';
 import { getProviderDefaultModel } from '../services/llmConfiguration.service.js';
-import { buildLlmAdminMetadata, sanitizeLlmModelParameters } from '../services/llmAdminParameters.service.js';
+import { buildLlmAdminMetadataWithOptions, sanitizeLlmModelParameters } from '../services/llmAdminParameters.service.js';
 import { getPromptContract, getPromptDefinition } from '../config/llmGovernance.js';
+import { discoverOllamaModels, validateOllamaModelExists } from '../services/ollamaAdmin.service.js';
+import {
+    computeUpdatedPromptVersionState,
+    extractPromptTextsFromFrontendSettings,
+    extractPromptTextsFromSettingsRecord,
+    resolvePromptVersionState
+} from '../services/promptVersioning.service.js';
 import {
     PROFILE_MATCHING_LOCAL_SKILL_WEIGHT,
     PROFILE_MATCHING_LOCAL_TOOL_WEIGHT,
@@ -58,7 +65,8 @@ function normalizeRequestedSettingsModel(settingsData = {}) {
     return settingsData;
 }
 
-function decorateSettingsResponse(settings) {
+async function decorateSettingsResponse(settings) {
+    const ollamaDiscovery = { modelCatalog: [], capabilitiesByModel: {} };
     const promptGovernance = Object.fromEntries(
         Object.entries(GOVERNED_PROMPT_KEYS).map(([settingKey, promptKey]) => {
             const prompt = getPromptDefinition(promptKey);
@@ -82,7 +90,15 @@ function decorateSettingsResponse(settings) {
     return {
         ...settings,
         llmAvailability: getProviderAvailabilityFlags(),
-        ...buildLlmAdminMetadata(getProviderAvailabilityFlags()),
+        ...buildLlmAdminMetadataWithOptions(getProviderAvailabilityFlags(), {
+            ollamaModels: ollamaDiscovery.modelCatalog
+        }),
+        ollamaDiscoveredModels: ollamaDiscovery.modelCatalog,
+        ollamaModelCapabilities: ollamaDiscovery.capabilitiesByModel,
+        promptVersionState: resolvePromptVersionState({
+            storedState: settings?.promptVersionState || {},
+            promptTexts: extractPromptTextsFromFrontendSettings(settings)
+        }),
         promptGovernance
     };
 }
@@ -123,7 +139,18 @@ function mergeCanonicalLlmSettings(settingsData, canonicalLlmSettings = {}) {
         'Profile Matching Local Coverage Multiplier': canonicalLlmSettings['Profile Matching Local Coverage Multiplier'] ?? settingsData['Profile Matching Local Coverage Multiplier'],
         llmAvailability: canonicalLlmSettings.llmAvailability ?? settingsData.llmAvailability,
         llmModelCatalog: canonicalLlmSettings.llmModelCatalog ?? settingsData.llmModelCatalog,
-        llmParameterDefinitions: canonicalLlmSettings.llmParameterDefinitions ?? settingsData.llmParameterDefinitions
+        llmParameterDefinitions: canonicalLlmSettings.llmParameterDefinitions ?? settingsData.llmParameterDefinitions,
+        promptVersionState: canonicalLlmSettings.promptVersionState ?? settingsData.promptVersionState
+    };
+}
+
+function buildNextPromptTexts(currentSettingsRecord = {}, incomingSettings = {}) {
+    return {
+        ...extractPromptTextsFromSettingsRecord(currentSettingsRecord),
+        ...Object.fromEntries(
+            Object.entries(extractPromptTextsFromFrontendSettings(incomingSettings))
+                .filter(([settingKey]) => Object.prototype.hasOwnProperty.call(incomingSettings, settingKey))
+        )
     };
 }
 
@@ -148,7 +175,7 @@ router.get('/', authenticateToken, async (req, res) => {
         if (!settings) {
             safeLog('info', 'No settings found, returning defaults');
 
-            const defaultSettings = mergeCanonicalLlmSettings(decorateSettingsResponse({
+            const defaultSettings = mergeCanonicalLlmSettings(await decorateSettingsResponse({
                 id: null,
                 llmModel: null,
                 cvMode: 'nominative',
@@ -177,7 +204,7 @@ router.get('/', authenticateToken, async (req, res) => {
         }
 
         const responseData = mergeCanonicalLlmSettings(
-            decorateSettingsResponse(normalizeRequestedSettingsModel(mapSettingsToFrontend(settings))),
+            await decorateSettingsResponse(normalizeRequestedSettingsModel(mapSettingsToFrontend(settings))),
             canonicalLlmSettings
         );
 
@@ -194,7 +221,7 @@ router.get('/', authenticateToken, async (req, res) => {
 
 // GET /api/settings/defaults - Get default prompts and weights
 router.get('/defaults', authenticateToken, requireAdmin, (req, res) => {
-    res.json(decorateSettingsResponse({
+    Promise.resolve(decorateSettingsResponse({
         llmModel: 'gpt-5.4',
         cvMode: 'nominative',
         chatbotEnabled: 'on',
@@ -219,7 +246,24 @@ router.get('/defaults', authenticateToken, requireAdmin, (req, res) => {
         'DPO Name': '',
         'DPO Email': '',
         'DPO Phone': ''
-    }));
+    })).then(payload => res.json(payload)).catch(() => res.status(500).json({ error: 'Failed to build defaults' }));
+});
+
+router.get('/ollama/models', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const baseUrl = String(req.query.baseUrl || '').trim();
+        const selectedModel = String(req.query.model || '').trim();
+        const discovery = await discoverOllamaModels(baseUrl, { includeCapabilities: true });
+
+        return res.json({
+            models: discovery.modelCatalog,
+            capabilitiesByModel: discovery.capabilitiesByModel,
+            selectedModelExists: selectedModel ? discovery.modelCatalog.some(entry => entry.value === selectedModel) : true
+        });
+    } catch (error) {
+        safeLog('warn', 'Failed to discover Ollama models', { error: error.message });
+        return res.status(400).json({ error: 'Failed to discover Ollama models' });
+    }
 });
 
 // PUT /api/settings/:id - Update settings (or create if not exists)
@@ -234,9 +278,31 @@ router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), valida
 
         delete updateData.id;
         updateData = normalizeRequestedSettingsModel(normalizeWeights(updateData));
-        if (updateData.llmModelParameters) {
-            updateData.llmModelParameters = sanitizeLlmModelParameters(updateData.llmModelParameters);
+        let ollamaDiscovery = null;
+        if (updateData.llmProvider === 'ollama') {
+            if (!String(updateData.llmModel || '').trim()) {
+                return res.status(400).json({ error: 'An Ollama default model must be selected.' });
+            }
+            const validation = await validateOllamaModelExists(updateData.ollamaBaseUrl, updateData.llmModel);
+            ollamaDiscovery = validation.discovery;
+            if (!validation.exists) {
+                return res.status(400).json({ error: 'Selected Ollama model is not available on the configured instance.' });
+            }
         }
+        if (updateData.llmModelParameters) {
+            updateData.llmModelParameters = sanitizeLlmModelParameters(updateData.llmModelParameters, getProviderAvailabilityFlags(), {
+                ollamaModels: ollamaDiscovery?.modelCatalog || []
+            });
+        }
+        const currentSettingsRecord = await getSettings();
+        const previousPromptTexts = extractPromptTextsFromSettingsRecord(currentSettingsRecord || {});
+        updateData.promptVersionState = computeUpdatedPromptVersionState({
+            storedState: currentSettingsRecord?.prompt_versions || {},
+            previousPromptTexts,
+            nextPromptTexts: buildNextPromptTexts(currentSettingsRecord || {}, updateData),
+            changedAt: new Date().toISOString(),
+            changedBy: req.user
+        });
 
         safeLog('debug', 'Settings normalized', { fields: Object.keys(updateData) });
 
@@ -252,7 +318,7 @@ router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), valida
             metadata: { fields: Object.keys(updateData) }
         });
 
-        res.json(decorateSettingsResponse(mapSettingsToFrontend(result)));
+        res.json(await decorateSettingsResponse(mapSettingsToFrontend(result)));
     } catch (error) {
         safeLog('error', 'Error updating settings', { error: error.message });
         return res.status(500).json({
@@ -269,9 +335,31 @@ router.post('/', authenticateToken, requireAdmin, validateBody(updateSettingsSch
         await invalidateSettingsCache();
 
         settingsData = normalizeRequestedSettingsModel(normalizeWeights(settingsData));
-        if (settingsData.llmModelParameters) {
-            settingsData.llmModelParameters = sanitizeLlmModelParameters(settingsData.llmModelParameters);
+        let ollamaDiscovery = null;
+        if (settingsData.llmProvider === 'ollama') {
+            if (!String(settingsData.llmModel || '').trim()) {
+                return res.status(400).json({ error: 'An Ollama default model must be selected.' });
+            }
+            const validation = await validateOllamaModelExists(settingsData.ollamaBaseUrl, settingsData.llmModel);
+            ollamaDiscovery = validation.discovery;
+            if (!validation.exists) {
+                return res.status(400).json({ error: 'Selected Ollama model is not available on the configured instance.' });
+            }
         }
+        if (settingsData.llmModelParameters) {
+            settingsData.llmModelParameters = sanitizeLlmModelParameters(settingsData.llmModelParameters, getProviderAvailabilityFlags(), {
+                ollamaModels: ollamaDiscovery?.modelCatalog || []
+            });
+        }
+        const currentSettingsRecord = await getSettings();
+        const previousPromptTexts = extractPromptTextsFromSettingsRecord(currentSettingsRecord || {});
+        settingsData.promptVersionState = computeUpdatedPromptVersionState({
+            storedState: currentSettingsRecord?.prompt_versions || {},
+            previousPromptTexts,
+            nextPromptTexts: buildNextPromptTexts(currentSettingsRecord || {}, settingsData),
+            changedAt: new Date().toISOString(),
+            changedBy: req.user
+        });
 
         const fieldsToCreate = {
             name: settingsData.llmModel || 'Default Settings',
@@ -288,7 +376,7 @@ router.post('/', authenticateToken, requireAdmin, validateBody(updateSettingsSch
             message: 'LLM settings created by admin'
         });
 
-        res.status(201).json(decorateSettingsResponse(mapSettingsToFrontend(result)));
+        res.status(201).json(await decorateSettingsResponse(mapSettingsToFrontend(result)));
     } catch (error) {
         safeLog('error', 'Error creating settings', { error: error.message });
         return res.status(500).json({

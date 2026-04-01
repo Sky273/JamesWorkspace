@@ -206,7 +206,7 @@ describe('OpenAI API Client', () => {
 
             const requestBody = axios.post.mock.calls[0][1];
             expect(requestBody.reasoning.effort).toBe('medium');
-            expect(requestBody.temperature).toBe(0);
+            expect(requestBody.temperature).toBeUndefined();
         });
     });
 

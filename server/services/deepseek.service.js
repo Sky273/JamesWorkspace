@@ -35,7 +35,8 @@ export async function callDeepSeek({
     timeout = 120000,
     maxPromptLength = MAX_PROMPT_LENGTH,
     userMetadata = null,
-    operationType = 'DeepSeek API request'
+    operationType = 'DeepSeek API request',
+    ...providerParameters
 }) {
     if (!DEEPSEEK_API_KEY) {
         throw new Error('DeepSeek API key not configured on server');
@@ -84,6 +85,7 @@ export async function callDeepSeek({
 
     try {
         const normalized = buildCapabilityAwareOpenAICompatibleParams('deepseek', model, {
+            parameters: providerParameters,
             maxTokens: effectiveMaxTokens,
             temperature,
             topP,

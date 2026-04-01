@@ -13,6 +13,7 @@ describe('SettingsPage helpers', () => {
     expect(getDefaultModelForProvider('deepseek')).toBe('deepseek-chat');
     expect(getDefaultModelForProvider('glm')).toBe('glm-5.1');
     expect(getDefaultModelForProvider('minimax')).toBe('MiniMax-M2.7');
+    expect(getDefaultModelForProvider('ollama')).toBe('');
     expect(getDefaultModelForProvider('openai')).toBe('gpt-4o');
   });
 
@@ -24,6 +25,7 @@ describe('SettingsPage helpers', () => {
     })).toEqual(expect.objectContaining({
       llmProvider: 'anthropic',
       llmModel: 'claude-sonnet-4-20250514',
+      llmModelParametersJson: '{}',
       chatbotEnabled: 'off',
       'Executive Summary Weight': 30,
       'Skills Weight': 20,
@@ -40,19 +42,36 @@ describe('SettingsPage helpers', () => {
 
     expect(payload).toEqual(expect.objectContaining({
       chatbotEnabled: 'off',
+      llmModelParameters: {},
       'Executive Summary Weight': 25,
       'Skills Weight': 15,
     }));
   });
 
-  it('clears the hosted llm model when provider is ollama', () => {
+  it('parses llm parameters json into the save payload', () => {
+    const payload = createSavePayload({
+      ...defaultFormData,
+      llmModelParametersJson: '{\n  "openai": {\n    "gpt-4o": {\n      "temperature": 0,\n      "top_p": 1\n    }\n  }\n}',
+    });
+
+    expect(payload.llmModelParameters).toEqual({
+      openai: {
+        'gpt-4o': {
+          temperature: 0,
+          top_p: 1,
+        },
+      },
+    });
+  });
+
+  it('keeps the selected remote llm model when provider is ollama', () => {
     const payload = createSavePayload({
       ...defaultFormData,
       llmProvider: 'ollama',
       llmModel: 'llama3.2',
     });
 
-    expect(payload.llmModel).toBe('');
+    expect(payload.llmModel).toBe('llama3.2');
   });
 
   it('computes the current total weight', () => {

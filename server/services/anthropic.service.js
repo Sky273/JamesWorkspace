@@ -34,6 +34,7 @@ export async function callAnthropicChat(messages, model, options = {}) {
         }));
 
     const normalized = buildCapabilityAwareAnthropicOptions('anthropic', model, {
+        parameters: options,
         maxTokens: options.max_tokens || 1000,
         temperature: options.temperature,
         topP: options.top_p,
@@ -52,13 +53,8 @@ export async function callAnthropicChat(messages, model, options = {}) {
             .filter(Boolean);
     }
 
-    if (normalized.temperature !== undefined) {
-        requestBody.temperature = normalized.temperature;
-    }
-
-    if (normalized.topP !== undefined) {
-        requestBody.top_p = normalized.topP;
-    }
+    Object.assign(requestBody, normalized.requestParams);
+    requestBody.max_tokens = normalized.effectiveMaxTokens;
 
     try {
         const response = await withRetry(
@@ -135,6 +131,7 @@ export async function callAnthropicVision(systemPrompt, userContent, model, opti
     });
 
     const normalized = buildCapabilityAwareAnthropicOptions('anthropic', model, {
+        parameters: options,
         maxTokens: options.max_tokens || 4000,
         temperature: options.temperature,
         topP: options.top_p,
@@ -147,14 +144,8 @@ export async function callAnthropicVision(systemPrompt, userContent, model, opti
         messages: [{ role: 'user', content: anthropicContent }],
         max_tokens: normalized.effectiveMaxTokens
     };
-
-    if (normalized.temperature !== undefined) {
-        requestBody.temperature = normalized.temperature;
-    }
-
-    if (normalized.topP !== undefined) {
-        requestBody.top_p = normalized.topP;
-    }
+    Object.assign(requestBody, normalized.requestParams);
+    requestBody.max_tokens = normalized.effectiveMaxTokens;
 
     try {
         const response = await withRetry(

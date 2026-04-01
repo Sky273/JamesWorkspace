@@ -574,20 +574,40 @@ export interface Settings {
   llmModel?: string;
   llmAvailability?: Record<string, { highspeedEnabled?: boolean; runtimeUnavailableModels?: string[] }>;
   llmModelCatalog?: Record<string, Array<{ value: string; label: string }>>;
-  llmParameterDefinitions?: Record<string, Record<string, Record<string, {
-    key: string;
-    type: 'integer' | 'number' | 'string' | 'enum';
-    label: string;
-    min?: number;
-    max?: number;
-    maxInclusive?: number;
-    maxExclusive?: number;
-    step?: number;
-    defaultValue?: string | number;
-    helpText?: string;
-    options?: Array<{ value: string; label: string }>;
-  }>>>;
   llmModelParameters?: Record<string, Record<string, Record<string, string | number>>>;
+  promptGovernance?: Record<string, {
+    settingKey: string;
+    promptKey: string;
+    promptId: string | null;
+    promptVersion: string | null;
+    promptDomain: string | null;
+    promptOperation: string | null;
+    contractId: string | null;
+    contractVersion: string | null;
+    sourceModule: string | null;
+    defaultText: string;
+  }>;
+  promptVersionState?: Record<string, {
+    currentRevision: number;
+    activeSource: 'default' | 'custom';
+    activeTextHash: string;
+    isModified: boolean;
+    lastChangedAt: string | null;
+    history: Array<{
+      revision: number;
+      source: 'default' | 'custom';
+      reason: string;
+      text: string;
+      textHash: string;
+      changedAt: string | null;
+      changedByUserId: string | null;
+      changedByEmail: string | null;
+      promptId: string | null;
+      promptVersion: string | null;
+      contractId: string | null;
+      contractVersion: string | null;
+    }>;
+  }>;
   ollamaBaseUrl?: string;
   ollamaVisionModel?: string;
   ollamaKeepAlive?: string;

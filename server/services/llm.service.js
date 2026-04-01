@@ -36,8 +36,11 @@ export async function callLLM(messages, options = {}) {
         messages,
         settings,
         options: {
-            ...options,
-            ...parameters
+            ...parameters,
+            timeout: options.timeout,
+            maxPromptLength: options.maxPromptLength,
+            userMetadata: options.userMetadata,
+            operationType: options.operationType
         }
     });
 }
@@ -67,8 +70,11 @@ export async function callLLMWithVision(systemPrompt, userContent, options = {})
         userContent,
         settings,
         options: {
-            ...options,
-            ...parameters
+            ...parameters,
+            timeout: options.timeout,
+            maxPromptLength: options.maxPromptLength,
+            userMetadata: options.userMetadata,
+            operationType: options.operationType
         }
     });
 }

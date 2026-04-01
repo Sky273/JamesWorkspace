@@ -32,26 +32,24 @@ function applyResolvedModelParameters(req, settings, provider, model) {
         settings,
         provider,
         model,
-        overrides: {
-            temperature: req.body.temperature,
-            top_p: req.body.top_p,
-            max_tokens: req.body.max_tokens,
-            max_completion_tokens: req.body.max_completion_tokens,
-            max_output_tokens: req.body.max_output_tokens,
-            response_format: req.body.response_format,
-            reasoning_effort: req.body.reasoning_effort
-        }
+        overrides: req.body
     });
+    const structuralFields = {
+        ...(req.body.model !== undefined ? { model: req.body.model } : {}),
+        ...(req.body.messages !== undefined ? { messages: req.body.messages } : {}),
+        ...(req.body.input !== undefined ? { input: req.body.input } : {}),
+        ...(req.body.system !== undefined ? { system: req.body.system } : {})
+    };
 
     req.body = {
-        ...req.body,
+        ...structuralFields,
         ...parameters
     };
 }
 
 async function handleOllamaRequest(req, res, settings, responseShape, model) {
     const result = await callOllama(req.body.messages || [], model, settings, {
-        temperature: req.body.temperature,
+        ...req.body,
         max_tokens: getRequestedMaxTokens(req.body)
     });
 
@@ -65,9 +63,8 @@ async function handleMiniMaxRequest(req, res, responseShape, model) {
             return callMiniMaxAnthropicCompatible({
                 model,
                 messages: req.body.messages || [],
+                ...req.body,
                 maxTokens: getRequestedMaxTokens(req.body),
-                temperature: req.body.temperature,
-                topP: req.body.top_p,
                 timeout: 120000,
                 operationType: `MiniMax ${model} anthropic-compatible request`,
                 useRetry: false
@@ -77,10 +74,8 @@ async function handleMiniMaxRequest(req, res, responseShape, model) {
         return callMiniMaxOpenAICompatible({
             model,
             messages: req.body.messages || [],
+            ...req.body,
             maxTokens: getRequestedMaxTokens(req.body),
-            temperature: req.body.temperature,
-            topP: req.body.top_p,
-            responseFormat: req.body.response_format,
             timeout: 120000,
             operationType: `MiniMax ${model} openai-compatible request`,
             useRetry: false
@@ -121,10 +116,8 @@ async function handleDeepSeekRequest(req, res, model, metadata) {
     const response = await callDeepSeekWithCircuitBreaker({
         model,
         messages: req.body.messages || [],
+        ...req.body,
         maxTokens: getRequestedMaxTokens(req.body),
-        temperature: req.body.temperature,
-        topP: req.body.top_p,
-        responseFormat: req.body.response_format,
         timeout: 120000,
         operationType: `DeepSeek ${model} request`
     });
@@ -149,10 +142,8 @@ async function handleGLMRequest(req, res, model, metadata) {
     const response = await callGLMWithCircuitBreaker({
         model,
         messages: req.body.messages || [],
+        ...req.body,
         maxTokens: getRequestedMaxTokens(req.body),
-        temperature: req.body.temperature,
-        topP: req.body.top_p,
-        responseFormat: req.body.response_format,
         timeout: 120000,
         operationType: `GLM ${model} request`
     });

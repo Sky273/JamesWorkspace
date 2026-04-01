@@ -53,7 +53,8 @@ export async function callOpenAI({
     timeout = 90000,
     maxPromptLength = MAX_PROMPT_LENGTH,
     userMetadata = null,  // Optional: { email, ip, action } for security logging
-    operationType = 'OpenAI Service API request'  // Description for logging
+    operationType = 'OpenAI Service API request',  // Description for logging
+    ...providerParameters
 }) {
     if (!OPENAI_API_KEY) {
         throw new Error('OpenAI API key not configured on server');
@@ -112,38 +113,48 @@ export async function callOpenAI({
         if (isGPT5Model) {
             // GPT-5 models use the Responses API
             apiUrl = OPENAI_RESPONSES_API_URL;
-            
-            // gpt-5.x-pro models only support: 'medium', 'high', 'xhigh'
-            // gpt-5.x (non-pro) supports: 'none', 'low', 'medium', 'high', 'xhigh'
-            const reasoningEffort = capabilities?.defaultReasoningEffort || 'medium';
-            
+
+            const normalized = buildCapabilityAwareOpenAICompatibleParams('openai', model, {
+                parameters: providerParameters,
+                maxTokens: effectiveMaxTokens,
+                temperature,
+                topP,
+                responseFormat,
+                fallbackMaxTokens: 4096
+            });
+            const reasoningEffort = normalized.parameters.reasoning_effort || capabilities?.defaultReasoningEffort || 'medium';
+
             requestParams = {
-                model: model,
+                model,
                 input: messages,
                 reasoning: { effort: reasoningEffort },
-                max_output_tokens: effectiveMaxTokens
+                max_output_tokens: normalized.effectiveMaxTokens
             };
-            
-            // In Responses API, response_format has moved to text.format
-            if (responseFormat) {
-                requestParams.text = { format: responseFormat };
+
+            const passthroughParameters = { ...normalized.parameters };
+            delete passthroughParameters.reasoning_effort;
+            delete passthroughParameters.max_completion_tokens;
+            delete passthroughParameters.max_output_tokens;
+            delete passthroughParameters.max_tokens;
+            delete passthroughParameters.response_format;
+            delete passthroughParameters.verbosity;
+
+            Object.assign(requestParams, passthroughParameters);
+
+            if (normalized.parameters.response_format || normalized.parameters.verbosity) {
+                requestParams.text = {
+                    ...(normalized.parameters.response_format ? { format: normalized.parameters.response_format } : {}),
+                    ...(normalized.parameters.verbosity ? { verbosity: normalized.parameters.verbosity } : {})
+                };
             }
-            
-            if (temperature !== undefined) {
-                requestParams.temperature = temperature;
-            }
-            
-            // top_p is supported for GPT-5 models
-            if (topP !== undefined) {
-                requestParams.top_p = topP;
-            }
-            
+
             safeLog('info', 'LLM Request', { model, messageCount: messages.length, maxTokens: effectiveMaxTokens, reasoningEffort, temperature, topP });
         } else {
             // Standard models use Chat Completions API
             apiUrl = OPENAI_CHAT_API_URL;
             
             const normalized = buildCapabilityAwareOpenAICompatibleParams('openai', model, {
+                parameters: providerParameters,
                 maxTokens: effectiveMaxTokens,
                 temperature,
                 topP,

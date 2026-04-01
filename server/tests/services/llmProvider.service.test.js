@@ -20,7 +20,12 @@ vi.mock('../../services/llmAdminParameters.service.js', () => ({
         parameters: {
             max_tokens: overrides.max_tokens ?? 4096,
             temperature: overrides.temperature ?? 0,
-            ...(overrides.top_p !== undefined ? { top_p: overrides.top_p } : {})
+            ...(overrides.top_p !== undefined ? { top_p: overrides.top_p } : {}),
+            reasoning_effort: 'high',
+            metadata: { source: 'admin-settings' },
+            keep_alive: '15m',
+            num_ctx: 16384,
+            stop: ['END']
         }
     }))
 }));
@@ -111,6 +116,9 @@ describe('llmProvider.service', () => {
             expect.objectContaining({
                 max_tokens: 4096,
                 temperature: 0,
+                keep_alive: '15m',
+                num_ctx: 16384,
+                stop: ['END'],
                 timeout: 20 * 60 * 1000,
                 operationType: 'Resume Analysis'
             })
@@ -141,6 +149,8 @@ describe('llmProvider.service', () => {
             messages: [{ role: 'user', content: 'Analyse ce CV' }],
             maxTokens: 4096,
             temperature: 0,
+            metadata: { source: 'admin-settings' },
+            stop: ['END'],
             timeout: 20 * 60 * 1000,
             operationType: 'Resume Analysis'
         }));
@@ -167,6 +177,8 @@ describe('llmProvider.service', () => {
 
         expect(callMiniMaxOpenAICompatible).toHaveBeenCalledWith(expect.objectContaining({
             model: 'MiniMax-M2.7',
+            metadata: { source: 'admin-settings' },
+            stop: ['END'],
             operationType: 'Resume Analysis',
             timeout: 20 * 60 * 1000
         }));
@@ -194,6 +206,8 @@ describe('llmProvider.service', () => {
             messages: [{ role: 'user', content: 'Analyse ce CV' }],
             maxTokens: 4096,
             temperature: 0,
+            metadata: { source: 'admin-settings' },
+            stop: ['END'],
             timeout: 20 * 60 * 1000,
             operationType: 'Resume Analysis'
         }));
@@ -218,6 +232,9 @@ describe('llmProvider.service', () => {
 
         expect(callOpenAI).toHaveBeenCalledWith(expect.objectContaining({
             model: 'gpt-4o',
+            reasoning_effort: 'high',
+            metadata: { source: 'admin-settings' },
+            stop: ['END'],
             operationType: 'LLM business operation'
         }));
         expect(result.choices[0].message.content).toBe('openai ok');
