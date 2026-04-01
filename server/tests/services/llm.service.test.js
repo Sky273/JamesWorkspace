@@ -18,9 +18,16 @@ vi.mock('../../services/llmConfiguration.service.js', () => ({
     resolveLLMRuntimeConfig: vi.fn()
 }));
 
+vi.mock('../../services/llmAdminParameters.service.js', () => ({
+    resolveEffectiveModelParameters: vi.fn(({ overrides = {} }) => ({
+        parameters: overrides
+    }))
+}));
+
 import { getLLMSettings } from '../../services/settings.service.js';
 import { callProviderChat, callProviderVision, logGatewayCall } from '../../services/llmGateway.service.js';
 import { resolveLLMRuntimeConfig } from '../../services/llmConfiguration.service.js';
+import { resolveEffectiveModelParameters } from '../../services/llmAdminParameters.service.js';
 import {
     getTokenParameter,
     supportsCustomTemperature,
@@ -32,6 +39,9 @@ import {
 describe('LLM Service', () => {
     beforeEach(() => {
         vi.resetAllMocks();
+        resolveEffectiveModelParameters.mockImplementation(({ overrides = {} }) => ({
+            parameters: overrides
+        }));
     });
 
     describe('getTokenParameter', () => {

@@ -16,6 +16,21 @@ import logger from '../utils/logger.frontend';
 import type { SettingsTabItem } from '../components/SettingsPage/SettingsTabsNav';
 
 type LLMProvider = 'openai' | 'anthropic' | 'deepseek' | 'glm' | 'minimax' | 'ollama';
+type LLMModelParameters = Record<string, Record<string, Record<string, string | number>>>;
+type LLMModelCatalog = Record<string, Array<{ value: string; label: string }>>;
+type LLMParameterDefinitions = Record<string, Record<string, Record<string, {
+  key: string;
+  type: 'integer' | 'number' | 'string' | 'enum';
+  label: string;
+  min?: number;
+  max?: number;
+  maxInclusive?: number;
+  maxExclusive?: number;
+  step?: number;
+  defaultValue?: string | number;
+  helpText?: string;
+  options?: Array<{ value: string; label: string }>;
+}>>>;
 
 interface Settings {
   id?: string;
@@ -23,6 +38,24 @@ interface Settings {
   llmModel?: string;
   llmAvailability?: Record<string, { highspeedEnabled?: boolean; runtimeUnavailableModels?: string[] }>;
   ollamaBaseUrl?: string;
+  ollamaVisionModel?: string;
+  ollamaKeepAlive?: string;
+  ollamaNumCtx?: number;
+  llmModelParameters?: LLMModelParameters;
+  llmModelCatalog?: LLMModelCatalog;
+  llmParameterDefinitions?: LLMParameterDefinitions;
+  promptGovernance?: Record<string, {
+    settingKey: string;
+    promptKey: string;
+    promptId: string | null;
+    promptVersion: string | null;
+    promptDomain: string | null;
+    promptOperation: string | null;
+    contractId: string | null;
+    contractVersion: string | null;
+    sourceModule: string | null;
+    defaultText: string;
+  }>;
   cvMode?: 'nominative' | 'anonymous';
   chatbotEnabled?: 'on' | 'off';
   webglEnabled?: 'on' | 'off';
@@ -54,6 +87,10 @@ export interface SettingsFormData {
   llmProvider: LLMProvider;
   llmModel: string;
   ollamaBaseUrl: string;
+  ollamaVisionModel: string;
+  ollamaKeepAlive: string;
+  ollamaNumCtx: number;
+  llmModelParameters: LLMModelParameters;
   cvMode: 'nominative' | 'anonymous';
   chatbotEnabled: 'on' | 'off';
   webglEnabled: 'on' | 'off';
@@ -77,13 +114,17 @@ export interface SettingsFormData {
   'DPO Name': string;
   'DPO Email': string;
   'DPO Phone': string;
-  [key: string]: string | number | boolean;
+  [key: string]: string | number | boolean | LLMModelParameters;
 }
 
 export const defaultFormData: SettingsFormData = {
   llmProvider: 'openai',
   llmModel: 'gpt-4o',
   ollamaBaseUrl: '',
+  ollamaVisionModel: '',
+  ollamaKeepAlive: '5m',
+  ollamaNumCtx: 8192,
+  llmModelParameters: {},
   cvMode: 'nominative',
   chatbotEnabled: 'on',
   webglEnabled: 'on',
@@ -121,6 +162,10 @@ export const toFormData = (settings?: Settings | null): SettingsFormData => ({
   llmProvider: settings?.llmProvider || 'openai',
   llmModel: settings?.llmModel || getDefaultModelForProvider(settings?.llmProvider),
   ollamaBaseUrl: settings?.ollamaBaseUrl || '',
+  ollamaVisionModel: settings?.ollamaVisionModel || '',
+  ollamaKeepAlive: settings?.ollamaKeepAlive || '5m',
+  ollamaNumCtx: settings?.ollamaNumCtx || 8192,
+  llmModelParameters: settings?.llmModelParameters || {},
   cvMode: settings?.cvMode || 'nominative',
   chatbotEnabled: settings?.chatbotEnabled || 'on',
   webglEnabled: settings?.webglEnabled || 'on',
@@ -146,9 +191,11 @@ export const toFormData = (settings?: Settings | null): SettingsFormData => ({
   'DPO Phone': settings?.['DPO Phone'] || ''
 });
 
-export const createSavePayload = (formData: SettingsFormData): Record<string, string | number> => {
+export const createSavePayload = (
+  formData: SettingsFormData
+): Record<string, string | number | LLMModelParameters> => {
   const chatbotValue = formData.chatbotEnabled;
-  const dataToSave: Record<string, string | number> = {
+  const dataToSave: Record<string, string | number | LLMModelParameters> = {
     ...formData,
     chatbotEnabled: chatbotValue === 'on' || (chatbotValue as unknown) === true ? 'on' : 'off',
     'Executive Summary Weight': Number(formData['Executive Summary Weight']),
@@ -168,9 +215,6 @@ export const createSavePayload = (formData: SettingsFormData): Record<string, st
 
   if (formData.llmProvider === 'ollama') {
     dataToSave.llmModel = '';
-    delete dataToSave.ollamaVisionModel;
-    delete dataToSave.ollamaKeepAlive;
-    delete dataToSave.ollamaNumCtx;
   }
 
   return dataToSave;
@@ -244,6 +288,7 @@ export function useSettingsPage() {
 
       const data = await response.json();
       setSettings(data);
+      setFormData(toFormData(data));
       setChatbotEnabled(dataToSave.chatbotEnabled === 'on');
       toast.success(t('settings.saveSuccess'));
     } catch (error) {
@@ -254,7 +299,10 @@ export function useSettingsPage() {
     }
   }, [authPost, authPut, formData, setChatbotEnabled, settings?.id, t]);
 
-  const handleInputChange = useCallback((field: string, value: string | number | boolean): void => {
+  const handleInputChange = useCallback((
+    field: string,
+    value: string | number | boolean | LLMModelParameters
+  ): void => {
     setFormData((prev) => ({
       ...prev,
       [field]: value

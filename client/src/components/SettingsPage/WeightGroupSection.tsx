@@ -4,7 +4,7 @@ interface WeightGroupSectionProps {
   title?: string;
   description?: string;
   weights: Array<{ key: string; label: string }>;
-  formData: Record<string, string | number | boolean>;
+  formData: Record<string, string | number | boolean | Record<string, Record<string, Record<string, string | number>>>>;
   onInputChange: (key: string, value: string) => void;
 }
 

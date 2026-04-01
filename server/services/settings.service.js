@@ -17,6 +17,7 @@ import {
 import { safeLog } from '../utils/logger.backend.js';
 import { resolveAvailableModel, getProviderAvailabilityFlags, syncPersistedAvailabilityState } from './llmAvailability.service.js';
 import { getProviderDefaultModel } from './llmConfiguration.service.js';
+import { buildLlmAdminMetadata, sanitizeLlmModelParameters } from './llmAdminParameters.service.js';
 import {
     settingsCache as sharedSettingsCache,
     CACHE_KEYS,
@@ -114,6 +115,7 @@ export async function getLLMSettings() {
             ollamaVisionModel: dbSettings.ollama_vision_model || '',
             ollamaKeepAlive: dbSettings.ollama_keep_alive || '5m',
             ollamaNumCtx: dbSettings.ollama_num_ctx || 8192,
+            llmModelParameters: sanitizeLlmModelParameters(dbSettings.llm_model_parameters || {}),
             cvMode: dbSettings.cv_mode,
             chatbotEnabled: dbSettings.chatbot_enabled,
             webglEnabled: dbSettings.webgl_enabled,
@@ -154,6 +156,7 @@ export async function getLLMSettings() {
         }
 
         settings.llmAvailability = getProviderAvailabilityFlags();
+        Object.assign(settings, buildLlmAdminMetadata(settings.llmAvailability));
 
         // Update cache
         await sharedSettingsCache.set(LLM_SETTINGS_CACHE_KEY, settings);

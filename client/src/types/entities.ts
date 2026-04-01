@@ -573,6 +573,21 @@ export interface Settings {
   llmProvider?: 'openai' | 'anthropic' | 'deepseek' | 'glm' | 'minimax' | 'ollama';
   llmModel?: string;
   llmAvailability?: Record<string, { highspeedEnabled?: boolean; runtimeUnavailableModels?: string[] }>;
+  llmModelCatalog?: Record<string, Array<{ value: string; label: string }>>;
+  llmParameterDefinitions?: Record<string, Record<string, Record<string, {
+    key: string;
+    type: 'integer' | 'number' | 'string' | 'enum';
+    label: string;
+    min?: number;
+    max?: number;
+    maxInclusive?: number;
+    maxExclusive?: number;
+    step?: number;
+    defaultValue?: string | number;
+    helpText?: string;
+    options?: Array<{ value: string; label: string }>;
+  }>>>;
+  llmModelParameters?: Record<string, Record<string, Record<string, string | number>>>;
   ollamaBaseUrl?: string;
   ollamaVisionModel?: string;
   ollamaKeepAlive?: string;

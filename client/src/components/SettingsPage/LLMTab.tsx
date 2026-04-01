@@ -1,14 +1,34 @@
 import { ChangeEvent, useMemo } from 'react';
 import LLMProviderModelSection from './LLMProviderModelSection';
+import LLMModelParametersSection from './LLMModelParametersSection';
 import LLMPresentationPreferences from './LLMPresentationPreferences';
+
+interface ParameterOption {
+  value: string;
+  label: string;
+}
+
+interface ParameterDefinition {
+  key: string;
+  type: 'integer' | 'number' | 'string' | 'enum';
+  label: string;
+  min?: number;
+  max?: number;
+  maxInclusive?: number;
+  maxExclusive?: number;
+  step?: number;
+  defaultValue?: string | number;
+  helpText?: string;
+  options?: ParameterOption[];
+}
 
 interface FormData {
   llmProvider: 'openai' | 'anthropic' | 'deepseek' | 'glm' | 'minimax' | 'ollama';
   llmModel: string;
   ollamaBaseUrl?: string;
+  llmModelParameters?: Record<string, Record<string, Record<string, string | number>>>;
   cvMode?: 'nominative' | 'anonymous';
   webglEnabled?: 'on' | 'off';
-  [key: string]: string | number | boolean | undefined;
 }
 
 interface LLMAvailability {
@@ -18,57 +38,33 @@ interface LLMAvailability {
   };
 }
 
-interface LLMTabProps {
-  formData: FormData;
-  onInputChange: (key: string, value: string | number) => void;
-  t: (key: string) => string;
-  llmAvailability?: LLMAvailability;
+interface ModelOption {
+  value: string;
+  label: string;
 }
 
-const OPENAI_MODELS = [
-  'gpt-5.4', 'gpt-5.4-pro', 'gpt-5.2', 'gpt-5.2-pro', 'gpt-5.1', 'gpt-5', 'gpt-5-mini', 'gpt-5-nano',
-  'gpt-4.1', 'gpt-4.1-mini', 'gpt-4.1-nano',
-  'gpt-4o', 'gpt-4o-mini'
-];
-
-const ANTHROPIC_MODELS = [
-  'claude-opus-4-1-20250805',
-  'claude-opus-4-20250514',
-  'claude-sonnet-4-20250514',
-  'claude-3-7-sonnet-20250219',
-  'claude-3-5-sonnet-20241022',
-  'claude-3-5-haiku-20241022'
-];
-
-const DEEPSEEK_MODELS = [
-  { value: 'deepseek-chat', label: 'DeepSeek-V3.2 - Standard (API: deepseek-chat)' },
-  { value: 'deepseek-reasoner', label: 'DeepSeek-V3.2 - Raisonnement (API: deepseek-reasoner)' }
-];
-
-const GLM_MODELS = [
-  { value: 'glm-5.1', label: 'GLM-5.1' },
-  { value: 'glm-5', label: 'GLM-5' }
-];
-
-const MINIMAX_STANDARD_MODELS = [
-  'MiniMax-M2.7',
-  'MiniMax-M2.5',
-  'M2-her',
-  'MiniMax-M2.1',
-  'MiniMax-M2'
-];
-
-const MINIMAX_HIGHSPEED_MODELS = [
-  'MiniMax-M2.7-highspeed',
-  'MiniMax-M2.5-highspeed',
-  'MiniMax-M2.1-highspeed'
-];
+interface LLMTabProps {
+  formData: FormData;
+  onInputChange: (
+    key: string,
+    value:
+      | string
+      | number
+      | Record<string, Record<string, Record<string, string | number>>>
+  ) => void;
+  t: (key: string) => string;
+  llmAvailability?: LLMAvailability;
+  llmModelCatalog?: Record<string, ModelOption[]>;
+  llmParameterDefinitions?: Record<string, Record<string, Record<string, ParameterDefinition>>>;
+}
 
 const LLMTab = ({
   formData,
   onInputChange,
   t,
-  llmAvailability
+  llmAvailability,
+  llmModelCatalog,
+  llmParameterDefinitions,
 }: LLMTabProps): JSX.Element => {
   const provider = formData.llmProvider || 'openai';
   const minimaxHighspeedEnabled = llmAvailability?.minimax?.highspeedEnabled === true;
@@ -76,10 +72,7 @@ const LLMTab = ({
     () => llmAvailability?.[provider]?.runtimeUnavailableModels || [],
     [llmAvailability, provider]
   );
-  const minimaxRuntimeUnavailableModels = useMemo(
-    () => llmAvailability?.minimax?.runtimeUnavailableModels || [],
-    [llmAvailability]
-  );
+  const providerCatalog = useMemo(() => llmModelCatalog || {}, [llmModelCatalog]);
 
   const providerOptions = useMemo(
     () => [
@@ -93,67 +86,18 @@ const LLMTab = ({
     []
   );
 
-  const minimaxModels = useMemo(() => {
-    const availableStandardModels = MINIMAX_STANDARD_MODELS.filter(
-      (model) => !minimaxRuntimeUnavailableModels.includes(model)
-    );
-
-    if (minimaxHighspeedEnabled) {
-      return [
-        ...availableStandardModels,
-        ...MINIMAX_HIGHSPEED_MODELS.filter((model) => !minimaxRuntimeUnavailableModels.includes(model))
-      ];
-    }
-
-    return availableStandardModels;
-  }, [minimaxHighspeedEnabled, minimaxRuntimeUnavailableModels]);
-
   const modelOptions = useMemo(() => {
-    if (provider === 'anthropic') {
-      return ANTHROPIC_MODELS
-        .filter((model) => !providerRuntimeUnavailableModels.includes(model))
-        .map((model) => ({ value: model, label: model }));
-    }
-
-    if (provider === 'deepseek') {
-      return DEEPSEEK_MODELS.filter((model) => !providerRuntimeUnavailableModels.includes(model.value));
-    }
-
-    if (provider === 'glm') {
-      return GLM_MODELS.filter((model) => !providerRuntimeUnavailableModels.includes(model.value));
-    }
-
-    if (provider === 'minimax') {
-      return minimaxModels.map((model) => ({ value: model, label: model }));
-    }
-
-    return OPENAI_MODELS
-      .filter((model) => !providerRuntimeUnavailableModels.includes(model))
-      .map((model) => ({ value: model, label: model }));
-  }, [provider, minimaxModels, providerRuntimeUnavailableModels]);
+    const availableCatalog = providerCatalog[provider] || [];
+    return availableCatalog.filter((model) => !providerRuntimeUnavailableModels.includes(model.value));
+  }, [provider, providerCatalog, providerRuntimeUnavailableModels]);
 
   const handleProviderChange = (event: ChangeEvent<HTMLSelectElement>): void => {
     const nextProvider = event.target.value as FormData['llmProvider'];
     onInputChange('llmProvider', nextProvider);
-
-    if (nextProvider === 'anthropic' && !ANTHROPIC_MODELS.includes(formData.llmModel)) {
-      onInputChange('llmModel', 'claude-sonnet-4-20250514');
-    }
-
-    if (nextProvider === 'deepseek' && !DEEPSEEK_MODELS.some((model) => model.value === formData.llmModel)) {
-      onInputChange('llmModel', 'deepseek-chat');
-    }
-
-    if (nextProvider === 'glm' && !GLM_MODELS.some((model) => model.value === formData.llmModel)) {
-      onInputChange('llmModel', 'glm-5.1');
-    }
-
-    if (nextProvider === 'minimax' && !minimaxModels.includes(formData.llmModel)) {
-      onInputChange('llmModel', 'MiniMax-M2.7');
-    }
-
-    if (nextProvider === 'openai' && !OPENAI_MODELS.includes(formData.llmModel)) {
-      onInputChange('llmModel', 'gpt-4o');
+    const nextProviderModels = providerCatalog[nextProvider] || [];
+    const isCurrentModelAvailable = nextProviderModels.some((model) => model.value === formData.llmModel);
+    if (nextProvider !== 'ollama' && !isCurrentModelAvailable && nextProviderModels[0]) {
+      onInputChange('llmModel', nextProviderModels[0].value);
     }
 
     if (nextProvider === 'ollama' && !formData.ollamaBaseUrl) {
@@ -178,14 +122,32 @@ const LLMTab = ({
   };
 
   const currentModelLabel = useMemo(() => {
-    if (provider === 'deepseek') {
-      return DEEPSEEK_MODELS.find((model) => model.value === formData.llmModel)?.label || formData.llmModel;
-    }
-    if (provider === 'glm') {
-      return GLM_MODELS.find((model) => model.value === formData.llmModel)?.label || formData.llmModel;
-    }
-    return formData.llmModel;
-  }, [formData.llmModel, provider]);
+    return modelOptions.find((model) => model.value === formData.llmModel)?.label || formData.llmModel;
+  }, [formData.llmModel, modelOptions]);
+
+  const selectedModelKey = provider === 'ollama' ? '__default__' : formData.llmModel;
+  const selectedParameterDefinitions = useMemo(
+    () => llmParameterDefinitions?.[provider]?.[selectedModelKey] || {},
+    [llmParameterDefinitions, provider, selectedModelKey]
+  );
+  const selectedParameterValues = useMemo(
+    () => formData.llmModelParameters?.[provider]?.[selectedModelKey] || {},
+    [formData.llmModelParameters, provider, selectedModelKey]
+  );
+
+  const handleParameterChange = (parameterKey: string, value: string | number): void => {
+    const nextParameters = {
+      ...(formData.llmModelParameters || {}),
+      [provider]: {
+        ...((formData.llmModelParameters || {})[provider] || {}),
+        [selectedModelKey]: {
+          ...selectedParameterValues,
+          [parameterKey]: value,
+        },
+      },
+    };
+    onInputChange('llmModelParameters', nextParameters);
+  };
 
   const providerDescription =
     provider === 'ollama'
@@ -219,6 +181,13 @@ const LLMTab = ({
         onModelChange={handleModelChange}
         onOllamaUrlChange={handleTextChange('ollamaBaseUrl')}
         t={t}
+      />
+
+      <LLMModelParametersSection
+        modelLabel={provider === 'ollama' ? 'Ollama runtime defaults' : (currentModelLabel || formData.llmModel)}
+        parameterDefinitions={selectedParameterDefinitions}
+        values={selectedParameterValues}
+        onParameterChange={handleParameterChange}
       />
 
       <LLMPresentationPreferences

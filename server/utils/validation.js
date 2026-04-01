@@ -513,6 +513,16 @@ export const updateSettingsSchema = z.object({
   ollamaVisionModel: z.string().max(100).optional(),
   ollamaKeepAlive: z.string().max(50).optional(),
   ollamaNumCtx: z.coerce.number().min(1024).max(262144).optional(),
+  llmModelParameters: z.record(
+    z.string(),
+    z.record(
+      z.string(),
+      z.record(
+        z.string(),
+        z.union([z.string(), z.coerce.number(), z.boolean()])
+      )
+    )
+  ).optional(),
   cvMode: z.enum(['nominative', 'anonymous']).optional(),
   chatbotEnabled: z.enum(['on', 'off']).optional(),
   webglEnabled: z.enum(['on', 'off']).optional(),

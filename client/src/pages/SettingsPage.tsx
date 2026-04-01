@@ -57,11 +57,18 @@ const SettingsPage = (): JSX.Element => {
             onInputChange={handleInputChange}
             t={t}
             llmAvailability={settings?.llmAvailability}
+            llmModelCatalog={settings?.llmModelCatalog}
+            llmParameterDefinitions={settings?.llmParameterDefinitions}
           />
         )}
 
         {activeTab === 'prompts' && (
-          <PromptsTab formData={formData} onInputChange={handleInputChange} t={t} />
+          <PromptsTab
+            formData={formData}
+            onInputChange={handleInputChange}
+            t={t}
+            promptGovernance={settings?.promptGovernance}
+          />
         )}
 
         {activeTab === 'weights' && (

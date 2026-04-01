@@ -5,12 +5,23 @@ vi.mock('../../services/settings.service.js', () => ({
 }));
 
 vi.mock('../../services/llmAvailability.service.js', () => ({
+    getProviderAvailabilityFlags: vi.fn(() => ({})),
     resolveAvailableModel: vi.fn((provider, model, fallbackModel) => ({
         model: provider === 'ollama' ? (model ?? null) : (model || fallbackModel || null),
         adjusted: false,
         reason: null,
         originalModel: provider === 'ollama' ? (model ?? null) : (model || fallbackModel || null),
         fallbackModel: fallbackModel || null
+    }))
+}));
+
+vi.mock('../../services/llmAdminParameters.service.js', () => ({
+    resolveEffectiveModelParameters: vi.fn(({ overrides = {} }) => ({
+        parameters: {
+            max_tokens: overrides.max_tokens ?? 4096,
+            temperature: overrides.temperature ?? 0,
+            ...(overrides.top_p !== undefined ? { top_p: overrides.top_p } : {})
+        }
     }))
 }));
 

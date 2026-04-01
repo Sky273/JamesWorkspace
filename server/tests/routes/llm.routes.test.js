@@ -57,12 +57,27 @@ vi.mock('../../services/settings.service.js', () => ({
 }));
 
 vi.mock('../../services/llmAvailability.service.js', () => ({
+    getProviderAvailabilityFlags: vi.fn(() => ({})),
     resolveAvailableModel: vi.fn((provider, model, fallbackModel) => ({
         model: provider === 'ollama' ? (model ?? null) : (model || fallbackModel || null),
         adjusted: false,
         reason: null,
         originalModel: provider === 'ollama' ? (model ?? null) : (model || fallbackModel || null),
         fallbackModel: fallbackModel || null
+    }))
+}));
+
+vi.mock('../../services/llmAdminParameters.service.js', () => ({
+    resolveEffectiveModelParameters: vi.fn(({ overrides = {} }) => ({
+        parameters: {
+            ...(overrides.max_tokens !== undefined ? { max_tokens: overrides.max_tokens } : {}),
+            ...(overrides.max_completion_tokens !== undefined ? { max_completion_tokens: overrides.max_completion_tokens } : {}),
+            ...(overrides.max_output_tokens !== undefined ? { max_output_tokens: overrides.max_output_tokens } : {}),
+            ...(overrides.temperature !== undefined ? { temperature: overrides.temperature } : {}),
+            ...(overrides.top_p !== undefined ? { top_p: overrides.top_p } : {}),
+            ...(overrides.reasoning_effort !== undefined ? { reasoning_effort: overrides.reasoning_effort } : {}),
+            ...(overrides.response_format !== undefined ? { response_format: overrides.response_format } : {})
+        }
     }))
 }));
 

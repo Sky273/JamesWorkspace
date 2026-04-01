@@ -16,6 +16,7 @@ import { callMiniMaxOpenAICompatible, callMiniMaxAnthropicCompatible } from '../
 import { extractOpenAIResponsesText, flattenLlmTextContent, sanitizeOpenAICompatibleResponseBody } from '../services/llmContent.service.js';
 import { normalizeAnthropicRequestBody, toAnthropicCompatibleResponse, toOpenAICompatibleResponse } from '../services/llmProviderCommon.service.js';
 import { resolveCompatibleProviderRuntimeConfig } from '../services/llmConfiguration.service.js';
+import { resolveEffectiveModelParameters } from '../services/llmAdminParameters.service.js';
 import {
     buildCircuitBreakerIndicators,
     buildOpenAIProxyRequest,
@@ -25,6 +26,28 @@ import {
 } from './llmRouteHelpers.js';
 
 const router = express.Router();
+
+function applyResolvedModelParameters(req, settings, provider, model) {
+    const { parameters } = resolveEffectiveModelParameters({
+        settings,
+        provider,
+        model,
+        overrides: {
+            temperature: req.body.temperature,
+            top_p: req.body.top_p,
+            max_tokens: req.body.max_tokens,
+            max_completion_tokens: req.body.max_completion_tokens,
+            max_output_tokens: req.body.max_output_tokens,
+            response_format: req.body.response_format,
+            reasoning_effort: req.body.reasoning_effort
+        }
+    });
+
+    req.body = {
+        ...req.body,
+        ...parameters
+    };
+}
 
 async function handleOllamaRequest(req, res, settings, responseShape, model) {
     const result = await callOllama(req.body.messages || [], model, settings, {
@@ -290,6 +313,7 @@ async function proxyAnthropicRequest(req, res, model, metadata, { useRetry = tru
 router.post('/openai', authenticateToken, llmLimiter, combinedRateLimit(30, 60 * 60 * 1000), validateBody(openaiRequestSchema), async (req, res) => {
     const metadata = getRequestMetadata(req);
     let model = req.body.model;
+    let provider = 'openai';
 
     try {
         const settings = await getLLMSettings();
@@ -298,7 +322,8 @@ router.post('/openai', authenticateToken, llmLimiter, combinedRateLimit(30, 60 *
             return res.status(400).json({ error: validationError });
         }
 
-        ({ model } = resolveCompatibleProviderRuntimeConfig({ settings, requestedModel: model, responseShape: 'openai' }));
+        ({ provider, model } = resolveCompatibleProviderRuntimeConfig({ settings, requestedModel: model, responseShape: 'openai' }));
+        applyResolvedModelParameters(req, settings, provider, model);
 
         const compatibleResponse = await maybeHandleCompatibleProviderRequest(req, res, settings, 'openai', model, metadata);
         if (compatibleResponse) {
@@ -317,6 +342,7 @@ router.post('/openai', authenticateToken, llmLimiter, combinedRateLimit(30, 60 *
 router.post('/anthropic', authenticateToken, llmLimiter, combinedRateLimit(30, 60 * 60 * 1000), validateBody(anthropicRequestSchema), async (req, res) => {
     const metadata = getRequestMetadata(req);
     let model = process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20241022';
+    let provider = 'anthropic';
 
     try {
         const settings = await getLLMSettings();
@@ -325,7 +351,8 @@ router.post('/anthropic', authenticateToken, llmLimiter, combinedRateLimit(30, 6
             return res.status(400).json({ error: validationError });
         }
 
-        ({ model } = resolveCompatibleProviderRuntimeConfig({ settings, requestedModel: req.body.model || model, responseShape: 'anthropic' }));
+        ({ provider, model } = resolveCompatibleProviderRuntimeConfig({ settings, requestedModel: req.body.model || model, responseShape: 'anthropic' }));
+        applyResolvedModelParameters(req, settings, provider, model);
 
         const compatibleResponse = await maybeHandleCompatibleProviderRequest(req, res, settings, 'anthropic', model, metadata);
         if (compatibleResponse) {
@@ -344,10 +371,12 @@ router.post('/anthropic', authenticateToken, llmLimiter, combinedRateLimit(30, 6
 router.post('/chat/completions', authenticateToken, llmLimiter, combinedRateLimit(30, 60 * 60 * 1000), validateBody(openaiRequestSchema), async (req, res) => {
     const metadata = getRequestMetadata(req);
     let model = req.body.model || 'openai';
+    let provider = 'openai';
 
     try {
         const settings = await getLLMSettings();
-        ({ model } = resolveCompatibleProviderRuntimeConfig({ settings, requestedModel: req.body.model || model, responseShape: 'openai' }));
+        ({ provider, model } = resolveCompatibleProviderRuntimeConfig({ settings, requestedModel: req.body.model || model, responseShape: 'openai' }));
+        applyResolvedModelParameters(req, settings, provider, model);
 
         const compatibleResponse = await maybeHandleCompatibleProviderRequest(req, res, settings, 'openai', model, metadata);
         if (compatibleResponse) {
@@ -366,10 +395,12 @@ router.post('/chat/completions', authenticateToken, llmLimiter, combinedRateLimi
 router.post('/messages', authenticateToken, llmLimiter, combinedRateLimit(30, 60 * 60 * 1000), validateBody(anthropicRequestSchema), async (req, res) => {
     const metadata = getRequestMetadata(req);
     let model = process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20241022';
+    let provider = 'anthropic';
 
     try {
         const settings = await getLLMSettings();
-        ({ model } = resolveCompatibleProviderRuntimeConfig({ settings, requestedModel: req.body.model || model, responseShape: 'anthropic' }));
+        ({ provider, model } = resolveCompatibleProviderRuntimeConfig({ settings, requestedModel: req.body.model || model, responseShape: 'anthropic' }));
+        applyResolvedModelParameters(req, settings, provider, model);
 
         const compatibleResponse = await maybeHandleCompatibleProviderRequest(req, res, settings, 'anthropic', model, metadata);
         if (compatibleResponse) {

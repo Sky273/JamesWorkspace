@@ -14,7 +14,7 @@ interface FormData {
   'Profile Matching Local Title Exact Weight': number;
   'Profile Matching Local Title Token Weight': number;
   'Profile Matching Local Coverage Multiplier': number;
-  [key: string]: string | number | boolean;
+  [key: string]: string | number | boolean | Record<string, Record<string, Record<string, string | number>>>;
 }
 
 interface WeightsTabProps {

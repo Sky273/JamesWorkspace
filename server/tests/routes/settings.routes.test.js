@@ -220,6 +220,12 @@ describe('Settings Routes', () => {
             expect(res.body.cvMode).toBe('nominative');
             expect(res.body['Analysis Prompt']).toBe('Analyze this');
             expect(res.body['DPO Name']).toBe('John');
+            expect(res.body.promptGovernance['Analysis Prompt']).toEqual(expect.objectContaining({
+                promptId: 'resume.analysis.default',
+                promptVersion: '1.8.8',
+                contractId: 'resume_analysis_v1',
+                contractVersion: '1.0.0'
+            }));
         });
 
         it('should overlay canonical LLM settings on the general settings payload', async () => {
@@ -257,6 +263,10 @@ describe('Settings Routes', () => {
             expect(res.body.llmModel).toBeNull();
             expect(res.body['Analysis Prompt']).toBe('default-analysis');
             expect(res.body['Profile Matching Local Skill Weight']).toBe(6);
+            expect(res.body.promptGovernance['Adaptation Prompt']).toEqual(expect.objectContaining({
+                promptId: 'mission.adaptation.default',
+                promptVersion: '1.8.8'
+            }));
         });
 
         it('should return 401 without auth', async () => {
@@ -283,6 +293,10 @@ describe('Settings Routes', () => {
             expect(res.body['Adaptation Prompt']).toBe('default-adaptation');
             expect(res.body['Executive Summary Weight']).toBe(20);
             expect(res.body.llmModel).toBe('gpt-5.4');
+            expect(res.body.promptGovernance['Improvement Prompt']).toEqual(expect.objectContaining({
+                promptId: 'resume.improvement.default',
+                contractId: 'resume_improvement_v1'
+            }));
         });
 
         it('should return 403 for non-admin', async () => {

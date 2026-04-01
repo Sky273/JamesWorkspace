@@ -77,7 +77,7 @@ export function buildOpenAIProxyRequest({ model, body = {}, allowResponsesApi = 
             input: body.messages || body.input
         };
         const isProModel = Boolean(model.match(/gpt-5\.\d+-pro/i));
-        requestBody.reasoning = { effort: isProModel ? 'medium' : 'none' };
+        requestBody.reasoning = { effort: body.reasoning_effort || (isProModel ? 'medium' : 'none') };
 
         if (body.response_format) {
             requestBody.text = { format: body.response_format };

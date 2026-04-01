@@ -7,6 +7,7 @@ import { getLLMSettings } from './settings.service.js';
 import { resolveLLMRuntimeConfig } from './llmConfiguration.service.js';
 import { callProviderChat } from './llmGateway.service.js';
 import { toOpenAICompatibleResponse } from './llmProviderCommon.service.js';
+import { resolveEffectiveModelParameters } from './llmAdminParameters.service.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { normalizeUtf8Text } from './openai/textUtils.js';
 
@@ -56,6 +57,17 @@ export async function callBusinessChatCompletion({
     const settings = await getLLMSettings();
     const { provider, model: effectiveModel } = resolveLLMRuntimeConfig(settings, model);
     const normalizedMessages = normalizeMessagesContent(messages);
+    const { parameters } = resolveEffectiveModelParameters({
+        settings,
+        provider,
+        model: effectiveModel,
+        overrides: {
+            temperature,
+            top_p: topP,
+            max_tokens: maxTokens,
+            response_format: responseFormat
+        }
+    });
 
     if (provider !== 'ollama' && !effectiveModel) {
         throw new Error('Model is required');
@@ -74,10 +86,7 @@ export async function callBusinessChatCompletion({
         messages: normalizedMessages,
         settings,
         options: {
-            temperature,
-            max_tokens: maxTokens,
-            top_p: topP,
-            response_format: responseFormat,
+            ...parameters,
             timeout: resolveBusinessOperationTimeout(operationType, timeout),
             maxPromptLength,
             userMetadata,

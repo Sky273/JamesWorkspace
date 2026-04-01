@@ -10,6 +10,8 @@ import { safeLog } from '../utils/logger.backend.js';
 import { mapSettingsToFrontend, mapSettingsFromFrontend } from '../utils/mappers.js';
 import { getProviderAvailabilityFlags, resolveAvailableModel } from '../services/llmAvailability.service.js';
 import { getProviderDefaultModel } from '../services/llmConfiguration.service.js';
+import { buildLlmAdminMetadata, sanitizeLlmModelParameters } from '../services/llmAdminParameters.service.js';
+import { getPromptContract, getPromptDefinition } from '../config/llmGovernance.js';
 import {
     PROFILE_MATCHING_LOCAL_SKILL_WEIGHT,
     PROFILE_MATCHING_LOCAL_TOOL_WEIGHT,
@@ -21,6 +23,12 @@ import {
 } from '../config/constants.js';
 
 const router = express.Router();
+const GOVERNED_PROMPT_KEYS = Object.freeze({
+    'Analysis Prompt': 'DEFAULT_ANALYSIS_PROMPT',
+    'Improvement Prompt': 'DEFAULT_IMPROVEMENT_PROMPT',
+    'Match Analysis Prompt': 'DEFAULT_MATCH_ANALYSIS_PROMPT',
+    'Adaptation Prompt': 'DEFAULT_ADAPTATION_PROMPT'
+});
 
 function normalizeRequestedSettingsModel(settingsData = {}) {
     if (!settingsData.llmProvider || !settingsData.llmModel) {
@@ -51,9 +59,31 @@ function normalizeRequestedSettingsModel(settingsData = {}) {
 }
 
 function decorateSettingsResponse(settings) {
+    const promptGovernance = Object.fromEntries(
+        Object.entries(GOVERNED_PROMPT_KEYS).map(([settingKey, promptKey]) => {
+            const prompt = getPromptDefinition(promptKey);
+            const contract = getPromptContract(promptKey);
+
+            return [settingKey, {
+                settingKey,
+                promptKey,
+                promptId: prompt?.id || null,
+                promptVersion: prompt?.version || null,
+                promptDomain: prompt?.domain || null,
+                promptOperation: prompt?.operation || null,
+                contractId: contract?.id || null,
+                contractVersion: contract?.version || null,
+                sourceModule: prompt?.sourceModule || null,
+                defaultText: prompt?.text || ''
+            }];
+        })
+    );
+
     return {
         ...settings,
-        llmAvailability: getProviderAvailabilityFlags()
+        llmAvailability: getProviderAvailabilityFlags(),
+        ...buildLlmAdminMetadata(getProviderAvailabilityFlags()),
+        promptGovernance
     };
 }
 
@@ -70,6 +100,7 @@ function mergeCanonicalLlmSettings(settingsData, canonicalLlmSettings = {}) {
         ollamaVisionModel: canonicalLlmSettings.ollamaVisionModel ?? settingsData.ollamaVisionModel,
         ollamaKeepAlive: canonicalLlmSettings.ollamaKeepAlive ?? settingsData.ollamaKeepAlive,
         ollamaNumCtx: canonicalLlmSettings.ollamaNumCtx ?? settingsData.ollamaNumCtx,
+        llmModelParameters: canonicalLlmSettings.llmModelParameters ?? settingsData.llmModelParameters,
         cvMode: canonicalLlmSettings.cvMode ?? settingsData.cvMode,
         chatbotEnabled: canonicalLlmSettings.chatbotEnabled ?? settingsData.chatbotEnabled,
         webglEnabled: canonicalLlmSettings.webglEnabled ?? settingsData.webglEnabled,
@@ -90,7 +121,9 @@ function mergeCanonicalLlmSettings(settingsData, canonicalLlmSettings = {}) {
         'Profile Matching Local Title Exact Weight': canonicalLlmSettings['Profile Matching Local Title Exact Weight'] ?? settingsData['Profile Matching Local Title Exact Weight'],
         'Profile Matching Local Title Token Weight': canonicalLlmSettings['Profile Matching Local Title Token Weight'] ?? settingsData['Profile Matching Local Title Token Weight'],
         'Profile Matching Local Coverage Multiplier': canonicalLlmSettings['Profile Matching Local Coverage Multiplier'] ?? settingsData['Profile Matching Local Coverage Multiplier'],
-        llmAvailability: canonicalLlmSettings.llmAvailability ?? settingsData.llmAvailability
+        llmAvailability: canonicalLlmSettings.llmAvailability ?? settingsData.llmAvailability,
+        llmModelCatalog: canonicalLlmSettings.llmModelCatalog ?? settingsData.llmModelCatalog,
+        llmParameterDefinitions: canonicalLlmSettings.llmParameterDefinitions ?? settingsData.llmParameterDefinitions
     };
 }
 
@@ -201,6 +234,9 @@ router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), valida
 
         delete updateData.id;
         updateData = normalizeRequestedSettingsModel(normalizeWeights(updateData));
+        if (updateData.llmModelParameters) {
+            updateData.llmModelParameters = sanitizeLlmModelParameters(updateData.llmModelParameters);
+        }
 
         safeLog('debug', 'Settings normalized', { fields: Object.keys(updateData) });
 
@@ -233,6 +269,9 @@ router.post('/', authenticateToken, requireAdmin, validateBody(updateSettingsSch
         await invalidateSettingsCache();
 
         settingsData = normalizeRequestedSettingsModel(normalizeWeights(settingsData));
+        if (settingsData.llmModelParameters) {
+            settingsData.llmModelParameters = sanitizeLlmModelParameters(settingsData.llmModelParameters);
+        }
 
         const fieldsToCreate = {
             name: settingsData.llmModel || 'Default Settings',

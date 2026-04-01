@@ -8,7 +8,7 @@ import { ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline';
 interface ChatbotTabProps {
   formData: {
     chatbotEnabled?: 'on' | 'off';
-    [key: string]: string | number | boolean | undefined;
+    [key: string]: string | number | boolean | undefined | Record<string, Record<string, Record<string, string | number>>>;
   };
   onInputChange: (field: string, value: string | number | boolean) => void;
   t: (key: string) => string;
