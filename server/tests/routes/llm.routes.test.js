@@ -358,6 +358,24 @@ describe('LLM Routes', () => {
                 useRetry: false
             }));
         });
+
+        it('sanitizes upstream Anthropic provider errors', async () => {
+            mockAxiosPost.mockRejectedValueOnce({
+                response: {
+                    status: 400,
+                    statusText: 'Bad Request',
+                    data: { error: { message: 'raw anthropic validation detail' } }
+                }
+            });
+
+            const res = await request(app)
+                .post('/api/llm/anthropic')
+                .set(AUTH)
+                .send({ messages: [{ role: 'user', content: 'Hello' }] });
+
+            expect(res.status).toBe(400);
+            expect(res.body).toEqual({ error: 'ANTHROPIC provider request failed (Bad Request).' });
+        });
     });
 
     describe('POST /chat/completions', () => {
@@ -376,6 +394,26 @@ describe('LLM Routes', () => {
 
             expect(res.status).toBe(200);
             expect(res.body.choices).toBeDefined();
+        });
+
+        it('sanitizes OpenAI 4xx proxy responses returned without exception', async () => {
+            mockAxiosPost.mockResolvedValueOnce({
+                status: 429,
+                statusText: 'Too Many Requests',
+                data: {
+                    error: {
+                        message: 'raw upstream detail'
+                    }
+                }
+            });
+
+            const res = await request(app)
+                .post('/api/llm/chat/completions')
+                .set(AUTH)
+                .send({ messages: [{ role: 'user', content: 'Hi' }], model: 'gpt-4o' });
+
+            expect(res.status).toBe(429);
+            expect(res.body).toEqual({ error: 'OPENAI provider request failed (Too Many Requests).' });
         });
 
         it('should strip reasoning content from DeepSeek-compatible proxy responses', async () => {
@@ -412,6 +450,34 @@ describe('LLM Routes', () => {
             expect(res.status).toBe(200);
             expect(res.body.choices[0].message.content).toBe('Response');
         });
+
+        it('should return 400 for oversized chat completion messages', async () => {
+            const res = await request(app)
+                .post('/api/llm/chat/completions')
+                .set(AUTH)
+                .send({ model: 'gpt-4o', messages: [{ role: 'user', content: 'x'.repeat(10001) }] });
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toContain('maximum length');
+        });
+
+        it('sanitizes upstream OpenAI provider errors', async () => {
+            mockAxiosPost.mockRejectedValueOnce({
+                response: {
+                    status: 429,
+                    statusText: 'Too Many Requests',
+                    data: { error: { message: 'raw upstream quota detail' } }
+                }
+            });
+
+            const res = await request(app)
+                .post('/api/llm/openai')
+                .set(AUTH)
+                .send({ messages: [{ role: 'user', content: 'Hello' }] });
+
+            expect(res.status).toBe(429);
+            expect(res.body).toEqual({ error: 'OPENAI provider request failed (Too Many Requests).' });
+        });
     });
 
     describe('POST /messages', () => {
@@ -432,6 +498,16 @@ describe('LLM Routes', () => {
             expect(mockWithRetry).toHaveBeenCalledWith(expect.any(Function), expect.objectContaining({
                 serviceName: 'anthropic'
             }));
+        });
+
+        it('should return 400 for oversized anthropic-compatible messages', async () => {
+            const res = await request(app)
+                .post('/api/llm/messages')
+                .set(AUTH)
+                .send({ messages: [{ role: 'user', content: 'x'.repeat(10001) }] });
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toContain('maximum length');
         });
     });
 

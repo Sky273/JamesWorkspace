@@ -88,10 +88,30 @@ describe('Auth Service', () => {
         it('should create and return user', async () => {
             createWithTimeout.mockResolvedValueOnce([{ id: 'u1', email: 'new@test.com' }]);
 
-            const result = await createUser({ email: 'new@test.com', name: 'New', password: 'hash' });
+            const result = await createUser({
+                email: 'new@test.com',
+                name: 'New',
+                password: 'hash',
+                firm_id: 'firm-1',
+                firm_name: 'Acme'
+            });
 
             expect(result.email).toBe('new@test.com');
-            expect(createWithTimeout).toHaveBeenCalledWith('users', [{ fields: { email: 'new@test.com', name: 'New', password: 'hash' } }]);
+            expect(createWithTimeout).toHaveBeenCalledWith('users', [{
+                fields: {
+                    email: 'new@test.com',
+                    name: 'New',
+                    password: 'hash',
+                    firm_id: 'firm-1',
+                    firm_name: 'Acme'
+                }
+            }]);
+        });
+
+        it('should reject creation without firm assignment', async () => {
+            await expect(createUser({ email: 'new@test.com', name: 'New', password: 'hash' }))
+                .rejects
+                .toThrow('Firm assignment is required');
         });
     });
 
@@ -100,12 +120,27 @@ describe('Auth Service', () => {
             query.mockResolvedValueOnce({ rows: [{ id: 'u1', google_id: 'g123', role: 'user', status: 'pending' }] });
 
             const result = await registerGoogleUser({
-                email: 'user@gmail.com', name: 'User', googleId: 'g123', googleEmail: 'user@gmail.com'
+                email: 'user@gmail.com',
+                name: 'User',
+                googleId: 'g123',
+                googleEmail: 'user@gmail.com',
+                firmId: 'firm-1',
+                firmName: 'Acme'
             });
 
             expect(result.status).toBe('pending');
             expect(query.mock.calls[0][0]).toContain('INSERT INTO users');
             expect(query.mock.calls[0][1]).toContain('g123');
+            expect(query.mock.calls[0][1]).toContain('firm-1');
+        });
+
+        it('should reject Google registration without firm assignment', async () => {
+            await expect(registerGoogleUser({
+                email: 'user@gmail.com',
+                name: 'User',
+                googleId: 'g123',
+                googleEmail: 'user@gmail.com'
+            })).rejects.toThrow('Firm assignment is required');
         });
     });
 });

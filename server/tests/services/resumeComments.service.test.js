@@ -18,6 +18,7 @@ import {
     initResumeCommentsTable,
     addComment,
     getComments,
+    getCommentForAccessCheck,
     updateComment,
     deleteComment,
     getCommentCount,
@@ -114,19 +115,19 @@ describe('Resume Comments Service', () => {
         it('should update comment owned by user', async () => {
             query.mockResolvedValueOnce({ rows: [{ id: 'c1', content: 'Updated' }] });
 
-            const result = await updateComment('c1', 'u1', 'Updated');
+            const result = await updateComment('c1', 'r1', 'u1', 'Updated');
 
             expect(result.content).toBe('Updated');
-            expect(query.mock.calls[0][0]).toContain('WHERE id = $2 AND user_id = $3');
+            expect(query.mock.calls[0][0]).toContain('WHERE id = $2 AND resume_id = $3 AND user_id = $4');
         });
 
         it('should return null if not found or not owner', async () => {
             query.mockResolvedValueOnce({ rows: [] });
-            expect(await updateComment('c1', 'u2', 'X')).toBeNull();
+            expect(await updateComment('c1', 'r1', 'u2', 'X')).toBeNull();
         });
 
         it('should throw if required fields missing', async () => {
-            await expect(updateComment('c1', 'u1', '')).rejects.toThrow('required');
+            await expect(updateComment('c1', 'r1', 'u1', '')).rejects.toThrow('required');
         });
     });
 
@@ -134,25 +135,35 @@ describe('Resume Comments Service', () => {
         it('should delete own comment', async () => {
             query.mockResolvedValueOnce({ rows: [{ id: 'c1' }] });
 
-            expect(await deleteComment('c1', 'u1')).toBe(true);
-            expect(query.mock.calls[0][0]).toContain('WHERE id = $1 AND user_id = $2');
+            expect(await deleteComment('c1', 'r1', 'u1')).toBe(true);
+            expect(query.mock.calls[0][0]).toContain('WHERE id = $1 AND resume_id = $2 AND user_id = $3');
         });
 
         it('should allow admin to delete any comment', async () => {
             query.mockResolvedValueOnce({ rows: [{ id: 'c1' }] });
 
-            expect(await deleteComment('c1', 'u1', true)).toBe(true);
-            expect(query.mock.calls[0][0]).toContain('WHERE id = $1');
+            expect(await deleteComment('c1', 'r1', 'u1', true)).toBe(true);
+            expect(query.mock.calls[0][0]).toContain('WHERE id = $1 AND resume_id = $2');
             expect(query.mock.calls[0][0]).not.toContain('user_id');
         });
 
         it('should return false if not found', async () => {
             query.mockResolvedValueOnce({ rows: [] });
-            expect(await deleteComment('c1', 'u1')).toBe(false);
+            expect(await deleteComment('c1', 'r1', 'u1')).toBe(false);
         });
 
         it('should throw if required fields missing', async () => {
-            await expect(deleteComment(null, 'u1')).rejects.toThrow('required');
+            await expect(deleteComment(null, 'r1', 'u1')).rejects.toThrow('required');
+        });
+    });
+
+    describe('getCommentForAccessCheck', () => {
+        it('should return comment metadata', async () => {
+            query.mockResolvedValueOnce({ rows: [{ id: 'c1', resume_id: 'r1', user_id: 'u1' }] });
+
+            const result = await getCommentForAccessCheck('c1');
+
+            expect(result).toEqual({ id: 'c1', resume_id: 'r1', user_id: 'u1' });
         });
     });
 

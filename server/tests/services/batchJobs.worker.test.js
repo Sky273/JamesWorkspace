@@ -15,6 +15,7 @@ vi.mock('../../services/batchJobs/constants.js', () => ({
 }));
 vi.mock('../../services/batchJobs/jobCrud.js', () => ({
     getPendingJobs: vi.fn(() => []),
+    getJobStatus: vi.fn(() => 'processing'),
     updateJobStatus: vi.fn(),
     updateJobCounters: vi.fn(),
     isJobComplete: vi.fn(() => false),
@@ -29,7 +30,7 @@ vi.mock('../../services/batchJobs/itemCrud.js', () => ({
 }));
 
 import { startWorker, stopWorker } from '../../services/batchJobs/worker.js';
-import { getPendingJobs, updateJobStatus, updateJobCounters, isJobComplete } from '../../services/batchJobs/jobCrud.js';
+import { getPendingJobs, getJobStatus, updateJobStatus, updateJobCounters, isJobComplete } from '../../services/batchJobs/jobCrud.js';
 import { getPendingItems, updateJobItemStatus } from '../../services/batchJobs/itemCrud.js';
 
 describe('Batch Jobs Worker', () => {
@@ -69,8 +70,8 @@ describe('Batch Jobs Worker', () => {
             await new Promise(r => setTimeout(r, 250));
             stopWorker();
 
-            expect(updateJobStatus).toHaveBeenCalledWith('job-1', 'processing');
             expect(processItem).toHaveBeenCalledWith(item, job);
+            expect(getJobStatus).toHaveBeenCalledWith('job-1');
         });
 
         it('should handle item processing errors', async () => {
@@ -103,6 +104,26 @@ describe('Batch Jobs Worker', () => {
 
             expect(updateJobCounters).toHaveBeenCalledWith('job-1');
             expect(updateJobStatus).toHaveBeenLastCalledWith('job-1', 'completed', expect.objectContaining({ processed_items: 0, success_count: 0, error_count: 0 }));
+        });
+
+        it('should preserve cancelled status when job completes after cancellation', async () => {
+            const processItem = vi.fn();
+            const job = { id: 'job-1', status: 'processing', total_items: 1 };
+            const item = { id: 'item-1', file_name: 'cv.pdf' };
+
+            getPendingJobs.mockResolvedValueOnce([job]).mockResolvedValue([]);
+            getPendingItems.mockResolvedValueOnce([item]);
+            isJobComplete.mockResolvedValueOnce(true);
+            getJobStatus
+                .mockResolvedValueOnce('processing')
+                .mockResolvedValueOnce('cancelled');
+
+            startWorker(processItem);
+            await new Promise(r => setTimeout(r, 250));
+            stopWorker();
+
+            expect(processItem).toHaveBeenCalledWith(item, job);
+            expect(updateJobStatus).not.toHaveBeenCalledWith('job-1', 'completed', expect.anything());
         });
     });
 });

@@ -239,17 +239,32 @@ router.get('/', async (req, res) => {
         checks.minimax = getNotConfiguredCheck();
     }
 
-    try {
-        const response = await Promise.race([
-            fetch(new URL('/api/tags', OLLAMA_BASE_URL).toString(), { method: 'GET' }),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 3000))
-        ]);
-        checks.ollama = {
-            status: response.ok ? 'ok' : 'error',
-            message: response.ok ? 'Ollama reachable' : `Ollama error: ${response.status}`
-        };
-    } catch {
-        checks.ollama = { status: 'error', message: 'Ollama unreachable' };
+    if (OLLAMA_BASE_URL) {
+        if (deepCheck) {
+            try {
+                const response = await Promise.race([
+                    fetch(new URL('/api/tags', OLLAMA_BASE_URL).toString(), { method: 'GET' }),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 3000))
+                ]);
+                checks.ollama = {
+                    status: response.ok ? 'ok' : 'error',
+                    message: response.ok ? 'Ollama reachable' : `Ollama error: ${response.status}`
+                };
+            } catch {
+                checks.ollama = { status: 'error', message: 'Ollama unreachable' };
+            }
+        } else {
+            checks.ollama = getConfiguredCheck();
+        }
+    } else {
+        checks.ollama = getNotConfiguredCheck();
+    }
+
+    const responseTime = Date.now() - startTime;
+    const statusCode = getHealthStatusCode(overallStatus);
+
+    if (!isAdmin) {
+        return res.status(statusCode).json(buildPublicHealthResponse({ overallStatus, responseTime }));
     }
 
     const [settingsCacheSize, templatesCacheSize, firmsCacheSize, cacheRegistry] = await Promise.all([
@@ -282,7 +297,6 @@ router.get('/', async (req, res) => {
         };
     }
 
-    const responseTime = Date.now() - startTime;
     const responsePayload = buildHealthResponsePayload({
         overallStatus,
         responseTime,
@@ -290,12 +304,6 @@ router.get('/', async (req, res) => {
         version: process.env.npm_package_version || '1.0.0',
         environment: process.env.NODE_ENV || 'development'
     });
-
-    const statusCode = getHealthStatusCode(overallStatus);
-
-    if (!isAdmin) {
-        return res.status(statusCode).json(buildPublicHealthResponse({ overallStatus, responseTime }));
-    }
 
     res.status(statusCode).json(responsePayload);
 });

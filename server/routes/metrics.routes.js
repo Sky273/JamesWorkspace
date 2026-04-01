@@ -286,7 +286,13 @@ router.get('/apm', authenticateToken, requireAdmin, (req, res) => {
  */
 router.get('/apm/slow-requests', authenticateToken, requireAdmin, (req, res) => {
     try {
-        const limit = parseInt(req.query.limit) || 50;
+        const parsedLimit = Number.parseInt(req.query.limit, 10);
+        const limit = Number.isNaN(parsedLimit) ? 50 : parsedLimit;
+        if (limit < 1 || limit > 100) {
+            return res.status(400).json({
+                error: 'Invalid limit parameter'
+            });
+        }
         const slowRequests = getSlowRequests(limit);
         res.json({
             count: slowRequests.length,

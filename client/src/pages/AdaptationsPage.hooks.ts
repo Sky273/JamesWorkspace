@@ -9,7 +9,7 @@ import { createAuthOptionsWithCsrf, fetchWithCsrfRetry } from '../utils/apiInter
 import logger from '../utils/logger.frontend';
 import resumeAdaptationService from '../utils/resumeAdaptationService';
 import { templateService } from '../utils/templateService';
-import { removeSuggestionMarkers } from '../utils/tinymceSuggestionsPlugin';
+import { removeSuggestionMarkers } from '../components/TiptapEditor';
 
 export interface Adaptation {
   id: string;

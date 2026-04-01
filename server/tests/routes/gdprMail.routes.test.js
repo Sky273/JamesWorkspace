@@ -154,6 +154,23 @@ describe('GDPR Mail Routes', () => {
             expect(res.status).toBe(200);
             expect(res.text).toContain('data-target-origin="http://localhost:5173"');
         });
+
+        it('should sanitize callback failures instead of exposing raw provider errors', async () => {
+            mockGetAuthUrl.mockResolvedValueOnce('https://accounts.google.com/o/oauth2/auth?...');
+            await request(app)
+                .get('/api/gdpr/mail/auth-url')
+                .set(AUTH);
+
+            mockHandleOAuthCallback.mockRejectedValueOnce(new Error('invalid_grant: token revoked'));
+
+            const res = await request(app)
+                .get(`/api/gdpr/mail/callback?code=abc&state=${'a'.repeat(64)}`);
+
+            expect(res.status).toBe(200);
+            expect(res.text).toContain('data-callback-error="gdpr_mail_callback_failed"');
+            expect(res.text).not.toContain('invalid_grant');
+            expect(res.text).not.toContain('token revoked');
+        });
     });
 
     describe('POST /disconnect', () => {
@@ -216,6 +233,7 @@ describe('GDPR Mail Routes', () => {
                 .set(AUTH)
                 .send({ email: 'test@example.com' });
             expect(res.status).toBe(500);
+            expect(res.body.error).toBe('Failed to send test email');
         });
     });
 });

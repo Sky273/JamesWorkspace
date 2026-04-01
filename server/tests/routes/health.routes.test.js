@@ -11,11 +11,11 @@ vi.mock('../../services/cache.service.js', () => ({
     settingsCache: { size: () => 5 },
     templatesCache: { size: () => 3 },
     firmsCache: { size: () => 2 },
-    getCacheRegistryStats: () => ({
+    getCacheRegistryStats: vi.fn(() => ({
         settings: { name: 'settings', size: 5, backend: 'redis', effectiveBackend: 'redis', connected: true, disabledReason: null },
         templates: { name: 'templates', size: 3, backend: 'redis', effectiveBackend: 'redis', connected: true, disabledReason: null },
         firms: { name: 'firms', size: 2, backend: 'redis', effectiveBackend: 'redis', connected: true, disabledReason: null }
-    })
+    }))
 }));
 
 vi.mock('../../config/constants.js', () => ({
@@ -200,8 +200,7 @@ describe('Health Routes', () => {
 
             await routeHandler(mockReq, mockRes);
 
-            expect(global.fetch).toHaveBeenCalledTimes(1);
-            expect(global.fetch.mock.calls[0][0]).toBe('http://127.0.0.1:11434/api/tags');
+            expect(global.fetch).not.toHaveBeenCalled();
             const response = mockRes.json.mock.calls[0][0];
             expect(response.checks).toBeUndefined();
         });
@@ -280,6 +279,7 @@ describe('Health Routes', () => {
             expect(global.fetch.mock.calls[2][0]).toBe('https://api.deepseek.com/chat/completions');
             expect(global.fetch.mock.calls[3][0]).toBe('https://api.z.ai/api/paas/v4/chat/completions');
             expect(global.fetch.mock.calls[4][0]).toBe('https://api.minimax.io/anthropic/v1/messages');
+            expect(global.fetch.mock.calls[5][0]).toBe('http://127.0.0.1:11434/api/tags');
         });
     });
 });

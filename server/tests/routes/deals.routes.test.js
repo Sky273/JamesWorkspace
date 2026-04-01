@@ -555,6 +555,19 @@ describe('Deals Routes - POST /api/deals', () => {
         expect(res.status).toBe(400);
     });
 
+    it('should sanitize internal access-check failures', async () => {
+        mockGetDealFirmId.mockRejectedValueOnce(new Error('database connection refused'));
+        mockIsUserAdmin.mockReturnValue(false);
+
+        const res = await request(app)
+            .get('/api/deals/deal-123')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(500);
+        expect(res.body.error).toBe('Failed to validate deal access');
+        expect(res.body.error).not.toContain('database connection refused');
+    });
+
     it('should reject creation without firm association for non-admin', async () => {
         mockGetUserFirmId.mockResolvedValueOnce(null);
         mockIsUserAdmin.mockReturnValue(false);

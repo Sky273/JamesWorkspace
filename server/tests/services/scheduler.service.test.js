@@ -35,10 +35,12 @@ import {
 describe('Scheduler Service', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        vi.useFakeTimers();
     });
 
     afterEach(() => {
         stopScheduler();
+        vi.useRealTimers();
     });
 
     describe('startScheduler / stopScheduler', () => {
@@ -49,6 +51,18 @@ describe('Scheduler Service', () => {
 
         it('should be safe to stop when not started', () => {
             expect(() => stopScheduler()).not.toThrow();
+        });
+
+        it('should not schedule duplicate timers when started twice', async () => {
+            expect(() => startScheduler()).not.toThrow();
+            expect(() => startScheduler()).not.toThrow();
+
+            await vi.advanceTimersByTimeAsync(30000);
+
+            expect(checkExpiredConsents).toHaveBeenCalledTimes(1);
+            expect(purgeExpiredResumes).toHaveBeenCalledTimes(1);
+            expect(cleanupExpiredTokens).toHaveBeenCalledTimes(1);
+            expect(proactiveTokenRefresh).toHaveBeenCalledTimes(1);
         });
     });
 

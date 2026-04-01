@@ -25,3 +25,45 @@ export async function getResumeById(resumeId) {
     const result = await query('SELECT * FROM resumes WHERE id = $1', [resumeId]);
     return result.rows.length > 0 ? result.rows[0] : null;
 }
+
+export async function getTemplateByIdForExport(templateId, { isAdmin, userFirmId }) {
+    const template = await getTemplateById(templateId);
+    if (!template) {
+        return null;
+    }
+
+    if (isAdmin) {
+        return template;
+    }
+
+    if (!userFirmId) {
+        return null;
+    }
+
+    if (template.firm_id !== null && template.firm_id !== userFirmId) {
+        return null;
+    }
+
+    return template;
+}
+
+export async function getResumeByIdForExport(resumeId, { isAdmin, userFirmId }) {
+    const resume = await getResumeById(resumeId);
+    if (!resume) {
+        return null;
+    }
+
+    if (isAdmin) {
+        return resume;
+    }
+
+    if (!userFirmId) {
+        return null;
+    }
+
+    if (resume.firm_id !== userFirmId) {
+        return null;
+    }
+
+    return resume;
+}

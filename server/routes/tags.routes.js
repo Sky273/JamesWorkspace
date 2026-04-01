@@ -4,7 +4,7 @@
  */
 
 import express from 'express';
-import { authenticateToken } from '../middleware/auth.middleware.js';
+import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
 import { validateBody, renameTagSchema, escoRecalculateSchema } from '../utils/validation.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { aggregateRawTags, aggregateCleanedTags, aggregateEscoTags, fetchResumeBatch, updateResumeTags, renameTag } from '../services/tags.service.js';
@@ -25,9 +25,9 @@ let escoTagsCacheTime = 0;
 
 // Maximum cache entries to prevent memory leaks
 const MAX_TAGS_CACHE_ENTRIES = 100;
+let tagsCacheCleanupInterval = null;
 
-// Periodic cache cleanup - auto-expire if not accessed for 2x TTL
-const tagsCacheCleanupInterval = setInterval(() => {
+function runTagsCacheCleanup() {
     const now = Date.now();
     let expiredCount = 0;
     // Clean up per-firm cleaned tags cache
@@ -46,7 +46,16 @@ const tagsCacheCleanupInterval = setInterval(() => {
         escoTagsCacheTime = 0;
         safeLog('debug', 'Tags: ESCO tags cache auto-expired');
     }
-}, TAGS_CACHE_TTL);
+}
+
+function startTagsCacheCleanup(intervalMs = TAGS_CACHE_TTL) {
+    if (tagsCacheCleanupInterval) {
+        return tagsCacheCleanupInterval;
+    }
+
+    tagsCacheCleanupInterval = setInterval(runTagsCacheCleanup, intervalMs);
+    return tagsCacheCleanupInterval;
+}
 
 /**
  * Invalidate tags cache
@@ -65,6 +74,7 @@ function invalidateTagsCache() {
 function destroyTagsCache() {
     if (tagsCacheCleanupInterval) {
         clearInterval(tagsCacheCleanupInterval);
+        tagsCacheCleanupInterval = null;
     }
     cleanedTagsCache.clear();
     cleanedTagsCacheTime.clear();
@@ -114,7 +124,14 @@ function parseJsonField(value) {
 // GET /api/tags - Get all tags from resumes (optimized SQL aggregation)
 router.get('/', authenticateToken, async (req, res) => {
     try {
-        const row = await aggregateRawTags();
+        const isAdmin = req.user?.role === 'admin';
+        const userFirmId = await getUserFirmId(req);
+
+        if (!isAdmin && !userFirmId) {
+            return res.status(403).json({ error: 'No firm association' });
+        }
+
+        const row = await aggregateRawTags({ isAdmin, userFirmId });
         res.json({
             'Skills': row.skills || [],
             'Industries': row.industries || [],
@@ -176,7 +193,7 @@ router.get('/cleaned', authenticateToken, async (req, res) => {
 });
 
 // POST /api/tags/cleaned/recalculate - Recalculate cleaned tags for all resumes (batch processing)
-router.post('/cleaned/recalculate', authenticateToken, async (req, res) => {
+router.post('/cleaned/recalculate', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const { processAnalysisTags } = await import('../utils/tagCleaner.js');
         
@@ -267,8 +284,15 @@ router.post('/cleaned/recalculate', authenticateToken, async (req, res) => {
 // GET /api/tags/esco - Get ESCO normalized tags (aggregated from all resumes - optimized SQL)
 router.get('/esco', authenticateToken, async (req, res) => {
     try {
+        const isAdmin = req.user?.role === 'admin';
+        const userFirmId = await getUserFirmId(req);
+
+        if (!isAdmin && !userFirmId) {
+            return res.status(403).json({ error: 'No firm association' });
+        }
+
         // Return cached ESCO tags if available and not expired
-        if (escoTagsCache && escoTagsCacheTime && (Date.now() - escoTagsCacheTime) < TAGS_CACHE_TTL) {
+        if (isAdmin && escoTagsCache && escoTagsCacheTime && (Date.now() - escoTagsCacheTime) < TAGS_CACHE_TTL) {
             return res.json(escoTagsCache);
         }
         
@@ -276,7 +300,7 @@ router.get('/esco', authenticateToken, async (req, res) => {
         // ESCO tags are stored as JSONB arrays of objects {label, uri}
         // Note: PostgreSQL doesn't allow ORDER BY in jsonb_agg(DISTINCT ...), so we use subqueries
         // For ESCO tags (objects), we deduplicate by uri and order by label
-        const row = await aggregateEscoTags();
+        const row = await aggregateEscoTags({ isAdmin, userFirmId });
         const result = {
             skills: row.skills || [],
             industries: row.industries || [],
@@ -285,8 +309,10 @@ router.get('/esco', authenticateToken, async (req, res) => {
         };
         
         // Update cache with timestamp
-        escoTagsCache = result;
-        escoTagsCacheTime = Date.now();
+        if (isAdmin) {
+            escoTagsCache = result;
+            escoTagsCacheTime = Date.now();
+        }
         
         res.json(result);
     } catch (error) {
@@ -296,7 +322,7 @@ router.get('/esco', authenticateToken, async (req, res) => {
 });
 
 // POST /api/tags/esco/recalculate - Recalculate ESCO tags for all resumes from cleaned tags (batch processing)
-router.post('/esco/recalculate', authenticateToken, validateBody(escoRecalculateSchema), async (req, res) => {
+router.post('/esco/recalculate', authenticateToken, requireAdmin, validateBody(escoRecalculateSchema), async (req, res) => {
     try {
         const { language = 'fr' } = req.body;
         
@@ -384,7 +410,7 @@ router.post('/esco/recalculate', authenticateToken, validateBody(escoRecalculate
 });
 
 // PUT /api/tags/rename - Rename tag across all resumes (optimized SQL)
-router.put('/rename', authenticateToken, validateBody(renameTagSchema), async (req, res) => {
+router.put('/rename', authenticateToken, requireAdmin, validateBody(renameTagSchema), async (req, res) => {
     try {
         const { category, oldName, newName } = req.body;
         
@@ -432,4 +458,4 @@ router.put('/rename', authenticateToken, validateBody(renameTagSchema), async (r
 
 // Export router and cache management functions
 export default router;
-export { invalidateTagsCache, destroyTagsCache, getTagsCacheStats };
+export { invalidateTagsCache, destroyTagsCache, getTagsCacheStats, startTagsCacheCleanup };

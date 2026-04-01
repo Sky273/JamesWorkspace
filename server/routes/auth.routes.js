@@ -6,7 +6,7 @@
  */
 
 // Re-export everything from the modular auth routes
-export { destroyAuthOauthStates } from './auth/index.js';
+export { destroyAuthOauthStates, startAuthOauthStatesCleanup } from './auth/index.js';
 
 // Default export for backward compatibility
 export { default } from './auth/index.js';

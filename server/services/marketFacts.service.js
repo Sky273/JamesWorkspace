@@ -15,7 +15,8 @@ import {
     getFactsFilterOptions,
     getFactsSummary,
     invalidateFactsCache,
-    loadFactsCache
+    loadFactsCache,
+    startFactsCacheCleanup
 } from './marketFacts.cache.js';
 import {
     getKeywordTrend,
@@ -236,6 +237,7 @@ export {
     loadFactsCache,
     getFactsFilterOptions,
     getFactsSummary,
+    startFactsCacheCleanup,
     cleanupFactsCache,
     destroyFactsCache,
     getFactsCacheStats

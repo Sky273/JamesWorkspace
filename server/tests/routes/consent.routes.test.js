@@ -17,6 +17,8 @@ const mockRecordConsentResponse = vi.fn();
 const mockGetConsentStatus = vi.fn();
 const mockResendConsentRequest = vi.fn();
 const mockMarkConsentError = vi.fn();
+const mockGetResumeForAccessCheck = vi.fn();
+const mockGetUserFirmId = vi.fn();
 vi.mock('../../services/consent.service.js', () => ({
     initializeConsent: (...args) => mockInitializeConsent(...args),
     sendConsentRequest: (...args) => mockSendConsentRequest(...args),
@@ -25,6 +27,12 @@ vi.mock('../../services/consent.service.js', () => ({
     getConsentStatus: (...args) => mockGetConsentStatus(...args),
     resendConsentRequest: (...args) => mockResendConsentRequest(...args),
     markConsentError: (...args) => mockMarkConsentError(...args)
+}));
+vi.mock('../../services/resumes.service.js', () => ({
+    getResumeForAccessCheck: (...args) => mockGetResumeForAccessCheck(...args)
+}));
+vi.mock('../../utils/firmHelpers.js', () => ({
+    getUserFirmId: (...args) => mockGetUserFirmId(...args)
 }));
 
 // Mock scheduler service
@@ -83,6 +91,8 @@ describe('Consent Routes', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        mockGetResumeForAccessCheck.mockResolvedValue({ id: 'res-1', firm_id: 'firm-123', name: 'Resume 1' });
+        mockGetUserFirmId.mockResolvedValue('firm-123');
         app = createTestApp();
     });
 
@@ -174,6 +184,19 @@ describe('Consent Routes', () => {
             expect(res.status).toBe(400);
             expect(res.body.error).toBe('Candidate name is required');
         });
+
+        it('should return 403 for a resume from another firm', async () => {
+            mockGetResumeForAccessCheck.mockResolvedValueOnce({ id: 'res-1', firm_id: 'firm-other', name: 'Resume 1' });
+
+            const res = await request(app)
+                .post('/api/consent/initialize')
+                .set('Authorization', 'Bearer valid-token')
+                .set('x-test-role', 'user')
+                .send({ resumeId: 'res-1', profileType: 'external', candidateName: 'John Doe', candidateEmail: 'john@example.com' });
+
+            expect(res.status).toBe(403);
+            expect(mockInitializeConsent).not.toHaveBeenCalled();
+        });
     });
 
     // ==========================================
@@ -200,6 +223,19 @@ describe('Consent Routes', () => {
                 .set('Authorization', 'Bearer valid-token');
 
             expect(res.status).toBe(400);
+            expect(res.body.error).toBe('Failed to send consent request');
+        });
+
+        it('should return 403 when the resume belongs to another firm', async () => {
+            mockGetResumeForAccessCheck.mockResolvedValueOnce({ id: 'res-1', firm_id: 'firm-other', name: 'Resume 1' });
+
+            const res = await request(app)
+                .post('/api/consent/res-1/send')
+                .set('Authorization', 'Bearer valid-token')
+                .set('x-test-role', 'user');
+
+            expect(res.status).toBe(403);
+            expect(mockSendConsentRequest).not.toHaveBeenCalled();
         });
     });
 
@@ -227,6 +263,7 @@ describe('Consent Routes', () => {
                 .set('Authorization', 'Bearer valid-token');
 
             expect(res.status).toBe(400);
+            expect(res.body.error).toBe('Failed to resend consent request');
         });
     });
 
@@ -257,6 +294,7 @@ describe('Consent Routes', () => {
                 .set('Authorization', 'Bearer valid-token');
 
             expect(res.status).toBe(400);
+            expect(res.body.error).toBe('Failed to get consent status');
         });
     });
 

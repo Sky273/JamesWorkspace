@@ -21,6 +21,7 @@ const TRENDS_CACHE_MAX_SIZE = 20000; // Max records (reduced from 100K to save ~
 let filterOptionsCache = null;
 let _filterOptionsCacheTime = 0;
 let summaryCache = null;
+let trendsCacheCleanupInterval = null;
 
 /**
  * Helper to parse PostgreSQL DECIMAL values to numbers
@@ -108,15 +109,25 @@ export function invalidateTrendsCache() {
 }
 
 // Periodic cache cleanup - auto-expire if not accessed for 2x TTL
-const trendsCacheCleanupInterval = setInterval(() => {
-    if (trendsCacheTime && Date.now() - trendsCacheTime > TRENDS_CACHE_TTL * 2) {
-        trendsLightCache = null;
-        filterOptionsCache = null;
-        summaryCache = null;
-        trendsCacheTime = 0;
-        safeLog('debug', 'MarketTrends: Cache auto-expired (inactive)');
+export function startTrendsCacheCleanup() {
+    if (trendsCacheCleanupInterval) {
+        return;
     }
-}, TRENDS_CACHE_TTL);
+
+    trendsCacheCleanupInterval = setInterval(() => {
+        if (trendsCacheTime && Date.now() - trendsCacheTime > TRENDS_CACHE_TTL * 2) {
+            trendsLightCache = null;
+            filterOptionsCache = null;
+            summaryCache = null;
+            trendsCacheTime = 0;
+            safeLog('debug', 'MarketTrends: Cache auto-expired (inactive)');
+        }
+    }, TRENDS_CACHE_TTL);
+
+    if (trendsCacheCleanupInterval.unref) {
+        trendsCacheCleanupInterval.unref();
+    }
+}
 
 /**
  * Destroy trends cache and cleanup interval (for graceful shutdown)
@@ -124,6 +135,7 @@ const trendsCacheCleanupInterval = setInterval(() => {
 export function destroyTrendsCache() {
     if (trendsCacheCleanupInterval) {
         clearInterval(trendsCacheCleanupInterval);
+        trendsCacheCleanupInterval = null;
     }
     trendsLightCache = null;
     filterOptionsCache = null;

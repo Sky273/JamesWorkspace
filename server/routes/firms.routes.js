@@ -11,8 +11,29 @@ import { resolveUploadMimeType } from '../utils/uploadFileTypes.js';
 import { isValidFileSignature } from '../utils/fileSignature.js';
 
 const LOGO_ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
+const DEFAULT_PAGE = 1;
+const DEFAULT_LIMIT = 100;
+const MAX_LIMIT = 200;
 
 const router = express.Router();
+
+function parsePaginationParams(pageInput, limitInput) {
+    const parsedPage = pageInput === undefined ? DEFAULT_PAGE : Number.parseInt(pageInput, 10);
+    const parsedLimit = limitInput === undefined ? DEFAULT_LIMIT : Number.parseInt(limitInput, 10);
+
+    if (!Number.isInteger(parsedPage) || parsedPage <= 0) {
+        return { error: 'page must be a positive integer' };
+    }
+
+    if (!Number.isInteger(parsedLimit) || parsedLimit <= 0) {
+        return { error: 'limit must be a positive integer' };
+    }
+
+    return {
+        page: parsedPage,
+        limit: Math.min(parsedLimit, MAX_LIMIT)
+    };
+}
 
 // Configure multer for logo uploads - use memory storage to store in database
 const logoUpload = multer({
@@ -34,10 +55,14 @@ const logoUpload = multer({
 // ============================================
 
 // GET /api/firms - Get all firms (with server-side pagination)
-router.get('/', authenticateToken, async (req, res) => {
+router.get('/', authenticateToken, requireAdmin, async (req, res) => {
     try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 100;
+        const pagination = parsePaginationParams(req.query.page, req.query.limit);
+        if (pagination.error) {
+            return res.status(400).json({ error: pagination.error });
+        }
+
+        const { page, limit } = pagination;
         const { search } = req.query;
 
         const { firms, hasMore, totalCount } = await firmsService.listFirms({ search, page, limit });
@@ -61,7 +86,7 @@ router.get('/', authenticateToken, async (req, res) => {
 });
 
 // GET /api/firms/:id - Get firm by ID
-router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => {
+router.get('/:id', authenticateToken, requireAdmin, validateParams('id'), async (req, res) => {
     try {
         const { id } = req.params;
         const firm = await firmsService.getFirmById(id);

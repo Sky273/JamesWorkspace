@@ -12,7 +12,7 @@ import logger from '../utils/logger.frontend';
 import { createSafeHtml } from '../utils/sanitizer.frontend';
 import { useTranslation } from 'react-i18next';
 import { createAuthOptionsWithCsrf, fetchWithCsrfRetry } from '../utils/apiInterceptor';
-import { removeSuggestionMarkers } from '../utils/tinymceSuggestionsPlugin';
+import { removeSuggestionMarkers } from './TiptapEditor';
 
 interface Template {
   id: string;

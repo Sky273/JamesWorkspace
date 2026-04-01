@@ -12,7 +12,9 @@ vi.mock('../../config/database.js', () => ({
 import { query } from '../../config/database.js';
 import {
     getTemplateById,
-    getResumeById
+    getResumeById,
+    getTemplateByIdForExport,
+    getResumeByIdForExport
 } from '../../services/batchExport.service.js';
 
 describe('Batch Export Service', () => {
@@ -41,6 +43,30 @@ describe('Batch Export Service', () => {
         it('should return null if not found', async () => {
             query.mockResolvedValueOnce({ rows: [] });
             expect(await getResumeById('missing')).toBeNull();
+        });
+    });
+
+    describe('getTemplateByIdForExport', () => {
+        it('should allow admin access', async () => {
+            query.mockResolvedValueOnce({ rows: [{ id: 't1', firm_id: 'firm-other' }] });
+            expect(await getTemplateByIdForExport('t1', { isAdmin: true, userFirmId: null })).toEqual({ id: 't1', firm_id: 'firm-other' });
+        });
+
+        it('should reject cross-firm non-admin access', async () => {
+            query.mockResolvedValueOnce({ rows: [{ id: 't1', firm_id: 'firm-other' }] });
+            expect(await getTemplateByIdForExport('t1', { isAdmin: false, userFirmId: 'firm-123' })).toBeNull();
+        });
+    });
+
+    describe('getResumeByIdForExport', () => {
+        it('should allow same-firm resume access', async () => {
+            query.mockResolvedValueOnce({ rows: [{ id: 'r1', firm_id: 'firm-123' }] });
+            expect(await getResumeByIdForExport('r1', { isAdmin: false, userFirmId: 'firm-123' })).toEqual({ id: 'r1', firm_id: 'firm-123' });
+        });
+
+        it('should reject cross-firm resume access', async () => {
+            query.mockResolvedValueOnce({ rows: [{ id: 'r1', firm_id: 'firm-other' }] });
+            expect(await getResumeByIdForExport('r1', { isAdmin: false, userFirmId: 'firm-123' })).toBeNull();
         });
     });
 });

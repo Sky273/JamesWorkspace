@@ -1,8 +1,15 @@
 import multer from 'multer';
+import fs from 'fs/promises';
+import { createRequire } from 'module';
 import { safeLog } from '../../../utils/logger.backend.js';
 import { extractTemplateFromHTML, extractTemplateFromImage, extractTemplateFromCV } from '../../../services/templateExtraction.service.js';
 import { extractTextFromPDFBuffer } from '../../../services/batchJobsWorker/textExtraction.js';
 import puppeteer from 'puppeteer';
+
+const require = createRequire(import.meta.url);
+const PDF_JS_BUNDLE_PATH = require.resolve('pdfjs-dist/build/pdf.min.mjs');
+const PDF_JS_WORKER_BUNDLE_PATH = require.resolve('pdfjs-dist/build/pdf.worker.min.mjs');
+let cachedPdfJsDataUrls = null;
 
 const upload = multer({
     storage: multer.memoryStorage(),
@@ -20,6 +27,24 @@ const upload = multer({
         cb(new Error('Invalid file type. Only PDF and Word documents are allowed.'), false);
     }
 });
+
+async function getPdfJsDataUrls() {
+    if (cachedPdfJsDataUrls) {
+        return cachedPdfJsDataUrls;
+    }
+
+    const [pdfJsSource, pdfWorkerSource] = await Promise.all([
+        fs.readFile(PDF_JS_BUNDLE_PATH, 'utf8'),
+        fs.readFile(PDF_JS_WORKER_BUNDLE_PATH, 'utf8')
+    ]);
+
+    cachedPdfJsDataUrls = {
+        pdfJsModuleUrl: `data:text/javascript;base64,${Buffer.from(pdfJsSource, 'utf8').toString('base64')}`,
+        pdfJsWorkerUrl: `data:text/javascript;base64,${Buffer.from(pdfWorkerSource, 'utf8').toString('base64')}`
+    };
+
+    return cachedPdfJsDataUrls;
+}
 
 async function extractFromDOCX(buffer, fileName) {
     const JSZip = (await import('jszip')).default;
@@ -265,6 +290,7 @@ async function extractFromPDF(buffer, fileName) {
             bufferSize: buffer.length,
             fileName
         });
+        const { pdfJsModuleUrl, pdfJsWorkerUrl } = await getPdfJsDataUrls();
 
         browser = await puppeteer.launch({
             headless: true,
@@ -300,12 +326,12 @@ async function extractFromPDF(buffer, fileName) {
             <body>
                 <div id="status">Loading PDF.js...</div>
                 <canvas id="canvas"></canvas>
-                <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-                <script>
+                <script type="module">
+                    import * as pdfjsLib from '${pdfJsModuleUrl}';
                     const statusEl = document.getElementById('status');
                     async function renderPDF() {
                         try {
-                            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                            pdfjsLib.GlobalWorkerOptions.workerSrc = '${pdfJsWorkerUrl}';
                             statusEl.textContent = 'Decoding PDF data...';
                             const pdfBase64 = '${pdfBase64}';
                             const pdfData = atob(pdfBase64);
@@ -333,11 +359,7 @@ async function extractFromPDF(buffer, fileName) {
                             window.pdfError = err.message || String(err);
                         }
                     }
-                    if (typeof pdfjsLib !== 'undefined') {
-                        renderPDF();
-                    } else {
-                        window.pdfError = 'PDF.js library failed to load';
-                    }
+                    renderPDF();
                 </script>
             </body>
             </html>

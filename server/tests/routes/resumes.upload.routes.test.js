@@ -71,6 +71,11 @@ vi.mock('../../services/wordTextExtraction.service.js', () => ({
     extractTextFromWordBuffer: (...args) => mockExtractTextFromWordBuffer(...args)
 }));
 
+const mockExtractPdfTextWithOcr = vi.fn();
+vi.mock('../../services/pdfTextExtraction.service.js', () => ({
+    extractPdfTextWithOcr: (...args) => mockExtractPdfTextWithOcr(...args)
+}));
+
 const mockUploadLimiter = vi.fn((req, _res, next) => next());
 vi.mock('../../middleware/rateLimit.middleware.js', () => ({
     uploadLimiter: (...args) => mockUploadLimiter(...args)
@@ -166,6 +171,16 @@ describe('Resume Extraction Routes', () => {
         pendingReadFileResolvers.length = 0;
         mockUnlink.mockResolvedValue(undefined);
         mockReadFile.mockImplementation((_path) => Promise.resolve(getFileSignatureBuffer('application/pdf')));
+        mockExtractPdfTextWithOcr.mockResolvedValue({
+            text: 'This is extracted PDF text content with enough characters to bypass OCR fallback in tests.',
+            pages: 1,
+            ocrUsed: false,
+            ocrPageCount: 0,
+            failedOcrPages: 0,
+            avgOcrConfidence: null,
+            primaryResult: null,
+            recentResults: []
+        });
     });
 
     it('configures multer with a 50MB file size limit', () => {
@@ -223,6 +238,22 @@ describe('Resume Extraction Routes', () => {
                 })
             );
         });
+
+        it('should not expose raw DOC extraction errors', async () => {
+            mockReadFile.mockResolvedValueOnce(getFileSignatureBuffer('application/msword'));
+            mockExtractTextFromWordBuffer.mockRejectedValueOnce(new Error('libreoffice crashed with internal path /tmp/secret'));
+
+            const res = await request(app)
+                .post('/api/resumes/extract-doc')
+                .set({
+                    ...AUTH,
+                    'x-test-filename': 'resume.doc',
+                    'x-test-mimetype': 'application/msword'
+                });
+
+            expect(res.status).toBe(500);
+            expect(res.body.error).toBe('Failed to extract text from DOC file');
+        });
     });
 
     describe('POST /extract-pdf', () => {
@@ -257,6 +288,17 @@ describe('Resume Extraction Routes', () => {
 
             expect(res.status).toBe(400);
             expect(res.body.error).toContain('Invalid PDF file contents');
+        });
+
+        it('should not expose raw PDF extraction errors', async () => {
+            mockExtractPdfTextWithOcr.mockRejectedValueOnce(new Error('ocr backend failed at C:\\secret\\path'));
+
+            const res = await request(app)
+                .post('/api/resumes/extract-pdf')
+                .set(AUTH);
+
+            expect(res.status).toBe(500);
+            expect(res.body.error).toBe('Failed to extract text from PDF file');
         });
 
         it('should reject PDF extraction when concurrency limit is reached for the same user', async () => {

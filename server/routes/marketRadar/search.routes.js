@@ -15,6 +15,19 @@ import {
 
 const router = express.Router();
 
+function parsePositiveInteger(value, { field, maxValue = null } = {}) {
+    if (value === undefined) {
+        return undefined;
+    }
+
+    const parsedValue = Number.parseInt(value, 10);
+    if (!Number.isFinite(parsedValue) || parsedValue <= 0) {
+        throw new Error(`${field} must be a positive integer`);
+    }
+
+    return maxValue ? Math.min(parsedValue, maxValue) : parsedValue;
+}
+
 /**
  * GET /api/market-radar/search/france-travail
  * Live search on France Travail API
@@ -52,14 +65,17 @@ router.get('/search/france-travail', authenticateToken, async (req, res) => {
 router.get('/search/adzuna', authenticateToken, async (req, res) => {
     try {
         const { what, where, category, salary_min, salary_max, page } = req.query;
+        const parsedPage = parsePositiveInteger(page, { field: 'page', maxValue: 100 }) || 1;
+        const parsedSalaryMin = parsePositiveInteger(salary_min, { field: 'salary_min' });
+        const parsedSalaryMax = parsePositiveInteger(salary_max, { field: 'salary_max' });
 
         const results = await searchAdzuna({
             what,
             where,
             category,
-            salary_min: salary_min ? parseInt(salary_min) : undefined,
-            salary_max: salary_max ? parseInt(salary_max) : undefined,
-            page: page ? parseInt(page) : 1,
+            salary_min: parsedSalaryMin,
+            salary_max: parsedSalaryMax,
+            page: parsedPage,
             results_per_page: 20
         });
 
@@ -69,6 +85,11 @@ router.get('/search/adzuna', authenticateToken, async (req, res) => {
             ...results
         });
     } catch (error) {
+        if (error.message?.includes('must be a positive integer')) {
+            return res.status(400).json({
+                error: error.message
+            });
+        }
         safeLog('error', 'Market Radar: Adzuna search failed', { error: error.message });
         res.status(500).json({ 
             error: 'Search failed' 

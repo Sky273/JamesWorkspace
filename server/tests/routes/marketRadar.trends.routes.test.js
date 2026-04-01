@@ -254,6 +254,26 @@ describe('Market Radar - Trends Routes', () => {
             expect(res.body.pagination).toBeDefined();
         });
 
+        it('should reject invalid pagination parameters', async () => {
+            const res = await request(app)
+                .get('/api/market-radar/trends?type=tension&page=-1&pageSize=0')
+                .set(AUTH);
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toContain('positive integer');
+            expect(mockGetStoredTrends).not.toHaveBeenCalled();
+        });
+
+        it('should reject invalid itemsPerType for grouped view', async () => {
+            const res = await request(app)
+                .get('/api/market-radar/trends?itemsPerType=-5')
+                .set(AUTH);
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toContain('itemsPerType');
+            expect(mockGetStoredTrendsGroupedByType).not.toHaveBeenCalled();
+        });
+
         it('should return 500 on error', async () => {
             mockGetStoredTrendsGroupedByType.mockRejectedValueOnce(new Error('fail'));
 

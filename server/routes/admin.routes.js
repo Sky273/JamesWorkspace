@@ -3,7 +3,7 @@ import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.j
 import { validateQuery, validators } from '../utils/validation.js';
 import { getSecurityLogs, getSecurityLogsCount } from '../services/security.service.js';
 import { getProxyLogs, getProxyLogsCount, getProxyLogsStats, safeLog } from '../utils/logger.backend.js';
-import { listAllUsers } from '../services/users.service.js';
+import { listUsers } from '../services/users.service.js';
 
 // Import cache stats functions
 import { getBlacklistStats } from '../services/tokenBlacklist.service.js';
@@ -16,6 +16,7 @@ import { getEscoCacheStats } from '../services/escoService.js';
 import { getStatsCacheStats } from './resumes/stats.routes.js';
 
 const router = express.Router();
+const MAX_SECURITY_LOGS_LIMIT = 1000;
 
 // ============================================
 // ADMIN ROUTES
@@ -36,7 +37,9 @@ router.get('/security-logs', authenticateToken, requireAdmin, validateQuery({
 }), (req, res) => {
     try {
         const { level, event, source, limit = 100, offset = 0 } = req.query;
-        const parsedLimit = limit === 'all' ? Infinity : parseInt(limit);
+        const parsedLimit = limit === 'all'
+            ? MAX_SECURITY_LOGS_LIMIT
+            : Math.min(parseInt(limit, 10), MAX_SECURITY_LOGS_LIMIT);
         const parsedOffset = parseInt(offset) || 0;
         
         // Get logs from appropriate source(s) - already sorted newest first
@@ -79,7 +82,7 @@ router.get('/security-logs', authenticateToken, requireAdmin, validateQuery({
             logs: filteredLogs,
             total: totalMatching,
             offset: parsedOffset,
-            limit: limit === 'all' ? 'all' : parsedLimit
+            limit: parsedLimit
         });
     } catch (error) {
         safeLog('error', 'Error fetching security logs', { error: error.message });
@@ -245,9 +248,31 @@ router.get('/cache-stats', authenticateToken, requireAdmin, async (req, res) => 
 });
 
 // GET /api/admin/users - Get all users (admin only) - alias for /api/auth/users
-router.get('/users', authenticateToken, requireAdmin, async (req, res) => {
+router.get('/users', authenticateToken, requireAdmin, validateQuery({
+    page: validators.positiveInteger,
+    limit: validators.positiveInteger,
+    search: validators.maxLength(200),
+    role: validators.maxLength(50),
+    status: validators.maxLength(50)
+}), async (req, res) => {
     try {
-        const records = await listAllUsers();
+        const {
+            page = 1,
+            limit = 100,
+            search,
+            role,
+            status
+        } = req.query;
+        const parsedPage = Number.parseInt(page, 10);
+        const parsedLimit = Math.min(Number.parseInt(limit, 10), 100);
+
+        const { users: records, hasMore } = await listUsers({
+            search: search || undefined,
+            role: role || undefined,
+            status: status || undefined,
+            page: parsedPage,
+            limit: parsedLimit
+        });
         const users = records.map(record => ({
             id: record.id,
             name: record.name,
@@ -257,7 +282,14 @@ router.get('/users', authenticateToken, requireAdmin, async (req, res) => {
             role: record.role || 'user',
             status: record.status || 'active'
         }));
-        res.json(users);
+        res.json({
+            users,
+            pagination: {
+                page: parsedPage,
+                limit: parsedLimit,
+                hasMore
+            }
+        });
     } catch (error) {
         safeLog('error', 'Error fetching users', { error: error.message });
         res.status(500).json({ error: 'Failed to fetch users' });

@@ -19,6 +19,19 @@ import { safeLog } from '../utils/logger.backend.js';
 
 const router = express.Router();
 
+function parsePositiveInteger(value, { field, defaultValue, maxValue = null }) {
+    if (value === undefined) {
+        return defaultValue;
+    }
+
+    const parsedValue = Number.parseInt(value, 10);
+    if (!Number.isFinite(parsedValue) || parsedValue <= 0) {
+        throw new Error(`${field} must be a positive integer`);
+    }
+
+    return maxValue ? Math.min(parsedValue, maxValue) : parsedValue;
+}
+
 /**
  * GET /api/gdpr-audit/logs
  * Get paginated GDPR audit logs with filters
@@ -44,6 +57,16 @@ router.get('/logs', authenticateToken, requireAdmin, asyncHandler(async (req, re
         filters: { firmId, action, category, isAutomated }
     });
 
+    let parsedPage;
+    let parsedLimit;
+
+    try {
+        parsedPage = parsePositiveInteger(page, { field: 'page', defaultValue: 1 });
+        parsedLimit = parsePositiveInteger(limit, { field: 'limit', defaultValue: 50, maxValue: 100 });
+    } catch (error) {
+        return res.status(400).json({ error: error.message });
+    }
+
     const result = await getGdprAuditLogs({
         firmId: firmId || null,
         action: action || null,
@@ -53,8 +76,8 @@ router.get('/logs', authenticateToken, requireAdmin, asyncHandler(async (req, re
         isAutomated: isAutomated === 'true' ? true : isAutomated === 'false' ? false : null,
         startDate: startDate ? new Date(startDate) : null,
         endDate: endDate ? new Date(endDate) : null,
-        page: parseInt(page, 10),
-        limit: Math.min(parseInt(limit, 10), 100), // Max 100 per page
+        page: parsedPage,
+        limit: parsedLimit,
         sortBy,
         sortOrder
     });
@@ -75,10 +98,14 @@ router.get('/stats', authenticateToken, requireAdmin, asyncHandler(async (req, r
         days
     });
 
-    const stats = await getGdprAuditStats(
-        firmId || null,
-        parseInt(days, 10)
-    );
+    let parsedDays;
+    try {
+        parsedDays = parsePositiveInteger(days, { field: 'days', defaultValue: 30, maxValue: 365 });
+    } catch (error) {
+        return res.status(400).json({ error: error.message });
+    }
+
+    const stats = await getGdprAuditStats(firmId || null, parsedDays);
 
     res.json(stats);
 }));

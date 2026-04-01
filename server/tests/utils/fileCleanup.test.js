@@ -66,6 +66,8 @@ import {
     stopPeriodicCleanup,
     destroyFileCleanup
 } from '../../utils/fileCleanup.js';
+import { cleanupOldJobs } from '../../services/batchJobs.service.js';
+import { cleanupExpiredShareArtifacts } from '../../services/shareResume.service.js';
 
 describe('File Cleanup Utilities', () => {
     beforeEach(() => {
@@ -369,6 +371,17 @@ describe('File Cleanup Utilities', () => {
 
             // Should have additional access calls from the interval cleanup
             expect(fs.access.mock.calls.length).toBeGreaterThan(callsAfterInit);
+        });
+
+        it('should skip DB-backed cleanup tasks when database tasks are disabled', async () => {
+            fs.access.mockRejectedValue(new Error('ENOENT'));
+            fs.mkdir.mockResolvedValue(undefined);
+
+            startPeriodicCleanup(60000, 3600000, { enableDatabaseTasks: false });
+            await vi.advanceTimersByTimeAsync(10);
+
+            expect(cleanupOldJobs).not.toHaveBeenCalled();
+            expect(cleanupExpiredShareArtifacts).not.toHaveBeenCalled();
         });
     });
 

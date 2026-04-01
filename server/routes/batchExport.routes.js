@@ -5,12 +5,13 @@
 
 import express from 'express';
 import JSZip from 'jszip';
-import { authenticateToken } from '../middleware/auth.middleware.js';
+import { authenticateToken, isUserAdmin } from '../middleware/auth.middleware.js';
 import { validateBody, batchExportSchema } from '../utils/validation.js';
 import { safeLog } from '../utils/logger.backend.js';
 import * as batchExportService from '../services/batchExport.service.js';
 import { getPdfServerAuthHeaders } from '../utils/pdfServerAuth.js';
 import { setSafeFileResponseHeaders } from '../utils/fileResponseSecurity.js';
+import { getUserFirmId } from '../utils/firmHelpers.js';
 
 const router = express.Router();
 const MAX_BATCH_EXPORT_RESUMES = 100;
@@ -81,6 +82,8 @@ router.post('/', authenticateToken, validateBody(batchExportSchema), async (req,
     try {
         const normalizedPayload = normalizeBatchExportPayload(req.body);
         const { resumeIds, templateId, format } = normalizedPayload;
+        const isAdmin = isUserAdmin(req);
+        const userFirmId = await getUserFirmId(req);
         
         if (!resumeIds || !Array.isArray(resumeIds) || resumeIds.length === 0) {
             return res.status(400).json({ error: 'Resume IDs are required' });
@@ -118,14 +121,13 @@ router.post('/', authenticateToken, validateBody(batchExportSchema), async (req,
                 url: PDF_SERVER_URL, 
                 error: healthErr.message 
             });
-            return res.status(503).json({ 
-                error: 'PDF server is not available. Please ensure the PDF server is running.',
-                details: `Cannot reach ${PDF_SERVER_URL}`
+            return res.status(503).json({
+                error: 'PDF server is not available. Please ensure the PDF server is running.'
             });
         }
         
         // Fetch template
-        const template = await batchExportService.getTemplateById(templateId);
+        const template = await batchExportService.getTemplateByIdForExport(templateId, { isAdmin, userFirmId });
         if (!template) {
             return res.status(404).json({ error: 'Template not found' });
         }
@@ -138,7 +140,7 @@ router.post('/', authenticateToken, validateBody(batchExportSchema), async (req,
         for (const resumeId of resumeIds) {
             try {
                 // Fetch resume
-                const resume = await batchExportService.getResumeById(resumeId);
+                const resume = await batchExportService.getResumeByIdForExport(resumeId, { isAdmin, userFirmId });
                 if (!resume) {
                     errors.push({ resumeId, error: 'Resume not found' });
                     continue;
@@ -224,7 +226,7 @@ router.post('/', authenticateToken, validateBody(batchExportSchema), async (req,
         res.send(zipBuffer);
     } catch (error) {
         safeLog('error', 'Batch export error', { error: error.message });
-        res.status(500).json({ error: 'Failed to generate batch export', details: error.message });
+        res.status(500).json({ error: 'Failed to generate batch export' });
     }
 });
 

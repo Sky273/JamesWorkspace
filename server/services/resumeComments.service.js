@@ -94,13 +94,32 @@ export async function getComments(resumeId, currentUserId = null) {
 }
 
 /**
+ * Get comment metadata for access checking
+ * @param {string} commentId - Comment UUID
+ * @returns {Promise<Object|null>} Comment metadata
+ */
+export async function getCommentForAccessCheck(commentId) {
+    if (!commentId) {
+        throw new Error('Comment ID is required');
+    }
+
+    const result = await query(`
+        SELECT id, resume_id, user_id
+        FROM resume_comments
+        WHERE id = $1
+    `, [commentId]);
+
+    return result.rows[0] || null;
+}
+
+/**
  * Update a comment
  * @param {string} commentId - Comment UUID
  * @param {string} userId - User UUID (must be owner)
  * @param {string} content - New content
  * @returns {Promise<Object|null>} Updated comment or null if not found/not owner
  */
-export async function updateComment(commentId, userId, content) {
+export async function updateComment(commentId, resumeId, userId, content) {
     if (!commentId || !userId || !content?.trim()) {
         throw new Error('Comment ID, user ID, and content are required');
     }
@@ -108,9 +127,9 @@ export async function updateComment(commentId, userId, content) {
     const result = await query(`
         UPDATE resume_comments
         SET content = $1, updated_at = CURRENT_TIMESTAMP
-        WHERE id = $2 AND user_id = $3
+        WHERE id = $2 AND resume_id = $3 AND user_id = $4
         RETURNING *
-    `, [content.trim(), commentId, userId]);
+    `, [content.trim(), commentId, resumeId, userId]);
 
     if (result.rows.length > 0) {
         safeLog('info', 'Comment updated', { commentId, userId });
@@ -127,7 +146,7 @@ export async function updateComment(commentId, userId, content) {
  * @param {boolean} [isAdmin=false] - Whether user is admin (can delete any comment)
  * @returns {Promise<boolean>} True if deleted
  */
-export async function deleteComment(commentId, userId, isAdmin = false) {
+export async function deleteComment(commentId, resumeId, userId, isAdmin = false) {
     if (!commentId || !userId) {
         throw new Error('Comment ID and user ID are required');
     }
@@ -137,16 +156,16 @@ export async function deleteComment(commentId, userId, isAdmin = false) {
         // Admin can delete any comment
         result = await query(`
             DELETE FROM resume_comments
-            WHERE id = $1
+            WHERE id = $1 AND resume_id = $2
             RETURNING id
-        `, [commentId]);
+        `, [commentId, resumeId]);
     } else {
         // Regular user can only delete their own comments
         result = await query(`
             DELETE FROM resume_comments
-            WHERE id = $1 AND user_id = $2
+            WHERE id = $1 AND resume_id = $2 AND user_id = $3
             RETURNING id
-        `, [commentId, userId]);
+        `, [commentId, resumeId, userId]);
     }
 
     if (result.rows.length > 0) {
@@ -206,6 +225,7 @@ export default {
     initResumeCommentsTable,
     addComment,
     getComments,
+    getCommentForAccessCheck,
     updateComment,
     deleteComment,
     getCommentCount,

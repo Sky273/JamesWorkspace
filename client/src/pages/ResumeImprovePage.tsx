@@ -24,9 +24,12 @@ import OverviewTab from '../components/ResumeAnalysis/OverviewTab';
 import PipelineTab from '../components/ResumeAnalysis/PipelineTab';
 import ResumeComments from '../components/ResumeComments';
 import { fetchWithAuth, createAuthOptionsWithCsrf } from '../utils/apiInterceptor';
-import { removeSuggestionMarkers } from '../utils/tinymceSuggestionsPlugin';
 import { FRONTEND_LLM_AI_MODIFICATION_TIMEOUT_MS } from '../constants/llmTimeouts';
-import { DeferredTiptapEditor as TiptapEditor, parseSuggestions } from '../components/TiptapEditor';
+import {
+  DeferredTiptapEditor as TiptapEditor,
+  parseSuggestions,
+  removeSuggestionMarkers,
+} from '../components/TiptapEditor';
 import type { TiptapEditorRef } from '../components/TiptapEditor';
 
 const ResumeImprovePage = (): JSX.Element => {

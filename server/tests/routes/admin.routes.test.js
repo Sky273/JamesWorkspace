@@ -62,9 +62,9 @@ vi.mock('./../../routes/resumes/stats.routes.js', () => ({
 }));
 
 // Mock users service
-const mockListAllUsers = vi.fn();
+const mockListUsers = vi.fn();
 vi.mock('../../services/users.service.js', () => ({
-    listAllUsers: (...args) => mockListAllUsers(...args)
+    listUsers: (...args) => mockListUsers(...args)
 }));
 
 // Mock validation
@@ -208,6 +208,24 @@ describe('Admin Routes', () => {
             expect(res.status).toBe(200);
             expect(res.body.offset).toBe(1);
         });
+
+        it('should cap limit=all to a bounded maximum', async () => {
+            const securityLogs = Array.from({ length: 1200 }, (_, index) => ({
+                ...sampleSecurityLog,
+                timestamp: new Date(Date.now() - index * 1000).toISOString(),
+                message: `security-${index}`
+            }));
+            mockGetSecurityLogs.mockReturnValueOnce(securityLogs);
+            mockGetProxyLogs.mockReturnValueOnce([]);
+
+            const res = await request(app)
+                .get('/api/admin/security-logs?limit=all')
+                .set(AUTH);
+
+            expect(res.status).toBe(200);
+            expect(res.body.limit).toBe(1000);
+            expect(res.body.logs).toHaveLength(1000);
+        });
     });
 
     describe('GET /security-filters', () => {
@@ -283,19 +301,27 @@ describe('Admin Routes', () => {
     });
 
     describe('GET /users', () => {
-        it('should return mapped user list', async () => {
-            mockListAllUsers.mockResolvedValueOnce([
-                { id: 'u-1', name: 'John', email: 'john@test.com', firm_name: 'Acme', role: 'admin', status: 'active' },
-                { id: 'u-2', name: 'Jane', email: 'jane@test.com', firm_name: 'Acme', role: 'user', status: 'active' }
-            ]);
+        it('should return mapped paginated user list', async () => {
+            mockListUsers.mockResolvedValueOnce({
+                users: [
+                    { id: 'u-1', name: 'John', email: 'john@test.com', firm_name: 'Acme', role: 'admin', status: 'active' },
+                    { id: 'u-2', name: 'Jane', email: 'jane@test.com', firm_name: 'Acme', role: 'user', status: 'active' }
+                ],
+                hasMore: false
+            });
 
             const res = await request(app)
                 .get('/api/admin/users')
                 .set(AUTH);
 
             expect(res.status).toBe(200);
-            expect(res.body).toHaveLength(2);
-            expect(res.body[0]).toEqual({
+            expect(res.body.users).toHaveLength(2);
+            expect(res.body.pagination).toEqual({
+                page: 1,
+                limit: 100,
+                hasMore: false
+            });
+            expect(res.body.users[0]).toEqual({
                 id: 'u-1',
                 name: 'John',
                 email: 'john@test.com',
@@ -307,27 +333,52 @@ describe('Admin Routes', () => {
         });
 
         it('should default role and status for missing fields', async () => {
-            mockListAllUsers.mockResolvedValueOnce([
-                { id: 'u-3', name: 'No Role', email: 'nr@test.com', firm_name: null }
-            ]);
+            mockListUsers.mockResolvedValueOnce({
+                users: [
+                    { id: 'u-3', name: 'No Role', email: 'nr@test.com', firm_name: null }
+                ],
+                hasMore: true
+            });
 
             const res = await request(app)
-                .get('/api/admin/users')
+                .get('/api/admin/users?page=2&limit=25')
                 .set(AUTH);
 
             expect(res.status).toBe(200);
-            expect(res.body[0].role).toBe('user');
-            expect(res.body[0].status).toBe('active');
+            expect(res.body.users[0].role).toBe('user');
+            expect(res.body.users[0].status).toBe('active');
+            expect(res.body.pagination).toEqual({
+                page: 2,
+                limit: 25,
+                hasMore: true
+            });
         });
 
         it('should return 500 on DB error', async () => {
-            mockListAllUsers.mockRejectedValueOnce(new Error('DB fail'));
+            mockListUsers.mockRejectedValueOnce(new Error('DB fail'));
 
             const res = await request(app)
                 .get('/api/admin/users')
                 .set(AUTH);
 
             expect(res.status).toBe(500);
+        });
+
+        it('should pass filters and cap limit at 100', async () => {
+            mockListUsers.mockResolvedValueOnce({ users: [], hasMore: false });
+
+            const res = await request(app)
+                .get('/api/admin/users?page=1&limit=500&search=john&role=admin&status=active')
+                .set(AUTH);
+
+            expect(res.status).toBe(200);
+            expect(mockListUsers).toHaveBeenCalledWith({
+                search: 'john',
+                role: 'admin',
+                status: 'active',
+                page: 1,
+                limit: 100
+            });
         });
     });
 });

@@ -126,6 +126,8 @@ export async function countResumes({ conditions = [], params = [], dealId, dealP
  * @returns {Promise<Array>}
  */
 export async function listResumes({ conditions = [], params = [], dealId, dealParamIndex, limit, offset }) {
+    const normalizedLimit = Math.max(1, Math.min(Number.isFinite(limit) ? limit : 50, 100));
+    const normalizedOffset = Math.max(0, Number.isFinite(offset) ? offset : 0);
     let sql;
     const queryParams = [...params];
 
@@ -142,7 +144,7 @@ export async function listResumes({ conditions = [], params = [], dealId, dealPa
         const limitIdx = queryParams.length + 1;
         const offsetIdx = queryParams.length + 2;
         sql += ` ORDER BY LOWER(r.name) ASC, r.created_at DESC LIMIT $${limitIdx} OFFSET $${offsetIdx}`;
-        queryParams.push(limit + 1, offset);
+        queryParams.push(normalizedLimit + 1, normalizedOffset);
     } else {
         sql = `SELECT ${RESUME_SELECT_COLUMNS} FROM resumes`;
         if (conditions.length > 0) {
@@ -151,7 +153,7 @@ export async function listResumes({ conditions = [], params = [], dealId, dealPa
         const limitIdx = queryParams.length + 1;
         const offsetIdx = queryParams.length + 2;
         sql += ` ORDER BY LOWER(name) ASC, created_at DESC LIMIT $${limitIdx} OFFSET $${offsetIdx}`;
-        queryParams.push(limit + 1, offset);
+        queryParams.push(normalizedLimit + 1, normalizedOffset);
     }
 
     const result = await query(sql, queryParams);

@@ -1,6 +1,19 @@
-import type { JSX, ReactNode } from 'react';
+import type { JSX, ReactNode, RefObject } from 'react';
+import type { TFunction } from 'i18next';
 import { motion } from 'framer-motion';
-import { ArrowLeftIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
+import {
+  ArrowDownTrayIcon,
+  ArrowLeftIcon,
+  DocumentTextIcon,
+  EnvelopeIcon,
+} from '@heroicons/react/24/outline';
+import { DeferredTiptapEditor as TiptapEditor } from '../components/TiptapEditor';
+import AdaptationAnalysisView from '../components/AdaptationAnalysisView';
+import { createSafeHtml } from '../utils/sanitizer.frontend';
+import type { TiptapEditorRef } from '../components/TiptapEditor';
+import type { Adaptation, AdaptationViewTab } from './AdaptationViewPage.types';
+
+type TranslateFn = TFunction<'translation', undefined>;
 
 export function AdaptationLoadingState(): JSX.Element {
   return (
@@ -21,7 +34,7 @@ export function AdaptationErrorState({
 }: {
   error: string;
   onBack: () => void;
-  t: (key: string) => string;
+  t: TranslateFn;
 }): JSX.Element {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
@@ -54,7 +67,7 @@ export function AdaptationBackButton({
   t,
 }: {
   onBack: () => void;
-  t: (key: string) => string;
+  t: TranslateFn;
 }): JSX.Element {
   return (
     <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="mb-6">
@@ -74,9 +87,9 @@ export function AdaptationTabs({
   onTabChange,
   t,
 }: {
-  activeTab: 'adapted' | 'analysis' | 'mission';
-  onTabChange: (tab: 'adapted' | 'analysis' | 'mission') => void;
-  t: (key: string) => string;
+  activeTab: AdaptationViewTab;
+  onTabChange: (tab: AdaptationViewTab) => void;
+  t: TranslateFn;
 }): JSX.Element {
   const tabs = [
     { key: 'adapted' as const, label: t('adaptations.tabs.adaptedCV') },
@@ -114,5 +127,127 @@ export function AdaptationPanel({ children }: { children: ReactNode }): JSX.Elem
     >
       {children}
     </motion.div>
+  );
+}
+
+export function AdaptationActionBar({
+  hasChanges,
+  saving,
+  onExport,
+  onSendEmail,
+  onSave,
+  t,
+}: {
+  hasChanges: boolean;
+  saving: boolean;
+  onExport: () => void;
+  onSendEmail: () => void;
+  onSave: () => void;
+  t: TranslateFn;
+}): JSX.Element {
+  return (
+    <div className="flex justify-end gap-3">
+      <button
+        onClick={onExport}
+        className="btn btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm"
+      >
+        <ArrowDownTrayIcon className="w-4 h-4" />
+        {t('adaptations.exportPDF')}
+      </button>
+      <button
+        onClick={onSendEmail}
+        className="btn btn-secondary inline-flex items-center gap-2 px-4 py-2 text-sm"
+      >
+        <EnvelopeIcon className="w-4 h-4" />
+        {t('adaptations.sendEmail', 'Envoyer par email')}
+      </button>
+      <button
+        onClick={onSave}
+        disabled={!hasChanges || saving}
+        className={`btn btn-secondary inline-flex items-center gap-2 px-4 py-2 text-sm ${
+          !hasChanges || saving ? 'opacity-50 cursor-not-allowed' : ''
+        }`}
+      >
+        {saving ? t('common.saving') : t('common.save')}
+      </button>
+    </div>
+  );
+}
+
+export function AdaptationTabContent({
+  activeTab,
+  adaptation,
+  editorRef,
+  hasChanges,
+  saving,
+  onEditorChange,
+  onEditorReady,
+  onExport,
+  onSendEmail,
+  onSave,
+  t,
+}: {
+  activeTab: AdaptationViewTab;
+  adaptation: Adaptation;
+  editorRef: RefObject<TiptapEditorRef | null>;
+  hasChanges: boolean;
+  saving: boolean;
+  onEditorChange: () => void;
+  onEditorReady: () => void;
+  onExport: () => void;
+  onSendEmail: () => void;
+  onSave: () => void;
+  t: TranslateFn;
+}): JSX.Element {
+  if (activeTab === 'adapted') {
+    return (
+      <div className="space-y-4">
+        {adaptation['Adapted Text'] ? (
+          <>
+            <AdaptationActionBar
+              hasChanges={hasChanges}
+              saving={saving}
+              onExport={onExport}
+              onSendEmail={onSendEmail}
+              onSave={onSave}
+              t={t}
+            />
+            <TiptapEditor
+              ref={editorRef}
+              content={adaptation['Adapted Text']}
+              onChange={onEditorChange}
+              onReady={onEditorReady}
+              height={500}
+            />
+          </>
+        ) : (
+          <p className="text-gray-500 dark:text-gray-400 italic">{t('adaptations.noAdaptedText')}</p>
+        )}
+      </div>
+    );
+  }
+
+  if (activeTab === 'analysis') {
+    return adaptation['Match Analysis'] ? (
+      <AdaptationAnalysisView adaptation={adaptation} />
+    ) : (
+      <p className="text-gray-500 dark:text-gray-400 italic">{t('adaptations.noAnalysis')}</p>
+    );
+  }
+
+  return (
+    <div>
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+        {adaptation['Mission Title'] || t('adaptations.card.unknownMission')}
+      </h3>
+      {adaptation['Mission Content'] ? (
+        <div
+          className="prose prose-sm dark:prose-invert max-w-none"
+          dangerouslySetInnerHTML={createSafeHtml(adaptation['Mission Content'])}
+        />
+      ) : (
+        <p className="text-gray-500 dark:text-gray-400 italic">{t('missions.noDescription')}</p>
+      )}
+    </div>
   );
 }

@@ -11,6 +11,8 @@ const mockSignIn = vi.fn();
 const mockRegister = vi.fn();
 const mockSignOut = vi.fn();
 const mockSetCurrentUser = vi.fn();
+const mockClearCurrentUser = vi.fn();
+const mockRestoreSession = vi.fn();
 
 vi.mock('../services/authService', () => ({
     authService: {
@@ -18,6 +20,8 @@ vi.mock('../services/authService', () => ({
         register: (...args: unknown[]) => mockRegister(...args),
         signOut: (...args: unknown[]) => mockSignOut(...args),
         setCurrentUser: (...args: unknown[]) => mockSetCurrentUser(...args),
+        clearCurrentUser: () => mockClearCurrentUser(),
+        restoreSession: () => mockRestoreSession(),
         getCurrentUser: vi.fn(() => null),
     },
     default: {
@@ -25,6 +29,8 @@ vi.mock('../services/authService', () => ({
         register: (...args: unknown[]) => mockRegister(...args),
         signOut: (...args: unknown[]) => mockSignOut(...args),
         setCurrentUser: (...args: unknown[]) => mockSetCurrentUser(...args),
+        clearCurrentUser: () => mockClearCurrentUser(),
+        restoreSession: () => mockRestoreSession(),
         getCurrentUser: vi.fn(() => null),
     },
 }));
@@ -61,15 +67,7 @@ const AuthConsumer = ({ onRender }: { onRender: (auth: ReturnType<typeof useAuth
 describe('AuthContext', () => {
     beforeEach(() => {
         vi.resetAllMocks();
-        // Mock fetch for /api/auth/me - return not authenticated
-        (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-            ok: false,
-            status: 401,
-            clone: () => ({
-                json: () => Promise.resolve({ error: 'No token' }),
-            }),
-            json: () => Promise.resolve({ error: 'No token' }),
-        });
+        mockRestoreSession.mockResolvedValue(null);
     });
 
     describe('useAuth', () => {
@@ -114,10 +112,7 @@ describe('AuthContext', () => {
         it('should set user when /api/auth/me succeeds', async () => {
             const mockUser = { id: '1', name: 'Test', email: 'test@test.com', role: 'user', status: 'active' };
 
-            (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-                ok: true,
-                json: () => Promise.resolve({ user: mockUser }),
-            });
+            mockRestoreSession.mockResolvedValueOnce(mockUser);
 
             let capturedAuth: ReturnType<typeof useAuth> | null = null;
 
@@ -233,19 +228,7 @@ describe('AuthContext', () => {
         });
 
         it('should attempt token refresh when /api/auth/me returns 401', async () => {
-            // First call: /api/auth/me returns 401
-            (global.fetch as ReturnType<typeof vi.fn>)
-                .mockResolvedValueOnce({
-                    ok: false,
-                    status: 401,
-                    clone: () => ({ json: () => Promise.resolve({ error: 'Token expired' }) }),
-                    json: () => Promise.resolve({ error: 'Token expired' }),
-                })
-                // Second call: /api/auth/refresh
-                .mockResolvedValueOnce({
-                    ok: false,
-                    json: () => Promise.resolve({ error: 'Refresh failed' }),
-                });
+            mockRestoreSession.mockResolvedValueOnce(null);
 
             let capturedAuth: ReturnType<typeof useAuth> | null = null;
 
@@ -258,6 +241,23 @@ describe('AuthContext', () => {
             await waitFor(() => {
                 expect(capturedAuth?.loading).toBe(false);
                 expect(capturedAuth?.user).toBeNull();
+            });
+        });
+
+        it('clears cached user when restoreSession throws', async () => {
+            mockRestoreSession.mockRejectedValueOnce(new Error('boom'));
+
+            let capturedAuth: ReturnType<typeof useAuth> | null = null;
+
+            render(
+                <AuthProvider>
+                    <AuthConsumer onRender={(auth) => { capturedAuth = auth; }} />
+                </AuthProvider>
+            );
+
+            await waitFor(() => {
+                expect(capturedAuth?.loading).toBe(false);
+                expect(mockClearCurrentUser).toHaveBeenCalled();
             });
         });
     });

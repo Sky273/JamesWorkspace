@@ -29,7 +29,9 @@ const ALLOWED_COLUMNS = new Set([
  * @returns {Promise<{templates: Array, totalCount: number, hasMore: boolean}>}
  */
 export async function listTemplates({ isAdmin, userFirmId, search, status, page = 1, limit = 100 }) {
-    const offset = (page - 1) * limit;
+    const normalizedPage = Math.max(1, Number.isFinite(page) ? page : 1);
+    const normalizedLimit = Math.max(1, Math.min(Number.isFinite(limit) ? limit : 100, 100));
+    const offset = (normalizedPage - 1) * normalizedLimit;
     const conditions = [];
     const params = [];
     let paramIndex = 1;
@@ -74,11 +76,11 @@ export async function listTemplates({ isAdmin, userFirmId, search, status, page 
          ${whereClause}
          ORDER BY t.name ASC
          LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
-        [...params, limit + 1, offset]
+        [...params, normalizedLimit + 1, offset]
     );
 
-    const hasMore = dataResult.rows.length > limit;
-    const templates = hasMore ? dataResult.rows.slice(0, limit) : dataResult.rows;
+    const hasMore = dataResult.rows.length > normalizedLimit;
+    const templates = hasMore ? dataResult.rows.slice(0, normalizedLimit) : dataResult.rows;
 
     return { templates, totalCount, hasMore };
 }
@@ -97,6 +99,28 @@ export async function getTemplateById(id) {
         throw err;
     }
     return result.rows[0];
+}
+
+export async function getTemplateByIdWithAccess(id, { isAdmin, userFirmId }) {
+    const template = await getTemplateById(id);
+
+    if (isAdmin) {
+        return template;
+    }
+
+    if (!userFirmId) {
+        const err = new Error('Template not found');
+        err.statusCode = 404;
+        throw err;
+    }
+
+    if (template.firm_id !== null && template.firm_id !== userFirmId) {
+        const err = new Error('Template not found');
+        err.statusCode = 404;
+        throw err;
+    }
+
+    return template;
 }
 
 /**

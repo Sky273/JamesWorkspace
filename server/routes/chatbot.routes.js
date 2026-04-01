@@ -51,6 +51,9 @@ const loadUserGuide = async () => {
 // Load user guide on startup
 loadUserGuide();
 
+const MAX_HISTORY_ENTRY_LENGTH = 10000;
+const MAX_HISTORY_TOTAL_LENGTH = 50000;
+
 /**
  * POST /api/chatbot/message
  * Send a message to the chatbot and get a response
@@ -64,6 +67,20 @@ router.post('/message', authenticateToken, validateBody(chatbotRequestSchema), a
     const { message, conversationHistory } = req.body;
     const userId = req.user?.id;
     const userName = req.user?.name;
+    const normalizedHistory = Array.isArray(conversationHistory) ? conversationHistory : [];
+    const oversizedHistoryEntry = normalizedHistory.find((entry) => typeof entry?.content === 'string' && entry.content.length > MAX_HISTORY_ENTRY_LENGTH);
+    if (oversizedHistoryEntry) {
+        return res.status(400).json({
+            error: 'Conversation history entry exceeds maximum length'
+        });
+    }
+
+    const totalHistoryLength = normalizedHistory.reduce((sum, entry) => sum + (typeof entry?.content === 'string' ? entry.content.length : 0), 0);
+    if (totalHistoryLength > MAX_HISTORY_TOTAL_LENGTH) {
+        return res.status(400).json({
+            error: 'Conversation history exceeds maximum total length'
+        });
+    }
 
     safeLog('info', 'Processing chatbot message with LLM', { 
         userId, 
@@ -114,8 +131,8 @@ Réponds toujours en français, sauf si l'utilisateur pose sa question en anglai
     ];
 
     // Add conversation history
-    if (conversationHistory && Array.isArray(conversationHistory)) {
-        conversationHistory.forEach(msg => {
+    if (normalizedHistory.length > 0) {
+        normalizedHistory.forEach(msg => {
             if (msg.role === 'user' || msg.role === 'assistant') {
                 messages.push({
                     role: msg.role,

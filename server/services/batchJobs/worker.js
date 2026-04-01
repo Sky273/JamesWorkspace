@@ -5,7 +5,7 @@
 
 import { safeLog } from '../../utils/logger.backend.js';
 import { JOB_STATUS, ITEM_STATUS, WORKER_INTERVAL } from './constants.js';
-import { getPendingJobs, updateJobStatus, updateJobCounters, isJobComplete, getFinalJobOutcome } from './jobCrud.js';
+import { getPendingJobs, updateJobStatus, updateJobCounters, isJobComplete, getFinalJobOutcome, getJobStatus } from './jobCrud.js';
 import { getPendingItems, updateJobItemStatus } from './itemCrud.js';
 
 // Worker state
@@ -58,8 +58,10 @@ async function processNextBatch(processItemFn) {
     const pendingJobs = await getPendingJobs();
 
     for (const job of pendingJobs) {
-        // Mark job as processing
-        await updateJobStatus(job.id, JOB_STATUS.PROCESSING);
+        const currentStatus = await getJobStatus(job.id);
+        if (currentStatus !== JOB_STATUS.PROCESSING) {
+            continue;
+        }
 
         // Get pending items
         const pendingItems = await getPendingItems(job.id);
@@ -69,6 +71,11 @@ async function processNextBatch(processItemFn) {
             if (await isJobComplete(job.id)) {
                 await updateJobCounters(job.id);
                 const outcome = await getFinalJobOutcome(job.id);
+                const latestStatus = await getJobStatus(job.id);
+                if (latestStatus === JOB_STATUS.CANCELLED) {
+                    safeLog('info', 'Batch job remained cancelled after processing cycle', { jobId: job.id });
+                    continue;
+                }
                 await updateJobStatus(job.id, outcome.status, {
                     processed_items: outcome.counters.processed_items,
                     success_count: outcome.counters.success_count,
@@ -110,6 +117,11 @@ async function processNextBatch(processItemFn) {
         // Check if job is complete
         if (await isJobComplete(job.id)) {
             const outcome = await getFinalJobOutcome(job.id);
+            const latestStatus = await getJobStatus(job.id);
+            if (latestStatus === JOB_STATUS.CANCELLED) {
+                safeLog('info', 'Batch job remained cancelled after processing cycle', { jobId: job.id });
+                continue;
+            }
             await updateJobStatus(job.id, outcome.status, {
                 processed_items: outcome.counters.processed_items,
                 success_count: outcome.counters.success_count,

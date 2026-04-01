@@ -9,6 +9,20 @@ import { applySafeBinaryHeaders } from '../../utils/fileResponseSecurity.js';
 
 const DEFAULT_PDF_PROXY_TIMEOUT_MS = 60_000;
 
+function buildProxyFailureBody(kind, statusCode) {
+    const label = kind === 'DOCX' ? 'DOCX' : 'PDF';
+
+    if (statusCode === 403) {
+        return { error: `${label} generation is not authorized` };
+    }
+
+    if (statusCode === 408 || statusCode === 504) {
+        return { error: `${label} generation timed out` };
+    }
+
+    return { error: `Failed to generate ${label}` };
+}
+
 async function relayBinaryResponse(response, res, fallbackContentType) {
     const contentType = response.headers.get('Content-Type') || fallbackContentType;
     const contentDisposition = response.headers.get('Content-Disposition');
@@ -80,17 +94,14 @@ export function registerProxyRoutes(app) {
                     error: errorText,
                     probableCause: response.status === 403 ? 'PDF_SERVER_INTERNAL_TOKEN mismatch between proxy and PDF server' : undefined
                 });
-                return res.status(response.status).json({ error: errorText });
+                return res.status(response.status).json(buildProxyFailureBody('PDF', response.status));
             }
             await relayBinaryResponse(response, res, 'application/pdf');
         } catch (error) {
             const statusCode = isAbortError(error) ? 504 : 500;
             safeLog(statusCode === 504 ? 'warn' : 'error', 'PDF proxy error', { error: error.message, timeoutMs: proxyTimeoutMs });
             if (!res.headersSent) {
-                res.status(statusCode).json({
-                    error: statusCode === 504 ? 'PDF generation timed out' : 'Failed to generate PDF',
-                    details: error.message
-                });
+                res.status(statusCode).json(buildProxyFailureBody('PDF', statusCode));
             }
         }
     });
@@ -114,7 +125,7 @@ export function registerProxyRoutes(app) {
                     error: errorText,
                     probableCause: response.status === 403 ? 'PDF_SERVER_INTERNAL_TOKEN mismatch between proxy and PDF server' : undefined
                 });
-                return res.status(response.status).json({ error: errorText });
+                return res.status(response.status).json(buildProxyFailureBody('DOCX', response.status));
             }
             await relayBinaryResponse(
                 response,
@@ -125,10 +136,7 @@ export function registerProxyRoutes(app) {
             const statusCode = isAbortError(error) ? 504 : 500;
             safeLog(statusCode === 504 ? 'warn' : 'error', 'DOCX proxy error', { error: error.message, timeoutMs: proxyTimeoutMs });
             if (!res.headersSent) {
-                res.status(statusCode).json({
-                    error: statusCode === 504 ? 'DOCX generation timed out' : 'Failed to generate DOCX',
-                    details: error.message
-                });
+                res.status(statusCode).json(buildProxyFailureBody('DOCX', statusCode));
             }
         }
     });

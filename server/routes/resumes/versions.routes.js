@@ -8,6 +8,8 @@ import { authenticateToken } from '../../middleware/auth.middleware.js';
 import { userRateLimit } from '../../middleware/rateLimit.middleware.js';
 import { validateParams } from '../../utils/validation.js';
 import { safeLog } from '../../utils/logger.backend.js';
+import { getResumeForAccessCheck } from '../../services/resumes.service.js';
+import { getUserFirmId } from '../../utils/firmHelpers.js';
 import {
     getVersions,
     getVersion,
@@ -15,6 +17,48 @@ import {
 } from '../../services/resumeVersions.service.js';
 
 const router = express.Router();
+const DEFAULT_LIMIT = 50;
+const MAX_LIMIT = 100;
+const DEFAULT_OFFSET = 0;
+
+function parseVersionsPagination(query = {}) {
+    const parsedLimit = query.limit === undefined ? DEFAULT_LIMIT : Number.parseInt(query.limit, 10);
+    const parsedOffset = query.offset === undefined ? DEFAULT_OFFSET : Number.parseInt(query.offset, 10);
+
+    if (!Number.isInteger(parsedLimit) || parsedLimit <= 0) {
+        return { error: 'Invalid limit parameter' };
+    }
+
+    if (!Number.isInteger(parsedOffset) || parsedOffset < 0) {
+        return { error: 'Invalid offset parameter' };
+    }
+
+    return {
+        limit: Math.min(parsedLimit, MAX_LIMIT),
+        offset: parsedOffset
+    };
+}
+
+async function assertResumeAccess(req, res) {
+    const resume = await getResumeForAccessCheck(req.params.id);
+
+    if (!resume) {
+        res.status(404).json({ error: 'Resume not found' });
+        return null;
+    }
+
+    if (req.user?.role === 'admin') {
+        return resume;
+    }
+
+    const userFirmId = await getUserFirmId(req);
+    if (!userFirmId || !resume.firm_id || resume.firm_id !== userFirmId) {
+        res.status(403).json({ error: 'Access denied' });
+        return null;
+    }
+
+    return resume;
+}
 
 // ============================================
 // GET /api/resumes/:id/versions
@@ -23,18 +67,27 @@ const router = express.Router();
 router.get('/:id/versions', authenticateToken, validateParams('id'), userRateLimit(50), async (req, res) => {
     try {
         const { id } = req.params;
-        const { limit = 50, offset = 0 } = req.query;
+        const pagination = parseVersionsPagination(req.query);
+        if (pagination.error) {
+            return res.status(400).json({ error: pagination.error });
+        }
+
+        const resume = await assertResumeAccess(req, res);
+
+        if (!resume) {
+            return;
+        }
 
         safeLog('info', 'GET /api/resumes/:id/versions', { 
             resumeId: id, 
-            limit, 
-            offset,
+            limit: pagination.limit, 
+            offset: pagination.offset,
             userId: req.user?.id 
         });
 
         const result = await getVersions(id, {
-            limit: Math.min(parseInt(limit, 10) || 50, 100),
-            offset: parseInt(offset, 10) || 0
+            limit: pagination.limit,
+            offset: pagination.offset
         });
 
         res.json(result);
@@ -58,6 +111,11 @@ router.get('/:id/versions/:versionNumber', authenticateToken, validateParams('id
 
         if (isNaN(versionNum) || versionNum < 1) {
             return res.status(400).json({ error: 'Invalid version number' });
+        }
+
+        const resume = await assertResumeAccess(req, res);
+        if (!resume) {
+            return;
         }
 
         safeLog('info', 'GET /api/resumes/:id/versions/:versionNumber', { 
@@ -96,6 +154,11 @@ router.post('/:id/versions/:versionNumber/restore', authenticateToken, validateP
             return res.status(400).json({ error: 'Invalid version number' });
         }
 
+        const resume = await assertResumeAccess(req, res);
+        if (!resume) {
+            return;
+        }
+
         safeLog('info', 'POST /api/resumes/:id/versions/:versionNumber/restore', { 
             resumeId: id, 
             versionNumber: versionNum,
@@ -117,7 +180,7 @@ router.post('/:id/versions/:versionNumber/restore', authenticateToken, validateP
         });
         
         if (error.message.includes('not found')) {
-            return res.status(404).json({ error: error.message });
+            return res.status(404).json({ error: 'Version not found' });
         }
         
         res.status(500).json({ error: 'Failed to restore resume version' });

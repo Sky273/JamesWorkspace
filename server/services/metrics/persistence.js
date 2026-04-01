@@ -12,6 +12,7 @@ export const METRICS_FILE = path.join(METRICS_DIR, 'metrics.json');
 export const METRICS_HISTORY_FILE = path.join(METRICS_DIR, 'metrics-history.jsonl');
 export const SAVE_INTERVAL_MS = 5 * 60 * 1000;
 export const HISTORY_INTERVAL_MS = 60 * 60 * 1000;
+export const MAX_HISTORY_ENTRIES = 24 * 30;
 
 export function ensureMetricsDirectory(log) {
     try {
@@ -130,8 +131,21 @@ export function saveMetricsToDisk(collector, log) {
 
 export function appendMetricsHistory(collector, log) {
     try {
+        ensureMetricsDirectory(log);
         const snapshot = buildHistorySnapshot(collector);
-        fs.appendFileSync(METRICS_HISTORY_FILE, JSON.stringify(snapshot) + '\n', 'utf8');
+        const nextLine = JSON.stringify(snapshot);
+        let lines = [];
+
+        if (fs.existsSync(METRICS_HISTORY_FILE)) {
+            lines = fs.readFileSync(METRICS_HISTORY_FILE, 'utf8').split('\n').filter(Boolean);
+        }
+
+        lines.push(nextLine);
+        if (lines.length > MAX_HISTORY_ENTRIES) {
+            lines = lines.slice(-MAX_HISTORY_ENTRIES);
+        }
+
+        fs.writeFileSync(METRICS_HISTORY_FILE, `${lines.join('\n')}\n`, 'utf8');
     } catch (err) {
         log.error('Failed to append metrics history', { error: err.message });
     }

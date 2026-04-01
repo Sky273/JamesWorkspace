@@ -12,6 +12,7 @@ import request from 'supertest';
 // Mock resumeComments service
 const mockGetComments = vi.fn();
 const mockAddComment = vi.fn();
+const mockGetCommentForAccessCheck = vi.fn();
 const mockUpdateComment = vi.fn();
 const mockDeleteComment = vi.fn();
 const mockGetCommentCount = vi.fn();
@@ -19,6 +20,7 @@ vi.mock('../../services/resumeComments.service.js', () => ({
     default: {
         getComments: (...args) => mockGetComments(...args),
         addComment: (...args) => mockAddComment(...args),
+        getCommentForAccessCheck: (...args) => mockGetCommentForAccessCheck(...args),
         updateComment: (...args) => mockUpdateComment(...args),
         deleteComment: (...args) => mockDeleteComment(...args),
         getCommentCount: (...args) => mockGetCommentCount(...args)
@@ -28,6 +30,16 @@ vi.mock('../../services/resumeComments.service.js', () => ({
 // Mock logger
 vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
+}));
+
+const mockGetResumeForAccessCheck = vi.fn();
+vi.mock('../../services/resumes.service.js', () => ({
+    getResumeForAccessCheck: (...args) => mockGetResumeForAccessCheck(...args)
+}));
+
+const mockGetUserFirmId = vi.fn();
+vi.mock('../../utils/firmHelpers.js', () => ({
+    getUserFirmId: (...args) => mockGetUserFirmId(...args)
 }));
 
 // Mock auth middleware
@@ -75,6 +87,9 @@ describe('Resume Comments Routes', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        mockGetResumeForAccessCheck.mockResolvedValue({ id: RESUME_ID, firm_id: 'firm-123', name: 'Resume' });
+        mockGetUserFirmId.mockResolvedValue('firm-123');
+        mockGetCommentForAccessCheck.mockResolvedValue({ id: COMMENT_ID, resume_id: RESUME_ID, user_id: 'user-123' });
         app = createTestApp();
     });
 
@@ -122,6 +137,16 @@ describe('Resume Comments Routes', () => {
 
             expect(res.status).toBe(500);
             expect(res.body.error).toBe('Failed to get comments');
+        });
+
+        it('should return 403 for cross-firm resume access', async () => {
+            mockGetUserFirmId.mockResolvedValueOnce('firm-other');
+
+            const res = await request(app)
+                .get(`/api/resumes/${RESUME_ID}/comments`)
+                .set('Authorization', 'Bearer valid-token');
+
+            expect(res.status).toBe(403);
         });
     });
 
@@ -204,7 +229,7 @@ describe('Resume Comments Routes', () => {
 
             expect(res.status).toBe(200);
             expect(res.body.success).toBe(true);
-            expect(mockUpdateComment).toHaveBeenCalledWith(COMMENT_ID, 'user-123', 'Updated!');
+            expect(mockUpdateComment).toHaveBeenCalledWith(COMMENT_ID, RESUME_ID, 'user-123', 'Updated!');
         });
 
         it('should return 404 if comment not found or not owner', async () => {
@@ -255,7 +280,7 @@ describe('Resume Comments Routes', () => {
             expect(res.status).toBe(200);
             expect(res.body.success).toBe(true);
             expect(res.body.message).toBe('Comment deleted');
-            expect(mockDeleteComment).toHaveBeenCalledWith(COMMENT_ID, 'user-123', false);
+            expect(mockDeleteComment).toHaveBeenCalledWith(COMMENT_ID, RESUME_ID, 'user-123', false);
         });
 
         it('should allow admin to delete any comment', async () => {
@@ -267,10 +292,11 @@ describe('Resume Comments Routes', () => {
                 .set('x-test-role', 'admin');
 
             expect(res.status).toBe(200);
-            expect(mockDeleteComment).toHaveBeenCalledWith(COMMENT_ID, 'user-123', true);
+            expect(mockDeleteComment).toHaveBeenCalledWith(COMMENT_ID, RESUME_ID, 'user-123', true);
         });
 
         it('should return 404 if comment not found or unauthorized', async () => {
+            mockGetCommentForAccessCheck.mockResolvedValueOnce({ id: COMMENT_MISSING_ID, resume_id: RESUME_ID, user_id: 'user-123' });
             mockDeleteComment.mockResolvedValueOnce(false);
 
             const res = await request(app)
@@ -289,6 +315,16 @@ describe('Resume Comments Routes', () => {
 
             expect(res.status).toBe(500);
             expect(res.body.error).toBe('Failed to delete comment');
+        });
+
+        it('should return 404 when comment does not belong to resume', async () => {
+            mockGetCommentForAccessCheck.mockResolvedValueOnce({ id: COMMENT_ID, resume_id: '00000000-0000-0000-0000-000000000055', user_id: 'user-123' });
+
+            const res = await request(app)
+                .delete(`/api/resumes/${RESUME_ID}/comments/${COMMENT_ID}`)
+                .set('Authorization', 'Bearer valid-token');
+
+            expect(res.status).toBe(404);
         });
     });
 

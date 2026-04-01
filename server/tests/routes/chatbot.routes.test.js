@@ -132,6 +132,24 @@ describe('Chatbot Routes', () => {
             expect(messages[messages.length - 1].content).toBe('Follow up');
         });
 
+        it('should build a UTF-8 clean system prompt', async () => {
+            mockCallLLM.mockResolvedValueOnce({
+                content: 'Réponse propre',
+                model: 'gpt-4o',
+                usage: {}
+            });
+
+            await request(app)
+                .post('/api/chatbot/message')
+                .set(AUTH)
+                .send({ message: 'Bonjour' });
+
+            const [messages] = mockCallLLM.mock.calls[0];
+            expect(messages[0].content).toContain('amélioration');
+            expect(messages[0].content).toContain('Réponds toujours en français');
+            expect(messages[0].content).not.toMatch(/[Ã�]/);
+        });
+
         it('should filter invalid conversation history roles', async () => {
             mockCallLLM.mockResolvedValueOnce({
                 content: 'OK',
@@ -196,6 +214,32 @@ describe('Chatbot Routes', () => {
                 .send({ message: 'Hello' });
 
             expect(res.status).toBe(500);
+        });
+
+        it('should return 400 for oversized history entry', async () => {
+            const res = await request(app)
+                .post('/api/chatbot/message')
+                .set(AUTH)
+                .send({
+                    message: 'Hello',
+                    conversationHistory: [{ role: 'user', content: 'x'.repeat(10001) }]
+                });
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toContain('entry');
+        });
+
+        it('should return 400 for oversized total history', async () => {
+            const res = await request(app)
+                .post('/api/chatbot/message')
+                .set(AUTH)
+                .send({
+                    message: 'Hello',
+                    conversationHistory: Array.from({ length: 6 }, () => ({ role: 'user', content: 'x'.repeat(9000) }))
+                });
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toContain('total');
         });
     });
 

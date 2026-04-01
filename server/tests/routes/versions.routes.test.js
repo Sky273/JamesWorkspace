@@ -12,10 +12,18 @@ import request from 'supertest';
 const mockGetVersions = vi.fn();
 const mockGetVersion = vi.fn();
 const mockRestoreVersion = vi.fn();
+const mockGetResumeForAccessCheck = vi.fn();
+const mockGetUserFirmId = vi.fn();
 vi.mock('../../services/resumeVersions.service.js', () => ({
     getVersions: (...args) => mockGetVersions(...args),
     getVersion: (...args) => mockGetVersion(...args),
     restoreVersion: (...args) => mockRestoreVersion(...args)
+}));
+vi.mock('../../services/resumes.service.js', () => ({
+    getResumeForAccessCheck: (...args) => mockGetResumeForAccessCheck(...args)
+}));
+vi.mock('../../utils/firmHelpers.js', () => ({
+    getUserFirmId: (...args) => mockGetUserFirmId(...args)
 }));
 
 // Mock logger
@@ -68,6 +76,8 @@ describe('Resume Versions Routes', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        mockGetResumeForAccessCheck.mockResolvedValue({ id: 'res-1', firm_id: 'firm-123', name: 'Resume 1' });
+        mockGetUserFirmId.mockResolvedValue('firm-123');
         app = createTestApp();
     });
 
@@ -124,6 +134,26 @@ describe('Resume Versions Routes', () => {
             });
         });
 
+        it('should return 400 for invalid limit', async () => {
+            const res = await request(app)
+                .get('/api/resumes/res-1/versions?limit=-5')
+                .set('Authorization', 'Bearer valid-token');
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toBe('Invalid limit parameter');
+            expect(mockGetVersions).not.toHaveBeenCalled();
+        });
+
+        it('should return 400 for invalid offset', async () => {
+            const res = await request(app)
+                .get('/api/resumes/res-1/versions?offset=-10')
+                .set('Authorization', 'Bearer valid-token');
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toBe('Invalid offset parameter');
+            expect(mockGetVersions).not.toHaveBeenCalled();
+        });
+
         it('should return 500 on error', async () => {
             mockGetVersions.mockRejectedValueOnce(new Error('DB error'));
 
@@ -133,6 +163,17 @@ describe('Resume Versions Routes', () => {
 
             expect(res.status).toBe(500);
             expect(res.body.error).toBe('Failed to fetch resume versions');
+        });
+
+        it('should return 403 for a resume from another firm', async () => {
+            mockGetResumeForAccessCheck.mockResolvedValueOnce({ id: 'res-1', firm_id: 'firm-other', name: 'Resume 1' });
+
+            const res = await request(app)
+                .get('/api/resumes/res-1/versions')
+                .set('Authorization', 'Bearer valid-token');
+
+            expect(res.status).toBe(403);
+            expect(mockGetVersions).not.toHaveBeenCalled();
         });
     });
 
@@ -233,14 +274,14 @@ describe('Resume Versions Routes', () => {
         });
 
         it('should return 404 if version not found', async () => {
-            mockRestoreVersion.mockRejectedValueOnce(new Error('Version not found'));
+            mockRestoreVersion.mockRejectedValueOnce(new Error('Version 99 not found for resume res-1'));
 
             const res = await request(app)
                 .post('/api/resumes/res-1/versions/99/restore')
                 .set('Authorization', 'Bearer valid-token');
 
             expect(res.status).toBe(404);
-            expect(res.body.error).toContain('not found');
+            expect(res.body.error).toBe('Version not found');
         });
 
         it('should return 500 on general error', async () => {

@@ -18,6 +18,20 @@ import {
 } from '../../services/marketFacts.service.js';
 
 const router = express.Router();
+const MAX_ALL_FACTS_RESPONSE = 2000;
+
+function parsePositiveInteger(value, { field, maxValue = null } = {}) {
+    if (value === undefined) {
+        return undefined;
+    }
+
+    const parsedValue = Number.parseInt(value, 10);
+    if (!Number.isFinite(parsedValue) || parsedValue <= 0) {
+        throw new Error(`${field} must be a positive integer`);
+    }
+
+    return maxValue ? Math.min(parsedValue, maxValue) : parsedValue;
+}
 
 /**
  * GET /api/market-radar/facts/all
@@ -28,15 +42,20 @@ router.get('/facts/all', authenticateToken, async (req, res) => {
     try {
         const startTime = Date.now();
         
-        // Get all facts from cache (no pagination)
+        // Keep the "all facts" endpoint bounded to protect server and client memory.
         const result = await getFactsByDateRange(null, null, {
             page: 1,
-            pageSize: 10000 // Large enough to get all records
+            pageSize: MAX_ALL_FACTS_RESPONSE
         });
         
         const duration = Date.now() - startTime;
+        const totalCount = result.pagination?.totalCount ?? result.facts.length;
+        const returnedCount = result.facts.length;
+        const truncated = totalCount > returnedCount;
         safeLog('info', `Market Radar: All facts loaded in ${duration}ms`, { 
-            totalCount: result.facts.length 
+            totalCount,
+            returnedCount,
+            truncated
         });
 
         // Set cache headers for client-side caching (5 minutes)
@@ -45,7 +64,9 @@ router.get('/facts/all', authenticateToken, async (req, res) => {
         res.json({
             success: true,
             facts: result.facts,
-            totalCount: result.facts.length,
+            totalCount,
+            returnedCount,
+            truncated,
             duration
         });
     } catch {
@@ -134,6 +155,8 @@ router.post('/facts/cache/refresh', authenticateToken, requireAdmin, async (req,
 router.get('/facts', authenticateToken, async (req, res) => {
     try {
         const { startDate, endDate, source, type, region, keyword, romeCode, page, pageSize } = req.query;
+        const parsedPage = parsePositiveInteger(page, { field: 'page' });
+        const parsedPageSize = parsePositiveInteger(pageSize, { field: 'pageSize', maxValue: 1000 });
 
         // Default to last 30 days if no dates provided
         const end = endDate || new Date().toISOString().split('T')[0];
@@ -149,8 +172,8 @@ router.get('/facts', authenticateToken, async (req, res) => {
             region,
             keyword,
             romeCode,
-            page,
-            pageSize
+            page: parsedPage,
+            pageSize: parsedPageSize
         });
 
         res.json({
@@ -160,7 +183,12 @@ router.get('/facts', authenticateToken, async (req, res) => {
             facts: result.facts,
             pagination: result.pagination
         });
-    } catch {
+    } catch (error) {
+        if (error.message?.includes('must be a positive integer')) {
+            return res.status(400).json({
+                error: error.message
+            });
+        }
         safeLog('error', 'Market Radar: Failed to get facts');
         res.status(500).json({ 
             error: 'Failed to retrieve facts' 
@@ -201,7 +229,7 @@ router.get('/latest/:type', authenticateToken, async (req, res) => {
 router.get('/trend/:keyword', authenticateToken, async (req, res) => {
     try {
         const { keyword } = req.params;
-        const days = parseInt(req.query.days) || 30;
+        const days = parsePositiveInteger(req.query.days, { field: 'days', maxValue: 365 }) || 30;
 
         const trend = await getKeywordTrend(keyword, days);
 
@@ -209,7 +237,12 @@ router.get('/trend/:keyword', authenticateToken, async (req, res) => {
             success: true,
             ...trend
         });
-    } catch {
+    } catch (error) {
+        if (error.message?.includes('must be a positive integer')) {
+            return res.status(400).json({
+                error: error.message
+            });
+        }
         safeLog('error', 'Market Radar: Failed to get trend');
         res.status(500).json({ 
             error: 'Failed to retrieve trend' 

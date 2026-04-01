@@ -171,6 +171,42 @@ describe('Firms Routes', () => {
             const res = await request(app).get('/api/firms').set(authHeader);
             expect(res.status).toBe(500);
         });
+
+        it('should return 403 for non-admin users', async () => {
+            const res = await request(app)
+                .get('/api/firms')
+                .set({ ...authHeader, 'x-test-role': 'user' });
+
+            expect(res.status).toBe(403);
+        });
+
+        it('should reject invalid pagination params', async () => {
+            const res = await request(app)
+                .get('/api/firms?page=-1&limit=0')
+                .set(authHeader);
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toContain('positive integer');
+            expect(mockListFirms).not.toHaveBeenCalled();
+        });
+
+        it('should clamp large limits before calling the service', async () => {
+            mockListFirms.mockResolvedValue({
+                firms: [],
+                hasMore: false,
+                totalCount: 0
+            });
+
+            const res = await request(app)
+                .get('/api/firms?limit=1000')
+                .set(authHeader);
+
+            expect(res.status).toBe(200);
+            expect(mockListFirms).toHaveBeenCalledWith(
+                expect.objectContaining({ page: 1, limit: 200 })
+            );
+            expect(res.body.pagination.limit).toBe(200);
+        });
     });
 
     describe('GET /api/firms/:id', () => {
@@ -190,6 +226,14 @@ describe('Firms Routes', () => {
 
             const res = await request(app).get('/api/firms/nonexistent').set(authHeader);
             expect(res.status).toBe(404);
+        });
+
+        it('should return 403 for non-admin users', async () => {
+            const res = await request(app)
+                .get('/api/firms/f-1')
+                .set({ ...authHeader, 'x-test-role': 'user' });
+
+            expect(res.status).toBe(403);
         });
     });
 

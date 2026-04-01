@@ -3,9 +3,12 @@
  * Frontend service for market radar API calls
  */
 
-import { fetchWithAuth, fetchWithCsrfRetry, createAuthOptionsWithCsrf } from '../utils/apiInterceptor';
-
-const API_BASE = '/api/market-radar';
+import {
+  buildQueryString,
+  getMarketRadarApiJson,
+  postMarketRadarApiJson,
+  TEN_MINUTES,
+} from './marketRadarService.utils';
 
 export interface MarketFact {
   id: string;
@@ -113,31 +116,8 @@ export interface SearchResult {
  */
 export async function triggerFullCollection(): Promise<CollectionSummary> {
   const THIRTY_MINUTES = 1800000;
-  
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), THIRTY_MINUTES);
-
-  const options = await createAuthOptionsWithCsrf({
-    method: 'POST',
-    signal: controller.signal,
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
-
-  try {
-    const response = await fetchWithCsrfRetry(`${API_BASE}/collect`, options, THIRTY_MINUTES);
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Collection failed');
-    }
-
-    const data = await response.json();
-    return data.summary;
-  } finally {
-    clearTimeout(timeoutId);
-  }
+  const data = await postMarketRadarApiJson<{ summary: CollectionSummary }>('/collect', {}, THIRTY_MINUTES);
+  return data.summary;
 }
 
 /**
@@ -147,48 +127,15 @@ export async function triggerFullCollection(): Promise<CollectionSummary> {
 export async function triggerSourceCollection(
   source: 'france_travail' | 'adzuna'
 ): Promise<{ success: boolean; message: string; jobId: string }> {
-  const options = await createAuthOptionsWithCsrf({
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
-
-  const response = await fetchWithAuth(`${API_BASE}/collect/${source}`, options);
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Collection failed');
-  }
-
-  return response.json();
+  return postMarketRadarApiJson(`/collect/${source}`);
 }
 
 /**
  * Get facts with optional filters and pagination
  */
 export async function getFacts(params: FactsQueryParams = {}): Promise<FactsResponse> {
-  const TEN_MINUTES = 600000;
-  
-  const queryParams = new URLSearchParams();
-  if (params.startDate) queryParams.append('startDate', params.startDate);
-  if (params.endDate) queryParams.append('endDate', params.endDate);
-  if (params.source) queryParams.append('source', params.source);
-  if (params.region) queryParams.append('region', params.region);
-  if (params.keyword) queryParams.append('keyword', params.keyword);
-  if (params.location) queryParams.append('location', params.location);
-  if (params.page) queryParams.append('page', params.page.toString());
-  if (params.pageSize) queryParams.append('pageSize', params.pageSize.toString());
-
-  const url = `${API_BASE}/facts${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
-  const response = await fetchWithAuth(url, {}, TEN_MINUTES);
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to fetch facts');
-  }
-
-  return response.json();
+  const query = buildQueryString(params as Record<string, string | number | undefined>);
+  return getMarketRadarApiJson<FactsResponse>(`/facts${query}`, TEN_MINUTES);
 }
 
 /**
@@ -205,16 +152,7 @@ export interface AllFactsResponse {
  * Get ALL facts data (no pagination, uses server cache)
  */
 export async function getAllFacts(): Promise<AllFactsResponse> {
-  const TEN_MINUTES = 600000;
-  
-  const response = await fetchWithAuth(`${API_BASE}/facts/all`, {}, TEN_MINUTES);
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to fetch all facts');
-  }
-
-  return response.json();
+  return getMarketRadarApiJson<AllFactsResponse>('/facts/all', TEN_MINUTES);
 }
 
 /**
@@ -234,16 +172,7 @@ export async function getFactsFilters(): Promise<{
   success: boolean;
   filters: FactsFilters;
 }> {
-  const TEN_MINUTES = 600000;
-  
-  const response = await fetchWithAuth(`${API_BASE}/facts/filters`, {}, TEN_MINUTES);
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to fetch facts filters');
-  }
-
-  return response.json();
+  return getMarketRadarApiJson('/facts/filters', TEN_MINUTES);
 }
 
 /**
@@ -266,16 +195,7 @@ export async function getFactsSummary(): Promise<{
   success: boolean;
   summary: FactsSummary;
 }> {
-  const TEN_MINUTES = 600000;
-  
-  const response = await fetchWithAuth(`${API_BASE}/facts/summary`, {}, TEN_MINUTES);
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to fetch facts summary');
-  }
-
-  return response.json();
+  return getMarketRadarApiJson('/facts/summary', TEN_MINUTES);
 }
 
 /**
@@ -286,17 +206,8 @@ export async function getLatestFacts(
   type: string,
   source?: string
 ): Promise<{ success: boolean; facts: MarketFact[] }> {
-  const TEN_MINUTES = 600000;
-  
-  const queryParams = source ? `?source=${source}` : '';
-  const response = await fetchWithAuth(`${API_BASE}/latest/${type}${queryParams}`, {}, TEN_MINUTES);
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to fetch latest facts');
-  }
-
-  return response.json();
+  const query = buildQueryString({ source });
+  return getMarketRadarApiJson(`/latest/${type}${query}`, TEN_MINUTES);
 }
 
 /**
@@ -306,14 +217,7 @@ export async function getKeywordTrend(
   keyword: string,
   days: number = 30
 ): Promise<TrendResponse> {
-  const response = await fetchWithAuth(`${API_BASE}/trend/${encodeURIComponent(keyword)}?days=${days}`);
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to fetch trend');
-  }
-
-  return response.json();
+  return getMarketRadarApiJson(`/trend/${encodeURIComponent(keyword)}?days=${days}`);
 }
 
 /**
@@ -323,19 +227,8 @@ export async function getRegionalComparison(
   date?: string,
   source?: string
 ): Promise<{ success: boolean; regions: MarketFact[] }> {
-  const queryParams = new URLSearchParams();
-  if (date) queryParams.append('date', date);
-  if (source) queryParams.append('source', source);
-
-  const url = `${API_BASE}/regional${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
-  const response = await fetchWithAuth(url);
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to fetch regional data');
-  }
-
-  return response.json();
+  const query = buildQueryString({ date, source });
+  return getMarketRadarApiJson(`/regional${query}`);
 }
 
 /**
@@ -348,21 +241,8 @@ export async function searchFranceTravail(params: {
   region?: string;
   typeContrat?: string;
 }): Promise<SearchResult> {
-  const queryParams = new URLSearchParams();
-  if (params.motsCles) queryParams.append('motsCles', params.motsCles);
-  if (params.codeROME) queryParams.append('codeROME', params.codeROME);
-  if (params.departement) queryParams.append('departement', params.departement);
-  if (params.region) queryParams.append('region', params.region);
-  if (params.typeContrat) queryParams.append('typeContrat', params.typeContrat);
-
-  const response = await fetchWithAuth(`${API_BASE}/search/france-travail?${queryParams.toString()}`);
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Search failed');
-  }
-
-  return response.json();
+  const query = buildQueryString(params as Record<string, string | number | undefined>);
+  return getMarketRadarApiJson(`/search/france-travail${query}`);
 }
 
 /**
@@ -375,21 +255,8 @@ export async function searchAdzuna(params: {
   salary_min?: number;
   salary_max?: number;
 }): Promise<SearchResult> {
-  const queryParams = new URLSearchParams();
-  if (params.what) queryParams.append('what', params.what);
-  if (params.where) queryParams.append('where', params.where);
-  if (params.category) queryParams.append('category', params.category);
-  if (params.salary_min) queryParams.append('salary_min', params.salary_min.toString());
-  if (params.salary_max) queryParams.append('salary_max', params.salary_max.toString());
-
-  const response = await fetchWithAuth(`${API_BASE}/search/adzuna?${queryParams.toString()}`);
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Search failed');
-  }
-
-  return response.json();
+  const query = buildQueryString(params);
+  return getMarketRadarApiJson(`/search/adzuna${query}`);
 }
 
 // ============================================
@@ -448,22 +315,7 @@ export async function triggerTrendsCollection(): Promise<{
   jobId: string;
   estimatedDuration: string;
 }> {
-  const options = await createAuthOptionsWithCsrf({
-    method: 'POST',
-    headers: { 
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({})
-  });
-
-  const response = await fetchWithAuth(`${API_BASE}/trends/collect`, options);
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to start trends collection');
-  }
-
-  return response.json();
+  return postMarketRadarApiJson('/trends/collect');
 }
 
 /**
@@ -476,22 +328,7 @@ export async function triggerDynamicsCollection(): Promise<{
   jobId: string;
   estimatedDuration: string;
 }> {
-  const options = await createAuthOptionsWithCsrf({
-    method: 'POST',
-    headers: { 
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({})
-  });
-
-  const response = await fetchWithAuth(`${API_BASE}/trends/collect-dynamics`, options);
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to start dynamics collection');
-  }
-
-  return response.json();
+  return postMarketRadarApiJson('/trends/collect-dynamics');
 }
 
 export interface TrendsQueryParams {
@@ -525,25 +362,8 @@ export interface TrendsResponse {
  * Get stored market trends with server-side filters and pagination
  */
 export async function getTrends(params: TrendsQueryParams = {}): Promise<TrendsResponse> {
-  const TEN_MINUTES = 600000;
-  
-  const queryParams = new URLSearchParams();
-  if (params.type) queryParams.append('type', params.type);
-  if (params.codeRome) queryParams.append('codeRome', params.codeRome);
-  if (params.regionCode) queryParams.append('regionCode', params.regionCode);
-  if (params.sortField) queryParams.append('sortField', params.sortField);
-  if (params.sortDirection) queryParams.append('sortDirection', params.sortDirection);
-  if (params.page) queryParams.append('page', params.page.toString());
-  if (params.pageSize) queryParams.append('pageSize', params.pageSize.toString());
-
-  const response = await fetchWithAuth(`${API_BASE}/trends?${queryParams.toString()}`, {}, TEN_MINUTES);
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to fetch trends');
-  }
-
-  return response.json();
+  const query = buildQueryString(params as Record<string, string | number | undefined>);
+  return getMarketRadarApiJson(`/trends${query}`, TEN_MINUTES);
 }
 
 /**
@@ -564,17 +384,8 @@ export interface AllTrendsResponse {
  * @param type - Optional type filter for specific trend type
  */
 export async function getAllTrends(type?: string): Promise<AllTrendsResponse> {
-  const TEN_MINUTES = 600000;
-  
-  const queryParams = type ? `?type=${encodeURIComponent(type)}` : '';
-  const response = await fetchWithAuth(`${API_BASE}/trends/all${queryParams}`, {}, TEN_MINUTES);
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to fetch all trends');
-  }
-
-  return response.json();
+  const query = type ? `?type=${encodeURIComponent(type)}` : '';
+  return getMarketRadarApiJson(`/trends/all${query}`, TEN_MINUTES);
 }
 
 /**
@@ -584,14 +395,7 @@ export async function getTrendMetadata(trendId: string): Promise<{
   success: boolean;
   trend: MarketTrend;
 }> {
-  const response = await fetchWithAuth(`${API_BASE}/trends/${encodeURIComponent(trendId)}/metadata`);
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to fetch trend metadata');
-  }
-
-  return response.json();
+  return getMarketRadarApiJson(`/trends/${encodeURIComponent(trendId)}/metadata`);
 }
 
 /**
@@ -602,16 +406,7 @@ export async function getTrendFilters(): Promise<{
   success: boolean;
   filters: TrendFilters;
 }> {
-  const TEN_MINUTES = 600000;
-  
-  const response = await fetchWithAuth(`${API_BASE}/trends/filters`, {}, TEN_MINUTES);
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to fetch trend filters');
-  }
-
-  return response.json();
+  return getMarketRadarApiJson('/trends/filters', TEN_MINUTES);
 }
 
 /**
@@ -622,16 +417,7 @@ export async function getTrendsSummary(): Promise<{
   success: boolean;
   summary: TrendsSummary;
 }> {
-  const TEN_MINUTES = 600000;
-  
-  const response = await fetchWithAuth(`${API_BASE}/trends/summary`, {}, TEN_MINUTES);
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to fetch trends summary');
-  }
-
-  return response.json();
+  return getMarketRadarApiJson('/trends/summary', TEN_MINUTES);
 }
 
 /**
@@ -679,14 +465,7 @@ export async function getTrendsAudit(): Promise<{
   audit: TrendsAuditReport;
   generatedAt: string;
 }> {
-  const response = await fetchWithAuth(`${API_BASE}/trends/audit`);
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to fetch audit report');
-  }
-
-  return response.json();
+  return getMarketRadarApiJson('/trends/audit');
 }
 
 /**
@@ -703,12 +482,5 @@ export async function getRadarConfig(): Promise<{
     };
   };
 }> {
-  const response = await fetchWithAuth(`${API_BASE}/config`);
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to fetch config');
-  }
-
-  return response.json();
+  return getMarketRadarApiJson('/config');
 }

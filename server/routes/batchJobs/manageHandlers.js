@@ -17,6 +17,10 @@ import { safeLog } from '../../utils/logger.backend.js';
 import { setSafeFileResponseHeaders } from '../../utils/fileResponseSecurity.js';
 import { ensureOwnerAccess, getUserContext } from './helpers.js';
 
+const DEFAULT_LIMIT = 50;
+const MAX_LIMIT = 200;
+const DEFAULT_OFFSET = 0;
+
 function withExportAvailability(job) {
     return {
         ...job,
@@ -24,13 +28,40 @@ function withExportAvailability(job) {
     };
 }
 
+function parseListJobsPagination(query = {}) {
+    const parsedLimit = query.limit === undefined ? DEFAULT_LIMIT : Number.parseInt(query.limit, 10);
+    const parsedOffset = query.offset === undefined ? DEFAULT_OFFSET : Number.parseInt(query.offset, 10);
+
+    if (!Number.isInteger(parsedLimit) || parsedLimit <= 0) {
+        return { error: 'limit must be a positive integer' };
+    }
+
+    if (!Number.isInteger(parsedOffset) || parsedOffset < 0) {
+        return { error: 'offset must be a non-negative integer' };
+    }
+
+    return {
+        limit: Math.min(parsedLimit, MAX_LIMIT),
+        offset: parsedOffset
+    };
+}
+
 export async function listJobs(req, res) {
     try {
         const userContext = getUserContext(req);
-        const { limit = 50, offset = 0, status } = req.query;
+        if (!userContext.isAdmin && !userContext.userFirmId) {
+            return res.status(403).json({ error: 'No firm association' });
+        }
+
+        const pagination = parseListJobsPagination(req.query);
+        if (pagination.error) {
+            return res.status(400).json({ error: pagination.error });
+        }
+
+        const { status } = req.query;
         const options = {
-            limit: parseInt(limit, 10),
-            offset: parseInt(offset, 10),
+            limit: pagination.limit,
+            offset: pagination.offset,
             status: status || null
         };
 
@@ -225,6 +256,6 @@ export async function provideNameForItem(req, res) {
         });
     } catch (error) {
         safeLog('error', 'Failed to provide name for item', { error: error.message });
-        res.status(500).json({ error: error.message || 'Erreur lors de la mise à jour' });
+        res.status(500).json({ error: 'Erreur lors de la mise à jour' });
     }
 }

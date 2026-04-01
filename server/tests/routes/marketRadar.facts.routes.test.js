@@ -98,7 +98,8 @@ describe('Market Radar - Facts Routes', () => {
 
         it('should return all facts', async () => {
             mockGetFactsByDateRange.mockResolvedValueOnce({
-                facts: [sampleFact, { ...sampleFact, id: 'fact-2' }]
+                facts: [sampleFact, { ...sampleFact, id: 'fact-2' }],
+                pagination: { totalCount: 2 }
             });
 
             const res = await request(app)
@@ -109,7 +110,29 @@ describe('Market Radar - Facts Routes', () => {
             expect(res.body.success).toBe(true);
             expect(res.body.facts).toHaveLength(2);
             expect(res.body.totalCount).toBe(2);
+            expect(res.body.returnedCount).toBe(2);
+            expect(res.body.truncated).toBe(false);
             expect(res.body.duration).toBeDefined();
+            expect(mockGetFactsByDateRange).toHaveBeenCalledWith(null, null, {
+                page: 1,
+                pageSize: 2000
+            });
+        });
+
+        it('should mark response as truncated when capped', async () => {
+            mockGetFactsByDateRange.mockResolvedValueOnce({
+                facts: [sampleFact],
+                pagination: { totalCount: 2500 }
+            });
+
+            const res = await request(app)
+                .get('/api/market-radar/facts/all')
+                .set(AUTH);
+
+            expect(res.status).toBe(200);
+            expect(res.body.totalCount).toBe(2500);
+            expect(res.body.returnedCount).toBe(1);
+            expect(res.body.truncated).toBe(true);
         });
 
         it('should return 500 on error', async () => {
@@ -263,8 +286,8 @@ describe('Market Radar - Facts Routes', () => {
                     region: 'IDF',
                     keyword: 'dev',
                     romeCode: 'M1805',
-                    page: '2',
-                    pageSize: '10'
+                    page: 2,
+                    pageSize: 10
                 })
             );
         });
@@ -278,6 +301,15 @@ describe('Market Radar - Facts Routes', () => {
 
             expect(res.status).toBe(500);
             expect(res.body.error).toContain('Failed');
+        });
+
+        it('should return 400 for invalid page', async () => {
+            const res = await request(app)
+                .get('/api/market-radar/facts?page=-1')
+                .set(AUTH);
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toContain('page');
         });
     });
 
@@ -359,6 +391,15 @@ describe('Market Radar - Facts Routes', () => {
                 .set(AUTH);
 
             expect(res.status).toBe(500);
+        });
+
+        it('should return 400 for invalid days', async () => {
+            const res = await request(app)
+                .get('/api/market-radar/trend/developer?days=0')
+                .set(AUTH);
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toContain('days');
         });
     });
 

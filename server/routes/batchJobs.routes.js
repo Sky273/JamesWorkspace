@@ -48,10 +48,10 @@ router.post('/profile-analysis', authenticateToken, validateBody(batchProfileAna
 router.post('/deal-export', authenticateToken, validateBody(batchDealExportSchema), createDealExportJob);
 
 router.get('/', authenticateToken, listJobs);
-router.get('/:id', authenticateToken, getJobDetails);
-router.post('/:id/cancel', authenticateToken, cancelJobHandler);
-router.delete('/:id', authenticateToken, deleteJobHandler);
-router.get('/:id/download', authenticateToken, downloadJobExport);
+router.get('/:id', authenticateToken, validateParams('id'), getJobDetails);
+router.post('/:id/cancel', authenticateToken, validateParams('id'), cancelJobHandler);
+router.delete('/:id', authenticateToken, validateParams('id'), deleteJobHandler);
+router.get('/:id/download', authenticateToken, validateParams('id'), downloadJobExport);
 router.get('/:id/pending-names', authenticateToken, listPendingNames);
 router.post('/items/:itemId/provide-name', authenticateToken, validateParams('itemId'), validateBody(provideNameSchema), provideNameForItem);
 

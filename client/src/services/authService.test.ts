@@ -24,6 +24,7 @@ vi.mock('../utils/apiInterceptor', () => ({
     clearCsrfToken: () => mockClearCsrfToken(),
     resetSessionState: () => mockResetSessionState(),
     isSessionRedirectError: (err: unknown) => mockIsSessionRedirectError(err),
+    AUTH_ERROR_PATTERNS: ['jwt malformed', 'invalid token', 'jwt expired', 'token invalid'],
 }));
 
 // Mock logger
@@ -181,6 +182,42 @@ describe('authService', () => {
         });
     });
 
+    describe('restoreSession', () => {
+        it('should restore the current user when /api/auth/me succeeds', async () => {
+            const restoredUser = { id: '1', name: 'Restored', email: 'restored@test.com', role: 'user', status: 'active' };
+            vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(mockResponse(true, { user: restoredUser })));
+
+            const result = await authService.restoreSession();
+
+            expect(result).toEqual(restoredUser);
+            expect(authService.getCurrentUser()).toEqual(restoredUser);
+        });
+
+        it('should refresh and retry when /api/auth/me returns 401', async () => {
+            const restoredUser = { id: '1', name: 'Restored', email: 'restored@test.com', role: 'user', status: 'active' };
+            vi.stubGlobal('fetch', vi.fn()
+                .mockResolvedValueOnce(mockResponse(false, { error: 'Session challenge required' }, 401))
+                .mockResolvedValueOnce(mockResponse(true, {}, 200))
+                .mockResolvedValueOnce(mockResponse(true, { user: restoredUser }, 200)));
+
+            const result = await authService.restoreSession();
+
+            expect(result).toEqual(restoredUser);
+            expect(authService.getCurrentUser()).toEqual(restoredUser);
+        });
+
+        it('should clear user and reset session state on JWT errors', async () => {
+            authService.setCurrentUser({ id: '1', name: 'Test', email: 'test@test.com', role: 'user', status: 'active' });
+            vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(mockResponse(false, { error: 'jwt expired' }, 401)));
+
+            const result = await authService.restoreSession();
+
+            expect(result).toBeNull();
+            expect(authService.getCurrentUser()).toBeNull();
+            expect(mockResetSessionState).toHaveBeenCalled();
+        });
+    });
+
     describe('getCurrentUser / setCurrentUser / isAuthenticated', () => {
         it('should return null when no user is set', () => {
             expect(authService.getCurrentUser()).toBeNull();
@@ -190,6 +227,12 @@ describe('authService', () => {
             const user = { id: '1', name: 'Test', email: 'test@test.com', role: 'user' as const, status: 'active' as const };
             authService.setCurrentUser(user);
             expect(authService.getCurrentUser()).toEqual(user);
+        });
+
+        it('should clear current user explicitly', () => {
+            authService.setCurrentUser({ id: '1', name: 'Test', email: 'test@test.com', role: 'user', status: 'active' });
+            authService.clearCurrentUser();
+            expect(authService.getCurrentUser()).toBeNull();
         });
 
         it('should report authenticated when user is set', () => {

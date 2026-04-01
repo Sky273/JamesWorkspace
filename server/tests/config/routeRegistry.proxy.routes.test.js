@@ -207,6 +207,47 @@ describe('Proxy Routes', () => {
 
         expect(res.status).toBe(504);
         expect(res.body.error).toContain('timed out');
+        expect(res.body.details).toBeUndefined();
+    });
+
+    it('sanitizes upstream PDF server errors', async () => {
+        const app = createTestApp();
+        mockFetch.mockResolvedValueOnce({
+            ok: false,
+            status: 500,
+            text: () => Promise.resolve('wkhtmltopdf failed on /srv/render/tmp/file.html')
+        });
+
+        const res = await request(app)
+            .post('/generate-pdf')
+            .set('x-test-auth', 'ok')
+            .send({
+                htmlContent: '<p>boom</p>',
+                filename: 'resume.pdf'
+            });
+
+        expect(res.status).toBe(500);
+        expect(res.body).toEqual({ error: 'Failed to generate PDF' });
+    });
+
+    it('sanitizes upstream DOCX authorization errors', async () => {
+        const app = createTestApp();
+        mockFetch.mockResolvedValueOnce({
+            ok: false,
+            status: 403,
+            text: () => Promise.resolve('internal token mismatch')
+        });
+
+        const res = await request(app)
+            .post('/generate-docx')
+            .set('x-test-auth', 'ok')
+            .send({
+                htmlContent: '<p>blocked</p>',
+                filename: 'resume.docx'
+            });
+
+        expect(res.status).toBe(403);
+        expect(res.body).toEqual({ error: 'DOCX generation is not authorized' });
     });
 });
 

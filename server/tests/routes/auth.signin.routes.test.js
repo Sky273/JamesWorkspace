@@ -216,6 +216,26 @@ describe('Auth Routes - POST /api/auth/signin', () => {
             expect(res.body.error).toContain('inactive');
         });
 
+        it('should return 403 for active user without firm assignment', async () => {
+            mockFindUserWithFirmByEmail.mockResolvedValueOnce({
+                id: 'user-123',
+                email: 'orphan@example.com',
+                password: '$2a$10$hashedpassword',
+                status: 'active',
+                role: 'user',
+                firm_id: null,
+                firm_name: null
+            });
+            mockBcryptCompare.mockResolvedValueOnce(true);
+
+            const res = await request(app)
+                .post('/api/auth/signin')
+                .send({ email: 'orphan@example.com', password: 'password123' });
+
+            expect(res.status).toBe(403);
+            expect(res.body.error).toContain('firm');
+        });
+
         it('should return user data and set cookies on successful login', async () => {
             mockFindUserWithFirmByEmail.mockResolvedValueOnce({
                 id: 'user-123',
@@ -275,65 +295,20 @@ describe('Auth Routes - POST /api/auth/register', () => {
         app = createTestApp();
     });
 
-    it('should reject registration with existing email', async () => {
-        mockFindExistingUserByEmail.mockResolvedValueOnce({ id: 'existing-user' });
-
+    it('should block self-service registration even with valid data', async () => {
         const res = await request(app)
             .post('/api/auth/register')
-            .send({ 
-                email: 'existing@example.com', 
-                password: 'password123',
-                name: 'Test User'
-            });
-
-        expect(res.status).toBe(409);
-        expect(res.body.error).toContain('already exists');
-    });
-
-    it('should create new user with valid data', async () => {
-        mockFindExistingUserByEmail.mockResolvedValueOnce(null);
-        mockBcryptHash.mockResolvedValueOnce('$2a$10$hashedpassword');
-        mockCreateUser.mockResolvedValueOnce({
-            id: 'new-user-123',
-            email: 'newuser@example.com',
-            name: 'New User',
-            role: 'user',
-            status: 'pending'
-        });
-
-        const res = await request(app)
-            .post('/api/auth/register')
-            .send({ 
-                email: 'newuser@example.com', 
+            .send({
+                email: 'newuser@example.com',
                 password: 'password123',
                 name: 'New User'
             });
 
-        expect(res.status).toBe(201);
-        expect(res.body.user).toBeDefined();
-        expect(res.body.user.email).toBe('newuser@example.com');
-        expect(res.body.message).toContain('registered successfully');
-    });
-
-    it('should hash password before storing', async () => {
-        mockFindExistingUserByEmail.mockResolvedValueOnce(null);
-        mockBcryptHash.mockResolvedValueOnce('$2a$10$hashedpassword');
-        mockCreateUser.mockResolvedValueOnce({
-            id: 'new-user-123',
-            email: 'newuser@example.com',
-            name: 'New User',
-            role: 'user'
-        });
-
-        await request(app)
-            .post('/api/auth/register')
-            .send({ 
-                email: 'newuser@example.com', 
-                password: 'password123',
-                name: 'New User'
-            });
-
-        expect(mockBcryptHash).toHaveBeenCalledWith('password123', expect.any(Number));
+        expect(res.status).toBe(403);
+        expect(res.body.error).toContain('Contact an administrator');
+        expect(mockFindExistingUserByEmail).not.toHaveBeenCalled();
+        expect(mockBcryptHash).not.toHaveBeenCalled();
+        expect(mockCreateUser).not.toHaveBeenCalled();
     });
 
     it('should reject weak password', async () => {
@@ -389,6 +364,25 @@ describe('Auth Routes - POST /api/auth/refresh', () => {
 
         expect(res.status).toBe(401);
         expect(res.body.error).toContain('inactive');
+    });
+
+    it('should return 403 when refreshed user has no firm assignment', async () => {
+        mockVerifyRefreshToken.mockReturnValueOnce({ id: 'user-123' });
+        mockFindUserWithFirmById.mockResolvedValueOnce({
+            id: 'user-123',
+            email: 'orphan@example.com',
+            status: 'active',
+            role: 'user',
+            firm_id: null,
+            firm_name: null
+        });
+
+        const res = await request(app)
+            .post('/api/auth/refresh')
+            .set('Cookie', 'refreshToken=valid-refresh-token');
+
+        expect(res.status).toBe(403);
+        expect(res.body.error).toContain('firm');
     });
 
     it('should apply auth rate limiting to refresh', async () => {
@@ -547,6 +541,24 @@ describe('Auth Routes - GET /api/auth/me', () => {
             .set('Cookie', 'accessToken=valid-token');
 
         expect(res.status).toBe(404);
+    });
+
+    it('should return 403 if current user has no firm assignment', async () => {
+        mockFindUserWithFirmById.mockResolvedValueOnce({
+            id: 'user-123',
+            email: 'orphan@example.com',
+            status: 'active',
+            role: 'user',
+            firm_id: null,
+            firm_name: null
+        });
+
+        const res = await request(app)
+            .get('/api/auth/me')
+            .set('Cookie', 'accessToken=valid-token');
+
+        expect(res.status).toBe(403);
+        expect(res.body.error).toContain('firm');
     });
 });
 

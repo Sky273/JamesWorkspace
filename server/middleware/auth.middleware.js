@@ -175,10 +175,10 @@ export function requireFirmAccess(getResourceFirm) {
             }
             
             next();
-        } catch (error) {
+        } catch {
             return res.status(500).json({
                 error: 'Authorization check failed',
-                message: error.message
+                message: 'Unable to verify access permissions'
             });
         }
     };

@@ -109,6 +109,11 @@ async function runTokenRefresh() {
  * Start all scheduled tasks
  */
 export function startScheduler() {
+    if (consentCheckInterval || reminderInterval || purgeInterval || tokenRefreshInterval || initialChecksTimeout) {
+        safeLog('warn', '[Scheduler] GDPR consent scheduler already running');
+        return;
+    }
+
     safeLog('info', '[Scheduler] Starting GDPR consent scheduler');
 
     // Run initial checks after a short delay (let server fully start)

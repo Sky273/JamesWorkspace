@@ -45,11 +45,21 @@ function normalizeTemplatePayload(payload = {}) {
 // GET /api/templates - Get all templates (with server-side pagination and filters)
 router.get('/', authenticateToken, async (req, res) => {
     try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 100;
+        const parsedPage = Number.parseInt(req.query.page, 10);
+        const parsedLimit = Number.parseInt(req.query.limit, 10);
+        const page = Number.isNaN(parsedPage) ? 1 : parsedPage;
+        const limit = Number.isNaN(parsedLimit) ? 100 : parsedLimit;
         const { search, status } = req.query;
         const isAdmin = isUserAdmin(req);
         const userFirmId = await getUserFirmId(req);
+
+        if (!isAdmin && !userFirmId) {
+            return res.status(403).json({ error: 'No firm association' });
+        }
+
+        if (page < 1 || limit < 1 || limit > 100) {
+            return res.status(400).json({ error: 'Invalid pagination parameters' });
+        }
 
         const { templates, totalCount, hasMore } = await templatesService.listTemplates({
             isAdmin, userFirmId, search, status, page, limit
@@ -92,7 +102,9 @@ router.get('/', authenticateToken, async (req, res) => {
 router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => {
     try {
         const { id } = req.params;
-        const template = await templatesService.getTemplateById(id);
+        const isAdmin = isUserAdmin(req);
+        const userFirmId = await getUserFirmId(req);
+        const template = await templatesService.getTemplateByIdWithAccess(id, { isAdmin, userFirmId });
         
         // Map to frontend format (using PascalCase for compatibility)
         res.json(mapTemplateToFrontend(template));

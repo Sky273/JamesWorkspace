@@ -181,7 +181,7 @@ const SendEmailModal = ({
       client: selectedClient ? { name: selectedClient.name, type: selectedClient.type, industry: '' } : undefined,
       contact: selectedContact ? { name: selectedContact.name, role: selectedContact.role } : undefined,
       resume: { name: resumeName, title: resumeTitle || '', version: currentVersion || 1 },
-      firm: { name: user?.firm || '', logo: user?.firmLogo || '' },
+      firm: { name: user?.firmName || user?.firm || '', logo: user?.firmLogo || '' },
       user: { name: user?.name || '', email: user?.email || '', jobTitle: user?.jobTitle || '', phone: user?.phone || '' }
     };
   }, [selectedClient, selectedContact, resumeName, resumeTitle, currentVersion, user]);

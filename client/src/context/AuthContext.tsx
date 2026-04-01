@@ -6,7 +6,7 @@
 
 import { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from 'react';
 import { authService, User, RegisterData, RegisterResponse, SignInResponse } from '../services/authService';
-import { resetSessionState, AUTH_ERROR_PATTERNS } from '../utils/apiInterceptor';
+import { resetSessionState } from '../utils/apiInterceptor';
 import { redirectToExpiredSession, setSessionExpiredHandler } from '../utils/sessionRedirect';
 import toast from 'react-hot-toast';
 import logger from '../utils/logger.frontend';
@@ -70,80 +70,20 @@ export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
         // This ensures the first login attempt after expiration will work
         resetSessionState();
         setUser(null);
-        authService.setCurrentUser(null);
+        authService.clearCurrentUser();
         setLoading(false);
         setInitialized(true);
         return;
       }
 
       try {
-        // First try to get user with current token
-        const response = await fetch('/api/auth/me', {
-          method: 'GET',
-          credentials: 'include'
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          setUser(data.user);
-          authService.setCurrentUser(data.user);
-        } else if (response.status === 401 || response.status === 403) {
-          // Check if it's a JWT error that shouldn't trigger refresh
-          let errorData: { error?: string; message?: string; code?: string } = {};
-          try {
-            errorData = await response.clone().json();
-          } catch {
-            // Ignore JSON parse errors
-          }
-          
-          const errorMessage = (errorData.error || errorData.message || '').toLowerCase();
-          const isJwtError = AUTH_ERROR_PATTERNS
-            .some(pattern => errorMessage.includes(pattern.toLowerCase()));
-          
-          // If it's a JWT error, don't try to refresh - just clear state
-          if (isJwtError) {
-            logger.warn('JWT error detected during session restore, clearing state:', errorMessage);
-            resetSessionState();
-            setUser(null);
-            authService.setCurrentUser(null);
-          } else {
-            // Token might be expired, try to refresh
-            const refreshResponse = await fetch('/api/auth/refresh', {
-              method: 'POST',
-              credentials: 'include',
-              headers: { 'Content-Type': 'application/json' }
-            });
-            
-            if (refreshResponse.ok) {
-              // Retry getting user after refresh
-              const retryResponse = await fetch('/api/auth/me', {
-                method: 'GET',
-                credentials: 'include'
-              });
-              
-              if (retryResponse.ok) {
-                const data = await retryResponse.json();
-                setUser(data.user);
-                authService.setCurrentUser(data.user);
-              } else {
-                setUser(null);
-                authService.setCurrentUser(null);
-              }
-            } else {
-              // Refresh failed - user is not authenticated
-              setUser(null);
-              authService.setCurrentUser(null);
-            }
-          }
-        } else {
-          setUser(null);
-          authService.setCurrentUser(null);
-        }
+        const restoredUser = await authService.restoreSession();
+        setUser(restoredUser);
       } catch (err) {
         logger.error('Failed to fetch current user:', err);
         resetSessionState();
         setUser(null);
-        authService.setCurrentUser(null);
+        authService.clearCurrentUser();
       } finally {
         setLoading(false);
         setInitialized(true);
@@ -204,7 +144,7 @@ export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
   const handleSessionExpired = useCallback((): void => {
     logger.warn('[AuthContext] Session expired, cleaning up and redirecting');
     setUser(null);
-    authService.setCurrentUser(null);
+    authService.clearCurrentUser();
     void authService.signOut().finally(() => {
       redirectToExpiredSession();
     });

@@ -60,6 +60,13 @@ vi.mock('../../middleware/auth.middleware.js', () => ({
         } else {
             res.status(401).json({ error: 'Unauthorized' });
         }
+    },
+    requireAdmin: (req, res, next) => {
+        if (req.user?.role === 'admin') {
+            next();
+        } else {
+            res.status(403).json({ error: 'Admin access required' });
+        }
     }
 }));
 
@@ -75,10 +82,11 @@ function createTestApp() {
 
 describe('Tags Routes', () => {
     let app;
-    const authHeader = { Authorization: 'Bearer valid-token' };
+    const authHeader = { Authorization: 'Bearer valid-token', 'x-test-role': 'admin' };
 
     beforeEach(() => {
         vi.clearAllMocks();
+        mockGetUserFirmId.mockResolvedValue('firm-123');
         invalidateTagsCache();
         app = createTestApp();
     });
@@ -120,6 +128,16 @@ describe('Tags Routes', () => {
 
             const res = await request(app).get('/api/tags').set(authHeader);
             expect(res.status).toBe(500);
+        });
+
+        it('should return 403 without firm association', async () => {
+            mockGetUserFirmId.mockResolvedValueOnce(null);
+
+            const res = await request(app)
+                .get('/api/tags')
+                .set({ Authorization: 'Bearer valid-token', 'x-test-role': 'user' });
+
+            expect(res.status).toBe(403);
         });
     });
 
@@ -227,6 +245,15 @@ describe('Tags Routes', () => {
                 .send({ category: 'Skills', oldName: 'JS', newName: 'JavaScript' });
 
             expect(res.status).toBe(500);
+        });
+
+        it('should reject rename for non-admin', async () => {
+            const res = await request(app)
+                .put('/api/tags/rename')
+                .set({ ...authHeader, 'x-test-role': 'user' })
+                .send({ category: 'Skills', oldName: 'JS', newName: 'JavaScript' });
+
+            expect(res.status).toBe(403);
         });
     });
 });

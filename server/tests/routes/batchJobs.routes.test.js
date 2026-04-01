@@ -118,6 +118,11 @@ const mockResumeItemWithName = vi.fn();
 const mockGetItemsPendingName = vi.fn();
 const mockFindMission = vi.fn();
 const mockClearJobExportFile = vi.fn(() => Promise.resolve());
+const mockGetResumeForAccessCheck = vi.fn(async () => ({
+    id: '123e4567-e89b-12d3-a456-426614174000',
+    firm_id: 'firm-123',
+    name: 'Resume 1'
+}));
 
 vi.mock('../../services/batchJobs.service.js', () => ({
     createJob: (...args) => mockCreateJob(...args),
@@ -145,6 +150,9 @@ vi.mock('../../services/batchJobs.service.js', () => ({
 
 vi.mock('../../services/missions.service.js', () => ({
     findMission: (...args) => mockFindMission(...args)
+}));
+vi.mock('../../services/resumes.service.js', () => ({
+    getResumeForAccessCheck: (...args) => mockGetResumeForAccessCheck(...args)
 }));
 
 // Mock firmHelpers
@@ -208,6 +216,14 @@ vi.mock('../../middleware/auth.middleware.js', () => ({
 // Import routes after mocks
 import batchJobsRoutes from '../../routes/batchJobs.routes.js';
 
+beforeEach(() => {
+    mockGetResumeForAccessCheck.mockResolvedValue({
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        firm_id: 'firm-123',
+        name: 'Resume 1'
+    });
+});
+
 // Create test app
 function createTestApp() {
     const app = express();
@@ -222,6 +238,7 @@ describe('Batch Jobs Routes - GET /api/batch-jobs', () => {
 
     beforeEach(() => {
         vi.resetAllMocks();
+        mockGetResumeForAccessCheck.mockResolvedValue({ id: '123e4567-e89b-12d3-a456-426614174000', firm_id: 'firm-123', name: 'Resume 1' });
         app = createTestApp();
     });
 
@@ -267,6 +284,34 @@ describe('Batch Jobs Routes - GET /api/batch-jobs', () => {
             .set('Authorization', 'Bearer valid-token');
 
         expect(res.status).toBe(200);
+        expect(mockGetJobsByFirm).toHaveBeenCalledWith('firm-123', expect.objectContaining({
+            limit: 10,
+            offset: 10
+        }));
+    });
+
+    it('should reject invalid pagination values', async () => {
+        const res = await request(app)
+            .get('/api/batch-jobs?limit=0&offset=-1')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(400);
+        expect(res.body.error).toContain('positive integer');
+        expect(mockGetJobsByFirm).not.toHaveBeenCalled();
+    });
+
+    it('should clamp large limits', async () => {
+        mockGetJobsByFirm.mockResolvedValueOnce([]);
+
+        const res = await request(app)
+            .get('/api/batch-jobs?limit=999')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(200);
+        expect(mockGetJobsByFirm).toHaveBeenCalledWith('firm-123', expect.objectContaining({
+            limit: 200,
+            offset: 0
+        }));
     });
 
     it('should use getAllJobs for admin', async () => {
@@ -401,6 +446,19 @@ describe('Batch Jobs Routes - POST /api/batch-jobs', () => {
             .set('x-test-invalid-upload', 'true');
 
         expect(res.status).toBe(500);
+    });
+
+    it('should not expose raw import job errors', async () => {
+        mockCreateJob.mockRejectedValueOnce(new Error('internal staging detail'));
+
+        const res = await request(app)
+            .post('/api/batch-jobs')
+            .set('Authorization', 'Bearer valid-token')
+            .set('Content-Type', 'application/json')
+            .send({ improve: true });
+
+        expect(res.status).toBe(500);
+        expect(res.body.error).toBe('Erreur lors de la création du job');
     });
 
     it('should reject files with invalid binary signatures', async () => {
@@ -563,6 +621,48 @@ describe('Batch Jobs Routes - POST /api/batch-jobs/:id/cancel', () => {
     });
 });
 
+describe('Batch Jobs Routes - pending names', () => {
+    let app;
+
+    beforeEach(() => {
+        vi.resetAllMocks();
+        app = createTestApp();
+    });
+
+    it('should return pending-name items for authorized user', async () => {
+        mockGetJob.mockResolvedValueOnce({
+            id: 'job-123',
+            firm_id: 'firm-123'
+        });
+        mockGetItemsPendingName.mockResolvedValueOnce([{ id: 'item-1', status: 'pending_name' }]);
+
+        const res = await request(app)
+            .get('/api/batch-jobs/job-123/pending-names')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(200);
+        expect(res.body.items).toHaveLength(1);
+    });
+
+    it('should not expose raw provide-name errors', async () => {
+        mockGetJobItem.mockResolvedValueOnce({
+            id: 'item-123',
+            firm_id: 'firm-123',
+            status: 'pending_name',
+            file_name: 'resume.pdf'
+        });
+        mockResumeItemWithName.mockRejectedValueOnce(new Error('db detail leak'));
+
+        const res = await request(app)
+            .post('/api/batch-jobs/items/item-123/provide-name')
+            .set('Authorization', 'Bearer valid-token')
+            .send({ name: 'Jean Dupont' });
+
+        expect(res.status).toBe(500);
+        expect(res.body.error).toBe('Erreur lors de la mise à jour');
+    });
+});
+
 
 describe('Batch Jobs Routes - POST /api/batch-jobs/improve', () => {
     let app;
@@ -573,6 +673,11 @@ describe('Batch Jobs Routes - POST /api/batch-jobs/improve', () => {
     });
 
     it('should create improve job with camelCase firmId', async () => {
+        mockGetResumeForAccessCheck.mockResolvedValueOnce({
+            id: '123e4567-e89b-12d3-a456-426614174000',
+            firm_id: 'firm-override',
+            name: 'Resume 1'
+        });
         mockCreateJob.mockResolvedValueOnce({ id: 'job-improve', status: 'pending' });
         mockAddJobResumeIds.mockResolvedValueOnce(1);
         mockGetJob.mockResolvedValueOnce({ id: 'job-improve', status: 'pending', firm_id: 'firm-override' });
@@ -630,6 +735,16 @@ describe('Batch Jobs Routes - POST /api/batch-jobs/adapt', () => {
     });
 
     it('should create adapt job with missionId and camelCase firmId', async () => {
+        mockGetResumeForAccessCheck.mockResolvedValueOnce({
+            id: '123e4567-e89b-12d3-a456-426614174000',
+            firm_id: 'firm-override',
+            name: 'Resume 1'
+        });
+        mockFindMission.mockResolvedValueOnce({
+            id: '123e4567-e89b-12d3-a456-426614174001',
+            title: 'Mission Adapt',
+            firm: 'firm-override'
+        });
         mockCreateJob.mockResolvedValueOnce({ id: 'job-adapt', status: 'pending' });
         mockAddJobResumeIds.mockResolvedValueOnce(1);
         mockGetJob.mockResolvedValueOnce({ id: 'job-adapt', status: 'pending', firm_id: 'firm-override' });
@@ -666,6 +781,16 @@ describe('Batch Jobs Routes - POST /api/batch-jobs/match', () => {
     });
 
     it('should create match job with missionId and camelCase firmId', async () => {
+        mockGetResumeForAccessCheck.mockResolvedValueOnce({
+            id: '123e4567-e89b-12d3-a456-426614174000',
+            firm_id: 'firm-override',
+            name: 'Resume 1'
+        });
+        mockFindMission.mockResolvedValueOnce({
+            id: '123e4567-e89b-12d3-a456-426614174001',
+            title: 'Mission Match',
+            firm: 'firm-override'
+        });
         mockCreateJob.mockResolvedValueOnce({ id: 'job-match', status: 'pending' });
         mockAddJobResumeIds.mockResolvedValueOnce(1);
         mockGetJob.mockResolvedValueOnce({ id: 'job-match', status: 'pending', firm_id: 'firm-override' });
@@ -702,6 +827,11 @@ describe('Batch Jobs Routes - POST /api/batch-jobs/profile-search', () => {
     });
 
     it('should create profile search job and stage a generic task item', async () => {
+        mockFindMission.mockResolvedValueOnce({
+            id: '123e4567-e89b-12d3-a456-426614174001',
+            title: 'Mission Search',
+            firm: 'firm-123'
+        });
         mockFindMission.mockResolvedValueOnce({
             id: '123e4567-e89b-12d3-a456-426614174001',
             title: 'Mission Search',
@@ -752,6 +882,11 @@ describe('Batch Jobs Routes - POST /api/batch-jobs/profile-analysis', () => {
             title: 'Mission Analysis',
             firm: 'firm-123'
         });
+        mockFindMission.mockResolvedValueOnce({
+            id: '123e4567-e89b-12d3-a456-426614174001',
+            title: 'Mission Analysis',
+            firm: 'firm-123'
+        });
         mockCreateJob.mockResolvedValueOnce({ id: 'job-profile-analysis', status: 'pending' });
         mockAddJobTaskItems.mockResolvedValueOnce(1);
         mockGetJob.mockResolvedValueOnce({ id: 'job-profile-analysis', status: 'pending', firm_id: 'firm-123' });
@@ -777,6 +912,22 @@ describe('Batch Jobs Routes - POST /api/batch-jobs/profile-analysis', () => {
                 sourceType: 'profile-analysis'
             })
         ]);
+    });
+
+    it('should reject a resume from another firm for improve jobs', async () => {
+        mockGetResumeForAccessCheck.mockResolvedValueOnce({
+            id: '123e4567-e89b-12d3-a456-426614174000',
+            firm_id: 'firm-other',
+            name: 'Resume X'
+        });
+
+        const res = await request(app)
+            .post('/api/batch-jobs/improve')
+            .set('Authorization', 'Bearer valid-token')
+            .send({ resumeIds: ['123e4567-e89b-12d3-a456-426614174000'] });
+
+        expect(res.status).toBe(403);
+        expect(mockCreateJob).not.toHaveBeenCalled();
     });
 });
 

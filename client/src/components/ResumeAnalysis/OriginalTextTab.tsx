@@ -7,8 +7,11 @@ import { useEffect, useState, useRef, useCallback, ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { UserIcon, BriefcaseIcon, SparklesIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { useResume } from '../../context/ResumeContext';
-import { removeSuggestionMarkers } from '../../utils/tinymceSuggestionsPlugin';
-import { DeferredTiptapEditor as TiptapEditor, parseSuggestions } from '../TiptapEditor';
+import {
+  DeferredTiptapEditor as TiptapEditor,
+  parseSuggestions,
+  removeSuggestionMarkers,
+} from '../TiptapEditor';
 import type { TiptapEditorRef } from '../TiptapEditor';
 import toast from 'react-hot-toast';
 import logger from '../../utils/logger.frontend';

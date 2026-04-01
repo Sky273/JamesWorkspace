@@ -12,7 +12,6 @@ import { getUserFirmId } from '../utils/firmHelpers.js';
 import {
     PIPELINE_STAGES,
     addToPipeline,
-    getClientFirmId,
     getInterviewAccessContext,
     getMissionContext,
     getPipelineById,

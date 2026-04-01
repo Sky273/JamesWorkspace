@@ -77,6 +77,10 @@ export async function findExistingUserByEmail(normalizedEmail) {
  * @returns {Promise<Object>} Created user record
  */
 export async function createUser(userData) {
+    if (!userData?.firm_id || !userData?.firm_name) {
+        throw new Error('Firm assignment is required');
+    }
+
     const records = await createWithTimeout('users', [{
         fields: userData
     }]);
@@ -88,12 +92,16 @@ export async function createUser(userData) {
  * @param {Object} data - { email, name, googleId, googleEmail }
  * @returns {Promise<Object>} Created user record
  */
-export async function registerGoogleUser({ email, name, googleId, googleEmail }) {
+export async function registerGoogleUser({ email, name, googleId, googleEmail, firmId, firmName }) {
+    if (!firmId || !firmName) {
+        throw new Error('Firm assignment is required');
+    }
+
     const result = await query(
-        `INSERT INTO users (email, password, name, role, status, google_id, google_email, google_linked_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)
+        `INSERT INTO users (email, password, name, role, status, google_id, google_email, google_linked_at, firm_id, firm_name)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP, $8, $9)
          RETURNING *`,
-        [email, '', name, 'user', 'pending', googleId, googleEmail]
+        [email, '', name, 'user', 'pending', googleId, googleEmail, firmId, firmName]
     );
     return result.rows[0];
 }

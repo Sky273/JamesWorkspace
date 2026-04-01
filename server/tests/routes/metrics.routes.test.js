@@ -385,6 +385,15 @@ describe('Metrics Routes', () => {
 
             expect(mockGetSlowRequests).toHaveBeenCalledWith(10);
         });
+
+        it('should reject invalid limit parameter', async () => {
+            const res = await request(app)
+                .get('/api/metrics/apm/slow-requests?limit=-1')
+                .set('Authorization', 'Bearer valid-token');
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toBe('Invalid limit parameter');
+        });
     });
 
     // ==========================================

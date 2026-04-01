@@ -147,6 +147,24 @@ describe('Market Radar Search Routes', () => {
 
             expect(res.status).toBe(500);
         });
+
+        it('should return 400 for invalid page', async () => {
+            const res = await request(app)
+                .get('/api/market-radar/search/adzuna?page=-1')
+                .set(AUTH);
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toContain('page');
+        });
+
+        it('should return 400 for invalid salary_min', async () => {
+            const res = await request(app)
+                .get('/api/market-radar/search/adzuna?salary_min=0')
+                .set(AUTH);
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toContain('salary_min');
+        });
     });
 
     describe('GET /salary-histogram', () => {

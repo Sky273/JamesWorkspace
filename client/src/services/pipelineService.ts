@@ -3,10 +3,12 @@
  * Frontend service for managing candidate selection pipeline and interviews
  */
 
-import { createAuthOptionsWithCsrf, fetchWithAuth } from '../utils/apiInterceptor';
 import logger from '../utils/logger.frontend';
-
-const API_BASE = '/api/pipeline';
+import {
+  buildPipelineQuery,
+  fetchPipelineApiJson,
+  fetchPipelineApiVoid,
+} from './pipelineService.utils';
 
 // ============================================
 // TYPES
@@ -115,14 +117,7 @@ export interface PipelineStats {
  */
 export async function getStages(): Promise<PipelineStage[]> {
   try {
-    const fetchOptions = await createAuthOptionsWithCsrf({ method: 'GET' });
-    const response = await fetchWithAuth(`${API_BASE}/stages`, fetchOptions);
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch pipeline stages');
-    }
-    
-    return await response.json();
+    return await fetchPipelineApiJson<PipelineStage[]>('/stages', { fallbackMessage: 'Failed to fetch pipeline stages' });
   } catch (error) {
     logger.error('[pipelineService] Error fetching stages:', error);
     throw error;
@@ -144,20 +139,11 @@ export async function addToPipeline(data: {
   notes?: string;
 }): Promise<PipelineEntry> {
   try {
-    const fetchOptions = await createAuthOptionsWithCsrf({
+    return await fetchPipelineApiJson<PipelineEntry>('', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
+      body: data,
+      fallbackMessage: 'Failed to add to pipeline',
     });
-    
-    const response = await fetchWithAuth(API_BASE, fetchOptions);
-    
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: 'Failed to add to pipeline' }));
-      throw new Error(errorData.error || 'Failed to add to pipeline');
-    }
-    
-    return await response.json();
   } catch (error) {
     logger.error('[pipelineService] Error adding to pipeline:', error);
     throw error;
@@ -169,14 +155,7 @@ export async function addToPipeline(data: {
  */
 export async function getPipelineById(pipelineId: string): Promise<PipelineEntry> {
   try {
-    const fetchOptions = await createAuthOptionsWithCsrf({ method: 'GET' });
-    const response = await fetchWithAuth(`${API_BASE}/${pipelineId}`, fetchOptions);
-    
-    if (!response.ok) {
-      throw new Error('Pipeline entry not found');
-    }
-    
-    return await response.json();
+    return await fetchPipelineApiJson<PipelineEntry>(`/${pipelineId}`, { fallbackMessage: 'Pipeline entry not found' });
   } catch (error) {
     logger.error('[pipelineService] Error fetching pipeline entry:', error);
     throw error;
@@ -188,14 +167,7 @@ export async function getPipelineById(pipelineId: string): Promise<PipelineEntry
  */
 export async function getPipelineByResumeId(resumeId: string): Promise<PipelineEntry[]> {
   try {
-    const fetchOptions = await createAuthOptionsWithCsrf({ method: 'GET' });
-    const response = await fetchWithAuth(`${API_BASE}/resume/${resumeId}`, fetchOptions);
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch pipeline entries');
-    }
-    
-    return await response.json();
+    return await fetchPipelineApiJson<PipelineEntry[]>(`/resume/${resumeId}`, { fallbackMessage: 'Failed to fetch pipeline entries' });
   } catch (error) {
     logger.error('[pipelineService] Error fetching pipeline for resume:', error);
     throw error;
@@ -207,14 +179,7 @@ export async function getPipelineByResumeId(resumeId: string): Promise<PipelineE
  */
 export async function getPipelineByMissionId(missionId: string): Promise<PipelineEntry[]> {
   try {
-    const fetchOptions = await createAuthOptionsWithCsrf({ method: 'GET' });
-    const response = await fetchWithAuth(`${API_BASE}/mission/${missionId}`, fetchOptions);
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch pipeline entries');
-    }
-    
-    return await response.json();
+    return await fetchPipelineApiJson<PipelineEntry[]>(`/mission/${missionId}`, { fallbackMessage: 'Failed to fetch pipeline entries' });
   } catch (error) {
     logger.error('[pipelineService] Error fetching pipeline for mission:', error);
     throw error;
@@ -229,19 +194,8 @@ export async function getPipelineOverview(filters?: {
   missionId?: string;
 }): Promise<PipelineOverview> {
   try {
-    const params = new URLSearchParams();
-    if (filters?.clientId) params.append('clientId', filters.clientId);
-    if (filters?.missionId) params.append('missionId', filters.missionId);
-    
-    const fetchOptions = await createAuthOptionsWithCsrf({ method: 'GET' });
-    const url = `${API_BASE}/overview${params.toString() ? `?${params.toString()}` : ''}`;
-    const response = await fetchWithAuth(url, fetchOptions);
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch pipeline overview');
-    }
-    
-    return await response.json();
+    const query = buildPipelineQuery(filters);
+    return await fetchPipelineApiJson<PipelineOverview>(`/overview${query}`, { fallbackMessage: 'Failed to fetch pipeline overview' });
   } catch (error) {
     logger.error('[pipelineService] Error fetching pipeline overview:', error);
     throw error;
@@ -257,20 +211,11 @@ export async function moveToStage(
   notes?: string
 ): Promise<PipelineEntry> {
   try {
-    const fetchOptions = await createAuthOptionsWithCsrf({
+    return await fetchPipelineApiJson<PipelineEntry>(`/${pipelineId}/stage`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ stage, notes })
+      body: { stage, notes },
+      fallbackMessage: 'Failed to update stage',
     });
-    
-    const response = await fetchWithAuth(`${API_BASE}/${pipelineId}/stage`, fetchOptions);
-    
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: 'Failed to update stage' }));
-      throw new Error(errorData.error || 'Failed to update stage');
-    }
-    
-    return await response.json();
   } catch (error) {
     logger.error('[pipelineService] Error moving pipeline stage:', error);
     throw error;
@@ -285,19 +230,11 @@ export async function updatePipelineNotes(
   notes: string
 ): Promise<PipelineEntry> {
   try {
-    const fetchOptions = await createAuthOptionsWithCsrf({
+    return await fetchPipelineApiJson<PipelineEntry>(`/${pipelineId}/notes`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ notes })
+      body: { notes },
+      fallbackMessage: 'Failed to update notes',
     });
-    
-    const response = await fetchWithAuth(`${API_BASE}/${pipelineId}/notes`, fetchOptions);
-    
-    if (!response.ok) {
-      throw new Error('Failed to update notes');
-    }
-    
-    return await response.json();
   } catch (error) {
     logger.error('[pipelineService] Error updating pipeline notes:', error);
     throw error;
@@ -309,12 +246,7 @@ export async function updatePipelineNotes(
  */
 export async function removeFromPipeline(pipelineId: string): Promise<void> {
   try {
-    const fetchOptions = await createAuthOptionsWithCsrf({ method: 'DELETE' });
-    const response = await fetchWithAuth(`${API_BASE}/${pipelineId}`, fetchOptions);
-    
-    if (!response.ok) {
-      throw new Error('Failed to remove from pipeline');
-    }
+    await fetchPipelineApiVoid(`/${pipelineId}`, 'DELETE', 'Failed to remove from pipeline');
   } catch (error) {
     logger.error('[pipelineService] Error removing from pipeline:', error);
     throw error;
@@ -326,14 +258,7 @@ export async function removeFromPipeline(pipelineId: string): Promise<void> {
  */
 export async function getPipelineHistory(pipelineId: string): Promise<PipelineHistory[]> {
   try {
-    const fetchOptions = await createAuthOptionsWithCsrf({ method: 'GET' });
-    const response = await fetchWithAuth(`${API_BASE}/${pipelineId}/history`, fetchOptions);
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch history');
-    }
-    
-    return await response.json();
+    return await fetchPipelineApiJson<PipelineHistory[]>(`/${pipelineId}/history`, { fallbackMessage: 'Failed to fetch history' });
   } catch (error) {
     logger.error('[pipelineService] Error fetching pipeline history:', error);
     throw error;
@@ -363,20 +288,11 @@ export async function scheduleInterview(
   }
 ): Promise<Interview> {
   try {
-    const fetchOptions = await createAuthOptionsWithCsrf({
+    return await fetchPipelineApiJson<Interview>(`/${pipelineId}/interviews`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
+      body: data,
+      fallbackMessage: 'Failed to schedule interview',
     });
-    
-    const response = await fetchWithAuth(`${API_BASE}/${pipelineId}/interviews`, fetchOptions);
-    
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: 'Failed to schedule interview' }));
-      throw new Error(errorData.error || 'Failed to schedule interview');
-    }
-    
-    return await response.json();
   } catch (error) {
     logger.error('[pipelineService] Error scheduling interview:', error);
     throw error;
@@ -388,14 +304,7 @@ export async function scheduleInterview(
  */
 export async function getInterviews(pipelineId: string): Promise<Interview[]> {
   try {
-    const fetchOptions = await createAuthOptionsWithCsrf({ method: 'GET' });
-    const response = await fetchWithAuth(`${API_BASE}/${pipelineId}/interviews`, fetchOptions);
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch interviews');
-    }
-    
-    return await response.json();
+    return await fetchPipelineApiJson<Interview[]>(`/${pipelineId}/interviews`, { fallbackMessage: 'Failed to fetch interviews' });
   } catch (error) {
     logger.error('[pipelineService] Error fetching interviews:', error);
     throw error;
@@ -407,15 +316,8 @@ export async function getInterviews(pipelineId: string): Promise<Interview[]> {
  */
 export async function getUpcomingInterviews(days?: number): Promise<Interview[]> {
   try {
-    const params = days ? `?days=${days}` : '';
-    const fetchOptions = await createAuthOptionsWithCsrf({ method: 'GET' });
-    const response = await fetchWithAuth(`${API_BASE}/interviews/upcoming${params}`, fetchOptions);
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch upcoming interviews');
-    }
-    
-    return await response.json();
+    const query = buildPipelineQuery({ days });
+    return await fetchPipelineApiJson<Interview[]>(`/interviews/upcoming${query}`, { fallbackMessage: 'Failed to fetch upcoming interviews' });
   } catch (error) {
     logger.error('[pipelineService] Error fetching upcoming interviews:', error);
     throw error;
@@ -430,19 +332,11 @@ export async function updateInterview(
   updates: Partial<Interview>
 ): Promise<Interview> {
   try {
-    const fetchOptions = await createAuthOptionsWithCsrf({
+    return await fetchPipelineApiJson<Interview>(`/interviews/${interviewId}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updates)
+      body: updates as Record<string, unknown>,
+      fallbackMessage: 'Failed to update interview',
     });
-    
-    const response = await fetchWithAuth(`${API_BASE}/interviews/${interviewId}`, fetchOptions);
-    
-    if (!response.ok) {
-      throw new Error('Failed to update interview');
-    }
-    
-    return await response.json();
   } catch (error) {
     logger.error('[pipelineService] Error updating interview:', error);
     throw error;
@@ -458,19 +352,11 @@ export async function completeInterview(
   outcomeNotes?: string
 ): Promise<Interview> {
   try {
-    const fetchOptions = await createAuthOptionsWithCsrf({
+    return await fetchPipelineApiJson<Interview>(`/interviews/${interviewId}/complete`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ outcome, outcomeNotes })
+      body: { outcome, outcomeNotes },
+      fallbackMessage: 'Failed to complete interview',
     });
-    
-    const response = await fetchWithAuth(`${API_BASE}/interviews/${interviewId}/complete`, fetchOptions);
-    
-    if (!response.ok) {
-      throw new Error('Failed to complete interview');
-    }
-    
-    return await response.json();
   } catch (error) {
     logger.error('[pipelineService] Error completing interview:', error);
     throw error;
@@ -482,14 +368,10 @@ export async function completeInterview(
  */
 export async function cancelInterview(interviewId: string): Promise<Interview> {
   try {
-    const fetchOptions = await createAuthOptionsWithCsrf({ method: 'POST' });
-    const response = await fetchWithAuth(`${API_BASE}/interviews/${interviewId}/cancel`, fetchOptions);
-    
-    if (!response.ok) {
-      throw new Error('Failed to cancel interview');
-    }
-    
-    return await response.json();
+    return await fetchPipelineApiJson<Interview>(`/interviews/${interviewId}/cancel`, {
+      method: 'POST',
+      fallbackMessage: 'Failed to cancel interview',
+    });
   } catch (error) {
     logger.error('[pipelineService] Error cancelling interview:', error);
     throw error;
@@ -501,12 +383,7 @@ export async function cancelInterview(interviewId: string): Promise<Interview> {
  */
 export async function deleteInterview(interviewId: string): Promise<void> {
   try {
-    const fetchOptions = await createAuthOptionsWithCsrf({ method: 'DELETE' });
-    const response = await fetchWithAuth(`${API_BASE}/interviews/${interviewId}`, fetchOptions);
-    
-    if (!response.ok) {
-      throw new Error('Failed to delete interview');
-    }
+    await fetchPipelineApiVoid(`/interviews/${interviewId}`, 'DELETE', 'Failed to delete interview');
   } catch (error) {
     logger.error('[pipelineService] Error deleting interview:', error);
     throw error;
@@ -525,19 +402,8 @@ export async function getPipelineStats(filters?: {
   clientId?: string;
 }): Promise<PipelineStats> {
   try {
-    const params = new URLSearchParams();
-    if (filters?.missionId) params.append('missionId', filters.missionId);
-    if (filters?.clientId) params.append('clientId', filters.clientId);
-    
-    const fetchOptions = await createAuthOptionsWithCsrf({ method: 'GET' });
-    const url = `${API_BASE}/stats${params.toString() ? `?${params.toString()}` : ''}`;
-    const response = await fetchWithAuth(url, fetchOptions);
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch statistics');
-    }
-    
-    return await response.json();
+    const query = buildPipelineQuery(filters);
+    return await fetchPipelineApiJson<PipelineStats>(`/stats${query}`, { fallbackMessage: 'Failed to fetch statistics' });
   } catch (error) {
     logger.error('[pipelineService] Error fetching pipeline stats:', error);
     throw error;

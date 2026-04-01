@@ -167,6 +167,55 @@ describe('Google OAuth Routes', () => {
             expect(res.status).toBe(302);
             expect(res.headers.location).toContain('missing_code');
         });
+
+        it('should block Google register flow when no firm can be assigned', async () => {
+            mockGetAuthUrl.mockResolvedValueOnce('https://accounts.google.com/o/oauth2/auth?...');
+            await request(app).get('/api/auth/google?action=register');
+
+            const state = mockGetAuthUrl.mock.calls[0][0];
+
+            mockExchangeCodeForUserInfo.mockResolvedValueOnce({
+                googleId: 'g-123',
+                email: 'newuser@test.com',
+                name: 'New User'
+            });
+            mockFindUserByGoogleId.mockResolvedValueOnce(null);
+            mockFindUserByEmail.mockResolvedValueOnce(null);
+
+            const res = await request(app)
+                .get(`/api/auth/google/callback?code=abc&state=${state}`);
+
+            expect(res.status).toBe(302);
+            expect(res.headers.location).toContain('/register?error=firm_assignment_required');
+            expect(mockRegisterGoogleUser).not.toHaveBeenCalled();
+        });
+
+        it('should block Google callback sign-in when existing user has no firm assignment', async () => {
+            mockGetAuthUrl.mockResolvedValueOnce('https://accounts.google.com/o/oauth2/auth?...');
+            await request(app).get('/api/auth/google?action=signin');
+
+            const state = mockGetAuthUrl.mock.calls[0][0];
+
+            mockExchangeCodeForUserInfo.mockResolvedValueOnce({
+                googleId: 'g-123',
+                email: 'orphan@test.com',
+                name: 'Orphan User'
+            });
+            mockFindUserByGoogleId.mockResolvedValueOnce({
+                id: 'u-4',
+                email: 'orphan@test.com',
+                status: 'active',
+                role: 'user',
+                firm_id: null,
+                firm_name: null
+            });
+
+            const res = await request(app)
+                .get(`/api/auth/google/callback?code=abc&state=${state}`);
+
+            expect(res.status).toBe(302);
+            expect(res.headers.location).toContain('/signin?error=firm_assignment_required');
+        });
     });
 
     // ==========================================
@@ -220,7 +269,9 @@ describe('Google OAuth Routes', () => {
                 email: 'existing@test.com',
                 name: 'Existing',
                 status: 'active',
-                role: 'user'
+                role: 'user',
+                firm_id: 'f-2',
+                firm_name: 'Acme'
             });
             mockLinkGoogleAccount.mockResolvedValueOnce();
             mockUpdateLastLogin.mockResolvedValueOnce();
@@ -266,6 +317,28 @@ describe('Google OAuth Routes', () => {
                 .send({ idToken: 'valid-token' });
 
             expect(res.status).toBe(403);
+        });
+
+        it('should return 403 for user without firm assignment', async () => {
+            mockVerifyIdToken.mockResolvedValueOnce({
+                googleId: 'g-123',
+                email: 'orphan@test.com'
+            });
+            mockFindUserByGoogleId.mockResolvedValueOnce({
+                id: 'u-4',
+                email: 'orphan@test.com',
+                status: 'active',
+                role: 'user',
+                firm_id: null,
+                firm_name: null
+            });
+
+            const res = await request(app)
+                .post('/api/auth/google/token')
+                .send({ idToken: 'valid-token' });
+
+            expect(res.status).toBe(403);
+            expect(res.body.error).toContain('firm');
         });
 
         it('should return 401 on invalid token', async () => {

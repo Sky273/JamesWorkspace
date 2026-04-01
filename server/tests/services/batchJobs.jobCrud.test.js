@@ -18,6 +18,7 @@ import { query } from '../../config/database.js';
 import {
     createJob,
     getJob,
+    getJobStatus,
     getJobsByFirm,
     getAllJobs,
     updateJobStatus,
@@ -203,15 +204,45 @@ describe('Batch Jobs - Job CRUD', () => {
         });
     });
 
+    describe('getJobStatus', () => {
+        it('should return current job status', async () => {
+            query.mockResolvedValueOnce({ rows: [{ status: 'processing' }] });
+
+            const result = await getJobStatus('j1');
+
+            expect(result).toBe('processing');
+            expect(query.mock.calls[0][1]).toEqual(['j1']);
+        });
+
+        it('should return null when job is missing', async () => {
+            query.mockResolvedValueOnce({ rows: [] });
+
+            await expect(getJobStatus('missing')).resolves.toBeNull();
+        });
+    });
+
     describe('getPendingJobs', () => {
-        it('should return pending and processing jobs', async () => {
-            query.mockResolvedValueOnce({ rows: [{ id: 'j1', status: 'pending' }] });
+        it('should atomically claim pending jobs and hydrate them', async () => {
+            query
+                .mockResolvedValueOnce({ rows: [{ id: 'j1', status: 'processing' }] })
+                .mockResolvedValueOnce({ rows: [{ id: 'j1', status: 'processing', user_name: 'John', firm_name: 'Acme' }] });
 
             const result = await getPendingJobs();
 
             expect(result).toHaveLength(1);
+            expect(query.mock.calls[0][0]).toContain('FOR UPDATE SKIP LOCKED');
             expect(query.mock.calls[0][1]).toContain('pending');
             expect(query.mock.calls[0][1]).toContain('processing');
+            expect(query.mock.calls[1][1]).toEqual([['j1']]);
+        });
+
+        it('should return empty array when no jobs were claimed', async () => {
+            query.mockResolvedValueOnce({ rows: [] });
+
+            const result = await getPendingJobs();
+
+            expect(result).toEqual([]);
+            expect(query).toHaveBeenCalledTimes(1);
         });
 
         it('should return empty array on error', async () => {

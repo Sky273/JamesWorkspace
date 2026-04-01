@@ -24,6 +24,7 @@ let factsCache = null;
 let factsCacheTime = 0;
 let factsFilterOptionsCache = null;
 let factsSummaryCache = null;
+let factsCacheCleanupInterval = null;
 
 function mapRecord(record) {
     const metadata = record.metadata || {};
@@ -147,15 +148,25 @@ export function invalidateFactsCache() {
     safeLog('info', 'MarketFacts: Cache invalidated');
 }
 
-const factsCacheCleanupInterval = setInterval(() => {
-    if (factsCacheTime && Date.now() - factsCacheTime > FACTS_CACHE_TTL * 2) {
-        factsCache = null;
-        factsFilterOptionsCache = null;
-        factsSummaryCache = null;
-        factsCacheTime = 0;
-        safeLog('debug', 'MarketFacts: Cache auto-expired (inactive)');
+export function startFactsCacheCleanup() {
+    if (factsCacheCleanupInterval) {
+        return;
     }
-}, FACTS_CACHE_TTL);
+
+    factsCacheCleanupInterval = setInterval(() => {
+        if (factsCacheTime && Date.now() - factsCacheTime > FACTS_CACHE_TTL * 2) {
+            factsCache = null;
+            factsFilterOptionsCache = null;
+            factsSummaryCache = null;
+            factsCacheTime = 0;
+            safeLog('debug', 'MarketFacts: Cache auto-expired (inactive)');
+        }
+    }, FACTS_CACHE_TTL);
+
+    if (factsCacheCleanupInterval.unref) {
+        factsCacheCleanupInterval.unref();
+    }
+}
 
 export function cleanupFactsCache() {
     factsCache = null;
@@ -168,6 +179,7 @@ export function cleanupFactsCache() {
 export function destroyFactsCache() {
     if (factsCacheCleanupInterval) {
         clearInterval(factsCacheCleanupInterval);
+        factsCacheCleanupInterval = null;
     }
     cleanupFactsCache();
     safeLog('info', 'MarketFacts: Cache destroyed');

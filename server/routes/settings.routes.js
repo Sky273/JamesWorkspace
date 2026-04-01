@@ -11,6 +11,7 @@ import { mapSettingsToFrontend, mapSettingsFromFrontend } from '../utils/mappers
 import { getProviderAvailabilityFlags } from '../services/llmAvailability.service.js';
 import { discoverOllamaModels } from '../services/ollamaAdmin.service.js';
 import { validatePersistedLlmSettings } from '../services/llmSettingsValidation.service.js';
+import { normalizeBaseUrl } from '../services/ollama.request.js';
 import {
     PROFILE_MATCHING_LOCAL_SKILL_WEIGHT,
     PROFILE_MATCHING_LOCAL_TOOL_WEIGHT,
@@ -28,6 +29,15 @@ import {
 } from './settings.routes.helpers.js';
 
 const router = express.Router();
+
+function resolveConfiguredOllamaBaseUrl(settings = {}) {
+    const candidate = settings?.ollamaBaseUrl;
+    if (!candidate || !String(candidate).trim()) {
+        throw Object.assign(new Error('Ollama base URL is not configured.'), { statusCode: 400 });
+    }
+
+    return normalizeBaseUrl(candidate);
+}
 
 // GET /api/settings - Get settings
 router.get('/', authenticateToken, async (req, res) => {
@@ -126,8 +136,16 @@ router.get('/defaults', authenticateToken, requireAdmin, (req, res) => {
 
 router.get('/ollama/models', authenticateToken, requireAdmin, async (req, res) => {
     try {
-        const baseUrl = String(req.query.baseUrl || '').trim();
+        const requestedBaseUrl = String(req.query.baseUrl || '').trim();
         const selectedModel = String(req.query.model || '').trim();
+        const canonicalLlmSettings = await getLLMSettings();
+        const configuredBaseUrl = resolveConfiguredOllamaBaseUrl(canonicalLlmSettings);
+        const baseUrl = normalizeBaseUrl(requestedBaseUrl);
+
+        if (baseUrl !== configuredBaseUrl) {
+            return res.status(400).json({ error: 'Ollama model discovery is limited to the configured Ollama URL.' });
+        }
+
         const discovery = await discoverOllamaModels(baseUrl, { includeCapabilities: true });
 
         return res.json({
@@ -137,7 +155,7 @@ router.get('/ollama/models', authenticateToken, requireAdmin, async (req, res) =
         });
     } catch (error) {
         safeLog('warn', 'Failed to discover Ollama models', { error: error.message });
-        return res.status(400).json({ error: 'Failed to discover Ollama models' });
+        return res.status(error.statusCode || 400).json({ error: error.statusCode ? error.message : 'Failed to discover Ollama models' });
     }
 });
 

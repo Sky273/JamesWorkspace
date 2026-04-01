@@ -261,7 +261,7 @@ router.delete('/:id', authenticateToken, validateParams('id'), async (req, res) 
         return res.json({ success: true, message: 'Template deleted successfully' });
     } catch (error) {
         safeLog('error', 'Error deleting email template', { error: error.message });
-        return res.status(500).json({ error: error.message || 'Failed to delete email template' });
+        return res.status(500).json({ error: 'Failed to delete email template' });
     }
 });
 
@@ -300,7 +300,7 @@ router.post('/:id/duplicate', authenticateToken, validateParams('id'), async (re
         return res.status(201).json({ template });
     } catch (error) {
         safeLog('error', 'Error duplicating email template', { error: error.message });
-        return res.status(500).json({ error: error.message || 'Failed to duplicate email template' });
+        return res.status(500).json({ error: 'Failed to duplicate email template' });
     }
 });
 
@@ -335,7 +335,7 @@ router.post('/:id/preview', authenticateToken, validateParams('id'), validateBod
         return res.json(result);
     } catch (error) {
         safeLog('error', 'Error previewing email template', { error: error.message });
-        return res.status(500).json({ error: error.message || 'Failed to preview email template' });
+        return res.status(500).json({ error: 'Failed to preview email template' });
     }
 });
 
@@ -364,7 +364,7 @@ router.post('/compile', authenticateToken, validateBody(compileEmailTemplateSche
         return res.json(result);
     } catch (error) {
         safeLog('error', 'Error compiling MJML', { error: error.message });
-        return res.status(500).json({ error: error.message || 'Failed to compile MJML' });
+        return res.status(500).json({ error: 'Failed to compile MJML' });
     }
 });
 

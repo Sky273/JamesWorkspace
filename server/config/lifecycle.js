@@ -12,22 +12,23 @@ import { PORT, ALLOWED_ORIGINS } from './constants.js';
 import { httpAgent, httpsAgent } from './axios.js';
 
 // Import cleanup/destroy functions
-import { cleanupRateLimitStore } from '../middleware/rateLimit.middleware.js';
+import { cleanupRateLimitStore, startRateLimitCleanup } from '../middleware/rateLimit.middleware.js';
 import { cleanupAllCaches } from '../services/cache.service.js';
 import { startPeriodicCleanup, stopPeriodicCleanup } from '../utils/fileCleanup.js';
 import { startBlacklistCleanup, destroyBlacklist } from '../services/tokenBlacklist.service.js';
-import { cleanupFactsCache, destroyFactsCache } from '../services/marketFacts.service.js';
-import { cleanupTrendsCache, destroyTrendsCache } from '../services/marketTrends.service.js';
+import { cleanupFactsCache, destroyFactsCache, startFactsCacheCleanup } from '../services/marketFacts.service.js';
+import { cleanupTrendsCache, destroyTrendsCache, startTrendsCacheCleanup } from '../services/marketTrends.service.js';
 import { cleanupMetiersCache, destroyMetiersCache } from '../services/rome.service.js';
-import { invalidateTagsCache, destroyTagsCache } from '../routes/tags.routes.js';
-import { destroyEscoCache } from '../services/escoService.js';
+import { invalidateTagsCache, destroyTagsCache, startTagsCacheCleanup } from '../routes/tags.routes.js';
+import { destroyEscoCache, startEscoCacheCleanup } from '../services/escoService.js';
 import { initializeDatabase, closePool } from '../services/database.service.js';
 import { startScheduler, stopScheduler } from '../services/scheduler.service.js';
 import { initBackupScheduler, stopBackupScheduler } from '../services/backup-scheduler.service.js';
 import { initializeWorker as initBatchJobsWorker, startWorker as startBatchJobsWorker, stopWorker as stopBatchJobsWorker } from '../services/batchJobsWorker.service.js';
 import { destroyCalendarService } from '../services/calendar.service.js';
-import { destroyAuthOauthStates } from '../routes/auth.routes.js';
-import { destroyMailStatesCleanup } from '../routes/mail.routes.js';
+import { destroyAuthOauthStates, startAuthOauthStatesCleanup } from '../routes/auth.routes.js';
+import { destroyMailStatesCleanup, startMailStatesCleanup } from '../routes/mail.routes.js';
+import { destroyGdprMailStatesCleanup, startGdprMailStatesCleanup } from '../routes/gdprMail.routes.js';
 import { destroyGoogleapis } from '../services/mail/gmailProvider.js';
 import { destroyMjml } from '../services/emailTemplates.service.js';
 import { metrics } from '../services/metrics.service.js';
@@ -120,6 +121,10 @@ function stopMarketRadarCacheCleanup() {
  * Called after the HTTP(S) server starts listening
  */
 async function onServerStart(server, protocol, port) {
+    startRateLimitCleanup();
+    startAuthOauthStatesCleanup();
+    startMailStatesCleanup();
+
     // Clean all caches on startup
     safeLog('info', 'Cleaning all caches on startup');
     try {
@@ -175,31 +180,39 @@ async function onServerStart(server, protocol, port) {
         } catch (error) {
             safeLog('error', 'Failed to initialize Backup Scheduler', { error: error.message });
         }
+        
+        // Start GDPR consent scheduler (checks for expired consents, sends reminders, purges)
+        startScheduler();
+        safeLog('info', 'GDPR Consent Scheduler started');
+        
+        // Initialize and start batch jobs worker
+        try {
+            await initBatchJobsWorker();
+            startBatchJobsWorker();
+            safeLog('info', 'Batch Jobs Worker started');
+        } catch (error) {
+            safeLog('error', 'Failed to start Batch Jobs Worker', { error: error.message });
+        }
     } else {
         safeLog('error', 'PostgreSQL database initialization failed');
     }
+
+    // Start periodic cleanup of temporary files.
+    // When PostgreSQL is unavailable, keep filesystem cleanup active but skip DB-backed cleanup tasks.
+    startPeriodicCleanup(60 * 60 * 1000, 60 * 60 * 1000, { enableDatabaseTasks: dbInitialized });
     
-    // Start periodic cleanup of temporary files
-    startPeriodicCleanup(60 * 60 * 1000, 60 * 60 * 1000); // Every hour, delete files older than 1 hour
-    
-    // Start periodic cleanup of expired blacklisted tokens
-    startBlacklistCleanup(60 * 60 * 1000); // Every hour
+    // Start periodic cleanup of expired blacklisted tokens only when PostgreSQL is available.
+    if (dbInitialized) {
+        startBlacklistCleanup(60 * 60 * 1000); // Every hour
+    }
     
     // Start periodic cleanup of Market Radar caches (every 15 minutes)
     startMarketRadarCacheCleanup();
-    
-    // Start GDPR consent scheduler (checks for expired consents, sends reminders, purges)
-    startScheduler();
-    safeLog('info', 'GDPR Consent Scheduler started');
-    
-    // Initialize and start batch jobs worker
-    try {
-        await initBatchJobsWorker();
-        startBatchJobsWorker();
-        safeLog('info', 'Batch Jobs Worker started');
-    } catch (error) {
-        safeLog('error', 'Failed to start Batch Jobs Worker', { error: error.message });
-    }
+    startFactsCacheCleanup();
+    startTrendsCacheCleanup();
+    startTagsCacheCleanup();
+    startEscoCacheCleanup();
+    startGdprMailStatesCleanup();
     
     // Start memory monitoring
     startMemoryMonitor();
@@ -322,6 +335,7 @@ export function startServer(app, serverDir) {
             destroyTagsCache();
             destroyEscoCache();
             destroyMailStatesCleanup();
+            destroyGdprMailStatesCleanup();
             destroyAuthOauthStates();
             destroyGoogleapis();
             destroyCalendarService();

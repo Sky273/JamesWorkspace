@@ -167,6 +167,24 @@ describe('GDPR Audit Routes', () => {
 
             expect(res.status).toBe(500);
         });
+
+        it('should return 400 for invalid page', async () => {
+            const res = await request(app)
+                .get('/api/gdpr-audit/logs?page=0')
+                .set(AUTH);
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toContain('page');
+        });
+
+        it('should return 400 for invalid limit', async () => {
+            const res = await request(app)
+                .get('/api/gdpr-audit/logs?limit=-5')
+                .set(AUTH);
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toContain('limit');
+        });
     });
 
     describe('GET /stats', () => {
@@ -212,6 +230,15 @@ describe('GDPR Audit Routes', () => {
                 .set(AUTH);
 
             expect(res.status).toBe(500);
+        });
+
+        it('should return 400 for invalid days', async () => {
+            const res = await request(app)
+                .get('/api/gdpr-audit/stats?days=0')
+                .set(AUTH);
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toContain('days');
         });
     });
 

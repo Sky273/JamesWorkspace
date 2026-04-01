@@ -4,7 +4,6 @@
 
 import express from 'express';
 import bcrypt from 'bcryptjs';
-import { SALT_ROUNDS } from '../../config/constants.js';
 import { authenticateToken } from '../../middleware/auth.middleware.js';
 import { authLimiter } from '../../middleware/rateLimit.middleware.js';
 import { validateBody, signInSchema, registerSchema, isValidEmail } from '../../utils/validation.js';
@@ -51,6 +50,16 @@ function formatUserResponse(user) {
  */
 async function fetchUserWithFirm(userId) {
     return authService.findUserWithFirmById(userId);
+}
+
+function hasFirmAssignment(user) {
+    return Boolean(user?.firm_id && user?.firm_name);
+}
+
+function blockUnassignedUser(res) {
+    return res.status(403).json({
+        error: 'Account is not assigned to a firm. Contact an administrator.'
+    });
 }
 
 // ============================================
@@ -122,6 +131,20 @@ router.post('/signin', authLimiter, validateBody(signInSchema), async (req, res)
                 metadata: { reason: 'account_inactive' }
             });
             return res.status(403).json({ error: 'Account is inactive. Please contact administrator.' });
+        }
+
+        if (!hasFirmAssignment(user)) {
+            securityLog(LOG_LEVELS.WARNING, SECURITY_EVENTS.AUTH_BLOCKED, {
+                ...metadata,
+                email: normalizedEmail,
+                userId: user.id,
+                role: user.role,
+                statusCode: 403,
+                action: 'LOGIN_ATTEMPT',
+                message: 'Login attempt on account without firm assignment',
+                metadata: { reason: 'missing_firm_assignment' }
+            });
+            return blockUnassignedUser(res);
         }
 
         // Check if 2FA is enabled
@@ -202,54 +225,20 @@ router.post('/signin', authLimiter, validateBody(signInSchema), async (req, res)
 // POST /api/auth/register - User registration
 router.post('/register', authLimiter, validateBody(registerSchema), async (req, res) => {
     try {
-        const { email, password, name } = req.body;
+        const { email } = req.body;
         const normalizedEmail = email.toLowerCase();
         const metadata = getRequestMetadata(req);
-
-        const existingUser = await authService.findExistingUserByEmail(normalizedEmail);
-
-        if (existingUser) {
-            securityLog(LOG_LEVELS.WARNING, SECURITY_EVENTS.AUTH_FAILURE, {
-                ...metadata,
-                email: normalizedEmail,
-                statusCode: 409,
-                action: 'REGISTER_ATTEMPT',
-                message: 'Registration attempt with existing email',
-                metadata: { reason: 'email_exists' }
-            });
-            return res.status(409).json({ error: 'User with this email already exists' });
-        }
-
-        const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
-
-        const userData = {
-            email: normalizedEmail,
-            password: hashedPassword,
-            name: name,
-            role: 'user',
-            status: 'pending'
-        };
-
-        const newUser = await authService.createUser(userData);
-
-        securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.USER_CREATED, {
+        securityLog(LOG_LEVELS.WARNING, SECURITY_EVENTS.AUTH_BLOCKED, {
             ...metadata,
-            email: newUser.email,
-            userId: newUser.id,
-            role: newUser.role,
-            statusCode: 201,
-            action: 'USER_REGISTRATION',
-            message: 'New user registered successfully'
+            email: normalizedEmail,
+            statusCode: 403,
+            action: 'REGISTER_ATTEMPT',
+            message: 'Self-service registration blocked because firm assignment is required',
+            metadata: { reason: 'firm_assignment_required' }
         });
 
-        res.status(201).json({
-            message: 'User registered successfully',
-            user: {
-                id: newUser.id,
-                email: newUser.email,
-                name: newUser.name,
-                role: newUser.role
-            }
+        res.status(403).json({
+            error: 'Self-service registration is unavailable. Contact an administrator.'
         });
     } catch (error) {
         safeLog('error', 'Registration error', { error: error.message });
@@ -280,6 +269,10 @@ router.post('/refresh', authLimiter, async (req, res) => {
         
         if (!user || user.status === 'inactive') {
             return res.status(401).json({ error: 'User not found or inactive' });
+        }
+
+        if (!hasFirmAssignment(user)) {
+            return blockUnassignedUser(res);
         }
 
         const userData = formatUserResponse(user);
@@ -356,6 +349,10 @@ router.get('/me', authenticateToken, async (req, res) => {
         
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
+        }
+
+        if (!hasFirmAssignment(user)) {
+            return blockUnassignedUser(res);
         }
 
         res.json({ user: formatUserResponse(user) });

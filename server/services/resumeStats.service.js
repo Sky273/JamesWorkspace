@@ -79,6 +79,9 @@ export function getStatsCacheStats() {
  * @returns {Promise<Object>}
  */
 export async function getResumesGroupedByDeal({ firmId, isAdmin }) {
+    const dealsWhereClause = isAdmin ? '' : 'WHERE d.firm_id = $1';
+    const dealsParams = isAdmin ? [] : [firmId];
+
     // Query 1: Get all deals for this firm with resume counts
     const dealsResult = await query(`
         SELECT d.id, d.title, d.status, d.priority,
@@ -88,11 +91,11 @@ export async function getResumesGroupedByDeal({ firmId, isAdmin }) {
         FROM deals d
         LEFT JOIN clients c ON d.client_id = c.id
         LEFT JOIN client_contacts cc ON d.contact_id = cc.id
-        WHERE d.firm_id = $1
+        ${dealsWhereClause}
         ORDER BY 
             CASE d.priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 WHEN 'low' THEN 3 ELSE 4 END,
             d.title ASC
-    `, [firmId]);
+    `, dealsParams);
 
     const dealIds = dealsResult.rows.map(d => d.id);
     

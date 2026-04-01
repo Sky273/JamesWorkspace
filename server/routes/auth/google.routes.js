@@ -22,6 +22,10 @@ const STATE_EXPIRY = 10 * 60 * 1000; // 10 minutes
 const MAX_OAUTH_STATES = 100; // Prevent memory exhaustion from abuse
 const ALLOWED_OAUTH_ACTIONS = new Set(['signin', 'register', 'link']);
 
+function hasFirmAssignment(user) {
+    return Boolean(user?.firm_id && user?.firm_name);
+}
+
 function pruneOAuthStates() {
     const now = Date.now();
     for (const [state, data] of oauthStates.entries()) {
@@ -50,9 +54,19 @@ function resolveOAuthUserId(req) {
 }
 
 // Cleanup expired states periodically
-let authOauthStatesCleanupInterval = setInterval(() => {
-    pruneOAuthStates();
-}, 60 * 1000);
+let authOauthStatesCleanupInterval = null;
+
+export function startAuthOauthStatesCleanup(intervalMs = 60 * 1000) {
+    if (authOauthStatesCleanupInterval) {
+        return authOauthStatesCleanupInterval;
+    }
+
+    authOauthStatesCleanupInterval = setInterval(() => {
+        pruneOAuthStates();
+    }, intervalMs);
+
+    return authOauthStatesCleanupInterval;
+}
 
 /**
  * Destroy OAuth states cleanup interval (for graceful shutdown)
@@ -169,28 +183,14 @@ router.get('/google/callback', async (req, res) => {
         
         if (!user) {
             if (stateData.action === 'register') {
-                try {
-                    user = await authService.registerGoogleUser({
-                        email: googleUser.email,
-                        name: googleUser.name,
-                        googleId: googleUser.googleId,
-                        googleEmail: googleUser.email
-                    });
-                    
-                    securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.USER_CREATED, {
-                        ...metadata,
-                        email: user.email,
-                        userId: user.id,
-                        action: 'GOOGLE_REGISTER',
-                        message: 'New user registered via Google OAuth',
-                        metadata: { googleId: googleUser.googleId }
-                    });
-                    
-                    return res.redirect('/signin?success=registered_pending');
-                } catch (regError) {
-                    safeLog('error', 'Google registration failed', { error: regError.message });
-                    return res.redirect('/register?error=registration_failed');
-                }
+                securityLog(LOG_LEVELS.WARNING, SECURITY_EVENTS.AUTH_BLOCKED, {
+                    ...metadata,
+                    email: googleUser.email,
+                    action: 'GOOGLE_REGISTER_BLOCKED',
+                    message: 'Google self-registration blocked because firm assignment is required',
+                    metadata: { googleId: googleUser.googleId, reason: 'firm_assignment_required' }
+                });
+                return res.redirect('/register?error=firm_assignment_required');
             } else {
                 securityLog(LOG_LEVELS.WARNING, SECURITY_EVENTS.AUTH_FAILURE, {
                     ...metadata,
@@ -212,6 +212,18 @@ router.get('/google/callback', async (req, res) => {
                 message: 'Google sign-in attempt on inactive account'
             });
             return res.redirect('/signin?error=account_inactive');
+        }
+
+        if (!hasFirmAssignment(user)) {
+            securityLog(LOG_LEVELS.WARNING, SECURITY_EVENTS.AUTH_BLOCKED, {
+                ...metadata,
+                email: user.email,
+                userId: user.id,
+                action: 'GOOGLE_SIGNIN',
+                message: 'Google sign-in blocked because account has no firm assignment',
+                metadata: { reason: 'missing_firm_assignment' }
+            });
+            return res.redirect('/signin?error=firm_assignment_required');
         }
         
         await authService.updateLastLogin(user.id);
@@ -308,6 +320,12 @@ router.post('/google/token', authLimiter, validateBody(googleTokenSchema), async
         
         if (user.status === 'inactive') {
             return res.status(403).json({ error: 'Account is inactive' });
+        }
+
+        if (!hasFirmAssignment(user)) {
+            return res.status(403).json({
+                error: 'Account is not assigned to a firm. Contact an administrator.'
+            });
         }
         
         await authService.updateLastLogin(user.id);

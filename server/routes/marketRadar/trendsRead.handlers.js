@@ -11,6 +11,19 @@ import {
 } from '../../services/marketTrends.service.js';
 import { safeLog } from '../../utils/logger.backend.js';
 
+function parsePositiveInteger(value, { field, maxValue = null } = {}) {
+    if (value === undefined) {
+        return undefined;
+    }
+
+    const parsedValue = Number.parseInt(value, 10);
+    if (!Number.isFinite(parsedValue) || parsedValue <= 0) {
+        throw new Error(`${field} must be a positive integer`);
+    }
+
+    return maxValue ? Math.min(parsedValue, maxValue) : parsedValue;
+}
+
 export async function getAllTrendsForMap(_req, res) {
     try {
         const startTime = Date.now();
@@ -41,12 +54,15 @@ export async function getAllTrendsForMap(_req, res) {
 export async function getTrends(req, res) {
     try {
         const { type, codeRome, regionCode, sortField, sortDirection, page, pageSize, itemsPerType } = req.query;
+        const parsedItemsPerType = parsePositiveInteger(itemsPerType, { field: 'itemsPerType', maxValue: 50 });
+        const parsedPage = parsePositiveInteger(page, { field: 'page', maxValue: 1000 });
+        const parsedPageSize = parsePositiveInteger(pageSize, { field: 'pageSize', maxValue: 100 });
 
         if (!type) {
             const result = await getStoredTrendsGroupedByType({
                 codeRome,
                 regionCode,
-                itemsPerType: itemsPerType ? parseInt(itemsPerType, 10) : 5
+                itemsPerType: parsedItemsPerType || 5
             });
 
             res.json({
@@ -65,8 +81,8 @@ export async function getTrends(req, res) {
             regionCode,
             sortField: sortField || 'Date',
             sortDirection: sortDirection || 'desc',
-            page: page ? parseInt(page, 10) : 1,
-            pageSize: pageSize ? parseInt(pageSize, 10) : 20
+            page: parsedPage || 1,
+            pageSize: parsedPageSize || 20
         });
 
         res.json({
@@ -76,7 +92,10 @@ export async function getTrends(req, res) {
             totalCount: result.totalCount,
             pagination: result.pagination
         });
-    } catch {
+    } catch (error) {
+        if (error.message?.includes('must be a positive integer')) {
+            return res.status(400).json({ error: error.message });
+        }
         safeLog('error', 'Market Radar: Failed to get trends');
         res.status(500).json({ error: 'Failed to get trends' });
     }

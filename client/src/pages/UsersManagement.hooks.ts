@@ -4,6 +4,12 @@ import { useTranslation } from 'react-i18next';
 
 import userService from '../utils/userService';
 import logger from '../utils/logger.frontend';
+import {
+  buildUsersManagementStats,
+  createDeleteTarget,
+  getCapitalizedRole,
+  getTotalPages,
+} from './UsersManagement.hookUtils';
 
 export interface User {
   id: string;
@@ -122,8 +128,8 @@ export function useUsersManagementDashboard() {
     void fetchData();
   }, [fetchData]);
 
-  const usersTotalPages = Math.max(1, Math.ceil(usersTotalCount / USERS_PAGE_SIZE)) || 1;
-  const firmsTotalPages = Math.max(1, Math.ceil(firmsTotalCount / USERS_PAGE_SIZE)) || 1;
+  const usersTotalPages = getTotalPages(usersTotalCount, USERS_PAGE_SIZE);
+  const firmsTotalPages = getTotalPages(firmsTotalCount, USERS_PAGE_SIZE);
 
   const goToUsersPage = useCallback((page: number) => {
     if (page >= 1 && page <= usersTotalPages) {
@@ -139,7 +145,7 @@ export function useUsersManagementDashboard() {
 
   const handleUserSubmit = useCallback(async (formData: UserFormData) => {
     try {
-      const capitalizedRole = formData.role.charAt(0).toUpperCase() + formData.role.slice(1).toLowerCase();
+      const capitalizedRole = getCapitalizedRole(formData.role);
 
       if (selectedUser) {
         await userService.updateUser(selectedUser.id, {
@@ -261,12 +267,10 @@ export function useUsersManagementDashboard() {
     }
   }, [deleteTarget, fetchData, t]);
 
-  const stats = useMemo<UsersManagementStats>(() => ({
-    totalUsers: usersTotalCount,
-    totalFirms: firmsTotalCount,
-    activeUsers: users.filter((user) => user.status === 'active').length,
-    admins: users.filter((user) => user.role === 'admin').length,
-  }), [firmsTotalCount, users, usersTotalCount]);
+  const stats = useMemo<UsersManagementStats>(
+    () => buildUsersManagementStats(users, usersTotalCount, firmsTotalCount),
+    [firmsTotalCount, users, usersTotalCount],
+  );
 
   return {
     activeTab,
@@ -311,11 +315,11 @@ export function useUsersManagementDashboard() {
       setUserModalOpen(true);
     },
     openDeleteFirm: (firm: Firm) => {
-      setDeleteTarget({ ...firm, type: 'firm' });
+      setDeleteTarget(createDeleteTarget(firm, 'firm'));
       setDeleteModalOpen(true);
     },
     openDeleteUser: (user: User) => {
-      setDeleteTarget({ ...user, type: 'user' });
+      setDeleteTarget(createDeleteTarget(user, 'user'));
       setDeleteModalOpen(true);
     },
     openEditFirm: (firm: Firm) => {

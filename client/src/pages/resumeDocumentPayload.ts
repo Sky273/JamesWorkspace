@@ -1,4 +1,4 @@
-import { removeSuggestionMarkers } from '../utils/tinymceSuggestionsPlugin';
+import { removeSuggestionMarkers } from '../components/TiptapEditor';
 import type { Resume } from '../types/entities';
 import type { ExportFormat } from '../components/ResumeAnalysis/ExportTab';
 

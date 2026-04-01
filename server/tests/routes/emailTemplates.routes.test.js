@@ -437,6 +437,57 @@ describe('Email Templates Routes', () => {
         });
     });
 
+    describe('sanitized 500 errors', () => {
+        it('should not expose raw delete errors', async () => {
+            mockGetTemplate.mockResolvedValueOnce(sampleTemplate);
+            mockDeleteTemplate.mockRejectedValueOnce(new Error('sql detail leak'));
+
+            const res = await request(app)
+                .delete('/api/email-templates/et-123')
+                .set('Authorization', 'Bearer valid-token');
+
+            expect(res.status).toBe(500);
+            expect(res.body.error).toBe('Failed to delete email template');
+        });
+
+        it('should not expose raw duplicate errors', async () => {
+            mockGetTemplate.mockResolvedValueOnce(sampleTemplate);
+            mockDuplicateTemplate.mockRejectedValueOnce(new Error('mjml stack trace'));
+
+            const res = await request(app)
+                .post('/api/email-templates/et-123/duplicate')
+                .set('Authorization', 'Bearer valid-token');
+
+            expect(res.status).toBe(500);
+            expect(res.body.error).toBe('Failed to duplicate email template');
+        });
+
+        it('should not expose raw preview errors', async () => {
+            mockGetTemplate.mockResolvedValueOnce(sampleTemplate);
+            mockRenderTemplate.mockRejectedValueOnce(new Error('render detail'));
+
+            const res = await request(app)
+                .post('/api/email-templates/et-123/preview')
+                .set('Authorization', 'Bearer valid-token')
+                .send({ context: {} });
+
+            expect(res.status).toBe(500);
+            expect(res.body.error).toBe('Failed to preview email template');
+        });
+
+        it('should not expose raw compile errors', async () => {
+            mockPreviewTemplate.mockRejectedValueOnce(new Error('compile trace'));
+
+            const res = await request(app)
+                .post('/api/email-templates/compile')
+                .set('Authorization', 'Bearer valid-token')
+                .send({ mjmlContent: '<mjml></mjml>' });
+
+            expect(res.status).toBe(500);
+            expect(res.body.error).toBe('Failed to compile MJML');
+        });
+    });
+
     // ==========================================
     // DELETE /api/email-templates/:id
     // ==========================================

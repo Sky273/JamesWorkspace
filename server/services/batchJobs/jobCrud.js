@@ -178,6 +178,26 @@ export async function updateJobStatus(jobId, status, updates = {}) {
 }
 
 /**
+ * Get only the current status for a job
+ * @param {string} jobId - Job ID
+ * @returns {Promise<string|null>} Current status or null
+ */
+export async function getJobStatus(jobId) {
+    try {
+        const result = await query(`
+            SELECT status
+            FROM batch_jobs
+            WHERE id = $1
+        `, [jobId]);
+
+        return result.rows[0]?.status || null;
+    } catch (error) {
+        safeLog('error', 'Failed to get batch job status', { error: error.message, jobId });
+        throw error;
+    }
+}
+
+/**
  * Cancel a job
  * @param {string} jobId - Job ID
  */
@@ -216,25 +236,46 @@ export async function deleteJob(jobId) {
 }
 
 /**
- * Get pending jobs to process (includes both pending and processing jobs)
+ * Claim pending jobs to process atomically
  * @returns {Promise<Array>} Pending jobs
  */
 export async function getPendingJobs() {
     try {
         const result = await query(`
+            WITH claimed_jobs AS (
+                SELECT bj.id
+                FROM batch_jobs bj
+                WHERE bj.status = $1
+                AND bj.job_type NOT IN (${COLLECTION_JOB_TYPES.map((_, i) => `$${i + 2}`).join(', ')})
+                ORDER BY bj.created_at ASC
+                LIMIT 5
+                FOR UPDATE SKIP LOCKED
+            )
+            UPDATE batch_jobs bj
+            SET status = $${COLLECTION_JOB_TYPES.length + 2},
+                started_at = COALESCE(bj.started_at, NOW())
+            FROM claimed_jobs cj
+            WHERE bj.id = cj.id
+            RETURNING bj.*
+        `, [JOB_STATUS.PENDING, ...COLLECTION_JOB_TYPES, JOB_STATUS.PROCESSING]);
+
+        if (result.rows.length === 0) {
+            return [];
+        }
+
+        const jobIds = result.rows.map((job) => job.id);
+        const hydratedResult = await query(`
             SELECT bj.*,
                    u.name as user_name,
                    f.name as firm_name
             FROM batch_jobs bj
             LEFT JOIN users u ON bj.user_id = u.id
             LEFT JOIN firms f ON bj.firm_id = f.id
-            WHERE bj.status IN ($1, $2)
-            AND bj.job_type NOT IN (${COLLECTION_JOB_TYPES.map((_, i) => `$${i + 3}`).join(', ')})
+            WHERE bj.id = ANY($1::uuid[])
             ORDER BY bj.created_at ASC
-            LIMIT 5
-        `, [JOB_STATUS.PENDING, JOB_STATUS.PROCESSING, ...COLLECTION_JOB_TYPES]);
+        `, [jobIds]);
 
-        return result.rows;
+        return hydratedResult.rows;
     } catch (error) {
         safeLog('error', 'Failed to get pending batch jobs', { error: error.message });
         return [];

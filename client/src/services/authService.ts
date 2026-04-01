@@ -10,7 +10,8 @@ import {
   clearCsrfToken, 
   resetSessionState,
   createAuthOptionsWithCsrf,
-  isSessionRedirectError
+  isSessionRedirectError,
+  AUTH_ERROR_PATTERNS
 } from '../utils/apiInterceptor';
 import logger from '../utils/logger.frontend';
 
@@ -31,6 +32,7 @@ export interface User {
   firm?: string;
   firmLogo?: string;
   firm_id?: string;
+  // Legacy aliases kept for backward-compatible reads only.
   customerId?: string;
   customerName?: string;
   customer?: string;
@@ -97,6 +99,15 @@ class AuthenticationError extends Error {
 // In-memory user cache (no localStorage for security)
 let cachedUser: User | null = null;
 
+const setAuthenticatedUser = (user: User | null): User | null => {
+  cachedUser = user;
+  return cachedUser;
+};
+
+const clearAuthenticatedUser = (): void => {
+  setAuthenticatedUser(null);
+};
+
 export const authService = {
   /**
    * Sign in — uses fetchWithAuth for timeout/cache-busting.
@@ -131,12 +142,12 @@ export const authService = {
         throw new AuthenticationError(data.error || 'Failed to sign in');
       }
 
-      cachedUser = data.user as User;
+      setAuthenticatedUser(data.user as User);
       
       // Reset session state on successful login (clears isSessionExpiring flag)
       resetSessionState();
       
-      return cachedUser;
+      return cachedUser as User;
     } catch (error) {
       if (isSessionRedirectError(error)) throw error;
       if (!(error instanceof AuthenticationError)) {
@@ -197,8 +208,73 @@ export const authService = {
         logger.error('Logout error:', error);
       }
     } finally {
-      cachedUser = null;
+      clearAuthenticatedUser();
       clearCsrfToken();
+    }
+  },
+
+  async restoreSession(): Promise<User | null> {
+    try {
+      const response = await fetch('/api/auth/me', {
+        method: 'GET',
+        credentials: 'include'
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return setAuthenticatedUser((data.user as User) || null);
+      }
+
+      if (response.status !== 401 && response.status !== 403) {
+        clearAuthenticatedUser();
+        return null;
+      }
+
+      let errorData: { error?: string; message?: string; code?: string } = {};
+      try {
+        errorData = await response.clone().json();
+      } catch {
+        // Ignore invalid JSON responses from auth endpoints.
+      }
+
+      const errorMessage = String(errorData.error || errorData.message || '').toLowerCase();
+      const isJwtError = AUTH_ERROR_PATTERNS.some((pattern) => errorMessage.includes(pattern.toLowerCase()));
+
+      if (isJwtError) {
+        logger.warn('JWT error detected during session restore, clearing state:', errorMessage);
+        resetSessionState();
+        clearAuthenticatedUser();
+        return null;
+      }
+
+      const refreshResponse = await fetch('/api/auth/refresh', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (!refreshResponse.ok) {
+        clearAuthenticatedUser();
+        return null;
+      }
+
+      const retryResponse = await fetch('/api/auth/me', {
+        method: 'GET',
+        credentials: 'include'
+      });
+
+      if (!retryResponse.ok) {
+        clearAuthenticatedUser();
+        return null;
+      }
+
+      const retryData = await retryResponse.json();
+      return setAuthenticatedUser((retryData.user as User) || null);
+    } catch (error) {
+      logger.error('Failed to restore session:', error);
+      resetSessionState();
+      clearAuthenticatedUser();
+      return null;
     }
   },
 
@@ -218,7 +294,7 @@ export const authService = {
 
       const data = await response.json();
       if (data.user) {
-        cachedUser = data.user as User;
+        setAuthenticatedUser(data.user as User);
       }
       return true;
     } catch (error) {
@@ -233,7 +309,11 @@ export const authService = {
   },
 
   setCurrentUser(user: User | null): void {
-    cachedUser = user;
+    setAuthenticatedUser(user);
+  },
+
+  clearCurrentUser(): void {
+    clearAuthenticatedUser();
   },
 
   isAuthenticated(): boolean {

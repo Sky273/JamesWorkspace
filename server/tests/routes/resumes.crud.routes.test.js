@@ -238,16 +238,15 @@ describe('Resume Routes - GET /api/resumes', () => {
         expect(res.body.pagination.totalCount).toBe(5);
     });
 
-    it('should return empty results for user without firm_id', async () => {
+    it('should return 403 for user without firm_id', async () => {
         mockGetUserFirmId.mockResolvedValueOnce(null);
 
         const res = await request(app)
             .get('/api/resumes')
             .set('Authorization', 'Bearer valid-token');
 
-        expect(res.status).toBe(200);
-        expect(res.body.data).toEqual([]);
-        expect(res.body.pagination.totalCount).toBe(0);
+        expect(res.status).toBe(403);
+        expect(res.body.error).toBe('User has no valid firm association');
     });
 
     it('should filter by status', async () => {
@@ -292,6 +291,15 @@ describe('Resume Routes - GET /api/resumes', () => {
         expect(res.status).toBe(200);
         expect(res.body.pagination.page).toBe(2);
         expect(res.body.pagination.limit).toBe(50);
+    });
+
+    it('should reject invalid pagination parameters', async () => {
+        const res = await request(app)
+            .get('/api/resumes?page=0&limit=-5')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(400);
+        expect(res.body.error).toBe('Invalid pagination parameters');
     });
 
     it('should allow admin to see all resumes', async () => {

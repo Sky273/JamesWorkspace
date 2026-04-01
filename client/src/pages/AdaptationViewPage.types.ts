@@ -9,6 +9,8 @@ export interface Template {
   FooterHeight?: number;
 }
 
+export type AdaptationViewTab = 'adapted' | 'analysis' | 'mission';
+
 export interface Adaptation {
   id: string;
   Resume?: string[];

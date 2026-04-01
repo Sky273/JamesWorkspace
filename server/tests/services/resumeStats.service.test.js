@@ -122,7 +122,9 @@ describe('Resume Stats Service', () => {
 
             await getResumesGroupedByDeal({ firmId: 'f1', isAdmin: true });
 
+            const dealsQuery = query.mock.calls[0][0];
             const unassignedQuery = query.mock.calls[1][0];
+            expect(dealsQuery).not.toContain('WHERE d.firm_id = $1');
             expect(unassignedQuery).not.toContain('r.firm_id = $1');
         });
     });

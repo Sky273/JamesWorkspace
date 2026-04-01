@@ -109,9 +109,11 @@ describe('Tags Service', () => {
             expect(result).toHaveLength(1);
             expect(selectWithTimeout).toHaveBeenCalledWith('resumes', {
                 columns: ['id', 'skills'],
+                conditions: [],
                 orderBy: 'id ASC',
                 limit: 100,
-                offset: 0
+                offset: 0,
+                params: []
             });
         });
     });

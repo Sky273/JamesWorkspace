@@ -8,6 +8,8 @@ import express from 'express';
 import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
 import { validateBody, validateParams, initializeConsentSchema, respondConsentSchema } from '../utils/validation.js';
 import { safeLog } from '../utils/logger.backend.js';
+import { getResumeForAccessCheck } from '../services/resumes.service.js';
+import { getUserFirmId } from '../utils/firmHelpers.js';
 import {
     initializeConsent,
     sendConsentRequest,
@@ -20,6 +22,42 @@ import {
 import { runAllChecks } from '../services/scheduler.service.js';
 
 const router = express.Router();
+
+function getAuthenticatedConsentErrorResponse(action) {
+    switch (action) {
+    case 'initialize':
+        return { status: 400, body: { error: 'Failed to initialize consent' } };
+    case 'send':
+        return { status: 400, body: { error: 'Failed to send consent request' } };
+    case 'resend':
+        return { status: 400, body: { error: 'Failed to resend consent request' } };
+    case 'status':
+        return { status: 400, body: { error: 'Failed to get consent status' } };
+    default:
+        return { status: 400, body: { error: 'Consent request failed' } };
+    }
+}
+
+async function assertResumeAccess(req, res, resumeId) {
+    const resume = await getResumeForAccessCheck(resumeId);
+
+    if (!resume) {
+        res.status(404).json({ error: 'Resume not found' });
+        return null;
+    }
+
+    if (req.user?.role === 'admin') {
+        return resume;
+    }
+
+    const userFirmId = await getUserFirmId(req);
+    if (!userFirmId || !resume.firm_id || resume.firm_id !== userFirmId) {
+        res.status(403).json({ error: 'Access denied' });
+        return null;
+    }
+
+    return resume;
+}
 
 function getFirstDefinedValue(source, keys) {
     for (const key of keys) {
@@ -63,6 +101,11 @@ router.post('/initialize', authenticateToken, validateBody(initializeConsentSche
             return res.status(400).json({ error: 'Candidate name is required' });
         }
 
+        const resume = await assertResumeAccess(req, res, resumeId);
+        if (!resume) {
+            return;
+        }
+
         const result = await initializeConsent({
             resumeId,
             profileType,
@@ -76,7 +119,8 @@ router.post('/initialize', authenticateToken, validateBody(initializeConsentSche
         });
     } catch (error) {
         safeLog('error', 'Error initializing consent', { error: error.message });
-        res.status(400).json({ error: error.message });
+        const failure = getAuthenticatedConsentErrorResponse('initialize');
+        res.status(failure.status).json(failure.body);
     }
 });
 
@@ -87,6 +131,11 @@ router.post('/initialize', authenticateToken, validateBody(initializeConsentSche
 router.post('/:resumeId/send', authenticateToken, validateParams('resumeId'), async (req, res) => {
     try {
         const { resumeId } = req.params;
+        const resume = await assertResumeAccess(req, res, resumeId);
+
+        if (!resume) {
+            return;
+        }
 
         const result = await sendConsentRequest(resumeId);
 
@@ -106,7 +155,8 @@ router.post('/:resumeId/send', authenticateToken, validateParams('resumeId'), as
             safeLog('error', 'Failed to update consent status to error', { error: updateError.message });
         }
         
-        res.status(400).json({ error: error.message });
+        const failure = getAuthenticatedConsentErrorResponse('send');
+        res.status(failure.status).json(failure.body);
     }
 });
 
@@ -117,6 +167,11 @@ router.post('/:resumeId/send', authenticateToken, validateParams('resumeId'), as
 router.post('/:resumeId/resend', authenticateToken, validateParams('resumeId'), async (req, res) => {
     try {
         const { resumeId } = req.params;
+        const resume = await assertResumeAccess(req, res, resumeId);
+
+        if (!resume) {
+            return;
+        }
 
         const result = await resendConsentRequest(resumeId);
 
@@ -128,7 +183,8 @@ router.post('/:resumeId/resend', authenticateToken, validateParams('resumeId'), 
     } catch (error) {
         safeLog('error', 'Error resending consent request', { error: error.message, resumeId: req.params.resumeId });
         // Note: resendConsentRequest already marks consent as 'error' internally
-        res.status(400).json({ error: error.message });
+        const failure = getAuthenticatedConsentErrorResponse('resend');
+        res.status(failure.status).json(failure.body);
     }
 });
 
@@ -139,6 +195,11 @@ router.post('/:resumeId/resend', authenticateToken, validateParams('resumeId'), 
 router.get('/:resumeId/status', authenticateToken, validateParams('resumeId'), async (req, res) => {
     try {
         const { resumeId } = req.params;
+        const resume = await assertResumeAccess(req, res, resumeId);
+
+        if (!resume) {
+            return;
+        }
 
         const status = await getConsentStatus(resumeId);
 
@@ -148,7 +209,8 @@ router.get('/:resumeId/status', authenticateToken, validateParams('resumeId'), a
         });
     } catch (error) {
         safeLog('error', 'Error getting consent status', { error: error.message });
-        res.status(400).json({ error: error.message });
+        const failure = getAuthenticatedConsentErrorResponse('status');
+        res.status(failure.status).json(failure.body);
     }
 });
 

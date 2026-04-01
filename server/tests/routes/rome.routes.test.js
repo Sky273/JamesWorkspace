@@ -11,7 +11,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import express from 'express';
 import request from 'supertest';
 
-// Mock rome service
 const mockGetStoredMetiers = vi.fn();
 const mockGetMetiersStats = vi.fn();
 const mockGetMetiers = vi.fn();
@@ -35,7 +34,6 @@ vi.mock('../../services/rome.service.js', () => ({
     collectITMetiers: (...args) => mockCollectITMetiers(...args)
 }));
 
-// Mock batchJobs service (needed since collection route now creates tracked jobs)
 const mockCreateJob = vi.fn();
 const mockUpdateJobStatus = vi.fn();
 const mockUpdateCollectionJobProgress = vi.fn();
@@ -52,17 +50,14 @@ vi.mock('../../services/batchJobs.service.js', () => ({
     }
 }));
 
-// Mock logger
 vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));
 
-// Mock errors
 vi.mock('../../utils/errors.js', () => ({
-    sanitizeErrorMessage: (err, fallback) => fallback
+    sanitizeErrorMessage: (_err, fallback) => fallback
 }));
 
-// Mock auth middleware
 vi.mock('../../middleware/auth.middleware.js', () => ({
     authenticateToken: (req, res, next) => {
         if (req.headers.authorization === 'Bearer valid-token') {
@@ -136,6 +131,24 @@ describe('Rome Routes', () => {
             expect(res.status).toBe(200);
             expect(res.body.totalCount).toBe(50);
             expect(res.body.pagination).toBeDefined();
+        });
+
+        it('should return 400 for invalid page', async () => {
+            const res = await request(app)
+                .get('/api/rome/metiers?page=0')
+                .set(AUTH);
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toContain('page');
+        });
+
+        it('should return 400 for invalid pageSize', async () => {
+            const res = await request(app)
+                .get('/api/rome/metiers?pageSize=-1')
+                .set(AUTH);
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toContain('pageSize');
         });
 
         it('should return 500 on error', async () => {

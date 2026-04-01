@@ -18,6 +18,7 @@ const ESCO_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
 // Cache for ESCO lookups to avoid repeated API calls
 const escoCache = new Map();
 const escoCacheTimestamps = new Map();
+let escoCacheCleanupInterval = null;
 
 /**
  * Cleanup expired entries and enforce max size
@@ -59,8 +60,16 @@ function cleanupEscoCache() {
     }
 }
 
-// Periodic cleanup every hour
-const escoCacheCleanupInterval = setInterval(cleanupEscoCache, 60 * 60 * 1000);
+export function startEscoCacheCleanup() {
+    if (escoCacheCleanupInterval) {
+        return;
+    }
+
+    escoCacheCleanupInterval = setInterval(cleanupEscoCache, 60 * 60 * 1000);
+    if (escoCacheCleanupInterval.unref) {
+        escoCacheCleanupInterval.unref();
+    }
+}
 
 /**
  * Set a value in the ESCO cache with timestamp
@@ -315,6 +324,7 @@ function clearEscoCache() {
 function destroyEscoCache() {
     if (escoCacheCleanupInterval) {
         clearInterval(escoCacheCleanupInterval);
+        escoCacheCleanupInterval = null;
     }
     escoCache.clear();
     escoCacheTimestamps.clear();

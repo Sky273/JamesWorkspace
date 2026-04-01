@@ -28,8 +28,15 @@ function createListResumesHandler() {
     return async (req, res) => {
         try {
             const isAdmin = req.user?.role === 'admin';
-            const page = parseInt(req.query.page) || 1;
-            const limit = parseInt(req.query.limit) || 50;
+            const parsedPage = Number.parseInt(req.query.page, 10);
+            const parsedLimit = Number.parseInt(req.query.limit, 10);
+            const page = Number.isNaN(parsedPage) ? 1 : parsedPage;
+            const limit = Number.isNaN(parsedLimit) ? 50 : parsedLimit;
+
+            if (page < 1 || limit < 1 || limit > 100) {
+                return res.status(400).json({ error: 'Invalid pagination parameters' });
+            }
+
             const offset = (page - 1) * limit;
             const { search, status, tags: _tags, dealId } = req.query;
 
@@ -45,11 +52,8 @@ function createListResumesHandler() {
                     params.push(userFirmId);
                     paramIndex++;
                 } else {
-                    safeLog('warn', 'User has no valid firm_id, returning empty results', { userId: req.user?.id });
-                    return res.json({
-                        data: [],
-                        pagination: { page: 1, limit, totalPages: 0, totalCount: 0, hasMore: false }
-                    });
+                    safeLog('warn', 'User has no valid firm_id, denying resume list access', { userId: req.user?.id });
+                    return res.status(403).json({ error: 'User has no valid firm association' });
                 }
             }
 

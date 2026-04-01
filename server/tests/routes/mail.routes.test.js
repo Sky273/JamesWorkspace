@@ -172,7 +172,8 @@ describe('Mail Routes', () => {
             const res = await request(app)
                 .get('/api/mail/callback/gmail?error=access_denied');
             expect(res.status).toBe(302);
-            expect(res.headers.location).toContain('mail_error');
+            expect(res.headers.location).toContain('mail_error=mail_callback_failed');
+            expect(res.headers.location).not.toContain('access_denied');
         });
 
         it('should redirect on invalid state', async () => {
@@ -180,6 +181,20 @@ describe('Mail Routes', () => {
                 .get('/api/mail/callback/gmail?code=abc&state=invalid');
             expect(res.status).toBe(302);
             expect(res.headers.location).toContain('invalid_state');
+        });
+
+        it('should sanitize callback failures instead of exposing raw error messages', async () => {
+            mockGetAuthUrl.mockResolvedValueOnce('https://accounts.google.com/...');
+            await request(app).get('/api/mail/auth/gmail').set(AUTH);
+
+            mockHandleOAuthCallback.mockRejectedValueOnce(new Error('Token exchange failed: invalid_grant'));
+
+            const res = await request(app)
+                .get('/api/mail/callback/gmail?code=abc&state=state-token-abc');
+
+            expect(res.status).toBe(302);
+            expect(res.headers.location).toContain('mail_error=mail_callback_failed');
+            expect(res.headers.location).not.toContain('invalid_grant');
         });
     });
 

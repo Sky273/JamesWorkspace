@@ -382,7 +382,7 @@ router.delete('/:id/resumes/:resumeId', authenticateToken, validateParams('id', 
 });
 
 // ============================================
-// RESUME-CENTRIC ROUTES (for CVthèque integration)
+// RESUME-CENTRIC ROUTES (for CVtheque integration)
 // ============================================
 
 // GET /api/deals/by-resume/:resumeId - Get all deals for a specific resume

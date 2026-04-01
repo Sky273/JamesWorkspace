@@ -107,7 +107,7 @@ function createExtractDocHandler() {
                 });
             }
             safeLog('error', 'Error extracting text from DOC', { error: error.message });
-            return res.status(500).json({ error: error.message || 'Failed to extract text from DOC file' });
+            return res.status(500).json({ error: 'Failed to extract text from DOC file' });
         }
     };
 }
@@ -289,7 +289,7 @@ function createExtractPdfHandler() {
                 });
             }
             safeLog('error', 'Error extracting text from PDF', { error: error.message });
-            return res.status(500).json({ error: error.message || 'Failed to extract text from PDF file' });
+            return res.status(500).json({ error: 'Failed to extract text from PDF file' });
         } finally {
             if (pdfExtractionSlotAcquired) {
                 releasePdfExtractionSlot(pdfExtractionUserKey);

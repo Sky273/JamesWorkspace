@@ -74,7 +74,7 @@ export async function checkDealAccess(req, dealId, { getDealFirmId, getUserFirmI
         }
 
         return { hasAccess: true, firmId: userFirmId };
-    } catch (error) {
-        return { hasAccess: false, error: error.message, status: 500 };
+    } catch {
+        return { hasAccess: false, error: 'Failed to validate deal access', status: 500 };
     }
 }

@@ -70,6 +70,7 @@ describe('Password Reset Routes', () => {
 
             expect(res.status).toBe(200);
             expect(res.body.success).toBe(true);
+            expect(res.body.message).toContain('réinitialisation');
             expect(mockRequestPasswordReset).toHaveBeenCalledWith('user@test.com');
         });
 
@@ -82,6 +83,7 @@ describe('Password Reset Routes', () => {
 
             expect(res.status).toBe(200);
             expect(res.body.success).toBe(true);
+            expect(res.body.message).toContain('réinitialisation');
         });
     });
 
@@ -113,6 +115,7 @@ describe('Password Reset Routes', () => {
             expect(res.status).toBe(400);
             expect(res.body.success).toBe(false);
             expect(res.body.code).toBe('invalid_token');
+            expect(res.body.error).toBe('Lien de réinitialisation invalide.');
         });
 
         it('should return 400 for used token', async () => {
@@ -127,6 +130,7 @@ describe('Password Reset Routes', () => {
 
             expect(res.status).toBe(400);
             expect(res.body.code).toBe('token_used');
+            expect(res.body.error).toContain('déjà été utilisé');
         });
 
         it('should return 400 for expired token', async () => {
@@ -141,6 +145,7 @@ describe('Password Reset Routes', () => {
 
             expect(res.status).toBe(400);
             expect(res.body.code).toBe('token_expired');
+            expect(res.body.error).toContain('expiré');
         });
 
         it('should return 400 for inactive account', async () => {
@@ -155,6 +160,7 @@ describe('Password Reset Routes', () => {
 
             expect(res.status).toBe(400);
             expect(res.body.code).toBe('account_inactive');
+            expect(res.body.error).toContain('désactivé');
         });
 
         it('should return 500 on server error', async () => {
@@ -166,6 +172,7 @@ describe('Password Reset Routes', () => {
 
             expect(res.status).toBe(500);
             expect(res.body.success).toBe(false);
+            expect(res.body.error).toBe('Erreur lors de la réinitialisation du mot de passe.');
         });
     });
 });

@@ -3,26 +3,18 @@
  * Displays a single adaptation by ID from URL parameter
  */
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { 
-  ArrowDownTrayIcon,
-  EnvelopeIcon
-} from '@heroicons/react/24/outline';
 import { useAuthFetch } from '../hooks/useAuthFetch';
-import { createSafeHtml } from '../utils/sanitizer.frontend';
 import { createAuthOptionsWithCsrf, fetchWithAuth, fetchWithCsrfRetry } from '../utils/apiInterceptor';
 import { templateService } from '../utils/templateService';
-import { DeferredTiptapEditor as TiptapEditor } from '../components/TiptapEditor';
 import type { TiptapEditorRef } from '../components/TiptapEditor';
-import AdaptationAnalysisView from '../components/AdaptationAnalysisView';
 import SendEmailModal from '../components/ResumeAnalysis/SendEmailModal';
 import toast from 'react-hot-toast';
 import logger from '../utils/logger.frontend';
-import { formatDate } from '../utils/dateFormatter';
 import i18n from '../i18n';
-import { removeSuggestionMarkers } from '../utils/tinymceSuggestionsPlugin';
+import { removeSuggestionMarkers } from '../components/TiptapEditor';
 import AdaptationHeader from './AdaptationHeader';
 import AdaptationExportModal from './AdaptationExportModal';
 import {
@@ -30,40 +22,44 @@ import {
   AdaptationErrorState,
   AdaptationLoadingState,
   AdaptationPanel,
-  AdaptationTabs
+  AdaptationTabContent,
+  AdaptationTabs,
 } from './AdaptationViewPage.sections';
-import type { Adaptation, Template } from './AdaptationViewPage.types';
+import type { Adaptation, AdaptationViewTab, Template } from './AdaptationViewPage.types';
+import {
+  buildEmailAttachmentHtml,
+  buildTemplateHtml,
+  formatAdaptationDate,
+} from './AdaptationViewPage.utils';
 
 const AdaptationViewPage = (): JSX.Element => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const fromDealsView = (location.state as { from?: string } | null)?.from === 'dealsGroupedView'
-    || sessionStorage.getItem('dealsGroupedViewState') !== null;
+  const fromDealsView =
+    (location.state as { from?: string } | null)?.from === 'dealsGroupedView' ||
+    sessionStorage.getItem('dealsGroupedViewState') !== null;
   const { t } = useTranslation();
   const { authGet } = useAuthFetch();
+
   const [adaptation, setAdaptation] = useState<Adaptation | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'adapted' | 'analysis' | 'mission'>('adapted');
-  
-  // Editor state
+  const [activeTab, setActiveTab] = useState<AdaptationViewTab>('adapted');
+
   const [_editorReady, setEditorReady] = useState(false);
   const editorRef = useRef<TiptapEditorRef | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
   const [saving, setSaving] = useState(false);
-  
-  // Export modal state
+
   const [showExportModal, setShowExportModal] = useState(false);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
-  
-  // Email modal state
+
   const [showEmailModal, setShowEmailModal] = useState(false);
-  
-  // Adapted title editing state
+
   const [editingTitle, setEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState('');
   const [savingTitle, setSavingTitle] = useState(false);
@@ -97,6 +93,29 @@ const AdaptationViewPage = (): JSX.Element => {
     loadAdaptation();
   }, [id, authGet, t]);
 
+  useEffect(() => {
+    const fetchTemplates = async () => {
+      try {
+        setLoadingTemplates(true);
+        const fetchedTemplates = await templateService.getAllTemplates();
+        const activeTemplates = fetchedTemplates.filter((template: Template) =>
+          template.Status?.toLowerCase() === 'active'
+        );
+        logger.log('Fetched templates', { total: fetchedTemplates.length, active: activeTemplates.length });
+        setTemplates(activeTemplates.length > 0 ? activeTemplates : fetchedTemplates);
+        if (fetchedTemplates.length > 0) {
+          setSelectedTemplate(activeTemplates.length > 0 ? activeTemplates[0].id : fetchedTemplates[0].id);
+        }
+      } catch (err) {
+        logger.error('Error fetching templates:', err);
+      } finally {
+        setLoadingTemplates(false);
+      }
+    };
+
+    fetchTemplates();
+  }, []);
+
   const handleBack = () => {
     if (fromDealsView) {
       navigate('/resumes', { state: { viewMode: 'byDeal' } });
@@ -119,48 +138,21 @@ const AdaptationViewPage = (): JSX.Element => {
     }
   };
 
-
-  // Load templates
-  useEffect(() => {
-    const fetchTemplates = async () => {
-      try {
-        setLoadingTemplates(true);
-        const fetchedTemplates = await templateService.getAllTemplates();
-        // Filter active templates (case-insensitive)
-        const activeTemplates = fetchedTemplates.filter((t: Template) => 
-          t.Status?.toLowerCase() === 'active'
-        );
-        logger.log('Fetched templates', { total: fetchedTemplates.length, active: activeTemplates.length });
-        setTemplates(activeTemplates.length > 0 ? activeTemplates : fetchedTemplates);
-        if (fetchedTemplates.length > 0) {
-          setSelectedTemplate(activeTemplates.length > 0 ? activeTemplates[0].id : fetchedTemplates[0].id);
-        }
-      } catch (err) {
-        logger.error('Error fetching templates:', err);
-      } finally {
-        setLoadingTemplates(false);
-      }
-    };
-    fetchTemplates();
-  }, []);
-
-
-  // Save adaptation
   const handleSave = async (): Promise<void> => {
     if (!editorRef.current || !adaptation) return;
-    
+
     try {
       setSaving(true);
       const content = editorRef.current.getContent();
-      const authOptions = await createAuthOptionsWithCsrf({ 
-        method: 'PUT', 
-        headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify({ 'Adapted Text': content }) 
+      const authOptions = await createAuthOptionsWithCsrf({
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 'Adapted Text': content }),
       });
-      
+
       const response = await fetchWithAuth(`/api/adaptations/${adaptation.id}`, authOptions);
       if (!response.ok) throw new Error('Failed to save');
-      
+
       setAdaptation({ ...adaptation, 'Adapted Text': content });
       setHasChanges(false);
       toast.success(t('common.saved'));
@@ -172,21 +164,20 @@ const AdaptationViewPage = (): JSX.Element => {
     }
   };
 
-  // Save adapted title
   const handleSaveTitle = async (): Promise<void> => {
     if (!adaptation) return;
-    
+
     try {
       setSavingTitle(true);
-      const authOptions = await createAuthOptionsWithCsrf({ 
-        method: 'PUT', 
-        headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify({ 'Adapted Title': editedTitle }) 
+      const authOptions = await createAuthOptionsWithCsrf({
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 'Adapted Title': editedTitle }),
       });
-      
+
       const response = await fetchWithAuth(`/api/adaptations/${adaptation.id}`, authOptions);
       if (!response.ok) throw new Error('Failed to save title');
-      
+
       setAdaptation({ ...adaptation, 'Adapted Title': editedTitle });
       setEditingTitle(false);
       toast.success(t('common.saved'));
@@ -198,63 +189,46 @@ const AdaptationViewPage = (): JSX.Element => {
     }
   };
 
-  // Export to PDF
   const handleExportToPDF = async (): Promise<void> => {
     if (!adaptation || !selectedTemplate) return;
-    
+
     try {
       setExportLoading(true);
       const template = await templateService.getTemplateById(selectedTemplate);
       if (!template) throw new Error('Template not found');
 
-      // Clean suggestion markers from content before export
       const rawContent = editorRef.current?.getContent() || adaptation['Adapted Text'] || '';
       const content = removeSuggestionMarkers(rawContent);
-      const name = adaptation['Resume Name'] || adaptation['Candidate Name'] || 'Candidat';
-      const title = adaptation['Adapted Title'] || adaptation['Mission Title'] || 'CV Adapté';
-
-      let processedBody = template.TemplateContent || '';
-      processedBody = processedBody.replace(/-name-/g, name);
-      processedBody = processedBody.replace(/-title-/g, title);
-      processedBody = processedBody.replace(/-content-/g, content);
-
-      let processedHeader = template.HeaderContent || '';
-      if (processedHeader) {
-        processedHeader = processedHeader.replace(/-name-/g, name);
-        processedHeader = processedHeader.replace(/-title-/g, title);
-      }
-
-      let processedFooter = template.FooterContent || '';
-      if (processedFooter) {
-        processedFooter = processedFooter.replace(/-name-/g, name);
-        processedFooter = processedFooter.replace(/-title-/g, title);
-      }
+      const { processedBody, processedHeader, processedFooter, name } = buildTemplateHtml(
+        template,
+        adaptation,
+        content,
+      );
 
       const exportOptions = await createAuthOptionsWithCsrf({
         method: 'POST',
         headers: { 'Content-Type': 'application/json; charset=utf-8' },
-        body: JSON.stringify({ 
-          htmlContent: processedBody, 
+        body: JSON.stringify({
+          htmlContent: processedBody,
           filename: `${name.replace(/[^a-zA-Z]/g, '_')}_adapted.pdf`,
           stylesheet: template.Stylesheet || '',
           headerContent: processedHeader || undefined,
           footerContent: processedFooter || undefined,
-          footerHeight: template.FooterHeight || 25
-        })
+          footerHeight: template.FooterHeight || 25,
+        }),
       });
 
-      const response = await fetchWithCsrfRetry('/generate-pdf', exportOptions, 300000); // 5 minutes for PDF generation
-
+      const response = await fetchWithCsrfRetry('/generate-pdf', exportOptions, 300000);
       if (!response.ok) throw new Error('Failed to generate PDF');
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${name.replace(/\s+/g, '_')}_adapted_${template.Name}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `${name.replace(/\s+/g, '_')}_adapted_${template.Name}.pdf`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
       window.URL.revokeObjectURL(url);
       toast.success(t('adaptations.exportSuccess'));
       setShowExportModal(false);
@@ -266,18 +240,18 @@ const AdaptationViewPage = (): JSX.Element => {
     }
   };
 
-
-  const formatAdaptationDate = (dateString?: string) => {
-    const locale = i18n.language === 'fr' ? 'fr-FR' : 'en-US';
-    return formatDate(dateString, 'long', locale) || '';
-  };
-
   if (loading) {
     return <AdaptationLoadingState />;
   }
 
   if (error || !adaptation) {
-    return <AdaptationErrorState error={error || t('errors.adaptationNotFoundDescription')} onBack={handleBack} t={t} />;
+    return (
+      <AdaptationErrorState
+        error={error || t('errors.adaptationNotFoundDescription')}
+        onBack={handleBack}
+        t={t}
+      />
+    );
   }
 
   return (
@@ -286,7 +260,6 @@ const AdaptationViewPage = (): JSX.Element => {
         <AdaptationBackButton onBack={handleBack} t={t} />
 
         <AdaptationPanel>
-          {/* Header - Candidate Name + Adapted Title */}
           <AdaptationHeader
             adaptation={adaptation}
             editingTitle={editingTitle}
@@ -294,100 +267,36 @@ const AdaptationViewPage = (): JSX.Element => {
             savingTitle={savingTitle}
             onEditedTitleChange={setEditedTitle}
             onStartEditTitle={() => {
-              setEditedTitle(adaptation['Adapted Title'] as string || '');
+              setEditedTitle((adaptation['Adapted Title'] as string) || '');
               setEditingTitle(true);
             }}
             onSaveTitle={handleSaveTitle}
             onCancelEditTitle={() => setEditingTitle(false)}
             onViewResume={handleViewResume}
             onViewMission={handleViewMission}
-            formatAdaptationDate={formatAdaptationDate}
+            formatAdaptationDate={(dateString) => formatAdaptationDate(dateString, i18n.language)}
           />
 
           <AdaptationTabs activeTab={activeTab} onTabChange={setActiveTab} t={t} />
 
-          {/* Tab content */}
           <div className="p-6">
-            {activeTab === 'adapted' && (
-              <div className="space-y-4">
-                {adaptation['Adapted Text'] ? (
-                  <>
-                    {/* Action buttons */}
-                    <div className="flex justify-end gap-3">
-                      <button 
-                        onClick={() => setShowExportModal(true)}
-                        className="btn btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm"
-                      >
-                        <ArrowDownTrayIcon className="w-4 h-4" />
-                        {t('adaptations.exportPDF')}
-                      </button>
-                      <button 
-                        onClick={() => setShowEmailModal(true)}
-                        className="btn btn-secondary inline-flex items-center gap-2 px-4 py-2 text-sm"
-                      >
-                        <EnvelopeIcon className="w-4 h-4" />
-                        {t('adaptations.sendEmail', 'Envoyer par email')}
-                      </button>
-                      <button 
-                        onClick={handleSave}
-                        disabled={!hasChanges || saving}
-                        className={`btn btn-secondary inline-flex items-center gap-2 px-4 py-2 text-sm ${!hasChanges || saving ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      >
-                        {saving ? t('common.saving') : t('common.save')}
-                      </button>
-                    </div>
-                    
-                    {/* Tiptap Editor */}
-                    <TiptapEditor
-                      ref={editorRef}
-                      content={adaptation['Adapted Text']}
-                      onChange={() => setHasChanges(true)}
-                      onReady={() => setEditorReady(true)}
-                      height={500}
-                    />
-                  </>
-                ) : (
-                  <p className="text-gray-500 dark:text-gray-400 italic">
-                    {t('adaptations.noAdaptedText')}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {activeTab === 'analysis' && (
-              <div>
-                {adaptation['Match Analysis'] ? (
-                  <AdaptationAnalysisView adaptation={adaptation} />
-                ) : (
-                  <p className="text-gray-500 dark:text-gray-400 italic">
-                    {t('adaptations.noAnalysis')}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {activeTab === 'mission' && (
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-                  {adaptation['Mission Title'] || t('adaptations.card.unknownMission')}
-                </h3>
-                {adaptation['Mission Content'] ? (
-                  <div 
-                    className="prose prose-sm dark:prose-invert max-w-none"
-                    dangerouslySetInnerHTML={createSafeHtml(adaptation['Mission Content'])}
-                  />
-                ) : (
-                  <p className="text-gray-500 dark:text-gray-400 italic">
-                    {t('missions.noDescription')}
-                  </p>
-                )}
-              </div>
-            )}
+            <AdaptationTabContent
+              activeTab={activeTab}
+              adaptation={adaptation}
+              editorRef={editorRef}
+              hasChanges={hasChanges}
+              saving={saving}
+              onEditorChange={() => setHasChanges(true)}
+              onEditorReady={() => setEditorReady(true)}
+              onExport={() => setShowExportModal(true)}
+              onSendEmail={() => setShowEmailModal(true)}
+              onSave={handleSave}
+              t={t}
+            />
           </div>
         </AdaptationPanel>
       </div>
 
-      {/* Export Modal */}
       {showExportModal && (
         <AdaptationExportModal
           templates={templates}
@@ -400,61 +309,36 @@ const AdaptationViewPage = (): JSX.Element => {
         />
       )}
 
-      {/* Email Modal */}
       {showEmailModal && adaptation && (
         <SendEmailModal
           isOpen={showEmailModal}
-          resumeId={adaptation['Resume ID'] || (adaptation.Resume && adaptation.Resume[0]) || ''}
+          resumeId={adaptation['Resume ID'] || adaptation.Resume?.[0] || ''}
           resumeName={adaptation['Resume Name'] || adaptation.ResumeName || ''}
           resumeTitle={adaptation.ResumeTitle || adaptation['Mission Title'] || ''}
           currentVersion={1}
           onClose={() => setShowEmailModal(false)}
           onGenerateAttachment={async (format) => {
-            // Always fetch templates to ensure we have one for document generation
             const allTemplates = await templateService.getAllTemplates();
             if (!allTemplates || allTemplates.length === 0) {
               throw new Error('No CV template available');
             }
-            // Use selectedTemplate if valid, otherwise use first available
+
             let template: Template | null = null;
             if (selectedTemplate) {
-              template = allTemplates.find((t: Template) => t.id === selectedTemplate) || null;
+              template = allTemplates.find((currentTemplate: Template) => currentTemplate.id === selectedTemplate) || null;
             }
             if (!template) {
               template = allTemplates[0];
             }
-            
-            // Clean suggestion markers from content before export
+
             const rawContent = editorRef.current?.getContent() || adaptation['Adapted Text'] || '';
             const content = removeSuggestionMarkers(rawContent);
-            const name = adaptation['Resume Name'] || adaptation.ResumeName || 'Candidat';
-            const title = adaptation['Mission Title'] || 'CV Adapté';
+            const { htmlContent, filenameBase } = buildEmailAttachmentHtml(template, adaptation, content);
 
-            let processedBody = template.TemplateContent || '';
-            processedBody = processedBody.replace(/-name-/g, name);
-            processedBody = processedBody.replace(/-title-/g, title);
-            processedBody = processedBody.replace(/-content-/g, content);
-
-            const htmlContent = `
-              <!DOCTYPE html>
-              <html>
-              <head>
-                <meta charset="UTF-8">
-                <style>${template.Stylesheet || ''}</style>
-              </head>
-              <body>
-                ${template.HeaderContent || ''}
-                ${processedBody}
-                ${template.FooterContent || ''}
-              </body>
-              </html>
-            `;
-
-            // Determine endpoint and filename based on format
             const endpoint = format === 'pdf' ? '/generate-pdf' : '/generate-docx';
             const fileExtension = format === 'pdf' ? 'pdf' : format;
-            const filename = `${name.replace(/[^a-zA-Z0-9]/g, '_')}_${title.replace(/[^a-zA-Z0-9]/g, '_')}.${fileExtension}`;
-            
+            const filename = `${filenameBase}.${fileExtension}`;
+
             const options = await createAuthOptionsWithCsrf({
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -462,11 +346,11 @@ const AdaptationViewPage = (): JSX.Element => {
                 htmlContent,
                 filename,
                 footerHeight: template.FooterHeight || 50,
-                format
-              })
+                format,
+              }),
             });
 
-            const response = await fetchWithCsrfRetry(endpoint, options, 300000); // 5 minutes for PDF/DOCX generation
+            const response = await fetchWithCsrfRetry(endpoint, options, 300000);
             if (!response.ok) throw new Error(`Failed to generate ${format.toUpperCase()}`);
             return await response.blob();
           }}
@@ -481,5 +365,3 @@ const AdaptationViewPage = (): JSX.Element => {
 };
 
 export default AdaptationViewPage;
-
-

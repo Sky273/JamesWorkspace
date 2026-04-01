@@ -220,8 +220,9 @@ export const llmLimiter = rateLimit({
     }
 });
 
-// Cleanup old rate limit entries every hour
-const rateLimitCleanupInterval = setInterval(() => {
+let rateLimitCleanupInterval = null;
+
+function runRateLimitCleanup() {
     const now = Date.now();
     let cleanedUser = 0;
     let cleanedCombined = 0;
@@ -248,14 +249,25 @@ const rateLimitCleanupInterval = setInterval(() => {
             combinedEntriesRemoved: cleanedCombined
         });
     }
-}, 3600000);
+}
+
+export const startRateLimitCleanup = (intervalMs = 3600000) => {
+    if (rateLimitCleanupInterval) {
+        return rateLimitCleanupInterval;
+    }
+
+    rateLimitCleanupInterval = setInterval(runRateLimitCleanup, intervalMs);
+    return rateLimitCleanupInterval;
+};
 
 // Export cleanup function for graceful shutdown
 export const cleanupRateLimitStore = () => {
     if (rateLimitCleanupInterval) {
         clearInterval(rateLimitCleanupInterval);
-        userRateLimitStore.clear();
-        combinedRateLimitStore.clear();
-        safeLog('info', 'Rate limit stores cleaned up');
+        rateLimitCleanupInterval = null;
     }
+
+    userRateLimitStore.clear();
+    combinedRateLimitStore.clear();
+    safeLog('info', 'Rate limit stores cleaned up');
 };

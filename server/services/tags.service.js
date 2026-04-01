@@ -10,14 +10,16 @@ import { selectWithTimeout, updateWithTimeout } from '../utils/postgresHelpers.j
  * Aggregate all raw tags from resumes (SQL aggregation)
  * @returns {Promise<Object>} { skills, industries, tools, soft_skills }
  */
-export async function aggregateRawTags() {
+export async function aggregateRawTags({ isAdmin = false, userFirmId = null } = {}) {
+    const firmFilter = isAdmin ? '' : 'WHERE firm_id = $1';
     const aggregateQuery = `
         SELECT 
             COALESCE(
                 (SELECT jsonb_agg(tag ORDER BY tag) FROM (
                     SELECT DISTINCT tag 
                     FROM resumes, jsonb_array_elements_text(COALESCE(skills, '[]'::jsonb)) AS tag 
-                    WHERE tag IS NOT NULL AND tag != ''
+                    ${firmFilter}
+                    ${firmFilter ? 'AND' : 'WHERE'} tag IS NOT NULL AND tag != ''
                 ) AS distinct_tags),
                 '[]'::jsonb
             ) AS skills,
@@ -25,7 +27,8 @@ export async function aggregateRawTags() {
                 (SELECT jsonb_agg(tag ORDER BY tag) FROM (
                     SELECT DISTINCT tag 
                     FROM resumes, jsonb_array_elements_text(COALESCE(industries, '[]'::jsonb)) AS tag 
-                    WHERE tag IS NOT NULL AND tag != ''
+                    ${firmFilter}
+                    ${firmFilter ? 'AND' : 'WHERE'} tag IS NOT NULL AND tag != ''
                 ) AS distinct_tags),
                 '[]'::jsonb
             ) AS industries,
@@ -33,7 +36,8 @@ export async function aggregateRawTags() {
                 (SELECT jsonb_agg(tag ORDER BY tag) FROM (
                     SELECT DISTINCT tag 
                     FROM resumes, jsonb_array_elements_text(COALESCE(tools, '[]'::jsonb)) AS tag 
-                    WHERE tag IS NOT NULL AND tag != ''
+                    ${firmFilter}
+                    ${firmFilter ? 'AND' : 'WHERE'} tag IS NOT NULL AND tag != ''
                 ) AS distinct_tags),
                 '[]'::jsonb
             ) AS tools,
@@ -41,7 +45,8 @@ export async function aggregateRawTags() {
                 (SELECT jsonb_agg(tag ORDER BY tag) FROM (
                     SELECT DISTINCT tag 
                     FROM resumes, jsonb_array_elements_text(COALESCE(soft_skills, '[]'::jsonb)) AS tag 
-                    WHERE tag IS NOT NULL AND tag != ''
+                    ${firmFilter}
+                    ${firmFilter ? 'AND' : 'WHERE'} tag IS NOT NULL AND tag != ''
                 ) AS distinct_tags),
                 '[]'::jsonb
             ) AS soft_skills
@@ -49,7 +54,7 @@ export async function aggregateRawTags() {
 
     const result = await selectWithTimeout('resumes', {
         rawQuery: aggregateQuery,
-        rawParams: []
+        rawParams: isAdmin ? [] : [userFirmId]
     });
 
     return result[0] || {};
@@ -186,14 +191,16 @@ export async function aggregateCleanedTags({ isAdmin, userFirmId, scope = 'defau
  * Aggregate ESCO normalized tags from resumes
  * @returns {Promise<Object>} { skills, industries, tools, soft_skills }
  */
-export async function aggregateEscoTags() {
+export async function aggregateEscoTags({ isAdmin = false, userFirmId = null } = {}) {
+    const firmFilter = isAdmin ? '' : 'WHERE firm_id = $1';
     const aggregateQuery = `
         SELECT 
             COALESCE(
                 (SELECT jsonb_agg(tag ORDER BY tag->>'label') FROM (
                     SELECT DISTINCT ON (tag->>'uri') tag 
                     FROM resumes, jsonb_array_elements(COALESCE(skills_esco, '[]'::jsonb)) AS tag 
-                    WHERE tag IS NOT NULL AND tag->>'label' IS NOT NULL AND tag->>'label' != ''
+                    ${firmFilter}
+                    ${firmFilter ? 'AND' : 'WHERE'} tag IS NOT NULL AND tag->>'label' IS NOT NULL AND tag->>'label' != ''
                     ORDER BY tag->>'uri', tag->>'label'
                 ) AS distinct_tags),
                 '[]'::jsonb
@@ -202,7 +209,8 @@ export async function aggregateEscoTags() {
                 (SELECT jsonb_agg(tag ORDER BY tag->>'label') FROM (
                     SELECT DISTINCT ON (tag->>'uri') tag 
                     FROM resumes, jsonb_array_elements(COALESCE(industries_esco, '[]'::jsonb)) AS tag 
-                    WHERE tag IS NOT NULL AND tag->>'label' IS NOT NULL AND tag->>'label' != ''
+                    ${firmFilter}
+                    ${firmFilter ? 'AND' : 'WHERE'} tag IS NOT NULL AND tag->>'label' IS NOT NULL AND tag->>'label' != ''
                     ORDER BY tag->>'uri', tag->>'label'
                 ) AS distinct_tags),
                 '[]'::jsonb
@@ -211,7 +219,8 @@ export async function aggregateEscoTags() {
                 (SELECT jsonb_agg(tag ORDER BY tag->>'label') FROM (
                     SELECT DISTINCT ON (tag->>'uri') tag 
                     FROM resumes, jsonb_array_elements(COALESCE(tools_esco, '[]'::jsonb)) AS tag 
-                    WHERE tag IS NOT NULL AND tag->>'label' IS NOT NULL AND tag->>'label' != ''
+                    ${firmFilter}
+                    ${firmFilter ? 'AND' : 'WHERE'} tag IS NOT NULL AND tag->>'label' IS NOT NULL AND tag->>'label' != ''
                     ORDER BY tag->>'uri', tag->>'label'
                 ) AS distinct_tags),
                 '[]'::jsonb
@@ -220,7 +229,8 @@ export async function aggregateEscoTags() {
                 (SELECT jsonb_agg(tag ORDER BY tag->>'label') FROM (
                     SELECT DISTINCT ON (tag->>'uri') tag 
                     FROM resumes, jsonb_array_elements(COALESCE(soft_skills_esco, '[]'::jsonb)) AS tag 
-                    WHERE tag IS NOT NULL AND tag->>'label' IS NOT NULL AND tag->>'label' != ''
+                    ${firmFilter}
+                    ${firmFilter ? 'AND' : 'WHERE'} tag IS NOT NULL AND tag->>'label' IS NOT NULL AND tag->>'label' != ''
                     ORDER BY tag->>'uri', tag->>'label'
                 ) AS distinct_tags),
                 '[]'::jsonb
@@ -229,7 +239,7 @@ export async function aggregateEscoTags() {
 
     const result = await selectWithTimeout('resumes', {
         rawQuery: aggregateQuery,
-        rawParams: []
+        rawParams: isAdmin ? [] : [userFirmId]
     });
 
     return result[0] || {};
@@ -242,9 +252,11 @@ export async function aggregateEscoTags() {
  * @param {number} offset - Offset
  * @returns {Promise<Object[]>}
  */
-export async function fetchResumeBatch(columns, limit, offset) {
+export async function fetchResumeBatch(columns, limit, offset, { firmId = null } = {}) {
     return selectWithTimeout('resumes', {
         columns,
+        conditions: firmId ? ['firm_id = $1'] : [],
+        params: firmId ? [firmId] : [],
         orderBy: 'id ASC',
         limit,
         offset
@@ -268,7 +280,8 @@ export async function updateResumeTags(id, fields) {
  * @param {string} newName - New tag name
  * @returns {Promise<Object[]>} Array of updated records (with id)
  */
-export async function renameTag(dbField, oldName, newName) {
+export async function renameTag(dbField, oldName, newName, { firmId = null } = {}) {
+    const firmCondition = firmId ? 'AND firm_id = $4' : '';
     const updateQuery = `
         UPDATE resumes 
         SET ${dbField} = (
@@ -282,11 +295,14 @@ export async function renameTag(dbField, oldName, newName) {
         ),
         updated_at = CURRENT_TIMESTAMP
         WHERE ${dbField} @> $3::jsonb
+        ${firmCondition}
         RETURNING id
     `;
 
     return selectWithTimeout('resumes', {
         rawQuery: updateQuery,
-        rawParams: [oldName, newName, JSON.stringify([oldName])]
+        rawParams: firmId
+            ? [oldName, newName, JSON.stringify([oldName]), firmId]
+            : [oldName, newName, JSON.stringify([oldName])]
     });
 }

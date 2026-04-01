@@ -412,6 +412,7 @@ export interface UserAccount {
   phone?: string;
   firmId?: string;
   firmName?: string;
+  // Legacy alias kept for backward-compatible display fallbacks.
   firm?: string;
   customerId?: string;
   customerName?: string;

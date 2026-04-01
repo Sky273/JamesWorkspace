@@ -168,4 +168,15 @@ describe('aiModifyHandler', () => {
             failedRuns: 1
         }));
     });
+
+    it('should not expose raw provider errors on server failure', async () => {
+        mockCallBusinessChatCompletion.mockRejectedValueOnce(new Error('socket hang up to internal provider'));
+
+        const { req, res } = mockReqRes({ content: '<p>CV</p>', instructions: 'fix' });
+
+        await aiModifyHandler(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(500);
+        expect(res.json).toHaveBeenCalledWith({ error: 'Failed to modify resume with AI' });
+    });
 });

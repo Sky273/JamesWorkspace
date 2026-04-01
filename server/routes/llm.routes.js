@@ -27,6 +27,22 @@ import {
 
 const router = express.Router();
 
+function buildSanitizedProxyErrorResponse(provider, fallbackMessage, error) {
+    const providerName = String(provider || 'llm').toLowerCase();
+    const statusCode = error?.response?.status || 500;
+    const statusText = typeof error?.response?.statusText === 'string'
+        ? error.response.statusText.trim()
+        : '';
+    const stableMessage = statusCode >= 500
+        ? fallbackMessage
+        : `${providerName.toUpperCase()} provider request failed${statusText ? ` (${statusText})` : ''}.`;
+
+    return {
+        statusCode,
+        body: { error: stableMessage }
+    };
+}
+
 function applyResolvedModelParameters(req, settings, provider, model) {
     const { parameters } = resolveEffectiveModelParameters({
         settings,
@@ -224,7 +240,13 @@ async function proxyOpenAIRequest(req, res, model, metadata, { allowResponsesApi
     );
 
     if (response.status >= 400) {
-        return res.status(response.status).json(response.data);
+        const sanitized = buildSanitizedProxyErrorResponse('openai', 'Failed to proxy request to OpenAI.', {
+            response: {
+                status: response.status,
+                statusText: response.statusText
+            }
+        });
+        return res.status(sanitized.statusCode).json(sanitized.body);
     }
 
     const usage = response.data?.usage || {};
@@ -324,9 +346,8 @@ router.post('/openai', authenticateToken, llmLimiter, combinedRateLimit(30, 60 *
         return await proxyOpenAIRequest(req, res, model, metadata, { allowResponsesApi: true });
     } catch (error) {
         metrics.trackLLMRequest(buildLLMMetricLabel('openai', model || 'openai'), 0, false, 0, 0);
-        const statusCode = error.response ? error.response.status : 500;
-        const errorData = error.response ? error.response.data : { error: 'Failed to proxy request to OpenAI.' };
-        return res.status(statusCode).json(errorData);
+        const sanitized = buildSanitizedProxyErrorResponse('openai', 'Failed to proxy request to OpenAI.', error);
+        return res.status(sanitized.statusCode).json(sanitized.body);
     }
 });
 
@@ -353,9 +374,8 @@ router.post('/anthropic', authenticateToken, llmLimiter, combinedRateLimit(30, 6
         return await proxyAnthropicRequest(req, res, model, metadata, { useRetry: true });
     } catch (error) {
         metrics.trackLLMRequest(buildLLMMetricLabel('anthropic', model), 0, false, 0, 0);
-        const statusCode = error.response ? error.response.status : 500;
-        const errorData = error.response ? error.response.data : { error: `Failed to proxy request to Anthropic: ${error.message}` };
-        return res.status(statusCode).json(errorData);
+        const sanitized = buildSanitizedProxyErrorResponse('anthropic', 'Failed to proxy request to Anthropic.', error);
+        return res.status(sanitized.statusCode).json(sanitized.body);
     }
 });
 
@@ -366,6 +386,11 @@ router.post('/chat/completions', authenticateToken, llmLimiter, combinedRateLimi
 
     try {
         const settings = await getLLMSettings();
+        const validationError = validateMessageLengths(req.body.messages, flattenLlmTextContent, MAX_PROMPT_LENGTH);
+        if (validationError) {
+            return res.status(400).json({ error: validationError });
+        }
+
         ({ provider, model } = resolveCompatibleProviderRuntimeConfig({ settings, requestedModel: req.body.model || model, responseShape: 'openai' }));
         applyResolvedModelParameters(req, settings, provider, model);
 
@@ -377,9 +402,8 @@ router.post('/chat/completions', authenticateToken, llmLimiter, combinedRateLimi
         return await proxyOpenAIRequest(req, res, model, metadata, { allowResponsesApi: false });
     } catch (error) {
         metrics.trackLLMRequest(buildLLMMetricLabel('openai', req.body.model || model), 0, false, 0, 0);
-        const statusCode = error.response ? error.response.status : 500;
-        const errorData = error.response ? error.response.data : { error: 'Failed to call OpenAI API.' };
-        return res.status(statusCode).json(errorData);
+        const sanitized = buildSanitizedProxyErrorResponse('openai', 'Failed to call OpenAI API.', error);
+        return res.status(sanitized.statusCode).json(sanitized.body);
     }
 });
 
@@ -390,6 +414,11 @@ router.post('/messages', authenticateToken, llmLimiter, combinedRateLimit(30, 60
 
     try {
         const settings = await getLLMSettings();
+        const validationError = validateMessageLengths(req.body.messages, flattenLlmTextContent, MAX_PROMPT_LENGTH);
+        if (validationError) {
+            return res.status(400).json({ error: validationError });
+        }
+
         ({ provider, model } = resolveCompatibleProviderRuntimeConfig({ settings, requestedModel: req.body.model || model, responseShape: 'anthropic' }));
         applyResolvedModelParameters(req, settings, provider, model);
 
@@ -401,9 +430,8 @@ router.post('/messages', authenticateToken, llmLimiter, combinedRateLimit(30, 60
         return await proxyAnthropicRequest(req, res, model, metadata, { useRetry: true });
     } catch (error) {
         metrics.trackLLMRequest(buildLLMMetricLabel('anthropic', req.body.model || model), 0, false, 0, 0);
-        const statusCode = error.response ? error.response.status : 500;
-        const errorData = error.response ? error.response.data : { error: 'Failed to call Anthropic API.' };
-        return res.status(statusCode).json(errorData);
+        const sanitized = buildSanitizedProxyErrorResponse('anthropic', 'Failed to call Anthropic API.', error);
+        return res.status(sanitized.statusCode).json(sanitized.body);
     }
 });
 

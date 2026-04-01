@@ -90,9 +90,13 @@ vi.mock('../utils/logger.frontend', () => ({
   },
 }));
 
-vi.mock('../utils/tinymceSuggestionsPlugin', () => ({
-  removeSuggestionMarkers: removeSuggestionMarkersMock,
-}));
+vi.mock('../components/TiptapEditor', async () => {
+  const actual = await vi.importActual<typeof import('../components/TiptapEditor')>('../components/TiptapEditor');
+  return {
+    ...actual,
+    removeSuggestionMarkers: removeSuggestionMarkersMock,
+  };
+});
 
 vi.mock('../components/ui/Skeleton', () => ({
   SkeletonCard: () => <div data-testid="skeleton" />,

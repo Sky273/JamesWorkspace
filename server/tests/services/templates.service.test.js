@@ -13,6 +13,7 @@ import { query } from '../../config/database.js';
 import {
     listTemplates,
     getTemplateById,
+    getTemplateByIdWithAccess,
     getFirmIfExists,
     createTemplate,
     updateTemplate,
@@ -89,6 +90,17 @@ describe('Templates Service', () => {
             expect(result.templates).toHaveLength(100);
             expect(result.hasMore).toBe(true);
         });
+
+        it('should clamp invalid pagination values defensively', async () => {
+            query
+                .mockResolvedValueOnce({ rows: [{ total: '1' }] })
+                .mockResolvedValueOnce({ rows: [{ id: 't1' }] });
+
+            await listTemplates({ isAdmin: true, page: -5, limit: 1000 });
+
+            expect(query.mock.calls[1][1].at(-2)).toBe(101);
+            expect(query.mock.calls[1][1].at(-1)).toBe(0);
+        });
     });
 
     describe('getTemplateById', () => {
@@ -105,6 +117,25 @@ describe('Templates Service', () => {
             } catch (err) {
                 expect(err.statusCode).toBe(404);
             }
+        });
+    });
+
+    describe('getTemplateByIdWithAccess', () => {
+        it('should allow admin access', async () => {
+            query.mockResolvedValueOnce({ rows: [{ id: 't1', firm_id: 'f-other' }] });
+            const result = await getTemplateByIdWithAccess('t1', { isAdmin: true, userFirmId: null });
+            expect(result.id).toBe('t1');
+        });
+
+        it('should allow same-firm access', async () => {
+            query.mockResolvedValueOnce({ rows: [{ id: 't1', firm_id: 'f1' }] });
+            const result = await getTemplateByIdWithAccess('t1', { isAdmin: false, userFirmId: 'f1' });
+            expect(result.id).toBe('t1');
+        });
+
+        it('should reject cross-firm access', async () => {
+            query.mockResolvedValueOnce({ rows: [{ id: 't1', firm_id: 'f2' }] });
+            await expect(getTemplateByIdWithAccess('t1', { isAdmin: false, userFirmId: 'f1' })).rejects.toMatchObject({ statusCode: 404 });
         });
     });
 

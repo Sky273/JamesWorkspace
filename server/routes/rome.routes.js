@@ -23,6 +23,19 @@ import {
 
 const router = express.Router();
 
+function parsePositiveInteger(value, { field, maxValue = null } = {}) {
+    if (value === undefined) {
+        return undefined;
+    }
+
+    const parsedValue = Number.parseInt(value, 10);
+    if (!Number.isFinite(parsedValue) || parsedValue <= 0) {
+        throw new Error(`${field} must be a positive integer`);
+    }
+
+    return maxValue ? Math.min(parsedValue, maxValue) : parsedValue;
+}
+
 // ============================================
 // PUBLIC ENDPOINTS (authenticated)
 // ============================================
@@ -35,36 +48,44 @@ const router = express.Router();
 router.get('/metiers', authenticateToken, async (req, res) => {
     try {
         const { codeRome, grandDomaine, search, page, pageSize, includeDetails } = req.query;
-        const result = await getStoredMetiers({ 
-            codeRome, 
-            grandDomaine, 
-            search, 
-            page, 
-            pageSize,
+        const parsedPage = parsePositiveInteger(page, { field: 'page' });
+        const parsedPageSize = parsePositiveInteger(pageSize, { field: 'pageSize', maxValue: 100 });
+        const result = await getStoredMetiers({
+            codeRome,
+            grandDomaine,
+            search,
+            page: parsedPage,
+            pageSize: parsedPageSize,
             includeDetails: includeDetails === 'true' || includeDetails === true
         });
-        
-        // Handle both array and paginated response
+
         if (Array.isArray(result)) {
-            res.json({
+            return res.json({
                 success: true,
                 count: result.length,
                 data: result
             });
-        } else {
-            res.json({
-                success: true,
-                count: result.metiers.length,
-                totalCount: result.totalCount,
-                pagination: result.pagination,
-                data: result.metiers
+        }
+
+        return res.json({
+            success: true,
+            count: result.metiers.length,
+            totalCount: result.totalCount,
+            pagination: result.pagination,
+            data: result.metiers
+        });
+    } catch (error) {
+        if (error.message?.includes('must be a positive integer')) {
+            return res.status(400).json({
+                success: false,
+                error: error.message
             });
         }
-    } catch (error) {
+
         safeLog('error', 'Rome route: Failed to get métiers', { error: error.message });
-        res.status(500).json({ 
-            success: false, 
-            error: sanitizeErrorMessage(error, 'Failed to fetch métiers') 
+        return res.status(500).json({
+            success: false,
+            error: sanitizeErrorMessage(error, 'Failed to fetch métiers')
         });
     }
 });
@@ -82,9 +103,9 @@ router.get('/metiers/stats', authenticateToken, async (req, res) => {
         });
     } catch (error) {
         safeLog('error', 'Rome route: Failed to get métiers stats', { error: error.message });
-        res.status(500).json({ 
-            success: false, 
-            error: sanitizeErrorMessage(error, 'Failed to fetch métiers statistics') 
+        res.status(500).json({
+            success: false,
+            error: sanitizeErrorMessage(error, 'Failed to fetch métiers statistics')
         });
     }
 });
@@ -97,23 +118,23 @@ router.get('/metiers/:codeRome', authenticateToken, async (req, res) => {
     try {
         const { codeRome } = req.params;
         const metiers = await getStoredMetiers({ codeRome });
-        
+
         if (metiers.length === 0) {
-            return res.status(404).json({ 
-                success: false, 
-                error: 'Métier not found' 
+            return res.status(404).json({
+                success: false,
+                error: 'Métier not found'
             });
         }
-        
-        res.json({
+
+        return res.json({
             success: true,
             data: metiers[0]
         });
     } catch (error) {
         safeLog('error', 'Rome route: Failed to get métier', { error: error.message });
-        res.status(500).json({ 
-            success: false, 
-            error: sanitizeErrorMessage(error, 'Failed to fetch métier details') 
+        return res.status(500).json({
+            success: false,
+            error: sanitizeErrorMessage(error, 'Failed to fetch métier details')
         });
     }
 });
@@ -136,9 +157,9 @@ router.get('/api/grands-domaines', authenticateToken, async (req, res) => {
         });
     } catch (error) {
         safeLog('error', 'Rome route: Failed to get grands domaines', { error: error.message });
-        res.status(500).json({ 
-            success: false, 
-            error: sanitizeErrorMessage(error, 'Failed to fetch grands domaines') 
+        res.status(500).json({
+            success: false,
+            error: sanitizeErrorMessage(error, 'Failed to fetch grands domaines')
         });
     }
 });
@@ -158,9 +179,9 @@ router.get('/api/domaines', authenticateToken, async (req, res) => {
         });
     } catch (error) {
         safeLog('error', 'Rome route: Failed to get domaines', { error: error.message });
-        res.status(500).json({ 
-            success: false, 
-            error: sanitizeErrorMessage(error, 'Failed to fetch domaines') 
+        res.status(500).json({
+            success: false,
+            error: sanitizeErrorMessage(error, 'Failed to fetch domaines')
         });
     }
 });
@@ -179,9 +200,9 @@ router.get('/api/metiers', authenticateToken, async (req, res) => {
         });
     } catch (error) {
         safeLog('error', 'Rome route: Failed to get API métiers', { error: error.message });
-        res.status(500).json({ 
-            success: false, 
-            error: sanitizeErrorMessage(error, 'Failed to fetch métiers from API') 
+        res.status(500).json({
+            success: false,
+            error: sanitizeErrorMessage(error, 'Failed to fetch métiers from API')
         });
     }
 });
@@ -200,9 +221,9 @@ router.get('/api/metiers/it', authenticateToken, async (req, res) => {
         });
     } catch (error) {
         safeLog('error', 'Rome route: Failed to get IT métiers', { error: error.message });
-        res.status(500).json({ 
-            success: false, 
-            error: sanitizeErrorMessage(error, 'Failed to fetch IT métiers') 
+        res.status(500).json({
+            success: false,
+            error: sanitizeErrorMessage(error, 'Failed to fetch IT métiers')
         });
     }
 });
@@ -221,9 +242,9 @@ router.get('/api/metiers/:codeRome', authenticateToken, async (req, res) => {
         });
     } catch (error) {
         safeLog('error', 'Rome route: Failed to get API métier', { error: error.message });
-        res.status(500).json({ 
-            success: false, 
-            error: sanitizeErrorMessage(error, 'Failed to fetch métier from API') 
+        res.status(500).json({
+            success: false,
+            error: sanitizeErrorMessage(error, 'Failed to fetch métier from API')
         });
     }
 });
@@ -243,9 +264,9 @@ router.get('/api/metiers/:codeRome/competences', authenticateToken, async (req, 
         });
     } catch (error) {
         safeLog('error', 'Rome route: Failed to get compétences', { error: error.message });
-        res.status(500).json({ 
-            success: false, 
-            error: sanitizeErrorMessage(error, 'Failed to fetch compétences') 
+        res.status(500).json({
+            success: false,
+            error: sanitizeErrorMessage(error, 'Failed to fetch compétences')
         });
     }
 });
@@ -258,23 +279,23 @@ router.get('/api/search', authenticateToken, async (req, res) => {
     try {
         const { q } = req.query;
         if (!q) {
-            return res.status(400).json({ 
-                success: false, 
-                error: 'Search query (q) is required' 
+            return res.status(400).json({
+                success: false,
+                error: 'Search query (q) is required'
             });
         }
-        
+
         const metiers = await searchMetiers(q);
-        res.json({
+        return res.json({
             success: true,
             count: metiers.length,
             data: metiers
         });
     } catch (error) {
         safeLog('error', 'Rome route: Search failed', { error: error.message });
-        res.status(500).json({ 
-            success: false, 
-            error: sanitizeErrorMessage(error, 'Search failed') 
+        return res.status(500).json({
+            success: false,
+            error: sanitizeErrorMessage(error, 'Search failed')
         });
     }
 });
@@ -289,11 +310,10 @@ router.get('/api/search', authenticateToken, async (req, res) => {
  */
 router.post('/collect', authenticateToken, requireAdmin, async (req, res) => {
     try {
-        safeLog('info', 'Rome: IT métiers collection triggered (background)', { 
-            userId: req.user.id 
+        safeLog('info', 'Rome: IT métiers collection triggered (background)', {
+            userId: req.user.id
         });
 
-        // Create a tracked job
         const job = await createJob({
             firmId: null,
             userId: req.user.id,
@@ -302,14 +322,12 @@ router.post('/collect', authenticateToken, requireAdmin, async (req, res) => {
         });
         await updateJobStatus(job.id, JOB_STATUS.PROCESSING);
 
-        // Respond immediately with jobId
         res.json({
             success: true,
             message: 'IT métiers collection started in background',
             jobId: job.id
         });
 
-        // Run collection in background (non-blocking)
         setImmediate(async () => {
             try {
                 const summary = await collectITMetiers({
@@ -332,9 +350,9 @@ router.post('/collect', authenticateToken, requireAdmin, async (req, res) => {
         });
     } catch (error) {
         safeLog('error', 'Rome route: Failed to start collection', { error: error.message });
-        res.status(500).json({ 
-            success: false, 
-            error: sanitizeErrorMessage(error, 'Failed to start collection') 
+        res.status(500).json({
+            success: false,
+            error: sanitizeErrorMessage(error, 'Failed to start collection')
         });
     }
 });

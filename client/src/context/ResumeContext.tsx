@@ -9,7 +9,7 @@ import { useAuth } from './AuthContext';
 import { createAuthOptionsWithCsrf, fetchWithAuth, fetchWithCsrfRetry, getResponseErrorMessage } from '../utils/apiInterceptor';
 import logger from '../utils/logger.frontend';
 import { showCaughtError, getUserFriendlyMessage } from '../components/errorToast.helpers';
-import { applyResumeUpdate, normalizeResume, normalizeResumeList } from '../utils/resumeNormalization';
+import { normalizeResume, normalizeResumeList } from '../utils/resumeNormalization';
 import { createAndTrackJob } from '../utils/longRunningOperation';
 import { deriveResumeImprovementProcessingStep, waitForResumeImprovementJobCompletion } from '../utils/resumeImprovementJob';
 
@@ -17,6 +17,13 @@ import { Resume } from '../types/entities';
 import {
   FRONTEND_SINGLE_UPLOAD_JOB_TIMEOUT_MS,
 } from '../constants/llmTimeouts';
+import {
+  applyImprovedContentUpdate,
+  applyOriginalContentUpdate,
+  deriveUploadProcessingStep,
+  getResumeIdentifier,
+  SINGLE_UPLOAD_JOB_POLL_INTERVAL_MS,
+} from './ResumeContext.utils';
 
 export type { Resume };
 
@@ -54,18 +61,7 @@ interface ResumeProviderProps {
 
 const ResumeContext = createContext<ResumeContextType | undefined>(undefined);
 
-const SINGLE_UPLOAD_JOB_POLL_INTERVAL_MS = 2000;
 const SINGLE_UPLOAD_JOB_TIMEOUT_MS = FRONTEND_SINGLE_UPLOAD_JOB_TIMEOUT_MS;
-const getResumeIdentifier = (resume: Resume | null | undefined): string | undefined => {
-  if (!resume) return undefined;
-  const candidates = [resume.id, resume['ID']];
-  for (const candidate of candidates) {
-    if (typeof candidate === 'string' && candidate.trim().length > 0) {
-      return candidate;
-    }
-  }
-  return undefined;
-};
 
 export const useResume = (): ResumeContextType => {
   const context = useContext(ResumeContext);
@@ -151,22 +147,6 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
       }
     }
   }, [setResumes]);
-
-  const deriveUploadProcessingStep = (jobData: { status?: string; items?: Array<{ progress?: number; status?: string }> }): ProcessingStep => {
-    const item = jobData.items?.[0];
-    const progress = typeof item?.progress === 'number' ? item.progress : 0;
-
-    if (item?.status === 'success' || jobData.status === 'completed') {
-      return 'analyze';
-    }
-    if (progress >= 40 || item?.status === 'pending_name') {
-      return 'analyze';
-    }
-    if (progress >= 30 || item?.status === 'processing') {
-      return 'extract';
-    }
-    return 'upload';
-  };
 
   const fetchResumeById = useCallback(async (resumeId: string, signal: AbortSignal): Promise<Resume> => {
     const fetchOptions = await createAuthOptionsWithCsrf({ method: 'GET' });
@@ -416,10 +396,10 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
     const updatedData = normalizeResume(await response.json());
     const newVersion = updatedData['Current Version'] || 0;
 
-    setCurrentResumeState(prev => (prev ? applyResumeUpdate(prev, { 'Improved Text': content, 'Current Version': newVersion }) : null));
+    setCurrentResumeState(prev => (prev ? applyImprovedContentUpdate(prev, content, newVersion) : null));
     setResumes(prev => prev.map(resume => (
       resume.id === resumeId
-        ? applyResumeUpdate(resume, { 'Improved Text': content, 'Current Version': newVersion })
+        ? applyImprovedContentUpdate(resume, content, newVersion)
         : resume
     )));
 
@@ -437,9 +417,9 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
       throw new Error('Failed to update original content');
     }
 
-    setCurrentResumeState(prev => (prev ? applyResumeUpdate(prev, { 'Original Text': content }) : null));
+    setCurrentResumeState(prev => (prev ? applyOriginalContentUpdate(prev, content) : null));
     setResumes(prev => prev.map(resume => (
-      resume.id === resumeId ? applyResumeUpdate(resume, { 'Original Text': content }) : resume
+      resume.id === resumeId ? applyOriginalContentUpdate(resume, content) : resume
     )));
 
     return { success: true };

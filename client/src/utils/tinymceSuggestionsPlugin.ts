@@ -4,16 +4,16 @@
  */
 
 import { TinyMCEEditor } from '../types/tinymce.d';
+import {
+  getSuggestionsCount,
+  parseSuggestions as parseSuggestionsShared,
+  SUGGESTION_SECTION_LABELS,
+  SUGGESTION_SECTION_MARKERS,
+  SUGGESTION_SECTION_ORDER,
+  type SuggestionsBySection,
+} from '../components/TiptapEditor/suggestions.shared';
+import { removeSuggestionMarkers as removeSuggestionMarkersShared } from '../components/TiptapEditor/suggestionsHtml';
 import logger from './logger.frontend';
-
-interface SuggestionsBySection {
-  executiveSummary?: string[];
-  skills?: string[];
-  experiences?: string[];
-  education?: string[];
-  hobbiesLanguages?: string[];
-  atsOptimization?: string[];
-}
 
 interface SuggestionsPluginConfig {
   suggestions: SuggestionsBySection;
@@ -21,24 +21,8 @@ interface SuggestionsPluginConfig {
 }
 
 // Section markers to identify where to place suggestions (expanded for better detection)
-const SECTION_MARKERS: Record<string, string[]> = {
-  executiveSummary: ['profil', 'resume', 'summary', 'profile', 'presentation', 'introduction', 'objectif', 'sommaire', 'a propos', 'about'],
-  skills: ['competences', 'skills', 'technologies', 'outils', 'expertise', 'savoir-faire', 'competences techniques', 'technical skills', 'stack technique', 'environnement technique'],
-  experiences: ['experience', 'parcours', 'missions', 'postes', 'emplois', 'experiences professionnelles', 'professional experience', 'work experience', 'historique'],
-  education: ['formation', 'education', 'diplomes', 'etudes', 'certifications', 'academique', 'cursus', 'scolarite', 'diplome'],
-  hobbiesLanguages: ['langues', 'languages', 'loisirs', 'hobbies', "centres d'interet", 'interests', 'activites', 'divers', 'autres'],
-  atsOptimization: [] // Global suggestions, shown in panel at top
-};
-
-// Section labels for display in the global panel
-const SECTION_LABELS: Record<string, string> = {
-  executiveSummary: 'Resume executif',
-  skills: 'Competences',
-  experiences: 'Experience',
-  education: 'Formation',
-  hobbiesLanguages: 'Langues & Loisirs',
-  atsOptimization: 'Optimisation ATS'
-};
+const SECTION_MARKERS = SUGGESTION_SECTION_MARKERS;
+const SECTION_LABELS = SUGGESTION_SECTION_LABELS;
 
 // CSS styles for suggestion markers
 const SUGGESTION_STYLES = `
@@ -219,7 +203,7 @@ function insertSuggestionsIntoContent(content: string, suggestions: SuggestionsB
   logger.info('[SuggestionsPlugin] Suggestions to insert:', suggestions);
   
   // Count total suggestions
-  const totalSuggestions = Object.values(suggestions).flat().filter(Boolean).length;
+  const totalSuggestions = getSuggestionsCount(suggestions);
   
   if (totalSuggestions === 0) {
     logger.info('[SuggestionsPlugin] No suggestions to display');
@@ -297,7 +281,10 @@ function insertSuggestionsIntoContent(content: string, suggestions: SuggestionsB
  * Create a suggestions panel to display at the top of the content
  * Displays suggestions grouped by section with improved styling
  */
-function _createSuggestionsPanel(suggestions: string[], sectionKey?: string): string {
+function _createSuggestionsPanel(
+  suggestions: string[],
+  sectionKey?: keyof SuggestionsBySection,
+): string {
   // Display ALL suggestions
   const items = suggestions.map((s, index) => 
     `<li style="display: flex; align-items: flex-start; gap: 10px; padding: 8px 12px; margin-bottom: 6px; background: rgba(255, 255, 255, 0.6); border-radius: 8px; color: #78350F; font-size: 13px; line-height: 1.4;">
@@ -306,7 +293,9 @@ function _createSuggestionsPanel(suggestions: string[], sectionKey?: string): st
     </li>`
   ).join('');
   
-  const title = sectionKey ? SECTION_LABELS[sectionKey] || 'Suggestions' : "Suggestions d'amélioration";
+  const title = sectionKey
+    ? SECTION_LABELS[sectionKey as keyof typeof SECTION_LABELS] || 'Suggestions'
+    : "Suggestions d'amélioration";
   
   return `
     <div class="suggestion-panel" style="background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%); border: 1px solid #F59E0B; border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15);">
@@ -328,9 +317,7 @@ function createGroupedSuggestionsPanel(suggestions: SuggestionsBySection): strin
   let totalCount = 0;
   
   // Order of sections to display
-  const sectionOrder: (keyof SuggestionsBySection)[] = [
-    'executiveSummary', 'skills', 'experiences', 'education', 'hobbiesLanguages', 'atsOptimization'
-  ];
+  const sectionOrder = SUGGESTION_SECTION_ORDER;
   
   for (const sectionKey of sectionOrder) {
     const sectionSuggestions = suggestions[sectionKey];
@@ -369,51 +356,6 @@ function createGroupedSuggestionsPanel(suggestions: SuggestionsBySection): strin
       ${sections.join('')}
     </div>
   `;
-}
-
-/**
- * Remove all suggestion markers from content
- * Exported for use when saving content without suggestions
- */
-export function removeSuggestionMarkers(content: string): string {
-  let cleaned = content;
-  
-  // Step 1: Remove suggestion badges (the orange pill with count)
-  // These are spans with the BADGE_STYLE containing #F59E0B or #D97706
-  // Pattern matches: <span style="...#F59E0B...">&#128161; N</span>
-  cleaned = cleaned.replace(/<span[^>]*style="[^"]*(?:#F59E0B|#D97706)[^"]*"[^>]*>[^<]*<\/span>/g, '');
-  
-  // Step 2: Remove any span with lightbulb emoji (with or without number)
-  cleaned = cleaned.replace(/<span[^>]*>[^<]*(&#128161;|\u{1F4A1})[^<]*<\/span>/gu, '');
-  
-  // Step 3: Remove any span with title attribute containing suggestion text (tooltip spans)
-  cleaned = cleaned.replace(/<span[^>]*title="[^"]*"[^>]*>(&#128161;|\u{1F4A1})[^<]*<\/span>/gu, '');
-  
-  // Step 4: Remove suggestion-highlight wrapper divs but KEEP their inner content
-  // Use a function to properly handle nested content
-  let prevCleaned = '';
-  while (prevCleaned !== cleaned) {
-    prevCleaned = cleaned;
-    // Match highlight divs and extract inner content
-    cleaned = cleaned.replace(/<div[^>]*(?:class="suggestion-highlight"|style="[^"]*border-left:\s*4px\s+solid\s+#F59E0B)[^>]*>([\s\S]*?)<\/div>/g, '$1');
-  }
-  
-  // Step 5: Remove suggestion panels (the yellow boxes at top)
-  // These contain class="suggestion-panel" or the gradient background #FEF3C7
-  cleaned = cleaned.replace(/<div[^>]*class="suggestion-panel"[^>]*>[\s\S]*?<\/ul>\s*<\/div>/g, '');
-  cleaned = cleaned.replace(/<div[^>]*style="[^"]*background:\s*linear-gradient\(135deg,\s*#FEF3C7[^"]*"[^>]*>[\s\S]*?<\/ul>\s*<\/div>/g, '');
-  
-  // Step 6: Clean up any orphaned lightbulb emojis (standalone or in spans)
-  cleaned = cleaned.replace(/(?:&#128161;|\u{1F4A1})\s*\d*/gu, '');
-  
-  // Step 7: Remove empty spans and divs that might be left over
-  cleaned = cleaned.replace(/<span[^>]*>\s*<\/span>/g, '');
-  cleaned = cleaned.replace(/<div[^>]*>\s*<\/div>/g, '');
-  
-  // Step 8: Clean up any double spaces or extra whitespace
-  cleaned = cleaned.replace(/\s{2,}/g, ' ');
-  
-  return cleaned;
 }
 
 /**
@@ -476,7 +418,7 @@ export function registerSuggestionsPlugin(
       } else {
         // Restore original content (without markers)
         const currentContent = editor.getContent();
-        const cleanContent = removeSuggestionMarkers(currentContent);
+        const cleanContent = removeSuggestionMarkersShared(currentContent);
         editor.setContent(cleanContent);
       }
       
@@ -511,48 +453,8 @@ export function registerSuggestionsPlugin(
   });
 }
 
-/**
- * Parse suggestions from JSON string or object
- * Handles various formats from the analysis API
- */
-export function parseSuggestions(suggestionsJson: string | object | undefined): SuggestionsBySection {
-  if (!suggestionsJson) {
-    logger.info('[SuggestionsPlugin] No suggestions provided');
-    return {};
-  }
-  
-  try {
-    let parsed: unknown;
-    
-    if (typeof suggestionsJson === 'string') {
-      // Try to parse JSON string
-      parsed = JSON.parse(suggestionsJson);
-    } else {
-      // Already an object
-      parsed = suggestionsJson;
-    }
-    
-    if (typeof parsed === 'object' && parsed !== null) {
-      const suggestions = parsed as SuggestionsBySection;
-      
-      // Log what we found
-      const sectionCounts = Object.entries(suggestions)
-        .filter(([, v]) => Array.isArray(v) && v.length > 0)
-        .map(([k, v]) => `${k}: ${(v as string[]).length}`);
-      
-      logger.info('[SuggestionsPlugin] Parsed suggestions:', {
-        sections: sectionCounts,
-        total: Object.values(suggestions).flat().filter(Boolean).length
-      });
-      
-      return suggestions;
-    }
-  } catch (err) {
-    logger.warn('[SuggestionsPlugin] Failed to parse suggestions:', err);
-  }
-  
-  return {};
-}
-
+export {
+  parseSuggestionsShared as parseSuggestions,
+  removeSuggestionMarkersShared as removeSuggestionMarkers,
+};
 export type { SuggestionsBySection, SuggestionsPluginConfig };
-

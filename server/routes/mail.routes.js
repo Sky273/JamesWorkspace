@@ -19,6 +19,7 @@ const router = express.Router();
 const oauthStates = new Map();
 const STATE_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
 const MAX_OAUTH_STATES = 100; // Prevent memory exhaustion from abuse
+const MAIL_CALLBACK_ERROR_CODE = 'mail_callback_failed';
 
 /**
  * Clean up expired OAuth states
@@ -38,7 +39,16 @@ function cleanupExpiredStates() {
 }
 
 // Cleanup every 5 minutes
-let mailStatesCleanupInterval = setInterval(cleanupExpiredStates, 5 * 60 * 1000);
+let mailStatesCleanupInterval = null;
+
+export function startMailStatesCleanup(intervalMs = 5 * 60 * 1000) {
+    if (mailStatesCleanupInterval) {
+        return mailStatesCleanupInterval;
+    }
+
+    mailStatesCleanupInterval = setInterval(cleanupExpiredStates, intervalMs);
+    return mailStatesCleanupInterval;
+}
 
 /**
  * Destroy mail states cleanup interval (for graceful shutdown)
@@ -106,7 +116,7 @@ router.get('/callback/gmail', async (req, res) => {
         // Check for OAuth error
         if (oauthError) {
             safeLog('warn', 'Gmail OAuth error', { error: oauthError });
-            return res.redirect(`${frontendUrl}/resumes?mail_error=${encodeURIComponent(oauthError)}`);
+            return res.redirect(`${frontendUrl}/resumes?mail_error=${MAIL_CALLBACK_ERROR_CODE}`);
         }
         
         // Validate state
@@ -133,7 +143,7 @@ router.get('/callback/gmail', async (req, res) => {
     } catch (error) {
         safeLog('error', 'Gmail OAuth callback error', { error: error.message });
         const frontendUrl = process.env.FRONTEND_URL || process.env.VITE_APP_URL || 'http://localhost:5173';
-        return res.redirect(`${frontendUrl}/resumes?mail_error=${encodeURIComponent(error.message)}`);
+        return res.redirect(`${frontendUrl}/resumes?mail_error=${MAIL_CALLBACK_ERROR_CODE}`);
     }
 });
 

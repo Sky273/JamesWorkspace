@@ -8,11 +8,11 @@ import express from 'express';
 import request from 'supertest';
 
 // Mock batchExport service
-const mockGetTemplateById = vi.fn();
-const mockGetResumeById = vi.fn();
+const mockGetTemplateByIdForExport = vi.fn();
+const mockGetResumeByIdForExport = vi.fn();
 vi.mock('../../services/batchExport.service.js', () => ({
-    getTemplateById: (...args) => mockGetTemplateById(...args),
-    getResumeById: (...args) => mockGetResumeById(...args)
+    getTemplateByIdForExport: (...args) => mockGetTemplateByIdForExport(...args),
+    getResumeByIdForExport: (...args) => mockGetResumeByIdForExport(...args)
 }));
 
 // Mock JSZip
@@ -46,12 +46,22 @@ vi.mock('../../utils/validation.js', () => ({
 vi.mock('../../middleware/auth.middleware.js', () => ({
     authenticateToken: (req, res, next) => {
         if (req.headers.authorization === 'Bearer valid-token') {
-            req.user = { id: 'user-123', role: 'user' };
+            req.user = {
+                id: 'user-123',
+                role: req.headers['x-test-role'] || 'user',
+                firm_id: '00000000-0000-0000-0000-000000000010'
+            };
             next();
         } else {
             res.status(401).json({ error: 'Unauthorized' });
         }
-    }
+    },
+    isUserAdmin: (req) => req.user?.role === 'admin'
+}));
+
+const mockGetUserFirmId = vi.fn();
+vi.mock('../../utils/firmHelpers.js', () => ({
+    getUserFirmId: (...args) => mockGetUserFirmId(...args)
 }));
 
 // Mock global fetch
@@ -76,6 +86,7 @@ describe('Batch Export Routes', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        mockGetUserFirmId.mockResolvedValue('00000000-0000-0000-0000-000000000010');
         app = createTestApp();
     });
 
@@ -106,8 +117,8 @@ describe('Batch Export Routes', () => {
 
         it('should accept snake_case batch export payload', async () => {
             mockFetch.mockResolvedValueOnce({ ok: true });
-            mockGetTemplateById.mockResolvedValueOnce({ id: TEMPLATE_UUID, template_content: '<div></div>' });
-            mockGetResumeById.mockResolvedValueOnce(null);
+            mockGetTemplateByIdForExport.mockResolvedValueOnce({ id: TEMPLATE_UUID, template_content: '<div></div>' });
+            mockGetResumeByIdForExport.mockResolvedValueOnce(null);
 
             const res = await request(app)
                 .post('/api/batch-export')
@@ -153,7 +164,7 @@ describe('Batch Export Routes', () => {
 
         it('should return 404 if template not found', async () => {
             mockFetch.mockResolvedValueOnce({ ok: true }); // health check
-            mockGetTemplateById.mockResolvedValueOnce(null); // template not found
+            mockGetTemplateByIdForExport.mockResolvedValueOnce(null); // template not found
 
             const res = await request(app)
                 .post('/api/batch-export')
@@ -168,12 +179,18 @@ describe('Batch Export Routes', () => {
             // Health check
             mockFetch.mockResolvedValueOnce({ ok: true });
             // Template
-            mockGetTemplateById.mockResolvedValueOnce(
+            mockGetTemplateByIdForExport.mockResolvedValueOnce(
                 { id: TEMPLATE_UUID, template_content: '<div>-content-</div>', header_content: '', footer_content: '', stylesheet: '', footer_height: 25 }
             );
             // Resume
-            mockGetResumeById.mockResolvedValueOnce(
-                { id: RESUME_UUID, name: 'John Doe', title: 'Dev', improved_text: 'CV content' }
+            mockGetResumeByIdForExport.mockResolvedValueOnce(
+                {
+                    id: RESUME_UUID,
+                    name: 'John Doe',
+                    title: 'Dev',
+                    improved_text: 'CV content',
+                    firm_id: '00000000-0000-0000-0000-000000000010'
+                }
             );
             // PDF generation
             mockFetch.mockResolvedValueOnce({
@@ -197,11 +214,11 @@ describe('Batch Export Routes', () => {
 
         it('should return 500 if no files generated', async () => {
             mockFetch.mockResolvedValueOnce({ ok: true }); // health
-            mockGetTemplateById.mockResolvedValueOnce(
+            mockGetTemplateByIdForExport.mockResolvedValueOnce(
                 { id: TEMPLATE_UUID, template_content: '<div></div>' }
             );
             // Resume not found
-            mockGetResumeById.mockResolvedValueOnce(null);
+            mockGetResumeByIdForExport.mockResolvedValueOnce(null);
             // ZIP has no files - mockFile is never called, so files is empty
 
             const res = await request(app)
@@ -215,12 +232,18 @@ describe('Batch Export Routes', () => {
 
         it('should handle PDF generation failure gracefully', async () => {
             mockFetch.mockResolvedValueOnce({ ok: true }); // health
-            mockGetTemplateById.mockResolvedValueOnce(
+            mockGetTemplateByIdForExport.mockResolvedValueOnce(
                 { id: TEMPLATE_UUID, template_content: '<div>-content-</div>' }
             );
             // Resume found
-            mockGetResumeById.mockResolvedValueOnce(
-                { id: RESUME_UUID, name: 'John', title: 'Dev', improved_text: 'text' }
+            mockGetResumeByIdForExport.mockResolvedValueOnce(
+                {
+                    id: RESUME_UUID,
+                    name: 'John',
+                    title: 'Dev',
+                    improved_text: 'text',
+                    firm_id: '00000000-0000-0000-0000-000000000010'
+                }
             );
             // PDF generation fails
             mockFetch.mockResolvedValueOnce({
@@ -236,6 +259,34 @@ describe('Batch Export Routes', () => {
 
             // No files generated -> 500
             expect(res.status).toBe(500);
+        });
+
+        it('should pass firm access context to export lookups', async () => {
+            mockFetch.mockResolvedValueOnce({ ok: true });
+            mockGetTemplateByIdForExport.mockResolvedValueOnce(null);
+
+            await request(app)
+                .post('/api/batch-export')
+                .set(AUTH)
+                .send({ resumeIds: [RESUME_UUID], templateId: TEMPLATE_UUID });
+
+            expect(mockGetTemplateByIdForExport).toHaveBeenCalledWith(TEMPLATE_UUID, {
+                isAdmin: false,
+                userFirmId: '00000000-0000-0000-0000-000000000010'
+            });
+        });
+
+        it('should not leak PDF server URL when unreachable', async () => {
+            mockFetch.mockRejectedValueOnce(new Error('Connection refused'));
+
+            const res = await request(app)
+                .post('/api/batch-export')
+                .set(AUTH)
+                .send({ resumeIds: [RESUME_UUID], templateId: TEMPLATE_UUID });
+
+            expect(res.status).toBe(503);
+            expect(JSON.stringify(res.body)).not.toContain('127.0.0.1:3002');
+            expect(res.body.details).toBeUndefined();
         });
     });
 });

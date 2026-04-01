@@ -212,7 +212,9 @@ If the user's instructions are not related to resume editing, refuse politely an
     } catch (error) {
         safeLog('error', 'Error in AI modify', { error: error.message });
         const statusCode = error.response?.status || 500;
-        const errorMessage = error.response?.data?.error || error.message || 'Failed to modify resume with AI';
+        const errorMessage = statusCode >= 500
+            ? 'Failed to modify resume with AI'
+            : (error.response?.data?.error || 'Failed to modify resume with AI');
         res.status(statusCode).json({ error: errorMessage });
     }
 }

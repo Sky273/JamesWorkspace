@@ -1,5 +1,6 @@
 import fs from 'fs/promises';
 import * as missionsService from '../../services/missions.service.js';
+import { getResumeForAccessCheck } from '../../services/resumes.service.js';
 import {
     JOB_STATUS,
     createJob,
@@ -50,6 +51,48 @@ async function readFileHeader(filePath, bytesToRead) {
     } finally {
         await handle.close();
     }
+}
+
+async function ensureResumeIdsAccess(resumeIds, firmId, userContext, res) {
+    for (const resumeId of resumeIds) {
+        const resume = await getResumeForAccessCheck(resumeId);
+        if (!resume) {
+            res.status(404).json({ error: `CV introuvable: ${resumeId}` });
+            return false;
+        }
+
+        if (!userContext.isAdmin && resume.firm_id !== userContext.userFirmId) {
+            res.status(403).json({ error: 'Accès non autorisé' });
+            return false;
+        }
+
+        if (firmId && resume.firm_id !== firmId) {
+            res.status(400).json({ error: `Le CV ${resumeId} n'appartient pas à la firme ciblée` });
+            return false;
+        }
+    }
+
+    return true;
+}
+
+async function ensureMissionAccess(missionId, firmId, userContext, res) {
+    const missionRecord = await missionsService.findMission(missionId);
+    if (!missionRecord) {
+        res.status(404).json({ error: 'Mission non trouvée' });
+        return null;
+    }
+
+    const missionFirmId = missionRecord.firm_id || missionRecord.firm;
+    if (!ensureOwnerAccess(missionFirmId, userContext, res)) {
+        return null;
+    }
+
+    if (firmId && missionFirmId !== firmId) {
+        res.status(400).json({ error: 'La mission n’appartient pas à la firme ciblée' });
+        return null;
+    }
+
+    return missionRecord;
 }
 
 export async function createImportJob(req, res) {
@@ -168,7 +211,7 @@ export async function createImportJob(req, res) {
     } catch (error) {
         await cleanupUploadedFiles(req.files);
         safeLog('error', 'Failed to create batch job', { error: error.message });
-        res.status(500).json({ error: error.message || 'Erreur lors de la création du job' });
+        res.status(500).json({ error: 'Erreur lors de la création du job' });
     }
 }
 
@@ -185,6 +228,17 @@ async function createResumeIdsJob(req, res, { jobType, optionsBuilder, logLabel 
         const firmId = resolveFirmId(userContext, normalizedPayload);
         if (!ensureFirmId(firmId, res)) {
             return;
+        }
+
+        if (!await ensureResumeIdsAccess(resumeIds, firmId, userContext, res)) {
+            return;
+        }
+
+        if (normalizedPayload.missionId) {
+            const missionRecord = await ensureMissionAccess(normalizedPayload.missionId, firmId, userContext, res);
+            if (!missionRecord) {
+                return;
+            }
         }
 
         const job = await createJob({
@@ -206,7 +260,7 @@ async function createResumeIdsJob(req, res, { jobType, optionsBuilder, logLabel 
         res.status(201).json(updatedJob);
     } catch (error) {
         safeLog('error', `Failed to create ${jobType} job`, { error: error.message });
-        res.status(500).json({ error: error.message || 'Erreur lors de la création du job' });
+        res.status(500).json({ error: 'Erreur lors de la création du job' });
     }
 }
 
@@ -255,6 +309,11 @@ export async function createProfileSearchJob(req, res) {
             return;
         }
 
+        const accessibleMission = await ensureMissionAccess(missionId, firmId, userContext, res);
+        if (!accessibleMission) {
+            return;
+        }
+
         const missionRecord = await missionsService.findMission(missionId);
         if (!missionRecord) {
             return res.status(404).json({ error: 'Mission non trouvée' });
@@ -295,7 +354,7 @@ export async function createProfileSearchJob(req, res) {
         res.status(201).json(updatedJob);
     } catch (error) {
         safeLog('error', 'Failed to create profile search job', { error: error.message });
-        res.status(500).json({ error: error.message || 'Erreur lors de la création du job' });
+        res.status(500).json({ error: 'Erreur lors de la création du job' });
     }
 }
 
@@ -308,6 +367,15 @@ export async function createProfileAnalysisJob(req, res) {
         const firmId = resolveFirmId(userContext, normalizedPayload);
 
         if (!ensureFirmId(firmId, res)) {
+            return;
+        }
+
+        if (!await ensureResumeIdsAccess([resumeId], firmId, userContext, res)) {
+            return;
+        }
+
+        const accessibleMission = await ensureMissionAccess(missionId, firmId, userContext, res);
+        if (!accessibleMission) {
             return;
         }
 
@@ -345,7 +413,7 @@ export async function createProfileAnalysisJob(req, res) {
         res.status(201).json(updatedJob);
     } catch (error) {
         safeLog('error', 'Failed to create profile analysis job', { error: error.message });
-        res.status(500).json({ error: error.message || 'Erreur lors de la création du job' });
+        res.status(500).json({ error: 'Erreur lors de la création du job' });
     }
 }
 
@@ -431,6 +499,6 @@ export async function createDealExportJob(req, res) {
         });
     } catch (error) {
         safeLog('error', 'Failed to create deal export job', { error: error.message });
-        res.status(500).json({ error: error.message || "Erreur lors de la création du job d'export" });
+        res.status(500).json({ error: "Erreur lors de la création du job d'export" });
     }
 }

@@ -8,11 +8,31 @@ import { authenticateToken } from '../middleware/auth.middleware.js';
 import { validateBody, validateParams, createCommentSchema, updateCommentSchema } from '../utils/validation.js';
 import resumeCommentsService from '../services/resumeComments.service.js';
 import { safeLog } from '../utils/logger.backend.js';
+import { getResumeForAccessCheck } from '../services/resumes.service.js';
+import { getUserFirmId } from '../utils/firmHelpers.js';
 
 const router = Router();
 
 // Ensure JSON body parsing for this router
 router.use(json());
+
+async function assertResumeAccess(req, resumeId) {
+    const resume = await getResumeForAccessCheck(resumeId);
+    if (!resume) {
+        return { status: 404, body: { success: false, error: 'Resume not found' } };
+    }
+
+    if (req.user?.role === 'admin') {
+        return { resume };
+    }
+
+    const userFirmId = await getUserFirmId(req);
+    if (!userFirmId || resume.firm_id !== userFirmId) {
+        return { status: 403, body: { success: false, error: 'Forbidden' } };
+    }
+
+    return { resume };
+}
 
 /**
  * GET /api/resumes/:resumeId/comments
@@ -22,6 +42,10 @@ router.get('/:resumeId/comments', authenticateToken, validateParams('resumeId'),
     try {
         const { resumeId } = req.params;
         const userId = req.user?.id;
+        const access = await assertResumeAccess(req, resumeId);
+        if (access.status) {
+            return res.status(access.status).json(access.body);
+        }
 
         const comments = await resumeCommentsService.getComments(resumeId, userId);
         
@@ -52,6 +76,10 @@ router.post('/:resumeId/comments', authenticateToken, validateParams('resumeId')
         const { content, isPrivate } = req.body;
         const userId = req.user?.id;
         const userName = req.user?.name || req.user?.email || 'Unknown';
+        const access = await assertResumeAccess(req, resumeId);
+        if (access.status) {
+            return res.status(access.status).json(access.body);
+        }
 
         if (!content?.trim()) {
             return res.status(400).json({
@@ -90,9 +118,21 @@ router.post('/:resumeId/comments', authenticateToken, validateParams('resumeId')
  */
 router.put('/:resumeId/comments/:commentId', authenticateToken, validateParams('resumeId', 'commentId'), validateBody(updateCommentSchema), async (req, res) => {
     try {
-        const { commentId } = req.params;
+        const { resumeId, commentId } = req.params;
         const { content } = req.body;
         const userId = req.user?.id;
+        const access = await assertResumeAccess(req, resumeId);
+        if (access.status) {
+            return res.status(access.status).json(access.body);
+        }
+
+        const comment = await resumeCommentsService.getCommentForAccessCheck(commentId);
+        if (!comment || comment.resume_id !== resumeId) {
+            return res.status(404).json({
+                success: false,
+                error: 'Comment not found'
+            });
+        }
 
         if (!content?.trim()) {
             return res.status(400).json({
@@ -101,9 +141,9 @@ router.put('/:resumeId/comments/:commentId', authenticateToken, validateParams('
             });
         }
 
-        const comment = await resumeCommentsService.updateComment(commentId, userId, content);
+        const updatedComment = await resumeCommentsService.updateComment(commentId, resumeId, userId, content);
 
-        if (!comment) {
+        if (!updatedComment) {
             return res.status(404).json({
                 success: false,
                 error: 'Comment not found or you are not the owner'
@@ -112,7 +152,7 @@ router.put('/:resumeId/comments/:commentId', authenticateToken, validateParams('
 
         res.json({
             success: true,
-            comment
+            comment: updatedComment
         });
     } catch (error) {
         safeLog('error', 'Failed to update comment', {
@@ -132,11 +172,23 @@ router.put('/:resumeId/comments/:commentId', authenticateToken, validateParams('
  */
 router.delete('/:resumeId/comments/:commentId', authenticateToken, validateParams('resumeId', 'commentId'), async (req, res) => {
     try {
-        const { commentId } = req.params;
+        const { resumeId, commentId } = req.params;
         const userId = req.user?.id;
         const isAdmin = req.user?.role === 'admin';
+        const access = await assertResumeAccess(req, resumeId);
+        if (access.status) {
+            return res.status(access.status).json(access.body);
+        }
 
-        const deleted = await resumeCommentsService.deleteComment(commentId, userId, isAdmin);
+        const comment = await resumeCommentsService.getCommentForAccessCheck(commentId);
+        if (!comment || comment.resume_id !== resumeId) {
+            return res.status(404).json({
+                success: false,
+                error: 'Comment not found or you are not authorized to delete it'
+            });
+        }
+
+        const deleted = await resumeCommentsService.deleteComment(commentId, resumeId, userId, isAdmin);
 
         if (!deleted) {
             return res.status(404).json({
@@ -169,6 +221,10 @@ router.get('/:resumeId/comments/count', authenticateToken, validateParams('resum
     try {
         const { resumeId } = req.params;
         const userId = req.user?.id;
+        const access = await assertResumeAccess(req, resumeId);
+        if (access.status) {
+            return res.status(access.status).json(access.body);
+        }
 
         const count = await resumeCommentsService.getCommentCount(resumeId, userId);
 

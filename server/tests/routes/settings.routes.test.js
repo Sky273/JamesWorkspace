@@ -408,6 +408,11 @@ describe('Settings Routes', () => {
 
     describe('GET /api/settings/ollama/models', () => {
         it('returns remote ollama models for admins', async () => {
+            mockGetLLMSettings.mockResolvedValue({
+                llmProvider: 'ollama',
+                ollamaBaseUrl: 'http://ollama.local:11434'
+            });
+
             const res = await request(app)
                 .get('/api/settings/ollama/models?baseUrl=http://ollama.local:11434&model=llama3.2:latest')
                 .set(authHeader);
@@ -415,6 +420,21 @@ describe('Settings Routes', () => {
             expect(res.status).toBe(200);
             expect(res.body.models).toEqual([{ value: 'llama3.2:latest', label: 'llama3.2:latest' }]);
             expect(res.body.selectedModelExists).toBe(true);
+        });
+
+        it('rejects arbitrary ollama discovery URLs', async () => {
+            mockGetLLMSettings.mockResolvedValue({
+                llmProvider: 'ollama',
+                ollamaBaseUrl: 'http://ollama.local:11434'
+            });
+
+            const res = await request(app)
+                .get('/api/settings/ollama/models?baseUrl=http://169.254.169.254:11434')
+                .set(authHeader);
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toBe('Ollama model discovery is limited to the configured Ollama URL.');
+            expect(discoverOllamaModels).not.toHaveBeenCalled();
         });
     });
 

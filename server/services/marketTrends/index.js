@@ -42,6 +42,7 @@ export {
     getTrendsSummary,
     getTrendFilterOptions,
     loadTrendsCache,
+    startTrendsCacheCleanup,
     invalidateTrendsCache,
     cleanupTrendsCache,
     destroyTrendsCache,

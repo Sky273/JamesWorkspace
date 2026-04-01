@@ -24,6 +24,7 @@ vi.mock('../../config/constants.js', () => ({
 // Mock templates service
 const mockListTemplates = vi.fn();
 const mockGetTemplateById = vi.fn();
+const mockGetTemplateByIdWithAccess = vi.fn();
 const mockGetFirmIfExists = vi.fn();
 const mockCreateTemplate = vi.fn();
 const mockUpdateTemplate = vi.fn();
@@ -31,6 +32,7 @@ const mockDeleteTemplate = vi.fn();
 vi.mock('../../services/templates.service.js', () => ({
     listTemplates: (...args) => mockListTemplates(...args),
     getTemplateById: (...args) => mockGetTemplateById(...args),
+    getTemplateByIdWithAccess: (...args) => mockGetTemplateByIdWithAccess(...args),
     getFirmIfExists: (...args) => mockGetFirmIfExists(...args),
     createTemplate: (...args) => mockCreateTemplate(...args),
     updateTemplate: (...args) => mockUpdateTemplate(...args),
@@ -234,6 +236,28 @@ describe('Templates CRUD Routes', () => {
             expect(res.body.pagination.limit).toBe(10);
         });
 
+        it('should reject invalid pagination params', async () => {
+            const res = await request(app)
+                .get('/api/templates?page=0&limit=-1')
+                .set('Authorization', 'Bearer valid-token');
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toBe('Invalid pagination parameters');
+        });
+
+        it('should reject non-admin users without firm association', async () => {
+            mockGetUserFirmId.mockResolvedValueOnce(null);
+
+            const res = await request(app)
+                .get('/api/templates')
+                .set('Authorization', 'Bearer valid-token')
+                .set('x-test-role', 'user');
+
+            expect(res.status).toBe(403);
+            expect(res.body.error).toBe('No firm association');
+            expect(mockListTemplates).not.toHaveBeenCalled();
+        });
+
         it('should handle hasMore pagination correctly', async () => {
             const rows = Array.from({ length: 10 }, (_, i) => ({
                 ...sampleTemplateRow, id: `tpl-${i}`
@@ -276,7 +300,7 @@ describe('Templates CRUD Routes', () => {
         });
 
         it('should return template by ID', async () => {
-            mockGetTemplateById.mockResolvedValueOnce(sampleTemplateRow);
+            mockGetTemplateByIdWithAccess.mockResolvedValueOnce(sampleTemplateRow);
 
             const res = await request(app)
                 .get('/api/templates/tpl-123')
@@ -291,7 +315,7 @@ describe('Templates CRUD Routes', () => {
         it('should return 404 for non-existent template', async () => {
             const notFoundError = new Error('Not found');
             notFoundError.statusCode = 404;
-            mockGetTemplateById.mockRejectedValueOnce(notFoundError);
+            mockGetTemplateByIdWithAccess.mockRejectedValueOnce(notFoundError);
 
             const res = await request(app)
                 .get('/api/templates/nonexistent')
@@ -302,7 +326,7 @@ describe('Templates CRUD Routes', () => {
         });
 
         it('should return 500 on unexpected error', async () => {
-            mockGetTemplateById.mockRejectedValueOnce(new Error('Connection lost'));
+            mockGetTemplateByIdWithAccess.mockRejectedValueOnce(new Error('Connection lost'));
 
             const res = await request(app)
                 .get('/api/templates/tpl-123')
@@ -310,6 +334,21 @@ describe('Templates CRUD Routes', () => {
 
             expect(res.status).toBe(500);
             expect(res.body.error).toBe('Failed to fetch template');
+        });
+
+        it('should pass access context when fetching template by ID', async () => {
+            mockGetTemplateByIdWithAccess.mockResolvedValueOnce(sampleTemplateRow);
+
+            const res = await request(app)
+                .get('/api/templates/tpl-123')
+                .set('Authorization', 'Bearer valid-token')
+                .set('x-test-role', 'user');
+
+            expect(res.status).toBe(200);
+            expect(mockGetTemplateByIdWithAccess).toHaveBeenCalledWith('tpl-123', {
+                isAdmin: false,
+                userFirmId: 'firm-123'
+            });
         });
     });
 

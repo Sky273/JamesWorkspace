@@ -5,9 +5,13 @@ import {
   buildExportPayload,
 } from './resumeDocumentPayload';
 
-vi.mock('../utils/tinymceSuggestionsPlugin', () => ({
-  removeSuggestionMarkers: vi.fn((value: string) => value.replace(/\[\[suggestion\]\]/g, '')),
-}));
+vi.mock('../components/TiptapEditor', async () => {
+  const actual = await vi.importActual<typeof import('../components/TiptapEditor')>('../components/TiptapEditor');
+  return {
+    ...actual,
+    removeSuggestionMarkers: vi.fn((value: string) => value.replace(/\[\[suggestion\]\]/g, '')),
+  };
+});
 
 describe('resumeDocumentPayload', () => {
   const resume = {

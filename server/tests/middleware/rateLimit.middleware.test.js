@@ -94,7 +94,8 @@ describe('Rate Limit Middleware', () => {
                 mw(req, res, next);
 
                 if (i < 2) {
-                    expect(next).toHaveBeenCalled();
+                    expect(next).toHaveBeenCalledTimes(1);
+                    expect(res.status).not.toHaveBeenCalled();
                 } else {
                     expect(res.status).toHaveBeenCalledWith(429);
                     expect(res.json).toHaveBeenCalled();
@@ -122,7 +123,8 @@ describe('Rate Limit Middleware', () => {
                 mw(req, res, next);
 
                 if (i < 2) {
-                    expect(next).toHaveBeenCalled();
+                    expect(next).toHaveBeenCalledTimes(1);
+                    expect(res.status).not.toHaveBeenCalled();
                 } else {
                     expect(res.status).toHaveBeenCalledWith(429);
                 }

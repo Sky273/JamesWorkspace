@@ -37,7 +37,7 @@ import { BubbleToolbar } from './BubbleToolbar';
 import { ImageToolbar } from './ImageToolbar';
 import { TableToolbar } from './TableToolbar';
 import { SuggestionsExtension } from './SuggestionsExtension';
-import type { SuggestionsBySection } from './SuggestionsExtension';
+import type { SuggestionsBySection } from './suggestions.shared';
 import { normalizeEditorContent } from './contentNormalization';
 import './TiptapEditor.css';
 

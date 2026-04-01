@@ -25,7 +25,6 @@ interface AdminFirmSelectorProps {
   t: TFunction;
 }
 
-// Special value to indicate "my firm" selection
 const MY_FIRM_VALUE = '__MY_FIRM__';
 
 const AdminFirmSelector = ({
@@ -34,14 +33,13 @@ const AdminFirmSelector = ({
   label,
   className = '',
   disabled = false,
-  t
+  t,
 }: AdminFirmSelectorProps): JSX.Element | null => {
   const { user } = useAuth();
   const [firms, setFirms] = useState<Firm[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [userFirmId, setUserFirmId] = useState<string>('');
 
-  // Only show for admin users
   const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
@@ -55,7 +53,7 @@ const AdminFirmSelector = ({
         const response = await userService.getCustomersPaginated({ page: 1, pageSize: 100 });
         const firmsList = response.customers || response || [];
         setFirms(firmsList);
-        
+
         const currentUserFirmId = user?.firmId || user?.firm_id || '';
         if (currentUserFirmId) {
           setUserFirmId(currentUserFirmId);
@@ -68,27 +66,25 @@ const AdminFirmSelector = ({
       }
     };
 
-    loadFirms();
-   
+    void loadFirms();
   }, [isAdmin, user?.firmId, user?.firm_id]);
 
-  // Don't render anything for non-admin users
   if (!isAdmin) {
     return null;
   }
 
-  // Handle selection change - convert MY_FIRM_VALUE to actual user firm_id
   const handleChange = (value: string) => {
     if (value === MY_FIRM_VALUE) {
       onFirmChange(userFirmId);
-    } else {
-      onFirmChange(value);
+      return;
     }
+
+    onFirmChange(value);
   };
 
-  // Determine the display value for the select
-  // If selectedFirmId is empty or matches userFirmId, show MY_FIRM_VALUE
-  const displayValue = (!selectedFirmId || selectedFirmId === userFirmId) ? MY_FIRM_VALUE : selectedFirmId;
+  const displayValue = !selectedFirmId || selectedFirmId === userFirmId
+    ? MY_FIRM_VALUE
+    : selectedFirmId;
 
   return (
     <div className={className}>
@@ -106,18 +102,18 @@ const AdminFirmSelector = ({
         className="w-full px-3 py-2 border border-purple-300 dark:border-purple-600 rounded-lg bg-purple-50 dark:bg-purple-900/20 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
       >
         <option value={MY_FIRM_VALUE}>
-          {loading 
-            ? t('common.loading', 'Chargement...') 
-            : t('common.myFirm', 'Mon cabinet (par défaut)')}
+          {loading
+            ? t('common.loading', 'Chargement...')
+            : t('common.myFirm', 'Mon cabinet (par defaut)')}
         </option>
-        {firms.filter(firm => firm.id !== userFirmId).map((firm) => (
+        {firms.filter((firm) => firm.id !== userFirmId).map((firm) => (
           <option key={firm.id} value={firm.id}>
             {firm.name}
           </option>
         ))}
       </select>
       <p className="mt-1 text-xs text-purple-600 dark:text-purple-400">
-        {t('common.adminFirmHint', 'En tant qu\'admin, vous pouvez créer cet élément pour un autre cabinet')}
+        {t('common.adminFirmHint', 'En tant qu\'admin, vous pouvez creer cet element pour un autre cabinet')}
       </p>
     </div>
   );

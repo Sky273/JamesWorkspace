@@ -30,6 +30,7 @@ export {
     getTrendsSummary,
     invalidateTrendsCache,
     loadTrendsCache,
+    startTrendsCacheCleanup,
     cleanupTrendsCache,
     destroyTrendsCache,
     getTrendsCacheStats,

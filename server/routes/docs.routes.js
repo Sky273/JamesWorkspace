@@ -22,8 +22,8 @@ router.get('/', (req, res) => {
 // which uses externalized scripts (no inline scripts) for CSP compliance
 router.get('/ui', (req, res) => {
     // registerSwaggerRoutes already handles this route before this router,
-    // but if somehow reached, redirect to ensure CSP compliance
-    res.redirect('/api/docs/ui');
+    // but if somehow reached, fall back to the JSON spec instead of looping.
+    res.redirect('/api/docs');
 });
 
 export default router;
