@@ -133,6 +133,11 @@ async function getPipelineOverview(filters = {}, pipelineStages) {
             params.push(filters.missionId);
         }
 
+        if (filters.firmId) {
+            whereClause += ` AND COALESCE(m.firm_id, r.firm_id, c.firm_id) = $${paramIndex++}`;
+            params.push(filters.firmId);
+        }
+
         const result = await query(
             `
             SELECT 

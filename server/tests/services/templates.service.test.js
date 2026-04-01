@@ -47,6 +47,17 @@ describe('Templates Service', () => {
             expect(query.mock.calls[0][0]).toContain('t.firm_id IS NULL');
         });
 
+        it('should restrict non-admin without firm_id to global templates only', async () => {
+            query
+                .mockResolvedValueOnce({ rows: [{ total: '0' }] })
+                .mockResolvedValueOnce({ rows: [] });
+
+            await listTemplates({ isAdmin: false, userFirmId: null });
+
+            expect(query.mock.calls[0][0]).toContain('t.firm_id IS NULL');
+            expect(query.mock.calls[0][0]).not.toContain('t.firm_id = $');
+        });
+
         it('should apply status filter', async () => {
             query
                 .mockResolvedValueOnce({ rows: [{ total: '0' }] })

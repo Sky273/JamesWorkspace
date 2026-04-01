@@ -5,43 +5,14 @@ import { validateBody, validateParams, createClientSchema, updateClientSchema, c
 import { safeLog } from '../utils/logger.backend.js';
 import { getUserFirmId } from '../utils/firmHelpers.js';
 import * as clientsService from '../services/clients.service.js';
+import {
+    ensureFirmScopedAccess,
+    normalizeClientPayload,
+    normalizeContactPayload,
+    parsePaginationParams
+} from './clients.routes.helpers.js';
 
 const router = express.Router();
-
-function getFirstDefinedValue(source, keys) {
-    for (const key of keys) {
-        if (Object.prototype.hasOwnProperty.call(source, key) && source[key] !== undefined) {
-            return source[key];
-        }
-    }
-    return undefined;
-}
-
-function normalizeClientPayload(payload = {}) {
-    return {
-        ...payload,
-        name: getFirstDefinedValue(payload, ['name', 'Name']),
-        type: getFirstDefinedValue(payload, ['type', 'Type']),
-        status: getFirstDefinedValue(payload, ['status', 'Status']),
-        address: getFirstDefinedValue(payload, ['address', 'Address']),
-        website: getFirstDefinedValue(payload, ['website', 'Website']),
-        industry: getFirstDefinedValue(payload, ['industry', 'Industry']),
-        notes: getFirstDefinedValue(payload, ['notes', 'Notes']),
-        firm_id: getFirstDefinedValue(payload, ['firm_id', 'firmId', 'FirmId'])
-    };
-}
-
-function normalizeContactPayload(payload = {}) {
-    return {
-        ...payload,
-        name: getFirstDefinedValue(payload, ['name', 'Name']),
-        role: getFirstDefinedValue(payload, ['role', 'Role']),
-        email: getFirstDefinedValue(payload, ['email', 'Email']),
-        phone: getFirstDefinedValue(payload, ['phone', 'Phone']),
-        job_title: getFirstDefinedValue(payload, ['job_title', 'jobTitle', 'JobTitle']),
-        is_primary: getFirstDefinedValue(payload, ['is_primary', 'isPrimary', 'IsPrimary'])
-    };
-}
 
 // ============================================
 // CLIENTS ROUTES
@@ -50,15 +21,20 @@ function normalizeContactPayload(payload = {}) {
 // GET /api/clients - Get all clients (with server-side pagination and firm segregation)
 router.get('/', authenticateToken, async (req, res) => {
     try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 20;
+        const pagination = parsePaginationParams(req.query.page, req.query.limit);
+        if (!pagination.ok) {
+            return res.status(400).json({ error: pagination.error });
+        }
         const { search, type } = req.query;
         const userFirmId = await getUserFirmId(req);
         const isAdmin = isUserAdmin(req);
+        const access = ensureFirmScopedAccess({ isAdmin, userFirmId });
+        if (!access.ok) {
+            return res.status(access.status).json({ error: access.error });
+        }
 
         const result = await clientsService.listClients({
-            page,
-            limit,
+            ...pagination.value,
             search,
             type,
             firmId: isAdmin ? null : userFirmId
@@ -93,11 +69,15 @@ router.get('/industries/list', authenticateToken, async (req, res) => {
 });
 
 // GET /api/clients/:id - Get client by ID with contacts
-router.get('/:id', authenticateToken, async (req, res) => {
+router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => {
     try {
         const { id } = req.params;
         const userFirmId = await getUserFirmId(req);
         const isAdmin = isUserAdmin(req);
+        const access = ensureFirmScopedAccess({ isAdmin, userFirmId });
+        if (!access.ok) {
+            return res.status(access.status).json({ error: access.error });
+        }
 
         const client = await clientsService.getClientById(id);
 
@@ -106,7 +86,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
         }
 
         // Check firm access
-        if (!isAdmin && userFirmId && client.firm_id !== userFirmId) {
+        if (!isAdmin && client.firm_id !== userFirmId) {
             return res.status(403).json({ error: 'Access denied' });
         }
 
@@ -125,9 +105,9 @@ router.post('/', authenticateToken, userRateLimit(), validateBody(createClientSc
         const userFirmId = await getUserFirmId(req);
         const userId = req.user?.id;
         const isAdmin = isUserAdmin(req);
-
-        if (!userFirmId) {
-            return res.status(400).json({ error: 'User must belong to a firm to create clients' });
+        const access = ensureFirmScopedAccess({ isAdmin, userFirmId, missingFirmMessage: 'User must belong to a firm to create clients' });
+        if (!access.ok) {
+            return res.status(400).json({ error: access.error });
         }
 
         const normalizedClient = normalizeClientPayload(req.body);
@@ -135,6 +115,9 @@ router.post('/', authenticateToken, userRateLimit(), validateBody(createClientSc
 
         if (!name) {
             return res.status(400).json({ error: 'Client name is required' });
+        }
+        if (String(name).length > 255) {
+            return res.status(400).json({ error: 'Client name is too long' });
         }
 
         // Determine target firm_id: admin can specify a different firm
@@ -176,6 +159,10 @@ router.put('/:id', authenticateToken, userRateLimit(), validateParams('id'), val
         const { id } = req.params;
         const userFirmId = await getUserFirmId(req);
         const isAdmin = isUserAdmin(req);
+        const access = ensureFirmScopedAccess({ isAdmin, userFirmId });
+        if (!access.ok) {
+            return res.status(access.status).json({ error: access.error });
+        }
 
         // Check if client exists and user has access
         const existing = await clientsService.findClient(id);
@@ -183,12 +170,15 @@ router.put('/:id', authenticateToken, userRateLimit(), validateParams('id'), val
             return res.status(404).json({ error: 'Client not found' });
         }
 
-        if (!isAdmin && userFirmId && existing.firm_id !== userFirmId) {
+        if (!isAdmin && existing.firm_id !== userFirmId) {
             return res.status(403).json({ error: 'Access denied' });
         }
 
         const normalizedClient = normalizeClientPayload(req.body);
         const { name, type, status, address, website, industry, notes, firm_id } = normalizedClient;
+        if (name !== undefined && String(name).length > 255) {
+            return res.status(400).json({ error: 'Client name is too long' });
+        }
 
         // Handle firm_id update (admin only)
         let targetFirmId = existing.firm_id;
@@ -224,11 +214,15 @@ router.put('/:id', authenticateToken, userRateLimit(), validateParams('id'), val
 });
 
 // DELETE /api/clients/:id - Delete client
-router.delete('/:id', authenticateToken, async (req, res) => {
+router.delete('/:id', authenticateToken, validateParams('id'), async (req, res) => {
     try {
         const { id } = req.params;
         const userFirmId = await getUserFirmId(req);
         const isAdmin = isUserAdmin(req);
+        const access = ensureFirmScopedAccess({ isAdmin, userFirmId });
+        if (!access.ok) {
+            return res.status(access.status).json({ error: access.error });
+        }
 
         // Check if client exists and user has access
         const existing = await clientsService.findClient(id);
@@ -236,7 +230,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
             return res.status(404).json({ error: 'Client not found' });
         }
 
-        if (!isAdmin && userFirmId && existing.firm_id !== userFirmId) {
+        if (!isAdmin && existing.firm_id !== userFirmId) {
             return res.status(403).json({ error: 'Access denied' });
         }
 
@@ -277,7 +271,12 @@ async function checkClientAccess(req, res, clientId) {
 
     const userFirmId = await getUserFirmId(req);
     const isAdmin = isUserAdmin(req);
-    if (!isAdmin && userFirmId && clientFirm.firm_id !== userFirmId) {
+    const access = ensureFirmScopedAccess({ isAdmin, userFirmId });
+    if (!access.ok) {
+        res.status(access.status).json({ error: access.error });
+        return { ok: false };
+    }
+    if (!isAdmin && clientFirm.firm_id !== userFirmId) {
         res.status(403).json({ error: 'Access denied' });
         return { ok: false };
     }
@@ -286,7 +285,7 @@ async function checkClientAccess(req, res, clientId) {
 }
 
 // GET /api/clients/:clientId/contacts - Get all contacts for a client
-router.get('/:clientId/contacts', authenticateToken, async (req, res) => {
+router.get('/:clientId/contacts', authenticateToken, validateParams('clientId'), async (req, res) => {
     try {
         const { clientId } = req.params;
         const access = await checkClientAccess(req, res, clientId);
@@ -303,20 +302,20 @@ router.get('/:clientId/contacts', authenticateToken, async (req, res) => {
 });
 
 // POST /api/clients/:clientId/contacts - Create contact
-router.post('/:clientId/contacts', authenticateToken, userRateLimit(), validateBody(createContactSchema), async (req, res) => {
+router.post('/:clientId/contacts', authenticateToken, validateParams('clientId'), userRateLimit(), validateBody(createContactSchema), async (req, res) => {
     try {
         const { clientId } = req.params;
         const access = await checkClientAccess(req, res, clientId);
         if (!access.ok) return;
 
         const normalizedContact = normalizeContactPayload(req.body);
-        const { name, role, email, phone, job_title, is_primary } = normalizedContact;
+        const { name, role, email, phone, is_primary } = normalizedContact;
 
         if (!name) {
             return res.status(400).json({ error: 'Contact name is required' });
         }
 
-        const contact = await clientsService.createContact(clientId, { name, role, email, phone, job_title, is_primary });
+        const contact = await clientsService.createContact(clientId, { name, role, email, phone, is_primary });
         return res.status(201).json(contact);
     } catch (error) {
         safeLog('error', 'Error creating contact', { error: error.message, clientId: req.params.clientId });
@@ -327,16 +326,16 @@ router.post('/:clientId/contacts', authenticateToken, userRateLimit(), validateB
 });
 
 // PUT /api/clients/:clientId/contacts/:id - Update contact
-router.put('/:clientId/contacts/:id', authenticateToken, userRateLimit(), validateBody(updateContactSchema), async (req, res) => {
+router.put('/:clientId/contacts/:id', authenticateToken, validateParams('clientId', 'id'), userRateLimit(), validateBody(updateContactSchema), async (req, res) => {
     try {
         const { clientId, id } = req.params;
         const access = await checkClientAccess(req, res, clientId);
         if (!access.ok) return;
 
         const normalizedContact = normalizeContactPayload(req.body);
-        const { name, role, email, phone, job_title, is_primary } = normalizedContact;
+        const { name, role, email, phone, is_primary } = normalizedContact;
 
-        const updated = await clientsService.updateContact(id, clientId, { name, role, email, phone, job_title, is_primary });
+        const updated = await clientsService.updateContact(id, clientId, { name, role, email, phone, is_primary });
 
         if (!updated) {
             return res.status(404).json({ error: 'Contact not found' });
@@ -352,7 +351,7 @@ router.put('/:clientId/contacts/:id', authenticateToken, userRateLimit(), valida
 });
 
 // DELETE /api/clients/:clientId/contacts/:id - Delete contact
-router.delete('/:clientId/contacts/:id', authenticateToken, async (req, res) => {
+router.delete('/:clientId/contacts/:id', authenticateToken, validateParams('clientId', 'id'), async (req, res) => {
     try {
         const { clientId, id } = req.params;
         const access = await checkClientAccess(req, res, clientId);

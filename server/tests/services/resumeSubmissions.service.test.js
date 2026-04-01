@@ -99,6 +99,19 @@ describe('Resume Submissions Service', () => {
 
             expect(query.mock.calls[0][0]).toContain('rs.status = $');
         });
+
+        it('should clamp invalid pagination inputs to safe values', async () => {
+            query
+                .mockResolvedValueOnce({ rows: [] })
+                .mockResolvedValueOnce({ rows: [{ count: '0' }] });
+
+            const result = await listSubmissions({ page: -1, limit: 1000 });
+
+            expect(result.pagination.page).toBe(1);
+            expect(result.pagination.limit).toBe(100);
+            expect(query.mock.calls[0][1]).toContain(101);
+            expect(query.mock.calls[0][1]).toContain(0);
+        });
     });
 
     // ============================================
@@ -125,14 +138,19 @@ describe('Resume Submissions Service', () => {
     // ============================================
 
     describe('validateResume', () => {
-        it('should return true if resume exists', async () => {
-            query.mockResolvedValueOnce({ rows: [{ id: 'r1' }] });
-            expect(await validateResume('r1')).toBe(true);
+        it('should return exists + firmMatch true when resume belongs to firm', async () => {
+            query.mockResolvedValueOnce({ rows: [{ firm_id: 'f1' }] });
+            expect(await validateResume('r1', 'f1')).toEqual({ exists: true, firmMatch: true });
         });
 
-        it('should return false if not found', async () => {
+        it('should return firmMatch false when resume belongs to another firm', async () => {
+            query.mockResolvedValueOnce({ rows: [{ firm_id: 'f2' }] });
+            expect(await validateResume('r1', 'f1')).toEqual({ exists: true, firmMatch: false });
+        });
+
+        it('should return exists false if not found', async () => {
             query.mockResolvedValueOnce({ rows: [] });
-            expect(await validateResume('missing')).toBe(false);
+            expect(await validateResume('missing', 'f1')).toEqual({ exists: false, firmMatch: false });
         });
     });
 
@@ -172,14 +190,19 @@ describe('Resume Submissions Service', () => {
     });
 
     describe('validateMission', () => {
-        it('should return true if mission exists', async () => {
-            query.mockResolvedValueOnce({ rows: [{ id: 'm1' }] });
-            expect(await validateMission('m1')).toBe(true);
+        it('should return exists + firmMatch true when mission belongs to firm', async () => {
+            query.mockResolvedValueOnce({ rows: [{ firm_id: 'f1' }] });
+            expect(await validateMission('m1', 'f1')).toEqual({ exists: true, firmMatch: true });
         });
 
-        it('should return false if not found', async () => {
+        it('should return firmMatch false when mission belongs to another firm', async () => {
+            query.mockResolvedValueOnce({ rows: [{ firm_id: 'f2' }] });
+            expect(await validateMission('m1', 'f1')).toEqual({ exists: true, firmMatch: false });
+        });
+
+        it('should return exists false if not found', async () => {
             query.mockResolvedValueOnce({ rows: [] });
-            expect(await validateMission('missing')).toBe(false);
+            expect(await validateMission('missing', 'f1')).toEqual({ exists: false, firmMatch: false });
         });
     });
 

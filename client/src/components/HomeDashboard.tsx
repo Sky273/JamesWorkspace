@@ -50,7 +50,7 @@ interface DashboardStats {
     averageImproved: number;
     improvement: number;
   };
-  customer: string | null;
+  firmId: string | null;
 }
 
 interface KPICardProps {
@@ -210,9 +210,9 @@ function HomeDashboard(): JSX.Element | null {
           <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
             {t('home.dashboard.title')}
           </h2>
-          {stats.customer && (
+          {(user?.firmName || user?.firm) && (
             <p className="text-gray-500 dark:text-gray-400 mt-1">
-              {stats.customer}
+              {user?.firmName || user?.firm}
             </p>
           )}
         </motion.div>

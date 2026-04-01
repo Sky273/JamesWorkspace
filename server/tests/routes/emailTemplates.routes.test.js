@@ -18,6 +18,7 @@ const mockDeleteTemplate = vi.fn();
 const mockDuplicateTemplate = vi.fn();
 const mockRenderTemplate = vi.fn();
 const mockPreviewTemplate = vi.fn();
+const mockGetUserFirmIdFromReq = vi.fn();
 vi.mock('../../services/emailTemplates.service.js', () => ({
     getTemplates: (...args) => mockGetTemplates(...args),
     getTemplate: (...args) => mockGetTemplate(...args),
@@ -39,6 +40,9 @@ vi.mock('../../services/emailTemplates.service.js', () => ({
 // Mock firm lookup helpers (declared after vi.mock references them)
 const mockGetUserFirmId = vi.fn();
 const mockGetFirmIdByName = vi.fn();
+vi.mock('../../utils/firmHelpers.js', () => ({
+    getUserFirmId: (...args) => mockGetUserFirmIdFromReq(...args)
+}));
 
 // Mock logger
 vi.mock('../../utils/logger.backend.js', () => ({
@@ -104,6 +108,7 @@ describe('Email Templates Routes', () => {
         // Default: getFirmIdForUser resolves via user.firm_id (no DB fallback needed)
         mockGetUserFirmId.mockResolvedValue(null);
         mockGetFirmIdByName.mockResolvedValue(null);
+        mockGetUserFirmIdFromReq.mockResolvedValue(null);
     });
 
     // ==========================================
@@ -128,18 +133,26 @@ describe('Email Templates Routes', () => {
         });
 
         it('should return empty list for non-admin without firm', async () => {
-            // Simulate no firm found for any DB lookup strategy
-            mockGetUserFirmId.mockResolvedValueOnce(null);
-            mockGetFirmIdByName.mockResolvedValueOnce(null);
-
             const res = await request(app)
                 .get('/api/email-templates')
                 .set('Authorization', 'Bearer valid-token')
                 .set('x-test-role', 'user')
                 .set('x-test-no-firm', 'true');
 
+            expect(res.status).toBe(403);
+            expect(res.body.error).toBe('Admin access required');
+        });
+
+        it('should allow admin without firm to get cross-firm templates', async () => {
+            mockGetTemplates.mockResolvedValueOnce([sampleTemplate, { ...sampleTemplate, id: 'et-sys', firm_id: null, is_system: true }]);
+
+            const res = await request(app)
+                .get('/api/email-templates')
+                .set('Authorization', 'Bearer valid-token')
+                .set('x-test-no-firm', 'true');
+
             expect(res.status).toBe(200);
-            expect(res.body.templates).toEqual([]);
+            expect(mockGetTemplates).toHaveBeenCalledWith(null, true);
         });
 
         it('should return 500 on service error', async () => {
@@ -167,6 +180,16 @@ describe('Email Templates Routes', () => {
             expect(res.body.keywords).toBeInstanceOf(Array);
             expect(res.body.keywords.length).toBeGreaterThan(0);
         });
+
+        it('should reject non-admin access', async () => {
+            const res = await request(app)
+                .get('/api/email-templates/keywords')
+                .set('Authorization', 'Bearer valid-token')
+                .set('x-test-role', 'user');
+
+            expect(res.status).toBe(403);
+            expect(res.body.error).toBe('Admin access required');
+        });
     });
 
     // ==========================================
@@ -193,6 +216,26 @@ describe('Email Templates Routes', () => {
 
             expect(res.status).toBe(404);
             expect(res.body.error).toBe('No default template found');
+        });
+
+        it('should reject non-admin access', async () => {
+            const res = await request(app)
+                .get('/api/email-templates/default')
+                .set('Authorization', 'Bearer valid-token')
+                .set('x-test-role', 'user');
+
+            expect(res.status).toBe(403);
+            expect(res.body.error).toBe('Admin access required');
+        });
+
+        it('should reject admin without firm', async () => {
+            const res = await request(app)
+                .get('/api/email-templates/default')
+                .set('Authorization', 'Bearer valid-token')
+                .set('x-test-no-firm', 'true');
+
+            expect(res.status).toBe(403);
+            expect(res.body.error).toBe('No firm association');
         });
     });
 
@@ -232,7 +275,7 @@ describe('Email Templates Routes', () => {
             expect(res.body.error).toBe('Access denied to this template');
         });
 
-        it('should allow access to system templates (firm_id null)', async () => {
+        it('should allow admin access to system templates (firm_id null)', async () => {
             mockGetTemplate.mockResolvedValueOnce({ ...sampleTemplate, firm_id: null });
 
             const res = await request(app)
@@ -240,6 +283,16 @@ describe('Email Templates Routes', () => {
                 .set('Authorization', 'Bearer valid-token');
 
             expect(res.status).toBe(200);
+        });
+
+        it('should reject non-admin access', async () => {
+            const res = await request(app)
+                .get('/api/email-templates/et-123')
+                .set('Authorization', 'Bearer valid-token')
+                .set('x-test-role', 'user');
+
+            expect(res.status).toBe(403);
+            expect(res.body.error).toBe('Admin access required');
         });
     });
 
@@ -268,6 +321,17 @@ describe('Email Templates Routes', () => {
                 expect.objectContaining({ name: 'New Template' }),
                 'user-123'
             );
+        });
+
+        it('should reject non-admin creation', async () => {
+            const res = await request(app)
+                .post('/api/email-templates')
+                .set('Authorization', 'Bearer valid-token')
+                .set('x-test-role', 'user')
+                .send(newBody);
+
+            expect(res.status).toBe(403);
+            expect(res.body.error).toBe('Admin access required');
         });
 
         it('should return 400 if required fields missing', async () => {
@@ -313,6 +377,17 @@ describe('Email Templates Routes', () => {
                 .send(updateBody);
 
             expect(res.status).toBe(200);
+        });
+
+        it('should reject non-admin update', async () => {
+            const res = await request(app)
+                .put('/api/email-templates/et-123')
+                .set('Authorization', 'Bearer valid-token')
+                .set('x-test-role', 'user')
+                .send(updateBody);
+
+            expect(res.status).toBe(403);
+            expect(res.body.error).toBe('Admin access required');
         });
 
         it('should return 404 if not found', async () => {
@@ -402,14 +477,12 @@ describe('Email Templates Routes', () => {
         });
 
         it('should return 403 for non-admin deleting system template', async () => {
-            mockGetTemplate.mockResolvedValueOnce({ ...sampleTemplate, is_system: true });
-
             const res = await request(app)
                 .delete('/api/email-templates/et-sys')
                 .set({ 'Authorization': 'Bearer valid-token', 'x-test-role': 'user' });
 
             expect(res.status).toBe(403);
-            expect(res.body.error).toBe('Cannot delete system template');
+            expect(res.body.error).toBe('Admin access required');
         });
 
         it('should return 403 for another firms template', async () => {
@@ -437,6 +510,26 @@ describe('Email Templates Routes', () => {
 
             expect(res.status).toBe(201);
             expect(mockDuplicateTemplate).toHaveBeenCalledWith('et-123', 'firm-123', 'user-123');
+        });
+
+        it('should reject non-admin duplication', async () => {
+            const res = await request(app)
+                .post('/api/email-templates/et-123/duplicate')
+                .set('Authorization', 'Bearer valid-token')
+                .set('x-test-role', 'user');
+
+            expect(res.status).toBe(403);
+            expect(res.body.error).toBe('Admin access required');
+        });
+
+        it('should reject admin without firm on duplication', async () => {
+            const res = await request(app)
+                .post('/api/email-templates/et-123/duplicate')
+                .set('Authorization', 'Bearer valid-token')
+                .set('x-test-no-firm', 'true');
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toContain('Firm ID not found');
         });
 
         it('should return 404 if original not found', async () => {
@@ -490,6 +583,17 @@ describe('Email Templates Routes', () => {
 
             expect(res.status).toBe(404);
         });
+
+        it('should reject non-admin preview', async () => {
+            const res = await request(app)
+                .post('/api/email-templates/et-123/preview')
+                .set('Authorization', 'Bearer valid-token')
+                .set('x-test-role', 'user')
+                .send({ context: {} });
+
+            expect(res.status).toBe(403);
+            expect(res.body.error).toBe('Admin access required');
+        });
     });
 
     // ==========================================
@@ -522,6 +626,19 @@ describe('Email Templates Routes', () => {
 
             expect(res.status).toBe(400);
             expect(res.body.error).toBe('MJML content is required');
+        });
+
+        it('should reject non-admin compile', async () => {
+            const res = await request(app)
+                .post('/api/email-templates/compile')
+                .set('Authorization', 'Bearer valid-token')
+                .set('x-test-role', 'user')
+                .send({
+                    mjmlContent: '<mjml><mj-body></mj-body></mjml>'
+                });
+
+            expect(res.status).toBe(403);
+            expect(res.body.error).toBe('Admin access required');
         });
     });
 

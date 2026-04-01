@@ -31,6 +31,7 @@ vi.mock('bcryptjs', () => ({
 
 // Mock users service
 const mockFindUserByEmail = vi.fn();
+const mockFindFirmById = vi.fn();
 const mockFindFirmByName = vi.fn();
 const mockCreateAdminUser = vi.fn();
 const mockFindUserById = vi.fn();
@@ -38,6 +39,7 @@ const mockUpdateAdminUser = vi.fn();
 const mockDeleteUser = vi.fn();
 vi.mock('../../services/users.service.js', () => ({
     findUserByEmail: (...args) => mockFindUserByEmail(...args),
+    findFirmById: (...args) => mockFindFirmById(...args),
     findFirmByName: (...args) => mockFindFirmByName(...args),
     createAdminUser: (...args) => mockCreateAdminUser(...args),
     findUserById: (...args) => mockFindUserById(...args),
@@ -75,7 +77,8 @@ vi.mock('../../middleware/auth.middleware.js', () => ({
                 id: 'admin-123',
                 email: 'admin@example.com',
                 role: req.headers['x-test-role'] || 'admin',
-                firm: 'Test Firm'
+                firm: 'Test Firm',
+                firm_id: 'firm-123'
             };
             next();
         } else {
@@ -113,7 +116,7 @@ describe('Users Routes', () => {
     describe('POST /api/auth/users', () => {
         it('should create a user', async () => {
             mockFindUserByEmail.mockResolvedValueOnce(null); // no existing user
-            mockFindFirmByName.mockResolvedValueOnce({ id: 'f-1', name: 'Acme Corp' });
+            mockFindFirmById.mockResolvedValueOnce({ id: 'f-1', name: 'Acme Corp' });
             mockCreateAdminUser.mockResolvedValue({
                 id: 'u-new',
                 email: 'new@example.com',
@@ -125,7 +128,7 @@ describe('Users Routes', () => {
             const res = await request(app)
                 .post('/api/auth/users')
                 .set(authHeader)
-                .send({ email: 'new@example.com', password: 'Password123!', name: 'New User', firm: 'Acme Corp' });
+                .send({ email: 'new@example.com', password: 'Password123!', name: 'New User', firmId: 'f-1' });
 
             expect(res.status).toBe(201);
             expect(res.body.email).toBe('new@example.com');
@@ -176,7 +179,7 @@ describe('Users Routes', () => {
 
         it('should create user with firm association', async () => {
             mockFindUserByEmail.mockResolvedValueOnce(null); // no existing user
-            mockFindFirmByName.mockResolvedValueOnce({ id: 'f-1', name: 'Acme Corp' }); // firm lookup
+            mockFindFirmById.mockResolvedValueOnce({ id: 'f-1', name: 'Acme Corp' }); // firm lookup
             mockCreateAdminUser.mockResolvedValue({
                 id: 'u-new',
                 email: 'new@example.com',
@@ -188,19 +191,19 @@ describe('Users Routes', () => {
             const res = await request(app)
                 .post('/api/auth/users')
                 .set(authHeader)
-                .send({ email: 'new@example.com', password: 'Pass123!', name: 'New User', firm: 'Acme Corp' });
+                .send({ email: 'new@example.com', password: 'Pass123!', name: 'New User', firmId: 'f-1' });
 
             expect(res.status).toBe(201);
         });
 
         it('should return 400 if firm not found', async () => {
             mockFindUserByEmail.mockResolvedValueOnce(null); // no existing user
-            mockFindFirmByName.mockResolvedValueOnce(null); // firm not found
+            mockFindFirmById.mockResolvedValueOnce(null); // firm not found
 
             const res = await request(app)
                 .post('/api/auth/users')
                 .set(authHeader)
-                .send({ email: 'new@example.com', password: 'Pass123!', name: 'New User', firm: 'Nonexistent' });
+                .send({ email: 'new@example.com', password: 'Pass123!', name: 'New User', firmId: 'firm-missing' });
 
             expect(res.status).toBe(400);
             expect(res.body.error).toContain('not found');
@@ -217,13 +220,13 @@ describe('Users Routes', () => {
 
         it('should return 500 on DB error', async () => {
             mockFindUserByEmail.mockResolvedValueOnce(null);
-            mockFindFirmByName.mockResolvedValueOnce({ id: 'f-1', name: 'Acme Corp' });
+            mockFindFirmById.mockResolvedValueOnce({ id: 'f-1', name: 'Acme Corp' });
             mockCreateAdminUser.mockRejectedValue(new Error('DB error'));
 
             const res = await request(app)
                 .post('/api/auth/users')
                 .set(authHeader)
-                .send({ email: 'new@example.com', password: 'Pass123!', name: 'New User', firm: 'Acme Corp' });
+                .send({ email: 'new@example.com', password: 'Pass123!', name: 'New User', firmId: 'f-1' });
 
             expect(res.status).toBe(500);
         });
@@ -234,7 +237,7 @@ describe('Users Routes', () => {
             mockFindUserById.mockResolvedValueOnce({
                 id: 'u-1', email: 'old@example.com', name: 'Old Name', role: 'user', status: 'active'
             });
-            mockFindFirmByName.mockResolvedValueOnce({ id: 'f-1', name: 'Acme Corp' });
+            mockFindFirmById.mockResolvedValueOnce({ id: 'f-1', name: 'Acme Corp' });
             mockUpdateAdminUser.mockResolvedValue({
                 id: 'u-1', email: 'old@example.com', name: 'New Name', role: 'user', status: 'active'
             });
@@ -242,7 +245,7 @@ describe('Users Routes', () => {
             const res = await request(app)
                 .put('/api/auth/users/u-1')
                 .set(authHeader)
-                .send({ name: 'New Name', firm: 'Acme Corp' });
+                .send({ name: 'New Name', firmId: 'f-1' });
 
             expect(res.status).toBe(200);
             expect(res.body.name).toBe('New Name');
@@ -295,12 +298,12 @@ describe('Users Routes', () => {
             mockFindUserById.mockResolvedValueOnce({
                 id: 'u-1', email: 'test@example.com', name: 'Test', role: 'user', status: 'active'
             });
-            mockFindFirmByName.mockResolvedValueOnce(null);
+            mockFindFirmById.mockResolvedValueOnce(null);
 
             const res = await request(app)
                 .put('/api/auth/users/u-1')
                 .set(authHeader)
-                .send({ firm: 'Unknown Firm' });
+                .send({ firmId: 'firm-missing' });
 
             expect(res.status).toBe(400);
             expect(res.body.error).toContain('not found');

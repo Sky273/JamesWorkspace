@@ -25,7 +25,11 @@ vi.mock('../../config/constants.js', () => ({
 
 // Mock candidatePipeline service
 const mockAddToPipeline = vi.fn();
+const mockGetClientFirmId = vi.fn();
+const mockGetInterviewAccessContext = vi.fn();
+const mockGetMissionContext = vi.fn();
 const mockGetPipelineById = vi.fn();
+const mockGetPipelineAccessContext = vi.fn();
 const mockGetPipelineByResumeId = vi.fn();
 const mockGetPipelineByMissionId = vi.fn();
 const mockGetPipelineOverview = vi.fn();
@@ -41,6 +45,10 @@ const mockCompleteInterview = vi.fn();
 const mockCancelInterview = vi.fn();
 const mockDeleteInterview = vi.fn();
 const mockGetPipelineStats = vi.fn();
+const mockGetResumeFirmId = vi.fn();
+const mockValidatePipelineAssociations = vi.fn();
+
+const mockGetUserFirmId = vi.fn();
 
 vi.mock('../../services/candidatePipeline.service.js', () => ({
     PIPELINE_STAGES: [
@@ -52,7 +60,11 @@ vi.mock('../../services/candidatePipeline.service.js', () => ({
         { id: 'rejected', label: 'Rejected' }
     ],
     addToPipeline: (...args) => mockAddToPipeline(...args),
+    getClientFirmId: (...args) => mockGetClientFirmId(...args),
+    getInterviewAccessContext: (...args) => mockGetInterviewAccessContext(...args),
+    getMissionContext: (...args) => mockGetMissionContext(...args),
     getPipelineById: (...args) => mockGetPipelineById(...args),
+    getPipelineAccessContext: (...args) => mockGetPipelineAccessContext(...args),
     getPipelineByResumeId: (...args) => mockGetPipelineByResumeId(...args),
     getPipelineByMissionId: (...args) => mockGetPipelineByMissionId(...args),
     getPipelineOverview: (...args) => mockGetPipelineOverview(...args),
@@ -67,7 +79,13 @@ vi.mock('../../services/candidatePipeline.service.js', () => ({
     completeInterview: (...args) => mockCompleteInterview(...args),
     cancelInterview: (...args) => mockCancelInterview(...args),
     deleteInterview: (...args) => mockDeleteInterview(...args),
-    getPipelineStats: (...args) => mockGetPipelineStats(...args)
+    getPipelineStats: (...args) => mockGetPipelineStats(...args),
+    getResumeFirmId: (...args) => mockGetResumeFirmId(...args),
+    validatePipelineAssociations: (...args) => mockValidatePipelineAssociations(...args)
+}));
+
+vi.mock('../../utils/firmHelpers.js', () => ({
+    getUserFirmId: (...args) => mockGetUserFirmId(...args)
 }));
 
 // Mock logger
@@ -95,7 +113,12 @@ vi.mock('../../utils/validation.js', () => ({
 vi.mock('../../middleware/auth.middleware.js', () => ({
     authenticateToken: (req, res, next) => {
         if (req.headers.authorization === 'Bearer valid-token') {
-            req.user = { id: 'user-123', email: 'test@example.com', role: 'user', firm: 'Test Firm' };
+            req.user = {
+                id: 'user-123',
+                email: 'test@example.com',
+                role: req.headers['x-test-role'] || 'user',
+                firm: 'Test Firm'
+            };
             next();
         } else {
             res.status(401).json({ error: 'Unauthorized' });
@@ -116,9 +139,27 @@ function createTestApp() {
 describe('Pipeline Routes', () => {
     let app;
     const authHeader = { Authorization: 'Bearer valid-token' };
+    const defaultPipelineAccess = {
+        id: 'pipe-1',
+        resume_firm_id: 'firm-123',
+        mission_firm_id: 'firm-123',
+        client_firm_id: 'firm-123'
+    };
 
     beforeEach(() => {
         vi.clearAllMocks();
+        mockGetUserFirmId.mockResolvedValue('firm-123');
+        mockValidatePipelineAssociations.mockResolvedValue({ ok: true, firmId: 'firm-123' });
+        mockGetPipelineAccessContext.mockResolvedValue(defaultPipelineAccess);
+        mockGetInterviewAccessContext.mockResolvedValue({
+            id: 'int-1',
+            pipeline_id: 'pipe-1',
+            resume_firm_id: 'firm-123',
+            mission_firm_id: 'firm-123',
+            client_firm_id: 'firm-123'
+        });
+        mockGetResumeFirmId.mockResolvedValue('firm-123');
+        mockGetMissionContext.mockResolvedValue({ firm_id: 'firm-123', client_id: 'c-1' });
         app = createTestApp();
     });
 
@@ -153,6 +194,7 @@ describe('Pipeline Routes', () => {
                 resumeId: 'r-1',
                 createdBy: 'user-123'
             }));
+            expect(mockValidatePipelineAssociations).toHaveBeenCalled();
         });
 
         it('should add to pipeline with snake_case payload', async () => {
@@ -192,6 +234,19 @@ describe('Pipeline Routes', () => {
 
             expect(res.status).toBe(500);
         });
+
+        it('should reject creation without firm association for non-admin', async () => {
+            mockGetUserFirmId.mockResolvedValueOnce(null);
+
+            const res = await request(app)
+                .post('/api/pipeline')
+                .set(authHeader)
+                .send({ resumeId: 'r-1' });
+
+            expect(res.status).toBe(403);
+            expect(res.body.error).toBe('No firm association');
+            expect(mockAddToPipeline).not.toHaveBeenCalled();
+        });
     });
 
     describe('GET /api/pipeline/:id', () => {
@@ -208,6 +263,39 @@ describe('Pipeline Routes', () => {
 
             const res = await request(app).get('/api/pipeline/nonexistent').set(authHeader);
             expect(res.status).toBe(404);
+        });
+
+        it('should reject access to pipeline entry from another firm', async () => {
+            mockGetPipelineAccessContext.mockResolvedValueOnce({
+                ...defaultPipelineAccess,
+                resume_firm_id: 'firm-other'
+            });
+
+            const res = await request(app).get('/api/pipeline/pipe-1').set(authHeader);
+            expect(res.status).toBe(403);
+        });
+    });
+
+    describe('GET /api/pipeline/overview', () => {
+        it('should return overview', async () => {
+            mockGetPipelineOverview.mockResolvedValue({ new: { count: 1, items: [] } });
+
+            const res = await request(app).get('/api/pipeline/overview').set(authHeader);
+
+            expect(res.status).toBe(200);
+            expect(mockGetPipelineOverview).toHaveBeenCalledWith(expect.objectContaining({ firmId: 'firm-123' }));
+        });
+    });
+
+    describe('GET /api/pipeline/stats', () => {
+        it('should return stats', async () => {
+            mockGetPipelineStats.mockResolvedValue({ total: '1' });
+
+            const res = await request(app).get('/api/pipeline/stats').set(authHeader);
+
+            expect(res.status).toBe(200);
+            expect(res.body.total).toBe('1');
+            expect(mockGetPipelineStats).toHaveBeenCalledWith(expect.objectContaining({ firmId: 'firm-123' }));
         });
     });
 
@@ -304,6 +392,32 @@ describe('Pipeline Routes', () => {
                 .send({ description: 'No title' });
 
             expect(res.status).toBe(400);
+        });
+    });
+
+    describe('GET /api/pipeline/interviews/upcoming', () => {
+        it('should return upcoming interviews', async () => {
+            mockGetUpcomingInterviews.mockResolvedValue([{ id: 'int-1' }]);
+
+            const res = await request(app)
+                .get('/api/pipeline/interviews/upcoming?days=7')
+                .set(authHeader);
+
+            expect(res.status).toBe(200);
+            expect(mockGetUpcomingInterviews).toHaveBeenCalledWith({
+                userId: 'user-123',
+                days: 7,
+                firmId: 'firm-123'
+            });
+        });
+
+        it('should reject invalid days filter', async () => {
+            const res = await request(app)
+                .get('/api/pipeline/interviews/upcoming?days=-1')
+                .set(authHeader);
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toBe('Invalid days filter');
         });
     });
 

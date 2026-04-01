@@ -118,6 +118,7 @@ describe('Clients Routes - GET /api/clients', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        mockGetUserFirmId.mockResolvedValue('firm-123');
         app = createTestApp();
     });
 
@@ -208,6 +209,27 @@ describe('Clients Routes - GET /api/clients', () => {
         expect(res.status).toBe(200);
         expect(mockListClients).toHaveBeenCalledWith(expect.objectContaining({ firmId: null }));
     });
+
+    it('should reject invalid pagination', async () => {
+        const res = await request(app)
+            .get('/api/clients?page=0&limit=-1')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(400);
+        expect(res.body.error).toBe('Invalid pagination parameters');
+        expect(mockListClients).not.toHaveBeenCalled();
+    });
+
+    it('should reject non-admin list access without firm association', async () => {
+        mockGetUserFirmId.mockResolvedValueOnce(null);
+
+        const res = await request(app)
+            .get('/api/clients')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(403);
+        expect(mockListClients).not.toHaveBeenCalled();
+    });
 });
 
 describe('Clients Routes - GET /api/clients/:id', () => {
@@ -215,6 +237,7 @@ describe('Clients Routes - GET /api/clients/:id', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        mockGetUserFirmId.mockResolvedValue('firm-123');
         app = createTestApp();
     });
 
@@ -265,6 +288,17 @@ describe('Clients Routes - GET /api/clients/:id', () => {
 
         expect(res.status).toBe(403);
     });
+
+    it('should reject non-admin detail access without firm association', async () => {
+        mockGetUserFirmId.mockResolvedValueOnce(null);
+
+        const res = await request(app)
+            .get('/api/clients/client-123')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(403);
+        expect(mockGetClientById).not.toHaveBeenCalled();
+    });
 });
 
 describe('Clients Routes - POST /api/clients', () => {
@@ -272,6 +306,7 @@ describe('Clients Routes - POST /api/clients', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        mockGetUserFirmId.mockResolvedValue('firm-123');
         app = createTestApp();
     });
 
@@ -362,6 +397,7 @@ describe('Clients Routes - PUT /api/clients/:id', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        mockGetUserFirmId.mockResolvedValue('firm-123');
         app = createTestApp();
     });
 
@@ -416,6 +452,7 @@ describe('Clients Routes - DELETE /api/clients/:id', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        mockGetUserFirmId.mockResolvedValue('firm-123');
         app = createTestApp();
     });
 
@@ -480,6 +517,7 @@ describe('Clients Routes - Contacts', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        mockGetUserFirmId.mockResolvedValue('firm-123');
         app = createTestApp();
     });
 
@@ -530,6 +568,30 @@ describe('Clients Routes - Contacts', () => {
             expect(res.status).toBe(201);
         });
 
+        it('should ignore deprecated jobTitle fields when creating contact', async () => {
+            mockGetUserFirmId.mockResolvedValueOnce('firm-123');
+            mockGetClientFirmId.mockResolvedValueOnce({ firm_id: 'firm-123' });
+            mockCreateContact.mockResolvedValueOnce({
+                id: 'new-contact-123',
+                name: 'New Contact',
+                client_id: 'client-123'
+            });
+
+            const res = await request(app)
+                .post('/api/clients/client-123/contacts')
+                .set('Authorization', 'Bearer valid-token')
+                .send({ name: 'New Contact', jobTitle: 'Director', job_title: 'Director' });
+
+            expect(res.status).toBe(201);
+            expect(mockCreateContact).toHaveBeenCalledWith('client-123', {
+                name: 'New Contact',
+                role: undefined,
+                email: undefined,
+                phone: undefined,
+                is_primary: undefined
+            });
+        });
+
         it('should reject contact without name', async () => {
             mockGetUserFirmId.mockResolvedValueOnce('firm-123');
             mockGetClientFirmId.mockResolvedValueOnce({ firm_id: 'firm-123' });
@@ -577,6 +639,7 @@ describe('Clients Routes - Input Validation', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        mockGetUserFirmId.mockResolvedValue('firm-123');
         app = createTestApp();
     });
 
@@ -589,6 +652,18 @@ describe('Clients Routes - Input Validation', () => {
             .send({ name: 'Test', type: 'client' });
 
         expect(res.status).toBe(400);
+    });
+
+    it('should reject contact access without firm association for non-admin', async () => {
+        mockGetUserFirmId.mockResolvedValueOnce(null);
+        mockGetClientFirmId.mockResolvedValueOnce({ firm_id: 'firm-123' });
+
+        const res = await request(app)
+            .get('/api/clients/client-123/contacts')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(403);
+        expect(mockListContacts).not.toHaveBeenCalled();
     });
 
     it('should reject empty name', async () => {

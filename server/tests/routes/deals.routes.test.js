@@ -50,6 +50,7 @@ const mockGetResumesForDeal = vi.fn();
 const mockGetDealStats = vi.fn();
 const mockGetDealFirmId = vi.fn();
 const mockGetClientFirmId = vi.fn();
+const mockGetContactOwnership = vi.fn();
 const mockGetResumeFirmId = vi.fn();
 const mockGetMissionsForDeal = vi.fn();
 
@@ -67,6 +68,7 @@ vi.mock('../../services/deals.service.js', () => ({
     getDealStats: (...args) => mockGetDealStats(...args),
     getDealFirmId: (...args) => mockGetDealFirmId(...args),
     getClientFirmId: (...args) => mockGetClientFirmId(...args),
+    getContactOwnership: (...args) => mockGetContactOwnership(...args),
     getResumeFirmId: (...args) => mockGetResumeFirmId(...args),
     getMissionsForDeal: (...args) => mockGetMissionsForDeal(...args),
     DEAL_STATUS: { OPEN: 'open', WON: 'won', LOST: 'lost', PENDING: 'pending' },
@@ -247,6 +249,19 @@ describe('Deals Routes - GET /api/deals', () => {
             expect.any(Object)
         );
     });
+
+    it('should reject invalid pagination', async () => {
+        mockGetUserFirmId.mockResolvedValueOnce('firm-123');
+        mockIsUserAdmin.mockReturnValue(false);
+
+        const res = await request(app)
+            .get('/api/deals?page=0&limit=-5')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(400);
+        expect(res.body.error).toBe('Invalid pagination parameters');
+        expect(mockGetDeals).not.toHaveBeenCalled();
+    });
 });
 
 describe('Deals Routes - GET /api/deals/stats', () => {
@@ -397,6 +412,19 @@ describe('Deals Routes - GET /api/deals/:id', () => {
 
         expect(res.status).toBe(200);
     });
+
+    it('should reject non-admin detail access without firm association', async () => {
+        mockGetDealFirmId.mockResolvedValueOnce('firm-123');
+        mockIsUserAdmin.mockReturnValue(false);
+        mockGetUserFirmId.mockResolvedValueOnce(null);
+
+        const res = await request(app)
+            .get('/api/deals/deal-123')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(403);
+        expect(res.body.error).toContain('firm');
+    });
 });
 
 describe('Deals Routes - POST /api/deals', () => {
@@ -443,6 +471,10 @@ describe('Deals Routes - POST /api/deals', () => {
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
         mockIsUserAdmin.mockReturnValue(false);
         mockGetClientFirmId.mockResolvedValueOnce('firm-123');
+        mockGetContactOwnership.mockResolvedValueOnce({
+            client_id: '123e4567-e89b-12d3-a456-426614174000',
+            firm_id: 'firm-123'
+        });
         mockCreateDeal.mockResolvedValueOnce({
             id: 'new-deal-camel',
             title: 'Camel Deal',
@@ -473,6 +505,44 @@ describe('Deals Routes - POST /api/deals', () => {
         }), 'user-123', 'firm-123');
     });
 
+    it('should reject creation for admin without firm association', async () => {
+        mockGetUserFirmId.mockResolvedValueOnce(null);
+        mockIsUserAdmin.mockReturnValue(true);
+
+        const res = await request(app)
+            .post('/api/deals')
+            .set('Authorization', 'Bearer valid-token')
+            .set('x-test-role', 'admin')
+            .send({ title: 'Admin Deal' });
+
+        expect(res.status).toBe(403);
+        expect(res.body.error).toBe('No firm association');
+        expect(mockCreateDeal).not.toHaveBeenCalled();
+    });
+
+    it('should reject creation when contact belongs to another client', async () => {
+        mockGetUserFirmId.mockResolvedValueOnce('firm-123');
+        mockIsUserAdmin.mockReturnValue(false);
+        mockGetClientFirmId.mockResolvedValueOnce('firm-123');
+        mockGetContactOwnership.mockResolvedValueOnce({
+            client_id: 'client-other',
+            firm_id: 'firm-123'
+        });
+
+        const res = await request(app)
+            .post('/api/deals')
+            .set('Authorization', 'Bearer valid-token')
+            .send({
+                title: 'Invalid Deal',
+                clientId: 'client-123',
+                contactId: 'contact-123'
+            });
+
+        expect(res.status).toBe(400);
+        expect(res.body.error).toBe('Contact does not belong to the provided client');
+        expect(mockCreateDeal).not.toHaveBeenCalled();
+    });
+
     it('should reject deal without title', async () => {
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
         mockIsUserAdmin.mockReturnValue(false);
@@ -483,6 +553,18 @@ describe('Deals Routes - POST /api/deals', () => {
             .send({ status: 'open' });
 
         expect(res.status).toBe(400);
+    });
+
+    it('should reject creation without firm association for non-admin', async () => {
+        mockGetUserFirmId.mockResolvedValueOnce(null);
+        mockIsUserAdmin.mockReturnValue(false);
+
+        const res = await request(app)
+            .post('/api/deals')
+            .set('Authorization', 'Bearer valid-token')
+            .send({ title: 'New Deal' });
+
+        expect(res.status).toBe(403);
     });
 });
 
@@ -531,6 +613,25 @@ describe('Deals Routes - PUT /api/deals/:id', () => {
 
         expect(res.status).toBe(200);
         expect(res.body.title).toBe('Updated Title');
+    });
+
+    it('should reject update when contact belongs to another firm', async () => {
+        mockGetDealFirmId.mockResolvedValueOnce('firm-123');
+        mockIsUserAdmin.mockReturnValue(false);
+        mockGetUserFirmId.mockResolvedValueOnce('firm-123');
+        mockGetContactOwnership.mockResolvedValueOnce({
+            client_id: 'client-123',
+            firm_id: 'firm-other'
+        });
+
+        const res = await request(app)
+            .put('/api/deals/deal-123')
+            .set('Authorization', 'Bearer valid-token')
+            .send({ contactId: 'contact-123' });
+
+        expect(res.status).toBe(403);
+        expect(res.body.error).toBe('Contact belongs to different firm');
+        expect(mockUpdateDeal).not.toHaveBeenCalled();
     });
 
     it('should return 403 for deal from different firm', async () => {
@@ -646,6 +747,20 @@ describe('Deals Routes - Deal-Resume Associations', () => {
                 .send({ resumeId: 'resume-123' });
 
             expect(res.status).toBe(403);
+        });
+
+        it('should reject resume association without firm association for non-admin', async () => {
+            mockGetDealFirmId.mockResolvedValueOnce('firm-123');
+            mockIsUserAdmin.mockReturnValue(false);
+            mockGetUserFirmId.mockResolvedValueOnce(null);
+
+            const res = await request(app)
+                .post('/api/deals/deal-123/resumes')
+                .set('Authorization', 'Bearer valid-token')
+                .send({ resumeId: 'resume-123' });
+
+            expect(res.status).toBe(403);
+            expect(res.body.error).toContain('firm');
         });
     });
 

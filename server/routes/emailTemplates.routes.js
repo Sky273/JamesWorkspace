@@ -8,6 +8,7 @@ import { authenticateToken } from '../middleware/auth.middleware.js';
 import { validateBody, validateParams, createEmailTemplateFrontSchema, updateEmailTemplateFrontSchema, compileEmailTemplateSchema, previewEmailTemplateSchema } from '../utils/validation.js';
 import { safeLog } from '../utils/logger.backend.js';
 import * as emailTemplatesService from '../services/emailTemplates.service.js';
+import { getUserFirmId } from '../utils/firmHelpers.js';
 
 /**
  * Get firm ID from user info (either from JWT or database lookup)
@@ -25,18 +26,23 @@ async function getFirmIdForUser(user) {
         const firmId = await emailTemplatesService.getUserFirmId(userId);
         if (firmId) return firmId;
     }
-    
-    // Look up by firm name
-    const firmName = user.firm || user.customer;
-    if (firmName) {
-        const firmId = await emailTemplatesService.getFirmIdByName(firmName);
-        if (firmId) return firmId;
-    }
-    
+
     return null;
 }
 
 const router = express.Router();
+
+function isAdmin(req) {
+    return req.user?.role === 'admin';
+}
+
+function requireAdmin(req, res) {
+    if (!isAdmin(req)) {
+        res.status(403).json({ error: 'Admin access required' });
+        return false;
+    }
+    return true;
+}
 
 /**
  * GET /api/email-templates
@@ -45,22 +51,19 @@ const router = express.Router();
  */
 router.get('/', authenticateToken, async (req, res) => {
     try {
-        const firmId = await getFirmIdForUser(req.user);
-        const isAdmin = req.user?.role === 'admin';
+        if (!requireAdmin(req, res)) {
+            return;
+        }
+
+        const firmId = await getUserFirmId(req) || await getFirmIdForUser(req.user);
         
         if (!firmId) {
             safeLog('warn', 'Firm ID not found for user', { userId: req.user.id, firm: req.user.firm });
-            // Only admins can see system templates when no firm is set
-            if (isAdmin) {
-                const templates = await emailTemplatesService.getTemplates(null, true);
-                return res.json({ templates });
-            }
-            // Non-admin without firm: return empty list
-            return res.json({ templates: [] });
+            const templates = await emailTemplatesService.getTemplates(null, true);
+            return res.json({ templates });
         }
         
-        // Pass isAdmin to include/exclude system templates
-        const templates = await emailTemplatesService.getTemplates(firmId, isAdmin);
+        const templates = await emailTemplatesService.getTemplates(firmId, true);
         
         return res.json({ templates });
     } catch (error) {
@@ -74,6 +77,9 @@ router.get('/', authenticateToken, async (req, res) => {
  * Get available keywords for template substitution
  */
 router.get('/keywords', authenticateToken, (req, res) => {
+    if (!requireAdmin(req, res)) {
+        return;
+    }
     return res.json({ keywords: emailTemplatesService.TEMPLATE_KEYWORDS });
 });
 
@@ -83,7 +89,14 @@ router.get('/keywords', authenticateToken, (req, res) => {
  */
 router.get('/default', authenticateToken, async (req, res) => {
     try {
-        const firmId = await getFirmIdForUser(req.user);
+        if (!requireAdmin(req, res)) {
+            return;
+        }
+
+        const firmId = await getUserFirmId(req) || await getFirmIdForUser(req.user);
+        if (!firmId) {
+            return res.status(403).json({ error: 'No firm association' });
+        }
         
         const template = await emailTemplatesService.getDefaultTemplate(firmId);
         
@@ -104,8 +117,12 @@ router.get('/default', authenticateToken, async (req, res) => {
  */
 router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => {
     try {
+        if (!requireAdmin(req, res)) {
+            return;
+        }
+
         const { id } = req.params;
-        const firmId = await getFirmIdForUser(req.user);
+        const firmId = await getUserFirmId(req) || await getFirmIdForUser(req.user);
         
         const template = await emailTemplatesService.getTemplate(id);
         
@@ -113,8 +130,10 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
             return res.status(404).json({ error: 'Template not found' });
         }
         
-        // Check access: system templates are accessible to all, firm templates only to firm members
-        if (template.firm_id && template.firm_id !== firmId) {
+        if (template.firm_id && firmId && template.firm_id !== firmId) {
+            return res.status(403).json({ error: 'Access denied to this template' });
+        }
+        if (template.firm_id && !firmId) {
             return res.status(403).json({ error: 'Access denied to this template' });
         }
         
@@ -131,7 +150,11 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
  */
 router.post('/', authenticateToken, validateBody(createEmailTemplateFrontSchema), async (req, res) => {
     try {
-        const firmId = await getFirmIdForUser(req.user);
+        if (!requireAdmin(req, res)) {
+            return;
+        }
+
+        const firmId = await getUserFirmId(req) || await getFirmIdForUser(req.user);
         const userId = req.user.id || req.user.userId;
         
         if (!firmId) {
@@ -165,8 +188,12 @@ router.post('/', authenticateToken, validateBody(createEmailTemplateFrontSchema)
  */
 router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateEmailTemplateFrontSchema), async (req, res) => {
     try {
+        if (!requireAdmin(req, res)) {
+            return;
+        }
+
         const { id } = req.params;
-        const firmId = await getFirmIdForUser(req.user);
+        const firmId = await getUserFirmId(req) || await getFirmIdForUser(req.user);
         
         // Check ownership
         const existing = await emailTemplatesService.getTemplate(id);
@@ -176,7 +203,10 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateE
         if (existing.is_system) {
             return res.status(403).json({ error: 'Cannot modify system template' });
         }
-        if (existing.firm_id !== firmId) {
+        if (existing.firm_id && firmId && existing.firm_id !== firmId) {
+            return res.status(403).json({ error: 'Access denied to this template' });
+        }
+        if (existing.firm_id && !firmId) {
             return res.status(403).json({ error: 'Access denied to this template' });
         }
         
@@ -207,23 +237,26 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateE
  */
 router.delete('/:id', authenticateToken, validateParams('id'), async (req, res) => {
     try {
+        if (!requireAdmin(req, res)) {
+            return;
+        }
+
         const { id } = req.params;
-        const firmId = await getFirmIdForUser(req.user);
-        const isAdmin = req.user?.role === 'admin';
+        const firmId = await getUserFirmId(req) || await getFirmIdForUser(req.user);
         
         // Check ownership
         const existing = await emailTemplatesService.getTemplate(id);
         if (!existing) {
             return res.status(404).json({ error: 'Template not found' });
         }
-        if (existing.is_system && !isAdmin) {
-            return res.status(403).json({ error: 'Cannot delete system template' });
+        if (!existing.is_system && existing.firm_id && firmId && existing.firm_id !== firmId) {
+            return res.status(403).json({ error: 'Access denied to this template' });
         }
-        if (!existing.is_system && existing.firm_id !== firmId) {
+        if (!existing.is_system && existing.firm_id && !firmId) {
             return res.status(403).json({ error: 'Access denied to this template' });
         }
         
-        await emailTemplatesService.deleteTemplate(id, { isAdmin });
+        await emailTemplatesService.deleteTemplate(id, { isAdmin: true });
         
         return res.json({ success: true, message: 'Template deleted successfully' });
     } catch (error) {
@@ -236,10 +269,14 @@ router.delete('/:id', authenticateToken, validateParams('id'), async (req, res) 
  * POST /api/email-templates/:id/duplicate
  * Duplicate a template to the user's firm
  */
-router.post('/:id/duplicate', authenticateToken, async (req, res) => {
+router.post('/:id/duplicate', authenticateToken, validateParams('id'), async (req, res) => {
     try {
+        if (!requireAdmin(req, res)) {
+            return;
+        }
+
         const { id } = req.params;
-        const firmId = await getFirmIdForUser(req.user);
+        const firmId = await getUserFirmId(req) || await getFirmIdForUser(req.user);
         const userId = req.user.id || req.user.userId;
         
         if (!firmId) {
@@ -251,7 +288,10 @@ router.post('/:id/duplicate', authenticateToken, async (req, res) => {
         if (!existing) {
             return res.status(404).json({ error: 'Template not found' });
         }
-        if (existing.firm_id && existing.firm_id !== firmId) {
+        if (existing.firm_id && firmId && existing.firm_id !== firmId) {
+            return res.status(403).json({ error: 'Access denied to this template' });
+        }
+        if (existing.firm_id && !firmId) {
             return res.status(403).json({ error: 'Access denied to this template' });
         }
         
@@ -270,8 +310,12 @@ router.post('/:id/duplicate', authenticateToken, async (req, res) => {
  */
 router.post('/:id/preview', authenticateToken, validateParams('id'), validateBody(previewEmailTemplateSchema), async (req, res) => {
     try {
+        if (!requireAdmin(req, res)) {
+            return;
+        }
+
         const { id } = req.params;
-        const firmId = await getFirmIdForUser(req.user);
+        const firmId = await getUserFirmId(req) || await getFirmIdForUser(req.user);
         const { context } = req.body;
         
         // Check access
@@ -279,7 +323,10 @@ router.post('/:id/preview', authenticateToken, validateParams('id'), validateBod
         if (!existing) {
             return res.status(404).json({ error: 'Template not found' });
         }
-        if (existing.firm_id && existing.firm_id !== firmId) {
+        if (existing.firm_id && firmId && existing.firm_id !== firmId) {
+            return res.status(403).json({ error: 'Access denied to this template' });
+        }
+        if (existing.firm_id && !firmId) {
             return res.status(403).json({ error: 'Access denied to this template' });
         }
         
@@ -298,6 +345,10 @@ router.post('/:id/preview', authenticateToken, validateParams('id'), validateBod
  */
 router.post('/compile', authenticateToken, validateBody(compileEmailTemplateSchema), async (req, res) => {
     try {
+        if (!requireAdmin(req, res)) {
+            return;
+        }
+
         const { mjmlContent, subjectTemplate, context } = req.body;
         
         if (!mjmlContent) {

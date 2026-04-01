@@ -136,16 +136,28 @@ export async function getTemplates(firmId, includeSystemTemplates = false) {
     let params;
     
     if (includeSystemTemplates) {
-        // Admin: include firm templates AND system templates (firm_id IS NULL)
-        sql = `
-            SELECT id, firm_id, name, description, subject_template, 
-                   is_system, is_default, status, created_at, updated_at
-            FROM email_templates
-            WHERE (firm_id = $1 OR firm_id IS NULL)
-              AND status = 'active'
-            ORDER BY is_system DESC, is_default DESC, name ASC
-        `;
-        params = [firmId];
+        if (firmId) {
+            // Admin with firm: include firm templates AND system templates
+            sql = `
+                SELECT id, firm_id, name, description, subject_template, 
+                       is_system, is_default, status, created_at, updated_at
+                FROM email_templates
+                WHERE (firm_id = $1 OR firm_id IS NULL)
+                  AND status = 'active'
+                ORDER BY is_system DESC, is_default DESC, name ASC
+            `;
+            params = [firmId];
+        } else {
+            // Admin without firm: cross-firm view over all active templates
+            sql = `
+                SELECT id, firm_id, name, description, subject_template, 
+                       is_system, is_default, status, created_at, updated_at
+                FROM email_templates
+                WHERE status = 'active'
+                ORDER BY is_system DESC, is_default DESC, name ASC
+            `;
+            params = [];
+        }
     } else {
         // Non-admin: only firm templates (exclude system templates without firm_id)
         sql = `

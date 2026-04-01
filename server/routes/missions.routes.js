@@ -10,33 +10,13 @@ import { sanitizeHtmlContent } from '../utils/sanitizer.backend.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { getUserFirmId } from '../utils/firmHelpers.js';
 import * as missionsService from '../services/missions.service.js';
+import {
+    ensureMissionFirmAccess,
+    normalizeMissionPayload,
+    parsePaginationParams
+} from './missions.routes.helpers.js';
 
 const router = express.Router();
-
-function getFirstDefinedValue(source, keys) {
-    for (const key of keys) {
-        if (source[key] !== undefined) {
-            return source[key];
-        }
-    }
-    return undefined;
-}
-
-function normalizeMissionPayload(payload = {}) {
-    return {
-        title: getFirstDefinedValue(payload, ['title', 'Title']),
-        content: getFirstDefinedValue(payload, ['content', 'Content']),
-        status: getFirstDefinedValue(payload, ['status', 'Status']),
-        firm: getFirstDefinedValue(payload, ['firm', 'Firm']),
-        firmId: getFirstDefinedValue(payload, ['firmId', 'firm_id', 'Firm ID']),
-        clientId: getFirstDefinedValue(payload, ['clientId', 'client_id', 'Client ID']),
-        contactId: getFirstDefinedValue(payload, ['contactId', 'contact_id', 'Contact ID']),
-        dealId: getFirstDefinedValue(payload, ['dealId', 'deal_id', 'Deal ID']),
-        keywords: getFirstDefinedValue(payload, ['keywords', 'Keywords']),
-        requiredSkills: getFirstDefinedValue(payload, ['requiredSkills', 'required_skills', 'Required Skills']),
-        preferredSkills: getFirstDefinedValue(payload, ['preferredSkills', 'preferred_skills', 'Preferred Skills'])
-    };
-}
 
 // ============================================
 // MISSIONS ROUTES
@@ -46,8 +26,10 @@ function normalizeMissionPayload(payload = {}) {
 router.get('/', authenticateToken, async (req, res) => {
     try {
         const isAdmin = req.user?.role === 'admin';
-        const page = parseInt(req.query.page) || 1;
-        const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+        const pagination = parsePaginationParams(req.query.page, req.query.limit);
+        if (!pagination.ok) {
+            return res.status(400).json({ error: pagination.error });
+        }
         const { search, status, dealId } = req.query;
 
         let firmId = null;
@@ -55,15 +37,12 @@ router.get('/', authenticateToken, async (req, res) => {
             firmId = await getUserFirmId(req);
             safeLog('info', 'Missions GET - user firm filter', { userFirmId: firmId, userId: req.user?.id });
             if (!firmId) {
-                safeLog('warn', 'User has no valid firm_id, returning empty results', { userId: req.user?.id });
-                return res.json({
-                    records: [],
-                    pagination: { page: 1, limit, totalPages: 0, totalCount: 0, hasMore: false }
-                });
+                safeLog('warn', 'User has no valid firm_id', { userId: req.user?.id });
+                return res.status(403).json({ error: 'No firm association' });
             }
         }
 
-        const result = await missionsService.listMissions({ page, limit, search, status, dealId, firmId });
+        const result = await missionsService.listMissions({ ...pagination.value, search, status, dealId, firmId });
         return res.json(result);
     } catch (error) {
         safeLog('error', 'Error fetching missions', { error: error.message });
@@ -101,11 +80,19 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
         }
         
         const isAdmin = req.user?.role === 'admin';
-        const userFirm = req.user?.firm;
         const userFirmId = await getUserFirmId(req);
-        
-        if (!isAdmin && record.firm !== userFirm && record.firm_id !== userFirmId) {
-            return res.status(403).json({ error: 'Access denied: You can only view missions from your firm' });
+        const access = ensureMissionFirmAccess({
+            isAdmin,
+            userFirmId,
+            mission: record
+        });
+
+        if (!access.ok) {
+            return res.status(access.status).json({
+                error: access.error === 'Access denied'
+                    ? 'Access denied: You can only view missions from your firm'
+                    : access.error
+            });
         }
         
         res.json(missionsService.mapMissionRecord(record));
@@ -123,6 +110,10 @@ router.post('/', authenticateToken, validateBody(createMissionSchema), async (re
         const userFirm = req.user?.firm;
         const userFirmId = await getUserFirmId(req);
         const isAdmin = req.user?.role === 'admin';
+
+        if (!isAdmin && !userFirmId) {
+            return res.status(403).json({ error: 'No firm association' });
+        }
         
         // Determine target firm_id: admin can specify any firm
         let targetFirmId = userFirmId;
@@ -147,39 +138,22 @@ router.post('/', authenticateToken, validateBody(createMissionSchema), async (re
         if (content) {
             content = sanitizeHtmlContent(content);
         }
-        
-        // Validate client_id if provided
-        const clientId = normalizedMission.clientId || null;
-        if (clientId) {
-            const clientCheck = await missionsService.validateClient(clientId, targetFirmId);
-            if (!clientCheck.exists) {
-                return res.status(400).json({ error: 'Client not found' });
-            }
-            if (!clientCheck.firmMatch) {
-                safeLog('warn', 'Client firm mismatch', { targetFirmId, userId: req.user?.id });
-                return res.status(403).json({ error: 'Client does not belong to the target firm' });
-            }
-        }
-        
-        // Validate contact_id if provided
-        const contactId = normalizedMission.contactId || null;
-        if (contactId && clientId) {
-            const contactValid = await missionsService.validateContact(contactId, clientId);
-            if (!contactValid) {
-                return res.status(400).json({ error: 'Contact not found or does not belong to this client' });
-            }
-        }
 
-        // Validate deal_id if provided
+        const clientId = normalizedMission.clientId || null;
+        const contactId = normalizedMission.contactId || null;
         const dealId = normalizedMission.dealId || null;
-        if (dealId) {
-            const dealCheck = await missionsService.validateDeal(dealId, targetFirmId);
-            if (!dealCheck.exists) {
-                return res.status(400).json({ error: 'Deal not found' });
+
+        const associationsCheck = await missionsService.validateMissionAssociations({
+            clientId,
+            contactId,
+            dealId,
+            expectedFirmId: targetFirmId
+        });
+        if (!associationsCheck.ok) {
+            if (associationsCheck.error === 'Client does not belong to the target firm') {
+                safeLog('warn', 'Client firm mismatch', { targetFirmId, userId: req.user?.id });
             }
-            if (!dealCheck.firmMatch) {
-                return res.status(403).json({ error: 'Deal does not belong to the target firm' });
-            }
+            return res.status(associationsCheck.status).json({ error: associationsCheck.error });
         }
         
         safeLog('info', 'Creating mission with firm data', {
@@ -214,13 +188,21 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateM
         const updateData = req.body;
         const normalizedUpdates = normalizeMissionPayload(updateData);
         const isAdmin = req.user?.role === 'admin';
-        const userFirm = req.user?.firm;
         const userFirmId = await getUserFirmId(req);
 
         const existingMission = await missionsService.findMission(id);
+        const access = ensureMissionFirmAccess({
+            isAdmin,
+            userFirmId,
+            mission: existingMission
+        });
 
-        if (!isAdmin && existingMission.firm !== userFirm && existingMission.firm_id !== userFirmId) {
-            return res.status(403).json({ error: 'Not authorized to update this mission' });
+        if (!access.ok) {
+            return res.status(access.status).json({
+                error: access.error === 'Access denied'
+                    ? 'Not authorized to update this mission'
+                    : access.error
+            });
         }
 
         // Build update object
@@ -255,66 +237,59 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateM
             updates.keywords = null;
         }
         
-        // Handle client_id update
-        if (normalizedUpdates.clientId !== undefined) {
-            const clientId = normalizedUpdates.clientId;
-            if (clientId) {
-                const clientCheck = await missionsService.validateClient(clientId, userFirmId);
-                if (!clientCheck.exists) {
-                    return res.status(400).json({ error: 'Client not found' });
-                }
-                if (!clientCheck.firmMatch) {
-                    return res.status(403).json({ error: 'Client does not belong to your firm' });
-                }
-            }
-            updates.client_id = clientId || null;
-        }
-        
-        // Handle contact_id update
-        if (normalizedUpdates.contactId !== undefined) {
-            const contactId = normalizedUpdates.contactId;
-            const clientId = updates.client_id || existingMission.client_id;
-            if (contactId && clientId) {
-                const contactValid = await missionsService.validateContact(contactId, clientId);
-                if (!contactValid) {
-                    return res.status(400).json({ error: 'Contact not found or does not belong to this client' });
-                }
-            }
-            updates.contact_id = contactId || null;
-        }
-        
-        // Handle deal_id update
-        if (normalizedUpdates.dealId !== undefined) {
-            const newDealId = normalizedUpdates.dealId;
-            if (newDealId) {
-                const dealCheck = await missionsService.validateDeal(newDealId, userFirmId);
-                if (!dealCheck.exists) {
-                    return res.status(400).json({ error: 'Deal not found' });
-                }
-                if (!dealCheck.firmMatch) {
-                    return res.status(403).json({ error: 'Deal does not belong to your firm' });
-                }
-            }
-            updates.deal_id = newDealId || null;
-        }
-
-        // Handle firm_id update (admin only)
+        let targetFirmId = existingMission.firm_id;
+        let targetFirmName = existingMission.firm;
         if (isAdmin && normalizedUpdates.firmId) {
             const newFirmId = normalizedUpdates.firmId;
             const firm = await missionsService.validateFirm(newFirmId);
             if (!firm) {
                 return res.status(400).json({ error: 'Specified firm not found' });
             }
-            updates.firm_id = firm.id;
-            updates.firm = firm.name;
+            targetFirmId = firm.id;
+            targetFirmName = firm.name;
             if (newFirmId !== existingMission.firm_id) {
-                safeLog('info', 'Admin changing mission firm', { 
-                    adminId: req.user?.id, 
+                safeLog('info', 'Admin changing mission firm', {
+                    adminId: req.user?.id,
                     missionId: id,
                     oldFirmId: existingMission.firm_id,
-                    newFirmId: updates.firm_id 
+                    newFirmId: targetFirmId
                 });
             }
+        }
+
+        if (normalizedUpdates.clientId !== undefined) {
+            updates.client_id = normalizedUpdates.clientId || null;
+        }
+
+        if (normalizedUpdates.contactId !== undefined) {
+            updates.contact_id = normalizedUpdates.contactId || null;
+        }
+
+        if (normalizedUpdates.dealId !== undefined) {
+            updates.deal_id = normalizedUpdates.dealId || null;
+        }
+
+        const finalClientId = Object.prototype.hasOwnProperty.call(updates, 'client_id') ? updates.client_id : existingMission.client_id;
+        const finalContactId = Object.prototype.hasOwnProperty.call(updates, 'contact_id') ? updates.contact_id : existingMission.contact_id;
+        const finalDealId = Object.prototype.hasOwnProperty.call(updates, 'deal_id') ? updates.deal_id : existingMission.deal_id;
+        const associationsCheck = await missionsService.validateMissionAssociations({
+            clientId: finalClientId,
+            contactId: finalContactId,
+            dealId: finalDealId,
+            expectedFirmId: targetFirmId
+        });
+        if (!associationsCheck.ok) {
+            const translatedError = associationsCheck.error === 'Client does not belong to the target firm'
+                ? 'Client does not belong to your firm'
+                : associationsCheck.error === 'Deal does not belong to the target firm'
+                    ? 'Deal does not belong to your firm'
+                    : associationsCheck.error;
+            return res.status(associationsCheck.status).json({ error: translatedError });
+        }
+
+        if (isAdmin && normalizedUpdates.firmId) {
+            updates.firm_id = targetFirmId;
+            updates.firm = targetFirmName;
         }
 
         const record = await missionsService.updateMission(id, updates);
@@ -333,13 +308,21 @@ router.delete('/:id', authenticateToken, validateParams('id'), async (req, res) 
     try {
         const { id } = req.params;
         const isAdmin = req.user?.role === 'admin';
-        const userFirm = req.user?.firm;
         const userFirmId = await getUserFirmId(req);
 
         if (!isAdmin) {
             const existingRecord = await missionsService.findMission(id);
-            if (existingRecord.firm !== userFirm && existingRecord.firm_id !== userFirmId) {
-                return res.status(403).json({ error: 'You can only delete missions from your firm' });
+            const access = ensureMissionFirmAccess({
+                isAdmin,
+                userFirmId,
+                mission: existingRecord
+            });
+            if (!access.ok) {
+                return res.status(access.status).json({
+                    error: access.error === 'Access denied'
+                        ? 'You can only delete missions from your firm'
+                        : access.error
+                });
             }
         }
 
@@ -359,14 +342,22 @@ router.get('/:missionId/adaptations', authenticateToken, validateParams('mission
     try {
         const { missionId } = req.params;
         const isAdmin = req.user?.role === 'admin';
-        const userFirm = req.user?.firm;
         const userFirmId = await getUserFirmId(req);
         
         // Verify mission belongs to user's firm
         if (!isAdmin) {
             const mission = await missionsService.findMission(missionId);
-            if (mission.firm !== userFirm && mission.firm_id !== userFirmId) {
-                return res.status(403).json({ error: 'Access denied: You can only view adaptations for missions from your firm' });
+            const access = ensureMissionFirmAccess({
+                isAdmin,
+                userFirmId,
+                mission
+            });
+            if (!access.ok) {
+                return res.status(access.status).json({
+                    error: access.error === 'Access denied'
+                        ? 'Access denied: You can only view adaptations for missions from your firm'
+                        : access.error
+                });
             }
         }
         
@@ -386,14 +377,18 @@ router.delete('/:missionId/keywords-cache', authenticateToken, validateParams('m
         const { missionId } = req.params;
         
         const isAdmin = req.user?.role === 'admin';
-        const userFirm = req.user?.firm || req.user?.firm_id;
         const userFirmId = await getUserFirmId(req);
         
         // Verify mission access
         const missionRecord = await missionsService.findMission(missionId);
-        
-        if (!isAdmin && missionRecord.firm !== userFirm && missionRecord.firm_id !== userFirmId) {
-            return res.status(403).json({ error: 'Access denied' });
+        const access = ensureMissionFirmAccess({
+            isAdmin,
+            userFirmId,
+            mission: missionRecord
+        });
+
+        if (!access.ok) {
+            return res.status(access.status).json({ error: access.error });
         }
         
         // Import the service dynamically

@@ -12,6 +12,7 @@ import {
     exchangeCalendarCode,
     isCalendarConnected,
     disconnectCalendar,
+    parseCalendarOAuthState,
     createCalendarEvent,
     updateCalendarEvent,
     deleteCalendarEvent,
@@ -27,6 +28,13 @@ function getTrustedFrontendOrigin() {
     } catch {
         return 'http://localhost:5173';
     }
+}
+
+function isValidCalendarEventId(eventId) {
+    return typeof eventId === 'string'
+        && eventId.length > 0
+        && eventId.length <= 1024
+        && /^[A-Za-z0-9._@-]+$/.test(eventId);
 }
 
 /**
@@ -70,8 +78,8 @@ router.get('/callback', async (req, res) => {
         }
         
         // Decode state to get userId
-        const stateData = JSON.parse(Buffer.from(state, 'base64').toString());
-        const { userId } = stateData;
+        const stateData = parseCalendarOAuthState(state);
+        const { userId } = stateData || {};
         
         if (!userId) {
             return res.status(400).send('Invalid state parameter');
@@ -142,6 +150,10 @@ router.post('/events', authenticateToken, validateBody(createCalendarEventSchema
  */
 router.patch('/events/:eventId', authenticateToken, async (req, res) => {
     try {
+        if (!isValidCalendarEventId(req.params.eventId)) {
+            return res.status(400).json({ error: 'Invalid calendar event ID' });
+        }
+
         const event = await updateCalendarEvent(req.user.id, req.params.eventId, req.body);
         
         if (!event) {
@@ -161,6 +173,10 @@ router.patch('/events/:eventId', authenticateToken, async (req, res) => {
  */
 router.delete('/events/:eventId', authenticateToken, async (req, res) => {
     try {
+        if (!isValidCalendarEventId(req.params.eventId)) {
+            return res.status(400).json({ error: 'Invalid calendar event ID' });
+        }
+
         const success = await deleteCalendarEvent(req.user.id, req.params.eventId);
         
         if (!success) {
@@ -180,7 +196,11 @@ router.delete('/events/:eventId', authenticateToken, async (req, res) => {
  */
 router.get('/events', authenticateToken, async (req, res) => {
     try {
-        const maxResults = parseInt(req.query.maxResults) || 10;
+        const maxResults = req.query.maxResults === undefined ? 10 : Number.parseInt(req.query.maxResults, 10);
+        if (!Number.isInteger(maxResults) || maxResults < 1 || maxResults > 100) {
+            return res.status(400).json({ error: 'Invalid maxResults parameter' });
+        }
+
         const events = await getUpcomingCalendarEvents(req.user.id, maxResults);
         res.json(events);
     } catch (error) {

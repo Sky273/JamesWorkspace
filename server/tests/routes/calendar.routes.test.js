@@ -17,10 +17,12 @@ const mockCreateCalendarEvent = vi.fn();
 const mockUpdateCalendarEvent = vi.fn();
 const mockDeleteCalendarEvent = vi.fn();
 const mockGetUpcomingCalendarEvents = vi.fn();
+const mockParseCalendarOAuthState = vi.fn();
 vi.mock('../../services/calendar.service.js', () => ({
     isCalendarConnected: (...args) => mockIsCalendarConnected(...args),
     getCalendarAuthUrl: (...args) => mockGetCalendarAuthUrl(...args),
     exchangeCalendarCode: (...args) => mockExchangeCalendarCode(...args),
+    parseCalendarOAuthState: (...args) => mockParseCalendarOAuthState(...args),
     disconnectCalendar: (...args) => mockDisconnectCalendar(...args),
     createCalendarEvent: (...args) => mockCreateCalendarEvent(...args),
     updateCalendarEvent: (...args) => mockUpdateCalendarEvent(...args),
@@ -66,6 +68,7 @@ describe('Calendar Routes', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        mockParseCalendarOAuthState.mockReturnValue({ userId: 'user-123', type: 'calendar', iat: Date.now() });
         app = createTestApp();
     });
 
@@ -146,7 +149,7 @@ describe('Calendar Routes', () => {
     describe('GET /callback', () => {
         it('should exchange code and return success HTML', async () => {
             mockExchangeCalendarCode.mockResolvedValueOnce(true);
-            const state = Buffer.from(JSON.stringify({ userId: 'user-123' })).toString('base64');
+            const state = 'signed-state';
 
             const res = await request(app)
                 .get(`/api/calendar/callback?code=auth-code-123&state=${state}`);
@@ -155,6 +158,7 @@ describe('Calendar Routes', () => {
             expect(res.text).toContain('Calendar connected');
             expect(res.text).toContain('data-target-origin="http://localhost:5173"');
             expect(mockExchangeCalendarCode).toHaveBeenCalledWith('auth-code-123', 'user-123');
+            expect(mockParseCalendarOAuthState).toHaveBeenCalledWith('signed-state');
         });
 
         it('should return 400 if code missing', async () => {
@@ -173,7 +177,8 @@ describe('Calendar Routes', () => {
         });
 
         it('should return 400 if state has no userId', async () => {
-            const state = Buffer.from(JSON.stringify({ foo: 'bar' })).toString('base64');
+            mockParseCalendarOAuthState.mockReturnValueOnce(null);
+            const state = 'invalid-state';
 
             const res = await request(app)
                 .get(`/api/calendar/callback?code=abc&state=${state}`);
@@ -184,7 +189,7 @@ describe('Calendar Routes', () => {
 
         it('should return 500 on exchange failure', async () => {
             mockExchangeCalendarCode.mockRejectedValueOnce(new Error('Token exchange failed'));
-            const state = Buffer.from(JSON.stringify({ userId: 'user-123' })).toString('base64');
+            const state = 'signed-state';
 
             const res = await request(app)
                 .get(`/api/calendar/callback?code=bad-code&state=${state}`);
@@ -296,6 +301,17 @@ describe('Calendar Routes', () => {
 
             expect(res.status).toBe(400);
         });
+
+        it('should reject invalid calendar event id', async () => {
+            const res = await request(app)
+                .patch('/api/calendar/events/bad%20id')
+                .set('Authorization', 'Bearer valid-token')
+                .send({ summary: 'Updated' });
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toBe('Invalid calendar event ID');
+            expect(mockUpdateCalendarEvent).not.toHaveBeenCalled();
+        });
     });
 
     // ==========================================
@@ -321,6 +337,16 @@ describe('Calendar Routes', () => {
                 .set('Authorization', 'Bearer valid-token');
 
             expect(res.status).toBe(400);
+        });
+
+        it('should reject invalid calendar event id', async () => {
+            const res = await request(app)
+                .delete('/api/calendar/events/bad%20id')
+                .set('Authorization', 'Bearer valid-token');
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toBe('Invalid calendar event ID');
+            expect(mockDeleteCalendarEvent).not.toHaveBeenCalled();
         });
     });
 
@@ -350,6 +376,16 @@ describe('Calendar Routes', () => {
                 .set('Authorization', 'Bearer valid-token');
 
             expect(mockGetUpcomingCalendarEvents).toHaveBeenCalledWith('user-123', 25);
+        });
+
+        it('should reject invalid maxResults', async () => {
+            const res = await request(app)
+                .get('/api/calendar/events?maxResults=-5')
+                .set('Authorization', 'Bearer valid-token');
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toBe('Invalid maxResults parameter');
+            expect(mockGetUpcomingCalendarEvents).not.toHaveBeenCalled();
         });
 
         it('should return 500 on error', async () => {

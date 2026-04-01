@@ -196,7 +196,7 @@ export function UsersResults({
               </div>
               <div className="flex items-center gap-2 mb-3">
                 {getRoleBadge(user.role, t)}
-                {user.firm ? <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">{user.firm}</span> : null}
+                {(user.firmName || user.firm) ? <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">{user.firmName || user.firm}</span> : null}
               </div>
               <div className="flex items-center gap-2 pt-3 border-t border-gray-200 dark:border-gray-700">
                 <CardActionButton icon={PencilSquareIcon} label={t('users.management.actions.edit')} onClick={() => onEdit(user)} className="btn btn-primary flex-1 px-3 py-2" tone="primary" />
@@ -249,7 +249,7 @@ export function FirmsResults({
         {firms.length === 0 ? (
           <div className="col-span-full"><EmptyStateCard icon={BuildingOfficeIcon} description={t('users.management.noFirms')} /></div>
         ) : firms.map((firm, index) => {
-          const associatedUsers = users.filter((user) => user.firm === firm.name);
+          const associatedUsers = users.filter((user) => user.firmId === firm.id);
           return (
             <AnimatedCard key={firm.id} index={index} className="shadow">
               <div className="p-4">

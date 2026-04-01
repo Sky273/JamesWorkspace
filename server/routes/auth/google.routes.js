@@ -224,9 +224,13 @@ router.get('/google/callback', async (req, res) => {
             phone: user.phone || '',
             status: user.status,
             role: user.role,
+            firmId: user.firm_id,
             firm_id: user.firm_id,
+            firmName: user.firm_name,
             firm: user.firm_name,
             firmLogo: user.firm_logo || '',
+            customerId: user.firm_id,
+            customerName: user.firm_name,
             customer: user.firm_name
         };
         
@@ -316,9 +320,13 @@ router.post('/google/token', authLimiter, validateBody(googleTokenSchema), async
             phone: user.phone || '',
             status: user.status,
             role: user.role,
+            firmId: user.firm_id,
             firm_id: user.firm_id,
+            firmName: user.firm_name,
             firm: user.firm_name,
             firmLogo: user.firm_logo || '',
+            customerId: user.firm_id,
+            customerName: user.firm_name,
             customer: user.firm_name
         };
         

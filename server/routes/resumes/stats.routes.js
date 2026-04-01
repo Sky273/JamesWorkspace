@@ -38,12 +38,15 @@ router.get('/grouped-by-deal', authenticateToken, async (req, res) => {
 // OPTIMIZED: Uses 30s cache per firm to reduce DB load
 router.get('/stats', authenticateToken, async (req, res) => {
     try {
-        const userFirm = req.user.firm || req.user.customer;
         const isAdmin = req.user?.role === 'admin';
         const userFirmId = isAdmin ? null : await getUserFirmId(req);
+
+        if (!isAdmin && !userFirmId) {
+            return res.status(403).json({ error: 'No firm association' });
+        }
         
         // Check cache first
-        const cacheKey = isAdmin ? 'admin' : (userFirmId || userFirm || 'unknown');
+        const cacheKey = isAdmin ? 'admin' : userFirmId;
         const cachedStats = resumeStatsService.getCachedStats(cacheKey);
         if (cachedStats) {
             safeLog('debug', 'Stats cache hit', { cacheKey });
@@ -51,7 +54,7 @@ router.get('/stats', authenticateToken, async (req, res) => {
         }
 
         // Determine firm filter params (null for admin)
-        const firmFilter = isAdmin ? { userFirmId: null, userFirm: null } : { userFirmId, userFirm };
+        const firmFilter = isAdmin ? { userFirmId: null } : { userFirmId };
 
         // Fetch all stats in parallel
         const [resumeStats, missionStats, adaptationStats] = await Promise.all([
@@ -85,7 +88,7 @@ router.get('/stats', authenticateToken, async (req, res) => {
                 // Improvement is the absolute difference in points (e.g., 62% -> 82% = +20 points)
                 improvement: Math.round(avgImproved - avgOriginal)
             },
-            customer: isAdmin ? null : userFirm
+            firmId: isAdmin ? null : userFirmId
         };
 
         // Cache the stats

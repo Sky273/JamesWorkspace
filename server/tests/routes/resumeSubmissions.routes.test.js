@@ -178,6 +178,16 @@ describe('Resume Submissions Routes', () => {
             expect(res.body.pagination.limit).toBe(5);
         });
 
+        it('should reject invalid pagination params', async () => {
+            const res = await request(app)
+                .get('/api/submissions?page=-1&limit=0')
+                .set('Authorization', 'Bearer valid-token');
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toBe('Invalid pagination parameters');
+            expect(mockListSubmissions).not.toHaveBeenCalled();
+        });
+
         it('should detect hasMore', async () => {
             mockListSubmissions.mockResolvedValueOnce({
                 data: Array.from({ length: 20 }, (_, i) => ({ ...sampleSubmission, id: `sub-${i}` })),
@@ -203,6 +213,18 @@ describe('Resume Submissions Routes', () => {
 
             expect(res.status).toBe(500);
             expect(res.body.error).toBe('Failed to fetch submissions');
+        });
+
+        it('should reject non-admin list access without firm association', async () => {
+            mockGetUserFirmId.mockResolvedValueOnce(null);
+
+            const res = await request(app)
+                .get('/api/submissions')
+                .set('Authorization', 'Bearer valid-token')
+                .set('x-test-role', 'user');
+
+            expect(res.status).toBe(403);
+            expect(res.body.error).toBe('No firm association');
         });
     });
 
@@ -265,6 +287,19 @@ describe('Resume Submissions Routes', () => {
 
             expect(res.status).toBe(200);
         });
+
+        it('should reject non-admin detail access without firm association', async () => {
+            mockGetUserFirmId.mockResolvedValueOnce(null);
+            mockGetSubmissionById.mockResolvedValueOnce(sampleSubmission);
+
+            const res = await request(app)
+                .get('/api/submissions/sub-123')
+                .set('Authorization', 'Bearer valid-token')
+                .set('x-test-role', 'user');
+
+            expect(res.status).toBe(403);
+            expect(res.body.error).toBe('No firm association');
+        });
     });
 
     // ==========================================
@@ -279,10 +314,10 @@ describe('Resume Submissions Routes', () => {
         };
 
         it('should create submission with valid data', async () => {
-            mockValidateResume.mockResolvedValueOnce(true);
+            mockValidateResume.mockResolvedValueOnce({ exists: true, firmMatch: true });
             mockValidateClient.mockResolvedValueOnce({ exists: true, firmMatch: true });
             mockValidateContact.mockResolvedValueOnce(true);
-            mockValidateMission.mockResolvedValueOnce(true);
+            mockValidateMission.mockResolvedValueOnce({ exists: true, firmMatch: true });
             mockCreateSubmission.mockResolvedValueOnce({ ...sampleSubmission, id: 'sub-new' });
 
             const res = await request(app)
@@ -295,10 +330,10 @@ describe('Resume Submissions Routes', () => {
         });
 
         it('should create submission with camelCase payload', async () => {
-            mockValidateResume.mockResolvedValueOnce(true);
+            mockValidateResume.mockResolvedValueOnce({ exists: true, firmMatch: true });
             mockValidateClient.mockResolvedValueOnce({ exists: true, firmMatch: true });
             mockValidateContact.mockResolvedValueOnce(true);
-            mockValidateMission.mockResolvedValueOnce(true);
+            mockValidateMission.mockResolvedValueOnce({ exists: true, firmMatch: true });
             mockCreateSubmission.mockResolvedValueOnce({ ...sampleSubmission, id: 'sub-camel' });
 
             const res = await request(app)
@@ -355,7 +390,7 @@ describe('Resume Submissions Routes', () => {
         });
 
         it('should return 400 if resume not found', async () => {
-            mockValidateResume.mockResolvedValueOnce(false);
+            mockValidateResume.mockResolvedValueOnce({ exists: false, firmMatch: false });
 
             const res = await request(app)
                 .post('/api/submissions')
@@ -367,7 +402,7 @@ describe('Resume Submissions Routes', () => {
         });
 
         it('should return 403 if client belongs to another firm', async () => {
-            mockValidateResume.mockResolvedValueOnce(true);
+            mockValidateResume.mockResolvedValueOnce({ exists: true, firmMatch: true });
             mockValidateClient.mockResolvedValueOnce({ exists: true, firmMatch: false });
 
             const res = await request(app)
@@ -380,7 +415,7 @@ describe('Resume Submissions Routes', () => {
         });
 
         it('should return 400 if contact does not belong to client', async () => {
-            mockValidateResume.mockResolvedValueOnce(true);
+            mockValidateResume.mockResolvedValueOnce({ exists: true, firmMatch: true });
             mockValidateClient.mockResolvedValueOnce({ exists: true, firmMatch: true });
             mockValidateContact.mockResolvedValueOnce(false);
 
@@ -403,6 +438,33 @@ describe('Resume Submissions Routes', () => {
 
             expect(res.status).toBe(400);
             expect(res.body.error).toContain('must belong to a firm');
+        });
+
+        it('should return 403 if resume belongs to another firm', async () => {
+            mockValidateResume.mockResolvedValueOnce({ exists: true, firmMatch: false });
+
+            const res = await request(app)
+                .post('/api/submissions')
+                .set('Authorization', 'Bearer valid-token')
+                .send(createBody);
+
+            expect(res.status).toBe(403);
+            expect(res.body.error).toBe('Resume does not belong to your firm');
+        });
+
+        it('should return 403 if mission belongs to another firm', async () => {
+            mockValidateResume.mockResolvedValueOnce({ exists: true, firmMatch: true });
+            mockValidateClient.mockResolvedValueOnce({ exists: true, firmMatch: true });
+            mockValidateContact.mockResolvedValueOnce(true);
+            mockValidateMission.mockResolvedValueOnce({ exists: true, firmMatch: false });
+
+            const res = await request(app)
+                .post('/api/submissions')
+                .set('Authorization', 'Bearer valid-token')
+                .send(createBody);
+
+            expect(res.status).toBe(403);
+            expect(res.body.error).toBe('Mission does not belong to your firm');
         });
     });
 
@@ -445,6 +507,20 @@ describe('Resume Submissions Routes', () => {
 
             expect(res.status).toBe(403);
         });
+
+        it('should reject non-admin update without firm association', async () => {
+            mockGetUserFirmId.mockResolvedValueOnce(null);
+            mockFindSubmission.mockResolvedValueOnce(sampleSubmission);
+
+            const res = await request(app)
+                .put('/api/submissions/sub-123')
+                .set('Authorization', 'Bearer valid-token')
+                .set('x-test-role', 'user')
+                .send({ status: 'viewed' });
+
+            expect(res.status).toBe(403);
+            expect(res.body.error).toBe('No firm association');
+        });
     });
 
     // ==========================================
@@ -484,6 +560,19 @@ describe('Resume Submissions Routes', () => {
 
             expect(res.status).toBe(403);
         });
+
+        it('should reject non-admin delete without firm association', async () => {
+            mockGetUserFirmId.mockResolvedValueOnce(null);
+            mockFindSubmission.mockResolvedValueOnce(sampleSubmission);
+
+            const res = await request(app)
+                .delete('/api/submissions/sub-123')
+                .set('Authorization', 'Bearer valid-token')
+                .set('x-test-role', 'user');
+
+            expect(res.status).toBe(403);
+            expect(res.body.error).toBe('No firm association');
+        });
     });
 
     // ==========================================
@@ -520,6 +609,18 @@ describe('Resume Submissions Routes', () => {
 
             expect(res.status).toBe(500);
             expect(res.body.error).toBe('Failed to fetch submission stats');
+        });
+
+        it('should reject non-admin stats access without firm association', async () => {
+            mockGetUserFirmId.mockResolvedValueOnce(null);
+
+            const res = await request(app)
+                .get('/api/submissions/stats/summary')
+                .set('Authorization', 'Bearer valid-token')
+                .set('x-test-role', 'user');
+
+            expect(res.status).toBe(403);
+            expect(res.body.error).toBe('No firm association');
         });
     });
 

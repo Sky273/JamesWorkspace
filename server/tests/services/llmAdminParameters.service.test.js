@@ -104,4 +104,30 @@ describe('llmAdminParameters.service', () => {
         expect(resolved.parameters.metadata).toEqual({ feature: 'analysis' });
         expect(resolved.parameters.stop).toEqual(['END']);
     });
+
+    it('preserves saved parameters after reload while still applying runtime model rules', () => {
+        const resolved = resolveEffectiveModelParameters({
+            settings: {
+                llmModelParameters: {
+                    deepseek: {
+                        'deepseek-reasoner': {
+                            temperature: 0,
+                            top_p: 1,
+                            max_tokens: 4096
+                        }
+                    }
+                }
+            },
+            provider: 'deepseek',
+            model: 'deepseek-reasoner',
+            overrides: {}
+        });
+
+        expect(resolved.persisted).toEqual({
+            temperature: 0,
+            top_p: 1,
+            max_tokens: 4096
+        });
+        expect(resolved.parameters.max_tokens).toBe(4096);
+    });
 });

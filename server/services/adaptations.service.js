@@ -18,7 +18,7 @@ const ALLOWED_COLUMNS = new Set([
 /**
  * List adaptations with pagination and filters
  * @param {Object} options
- * @param {string|null} options.userFirm - Firm name filter (null for admin)
+ * @param {string|null} options.firmId - Firm UUID filter (null for admin)
  * @param {string} [options.resumeId]
  * @param {string} [options.missionId]
  * @param {string} [options.status]
@@ -27,15 +27,17 @@ const ALLOWED_COLUMNS = new Set([
  * @param {number} [options.limit=20]
  * @returns {Promise<{records: Array, totalCount: number}>}
  */
-export async function listAdaptations({ userFirm, resumeId, missionId, status, search, page = 1, limit = 20 }) {
+export async function listAdaptations({ firmId, resumeId, missionId, status, search, page = 1, limit = 20 }) {
+    const normalizedPage = Math.max(1, page);
+    const normalizedLimit = Math.max(1, Math.min(limit, 100));
     const conditions = [];
     const params = [];
     let paramIndex = 1;
 
     // Firm filter (non-admin users)
-    if (userFirm) {
-        conditions.push(`firm = $${paramIndex}`);
-        params.push(userFirm);
+    if (firmId) {
+        conditions.push(`firm_id = $${paramIndex}`);
+        params.push(firmId);
         paramIndex++;
     }
 
@@ -68,7 +70,7 @@ export async function listAdaptations({ userFirm, resumeId, missionId, status, s
     }
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-    const offset = (page - 1) * limit;
+    const offset = (normalizedPage - 1) * normalizedLimit;
 
     // Count total records
     const countResult = await query(
@@ -80,7 +82,7 @@ export async function listAdaptations({ userFirm, resumeId, missionId, status, s
     // Fetch paginated records
     const dataResult = await query(
         `SELECT * FROM resume_adaptations ${whereClause} ORDER BY created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
-        [...params, limit, offset]
+        [...params, normalizedLimit, offset]
     );
 
     return { records: dataResult.rows, totalCount };
@@ -94,6 +96,9 @@ export async function listAdaptations({ userFirm, resumeId, missionId, status, s
  * @returns {Promise<Object>}
  */
 export async function getAdaptationsGroupedByDeal({ firmId, isAdmin }) {
+    const dealsWhereClause = isAdmin ? '' : 'WHERE d.firm_id = $1';
+    const dealsParams = isAdmin ? [] : [firmId];
+
     // Query 1: Get all deals for this firm
     const dealsResult = await query(`
         SELECT d.id, d.title, d.status, d.priority,
@@ -102,11 +107,11 @@ export async function getAdaptationsGroupedByDeal({ firmId, isAdmin }) {
         FROM deals d
         LEFT JOIN clients c ON d.client_id = c.id
         LEFT JOIN client_contacts cc ON d.contact_id = cc.id
-        WHERE d.firm_id = $1
+        ${dealsWhereClause}
         ORDER BY
             CASE d.priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 WHEN 'low' THEN 3 ELSE 4 END,
             d.title ASC
-    `, [firmId]);
+    `, dealsParams);
 
     const dealIds = dealsResult.rows.map(d => d.id);
 
@@ -187,7 +192,7 @@ export async function getAdaptationsGroupedByDeal({ firmId, isAdmin }) {
         .filter(deal => deal.adaptations_count > 0); // Only show deals that have adaptations
 
     // Query 4: Get adaptations for missions WITHOUT a deal
-    const firmFilter = !isAdmin ? 'AND ra.firm = (SELECT name FROM firms WHERE id = $1)' : '';
+    const firmFilter = !isAdmin ? 'AND ra.firm_id = $1' : '';
     const firmParams = !isAdmin ? [firmId] : [];
 
     const unassignedResult = await query(`

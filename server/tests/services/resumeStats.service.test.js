@@ -145,14 +145,6 @@ describe('Resume Stats Service', () => {
             expect(query.mock.calls[0][0]).toContain('r.firm_id = $1');
         });
 
-        it('should filter by firm name fallback', async () => {
-            query.mockResolvedValueOnce({ rows: [{ total: '10' }] });
-
-            await getResumeStats({ userFirm: 'Acme' });
-
-            expect(query.mock.calls[0][0]).toContain('r.firm_name = $1');
-        });
-
         it('should return all stats for admin (no filter)', async () => {
             query.mockResolvedValueOnce({ rows: [{ total: '100' }] });
 
@@ -166,18 +158,10 @@ describe('Resume Stats Service', () => {
         it('should return mission stats with firmId filter', async () => {
             query.mockResolvedValueOnce({ rows: [{ total: '20', active: '15' }] });
 
-            const result = await getMissionStats({ userFirmId: 'f1', userFirm: 'Acme' });
+            const result = await getMissionStats({ userFirmId: 'f1' });
 
             expect(result.total).toBe('20');
-            expect(query.mock.calls[0][0]).toContain('firm = $1 OR firm_id = $2');
-        });
-
-        it('should return mission stats with firm name fallback', async () => {
-            query.mockResolvedValueOnce({ rows: [{ total: '5' }] });
-
-            await getMissionStats({ userFirm: 'Acme' });
-
-            expect(query.mock.calls[0][0]).toContain('firm = $1');
+            expect(query.mock.calls[0][0]).toContain('firm_id = $1');
         });
     });
 
@@ -185,9 +169,10 @@ describe('Resume Stats Service', () => {
         it('should return adaptation count with firmId filter', async () => {
             query.mockResolvedValueOnce({ rows: [{ total: '30' }] });
 
-            const result = await getAdaptationStats({ userFirmId: 'f1', userFirm: 'Acme' });
+            const result = await getAdaptationStats({ userFirmId: 'f1' });
 
             expect(result.total).toBe('30');
+            expect(query.mock.calls[0][0]).toContain('firm_id = $1');
         });
 
         it('should return stats for admin (no filter)', async () => {

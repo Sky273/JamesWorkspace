@@ -7,6 +7,18 @@ import * as submissionsService from '../services/resumeSubmissions.service.js';
 
 const router = express.Router();
 
+function parsePositiveInteger(value, fallback, max = null) {
+    const parsed = parseInt(value, 10);
+    if (Number.isNaN(parsed) || parsed < 1) {
+        return { ok: false, value: fallback };
+    }
+
+    return {
+        ok: true,
+        value: max ? Math.min(parsed, max) : parsed
+    };
+}
+
 function getFirstDefinedValue(source, keys) {
     for (const key of keys) {
         if (Object.prototype.hasOwnProperty.call(source, key) && source[key] !== undefined) {
@@ -36,20 +48,60 @@ function normalizeSubmissionPayload(payload = {}) {
 // GET /api/submissions - Get all submissions (with pagination and firm segregation)
 router.get('/', authenticateToken, async (req, res) => {
     try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 20;
+        const pageInput = req.query.page;
+        const limitInput = req.query.limit;
+        const pageResult = pageInput === undefined ? { ok: true, value: 1 } : parsePositiveInteger(pageInput, 1);
+        const limitResult = limitInput === undefined ? { ok: true, value: 20 } : parsePositiveInteger(limitInput, 20, 100);
         const { clientId, resumeId, missionId, status } = req.query;
         const userFirmId = await getUserFirmId(req);
         const isAdmin = isUserAdmin(req);
 
+        if (!pageResult.ok || !limitResult.ok) {
+            return res.status(400).json({ error: 'Invalid pagination parameters' });
+        }
+
+        if (!isAdmin && !userFirmId) {
+            return res.status(403).json({ error: 'No firm association' });
+        }
+
         const firmId = (!isAdmin && userFirmId) ? userFirmId : null;
 
-        const result = await submissionsService.listSubmissions({ page, limit, clientId, resumeId, missionId, status, firmId });
+        const result = await submissionsService.listSubmissions({
+            page: pageResult.value,
+            limit: limitResult.value,
+            clientId,
+            resumeId,
+            missionId,
+            status,
+            firmId
+        });
         return res.json(result);
     } catch (error) {
         safeLog('error', 'Error fetching submissions', { error: error.message });
         return res.status(500).json({ 
             error: 'Failed to fetch submissions' 
+        });
+    }
+});
+
+// GET /api/submissions/stats - Get submission statistics
+router.get('/stats/summary', authenticateToken, async (req, res) => {
+    try {
+        const userFirmId = await getUserFirmId(req);
+        const isAdmin = isUserAdmin(req);
+
+        if (!isAdmin && !userFirmId) {
+            return res.status(403).json({ error: 'No firm association' });
+        }
+
+        const firmId = (!isAdmin && userFirmId) ? userFirmId : null;
+        const stats = await submissionsService.getStatsSummary(firmId);
+
+        return res.json(stats);
+    } catch (error) {
+        safeLog('error', 'Error fetching submission stats', { error: error.message });
+        return res.status(500).json({ 
+            error: 'Failed to fetch submission stats' 
         });
     }
 });
@@ -67,8 +119,12 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
             return res.status(404).json({ error: 'Submission not found' });
         }
 
+        if (!isAdmin && !userFirmId) {
+            return res.status(403).json({ error: 'No firm association' });
+        }
+
         // Check firm access
-        if (!isAdmin && userFirmId && submission.firm_id !== userFirmId) {
+        if (!isAdmin && submission.firm_id !== userFirmId) {
             return res.status(403).json({ error: 'Access denied' });
         }
 
@@ -106,9 +162,12 @@ router.post('/', authenticateToken, validateBody(createSubmissionSchema), async 
         }
 
         // Verify resume exists
-        const resumeExists = await submissionsService.validateResume(resume_id);
-        if (!resumeExists) {
+        const resumeCheck = await submissionsService.validateResume(resume_id, userFirmId);
+        if (!resumeCheck.exists) {
             return res.status(400).json({ error: 'Resume not found' });
+        }
+        if (!resumeCheck.firmMatch) {
+            return res.status(403).json({ error: 'Resume does not belong to your firm' });
         }
 
         // Verify client exists and belongs to user's firm
@@ -128,9 +187,12 @@ router.post('/', authenticateToken, validateBody(createSubmissionSchema), async 
 
         // Verify mission if provided
         if (mission_id) {
-            const missionExists = await submissionsService.validateMission(mission_id);
-            if (!missionExists) {
+            const missionCheck = await submissionsService.validateMission(mission_id, userFirmId);
+            if (!missionCheck.exists) {
                 return res.status(400).json({ error: 'Mission not found' });
+            }
+            if (!missionCheck.firmMatch) {
+                return res.status(403).json({ error: 'Mission does not belong to your firm' });
             }
         }
 
@@ -161,7 +223,11 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateS
             return res.status(404).json({ error: 'Submission not found' });
         }
 
-        if (!isAdmin && userFirmId && existing.firm_id !== userFirmId) {
+        if (!isAdmin && !userFirmId) {
+            return res.status(403).json({ error: 'No firm association' });
+        }
+
+        if (!isAdmin && existing.firm_id !== userFirmId) {
             return res.status(403).json({ error: 'Access denied' });
         }
 
@@ -190,7 +256,11 @@ router.delete('/:id', authenticateToken, validateParams('id'), async (req, res) 
             return res.status(404).json({ error: 'Submission not found' });
         }
 
-        if (!isAdmin && userFirmId && existing.firm_id !== userFirmId) {
+        if (!isAdmin && !userFirmId) {
+            return res.status(403).json({ error: 'No firm association' });
+        }
+
+        if (!isAdmin && existing.firm_id !== userFirmId) {
             return res.status(403).json({ error: 'Access denied' });
         }
 
@@ -201,24 +271,6 @@ router.delete('/:id', authenticateToken, validateParams('id'), async (req, res) 
         safeLog('error', 'Error deleting submission', { error: error.message, submissionId: req.params.id });
         return res.status(500).json({ 
             error: 'Failed to delete submission' 
-        });
-    }
-});
-
-// GET /api/submissions/stats - Get submission statistics
-router.get('/stats/summary', authenticateToken, async (req, res) => {
-    try {
-        const userFirmId = await getUserFirmId(req);
-        const isAdmin = isUserAdmin(req);
-
-        const firmId = (!isAdmin && userFirmId) ? userFirmId : null;
-        const stats = await submissionsService.getStatsSummary(firmId);
-
-        return res.json(stats);
-    } catch (error) {
-        safeLog('error', 'Error fetching submission stats', { error: error.message });
-        return res.status(500).json({ 
-            error: 'Failed to fetch submission stats' 
         });
     }
 });

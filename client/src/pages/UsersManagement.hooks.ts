@@ -10,6 +10,8 @@ export interface User {
   name?: string;
   email?: string;
   firm?: string;
+  firmId?: string;
+  firmName?: string;
   role?: string;
   status?: string;
 }
@@ -31,7 +33,7 @@ export interface UserFormData {
   password: string;
   jobTitle: string;
   phone: string;
-  firm: string;
+  firmId: string;
   role: string;
   status: string;
 }
@@ -145,7 +147,7 @@ export function useUsersManagementDashboard() {
           email: formData.email.toLowerCase(),
           jobTitle: formData.jobTitle || '',
           phone: formData.phone || '',
-          firm: formData.firm || undefined,
+          firmId: formData.firmId || undefined,
           role: capitalizedRole,
           status: formData.status,
         });
@@ -157,7 +159,7 @@ export function useUsersManagementDashboard() {
           password: formData.password,
           jobTitle: formData.jobTitle || '',
           phone: formData.phone || '',
-          firm: formData.firm,
+          firmId: formData.firmId,
           role: capitalizedRole,
           status: formData.status,
         });

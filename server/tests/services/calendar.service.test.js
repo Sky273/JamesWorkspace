@@ -24,6 +24,10 @@ vi.mock('../../config/oauth.config.js', () => ({
     calculateTokenExpiry: vi.fn(() => new Date(Date.now() + 3600000))
 }));
 
+vi.mock('../../config/constants.js', () => ({
+    JWT_SECRET: 'test-jwt-secret-for-vitest-minimum-32-chars-long'
+}));
+
 vi.mock('googleapis', () => ({
     google: {
         auth: { OAuth2: vi.fn(() => ({
@@ -45,7 +49,9 @@ vi.mock('googleapis', () => ({
 
 import { query } from '../../config/database.js';
 import {
+    buildCalendarOAuthState,
     isCalendarConnected,
+    parseCalendarOAuthState,
     disconnectCalendar,
     initCalendarTokensTable,
     destroyCalendarService
@@ -75,6 +81,25 @@ describe('Calendar Service', () => {
         it('should return false on error', async () => {
             query.mockRejectedValueOnce(new Error('DB error'));
             expect(await isCalendarConnected('u1')).toBe(false);
+        });
+    });
+
+    describe('calendar oauth state', () => {
+        it('should build and parse a signed state', () => {
+            const state = buildCalendarOAuthState({ userId: 'u1', issuedAt: Date.now() });
+
+            expect(parseCalendarOAuthState(state)).toMatchObject({
+                userId: 'u1',
+                type: 'calendar'
+            });
+        });
+
+        it('should reject tampered state', () => {
+            const state = buildCalendarOAuthState({ userId: 'u1', issuedAt: Date.now() });
+            const [payload, signature] = state.split('.');
+            const tampered = `${payload}.x${signature.slice(1)}`;
+
+            expect(parseCalendarOAuthState(tampered)).toBeNull();
         });
     });
 

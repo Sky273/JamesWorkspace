@@ -9,25 +9,22 @@ import { validateParams, validateBody, updateAdaptationSchema } from '../utils/v
 import { safeLog } from '../utils/logger.backend.js';
 import { getUserFirmId } from '../utils/firmHelpers.js';
 import * as adaptationsService from '../services/adaptations.service.js';
+import {
+    ensureAdaptationFirmAccess,
+    normalizeAdaptationPayload
+} from './adaptations.routes.helpers.js';
 
 const router = express.Router();
 
-function getFirstDefinedValue(source, keys) {
-    for (const key of keys) {
-        if (source[key] !== undefined) {
-            return source[key];
-        }
+function parsePositiveInteger(value, fallback, max = null) {
+    const parsed = parseInt(value, 10);
+    if (Number.isNaN(parsed) || parsed < 1) {
+        return { ok: false, value: fallback };
     }
-    return undefined;
-}
 
-function normalizeAdaptationPayload(payload = {}) {
     return {
-        adaptedText: getFirstDefinedValue(payload, ['adaptedText', 'adapted_text', 'Adapted Text']),
-        adaptedTitle: getFirstDefinedValue(payload, ['adaptedTitle', 'adapted_title', 'Adapted Title']),
-        status: getFirstDefinedValue(payload, ['status', 'Status']),
-        matchScore: getFirstDefinedValue(payload, ['matchScore', 'match_score', 'Match Score']),
-        matchAnalysis: getFirstDefinedValue(payload, ['matchAnalysis', 'match_analysis', 'Match Analysis'])
+        ok: true,
+        value: max ? Math.min(parsed, max) : parsed
     };
 }
 
@@ -40,19 +37,29 @@ router.get('/', authenticateToken, async (req, res) => {
     try {
         const { resumeId, missionId, status, search } = req.query;
         const isAdmin = req.user?.role === 'admin';
-        const userFirm = req.user?.firm || req.user?.customer;
+        const userFirmId = await getUserFirmId(req);
+        const access = ensureAdaptationFirmAccess({ isAdmin, userFirmId });
+        if (!access.ok) {
+            return res.status(access.status).json({ error: access.error });
+        }
         
-        const page = parseInt(req.query.page) || 1;
-        const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+        const pageInput = req.query.page;
+        const limitInput = req.query.limit;
+        const pageResult = pageInput === undefined ? { ok: true, value: 1 } : parsePositiveInteger(pageInput, 1);
+        const limitResult = limitInput === undefined ? { ok: true, value: 20 } : parsePositiveInteger(limitInput, 20, 100);
+
+        if (!pageResult.ok || !limitResult.ok) {
+            return res.status(400).json({ error: 'Invalid pagination parameters' });
+        }
 
         const { records, totalCount } = await adaptationsService.listAdaptations({
-            userFirm: (!isAdmin && userFirm) ? userFirm : null,
+            firmId: isAdmin ? null : userFirmId,
             resumeId,
             missionId,
             status,
             search,
-            page,
-            limit
+            page: pageResult.value,
+            limit: limitResult.value
         });
 
         const adaptations = records.map(record => ({
@@ -74,14 +81,14 @@ router.get('/', authenticateToken, async (req, res) => {
             'Updated At': record.updated_at
         }));
 
-        const totalPages = Math.ceil(totalCount / limit);
-        const hasMore = page < totalPages;
+        const totalPages = Math.ceil(totalCount / limitResult.value);
+        const hasMore = pageResult.value < totalPages;
 
         return res.json({
             data: adaptations,
             pagination: {
-                page,
-                limit,
+                page: pageResult.value,
+                limit: limitResult.value,
                 totalCount,
                 totalPages,
                 hasMore
@@ -118,10 +125,14 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
         const record = await adaptationsService.getAdaptationById(id);
         
         const isAdmin = req.user?.role === 'admin';
-        const userFirm = req.user?.firm || req.user?.customer;
-        
-        if (!isAdmin && record.firm !== userFirm) {
-            return res.status(403).json({ error: 'Access denied: You can only view adaptations from your firm' });
+        const userFirmId = await getUserFirmId(req);
+        const access = ensureAdaptationFirmAccess({ isAdmin, userFirmId, record });
+        if (!access.ok) {
+            return res.status(access.status).json({
+                error: access.error === 'Access denied'
+                    ? 'Access denied: You can only view adaptations from your firm'
+                    : access.error
+            });
         }
         
         // Fetch mission client/contact info if mission_id exists
@@ -171,13 +182,18 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateA
     try {
         const { id } = req.params;
         const isAdmin = req.user?.role === 'admin';
-        const userFirm = req.user?.firm || req.user?.customer;
+        const userFirmId = await getUserFirmId(req);
 
         // Check permissions
         if (!isAdmin) {
             const existingRecord = await adaptationsService.getAdaptationById(id);
-            if (existingRecord.firm !== userFirm) {
-                return res.status(403).json({ error: 'You can only update adaptations from your firm' });
+            const access = ensureAdaptationFirmAccess({ isAdmin, userFirmId, record: existingRecord });
+            if (!access.ok) {
+                return res.status(access.status).json({
+                    error: access.error === 'Access denied'
+                        ? 'You can only update adaptations from your firm'
+                        : access.error
+                });
             }
         }
 
@@ -233,13 +249,18 @@ router.delete('/:id', authenticateToken, validateParams('id'), async (req, res) 
     try {
         const { id } = req.params;
         const isAdmin = req.user?.role === 'admin';
-        const userFirm = req.user?.firm || req.user?.customer;
+        const userFirmId = await getUserFirmId(req);
 
         // Check permissions
         if (!isAdmin) {
             const existingRecord = await adaptationsService.getAdaptationById(id);
-            if (existingRecord.firm !== userFirm) {
-                return res.status(403).json({ error: 'You can only delete adaptations from your firm' });
+            const access = ensureAdaptationFirmAccess({ isAdmin, userFirmId, record: existingRecord });
+            if (!access.ok) {
+                return res.status(access.status).json({
+                    error: access.error === 'Access denied'
+                        ? 'You can only delete adaptations from your firm'
+                        : access.error
+                });
             }
         }
 

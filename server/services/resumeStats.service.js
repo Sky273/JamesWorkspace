@@ -270,18 +270,14 @@ export async function getResumesGroupedByDeal({ firmId, isAdmin }) {
  * Fetch resume stats (count, analyzed, improved, scores, date ranges)
  * @param {Object} options
  * @param {string|null} options.userFirmId
- * @param {string|null} options.userFirm - firm name fallback
  * @returns {Promise<Object>}
  */
-export async function getResumeStats({ userFirmId, userFirm }) {
+export async function getResumeStats({ userFirmId }) {
     let whereClause = '';
     const params = [];
     if (userFirmId) {
         whereClause = 'WHERE r.firm_id = $1';
         params.push(userFirmId);
-    } else if (userFirm) {
-        whereClause = 'WHERE r.firm_name = $1';
-        params.push(userFirm);
     }
 
     const today = new Date();
@@ -313,18 +309,14 @@ export async function getResumeStats({ userFirmId, userFirm }) {
  * Fetch mission stats (total, active)
  * @param {Object} options
  * @param {string|null} options.userFirmId
- * @param {string|null} options.userFirm
  * @returns {Promise<Object>}
  */
-export async function getMissionStats({ userFirmId, userFirm }) {
+export async function getMissionStats({ userFirmId }) {
     let missionWhereClause = '';
     let missionParams = [];
     if (userFirmId) {
-        missionWhereClause = 'WHERE (firm = $1 OR firm_id = $2)';
-        missionParams = [userFirm || '', userFirmId];
-    } else if (userFirm) {
-        missionWhereClause = 'WHERE firm = $1';
-        missionParams = [userFirm];
+        missionWhereClause = 'WHERE firm_id = $1';
+        missionParams = [userFirmId];
     }
     
     const missionStatsQuery = `
@@ -343,18 +335,14 @@ export async function getMissionStats({ userFirmId, userFirm }) {
  * Fetch adaptation stats (total count)
  * @param {Object} options
  * @param {string|null} options.userFirmId
- * @param {string|null} options.userFirm
  * @returns {Promise<Object>}
  */
-export async function getAdaptationStats({ userFirmId, userFirm }) {
+export async function getAdaptationStats({ userFirmId }) {
     let adaptationWhereClause = '';
     let adaptationParams = [];
     if (userFirmId) {
-        adaptationWhereClause = 'WHERE (firm = $1 OR firm_id = $2)';
-        adaptationParams = [userFirm || '', userFirmId];
-    } else if (userFirm) {
-        adaptationWhereClause = 'WHERE firm = $1';
-        adaptationParams = [userFirm];
+        adaptationWhereClause = 'WHERE firm_id = $1';
+        adaptationParams = [userFirmId];
     }
     
     const adaptationStatsQuery = `

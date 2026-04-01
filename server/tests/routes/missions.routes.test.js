@@ -39,6 +39,7 @@ const mockValidateFirm = vi.fn();
 const mockValidateClient = vi.fn();
 const mockValidateContact = vi.fn();
 const mockValidateDeal = vi.fn();
+const mockValidateMissionAssociations = vi.fn();
 const mockCreateMission = vi.fn();
 const mockFindMission = vi.fn();
 const mockUpdateMission = vi.fn();
@@ -55,6 +56,7 @@ vi.mock('../../services/missions.service.js', () => ({
     validateClient: (...args) => mockValidateClient(...args),
     validateContact: (...args) => mockValidateContact(...args),
     validateDeal: (...args) => mockValidateDeal(...args),
+    validateMissionAssociations: (...args) => mockValidateMissionAssociations(...args),
     createMission: (...args) => mockCreateMission(...args),
     findMission: (...args) => mockFindMission(...args),
     updateMission: (...args) => mockUpdateMission(...args),
@@ -200,9 +202,9 @@ describe('Missions Routes - GET /api/missions', () => {
             .get('/api/missions')
             .set('Authorization', 'Bearer valid-token');
 
-        expect(res.status).toBe(200);
-        expect(res.body.records).toEqual([]);
-        expect(res.body.pagination.totalCount).toBe(0);
+        expect(res.status).toBe(403);
+        expect(res.body.error).toBe('No firm association');
+        expect(mockListMissions).not.toHaveBeenCalled();
     });
 
     it('should filter by status', async () => {
@@ -266,19 +268,28 @@ describe('Missions Routes - GET /api/missions', () => {
         expect(res.body.pagination.limit).toBe(10);
     });
 
-    it('should cap limit at 100', async () => {
+    it('should reject invalid pagination parameters', async () => {
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
-        mockListMissions.mockResolvedValueOnce({
-            data: [],
-            pagination: { page: 1, limit: 100, totalCount: 0, totalPages: 0, hasMore: false }
-        });
+
+        const res = await request(app)
+            .get('/api/missions?page=0&limit=-1')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(400);
+        expect(res.body.error).toBe('Invalid pagination parameters');
+        expect(mockListMissions).not.toHaveBeenCalled();
+    });
+
+    it('should reject limit above 100', async () => {
+        mockGetUserFirmId.mockResolvedValueOnce('firm-123');
 
         const res = await request(app)
             .get('/api/missions?limit=500')
             .set('Authorization', 'Bearer valid-token');
 
-        expect(res.status).toBe(200);
-        expect(mockListMissions).toHaveBeenCalledWith(expect.objectContaining({ limit: 100 }));
+        expect(res.status).toBe(400);
+        expect(res.body.error).toBe('Invalid pagination parameters');
+        expect(mockListMissions).not.toHaveBeenCalled();
     });
 
     it('should allow admin to see all missions without firm filter', async () => {
@@ -353,6 +364,17 @@ describe('Missions Routes - GET /api/missions/:id', () => {
         expect(res.status).toBe(403);
     });
 
+    it('should reject non-admin detail access without firm association', async () => {
+        mockGetMissionWithJoins.mockResolvedValueOnce(makeMissionRow());
+        mockGetUserFirmId.mockResolvedValueOnce(null);
+
+        const res = await request(app)
+            .get('/api/missions/mission-123')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(403);
+    });
+
     it('should allow admin to access any mission', async () => {
         mockGetMissionWithJoins.mockResolvedValueOnce(
             makeMissionRow({ firm: 'Other Firm', firm_id: 'firm-other' })
@@ -412,6 +434,7 @@ describe('Missions Routes - POST /api/missions', () => {
 
     it('should create mission with camelCase payload', async () => {
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
+        mockValidateMissionAssociations.mockResolvedValueOnce({ ok: true });
         const created = makeMissionRow({
             id: 'new-mission-camel',
             title: 'Mission Camel',
@@ -446,6 +469,7 @@ describe('Missions Routes - POST /api/missions', () => {
 
     it('should create mission with valid data', async () => {
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
+        mockValidateMissionAssociations.mockResolvedValueOnce({ ok: true });
         const created = makeMissionRow({ id: 'new-mission-1', title: 'Dev Full Stack', status: 'active' });
         mockCreateMission.mockResolvedValueOnce(created);
 
@@ -465,9 +489,7 @@ describe('Missions Routes - POST /api/missions', () => {
 
     it('should create mission with client and deal associations', async () => {
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
-        mockValidateClient.mockResolvedValueOnce({ exists: true, firmMatch: true });
-        mockValidateContact.mockResolvedValueOnce(true);
-        mockValidateDeal.mockResolvedValueOnce({ exists: true, firmMatch: true });
+        mockValidateMissionAssociations.mockResolvedValueOnce({ ok: true });
         const created = makeMissionRow({
             id: 'new-mission-2', client_id: 'client-1', client_name: 'Acme',
             contact_id: 'contact-1', deal_id: 'deal-1'
@@ -490,7 +512,7 @@ describe('Missions Routes - POST /api/missions', () => {
 
     it('should reject if client belongs to different firm', async () => {
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
-        mockValidateClient.mockResolvedValueOnce({ exists: true, firmMatch: false });
+        mockValidateMissionAssociations.mockResolvedValueOnce({ ok: false, status: 403, error: 'Client does not belong to the target firm' });
 
         const res = await request(app)
             .post('/api/missions')
@@ -505,7 +527,7 @@ describe('Missions Routes - POST /api/missions', () => {
 
     it('should reject if client not found', async () => {
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
-        mockValidateClient.mockResolvedValueOnce({ exists: false, firmMatch: false });
+        mockValidateMissionAssociations.mockResolvedValueOnce({ ok: false, status: 400, error: 'Client not found' });
 
         const res = await request(app)
             .post('/api/missions')
@@ -516,6 +538,17 @@ describe('Missions Routes - POST /api/missions', () => {
             });
 
         expect(res.status).toBe(400);
+    });
+
+    it('should reject creation for non-admin without firm association', async () => {
+        mockGetUserFirmId.mockResolvedValueOnce(null);
+
+        const res = await request(app)
+            .post('/api/missions')
+            .set('Authorization', 'Bearer valid-token')
+            .send({ Title: 'Mission' });
+
+        expect(res.status).toBe(403);
     });
 });
 
@@ -554,6 +587,7 @@ describe('Missions Routes - PUT /api/missions/:id', () => {
     it('should update mission with camelCase payload', async () => {
         mockFindMission.mockResolvedValueOnce(makeMissionRow({ firm: 'Test Firm', firm_id: 'firm-123' }));
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
+        mockValidateMissionAssociations.mockResolvedValueOnce({ ok: true });
         const updated = makeMissionRow({ title: 'Updated Camel', status: 'closed', required_skills: ['TS'] });
         mockUpdateMission.mockResolvedValueOnce(updated);
 
@@ -575,6 +609,7 @@ describe('Missions Routes - PUT /api/missions/:id', () => {
     it('should invalidate cached mission keywords when title changes', async () => {
         mockFindMission.mockResolvedValueOnce(makeMissionRow({ firm: 'Test Firm', firm_id: 'firm-123' }));
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
+        mockValidateMissionAssociations.mockResolvedValueOnce({ ok: true });
         mockUpdateMission.mockResolvedValueOnce(makeMissionRow({ title: 'Updated Title' }));
 
         const res = await request(app)
@@ -592,6 +627,7 @@ describe('Missions Routes - PUT /api/missions/:id', () => {
     it('should update mission for authorized user', async () => {
         mockFindMission.mockResolvedValueOnce(makeMissionRow({ firm: 'Test Firm', firm_id: 'firm-123' }));
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
+        mockValidateMissionAssociations.mockResolvedValueOnce({ ok: true });
         const updated = makeMissionRow({ title: 'Updated Title', status: 'closed' });
         mockUpdateMission.mockResolvedValueOnce(updated);
 
@@ -616,9 +652,22 @@ describe('Missions Routes - PUT /api/missions/:id', () => {
         expect(res.status).toBe(403);
     });
 
+    it('should reject non-admin update without firm association', async () => {
+        mockFindMission.mockResolvedValueOnce(makeMissionRow({ firm: 'Test Firm', firm_id: 'firm-123' }));
+        mockGetUserFirmId.mockResolvedValueOnce(null);
+
+        const res = await request(app)
+            .put('/api/missions/mission-123')
+            .set('Authorization', 'Bearer valid-token')
+            .send({ title: 'Updated' });
+
+        expect(res.status).toBe(403);
+    });
+
     it('should allow admin to update any mission', async () => {
         mockFindMission.mockResolvedValueOnce(makeMissionRow({ firm: 'Other Firm', firm_id: 'firm-other' }));
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
+        mockValidateMissionAssociations.mockResolvedValueOnce({ ok: true });
         const updated = makeMissionRow({ title: 'Admin Updated' });
         mockUpdateMission.mockResolvedValueOnce(updated);
 
@@ -629,6 +678,33 @@ describe('Missions Routes - PUT /api/missions/:id', () => {
             .send({ title: 'Admin Updated' });
 
         expect(res.status).toBe(200);
+    });
+
+    it('should reject admin firm change when existing associations do not match target firm', async () => {
+        mockFindMission.mockResolvedValueOnce(makeMissionRow({
+            firm: 'Old Firm',
+            firm_id: 'firm-old',
+            client_id: 'client-1',
+            contact_id: 'contact-1',
+            deal_id: 'deal-1'
+        }));
+        mockGetUserFirmId.mockResolvedValueOnce('firm-admin');
+        mockValidateFirm.mockResolvedValueOnce({ id: 'firm-new', name: 'New Firm' });
+        mockValidateMissionAssociations.mockResolvedValueOnce({
+            ok: false,
+            status: 403,
+            error: 'Client does not belong to the target firm'
+        });
+
+        const res = await request(app)
+            .put('/api/missions/mission-123')
+            .set('Authorization', 'Bearer valid-token')
+            .set('x-test-role', 'admin')
+            .send({ firmId: 'firm-new' });
+
+        expect(res.status).toBe(403);
+        expect(res.body.error).toBe('Client does not belong to your firm');
+        expect(mockUpdateMission).not.toHaveBeenCalled();
     });
 });
 
@@ -677,6 +753,17 @@ describe('Missions Routes - DELETE /api/missions/:id', () => {
     it('should return 403 for mission from different firm', async () => {
         mockFindMission.mockResolvedValueOnce(makeMissionRow({ firm: 'Other Firm', firm_id: 'firm-other' }));
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
+
+        const res = await request(app)
+            .delete('/api/missions/mission-123')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(403);
+    });
+
+    it('should reject non-admin delete without firm association', async () => {
+        mockFindMission.mockResolvedValueOnce(makeMissionRow({ firm: 'Test Firm', firm_id: 'firm-123' }));
+        mockGetUserFirmId.mockResolvedValueOnce(null);
 
         const res = await request(app)
             .delete('/api/missions/mission-123')
@@ -749,6 +836,17 @@ describe('Missions Routes - GET /api/missions/:missionId/adaptations', () => {
         expect(res.status).toBe(403);
     });
 
+    it('should reject non-admin adaptations access without firm association', async () => {
+        mockFindMission.mockResolvedValueOnce(makeMissionRow({ firm: 'Test Firm', firm_id: 'firm-123' }));
+        mockGetUserFirmId.mockResolvedValueOnce(null);
+
+        const res = await request(app)
+            .get('/api/missions/mission-123/adaptations')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(403);
+    });
+
     it('should allow admin to view adaptations for any mission', async () => {
         mockListMissionAdaptations.mockResolvedValueOnce([]);
 
@@ -789,6 +887,18 @@ describe('Missions Routes - DELETE /api/missions/:missionId/keywords-cache', () 
     it('should return 403 when the mission belongs to another firm', async () => {
         mockFindMission.mockResolvedValueOnce(makeMissionRow({ firm: 'Other Firm', firm_id: 'firm-other' }));
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
+
+        const res = await request(app)
+            .delete('/api/missions/mission-123/keywords-cache')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(403);
+        expect(mockClearMissionKeywordsCache).not.toHaveBeenCalled();
+    });
+
+    it('should reject keywords cache clear without firm association', async () => {
+        mockFindMission.mockResolvedValueOnce(makeMissionRow({ firm: 'Test Firm', firm_id: 'firm-123' }));
+        mockGetUserFirmId.mockResolvedValueOnce(null);
 
         const res = await request(app)
             .delete('/api/missions/mission-123/keywords-cache')

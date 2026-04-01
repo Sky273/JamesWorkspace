@@ -60,6 +60,18 @@ vi.mock('../../utils/logger.backend.js', () => ({
 // Mock validation
 vi.mock('../../utils/validation.js', () => ({
     validateBody: () => (req, res, next) => next(),
+    validateParams: (...paramNames) => (req, res, next) => {
+        for (const paramName of paramNames) {
+            const value = req.params[paramName];
+            if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value || '')) {
+                return res.status(400).json({
+                    error: 'Validation failed',
+                    details: [{ field: paramName, message: 'Invalid record ID format' }]
+                });
+            }
+        }
+        next();
+    },
     updateBackupSettingsSchema: {},
     testBackupConnectionSchema: {},
     restoreBackupSchema: {}
@@ -208,6 +220,7 @@ describe('Backup Routes', () => {
 
             expect(res.status).toBe(500);
             expect(res.body.success).toBe(false);
+            expect(res.body.error).toBe('Manual backup failed');
         });
     });
 
@@ -245,10 +258,19 @@ describe('Backup Routes', () => {
         it('should delete history entry', async () => {
             mockDeleteHistoryEntry.mockResolvedValue(undefined);
 
-            const res = await request(app).delete('/api/backup/history/h-1').set(authHeader);
+            const res = await request(app)
+                .delete('/api/backup/history/123e4567-e89b-12d3-a456-426614174000')
+                .set(authHeader);
 
             expect(res.status).toBe(200);
             expect(res.body.success).toBe(true);
+        });
+
+        it('should reject an invalid history entry id', async () => {
+            const res = await request(app).delete('/api/backup/history/not-a-uuid').set(authHeader);
+
+            expect(res.status).toBe(400);
+            expect(mockDeleteHistoryEntry).not.toHaveBeenCalled();
         });
     });
 
@@ -316,6 +338,7 @@ describe('Backup Routes', () => {
                 .send({ filename: 'backup-daily-testdb-2026-03-31T10-30-00.sql.gz', confirmText: 'RESTORE' });
 
             expect(res.status).toBe(500);
+            expect(res.body.message).toBe('Database restore failed');
         });
     });
 

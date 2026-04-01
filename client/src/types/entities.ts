@@ -404,6 +404,24 @@ export interface Firm {
 
 export type FirmStatus = 'Active' | 'Inactive';
 
+export interface UserAccount {
+  id: string;
+  name?: string;
+  email?: string;
+  jobTitle?: string;
+  phone?: string;
+  firmId?: string;
+  firmName?: string;
+  firm?: string;
+  customerId?: string;
+  customerName?: string;
+  customer?: string;
+  role?: string;
+  status?: string;
+  createdAt?: string;
+  lastLogin?: string;
+}
+
 
 // ============================================
 // CLIENT TYPES

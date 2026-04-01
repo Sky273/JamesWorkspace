@@ -19,6 +19,19 @@ function getMetricsProviderLabel(provider, model) {
     return buildLLMMetricLabel(provider, model);
 }
 
+function buildAppliedOptionsSummary(options = {}) {
+    const parameterKeys = Object.keys(options).sort();
+    return {
+        parameterKeys,
+        maxTokens: options.max_tokens || options.max_completion_tokens || options.max_output_tokens || null,
+        temperature: options.temperature ?? null,
+        topP: options.top_p ?? null,
+        hasMetadata: Boolean(options.metadata),
+        hasTools: Array.isArray(options.tools) && options.tools.length > 0,
+        hasResponseFormat: Boolean(options.response_format)
+    };
+}
+
 function unwrapOpenAICompatibleResponse(response, fallbackModel) {
     const choices = response?.choices;
     const content = choices?.[0]?.message?.content;
@@ -183,10 +196,22 @@ function getProviderAdapter(provider) {
 }
 
 export async function callProviderChat({ provider, model, messages, settings = {}, options = {} }) {
+    safeLog('debug', 'Applying resolved LLM model parameters', {
+        provider,
+        model,
+        messageCount: messages?.length || 0,
+        ...buildAppliedOptionsSummary(options)
+    });
     return getProviderAdapter(provider).chat({ provider, model, messages, settings, options });
 }
 
 export async function callProviderVision({ provider, model, systemPrompt, userContent, settings = {}, options = {} }) {
+    safeLog('debug', 'Applying resolved vision model parameters', {
+        provider,
+        model,
+        contentCount: userContent?.length || 0,
+        ...buildAppliedOptionsSummary(options)
+    });
     return getProviderAdapter(provider).vision({ provider, model, systemPrompt, userContent, settings, options });
 }
 

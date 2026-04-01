@@ -18,10 +18,15 @@ import {
     PIPELINE_STAGES,
     initCandidatePipelineTable,
     addToPipeline,
+    getClientFirmId,
+    getInterviewAccessContext,
+    getMissionContext,
     getPipelineById,
+    getPipelineAccessContext,
     getPipelineByResumeId,
     getPipelineByMissionId,
     getPipelineOverview,
+    getResumeFirmId,
     moveToStage,
     updatePipelineNotes,
     removeFromPipeline,
@@ -33,7 +38,8 @@ import {
     completeInterview,
     cancelInterview,
     deleteInterview,
-    getPipelineStats
+    getPipelineStats,
+    validatePipelineAssociations
 } from '../../services/candidatePipeline.service.js';
 
 describe('Candidate Pipeline Service', () => {
@@ -214,6 +220,15 @@ describe('Candidate Pipeline Service', () => {
 
             expect(query.mock.calls[0][0]).toContain('cp.mission_id = $');
         });
+
+        it('should apply firmId filter', async () => {
+            query.mockResolvedValueOnce({ rows: [] });
+
+            await getPipelineOverview({ firmId: 'f1' });
+
+            expect(query.mock.calls[0][0]).toContain('COALESCE(m.firm_id, r.firm_id, c.firm_id)');
+            expect(query.mock.calls[0][1]).toContain('f1');
+        });
     });
 
     describe('moveToStage', () => {
@@ -275,6 +290,65 @@ describe('Candidate Pipeline Service', () => {
 
             expect(result).toHaveLength(1);
             expect(result[0].changed_by_name).toBe('Admin');
+        });
+    });
+
+    describe('access helpers', () => {
+        it('should return resume firm id', async () => {
+            query.mockResolvedValueOnce({ rows: [{ firm_id: 'f1' }] });
+            await expect(getResumeFirmId('r1')).resolves.toBe('f1');
+        });
+
+        it('should return mission context', async () => {
+            query.mockResolvedValueOnce({ rows: [{ firm_id: 'f1', client_id: 'c1' }] });
+            await expect(getMissionContext('m1')).resolves.toEqual({ firm_id: 'f1', client_id: 'c1' });
+        });
+
+        it('should return client firm id', async () => {
+            query.mockResolvedValueOnce({ rows: [{ firm_id: 'f1' }] });
+            await expect(getClientFirmId('c1')).resolves.toBe('f1');
+        });
+
+        it('should return pipeline access context', async () => {
+            query.mockResolvedValueOnce({ rows: [{ id: 'p1', resume_firm_id: 'f1' }] });
+            await expect(getPipelineAccessContext('p1')).resolves.toEqual({ id: 'p1', resume_firm_id: 'f1' });
+        });
+
+        it('should return interview access context', async () => {
+            query.mockResolvedValueOnce({ rows: [{ id: 'i1', pipeline_id: 'p1' }] });
+            await expect(getInterviewAccessContext('i1')).resolves.toEqual({ id: 'i1', pipeline_id: 'p1' });
+        });
+
+        it('should validate coherent pipeline associations', async () => {
+            query
+                .mockResolvedValueOnce({ rows: [{ firm_id: 'f1' }] })
+                .mockResolvedValueOnce({ rows: [{ firm_id: 'f1', client_id: 'c1' }] })
+                .mockResolvedValueOnce({ rows: [{ firm_id: 'f1' }] });
+
+            await expect(validatePipelineAssociations({
+                resumeId: 'r1',
+                missionId: 'm1',
+                clientId: 'c1',
+                expectedFirmId: 'f1'
+            })).resolves.toEqual({ ok: true, firmId: 'f1' });
+        });
+
+        it('should reject client mismatch with mission', async () => {
+            query
+                .mockResolvedValueOnce({ rows: [{ firm_id: 'f1' }] })
+                .mockResolvedValueOnce({ rows: [{ firm_id: 'f1', client_id: 'c1' }] })
+                .mockResolvedValueOnce({ rows: [{ firm_id: 'f1' }] });
+
+            await expect(validatePipelineAssociations({
+                resumeId: 'r1',
+                missionId: 'm1',
+                clientId: 'c2',
+                expectedFirmId: 'f1'
+            })).resolves.toEqual({
+                ok: false,
+                status: 400,
+                error: 'Client does not match mission'
+            });
         });
     });
 
@@ -346,6 +420,15 @@ describe('Candidate Pipeline Service', () => {
             await getUpcomingInterviews({ days: 7 });
 
             expect(query.mock.calls[0][0]).toContain('INTERVAL');
+        });
+
+        it('should apply firmId filter', async () => {
+            query.mockResolvedValueOnce({ rows: [] });
+
+            await getUpcomingInterviews({ firmId: 'f1' });
+
+            expect(query.mock.calls[0][0]).toContain('COALESCE(m.firm_id, r.firm_id, c.firm_id)');
+            expect(query.mock.calls[0][1]).toContain('f1');
         });
 
         it('should throw on invalid days filter', async () => {
@@ -444,6 +527,15 @@ describe('Candidate Pipeline Service', () => {
             await getPipelineStats({ clientId: 'c1' });
 
             expect(query.mock.calls[0][0]).toContain('cp.client_id = $');
+        });
+
+        it('should apply firmId filter', async () => {
+            query.mockResolvedValueOnce({ rows: [{ total: '0' }] });
+
+            await getPipelineStats({ firmId: 'f1' });
+
+            expect(query.mock.calls[0][0]).toContain('COALESCE(m.firm_id, r.firm_id, c.firm_id)');
+            expect(query.mock.calls[0][1]).toContain('f1');
         });
     });
 });

@@ -33,9 +33,13 @@ function formatUserResponse(user) {
         phone: user.phone || '',
         status: user.status,
         role: user.role,
+        firmId: user.firm_id,
         firm_id: user.firm_id,
+        firmName: user.firm_name,
         firm: user.firm_name,
         firmLogo: user.firm_logo || '',
+        customerId: user.firm_id,
+        customerName: user.firm_name,
         customer: user.firm_name,
         google_id: user.google_id || null,
         google_email: user.google_email || null

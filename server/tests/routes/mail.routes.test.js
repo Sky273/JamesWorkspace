@@ -15,7 +15,6 @@ const mockHandleOAuthCallback = vi.fn();
 const mockCreateDraft = vi.fn();
 const mockDisconnect = vi.fn();
 const mockGetUserWithFirmData = vi.fn();
-const mockGetClientFirmId = vi.fn();
 const mockGetResumeCurrentVersion = vi.fn();
 const mockRecordSubmission = vi.fn();
 vi.mock('../../services/mail/mailService.js', () => ({
@@ -25,14 +24,32 @@ vi.mock('../../services/mail/mailService.js', () => ({
     createDraft: (...args) => mockCreateDraft(...args),
     disconnect: (...args) => mockDisconnect(...args),
     getUserWithFirmData: (...args) => mockGetUserWithFirmData(...args),
-    getClientFirmId: (...args) => mockGetClientFirmId(...args),
     getResumeCurrentVersion: (...args) => mockGetResumeCurrentVersion(...args),
     recordSubmission: (...args) => mockRecordSubmission(...args)
 }));
 
 // Mock email templates service
+const mockGetTemplate = vi.fn();
+const mockRenderTemplate = vi.fn();
 vi.mock('../../services/emailTemplates.service.js', () => ({
-    renderTemplate: vi.fn().mockResolvedValue({ subject: 'Rendered', html: '<p>Rendered</p>' })
+    getTemplate: (...args) => mockGetTemplate(...args),
+    renderTemplate: (...args) => mockRenderTemplate(...args)
+}));
+
+const mockValidateResume = vi.fn();
+const mockValidateClient = vi.fn();
+const mockValidateContact = vi.fn();
+const mockValidateMission = vi.fn();
+vi.mock('../../services/resumeSubmissions.service.js', () => ({
+    validateResume: (...args) => mockValidateResume(...args),
+    validateClient: (...args) => mockValidateClient(...args),
+    validateContact: (...args) => mockValidateContact(...args),
+    validateMission: (...args) => mockValidateMission(...args)
+}));
+
+const mockGetUserFirmId = vi.fn();
+vi.mock('../../utils/firmHelpers.js', () => ({
+    getUserFirmId: (...args) => mockGetUserFirmId(...args)
 }));
 
 // Mock logger
@@ -86,6 +103,13 @@ describe('Mail Routes', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        mockGetUserFirmId.mockResolvedValue('firm-123');
+        mockGetTemplate.mockResolvedValue({ id: 'tpl-1', firm_id: 'firm-123', is_system: false });
+        mockRenderTemplate.mockResolvedValue({ subject: 'Rendered', html: '<p>Rendered</p>' });
+        mockValidateResume.mockResolvedValue({ exists: true, firmMatch: true });
+        mockValidateClient.mockResolvedValue({ exists: true, firmMatch: true });
+        mockValidateContact.mockResolvedValue(true);
+        mockValidateMission.mockResolvedValue({ exists: true, firmMatch: true });
         app = createTestApp();
     });
 
@@ -199,7 +223,6 @@ describe('Mail Routes', () => {
 
         it('should record submission if resumeId/clientId/contactId provided', async () => {
             mockCreateDraft.mockResolvedValueOnce({ draftId: 'd-1', webLink: 'link' });
-            mockGetClientFirmId.mockResolvedValueOnce('f-1');
             mockGetResumeCurrentVersion.mockResolvedValueOnce(3);
             mockRecordSubmission.mockResolvedValueOnce('sub-1');
 
@@ -218,8 +241,149 @@ describe('Mail Routes', () => {
             expect(res.status).toBe(200);
             expect(res.body.submissionId).toBe('sub-1');
             expect(mockRecordSubmission).toHaveBeenCalledWith(
-                expect.objectContaining({ resumeId: '00000000-0000-0000-0000-000000000001', clientId: '00000000-0000-0000-0000-000000000002', contactId: '00000000-0000-0000-0000-000000000003' })
+                expect.objectContaining({
+                    resumeId: '00000000-0000-0000-0000-000000000001',
+                    clientId: '00000000-0000-0000-0000-000000000002',
+                    contactId: '00000000-0000-0000-0000-000000000003',
+                    firmId: 'firm-123'
+                })
             );
+        });
+
+        it('should reject submission tracking without firm association', async () => {
+            mockGetUserFirmId.mockResolvedValueOnce(null);
+
+            const res = await request(app)
+                .post('/api/mail/draft')
+                .set(AUTH)
+                .send({
+                    to: 'client@test.com',
+                    subject: 'CV',
+                    body: 'Hi',
+                    resumeId: '00000000-0000-0000-0000-000000000001'
+                });
+
+            expect(res.status).toBe(403);
+            expect(res.body.error).toBe('No firm association');
+            expect(mockCreateDraft).not.toHaveBeenCalled();
+        });
+
+        it('should reject tracking when linked resume belongs to another firm', async () => {
+            mockValidateResume.mockResolvedValueOnce({ exists: true, firmMatch: false });
+
+            const res = await request(app)
+                .post('/api/mail/draft')
+                .set(AUTH)
+                .send({
+                    to: 'client@test.com',
+                    subject: 'CV',
+                    body: 'Hi',
+                    resumeId: '00000000-0000-0000-0000-000000000001',
+                    clientId: '00000000-0000-0000-0000-000000000002',
+                    contactId: '00000000-0000-0000-0000-000000000003'
+                });
+
+            expect(res.status).toBe(403);
+            expect(res.body.error).toBe('Resume does not belong to your firm');
+            expect(mockCreateDraft).not.toHaveBeenCalled();
+        });
+
+        it('should reject tracking when contact does not belong to client', async () => {
+            mockValidateContact.mockResolvedValueOnce(false);
+
+            const res = await request(app)
+                .post('/api/mail/draft')
+                .set(AUTH)
+                .send({
+                    to: 'client@test.com',
+                    subject: 'CV',
+                    body: 'Hi',
+                    resumeId: '00000000-0000-0000-0000-000000000001',
+                    clientId: '00000000-0000-0000-0000-000000000002',
+                    contactId: '00000000-0000-0000-0000-000000000003'
+                });
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toContain('Contact not found');
+            expect(mockCreateDraft).not.toHaveBeenCalled();
+        });
+
+        it('should reject foreign-firm template access', async () => {
+            mockGetTemplate.mockResolvedValueOnce({ id: 'tpl-2', firm_id: 'other-firm', is_system: false });
+
+            const res = await request(app)
+                .post('/api/mail/draft')
+                .set(AUTH)
+                .send({
+                    to: 'client@test.com',
+                    subject: 'Fallback',
+                    templateId: 'tpl-2',
+                    templateContext: { user: {}, firm: {} }
+                });
+
+            expect(res.status).toBe(403);
+            expect(res.body.error).toBe('Template does not belong to your firm');
+            expect(mockCreateDraft).not.toHaveBeenCalled();
+        });
+
+        it('should reject missing template context', async () => {
+            const res = await request(app)
+                .post('/api/mail/draft')
+                .set(AUTH)
+                .send({
+                    to: 'client@test.com',
+                    subject: 'Fallback',
+                    templateId: 'tpl-1'
+                });
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toBe('Template context is required when templateId is provided');
+            expect(mockCreateDraft).not.toHaveBeenCalled();
+        });
+
+        it('should stop on template rendering error', async () => {
+            mockRenderTemplate.mockRejectedValueOnce(new Error('MJML failed'));
+
+            const res = await request(app)
+                .post('/api/mail/draft')
+                .set(AUTH)
+                .send({
+                    to: 'client@test.com',
+                    subject: 'Fallback',
+                    templateId: 'tpl-1',
+                    templateContext: { user: {}, firm: {} }
+                });
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toBe('Failed to render template');
+            expect(mockCreateDraft).not.toHaveBeenCalled();
+        });
+
+        it('should render accessible template before draft creation', async () => {
+            mockGetUserWithFirmData.mockResolvedValueOnce({
+                name: 'User',
+                email: 'user@test.com',
+                job_title: 'Consultant',
+                phone: '123',
+                firm_name: 'Test Firm',
+                firm_logo: '/logo.png'
+            });
+            mockCreateDraft.mockResolvedValueOnce({ draftId: 'draft-123', webLink: 'https://mail.google.com/draft/123' });
+
+            const res = await request(app)
+                .post('/api/mail/draft')
+                .set(AUTH)
+                .send({
+                    to: 'client@test.com',
+                    templateId: 'tpl-1',
+                    templateContext: { user: {}, firm: {} }
+                });
+
+            expect(res.status).toBe(200);
+            expect(mockRenderTemplate).toHaveBeenCalledWith('tpl-1', expect.objectContaining({
+                user: expect.objectContaining({ name: 'User' }),
+                firm: expect.objectContaining({ name: 'Test Firm' })
+            }));
         });
 
         it('should return 401 on auth error from provider', async () => {

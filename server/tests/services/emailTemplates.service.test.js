@@ -88,6 +88,16 @@ describe('Email Templates Service', () => {
             expect(result).toHaveLength(2);
             expect(query.mock.calls[0][0]).toContain('firm_id IS NULL');
         });
+
+        it('should return all active templates for admin without firm', async () => {
+            query.mockResolvedValueOnce({ rows: [{ id: 't1' }, { id: 't2' }] });
+
+            const result = await getTemplates(null, true);
+
+            expect(result).toHaveLength(2);
+            expect(query.mock.calls[0][0]).toContain('WHERE status = \'active\'');
+            expect(query.mock.calls[0][1]).toEqual([]);
+        });
     });
 
     describe('getTemplate', () => {

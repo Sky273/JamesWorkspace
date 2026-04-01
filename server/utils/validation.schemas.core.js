@@ -245,9 +245,5 @@ export const updateUserProfileSchema = z.object({
   name: z.string().min(1).max(255).optional(),
   jobTitle: z.string().max(255).optional().nullable(),
   job_title: z.string().max(255).optional().nullable(),
-  phone: z.string().max(50).optional().nullable(),
-  role: lowercaseEnum(['user', 'admin']).optional(),
-  status: lowercaseEnum(['active', 'inactive', 'pending']).optional(),
-  firm_id: z.string().uuid().optional().nullable(),
-  firmId: z.string().uuid().optional().nullable()
+  phone: z.string().max(50).optional().nullable()
 }).strip();

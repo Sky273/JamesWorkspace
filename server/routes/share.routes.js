@@ -19,6 +19,10 @@ const router = Router();
 // JSON parsing for this router
 router.use(json());
 
+function isValidShareToken(token) {
+    return typeof token === 'string' && /^[a-f0-9]{64}$/i.test(token);
+}
+
 async function assertResumeAccess(req, res) {
     const { resumeId } = req.params;
     const resume = await getResumeForAccessCheck(resumeId);
@@ -225,7 +229,7 @@ router.get('/pdf/:token', async (req, res) => {
     try {
         const { token } = req.params;
 
-        if (!token || token.length !== 64) {
+        if (!isValidShareToken(token)) {
             return res.status(400).json({
                 success: false,
                 error: 'Invalid token'
@@ -271,7 +275,7 @@ router.get('/file/:token', async (req, res) => {
     try {
         const { token } = req.params;
 
-        if (!token || token.length !== 64) {
+        if (!isValidShareToken(token)) {
             return res.status(400).json({
                 success: false,
                 error: 'Invalid token'

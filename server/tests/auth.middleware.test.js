@@ -255,53 +255,58 @@ describe('Auth Middleware', () => {
 
   describe('hasCustomerAccess (alias for hasFirmAccess)', () => {
     it('should return true for admin regardless of firm', () => {
-      mockReq.user = { role: 'admin', firm: 'Company A' };
-      expect(hasCustomerAccess(mockReq, 'Company B')).toBe(true);
+      mockReq.user = { role: 'admin', firmId: 'firm-1' };
+      expect(hasCustomerAccess(mockReq, { firm_id: 'firm-2' })).toBe(true);
     });
 
-    it('should return true if user firm matches resource firm', () => {
-      mockReq.user = { role: 'user', firm: 'Company A' };
-      expect(hasCustomerAccess(mockReq, 'Company A')).toBe(true);
+    it('should return true if user firm_id matches resource firm_id', () => {
+      mockReq.user = { role: 'user', firmId: 'firm-1' };
+      expect(hasCustomerAccess(mockReq, { firm_id: 'firm-1' })).toBe(true);
     });
 
-    it('should return false if user firm does not match', () => {
-      mockReq.user = { role: 'user', firm: 'Company A' };
-      expect(hasCustomerAccess(mockReq, 'Company B')).toBe(false);
+    it('should return false if user firm_id does not match', () => {
+      mockReq.user = { role: 'user', firmId: 'firm-1' };
+      expect(hasCustomerAccess(mockReq, { firm_id: 'firm-2' })).toBe(false);
     });
 
-    it('should return falsy value if user has no firm', () => {
+    it('should return falsy value if user has no firm_id', () => {
       mockReq.user = { role: 'user', firm: null };
-      // Returns falsy when userFirm is null due to short-circuit evaluation
-      expect(hasCustomerAccess(mockReq, 'Company A')).toBeFalsy();
+      expect(hasCustomerAccess(mockReq, { firm_id: 'firm-1' })).toBeFalsy();
     });
   });
 
   describe('hasFirmAccess', () => {
     it('should return true for admin accessing any firm', () => {
-      mockReq.user = { role: 'admin', firm: 'Firm A' };
-      expect(hasFirmAccess(mockReq, 'Firm B')).toBe(true);
+      mockReq.user = { role: 'admin', firmId: 'firm-1' };
+      expect(hasFirmAccess(mockReq, { firm_id: 'firm-2' })).toBe(true);
     });
 
-    it('should return true for user accessing own firm', () => {
-      mockReq.user = { role: 'user', firm: 'Firm A' };
-      expect(hasFirmAccess(mockReq, 'Firm A')).toBe(true);
+    it('should return true for user accessing own firm_id', () => {
+      mockReq.user = { role: 'user', firmId: 'firm-1' };
+      expect(hasFirmAccess(mockReq, { firm_id: 'firm-1' })).toBe(true);
     });
 
-    it('should return false for user accessing different firm', () => {
-      mockReq.user = { role: 'user', firm: 'Firm A' };
-      expect(hasFirmAccess(mockReq, 'Firm B')).toBe(false);
+    it('should return false for user accessing different firm_id', () => {
+      mockReq.user = { role: 'user', firmId: 'firm-1' };
+      expect(hasFirmAccess(mockReq, { firm_id: 'firm-2' })).toBe(false);
     });
 
-    it('should return falsy when user has no firm', () => {
+    it('should prefer firm IDs when both user and resource have IDs', () => {
+      mockReq.user = { role: 'user', firm: 'Firm A', firmId: 'firm-1' };
+      expect(hasFirmAccess(mockReq, { firm_id: 'firm-1', firm: 'Other Label' })).toBe(true);
+      expect(hasFirmAccess(mockReq, { id: 'firm-2', name: 'Firm A' })).toBe(false);
+    });
+
+    it('should return falsy when user has no firm_id', () => {
       mockReq.user = { role: 'user' };
-      expect(hasFirmAccess(mockReq, 'Firm A')).toBeFalsy();
+      expect(hasFirmAccess(mockReq, { firm_id: 'firm-1' })).toBeFalsy();
     });
   });
 
   describe('requireFirmAccess', () => {
     it('should call next() when user has firm access', async () => {
-      mockReq.user = { role: 'admin', firm: 'Firm A' };
-      const getResourceFirm = vi.fn().mockResolvedValue('Firm B');
+      mockReq.user = { role: 'admin', firmId: 'firm-1' };
+      const getResourceFirm = vi.fn().mockResolvedValue({ firm_id: 'firm-2' });
       const middleware = requireFirmAccess(getResourceFirm);
 
       await middleware(mockReq, mockRes, nextFn);
@@ -311,8 +316,8 @@ describe('Auth Middleware', () => {
     });
 
     it('should return 403 when user lacks firm access', async () => {
-      mockReq.user = { role: 'user', firm: 'Firm A' };
-      const getResourceFirm = vi.fn().mockResolvedValue('Firm B');
+      mockReq.user = { role: 'user', firm: 'Firm A', firmId: 'firm-1' };
+      const getResourceFirm = vi.fn().mockResolvedValue({ firm_id: 'firm-2', firm: 'Firm A' });
       const middleware = requireFirmAccess(getResourceFirm);
 
       await middleware(mockReq, mockRes, nextFn);
@@ -325,7 +330,7 @@ describe('Auth Middleware', () => {
     });
 
     it('should return 500 when getResourceFirm throws', async () => {
-      mockReq.user = { role: 'user', firm: 'Firm A' };
+      mockReq.user = { role: 'user', firmId: 'firm-1' };
       const getResourceFirm = vi.fn().mockRejectedValue(new Error('DB error'));
       const middleware = requireFirmAccess(getResourceFirm);
 

@@ -10,37 +10,15 @@ import { validateBody, validateParams, createUserSchema, updateAdminUserSchema }
 import { securityLog, getRequestMetadata, LOG_LEVELS, SECURITY_EVENTS } from '../../services/security.service.js';
 import { safeLog } from '../../utils/logger.backend.js';
 import * as usersService from '../../services/users.service.js';
+import {
+    buildAdminUserUpdateData,
+    normalizeAdminUserPayload,
+    normalizeRole,
+    resolveRequiredFirmId,
+    resolveRequiredFirmName
+} from './users.routes.helpers.js';
 
 const router = express.Router();
-
-function getFirstDefinedValue(source, keys) {
-    for (const key of keys) {
-        if (Object.prototype.hasOwnProperty.call(source, key) && source[key] !== undefined) {
-            return source[key];
-        }
-    }
-    return undefined;
-}
-
-function normalizeAdminUserPayload(payload = {}) {
-    return {
-        ...payload,
-        email: getFirstDefinedValue(payload, ['email', 'Email']),
-        password: getFirstDefinedValue(payload, ['password', 'Password']),
-        name: getFirstDefinedValue(payload, ['name', 'Name']),
-        jobTitle: getFirstDefinedValue(payload, ['jobTitle', 'job_title', 'JobTitle']),
-        phone: getFirstDefinedValue(payload, ['phone', 'Phone']),
-        status: getFirstDefinedValue(payload, ['status', 'Status']),
-        firm: getFirstDefinedValue(payload, ['firm', 'Firm']),
-        customer: getFirstDefinedValue(payload, ['customer', 'Customer']),
-        role: getFirstDefinedValue(payload, ['role', 'Role'])
-    };
-}
-
-function resolveRequiredFirmName(normalizedPayload = {}) {
-    const firmName = normalizedPayload.firm || normalizedPayload.customer;
-    return typeof firmName === 'string' ? firmName.trim() : '';
-}
 
 // POST /api/auth/users - Create user (admin only)
 router.post('/users', authenticateToken, requireAdmin, validateBody(createUserSchema), async (req, res) => {
@@ -49,6 +27,7 @@ router.post('/users', authenticateToken, requireAdmin, validateBody(createUserSc
         const { email, password, name, jobTitle, phone, status, role } = normalizedPayload;
         const normalizedEmail = email.toLowerCase();
         const metadata = getRequestMetadata(req);
+        const requestedFirmId = resolveRequiredFirmId(normalizedPayload);
         const firmName = resolveRequiredFirmName(normalizedPayload);
 
         const existingUser = await usersService.findUserByEmail(normalizedEmail);
@@ -59,32 +38,33 @@ router.post('/users', authenticateToken, requireAdmin, validateBody(createUserSc
 
         const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
-        const normalizedRole = (role || 'user').toLowerCase();
-        const validRole = ['admin', 'user'].includes(normalizedRole) ? normalizedRole : 'user';
-
         const userData = {
             email: normalizedEmail,
             password: hashedPassword,
             name: name,
             job_title: jobTitle || null,
             phone: phone || null,
-            role: validRole,
+            role: normalizeRole(role),
             status: (status || 'active').toLowerCase()
         };
 
-        if (!firmName) {
+        if (!requestedFirmId && !firmName) {
             return res.status(400).json({
                 error: 'Firm selection is required'
             });
         }
 
-        const foundFirm = await usersService.findFirmByName(firmName);
+        const foundFirm = requestedFirmId
+            ? await usersService.findFirmById(requestedFirmId)
+            : await usersService.findFirmByName(firmName);
         if (foundFirm) {
             userData.firm_id = foundFirm.id;
             userData.firm_name = foundFirm.name;
         } else {
             return res.status(400).json({
-                error: `Firm '${firmName}' not found`
+                error: requestedFirmId
+                    ? `Firm '${requestedFirmId}' not found`
+                    : `Firm '${firmName}' not found`
             });
         }
 
@@ -127,39 +107,34 @@ router.put('/users/:id', authenticateToken, requireAdmin, validateParams('id'), 
         }
 
         const normalizedPayload = normalizeAdminUserPayload(req.body);
+        const requestedFirmId = resolveRequiredFirmId(normalizedPayload);
         const firmName = resolveRequiredFirmName(normalizedPayload);
-        const name = normalizedPayload.name;
-        const email = normalizedPayload.email;
-        const status = normalizedPayload.status;
-        const role = normalizedPayload.role;
-        const jobTitle = normalizedPayload.jobTitle;
-        const phone = normalizedPayload.phone;
-
-        if (name && name !== currentUser.name) updateData.name = name;
-        if (email && email.toLowerCase() !== currentUser.email.toLowerCase()) {
-            updateData.email = email.toLowerCase();
-        }
-        if (status) updateData.status = status.toLowerCase();
-        if (role) updateData.role = role.toLowerCase();
-        if (jobTitle !== undefined) updateData.job_title = jobTitle || null;
-        if (phone !== undefined) updateData.phone = phone || null;
-        if (req.body.password) {
-            updateData.password = await bcrypt.hash(req.body.password, SALT_ROUNDS);
-        }
+        Object.assign(
+            updateData,
+            buildAdminUserUpdateData(
+                normalizedPayload,
+                currentUser,
+                req.body.password ? await bcrypt.hash(req.body.password, SALT_ROUNDS) : null
+            )
+        );
         
-        if (!firmName) {
+        if (!requestedFirmId && !firmName) {
             return res.status(400).json({
                 error: 'Firm selection is required'
             });
         }
 
-        const foundFirm = await usersService.findFirmByName(firmName);
+        const foundFirm = requestedFirmId
+            ? await usersService.findFirmById(requestedFirmId)
+            : await usersService.findFirmByName(firmName);
         if (foundFirm) {
             updateData.firm_id = foundFirm.id;
             updateData.firm_name = foundFirm.name;
         } else {
             return res.status(400).json({
-                error: `Firm '${firmName}' not found`
+                error: requestedFirmId
+                    ? `Firm '${requestedFirmId}' not found`
+                    : `Firm '${firmName}' not found`
             });
         }
 

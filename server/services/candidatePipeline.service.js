@@ -27,6 +27,7 @@ import {
     scheduleInterview as scheduleInterviewInternal,
     updateInterview
 } from './candidatePipeline/interviews.js';
+import { query } from '../config/database.js';
 
 export const PIPELINE_STAGES = [
     { id: 'new', label: 'Nouveau', labelEn: 'New', order: 1, color: '#6B7280' },
@@ -91,6 +92,93 @@ export async function getPipelineOverviewFacade(filters = {}) {
 
 export async function scheduleInterview(args) {
     return scheduleInterviewInternal({ ...args, pipelineStages: PIPELINE_STAGES });
+}
+
+export async function getResumeFirmId(resumeId) {
+    const result = await query('SELECT firm_id FROM resumes WHERE id = $1', [resumeId]);
+    return result.rows[0]?.firm_id || null;
+}
+
+export async function getClientFirmId(clientId) {
+    const result = await query('SELECT firm_id FROM clients WHERE id = $1', [clientId]);
+    return result.rows[0]?.firm_id || null;
+}
+
+export async function getMissionContext(missionId) {
+    const result = await query('SELECT firm_id, client_id FROM missions WHERE id = $1', [missionId]);
+    return result.rows[0] || null;
+}
+
+export async function getPipelineAccessContext(pipelineId) {
+    const result = await query(`
+        SELECT cp.id,
+               cp.resume_id,
+               cp.mission_id,
+               cp.client_id,
+               r.firm_id as resume_firm_id,
+               m.firm_id as mission_firm_id,
+               m.client_id as mission_client_id,
+               c.firm_id as client_firm_id
+        FROM candidate_pipeline cp
+        LEFT JOIN resumes r ON r.id = cp.resume_id
+        LEFT JOIN missions m ON m.id = cp.mission_id
+        LEFT JOIN clients c ON c.id = cp.client_id
+        WHERE cp.id = $1
+    `, [pipelineId]);
+
+    return result.rows[0] || null;
+}
+
+export async function getInterviewAccessContext(interviewId) {
+    const result = await query(`
+        SELECT pi.id,
+               pi.pipeline_id,
+               cp.resume_id,
+               cp.mission_id,
+               cp.client_id,
+               r.firm_id as resume_firm_id,
+               m.firm_id as mission_firm_id,
+               m.client_id as mission_client_id,
+               c.firm_id as client_firm_id
+        FROM pipeline_interviews pi
+        INNER JOIN candidate_pipeline cp ON cp.id = pi.pipeline_id
+        LEFT JOIN resumes r ON r.id = cp.resume_id
+        LEFT JOIN missions m ON m.id = cp.mission_id
+        LEFT JOIN clients c ON c.id = cp.client_id
+        WHERE pi.id = $1
+    `, [interviewId]);
+
+    return result.rows[0] || null;
+}
+
+export async function validatePipelineAssociations({ resumeId, missionId, clientId, expectedFirmId = null }) {
+    const resumeFirmId = resumeId ? await getResumeFirmId(resumeId) : null;
+    if (resumeId && !resumeFirmId) {
+        return { ok: false, status: 400, error: 'Resume not found' };
+    }
+
+    const missionContext = missionId ? await getMissionContext(missionId) : null;
+    if (missionId && !missionContext) {
+        return { ok: false, status: 400, error: 'Mission not found' };
+    }
+
+    const clientFirmId = clientId ? await getClientFirmId(clientId) : null;
+    if (clientId && !clientFirmId) {
+        return { ok: false, status: 400, error: 'Client not found' };
+    }
+
+    const firmIds = [resumeFirmId, missionContext?.firm_id || null, clientFirmId].filter(Boolean);
+    const targetFirmId = expectedFirmId || firmIds[0] || null;
+
+    if (targetFirmId && firmIds.some((firmId) => firmId !== targetFirmId)) {
+        return { ok: false, status: 403, error: 'Pipeline entities must belong to the same firm' };
+    }
+
+    if (missionContext?.client_id && clientId && missionContext.client_id !== clientId) {
+        return { ok: false, status: 400, error: 'Client does not match mission' };
+    }
+
+    return { ok: true, firmId: targetFirmId };
 }
 
 export { getPipelineOverviewFacade as getPipelineOverview };

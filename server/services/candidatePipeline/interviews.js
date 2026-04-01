@@ -96,6 +96,11 @@ async function getUpcomingInterviews(filters = {}) {
             params.push(daysInt);
         }
 
+        if (filters.firmId) {
+            whereClause += ` AND COALESCE(m.firm_id, r.firm_id, c.firm_id) = $${paramIndex++}`;
+            params.push(filters.firmId);
+        }
+
         const result = await query(
             `
             SELECT 
@@ -239,6 +244,11 @@ async function getPipelineStats(filters = {}) {
         if (filters.clientId) {
             whereClause += ` AND cp.client_id = $${paramIndex++}`;
             params.push(filters.clientId);
+        }
+
+        if (filters.firmId) {
+            whereClause += ` AND COALESCE(m.firm_id, r.firm_id, c.firm_id) = $${paramIndex++}`;
+            params.push(filters.firmId);
         }
 
         const result = await query(

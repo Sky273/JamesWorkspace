@@ -35,10 +35,14 @@ export async function listTemplates({ isAdmin, userFirmId, search, status, page 
     let paramIndex = 1;
 
     // Firm filter: non-admins see only their firm's templates + global templates
-    if (!isAdmin && userFirmId) {
-        conditions.push(`(t.firm_id = $${paramIndex} OR t.firm_id IS NULL)`);
-        params.push(userFirmId);
-        paramIndex++;
+    if (!isAdmin) {
+        if (userFirmId) {
+            conditions.push(`(t.firm_id = $${paramIndex} OR t.firm_id IS NULL)`);
+            params.push(userFirmId);
+            paramIndex++;
+        } else {
+            conditions.push('t.firm_id IS NULL');
+        }
     }
 
     if (status && status !== 'all') {

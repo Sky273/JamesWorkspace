@@ -101,6 +101,8 @@ export async function initShareResumeTable() {
  * @returns {Promise<{token: string, path: string, expiresAt: Date}>} Share info
  */
 export async function storeSharedPdf(resumeId, pdfBuffer, filename) {
+    let pdfPath = null;
+
     try {
         const existingShare = await getShareRowByResumeId(resumeId);
         const token = generateShareToken();
@@ -108,7 +110,7 @@ export async function storeSharedPdf(resumeId, pdfBuffer, filename) {
         const expiresAt = buildShareExpiryDate();
 
         const safeFilename = filename.replace(/[^a-zA-Z0-9_-]/g, '_') + '.pdf';
-        const pdfPath = path.join(SHARED_PDF_DIR, `${token}_${safeFilename}`);
+        pdfPath = path.join(SHARED_PDF_DIR, `${token}_${safeFilename}`);
 
         await fs.writeFile(pdfPath, pdfBuffer);
 
@@ -131,6 +133,9 @@ export async function storeSharedPdf(resumeId, pdfBuffer, filename) {
 
         return { token, path: pdfPath, expiresAt };
     } catch (error) {
+        if (pdfPath) {
+            await deleteSharedPdfFile(pdfPath);
+        }
         safeLog('error', 'Failed to store shared PDF', {
             resumeId,
             error: error.message

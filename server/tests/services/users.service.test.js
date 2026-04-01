@@ -91,6 +91,16 @@ describe('Users Service', () => {
             const opts = selectWithTimeout.mock.calls[0][1];
             expect(opts.where).toContain('status = $');
         });
+
+        it('should clamp invalid pagination inputs', async () => {
+            selectWithTimeout.mockResolvedValueOnce([]);
+
+            await listUsers({ page: -2, limit: 500 });
+
+            const opts = selectWithTimeout.mock.calls[0][1];
+            expect(opts.limit).toBe(101);
+            expect(opts.offset).toBe(0);
+        });
     });
 
     describe('updateUserProfile', () => {

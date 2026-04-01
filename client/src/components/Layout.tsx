@@ -152,7 +152,7 @@ const Layout = (): JSX.Element => {
                         {user.name || t('userProfile.anonymous')}
                       </span>
                       <span className="truncate text-[11px] text-slate-500 dark:text-slate-400">
-                        {user.firm || t('userProfile.noCompany')} · {getRoleLabel(user.role)}
+                        {user.firmName || user.firm || t('userProfile.noCompany')} · {getRoleLabel(user.role)}
                       </span>
                     </div>
                   </Link>

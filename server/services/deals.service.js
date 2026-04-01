@@ -262,8 +262,10 @@ export async function getDealById(dealId) {
 export async function getDeals(firmId, filters = {}, pagination = {}) {
     try {
         const { clientId, status, priority, search } = filters;
-        const page = parseInt(pagination.page) || 1;
-        const limit = Math.min(parseInt(pagination.limit) || 20, 100);
+        const parsedPage = Number.parseInt(pagination.page, 10);
+        const parsedLimit = Number.parseInt(pagination.limit, 10);
+        const page = Number.isInteger(parsedPage) && parsedPage > 0 ? parsedPage : 1;
+        const limit = Number.isInteger(parsedLimit) ? Math.min(Math.max(parsedLimit, 1), 100) : 20;
         const offset = (page - 1) * limit;
 
         // Build WHERE conditions
@@ -543,6 +545,22 @@ export async function getDealFirmId(dealId) {
 export async function getClientFirmId(clientId) {
     const result = await query('SELECT firm_id FROM clients WHERE id = $1', [clientId]);
     return result.rows.length > 0 ? result.rows[0].firm_id : null;
+}
+
+/**
+ * Get a contact's owning client and firm for validation
+ * @param {string} contactId - Contact ID
+ * @returns {Promise<{client_id: string, firm_id: string} | null>} Contact metadata or null
+ */
+export async function getContactOwnership(contactId) {
+    const result = await query(`
+        SELECT cc.client_id, c.firm_id
+        FROM client_contacts cc
+        INNER JOIN clients c ON c.id = cc.client_id
+        WHERE cc.id = $1
+    `, [contactId]);
+
+    return result.rows[0] || null;
 }
 
 /**

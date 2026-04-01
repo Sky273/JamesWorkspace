@@ -146,9 +146,14 @@ export function hasFirmAccess(req, resourceFirm) {
     if (isUserAdmin(req)) {
         return true;
     }
-    
-    const userFirm = req.user?.firm;
-    return userFirm && userFirm === resourceFirm;
+
+    const userFirmId = req.user?.firmId || req.user?.firm_id || null;
+
+    const resourceFirmId = resourceFirm && typeof resourceFirm === 'object'
+        ? (resourceFirm.firmId || resourceFirm.firm_id || resourceFirm.id || null)
+        : null;
+
+    return Boolean(userFirmId && resourceFirmId && userFirmId === resourceFirmId);
 }
 
 // Backward compatibility alias
@@ -178,4 +183,3 @@ export function requireFirmAccess(getResourceFirm) {
         }
     };
 }
-

@@ -13,6 +13,7 @@ interface User {
   jobTitle?: string;
   phone?: string;
   firm?: string;
+  firmId?: string;
   role?: string;
   status?: string;
 }
@@ -28,7 +29,7 @@ interface FormData {
   password: string;
   jobTitle: string;
   phone: string;
-  firm: string;
+  firmId: string;
   role: string;
   status: string;
 }
@@ -49,7 +50,7 @@ const UserFormModal = ({ isOpen, onClose, onSubmit, user, firms, t }: UserFormMo
     password: '',
     jobTitle: '',
     phone: '',
-    firm: '',
+    firmId: '',
     role: 'user',
     status: 'Active'
   });
@@ -66,12 +67,12 @@ const UserFormModal = ({ isOpen, onClose, onSubmit, user, firms, t }: UserFormMo
         password: '',
         jobTitle: user.jobTitle || '',
         phone: user.phone || '',
-        firm: user.firm || '',
+        firmId: user.firmId || '',
         role: user.role || 'user',
         status: capitalizedStatus
       });
     } else {
-      setFormData({ name: '', email: '', password: '', jobTitle: '', phone: '', firm: '', role: 'user', status: 'Active' });
+      setFormData({ name: '', email: '', password: '', jobTitle: '', phone: '', firmId: '', role: 'user', status: 'Active' });
     }
   }, [user, isOpen]);
 
@@ -159,14 +160,14 @@ const UserFormModal = ({ isOpen, onClose, onSubmit, user, firms, t }: UserFormMo
             {t('users.management.modal.firm')} *
           </label>
           <select
-            value={formData.firm}
-            onChange={handleInputChange('firm')}
+            value={formData.firmId}
+            onChange={handleInputChange('firmId')}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
             required
           >
             <option value="">{t('users.management.modal.selectFirm')}</option>
             {firms.map(c => (
-              <option key={c.id} value={c.name}>{c.name}</option>
+              <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
         </div>

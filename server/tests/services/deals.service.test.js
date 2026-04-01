@@ -32,6 +32,7 @@ import {
     getDealStats,
     getDealFirmId,
     getClientFirmId,
+    getContactOwnership,
     getResumeFirmId,
     getMissionsForDeal,
     getDealsCountForClient
@@ -303,6 +304,18 @@ describe('Deals Service', () => {
             expect(result.pagination.hasMore).toBe(true);
             expect(result.pagination.totalPages).toBe(3);
         });
+
+        it('should clamp invalid pagination values defensively', async () => {
+            query
+                .mockResolvedValueOnce({ rows: [{ total: '0' }] })
+                .mockResolvedValueOnce({ rows: [] });
+
+            const result = await getDeals('f1', {}, { page: -3, limit: 0 });
+
+            expect(result.pagination.page).toBe(1);
+            expect(result.pagination.limit).toBe(1);
+            expect(query.mock.calls[1][1].slice(-2)).toEqual([1, 0]);
+        });
     });
 
     // ============================================
@@ -432,6 +445,23 @@ describe('Deals Service', () => {
         it('should return null if not found', async () => {
             query.mockResolvedValueOnce({ rows: [] });
             expect(await getResumeFirmId('missing')).toBeNull();
+        });
+    });
+
+    describe('getContactOwnership', () => {
+        it('should return client and firm ids', async () => {
+            query.mockResolvedValueOnce({ rows: [{ client_id: 'c1', firm_id: 'f1' }] });
+
+            await expect(getContactOwnership('ct1')).resolves.toEqual({
+                client_id: 'c1',
+                firm_id: 'f1'
+            });
+        });
+
+        it('should return null if contact not found', async () => {
+            query.mockResolvedValueOnce({ rows: [] });
+
+            await expect(getContactOwnership('missing')).resolves.toBeNull();
         });
     });
 

@@ -131,6 +131,18 @@ describe('Clients Service', () => {
             expect(query).toHaveBeenCalledTimes(1); // only data query
             expect(result.pagination.totalCount).toBeNull();
         });
+
+        it('should clamp invalid pagination values defensively', async () => {
+            query
+                .mockResolvedValueOnce({ rows: [] })
+                .mockResolvedValueOnce({ rows: [{ count: '0' }] });
+
+            const result = await listClients({ page: -2, limit: 0 });
+
+            expect(result.pagination.page).toBe(1);
+            expect(result.pagination.limit).toBe(1);
+            expect(query.mock.calls[0][1].slice(-2)).toEqual([2, 0]);
+        });
     });
 
     describe('listIndustries', () => {

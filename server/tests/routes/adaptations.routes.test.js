@@ -66,7 +66,7 @@ vi.mock('../../middleware/auth.middleware.js', () => ({
                 role: req.headers['x-test-role'] || 'user',
                 firm: 'Test Firm',
                 customer: 'Test Firm',
-                firm_id: 'firm-123'
+                firm_id: req.headers['x-test-no-firm'] === 'true' ? null : 'firm-123'
             };
             next();
         } else {
@@ -92,6 +92,7 @@ describe('Adaptations Routes - GET /api/adaptations', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        mockGetUserFirmId.mockResolvedValue('firm-123');
         app = createTestApp();
     });
 
@@ -112,7 +113,8 @@ describe('Adaptations Routes - GET /api/adaptations', () => {
                     resume_name: 'John Doe',
                     mission_title: 'Dev React',
                     status: 'completed',
-                    firm: 'Test Firm'
+                    firm: 'Test Firm',
+                    firm_id: 'firm-123'
                 },
                 { 
                     id: 'adapt-2', 
@@ -121,7 +123,8 @@ describe('Adaptations Routes - GET /api/adaptations', () => {
                     resume_name: 'Jane Smith',
                     mission_title: 'Dev React',
                     status: 'pending',
-                    firm: 'Test Firm'
+                    firm: 'Test Firm',
+                    firm_id: 'firm-123'
                 }
             ],
             totalCount: 5
@@ -208,6 +211,16 @@ describe('Adaptations Routes - GET /api/adaptations', () => {
         expect(res.body.pagination.page).toBe(2);
     });
 
+    it('should reject invalid pagination parameters', async () => {
+        const res = await request(app)
+            .get('/api/adaptations?page=-1&limit=0')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(400);
+        expect(res.body.error).toBe('Invalid pagination parameters');
+        expect(mockListAdaptations).not.toHaveBeenCalled();
+    });
+
     it('should limit max results to 100', async () => {
         mockListAdaptations.mockResolvedValueOnce({
             records: [],
@@ -235,8 +248,20 @@ describe('Adaptations Routes - GET /api/adaptations', () => {
 
         expect(res.status).toBe(200);
         expect(mockListAdaptations).toHaveBeenCalledWith(
-            expect.objectContaining({ userFirm: null })
+            expect.objectContaining({ firmId: null })
         );
+    });
+
+    it('should reject non-admin list access without firm association', async () => {
+        mockGetUserFirmId.mockResolvedValueOnce(null);
+
+        const res = await request(app)
+            .get('/api/adaptations')
+            .set('Authorization', 'Bearer valid-token')
+            .set('x-test-role', 'user')
+            .set('x-test-no-firm', 'true');
+
+        expect(res.status).toBe(403);
     });
 });
 
@@ -245,6 +270,7 @@ describe('Adaptations Routes - GET /api/adaptations/:id', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        mockGetUserFirmId.mockResolvedValue('firm-123');
         app = createTestApp();
     });
 
@@ -276,7 +302,8 @@ describe('Adaptations Routes - GET /api/adaptations/:id', () => {
             mission_title: 'Dev React',
             status: 'completed',
             adapted_text: 'Adapted resume content...',
-            firm: 'Test Firm'
+            firm: 'Test Firm',
+            firm_id: 'firm-123'
         });
         mockGetMissionClientContact.mockResolvedValueOnce({ client_id: 'c-1', contact_id: 'cc-1' });
 
@@ -291,7 +318,8 @@ describe('Adaptations Routes - GET /api/adaptations/:id', () => {
     it('should return 403 for adaptation from different firm', async () => {
         mockGetAdaptationById.mockResolvedValueOnce({ 
             id: 'adapt-123', 
-            firm: 'Other Firm'
+            firm: 'Other Firm',
+            firm_id: 'firm-other'
         });
 
         const res = await request(app)
@@ -304,7 +332,8 @@ describe('Adaptations Routes - GET /api/adaptations/:id', () => {
     it('should allow admin to access any adaptation', async () => {
         mockGetAdaptationById.mockResolvedValueOnce({ 
             id: 'adapt-123', 
-            firm: 'Other Firm'
+            firm: 'Other Firm',
+            firm_id: 'firm-other'
         });
 
         const res = await request(app)
@@ -321,6 +350,7 @@ describe('Adaptations Routes - PUT /api/adaptations/:id', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        mockGetUserFirmId.mockResolvedValue('firm-123');
         app = createTestApp();
     });
 
@@ -349,7 +379,8 @@ describe('Adaptations Routes - PUT /api/adaptations/:id', () => {
         mockGetAdaptationById.mockResolvedValueOnce({ 
             id: 'adapt-123',
             status: 'pending',
-            firm: 'Test Firm'
+            firm: 'Test Firm',
+            firm_id: 'firm-123'
         });
         mockUpdateAdaptation.mockResolvedValueOnce({
             id: 'adapt-123',
@@ -358,7 +389,8 @@ describe('Adaptations Routes - PUT /api/adaptations/:id', () => {
             adapted_text: 'Updated adapted text',
             match_score: 88,
             match_analysis: 'Strong match',
-            firm: 'Test Firm'
+            firm: 'Test Firm',
+            firm_id: 'firm-123'
         });
 
         const res = await request(app)
@@ -386,12 +418,14 @@ describe('Adaptations Routes - PUT /api/adaptations/:id', () => {
         mockGetAdaptationById.mockResolvedValueOnce({ 
             id: 'adapt-123',
             status: 'pending',
-            firm: 'Test Firm'
+            firm: 'Test Firm',
+            firm_id: 'firm-123'
         });
         mockUpdateAdaptation.mockResolvedValueOnce({
             id: 'adapt-123',
             status: 'completed',
-            firm: 'Test Firm'
+            firm: 'Test Firm',
+            firm_id: 'firm-123'
         });
 
         const res = await request(app)
@@ -405,7 +439,8 @@ describe('Adaptations Routes - PUT /api/adaptations/:id', () => {
     it('should return 403 for adaptation from different firm', async () => {
         mockGetAdaptationById.mockResolvedValueOnce({ 
             id: 'adapt-123',
-            firm: 'Other Firm'
+            firm: 'Other Firm',
+            firm_id: 'firm-other'
         });
 
         const res = await request(app)
@@ -422,6 +457,7 @@ describe('Adaptations Routes - DELETE /api/adaptations/:id', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        mockGetUserFirmId.mockResolvedValue('firm-123');
         app = createTestApp();
     });
 
@@ -447,7 +483,8 @@ describe('Adaptations Routes - DELETE /api/adaptations/:id', () => {
     it('should delete adaptation for authorized user', async () => {
         mockGetAdaptationById.mockResolvedValueOnce({ 
             id: 'adapt-123',
-            firm: 'Test Firm'
+            firm: 'Test Firm',
+            firm_id: 'firm-123'
         });
         mockDeleteAdaptation.mockResolvedValueOnce(true);
 
@@ -462,7 +499,8 @@ describe('Adaptations Routes - DELETE /api/adaptations/:id', () => {
     it('should return 403 for adaptation from different firm', async () => {
         mockGetAdaptationById.mockResolvedValueOnce({ 
             id: 'adapt-123',
-            firm: 'Other Firm'
+            firm: 'Other Firm',
+            firm_id: 'firm-other'
         });
 
         const res = await request(app)

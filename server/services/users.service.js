@@ -13,7 +13,9 @@ import { selectWithTimeout, escapeLike, createWithTimeout, updateWithTimeout, de
  * @returns {Promise<{ users: Object[], hasMore: boolean }>}
  */
 export async function listUsers({ search, role, status, page = 1, limit = 100 } = {}) {
-    const offset = (page - 1) * limit;
+    const normalizedPage = Math.max(1, page);
+    const normalizedLimit = Math.max(1, Math.min(limit, 100));
+    const offset = (normalizedPage - 1) * normalizedLimit;
     const conditions = [];
     const params = [];
     let paramIndex = 1;
@@ -42,11 +44,11 @@ export async function listUsers({ search, role, status, page = 1, limit = 100 } 
         where: whereClause,
         params: params,
         orderBy: 'name ASC',
-        limit: limit + 1,
+        limit: normalizedLimit + 1,
         offset: offset
     });
 
-    const hasMore = users.length > limit;
+    const hasMore = users.length > normalizedLimit;
     if (hasMore) {
         users.pop();
     }
@@ -133,6 +135,20 @@ export async function findUserByEmail(normalizedEmail) {
         limit: 1
     });
     return users.length > 0 ? users[0] : null;
+}
+
+/**
+ * Find firm by ID
+ * @param {string} firmId
+ * @returns {Promise<Object|null>}
+ */
+export async function findFirmById(firmId) {
+    const firms = await selectWithTimeout('firms', {
+        where: 'id = $1',
+        params: [firmId],
+        limit: 1
+    });
+    return firms.length > 0 ? firms[0] : null;
 }
 
 /**

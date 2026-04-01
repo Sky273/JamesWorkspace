@@ -35,6 +35,7 @@ import {
     validateClient,
     validateContact,
     validateDeal,
+    validateMissionAssociations,
     createMission,
     findMission,
     updateMission,
@@ -172,6 +173,17 @@ describe('Missions Service', () => {
             expect(result.pagination.totalPages).toBe(3);
             expect(result.pagination.hasMore).toBe(true);
         });
+
+        it('should clamp invalid pagination values defensively', async () => {
+            selectWithTimeout.mockResolvedValueOnce([{ total: '0' }]);
+            query.mockResolvedValueOnce({ rows: [] });
+
+            const result = await listMissions({ page: -3, limit: 0 });
+
+            expect(result.pagination.page).toBe(1);
+            expect(result.pagination.limit).toBe(1);
+            expect(query.mock.calls[0][1].slice(-2)).toEqual([1, 0]);
+        });
     });
 
     // ============================================
@@ -217,6 +229,17 @@ describe('Missions Service', () => {
 
             expect(result.unassigned).toHaveLength(1);
             expect(result.totalUnassigned).toBe(1);
+        });
+
+        it('should not filter deals by firm in admin mode', async () => {
+            query
+                .mockResolvedValueOnce({ rows: [] })
+                .mockResolvedValueOnce({ rows: [] });
+
+            await getMissionsGroupedByDeal({ firmId: null, isAdmin: true });
+
+            expect(query.mock.calls[0][0]).not.toContain('WHERE d.firm_id = $1');
+            expect(query.mock.calls[0][1]).toEqual([]);
         });
     });
 
@@ -274,6 +297,50 @@ describe('Missions Service', () => {
         it('should return exists:false if not found', async () => {
             query.mockResolvedValueOnce({ rows: [] });
             expect(await validateDeal('missing', 'f1')).toEqual({ exists: false, firmMatch: false });
+        });
+    });
+
+    describe('validateMissionAssociations', () => {
+        it('should accept coherent associations', async () => {
+            query
+                .mockResolvedValueOnce({ rows: [{ firm_id: 'f1' }] })
+                .mockResolvedValueOnce({ rows: [{ id: 'ct1' }] })
+                .mockResolvedValueOnce({ rows: [{ firm_id: 'f1' }] });
+
+            await expect(validateMissionAssociations({
+                clientId: 'c1',
+                contactId: 'ct1',
+                dealId: 'd1',
+                expectedFirmId: 'f1'
+            })).resolves.toEqual({ ok: true });
+        });
+
+        it('should reject contact without client', async () => {
+            await expect(validateMissionAssociations({
+                clientId: null,
+                contactId: 'ct1',
+                dealId: null,
+                expectedFirmId: 'f1'
+            })).resolves.toEqual({
+                ok: false,
+                status: 400,
+                error: 'Contact requires a client association'
+            });
+        });
+
+        it('should reject deal from another firm', async () => {
+            query.mockResolvedValueOnce({ rows: [{ firm_id: 'f2' }] });
+
+            await expect(validateMissionAssociations({
+                clientId: null,
+                contactId: null,
+                dealId: 'd1',
+                expectedFirmId: 'f1'
+            })).resolves.toEqual({
+                ok: false,
+                status: 403,
+                error: 'Deal does not belong to the target firm'
+            });
         });
     });
 

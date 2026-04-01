@@ -26,9 +26,13 @@ export interface User {
   phone?: string;
   role: 'admin' | 'user' | 'viewer';
   status: 'active' | 'inactive' | 'pending';
+  firmId?: string;
+  firmName?: string;
   firm?: string;
   firmLogo?: string;
   firm_id?: string;
+  customerId?: string;
+  customerName?: string;
   customer?: string;
   // Google SSO fields
   google_id?: string;
@@ -61,7 +65,7 @@ export interface CreateUserData {
   phone?: string;
   role?: string;
   status?: string;
-  firm?: string;
+  firmId?: string;
 }
 
 export interface UpdateUserData {
@@ -72,7 +76,7 @@ export interface UpdateUserData {
   phone?: string;
   role?: string;
   status?: string;
-  firm?: string;
+  firmId?: string;
 }
 
 // ============================================

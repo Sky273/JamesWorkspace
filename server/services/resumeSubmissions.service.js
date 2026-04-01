@@ -62,7 +62,9 @@ const SUBMISSION_BY_ID_SELECT = `
  * @returns {Promise<{data: Array, pagination: Object}>}
  */
 export async function listSubmissions({ page = 1, limit = 20, clientId, resumeId, missionId, status, firmId }) {
-    const offset = (page - 1) * limit;
+    const normalizedPage = Math.max(1, page);
+    const normalizedLimit = Math.max(1, Math.min(limit, 100));
+    const offset = (normalizedPage - 1) * normalizedLimit;
     const whereConditions = [];
     const params = [];
     let paramIndex = 1;
@@ -107,19 +109,19 @@ export async function listSubmissions({ page = 1, limit = 20, clientId, resumeId
         ORDER BY rs.sent_at DESC
         LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
     `;
-    params.push(limit + 1, offset);
+    params.push(normalizedLimit + 1, offset);
 
     const result = await query(submissionsQuery, params);
     const submissions = result.rows;
 
-    const hasMore = submissions.length > limit;
+    const hasMore = submissions.length > normalizedLimit;
     if (hasMore) {
         submissions.pop();
     }
 
     // Get total count only on page 1
     let totalCount = null;
-    if (page === 1) {
+    if (normalizedPage === 1) {
         const countParams = params.slice(0, -2);
         const countQuery = `SELECT COUNT(*) as count FROM resume_submissions rs ${whereClause}`;
         const countResult = await query(countQuery, countParams);
@@ -129,11 +131,11 @@ export async function listSubmissions({ page = 1, limit = 20, clientId, resumeId
     return {
         data: submissions,
         pagination: {
-            page,
-            limit,
+            page: normalizedPage,
+            limit: normalizedLimit,
             hasMore,
             totalCount,
-            nextPage: hasMore ? page + 1 : null
+            nextPage: hasMore ? normalizedPage + 1 : null
         }
     };
 }
@@ -161,9 +163,17 @@ export async function getSubmissionById(id) {
  * @param {string} resumeId
  * @returns {Promise<boolean>}
  */
-export async function validateResume(resumeId) {
-    const result = await query('SELECT id FROM resumes WHERE id = $1', [resumeId]);
-    return result.rows.length > 0;
+export async function validateResume(resumeId, expectedFirmId = null) {
+    const result = await query('SELECT firm_id FROM resumes WHERE id = $1', [resumeId]);
+    if (result.rows.length === 0) {
+        return { exists: false, firmMatch: false };
+    }
+
+    if (!expectedFirmId) {
+        return { exists: true, firmMatch: true };
+    }
+
+    return { exists: true, firmMatch: result.rows[0].firm_id === expectedFirmId };
 }
 
 /**
@@ -194,9 +204,17 @@ export async function validateContact(contactId, clientId) {
  * @param {string} missionId
  * @returns {Promise<boolean>}
  */
-export async function validateMission(missionId) {
-    const result = await query('SELECT id FROM missions WHERE id = $1', [missionId]);
-    return result.rows.length > 0;
+export async function validateMission(missionId, expectedFirmId = null) {
+    const result = await query('SELECT firm_id FROM missions WHERE id = $1', [missionId]);
+    if (result.rows.length === 0) {
+        return { exists: false, firmMatch: false };
+    }
+
+    if (!expectedFirmId) {
+        return { exists: true, firmMatch: true };
+    }
+
+    return { exists: true, firmMatch: result.rows[0].firm_id === expectedFirmId };
 }
 
 // ============================================

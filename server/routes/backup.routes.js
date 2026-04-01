@@ -6,7 +6,7 @@
 import express from 'express';
 import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
 import { safeLog } from '../utils/logger.backend.js';
-import { validateBody, updateBackupSettingsSchema, testBackupConnectionSchema, restoreBackupSchema } from '../utils/validation.js';
+import { validateBody, validateParams, updateBackupSettingsSchema, testBackupConnectionSchema, restoreBackupSchema } from '../utils/validation.js';
 import { securityLog, getRequestMetadata, LOG_LEVELS, SECURITY_EVENTS } from '../services/security.service.js';
 import { assertSafeOutboundHost } from '../utils/networkHostSecurity.js';
 import {
@@ -240,7 +240,7 @@ router.post('/run', async (req, res) => {
         safeLog('error', 'Manual backup failed', { error: error.message });
         res.status(500).json({ 
             success: false, 
-            error: error.message 
+            error: 'Manual backup failed'
         });
     }
 });
@@ -267,7 +267,7 @@ router.get('/history', async (req, res) => {
  * DELETE /api/backup/history/:id
  * Delete a backup history entry
  */
-router.delete('/history/:id', async (req, res) => {
+router.delete('/history/:id', validateParams('id'), async (req, res) => {
     try {
         const { id } = req.params;
         
@@ -344,7 +344,8 @@ router.post('/restore', validateBody(restoreBackupSchema), async (req, res) => {
     } catch {
         safeLog('error', 'Database restore failed', { error: 'Database restore failed' });
         res.status(500).json({ 
-            success: false 
+            success: false,
+            message: 'Database restore failed'
         });
     }
 });

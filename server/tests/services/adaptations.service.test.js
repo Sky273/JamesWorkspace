@@ -44,15 +44,15 @@ describe('Adaptations Service', () => {
             expect(result.records).toHaveLength(2);
         });
 
-        it('should apply firm filter for non-admin', async () => {
+        it('should apply firm_id filter for non-admin', async () => {
             query
                 .mockResolvedValueOnce({ rows: [{ total: '0' }] })
                 .mockResolvedValueOnce({ rows: [] });
 
-            await listAdaptations({ userFirm: 'Acme', page: 1, limit: 20 });
+            await listAdaptations({ firmId: 'firm-123', page: 1, limit: 20 });
 
-            expect(query.mock.calls[0][0]).toContain('firm = $1');
-            expect(query.mock.calls[0][1]).toContain('Acme');
+            expect(query.mock.calls[0][0]).toContain('firm_id = $1');
+            expect(query.mock.calls[0][1]).toContain('firm-123');
         });
 
         it('should apply resumeId filter', async () => {
@@ -110,10 +110,10 @@ describe('Adaptations Service', () => {
                 .mockResolvedValueOnce({ rows: [{ total: '0' }] })
                 .mockResolvedValueOnce({ rows: [] });
 
-            await listAdaptations({ userFirm: 'Acme', status: 'completed', search: 'dev', page: 1, limit: 20 });
+            await listAdaptations({ firmId: 'firm-123', status: 'completed', search: 'dev', page: 1, limit: 20 });
 
             const sql = query.mock.calls[0][0];
-            expect(sql).toContain('firm = $1');
+            expect(sql).toContain('firm_id = $1');
             expect(sql).toContain('status = $2');
             expect(sql).toContain('ILIKE $3');
         });
@@ -128,6 +128,18 @@ describe('Adaptations Service', () => {
             const dataCall = query.mock.calls[1];
             // offset should be (3-1)*10 = 20
             expect(dataCall[1]).toContain(20);
+        });
+
+        it('should clamp invalid pagination inputs to safe values', async () => {
+            query
+                .mockResolvedValueOnce({ rows: [{ total: '5' }] })
+                .mockResolvedValueOnce({ rows: [] });
+
+            await listAdaptations({ page: -2, limit: 500 });
+
+            const dataCall = query.mock.calls[1];
+            expect(dataCall[1]).toContain(100);
+            expect(dataCall[1]).toContain(0);
         });
     });
 
@@ -173,6 +185,17 @@ describe('Adaptations Service', () => {
             const result = await getAdaptationsGroupedByDeal({ firmId: 'f1', isAdmin: false });
 
             expect(result.deals).toHaveLength(0);
+        });
+
+        it('should not apply firm filter on deals query for admins', async () => {
+            query
+                .mockResolvedValueOnce({ rows: [] })
+                .mockResolvedValueOnce({ rows: [] });
+
+            await getAdaptationsGroupedByDeal({ firmId: 'f1', isAdmin: true });
+
+            expect(query.mock.calls[0][0]).not.toContain('WHERE d.firm_id = $1');
+            expect(query.mock.calls[0][1]).toEqual([]);
         });
     });
 

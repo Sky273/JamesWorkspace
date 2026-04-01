@@ -56,15 +56,9 @@ const AdminFirmSelector = ({
         const firmsList = response.customers || response || [];
         setFirms(firmsList);
         
-        // Find user's firm_id from the firms list using user.firm name
-        const userFirmName = user?.firm;
-        if (userFirmName) {
-          const userFirm = firmsList.find((f: Firm) => f.name === userFirmName);
-          if (userFirm) {
-            setUserFirmId(userFirm.id);
-            // Don't auto-set default firm here - it causes timing issues with React state
-            // The backend will use the user's firm if no firm_id is sent
-          }
+        const currentUserFirmId = user?.firmId || user?.firm_id || '';
+        if (currentUserFirmId) {
+          setUserFirmId(currentUserFirmId);
         }
       } catch (error) {
         logger.error('[AdminFirmSelector] Failed to load firms:', error);
@@ -76,7 +70,7 @@ const AdminFirmSelector = ({
 
     loadFirms();
    
-  }, [isAdmin, user?.firm]);
+  }, [isAdmin, user?.firmId, user?.firm_id]);
 
   // Don't render anything for non-admin users
   if (!isAdmin) {

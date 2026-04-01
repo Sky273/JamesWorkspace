@@ -28,7 +28,9 @@ interface User {
   phone?: string;
   role?: string;
   status?: string;
+  firmId?: string;
   firm?: string;
+  firmName?: string;
   firm_name?: string;
 }
 
@@ -63,9 +65,9 @@ interface UserFormData {
   password?: string;
   jobTitle?: string;
   phone?: string;
+  firmId?: string;
   role?: string;
   status?: string;
-  firm?: string;
 }
 
 interface UploadLogoResponse {

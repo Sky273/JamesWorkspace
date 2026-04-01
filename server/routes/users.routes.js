@@ -6,6 +6,18 @@ import * as usersService from '../services/users.service.js';
 
 const router = express.Router();
 
+function parsePositiveInteger(value, fallback, max = null) {
+    const parsed = parseInt(value, 10);
+    if (Number.isNaN(parsed) || parsed < 1) {
+        return { ok: false, value: fallback };
+    }
+
+    return {
+        ok: true,
+        value: max ? Math.min(parsed, max) : parsed
+    };
+}
+
 // ============================================
 // USERS ROUTES (PostgreSQL)
 // ============================================
@@ -13,11 +25,23 @@ const router = express.Router();
 // GET /api/users - Get all users (admin function, with server-side pagination)
 router.get('/', authenticateToken, requireAdmin, async (req, res) => {
     try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 100;
+        const pageInput = req.query.page;
+        const limitInput = req.query.limit;
+        const pageResult = pageInput === undefined ? { ok: true, value: 1 } : parsePositiveInteger(pageInput, 1);
+        const limitResult = limitInput === undefined ? { ok: true, value: 100 } : parsePositiveInteger(limitInput, 100, 100);
         const { search, role, status } = req.query;
 
-        const { users, hasMore } = await usersService.listUsers({ search, role, status, page, limit });
+        if (!pageResult.ok || !limitResult.ok) {
+            return res.status(400).json({ error: 'Invalid pagination parameters' });
+        }
+
+        const { users, hasMore } = await usersService.listUsers({
+            search,
+            role,
+            status,
+            page: pageResult.value,
+            limit: limitResult.value
+        });
 
         // Map to frontend format (exclude password)
         const mappedUsers = users.map(user => ({
@@ -26,8 +50,10 @@ router.get('/', authenticateToken, requireAdmin, async (req, res) => {
             email: user.email,
             jobTitle: user.job_title || '',
             phone: user.phone || '',
+            firmName: user.firm_name,
             firm: user.firm_name,
             firmId: user.firm_id,
+            customerName: user.firm_name,
             customer: user.firm_name,
             customerId: user.firm_id,
             role: user.role || 'user',
@@ -39,10 +65,10 @@ router.get('/', authenticateToken, requireAdmin, async (req, res) => {
         const response = {
             data: mappedUsers,
             pagination: {
-                page,
-                limit,
+                page: pageResult.value,
+                limit: limitResult.value,
                 hasMore,
-                nextPage: hasMore ? page + 1 : null
+                nextPage: hasMore ? pageResult.value + 1 : null
             }
         };
 
@@ -60,16 +86,16 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateU
     try {
         const { id } = req.params;
         const userId = req.user.id;
-        const isAdmin = req.user?.role === 'admin';
 
-        // Users can only update their own profile, admins can update anyone
-        if (id !== userId && !isAdmin) {
+        // Profile updates are self-service only. Admin account management goes through /api/auth/users/:id.
+        if (id !== userId) {
             return res.status(403).json({ error: 'Not authorized to update this profile' });
         }
 
-        const { name, jobTitle, phone, role, status, firm_id } = req.body;
+        const { name, phone } = req.body;
+        const jobTitle = req.body.jobTitle ?? req.body.job_title;
 
-        const updatedUser = await usersService.updateUserProfile(id, { name, jobTitle, phone, role, status, firm_id }, isAdmin);
+        const updatedUser = await usersService.updateUserProfile(id, { name, jobTitle, phone }, false);
 
         if (updatedUser && updatedUser.noFields) {
             return res.status(400).json({ error: 'No fields to update' });
@@ -93,6 +119,7 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateU
                 email: updatedUser.email,
                 jobTitle: updatedUser.job_title,
                 phone: updatedUser.phone,
+                firmName: updatedUser.firm_name,
                 firm: updatedUser.firm_name,
                 firmId: updatedUser.firm_id,
                 role: updatedUser.role,

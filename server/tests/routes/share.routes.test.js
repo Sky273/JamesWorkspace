@@ -202,6 +202,13 @@ describe('Share Routes', () => {
         expect(res.headers['x-content-type-options']).toBe('nosniff');
     });
 
+    it('rejects non-hex public share tokens before hitting the service', async () => {
+        const res = await request(app).get('/api/share/pdf/' + 'z'.repeat(64));
+
+        expect(res.status).toBe(400);
+        expect(mockGetSharedPdfByToken).not.toHaveBeenCalled();
+    });
+
     it('returns 404 for an expired or unknown public file token', async () => {
         mockGetResumeFileByToken.mockResolvedValueOnce(null);
 

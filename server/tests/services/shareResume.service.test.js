@@ -128,6 +128,17 @@ describe('shareResume.service', () => {
         expect(fs.unlink).toHaveBeenCalledWith('/old/file.pdf');
     });
 
+    it('deletes the new shared PDF if the database update fails', async () => {
+        query
+            .mockResolvedValueOnce({ rows: [{ id: 'resume-123', shared_pdf_path: null }] })
+            .mockRejectedValueOnce(new Error('db failure'));
+
+        await expect(storeSharedPdf('resume-123', Buffer.from('PDF content'), 'cv.pdf')).rejects.toThrow('db failure');
+
+        expect(fs.writeFile).toHaveBeenCalled();
+        expect(fs.unlink).toHaveBeenCalledWith(expect.stringContaining('aaaaaaaa'));
+    });
+
     it('returns shared PDF info when token is valid', async () => {
         query.mockResolvedValueOnce({
             rows: [{

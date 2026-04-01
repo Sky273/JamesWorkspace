@@ -8,8 +8,10 @@ import crypto from 'crypto';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { validateBody, createMailDraftSchema } from '../utils/validation.js';
 import { safeLog } from '../utils/logger.backend.js';
+import { getUserFirmId } from '../utils/firmHelpers.js';
 import * as mailService from '../services/mail/mailService.js';
 import * as emailTemplatesService from '../services/emailTemplates.service.js';
+import * as submissionsService from '../services/resumeSubmissions.service.js';
 
 const router = express.Router();
 
@@ -141,7 +143,7 @@ router.get('/callback/gmail', async (req, res) => {
 router.post('/draft', authenticateToken, validateBody(createMailDraftSchema), async (req, res) => {
     try {
         const userId = req.user.id || req.user.userId;
-        const _userFirm = req.user.firm || req.user.customer;
+        const userFirmId = await getUserFirmId(req);
         
         // Debug: log raw request body keys and template info
         safeLog('debug', 'Mail draft request body', { 
@@ -163,6 +165,47 @@ router.post('/draft', authenticateToken, validateBody(createMailDraftSchema), as
         if (!to) {
             return res.status(400).json({ error: 'Recipient email (to) is required' });
         }
+
+        const shouldTrackSubmission = Boolean(resumeId || clientId || contactId || missionId);
+        if (shouldTrackSubmission) {
+            if (!userFirmId) {
+                return res.status(403).json({ error: 'No firm association' });
+            }
+            if (!resumeId || !clientId || !contactId) {
+                return res.status(400).json({ error: 'resumeId, clientId and contactId are required to track a submission' });
+            }
+
+            const resumeCheck = await submissionsService.validateResume(resumeId, userFirmId);
+            if (!resumeCheck.exists) {
+                return res.status(400).json({ error: 'Resume not found' });
+            }
+            if (!resumeCheck.firmMatch) {
+                return res.status(403).json({ error: 'Resume does not belong to your firm' });
+            }
+
+            const clientCheck = await submissionsService.validateClient(clientId, userFirmId);
+            if (!clientCheck.exists) {
+                return res.status(400).json({ error: 'Client not found' });
+            }
+            if (!clientCheck.firmMatch) {
+                return res.status(403).json({ error: 'Client does not belong to your firm' });
+            }
+
+            const contactValid = await submissionsService.validateContact(contactId, clientId);
+            if (!contactValid) {
+                return res.status(400).json({ error: 'Contact not found or does not belong to this client' });
+            }
+
+            if (missionId) {
+                const missionCheck = await submissionsService.validateMission(missionId, userFirmId);
+                if (!missionCheck.exists) {
+                    return res.status(400).json({ error: 'Mission not found' });
+                }
+                if (!missionCheck.firmMatch) {
+                    return res.status(403).json({ error: 'Mission does not belong to your firm' });
+                }
+            }
+        }
         
         // Process template if provided
         let finalSubject = subject;
@@ -177,44 +220,53 @@ router.post('/draft', authenticateToken, validateBody(createMailDraftSchema), as
             templateContextKeys: templateContext ? Object.keys(templateContext) : []
         });
         
-        if (templateId && templateContext) {
+        if (templateId) {
+            if (!templateContext) {
+                return res.status(400).json({ error: 'Template context is required when templateId is provided' });
+            }
+
+            const template = await emailTemplatesService.getTemplate(templateId);
+            if (!template) {
+                return res.status(404).json({ error: 'Template not found' });
+            }
+
+            if (!template.is_system && template.firm_id !== userFirmId) {
+                return res.status(403).json({ error: 'Template does not belong to your firm' });
+            }
+
+            const dbUser = await mailService.getUserWithFirmData(userId);
+
+            if (dbUser) {
+                templateContext.user = {
+                    ...templateContext.user,
+                    name: dbUser.name || templateContext.user?.name || '',
+                    email: dbUser.email || templateContext.user?.email || '',
+                    jobTitle: dbUser.job_title || templateContext.user?.jobTitle || '',
+                    phone: dbUser.phone || templateContext.user?.phone || ''
+                };
+                templateContext.firm = {
+                    ...templateContext.firm,
+                    name: dbUser.firm_name || templateContext.firm?.name || '',
+                    logo: dbUser.firm_logo || templateContext.firm?.logo || ''
+                };
+                safeLog('debug', 'Enriched template context with DB user data', { 
+                    userName: templateContext.user.name,
+                    userJobTitle: templateContext.user.jobTitle,
+                    userPhone: templateContext.user.phone
+                });
+            }
+
             try {
-                // Enrich user context with fresh data from database
-                const dbUser = await mailService.getUserWithFirmData(userId);
-                
-                if (dbUser) {
-                    // Merge database user data into context
-                    templateContext.user = {
-                        ...templateContext.user,
-                        name: dbUser.name || templateContext.user?.name || '',
-                        email: dbUser.email || templateContext.user?.email || '',
-                        jobTitle: dbUser.job_title || templateContext.user?.jobTitle || '',
-                        phone: dbUser.phone || templateContext.user?.phone || ''
-                    };
-                    // Also update firm data
-                    templateContext.firm = {
-                        ...templateContext.firm,
-                        name: dbUser.firm_name || templateContext.firm?.name || '',
-                        logo: dbUser.firm_logo || templateContext.firm?.logo || ''
-                    };
-                    safeLog('debug', 'Enriched template context with DB user data', { 
-                        userName: templateContext.user.name,
-                        userJobTitle: templateContext.user.jobTitle,
-                        userPhone: templateContext.user.phone
-                    });
-                }
-                
-                safeLog('info', 'Rendering email template', { templateId, context: templateContext });
+                safeLog('info', 'Rendering email template', { templateId });
                 const rendered = await emailTemplatesService.renderTemplate(templateId, templateContext);
                 finalSubject = rendered.subject;
                 finalBody = rendered.html;
                 emailHtmlSent = rendered.html;
                 safeLog('info', 'Email template rendered successfully', { templateId, subject: finalSubject, bodyLength: finalBody?.length });
             } catch (templateError) {
-                safeLog('error', 'Failed to render template', { error: templateError.message, stack: templateError.stack });
+                safeLog('error', 'Failed to render template', { error: templateError.message, stack: templateError.stack, templateId });
+                return res.status(400).json({ error: 'Failed to render template' });
             }
-        } else if (templateId && !templateContext) {
-            safeLog('warn', 'Template ID provided but no context - template will not be rendered');
         }
         
         if (!finalSubject) {
@@ -251,24 +303,18 @@ router.post('/draft', authenticateToken, validateBody(createMailDraftSchema), as
         });
         if (resumeId && clientId && contactId) {
             try {
-                // Get firm_id from client
-                const firmId = await mailService.getClientFirmId(clientId);
-                
                 // Get current version number if not provided
                 let currentVersion = versionNumber;
                 if (!currentVersion) {
                     currentVersion = await mailService.getResumeCurrentVersion(resumeId);
                 }
-                
-                if (firmId) {
-                    // Record submission
-                    submissionId = await mailService.recordSubmission({
-                        resumeId, clientId, contactId, missionId,
-                        firmId, sentBy: userId, versionNumber: currentVersion,
-                        templateId, emailHtmlSent
-                    });
-                    safeLog('info', 'Resume submission recorded', { submissionId, resumeId, clientId, contactId, versionNumber: currentVersion, templateId: templateId || null });
-                }
+
+                submissionId = await mailService.recordSubmission({
+                    resumeId, clientId, contactId, missionId,
+                    firmId: userFirmId, sentBy: userId, versionNumber: currentVersion,
+                    templateId, emailHtmlSent
+                });
+                safeLog('info', 'Resume submission recorded', { submissionId, resumeId, clientId, contactId, versionNumber: currentVersion, templateId: templateId || null });
             } catch (submissionError) {
                 // Log but don't fail the request - draft was created successfully
                 safeLog('warn', 'Failed to record submission', { error: submissionError.message });

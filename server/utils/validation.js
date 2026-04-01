@@ -430,8 +430,6 @@ export const createContactSchema = z.object({
   email: z.string().email().optional().or(z.literal('')),
   phone: z.string().max(50).optional(),
   role: z.string().max(255).optional(),
-  job_title: z.string().max(255).optional(),
-  jobTitle: z.string().max(255).optional(),
   is_primary: z.boolean().optional(),
   isPrimary: z.boolean().optional()
 }).strip();
@@ -441,8 +439,6 @@ export const updateContactSchema = z.object({
   email: z.string().email().optional().or(z.literal('')),
   phone: z.string().max(50).optional(),
   role: z.string().max(255).optional(),
-  job_title: z.string().max(255).optional(),
-  jobTitle: z.string().max(255).optional(),
   is_primary: z.boolean().optional(),
   isPrimary: z.boolean().optional()
 }).strip();

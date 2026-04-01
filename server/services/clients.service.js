@@ -22,6 +22,8 @@ import { escapeLike } from '../utils/postgresHelpers.js';
  * @returns {Promise<{data: Array, pagination: Object}>}
  */
 export async function listClients({ page = 1, limit = 20, search, type, firmId }) {
+    page = Number.isInteger(page) && page > 0 ? page : 1;
+    limit = Number.isInteger(limit) ? Math.min(Math.max(limit, 1), 100) : 20;
     const offset = (page - 1) * limit;
     const conditions = [];
     const params = [];

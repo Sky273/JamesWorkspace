@@ -79,6 +79,8 @@ export async function getMissionWithJoins(id) {
  * @returns {Promise<{data: Array, pagination: Object}>}
  */
 export async function listMissions({ page = 1, limit = 20, search, status, dealId, firmId }) {
+    page = Number.isInteger(page) && page > 0 ? page : 1;
+    limit = Number.isInteger(limit) ? Math.min(Math.max(limit, 1), 100) : 20;
     const offset = (page - 1) * limit;
     const conditions = [];
     const params = [];
@@ -161,7 +163,13 @@ export async function listMissions({ page = 1, limit = 20, search, status, dealI
  * @returns {Promise<Object>}
  */
 export async function getMissionsGroupedByDeal({ firmId, isAdmin }) {
-    // Query 1: Get all deals for this firm
+    const dealConditions = [];
+    const dealParams = [];
+    if (!isAdmin) {
+        dealConditions.push('d.firm_id = $1');
+        dealParams.push(firmId);
+    }
+
     const dealsResult = await query(`
         SELECT d.id, d.title, d.status, d.priority,
                c.name as client_name, c.type as client_type,
@@ -169,11 +177,11 @@ export async function getMissionsGroupedByDeal({ firmId, isAdmin }) {
         FROM deals d
         LEFT JOIN clients c ON d.client_id = c.id
         LEFT JOIN client_contacts cc ON d.contact_id = cc.id
-        WHERE d.firm_id = $1
+        ${dealConditions.length > 0 ? `WHERE ${dealConditions.join(' AND ')}` : ''}
         ORDER BY
             CASE d.priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 WHEN 'low' THEN 3 ELSE 4 END,
             d.title ASC
-    `, [firmId]);
+    `, dealParams);
 
     const dealIds = dealsResult.rows.map(d => d.id);
 
@@ -353,6 +361,41 @@ export async function validateDeal(dealId, expectedFirmId) {
     const result = await query('SELECT firm_id FROM deals WHERE id = $1', [dealId]);
     if (result.rows.length === 0) return { exists: false, firmMatch: false };
     return { exists: true, firmMatch: result.rows[0].firm_id === expectedFirmId };
+}
+
+export async function validateMissionAssociations({ clientId, contactId, dealId, expectedFirmId }) {
+    if (clientId) {
+        const clientCheck = await validateClient(clientId, expectedFirmId);
+        if (!clientCheck.exists) {
+            return { ok: false, status: 400, error: 'Client not found' };
+        }
+        if (!clientCheck.firmMatch) {
+            return { ok: false, status: 403, error: 'Client does not belong to the target firm' };
+        }
+    }
+
+    if (contactId) {
+        if (!clientId) {
+            return { ok: false, status: 400, error: 'Contact requires a client association' };
+        }
+
+        const contactValid = await validateContact(contactId, clientId);
+        if (!contactValid) {
+            return { ok: false, status: 400, error: 'Contact not found or does not belong to this client' };
+        }
+    }
+
+    if (dealId) {
+        const dealCheck = await validateDeal(dealId, expectedFirmId);
+        if (!dealCheck.exists) {
+            return { ok: false, status: 400, error: 'Deal not found' };
+        }
+        if (!dealCheck.firmMatch) {
+            return { ok: false, status: 403, error: 'Deal does not belong to the target firm' };
+        }
+    }
+
+    return { ok: true };
 }
 
 // ============================================

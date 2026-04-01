@@ -10,6 +10,12 @@ import { userRateLimit } from '../middleware/rateLimit.middleware.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { getUserFirmId, isUserAdmin } from '../utils/firmHelpers.js';
 import {
+    checkDealAccess,
+    ensureFirmScopedAccess,
+    normalizeDealPayload,
+    parsePaginationParams
+} from './deals.routes.helpers.js';
+import {
     createDeal,
     updateDeal,
     deleteDeal,
@@ -23,6 +29,7 @@ import {
     getDealStats,
     getDealFirmId,
     getClientFirmId,
+    getContactOwnership,
     getResumeFirmId,
     getMissionsForDeal,
     DEAL_STATUS,
@@ -32,58 +39,6 @@ import {
 
 const router = express.Router();
 
-function getFirstDefinedValue(source, keys) {
-    for (const key of keys) {
-        if (Object.prototype.hasOwnProperty.call(source, key) && source[key] !== undefined) {
-            return source[key];
-        }
-    }
-    return undefined;
-}
-
-function normalizeDealPayload(payload = {}) {
-    return {
-        ...payload,
-        title: getFirstDefinedValue(payload, ['title', 'Title']),
-        description: getFirstDefinedValue(payload, ['description', 'Description']),
-        client_id: getFirstDefinedValue(payload, ['client_id', 'clientId']),
-        contact_id: getFirstDefinedValue(payload, ['contact_id', 'contactId']),
-        status: getFirstDefinedValue(payload, ['status', 'Status']),
-        expected_start_date: getFirstDefinedValue(payload, ['expected_start_date', 'expectedStartDate']),
-        expected_end_date: getFirstDefinedValue(payload, ['expected_end_date', 'expectedEndDate']),
-        budget_min: getFirstDefinedValue(payload, ['budget_min', 'budgetMin']),
-        budget_max: getFirstDefinedValue(payload, ['budget_max', 'budgetMax']),
-        priority: getFirstDefinedValue(payload, ['priority', 'Priority']),
-        tags: getFirstDefinedValue(payload, ['tags', 'Tags']),
-        notes: getFirstDefinedValue(payload, ['notes', 'Notes'])
-    };
-}
-
-/**
- * Check if user has access to a deal (same firm)
- */
-async function checkDealAccess(req, dealId) {
-    try {
-        const dealFirmId = await getDealFirmId(dealId);
-        if (!dealFirmId) {
-            return { hasAccess: false, error: 'Deal not found' };
-        }
-
-        if (isUserAdmin(req)) {
-            return { hasAccess: true, firmId: dealFirmId };
-        }
-
-        const userFirmId = await getUserFirmId(req);
-        if (dealFirmId !== userFirmId) {
-            return { hasAccess: false, error: 'Access denied' };
-        }
-
-        return { hasAccess: true, firmId: userFirmId };
-    } catch (error) {
-        return { hasAccess: false, error: error.message };
-    }
-}
-
 // ============================================
 // DEALS CRUD ROUTES
 // ============================================
@@ -92,8 +47,14 @@ async function checkDealAccess(req, dealId) {
 router.get('/', authenticateToken, async (req, res) => {
     try {
         const userFirmId = await getUserFirmId(req);
-        if (!userFirmId && !isUserAdmin(req)) {
-            return res.status(403).json({ error: 'No firm association' });
+        const access = ensureFirmScopedAccess({ isAdmin: isUserAdmin(req), userFirmId });
+        if (!access.ok) {
+            return res.status(access.status).json({ error: access.error });
+        }
+
+        const pagination = parsePaginationParams(req.query.page, req.query.limit);
+        if (!pagination.ok) {
+            return res.status(400).json({ error: pagination.error });
         }
 
         const firmId = isUserAdmin(req) && req.query.firmId ? req.query.firmId : userFirmId;
@@ -105,12 +66,7 @@ router.get('/', authenticateToken, async (req, res) => {
             search: req.query.search
         };
 
-        const pagination = {
-            page: req.query.page,
-            limit: req.query.limit
-        };
-
-        const result = await getDeals(firmId, filters, pagination);
+        const result = await getDeals(firmId, filters, pagination.value);
         return res.json(result);
     } catch (error) {
         safeLog('error', 'Error fetching deals', { error: error.message });
@@ -122,8 +78,9 @@ router.get('/', authenticateToken, async (req, res) => {
 router.get('/stats', authenticateToken, async (req, res) => {
     try {
         const userFirmId = await getUserFirmId(req);
-        if (!userFirmId && !isUserAdmin(req)) {
-            return res.status(403).json({ error: 'No firm association' });
+        const access = ensureFirmScopedAccess({ isAdmin: isUserAdmin(req), userFirmId });
+        if (!access.ok) {
+            return res.status(access.status).json({ error: access.error });
         }
 
         const firmId = isUserAdmin(req) && req.query.firmId ? req.query.firmId : userFirmId;
@@ -154,10 +111,10 @@ router.get('/resume-statuses', authenticateToken, (req, res) => {
 router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => {
     try {
         const { id } = req.params;
-        const access = await checkDealAccess(req, id);
+        const access = await checkDealAccess(req, id, { getDealFirmId, getUserFirmId, isUserAdmin });
         
         if (!access.hasAccess) {
-            return res.status(access.error === 'Deal not found' ? 404 : 403)
+            return res.status(access.status || (access.error === 'Deal not found' ? 404 : 403))
                 .json({ error: access.error });
         }
 
@@ -173,10 +130,10 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
 router.get('/:id/missions', authenticateToken, validateParams('id'), async (req, res) => {
     try {
         const { id } = req.params;
-        const access = await checkDealAccess(req, id);
+        const access = await checkDealAccess(req, id, { getDealFirmId, getUserFirmId, isUserAdmin });
         
         if (!access.hasAccess) {
-            return res.status(access.error === 'Deal not found' ? 404 : 403)
+            return res.status(access.status || (access.error === 'Deal not found' ? 404 : 403))
                 .json({ error: access.error });
         }
 
@@ -197,7 +154,10 @@ router.post('/', authenticateToken, userRateLimit(), validateBody(createDealSche
         
         const userFirmId = await getUserFirmId(req);
         safeLog('info', 'Creating deal - firm check', { userFirmId });
-        
+        const access = ensureFirmScopedAccess({ isAdmin: isUserAdmin(req), userFirmId });
+        if (!access.ok) {
+            return res.status(access.status).json({ error: access.error });
+        }
         if (!userFirmId) {
             return res.status(403).json({ error: 'No firm association' });
         }
@@ -228,6 +188,19 @@ router.post('/', authenticateToken, userRateLimit(), validateBody(createDealSche
             }
         }
 
+        if (normalizedDeal.contact_id) {
+            const contact = await getContactOwnership(normalizedDeal.contact_id);
+            if (!contact) {
+                return res.status(400).json({ error: 'Contact not found' });
+            }
+            if (contact.firm_id !== userFirmId) {
+                return res.status(403).json({ error: 'Contact belongs to different firm' });
+            }
+            if (normalizedDeal.client_id && contact.client_id !== normalizedDeal.client_id) {
+                return res.status(400).json({ error: 'Contact does not belong to the provided client' });
+            }
+        }
+
         safeLog('info', 'Creating deal - calling createDeal service', { title, userId, userFirmId });
         const deal = await createDeal(normalizedDeal, userId, userFirmId);
         safeLog('info', 'Deal created successfully', { dealId: deal.id });
@@ -242,10 +215,10 @@ router.post('/', authenticateToken, userRateLimit(), validateBody(createDealSche
 router.put('/:id', authenticateToken, validateParams('id'), userRateLimit(), validateBody(updateDealSchema), async (req, res) => {
     try {
         const { id } = req.params;
-        const access = await checkDealAccess(req, id);
+        const access = await checkDealAccess(req, id, { getDealFirmId, getUserFirmId, isUserAdmin });
         
         if (!access.hasAccess) {
-            return res.status(access.error === 'Deal not found' ? 404 : 403)
+            return res.status(access.status || (access.error === 'Deal not found' ? 404 : 403))
                 .json({ error: access.error });
         }
 
@@ -262,6 +235,19 @@ router.put('/:id', authenticateToken, validateParams('id'), userRateLimit(), val
             }
         }
 
+        if (normalizedDeal.contact_id) {
+            const contact = await getContactOwnership(normalizedDeal.contact_id);
+            if (!contact) {
+                return res.status(400).json({ error: 'Contact not found' });
+            }
+            if (contact.firm_id !== access.firmId) {
+                return res.status(403).json({ error: 'Contact belongs to different firm' });
+            }
+            if (normalizedDeal.client_id && contact.client_id !== normalizedDeal.client_id) {
+                return res.status(400).json({ error: 'Contact does not belong to the provided client' });
+            }
+        }
+
         const deal = await updateDeal(id, normalizedDeal);
         return res.json(deal);
     } catch (error) {
@@ -274,10 +260,10 @@ router.put('/:id', authenticateToken, validateParams('id'), userRateLimit(), val
 router.delete('/:id', authenticateToken, validateParams('id'), userRateLimit(), async (req, res) => {
     try {
         const { id } = req.params;
-        const access = await checkDealAccess(req, id);
+        const access = await checkDealAccess(req, id, { getDealFirmId, getUserFirmId, isUserAdmin });
         
         if (!access.hasAccess) {
-            return res.status(access.error === 'Deal not found' ? 404 : 403)
+            return res.status(access.status || (access.error === 'Deal not found' ? 404 : 403))
                 .json({ error: access.error });
         }
 
@@ -297,10 +283,10 @@ router.delete('/:id', authenticateToken, validateParams('id'), userRateLimit(), 
 router.get('/:id/resumes', authenticateToken, validateParams('id'), async (req, res) => {
     try {
         const { id } = req.params;
-        const access = await checkDealAccess(req, id);
+        const access = await checkDealAccess(req, id, { getDealFirmId, getUserFirmId, isUserAdmin });
         
         if (!access.hasAccess) {
-            return res.status(access.error === 'Deal not found' ? 404 : 403)
+            return res.status(access.status || (access.error === 'Deal not found' ? 404 : 403))
                 .json({ error: access.error });
         }
 
@@ -322,9 +308,9 @@ router.post('/:id/resumes', authenticateToken, validateParams('id'), userRateLim
             return res.status(400).json({ error: 'resumeId is required' });
         }
 
-        const access = await checkDealAccess(req, id);
+        const access = await checkDealAccess(req, id, { getDealFirmId, getUserFirmId, isUserAdmin });
         if (!access.hasAccess) {
-            return res.status(access.error === 'Deal not found' ? 404 : 403)
+            return res.status(access.status || (access.error === 'Deal not found' ? 404 : 403))
                 .json({ error: access.error });
         }
 
@@ -356,9 +342,9 @@ router.put('/:id/resumes/:resumeId', authenticateToken, validateParams('id', 're
             return res.status(400).json({ error: 'status is required' });
         }
 
-        const access = await checkDealAccess(req, id);
+        const access = await checkDealAccess(req, id, { getDealFirmId, getUserFirmId, isUserAdmin });
         if (!access.hasAccess) {
-            return res.status(access.error === 'Deal not found' ? 404 : 403)
+            return res.status(access.status || (access.error === 'Deal not found' ? 404 : 403))
                 .json({ error: access.error });
         }
 
@@ -378,9 +364,9 @@ router.delete('/:id/resumes/:resumeId', authenticateToken, validateParams('id', 
     try {
         const { id, resumeId } = req.params;
         
-        const access = await checkDealAccess(req, id);
+        const access = await checkDealAccess(req, id, { getDealFirmId, getUserFirmId, isUserAdmin });
         if (!access.hasAccess) {
-            return res.status(access.error === 'Deal not found' ? 404 : 403)
+            return res.status(access.status || (access.error === 'Deal not found' ? 404 : 403))
                 .json({ error: access.error });
         }
 
@@ -404,9 +390,9 @@ router.get('/by-resume/:resumeId', authenticateToken, validateParams('resumeId')
     try {
         const { resumeId } = req.params;
         const userFirmId = await getUserFirmId(req);
-        
-        if (!userFirmId && !isUserAdmin(req)) {
-            return res.status(403).json({ error: 'No firm association' });
+        const access = ensureFirmScopedAccess({ isAdmin: isUserAdmin(req), userFirmId });
+        if (!access.ok) {
+            return res.status(access.status).json({ error: access.error });
         }
 
         // Verify resume exists and user has access
@@ -437,8 +423,9 @@ router.post('/add-resume-to-multiple', authenticateToken, userRateLimit(), valid
         }
 
         const userFirmId = await getUserFirmId(req);
-        if (!userFirmId) {
-            return res.status(403).json({ error: 'No firm association' });
+        const access = ensureFirmScopedAccess({ isAdmin: isUserAdmin(req), userFirmId });
+        if (!access.ok) {
+            return res.status(access.status).json({ error: access.error });
         }
 
         // Verify resume exists and belongs to user's firm
@@ -456,9 +443,9 @@ router.post('/add-resume-to-multiple', authenticateToken, userRateLimit(), valid
 
         for (const dealId of dealIds) {
             try {
-                const access = await checkDealAccess(req, dealId);
-                if (!access.hasAccess) {
-                    errors.push({ dealId, error: access.error });
+                const dealAccess = await checkDealAccess(req, dealId, { getDealFirmId, getUserFirmId, isUserAdmin });
+                if (!dealAccess.hasAccess) {
+                    errors.push({ dealId, error: dealAccess.error });
                     continue;
                 }
                 const result = await addResumeToDeal(dealId, resumeId, userId);
