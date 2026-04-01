@@ -2,7 +2,7 @@ import { safeLog } from '../../utils/logger.backend.js';
 import { cleanupHtml } from './textUtils.js';
 import { validateResumeAnalysisPayload, validateResumeImprovementEnvelope } from './contracts.js';
 
-function pickNumericScore(...values) {
+function _pickNumericScore(...values) {
     for (const value of values) {
         if (value === undefined || value === null || value === '') continue;
         if (typeof value === 'number' && Number.isFinite(value)) return Math.round(value);

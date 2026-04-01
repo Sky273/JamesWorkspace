@@ -198,12 +198,12 @@ export async function closeClient(clientWrapper) {
             // For FTP, send QUIT command first to properly close TLS connection
             try {
                 await clientWrapper.client.quit();
-            } catch (_quitError) {
+            } catch {
                 // QUIT may fail if connection is already broken, ignore
             }
             clientWrapper.client.close();
         }
-    } catch (_e) {
+    } catch {
         // Ignore close errors
     }
 }

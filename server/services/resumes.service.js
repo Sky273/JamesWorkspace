@@ -5,8 +5,7 @@
  */
 
 import { query } from '../config/database.js';
-import { findWithTimeout, createWithTimeout, escapeLike } from '../utils/postgresHelpers.js';
-import { safeLog } from '../utils/logger.backend.js';
+import { findWithTimeout, createWithTimeout } from '../utils/postgresHelpers.js';
 
 /**
  * Allowed column names for dynamic UPDATE on the resumes table.

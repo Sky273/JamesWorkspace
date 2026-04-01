@@ -8,9 +8,15 @@ export function useUploadPageFlow() {
   const location = useLocation();
   const [uploadState, setUploadState] = useState<'resetting' | 'ready'>('resetting');
   const entryResumeIdRef = useRef<string | null>(null);
+  const latestResumeIdRef = useRef<string | null>(currentResume?.id || null);
+  const currentResumeId = currentResume?.id || null;
 
   useEffect(() => {
-    entryResumeIdRef.current = currentResume?.id || null;
+    latestResumeIdRef.current = currentResumeId;
+  }, [currentResumeId]);
+
+  useEffect(() => {
+    entryResumeIdRef.current = latestResumeIdRef.current;
     setUploadState('resetting');
     setCurrentResume(null);
   }, [location.key, setCurrentResume]);
@@ -22,8 +28,8 @@ export function useUploadPageFlow() {
   }, [currentResume, uploadState]);
 
   useEffect(() => {
-    if (uploadState === 'ready' && currentResume?.id && currentResume.id !== entryResumeIdRef.current) {
-      navigate(`/resumes/${currentResume.id}/analysis`);
+    if (uploadState === 'ready' && currentResumeId && currentResumeId !== entryResumeIdRef.current) {
+      navigate(`/resumes/${currentResumeId}/analysis`);
     }
-  }, [currentResume, navigate, uploadState]);
+  }, [currentResumeId, navigate, uploadState]);
 }

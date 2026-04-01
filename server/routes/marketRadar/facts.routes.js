@@ -48,7 +48,7 @@ router.get('/facts/all', authenticateToken, async (req, res) => {
             totalCount: result.facts.length,
             duration
         });
-    } catch (error) {
+    } catch {
         safeLog('error', 'Market Radar: Failed to get all facts');
         res.status(500).json({ 
             error: 'Failed to get all facts' 
@@ -72,7 +72,7 @@ router.get('/facts/filters', authenticateToken, async (req, res) => {
             success: true,
             filters
         });
-    } catch (error) {
+    } catch {
         safeLog('error', 'Market Radar: Failed to get facts filters');
         res.status(500).json({ 
             error: 'Failed to get facts filters' 
@@ -91,7 +91,7 @@ router.get('/facts/summary', authenticateToken, async (req, res) => {
             success: true,
             summary
         });
-    } catch (error) {
+    } catch {
         safeLog('error', 'Market Radar: Failed to get facts summary');
         res.status(500).json({ 
             error: 'Failed to get facts summary' 
@@ -118,7 +118,7 @@ router.post('/facts/cache/refresh', authenticateToken, requireAdmin, async (req,
             message: 'Facts cache refreshed successfully',
             duration
         });
-    } catch (error) {
+    } catch {
         safeLog('error', 'Market Radar: Facts cache refresh failed');
         res.status(500).json({ 
             error: 'Facts cache refresh failed' 
@@ -160,7 +160,7 @@ router.get('/facts', authenticateToken, async (req, res) => {
             facts: result.facts,
             pagination: result.pagination
         });
-    } catch (error) {
+    } catch {
         safeLog('error', 'Market Radar: Failed to get facts');
         res.status(500).json({ 
             error: 'Failed to retrieve facts' 
@@ -186,7 +186,7 @@ router.get('/latest/:type', authenticateToken, async (req, res) => {
             count: facts.length,
             facts
         });
-    } catch (error) {
+    } catch {
         safeLog('error', 'Market Radar: Failed to get latest facts');
         res.status(500).json({ 
             error: 'Failed to retrieve facts' 
@@ -209,7 +209,7 @@ router.get('/trend/:keyword', authenticateToken, async (req, res) => {
             success: true,
             ...trend
         });
-    } catch (error) {
+    } catch {
         safeLog('error', 'Market Radar: Failed to get trend');
         res.status(500).json({ 
             error: 'Failed to retrieve trend' 
@@ -235,7 +235,7 @@ router.get('/regional', authenticateToken, async (req, res) => {
             count: data.length,
             regions: data
         });
-    } catch (error) {
+    } catch {
         safeLog('error', 'Market Radar: Failed to get regional data');
         res.status(500).json({ 
             error: 'Failed to retrieve regional data' 

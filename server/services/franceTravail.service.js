@@ -287,7 +287,7 @@ async function collectMarketFacts(options = {}) {
 
     // Report expected total before starting
     if (onTotalEstimated) {
-        try { await onTotalEstimated(expectedTotal); } catch (_) { /* ignore */ }
+        try { await onTotalEstimated(expectedTotal); } catch { /* ignore */ }
     }
 
     // Rate limiting: 3 requests per second max

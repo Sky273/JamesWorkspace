@@ -3,7 +3,7 @@
  * TypeScript version
  */
 
-import { useState, useEffect, useCallback, ChangeEvent } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { BriefcaseIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { useAuthFetch } from '../hooks/useAuthFetch';

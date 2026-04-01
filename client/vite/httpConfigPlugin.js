@@ -31,7 +31,6 @@ export function httpConfigPlugin() {
           return next();
         }
 
-        const originalWrite = res.write.bind(res);
         const originalEnd = res.end.bind(res);
         const chunks = [];
 

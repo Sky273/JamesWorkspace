@@ -104,7 +104,7 @@ function extractMiniMaxOpenAIContent(payload = {}) {
     return '';
 }
 
-async function postToMiniMax(url, body, headers, timeout, operationType) {
+async function _postToMiniMax(url, body, headers, timeout, operationType) {
     return withRetry(
         () => axios.post(url, body, {
             headers,

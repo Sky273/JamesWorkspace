@@ -165,7 +165,7 @@ describe('Retry Service', () => {
                         serviceName: 'openai',
                         operationName: 'test'
                     });
-                } catch (_) { /* expected */ }
+                } catch { /* expected */ }
             }
 
             await expect(withRetry(() => Promise.resolve('ok'), {

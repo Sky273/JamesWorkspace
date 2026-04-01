@@ -83,7 +83,7 @@ describe('Backup Settings Service', () => {
 
             const result = await getBackupSettings();
 
-            expect(result).toEqual(settings);
+            expect(result).toEqual({ ...settings, password: '' });
             expect(query).toHaveBeenCalledWith('SELECT * FROM backup_settings LIMIT 1');
         });
 

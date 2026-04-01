@@ -1,5 +1,4 @@
 import { ArrowPathIcon, BeakerIcon, DocumentTextIcon, GlobeEuropeAfricaIcon } from '@heroicons/react/24/outline';
-import type { ChangeEvent } from 'react';
 import type { TabType } from './types';
 import SearchField from '../page/SearchField';
 

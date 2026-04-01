@@ -190,7 +190,7 @@ const ResumeImprovePage = (): JSX.Element => {
       logger.error(`Error updating ${field}:`, err);
       toast.error(t('resume.saveError'));
     }
-  }, [currentResume, setCurrentResume]);
+  }, [currentResume, setCurrentResume, t]);
 
   // Handle share improved PDF
   const handleShare = useCallback(async () => {

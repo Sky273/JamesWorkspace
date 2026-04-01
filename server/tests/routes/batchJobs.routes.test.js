@@ -9,7 +9,7 @@ import cookieParser from 'cookie-parser';
 import request from 'supertest';
 import { Readable } from 'stream';
 
-function getImportFileBuffer(filename) {
+function _getImportFileBuffer(filename) {
     if (filename.endsWith('.pdf')) {
         return Buffer.from('%PDF-1.7 import');
     }

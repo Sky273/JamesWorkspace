@@ -10,7 +10,7 @@ import { formatDate } from '../../utils/dateFormatter';
 import type { ParsedMetadata } from './marketTrends.types';
 
 export function TensionContent({ parsed }: { parsed: ParsedMetadata }) {
-  const { t } = useTranslation();
+  useTranslation();
   return (
     <div className="space-y-3">
       {parsed.typeSpecific?.tensionLevel && (

@@ -6,7 +6,7 @@
 
 import { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from 'react';
 import { authService, User, RegisterData, RegisterResponse, SignInResponse } from '../services/authService';
-import { resetSessionState, AUTH_ERROR_PATTERNS, attemptTokenRefresh } from '../utils/apiInterceptor';
+import { resetSessionState, AUTH_ERROR_PATTERNS } from '../utils/apiInterceptor';
 import { redirectToExpiredSession, setSessionExpiredHandler } from '../utils/sessionRedirect';
 import toast from 'react-hot-toast';
 import logger from '../utils/logger.frontend';

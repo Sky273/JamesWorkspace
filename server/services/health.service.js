@@ -16,7 +16,7 @@ async function getBinaryStorageMetricsSafe() {
                 COALESCE(MAX(octet_length(resume_file_data)), 0) AS max_resume_binary_bytes
             FROM resumes
         `);
-    } catch (_error) {
+    } catch {
         return {
             rows: [{
                 resumes_with_binary: 0,
@@ -36,7 +36,7 @@ async function getBatchStorageMetricsSafe() {
                 COALESCE(SUM(octet_length(file_data)), 0) AS total_file_data_bytes
             FROM batch_job_items
         `);
-    } catch (_error) {
+    } catch {
         return {
             rows: [{
                 items_with_file_data: 0,

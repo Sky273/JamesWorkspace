@@ -9,7 +9,7 @@ import tseslint from 'typescript-eslint';
 export default tseslint.config(
   // Ignore patterns
   {
-    ignores: ['dist/**', 'node_modules/**', 'client/public/**', 'client/dist/**', '.eslintrc.cjs', 'client/tinymce/**', 'coverage/**', '**/*.timestamp-*.mjs', '**/vitest.config.ts'],
+    ignores: ['dist/**', 'node_modules/**', 'client/public/**', 'client/dist/**', 'client/coverage/**', '.eslintrc.cjs', 'client/tinymce/**', 'coverage/**', '**/*.timestamp-*.mjs', '**/vitest.config.ts'],
   },
   
   // Base JS config

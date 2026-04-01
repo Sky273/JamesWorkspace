@@ -13,7 +13,6 @@ import { useResumeAdaptPage } from './ResumeAdaptPage.hooks';
 
 const ResumeAdaptPage = (): JSX.Element => {
   const {
-    id,
     resume,
     step,
     selectedMission,

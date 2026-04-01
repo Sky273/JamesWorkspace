@@ -3,7 +3,7 @@
  * encryptToken, decryptToken, isTokenExpired, calculateTokenExpiry, config objects
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import crypto from 'crypto';
 
 // Set encryption key BEFORE module import (getEncryptionKey reads process.env at call time)

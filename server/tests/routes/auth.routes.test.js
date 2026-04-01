@@ -39,7 +39,7 @@ import bcrypt from 'bcryptjs';
 
 describe('Auth Routes - Sign In', () => {
     let mockReq;
-    let mockRes;
+    let _mockRes;
 
     beforeEach(() => {
         vi.clearAllMocks();
@@ -50,7 +50,7 @@ describe('Auth Routes - Sign In', () => {
             ip: '127.0.0.1',
             headers: { 'user-agent': 'test-agent' }
         };
-        mockRes = {
+        _mockRes = {
             status: vi.fn().mockReturnThis(),
             json: vi.fn().mockReturnThis(),
             cookie: vi.fn().mockReturnThis(),

@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { SparklesIcon } from '@heroicons/react/24/outline';
+import type { TFunction } from 'i18next';
 import { formatDateTime } from '../../utils/dateFormatter';
 
 interface AiModifyRecentEntry {
@@ -43,7 +44,7 @@ interface AiModifyMetrics {
 interface AiModifyMetricsCardProps {
   metrics: AiModifyMetrics | null | undefined;
   successRatio: number | null;
-  t: any;
+  t: TFunction;
   safeNumber: (value: unknown, defaultValue?: number) => number;
   formatNumber: (value?: number) => string;
 }

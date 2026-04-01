@@ -38,13 +38,14 @@ export function useResumeAnalysisPage() {
     || sessionStorage.getItem('dealsGroupedViewState') !== null;
   const hasImprovedText = !!currentResume?.['Improved Text'];
   const resumeName = currentResume?.['Name'] || currentResume?.['File Name'] || 'CV';
+  const currentResumeForPage = currentResume?.id === id ? currentResume as Resume : null;
 
   useEffect(() => {
     const loadResume = async () => {
       try {
         const resolvedResume = await resolveResumeForPage({
           id,
-          currentResume: currentResume as Resume | null,
+          currentResume: currentResumeForPage,
           resumes: resumes as Resume[],
           fetchResume: async (resumeId) => {
             logger.info('[ResumeAnalysisPage] Fetching resume from API');
@@ -86,7 +87,7 @@ export function useResumeAnalysisPage() {
     };
 
     void loadResume();
-  }, [currentResume?.id, id, resumes, setCurrentResume, t]);
+  }, [currentResumeForPage, id, resumes, setCurrentResume, t]);
 
   const handleImprove = useCallback(async () => {
     logger.info('[ResumeAnalysisPage] handleImprove called', {

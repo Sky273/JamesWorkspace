@@ -10,8 +10,6 @@ import { TrendMetadataFullView } from './TrendMetadataFullView';
 import { parseMetadata } from './trendMetadata.parser';
 import type { TrendMetadataDisplayProps } from './trendMetadata.types';
 
-export { parseMetadata } from './trendMetadata.parser';
-
 export default function TrendMetadataDisplay({ metadata, type, value, compact = false, className = '' }: TrendMetadataDisplayProps) {
   const { t } = useTranslation();
   const parsed = useMemo(() => parseMetadata(metadata, type, value), [metadata, type, value]);

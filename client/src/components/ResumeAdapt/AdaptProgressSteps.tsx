@@ -1,11 +1,12 @@
 import { motion } from 'framer-motion';
 import { BriefcaseIcon, CheckCircleIcon, DocumentTextIcon, SparklesIcon } from '@heroicons/react/24/outline';
+import type { TFunction } from 'i18next';
 
 type Step = 'loading' | 'select-mission' | 'analyzing' | 'show-analysis' | 'adapting' | 'show-result' | 'error';
 
 interface AdaptProgressStepsProps {
   step: Step;
-  t: any;
+  t: TFunction;
 }
 
 export default function AdaptProgressSteps({ step, t }: AdaptProgressStepsProps): JSX.Element {

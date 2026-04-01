@@ -78,7 +78,7 @@ router.get('/', async (req, res) => {
         const { latency: dbLatency, stats } = await checkDatabaseHealth();
         checks.database = buildDatabaseCheck(dbLatency, stats);
         overallStatus = updateOverallStatus(overallStatus, checks.database.status);
-    } catch (error) {
+    } catch {
         checks.database = {
             status: 'error',
             message: 'Connection failed'

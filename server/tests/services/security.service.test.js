@@ -3,7 +3,7 @@
  * Tests circular buffer logging, log levels, events, and request metadata
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 vi.mock('../../utils/logger.backend.js', () => ({
     createModuleLogger: vi.fn(() => ({

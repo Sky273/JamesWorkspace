@@ -72,8 +72,14 @@ const LLMTab = ({
 }: LLMTabProps): JSX.Element => {
   const provider = formData.llmProvider || 'openai';
   const minimaxHighspeedEnabled = llmAvailability?.minimax?.highspeedEnabled === true;
-  const providerRuntimeUnavailableModels = llmAvailability?.[provider]?.runtimeUnavailableModels || [];
-  const minimaxRuntimeUnavailableModels = llmAvailability?.minimax?.runtimeUnavailableModels || [];
+  const providerRuntimeUnavailableModels = useMemo(
+    () => llmAvailability?.[provider]?.runtimeUnavailableModels || [],
+    [llmAvailability, provider]
+  );
+  const minimaxRuntimeUnavailableModels = useMemo(
+    () => llmAvailability?.minimax?.runtimeUnavailableModels || [],
+    [llmAvailability]
+  );
 
   const providerOptions = useMemo(
     () => [

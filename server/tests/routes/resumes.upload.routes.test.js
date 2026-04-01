@@ -115,7 +115,7 @@ vi.mock('multer', () => {
                 }
 
                 if (req.headers['x-test-body']) {
-                    try { req.body = JSON.parse(req.headers['x-test-body']); } catch {}
+                    try { req.body = JSON.parse(req.headers['x-test-body']); } catch { /* ignore malformed test body */ }
                 }
                 next();
             }

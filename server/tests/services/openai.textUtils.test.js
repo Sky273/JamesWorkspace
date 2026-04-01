@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { decodeHtmlEntities, cleanupText, cleanupHtml, normalizeUtf8Text, stripLlmThinkingContent, extractJsonPayload, parseJsonFromLlmResponse } from '../../services/openai/textUtils.js';
+import { decodeHtmlEntities, cleanupText, cleanupHtml, stripLlmThinkingContent, extractJsonPayload, parseJsonFromLlmResponse } from '../../services/openai/textUtils.js';
 
 describe('OpenAI Text Utilities', () => {
     describe('decodeHtmlEntities', () => {

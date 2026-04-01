@@ -1,11 +1,12 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { DocumentTextIcon, SparklesIcon } from '@heroicons/react/24/outline';
+import type { TFunction } from 'i18next';
 
 interface AdaptLoadingStateProps {
   mode: 'analyzing' | 'adapting';
   cycleIndex: number;
   cycleMessages: string[];
-  t: any;
+  t: TFunction;
 }
 
 export default function AdaptLoadingState({

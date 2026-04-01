@@ -50,13 +50,14 @@ export function useResumeExportPage() {
   const [exportLoading, setExportLoading] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [selectedFormat, setSelectedFormat] = useState<ExportFormat>('pdf');
+  const currentResumeForPage = currentResume?.id === id ? currentResume as Resume : null;
 
   useEffect(() => {
     const loadResume = async () => {
       try {
         const resolvedResume = await resolveResumeForPage({
           id,
-          currentResume: currentResume as Resume | null,
+          currentResume: currentResumeForPage,
           resumes: resumes as Resume[],
           fetchResume: async (resumeId) => await resumeService.getResume(resumeId) as Resume | null,
         });
@@ -90,7 +91,7 @@ export function useResumeExportPage() {
     };
 
     void loadResume();
-  }, [id, resumes, setCurrentResume, t]);
+  }, [currentResumeForPage, id, resumes, setCurrentResume, t]);
 
   useEffect(() => {
     const fetchTemplates = async () => {

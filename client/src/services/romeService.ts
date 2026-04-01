@@ -4,7 +4,7 @@
  */
 
 import { fetchWithAuth } from '../utils/apiInterceptor';
-import { fetchWithCsrfRetry, createAuthOptionsWithCsrf } from '../utils/apiInterceptor';
+import { createAuthOptionsWithCsrf } from '../utils/apiInterceptor';
 
 const API_BASE = '/api/rome';
 

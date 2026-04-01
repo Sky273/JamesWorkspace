@@ -7,12 +7,12 @@ import crypto from 'crypto';
 import { authenticateToken } from '../../middleware/auth.middleware.js';
 import { authLimiter } from '../../middleware/rateLimit.middleware.js';
 import { validateBody, googleTokenSchema } from '../../utils/validation.js';
-import { generateAccessToken, generateRefreshToken } from '../../services/jwt.service.js';
+import { generateAccessToken, generateRefreshToken, verifyToken } from '../../services/jwt.service.js';
 import { securityLog, getRequestMetadata, LOG_LEVELS, SECURITY_EVENTS } from '../../services/security.service.js';
 import { safeLog } from '../../utils/logger.backend.js';
 import * as googleAuthService from '../../services/googleAuth.service.js';
 import * as authService from '../../services/auth.service.js';
-import { useSecureCookies, ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE } from './config.js';
+import { ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE } from './config.js';
 
 const router = express.Router();
 
@@ -20,20 +20,38 @@ const router = express.Router();
 const oauthStates = new Map();
 const STATE_EXPIRY = 10 * 60 * 1000; // 10 minutes
 const MAX_OAUTH_STATES = 100; // Prevent memory exhaustion from abuse
+const ALLOWED_OAUTH_ACTIONS = new Set(['signin', 'register', 'link']);
 
-// Cleanup expired states periodically
-let authOauthStatesCleanupInterval = setInterval(() => {
+function pruneOAuthStates() {
     const now = Date.now();
     for (const [state, data] of oauthStates.entries()) {
         if (now - data.createdAt > STATE_EXPIRY) {
             oauthStates.delete(state);
         }
     }
-    // Evict oldest entries if still over limit
     while (oauthStates.size > MAX_OAUTH_STATES) {
         const oldestKey = oauthStates.keys().next().value;
         oauthStates.delete(oldestKey);
     }
+}
+
+function resolveOAuthAction(action) {
+    return typeof action === 'string' && ALLOWED_OAUTH_ACTIONS.has(action) ? action : 'signin';
+}
+
+function resolveOAuthUserId(req) {
+    const accessToken = req.cookies?.accessToken;
+    if (!accessToken) {
+        return null;
+    }
+
+    const decoded = verifyToken(accessToken);
+    return decoded?.id || null;
+}
+
+// Cleanup expired states periodically
+let authOauthStatesCleanupInterval = setInterval(() => {
+    pruneOAuthStates();
 }, 60 * 1000);
 
 /**
@@ -52,26 +70,27 @@ export function destroyAuthOauthStates() {
 router.get('/google', authLimiter, async (req, res) => {
     try {
         const { action, returnUrl } = req.query;
-        
+        const resolvedAction = resolveOAuthAction(action);
         const state = crypto.randomBytes(32).toString('hex');
-        
+
         // Sanitize returnUrl: only allow relative paths (prevents open redirect)
         let safeReturnUrl = '/';
         if (returnUrl && typeof returnUrl === 'string' && returnUrl.startsWith('/') && !returnUrl.startsWith('//')) {
             safeReturnUrl = returnUrl;
         }
-        
+
+        pruneOAuthStates();
         oauthStates.set(state, {
-            action: action || 'signin',
-            userId: req.cookies.accessToken ? req.user?.id : null,
+            action: resolvedAction,
+            userId: resolvedAction === 'link' ? resolveOAuthUserId(req) : null,
             returnUrl: safeReturnUrl,
             createdAt: Date.now()
         });
-        
+
         const authUrl = await googleAuthService.getAuthUrl(state);
-        
-        safeLog('info', 'Google OAuth initiated', { action, state: state.substring(0, 8) });
-        
+
+        safeLog('info', 'Google OAuth initiated', { action: resolvedAction, state: state.substring(0, 8) });
+
         res.json({ authUrl });
     } catch (error) {
         safeLog('error', 'Google OAuth init error', { error: error.message });
@@ -84,25 +103,30 @@ router.get('/google/callback', async (req, res) => {
     try {
         const { code, state, error: oauthError } = req.query;
         const metadata = getRequestMetadata(req);
-        
+
         if (oauthError) {
             safeLog('warn', 'Google OAuth error', { error: oauthError });
             return res.redirect('/signin?error=google_auth_failed');
         }
-        
-        if (!state || !oauthStates.has(state)) {
+
+        if (typeof code !== 'string' || !code.trim()) {
+            safeLog('warn', 'Google OAuth callback missing code');
+            return res.redirect('/signin?error=missing_code');
+        }
+
+        if (typeof state !== 'string' || !oauthStates.has(state)) {
             safeLog('warn', 'Invalid OAuth state');
             return res.redirect('/signin?error=invalid_state');
         }
-        
+
         const stateData = oauthStates.get(state);
         oauthStates.delete(state);
-        
+
         if (Date.now() - stateData.createdAt > STATE_EXPIRY) {
             safeLog('warn', 'OAuth state expired');
             return res.redirect('/signin?error=state_expired');
         }
-        
+
         const googleUser = await googleAuthService.exchangeCodeForUserInfo(code);
         
         if (stateData.action === 'link') {

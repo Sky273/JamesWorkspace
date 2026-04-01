@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { SparklesIcon } from '@heroicons/react/24/outline';
+import type { TFunction } from 'i18next';
 import MatchAnalysisDisplay from '../MatchAnalysisDisplay';
 import AdaptationComparison from '../AdaptationComparison';
 import type { MatchAnalysis } from '../../utils/resumeAdaptationService';
@@ -32,7 +33,7 @@ interface AdaptResultPanelProps {
   onTabChange: (tab: 'analysis' | 'adapted') => void;
   onNewAdaptation: () => void;
   onViewAdaptation: () => void;
-  t: any;
+  t: TFunction;
 }
 
 export default function AdaptResultPanel({

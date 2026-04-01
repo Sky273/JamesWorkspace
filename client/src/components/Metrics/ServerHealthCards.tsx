@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { CircleStackIcon, CpuChipIcon } from '@heroicons/react/24/outline';
+import type { TFunction } from 'i18next';
 
 interface ServerHealthCardsProps {
   metrics: {
@@ -9,7 +10,7 @@ interface ServerHealthCardsProps {
   cacheBackend: string;
   cacheConnected: boolean | null | undefined;
   cacheFallbackReason: string | null | undefined;
-  t: any;
+  t: TFunction;
   safeNumber: (value: unknown, defaultValue?: number) => number;
   formatBytes: (value?: number) => string;
   formatNumber: (value?: number) => string;

@@ -38,7 +38,7 @@ describe('GdprTab', () => {
       ok: true,
       json: async () => ({ connected: false }),
     });
-    vi.mocked(window.open).mockReturnValue({ closed: false } as Window);
+    vi.mocked(window.open).mockReturnValue({ closed: false, close: vi.fn() } as unknown as Window);
   });
 
   it('ignores oauth popup messages from unexpected origins', async () => {
@@ -59,6 +59,9 @@ describe('GdprTab', () => {
     });
 
     fireEvent.click(screen.getByRole('button', { name: 'settings.gdpr.connectGmail' }));
+    await waitFor(() => {
+      expect(window.open).toHaveBeenCalled();
+    });
 
     window.dispatchEvent(new MessageEvent('message', {
       origin: 'https://evil.example',
@@ -92,6 +95,9 @@ describe('GdprTab', () => {
     });
 
     fireEvent.click(screen.getByRole('button', { name: 'settings.gdpr.connectGmail' }));
+    await waitFor(() => {
+      expect(window.open).toHaveBeenCalled();
+    });
 
     window.dispatchEvent(new MessageEvent('message', {
       origin: window.location.origin,

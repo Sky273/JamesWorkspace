@@ -5,7 +5,6 @@ import {
   EyeIcon,
   FolderIcon,
   GlobeAltIcon,
-  MagnifyingGlassIcon,
   MapPinIcon,
   PaperAirplaneIcon,
   PencilSquareIcon,

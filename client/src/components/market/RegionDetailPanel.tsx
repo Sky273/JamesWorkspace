@@ -6,7 +6,8 @@
 import { MapPinIcon, BriefcaseIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
 import type { MarketTrend } from '../../services/marketRadarService';
-import TrendMetadataDisplay, { parseMetadata } from './TrendMetadataDisplay';
+import TrendMetadataDisplay from './TrendMetadataDisplay';
+import { parseMetadata } from './parseMetadata';
 import type { RegionData, TrendRegionData, DataSourceType } from './franceMap.types';
 
 interface RegionDetailPanelProps {

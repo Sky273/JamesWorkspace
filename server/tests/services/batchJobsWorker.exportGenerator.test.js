@@ -31,12 +31,12 @@ vi.mock('../../services/batchJobsWorker/helpers.js', () => ({
 
 // Mock jszip - must be a constructor that tracks added files
 const mockZipGenerateAsync = vi.fn(() => Buffer.from('zipdata'));
-let zipInstance = null;
+let _zipInstance = null;
 
 class MockJSZip {
     constructor() {
         this.files = {};
-        zipInstance = this;
+        _zipInstance = this;
     }
     folder() {
         // Return self so folder().file() works

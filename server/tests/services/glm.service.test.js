@@ -17,7 +17,7 @@ vi.mock('../../services/llmPayloadCapabilities.service.js', () => ({
     buildCapabilityAwareOpenAICompatibleParams: vi.fn((_provider, _model, params) => ({
         requestParams: {
             model: params.additionalParams?.model,
-            messages: params.additionalParams?.messages || params.additionalParams?.messages === [] ? params.additionalParams.messages : params.additionalParams?.messages,
+            messages: params.additionalParams?.messages,
             max_tokens: params.maxTokens
         }
     }))

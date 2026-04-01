@@ -1,5 +1,7 @@
 import sanitizeHtml from 'sanitize-html';
 
+const NULL_CHARACTER_REGEX = new RegExp(String.fromCharCode(0), 'g');
+
 const SAFE_INLINE_CSS_PATTERNS = {
     color: [/^#[0-9a-f]{3,8}$/i, /^rgba?\([^)]{1,64}\)$/i, /^[a-z-]{1,32}$/i],
     'background-color': [/^#[0-9a-f]{3,8}$/i, /^rgba?\([^)]{1,64}\)$/i, /^[a-z-]{1,32}$/i],
@@ -55,7 +57,7 @@ const DOCUMENT_ALLOWED_ATTRIBUTES = {
 };
 
 function normalizeInput(value) {
-    return typeof value === 'string' ? value.replace(/\u0000/g, '').trim() : '';
+    return typeof value === 'string' ? value.replace(NULL_CHARACTER_REGEX, '').trim() : '';
 }
 
 export function sanitizeHtmlContent(content) {

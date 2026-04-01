@@ -3,7 +3,7 @@
  * Tests memory usage reporting, cache cleanup registration, start/stop
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 
 vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()

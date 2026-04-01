@@ -79,7 +79,7 @@ export const CustomTableCell = TableCell.extend({
     if (HTMLAttributes.cellWidth) styles.push(`width: ${HTMLAttributes.cellWidth}`);
     if (HTMLAttributes.textAlign) styles.push(`text-align: ${HTMLAttributes.textAlign}`);
 
-    const { backgroundColor, verticalAlign, cellPadding, borderColor, borderWidth, cellWidth, textAlign, style: existingStyle, ...rest } = HTMLAttributes;
+    const { backgroundColor, style: existingStyle, ...rest } = HTMLAttributes;
 
     const finalStyle = [existingStyle, ...styles].filter(Boolean).join('; ');
 

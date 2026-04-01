@@ -148,7 +148,7 @@ export async function collectAllTrends(req, res) {
                 }
             }
         });
-    } catch (error) {
+    } catch {
         safeLog('error', 'Market Radar: Failed to start collection');
         res.status(500).json({ error: 'Failed to start collection' });
     }
@@ -311,7 +311,7 @@ export async function collectDynamicsOnly(req, res) {
                 }
             }
         });
-    } catch (error) {
+    } catch {
         safeLog('error', 'Market Radar: Failed to start DYN_1 collection');
         res.status(500).json({ error: 'Failed to start DYN_1 collection' });
     }

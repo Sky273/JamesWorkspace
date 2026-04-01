@@ -10,15 +10,10 @@ import { tagService } from '../utils/tagService';
 import { motion } from 'framer-motion';
 import logger from '../utils/logger.frontend';
 import {
-  TagIcon,
-  PencilSquareIcon,
-  ArrowPathIcon,
   WrenchScrewdriverIcon,
   BriefcaseIcon,
   SparklesIcon,
-  HeartIcon,
-  BeakerIcon,
-  GlobeEuropeAfricaIcon
+  HeartIcon
 } from '@heroicons/react/24/outline';
 import type { CategoryConfig, CleanedTags, EditingTag, EscoTagItem, EscoTags, TabType, Tags } from '../components/TagsManagement/types';
 import TagsStatsGrid from '../components/TagsManagement/TagsStatsGrid';

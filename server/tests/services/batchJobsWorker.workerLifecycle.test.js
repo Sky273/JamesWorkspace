@@ -3,7 +3,7 @@
  * initializeWorker, startWorker, stopWorker, processNextBatch, processItem
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 
 vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()

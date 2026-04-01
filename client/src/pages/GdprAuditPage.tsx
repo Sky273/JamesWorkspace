@@ -7,7 +7,6 @@ import {
   ExclamationTriangleIcon,
   FunnelIcon,
   InformationCircleIcon,
-  ShieldCheckIcon,
   CheckCircleIcon,
   ClockIcon,
   XCircleIcon

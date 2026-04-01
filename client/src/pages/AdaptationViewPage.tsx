@@ -5,11 +5,8 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { 
-  ArrowLeftIcon, 
-  DocumentTextIcon,
   ArrowDownTrayIcon,
   EnvelopeIcon
 } from '@heroicons/react/24/outline';
@@ -28,40 +25,14 @@ import i18n from '../i18n';
 import { removeSuggestionMarkers } from '../utils/tinymceSuggestionsPlugin';
 import AdaptationHeader from './AdaptationHeader';
 import AdaptationExportModal from './AdaptationExportModal';
-
-interface Template {
-  id: string;
-  Name: string;
-  Status?: string;
-  TemplateContent?: string;
-  Stylesheet?: string;
-  HeaderContent?: string;
-  FooterContent?: string;
-  FooterHeight?: number;
-}
-
-interface Adaptation {
-  id: string;
-  Resume?: string[];
-  Mission?: string[];
-  'Resume ID'?: string;
-  'Mission ID'?: string;
-  'Resume Name'?: string;
-  'Candidate Name'?: string;
-  'Adapted Title'?: string;
-  'Adapted Text'?: string;
-  'Match Score'?: number;
-  'Match Analysis'?: string;
-  'Mission Title'?: string;
-  'Mission Content'?: string;
-  'Mission Client ID'?: string;
-  'Mission Contact ID'?: string;
-  Status?: string;
-  'Created At'?: string;
-  ResumeName?: string;
-  ResumeTitle?: string;
-  [key: string]: unknown;
-}
+import {
+  AdaptationBackButton,
+  AdaptationErrorState,
+  AdaptationLoadingState,
+  AdaptationPanel,
+  AdaptationTabs
+} from './AdaptationViewPage.sections';
+import type { Adaptation, Template } from './AdaptationViewPage.types';
 
 const AdaptationViewPage = (): JSX.Element => {
   const { id } = useParams<{ id: string }>();
@@ -302,72 +273,19 @@ const AdaptationViewPage = (): JSX.Element => {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
-        <div className="max-w-5xl mx-auto px-4">
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          </div>
-        </div>
-      </div>
-    );
+    return <AdaptationLoadingState />;
   }
 
   if (error || !adaptation) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
-        <div className="max-w-5xl mx-auto px-4">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center"
-          >
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
-              <DocumentTextIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-                {t('errors.adaptationNotFound')}
-              </h2>
-              <p className="text-gray-600 dark:text-gray-400 mb-6">
-                {error || t('errors.adaptationNotFoundDescription')}
-              </p>
-              <button
-                onClick={handleBack}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                <ArrowLeftIcon className="w-5 h-5" />
-                {t('common.back')}
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      </div>
-    );
+    return <AdaptationErrorState error={error || t('errors.adaptationNotFoundDescription')} onBack={handleBack} t={t} />;
   }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
       <div className="max-w-5xl mx-auto px-4">
-        {/* Back button */}
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="mb-6"
-        >
-          <button
-            onClick={handleBack}
-            className="inline-flex items-center gap-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
-          >
-            <ArrowLeftIcon className="w-5 h-5" />
-            {t('common.back')}
-          </button>
-        </motion.div>
+        <AdaptationBackButton onBack={handleBack} t={t} />
 
-        {/* Adaptation content */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden"
-        >
+        <AdaptationPanel>
           {/* Header - Candidate Name + Adapted Title */}
           <AdaptationHeader
             adaptation={adaptation}
@@ -386,41 +304,7 @@ const AdaptationViewPage = (): JSX.Element => {
             formatAdaptationDate={formatAdaptationDate}
           />
 
-          {/* Tabs */}
-          <div className="border-b border-gray-200 dark:border-gray-700">
-            <nav className="flex -mb-px">
-              <button
-                onClick={() => setActiveTab('adapted')}
-                className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === 'adapted'
-                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                }`}
-              >
-                {t('adaptations.tabs.adaptedCV')}
-              </button>
-              <button
-                onClick={() => setActiveTab('analysis')}
-                className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === 'analysis'
-                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                }`}
-              >
-                {t('adaptations.tabs.analysis')}
-              </button>
-              <button
-                onClick={() => setActiveTab('mission')}
-                className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === 'mission'
-                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                }`}
-              >
-                {t('adaptations.tabs.mission')}
-              </button>
-            </nav>
-          </div>
+          <AdaptationTabs activeTab={activeTab} onTabChange={setActiveTab} t={t} />
 
           {/* Tab content */}
           <div className="p-6">
@@ -500,7 +384,7 @@ const AdaptationViewPage = (): JSX.Element => {
               </div>
             )}
           </div>
-        </motion.div>
+        </AdaptationPanel>
       </div>
 
       {/* Export Modal */}

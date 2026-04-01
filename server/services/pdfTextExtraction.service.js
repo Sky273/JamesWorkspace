@@ -15,7 +15,6 @@ import {
     buildBlockSequenceText as createBlockSequenceText
 } from './pdfOcrHeuristics.service.js';
 import {
-    DEFAULT_Y_THRESHOLD,
     extractStructuredPageText,
     normalizeExtractedText
 } from './pdfTextExtraction.helpers.js';
@@ -23,6 +22,7 @@ import { createPdfOcrRuntimeService } from './pdfOcrRuntime.service.js';
 import { createPdfOcrIoService } from './pdfOcrIo.service.js';
 import { createOcrPageEvaluator, recognizeBlockSequence } from './pdfOcrPageOrchestrator.service.js';
 import { createOcrVariantBuffers } from './pdfOcrCanvasVariants.service.js';
+import { createPdfOcrPageProcessor } from './pdfTextOcrPageProcessor.service.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -63,7 +63,7 @@ const {
     hasTesseractCli,
     hasPdftoppmCli,
     hasPdfimagesCli,
-    hasAdvancedOcrBackend,
+    hasAdvancedOcrBackend: _hasAdvancedOcrBackend,
     getOcrRuntimeDiagnostics
 } = ocrRuntimeService;
 
@@ -88,32 +88,23 @@ const {
     renderPdfPageWithPdftoppm: renderPdfPageWithPdftoppmIo
 } = ocrIoService;
 
-async function recognizeWithTesseractJs(tesseractWorker, tempPath) {
-    const { data: { text, confidence } } = await tesseractWorker.recognize(tempPath);
-    return {
-        text,
-        confidence,
-        score: calculateOcrResultScore(text, confidence),
-        engine: 'tesseract.js',
-        psm: null
-    };
+async function createTesseractWorker({ logger }) {
+    const Tesseract = await import('tesseract.js');
+    return Tesseract.createWorker('fra+eng', 1, { logger });
 }
 
-async function recognizeVariantBuffer(tesseractWorker, variantName, variantBuffer, pageNum) {
+async function createCanvasModule() {
+    return import('canvas');
+}
+
+async function writeTempVariantBuffer(variantName, variantBuffer, pageNum) {
     const tempPath = path.join(
         os.tmpdir(),
         `resume-ocr-${process.pid}-${Date.now()}-${pageNum}-${variantName}.png`
     );
 
-    try {
-        await fs.writeFile(tempPath, variantBuffer);
-        if (await hasTesseractCli()) {
-            return await recognizeWithTesseractCliIo(tempPath);
-        }
-        return await recognizeWithTesseractJs(tesseractWorker, tempPath);
-    } finally {
-        await fs.unlink(tempPath).catch(() => {});
-    }
+    await fs.writeFile(tempPath, variantBuffer);
+    return tempPath;
 }
 
 export async function extractPdfTextWithOcr(buffer, options = {}) {
@@ -132,7 +123,7 @@ export async function extractPdfTextWithOcr(buffer, options = {}) {
         onOcrVariantAttempt
     } = options;
 
-    let tesseractWorker = null;
+    const workerRef = { current: null };
 
     try {
         const uint8Array = new Uint8Array(buffer);
@@ -144,343 +135,63 @@ export async function extractPdfTextWithOcr(buffer, options = {}) {
         }
 
         let fullText = '';
-        let ocrUsed = false;
-        let ocrPageCount = 0;
-        let failedOcrPages = 0;
-        let totalOcrConfidence = 0;
-        const recentResults = [];
-
-        const useCliOcrPipeline = (await hasTesseractCli()) && (await hasPdftoppmCli());
-        const useEmbeddedImagePipeline = (await hasTesseractCli()) && (await hasPdfimagesCli());
-
-        const ocrPage = async (page, pageNum, totalTextLength = 0, itemCount = 0) => {
-            if (ocrPageCount >= maxScannedOcrPages) {
-                throw new Error(`PDF contains too many scanned pages for OCR extraction. Maximum supported scanned pages is ${maxScannedOcrPages}.`);
-            }
-
-            onOcrPageDetected?.({ pageNum, totalTextLength, itemCount });
-
-            if (!useCliOcrPipeline && !tesseractWorker) {
-                const Tesseract = await import('tesseract.js');
-                tesseractWorker = await Tesseract.createWorker('fra+eng', 1, {
-                    logger: (message) => {
-                        if (message.status === 'recognizing text') {
-                            onOcrProgress?.({ pageNum, progress: message.progress });
-                        }
-                    }
-                });
-            }
-
-            const evaluator = createOcrPageEvaluator({
-                pageNum,
+        const ocrState = {
+            ocrUsed: false,
+            ocrPageCount: 0,
+            failedOcrPages: 0,
+            totalOcrConfidence: 0,
+            recentResults: []
+        };
+        const ocrPage = createPdfOcrPageProcessor({
+            settings: {
+                maxScannedOcrPages,
+                maxOcrRenderPixels,
+                minOcrTextLength,
+                advancedOcrTriggerTextLength,
+                ocrRenderScale,
+                advancedOcrBackend: DEFAULT_ADVANCED_OCR_BACKEND,
+                embeddedImageTriggerTextLength: DEFAULT_EMBEDDED_IMAGE_TRIGGER_TEXT_LENGTH,
+                embeddedImageStrongTextLength: DEFAULT_EMBEDDED_IMAGE_STRONG_TEXT_LENGTH,
+                maxEmbeddedImagesPerPage: DEFAULT_MAX_EMBEDDED_IMAGES_PER_PAGE,
                 maxVariantsPerPage: DEFAULT_MAX_VARIANTS_PER_PAGE,
                 maxOcrTimePerPageMs: DEFAULT_MAX_OCR_TIME_PER_PAGE_MS,
-                earlyAcceptScore: DEFAULT_EARLY_ACCEPT_SCORE,
-                onOcrVariantAttempt,
-                buildCandidate: createOcrCandidate
-            });
-            const shouldStopExploration = evaluator.shouldStopExploration;
-            const recordCandidate = evaluator.recordCandidate;
-            const considerCandidate = evaluator.considerCandidate;
-            const getBestVariant = evaluator.getBestVariant;
-
-            if (useCliOcrPipeline) {
-                const renderedImagePath = await renderPdfPageWithPdftoppmIo(buffer, pageNum);
-                try {
-                    const candidateImages = [{ name: 'pdftoppm-page', path: renderedImagePath }];
-                    const baseRecognition = await recognizeWithTesseractCliIo(renderedImagePath);
-                    recordCandidate('pdftoppm-page', baseRecognition);
-
-                    let preparedAssets = { variants: [], blocks: [] };
-                    if (!shouldStopExploration()) {
-                        preparedAssets = await preparePythonOcrVariantsIo(renderedImagePath, pageNum);
-                        for (const variant of preparedAssets.variants) {
-                            if (variant?.path) {
-                                candidateImages.push({ name: variant.name, path: variant.path });
-                            }
-                        }
-                    }
-
-                    for (const imageVariant of candidateImages.slice(1)) {
-                        if (shouldStopExploration()) {
-                            break;
-                        }
-                        const recognition = await recognizeWithTesseractCliIo(imageVariant.path);
-                        recordCandidate(imageVariant.name, recognition);
-                    }
-
-                    if (!shouldStopExploration() && preparedAssets.blocks.length > 0) {
-                        const blockSequenceCandidate = await recognizeBlockSequence({
-                            blocks: preparedAssets.blocks,
-                            recognizer: async (imagePath) => recognizeWithTesseractCliIo(imagePath),
-                            onOcrVariantAttempt,
-                            pageNum,
-                            buildSequenceText: createBlockSequenceText,
-                            scoreSequence: calculateBlockSequenceScore
-                        });
-                        if (blockSequenceCandidate) {
-                            blockSequenceCandidate.score = calculateOcrCandidateQuality(blockSequenceCandidate.text, blockSequenceCandidate.confidence);
-                            considerCandidate(blockSequenceCandidate);
-                        }
-                    }
-
-                    if (
-                        useEmbeddedImagePipeline
-                        && getRecognizedTextLength(getBestVariant()) < DEFAULT_EMBEDDED_IMAGE_TRIGGER_TEXT_LENGTH
-                        && !shouldStopExploration()
-                    ) {
-                        const embeddedImages = (await extractEmbeddedImagesFromPdfIo(buffer, pageNum))
-                            .slice(0, DEFAULT_MAX_EMBEDDED_IMAGES_PER_PAGE);
-                        try {
-                            const embeddedImageCandidates = [];
-                            for (const embeddedImage of embeddedImages) {
-                                if (shouldStopExploration()) {
-                                    break;
-                                }
-                                embeddedImageCandidates.push(embeddedImage);
-                                const baseRecognition = await recognizeWithTesseractCliIo(embeddedImage.path);
-                                const baseCandidate = recordCandidate(embeddedImage.name, baseRecognition);
-
-                                if (getRecognizedTextLength(baseCandidate) < DEFAULT_EMBEDDED_IMAGE_STRONG_TEXT_LENGTH && !shouldStopExploration()) {
-                                    const preparedEmbeddedAssets = await preparePythonOcrVariantsIo(embeddedImage.path, pageNum);
-                                    for (const variant of preparedEmbeddedAssets.variants.slice(0, 4)) {
-                                        if (variant?.path) {
-                                            embeddedImageCandidates.push({
-                                                name: `${embeddedImage.name}-${variant.name}`,
-                                                path: variant.path,
-                                                order: embeddedImage.order
-                                            });
-                                        }
-                                    }
-
-                                    if (!shouldStopExploration()) {
-                                        const embeddedBlocksCandidate = await recognizeBlockSequence({
-                                            blocks: preparedEmbeddedAssets.blocks,
-                                            recognizer: async (imagePath) => recognizeWithTesseractCliIo(imagePath),
-                                            onOcrVariantAttempt,
-                                            pageNum,
-                                            variantPrefix: `${embeddedImage.name}-blocks`,
-                                            buildSequenceText: createBlockSequenceText,
-                                            scoreSequence: calculateBlockSequenceScore
-                                        });
-                                        if (embeddedBlocksCandidate) {
-                                            embeddedBlocksCandidate.score = calculateOcrCandidateQuality(embeddedBlocksCandidate.text, embeddedBlocksCandidate.confidence);
-                                            considerCandidate(embeddedBlocksCandidate);
-                                        }
-                                    }
-
-                                    for (const blockVariant of preparedEmbeddedAssets.blocks) {
-                                        await fs.unlink(blockVariant.path).catch(() => {});
-                                    }
-                                }
-                            }
-
-                            if (!shouldStopExploration()) {
-                                const embeddedSequenceCandidate = await recognizeBlockSequence({
-                                    blocks: embeddedImages,
-                                    recognizer: async (imagePath) => recognizeWithTesseractCliIo(imagePath),
-                                    onOcrVariantAttempt,
-                                    pageNum,
-                                    variantPrefix: 'pdfimages-sequence',
-                                    buildSequenceText: createBlockSequenceText,
-                                    scoreSequence: calculateBlockSequenceScore
-                                });
-                                if (embeddedSequenceCandidate) {
-                                    embeddedSequenceCandidate.score = calculateOcrCandidateQuality(embeddedSequenceCandidate.text, embeddedSequenceCandidate.confidence);
-                                    considerCandidate(embeddedSequenceCandidate);
-                                }
-                            }
-
-                            for (const imageVariant of embeddedImageCandidates) {
-                                if (shouldStopExploration()) {
-                                    break;
-                                }
-                                if (embeddedImages.some((embedded) => embedded.path === imageVariant.path)) {
-                                    continue;
-                                }
-                                const recognition = await recognizeWithTesseractCliIo(imageVariant.path);
-                                recordCandidate(imageVariant.name, recognition);
-                            }
-
-                            if (
-                                getBestVariant()
-                                && (getBestVariant()?.text?.trim().length || 0) < advancedOcrTriggerTextLength
-                                && DEFAULT_ADVANCED_OCR_BACKEND !== 'none'
-                                && !shouldStopExploration()
-                            ) {
-                                const advancedEmbeddedSequenceCandidate = await recognizeBlockSequence({
-                                    blocks: embeddedImages,
-                                    recognizer: async (imagePath) => {
-                                        const advancedRecognition = await recognizeWithAdvancedOcrIo(
-                                            imagePath,
-                                            DEFAULT_ADVANCED_OCR_BACKEND
-                                        );
-                                        return advancedRecognition || {
-                                            text: '',
-                                            confidence: 0,
-                                            score: 0,
-                                            engine: DEFAULT_ADVANCED_OCR_BACKEND,
-                                            psm: null
-                                        };
-                                    },
-                                    onOcrVariantAttempt,
-                                    pageNum,
-                                    variantPrefix: 'pdfimages-sequence-advanced',
-                                    buildSequenceText: createBlockSequenceText,
-                                    scoreSequence: calculateBlockSequenceScore
-                                });
-                                if (advancedEmbeddedSequenceCandidate) {
-                                    advancedEmbeddedSequenceCandidate.score = calculateOcrCandidateQuality(advancedEmbeddedSequenceCandidate.text, advancedEmbeddedSequenceCandidate.confidence);
-                                    considerCandidate(advancedEmbeddedSequenceCandidate);
-                                }
-                            }
-
-                            for (const embeddedImage of embeddedImages) {
-                                await fs.unlink(embeddedImage.path).catch(() => {});
-                            }
-                            for (const imageVariant of embeddedImageCandidates.filter((item) => !embeddedImages.some((embedded) => embedded.path === item.path))) {
-                                await fs.unlink(imageVariant.path).catch(() => {});
-                            }
-                        } catch {
-                            for (const embeddedImage of embeddedImages) {
-                                await fs.unlink(embeddedImage.path).catch(() => {});
-                            }
-                        }
-                    }
-
-                    if (
-                        getBestVariant()
-                        && (getBestVariant()?.text?.trim().length || 0) < advancedOcrTriggerTextLength
-                        && DEFAULT_ADVANCED_OCR_BACKEND !== 'none'
-                        && !shouldStopExploration()
-                    ) {
-                        for (const imageVariant of candidateImages) {
-                            if (shouldStopExploration()) {
-                                break;
-                            }
-                            const advancedRecognition = await recognizeWithAdvancedOcrIo(
-                                imageVariant.path,
-                                DEFAULT_ADVANCED_OCR_BACKEND
-                            );
-                            if (!advancedRecognition) {
-                                continue;
-                            }
-                            recordCandidate(`${imageVariant.name}-advanced`, advancedRecognition);
-                        }
-
-                        if (!shouldStopExploration()) {
-                            const advancedBlockCandidate = await recognizeBlockSequence({
-                                blocks: preparedAssets.blocks,
-                                recognizer: async (imagePath) => {
-                                    const advancedRecognition = await recognizeWithAdvancedOcrIo(
-                                        imagePath,
-                                        DEFAULT_ADVANCED_OCR_BACKEND
-                                    );
-                                    return advancedRecognition || {
-                                        text: '',
-                                        confidence: 0,
-                                        score: 0,
-                                        engine: DEFAULT_ADVANCED_OCR_BACKEND,
-                                        psm: null
-                                    };
-                                },
-                                onOcrVariantAttempt,
-                                pageNum,
-                                variantPrefix: 'python-blocks-advanced',
-                                buildSequenceText: createBlockSequenceText,
-                                scoreSequence: calculateBlockSequenceScore
-                            });
-                            if (advancedBlockCandidate) {
-                                advancedBlockCandidate.score = calculateOcrCandidateQuality(advancedBlockCandidate.text, advancedBlockCandidate.confidence);
-                                considerCandidate(advancedBlockCandidate);
-                            }
-                        }
-                    }
-
-                    for (const imageVariant of candidateImages.slice(1)) {
-                        await fs.unlink(imageVariant.path).catch(() => {});
-                    }
-                    for (const blockVariant of preparedAssets.blocks) {
-                        await fs.unlink(blockVariant.path).catch(() => {});
-                    }
-                } finally {
-                    await fs.unlink(renderedImagePath).catch(() => {});
-                }
-            } else {
-                const viewport = page.getViewport({ scale: ocrRenderScale });
-                if ((viewport.width * viewport.height) > maxOcrRenderPixels) {
-                    throw new Error('Page is too large for OCR rendering');
-                }
-
-                const canvasModule = await import('canvas');
-                const { createCanvas } = canvasModule;
-                const canvas = createCanvas(viewport.width, viewport.height);
-                const context = canvas.getContext('2d');
-                await page.render({ canvasContext: context, viewport }).promise;
-                const variantBuffers = createOcrVariantBuffers(
-                    canvasModule,
-                    canvas,
-                    context,
-                    locateInkBoundingBox
-                );
-
-                for (const variant of variantBuffers) {
-                    if (shouldStopExploration()) {
-                        break;
-                    }
-                    const recognition = await recognizeVariantBuffer(
-                        tesseractWorker,
-                        variant.name,
-                        variant.buffer,
-                        pageNum
-                    );
-                    recordCandidate(variant.name, recognition);
-                }
+                earlyAcceptScore: DEFAULT_EARLY_ACCEPT_SCORE
+            },
+            workerRef,
+            callbacks: {
+                onOcrProgress,
+                onOcrPageDetected,
+                onOcrPageCompleted,
+                onOcrPageFailed,
+                onOcrVariantAttempt
+            },
+            services: {
+                fs,
+                hasTesseractCli,
+                hasPdftoppmCli,
+                hasPdfimagesCli,
+                renderPdfPageWithPdftoppm: renderPdfPageWithPdftoppmIo,
+                recognizeWithTesseractCli: recognizeWithTesseractCliIo,
+                preparePythonOcrVariants: preparePythonOcrVariantsIo,
+                recognizeWithAdvancedOcr: recognizeWithAdvancedOcrIo,
+                extractEmbeddedImagesFromPdf: extractEmbeddedImagesFromPdfIo,
+                createCanvasModule,
+                createTesseractWorker,
+                createOcrPageEvaluator,
+                recognizeBlockSequence,
+                createOcrVariantBuffers,
+                writeTempVariantBuffer
+            },
+            heuristics: {
+                locateInkBoundingBox,
+                calculateOcrResultScore,
+                getRecognizedTextLength,
+                calculateOcrCandidateQuality,
+                createOcrCandidate,
+                calculateBlockSequenceScore,
+                createBlockSequenceText
             }
-
-            const bestVariant = getBestVariant();
-            const ocrText = bestVariant?.text || '';
-            const confidence = bestVariant?.confidence || 0;
-
-            ocrPageCount++;
-
-            if (ocrText && ocrText.trim().length > minOcrTextLength) {
-                const trimmedText = ocrText.trim();
-                ocrUsed = true;
-                totalOcrConfidence += confidence || 0;
-                const pageResult = {
-                    pageNum,
-                    confidence,
-                    textLength: trimmedText.length,
-                    variant: bestVariant?.variant || 'unknown',
-                    engine: bestVariant?.engine || 'unknown',
-                    psm: bestVariant?.psm || null
-                };
-                recentResults.push({ success: true, ...pageResult });
-                if (recentResults.length > 10) {
-                    recentResults.shift();
-                }
-                onOcrPageCompleted?.(pageResult);
-                return trimmedText + '\n\n';
-            }
-
-            failedOcrPages++;
-            const failedResult = {
-                pageNum,
-                error: 'OCR returned insufficient text',
-                confidence,
-                textLength: ocrText?.trim().length || 0,
-                variant: bestVariant?.variant || 'unknown',
-                engine: bestVariant?.engine || 'unknown',
-                psm: bestVariant?.psm || null
-            };
-            recentResults.push({ success: false, ...failedResult });
-            if (recentResults.length > 10) {
-                recentResults.shift();
-            }
-            onOcrPageFailed?.(failedResult);
-            return '';
-        };
+        });
 
         for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
             const page = await pdf.getPage(pageNum);
@@ -493,14 +204,21 @@ export async function extractPdfTextWithOcr(buffer, options = {}) {
             }
 
             try {
-                fullText += await ocrPage(page, pageNum, totalTextLength, textContent.items.length);
+                fullText += await ocrPage({
+                    page,
+                    pageNum,
+                    buffer,
+                    state: ocrState,
+                    totalTextLength,
+                    itemCount: textContent.items.length
+                });
             } catch (error) {
-                ocrPageCount++;
-                failedOcrPages++;
+                ocrState.ocrPageCount++;
+                ocrState.failedOcrPages++;
                 const failedResult = { pageNum, error: error.message };
-                recentResults.push({ success: false, ...failedResult });
-                if (recentResults.length > 10) {
-                    recentResults.shift();
+                ocrState.recentResults.push({ success: false, ...failedResult });
+                if (ocrState.recentResults.length > 10) {
+                    ocrState.recentResults.shift();
                 }
                 onOcrPageFailed?.(failedResult);
             }
@@ -510,22 +228,29 @@ export async function extractPdfTextWithOcr(buffer, options = {}) {
 
         if (normalizedText.length < forceDocumentOcrTextLength) {
             fullText = '';
-            ocrUsed = false;
-            ocrPageCount = 0;
-            failedOcrPages = 0;
-            totalOcrConfidence = 0;
+            ocrState.ocrUsed = false;
+            ocrState.ocrPageCount = 0;
+            ocrState.failedOcrPages = 0;
+            ocrState.totalOcrConfidence = 0;
 
             for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
                 const page = await pdf.getPage(pageNum);
                 try {
-                    fullText += await ocrPage(page, pageNum, 0, 0);
+                    fullText += await ocrPage({
+                        page,
+                        pageNum,
+                        buffer,
+                        state: ocrState,
+                        totalTextLength: 0,
+                        itemCount: 0
+                    });
                 } catch (error) {
-                    ocrPageCount++;
-                    failedOcrPages++;
+                    ocrState.ocrPageCount++;
+                    ocrState.failedOcrPages++;
                     const failedResult = { pageNum, error: error.message };
-                    recentResults.push({ success: false, ...failedResult });
-                    if (recentResults.length > 10) {
-                        recentResults.shift();
+                    ocrState.recentResults.push({ success: false, ...failedResult });
+                    if (ocrState.recentResults.length > 10) {
+                        ocrState.recentResults.shift();
                     }
                     onOcrPageFailed?.(failedResult);
                 }
@@ -534,23 +259,23 @@ export async function extractPdfTextWithOcr(buffer, options = {}) {
             normalizedText = normalizeExtractedText(fullText);
         }
 
-        const successfulResults = recentResults
+        const successfulResults = ocrState.recentResults
             .filter((result) => result.success && Number(result.textLength) > 0)
             .sort((a, b) => (Number(b.textLength) || 0) - (Number(a.textLength) || 0));
 
         return {
             text: normalizedText,
             pages: pdf.numPages,
-            ocrUsed,
-            ocrPageCount,
-            failedOcrPages,
-            avgOcrConfidence: ocrPageCount > 0 ? totalOcrConfidence / ocrPageCount : null,
+            ocrUsed: ocrState.ocrUsed,
+            ocrPageCount: ocrState.ocrPageCount,
+            failedOcrPages: ocrState.failedOcrPages,
+            avgOcrConfidence: ocrState.ocrPageCount > 0 ? ocrState.totalOcrConfidence / ocrState.ocrPageCount : null,
             primaryResult: successfulResults[0] || null,
-            recentResults: recentResults.slice(-5)
+            recentResults: ocrState.recentResults.slice(-5)
         };
     } finally {
-        if (tesseractWorker) {
-            await tesseractWorker.terminate().catch(() => {});
+        if (workerRef.current) {
+            await workerRef.current.terminate().catch(() => {});
         }
     }
 }

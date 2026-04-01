@@ -2,7 +2,6 @@
 // METRICS AND MONITORING SERVICE
 // ============================================
 
-import fs from 'fs';
 import { createModuleLogger } from '../utils/logger.backend.js';
 import { buildLLMMetricLabel as buildLLMMetricLabelValue, normalizeLLMProviderKey, pruneLLMProviderStats, getTrackedLLMProviderKey, calculateLLMCost, calculateCostByProvider, getModelPricing } from './metrics/llm.js';
 import { applyInitialMetricsState } from './metrics/state.js';

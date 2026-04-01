@@ -1,9 +1,10 @@
 import { motion } from 'framer-motion';
 import { SparklesIcon } from '@heroicons/react/24/outline';
+import type { TFunction } from 'i18next';
 
 interface ResumeImproveEmptyStateProps {
   onImprove: () => void;
-  t: any;
+  t: TFunction;
 }
 
 export default function ResumeImproveEmptyState({

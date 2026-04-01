@@ -36,7 +36,6 @@ const MissionsPage = (): JSX.Element => {
     resetSearch,
     setEditorReady,
     setFormData,
-    setShowModal,
     setSearchTerm,
     setViewMode,
     searchTerm,
@@ -107,4 +106,3 @@ const MissionsPage = (): JSX.Element => {
 };
 
 export default MissionsPage;
-

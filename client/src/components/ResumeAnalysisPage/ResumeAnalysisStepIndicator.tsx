@@ -1,12 +1,13 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { ArrowDownTrayIcon, CheckCircleIcon, MagnifyingGlassIcon, SparklesIcon } from '@heroicons/react/24/outline';
+import type { TFunction } from 'i18next';
 
 interface ResumeAnalysisStepIndicatorProps {
   resumeId: string;
   hasImprovedText: boolean;
   onImprove: () => void;
-  t: any;
+  t: TFunction;
 }
 
 export default function ResumeAnalysisStepIndicator({

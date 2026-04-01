@@ -70,7 +70,7 @@ export const useTrendMetadata = ({
   const [selectedTrendMetadata, setSelectedTrendMetadata] = useState<MarketTrend | null>(null);
   const [metadataLoading, setMetadataLoading] = useState(false);
   const [cache, setCache] = useState<Record<string, MarketTrend>>({});
-  const [cacheKeys, setCacheKeys] = useState<string[]>([]);
+  const [, setCacheKeys] = useState<string[]>([]);
   const cacheMaxSize = 50;
 
   const addToCache = useCallback((trendId: string, trend: MarketTrend) => {

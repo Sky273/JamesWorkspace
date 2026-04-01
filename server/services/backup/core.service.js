@@ -53,7 +53,7 @@ function findPgBinary(binaryName) {
             if (binPath && fs.existsSync(fullPath)) {
                 return fullPath;
             }
-        } catch (_e) {
+        } catch {
             // Continue to next path
         }
     }
@@ -159,7 +159,7 @@ export async function createBackup(type = 'manual') {
         
         try {
             await execFileAsync(pgDumpBin, ['--version']);
-        } catch (_error) {
+        } catch {
             throw new Error('pg_dump not found. Please install PostgreSQL client tools.');
         }
         
@@ -283,7 +283,7 @@ export async function createBackup(type = 'manual') {
         try {
             if (fs.existsSync(localPath)) fs.unlinkSync(localPath);
             if (fs.existsSync(compressedPath)) fs.unlinkSync(compressedPath);
-        } catch (_e) {
+        } catch {
             // Ignore cleanup errors
         }
         
@@ -331,7 +331,7 @@ export async function restoreBackup(filename) {
         
         try {
             await execFileAsync(psqlBin, ['--version']);
-        } catch (_error) {
+        } catch {
             throw new Error('psql not found. Please install PostgreSQL client tools.');
         }
         
@@ -379,7 +379,7 @@ export async function restoreBackup(filename) {
         try {
             if (fs.existsSync(localCompressedPath)) fs.unlinkSync(localCompressedPath);
             if (fs.existsSync(localPath)) fs.unlinkSync(localPath);
-        } catch (_e) {
+        } catch {
             // Ignore cleanup errors
         }
         

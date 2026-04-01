@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { ArrowDownTrayIcon, SparklesIcon } from '@heroicons/react/24/outline';
+import type { TFunction } from 'i18next';
 import { formatDateTime } from '../../utils/dateFormatter';
 
 interface OperationRecentEntry {
@@ -47,7 +48,7 @@ interface OperationLLMCardProps {
   metrics: OperationMetrics | null | undefined;
   successRatio: number | null;
   mode: 'improvement' | 'adaptation';
-  t: any;
+  t: TFunction;
   safeNumber: (value: unknown, defaultValue?: number) => number;
   formatNumber: (value?: number) => string;
 }

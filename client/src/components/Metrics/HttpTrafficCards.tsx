@@ -1,5 +1,18 @@
 import { motion } from 'framer-motion';
 import { ChartBarIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import type { ComponentType } from 'react';
+import type { TFunction } from 'i18next';
+
+interface ProgressBarProps {
+  label: string;
+  value: number;
+  max: number;
+  color?: string;
+}
+
+interface LlmProviderStats {
+  requests?: number;
+}
 
 interface HttpTrafficCardsProps {
   metrics: {
@@ -13,11 +26,11 @@ interface HttpTrafficCardsProps {
       requests?: number;
       totalTokens?: number;
       estimatedCost?: number;
-      byProvider?: Record<string, { requests?: number } | number>;
+      byProvider?: Record<string, LlmProviderStats | number>;
     };
   } | null;
-  ProgressBar: any;
-  t: any;
+  ProgressBar: ComponentType<ProgressBarProps>;
+  t: TFunction;
   safeNumber: (value: unknown, defaultValue?: number) => number;
   formatNumber: (value?: number) => string;
 }

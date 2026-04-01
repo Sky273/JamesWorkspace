@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { ArrowDownTrayIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import type { TFunction } from 'i18next';
 import { formatDateTime } from '../../utils/dateFormatter';
 
 interface BatchImportRecentEntry {
@@ -37,7 +38,7 @@ interface BatchImportMetrics {
 interface BatchImportMetricsCardProps {
   metrics: BatchImportMetrics | null | undefined;
   successRatio: number | null;
-  t: any;
+  t: TFunction;
   safeNumber: (value: unknown, defaultValue?: number) => number;
   formatNumber: (value?: number) => string;
   formatBytes: (value?: number) => string;

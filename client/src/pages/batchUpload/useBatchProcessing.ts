@@ -11,13 +11,11 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { fetchWithAuth, createAuthOptionsWithCsrf, getResponseErrorMessage } from '../../utils/apiInterceptor';
 import { createAndTrackJob } from '../../utils/longRunningOperation';
-import { waitForResumeImprovementJobCompletion } from '../../utils/resumeImprovementJob';
 import logger from '../../utils/logger.frontend';
 import toast from 'react-hot-toast';
 import type { FileStatus, ExportFormats } from '../batchUpload.utils';
-import {
-  FRONTEND_LLM_ANALYSIS_TIMEOUT_MS,
-} from '../../constants/llmTimeouts';
+
+
 
 interface UseBatchProcessingParams {
   filesRef: MutableRefObject<FileStatus[]>;
@@ -38,9 +36,9 @@ interface UseBatchProcessingParams {
 export function useBatchProcessing({
   filesRef,
   isMountedRef,
-  abortControllerRef,
-  isAdmin,
-  selectedFirmId,
+  abortControllerRef: _abortControllerRef,
+  isAdmin: _isAdmin,
+  selectedFirmId: _selectedFirmId,
   improveOption,
   exportOption,
   exportFormats,

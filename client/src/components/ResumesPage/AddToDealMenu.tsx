@@ -81,7 +81,7 @@ const ManageResumeDealsModal = ({ resumeId, onSuccess }: ManageResumeDealsModalP
     } finally {
       setLoading(false);
     }
-  }, [isOpen, resumeId]);
+  }, [isOpen, resumeId, t]);
 
   useEffect(() => {
     fetchData();

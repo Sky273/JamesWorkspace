@@ -1,5 +1,4 @@
 import { ArrowPathIcon, BriefcaseIcon, CalendarIcon, ChartBarIcon, CheckCircleIcon, ClockIcon, ExclamationTriangleIcon, FunnelIcon, MapIcon, MapPinIcon, TableCellsIcon } from '@heroicons/react/24/outline';
-import { Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Pagination from '../components/Pagination';

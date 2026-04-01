@@ -111,7 +111,7 @@ describe('Backup FTP/SFTP Service', () => {
         it('should use implicit TLS when configured', async () => {
             mockFtpAccess.mockResolvedValueOnce(undefined);
 
-            const { port, ...noPortSettings } = ftpSettings;
+            const { port: _port, ...noPortSettings } = ftpSettings;
             await getClient({ ...noPortSettings, tls_mode: 'implicit' });
 
             expect(mockFtpAccess).toHaveBeenCalledWith(expect.objectContaining({

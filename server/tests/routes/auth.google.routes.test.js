@@ -32,9 +32,11 @@ vi.mock('../../services/googleAuth.service.js', () => ({
 }));
 
 // Mock JWT service
+const mockVerifyToken = vi.fn();
 vi.mock('../../services/jwt.service.js', () => ({
     generateAccessToken: () => 'mock-access-token',
-    generateRefreshToken: () => 'mock-refresh-token'
+    generateRefreshToken: () => 'mock-refresh-token',
+    verifyToken: (...args) => mockVerifyToken(...args)
 }));
 
 // Mock security
@@ -101,6 +103,7 @@ describe('Google OAuth Routes', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        mockVerifyToken.mockReset();
         app = createTestApp();
     });
 
@@ -123,6 +126,18 @@ describe('Google OAuth Routes', () => {
             const res = await request(app).get('/api/auth/google');
             expect(res.status).toBe(500);
         });
+
+        it('should resolve link action user from access token cookie', async () => {
+            mockVerifyToken.mockReturnValueOnce({ id: 'user-123' });
+            mockGetAuthUrl.mockResolvedValueOnce('https://accounts.google.com/o/oauth2/auth?...');
+
+            const res = await request(app)
+                .get('/api/auth/google?action=link&returnUrl=/settings')
+                .set('Cookie', ['accessToken=valid-access-token']);
+
+            expect(res.status).toBe(200);
+            expect(mockVerifyToken).toHaveBeenCalledWith('valid-access-token');
+        });
     });
 
     // ==========================================
@@ -143,6 +158,14 @@ describe('Google OAuth Routes', () => {
 
             expect(res.status).toBe(302);
             expect(res.headers.location).toContain('invalid_state');
+        });
+
+        it('should redirect when callback code is missing', async () => {
+            const res = await request(app)
+                .get('/api/auth/google/callback?state=missing-code');
+
+            expect(res.status).toBe(302);
+            expect(res.headers.location).toContain('missing_code');
         });
     });
 

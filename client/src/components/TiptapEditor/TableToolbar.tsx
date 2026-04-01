@@ -6,6 +6,9 @@
 
 import type { Editor } from '@tiptap/react';
 import { useState, useCallback, useEffect } from 'react';
+type TableAttributeCommands = {
+  setTableAttribute: (attr: string, value: unknown) => boolean;
+};
 
 interface TableToolbarProps {
   editor: Editor;
@@ -115,7 +118,7 @@ export const TableToolbar = ({ editor }: TableToolbarProps) => {
   }, [editor]);
 
   const setTableAttr = useCallback((attr: string, value: unknown) => {
-    (editor.commands as any).setTableAttribute(attr, value);
+    (editor.commands as Editor['commands'] & TableAttributeCommands).setTableAttribute(attr, value);
   }, [editor]);
 
   const setCellAttr = useCallback((attr: string, value: unknown) => {

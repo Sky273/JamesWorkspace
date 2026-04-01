@@ -8,7 +8,11 @@ let authState = {
   user: null as null | { role: string },
 };
 
-const renderPage = (label: string) => () => <div>{label}</div>;
+const renderPage = (label: string) => {
+  const MockPage = () => <div>{label}</div>;
+  MockPage.displayName = `${label}MockPage`;
+  return MockPage;
+};
 
 vi.mock('./context/AuthContext', () => ({
   useAuth: () => authState,

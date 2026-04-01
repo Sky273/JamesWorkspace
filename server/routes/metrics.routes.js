@@ -227,7 +227,7 @@ router.get('/database', authenticateToken, requireAdmin, async (req, res) => {
             });
         }
         
-        const { sizeResult, tableStatsResult, connectionStatsResult, binaryStorageResult, batchStorageResult, queryTime } = await getDatabaseMetrics();
+        const { sizeResult, tableStatsResult, connectionStatsResult, queryTime } = await getDatabaseMetrics();
         
         const result = {
             database: {
@@ -320,4 +320,3 @@ router.delete('/apm/slow-requests', authenticateToken, requireAdmin, (req, res) 
 });
 
 export default router;
-

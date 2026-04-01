@@ -11,14 +11,7 @@ import {
 import { StarIcon } from '@heroicons/react/24/outline';
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
 import SearchField from '../page/SearchField';
-
-interface Resume {
-  id: string;
-  Name: string;
-  Title?: string;
-  'Global Score'?: number;
-  Tags?: string[];
-}
+import type { Resume } from './MissionPipelineKanban.types';
 
 interface PipelineAddCandidateModalProps {
   availableResumes: Resume[];

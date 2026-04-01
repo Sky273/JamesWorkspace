@@ -5,7 +5,7 @@
 
 import express from 'express';
 import { authenticateToken } from '../middleware/auth.middleware.js';
-import { validateBody, validateParams, createCalendarEventSchema } from '../utils/validation.js';
+import { validateBody, createCalendarEventSchema } from '../utils/validation.js';
 import { safeLog } from '../utils/logger.backend.js';
 import {
     getCalendarAuthUrl,

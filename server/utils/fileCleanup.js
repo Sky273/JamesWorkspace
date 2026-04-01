@@ -99,13 +99,13 @@ async function getDirectoryStats(directory) {
                     fileCount++;
                     totalSize += stats.size;
                 }
-            } catch (_e) {
+            } catch {
                 // Ignore errors for individual files
             }
         }
 
         return { fileCount, totalSize };
-    } catch (_e) {
+    } catch {
         return { fileCount: 0, totalSize: 0 };
     }
 }

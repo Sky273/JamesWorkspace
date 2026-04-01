@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { ArrowRightIcon, CheckCircleIcon, ShareIcon, SparklesIcon } from '@heroicons/react/24/outline';
+import type { TFunction } from 'i18next';
 import ConsentBadge, { ConsentStatus } from '../ConsentBadge';
 import type { Resume } from '../../types/entities';
 
@@ -11,7 +12,7 @@ interface ResumeAnalysisHeaderProps {
   hasImprovedText: boolean;
   onShare: () => void;
   onImprove: () => void;
-  t: any;
+  t: TFunction;
 }
 
 export default function ResumeAnalysisHeader({

@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { ExclamationTriangleIcon, SparklesIcon } from '@heroicons/react/24/outline';
+import type { TFunction } from 'i18next';
 import { formatDateTime } from '../../utils/dateFormatter';
 
 interface ProfileMatchingRecentEntry {
@@ -52,7 +53,7 @@ interface ProfileMatchingMetricsCardProps {
   scoredToExplainedRatio: number | null;
   scoredToReturnedRatio: number | null;
   alerts: string[];
-  t: any;
+  t: TFunction;
   safeNumber: (value: unknown, defaultValue?: number) => number;
   formatNumber: (value?: number) => string;
 }

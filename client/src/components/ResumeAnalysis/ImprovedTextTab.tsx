@@ -5,7 +5,7 @@
 
 import { useState, useEffect, ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CheckIcon, UserIcon, BriefcaseIcon, SparklesIcon, ExclamationTriangleIcon, ClockIcon, RocketLaunchIcon } from '@heroicons/react/24/outline';
+import { UserIcon, BriefcaseIcon, SparklesIcon, ExclamationTriangleIcon, ClockIcon } from '@heroicons/react/24/outline';
 import VersionsPanel from './VersionsPanel';
 import { getVersions } from '../../services/resumeVersionsService';
 
@@ -42,9 +42,17 @@ interface ImprovedTextTabProps {
   editorSlot?: React.ReactNode;
 }
 
-const ImprovedTextTab = ({ resume, onSave, onUpdateField, editorReady = false, onAIModify, onVersionRestored, onAdaptToMission, editorSlot }: ImprovedTextTabProps): JSX.Element => {
+const ImprovedTextTab = ({
+  resume,
+  onSave: _onSave,
+  onUpdateField,
+  editorReady: _editorReady = false,
+  onAIModify,
+  onVersionRestored,
+  onAdaptToMission: _onAdaptToMission,
+  editorSlot
+}: ImprovedTextTabProps): JSX.Element => {
   const { t } = useTranslation();
-  const [isSaving, setIsSaving] = useState<boolean>(false);
   const [candidateName, setCandidateName] = useState<string>(resume['Name'] || '');
   const [professionalTitle, setProfessionalTitle] = useState<string>(resume['Title'] || '');
   const [aiInstructions, setAiInstructions] = useState<string>('');
@@ -89,16 +97,6 @@ const ImprovedTextTab = ({ resume, onSave, onUpdateField, editorReady = false, o
   const improvement = improvedRating - originalRating;
   const hasImprovement = improvement !== 0;
   const isNegativeImprovement = improvement < 0;
-
-  const handleSave = async (): Promise<void> => {
-    if (!onSave) return;
-    setIsSaving(true);
-    try {
-      await onSave();
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   const handleNameBlur = async (): Promise<void> => {
     if (onUpdateField && candidateName !== resume['Name']) {

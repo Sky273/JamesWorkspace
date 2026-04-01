@@ -231,6 +231,14 @@ describe('Backup Routes', () => {
 
             expect(mockGetBackupHistory).toHaveBeenCalledWith(10, 5);
         });
+
+        it('should clamp oversized limit and sanitize offset', async () => {
+            mockGetBackupHistory.mockResolvedValue([]);
+
+            await request(app).get('/api/backup/history?limit=9999&offset=-4').set(authHeader);
+
+            expect(mockGetBackupHistory).toHaveBeenCalledWith(200, 0);
+        });
     });
 
     describe('DELETE /api/backup/history/:id', () => {

@@ -22,6 +22,13 @@ import {
 import { reloadBackupScheduler, getSchedulerStatus } from '../services/backup-scheduler.service.js';
 
 const router = express.Router();
+const DEFAULT_HISTORY_LIMIT = 50;
+const MAX_HISTORY_LIMIT = 200;
+
+function parsePositiveInteger(value, fallback) {
+    const parsed = Number.parseInt(String(value ?? ''), 10);
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+}
 
 // All backup routes require admin authentication
 router.use(authenticateToken);
@@ -244,8 +251,8 @@ router.post('/run', async (req, res) => {
  */
 router.get('/history', async (req, res) => {
     try {
-        const limit = parseInt(req.query.limit) || 50;
-        const offset = parseInt(req.query.offset) || 0;
+        const limit = Math.min(parsePositiveInteger(req.query.limit, DEFAULT_HISTORY_LIMIT), MAX_HISTORY_LIMIT);
+        const offset = parsePositiveInteger(req.query.offset, 0);
         
         const history = await getBackupHistory(limit, offset);
         
@@ -292,7 +299,7 @@ router.get('/list-remote', async (req, res) => {
         const result = await listRemoteBackups(settings);
         
         res.json(result);
-    } catch (error) {
+    } catch {
         safeLog('error', 'Failed to list remote backups', { error: 'Failed to list remote backups' });
         res.status(500).json({ 
             success: false, 
@@ -334,7 +341,7 @@ router.post('/restore', validateBody(restoreBackupSchema), async (req, res) => {
         safeLog('info', 'Database restore completed', { filename });
         
         res.json(result);
-    } catch (error) {
+    } catch {
         safeLog('error', 'Database restore failed', { error: 'Database restore failed' });
         res.status(500).json({ 
             success: false 
@@ -350,7 +357,7 @@ router.get('/scheduler-status', async (req, res) => {
     try {
         const status = getSchedulerStatus();
         res.json(status);
-    } catch (_error) {
+    } catch {
         res.status(500).json({ error: 'Failed to get scheduler status' });
     }
 });

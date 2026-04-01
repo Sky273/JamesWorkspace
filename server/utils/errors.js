@@ -3,7 +3,6 @@
  * JavaScript version for Node.js backend
  */
 
-import { safeLog } from './logger.backend.js';
 
 // ============================================
 // ERROR HANDLING HELPERS

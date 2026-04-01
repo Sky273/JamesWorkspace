@@ -13,7 +13,7 @@ import { securityLog, getRequestMetadata, LOG_LEVELS, SECURITY_EVENTS } from '..
 import { safeLog } from '../../utils/logger.backend.js';
 import { is2FAEnabled, verifyTotpCode } from '../../services/totp.service.js';
 import * as authService from '../../services/auth.service.js';
-import { useSecureCookies, ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE, CLEAR_ACCESS_TOKEN, CLEAR_REFRESH_TOKEN } from './config.js';
+import { ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE, CLEAR_ACCESS_TOKEN, CLEAR_REFRESH_TOKEN } from './config.js';
 
 const router = express.Router();
 

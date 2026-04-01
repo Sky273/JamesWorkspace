@@ -4,6 +4,7 @@
  */
 
 import { Table } from '@tiptap/extension-table';
+import type { CommandProps } from '@tiptap/core';
 
 declare module '@tiptap/react' {
   interface Commands<ReturnType> {
@@ -76,7 +77,7 @@ export const CustomTable = Table.extend({
       ...this.parent?.(),
       setTableAttribute:
         (attr: string, value: unknown) =>
-        ({ state, dispatch, tr }: Record<string, any>) => {
+        ({ state, dispatch, tr }: CommandProps) => {
           const { $from } = state.selection;
           for (let d = $from.depth; d > 0; d--) {
             if ($from.node(d).type.name === 'table') {

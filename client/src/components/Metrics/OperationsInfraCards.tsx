@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { ArrowDownTrayIcon, BoltIcon } from '@heroicons/react/24/outline';
+import type { TFunction } from 'i18next';
 
 interface OperationsInfraMetrics {
   ocrRuntime?: {
@@ -69,7 +70,7 @@ interface OperationsInfraMetrics {
 
 interface OperationsInfraCardsProps {
   metrics: OperationsInfraMetrics | null | undefined;
-  t: any;
+  t: TFunction;
   safeNumber: (value: unknown, defaultValue?: number) => number;
   formatNumber: (value?: number) => string;
   formatBytes: (value?: number) => string;

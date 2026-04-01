@@ -288,7 +288,7 @@ export async function get2FAStatus(userId) {
         try {
             const codes = JSON.parse(decryptSecret(totp_backup_codes));
             backupCodesRemaining = codes.length;
-        } catch (_e) {
+        } catch {
             // Ignore decryption errors
         }
     }

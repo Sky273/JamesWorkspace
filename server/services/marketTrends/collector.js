@@ -22,7 +22,7 @@ import {
     estimateExpectedTotal,
     loadCollectionContext
 } from './collectionRuntime.js';
-import { generateCollectionReport, storeTrend } from './persistence.js';
+import { generateCollectionReport } from './persistence.js';
 
 /**
  * Calculate the last complete quarter dates

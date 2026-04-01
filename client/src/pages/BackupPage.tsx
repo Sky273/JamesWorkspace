@@ -7,7 +7,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
-import { ArrowPathIcon, ServerStackIcon } from '@heroicons/react/24/outline';
+import { ArrowPathIcon } from '@heroicons/react/24/outline';
 import { useAuthFetch } from '../hooks/useAuthFetch';
 import logger from '../utils/logger.frontend';
 import type { BackupSettings, BackupHistoryItem, RemoteFile } from './backupPage.types';

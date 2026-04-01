@@ -49,7 +49,11 @@ export const GdprTab = ({ t }: GdprTabProps): JSX.Element => {
       oauthMessageHandlerRef.current = null;
     }
 
-    if (oauthPopupRef.current && !oauthPopupRef.current.closed) {
+    if (
+      oauthPopupRef.current &&
+      !oauthPopupRef.current.closed &&
+      typeof oauthPopupRef.current.close === 'function'
+    ) {
       oauthPopupRef.current.close();
     }
     oauthPopupRef.current = null;

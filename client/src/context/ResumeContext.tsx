@@ -76,7 +76,7 @@ export const useResume = (): ResumeContextType => {
 };
 
 export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element => {
-  const { user } = useAuth();
+  useAuth();
   const [resumes, setResumesState] = useState<Resume[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [currentResume, setCurrentResumeState] = useState<Resume | null>(null);
@@ -497,4 +497,3 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
 };
 
 export default ResumeContext;
-
