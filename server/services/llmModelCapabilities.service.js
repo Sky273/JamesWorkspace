@@ -721,6 +721,70 @@ export function getSupportedParameterDefinitions(provider, model) {
     );
 }
 
+export function getPersistableParameterDefinitions(provider, model) {
+    const providerKey = String(provider || '').trim().toLowerCase();
+    const capability = getModelCapabilities(providerKey, model);
+    const baseDefinitions = Object.fromEntries(
+        Object.entries(PROVIDER_DEFAULT_PARAMETERS[providerKey] || {}).map(([key, definition]) => [key, cloneDefinition(definition)])
+    );
+    const supportedKeys = new Set(Object.keys(baseDefinitions));
+
+    if (Array.isArray(capability?.supportedParameters)) {
+        for (const key of capability.supportedParameters) {
+            supportedKeys.add(key);
+        }
+    }
+
+    if (Array.isArray(capability?.reasoningEfforts) && capability.reasoningEfforts.length > 0) {
+        baseDefinitions.reasoning_effort = createEnumDefinition({
+            key: 'reasoning_effort',
+            label: 'Reasoning effort',
+            options: capability.reasoningEfforts,
+            defaultValue: capability.defaultReasoningEffort || capability.reasoningEfforts[0]
+        });
+        supportedKeys.add('reasoning_effort');
+    }
+
+    if (supportedKeys.has('verbosity') && !baseDefinitions.verbosity) {
+        baseDefinitions.verbosity = createEnumDefinition({
+            key: 'verbosity',
+            label: 'Verbosity',
+            options: ['low', 'medium', 'high'],
+            defaultValue: 'medium'
+        });
+        supportedKeys.add('verbosity');
+    }
+
+    if (providerKey === 'glm' && supportedKeys.has('tool_choice')) {
+        baseDefinitions.tool_choice = createEnumDefinition({
+            key: 'tool_choice',
+            label: 'Tool choice',
+            options: ['auto'],
+            defaultValue: 'auto'
+        });
+        supportedKeys.add('tool_choice');
+    }
+
+    const tokenParameter = capability?.tokenParameter || (providerKey === 'ollama' ? null : 'max_tokens');
+    if (tokenParameter) {
+        const providerCap = capability?.maxOutputTokens;
+        baseDefinitions[tokenParameter] = createIntegerDefinition({
+            key: tokenParameter,
+            label: tokenParameter === 'max_completion_tokens' ? 'Max completion tokens' : 'Max tokens',
+            min: 1,
+            ...(typeof providerCap === 'number' ? { max: providerCap } : {}),
+            defaultValue: typeof providerCap === 'number' ? Math.min(4096, providerCap) : 4096
+        });
+        supportedKeys.add(tokenParameter);
+    }
+
+    return Object.fromEntries(
+        Array.from(supportedKeys)
+            .filter(key => Boolean(baseDefinitions[key]))
+            .map(key => [key, cloneDefinition(baseDefinitions[key])])
+    );
+}
+
 export function clampModelMaxOutputTokens(provider, model, requestedMaxTokens, fallbackMaxTokens = 4096) {
     const capabilities = getModelCapabilities(provider, model);
     const parsedRequestedMaxTokens = Number.isFinite(requestedMaxTokens)

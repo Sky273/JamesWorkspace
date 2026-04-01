@@ -13,6 +13,7 @@ import { getProviderDefaultModel } from '../services/llmConfiguration.service.js
 import { buildLlmAdminMetadataWithOptions, sanitizeLlmModelParameters } from '../services/llmAdminParameters.service.js';
 import { getPromptContract, getPromptDefinition } from '../config/llmGovernance.js';
 import { discoverOllamaModels, validateOllamaModelExists } from '../services/ollamaAdmin.service.js';
+import { validatePersistedLlmSettings } from '../services/llmSettingsValidation.service.js';
 import {
     computeUpdatedPromptVersionState,
     extractPromptTextsFromFrontendSettings,
@@ -294,6 +295,7 @@ router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), valida
                 ollamaModels: ollamaDiscovery?.modelCatalog || []
             });
         }
+        await validatePersistedLlmSettings(updateData, req.user);
         const currentSettingsRecord = await getSettings();
         const previousPromptTexts = extractPromptTextsFromSettingsRecord(currentSettingsRecord || {});
         updateData.promptVersionState = computeUpdatedPromptVersionState({
@@ -321,8 +323,8 @@ router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), valida
         res.json(await decorateSettingsResponse(mapSettingsToFrontend(result)));
     } catch (error) {
         safeLog('error', 'Error updating settings', { error: error.message });
-        return res.status(500).json({
-            error: 'Failed to update settings'
+        return res.status(error.statusCode || 500).json({
+            error: error.statusCode ? error.message : 'Failed to update settings'
         });
     }
 });
@@ -351,6 +353,7 @@ router.post('/', authenticateToken, requireAdmin, validateBody(updateSettingsSch
                 ollamaModels: ollamaDiscovery?.modelCatalog || []
             });
         }
+        await validatePersistedLlmSettings(settingsData, req.user);
         const currentSettingsRecord = await getSettings();
         const previousPromptTexts = extractPromptTextsFromSettingsRecord(currentSettingsRecord || {});
         settingsData.promptVersionState = computeUpdatedPromptVersionState({
@@ -379,8 +382,8 @@ router.post('/', authenticateToken, requireAdmin, validateBody(updateSettingsSch
         res.status(201).json(await decorateSettingsResponse(mapSettingsToFrontend(result)));
     } catch (error) {
         safeLog('error', 'Error creating settings', { error: error.message });
-        return res.status(500).json({
-            error: 'Failed to create settings'
+        return res.status(error.statusCode || 500).json({
+            error: error.statusCode ? error.message : 'Failed to create settings'
         });
     }
 });

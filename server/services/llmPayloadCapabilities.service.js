@@ -1,4 +1,4 @@
-import { clampModelMaxOutputTokens, getModelCapabilities, getSupportedParameterDefinitions } from './llmModelCapabilities.service.js';
+import { clampModelMaxOutputTokens, getModelCapabilities, getPersistableParameterDefinitions, getSupportedParameterDefinitions } from './llmModelCapabilities.service.js';
 
 function isFiniteNumber(value) {
     return typeof value === 'number' && Number.isFinite(value);
@@ -290,6 +290,53 @@ export function normalizeGenerationOptions(provider, model, {
         temperature: normalizedParameters.temperature,
         topP: normalizedParameters.top_p,
         responseFormat: normalizedParameters.response_format
+    };
+}
+
+export function sanitizePersistedGenerationParameters(provider, model, {
+    parameters = {},
+    fallbackMaxTokens = 4096
+} = {}) {
+    const capabilities = getModelCapabilities(provider, model);
+    const definitions = getPersistableParameterDefinitions(provider, model);
+    const inputParameters = buildInputParameterBag({ parameters });
+    const sanitizedParameters = {};
+    const tokenAliases = ['max_tokens', 'max_completion_tokens', 'max_output_tokens'];
+    const tokenParameter = provider === 'ollama' ? null : (capabilities?.tokenParameter || 'max_tokens');
+
+    for (const [key, rawValue] of Object.entries(inputParameters)) {
+        if (rawValue === undefined) {
+            continue;
+        }
+
+        if (tokenAliases.includes(key)) {
+            continue;
+        }
+
+        const definition = definitions[key];
+        if (!definition) {
+            continue;
+        }
+
+        const normalizedValue = normalizeValueByDefinition(definition, rawValue);
+        if (normalizedValue !== undefined) {
+            sanitizedParameters[key] = normalizedValue;
+        }
+    }
+
+    const requestedMaxTokens = getRequestedMaxTokensFromParameters(inputParameters, fallbackMaxTokens);
+    if (tokenParameter && Number.isFinite(requestedMaxTokens)) {
+        const tokenDefinition = definitions[tokenParameter];
+        const normalizedTokenValue = normalizeValueByDefinition(tokenDefinition, requestedMaxTokens);
+        if (normalizedTokenValue !== undefined) {
+            sanitizedParameters[tokenParameter] = normalizedTokenValue;
+        }
+    }
+
+    return {
+        capabilities,
+        tokenParameter,
+        parameters: sanitizedParameters
     };
 }
 

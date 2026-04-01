@@ -8,6 +8,7 @@ import express from 'express';
 import cookieParser from 'cookie-parser';
 import request from 'supertest';
 import { discoverOllamaModels } from '../../services/ollamaAdmin.service.js';
+import { validatePersistedLlmSettings } from '../../services/llmSettingsValidation.service.js';
 
 // Mock constants
 vi.mock('../../config/constants.js', () => ({
@@ -86,6 +87,10 @@ vi.mock('../../services/llmAdminParameters.service.js', () => ({
         llmParameterDefinitions: {}
     })),
     sanitizeLlmModelParameters: vi.fn((value) => value || {})
+}));
+
+vi.mock('../../services/llmSettingsValidation.service.js', () => ({
+    validatePersistedLlmSettings: vi.fn(async () => undefined)
 }));
 
 vi.mock('../../services/ollamaAdmin.service.js', () => ({
@@ -451,6 +456,10 @@ describe('Settings Routes', () => {
                     })
                 })
             }));
+            expect(validatePersistedLlmSettings).toHaveBeenCalledWith(
+                expect.objectContaining({ llmModel: 'gpt-4-turbo' }),
+                expect.objectContaining({ id: 'user-123' })
+            );
         });
 
         it('should return 403 for non-admin', async () => {
@@ -515,9 +524,58 @@ describe('Settings Routes', () => {
             expect(res.status).toBe(400);
             expect(res.body.error).toContain('Selected Ollama model');
         });
+
+        it('rejects settings when provider/model validation call fails', async () => {
+            validatePersistedLlmSettings.mockRejectedValueOnce(Object.assign(
+                new Error('Saved parameters are invalid for deepseek/deepseek-reasoner: upstream error'),
+                { statusCode: 400 }
+            ));
+
+            const res = await request(app)
+                .put('/api/settings/set-1')
+                .set(authHeader)
+                .send({
+                    llmProvider: 'deepseek',
+                    llmModel: 'deepseek-reasoner',
+                    llmModelParameters: {
+                        deepseek: {
+                            'deepseek-reasoner': {
+                                temperature: 0
+                            }
+                        }
+                    }
+                });
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toContain('Saved parameters are invalid');
+        });
     });
 
     describe('POST /api/settings', () => {
+        it('validates persisted provider/model parameters before creating settings', async () => {
+            mockCreateSettings.mockResolvedValue({
+                id: 'set-new',
+                llm_model: 'gpt-4o',
+                llm_provider: 'openai'
+            });
+
+            const res = await request(app)
+                .post('/api/settings')
+                .set(authHeader)
+                .send({
+                    llmProvider: 'openai',
+                    llmModel: 'gpt-4o'
+                });
+
+            expect(res.status).toBe(201);
+            expect(validatePersistedLlmSettings).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    llmProvider: 'openai',
+                    llmModel: 'gpt-4o'
+                }),
+                expect.objectContaining({ id: 'user-123' })
+            );
+        });
         it('should create settings', async () => {
             mockCreateSettings.mockResolvedValue({
                 id: 'set-new',

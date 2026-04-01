@@ -1,6 +1,6 @@
 import { getProviderAvailabilityFlags } from './llmAvailability.service.js';
-import { getSupportedParameterDefinitions } from './llmModelCapabilities.service.js';
-import { normalizeGenerationOptions } from './llmPayloadCapabilities.service.js';
+import { getPersistableParameterDefinitions, getSupportedParameterDefinitions } from './llmModelCapabilities.service.js';
+import { normalizeGenerationOptions, sanitizePersistedGenerationParameters } from './llmPayloadCapabilities.service.js';
 
 const DEFAULT_MAX_OUTPUT_TOKENS = 4096;
 const OLLAMA_GLOBAL_KEY = '__global__';
@@ -145,23 +145,44 @@ export function sanitizeLlmModelParameters(parameters = {}, availability = getPr
                 ? (providerDefinitions[modelKey] || providerDefinitions[OLLAMA_GENERIC_MODEL_KEY])
                 : providerDefinitions[modelKey];
             if (!modelDefinitions) {
-                continue;
+                if (provider !== 'ollama') {
+                    const providerPersistableDefinitions = getPersistableParameterDefinitions(provider, modelKey);
+                    if (Object.keys(providerPersistableDefinitions).length === 0) {
+                        continue;
+                    }
+                } else if (!providerDefinitions[OLLAMA_GENERIC_MODEL_KEY]) {
+                    continue;
+                }
             }
 
             const sanitizedParams = {};
-            for (const paramKey of Object.keys(modelDefinitions)) {
+            const persistableDefinitions = provider === 'ollama'
+                ? (getPersistableParameterDefinitions(provider, modelKey) || providerDefinitions[OLLAMA_GENERIC_MODEL_KEY] || {})
+                : getPersistableParameterDefinitions(provider, modelKey);
+
+            for (const paramKey of Object.keys(rawParams)) {
+                if (!Object.prototype.hasOwnProperty.call(persistableDefinitions, paramKey)
+                    && !['max_tokens', 'max_completion_tokens', 'max_output_tokens'].includes(paramKey)) {
+                    continue;
+                }
+
                 if (!Object.prototype.hasOwnProperty.call(rawParams, paramKey)) {
                     continue;
                 }
 
                 const rawValue = rawParams[paramKey];
-                const normalized = normalizeGenerationOptions(provider, modelKey, {
+                const persisted = sanitizePersistedGenerationParameters(provider, modelKey, {
                     parameters: { [paramKey]: rawValue },
                     fallbackMaxTokens: DEFAULT_MAX_OUTPUT_TOKENS
                 }).parameters;
 
-                if (Object.prototype.hasOwnProperty.call(normalized, paramKey)) {
-                    sanitizedParams[paramKey] = normalized[paramKey];
+                if (['max_tokens', 'max_completion_tokens', 'max_output_tokens'].includes(paramKey)) {
+                    Object.assign(sanitizedParams, persisted);
+                    continue;
+                }
+
+                if (Object.prototype.hasOwnProperty.call(persisted, paramKey)) {
+                    sanitizedParams[paramKey] = persisted[paramKey];
                 }
             }
 

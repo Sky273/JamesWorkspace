@@ -33,6 +33,50 @@ describe('llmAdminParameters.service', () => {
         });
     });
 
+    it('keeps valid persisted sampling parameters even when runtime rules may later ignore them', () => {
+        const sanitized = sanitizeLlmModelParameters({
+            deepseek: {
+                'deepseek-reasoner': {
+                    temperature: 0,
+                    top_p: 1,
+                    max_tokens: 4096
+                }
+            }
+        });
+
+        expect(sanitized).toEqual({
+            deepseek: {
+                'deepseek-reasoner': {
+                    temperature: 0,
+                    top_p: 1,
+                    max_tokens: 4096
+                }
+            }
+        });
+    });
+
+    it('normalizes persisted token aliases without dropping sibling parameters', () => {
+        const sanitized = sanitizeLlmModelParameters({
+            openai: {
+                'gpt-5.4': {
+                    temperature: 0,
+                    top_p: 1,
+                    max_tokens: 2048
+                }
+            }
+        });
+
+        expect(sanitized).toEqual({
+            openai: {
+                'gpt-5.4': {
+                    temperature: 0,
+                    top_p: 1,
+                    max_completion_tokens: 2048
+                }
+            }
+        });
+    });
+
     it('merges persisted defaults and runtime overrides with canonical token normalization', () => {
         const resolved = resolveEffectiveModelParameters({
             settings: {
