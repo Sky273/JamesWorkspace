@@ -44,7 +44,13 @@ export const createUserSchema = z.object({
   Customer: z.string().optional(),
   firm: z.string().optional(),
   Firm: z.string().optional()
-});
+}).refine(
+  (data) => Boolean(
+    [data.firm, data.Firm, data.customer, data.Customer]
+      .some((value) => typeof value === 'string' && value.trim())
+  ),
+  { message: 'Firm is required', path: ['firm'] }
+);
 
 // Mission schemas
 const missionStatusSchema = z.enum(['Active', 'Closed', 'Draft', 'active', 'closed', 'draft']).optional();
@@ -224,8 +230,16 @@ export const updateAdminUserSchema = z.object({
   job_title: z.string().max(255).optional().nullable(),
   phone: z.string().max(50).optional().nullable(),
   firm: z.string().max(255).optional(),
-  customer: z.string().max(255).optional()
-}).strip();
+  Firm: z.string().max(255).optional(),
+  customer: z.string().max(255).optional(),
+  Customer: z.string().max(255).optional()
+}).strip().refine(
+  (data) => Boolean(
+    [data.firm, data.Firm, data.customer, data.Customer]
+      .some((value) => typeof value === 'string' && value.trim())
+  ),
+  { message: 'Firm is required', path: ['firm'] }
+);
 
 export const updateUserProfileSchema = z.object({
   name: z.string().min(1).max(255).optional(),

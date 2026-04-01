@@ -113,6 +113,7 @@ describe('Users Routes', () => {
     describe('POST /api/auth/users', () => {
         it('should create a user', async () => {
             mockFindUserByEmail.mockResolvedValueOnce(null); // no existing user
+            mockFindFirmByName.mockResolvedValueOnce({ id: 'f-1', name: 'Acme Corp' });
             mockCreateAdminUser.mockResolvedValue({
                 id: 'u-new',
                 email: 'new@example.com',
@@ -124,7 +125,7 @@ describe('Users Routes', () => {
             const res = await request(app)
                 .post('/api/auth/users')
                 .set(authHeader)
-                .send({ email: 'new@example.com', password: 'Password123!', name: 'New User' });
+                .send({ email: 'new@example.com', password: 'Password123!', name: 'New User', firm: 'Acme Corp' });
 
             expect(res.status).toBe(201);
             expect(res.body.email).toBe('new@example.com');
@@ -155,10 +156,22 @@ describe('Users Routes', () => {
             const res = await request(app)
                 .post('/api/auth/users')
                 .set(authHeader)
-                .send({ email: 'existing@example.com', password: 'Password123!', name: 'Existing' });
+                .send({ email: 'existing@example.com', password: 'Password123!', name: 'Existing', firm: 'Acme Corp' });
 
             expect(res.status).toBe(409);
             expect(res.body.error).toContain('already exists');
+        });
+
+        it('should return 400 if firm is missing on create', async () => {
+            mockFindUserByEmail.mockResolvedValueOnce(null);
+
+            const res = await request(app)
+                .post('/api/auth/users')
+                .set(authHeader)
+                .send({ email: 'new@example.com', password: 'Password123!', name: 'New User' });
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toContain('Firm selection is required');
         });
 
         it('should create user with firm association', async () => {
@@ -204,12 +217,13 @@ describe('Users Routes', () => {
 
         it('should return 500 on DB error', async () => {
             mockFindUserByEmail.mockResolvedValueOnce(null);
+            mockFindFirmByName.mockResolvedValueOnce({ id: 'f-1', name: 'Acme Corp' });
             mockCreateAdminUser.mockRejectedValue(new Error('DB error'));
 
             const res = await request(app)
                 .post('/api/auth/users')
                 .set(authHeader)
-                .send({ email: 'new@example.com', password: 'Pass123!', name: 'New User' });
+                .send({ email: 'new@example.com', password: 'Pass123!', name: 'New User', firm: 'Acme Corp' });
 
             expect(res.status).toBe(500);
         });
@@ -220,6 +234,7 @@ describe('Users Routes', () => {
             mockFindUserById.mockResolvedValueOnce({
                 id: 'u-1', email: 'old@example.com', name: 'Old Name', role: 'user', status: 'active'
             });
+            mockFindFirmByName.mockResolvedValueOnce({ id: 'f-1', name: 'Acme Corp' });
             mockUpdateAdminUser.mockResolvedValue({
                 id: 'u-1', email: 'old@example.com', name: 'New Name', role: 'user', status: 'active'
             });
@@ -227,7 +242,7 @@ describe('Users Routes', () => {
             const res = await request(app)
                 .put('/api/auth/users/u-1')
                 .set(authHeader)
-                .send({ name: 'New Name' });
+                .send({ name: 'New Name', firm: 'Acme Corp' });
 
             expect(res.status).toBe(200);
             expect(res.body.name).toBe('New Name');
@@ -262,7 +277,7 @@ describe('Users Routes', () => {
             expect(res.status).toBe(404);
         });
 
-        it('should return 400 if no fields to update', async () => {
+        it('should return 400 if firm is missing on update', async () => {
             mockFindUserById.mockResolvedValueOnce({
                 id: 'u-1', email: 'test@example.com', name: 'Test', role: 'user', status: 'active'
             });
@@ -270,10 +285,25 @@ describe('Users Routes', () => {
             const res = await request(app)
                 .put('/api/auth/users/u-1')
                 .set(authHeader)
-                .send({});
+                .send({ name: 'New Name' });
 
             expect(res.status).toBe(400);
-            expect(res.body.error).toContain('No fields');
+            expect(res.body.error).toContain('Firm selection is required');
+        });
+
+        it('should return 400 if selected firm does not exist on update', async () => {
+            mockFindUserById.mockResolvedValueOnce({
+                id: 'u-1', email: 'test@example.com', name: 'Test', role: 'user', status: 'active'
+            });
+            mockFindFirmByName.mockResolvedValueOnce(null);
+
+            const res = await request(app)
+                .put('/api/auth/users/u-1')
+                .set(authHeader)
+                .send({ firm: 'Unknown Firm' });
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toContain('not found');
         });
     });
 

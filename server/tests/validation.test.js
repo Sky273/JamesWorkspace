@@ -129,7 +129,8 @@ describe('Zod Schemas', () => {
         email: 'admin@example.com',
         password: 'securepass123',
         name: 'Admin User',
-        status: 'Active'
+        status: 'Active',
+        firm: 'Acme Corp'
       };
       expect(() => createUserSchema.parse(validData)).not.toThrow();
     });
@@ -150,7 +151,8 @@ describe('Zod Schemas', () => {
           email: 'test@example.com',
           password: 'password123',
           name: 'Test User',
-          status
+          status,
+          firm: 'Acme Corp'
         };
         expect(() => createUserSchema.parse(data)).not.toThrow();
       });

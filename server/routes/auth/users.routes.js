@@ -37,13 +37,19 @@ function normalizeAdminUserPayload(payload = {}) {
     };
 }
 
+function resolveRequiredFirmName(normalizedPayload = {}) {
+    const firmName = normalizedPayload.firm || normalizedPayload.customer;
+    return typeof firmName === 'string' ? firmName.trim() : '';
+}
+
 // POST /api/auth/users - Create user (admin only)
 router.post('/users', authenticateToken, requireAdmin, validateBody(createUserSchema), async (req, res) => {
     try {
         const normalizedPayload = normalizeAdminUserPayload(req.body);
-        const { email, password, name, jobTitle, phone, status, firm, customer, role } = normalizedPayload;
+        const { email, password, name, jobTitle, phone, status, role } = normalizedPayload;
         const normalizedEmail = email.toLowerCase();
         const metadata = getRequestMetadata(req);
+        const firmName = resolveRequiredFirmName(normalizedPayload);
 
         const existingUser = await usersService.findUserByEmail(normalizedEmail);
 
@@ -66,18 +72,20 @@ router.post('/users', authenticateToken, requireAdmin, validateBody(createUserSc
             status: (status || 'active').toLowerCase()
         };
 
-        const firmName = firm || customer;
-        if (firmName) {
-            const foundFirm = await usersService.findFirmByName(firmName);
-            
-            if (foundFirm) {
-                userData.firm_id = foundFirm.id;
-                userData.firm_name = foundFirm.name;
-            } else {
-                return res.status(400).json({ 
-                    error: `Firm '${firmName}' not found` 
-                });
-            }
+        if (!firmName) {
+            return res.status(400).json({
+                error: 'Firm selection is required'
+            });
+        }
+
+        const foundFirm = await usersService.findFirmByName(firmName);
+        if (foundFirm) {
+            userData.firm_id = foundFirm.id;
+            userData.firm_name = foundFirm.name;
+        } else {
+            return res.status(400).json({
+                error: `Firm '${firmName}' not found`
+            });
         }
 
         const newUser = await usersService.createAdminUser(userData);
@@ -119,6 +127,7 @@ router.put('/users/:id', authenticateToken, requireAdmin, validateParams('id'), 
         }
 
         const normalizedPayload = normalizeAdminUserPayload(req.body);
+        const firmName = resolveRequiredFirmName(normalizedPayload);
         const name = normalizedPayload.name;
         const email = normalizedPayload.email;
         const status = normalizedPayload.status;
@@ -138,18 +147,20 @@ router.put('/users/:id', authenticateToken, requireAdmin, validateParams('id'), 
             updateData.password = await bcrypt.hash(req.body.password, SALT_ROUNDS);
         }
         
-        if (normalizedPayload.firm || normalizedPayload.customer) {
-            const firmName = normalizedPayload.firm || normalizedPayload.customer;
-            const foundFirm = await usersService.findFirmByName(firmName);
-            
-            if (foundFirm) {
-                updateData.firm_id = foundFirm.id;
-                updateData.firm_name = foundFirm.name;
-            } else {
-                return res.status(400).json({ 
-                    error: `Firm '${firmName}' not found` 
-                });
-            }
+        if (!firmName) {
+            return res.status(400).json({
+                error: 'Firm selection is required'
+            });
+        }
+
+        const foundFirm = await usersService.findFirmByName(firmName);
+        if (foundFirm) {
+            updateData.firm_id = foundFirm.id;
+            updateData.firm_name = foundFirm.name;
+        } else {
+            return res.status(400).json({
+                error: `Firm '${firmName}' not found`
+            });
         }
 
         if (Object.keys(updateData).length === 0) {
