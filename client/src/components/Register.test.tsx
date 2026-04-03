@@ -108,7 +108,7 @@ describe('Register', () => {
         password: 'password123',
       });
     });
-    expect(mockNavigate).toHaveBeenCalledWith('/signin');
+    expect(mockNavigate).toHaveBeenCalledWith('/signin?success=registered_pending');
   });
 
   it('shows backend error when register fails', async () => {

@@ -1,4 +1,5 @@
 import path from 'path';
+import { pathToFileURL } from 'url';
 import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
@@ -14,7 +15,7 @@ function getStandardFontDataUrl() {
     const pdfjsRoot = path.dirname(pdfjsPackagePath);
     const standardFontsPath = path.join(pdfjsRoot, 'standard_fonts');
 
-    cachedStandardFontDataUrl = `${standardFontsPath}${path.sep}`;
+    cachedStandardFontDataUrl = pathToFileURL(`${standardFontsPath}${path.sep}`).href;
     return cachedStandardFontDataUrl;
 }
 

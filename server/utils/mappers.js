@@ -3,7 +3,13 @@
  * Eliminates duplication of mapping logic across route files
  */
 
-import { DEFAULT_ANALYSIS_PROMPT, DEFAULT_IMPROVEMENT_PROMPT, DEFAULT_MATCH_ANALYSIS_PROMPT, DEFAULT_ADAPTATION_PROMPT } from '../config/prompts.backend.js';
+import {
+    DEFAULT_ANALYSIS_PROMPT,
+    DEFAULT_IMPROVEMENT_PROMPT,
+    DEFAULT_MATCH_ANALYSIS_PROMPT,
+    DEFAULT_ADAPTATION_PROMPT,
+    DEFAULT_PRE_ANALYSIS_PROMPT
+} from '../config/prompts.backend.js';
 
 /**
  * Map a PostgreSQL llm_settings row to frontend format
@@ -23,6 +29,8 @@ export function mapSettingsToFrontend(row) {
         cvMode: row.cv_mode || 'nominative',
         chatbotEnabled: row.chatbot_enabled || 'on',
         webglEnabled: row.webgl_enabled || 'on',
+        preAnalysisEnabled: row.pre_analysis_enabled ?? false,
+        'Pre Analysis Prompt': row.pre_analysis_prompt || DEFAULT_PRE_ANALYSIS_PROMPT,
         'Analysis Prompt': row.analysis_prompt || DEFAULT_ANALYSIS_PROMPT,
         'Improvement Prompt': row.improvement_prompt || DEFAULT_IMPROVEMENT_PROMPT,
         'Match Analysis Prompt': row.match_analysis_prompt || DEFAULT_MATCH_ANALYSIS_PROMPT,
@@ -130,6 +138,8 @@ export function mapSettingsFromFrontend(data) {
         cv_mode: data.cvMode,
         chatbot_enabled: data.chatbotEnabled,
         webgl_enabled: data.webglEnabled,
+        pre_analysis_enabled: data.preAnalysisEnabled,
+        pre_analysis_prompt: data['Pre Analysis Prompt'],
         analysis_prompt: data['Analysis Prompt'],
         improvement_prompt: data['Improvement Prompt'],
         match_analysis_prompt: data['Match Analysis Prompt'],

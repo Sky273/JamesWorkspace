@@ -147,12 +147,20 @@ router.get('/google/callback', async (req, res) => {
             if (!stateData.userId) {
                 return res.redirect('/settings?error=not_authenticated');
             }
-            
-            await googleAuthService.linkGoogleAccount(
+
+            const currentUser = await authService.findUserWithFirmById(stateData.userId);
+            if (!currentUser || currentUser.status === 'inactive') {
+                return res.redirect('/settings?error=not_authenticated');
+            }
+
+            const linked = await googleAuthService.linkGoogleAccount(
                 stateData.userId,
                 googleUser.googleId,
                 googleUser.email
             );
+            if (!linked) {
+                return res.redirect('/settings?error=not_authenticated');
+            }
             
             securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.AUTH_SUCCESS, {
                 ...metadata,
@@ -183,14 +191,22 @@ router.get('/google/callback', async (req, res) => {
         
         if (!user) {
             if (stateData.action === 'register') {
-                securityLog(LOG_LEVELS.WARNING, SECURITY_EVENTS.AUTH_BLOCKED, {
+                const createdUser = await authService.registerGoogleUser({
+                    email: googleUser.email,
+                    name: googleUser.name,
+                    googleId: googleUser.googleId,
+                    googleEmail: googleUser.email
+                });
+
+                securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.USER_CREATED, {
                     ...metadata,
                     email: googleUser.email,
-                    action: 'GOOGLE_REGISTER_BLOCKED',
-                    message: 'Google self-registration blocked because firm assignment is required',
-                    metadata: { googleId: googleUser.googleId, reason: 'firm_assignment_required' }
+                    userId: createdUser.id,
+                    action: 'GOOGLE_REGISTER_SUCCESS',
+                    message: 'Google self-registration completed with default firm assignment',
+                    metadata: { googleId: googleUser.googleId, status: createdUser.status }
                 });
-                return res.redirect('/register?error=firm_assignment_required');
+                return res.redirect('/signin?success=registered_pending');
             } else {
                 securityLog(LOG_LEVELS.WARNING, SECURITY_EVENTS.AUTH_FAILURE, {
                     ...metadata,

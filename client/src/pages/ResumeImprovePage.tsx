@@ -145,21 +145,20 @@ const ResumeImprovePage = (): JSX.Element => {
       
       const response = await fetchWithAuth(`/api/resumes/${currentResume.id}/ai-modify`, authOptions, FRONTEND_LLM_AI_MODIFICATION_TIMEOUT_MS);
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Failed to modify resume' }));
-        throw new Error(errorData.error || 'Failed to modify resume with AI');
+        throw new Error('Failed to modify resume with AI');
       }
 
       const { modifiedContent, message } = await response.json();
       if (editorRef.current && modifiedContent) {
         editorRef.current.setContent(modifiedContent);
       }
-      return message || 'CV modifié avec succès par l\'IA';
+      return message || 'CV modifie avec succes par l IA';
     } catch (error) {
       logger.error('Failed to modify resume with AI:', error);
-      toast.error(error instanceof Error ? error.message : 'Échec de la modification par IA');
+      toast.error(t('resume.improveError'));
       throw error;
     }
-  }, [currentResume, localResume]);
+  }, [currentResume, localResume, t]);
 
   const handleVersionRestored = useCallback(async (newVersion: number) => {
     if (!currentResume) return;
@@ -174,7 +173,7 @@ const ResumeImprovePage = (): JSX.Element => {
         if (editorRef.current && restoredText) {
           editorRef.current.setContent(restoredText);
         }
-        toast.success(`Version ${newVersion} chargée`);
+        toast.success(`Version ${newVersion} chargee`);
       }
     } catch (error) {
       logger.error('Failed to reload after version restore:', error);

@@ -12,6 +12,7 @@ import {
 import { safeLog } from '../utils/logger.backend.js';
 
 export const GOVERNED_PROMPT_KEYS = Object.freeze({
+    'Pre Analysis Prompt': 'DEFAULT_PRE_ANALYSIS_PROMPT',
     'Analysis Prompt': 'DEFAULT_ANALYSIS_PROMPT',
     'Improvement Prompt': 'DEFAULT_IMPROVEMENT_PROMPT',
     'Match Analysis Prompt': 'DEFAULT_MATCH_ANALYSIS_PROMPT',
@@ -104,6 +105,8 @@ export function mergeCanonicalLlmSettings(settingsData, canonicalLlmSettings = {
         cvMode: canonicalLlmSettings.cvMode ?? settingsData.cvMode,
         chatbotEnabled: canonicalLlmSettings.chatbotEnabled ?? settingsData.chatbotEnabled,
         webglEnabled: canonicalLlmSettings.webglEnabled ?? settingsData.webglEnabled,
+        preAnalysisEnabled: canonicalLlmSettings.preAnalysisEnabled ?? settingsData.preAnalysisEnabled,
+        'Pre Analysis Prompt': canonicalLlmSettings['Pre Analysis Prompt'] ?? settingsData['Pre Analysis Prompt'],
         'Analysis Prompt': canonicalLlmSettings['Analysis Prompt'] ?? settingsData['Analysis Prompt'],
         'Improvement Prompt': canonicalLlmSettings['Improvement Prompt'] ?? settingsData['Improvement Prompt'],
         'Match Analysis Prompt': canonicalLlmSettings['Match Analysis Prompt'] ?? settingsData['Match Analysis Prompt'],
@@ -143,18 +146,24 @@ export async function prepareSettingsMutationPayload(settingsData, { getProvider
     let ollamaDiscovery = null;
 
     if (preparedSettings.llmProvider === 'ollama') {
-        if (!String(preparedSettings.llmModel || '').trim()) {
-            const error = new Error('An Ollama default model must be selected.');
-            error.statusCode = 400;
-            throw error;
-        }
-
-        const validation = await validateOllamaModelExists(preparedSettings.ollamaBaseUrl, preparedSettings.llmModel);
-        ollamaDiscovery = validation.discovery;
-        if (!validation.exists) {
-            const error = new Error('Selected Ollama model is not available on the configured instance.');
-            error.statusCode = 400;
-            throw error;
+        const selectedOllamaModel = String(preparedSettings.llmModel || '').trim();
+        if (selectedOllamaModel) {
+            try {
+                const validation = await validateOllamaModelExists(preparedSettings.ollamaBaseUrl, selectedOllamaModel);
+                ollamaDiscovery = validation.discovery;
+                if (!validation.exists) {
+                    safeLog('warn', 'Selected Ollama model is not currently available on the configured instance; persisting settings anyway', {
+                        baseUrl: preparedSettings.ollamaBaseUrl,
+                        model: selectedOllamaModel
+                    });
+                }
+            } catch (error) {
+                safeLog('warn', 'Failed to validate Ollama model during settings save; persisting settings anyway', {
+                    baseUrl: preparedSettings.ollamaBaseUrl,
+                    model: selectedOllamaModel,
+                    error: error.message
+                });
+            }
         }
     }
 

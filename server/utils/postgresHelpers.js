@@ -98,6 +98,39 @@ async function queryWithTimeout(sql, params, timeout = 30000) {
 }
 
 /**
+ * Execute an explicitly reviewed raw SELECT query.
+ * This helper exists for complex joins/aggregations that cannot be expressed
+ * with the generic select helper. Callers must provide a short context label.
+ * @param {string} sql
+ * @param {Array} params
+ * @param {Object} options
+ * @param {string} options.context
+ * @param {number} timeout
+ * @returns {Promise<Array>}
+ */
+export async function selectRawWithTimeout(sql, params = [], { context } = {}, timeout = 30000) {
+    if (!sql || typeof sql !== 'string') {
+        throw new Error('Raw SQL query must be a non-empty string');
+    }
+
+    if (!context || typeof context !== 'string') {
+        throw new Error('Raw SQL context is required');
+    }
+
+    try {
+        const result = await queryWithTimeout(sql, params, timeout);
+        return result.rows;
+    } catch (error) {
+        safeLog('error', 'selectRawWithTimeout failed', {
+            context,
+            error: error.message,
+            timeout
+        });
+        throw error;
+    }
+}
+
+/**
  * Validate column names (basic validation - alphanumeric and underscore only)
  * @param {Array<string>} columns - Column names to validate
  * @throws {Error} If any column name is invalid
@@ -141,20 +174,10 @@ function validateColumnNames(columns) {
  * @returns {Promise<Array>} Array of rows
  */
 export async function selectWithTimeout(table, options = {}, timeout = 30000) {
-    // Support raw queries for complex aggregations
     if (options.rawQuery) {
-        try {
-            const result = await queryWithTimeout(options.rawQuery, options.rawParams || [], timeout);
-            return result.rows;
-        } catch (error) {
-            safeLog('error', 'selectWithTimeout (raw) failed', {
-                error: error.message,
-                timeout
-            });
-            throw error;
-        }
+        throw new Error('Raw SQL is not allowed via selectWithTimeout; use selectRawWithTimeout');
     }
-    
+
     // Validate table and column names to prevent SQL injection
     const validatedTable = validateTableName(table);
     

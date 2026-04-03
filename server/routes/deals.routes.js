@@ -223,10 +223,27 @@ router.put('/:id', authenticateToken, validateParams('id'), userRateLimit(), val
         }
 
         const normalizedDeal = normalizeDealPayload(req.body);
+        const existingDeal = await getDealById(id);
+        if (!existingDeal) {
+            return res.status(404).json({ error: 'Deal not found' });
+        }
+
+        const hasClientUpdate =
+            Object.prototype.hasOwnProperty.call(req.body, 'client_id') ||
+            Object.prototype.hasOwnProperty.call(req.body, 'clientId');
+        const hasContactUpdate =
+            Object.prototype.hasOwnProperty.call(req.body, 'contact_id') ||
+            Object.prototype.hasOwnProperty.call(req.body, 'contactId');
+        const effectiveClientId = hasClientUpdate
+            ? (normalizedDeal.client_id && normalizedDeal.client_id.trim() !== '' ? normalizedDeal.client_id : null)
+            : (existingDeal.client_id || null);
+        const effectiveContactId = hasContactUpdate
+            ? (normalizedDeal.contact_id && normalizedDeal.contact_id.trim() !== '' ? normalizedDeal.contact_id : null)
+            : (existingDeal.contact_id || null);
 
         // If client_id is being updated, verify it belongs to the same firm
-        if (normalizedDeal.client_id) {
-            const clientFirmId = await getClientFirmId(normalizedDeal.client_id);
+        if (effectiveClientId) {
+            const clientFirmId = await getClientFirmId(effectiveClientId);
             if (!clientFirmId) {
                 return res.status(400).json({ error: 'Client not found' });
             }
@@ -235,15 +252,15 @@ router.put('/:id', authenticateToken, validateParams('id'), userRateLimit(), val
             }
         }
 
-        if (normalizedDeal.contact_id) {
-            const contact = await getContactOwnership(normalizedDeal.contact_id);
+        if (effectiveContactId) {
+            const contact = await getContactOwnership(effectiveContactId);
             if (!contact) {
                 return res.status(400).json({ error: 'Contact not found' });
             }
             if (contact.firm_id !== access.firmId) {
                 return res.status(403).json({ error: 'Contact belongs to different firm' });
             }
-            if (normalizedDeal.client_id && contact.client_id !== normalizedDeal.client_id) {
+            if (effectiveClientId && contact.client_id !== effectiveClientId) {
                 return res.status(400).json({ error: 'Contact does not belong to the provided client' });
             }
         }

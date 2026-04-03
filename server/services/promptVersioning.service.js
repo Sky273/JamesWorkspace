@@ -2,6 +2,10 @@ import crypto from 'crypto';
 import { getPromptContract, getPromptDefinition } from '../config/llmGovernance.js';
 
 export const PROMPT_VERSION_FIELD_MAP = Object.freeze({
+    'Pre Analysis Prompt': Object.freeze({
+        promptKey: 'DEFAULT_PRE_ANALYSIS_PROMPT',
+        column: 'pre_analysis_prompt'
+    }),
     'Analysis Prompt': Object.freeze({
         promptKey: 'DEFAULT_ANALYSIS_PROMPT',
         column: 'analysis_prompt'

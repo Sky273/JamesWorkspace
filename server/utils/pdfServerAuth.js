@@ -1,3 +1,5 @@
+import crypto from 'crypto';
+
 export const PDF_SERVER_AUTH_HEADER = 'x-internal-service-token';
 
 const DEV_TEST_FALLBACK_TOKEN = 'dev-test-pdf-server-internal-token-32chars';
@@ -5,16 +7,19 @@ const DERIVATION_SALT = 'resumeconverter-pdf-server-internal-token-v1';
 const isProduction = process.env.NODE_ENV === 'production';
 const configuredToken = process.env.PDF_SERVER_INTERNAL_TOKEN;
 
-function deriveProductionFallbackToken() {
-    const jwtSecret = process.env.JWT_SECRET;
-    const csrfSecret = process.env.CSRF_SECRET;
-
+export function derivePdfServerFallbackToken(jwtSecret = process.env.JWT_SECRET, csrfSecret = process.env.CSRF_SECRET) {
     if (!jwtSecret || jwtSecret.length < 32 || !csrfSecret || csrfSecret.length < 32) {
         return null;
     }
 
-    const seed = Buffer.from(`${jwtSecret}:${csrfSecret}:${DERIVATION_SALT}`).toString('base64url');
-    return seed.slice(0, 48);
+    return crypto
+        .createHash('sha256')
+        .update(jwtSecret, 'utf8')
+        .update(':', 'utf8')
+        .update(csrfSecret, 'utf8')
+        .update(':', 'utf8')
+        .update(DERIVATION_SALT, 'utf8')
+        .digest('base64url');
 }
 
 function resolvePdfServerInternalToken() {
@@ -27,7 +32,7 @@ function resolvePdfServerInternalToken() {
         return DEV_TEST_FALLBACK_TOKEN;
     }
 
-    const derivedToken = deriveProductionFallbackToken();
+    const derivedToken = derivePdfServerFallbackToken();
     if (derivedToken && derivedToken.length >= 32) {
         process.env.PDF_SERVER_INTERNAL_TOKEN = derivedToken;
         return derivedToken;

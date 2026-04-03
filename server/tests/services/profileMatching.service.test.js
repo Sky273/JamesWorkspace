@@ -18,6 +18,7 @@ vi.mock('../../utils/logger.backend.js', () => ({
 
 // Mock postgres helpers
 vi.mock('../../utils/postgresHelpers.js', () => ({
+    selectRawWithTimeout: vi.fn(),
     selectWithTimeout: vi.fn(),
     findWithTimeout: vi.fn(),
     updateWithTimeout: vi.fn()
@@ -51,7 +52,7 @@ vi.mock('../../config/prompts.backend.js', () => ({
 }));
 
 // Import mocked modules
-import { selectWithTimeout, findWithTimeout, updateWithTimeout } from '../../utils/postgresHelpers.js';
+import { selectRawWithTimeout, findWithTimeout, updateWithTimeout } from '../../utils/postgresHelpers.js';
 import { callBusinessChatCompletion } from '../../services/llmProvider.service.js';
 import { getLLMSettings } from '../../services/settings.service.js';
 import metrics from '../../services/metrics.service.js';
@@ -199,7 +200,7 @@ describe('Profile Matching Service', () => {
     describe('findMatchingProfiles', () => {
         beforeEach(() => {
             findWithTimeout.mockResolvedValue(mockMissionRecord);
-            selectWithTimeout.mockResolvedValue(mockResumeRecords);
+            selectRawWithTimeout.mockResolvedValue(mockResumeRecords);
             callBusinessChatCompletion.mockResolvedValue(mockLLMScoringResponse);
         });
 
@@ -267,7 +268,7 @@ describe('Profile Matching Service', () => {
                 ...mockMissionRecord,
                 keywords: null
             });
-            selectWithTimeout.mockResolvedValueOnce(mockResumeRecords);
+            selectRawWithTimeout.mockResolvedValueOnce(mockResumeRecords);
             callBusinessChatCompletion
                 .mockResolvedValueOnce({
                     choices: [{
@@ -385,21 +386,22 @@ describe('Profile Matching Service', () => {
         it('should filter resumes by firm_id when a firm is provided', async () => {
             await findMatchingProfiles('mission-1', {
                 limit: 10,
-                firm: 'firm-1'
+                firmId: 'firm-1'
             });
 
-            expect(selectWithTimeout).toHaveBeenCalledWith('resumes', expect.objectContaining({
-                rawQuery: expect.stringContaining('r.firm_id = $1'),
-                rawParams: ['firm-1']
-            }));
+            expect(selectRawWithTimeout).toHaveBeenCalledWith(
+                expect.stringContaining('r.firm_id = $1'),
+                ['firm-1'],
+                expect.objectContaining({ context: 'profileMatching.findMatchingProfiles' })
+            );
         });
 
         it('should return an empty result without LLM failure when no resumes match filters', async () => {
-            selectWithTimeout.mockResolvedValue([]);
+            selectRawWithTimeout.mockResolvedValue([]);
 
             const result = await findMatchingProfiles('mission-1', {
                 limit: 10,
-                firm: 'firm-1'
+                firmId: 'firm-1'
             });
 
             expect(result.totalResumesScanned).toBe(0);
@@ -440,7 +442,7 @@ describe('Profile Matching Service', () => {
     describe('LLM Batch Scoring', () => {
         beforeEach(() => {
             findWithTimeout.mockResolvedValue(mockMissionRecord);
-            selectWithTimeout.mockResolvedValue(mockResumeRecords);
+            selectRawWithTimeout.mockResolvedValue(mockResumeRecords);
         });
 
         it('should process profiles in batches', async () => {
@@ -451,7 +453,7 @@ describe('Profile Matching Service', () => {
                 name: `Candidate ${i}`
             }));
             
-            selectWithTimeout.mockResolvedValue(manyResumes);
+            selectRawWithTimeout.mockResolvedValue(manyResumes);
             
             // Mock responses for multiple batches
             callBusinessChatCompletion.mockResolvedValue({
@@ -489,7 +491,7 @@ describe('Profile Matching Service', () => {
                 soft_skills: JSON.stringify(['Communication'])
             }));
 
-            selectWithTimeout.mockResolvedValue(manyResumes);
+            selectRawWithTimeout.mockResolvedValue(manyResumes);
             callBusinessChatCompletion.mockResolvedValue({
                 choices: [{
                     message: {
@@ -527,7 +529,7 @@ describe('Profile Matching Service', () => {
                 }));
 
                 findWithTimeout.mockResolvedValue(mockMissionRecord);
-                selectWithTimeout.mockResolvedValue(manyResumes);
+                selectRawWithTimeout.mockResolvedValue(manyResumes);
                 callBusinessChatCompletion.mockResolvedValue({
                     choices: [{
                         message: {
@@ -597,7 +599,7 @@ describe('Profile Matching Service', () => {
                 name: `Candidate ${i}`
             }));
 
-            selectWithTimeout.mockResolvedValue(sixResumes);
+            selectRawWithTimeout.mockResolvedValue(sixResumes);
 
             callBusinessChatCompletion
                 .mockResolvedValueOnce({
@@ -653,7 +655,7 @@ describe('Profile Matching Service', () => {
             }));
 
             getLLMSettings.mockResolvedValue({ llmModel: 'deepseek-reasoner', llmProvider: 'deepseek' });
-            selectWithTimeout.mockResolvedValue(fourResumes);
+            selectRawWithTimeout.mockResolvedValue(fourResumes);
 
             callBusinessChatCompletion
                 .mockRejectedValueOnce(new Error('DeepSeek response truncated due to token limit'))
@@ -697,7 +699,7 @@ describe('Profile Matching Service', () => {
                 name: `Candidate ${i}`
             }));
 
-            selectWithTimeout.mockResolvedValue(manyResumes);
+            selectRawWithTimeout.mockResolvedValue(manyResumes);
             callBusinessChatCompletion
                 .mockResolvedValueOnce({
                     choices: [{

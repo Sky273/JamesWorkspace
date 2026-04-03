@@ -335,10 +335,23 @@ describe('Deals Routes - GET /api/deals/:id', () => {
     });
 
     it('should update deal with camelCase payload', async () => {
+        mockGetDealById.mockReset();
+        mockGetClientFirmId.mockReset();
+        mockGetContactOwnership.mockReset();
         mockGetDealFirmId.mockResolvedValueOnce('firm-123');
         mockIsUserAdmin.mockReturnValue(false);
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
+        mockGetDealById.mockResolvedValueOnce({
+            id: 'deal-123',
+            client_id: 'client-123',
+            contact_id: 'contact-123',
+            firm_id: 'firm-123'
+        });
         mockGetClientFirmId.mockResolvedValueOnce('firm-123');
+        mockGetContactOwnership.mockResolvedValueOnce({
+            client_id: '123e4567-e89b-12d3-a456-426614174000',
+            firm_id: 'firm-123'
+        });
         mockUpdateDeal.mockResolvedValueOnce({
             id: 'deal-123',
             title: 'Camel Updated Deal',
@@ -609,9 +622,23 @@ describe('Deals Routes - PUT /api/deals/:id', () => {
     });
 
     it('should update deal for authorized user', async () => {
+        mockGetDealById.mockReset();
+        mockGetClientFirmId.mockReset();
+        mockGetContactOwnership.mockReset();
         mockGetDealFirmId.mockResolvedValueOnce('firm-123');
         mockIsUserAdmin.mockReturnValue(false);
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
+        mockGetDealById.mockResolvedValueOnce({
+            id: 'deal-123',
+            client_id: 'client-123',
+            contact_id: 'contact-123',
+            firm_id: 'firm-123'
+        });
+        mockGetClientFirmId.mockResolvedValueOnce('firm-123');
+        mockGetContactOwnership.mockResolvedValueOnce({
+            client_id: 'client-123',
+            firm_id: 'firm-123'
+        });
         mockUpdateDeal.mockResolvedValueOnce({
             id: 'deal-123',
             title: 'Updated Title',
@@ -629,9 +656,19 @@ describe('Deals Routes - PUT /api/deals/:id', () => {
     });
 
     it('should reject update when contact belongs to another firm', async () => {
+        mockGetDealById.mockReset();
+        mockGetClientFirmId.mockReset();
+        mockGetContactOwnership.mockReset();
         mockGetDealFirmId.mockResolvedValueOnce('firm-123');
         mockIsUserAdmin.mockReturnValue(false);
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
+        mockGetDealById.mockResolvedValueOnce({
+            id: 'deal-123',
+            client_id: 'client-123',
+            contact_id: 'contact-123',
+            firm_id: 'firm-123'
+        });
+        mockGetClientFirmId.mockResolvedValueOnce('firm-123');
         mockGetContactOwnership.mockResolvedValueOnce({
             client_id: 'client-123',
             firm_id: 'firm-other'
@@ -644,6 +681,35 @@ describe('Deals Routes - PUT /api/deals/:id', () => {
 
         expect(res.status).toBe(403);
         expect(res.body.error).toBe('Contact belongs to different firm');
+        expect(mockUpdateDeal).not.toHaveBeenCalled();
+    });
+
+    it('should reject update when changing client leaves existing contact inconsistent', async () => {
+        mockGetDealById.mockReset();
+        mockGetClientFirmId.mockReset();
+        mockGetContactOwnership.mockReset();
+        mockGetDealFirmId.mockResolvedValueOnce('firm-123');
+        mockIsUserAdmin.mockReturnValue(false);
+        mockGetUserFirmId.mockResolvedValueOnce('firm-123');
+        mockGetDealById.mockResolvedValue({
+            id: 'deal-123',
+            client_id: 'client-123',
+            contact_id: 'contact-123',
+            firm_id: 'firm-123'
+        });
+        mockGetClientFirmId.mockResolvedValue('firm-123');
+        mockGetContactOwnership.mockResolvedValue({
+            client_id: 'client-other',
+            firm_id: 'firm-123'
+        });
+
+        const res = await request(app)
+            .put('/api/deals/deal-123')
+            .set('Authorization', 'Bearer valid-token')
+            .send({ clientId: 'client-new' });
+
+        expect(res.status).toBe(400);
+        expect(res.body.error).toBe('Contact does not belong to the provided client');
         expect(mockUpdateDeal).not.toHaveBeenCalled();
     });
 

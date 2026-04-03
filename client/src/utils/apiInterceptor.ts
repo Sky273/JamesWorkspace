@@ -7,6 +7,12 @@
  */
 
 import logger from './logger.frontend';
+import {
+  createAuthOptions as buildAuthOptions,
+  createAuthOptionsWithCsrf as buildAuthOptionsWithCsrf,
+  fetchWithCsrfRetry as fetchWithCsrfRetryInternal,
+} from './apiInterceptor.authOptions';
+import { fetchWithTimeout as fetchWithTimeoutInternal } from './apiInterceptor.fetch';
 
 // Re-export types, error classes, and constants so existing imports don't break
 export {
@@ -24,60 +30,25 @@ export {
   fetchCsrfToken,
   clearCsrfToken,
 } from './csrfManager';
+export { getResponseErrorMessage } from './apiInterceptor.responses';
 
 // Import what we need internally
 import { SessionRedirectError, isAuthErrorMessage } from './auth.types';
 import type { SessionExpiredHandler, FetchOptions } from './auth.types';
 import { getCsrfToken, refreshCsrfToken, resetCsrfState, isCsrfError } from './csrfManager';
 import {
+  REQUEST_TIMEOUT_MESSAGE,
+  isSessionForbiddenError,
+  parseForbiddenResponse,
+  toTimeoutError,
+  toTimeoutUserError,
+} from './apiInterceptor.responses';
+import {
   isSessionRedirectInProgress,
   resetSessionRedirect,
   setSessionExpiredHandler as setRedirectHandler,
   triggerSessionExpiry,
 } from './sessionRedirect';
-
-interface MergedAbortSignalResult {
-  signal?: AbortSignal;
-  cleanup: () => void;
-}
-
-function mergeAbortSignals(...signals: Array<AbortSignal | null | undefined>): MergedAbortSignalResult {
-  const activeSignals = signals.filter((signal): signal is AbortSignal => Boolean(signal));
-  if (activeSignals.length === 0) {
-    return {
-      signal: undefined,
-      cleanup: () => {},
-    };
-  }
-
-  const controller = new AbortController();
-  const cleanupCallbacks: Array<() => void> = [];
-
-  const cleanup = () => {
-    while (cleanupCallbacks.length > 0) {
-      const callback = cleanupCallbacks.pop();
-      callback?.();
-    }
-  };
-
-  const abort = () => {
-    cleanup();
-    if (!controller.signal.aborted) {
-      controller.abort();
-    }
-  };
-
-  for (const signal of activeSignals) {
-    if (signal.aborted) {
-      abort();
-      return { signal: controller.signal, cleanup };
-    }
-    signal.addEventListener('abort', abort, { once: true });
-    cleanupCallbacks.push(() => signal.removeEventListener('abort', abort));
-  }
-
-  return { signal: controller.signal, cleanup };
-}
 
 // ============================================
 // SESSION STATE
@@ -124,93 +95,19 @@ export const setSessionExpiredHandler = (callback: SessionExpiredHandler): void 
 // FETCH UTILITIES
 // ============================================
 
-/**
- * Create a fetch request with timeout and automatic retry for transient 400 errors
- */
-export const getResponseErrorMessage = async (response: Response, fallbackMessage: string): Promise<string> => {
-  const contentType = response.headers.get('content-type') || '';
-
-  if (contentType.includes('application/json')) {
-    const errorData = await response.clone().json().catch(() => null) as Record<string, unknown> | null;
-    const nestedError = errorData?.error;
-
-    if (typeof nestedError === 'string' && nestedError.trim()) {
-      return nestedError.trim();
-    }
-
-    if (nestedError && typeof nestedError === 'object' && typeof (nestedError as Record<string, unknown>).message === 'string') {
-      const nestedMessage = String((nestedError as Record<string, unknown>).message).trim();
-      if (nestedMessage) return nestedMessage;
-    }
-
-    if (typeof errorData?.message === 'string' && errorData.message.trim()) {
-      return errorData.message.trim();
-    }
-  }
-
-  const rawText = await response.text().catch(() => '');
-  const trimmedText = rawText.trim();
-  const isHtml = contentType.includes('text/html') || /^\s*<!DOCTYPE html>/i.test(trimmedText) || /^\s*<html/i.test(trimmedText);
-  const isGatewayTimeout = response.status === 524 || /Error code 524/i.test(trimmedText) || /A timeout occurred/i.test(trimmedText);
-
-  if (isGatewayTimeout) {
-    return 'Le serveur a mis trop de temps a repondre. Le traitement peut continuer en arriere-plan.';
-  }
-
-  if (isHtml) {
-    return "Le serveur a retourne une page d'erreur (" + response.status + ' ' + response.statusText + ').';
-  }
-
-  return trimmedText || fallbackMessage;
-};
-
 const fetchWithTimeout = async (
   url: string, 
   options: FetchOptions = {}, 
   timeout: number = 120000, // Default 2 minutes timeout (long operations should pass explicit timeout)
   retryCount: number = 0
 ): Promise<Response> => {
-  const timeoutController = new AbortController();
-  const timeoutId = setTimeout(() => timeoutController.abort(), timeout);
-  const mergedSignal = mergeAbortSignals(options.signal, timeoutController.signal);
-  
-  const fullUrl = url.startsWith('/') ? `${API_BASE_URL}${url}` : url;
-  
-  // Add cache-busting headers to prevent stale responses
-  const headersWithCacheBust = {
-    ...options.headers,
-    'Cache-Control': 'no-cache',
-    'Pragma': 'no-cache'
-  };
-  
-  try {
-    const response = await fetch(fullUrl, {
-      ...options,
-      headers: headersWithCacheBust,
-      signal: mergedSignal.signal,
-      credentials: 'include'
-    } as RequestInit);
-    clearTimeout(timeoutId);
-    mergedSignal.cleanup();
-    
-    // Retry once on 400 errors for GET requests (likely stale cache/proxy issue)
-    if (response.status === 400 && retryCount < 1 && (!options.method || options.method === 'GET')) {
-      logger.warn(`[API Interceptor] Got 400 on GET request, retrying once: ${url}`);
-      await new Promise(resolve => setTimeout(resolve, 500)); // Small delay before retry
-      return fetchWithTimeout(url, options, timeout, retryCount + 1);
-    }
-    
-    return response;
-  } catch (error) {
-    clearTimeout(timeoutId);
-    mergedSignal.cleanup();
-    if (error instanceof Error && error.name === 'AbortError') {
-      logger.error(`[API Interceptor] Request timeout after ${timeout}ms:`, url);
-      throw new Error(`Request timeout after ${timeout / 1000}s`);
-    }
-    logger.error('[API Interceptor] Fetch error', { message: (error as Error).message, url });
-    throw error;
-  }
+  return fetchWithTimeoutInternal(
+    { apiBaseUrl: API_BASE_URL, logger, toTimeoutError },
+    url,
+    options,
+    timeout,
+    retryCount
+  );
 };
 
 /**
@@ -326,34 +223,9 @@ export const fetchWithAuth = async (
 
     if (response.status === 403) {
       logger.warn('[API Interceptor] 403 Forbidden - checking if session related');
-      
-      let errorMessage = 'Accès refusé';
-      let errorCode = '';
-      try {
-        const errorData = await response.clone().json();
-        errorMessage = errorData.error || errorMessage;
-        errorCode = errorData.code || '';
-      } catch {
-        // Ignore JSON parse errors
-      }
 
-      // Check if this is a session/CSRF related error - redirect to signin
-      const sessionErrorPatterns = [
-        'csrf',
-        'token',
-        'session',
-        'expired',
-        'invalid_csrf',
-        'CSRF_INVALID',
-        'TOKEN_EXPIRED'
-      ];
-      
-      const isSessionError = sessionErrorPatterns.some(pattern => 
-        errorMessage.toLowerCase().includes(pattern.toLowerCase()) ||
-        errorCode.toLowerCase().includes(pattern.toLowerCase())
-      );
-
-      if (isSessionError) {
+      const { errorMessage, errorCode } = await parseForbiddenResponse(response);
+      if (isSessionForbiddenError(errorMessage, errorCode)) {
         logger.warn('[API Interceptor] Session/CSRF error detected, redirecting to signin');
         triggerSessionExpiry();
         // Throw special error to stop all processing
@@ -372,9 +244,9 @@ export const fetchWithAuth = async (
 
     return response;
   } catch (error) {
-    if (error instanceof Error && error.message === 'Request timeout') {
+    if (error instanceof Error && error.message === REQUEST_TIMEOUT_MESSAGE) {
       logger.error('[API Interceptor] Request timed out:', url);
-      throw new Error('La requête a expiré. Veuillez réessayer.');
+      throw toTimeoutUserError();
     }
     throw error;
   }
@@ -396,35 +268,14 @@ export const resetSessionState = (): void => {
  * Helper to create fetch options with authentication headers
  */
 export const createAuthOptions = (options: FetchOptions = {}): FetchOptions => {
-  return {
-    ...options,
-    headers: {
-      ...options.headers
-    },
-    credentials: 'include'
-  };
+  return buildAuthOptions(options);
 };
 
 /**
  * Create auth options with CSRF token for mutating requests
  */
 export const createAuthOptionsWithCsrf = async (options: FetchOptions = {}, forceRefreshCsrf: boolean = false): Promise<FetchOptions> => {
-  // IMPORTANT: Await the CSRF token BEFORE building the options
-  const csrfToken = await getCsrfToken(forceRefreshCsrf);
-  
-  logger.log('[CSRF] Building options with token:', csrfToken ? 'present' : 'missing');
-  
-  // Merge headers with x-csrf-token LAST to ensure it's not overwritten
-  const mergedHeaders: Record<string, string> = {
-    ...options.headers,
-    'x-csrf-token': csrfToken || ''
-  };
-  
-  return {
-    ...options,
-    headers: mergedHeaders,
-    credentials: 'include'
-  };
+  return buildAuthOptionsWithCsrf({ getCsrfToken, logger }, options, forceRefreshCsrf);
 };
 
 /**
@@ -436,46 +287,12 @@ export const fetchWithCsrfRetry = async (
   options: FetchOptions = {},
   timeout: number = 120000 // Default 2 minutes timeout (long operations should pass explicit timeout)
 ): Promise<Response> => {
-  // First attempt
-  let response = await fetchWithAuth(url, options, timeout);
-  
-  // If CSRF error (403), refresh token and retry
-  if (response.status === 403) {
-    const isCsrf = await isCsrfError(response);
-    
-    if (isCsrf) {
-      logger.warn('[CSRF] Token invalid, refreshing and retrying...');
-      
-      // Force refresh the CSRF token
-      const newToken = await refreshCsrfToken();
-      
-      if (newToken) {
-        logger.log('[CSRF] Got new token, retrying request...');
-        
-        // Update the options with new token
-        const retryOptions: FetchOptions = {
-          ...options,
-          headers: {
-            ...options.headers,
-            'x-csrf-token': newToken
-          }
-        };
-        
-        // Retry the request
-        response = await fetchWithAuth(url, retryOptions, timeout);
-        
-        if (response.ok) {
-          logger.log('[CSRF] Retry successful');
-        } else {
-          logger.warn('[CSRF] Retry failed with status:', response.status);
-        }
-      } else {
-        logger.error('[CSRF] Failed to get new token for retry');
-      }
-    }
-  }
-  
-  return response;
+  return fetchWithCsrfRetryInternal(
+    { fetchWithAuth, isCsrfError, logger, refreshCsrfToken },
+    url,
+    options,
+    timeout
+  );
 };
 
 // ============================================

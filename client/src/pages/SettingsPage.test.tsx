@@ -196,6 +196,54 @@ describe('SettingsPage', () => {
     expect(toastSuccessMock).toHaveBeenCalledWith('settings.saveSuccess');
   });
 
+  it('allows saving ollama settings even without a selected model', async () => {
+    authGetMock.mockImplementation(async (url: string) => {
+      if (url === '/api/settings') {
+        return {
+          ok: true,
+          json: async () => ({
+            id: 'settings-1',
+            llmProvider: 'ollama',
+            llmModel: '',
+            ollamaBaseUrl: 'http://ollama.local:11434',
+            chatbotEnabled: 'on',
+            webglEnabled: 'on',
+            'Executive Summary Weight': 20,
+            'Skills Weight': 20,
+            'Experience Weight': 20,
+            'Education Weight': 15,
+            'ATS Weight': 15,
+            'Hobbies Languages Weight': 10,
+          }),
+        };
+      }
+
+      throw new Error(`Unexpected authGet url: ${url}`);
+    });
+
+    authPutMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ id: 'settings-1' }),
+    });
+
+    render(<SettingsPage />);
+
+    await screen.findByTestId('llm-tab');
+    fireEvent.click(screen.getByRole('button', { name: 'settings.save' }));
+
+    await waitFor(() => {
+      expect(authPutMock).toHaveBeenCalledWith(
+        '/api/settings/settings-1',
+        expect.objectContaining({
+          llmProvider: 'ollama',
+          llmModel: '',
+          ollamaBaseUrl: 'http://ollama.local:11434',
+        })
+      );
+    });
+    expect(toastErrorMock).not.toHaveBeenCalledWith('Selectionnez un modele Ollama distant');
+  });
+
   it('reloads defaults after reset confirmation', async () => {
     render(<SettingsPage />);
 

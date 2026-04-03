@@ -104,8 +104,13 @@ export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
         return result as SignInResponse;
       }
       
-      // Normal login - set user
-      setUser(result as User);
+      const resolvedUser = result as User;
+      if (resolvedUser.status === 'active') {
+        setUser(resolvedUser);
+      } else {
+        setUser(null);
+        authService.clearCurrentUser();
+      }
       return result;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An error occurred';

@@ -532,19 +532,6 @@ export async function getUserFirmId(userId) {
     return result.rows.length > 0 ? result.rows[0].firm_id : null;
 }
 
-/**
- * Get firm ID by firm name
- * @param {string} firmName
- * @returns {Promise<string|null>}
- */
-export async function getFirmIdByName(firmName) {
-    const result = await query(
-        'SELECT id FROM firms WHERE name = $1',
-        [firmName]
-    );
-    return result.rows.length > 0 ? result.rows[0].id : null;
-}
-
 export default {
     TEMPLATE_KEYWORDS,
     getTemplates,
@@ -558,6 +545,5 @@ export default {
     substituteKeywords,
     renderTemplate,
     previewTemplate,
-    getUserFirmId,
-    getFirmIdByName
+    getUserFirmId
 };

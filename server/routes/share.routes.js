@@ -4,6 +4,7 @@
  */
 
 import { Router, json } from 'express';
+import { createReadStream } from 'fs';
 import fs from 'fs/promises';
 import { authenticateToken, isUserAdmin } from '../middleware/auth.middleware.js';
 import { validateBody, validateParams, sharePdfSchema } from '../utils/validation.js';
@@ -244,16 +245,16 @@ router.get('/pdf/:token', async (req, res) => {
             });
         }
 
-        const pdfBuffer = await fs.readFile(pdfInfo.path);
+        const stats = await fs.stat(pdfInfo.path);
         const filename = pdfInfo.name ? `${pdfInfo.name.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf` : 'cv.pdf';
 
         setSafeFileResponseHeaders(res, {
             contentType: 'application/pdf',
             filename,
-            contentLength: pdfBuffer.length,
+            contentLength: stats.size,
             inline: true
         });
-        res.send(pdfBuffer);
+        createReadStream(pdfInfo.path).pipe(res);
     } catch (error) {
         safeLog('error', 'Failed to serve shared PDF', {
             token: req.params.token?.substring(0, 8),

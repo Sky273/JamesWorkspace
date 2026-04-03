@@ -41,17 +41,26 @@ async function getBrowser() {
     launchOptions.executablePath = configuredExecutablePath;
   }
 
-  browserLaunchPromise = puppeteer.launch(launchOptions);
-  
-  browserInstance = await browserLaunchPromise;
-  browserLaunchPromise = null;
-  
-  // Handle browser disconnect
-  browserInstance.on('disconnected', () => {
-    browserInstance = null;
-  });
-  
-  return browserInstance;
+  browserLaunchPromise = (async () => {
+    try {
+      const browser = await puppeteer.launch(launchOptions);
+      browserInstance = browser;
+
+      // Handle browser disconnect
+      browserInstance.on('disconnected', () => {
+        browserInstance = null;
+      });
+
+      return browserInstance;
+    } catch (error) {
+      browserInstance = null;
+      throw error;
+    } finally {
+      browserLaunchPromise = null;
+    }
+  })();
+
+  return browserLaunchPromise;
 }
 
 /**
@@ -153,6 +162,17 @@ async function closeBrowser() {
       log('warn', 'Failed to close browser', { error: error.message });
     }
   }
+  browserLaunchPromise = null;
 }
 
-module.exports = { generatePdf, closeBrowser };
+module.exports = {
+  generatePdf,
+  closeBrowser,
+  _internal: {
+    getBrowser,
+    resetBrowserState() {
+      browserInstance = null;
+      browserLaunchPromise = null;
+    }
+  }
+};

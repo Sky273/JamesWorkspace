@@ -9,12 +9,13 @@ import { processAnalysisTags } from '../../utils/tagCleaner.js';
 import { ITEM_STATUS, updateJobItemStatus } from '../batchJobs.service.js';
 import { parseScore, generateTrigram } from './helpers.js';
 import { extractTextFromBuffer } from './textExtraction.js';
-import { analyzeResumeWithLLM } from './llmIntegration.js';
+import { analyzeResumeWithLLM, preAnalyzeResumeWithLLM } from './llmIntegration.js';
 import { cleanExtractedResumeText, isPlaceholderCandidateName } from '../ocrTextCleanup.service.js';
 import { buildConsentMetadata, sendConsentRequestIfNeeded } from './processors/shared.js';
 import { processImprovement, processImproveItem } from './processors/improvement.js';
 import { processAdaptItem, processMatchItem, processProfileSearchItem, processProfileAnalysisItem } from './processors/profileAndMatching.js';
 import { metrics } from '../metrics.service.js';
+import { getLLMSettings } from '../settings.service.js';
 
 function buildOcrMetricsMetadata(extractionResult, baseMetadata = {}) {
     return {
@@ -189,7 +190,23 @@ export async function processImportItem(item, job, options) {
 
         await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, { progress: 40 });
 
+        const llmSettings = await getLLMSettings();
+        const originalExtractedText = text;
+        let analysisInputText = originalExtractedText;
+
+        if (llmSettings.preAnalysisEnabled) {
+            currentStage = 'pre-analyze';
+            await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, { progress: 50 });
+            safeLog('info', 'Pre-analyzing extracted CV text with LLM', { itemId: item.id, resumeId, fileName: item.file_name });
+            const preAnalyzedText = await preAnalyzeResumeWithLLM(text, job.firm_id, item.file_name);
+            if (!preAnalyzedText || preAnalyzedText.trim().length < 50) {
+                throw new Error('La pre-analyse du CV a retourne un texte inexploitable');
+            }
+            analysisInputText = preAnalyzedText.trim();
+        }
+
         currentStage = 'analyze';
+        await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, { progress: 60 });
         let analysis;
         let isResumedWithName = false;
 
@@ -209,7 +226,7 @@ export async function processImportItem(item, job, options) {
 
         if (!analysis) {
             safeLog('info', 'Analyzing CV with LLM', { itemId: item.id, firmId: job.firm_id, fileName: item.file_name });
-            analysis = await analyzeResumeWithLLM(text, job.firm_id, item.file_name, {
+            analysis = await analyzeResumeWithLLM(analysisInputText, job.firm_id, item.file_name, {
                 ocrUsed: !!extractionResult?.ocrUsed
             });
             metrics.trackBatchImportActivity({
@@ -270,7 +287,7 @@ export async function processImportItem(item, job, options) {
                     analyzed_at = NOW()
                 WHERE id = $19
             `, [
-                text,
+                originalExtractedText,
                 parseScore(analysis.globalRating),
                 parseScore(analysis.skillsRating),
                 parseScore(analysis.experiencesRating),
@@ -295,7 +312,7 @@ export async function processImportItem(item, job, options) {
                 progress: 60,
                 error_message: 'En attente du nom du candidat (extraction automatique échouée)',
                 pending_analysis: JSON.stringify(analysis),
-                pending_text: text,
+                pending_text: analysisInputText,
                 pending_improve: improve
             });
 
@@ -314,13 +331,9 @@ export async function processImportItem(item, job, options) {
             return;
         }
 
-        await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, { progress: 60 });
-
         currentStage = 'persist-analysis';
         const { rawTags, cleanedTags } = processAnalysisTags(analysis);
 
-        const { getLLMSettings } = await import('../settings.service.js');
-        const llmSettings = await getLLMSettings();
         const isAnonymous = llmSettings.cvMode === 'anonymous';
 
         const trigram = isAnonymous ? generateTrigram(analysis.name) : null;
@@ -359,7 +372,7 @@ export async function processImportItem(item, job, options) {
                 analyzed_at = NOW()
             WHERE id = $21
         `, [
-            text,
+                originalExtractedText,
             parseScore(analysis.globalRating),
             parseScore(analysis.skillsRating),
             parseScore(analysis.experiencesRating),
@@ -390,7 +403,7 @@ export async function processImportItem(item, job, options) {
 
         if (improve) {
             currentStage = 'improve';
-            await processImprovement(item, resumeId, text, analysis, job);
+            await processImprovement(item, resumeId, analysisInputText, analysis, job);
         }
 
         await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, { progress: 95 });

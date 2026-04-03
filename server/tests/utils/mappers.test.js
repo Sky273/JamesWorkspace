@@ -8,6 +8,7 @@ import { describe, it, expect, vi } from 'vitest';
 
 // Mock prompts config (used for default values)
 vi.mock('../../config/prompts.backend.js', () => ({
+    DEFAULT_PRE_ANALYSIS_PROMPT: 'default-pre-analysis-prompt',
     DEFAULT_ANALYSIS_PROMPT: 'default-analysis-prompt',
     DEFAULT_IMPROVEMENT_PROMPT: 'default-improvement-prompt',
     DEFAULT_MATCH_ANALYSIS_PROMPT: 'default-match-analysis-prompt',
@@ -30,6 +31,8 @@ describe('mapSettingsToFrontend', () => {
         llm_model: 'gpt-4o',
         cv_mode: 'anonymized',
         chatbot_enabled: 'off',
+        pre_analysis_enabled: true,
+        pre_analysis_prompt: 'custom pre-analysis',
         analysis_prompt: 'custom analysis',
         improvement_prompt: 'custom improvement',
         match_analysis_prompt: 'custom match',
@@ -52,6 +55,8 @@ describe('mapSettingsToFrontend', () => {
         expect(result.llmModel).toBe('gpt-4o');
         expect(result.cvMode).toBe('anonymized');
         expect(result.chatbotEnabled).toBe('off');
+        expect(result.preAnalysisEnabled).toBe(true);
+        expect(result['Pre Analysis Prompt']).toBe('custom pre-analysis');
         expect(result['Analysis Prompt']).toBe('custom analysis');
         expect(result['Improvement Prompt']).toBe('custom improvement');
         expect(result['Match Analysis Prompt']).toBe('custom match');
@@ -76,6 +81,8 @@ describe('mapSettingsToFrontend', () => {
         expect(result.llmModel).toBeNull();
         expect(result.cvMode).toBe('nominative');
         expect(result.chatbotEnabled).toBe('on');
+        expect(result.preAnalysisEnabled).toBe(false);
+        expect(result['Pre Analysis Prompt']).toBe('default-pre-analysis-prompt');
         expect(result['Analysis Prompt']).toBe('default-analysis-prompt');
         expect(result['Improvement Prompt']).toBe('default-improvement-prompt');
         expect(result['Match Analysis Prompt']).toBe('default-match-analysis-prompt');
@@ -110,11 +117,13 @@ describe('mapSettingsFromFrontend', () => {
             llmModel: 'gpt-4o',
             cvMode: 'anonymized',
             chatbotEnabled: 'off',
+            preAnalysisEnabled: true,
             promptVersionState: {
                 'Analysis Prompt': {
                     currentRevision: 2
                 }
             },
+            'Pre Analysis Prompt': 'pre-prompt',
             'Analysis Prompt': 'prompt1',
             'Improvement Prompt': 'prompt2',
             'Match Analysis Prompt': 'prompt3',
@@ -135,11 +144,13 @@ describe('mapSettingsFromFrontend', () => {
         expect(result.llm_model).toBe('gpt-4o');
         expect(result.cv_mode).toBe('anonymized');
         expect(result.chatbot_enabled).toBe('off');
+        expect(result.pre_analysis_enabled).toBe(true);
         expect(result.prompt_versions).toEqual({
             'Analysis Prompt': {
                 currentRevision: 2
             }
         });
+        expect(result.pre_analysis_prompt).toBe('pre-prompt');
         expect(result.analysis_prompt).toBe('prompt1');
         expect(result.improvement_prompt).toBe('prompt2');
         expect(result.match_analysis_prompt).toBe('prompt3');
@@ -380,6 +391,8 @@ describe('Round-trip consistency', () => {
             llmModel: 'gpt-4o',
             cvMode: 'anonymized',
             chatbotEnabled: 'off',
+            preAnalysisEnabled: true,
+            'Pre Analysis Prompt': 'custom-pre',
             'Analysis Prompt': 'custom-a',
             'DPO Name': 'DPO Test'
         };
@@ -391,6 +404,8 @@ describe('Round-trip consistency', () => {
         expect(result.llmModel).toBe('gpt-4o');
         expect(result.cvMode).toBe('anonymized');
         expect(result.chatbotEnabled).toBe('off');
+        expect(result.preAnalysisEnabled).toBe(true);
+        expect(result['Pre Analysis Prompt']).toBe('custom-pre');
         expect(result['Analysis Prompt']).toBe('custom-a');
         expect(result['DPO Name']).toBe('DPO Test');
     });

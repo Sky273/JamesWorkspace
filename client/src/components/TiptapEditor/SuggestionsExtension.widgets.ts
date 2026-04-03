@@ -14,7 +14,7 @@ export function createBadgeWidget(
 
   const pill = document.createElement('span');
   pill.className = 'suggestion-deco-pill';
-  pill.textContent = `ðŸ’¡ ${suggestions.length}`;
+  pill.textContent = `! ${suggestions.length}`;
   wrapper.appendChild(pill);
 
   const dropdown = document.createElement('div');
@@ -36,7 +36,7 @@ export function createBadgeWidget(
 
   const closeBtn = document.createElement('button');
   closeBtn.className = 'suggestion-deco-dropdown-close';
-  closeBtn.textContent = 'âœ•';
+  closeBtn.textContent = 'x';
   closeBtn.type = 'button';
 
   header.append(titleEl, countEl, closeBtn);
@@ -104,10 +104,10 @@ export function createGlobalPanel(
 
   const headerIcon = document.createElement('span');
   headerIcon.className = 'suggestion-deco-panel-icon';
-  headerIcon.textContent = 'ðŸ’¡';
+  headerIcon.textContent = '!';
 
   const headerText = document.createElement('span');
-  headerText.textContent = "Suggestions d'amÃ©lioration";
+  headerText.textContent = "Suggestions d'amelioration";
 
   const headerCount = document.createElement('span');
   headerCount.className = 'suggestion-deco-panel-count';

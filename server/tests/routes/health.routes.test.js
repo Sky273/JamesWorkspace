@@ -49,6 +49,15 @@ vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));
 
+vi.mock('../../services/users.service.js', () => ({
+    findUserById: vi.fn(async (id) => {
+        if (id === 'admin-1') {
+            return { id: 'admin-1', role: 'admin', status: 'active' };
+        }
+        return null;
+    })
+}));
+
 vi.mock('../../middleware/auth.middleware.js', () => ({
     authenticateToken: (req, res, next) => next(),
     requireAdmin: (req, res, next) => next()
@@ -95,6 +104,7 @@ vi.mock('../../services/wordTextExtraction.service.js', () => ({
 }));
 
 import { query as dbQuery } from '../../config/database.js';
+import { findUserById } from '../../services/users.service.js';
 
 describe('Health Routes', () => {
     let mockReq;
@@ -189,6 +199,26 @@ describe('Health Routes', () => {
             mockReq.cookies = {};
             mockReq.query = { deep: 'true' };
             global.fetch = vi.fn();
+
+            dbQuery.mockResolvedValueOnce({ rows: [{ connected: 1 }] });
+            dbQuery.mockResolvedValueOnce({
+                rows: [{ resumes_count: '10', users_count: '2', missions_count: '5', db_size: '1048576' }]
+            });
+
+            const healthRouter = (await import('../../routes/health.routes.js')).default;
+            const routeHandler = healthRouter.stack.find(r => r.route?.path === '/').route.stack[0].handle;
+
+            await routeHandler(mockReq, mockRes);
+
+            expect(global.fetch).not.toHaveBeenCalled();
+            const response = mockRes.json.mock.calls[0][0];
+            expect(response.checks).toBeUndefined();
+        });
+
+        it('should ignore deep checks when the token belongs to a user who is no longer admin', async () => {
+            mockReq.query = { deep: 'true' };
+            global.fetch = vi.fn();
+            findUserById.mockResolvedValueOnce({ id: 'admin-1', role: 'user', status: 'active' });
 
             dbQuery.mockResolvedValueOnce({ rows: [{ connected: 1 }] });
             dbQuery.mockResolvedValueOnce({

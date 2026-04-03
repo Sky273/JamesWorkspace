@@ -58,7 +58,7 @@ router.get('/', authenticateToken, async (req, res) => {
         const firmId = await getUserFirmId(req) || await getFirmIdForUser(req.user);
         
         if (!firmId) {
-            safeLog('warn', 'Firm ID not found for user', { userId: req.user.id, firm: req.user.firm });
+            safeLog('warn', 'Firm ID not found for user', { userId: req.user.id, firmName: req.user.firmName || null });
             const templates = await emailTemplatesService.getTemplates(null, true);
             return res.json({ templates });
         }

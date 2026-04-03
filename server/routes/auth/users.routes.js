@@ -14,8 +14,7 @@ import {
     buildAdminUserUpdateData,
     normalizeAdminUserPayload,
     normalizeRole,
-    resolveRequiredFirmId,
-    resolveRequiredFirmName
+    resolveRequiredFirmId
 } from './users.routes.helpers.js';
 
 const router = express.Router();
@@ -28,7 +27,6 @@ router.post('/users', authenticateToken, requireAdmin, validateBody(createUserSc
         const normalizedEmail = email.toLowerCase();
         const metadata = getRequestMetadata(req);
         const requestedFirmId = resolveRequiredFirmId(normalizedPayload);
-        const firmName = resolveRequiredFirmName(normalizedPayload);
 
         const existingUser = await usersService.findUserByEmail(normalizedEmail);
 
@@ -48,23 +46,19 @@ router.post('/users', authenticateToken, requireAdmin, validateBody(createUserSc
             status: (status || 'active').toLowerCase()
         };
 
-        if (!requestedFirmId && !firmName) {
+        if (!requestedFirmId) {
             return res.status(400).json({
-                error: 'Firm selection is required'
+                error: 'Firm ID selection is required'
             });
         }
 
-        const foundFirm = requestedFirmId
-            ? await usersService.findFirmById(requestedFirmId)
-            : await usersService.findFirmByName(firmName);
+        const foundFirm = await usersService.findFirmById(requestedFirmId);
         if (foundFirm) {
             userData.firm_id = foundFirm.id;
             userData.firm_name = foundFirm.name;
         } else {
             return res.status(400).json({
-                error: requestedFirmId
-                    ? `Firm '${requestedFirmId}' not found`
-                    : `Firm '${firmName}' not found`
+                error: `Firm '${requestedFirmId}' not found`
             });
         }
 
@@ -108,7 +102,6 @@ router.put('/users/:id', authenticateToken, requireAdmin, validateParams('id'), 
 
         const normalizedPayload = normalizeAdminUserPayload(req.body);
         const requestedFirmId = resolveRequiredFirmId(normalizedPayload);
-        const firmName = resolveRequiredFirmName(normalizedPayload);
         Object.assign(
             updateData,
             buildAdminUserUpdateData(
@@ -118,23 +111,19 @@ router.put('/users/:id', authenticateToken, requireAdmin, validateParams('id'), 
             )
         );
         
-        if (!requestedFirmId && !firmName) {
+        if (!requestedFirmId) {
             return res.status(400).json({
-                error: 'Firm selection is required'
+                error: 'Firm ID selection is required'
             });
         }
 
-        const foundFirm = requestedFirmId
-            ? await usersService.findFirmById(requestedFirmId)
-            : await usersService.findFirmByName(firmName);
+        const foundFirm = await usersService.findFirmById(requestedFirmId);
         if (foundFirm) {
             updateData.firm_id = foundFirm.id;
             updateData.firm_name = foundFirm.name;
         } else {
             return res.status(400).json({
-                error: requestedFirmId
-                    ? `Firm '${requestedFirmId}' not found`
-                    : `Firm '${firmName}' not found`
+                error: `Firm '${requestedFirmId}' not found`
             });
         }
 

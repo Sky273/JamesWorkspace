@@ -27,8 +27,11 @@ export function deriveUploadProcessingStep(jobData: {
   if (item?.status === 'success' || jobData.status === 'completed') {
     return 'analyze';
   }
-  if (progress >= 40 || item?.status === 'pending_name') {
+  if (progress >= 60 || item?.status === 'pending_name') {
     return 'analyze';
+  }
+  if (progress >= 50) {
+    return 'preanalyze';
   }
   if (progress >= 30 || item?.status === 'processing') {
     return 'extract';

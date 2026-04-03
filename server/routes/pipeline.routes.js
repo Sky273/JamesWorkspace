@@ -10,6 +10,14 @@ import { validateBody, validateParams, createPipelineEntrySchema, scheduleInterv
 import { safeLog } from '../utils/logger.backend.js';
 import { getUserFirmId } from '../utils/firmHelpers.js';
 import {
+    getPipelineEntryAccessResult,
+    getInterviewAccessResult,
+    getMissionAccessResult,
+    getPipelineRequestAccess,
+    getResumeAccessResult,
+    normalizePipelineEntryPayload
+} from './pipeline.routes.helpers.js';
+import {
     PIPELINE_STAGES,
     addToPipeline,
     getInterviewAccessContext,
@@ -37,50 +45,6 @@ import {
 
 const router = express.Router();
 
-function getFirstDefinedValue(source, keys) {
-    for (const key of keys) {
-        if (Object.prototype.hasOwnProperty.call(source, key) && source[key] !== undefined) {
-            return source[key];
-        }
-    }
-    return undefined;
-}
-
-function normalizePipelineEntryPayload(payload = {}) {
-    return {
-        ...payload,
-        resumeId: getFirstDefinedValue(payload, ['resumeId', 'resume_id']),
-        missionId: getFirstDefinedValue(payload, ['missionId', 'mission_id']),
-        clientId: getFirstDefinedValue(payload, ['clientId', 'client_id']),
-        stage: getFirstDefinedValue(payload, ['stage', 'Stage']),
-        notes: getFirstDefinedValue(payload, ['notes', 'Notes'])
-    };
-}
-
-async function getPipelineRequestAccess(req) {
-    const isAdmin = req.user?.role === 'admin';
-    const userFirmId = await getUserFirmId(req);
-
-    if (!isAdmin && !userFirmId) {
-        return { ok: false, status: 403, error: 'No firm association' };
-    }
-
-    return { ok: true, isAdmin, userFirmId };
-}
-
-function hasFirmAccess(isAdmin, userFirmId, ...firmIds) {
-    if (isAdmin) {
-        return true;
-    }
-
-    const scopedFirmIds = firmIds.filter(Boolean);
-    if (scopedFirmIds.length === 0) {
-        return false;
-    }
-
-    return scopedFirmIds.every((firmId) => firmId === userFirmId);
-}
-
 // ============================================
 // PIPELINE STAGES
 // ============================================
@@ -103,7 +67,7 @@ router.get('/stages', authenticateToken, (req, res) => {
  */
 router.post('/', authenticateToken, userRateLimit(), validateBody(createPipelineEntrySchema), async (req, res) => {
     try {
-        const access = await getPipelineRequestAccess(req);
+        const access = await getPipelineRequestAccess(req, getUserFirmId);
         if (!access.ok) {
             return res.status(access.status).json({ error: access.error });
         }
@@ -147,7 +111,7 @@ router.post('/', authenticateToken, userRateLimit(), validateBody(createPipeline
  */
 router.get('/overview', authenticateToken, async (req, res) => {
     try {
-        const access = await getPipelineRequestAccess(req);
+        const access = await getPipelineRequestAccess(req, getUserFirmId);
         if (!access.ok) {
             return res.status(access.status).json({ error: access.error });
         }
@@ -171,7 +135,7 @@ router.get('/overview', authenticateToken, async (req, res) => {
  */
 router.get('/interviews/upcoming', authenticateToken, async (req, res) => {
     try {
-        const access = await getPipelineRequestAccess(req);
+        const access = await getPipelineRequestAccess(req, getUserFirmId);
         if (!access.ok) {
             return res.status(access.status).json({ error: access.error });
         }
@@ -200,7 +164,7 @@ router.get('/interviews/upcoming', authenticateToken, async (req, res) => {
  */
 router.get('/stats', authenticateToken, async (req, res) => {
     try {
-        const access = await getPipelineRequestAccess(req);
+        const access = await getPipelineRequestAccess(req, getUserFirmId);
         if (!access.ok) {
             return res.status(access.status).json({ error: access.error });
         }
@@ -224,17 +188,14 @@ router.get('/stats', authenticateToken, async (req, res) => {
  */
 router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => {
     try {
-        const access = await getPipelineRequestAccess(req);
+        const access = await getPipelineRequestAccess(req, getUserFirmId);
         if (!access.ok) {
             return res.status(access.status).json({ error: access.error });
         }
 
-        const context = await getPipelineAccessContext(req.params.id);
-        if (!context) {
-            return res.status(404).json({ error: 'Pipeline entry not found' });
-        }
-        if (!hasFirmAccess(access.isAdmin, access.userFirmId, context.resume_firm_id, context.mission_firm_id, context.client_firm_id)) {
-            return res.status(403).json({ error: 'Access denied' });
+        const entryAccess = await getPipelineEntryAccessResult(access, req.params.id, getPipelineAccessContext);
+        if (!entryAccess.ok) {
+            return res.status(entryAccess.status).json({ error: entryAccess.error });
         }
 
         const pipeline = await getPipelineById(req.params.id);
@@ -254,17 +215,14 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
  */
 router.get('/resume/:resumeId', authenticateToken, validateParams('resumeId'), async (req, res) => {
     try {
-        const access = await getPipelineRequestAccess(req);
+        const access = await getPipelineRequestAccess(req, getUserFirmId);
         if (!access.ok) {
             return res.status(access.status).json({ error: access.error });
         }
 
-        const resumeFirmId = await getResumeFirmId(req.params.resumeId);
-        if (!resumeFirmId) {
-            return res.status(404).json({ error: 'Resume not found' });
-        }
-        if (!hasFirmAccess(access.isAdmin, access.userFirmId, resumeFirmId)) {
-            return res.status(403).json({ error: 'Access denied' });
+        const resumeAccess = await getResumeAccessResult(access, req.params.resumeId, getResumeFirmId);
+        if (!resumeAccess.ok) {
+            return res.status(resumeAccess.status).json({ error: resumeAccess.error });
         }
 
         const pipelines = await getPipelineByResumeId(req.params.resumeId);
@@ -281,17 +239,14 @@ router.get('/resume/:resumeId', authenticateToken, validateParams('resumeId'), a
  */
 router.get('/mission/:missionId', authenticateToken, validateParams('missionId'), async (req, res) => {
     try {
-        const access = await getPipelineRequestAccess(req);
+        const access = await getPipelineRequestAccess(req, getUserFirmId);
         if (!access.ok) {
             return res.status(access.status).json({ error: access.error });
         }
 
-        const mission = await getMissionContext(req.params.missionId);
-        if (!mission) {
-            return res.status(404).json({ error: 'Mission not found' });
-        }
-        if (!hasFirmAccess(access.isAdmin, access.userFirmId, mission.firm_id)) {
-            return res.status(403).json({ error: 'Access denied' });
+        const missionAccess = await getMissionAccessResult(access, req.params.missionId, getMissionContext);
+        if (!missionAccess.ok) {
+            return res.status(missionAccess.status).json({ error: missionAccess.error });
         }
 
         const pipelines = await getPipelineByMissionId(req.params.missionId);
@@ -308,7 +263,7 @@ router.get('/mission/:missionId', authenticateToken, validateParams('missionId')
  */
 router.patch('/:id/stage', authenticateToken, validateParams('id'), async (req, res) => {
     try {
-        const access = await getPipelineRequestAccess(req);
+        const access = await getPipelineRequestAccess(req, getUserFirmId);
         if (!access.ok) {
             return res.status(access.status).json({ error: access.error });
         }
@@ -324,12 +279,9 @@ router.patch('/:id/stage', authenticateToken, validateParams('id'), async (req, 
             return res.status(400).json({ error: 'Invalid stage' });
         }
 
-        const context = await getPipelineAccessContext(req.params.id);
-        if (!context) {
-            return res.status(404).json({ error: 'Pipeline entry not found' });
-        }
-        if (!hasFirmAccess(access.isAdmin, access.userFirmId, context.resume_firm_id, context.mission_firm_id, context.client_firm_id)) {
-            return res.status(403).json({ error: 'Access denied' });
+        const entryAccess = await getPipelineEntryAccessResult(access, req.params.id, getPipelineAccessContext);
+        if (!entryAccess.ok) {
+            return res.status(entryAccess.status).json({ error: entryAccess.error });
         }
 
         const pipeline = await moveToStage({
@@ -352,17 +304,14 @@ router.patch('/:id/stage', authenticateToken, validateParams('id'), async (req, 
  */
 router.patch('/:id/notes', authenticateToken, validateParams('id'), async (req, res) => {
     try {
-        const access = await getPipelineRequestAccess(req);
+        const access = await getPipelineRequestAccess(req, getUserFirmId);
         if (!access.ok) {
             return res.status(access.status).json({ error: access.error });
         }
 
-        const context = await getPipelineAccessContext(req.params.id);
-        if (!context) {
-            return res.status(404).json({ error: 'Pipeline entry not found' });
-        }
-        if (!hasFirmAccess(access.isAdmin, access.userFirmId, context.resume_firm_id, context.mission_firm_id, context.client_firm_id)) {
-            return res.status(403).json({ error: 'Access denied' });
+        const entryAccess = await getPipelineEntryAccessResult(access, req.params.id, getPipelineAccessContext);
+        if (!entryAccess.ok) {
+            return res.status(entryAccess.status).json({ error: entryAccess.error });
         }
 
         const { notes } = req.body;
@@ -384,17 +333,14 @@ router.patch('/:id/notes', authenticateToken, validateParams('id'), async (req, 
  */
 router.delete('/:id', authenticateToken, validateParams('id'), async (req, res) => {
     try {
-        const access = await getPipelineRequestAccess(req);
+        const access = await getPipelineRequestAccess(req, getUserFirmId);
         if (!access.ok) {
             return res.status(access.status).json({ error: access.error });
         }
 
-        const context = await getPipelineAccessContext(req.params.id);
-        if (!context) {
-            return res.status(404).json({ error: 'Pipeline entry not found' });
-        }
-        if (!hasFirmAccess(access.isAdmin, access.userFirmId, context.resume_firm_id, context.mission_firm_id, context.client_firm_id)) {
-            return res.status(403).json({ error: 'Access denied' });
+        const entryAccess = await getPipelineEntryAccessResult(access, req.params.id, getPipelineAccessContext);
+        if (!entryAccess.ok) {
+            return res.status(entryAccess.status).json({ error: entryAccess.error });
         }
 
         await removeFromPipeline(req.params.id);
@@ -411,17 +357,14 @@ router.delete('/:id', authenticateToken, validateParams('id'), async (req, res) 
  */
 router.get('/:id/history', authenticateToken, validateParams('id'), async (req, res) => {
     try {
-        const access = await getPipelineRequestAccess(req);
+        const access = await getPipelineRequestAccess(req, getUserFirmId);
         if (!access.ok) {
             return res.status(access.status).json({ error: access.error });
         }
 
-        const context = await getPipelineAccessContext(req.params.id);
-        if (!context) {
-            return res.status(404).json({ error: 'Pipeline entry not found' });
-        }
-        if (!hasFirmAccess(access.isAdmin, access.userFirmId, context.resume_firm_id, context.mission_firm_id, context.client_firm_id)) {
-            return res.status(403).json({ error: 'Access denied' });
+        const entryAccess = await getPipelineEntryAccessResult(access, req.params.id, getPipelineAccessContext);
+        if (!entryAccess.ok) {
+            return res.status(entryAccess.status).json({ error: entryAccess.error });
         }
 
         const history = await getPipelineHistory(req.params.id);
@@ -442,7 +385,7 @@ router.get('/:id/history', authenticateToken, validateParams('id'), async (req, 
  */
 router.post('/:id/interviews', authenticateToken, userRateLimit(), validateParams('id'), validateBody(scheduleInterviewSchema), async (req, res) => {
     try {
-        const access = await getPipelineRequestAccess(req);
+        const access = await getPipelineRequestAccess(req, getUserFirmId);
         if (!access.ok) {
             return res.status(access.status).json({ error: access.error });
         }
@@ -464,12 +407,9 @@ router.post('/:id/interviews', authenticateToken, userRateLimit(), validateParam
             return res.status(400).json({ error: 'Title and scheduled date are required' });
         }
 
-        const context = await getPipelineAccessContext(req.params.id);
-        if (!context) {
-            return res.status(404).json({ error: 'Pipeline entry not found' });
-        }
-        if (!hasFirmAccess(access.isAdmin, access.userFirmId, context.resume_firm_id, context.mission_firm_id, context.client_firm_id)) {
-            return res.status(403).json({ error: 'Access denied' });
+        const entryAccess = await getPipelineEntryAccessResult(access, req.params.id, getPipelineAccessContext);
+        if (!entryAccess.ok) {
+            return res.status(entryAccess.status).json({ error: entryAccess.error });
         }
 
         const interview = await scheduleInterview({
@@ -500,17 +440,14 @@ router.post('/:id/interviews', authenticateToken, userRateLimit(), validateParam
  */
 router.get('/:id/interviews', authenticateToken, validateParams('id'), async (req, res) => {
     try {
-        const access = await getPipelineRequestAccess(req);
+        const access = await getPipelineRequestAccess(req, getUserFirmId);
         if (!access.ok) {
             return res.status(access.status).json({ error: access.error });
         }
 
-        const context = await getPipelineAccessContext(req.params.id);
-        if (!context) {
-            return res.status(404).json({ error: 'Pipeline entry not found' });
-        }
-        if (!hasFirmAccess(access.isAdmin, access.userFirmId, context.resume_firm_id, context.mission_firm_id, context.client_firm_id)) {
-            return res.status(403).json({ error: 'Access denied' });
+        const entryAccess = await getPipelineEntryAccessResult(access, req.params.id, getPipelineAccessContext);
+        if (!entryAccess.ok) {
+            return res.status(entryAccess.status).json({ error: entryAccess.error });
         }
 
         const interviews = await getInterviews(req.params.id);
@@ -531,17 +468,14 @@ router.get('/:id/interviews', authenticateToken, validateParams('id'), async (re
  */
 router.patch('/interviews/:interviewId', authenticateToken, validateParams('interviewId'), validateBody(updateInterviewSchema), async (req, res) => {
     try {
-        const access = await getPipelineRequestAccess(req);
+        const access = await getPipelineRequestAccess(req, getUserFirmId);
         if (!access.ok) {
             return res.status(access.status).json({ error: access.error });
         }
 
-        const context = await getInterviewAccessContext(req.params.interviewId);
-        if (!context) {
-            return res.status(404).json({ error: 'Interview not found' });
-        }
-        if (!hasFirmAccess(access.isAdmin, access.userFirmId, context.resume_firm_id, context.mission_firm_id, context.client_firm_id)) {
-            return res.status(403).json({ error: 'Access denied' });
+        const interviewAccess = await getInterviewAccessResult(access, req.params.interviewId, getInterviewAccessContext);
+        if (!interviewAccess.ok) {
+            return res.status(interviewAccess.status).json({ error: interviewAccess.error });
         }
 
         const interview = await updateInterview(req.params.interviewId, req.body);
@@ -558,7 +492,7 @@ router.patch('/interviews/:interviewId', authenticateToken, validateParams('inte
  */
 router.post('/interviews/:interviewId/complete', authenticateToken, validateParams('interviewId'), validateBody(completeInterviewSchema), async (req, res) => {
     try {
-        const access = await getPipelineRequestAccess(req);
+        const access = await getPipelineRequestAccess(req, getUserFirmId);
         if (!access.ok) {
             return res.status(access.status).json({ error: access.error });
         }
@@ -569,12 +503,9 @@ router.post('/interviews/:interviewId/complete', authenticateToken, validatePara
             return res.status(400).json({ error: 'Outcome is required' });
         }
 
-        const context = await getInterviewAccessContext(req.params.interviewId);
-        if (!context) {
-            return res.status(404).json({ error: 'Interview not found' });
-        }
-        if (!hasFirmAccess(access.isAdmin, access.userFirmId, context.resume_firm_id, context.mission_firm_id, context.client_firm_id)) {
-            return res.status(403).json({ error: 'Access denied' });
+        const interviewAccess = await getInterviewAccessResult(access, req.params.interviewId, getInterviewAccessContext);
+        if (!interviewAccess.ok) {
+            return res.status(interviewAccess.status).json({ error: interviewAccess.error });
         }
 
         const interview = await completeInterview({
@@ -597,17 +528,14 @@ router.post('/interviews/:interviewId/complete', authenticateToken, validatePara
  */
 router.post('/interviews/:interviewId/cancel', authenticateToken, validateParams('interviewId'), async (req, res) => {
     try {
-        const access = await getPipelineRequestAccess(req);
+        const access = await getPipelineRequestAccess(req, getUserFirmId);
         if (!access.ok) {
             return res.status(access.status).json({ error: access.error });
         }
 
-        const context = await getInterviewAccessContext(req.params.interviewId);
-        if (!context) {
-            return res.status(404).json({ error: 'Interview not found' });
-        }
-        if (!hasFirmAccess(access.isAdmin, access.userFirmId, context.resume_firm_id, context.mission_firm_id, context.client_firm_id)) {
-            return res.status(403).json({ error: 'Access denied' });
+        const interviewAccess = await getInterviewAccessResult(access, req.params.interviewId, getInterviewAccessContext);
+        if (!interviewAccess.ok) {
+            return res.status(interviewAccess.status).json({ error: interviewAccess.error });
         }
 
         const interview = await cancelInterview(req.params.interviewId);
@@ -624,17 +552,14 @@ router.post('/interviews/:interviewId/cancel', authenticateToken, validateParams
  */
 router.delete('/interviews/:interviewId', authenticateToken, validateParams('interviewId'), async (req, res) => {
     try {
-        const access = await getPipelineRequestAccess(req);
+        const access = await getPipelineRequestAccess(req, getUserFirmId);
         if (!access.ok) {
             return res.status(access.status).json({ error: access.error });
         }
 
-        const context = await getInterviewAccessContext(req.params.interviewId);
-        if (!context) {
-            return res.status(404).json({ error: 'Interview not found' });
-        }
-        if (!hasFirmAccess(access.isAdmin, access.userFirmId, context.resume_firm_id, context.mission_firm_id, context.client_firm_id)) {
-            return res.status(403).json({ error: 'Access denied' });
+        const interviewAccess = await getInterviewAccessResult(access, req.params.interviewId, getInterviewAccessContext);
+        if (!interviewAccess.ok) {
+            return res.status(interviewAccess.status).json({ error: interviewAccess.error });
         }
 
         await deleteInterview(req.params.interviewId);

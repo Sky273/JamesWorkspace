@@ -109,8 +109,11 @@ export async function authenticateToken(req, res, next) {
         role: currentUser.role,
         firmId: currentUser.firm_id || null,
         firm_id: currentUser.firm_id || null,
-        firm: currentUser.firm_name || decoded.firm || null,
-        customer: currentUser.firm_name || decoded.customer || null
+        firmName: currentUser.firm_name || null,
+        customerName: currentUser.firm_name || null,
+        // Legacy aliases kept for backward compatibility only.
+        firm: currentUser.firm_name || null,
+        customer: currentUser.firm_name || null
     };
     next();
 }

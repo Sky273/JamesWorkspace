@@ -9,6 +9,12 @@ describe('promptVersioning.service', () => {
     it('bootstraps default revision state for each governed prompt', () => {
         const state = resolvePromptVersionState();
 
+        expect(state['Pre Analysis Prompt']).toEqual(expect.objectContaining({
+            currentRevision: 1,
+            isModified: false,
+            activeSource: 'default'
+        }));
+        expect(state['Pre Analysis Prompt'].history).toHaveLength(1);
         expect(state['Analysis Prompt']).toEqual(expect.objectContaining({
             currentRevision: 1,
             isModified: false,
@@ -41,6 +47,7 @@ describe('promptVersioning.service', () => {
 
     it('increments revision only for the prompt that actually changed', () => {
         const previousTexts = {
+            'Pre Analysis Prompt': 'Custom pre-analysis prompt',
             'Analysis Prompt': 'Custom analysis prompt',
             'Improvement Prompt': 'Custom improvement prompt'
         };
@@ -54,17 +61,70 @@ describe('promptVersioning.service', () => {
             previousPromptTexts: previousTexts,
             nextPromptTexts: {
                 ...previousTexts,
+                'Pre Analysis Prompt': 'Updated pre-analysis prompt',
                 'Improvement Prompt': 'Updated improvement prompt'
             },
             changedAt: '2026-04-01T11:00:00.000Z',
             changedBy: { id: 'user-1', email: 'admin@example.com' }
         });
 
+        expect(nextState['Pre Analysis Prompt'].currentRevision).toBe(3);
+        expect(nextState['Pre Analysis Prompt'].history.at(-1)).toEqual(expect.objectContaining({
+            reason: 'updated_custom',
+            changedByEmail: 'admin@example.com'
+        }));
         expect(nextState['Analysis Prompt'].currentRevision).toBe(2);
         expect(nextState['Improvement Prompt'].currentRevision).toBe(3);
         expect(nextState['Improvement Prompt'].history.at(-1)).toEqual(expect.objectContaining({
             reason: 'updated_custom',
             changedByEmail: 'admin@example.com'
+        }));
+    });
+
+    it('tracks revert and restore flows for pre-analysis prompt like other governed prompts', () => {
+        const customState = computeUpdatedPromptVersionState({
+            storedState: {},
+            previousPromptTexts: {},
+            nextPromptTexts: {
+                'Pre Analysis Prompt': 'Custom pre-analysis prompt'
+            },
+            changedAt: '2026-03-31T10:00:00.000Z',
+            changedBy: { id: 'user-1', email: 'admin@example.com' }
+        });
+
+        const revertedState = computeUpdatedPromptVersionState({
+            storedState: customState,
+            previousPromptTexts: {
+                'Pre Analysis Prompt': 'Custom pre-analysis prompt'
+            },
+            nextPromptTexts: extractPromptTextsFromSettingsRecord({}),
+            changedAt: '2026-03-31T11:00:00.000Z',
+            changedBy: { id: 'user-1', email: 'admin@example.com' }
+        });
+
+        expect(revertedState['Pre Analysis Prompt']).toEqual(expect.objectContaining({
+            currentRevision: 3,
+            isModified: false,
+            activeSource: 'default'
+        }));
+        expect(revertedState['Pre Analysis Prompt'].history.at(-1)).toEqual(expect.objectContaining({
+            reason: 'reverted_to_default',
+            source: 'default'
+        }));
+
+        const restoredState = computeUpdatedPromptVersionState({
+            storedState: revertedState,
+            previousPromptTexts: extractPromptTextsFromSettingsRecord({}),
+            nextPromptTexts: {
+                'Pre Analysis Prompt': 'Custom pre-analysis prompt'
+            },
+            changedAt: '2026-03-31T12:00:00.000Z',
+            changedBy: { id: 'user-1', email: 'admin@example.com' }
+        });
+
+        expect(restoredState['Pre Analysis Prompt'].history.at(-1)).toEqual(expect.objectContaining({
+            reason: 'restored_revision',
+            text: 'Custom pre-analysis prompt'
         }));
     });
 

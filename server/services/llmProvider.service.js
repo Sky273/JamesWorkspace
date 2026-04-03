@@ -12,6 +12,7 @@ import { safeLog } from '../utils/logger.backend.js';
 import { normalizeUtf8Text } from './openai/textUtils.js';
 
 const BUSINESS_CV_OPERATION_TIMEOUTS_MS = {
+    'Resume Pre-Analysis': 20 * 60 * 1000,
     'Resume Analysis': 20 * 60 * 1000,
     'Improved Resume Analysis': 20 * 60 * 1000,
     'Resume Improvement': 25 * 60 * 1000

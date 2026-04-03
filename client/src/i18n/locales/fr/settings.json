@@ -170,6 +170,10 @@
     "prompts": {
       "title": "Configuration des Prompts",
       "description": "Personnalisez les prompts utilisés pour l'analyse et l'amélioration des CV. Laissez vide pour utiliser les prompts par défaut.",
+      "preAnalysisEnabled": "Activer la pré-analyse",
+      "preAnalysisEnabledHelp": "Lance une passe serveur de nettoyage et de structuration minimale du texte extrait avant l'analyse principale.",
+      "preAnalysis": "Prompt de Pré-analyse",
+      "preAnalysisHelp": "Ce prompt est utilisé pour nettoyer et restructurer l'extraction native ou OCR avant la passe d'analyse.",
       "analysis": "Prompt d'Analyse",
       "analysisHelp": "Ce prompt est utilisé pour analyser le CV et générer les scores.",
       "improvement": "Prompt d'Amélioration",

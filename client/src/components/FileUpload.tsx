@@ -7,7 +7,7 @@
  * 2. File upload
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useDropzone, FileRejection, FileError } from 'react-dropzone';
 import { DocumentArrowUpIcon, UserIcon, BuildingOfficeIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -18,6 +18,7 @@ import AdminFirmSelector from './AdminFirmSelector';
 import InputWithLeadingIcon from './form/InputWithLeadingIcon';
 import { useTranslation } from 'react-i18next';
 import logger from '../utils/logger.frontend';
+import { createAuthOptionsWithCsrf, fetchWithAuth } from '../utils/apiInterceptor';
 
 interface CandidateInfo {
   profileType: 'employee' | 'external';
@@ -39,9 +40,37 @@ const FileUpload = (): JSX.Element => {
     candidateEmail: '',
     firmId: ''
   });
+  const [preAnalysisEnabled, setPreAnalysisEnabled] = useState<boolean>(true);
   
   const _isAdmin = user?.role === 'admin';
   const [formErrors, setFormErrors] = useState<{ name?: string; email?: string }>({});
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadPreAnalysisSetting = async (): Promise<void> => {
+      try {
+        const options = await createAuthOptionsWithCsrf({ method: 'GET' });
+        const response = await fetchWithAuth('/api/settings', options);
+        if (!response.ok) {
+          throw new Error('Failed to fetch settings');
+        }
+
+        const settings = await response.json() as { preAnalysisEnabled?: boolean };
+        if (isMounted) {
+          setPreAnalysisEnabled(Boolean(settings.preAnalysisEnabled));
+        }
+      } catch (error) {
+        logger.warn('[FileUpload] Failed to load pre-analysis setting, keeping default processing steps', error);
+      }
+    };
+
+    loadPreAnalysisSetting();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Validate email format
   const isValidEmail = (email: string): boolean => {
@@ -388,6 +417,7 @@ const FileUpload = (): JSX.Element => {
             currentStep={processingStep}
             error={processingError}
             fullscreen={true}
+            preAnalysisEnabled={preAnalysisEnabled}
           />
         ) : step === 'info' ? (
           renderInfoForm()

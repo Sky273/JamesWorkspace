@@ -39,8 +39,16 @@ const CLEANUP_DIRS = {
     }
 };
 
+const OCR_TEMP_ENTRY_PREFIXES = [
+    'resume-ocr-',
+    'resume-word-ocr-'
+];
+const OCR_TEMP_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+const OCR_TEMP_CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000;
+
 // Store timer reference for cleanup
 let fileCleanupTimer = null;
+let ocrCleanupTimer = null;
 let lastCleanupTime = null;
 let totalFilesDeleted = 0;
 let cleanupStats = {};
@@ -53,6 +61,11 @@ export function stopPeriodicCleanup() {
         clearInterval(fileCleanupTimer);
         fileCleanupTimer = null;
         safeLog('info', 'File cleanup timer stopped');
+    }
+    if (ocrCleanupTimer) {
+        clearInterval(ocrCleanupTimer);
+        ocrCleanupTimer = null;
+        safeLog('info', 'OCR cleanup timer stopped');
     }
 }
 
@@ -72,6 +85,7 @@ export function destroyFileCleanup() {
 export function getFileCleanupStats() {
     return {
         timerActive: !!fileCleanupTimer,
+        ocrTimerActive: !!ocrCleanupTimer,
         lastCleanupTime: lastCleanupTime ? new Date(lastCleanupTime).toISOString() : null,
         totalFilesDeleted,
         directories: CLEANUP_DIRS,
@@ -205,6 +219,72 @@ export async function cleanupOldFiles(directory, maxAgeMs = 60 * 60 * 1000) {
     }
 }
 
+export async function cleanupOcrTempArtifacts(maxAgeMs = OCR_TEMP_MAX_AGE_MS) {
+    const tmpDirectory = os.tmpdir();
+
+    try {
+        const entries = await fs.readdir(tmpDirectory);
+        const now = Date.now();
+        let deletedCount = 0;
+
+        for (const entry of entries) {
+            if (!OCR_TEMP_ENTRY_PREFIXES.some(prefix => entry.startsWith(prefix))) {
+                continue;
+            }
+
+            const entryPath = path.join(tmpDirectory, entry);
+
+            try {
+                const stats = await fs.stat(entryPath);
+                const entryAge = now - stats.mtimeMs;
+
+                if (entryAge <= maxAgeMs) {
+                    continue;
+                }
+
+                if (stats.isDirectory()) {
+                    await fs.rm(entryPath, { recursive: true, force: true });
+                } else {
+                    await fs.unlink(entryPath);
+                }
+
+                deletedCount++;
+            } catch (error) {
+                if (error.code !== 'ENOENT') {
+                    safeLog('warn', 'Error processing OCR temporary artifact during cleanup', {
+                        entry,
+                        error: error.message
+                    });
+                }
+            }
+        }
+
+        cleanupStats.ocrTempArtifacts = {
+            lastCleanup: new Date().toISOString(),
+            deletedCount,
+            tmpDirectory,
+            maxAgeHours: Math.round(maxAgeMs / (60 * 60 * 1000))
+        };
+        lastCleanupTime = Date.now();
+        totalFilesDeleted += deletedCount;
+
+        if (deletedCount > 0) {
+            safeLog('info', 'OCR temporary artifact cleanup completed', {
+                deletedCount,
+                tmpDirectory
+            });
+        }
+
+        return deletedCount;
+    } catch (error) {
+        safeLog('error', 'Error during OCR temporary artifact cleanup', {
+            tmpDirectory,
+            error: error.message
+        });
+        return 0;
+    }
+}
+
 /**
  * Clean all configured directories with their respective TTLs
  * Also cleans up old batch jobs and their file_data
@@ -306,12 +386,22 @@ async function cleanupAllDirectories(options = {}) {
  * @returns {NodeJS.Timeout} - Interval timer
  */
 export function startPeriodicCleanup(intervalMs = 60 * 60 * 1000, _maxAgeMs = 60 * 60 * 1000, options = {}) {
-    const { enableDatabaseTasks = true } = options;
+    stopPeriodicCleanup();
+
+    const {
+        enableDatabaseTasks = true,
+        enableDailyOcrCleanup = true,
+        ocrCleanupIntervalMs = OCR_TEMP_CLEANUP_INTERVAL_MS,
+        ocrMaxAgeMs = OCR_TEMP_MAX_AGE_MS
+    } = options;
     const dirCount = Object.keys(CLEANUP_DIRS).length;
     safeLog('info', 'Starting periodic file cleanup for all directories', {
         intervalMinutes: intervalMs / 60000,
         directories: dirCount,
         enableDatabaseTasks,
+        enableDailyOcrCleanup,
+        ocrCleanupIntervalHours: Math.round(ocrCleanupIntervalMs / (60 * 60 * 1000)),
+        ocrMaxAgeHours: Math.round(ocrMaxAgeMs / (60 * 60 * 1000)),
         configs: Object.entries(CLEANUP_DIRS).map(([key, config]) => ({
             name: key,
             path: config.path,
@@ -347,6 +437,18 @@ export function startPeriodicCleanup(intervalMs = 60 * 60 * 1000, _maxAgeMs = 60
 
     // Store timer reference for external cleanup
     fileCleanupTimer = timer;
+
+    if (enableDailyOcrCleanup) {
+        cleanupOcrTempArtifacts(ocrMaxAgeMs).catch(error => {
+            safeLog('error', 'Initial OCR cleanup failed', { error: error.message });
+        });
+
+        ocrCleanupTimer = setInterval(() => {
+            cleanupOcrTempArtifacts(ocrMaxAgeMs).catch(error => {
+                safeLog('error', 'Scheduled OCR cleanup failed', { error: error.message });
+            });
+        }, ocrCleanupIntervalMs);
+    }
 
     return timer;
 }

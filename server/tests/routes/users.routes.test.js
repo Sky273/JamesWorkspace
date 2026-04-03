@@ -32,7 +32,6 @@ vi.mock('bcryptjs', () => ({
 // Mock users service
 const mockFindUserByEmail = vi.fn();
 const mockFindFirmById = vi.fn();
-const mockFindFirmByName = vi.fn();
 const mockCreateAdminUser = vi.fn();
 const mockFindUserById = vi.fn();
 const mockUpdateAdminUser = vi.fn();
@@ -40,7 +39,6 @@ const mockDeleteUser = vi.fn();
 vi.mock('../../services/users.service.js', () => ({
     findUserByEmail: (...args) => mockFindUserByEmail(...args),
     findFirmById: (...args) => mockFindFirmById(...args),
-    findFirmByName: (...args) => mockFindFirmByName(...args),
     createAdminUser: (...args) => mockCreateAdminUser(...args),
     findUserById: (...args) => mockFindUserById(...args),
     updateAdminUser: (...args) => mockUpdateAdminUser(...args),
@@ -134,32 +132,13 @@ describe('Users Routes', () => {
             expect(res.body.email).toBe('new@example.com');
         });
 
-        it('should create a user with legacy aliases', async () => {
-            mockFindUserByEmail.mockResolvedValueOnce(null);
-            mockFindFirmByName.mockResolvedValueOnce({ id: 'f-1', name: 'Acme Corp' });
-            mockCreateAdminUser.mockResolvedValue({
-                id: 'u-legacy',
-                email: 'legacy@example.com',
-                name: 'Legacy User',
-                role: 'user',
-                status: 'active'
-            });
-
-            const res = await request(app)
-                .post('/api/auth/users')
-                .set(authHeader)
-                .send({ email: 'legacy@example.com', password: 'Password123!', name: 'Legacy User', job_title: 'Engineer', Firm: 'Acme Corp' });
-
-            expect(res.status).toBe(201);
-        });
-
         it('should return 409 if user already exists', async () => {
             mockFindUserByEmail.mockResolvedValueOnce({ id: 'u-existing' });
 
             const res = await request(app)
                 .post('/api/auth/users')
                 .set(authHeader)
-                .send({ email: 'existing@example.com', password: 'Password123!', name: 'Existing', firm: 'Acme Corp' });
+                .send({ email: 'existing@example.com', password: 'Password123!', name: 'Existing', firmId: 'f-1' });
 
             expect(res.status).toBe(409);
             expect(res.body.error).toContain('already exists');
@@ -174,7 +153,7 @@ describe('Users Routes', () => {
                 .send({ email: 'new@example.com', password: 'Password123!', name: 'New User' });
 
             expect(res.status).toBe(400);
-            expect(res.body.error).toContain('Firm selection is required');
+            expect(res.body.error).toContain('Firm ID selection is required');
         });
 
         it('should create user with firm association', async () => {
@@ -251,24 +230,6 @@ describe('Users Routes', () => {
             expect(res.body.name).toBe('New Name');
         });
 
-        it('should update a user with legacy aliases', async () => {
-            mockFindUserById.mockResolvedValueOnce({
-                id: 'u-1', email: 'old@example.com', name: 'Old Name', role: 'user', status: 'active'
-            });
-            mockFindFirmByName.mockResolvedValueOnce({ id: 'f-1', name: 'Acme Corp' });
-            mockUpdateAdminUser.mockResolvedValue({
-                id: 'u-1', email: 'old@example.com', name: 'Old Name', role: 'user', status: 'active'
-            });
-
-            const res = await request(app)
-                .put('/api/auth/users/u-1')
-                .set(authHeader)
-                .send({ job_title: 'Director', Customer: 'Acme Corp' });
-
-            expect(res.status).toBe(200);
-            expect(mockUpdateAdminUser).toHaveBeenCalledWith('u-1', expect.objectContaining({ job_title: 'Director', firm_id: 'f-1' }));
-        });
-
         it('should return 404 if user not found', async () => {
             mockFindUserById.mockResolvedValueOnce(null);
 
@@ -291,7 +252,7 @@ describe('Users Routes', () => {
                 .send({ name: 'New Name' });
 
             expect(res.status).toBe(400);
-            expect(res.body.error).toContain('Firm selection is required');
+            expect(res.body.error).toContain('Firm ID selection is required');
         });
 
         it('should return 400 if selected firm does not exist on update', async () => {

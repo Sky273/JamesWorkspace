@@ -7,7 +7,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
-const { log, LOG_LEVELS } = require('../../lib/logger.cjs');
+const { log, LOG_LEVELS, safeSerializeLogData } = require('../../lib/logger.cjs');
 
 describe('Logger', () => {
   beforeEach(() => {
@@ -78,6 +78,25 @@ describe('Logger', () => {
       const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
       log('info', 'should be suppressed');
       expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('should not throw on circular object data', () => {
+      const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const circular = {};
+      circular.self = circular;
+
+      expect(() => log('error', 'circular', circular)).not.toThrow();
+      expect(spy).toHaveBeenCalledWith(
+        expect.stringContaining('circular'),
+        expect.stringContaining('serializationError')
+      );
+    });
+  });
+
+  describe('safeSerializeLogData()', () => {
+    it('returns primitive values unchanged', () => {
+      expect(safeSerializeLogData('x')).toBe('x');
+      expect(safeSerializeLogData(42)).toBe(42);
     });
   });
 });

@@ -123,6 +123,9 @@ export function securityLog(level, event, details = {}) {
     
     // Only add non-null fields to reduce memory
     if (details.email) logEntry.email = details.email;
+    if (details.firmId) logEntry.firmId = details.firmId;
+    if (details.firmName) logEntry.firmName = details.firmName;
+    if (details.customerName) logEntry.customerName = details.customerName;
     if (details.customer) logEntry.customer = details.customer;
     if (details.role) logEntry.role = details.role;
     if (details.endpoint) logEntry.endpoint = details.endpoint;

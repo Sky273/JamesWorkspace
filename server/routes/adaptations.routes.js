@@ -75,7 +75,10 @@ router.get('/', authenticateToken, async (req, res) => {
             'Match Score': record.match_score,
             'Match Analysis': record.match_analysis,
             Status: record.status,
+            'Firm ID': record.firm_id || null,
+            'Firm Name': record.firm || null,
             Firm: record.firm,
+            CustomerName: record.firm,
             Customer: record.firm,
             'Created At': record.created_at,
             'Updated At': record.updated_at
@@ -163,7 +166,10 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
             'Match Score': record.match_score,
             'Match Analysis': record.match_analysis,
             Status: record.status,
+            'Firm ID': record.firm_id || null,
+            'Firm Name': record.firm || null,
             Firm: record.firm,
+            CustomerName: record.firm,
             Customer: record.firm,
             'Created At': record.created_at,
             'Updated At': record.updated_at
@@ -230,7 +236,10 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateA
             'Match Score': updatedRecord.match_score,
             'Match Analysis': updatedRecord.match_analysis,
             Status: updatedRecord.status,
+            'Firm ID': updatedRecord.firm_id || null,
+            'Firm Name': updatedRecord.firm || null,
             Firm: updatedRecord.firm,
+            CustomerName: updatedRecord.firm,
             Customer: updatedRecord.firm,
             'Created At': updatedRecord.created_at,
             'Updated At': updatedRecord.updated_at

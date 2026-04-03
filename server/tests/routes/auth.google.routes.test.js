@@ -55,9 +55,11 @@ vi.mock('../../utils/logger.backend.js', () => ({
 // Mock auth service
 const mockUpdateLastLogin = vi.fn();
 const mockRegisterGoogleUser = vi.fn();
+const mockFindUserWithFirmById = vi.fn();
 vi.mock('../../services/auth.service.js', () => ({
     updateLastLogin: (...args) => mockUpdateLastLogin(...args),
-    registerGoogleUser: (...args) => mockRegisterGoogleUser(...args)
+    registerGoogleUser: (...args) => mockRegisterGoogleUser(...args),
+    findUserWithFirmById: (...args) => mockFindUserWithFirmById(...args)
 }));
 
 // Mock auth config
@@ -104,6 +106,7 @@ describe('Google OAuth Routes', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mockVerifyToken.mockReset();
+        mockFindUserWithFirmById.mockResolvedValue({ id: 'user-123', status: 'active', firm_id: 'f-1', firm_name: 'Acme' });
         app = createTestApp();
     });
 
@@ -168,7 +171,7 @@ describe('Google OAuth Routes', () => {
             expect(res.headers.location).toContain('missing_code');
         });
 
-        it('should block Google register flow when no firm can be assigned', async () => {
+        it('should create a pending account during Google register flow', async () => {
             mockGetAuthUrl.mockResolvedValueOnce('https://accounts.google.com/o/oauth2/auth?...');
             await request(app).get('/api/auth/google?action=register');
 
@@ -181,13 +184,22 @@ describe('Google OAuth Routes', () => {
             });
             mockFindUserByGoogleId.mockResolvedValueOnce(null);
             mockFindUserByEmail.mockResolvedValueOnce(null);
+            mockRegisterGoogleUser.mockResolvedValueOnce({
+                id: 'u-new',
+                status: 'pending'
+            });
 
             const res = await request(app)
                 .get(`/api/auth/google/callback?code=abc&state=${state}`);
 
             expect(res.status).toBe(302);
-            expect(res.headers.location).toContain('/register?error=firm_assignment_required');
-            expect(mockRegisterGoogleUser).not.toHaveBeenCalled();
+            expect(res.headers.location).toContain('/signin?success=registered_pending');
+            expect(mockRegisterGoogleUser).toHaveBeenCalledWith({
+                email: 'newuser@test.com',
+                name: 'New User',
+                googleId: 'g-123',
+                googleEmail: 'newuser@test.com'
+            });
         });
 
         it('should block Google callback sign-in when existing user has no firm assignment', async () => {
@@ -215,6 +227,57 @@ describe('Google OAuth Routes', () => {
 
             expect(res.status).toBe(302);
             expect(res.headers.location).toContain('/signin?error=firm_assignment_required');
+        });
+
+        it('should link the Google account for a valid link callback', async () => {
+            mockVerifyToken.mockReturnValueOnce({ id: 'user-123' });
+            mockGetAuthUrl.mockResolvedValueOnce('https://accounts.google.com/o/oauth2/auth?...');
+
+            await request(app)
+                .get('/api/auth/google?action=link&returnUrl=/settings')
+                .set('Cookie', ['accessToken=valid-access-token']);
+
+            const state = mockGetAuthUrl.mock.calls[0][0];
+
+            mockExchangeCodeForUserInfo.mockResolvedValueOnce({
+                googleId: 'g-linked',
+                email: 'linked@test.com',
+                name: 'Linked User'
+            });
+            mockLinkGoogleAccount.mockResolvedValueOnce(true);
+
+            const res = await request(app)
+                .get(`/api/auth/google/callback?code=abc&state=${state}`);
+
+            expect(res.status).toBe(302);
+            expect(res.headers.location).toContain('/settings?success=google_linked');
+            expect(mockFindUserWithFirmById).toHaveBeenCalledWith('user-123');
+            expect(mockLinkGoogleAccount).toHaveBeenCalledWith('user-123', 'g-linked', 'linked@test.com');
+        });
+
+        it('should reject link callback when the original user no longer exists', async () => {
+            mockVerifyToken.mockReturnValueOnce({ id: 'user-123' });
+            mockGetAuthUrl.mockResolvedValueOnce('https://accounts.google.com/o/oauth2/auth?...');
+
+            await request(app)
+                .get('/api/auth/google?action=link&returnUrl=/settings')
+                .set('Cookie', ['accessToken=valid-access-token']);
+
+            const state = mockGetAuthUrl.mock.calls[0][0];
+
+            mockExchangeCodeForUserInfo.mockResolvedValueOnce({
+                googleId: 'g-linked',
+                email: 'linked@test.com',
+                name: 'Linked User'
+            });
+            mockFindUserWithFirmById.mockResolvedValueOnce(null);
+
+            const res = await request(app)
+                .get(`/api/auth/google/callback?code=abc&state=${state}`);
+
+            expect(res.status).toBe(302);
+            expect(res.headers.location).toContain('/settings?error=not_authenticated');
+            expect(mockLinkGoogleAccount).not.toHaveBeenCalled();
         });
     });
 

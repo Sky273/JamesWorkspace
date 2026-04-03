@@ -102,6 +102,8 @@ describe('Settings Service', () => {
                 llm_model: 'gpt-4o',
                 llm_provider: 'openai',
                 cv_mode: 'nominative',
+                pre_analysis_enabled: true,
+                pre_analysis_prompt: 'Pre analyze this CV',
                 analysis_prompt: 'Analyze this CV',
                 improvement_prompt: 'Improve this CV',
                 executive_summary_weight: 20,
@@ -118,6 +120,8 @@ describe('Settings Service', () => {
             
             expect(result.llmModel).toBe('gpt-4o');
             expect(result.llmProvider).toBe('openai');
+            expect(result.preAnalysisEnabled).toBe(true);
+            expect(result['Pre Analysis Prompt']).toBe('Pre analyze this CV');
             expect(result['Profile Matching Local Skill Weight']).toBe(9);
             expect(result.promptVersionState['Analysis Prompt']).toEqual(expect.objectContaining({
                 currentRevision: 2,
@@ -252,6 +256,8 @@ describe('Settings Service', () => {
     describe('getPrompts', () => {
         it('should return all prompts', async () => {
             selectWithTimeout.mockResolvedValueOnce([{
+                pre_analysis_enabled: true,
+                pre_analysis_prompt: 'Pre analyze prompt',
                 analysis_prompt: 'Analyze prompt',
                 improvement_prompt: 'Improve prompt',
                 match_analysis_prompt: 'Match prompt',
@@ -260,6 +266,8 @@ describe('Settings Service', () => {
             
             const result = await getPrompts();
             
+            expect(result.preAnalysisEnabled).toBe(true);
+            expect(result.preAnalysis).toBe('Pre analyze prompt');
             expect(result.analysis).toBe('Analyze prompt');
             expect(result.improvement).toBe('Improve prompt');
             expect(result.matchAnalysis).toBe('Match prompt');

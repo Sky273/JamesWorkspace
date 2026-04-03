@@ -152,20 +152,6 @@ export async function findFirmById(firmId) {
 }
 
 /**
- * Find firm by name
- * @param {string} firmName
- * @returns {Promise<Object|null>}
- */
-export async function findFirmByName(firmName) {
-    const firms = await selectWithTimeout('firms', {
-        where: 'name = $1',
-        params: [firmName],
-        limit: 1
-    });
-    return firms.length > 0 ? firms[0] : null;
-}
-
-/**
  * Create a user (admin CRUD)
  * @param {Object} userData - Fields for the new user record
  * @returns {Promise<Object>} Created user record

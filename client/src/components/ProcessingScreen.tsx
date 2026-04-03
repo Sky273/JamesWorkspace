@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   DocumentArrowUpIcon,
   DocumentTextIcon,
+  SparklesIcon,
   CpuChipIcon,
   CheckIcon
 } from '@heroicons/react/24/outline';
@@ -244,43 +245,70 @@ interface ProcessingScreenProps {
   currentStep: string;
   error?: string | null;
   fullscreen?: boolean;
+  preAnalysisEnabled?: boolean;
 }
 
-const ProcessingScreen = ({ currentStep, error, fullscreen = false }: ProcessingScreenProps): JSX.Element => {
+const ProcessingScreen = ({
+  currentStep,
+  error,
+  fullscreen = false,
+  preAnalysisEnabled = true,
+}: ProcessingScreenProps): JSX.Element => {
   const { t } = useTranslation();
 
-  const steps: StepDef[] = useMemo(() => [
-    {
-      key: 'upload',
-      icon: DocumentArrowUpIcon,
-      title: t('processing.steps.upload.title'),
-      description: t('processing.steps.upload.description'),
-      loadingTexts: t('processing.steps.upload.steps', { returnObjects: true }) as string[],
-      colors: {
-        primary: '#3B82F6',
-        gradient: 'linear-gradient(135deg, #3B82F6, #6366F1)',
-        bg: 'from-blue-50/60 via-transparent to-indigo-50/40',
-        darkBg: 'dark:from-blue-950/20 dark:via-transparent dark:to-indigo-950/15',
-        ring: '#6366F1',
-        particle: 'bg-blue-400/30',
+  const steps: StepDef[] = useMemo(() => {
+    const nextSteps: StepDef[] = [
+      {
+        key: 'upload',
+        icon: DocumentArrowUpIcon,
+        title: t('processing.steps.upload.title'),
+        description: t('processing.steps.upload.description'),
+        loadingTexts: t('processing.steps.upload.steps', { returnObjects: true }) as string[],
+        colors: {
+          primary: '#3B82F6',
+          gradient: 'linear-gradient(135deg, #3B82F6, #6366F1)',
+          bg: 'from-blue-50/60 via-transparent to-indigo-50/40',
+          darkBg: 'dark:from-blue-950/20 dark:via-transparent dark:to-indigo-950/15',
+          ring: '#6366F1',
+          particle: 'bg-blue-400/30',
+        },
       },
-    },
-    {
-      key: 'extract',
-      icon: DocumentTextIcon,
-      title: t('processing.steps.extract.title'),
-      description: t('processing.steps.extract.description'),
-      loadingTexts: t('processing.steps.extract.steps', { returnObjects: true }) as string[],
-      colors: {
-        primary: '#8B5CF6',
-        gradient: 'linear-gradient(135deg, #8B5CF6, #A855F7)',
-        bg: 'from-violet-50/60 via-transparent to-purple-50/40',
-        darkBg: 'dark:from-violet-950/20 dark:via-transparent dark:to-purple-950/15',
-        ring: '#A855F7',
-        particle: 'bg-violet-400/30',
+      {
+        key: 'extract',
+        icon: DocumentTextIcon,
+        title: t('processing.steps.extract.title'),
+        description: t('processing.steps.extract.description'),
+        loadingTexts: t('processing.steps.extract.steps', { returnObjects: true }) as string[],
+        colors: {
+          primary: '#8B5CF6',
+          gradient: 'linear-gradient(135deg, #8B5CF6, #A855F7)',
+          bg: 'from-violet-50/60 via-transparent to-purple-50/40',
+          darkBg: 'dark:from-violet-950/20 dark:via-transparent dark:to-purple-950/15',
+          ring: '#A855F7',
+          particle: 'bg-violet-400/30',
+        },
       },
-    },
-    {
+    ];
+
+    if (preAnalysisEnabled) {
+      nextSteps.push({
+        key: 'preanalyze',
+        icon: SparklesIcon,
+        title: t('processing.steps.preanalyze.title'),
+        description: t('processing.steps.preanalyze.description'),
+        loadingTexts: t('processing.steps.preanalyze.steps', { returnObjects: true }) as string[],
+        colors: {
+          primary: '#14B8A6',
+          gradient: 'linear-gradient(135deg, #14B8A6, #0EA5E9)',
+          bg: 'from-teal-50/60 via-transparent to-cyan-50/40',
+          darkBg: 'dark:from-teal-950/20 dark:via-transparent dark:to-cyan-950/15',
+          ring: '#0EA5E9',
+          particle: 'bg-teal-400/30',
+        },
+      });
+    }
+
+    nextSteps.push({
       key: 'analyze',
       icon: CpuChipIcon,
       title: t('processing.steps.analyze.title'),
@@ -294,10 +322,15 @@ const ProcessingScreen = ({ currentStep, error, fullscreen = false }: Processing
         ring: '#F43F5E',
         particle: 'bg-pink-400/30',
       },
-    },
-  ], [t]);
+    });
 
-  const currentIdx = steps.findIndex(s => s.key === currentStep);
+    return nextSteps;
+  }, [preAnalysisEnabled, t]);
+
+  const normalizedCurrentStep = !preAnalysisEnabled && currentStep === 'preanalyze'
+    ? 'analyze'
+    : currentStep;
+  const currentIdx = steps.findIndex(s => s.key === normalizedCurrentStep);
   const activeStep = steps[Math.max(currentIdx, 0)];
 
   const content = (

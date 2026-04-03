@@ -19,6 +19,15 @@
           "Identification des sections"
         ]
       },
+      "preanalyze": {
+        "title": "Pré-analyse du texte",
+        "description": "Nettoyage et structuration minimale avant l'analyse IA...",
+        "steps": [
+          "Nettoyage des artefacts d'extraction",
+          "Réorganisation des blocs du CV",
+          "Préparation du texte pour l'analyse"
+        ]
+      },
       "analyze": {
         "title": "Analyse IA",
         "description": "Analyse avec l'IA avancée...",

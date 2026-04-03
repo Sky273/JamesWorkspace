@@ -23,7 +23,6 @@ import {
     listUsers,
     updateUserProfile,
     findUserByEmail,
-    findFirmByName,
     createAdminUser,
     findUserById,
     updateAdminUser,
@@ -154,18 +153,6 @@ describe('Users Service', () => {
         it('should return null if not found', async () => {
             selectWithTimeout.mockResolvedValueOnce([]);
             expect(await findUserByEmail('missing@test.com')).toBeNull();
-        });
-    });
-
-    describe('findFirmByName', () => {
-        it('should return firm if found', async () => {
-            selectWithTimeout.mockResolvedValueOnce([{ id: 'f1', name: 'Acme' }]);
-            expect(await findFirmByName('Acme')).toEqual({ id: 'f1', name: 'Acme' });
-        });
-
-        it('should return null if not found', async () => {
-            selectWithTimeout.mockResolvedValueOnce([]);
-            expect(await findFirmByName('Unknown')).toBeNull();
         });
     });
 

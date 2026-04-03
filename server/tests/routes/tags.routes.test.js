@@ -22,8 +22,10 @@ vi.mock('../../config/constants.js', () => ({
 
 // Mock postgresHelpers
 const mockSelectWithTimeout = vi.fn();
+const mockSelectRawWithTimeout = vi.fn();
 const mockUpdateWithTimeout = vi.fn();
 vi.mock('../../utils/postgresHelpers.js', () => ({
+    selectRawWithTimeout: (...args) => mockSelectRawWithTimeout(...args),
     selectWithTimeout: (...args) => mockSelectWithTimeout(...args),
     updateWithTimeout: (...args) => mockUpdateWithTimeout(...args)
 }));
@@ -93,7 +95,7 @@ describe('Tags Routes', () => {
 
     describe('GET /api/tags', () => {
         it('should return aggregated tags', async () => {
-            mockSelectWithTimeout.mockResolvedValue([{
+            mockSelectRawWithTimeout.mockResolvedValue([{
                 skills: ['JavaScript', 'Python'],
                 industries: ['IT'],
                 tools: ['Git'],
@@ -110,7 +112,7 @@ describe('Tags Routes', () => {
         });
 
         it('should handle empty results', async () => {
-            mockSelectWithTimeout.mockResolvedValue([{}]);
+            mockSelectRawWithTimeout.mockResolvedValue([{}]);
 
             const res = await request(app).get('/api/tags').set(authHeader);
 
@@ -124,7 +126,7 @@ describe('Tags Routes', () => {
         });
 
         it('should return 500 on service error', async () => {
-            mockSelectWithTimeout.mockRejectedValue(new Error('DB error'));
+            mockSelectRawWithTimeout.mockRejectedValue(new Error('DB error'));
 
             const res = await request(app).get('/api/tags').set(authHeader);
             expect(res.status).toBe(500);
@@ -144,7 +146,7 @@ describe('Tags Routes', () => {
     describe('GET /api/tags/cleaned', () => {
         it('should return cleaned tags for user', async () => {
             mockGetUserFirmId.mockResolvedValue('firm-123');
-            mockSelectWithTimeout.mockResolvedValue([{
+            mockSelectRawWithTimeout.mockResolvedValue([{
                 skills: ['JavaScript'],
                 industries: ['Tech'],
                 tools: ['VS Code'],
@@ -159,7 +161,7 @@ describe('Tags Routes', () => {
 
         it('should return 500 on DB error', async () => {
             mockGetUserFirmId.mockResolvedValue('firm-123');
-            mockSelectWithTimeout.mockRejectedValue(new Error('DB error'));
+            mockSelectRawWithTimeout.mockRejectedValue(new Error('DB error'));
 
             const res = await request(app).get('/api/tags/cleaned').set(authHeader);
             expect(res.status).toBe(500);
@@ -168,7 +170,7 @@ describe('Tags Routes', () => {
 
     describe('GET /api/tags/esco', () => {
         it('should return ESCO tags', async () => {
-            mockSelectWithTimeout.mockResolvedValue([{
+            mockSelectRawWithTimeout.mockResolvedValue([{
                 skills: [{ label: 'Programming', uri: 'http://esco/1' }],
                 industries: [],
                 tools: [],
@@ -183,7 +185,7 @@ describe('Tags Routes', () => {
         });
 
         it('should return 500 on error', async () => {
-            mockSelectWithTimeout.mockRejectedValue(new Error('DB error'));
+            mockSelectRawWithTimeout.mockRejectedValue(new Error('DB error'));
 
             const res = await request(app).get('/api/tags/esco').set(authHeader);
             expect(res.status).toBe(500);
@@ -205,7 +207,7 @@ describe('Tags Routes', () => {
 
     describe('PUT /api/tags/rename', () => {
         it('should rename a tag across resumes', async () => {
-            mockSelectWithTimeout.mockResolvedValue([{ id: 'r-1' }, { id: 'r-2' }]);
+            mockSelectRawWithTimeout.mockResolvedValue([{ id: 'r-1' }, { id: 'r-2' }]);
 
             const res = await request(app)
                 .put('/api/tags/rename')
@@ -237,7 +239,7 @@ describe('Tags Routes', () => {
         });
 
         it('should return 500 on DB error', async () => {
-            mockSelectWithTimeout.mockRejectedValue(new Error('DB error'));
+            mockSelectRawWithTimeout.mockRejectedValue(new Error('DB error'));
 
             const res = await request(app)
                 .put('/api/tags/rename')

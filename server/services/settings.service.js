@@ -28,6 +28,7 @@ import {
 
 const LLM_SETTINGS_CACHE_KEY = CACHE_KEYS.settings.LLM_SETTINGS;
 const CANONICAL_LLM_SETTINGS_KEY = 'default';
+const DEFAULT_LLM_PROVIDER = 'openai';
 let cacheTimestamp = null;
 
 function buildCanonicalSettingsDefaults(fields = {}) {
@@ -121,6 +122,8 @@ export async function getLLMSettings() {
             cvMode: dbSettings.cv_mode,
             chatbotEnabled: dbSettings.chatbot_enabled,
             webglEnabled: dbSettings.webgl_enabled,
+            preAnalysisEnabled: dbSettings.pre_analysis_enabled ?? false,
+            'Pre Analysis Prompt': dbSettings.pre_analysis_prompt,
             'Analysis Prompt': dbSettings.analysis_prompt,
             'Improvement Prompt': dbSettings.improvement_prompt,
             'Match Analysis Prompt': dbSettings.match_analysis_prompt,
@@ -202,7 +205,7 @@ export async function getLLMSettings() {
  */
 export async function getLLMModel() {
     const settings = await getLLMSettings();
-    return settings.llmModel || 'gpt-4o'; // Default fallback
+    return settings.llmModel || getProviderDefaultModel(settings.llmProvider || DEFAULT_LLM_PROVIDER);
 }
 
 /**
@@ -211,7 +214,7 @@ export async function getLLMModel() {
  */
 export async function getLLMProvider() {
     const settings = await getLLMSettings();
-    return settings.llmProvider || 'openai'; // Default fallback
+    return settings.llmProvider || DEFAULT_LLM_PROVIDER;
 }
 
 /**
@@ -261,6 +264,8 @@ export async function getPrompts() {
     const settings = await getLLMSettings();
     return {
         analysis: settings['Analysis Prompt'] || null,
+        preAnalysis: settings['Pre Analysis Prompt'] || null,
+        preAnalysisEnabled: settings.preAnalysisEnabled ?? false,
         improvement: settings['Improvement Prompt'] || null,
         matchAnalysis: settings['Match Analysis Prompt'] || null,
         adaptation: settings['Adaptation Prompt'] || null

@@ -132,7 +132,7 @@ export async function verifyIdToken(idToken) {
  */
 export async function linkGoogleAccount(userId, googleId, googleEmail) {
     try {
-        await query(
+        const result = await query(
             `UPDATE users SET 
                 google_id = $1, 
                 google_email = $2,
@@ -140,6 +140,11 @@ export async function linkGoogleAccount(userId, googleId, googleEmail) {
             WHERE id = $3`,
             [googleId, googleEmail, userId]
         );
+
+        if (!result.rowCount) {
+            safeLog('warn', 'Google account link skipped because user was not found', { userId, googleEmail });
+            return false;
+        }
         
         safeLog('info', 'Google account linked', { userId, googleEmail });
         return true;

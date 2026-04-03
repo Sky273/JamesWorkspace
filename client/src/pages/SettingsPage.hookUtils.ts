@@ -50,19 +50,12 @@ export function validateSettingsBeforeSave(
     };
   }
 
-  if (formData.llmProvider === 'ollama' && !formData.llmModel.trim()) {
-    return {
-      valid: false,
-      message: 'Selectionnez un modele Ollama distant',
-    };
-  }
-
   return { valid: true };
 }
 
 export function buildSettingsSavePayload(
   formData: SettingsFormData,
-): { payload: Record<string, string | number | LLMModelParameters> } | { error: string } {
+): { payload: Record<string, string | number | boolean | LLMModelParameters> } | { error: string } {
   try {
     return { payload: createSavePayload(formData) };
   } catch (error) {

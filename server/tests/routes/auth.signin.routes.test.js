@@ -295,7 +295,17 @@ describe('Auth Routes - POST /api/auth/register', () => {
         app = createTestApp();
     });
 
-    it('should block self-service registration even with valid data', async () => {
+    it('should create a pending user on self-service registration', async () => {
+        mockFindExistingUserByEmail.mockResolvedValueOnce(null);
+        mockBcryptHash.mockResolvedValueOnce('hashed-password');
+        mockCreateUser.mockResolvedValueOnce({
+            id: 'user-123',
+            email: 'newuser@example.com',
+            role: 'user',
+            status: 'pending',
+            firm_name: 'Public Registration'
+        });
+
         const res = await request(app)
             .post('/api/auth/register')
             .send({
@@ -304,10 +314,32 @@ describe('Auth Routes - POST /api/auth/register', () => {
                 name: 'New User'
             });
 
-        expect(res.status).toBe(403);
-        expect(res.body.error).toContain('Contact an administrator');
-        expect(mockFindExistingUserByEmail).not.toHaveBeenCalled();
-        expect(mockBcryptHash).not.toHaveBeenCalled();
+        expect(res.status).toBe(201);
+        expect(res.body.message).toContain('Registration successful');
+        expect(mockFindExistingUserByEmail).toHaveBeenCalledWith('newuser@example.com');
+        expect(mockBcryptHash).toHaveBeenCalledWith('password123', 10);
+        expect(mockCreateUser).toHaveBeenCalledWith({
+            email: 'newuser@example.com',
+            password: 'hashed-password',
+            name: 'New User',
+            role: 'user',
+            status: 'pending'
+        });
+    });
+
+    it('should reject duplicate emails', async () => {
+        mockFindExistingUserByEmail.mockResolvedValueOnce({ id: 'user-1' });
+
+        const res = await request(app)
+            .post('/api/auth/register')
+            .send({
+                email: 'newuser@example.com',
+                password: 'password123',
+                name: 'New User'
+            });
+
+        expect(res.status).toBe(409);
+        expect(res.body.error).toContain('already exists');
         expect(mockCreateUser).not.toHaveBeenCalled();
     });
 

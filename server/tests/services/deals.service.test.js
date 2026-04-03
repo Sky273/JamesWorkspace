@@ -178,6 +178,33 @@ describe('Deals Service', () => {
             query.mockResolvedValueOnce({ rows: [] });
             await expect(updateDeal('missing', { title: 'X' })).rejects.toThrow('Deal not found');
         });
+
+        it('should not clear omitted optional fields during partial update', async () => {
+            query.mockResolvedValueOnce({ rows: [{ id: 'd1', title: 'Updated' }] });
+
+            await updateDeal('d1', { title: 'Updated' });
+
+            const [sql, params] = query.mock.calls[0];
+            expect(sql).toContain('title = $1');
+            expect(sql).not.toContain('client_id =');
+            expect(sql).not.toContain('contact_id =');
+            expect(params).toEqual(['Updated', 'd1']);
+        });
+
+        it('should allow explicit clearing of client and contact ids', async () => {
+            query.mockResolvedValueOnce({ rows: [{ id: 'd1', client_id: null, contact_id: null }] });
+
+            await updateDeal('d1', { client_id: '', contact_id: '' });
+
+            const [sql, params] = query.mock.calls[0];
+            expect(sql).toContain('client_id = $1');
+            expect(sql).toContain('contact_id = $2');
+            expect(params).toEqual([null, null, 'd1']);
+        });
+
+        it('should throw when no fields are provided', async () => {
+            await expect(updateDeal('d1', {})).rejects.toThrow('No deal fields provided for update');
+        });
     });
 
     // ============================================

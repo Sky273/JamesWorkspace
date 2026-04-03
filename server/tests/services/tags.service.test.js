@@ -6,11 +6,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../utils/postgresHelpers.js', () => ({
+    selectRawWithTimeout: vi.fn(),
     selectWithTimeout: vi.fn(),
     updateWithTimeout: vi.fn()
 }));
 
-import { selectWithTimeout, updateWithTimeout } from '../../utils/postgresHelpers.js';
+import { selectRawWithTimeout, selectWithTimeout, updateWithTimeout } from '../../utils/postgresHelpers.js';
 import {
     aggregateRawTags,
     aggregateCleanedTags,
@@ -28,17 +29,17 @@ describe('Tags Service', () => {
     describe('aggregateRawTags', () => {
         it('should return aggregated raw tags', async () => {
             const tags = { skills: ['React'], industries: ['IT'], tools: ['Git'], soft_skills: ['Communication'] };
-            selectWithTimeout.mockResolvedValueOnce([tags]);
+            selectRawWithTimeout.mockResolvedValueOnce([tags]);
 
             const result = await aggregateRawTags();
 
             expect(result).toEqual(tags);
-            expect(selectWithTimeout.mock.calls[0][0]).toBe('resumes');
-            expect(selectWithTimeout.mock.calls[0][1].rawQuery).toContain('jsonb_array_elements_text');
+            expect(selectRawWithTimeout.mock.calls[0][0]).toContain('jsonb_array_elements_text');
+            expect(selectRawWithTimeout.mock.calls[0][2]).toEqual(expect.objectContaining({ context: 'tags.aggregateRawTags' }));
         });
 
         it('should return empty object if no results', async () => {
-            selectWithTimeout.mockResolvedValueOnce([]);
+            selectRawWithTimeout.mockResolvedValueOnce([]);
             expect(await aggregateRawTags()).toEqual({});
         });
     });
@@ -46,44 +47,44 @@ describe('Tags Service', () => {
     describe('aggregateCleanedTags', () => {
         it('should return cleaned tags for admin (no firm filter)', async () => {
             const tags = { skills: ['React'], industries: [], tools: [], soft_skills: [] };
-            selectWithTimeout.mockResolvedValueOnce([tags]);
+            selectRawWithTimeout.mockResolvedValueOnce([tags]);
 
             const result = await aggregateCleanedTags({ isAdmin: true });
 
             expect(result).toEqual(tags);
-            expect(selectWithTimeout.mock.calls[0][1].rawParams).toEqual([]);
+            expect(selectRawWithTimeout.mock.calls[0][1]).toEqual([]);
         });
 
         it('should apply firm filter for non-admin', async () => {
-            selectWithTimeout.mockResolvedValueOnce([{}]);
+            selectRawWithTimeout.mockResolvedValueOnce([{}]);
 
             await aggregateCleanedTags({ isAdmin: false, userFirmId: 'f1' });
 
-            expect(selectWithTimeout.mock.calls[0][1].rawParams).toEqual(['f1']);
-            expect(selectWithTimeout.mock.calls[0][1].rawQuery).toContain('firm_id = $1');
+            expect(selectRawWithTimeout.mock.calls[0][1]).toEqual(['f1']);
+            expect(selectRawWithTimeout.mock.calls[0][0]).toContain('firm_id = $1');
         });
 
         it('should handle grouped-by-deal scope for admin', async () => {
-            selectWithTimeout.mockResolvedValueOnce([{}]);
+            selectRawWithTimeout.mockResolvedValueOnce([{}]);
 
             await aggregateCleanedTags({ isAdmin: true, scope: 'grouped-by-deal' });
 
-            expect(selectWithTimeout.mock.calls[0][1].rawQuery).toContain('visible_resumes');
-            expect(selectWithTimeout.mock.calls[0][1].rawParams).toEqual([]);
+            expect(selectRawWithTimeout.mock.calls[0][0]).toContain('visible_resumes');
+            expect(selectRawWithTimeout.mock.calls[0][1]).toEqual([]);
         });
 
         it('should handle grouped-by-deal scope for non-admin', async () => {
-            selectWithTimeout.mockResolvedValueOnce([{}]);
+            selectRawWithTimeout.mockResolvedValueOnce([{}]);
 
             await aggregateCleanedTags({ isAdmin: false, userFirmId: 'f1', scope: 'grouped-by-deal' });
 
-            expect(selectWithTimeout.mock.calls[0][1].rawQuery).toContain('visible_resumes');
-            expect(selectWithTimeout.mock.calls[0][1].rawQuery).toContain('d.firm_id = $1');
-            expect(selectWithTimeout.mock.calls[0][1].rawParams).toEqual(['f1']);
+            expect(selectRawWithTimeout.mock.calls[0][0]).toContain('visible_resumes');
+            expect(selectRawWithTimeout.mock.calls[0][0]).toContain('d.firm_id = $1');
+            expect(selectRawWithTimeout.mock.calls[0][1]).toEqual(['f1']);
         });
 
         it('should return empty object if no results', async () => {
-            selectWithTimeout.mockResolvedValueOnce([]);
+            selectRawWithTimeout.mockResolvedValueOnce([]);
             expect(await aggregateCleanedTags({ isAdmin: true })).toEqual({});
         });
     });
@@ -91,12 +92,12 @@ describe('Tags Service', () => {
     describe('aggregateEscoTags', () => {
         it('should return ESCO normalized tags', async () => {
             const tags = { skills: [{ label: 'React', uri: 'esco:1' }], industries: [], tools: [], soft_skills: [] };
-            selectWithTimeout.mockResolvedValueOnce([tags]);
+            selectRawWithTimeout.mockResolvedValueOnce([tags]);
 
             const result = await aggregateEscoTags();
 
             expect(result).toEqual(tags);
-            expect(selectWithTimeout.mock.calls[0][1].rawQuery).toContain('skills_esco');
+            expect(selectRawWithTimeout.mock.calls[0][0]).toContain('skills_esco');
         });
     });
 
@@ -130,13 +131,13 @@ describe('Tags Service', () => {
 
     describe('renameTag', () => {
         it('should execute rename query and return updated IDs', async () => {
-            selectWithTimeout.mockResolvedValueOnce([{ id: 'r1' }, { id: 'r2' }]);
+            selectRawWithTimeout.mockResolvedValueOnce([{ id: 'r1' }, { id: 'r2' }]);
 
             const result = await renameTag('skills', 'React.js', 'React');
 
             expect(result).toHaveLength(2);
-            expect(selectWithTimeout.mock.calls[0][1].rawQuery).toContain('UPDATE resumes');
-            expect(selectWithTimeout.mock.calls[0][1].rawParams).toEqual(['React.js', 'React', JSON.stringify(['React.js'])]);
+            expect(selectRawWithTimeout.mock.calls[0][0]).toContain('UPDATE resumes');
+            expect(selectRawWithTimeout.mock.calls[0][1]).toEqual(['React.js', 'React', JSON.stringify(['React.js'])]);
         });
     });
 });

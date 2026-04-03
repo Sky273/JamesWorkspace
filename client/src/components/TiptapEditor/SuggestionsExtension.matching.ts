@@ -98,7 +98,7 @@ export function normalizeText(text: string): string {
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[''Ê¼`]/g, "'")
+    .replace(/[''`]/g, "'")
     .trim();
 }
 
@@ -140,7 +140,7 @@ export function scoreMatch(
       else {
         const escaped = marker.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const wordBoundary = new RegExp(
-          `(?:^|[\\s,;:.!?/()\\[\\]|â€“â€”\\-])${escaped}(?:[\\s,;:.!?/()\\[\\]|â€“â€”\\-]|$)`,
+          `(?:^|[\\s,;:.!?/()\\[\\]|–—\\-])${escaped}(?:[\\s,;:.!?/()\\[\\]|–—\\-]|$)`,
         );
         score += wordBoundary.test(normalizedText) ? 20 : 8;
       }

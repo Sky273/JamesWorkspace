@@ -99,6 +99,9 @@ class AuthenticationError extends Error {
 // In-memory user cache (no localStorage for security)
 let cachedUser: User | null = null;
 
+const isActiveUser = (user: User | null | undefined): user is User =>
+  Boolean(user && user.status === 'active');
+
 const setAuthenticatedUser = (user: User | null): User | null => {
   cachedUser = user;
   return cachedUser;
@@ -142,12 +145,16 @@ export const authService = {
         throw new AuthenticationError(data.error || 'Failed to sign in');
       }
 
-      setAuthenticatedUser(data.user as User);
-      
-      // Reset session state on successful login (clears isSessionExpiring flag)
-      resetSessionState();
-      
-      return cachedUser as User;
+      const signedInUser = data.user as User;
+
+      if (isActiveUser(signedInUser)) {
+        setAuthenticatedUser(signedInUser);
+        resetSessionState();
+      } else {
+        clearAuthenticatedUser();
+      }
+
+      return signedInUser;
     } catch (error) {
       if (isSessionRedirectError(error)) throw error;
       if (!(error instanceof AuthenticationError)) {
@@ -222,7 +229,12 @@ export const authService = {
 
       if (response.ok) {
         const data = await response.json();
-        return setAuthenticatedUser((data.user as User) || null);
+        const restoredUser = (data.user as User) || null;
+        if (!isActiveUser(restoredUser)) {
+          clearAuthenticatedUser();
+          return null;
+        }
+        return setAuthenticatedUser(restoredUser);
       }
 
       if (response.status !== 401 && response.status !== 403) {
@@ -269,7 +281,12 @@ export const authService = {
       }
 
       const retryData = await retryResponse.json();
-      return setAuthenticatedUser((retryData.user as User) || null);
+      const refreshedUser = (retryData.user as User) || null;
+      if (!isActiveUser(refreshedUser)) {
+        clearAuthenticatedUser();
+        return null;
+      }
+      return setAuthenticatedUser(refreshedUser);
     } catch (error) {
       logger.error('Failed to restore session:', error);
       resetSessionState();
@@ -293,10 +310,12 @@ export const authService = {
       }
 
       const data = await response.json();
-      if (data.user) {
+      if (isActiveUser(data.user as User)) {
         setAuthenticatedUser(data.user as User);
+        return true;
       }
-      return true;
+      clearAuthenticatedUser();
+      return false;
     } catch (error) {
       logger.error('Token refresh error:', error);
       this.signOut();
@@ -317,7 +336,7 @@ export const authService = {
   },
 
   isAuthenticated(): boolean {
-    return !!this.getCurrentUser();
+    return isActiveUser(this.getCurrentUser());
   },
 
   /**

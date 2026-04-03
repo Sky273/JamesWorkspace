@@ -14,7 +14,8 @@ process.env.PDF_SERVER_INTERNAL_TOKEN = 'test-pdf-server-internal-token-minimum-
 const pdfGen = require('../lib/pdfGenerator.cjs');
 const docxGen = require('../lib/docxGenerator.cjs');
 const logger = require('../lib/logger.cjs');
-const { app } = require('../server.cjs');
+const serverModule = require('../server.cjs');
+const { app } = serverModule;
 
 const origGeneratePdf = pdfGen.generatePdf;
 const origCloseBrowser = pdfGen.closeBrowser;
@@ -83,6 +84,15 @@ describe('PDF Server', () => {
       expect(res.body.config.maxHtmlSize).toBeDefined();
       expect(res.body.config.maxConcurrentJobs).toBeDefined();
       expect(res.body.config.maxOutputSize).toBeDefined();
+    });
+  });
+
+  describe('unknown routes', () => {
+    it('returns 404 when no embedded dist frontend is present', async () => {
+      const res = await request(app).get('/not-a-real-route');
+
+      expect(res.status).toBe(404);
+      expect(res.body).toEqual({ error: 'Not found' });
     });
   });
 
@@ -255,6 +265,7 @@ describe('PDF Server', () => {
 
       expect(res.status).toBe(500);
       expect(res.body.error).toContain('Failed to generate PDF');
+      expect(res.body.details).toBeUndefined();
     });
 
     it('should return 504 on timeout error', async () => {
@@ -388,6 +399,7 @@ describe('PDF Server', () => {
 
       expect(res.status).toBe(500);
       expect(res.body.error).toContain('Failed to generate DOCX');
+      expect(res.body.details).toBeUndefined();
     });
   });
 
@@ -419,5 +431,19 @@ describe('PDF Server', () => {
       }));
     });
   });
-});
 
+  describe('internal helpers', () => {
+    it('derives an opaque stable fallback token', () => {
+      const jwtSecret = 'j'.repeat(32) + '-jwt-secret-material';
+      const csrfSecret = 'c'.repeat(32) + '-csrf-secret-material';
+
+      const token = serverModule._internal.derivePdfServerFallbackToken(jwtSecret, csrfSecret);
+
+      expect(token).toHaveLength(43);
+      expect(token).toMatch(/^[A-Za-z0-9_-]+$/);
+      expect(token.startsWith('j'.repeat(8))).toBe(false);
+      expect(token.startsWith('c'.repeat(8))).toBe(false);
+      expect(serverModule._internal.derivePdfServerFallbackToken(jwtSecret, csrfSecret)).toBe(token);
+    });
+  });
+});

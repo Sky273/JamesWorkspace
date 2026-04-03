@@ -118,6 +118,7 @@ vi.mock('../../services/ollamaAdmin.service.js', () => ({
 // Mock prompts
 vi.mock('../../config/prompts.backend.js', () => ({
     normalizeWeights: (data) => data,
+    DEFAULT_PRE_ANALYSIS_PROMPT: 'default-pre-analysis',
     DEFAULT_ANALYSIS_PROMPT: 'default-analysis',
     DEFAULT_IMPROVEMENT_PROMPT: 'default-improvement',
     DEFAULT_MATCH_ANALYSIS_PROMPT: 'default-match',
@@ -134,6 +135,15 @@ vi.mock('../../config/llmGovernance.js', () => ({
             operation: 'resume-analysis',
             sourceModule: './prompts/resume.prompts.js',
             text: 'default-analysis'
+        },
+        DEFAULT_PRE_ANALYSIS_PROMPT: {
+            key,
+            id: 'resume.pre-analysis.default',
+            version: '1.0.0',
+            domain: 'resume',
+            operation: 'resume-pre-analysis',
+            sourceModule: './prompts/resume.prompts.js',
+            text: 'default-pre-analysis'
         },
         DEFAULT_IMPROVEMENT_PROMPT: {
             key,
@@ -165,6 +175,7 @@ vi.mock('../../config/llmGovernance.js', () => ({
     }[key] || null)),
     getPromptContract: vi.fn((key) => ({
         DEFAULT_ANALYSIS_PROMPT: { id: 'resume_analysis_v1', version: '1.0.0' },
+        DEFAULT_PRE_ANALYSIS_PROMPT: { id: 'resume_pre_analysis_v1', version: '1.0.0' },
         DEFAULT_IMPROVEMENT_PROMPT: { id: 'resume_improvement_v1', version: '1.0.0' },
         DEFAULT_MATCH_ANALYSIS_PROMPT: { id: 'mission_match_v1', version: '1.0.0' },
         DEFAULT_ADAPTATION_PROMPT: { id: 'mission_adaptation_v1', version: '1.0.0' }
@@ -199,6 +210,8 @@ vi.mock('../../utils/mappers.js', () => ({
         cvMode: settings.cv_mode ?? settings.cvMode ?? 'nominative',
         chatbotEnabled: settings.chatbot_enabled ?? settings.chatbotEnabled ?? 'on',
         webglEnabled: settings.webgl_enabled ?? settings.webglEnabled ?? 'on',
+        preAnalysisEnabled: settings.pre_analysis_enabled ?? settings.preAnalysisEnabled ?? false,
+        'Pre Analysis Prompt': settings.pre_analysis_prompt ?? settings['Pre Analysis Prompt'] ?? '',
         'Analysis Prompt': settings.analysis_prompt ?? settings['Analysis Prompt'] ?? '',
         'Improvement Prompt': settings.improvement_prompt ?? settings['Improvement Prompt'] ?? '',
         'Match Analysis Prompt': settings.match_analysis_prompt ?? settings['Match Analysis Prompt'] ?? '',
@@ -349,7 +362,8 @@ describe('Settings Routes', () => {
 
             expect(res.status).toBe(200);
             expect(res.body.id).toBeNull();
-            expect(res.body.llmModel).toBeNull();
+            expect(res.body.llmModel).toBe('gpt-4o');
+            expect(res.body['Pre Analysis Prompt']).toBe('default-pre-analysis');
             expect(res.body['Analysis Prompt']).toBe('default-analysis');
             expect(res.body['Profile Matching Local Skill Weight']).toBe(6);
             expect(res.body.promptGovernance['Adaptation Prompt']).toEqual(expect.objectContaining({
@@ -375,17 +389,51 @@ describe('Settings Routes', () => {
         });
     });
 
+    describe('GET /api/settings/presentation', () => {
+        it('should return presentation toggles for authenticated users', async () => {
+            mockGetSettings.mockResolvedValueOnce({
+                chatbotEnabled: 'off',
+                webglEnabled: 'on'
+            });
+
+            const res = await request(app)
+                .get('/api/settings/presentation')
+                .set({ ...authHeader, 'x-test-role': 'user' });
+
+            expect(res.status).toBe(200);
+            expect(res.body).toEqual({
+                chatbotEnabled: 'off',
+                webglEnabled: 'on'
+            });
+        });
+
+        it('should return defaults when presentation settings are missing', async () => {
+            mockGetSettings.mockResolvedValueOnce(null);
+
+            const res = await request(app)
+                .get('/api/settings/presentation')
+                .set({ ...authHeader, 'x-test-role': 'user' });
+
+            expect(res.status).toBe(200);
+            expect(res.body).toEqual({
+                chatbotEnabled: 'on',
+                webglEnabled: 'on'
+            });
+        });
+    });
+
     describe('GET /api/settings/defaults', () => {
         it('should return default prompts and weights for admin', async () => {
             const res = await request(app).get('/api/settings/defaults').set(authHeader);
 
             expect(res.status).toBe(200);
+            expect(res.body['Pre Analysis Prompt']).toBe('default-pre-analysis');
             expect(res.body['Analysis Prompt']).toBe('default-analysis');
             expect(res.body['Improvement Prompt']).toBe('default-improvement');
             expect(res.body['Match Analysis Prompt']).toBe('default-match');
             expect(res.body['Adaptation Prompt']).toBe('default-adaptation');
             expect(res.body['Executive Summary Weight']).toBe(20);
-            expect(res.body.llmModel).toBe('gpt-5.4');
+            expect(res.body.llmModel).toBe('gpt-4o');
             expect(res.body.promptGovernance['Improvement Prompt']).toEqual(expect.objectContaining({
                 promptId: 'resume.improvement.default',
                 contractId: 'resume_improvement_v1'
@@ -531,7 +579,14 @@ describe('Settings Routes', () => {
             expect(res.status).toBe(500);
         });
 
-        it('rejects unavailable ollama models', async () => {
+        it('persists settings even when the selected ollama model is unavailable', async () => {
+            mockUpsertSettings.mockResolvedValue({
+                id: 'set-1',
+                llm_provider: 'ollama',
+                llm_model: 'missing-model',
+                ollama_base_url: 'http://ollama.local:11434'
+            });
+
             const res = await request(app)
                 .put('/api/settings/set-1')
                 .set(authHeader)
@@ -541,8 +596,12 @@ describe('Settings Routes', () => {
                     llmModel: 'missing-model'
                 });
 
-            expect(res.status).toBe(400);
-            expect(res.body.error).toContain('Selected Ollama model');
+            expect(res.status).toBe(200);
+            expect(mockUpsertSettings).toHaveBeenCalledWith('set-1', expect.objectContaining({
+                llmProvider: 'ollama',
+                llmModel: 'missing-model',
+                ollamaBaseUrl: 'http://ollama.local:11434'
+            }));
         });
 
         it('rejects settings when provider/model validation call fails', async () => {

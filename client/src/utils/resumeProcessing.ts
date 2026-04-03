@@ -3,7 +3,7 @@
  * Text extraction and resume improvement using Claude/OpenAI
  */
 
-import { createAuthOptionsWithCsrf } from './apiInterceptor';
+import { createAuthOptionsWithCsrf, fetchWithCsrfRetry } from './apiInterceptor';
 import logger from './logger.frontend';
 
 async function loadTextExtraction() {
@@ -162,10 +162,10 @@ async function askClaude(prompt: string): Promise<string> {
                 ],
             }),
         });
-        const response = await fetch('/api/llm/anthropic', {
+        const response = await fetchWithCsrfRetry('/api/llm/anthropic', {
             ...authOptions,
             signal: controller.signal
-        });
+        }, 60000);
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({ error: 'Failed to parse error response from proxy' }));
@@ -250,10 +250,10 @@ Répondez uniquement en JSON. Le JSON devra respecter le format suivant :
                 })
             });
             
-            const response = await fetch('/api/llm/openai', {
+            const response = await fetchWithCsrfRetry('/api/llm/openai', {
                 ...authOptions,
                 signal: controller.signal
-            });
+            }, 90000);
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({ error: 'Failed to parse error response' }));

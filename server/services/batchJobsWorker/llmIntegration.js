@@ -128,6 +128,30 @@ export async function analyzeResumeWithLLM(text, _firmId, originalFileName = nul
     return analysis;
 }
 
+export async function preAnalyzeResumeWithLLM(text, _firmId, originalFileName = null) {
+    const { preAnalyzeResumeText } = await import('../openai.service.js');
+    const { getLLMSettings } = await import('../settings.service.js');
+    const { DEFAULT_PRE_ANALYSIS_PROMPT } = await import('../../config/prompts.backend.js');
+    const { buildPromptExecutionMetadata } = await import('../../config/llmGovernance.js');
+
+    const settings = await getLLMSettings();
+    const model = settings.llmModel;
+    const preAnalysisPrompt = settings['Pre Analysis Prompt'] || DEFAULT_PRE_ANALYSIS_PROMPT;
+    const promptMetadata = buildPromptExecutionMetadata('DEFAULT_PRE_ANALYSIS_PROMPT', settings['Pre Analysis Prompt'] ? 'settings' : 'default');
+
+    if (!model && settings.llmProvider !== 'ollama') {
+        throw new Error('LLM model not configured');
+    }
+
+    await acquireLLMSlot();
+    try {
+        safeLog('debug', 'Batch pre-analysis using governed prompt', { ...promptMetadata, originalFileName });
+        return await preAnalyzeResumeText(text, model, preAnalysisPrompt, { promptMetadata }, originalFileName);
+    } finally {
+        releaseLLMSlot();
+    }
+}
+
 /**
  * Improve a resume using the LLM (with rate limiting)
  * @param {string} text - Resume text to improve
@@ -245,4 +269,3 @@ export async function analyzeImprovedResumeWithLLM(text, _firmId, originalFileNa
 
     return improvedAnalysis;
 }
-

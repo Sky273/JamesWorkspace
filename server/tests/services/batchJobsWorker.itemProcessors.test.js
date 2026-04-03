@@ -36,10 +36,12 @@ vi.mock('../../services/batchJobsWorker/textExtraction.js', () => ({
 }));
 
 const mockAnalyze = vi.fn();
+const mockPreAnalyze = vi.fn();
 const mockImprove = vi.fn();
 const mockAnalyzeImproved = vi.fn();
 vi.mock('../../services/batchJobsWorker/llmIntegration.js', () => ({
     analyzeResumeWithLLM: (...args) => mockAnalyze(...args),
+    preAnalyzeResumeWithLLM: (...args) => mockPreAnalyze(...args),
     improveResumeWithLLM: (...args) => mockImprove(...args),
     analyzeImprovedResumeWithLLM: (...args) => mockAnalyzeImproved(...args)
 }));
@@ -51,6 +53,7 @@ vi.mock('../../services/batchJobsWorker/helpers.js', () => ({
 
 vi.mock('../../services/settings.service.js', () => ({
     getLLMSettings: vi.fn(() => ({
+        preAnalysisEnabled: false,
         cvMode: 'named',
         executiveSummaryWeight: 20, skillsWeight: 20, experienceWeight: 20,
         educationWeight: 15, atsWeight: 15, hobbiesLanguagesWeight: 10
@@ -89,6 +92,7 @@ vi.mock('../../services/resumes.service.js', () => ({
 
 import { processImportItem, processImproveItem, processAdaptItem } from '../../services/batchJobsWorker/itemProcessors.js';
 import { updateJobItemStatus } from '../../services/batchJobs.service.js';
+import { getLLMSettings } from '../../services/settings.service.js';
 
 describe('Batch Jobs Worker - Item Processors', () => {
     beforeEach(() => {
@@ -96,6 +100,7 @@ describe('Batch Jobs Worker - Item Processors', () => {
         mockQuery.mockReset();
         mockExtractText.mockReset();
         mockAnalyze.mockReset();
+        mockPreAnalyze.mockReset();
         mockImprove.mockReset();
         mockAnalyzeImproved.mockReset();
         mockSendConsentRequest.mockReset();
@@ -103,6 +108,17 @@ describe('Batch Jobs Worker - Item Processors', () => {
         mockExecuteResumeAdaptation.mockReset();
         mockTrackBatchImportActivity.mockReset();
         mockTrackOcrActivity.mockReset();
+        vi.mocked(getLLMSettings).mockReset();
+        vi.mocked(getLLMSettings).mockResolvedValue({
+            preAnalysisEnabled: false,
+            cvMode: 'named',
+            executiveSummaryWeight: 20,
+            skillsWeight: 20,
+            experienceWeight: 20,
+            educationWeight: 15,
+            atsWeight: 15,
+            hobbiesLanguagesWeight: 10
+        });
     });
 
     const job = { id: 'job-1', firm_id: 'firm-1', firm_name: 'TestFirm' };
@@ -150,6 +166,93 @@ describe('Batch Jobs Worker - Item Processors', () => {
             expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('UPDATE resumes SET'), expect.any(Array));
             expect(mockTrackBatchImportActivity).toHaveBeenCalledWith(expect.objectContaining({ event: 'run', mimeType: 'application/pdf' }));
             expect(mockTrackBatchImportActivity).toHaveBeenCalledWith(expect.objectContaining({ event: 'completed', successfulRuns: 1 }));
+        });
+
+        it('should run pre-analysis before analysis when enabled in settings', async () => {
+            const extractedText = 'A long extracted resume text that is more than fifty characters for validation and downstream analysis.';
+
+            vi.mocked(getLLMSettings).mockResolvedValueOnce({
+                preAnalysisEnabled: true,
+                cvMode: 'named'
+            }).mockResolvedValueOnce({
+                preAnalysisEnabled: true,
+                cvMode: 'named'
+            });
+
+            mockQuery
+                .mockResolvedValueOnce({ rows: [{ id: 'res-1' }] })
+                .mockResolvedValueOnce({ rows: [] })
+                .mockResolvedValueOnce({ rows: [] });
+
+            mockExtractText.mockResolvedValueOnce({
+                text: extractedText,
+                ocrUsed: false
+            });
+            mockPreAnalyze.mockResolvedValueOnce('# Experience\n- Structured resume text for analysis');
+            mockAnalyze.mockResolvedValueOnce({
+                name: 'John Doe',
+                title: 'Developer',
+                globalRating: 75,
+                skillsRating: 80,
+                experiencesRating: 70,
+                educationRating: 65,
+                atsOptimizationRating: 72,
+                executiveSummaryRating: 78,
+                hobbiesLanguagesRating: 60,
+                suggestions: {}
+            });
+
+            await processImportItem(item, job, { improve: false });
+
+            expect(mockPreAnalyze).toHaveBeenCalledWith(
+                expect.any(String),
+                'firm-1',
+                'cv.pdf'
+            );
+            expect(mockAnalyze).toHaveBeenCalledWith(
+                '# Experience\n- Structured resume text for analysis',
+                'firm-1',
+                'cv.pdf',
+                expect.objectContaining({ ocrUsed: false })
+            );
+            expect(updateJobItemStatus).toHaveBeenCalledWith('item-1', 'processing', expect.objectContaining({ progress: 50 }));
+            expect(updateJobItemStatus).toHaveBeenCalledWith('item-1', 'processing', expect.objectContaining({ progress: 60 }));
+
+            const finalUpdateCall = mockQuery.mock.calls.find(
+                ([sql]) => typeof sql === 'string' && sql.includes("status = 'analyzed'")
+            );
+
+            expect(finalUpdateCall).toBeTruthy();
+            expect(finalUpdateCall[1][0]).toBe(mockPreAnalyze.mock.calls[0][0]);
+            expect(finalUpdateCall[1][0]).not.toBe('# Experience\n- Structured resume text for analysis');
+        });
+
+        it('should mark the item as analyzing before running the main analysis even without pre-analysis', async () => {
+            mockQuery
+                .mockResolvedValueOnce({ rows: [{ id: 'res-1' }] })
+                .mockResolvedValueOnce({ rows: [] })
+                .mockResolvedValueOnce({ rows: [] });
+
+            mockExtractText.mockResolvedValueOnce({
+                text: 'A long extracted resume text that is more than fifty characters for validation and downstream analysis.',
+                ocrUsed: false
+            });
+            mockAnalyze.mockResolvedValueOnce({
+                name: 'John Doe',
+                title: 'Developer',
+                globalRating: 75,
+                skillsRating: 80,
+                experiencesRating: 70,
+                educationRating: 65,
+                atsOptimizationRating: 72,
+                executiveSummaryRating: 78,
+                hobbiesLanguagesRating: 60,
+                suggestions: {}
+            });
+
+            await processImportItem(item, job, { improve: false });
+
+            expect(updateJobItemStatus).toHaveBeenCalledWith('item-1', 'processing', expect.objectContaining({ progress: 60 }));
         });
 
         it('should persist extracted text as original_text instead of overwriting it with structuredText', async () => {

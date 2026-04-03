@@ -556,6 +556,8 @@ CREATE TABLE public.llm_settings (
     improvement_prompt text,
     match_analysis_prompt text,
     adaptation_prompt text,
+    pre_analysis_enabled boolean DEFAULT false NOT NULL,
+    pre_analysis_prompt text,
     cv_mode character varying(50) DEFAULT 'nominative'::character varying,
     chatbot_enabled character varying(10) DEFAULT 'on'::character varying,
     executive_summary_weight integer DEFAULT 20,

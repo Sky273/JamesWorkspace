@@ -4,7 +4,7 @@
  * Extracted from routes/tags.routes.js
  */
 
-import { selectWithTimeout, updateWithTimeout } from '../utils/postgresHelpers.js';
+import { selectRawWithTimeout, selectWithTimeout, updateWithTimeout } from '../utils/postgresHelpers.js';
 
 /**
  * Aggregate all raw tags from resumes (SQL aggregation)
@@ -52,10 +52,11 @@ export async function aggregateRawTags({ isAdmin = false, userFirmId = null } = 
             ) AS soft_skills
     `;
 
-    const result = await selectWithTimeout('resumes', {
-        rawQuery: aggregateQuery,
-        rawParams: isAdmin ? [] : [userFirmId]
-    });
+    const result = await selectRawWithTimeout(
+        aggregateQuery,
+        isAdmin ? [] : [userFirmId],
+        { context: 'tags.aggregateRawTags' }
+    );
 
     return result[0] || {};
 }
@@ -179,10 +180,7 @@ export async function aggregateCleanedTags({ isAdmin, userFirmId, scope = 'defau
         queryParams = firmParams;
     }
 
-    const result = await selectWithTimeout('resumes', {
-        rawQuery: aggregateQuery,
-        rawParams: queryParams
-    });
+    const result = await selectRawWithTimeout(aggregateQuery, queryParams, { context: 'tags.aggregateCleanedTags' });
 
     return result[0] || {};
 }
@@ -237,10 +235,11 @@ export async function aggregateEscoTags({ isAdmin = false, userFirmId = null } =
             ) AS soft_skills
     `;
 
-    const result = await selectWithTimeout('resumes', {
-        rawQuery: aggregateQuery,
-        rawParams: isAdmin ? [] : [userFirmId]
-    });
+    const result = await selectRawWithTimeout(
+        aggregateQuery,
+        isAdmin ? [] : [userFirmId],
+        { context: 'tags.aggregateEscoTags' }
+    );
 
     return result[0] || {};
 }
@@ -299,10 +298,11 @@ export async function renameTag(dbField, oldName, newName, { firmId = null } = {
         RETURNING id
     `;
 
-    return selectWithTimeout('resumes', {
-        rawQuery: updateQuery,
-        rawParams: firmId
+    return selectRawWithTimeout(
+        updateQuery,
+        firmId
             ? [oldName, newName, JSON.stringify([oldName]), firmId]
-            : [oldName, newName, JSON.stringify([oldName])]
-    });
+            : [oldName, newName, JSON.stringify([oldName])],
+        { context: 'tags.renameTag' }
+    );
 }

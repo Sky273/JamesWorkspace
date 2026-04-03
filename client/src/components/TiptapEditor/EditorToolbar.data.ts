@@ -74,9 +74,9 @@ export const BORDER_WIDTH_PRESETS = ['1px', '2px', '3px'] as const;
 export const TABLE_BORDER_WIDTH_PRESETS = [null, '1px', '2px', '3px', '4px'] as const;
 
 export const VALIGN_OPTIONS = [
-  { value: 'top', label: 'Haut', icon: 'â†‘' },
-  { value: 'middle', label: 'Milieu', icon: 'â†•' },
-  { value: 'bottom', label: 'Bas', icon: 'â†“' },
+  { value: 'top', label: 'Haut', icon: '^' },
+  { value: 'middle', label: 'Milieu', icon: '-' },
+  { value: 'bottom', label: 'Bas', icon: 'v' },
 ] as const;
 
 export const TEXTALIGN_OPTIONS = [
@@ -93,7 +93,7 @@ export const TABLE_WIDTH_PRESETS = [
 ] as const;
 
 export const BORDER_STYLE_OPTIONS = [
-  { value: null, label: 'DÃ©faut' },
+  { value: null, label: 'Defaut' },
   { value: 'solid', label: 'Plein' },
   { value: 'dashed', label: 'Tirets' },
   { value: 'dotted', label: 'Points' },

@@ -34,7 +34,7 @@ export interface CandidateInfo {
   firmId?: string;
 }
 
-export type ProcessingStep = 'upload' | 'extract' | 'analyze' | 'improving' | 'analyzing' | null;
+export type ProcessingStep = 'upload' | 'extract' | 'preanalyze' | 'analyze' | 'improving' | 'analyzing' | null;
 
 interface ResumeContextType {
   resumes: Resume[];
@@ -198,7 +198,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
 
       const item = jobData.items?.[0];
       if (item?.status === 'pending_name') {
-        throw new Error("L'analyse du CV necessite une confirmation du nom du candidat.");
+        throw new Error("L'analyse du CV nécessite une confirmation du nom du candidat.");
       }
 
       if (item?.status === 'error') {

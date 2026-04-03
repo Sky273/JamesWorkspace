@@ -46,7 +46,7 @@ export const getUserFirmId = async (req) => {
  * @returns {string|null} - firm name or null
  */
 export const getUserFirmName = (req) => {
-    return req.user?.firm || null;
+    return req.user?.firmName || req.user?.firm || null;
 };
 
 /**

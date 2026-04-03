@@ -2,7 +2,7 @@
  * Template Service for CV templates
  */
 
-import { fetchWithAuth, createAuthOptions, createAuthOptionsWithCsrf } from './apiInterceptor';
+import { fetchWithAuth, createAuthOptions, createAuthOptionsWithCsrf, authPost, authPut, authDelete, fetchWithCsrfRetry } from './apiInterceptor';
 import logger from './logger.frontend';
 
 export interface Template {
@@ -223,14 +223,7 @@ export const templateService = {
         try {
             validateTemplateData(templateData);
             const sanitizedFields = sanitizeTemplateData(templateData);
-            const authOptions = await createAuthOptionsWithCsrf({
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(sanitizedFields)
-            });
-            const response = await fetchWithAuth('/api/templates', authOptions);
+            const response = await authPost('/api/templates', sanitizedFields);
             if (!response.ok) {
                 const errorData = await response.json();
                 throw new Error(errorData.error || 'Invalid template data. Please check all required fields are filled correctly.');
@@ -246,14 +239,7 @@ export const templateService = {
         try {
             validateTemplateData(templateData);
             const sanitizedFields = sanitizeTemplateData(templateData);
-            const authOptions = await createAuthOptionsWithCsrf({
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(sanitizedFields)
-            });
-            const response = await fetchWithAuth(`/api/templates/${id}`, authOptions);
+            const response = await authPut(`/api/templates/${id}`, sanitizedFields);
             if (!response.ok) {
                 const errorData = await response.json();
                 throw new Error(errorData.error || 'Invalid template data. Please check all required fields are filled correctly.');
@@ -267,10 +253,7 @@ export const templateService = {
 
     async deleteTemplate(id: string): Promise<{ success: boolean }> {
         try {
-            const authOptions = await createAuthOptionsWithCsrf({
-                method: 'DELETE'
-            });
-            const response = await fetchWithAuth(`/api/templates/${id}`, authOptions);
+            const response = await authDelete(`/api/templates/${id}`);
             if (!response.ok) {
                 const errorData = await response.json();
                 throw new Error(errorData.error || 'Failed to delete template');
@@ -301,7 +284,7 @@ export const templateService = {
             // This operation involves LLM processing which can take several minutes
             const EXTRACTION_TIMEOUT = 5 * 60 * 1000; // 5 minutes
             
-            const response = await fetchWithAuth('/api/templates/extract-from-cv', authOptions, EXTRACTION_TIMEOUT);
+            const response = await fetchWithCsrfRetry('/api/templates/extract-from-cv', authOptions, EXTRACTION_TIMEOUT);
             
             if (!response.ok) {
                 const errorData = await response.json();

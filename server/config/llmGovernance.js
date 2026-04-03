@@ -4,6 +4,7 @@ import {
   DEFAULT_ADAPTATION_PROMPT,
   DEFAULT_ANALYSIS_PROMPT,
   DEFAULT_IMPROVEMENT_PROMPT,
+  DEFAULT_PRE_ANALYSIS_PROMPT as DEFAULT_PRE_ANALYSIS_PROMPT_TEXT,
   DEFAULT_MATCH_ANALYSIS_PROMPT
 } from './prompts/resume.prompts.js';
 import {
@@ -21,6 +22,14 @@ export const CONTRACT_REGISTRY = Object.freeze({
     validatorModule: '../services/openai/contracts.js',
     validatorExport: 'validateResumeAnalysisPayload',
     description: 'Analyse structurée d\'un CV.'
+  }),
+  resume_pre_analysis_v1: Object.freeze({
+    id: 'resume_pre_analysis_v1',
+    version: '1.0.0',
+    domain: 'resume',
+    validatorModule: null,
+    validatorExport: null,
+    description: 'Pre-analyse textuelle d\'un CV avant l\'analyse structuree.'
   }),
   resume_improvement_v1: Object.freeze({
     id: 'resume_improvement_v1',
@@ -89,6 +98,17 @@ export const CONTRACT_REGISTRY = Object.freeze({
 });
 
 export const PROMPT_REGISTRY = Object.freeze({
+  DEFAULT_PRE_ANALYSIS_PROMPT: Object.freeze({
+    key: 'DEFAULT_PRE_ANALYSIS_PROMPT',
+    id: 'resume.pre-analysis.default',
+    version: '1.0.0',
+    domain: 'resume',
+    operation: 'resume-pre-analysis',
+    contractId: 'resume_pre_analysis_v1',
+    owner: 'resume',
+    sourceModule: './prompts/resume.prompts.js',
+    text: DEFAULT_PRE_ANALYSIS_PROMPT_TEXT
+  }),
   DEFAULT_ANALYSIS_PROMPT: Object.freeze({
     key: 'DEFAULT_ANALYSIS_PROMPT',
     id: 'resume.analysis.default',

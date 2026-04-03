@@ -324,7 +324,7 @@ export function MetiersResults({
                 <span className="px-3 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-lg font-mono font-semibold">{metier.CodeRome}</span>
                 <div className="text-left">
                   <h3 className="font-semibold text-gray-900 dark:text-gray-100">{metier.Libelle}</h3>
-                  {metier.Enjeux && metier.Enjeux.length > 0 && <p className="text-sm text-gray-500 dark:text-gray-400">{metier.Enjeux.slice(0, 3).map((enjeu) => enjeu.libelle).join(' â€¢ ')}</p>}
+                  {metier.Enjeux && metier.Enjeux.length > 0 && <p className="text-sm text-gray-500 dark:text-gray-400">{metier.Enjeux.slice(0, 3).map((enjeu) => enjeu.libelle).join(' • ')}</p>}
                 </div>
               </div>
               <div className="flex items-center gap-4">

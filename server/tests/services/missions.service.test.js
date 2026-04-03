@@ -15,6 +15,7 @@ vi.mock('../../utils/logger.backend.js', () => ({
 }));
 
 vi.mock('../../utils/postgresHelpers.js', () => ({
+    selectRawWithTimeout: vi.fn(),
     selectWithTimeout: vi.fn(),
     findWithTimeout: vi.fn(),
     createWithTimeout: vi.fn(),
@@ -25,7 +26,7 @@ vi.mock('../../utils/postgresHelpers.js', () => ({
 
 // Import after mocks
 import { query } from '../../config/database.js';
-import { selectWithTimeout, findWithTimeout, createWithTimeout, updateWithTimeout, destroyWithTimeout } from '../../utils/postgresHelpers.js';
+import { selectRawWithTimeout, selectWithTimeout, findWithTimeout, createWithTimeout, updateWithTimeout, destroyWithTimeout } from '../../utils/postgresHelpers.js';
 import {
     mapMissionRecord,
     getMissionWithJoins,
@@ -101,7 +102,7 @@ describe('Missions Service', () => {
 
     describe('listMissions', () => {
         it('should return paginated missions', async () => {
-            selectWithTimeout.mockResolvedValueOnce([{ total: '5' }]);
+            selectRawWithTimeout.mockResolvedValueOnce([{ total: '5' }]);
             query.mockResolvedValueOnce({
                 rows: [{ id: '1', title: 'Dev', status: 'open' }]
             });
@@ -114,58 +115,58 @@ describe('Missions Service', () => {
         });
 
         it('should apply firm filter', async () => {
-            selectWithTimeout.mockResolvedValueOnce([{ total: '0' }]);
+            selectRawWithTimeout.mockResolvedValueOnce([{ total: '0' }]);
             query.mockResolvedValueOnce({ rows: [] });
 
             await listMissions({ page: 1, limit: 20, firmId: 'f1' });
 
-            const countCall = selectWithTimeout.mock.calls[0];
-            expect(countCall[1].rawQuery).toContain('m.firm_id = $1');
-            expect(countCall[1].rawParams).toContain('f1');
+            const countCall = selectRawWithTimeout.mock.calls[0];
+            expect(countCall[0]).toContain('m.firm_id = $1');
+            expect(countCall[1]).toContain('f1');
         });
 
         it('should apply status filter (not "all")', async () => {
-            selectWithTimeout.mockResolvedValueOnce([{ total: '0' }]);
+            selectRawWithTimeout.mockResolvedValueOnce([{ total: '0' }]);
             query.mockResolvedValueOnce({ rows: [] });
 
             await listMissions({ page: 1, limit: 20, status: 'open' });
 
-            const countCall = selectWithTimeout.mock.calls[0];
-            expect(countCall[1].rawQuery).toContain('m.status = $');
+            const countCall = selectRawWithTimeout.mock.calls[0];
+            expect(countCall[0]).toContain('m.status = $');
         });
 
         it('should skip status filter for "all"', async () => {
-            selectWithTimeout.mockResolvedValueOnce([{ total: '0' }]);
+            selectRawWithTimeout.mockResolvedValueOnce([{ total: '0' }]);
             query.mockResolvedValueOnce({ rows: [] });
 
             await listMissions({ page: 1, limit: 20, status: 'all' });
 
-            const countCall = selectWithTimeout.mock.calls[0];
-            expect(countCall[1].rawQuery).not.toContain('m.status');
+            const countCall = selectRawWithTimeout.mock.calls[0];
+            expect(countCall[0]).not.toContain('m.status');
         });
 
         it('should apply deal filter with "none"', async () => {
-            selectWithTimeout.mockResolvedValueOnce([{ total: '0' }]);
+            selectRawWithTimeout.mockResolvedValueOnce([{ total: '0' }]);
             query.mockResolvedValueOnce({ rows: [] });
 
             await listMissions({ page: 1, limit: 20, dealId: 'none' });
 
-            const countCall = selectWithTimeout.mock.calls[0];
-            expect(countCall[1].rawQuery).toContain('m.deal_id IS NULL');
+            const countCall = selectRawWithTimeout.mock.calls[0];
+            expect(countCall[0]).toContain('m.deal_id IS NULL');
         });
 
         it('should apply search filter', async () => {
-            selectWithTimeout.mockResolvedValueOnce([{ total: '0' }]);
+            selectRawWithTimeout.mockResolvedValueOnce([{ total: '0' }]);
             query.mockResolvedValueOnce({ rows: [] });
 
             await listMissions({ page: 1, limit: 20, search: 'dev' });
 
-            const countCall = selectWithTimeout.mock.calls[0];
-            expect(countCall[1].rawQuery).toContain('ILIKE');
+            const countCall = selectRawWithTimeout.mock.calls[0];
+            expect(countCall[0]).toContain('ILIKE');
         });
 
         it('should calculate pagination correctly', async () => {
-            selectWithTimeout.mockResolvedValueOnce([{ total: '50' }]);
+            selectRawWithTimeout.mockResolvedValueOnce([{ total: '50' }]);
             query.mockResolvedValueOnce({ rows: [] });
 
             const result = await listMissions({ page: 1, limit: 20 });
@@ -175,7 +176,7 @@ describe('Missions Service', () => {
         });
 
         it('should clamp invalid pagination values defensively', async () => {
-            selectWithTimeout.mockResolvedValueOnce([{ total: '0' }]);
+            selectRawWithTimeout.mockResolvedValueOnce([{ total: '0' }]);
             query.mockResolvedValueOnce({ rows: [] });
 
             const result = await listMissions({ page: -3, limit: 0 });
@@ -408,6 +409,11 @@ describe('Missions Service', () => {
             expect(result[0]['Resume Name']).toBe('CV');
             expect(result[0]['Match Score']).toBe(85);
             expect(result[0].Status).toBe('completed');
+            expect(selectWithTimeout).toHaveBeenCalledWith('resume_adaptations', {
+                where: 'mission_id = $1',
+                params: ['m1'],
+                orderBy: 'created_at DESC'
+            });
         });
     });
 });

@@ -6,7 +6,7 @@
 
 import { query } from '../config/database.js';
 import { safeLog } from '../utils/logger.backend.js';
-import { selectWithTimeout, findWithTimeout, createWithTimeout, updateWithTimeout, destroyWithTimeout, escapeLike } from '../utils/postgresHelpers.js';
+import { selectRawWithTimeout, selectWithTimeout, findWithTimeout, createWithTimeout, updateWithTimeout, destroyWithTimeout, escapeLike } from '../utils/postgresHelpers.js';
 
 // ============================================
 // MAPPING HELPERS
@@ -124,10 +124,7 @@ export async function listMissions({ page = 1, limit = 20, search, status, dealI
 
     // Count total records
     const countQuery = `SELECT COUNT(*) as total FROM missions m ${whereClause}`;
-    const countResult = await selectWithTimeout('missions', {
-        rawQuery: countQuery,
-        rawParams: params
-    });
+    const countResult = await selectRawWithTimeout(countQuery, params, { context: 'missions.list.count' });
     const totalCount = parseInt(countResult[0]?.total || 0);
 
     // Fetch paginated records with joins
@@ -449,7 +446,8 @@ export async function deleteMission(id) {
  */
 export async function listMissionAdaptations(missionId) {
     const records = await selectWithTimeout('resume_adaptations', {
-        where: { mission_id: missionId },
+        where: 'mission_id = $1',
+        params: [missionId],
         orderBy: 'created_at DESC'
     });
 

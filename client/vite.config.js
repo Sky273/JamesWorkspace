@@ -20,6 +20,7 @@ const OPTIMIZE_DEPENDENCY_INCLUDE = [
 ];
 
 const COMPRESSED_ASSET_FILTER = /\.(js|mjs|json|css|html|svg|txt|xml|wasm)$/i;
+const COMPRESSION_VERBOSE = process.platform !== 'win32';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, __dirname, '');
@@ -45,6 +46,7 @@ export default defineConfig(({ mode }) => {
                 threshold: 1024,
                 deleteOriginFile: false,
                 filter: COMPRESSED_ASSET_FILTER,
+                verbose: COMPRESSION_VERBOSE,
               }),
               compression({
                 algorithm: 'brotliCompress',
@@ -52,6 +54,7 @@ export default defineConfig(({ mode }) => {
                 threshold: 1024,
                 deleteOriginFile: false,
                 filter: COMPRESSED_ASSET_FILTER,
+                verbose: COMPRESSION_VERBOSE,
               }),
             ]
       ),

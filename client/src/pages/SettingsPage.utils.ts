@@ -78,6 +78,8 @@ export interface Settings {
   cvMode?: 'nominative' | 'anonymous';
   chatbotEnabled?: 'on' | 'off';
   webglEnabled?: 'on' | 'off';
+  preAnalysisEnabled?: boolean;
+  'Pre Analysis Prompt'?: string;
   'Analysis Prompt'?: string;
   'Improvement Prompt'?: string;
   'Match Analysis Prompt'?: string;
@@ -113,6 +115,8 @@ export interface SettingsFormData {
   cvMode: 'nominative' | 'anonymous';
   chatbotEnabled: 'on' | 'off';
   webglEnabled: 'on' | 'off';
+  preAnalysisEnabled: boolean;
+  'Pre Analysis Prompt': string;
   'Analysis Prompt': string;
   'Improvement Prompt': string;
   'Match Analysis Prompt': string;
@@ -166,6 +170,8 @@ export const defaultFormData: SettingsFormData = {
   cvMode: 'nominative',
   chatbotEnabled: 'on',
   webglEnabled: 'on',
+  preAnalysisEnabled: false,
+  'Pre Analysis Prompt': '',
   'Analysis Prompt': '',
   'Improvement Prompt': '',
   'Match Analysis Prompt': '',
@@ -208,6 +214,8 @@ export const toFormData = (settings?: Settings | null): SettingsFormData => ({
   cvMode: settings?.cvMode || 'nominative',
   chatbotEnabled: settings?.chatbotEnabled || 'on',
   webglEnabled: settings?.webglEnabled || 'on',
+  preAnalysisEnabled: settings?.preAnalysisEnabled || false,
+  'Pre Analysis Prompt': settings?.['Pre Analysis Prompt'] || '',
   'Analysis Prompt': settings?.['Analysis Prompt'] || '',
   'Improvement Prompt': settings?.['Improvement Prompt'] || '',
   'Match Analysis Prompt': settings?.['Match Analysis Prompt'] || '',
@@ -232,10 +240,10 @@ export const toFormData = (settings?: Settings | null): SettingsFormData => ({
 
 export const createSavePayload = (
   formData: SettingsFormData
-): Record<string, string | number | LLMModelParameters> => {
+): Record<string, string | number | boolean | LLMModelParameters> => {
   const chatbotValue = formData.chatbotEnabled;
   const llmModelParameters = parseLlmModelParametersJson(formData.llmModelParametersJson);
-  const dataToSave: Record<string, string | number | LLMModelParameters> = {
+  const dataToSave: Record<string, string | number | boolean | LLMModelParameters> = {
     ...formData,
     llmModelParameters,
     chatbotEnabled: chatbotValue === 'on' || (chatbotValue as unknown) === true ? 'on' : 'off',

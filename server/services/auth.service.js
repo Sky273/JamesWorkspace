@@ -5,7 +5,9 @@
  */
 
 import { query } from '../config/database.js';
-import { selectWithTimeout, createWithTimeout } from '../utils/postgresHelpers.js';
+import { createWithTimeout, selectRawWithTimeout, selectWithTimeout } from '../utils/postgresHelpers.js';
+
+const DEFAULT_SELF_SERVICE_FIRM_NAME = 'Public Registration';
 
 /**
  * Find user with firm logo by email (case-insensitive)
@@ -13,16 +15,17 @@ import { selectWithTimeout, createWithTimeout } from '../utils/postgresHelpers.j
  * @returns {Promise<Object|null>}
  */
 export async function findUserWithFirmByEmail(normalizedEmail) {
-    const users = await selectWithTimeout('users', {
-        rawQuery: `
+    const users = await selectRawWithTimeout(
+        `
             SELECT u.*, f.logo_url as firm_logo
             FROM users u
             LEFT JOIN firms f ON u.firm_id = f.id
             WHERE LOWER(u.email) = $1
             LIMIT 1
         `,
-        rawParams: [normalizedEmail]
-    });
+        [normalizedEmail],
+        { context: 'auth.findUserWithFirmByEmail' }
+    );
     return users.length > 0 ? users[0] : null;
 }
 
@@ -32,16 +35,17 @@ export async function findUserWithFirmByEmail(normalizedEmail) {
  * @returns {Promise<Object|null>}
  */
 export async function findUserWithFirmById(userId) {
-    const users = await selectWithTimeout('users', {
-        rawQuery: `
+    const users = await selectRawWithTimeout(
+        `
             SELECT u.*, f.logo_url as firm_logo
             FROM users u
             LEFT JOIN firms f ON u.firm_id = f.id
             WHERE u.id = $1
             LIMIT 1
         `,
-        rawParams: [userId]
-    });
+        [userId],
+        { context: 'auth.findUserWithFirmById' }
+    );
     return users.length > 0 ? users[0] : null;
 }
 
@@ -77,12 +81,14 @@ export async function findExistingUserByEmail(normalizedEmail) {
  * @returns {Promise<Object>} Created user record
  */
 export async function createUser(userData) {
-    if (!userData?.firm_id || !userData?.firm_name) {
-        throw new Error('Firm assignment is required');
-    }
+    const firmAssignment = await resolveFirmAssignment(userData);
 
     const records = await createWithTimeout('users', [{
-        fields: userData
+        fields: {
+            ...userData,
+            firm_id: firmAssignment.firm_id,
+            firm_name: firmAssignment.firm_name
+        }
     }]);
     return records[0];
 }
@@ -93,15 +99,53 @@ export async function createUser(userData) {
  * @returns {Promise<Object>} Created user record
  */
 export async function registerGoogleUser({ email, name, googleId, googleEmail, firmId, firmName }) {
-    if (!firmId || !firmName) {
-        throw new Error('Firm assignment is required');
-    }
+    const firmAssignment = await resolveFirmAssignment({
+        firm_id: firmId,
+        firm_name: firmName
+    });
 
     const result = await query(
         `INSERT INTO users (email, password, name, role, status, google_id, google_email, google_linked_at, firm_id, firm_name)
          VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP, $8, $9)
          RETURNING *`,
-        [email, '', name, 'user', 'pending', googleId, googleEmail, firmId, firmName]
+        [email, '', name, 'user', 'pending', googleId, googleEmail, firmAssignment.firm_id, firmAssignment.firm_name]
     );
     return result.rows[0];
+}
+
+async function resolveFirmAssignment(userData) {
+    if (userData?.firm_id && userData?.firm_name) {
+        return {
+            firm_id: userData.firm_id,
+            firm_name: userData.firm_name
+        };
+    }
+
+    const existingFirm = await query(
+        `SELECT id, name
+         FROM firms
+         WHERE LOWER(name) = LOWER($1)
+         ORDER BY created_at ASC
+         LIMIT 1`,
+        [DEFAULT_SELF_SERVICE_FIRM_NAME]
+    );
+
+    if (existingFirm.rows[0]) {
+        return {
+            firm_id: existingFirm.rows[0].id,
+            firm_name: existingFirm.rows[0].name
+        };
+    }
+
+    const createdFirm = await query(
+        `INSERT INTO firms (name, status)
+         VALUES ($1, 'active')
+         RETURNING id, name`,
+        [DEFAULT_SELF_SERVICE_FIRM_NAME]
+    );
+
+    return {
+        firm_id: createdFirm.rows[0].id,
+        firm_name: createdFirm.rows[0].name
+    };
 }

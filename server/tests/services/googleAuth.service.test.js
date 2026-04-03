@@ -56,13 +56,19 @@ describe('Google Auth Service', () => {
 
     describe('linkGoogleAccount', () => {
         it('should update user with google ID and email', async () => {
-            query.mockResolvedValueOnce({ rows: [] });
+            query.mockResolvedValueOnce({ rowCount: 1, rows: [] });
 
             const result = await linkGoogleAccount('u1', 'g123', 'user@gmail.com');
 
             expect(result).toBe(true);
             expect(query.mock.calls[0][0]).toContain('google_id = $1');
             expect(query.mock.calls[0][1]).toEqual(['g123', 'user@gmail.com', 'u1']);
+        });
+
+        it('should return false when no user row was updated', async () => {
+            query.mockResolvedValueOnce({ rowCount: 0, rows: [] });
+
+            await expect(linkGoogleAccount('missing', 'g123', 'user@gmail.com')).resolves.toBe(false);
         });
 
         it('should throw on DB error', async () => {

@@ -170,6 +170,10 @@
     "prompts": {
       "title": "Prompts Configuration",
       "description": "Customize the prompts used for resume analysis and improvement. Leave empty to use default prompts.",
+      "preAnalysisEnabled": "Enable pre-analysis",
+      "preAnalysisEnabledHelp": "Runs a server-side cleanup and light structuring pass on extracted text before the main analysis.",
+      "preAnalysis": "Pre-analysis Prompt",
+      "preAnalysisHelp": "This prompt is used to clean and minimally restructure native or OCR extraction before the analysis pass.",
       "analysis": "Analysis Prompt",
       "analysisHelp": "This prompt is used to analyze the resume and generate scores.",
       "improvement": "Improvement Prompt",

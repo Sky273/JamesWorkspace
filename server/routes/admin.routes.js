@@ -277,8 +277,12 @@ router.get('/users', authenticateToken, requireAdmin, validateQuery({
             id: record.id,
             name: record.name,
             email: record.email,
-            firm: record.firm_name,
-            customer: record.firm_name,
+            firmId: record.firm_id || null,
+            firmName: record.firm_name || null,
+            customerName: record.firm_name || null,
+            // Legacy aliases kept for compatibility with older admin payload consumers.
+            firm: record.firm_name || null,
+            customer: record.firm_name || null,
             role: record.role || 'user',
             status: record.status || 'active'
         }));

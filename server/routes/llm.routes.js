@@ -323,117 +323,118 @@ async function proxyAnthropicRequest(req, res, model, metadata, { useRetry = tru
     return res.json(response.data);
 }
 
-router.post('/openai', authenticateToken, llmLimiter, combinedRateLimit(30, 60 * 60 * 1000), validateBody(openaiRequestSchema), async (req, res) => {
-    const metadata = getRequestMetadata(req);
-    let model = req.body.model;
-    let provider = 'openai';
+function createCompatibleProxyHandler({
+    responseShape,
+    proxyProvider,
+    fallbackErrorMessage,
+    allowResponsesApi,
+    useRetry
+}) {
+    return async (req, res) => {
+        const metadata = getRequestMetadata(req);
+        let model = req.body.model;
+        let provider = proxyProvider;
 
-    try {
-        const settings = await getLLMSettings();
-        const validationError = validateMessageLengths(req.body.messages, flattenLlmTextContent, MAX_PROMPT_LENGTH);
-        if (validationError) {
-            return res.status(400).json({ error: validationError });
+        try {
+            const settings = await getLLMSettings();
+            const validationError = validateMessageLengths(req.body.messages, flattenLlmTextContent, MAX_PROMPT_LENGTH);
+            if (validationError) {
+                return res.status(400).json({ error: validationError });
+            }
+
+            ({ provider, model } = resolveCompatibleProviderRuntimeConfig({
+                settings,
+                requestedModel: req.body.model || model,
+                responseShape
+            }));
+            applyResolvedModelParameters(req, settings, provider, model);
+
+            const compatibleResponse = await maybeHandleCompatibleProviderRequest(
+                req,
+                res,
+                settings,
+                responseShape,
+                model,
+                metadata
+            );
+            if (compatibleResponse) {
+                return compatibleResponse;
+            }
+
+            if (responseShape === 'anthropic') {
+                return await proxyAnthropicRequest(req, res, model, metadata, { useRetry });
+            }
+
+            return await proxyOpenAIRequest(req, res, model, metadata, { allowResponsesApi });
+        } catch (error) {
+            metrics.trackLLMRequest(
+                buildLLMMetricLabel(proxyProvider, req.body.model || model || proxyProvider),
+                0,
+                false,
+                0,
+                0
+            );
+            const sanitized = buildSanitizedProxyErrorResponse(proxyProvider, fallbackErrorMessage, error);
+            return res.status(sanitized.statusCode).json(sanitized.body);
         }
+    };
+}
 
-        ({ provider, model } = resolveCompatibleProviderRuntimeConfig({ settings, requestedModel: model, responseShape: 'openai' }));
-        applyResolvedModelParameters(req, settings, provider, model);
+router.post(
+    '/openai',
+    authenticateToken,
+    llmLimiter,
+    combinedRateLimit(30, 60 * 60 * 1000),
+    validateBody(openaiRequestSchema),
+    createCompatibleProxyHandler({
+        responseShape: 'openai',
+        proxyProvider: 'openai',
+        fallbackErrorMessage: 'Failed to proxy request to OpenAI.',
+        allowResponsesApi: true
+    })
+);
 
-        const compatibleResponse = await maybeHandleCompatibleProviderRequest(req, res, settings, 'openai', model, metadata);
-        if (compatibleResponse) {
-            return compatibleResponse;
-        }
+router.post(
+    '/anthropic',
+    authenticateToken,
+    llmLimiter,
+    combinedRateLimit(30, 60 * 60 * 1000),
+    validateBody(anthropicRequestSchema),
+    createCompatibleProxyHandler({
+        responseShape: 'anthropic',
+        proxyProvider: 'anthropic',
+        fallbackErrorMessage: 'Failed to proxy request to Anthropic.',
+        useRetry: true
+    })
+);
 
-        return await proxyOpenAIRequest(req, res, model, metadata, { allowResponsesApi: true });
-    } catch (error) {
-        metrics.trackLLMRequest(buildLLMMetricLabel('openai', model || 'openai'), 0, false, 0, 0);
-        const sanitized = buildSanitizedProxyErrorResponse('openai', 'Failed to proxy request to OpenAI.', error);
-        return res.status(sanitized.statusCode).json(sanitized.body);
-    }
-});
+router.post(
+    '/chat/completions',
+    authenticateToken,
+    llmLimiter,
+    combinedRateLimit(30, 60 * 60 * 1000),
+    validateBody(openaiRequestSchema),
+    createCompatibleProxyHandler({
+        responseShape: 'openai',
+        proxyProvider: 'openai',
+        fallbackErrorMessage: 'Failed to call OpenAI API.',
+        allowResponsesApi: false
+    })
+);
 
-router.post('/anthropic', authenticateToken, llmLimiter, combinedRateLimit(30, 60 * 60 * 1000), validateBody(anthropicRequestSchema), async (req, res) => {
-    const metadata = getRequestMetadata(req);
-    let model = process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20241022';
-    let provider = 'anthropic';
-
-    try {
-        const settings = await getLLMSettings();
-        const validationError = validateMessageLengths(req.body.messages, flattenLlmTextContent, MAX_PROMPT_LENGTH);
-        if (validationError) {
-            return res.status(400).json({ error: validationError });
-        }
-
-        ({ provider, model } = resolveCompatibleProviderRuntimeConfig({ settings, requestedModel: req.body.model || model, responseShape: 'anthropic' }));
-        applyResolvedModelParameters(req, settings, provider, model);
-
-        const compatibleResponse = await maybeHandleCompatibleProviderRequest(req, res, settings, 'anthropic', model, metadata);
-        if (compatibleResponse) {
-            return compatibleResponse;
-        }
-
-        return await proxyAnthropicRequest(req, res, model, metadata, { useRetry: true });
-    } catch (error) {
-        metrics.trackLLMRequest(buildLLMMetricLabel('anthropic', model), 0, false, 0, 0);
-        const sanitized = buildSanitizedProxyErrorResponse('anthropic', 'Failed to proxy request to Anthropic.', error);
-        return res.status(sanitized.statusCode).json(sanitized.body);
-    }
-});
-
-router.post('/chat/completions', authenticateToken, llmLimiter, combinedRateLimit(30, 60 * 60 * 1000), validateBody(openaiRequestSchema), async (req, res) => {
-    const metadata = getRequestMetadata(req);
-    let model = req.body.model || 'openai';
-    let provider = 'openai';
-
-    try {
-        const settings = await getLLMSettings();
-        const validationError = validateMessageLengths(req.body.messages, flattenLlmTextContent, MAX_PROMPT_LENGTH);
-        if (validationError) {
-            return res.status(400).json({ error: validationError });
-        }
-
-        ({ provider, model } = resolveCompatibleProviderRuntimeConfig({ settings, requestedModel: req.body.model || model, responseShape: 'openai' }));
-        applyResolvedModelParameters(req, settings, provider, model);
-
-        const compatibleResponse = await maybeHandleCompatibleProviderRequest(req, res, settings, 'openai', model, metadata);
-        if (compatibleResponse) {
-            return compatibleResponse;
-        }
-
-        return await proxyOpenAIRequest(req, res, model, metadata, { allowResponsesApi: false });
-    } catch (error) {
-        metrics.trackLLMRequest(buildLLMMetricLabel('openai', req.body.model || model), 0, false, 0, 0);
-        const sanitized = buildSanitizedProxyErrorResponse('openai', 'Failed to call OpenAI API.', error);
-        return res.status(sanitized.statusCode).json(sanitized.body);
-    }
-});
-
-router.post('/messages', authenticateToken, llmLimiter, combinedRateLimit(30, 60 * 60 * 1000), validateBody(anthropicRequestSchema), async (req, res) => {
-    const metadata = getRequestMetadata(req);
-    let model = process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20241022';
-    let provider = 'anthropic';
-
-    try {
-        const settings = await getLLMSettings();
-        const validationError = validateMessageLengths(req.body.messages, flattenLlmTextContent, MAX_PROMPT_LENGTH);
-        if (validationError) {
-            return res.status(400).json({ error: validationError });
-        }
-
-        ({ provider, model } = resolveCompatibleProviderRuntimeConfig({ settings, requestedModel: req.body.model || model, responseShape: 'anthropic' }));
-        applyResolvedModelParameters(req, settings, provider, model);
-
-        const compatibleResponse = await maybeHandleCompatibleProviderRequest(req, res, settings, 'anthropic', model, metadata);
-        if (compatibleResponse) {
-            return compatibleResponse;
-        }
-
-        return await proxyAnthropicRequest(req, res, model, metadata, { useRetry: true });
-    } catch (error) {
-        metrics.trackLLMRequest(buildLLMMetricLabel('anthropic', req.body.model || model), 0, false, 0, 0);
-        const sanitized = buildSanitizedProxyErrorResponse('anthropic', 'Failed to call Anthropic API.', error);
-        return res.status(sanitized.statusCode).json(sanitized.body);
-    }
-});
+router.post(
+    '/messages',
+    authenticateToken,
+    llmLimiter,
+    combinedRateLimit(30, 60 * 60 * 1000),
+    validateBody(anthropicRequestSchema),
+    createCompatibleProxyHandler({
+        responseShape: 'anthropic',
+        proxyProvider: 'anthropic',
+        fallbackErrorMessage: 'Failed to call Anthropic API.',
+        useRetry: true
+    })
+);
 
 router.get('/circuit-breakers', authenticateToken, requireAdmin, (req, res) => {
     const states = getCircuitBreakerStates();

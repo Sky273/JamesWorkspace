@@ -19,6 +19,15 @@
           "Identifying sections"
         ]
       },
+      "preanalyze": {
+        "title": "Pre-analysis",
+        "description": "Cleaning and lightly structuring the extracted text before AI analysis...",
+        "steps": [
+          "Cleaning extraction artifacts",
+          "Reorganizing resume blocks",
+          "Preparing text for analysis"
+        ]
+      },
       "analyze": {
         "title": "AI Analysis",
         "description": "Analyzing with advanced AI...",

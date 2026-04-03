@@ -41,7 +41,6 @@ import {
     substituteKeywords,
     renderTemplate,
     getUserFirmId,
-    getFirmIdByName,
     destroyMjml
 } from '../../services/emailTemplates.service.js';
 
@@ -390,18 +389,6 @@ describe('Email Templates Service', () => {
         it('should return null if user not found', async () => {
             query.mockResolvedValueOnce({ rows: [] });
             expect(await getUserFirmId('missing')).toBeNull();
-        });
-    });
-
-    describe('getFirmIdByName', () => {
-        it('should return firm id by name', async () => {
-            query.mockResolvedValueOnce({ rows: [{ id: 'f1' }] });
-            expect(await getFirmIdByName('Acme')).toBe('f1');
-        });
-
-        it('should return null if firm not found', async () => {
-            query.mockResolvedValueOnce({ rows: [] });
-            expect(await getFirmIdByName('Unknown')).toBeNull();
         });
     });
 

@@ -107,7 +107,7 @@ router.post('/', authenticateToken, validateBody(createMissionSchema), async (re
     try {
         const missionData = req.body;
         const normalizedMission = normalizeMissionPayload(missionData);
-        const userFirm = req.user?.firm;
+        const userFirm = req.user?.firmName || req.user?.firm;
         const userFirmId = await getUserFirmId(req);
         const isAdmin = req.user?.role === 'admin';
 

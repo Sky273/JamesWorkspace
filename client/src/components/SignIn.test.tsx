@@ -60,11 +60,12 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-const renderSignIn = () => render(
-  <MemoryRouter>
-    <SignIn />
-  </MemoryRouter>
-);
+const renderSignIn = () =>
+  render(
+    <MemoryRouter>
+      <SignIn />
+    </MemoryRouter>
+  );
 
 describe('SignIn', () => {
   beforeEach(() => {
@@ -125,7 +126,7 @@ describe('SignIn', () => {
     renderSignIn();
 
     await waitFor(() => {
-      expect(mockToastError).toHaveBeenCalledWith('auth.signIn.sessionExpired', expect.objectContaining({ icon: '🔒' }));
+      expect(mockToastError).toHaveBeenCalledWith('auth.signIn.sessionExpired', expect.objectContaining({ icon: '!' }));
     });
     expect(mockNavigate).toHaveBeenCalledWith('/signin', { replace: true });
   });
@@ -135,7 +136,7 @@ describe('SignIn', () => {
     renderSignIn();
 
     await waitFor(() => {
-      expect(mockToastSuccess).toHaveBeenCalledWith('auth.signIn.registeredPending', expect.objectContaining({ icon: '✅' }));
+      expect(mockToastSuccess).toHaveBeenCalledWith('auth.signIn.registeredPending', expect.objectContaining({ icon: 'OK' }));
     });
     expect(mockNavigate).toHaveBeenCalledWith('/signin', { replace: true });
   });
@@ -146,6 +147,18 @@ describe('SignIn', () => {
 
     expect(await screen.findByText('auth.signIn.googleNoAccount')).toBeInTheDocument();
     expect(mockNavigate).toHaveBeenCalledWith('/signin', { replace: true });
+  });
+
+  it('shows pending approval message instead of navigating when user is pending', async () => {
+    mockSignIn.mockResolvedValue({ id: '1', email: 'john@example.com', status: 'pending' });
+    renderSignIn();
+
+    fireEvent.change(screen.getByPlaceholderText('auth.signIn.emailPlaceholder'), { target: { value: 'john@example.com' } });
+    fireEvent.change(screen.getByPlaceholderText('auth.signIn.passwordPlaceholder'), { target: { value: 'secret' } });
+    fireEvent.click(screen.getByRole('button', { name: 'auth.signIn.signInButton' }));
+
+    expect(await screen.findByText('auth.signIn.accountPending')).toBeInTheDocument();
+    expect(mockNavigate).not.toHaveBeenCalledWith('/');
   });
 
   it('shows Google auth failure when popup bootstrap fails', async () => {

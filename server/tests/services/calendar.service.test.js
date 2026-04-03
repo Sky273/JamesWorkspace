@@ -97,7 +97,8 @@ describe('Calendar Service', () => {
         it('should reject tampered state', () => {
             const state = buildCalendarOAuthState({ userId: 'u1', issuedAt: Date.now() });
             const [payload, signature] = state.split('.');
-            const tampered = `${payload}.x${signature.slice(1)}`;
+            const replacement = signature.startsWith('x') ? 'y' : 'x';
+            const tampered = `${payload}.${replacement}${signature.slice(1)}`;
 
             expect(parseCalendarOAuthState(tampered)).toBeNull();
         });

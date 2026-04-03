@@ -47,7 +47,7 @@ function HomePage(): JSX.Element {
   const { authGet } = useAuthFetch();
   const [activeSection, setActiveSection] = useState<string>('hero');
   const [, setIsScrolled] = useState<boolean>(false);
-  const [webglEnabled, setWebglEnabled] = useState<boolean>(true);
+  const [webglEnabled, setWebglEnabled] = useState<boolean>(false);
   const [dashboardRef, dashboardInView] = useInView({
     triggerOnce: true,
     rootMargin: '320px 0px'
@@ -55,15 +55,17 @@ function HomePage(): JSX.Element {
 
   const fetchWebglSetting = useCallback(() => {
     let cancelled = false;
-    authGet('/api/settings')
+    authGet('/api/settings/presentation')
       .then(res => (res.ok ? res.json() : null))
       .then(data => {
-        if (!cancelled && data?.webglEnabled === 'off') {
-          setWebglEnabled(false);
+        if (!cancelled) {
+          setWebglEnabled(data?.webglEnabled === 'on');
         }
       })
       .catch(() => {
-        // keep default: enabled
+        if (!cancelled) {
+          setWebglEnabled(false);
+        }
       });
     return () => {
       cancelled = true;

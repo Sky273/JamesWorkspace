@@ -11,11 +11,12 @@ vi.mock('../../config/database.js', () => ({
 
 vi.mock('../../utils/postgresHelpers.js', () => ({
     selectWithTimeout: vi.fn(),
+    selectRawWithTimeout: vi.fn(),
     createWithTimeout: vi.fn()
 }));
 
 import { query } from '../../config/database.js';
-import { selectWithTimeout, createWithTimeout } from '../../utils/postgresHelpers.js';
+import { selectRawWithTimeout, selectWithTimeout, createWithTimeout } from '../../utils/postgresHelpers.js';
 import {
     findUserWithFirmByEmail,
     findUserWithFirmById,
@@ -28,27 +29,31 @@ import {
 describe('Auth Service', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        query.mockReset();
+        selectRawWithTimeout.mockReset();
+        selectWithTimeout.mockReset();
+        createWithTimeout.mockReset();
     });
 
     describe('findUserWithFirmByEmail', () => {
         it('should return user with firm logo', async () => {
-            selectWithTimeout.mockResolvedValueOnce([{ id: 'u1', email: 'test@test.com', firm_logo: '/logo.png' }]);
+            selectRawWithTimeout.mockResolvedValueOnce([{ id: 'u1', email: 'test@test.com', firm_logo: '/logo.png' }]);
 
             const result = await findUserWithFirmByEmail('test@test.com');
 
             expect(result.firm_logo).toBe('/logo.png');
-            expect(selectWithTimeout.mock.calls[0][1].rawQuery).toContain('LEFT JOIN firms');
+            expect(selectRawWithTimeout.mock.calls[0][0]).toContain('LEFT JOIN firms');
         });
 
         it('should return null if not found', async () => {
-            selectWithTimeout.mockResolvedValueOnce([]);
+            selectRawWithTimeout.mockResolvedValueOnce([]);
             expect(await findUserWithFirmByEmail('missing@test.com')).toBeNull();
         });
     });
 
     describe('findUserWithFirmById', () => {
         it('should return user with firm logo by ID', async () => {
-            selectWithTimeout.mockResolvedValueOnce([{ id: 'u1', firm_logo: '/logo.png' }]);
+            selectRawWithTimeout.mockResolvedValueOnce([{ id: 'u1', firm_logo: '/logo.png' }]);
 
             const result = await findUserWithFirmById('u1');
 
@@ -56,7 +61,7 @@ describe('Auth Service', () => {
         });
 
         it('should return null if not found', async () => {
-            selectWithTimeout.mockResolvedValueOnce([]);
+            selectRawWithTimeout.mockResolvedValueOnce([]);
             expect(await findUserWithFirmById('missing')).toBeNull();
         });
     });
@@ -86,6 +91,7 @@ describe('Auth Service', () => {
 
     describe('createUser', () => {
         it('should create and return user', async () => {
+            query.mockResolvedValueOnce({ rows: [{ id: 'firm-1', name: 'Acme' }] });
             createWithTimeout.mockResolvedValueOnce([{ id: 'u1', email: 'new@test.com' }]);
 
             const result = await createUser({
@@ -108,10 +114,21 @@ describe('Auth Service', () => {
             }]);
         });
 
-        it('should reject creation without firm assignment', async () => {
-            await expect(createUser({ email: 'new@test.com', name: 'New', password: 'hash' }))
-                .rejects
-                .toThrow('Firm assignment is required');
+        it('should auto-assign default firm when missing', async () => {
+            query.mockResolvedValueOnce({ rows: [] });
+            query.mockResolvedValueOnce({ rows: [{ id: 'firm-default', name: 'Public Registration' }] });
+            createWithTimeout.mockResolvedValueOnce([{ id: 'u1', email: 'new@test.com' }]);
+
+            await createUser({ email: 'new@test.com', name: 'New', password: 'hash' });
+
+            expect(query).toHaveBeenCalledWith(expect.stringContaining('SELECT id, name'), ['Public Registration']);
+            expect(query).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO firms'), ['Public Registration']);
+            expect(createWithTimeout).toHaveBeenCalledWith('users', [{
+                fields: expect.objectContaining({
+                    firm_id: 'firm-default',
+                    firm_name: 'Public Registration'
+                })
+            }]);
         });
     });
 
@@ -134,13 +151,20 @@ describe('Auth Service', () => {
             expect(query.mock.calls[0][1]).toContain('firm-1');
         });
 
-        it('should reject Google registration without firm assignment', async () => {
-            await expect(registerGoogleUser({
+        it('should auto-assign default firm for Google registration when missing', async () => {
+            query.mockResolvedValueOnce({ rows: [] });
+            query.mockResolvedValueOnce({ rows: [{ id: 'firm-default', name: 'Public Registration' }] });
+            query.mockResolvedValueOnce({ rows: [{ id: 'u1', google_id: 'g123', role: 'user', status: 'pending' }] });
+
+            const result = await registerGoogleUser({
                 email: 'user@gmail.com',
                 name: 'User',
                 googleId: 'g123',
                 googleEmail: 'user@gmail.com'
-            })).rejects.toThrow('Firm assignment is required');
+            });
+
+            expect(result.status).toBe('pending');
+            expect(query.mock.calls[2][1]).toContain('firm-default');
         });
     });
 });

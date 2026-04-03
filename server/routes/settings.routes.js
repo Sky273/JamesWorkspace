@@ -5,13 +5,21 @@ import { securityLog, getRequestMetadata, LOG_LEVELS, SECURITY_EVENTS } from '..
 import { settingsCache, CACHE_KEYS } from '../services/cache.service.js';
 import { metrics } from '../services/metrics.service.js';
 import { invalidateSettingsCache, getSettings, getLLMSettings, upsertSettings, createSettings } from '../services/settings.service.js';
-import { normalizeWeights, DEFAULT_ANALYSIS_PROMPT, DEFAULT_IMPROVEMENT_PROMPT, DEFAULT_MATCH_ANALYSIS_PROMPT, DEFAULT_ADAPTATION_PROMPT } from '../config/prompts.backend.js';
+import {
+    normalizeWeights,
+    DEFAULT_ANALYSIS_PROMPT,
+    DEFAULT_IMPROVEMENT_PROMPT,
+    DEFAULT_MATCH_ANALYSIS_PROMPT,
+    DEFAULT_ADAPTATION_PROMPT,
+    DEFAULT_PRE_ANALYSIS_PROMPT
+} from '../config/prompts.backend.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { mapSettingsToFrontend, mapSettingsFromFrontend } from '../utils/mappers.js';
 import { getProviderAvailabilityFlags } from '../services/llmAvailability.service.js';
 import { discoverOllamaModels } from '../services/ollamaAdmin.service.js';
 import { validatePersistedLlmSettings } from '../services/llmSettingsValidation.service.js';
 import { normalizeBaseUrl } from '../services/ollama.request.js';
+import { getProviderDefaultModel } from '../services/llmConfiguration.service.js';
 import {
     PROFILE_MATCHING_LOCAL_SKILL_WEIGHT,
     PROFILE_MATCHING_LOCAL_TOOL_WEIGHT,
@@ -29,6 +37,7 @@ import {
 } from './settings.routes.helpers.js';
 
 const router = express.Router();
+const DEFAULT_OPENAI_MODEL = getProviderDefaultModel('openai');
 
 function resolveConfiguredOllamaBaseUrl(settings = {}) {
     const candidate = settings?.ollamaBaseUrl;
@@ -62,10 +71,13 @@ router.get('/', authenticateToken, async (req, res) => {
 
             const defaultSettings = mergeCanonicalLlmSettings(await decorateSettingsResponse({
                 id: null,
-                llmModel: null,
+                llmProvider: 'openai',
+                llmModel: DEFAULT_OPENAI_MODEL,
                 cvMode: 'nominative',
                 chatbotEnabled: 'on',
                 webglEnabled: 'on',
+                preAnalysisEnabled: false,
+                'Pre Analysis Prompt': DEFAULT_PRE_ANALYSIS_PROMPT,
                 'Analysis Prompt': DEFAULT_ANALYSIS_PROMPT,
                 'Improvement Prompt': DEFAULT_IMPROVEMENT_PROMPT,
                 'Match Analysis Prompt': DEFAULT_MATCH_ANALYSIS_PROMPT,
@@ -104,13 +116,40 @@ router.get('/', authenticateToken, async (req, res) => {
     }
 });
 
+router.get('/presentation', authenticateToken, async (req, res) => {
+    try {
+        const settings = await getSettings();
+
+        if (!settings) {
+            return res.json({
+                chatbotEnabled: 'on',
+                webglEnabled: 'on'
+            });
+        }
+
+        const mapped = mapSettingsToFrontend(settings);
+        return res.json({
+            chatbotEnabled: mapped.chatbotEnabled || 'on',
+            webglEnabled: mapped.webglEnabled || 'on'
+        });
+    } catch (error) {
+        safeLog('error', 'Error fetching presentation settings', { error: error.message });
+        return res.status(500).json({
+            error: 'Failed to fetch presentation settings'
+        });
+    }
+});
+
 // GET /api/settings/defaults - Get default prompts and weights
 router.get('/defaults', authenticateToken, requireAdmin, (req, res) => {
     Promise.resolve(decorateSettingsResponse({
-        llmModel: 'gpt-5.4',
+        llmProvider: 'openai',
+        llmModel: DEFAULT_OPENAI_MODEL,
         cvMode: 'nominative',
         chatbotEnabled: 'on',
         webglEnabled: 'on',
+        preAnalysisEnabled: false,
+        'Pre Analysis Prompt': DEFAULT_PRE_ANALYSIS_PROMPT,
         'Analysis Prompt': DEFAULT_ANALYSIS_PROMPT,
         'Improvement Prompt': DEFAULT_IMPROVEMENT_PROMPT,
         'Match Analysis Prompt': DEFAULT_MATCH_ANALYSIS_PROMPT,

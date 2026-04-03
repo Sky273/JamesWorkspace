@@ -6,12 +6,21 @@
  * DOC:  HTML → Puppeteer → PDF → LibreOffice → DOC (visual fidelity with PDF)
  */
 
-const { execSync } = require('child_process');
 const fs = require('fs');
-const path = require('path');
 const os = require('os');
 const { log } = require('./logger.cjs');
 const { generatePdf } = require('./pdfGenerator.cjs');
+const {
+  cleanupTempFiles,
+  createTempArtifactPaths,
+  runExternalCommand
+} = require('./docxRuntime.cjs');
+const {
+  attachDocumentPart,
+  loadDocxZip,
+  registerEmbeddedImages,
+  updateContentTypes
+} = require('./docxPackage.cjs');
 
 // Lazy load JSZip for DOCX manipulation
 let JSZip = null;
@@ -782,8 +791,7 @@ function htmlToOoxml(html, defaultAlign, defaultStyle) {
  * @returns {Promise<Buffer>} Modified DOCX buffer with footer on every page
  */
 async function injectFooterIntoDocx(docxBuffer, footerContent, stylesheet) {
-  const JSZipClass = await getJSZip();
-  const zip = await JSZipClass.loadAsync(docxBuffer);
+  const zip = await loadDocxZip(getJSZip, docxBuffer);
 
   // Extract default styling from stylesheet for footer context
   let defaultAlign;
@@ -818,85 +826,20 @@ async function injectFooterIntoDocx(docxBuffer, footerContent, stylesheet) {
 
   zip.file('word/footer1.xml', footerXml);
 
-  // Embed image files and create footer relationships
-  if (hasImages) {
-    for (const img of images) {
-      zip.file(`word/media/${img.filename}`, img.data);
-    }
+  registerEmbeddedImages(zip, images, 'word/_rels/footer1.xml.rels');
 
-    let footerRelsXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">';
-    for (const img of images) {
-      footerRelsXml += `\n  <Relationship Id="${img.rId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${img.filename}"/>`;
-    }
-    footerRelsXml += '\n</Relationships>';
-    zip.file('word/_rels/footer1.xml.rels', footerRelsXml);
-  }
+  await updateContentTypes(zip, {
+    partName: '/word/footer1.xml',
+    contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml',
+    images
+  });
 
-  // Register footer and image content types in [Content_Types].xml
-  let contentTypesXml = await zip.file('[Content_Types].xml').async('string');
-  if (!contentTypesXml.includes('footer1.xml')) {
-    contentTypesXml = contentTypesXml.replace(
-      '</Types>',
-      '<Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/></Types>'
-    );
-  }
-  if (hasImages) {
-    const extensions = [...new Set(images.map(img => img.ext))];
-    for (const ext of extensions) {
-      if (!contentTypesXml.includes(`Extension="${ext}"`)) {
-        const mime = ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : `image/${ext}`;
-        contentTypesXml = contentTypesXml.replace(
-          '</Types>',
-          `<Default Extension="${ext}" ContentType="${mime}"/></Types>`
-        );
-      }
-    }
-  }
-  zip.file('[Content_Types].xml', contentTypesXml);
-
-  // Add relationship for the footer
-  let relsXml = await zip.file('word/_rels/document.xml.rels').async('string');
-  if (!relsXml.includes('footer1.xml')) {
-    const rIdMatches = relsXml.match(/rId(\d+)/g) || [];
-    const maxRId = rIdMatches.reduce((max, id) => {
-      const num = parseInt(id.replace('rId', ''));
-      return num > max ? num : max;
-    }, 0);
-    const footerRId = `rId${maxRId + 1}`;
-
-    relsXml = relsXml.replace(
-      '</Relationships>',
-      `<Relationship Id="${footerRId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/></Relationships>`
-    );
-    zip.file('word/_rels/document.xml.rels', relsXml);
-
-    // Wire the footer into document.xml section properties
-    let documentXml = await zip.file('word/document.xml').async('string');
-    const footerRef = `<w:footerReference w:type="default" r:id="${footerRId}"/>`;
-    const defaultSectPr = `<w:sectPr>${footerRef}<w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720"/></w:sectPr>`;
-
-    if (/<w:sectPr\s*\/>/.test(documentXml)) {
-      // Pandoc generates self-closing <w:sectPr /> — replace entirely
-      documentXml = documentXml.replace(/<w:sectPr\s*\/>/, defaultSectPr);
-    } else if (/<w:sectPr[^/]*>/.test(documentXml)) {
-      // Opening tag with children — inject footerReference after opening tag
-      documentXml = documentXml.replace(
-        /<w:sectPr([^/][^>]*)>/,
-        `<w:sectPr$1>${footerRef}`
-      );
-      // Ensure footer margin is defined
-      if (!/<w:pgMar[^>]*w:footer/.test(documentXml)) {
-        documentXml = documentXml.replace(
-          /<w:pgMar([^/]*)\/?>/,
-          '<w:pgMar$1 w:footer="720"/>'
-        );
-      }
-    } else {
-      // No sectPr at all — create one before </w:body>
-      documentXml = documentXml.replace('</w:body>', `${defaultSectPr}</w:body>`);
-    }
-    zip.file('word/document.xml', documentXml);
-  }
+  await attachDocumentPart(zip, {
+    partFileName: 'footer1.xml',
+    relationshipType: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer',
+    referenceXml: '<w:footerReference w:type="default" r:id="__RID__"/>',
+    marginAttr: 'w:footer'
+  });
 
   return zip.generateAsync({ type: 'nodebuffer' });
 }
@@ -936,8 +879,7 @@ function buildPandocHtml({ htmlContent, stylesheet }) {
  * @returns {Promise<Buffer>} Modified DOCX buffer with header on every page
  */
 async function injectHeaderIntoDocx(docxBuffer, headerContent, stylesheet) {
-  const JSZipClass = await getJSZip();
-  const zip = await JSZipClass.loadAsync(docxBuffer);
+  const zip = await loadDocxZip(getJSZip, docxBuffer);
 
   // Extract base64 images from header HTML (replaced with markers)
   const { html: processedHeader, images } = extractImagesFromHtml(headerContent);
@@ -961,82 +903,20 @@ async function injectHeaderIntoDocx(docxBuffer, headerContent, stylesheet) {
 
   zip.file('word/header1.xml', headerXml);
 
-  // Embed image files and create header relationships
-  if (hasImages) {
-    for (const img of images) {
-      zip.file(`word/media/${img.filename}`, img.data);
-    }
+  registerEmbeddedImages(zip, images, 'word/_rels/header1.xml.rels');
 
-    let headerRelsXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">';
-    for (const img of images) {
-      headerRelsXml += `\n  <Relationship Id="${img.rId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${img.filename}"/>`;
-    }
-    headerRelsXml += '\n</Relationships>';
-    zip.file('word/_rels/header1.xml.rels', headerRelsXml);
-  }
+  await updateContentTypes(zip, {
+    partName: '/word/header1.xml',
+    contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml',
+    images
+  });
 
-  // Register header and image content types in [Content_Types].xml
-  let contentTypesXml = await zip.file('[Content_Types].xml').async('string');
-  if (!contentTypesXml.includes('header1.xml')) {
-    contentTypesXml = contentTypesXml.replace(
-      '</Types>',
-      '<Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/></Types>'
-    );
-  }
-  if (hasImages) {
-    const extensions = [...new Set(images.map(img => img.ext))];
-    for (const ext of extensions) {
-      if (!contentTypesXml.includes(`Extension="${ext}"`)) {
-        const mime = ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : `image/${ext}`;
-        contentTypesXml = contentTypesXml.replace(
-          '</Types>',
-          `<Default Extension="${ext}" ContentType="${mime}"/></Types>`
-        );
-      }
-    }
-  }
-  zip.file('[Content_Types].xml', contentTypesXml);
-
-  // Add relationship for the header
-  let relsXml = await zip.file('word/_rels/document.xml.rels').async('string');
-  if (!relsXml.includes('header1.xml')) {
-    const rIdMatches = relsXml.match(/rId(\d+)/g) || [];
-    const maxRId = rIdMatches.reduce((max, id) => {
-      const num = parseInt(id.replace('rId', ''));
-      return num > max ? num : max;
-    }, 0);
-    const headerRId = `rId${maxRId + 1}`;
-
-    relsXml = relsXml.replace(
-      '</Relationships>',
-      `<Relationship Id="${headerRId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/></Relationships>`
-    );
-    zip.file('word/_rels/document.xml.rels', relsXml);
-
-    // Wire the header into document.xml section properties
-    let documentXml = await zip.file('word/document.xml').async('string');
-    const headerRef = `<w:headerReference w:type="default" r:id="${headerRId}"/>`;
-
-    if (/<w:sectPr\s*\/>/.test(documentXml)) {
-      const defaultSectPr = `<w:sectPr>${headerRef}<w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720"/></w:sectPr>`;
-      documentXml = documentXml.replace(/<w:sectPr\s*\/>/, defaultSectPr);
-    } else if (/<w:sectPr[^/]*>/.test(documentXml)) {
-      documentXml = documentXml.replace(
-        /<w:sectPr([^/][^>]*)>/,
-        `<w:sectPr$1>${headerRef}`
-      );
-      if (!/<w:pgMar[^>]*w:header/.test(documentXml)) {
-        documentXml = documentXml.replace(
-          /<w:pgMar([^/]*)\/?>/,
-          '<w:pgMar$1 w:header="720"/>'
-        );
-      }
-    } else {
-      const defaultSectPr = `<w:sectPr>${headerRef}<w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720"/></w:sectPr>`;
-      documentXml = documentXml.replace('</w:body>', `${defaultSectPr}</w:body>`);
-    }
-    zip.file('word/document.xml', documentXml);
-  }
+  await attachDocumentPart(zip, {
+    partFileName: 'header1.xml',
+    relationshipType: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/header',
+    referenceXml: '<w:headerReference w:type="default" r:id="__RID__"/>',
+    marginAttr: 'w:header'
+  });
 
   return zip.generateAsync({ type: 'nodebuffer' });
 }
@@ -1047,9 +927,16 @@ async function injectHeaderIntoDocx(docxBuffer, headerContent, stylesheet) {
  */
 async function generateDocxViaPandoc({ htmlContent, stylesheet, headerContent, footerContent }) {
   const tempDir = os.tmpdir();
-  const tempId = `docx_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-  const htmlFilePath = path.join(tempDir, `${tempId}.html`);
-  const docxFilePath = path.join(tempDir, `${tempId}.docx`);
+  const { files } = createTempArtifactPaths({
+    tempDir,
+    prefix: 'docx',
+    outputs: {
+      html: 'html',
+      docx: 'docx'
+    }
+  });
+  const htmlFilePath = files.html;
+  const docxFilePath = files.docx;
 
   try {
     const hasFooter = footerContent && footerContent.trim();
@@ -1071,14 +958,16 @@ async function generateDocxViaPandoc({ htmlContent, stylesheet, headerContent, f
     fs.writeFileSync(htmlFilePath, wrappedHtmlContent, 'utf8');
 
     // Run Pandoc HTML → DOCX
-    const pandocCmd = `pandoc "${htmlFilePath}" -f html -t docx -o "${docxFilePath}" --standalone`;
+    const pandocArgs = [htmlFilePath, '-f', 'html', '-t', 'docx', '-o', docxFilePath, '--standalone'];
     try {
-      execSync(pandocCmd, {
+      await runExternalCommand({
+        command: 'pandoc',
+        args: pandocArgs,
+        log,
         timeout: 30000,
-        stdio: ['pipe', 'pipe', 'pipe']
+        failureMessage: 'Pandoc HTML to DOCX conversion failed'
       });
     } catch (cmdError) {
-      log('error', 'Pandoc HTML to DOCX conversion failed', { error: cmdError.message });
       throw new Error(`Pandoc conversion failed: ${cmdError.message}`);
     }
 
@@ -1111,12 +1000,11 @@ async function generateDocxViaPandoc({ htmlContent, stylesheet, headerContent, f
     log('debug', 'DOCX generated via Pandoc', { size: `${Math.round(docxBuffer.length / 1024)}KB` });
     return docxBuffer;
   } finally {
-    try {
-      if (fs.existsSync(htmlFilePath)) fs.unlinkSync(htmlFilePath);
-      if (fs.existsSync(docxFilePath)) fs.unlinkSync(docxFilePath);
-    } catch (cleanupError) {
-      log('warn', 'Failed to cleanup temp files', { error: cleanupError.message });
-    }
+    cleanupTempFiles({
+      fs,
+      log,
+      filePaths: [htmlFilePath, docxFilePath]
+    });
   }
 }
 
@@ -1127,10 +1015,17 @@ async function generateDocxViaPandoc({ htmlContent, stylesheet, headerContent, f
  */
 async function generateDocViaPdf({ htmlContent, stylesheet, headerContent, footerContent, footerHeight, outputFormat = 'doc' }) {
   const tempDir = os.tmpdir();
-  const tempId = `doc_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-  const pdfFilePath = path.join(tempDir, `${tempId}.pdf`);
   const outputExt = outputFormat === 'docx' ? 'docx' : 'doc';
-  const outputFilePath = path.join(tempDir, `${tempId}.${outputExt}`);
+  const { files } = createTempArtifactPaths({
+    tempDir,
+    prefix: 'doc',
+    outputs: {
+      pdf: 'pdf',
+      output: outputExt
+    }
+  });
+  const pdfFilePath = files.pdf;
+  const outputFilePath = files.output;
 
   try {
     log('info', `${outputFormat.toUpperCase()} generation via Puppeteer PDF + LibreOffice`, { 
@@ -1154,17 +1049,30 @@ async function generateDocViaPdf({ htmlContent, stylesheet, headerContent, foote
     // For DOCX: use "Office Open XML Text" filter
     // For DOC: use "MS Word 97" filter
     const outputFilter = outputFormat === 'docx' ? 'docx:"Office Open XML Text"' : 'doc:"MS Word 97"';
-    const libreOfficeCmd = `soffice --headless --infilter="writer_pdf_import" --convert-to ${outputFilter} --outdir "${tempDir}" "${pdfFilePath}"`;
+    const libreOfficeArgs = [
+      '--headless',
+      '--infilter=writer_pdf_import',
+      '--convert-to',
+      outputFilter,
+      '--outdir',
+      tempDir,
+      pdfFilePath
+    ];
     
-    log('debug', `LibreOffice PDF to ${outputFormat.toUpperCase()} conversion`, { cmd: libreOfficeCmd });
+    log('debug', `LibreOffice PDF to ${outputFormat.toUpperCase()} conversion`, {
+      command: 'soffice',
+      args: libreOfficeArgs
+    });
     
     try {
-      execSync(libreOfficeCmd, { 
+      await runExternalCommand({
+        command: 'soffice',
+        args: libreOfficeArgs,
+        log,
         timeout: 60000,
-        stdio: ['pipe', 'pipe', 'pipe']
+        failureMessage: `LibreOffice PDF to ${outputFormat.toUpperCase()} conversion failed`
       });
     } catch (cmdError) {
-      log('error', `LibreOffice PDF to ${outputFormat.toUpperCase()} conversion failed`, { error: cmdError.message });
       throw new Error(`LibreOffice conversion failed: ${cmdError.message}`);
     }
 
@@ -1177,12 +1085,11 @@ async function generateDocViaPdf({ htmlContent, stylesheet, headerContent, foote
     
     return outputBuffer;
   } finally {
-    try {
-      if (fs.existsSync(pdfFilePath)) fs.unlinkSync(pdfFilePath);
-      if (fs.existsSync(outputFilePath)) fs.unlinkSync(outputFilePath);
-    } catch (cleanupError) {
-      log('warn', 'Failed to cleanup temp files', { error: cleanupError.message });
-    }
+    cleanupTempFiles({
+      fs,
+      log,
+      filePaths: [pdfFilePath, outputFilePath]
+    });
   }
 }
 
@@ -1249,6 +1156,8 @@ module.exports = {
     extractImagesFromHtml, buildImageDrawing, parseBorderStyle, buildBorderXml,
     convertTableToOoxml, convertBlocksToOoxml, buildFlexParagraph,
     htmlToOoxml, injectFooterIntoDocx, injectHeaderIntoDocx, buildPandocHtml,
-    extractHeaderBorder
+    extractHeaderBorder,
+    cleanupTempFiles, createTempArtifactPaths, runExternalCommand,
+    loadDocxZip, registerEmbeddedImages, updateContentTypes, attachDocumentPart
   }
 };

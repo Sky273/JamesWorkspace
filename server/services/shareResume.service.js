@@ -20,6 +20,7 @@ import {
 const SHARED_PDF_DIR = path.join(UPLOAD_DIR, 'shared');
 export const SHARE_LINK_TTL_DAYS = 7;
 export const SHARE_LINK_TTL_MS = SHARE_LINK_TTL_DAYS * 24 * 60 * 60 * 1000;
+const RESOLVED_SHARED_PDF_DIR = path.resolve(SHARED_PDF_DIR);
 
 function buildShareExpiryDate(now = new Date()) {
     return new Date(now.getTime() + SHARE_LINK_TTL_MS);
@@ -40,7 +41,13 @@ async function deleteSharedPdfFile(filePath) {
     }
 
     try {
-        await fs.unlink(filePath);
+        const resolvedPath = path.resolve(filePath);
+        if (resolvedPath !== RESOLVED_SHARED_PDF_DIR && !resolvedPath.startsWith(`${RESOLVED_SHARED_PDF_DIR}${path.sep}`)) {
+            safeLog('warn', 'Rejected shared PDF deletion outside managed directory', { filePath });
+            return false;
+        }
+
+        await fs.unlink(resolvedPath);
         return true;
     } catch (error) {
         if (error?.code !== 'ENOENT') {
@@ -171,15 +178,24 @@ export async function getSharedPdfByToken(token) {
             return null;
         }
 
+        const resolvedPath = path.resolve(resume.shared_pdf_path || '');
+        if (resolvedPath !== RESOLVED_SHARED_PDF_DIR && !resolvedPath.startsWith(`${RESOLVED_SHARED_PDF_DIR}${path.sep}`)) {
+            safeLog('warn', 'Shared PDF path rejected because it is outside managed directory', {
+                resumeId: resume.id,
+                token: token.substring(0, 8) + '...'
+            });
+            return null;
+        }
+
         try {
-            await fs.access(resume.shared_pdf_path);
+            await fs.access(resolvedPath);
         } catch {
             safeLog('warn', 'Shared PDF file not found', { token });
             return null;
         }
 
         return {
-            path: resume.shared_pdf_path,
+            path: resolvedPath,
             resumeId: resume.id,
             name: resume.name,
             expiresAt: resume.shared_pdf_expires_at

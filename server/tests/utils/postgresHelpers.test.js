@@ -34,6 +34,7 @@ vi.mock('../../utils/logger.backend.js', () => ({
 import { safeLog } from '../../utils/logger.backend.js';
 import { __mockClient } from '../../config/database.js';
 import {
+    selectRawWithTimeout,
     selectWithTimeout,
     findWithTimeout,
     createWithTimeout,
@@ -133,16 +134,30 @@ describe('postgresHelpers', () => {
             );
         });
 
-        it('should support raw queries', async () => {
+        it('should not accept raw queries through selectWithTimeout', async () => {
+            await expect(selectWithTimeout('firms', {
+                rawQuery: 'SELECT COUNT(*) as count FROM firms',
+                rawParams: []
+            })).rejects.toThrow();
+        });
+    });
+
+    describe('selectRawWithTimeout', () => {
+        it('should execute reviewed raw queries', async () => {
             __mockClient.query.mockResolvedValueOnce({});
             __mockClient.query.mockResolvedValueOnce({ rows: [{ count: 5 }] });
 
-            const result = await selectWithTimeout('firms', {
-                rawQuery: 'SELECT COUNT(*) as count FROM firms',
-                rawParams: []
-            });
+            const result = await selectRawWithTimeout(
+                'SELECT COUNT(*) as count FROM firms',
+                [],
+                { context: 'tests.countFirms' }
+            );
 
             expect(result).toEqual([{ count: 5 }]);
+        });
+
+        it('should require a context label', async () => {
+            await expect(selectRawWithTimeout('SELECT 1', [], {})).rejects.toThrow('Raw SQL context is required');
         });
     });
 

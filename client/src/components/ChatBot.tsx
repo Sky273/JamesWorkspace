@@ -150,14 +150,14 @@ const ChatBot = (): JSX.Element | null => {
   useEffect(() => {
     const checkChatbotStatus = async () => {
       try {
-        const response = await authGet('/api/settings');
+        const response = await authGet('/api/settings/presentation');
         if (response.ok) {
           const data = await response.json();
           setChatbotEnabled(data.chatbotEnabled === 'on');
         }
       } catch (error) {
         log.warn('Failed to fetch chatbot settings', { error: error instanceof Error ? error.message : 'Unknown' });
-        setChatbotEnabled(true);
+        setChatbotEnabled(false);
       }
     };
     checkChatbotStatus();

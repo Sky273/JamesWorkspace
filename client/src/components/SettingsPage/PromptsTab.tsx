@@ -1,6 +1,8 @@
 import { ChangeEvent } from 'react';
 
 interface FormData {
+  preAnalysisEnabled?: boolean;
+  'Pre Analysis Prompt': string;
   'Analysis Prompt': string;
   'Improvement Prompt': string;
   'Match Analysis Prompt': string;
@@ -43,6 +45,7 @@ interface PromptVersionStateEntry {
 }
 
 interface PromptTextareaProps {
+  promptKey: keyof FormData;
   label: string;
   value: string;
   onChange: (value: string) => void;
@@ -55,7 +58,7 @@ interface PromptTextareaProps {
 
 interface PromptsTabProps {
   formData: FormData;
-  onInputChange: (key: string, value: string) => void;
+  onInputChange: (key: string, value: string | boolean) => void;
   promptGovernance?: Record<string, PromptGovernanceEntry>;
   promptVersionState?: Record<string, PromptVersionStateEntry>;
   t: (key: string) => string;
@@ -73,6 +76,19 @@ interface PromptHistoryItemProps {
   t: (key: string) => string;
 }
 
+interface PromptFieldDefinition {
+  promptKey: keyof FormData;
+  labelKey: string;
+  helpTextKey: string;
+  placeholders: string[];
+}
+
+interface PromptSectionDefinition {
+  id: string;
+  titleKey?: string;
+  fields: PromptFieldDefinition[];
+}
+
 const fallbackText = (t: (key: string) => string, key: string, fallback: string): string => {
   const translated = t(key);
   return translated === key ? fallback : translated;
@@ -84,6 +100,55 @@ const MetadataItem = ({ label, value }: MetadataItemProps): JSX.Element => (
     <div className="mt-1 break-all font-mono text-xs text-slate-900 dark:text-slate-100">{value}</div>
   </div>
 );
+
+const PROMPT_SECTIONS: PromptSectionDefinition[] = [
+  {
+    id: 'pre-analysis',
+    fields: [
+      {
+        promptKey: 'Pre Analysis Prompt',
+        labelKey: 'settings.prompts.preAnalysis',
+        helpTextKey: 'settings.prompts.preAnalysisHelp',
+        placeholders: ['{TEXT}', '{FILENAME}'],
+      },
+    ],
+  },
+  {
+    id: 'core-analysis',
+    fields: [
+      {
+        promptKey: 'Analysis Prompt',
+        labelKey: 'settings.prompts.analysis',
+        helpTextKey: 'settings.prompts.analysisHelp',
+        placeholders: ['{TEXT}'],
+      },
+      {
+        promptKey: 'Improvement Prompt',
+        labelKey: 'settings.prompts.improvement',
+        helpTextKey: 'settings.prompts.improvementHelp',
+        placeholders: ['{TEXT}', '{ANALYSIS}'],
+      },
+    ],
+  },
+  {
+    id: 'adaptation',
+    titleKey: 'settings.prompts.adaptationSection',
+    fields: [
+      {
+        promptKey: 'Match Analysis Prompt',
+        labelKey: 'settings.prompts.matchAnalysis',
+        helpTextKey: 'settings.prompts.matchAnalysisHelp',
+        placeholders: ['{RESUME_TEXT}', '{MISSION_TITLE}', '{MISSION_CONTENT}'],
+      },
+      {
+        promptKey: 'Adaptation Prompt',
+        labelKey: 'settings.prompts.adaptation',
+        helpTextKey: 'settings.prompts.adaptationHelp',
+        placeholders: ['{RESUME_TEXT}', '{RESUME_ANALYSIS}', '{MISSION_TITLE}', '{MISSION_CONTENT}', '{MATCH_ANALYSIS}'],
+      },
+    ],
+  },
+];
 
 const PromptHistoryItem = ({
   entry,
@@ -204,6 +269,7 @@ const PromptGovernancePanel = ({
 };
 
 const PromptTextarea = ({
+  promptKey,
   label,
   value,
   onChange,
@@ -244,7 +310,7 @@ const PromptTextarea = ({
       </p>
 
       {history.length > 1 && (
-        <details className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/50">
+        <details data-testid={`prompt-history-${String(promptKey)}`} className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/50">
           <summary className="cursor-pointer text-sm font-medium text-slate-900 dark:text-slate-100">
             {fallbackText(t, 'settings.prompts.governance.historyTitle', 'Historique des versions')}
           </summary>
@@ -268,6 +334,76 @@ const PromptTextarea = ({
   );
 };
 
+const PromptToggleCard = ({
+  checked,
+  onChange,
+  t,
+}: {
+  checked: boolean;
+  onChange: (nextValue: boolean) => void;
+  t: (key: string) => string;
+}): JSX.Element => (
+  <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+    <label className="flex items-start gap-3">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+        className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+      />
+      <div>
+        <span className="block text-sm font-medium text-gray-900 dark:text-gray-100">
+          {t('settings.prompts.preAnalysisEnabled')}
+        </span>
+        <span className="mt-1 block text-sm text-gray-500 dark:text-gray-400">
+          {t('settings.prompts.preAnalysisEnabledHelp')}
+        </span>
+      </div>
+    </label>
+  </div>
+);
+
+const PromptSection = ({
+  section,
+  formData,
+  onInputChange,
+  promptGovernance,
+  promptVersionState,
+  t,
+}: {
+  section: PromptSectionDefinition;
+  formData: FormData;
+  onInputChange: (key: string, value: string | boolean) => void;
+  promptGovernance?: Record<string, PromptGovernanceEntry>;
+  promptVersionState?: Record<string, PromptVersionStateEntry>;
+  t: (key: string) => string;
+}): JSX.Element => (
+  <div className="space-y-6">
+    {section.titleKey && (
+      <div className="border-t border-gray-200 pt-6 dark:border-gray-700">
+        <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-gray-100">
+          {t(section.titleKey)}
+        </h3>
+      </div>
+    )}
+
+    {section.fields.map((field) => (
+      <PromptTextarea
+        key={field.promptKey}
+        promptKey={field.promptKey}
+        label={t(field.labelKey)}
+        value={formData[field.promptKey] as string}
+        onChange={(nextValue) => onInputChange(field.promptKey, nextValue)}
+        helpText={t(field.helpTextKey)}
+        placeholders={field.placeholders}
+        governance={promptGovernance?.[field.promptKey]}
+        versionState={promptVersionState?.[field.promptKey]}
+        t={t}
+      />
+    ))}
+  </div>
+);
+
 const PromptsTab = ({
   formData,
   onInputChange,
@@ -275,6 +411,10 @@ const PromptsTab = ({
   promptVersionState,
   t,
 }: PromptsTabProps): JSX.Element => {
+  const visibleSections = PROMPT_SECTIONS.filter((section) => (
+    section.id !== 'pre-analysis' || !!formData.preAnalysisEnabled
+  ));
+
   return (
     <div className="space-y-6">
       <div>
@@ -286,55 +426,23 @@ const PromptsTab = ({
         </p>
       </div>
 
-      <PromptTextarea
-        label={t('settings.prompts.analysis')}
-        value={formData['Analysis Prompt']}
-        onChange={(nextValue) => onInputChange('Analysis Prompt', nextValue)}
-        helpText={t('settings.prompts.analysisHelp')}
-        placeholders={['{TEXT}']}
-        governance={promptGovernance?.['Analysis Prompt']}
-        versionState={promptVersionState?.['Analysis Prompt']}
+      <PromptToggleCard
+        checked={!!formData.preAnalysisEnabled}
+        onChange={(nextValue) => onInputChange('preAnalysisEnabled', nextValue)}
         t={t}
       />
 
-      <PromptTextarea
-        label={t('settings.prompts.improvement')}
-        value={formData['Improvement Prompt']}
-        onChange={(nextValue) => onInputChange('Improvement Prompt', nextValue)}
-        helpText={t('settings.prompts.improvementHelp')}
-        placeholders={['{TEXT}', '{ANALYSIS}']}
-        governance={promptGovernance?.['Improvement Prompt']}
-        versionState={promptVersionState?.['Improvement Prompt']}
-        t={t}
-      />
-
-      <div className="border-t border-gray-200 pt-6 dark:border-gray-700">
-        <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-gray-100">
-          {t('settings.prompts.adaptationSection')}
-        </h3>
-      </div>
-
-      <PromptTextarea
-        label={t('settings.prompts.matchAnalysis')}
-        value={formData['Match Analysis Prompt']}
-        onChange={(nextValue) => onInputChange('Match Analysis Prompt', nextValue)}
-        helpText={t('settings.prompts.matchAnalysisHelp')}
-        placeholders={['{RESUME_TEXT}', '{MISSION_TITLE}', '{MISSION_CONTENT}']}
-        governance={promptGovernance?.['Match Analysis Prompt']}
-        versionState={promptVersionState?.['Match Analysis Prompt']}
-        t={t}
-      />
-
-      <PromptTextarea
-        label={t('settings.prompts.adaptation')}
-        value={formData['Adaptation Prompt']}
-        onChange={(nextValue) => onInputChange('Adaptation Prompt', nextValue)}
-        helpText={t('settings.prompts.adaptationHelp')}
-        placeholders={['{RESUME_TEXT}', '{RESUME_ANALYSIS}', '{MISSION_TITLE}', '{MISSION_CONTENT}', '{MATCH_ANALYSIS}']}
-        governance={promptGovernance?.['Adaptation Prompt']}
-        versionState={promptVersionState?.['Adaptation Prompt']}
-        t={t}
-      />
+      {visibleSections.map((section) => (
+        <PromptSection
+          key={section.id}
+          section={section}
+          formData={formData}
+          onInputChange={onInputChange}
+          promptGovernance={promptGovernance}
+          promptVersionState={promptVersionState}
+          t={t}
+        />
+      ))}
     </div>
   );
 };

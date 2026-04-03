@@ -75,7 +75,7 @@ const Register = (): JSX.Element => {
         email: formData.email.toLowerCase(),
         password: formData.password
       });
-      navigate('/signin');
+      navigate('/signin?success=registered_pending');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : t('errors.serverError');
       setError(errorMessage);

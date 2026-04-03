@@ -13,6 +13,7 @@ import { getStorageStats, getFileCleanupStats } from '../utils/fileCleanup.js';
 import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
 import { getOcrRuntimeDiagnostics } from '../services/pdfTextExtraction.service.js';
 import { getWordExtractionRuntimeDiagnostics } from '../services/wordTextExtraction.service.js';
+import { findUserById } from '../services/users.service.js';
 import {
     buildCacheCheck,
     buildDatabaseCheck,
@@ -53,18 +54,33 @@ async function runConnectivityCheck({
         : { status: 'error', message: `API error: ${response.status}`, latency: `${latency}ms` };
 }
 
-router.get('/', async (req, res) => {
-    const startTime = Date.now();
+async function resolveAdminHealthAccess(req) {
+    const accessToken = req.cookies?.accessToken;
+    if (!accessToken) {
+        return false;
+    }
 
-    const isAdmin = req.cookies?.accessToken ? await (async () => {
-        try {
-            const { verifyToken } = await import('../services/jwt.service.js');
-            const decoded = verifyToken(req.cookies.accessToken);
-            return decoded?.role === 'admin';
-        } catch {
+    try {
+        const { verifyToken } = await import('../services/jwt.service.js');
+        const decoded = verifyToken(accessToken);
+        if (!decoded?.id) {
             return false;
         }
-    })() : false;
+
+        const currentUser = await findUserById(decoded.id);
+        if (!currentUser) {
+            return false;
+        }
+
+        return currentUser.role === 'admin' && String(currentUser.status || '').toLowerCase() !== 'inactive';
+    } catch {
+        return false;
+    }
+}
+
+router.get('/', async (req, res) => {
+    const startTime = Date.now();
+    const isAdmin = await resolveAdminHealthAccess(req);
 
     const checks = getInitialHealthChecks();
 

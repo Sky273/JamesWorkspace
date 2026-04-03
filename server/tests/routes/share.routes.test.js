@@ -5,6 +5,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import express from 'express';
 import request from 'supertest';
+import { Readable } from 'stream';
 
 const mockStoreSharedPdf = vi.fn();
 const mockGetShareStatus = vi.fn();
@@ -37,9 +38,16 @@ vi.mock('../../utils/firmHelpers.js', () => ({
 }));
 
 const mockReadFile = vi.fn();
+const mockStat = vi.fn();
 vi.mock('fs/promises', () => ({
-    default: { readFile: (...args) => mockReadFile(...args) },
-    readFile: (...args) => mockReadFile(...args)
+    default: { readFile: (...args) => mockReadFile(...args), stat: (...args) => mockStat(...args) },
+    readFile: (...args) => mockReadFile(...args),
+    stat: (...args) => mockStat(...args)
+}));
+
+const mockCreateReadStream = vi.fn();
+vi.mock('fs', () => ({
+    createReadStream: (...args) => mockCreateReadStream(...args)
 }));
 
 vi.mock('../../utils/logger.backend.js', () => ({
@@ -174,7 +182,8 @@ describe('Share Routes', () => {
             path: '/tmp/shared/cv.pdf',
             name: 'John Doe CV'
         });
-        mockReadFile.mockResolvedValueOnce(Buffer.from('%PDF-1.4 fake content'));
+        mockStat.mockResolvedValueOnce({ size: 21 });
+        mockCreateReadStream.mockReturnValueOnce(Readable.from([Buffer.from('%PDF-1.4 fake content')]));
 
         const res = await request(app).get(`/api/share/pdf/${VALID_TOKEN}`);
 
@@ -182,6 +191,8 @@ describe('Share Routes', () => {
         expect(res.headers['content-type']).toContain('application/pdf');
         expect(res.headers['content-disposition']).toContain('inline');
         expect(res.headers['x-content-type-options']).toBe('nosniff');
+        expect(mockCreateReadStream).toHaveBeenCalledWith('/tmp/shared/cv.pdf');
+        expect(mockReadFile).not.toHaveBeenCalled();
     });
 
     it('serves an original file only by file token', async () => {

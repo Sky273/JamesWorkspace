@@ -24,8 +24,7 @@ async function extractTextFromWordViaServer(file: File): Promise<string> {
     const response = await fetchWithAuth('/api/resumes/extract-doc', options);
 
     if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Failed to extract text from Word file' }));
-        throw new Error(errorData.error || 'Failed to extract text from Word file');
+        throw new Error('Failed to extract text from Word file');
     }
 
     const { text } = await response.json();
@@ -56,8 +55,7 @@ export async function extractTextFromPDF(file: File): Promise<string> {
         const response = await fetchWithAuth('/api/resumes/extract-pdf', options);
         
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ error: 'Failed to extract text from PDF' }));
-            throw new Error(errorData.error || 'Failed to extract text from PDF file');
+            throw new Error('Failed to extract text from PDF file');
         }
         
         const { text, pages, ocrUsed, ocrPageCount, extractionTimeMs } = await response.json();
@@ -79,7 +77,7 @@ export async function extractTextFromPDF(file: File): Promise<string> {
         return text;
     } catch (error) {
         logger.error('Error extracting text from PDF:', error);
-        throw new Error(`Failed to extract text from PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        throw new Error('Failed to extract text from PDF');
     }
 }
 
@@ -94,7 +92,7 @@ export async function extractTextFromDOCX(file: File): Promise<string> {
         return text;
     } catch (error) {
         logger.error('Error extracting text from DOCX:', error);
-        throw new Error(`Failed to extract text from DOCX: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        throw new Error('Failed to extract text from DOCX');
     }
 }
 
@@ -111,6 +109,6 @@ export async function extractTextFromDOC(file: File): Promise<string> {
         return text;
     } catch (error) {
         logger.error('Error extracting text from DOC:', error);
-        throw new Error(`Failed to extract text from DOC: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        throw new Error('Failed to extract text from DOC');
     }
 }

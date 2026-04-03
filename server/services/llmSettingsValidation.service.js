@@ -1,6 +1,7 @@
 import { callProviderChat } from './llmGateway.service.js';
 import { resolveEffectiveModelParameters, OLLAMA_GENERIC_MODEL_KEY, OLLAMA_GLOBAL_KEY } from './llmAdminParameters.service.js';
 import { getProviderDefaultModel } from './llmConfiguration.service.js';
+import { safeLog } from '../utils/logger.backend.js';
 
 const SETTINGS_VALIDATION_MESSAGES = Object.freeze([
     {
@@ -92,6 +93,15 @@ export async function validatePersistedLlmSettings(settingsData = {}, user = nul
                 }
             });
         } catch (error) {
+            if (provider === 'ollama') {
+                safeLog('warn', 'Ollama settings validation failed; persisting settings anyway', {
+                    provider,
+                    model,
+                    error: error.message
+                });
+                continue;
+            }
+
             throw createValidationError(
                 `Saved parameters are invalid for ${provider}/${model}: ${error.message}`,
                 { provider, model }

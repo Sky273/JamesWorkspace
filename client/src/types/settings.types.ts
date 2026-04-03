@@ -1,0 +1,63 @@
+export interface Settings {
+  id?: string;
+  llmProvider?: 'openai' | 'anthropic' | 'deepseek' | 'glm' | 'minimax' | 'ollama';
+  llmModel?: string;
+  llmAvailability?: Record<string, { highspeedEnabled?: boolean; runtimeUnavailableModels?: string[] }>;
+  llmModelCatalog?: Record<string, Array<{ value: string; label: string }>>;
+  llmModelParameters?: Record<string, Record<string, Record<string, string | number>>>;
+  promptGovernance?: Record<string, {
+    settingKey: string;
+    promptKey: string;
+    promptId: string | null;
+    promptVersion: string | null;
+    promptDomain: string | null;
+    promptOperation: string | null;
+    contractId: string | null;
+    contractVersion: string | null;
+    sourceModule: string | null;
+    defaultText: string;
+  }>;
+  promptVersionState?: Record<string, {
+    currentRevision: number;
+    activeSource: 'default' | 'custom';
+    activeTextHash: string;
+    isModified: boolean;
+    lastChangedAt: string | null;
+    history: Array<{
+      revision: number;
+      source: 'default' | 'custom';
+      reason: string;
+      text: string;
+      textHash: string;
+      changedAt: string | null;
+      changedByUserId: string | null;
+      changedByEmail: string | null;
+      promptId: string | null;
+      promptVersion: string | null;
+      contractId: string | null;
+      contractVersion: string | null;
+    }>;
+  }>;
+  ollamaBaseUrl?: string;
+  ollamaVisionModel?: string;
+  ollamaKeepAlive?: string;
+  ollamaNumCtx?: number;
+  cvMode?: 'nominative' | 'anonymous';
+  chatbotEnabled?: 'on' | 'off';
+  webglEnabled?: 'on' | 'off';
+  preAnalysisEnabled?: boolean;
+  'Pre Analysis Prompt'?: string;
+  'Analysis Prompt'?: string;
+  'Improvement Prompt'?: string;
+  'Match Analysis Prompt'?: string;
+  'Adaptation Prompt'?: string;
+  'Executive Summary Weight'?: number;
+  'Skills Weight'?: number;
+  'Experience Weight'?: number;
+  'Education Weight'?: number;
+  'ATS Weight'?: number;
+  'Hobbies Languages Weight'?: number;
+  'DPO Name'?: string;
+  'DPO Email'?: string;
+  'DPO Phone'?: string;
+}

@@ -187,7 +187,8 @@ router.post('/signin', authLimiter, validateBody(signInSchema), async (req, res)
         
         safeLog('debug', 'User data prepared for signin', { 
             userId: userData.id, 
-            firm: userData.firm 
+            firmId: userData.firmId,
+            firmName: userData.firmName
         });
 
         const accessToken = generateAccessToken(userData);
@@ -200,7 +201,8 @@ router.post('/signin', authLimiter, validateBody(signInSchema), async (req, res)
             ...metadata,
             email: userData.email,
             userId: userData.id,
-            customer: userData.customer,
+            firmId: userData.firmId,
+            firmName: userData.firmName,
             role: userData.role,
             statusCode: 200,
             action: 'LOGIN_SUCCESS',
@@ -225,20 +227,38 @@ router.post('/signin', authLimiter, validateBody(signInSchema), async (req, res)
 // POST /api/auth/register - User registration
 router.post('/register', authLimiter, validateBody(registerSchema), async (req, res) => {
     try {
-        const { email } = req.body;
+        const { email, password, name } = req.body;
         const normalizedEmail = email.toLowerCase();
         const metadata = getRequestMetadata(req);
-        securityLog(LOG_LEVELS.WARNING, SECURITY_EVENTS.AUTH_BLOCKED, {
-            ...metadata,
+        const existingUser = await authService.findExistingUserByEmail(normalizedEmail);
+
+        if (existingUser) {
+            return res.status(409).json({ error: 'An account already exists with this email' });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const createdUser = await authService.createUser({
             email: normalizedEmail,
-            statusCode: 403,
-            action: 'REGISTER_ATTEMPT',
-            message: 'Self-service registration blocked because firm assignment is required',
-            metadata: { reason: 'firm_assignment_required' }
+            password: hashedPassword,
+            name,
+            role: 'user',
+            status: 'pending'
         });
 
-        res.status(403).json({
-            error: 'Self-service registration is unavailable. Contact an administrator.'
+        securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.USER_CREATED, {
+            ...metadata,
+            email: normalizedEmail,
+            userId: createdUser.id,
+            firm: createdUser.firm_name,
+            role: createdUser.role,
+            statusCode: 201,
+            action: 'REGISTER_SUCCESS',
+            message: 'User self-registered with default firm assignment',
+            metadata: { status: createdUser.status }
+        });
+
+        res.status(201).json({
+            message: 'Registration successful. Please wait for admin approval to access your account.'
         });
     } catch (error) {
         safeLog('error', 'Registration error', { error: error.message });

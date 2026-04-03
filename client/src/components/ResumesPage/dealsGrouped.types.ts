@@ -94,16 +94,16 @@ export const STATUS_COLORS: Record<string, string> = {
 
 export const STATUS_LABELS: Record<string, string> = {
   open: 'En cours',
-  won: 'Gagnée',
+  won: 'Gagnee',
   lost: 'Perdue',
   on_hold: 'En attente'
 };
 
 export const PRIORITY_ICONS: Record<string, { icon: string; color: string }> = {
-  low: { icon: '○', color: 'text-gray-400' },
-  medium: { icon: '●', color: 'text-blue-500' },
-  high: { icon: '●●', color: 'text-orange-500' },
-  urgent: { icon: '●●●', color: 'text-red-500' }
+  low: { icon: 'o', color: 'text-gray-400' },
+  medium: { icon: 'oo', color: 'text-blue-500' },
+  high: { icon: 'ooo', color: 'text-orange-500' },
+  urgent: { icon: '!!!!', color: 'text-red-500' }
 };
 
 export const TAG_COLOR_MAP: Record<string, string> = {

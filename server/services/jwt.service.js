@@ -24,8 +24,10 @@ export function generateAccessToken(user) {
         status: user.status,
         role: user.role || 'user',
         firmId: user.firm_id || user.firmId,
-        firm: user.firm,
-        customer: user.firm || user.customer,
+        firmName: user.firm_name || user.firmName || user.firm || null,
+        firm: user.firm_name || user.firmName || user.firm || null,
+        customerName: user.customerName || user.firm_name || user.firmName || user.firm || null,
+        customer: user.firm_name || user.firmName || user.firm || user.customer || null,
         jti // Unique token ID for blacklist support
     };
     

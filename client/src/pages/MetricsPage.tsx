@@ -44,10 +44,9 @@ const MetricsPage = (): JSX.Element => {
     try {
       const response = await fetchWithAuth('/api/metrics', createAuthOptions());
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
         if (response.status === 403) toast.error(t('metrics.accessDenied'));
         else if (response.status === 401) toast.error(t('metrics.sessionExpired'));
-        else toast.error(`${t('common.error')} ${response.status}: ${errorData.error || t('metrics.error')}`);
+        else toast.error(t('metrics.error'));
         throw new Error(`Failed to fetch metrics: ${response.status}`);
       }
       const data = await response.json();

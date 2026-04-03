@@ -28,11 +28,6 @@ export function resolveRequiredFirmId(normalizedPayload = {}) {
     return typeof firmId === 'string' ? firmId.trim() : '';
 }
 
-export function resolveRequiredFirmName(normalizedPayload = {}) {
-    const firmName = normalizedPayload.firm || normalizedPayload.customer;
-    return typeof firmName === 'string' ? firmName.trim() : '';
-}
-
 export function normalizeRole(role) {
     const normalizedRole = String(role || 'user').toLowerCase();
     return ['admin', 'user'].includes(normalizedRole) ? normalizedRole : 'user';

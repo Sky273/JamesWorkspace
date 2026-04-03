@@ -118,6 +118,35 @@ export async function analyzeResume(resumeText, model, analysisPrompt, userMetad
     return normalized;
 }
 
+export async function preAnalyzeResumeText(text, model, preAnalysisPrompt, userMetadata = null, originalFileName = null) {
+    const prompt = preAnalysisPrompt
+        .replace(/{TEXT}/g, text)
+        .replace(/{FILENAME}/g, originalFileName || 'Non disponible');
+
+    const response = await callBusinessChatCompletion({
+        model,
+        messages: [
+            {
+                role: 'system',
+                content: 'You clean and minimally structure extracted resume text. Respond with plain Markdown text only.'
+            },
+            {
+                role: 'user',
+                content: prompt
+            }
+        ],
+        maxTokens: 12000,
+        temperature: 0,
+        timeout: 20 * 60 * 1000,
+        maxPromptLength: 120000,
+        userMetadata,
+        operationType: 'Resume Pre-Analysis'
+    });
+
+    const content = normalizeUtf8Text(stripLlmThinkingContent(response.choices?.[0]?.message?.content || ''));
+    return content.trim();
+}
+
 export async function improveResume(text, analysis, model, improvementPromptTemplate, originalFileName = null, userMetadata = null) {
     const analysisJson = JSON.stringify(analysis, null, 2);
     const fileNameValue = originalFileName || 'Non disponible';

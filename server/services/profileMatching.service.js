@@ -4,7 +4,7 @@
  * Optimized to minimize LLM usage by using pre-extracted CV tags
  */
 
-import { selectWithTimeout, findWithTimeout } from '../utils/postgresHelpers.js';
+import { findWithTimeout, selectRawWithTimeout } from '../utils/postgresHelpers.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { getLLMSettings } from './settings.service.js';
 import { PROFILE_MATCHING_LLM_PREFILTER_CAP } from '../config/constants.js';
@@ -41,14 +41,15 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
         limit = 0,
         minScore = 0,
         status = null,
-        firm = null,
+        firmId = null,
+        firm = undefined,
         weights = DEFAULT_WEIGHTS,
         dealId = null,
         progressCallback = null
     } = options;
 
-    const firmFilter = firm;
-    safeLog('info', 'Finding matching profiles', { missionId, limit, minScore, status, firm: firmFilter, dealId });
+    const firmFilter = firmId || firm || null;
+    safeLog('info', 'Finding matching profiles', { missionId, limit, minScore, status, firmId: firmFilter, dealId });
 
     const missionRecord = await findWithTimeout('missions', missionId);
     if (!missionRecord) {
@@ -105,10 +106,7 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
         ${whereClause}
     `;
 
-    const resumeRecords = await selectWithTimeout('resumes', {
-        rawQuery: query,
-        rawParams: params
-    });
+    const resumeRecords = await selectRawWithTimeout(query, params, { context: 'profileMatching.findMatchingProfiles' });
 
     safeLog('info', 'Fetched resumes for matching', { count: resumeRecords.length });
     await emitProgress(progressCallback, {
@@ -187,7 +185,7 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
             missionId,
             dealId,
             status,
-            firm: firmFilter
+            firmId: firmFilter
         });
 
         return {

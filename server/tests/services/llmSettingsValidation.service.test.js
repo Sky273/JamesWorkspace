@@ -90,4 +90,19 @@ describe('llmSettingsValidation.service', () => {
             message: expect.stringContaining('Saved parameters are invalid for openai/gpt-4o')
         });
     });
+
+    it('does not block persistence when ollama validation fails', async () => {
+        callProviderChat.mockRejectedValueOnce(new Error('ollama unavailable'));
+
+        await expect(validatePersistedLlmSettings({
+            llmProvider: 'ollama',
+            llmModel: 'llama3.2:latest',
+            ollamaBaseUrl: 'http://ollama.local:11434'
+        })).resolves.toBeUndefined();
+
+        expect(callProviderChat).toHaveBeenCalledWith(expect.objectContaining({
+            provider: 'ollama',
+            model: 'llama3.2:latest'
+        }));
+    });
 });

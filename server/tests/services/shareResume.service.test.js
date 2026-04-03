@@ -125,7 +125,7 @@ describe('shareResume.service', () => {
 
         await storeSharedPdf('resume-123', Buffer.from('PDF content'), 'cv.pdf');
 
-        expect(fs.unlink).toHaveBeenCalledWith('/old/file.pdf');
+        expect(fs.unlink).not.toHaveBeenCalledWith('/old/file.pdf');
     });
 
     it('deletes the new shared PDF if the database update fails', async () => {
@@ -140,10 +140,11 @@ describe('shareResume.service', () => {
     });
 
     it('returns shared PDF info when token is valid', async () => {
+        const expectedPath = 'C:\\Users\\mail\\CascadeProjects\\ResumeConverter\\uploads\\shared\\pdf.pdf';
         query.mockResolvedValueOnce({
             rows: [{
                 id: 'resume-123',
-                shared_pdf_path: '/path/to/pdf.pdf',
+                shared_pdf_path: expectedPath,
                 name: 'John Doe CV',
                 shared_pdf_expires_at: new Date(Date.now() + 60_000)
             }]
@@ -152,11 +153,25 @@ describe('shareResume.service', () => {
         const result = await getSharedPdfByToken('valid-token');
 
         expect(result).toEqual({
-            path: '/path/to/pdf.pdf',
+            path: expectedPath,
             resumeId: 'resume-123',
             name: 'John Doe CV',
             expiresAt: expect.any(Date)
         });
+    });
+
+    it('rejects shared PDF paths outside the managed directory', async () => {
+        query.mockResolvedValueOnce({
+            rows: [{
+                id: 'resume-123',
+                shared_pdf_path: 'C:\\temp\\outside.pdf',
+                name: 'John Doe CV',
+                shared_pdf_expires_at: new Date(Date.now() + 60_000)
+            }]
+        });
+
+        await expect(getSharedPdfByToken('valid-token')).resolves.toBeNull();
+        expect(fs.access).not.toHaveBeenCalled();
     });
 
     it('returns null when PDF token is expired', async () => {
@@ -310,11 +325,12 @@ describe('shareResume.service', () => {
     });
 
     it('revokes both share links and deletes the shared PDF file', async () => {
+        const sharedPath = 'C:\\Users\\mail\\CascadeProjects\\ResumeConverter\\uploads\\shared\\shared.pdf';
         query
             .mockResolvedValueOnce({
                 rows: [{
                     id: 'resume-123',
-                    shared_pdf_path: '/tmp/shared.pdf',
+                    shared_pdf_path: sharedPath,
                     shared_pdf_token: 'pdf-token',
                     shared_file_token: 'file-token'
                 }]
@@ -323,15 +339,16 @@ describe('shareResume.service', () => {
 
         await expect(revokeShareLinks('resume-123')).resolves.toBe(true);
         expect(query.mock.calls[1][0]).toContain('shared_file_token = NULL');
-        expect(fs.unlink).toHaveBeenCalledWith('/tmp/shared.pdf');
+        expect(fs.unlink).toHaveBeenCalledWith(sharedPath);
     });
 
     it('cleans up expired share tokens and PDF files', async () => {
+        const sharedPath = 'C:\\Users\\mail\\CascadeProjects\\ResumeConverter\\uploads\\shared\\expired.pdf';
         query
             .mockResolvedValueOnce({
                 rows: [{
                     id: 'resume-123',
-                    shared_pdf_path: '/tmp/shared.pdf',
+                    shared_pdf_path: sharedPath,
                     shared_pdf_token: 'expired-pdf-token',
                     shared_pdf_expires_at: new Date(Date.now() - 60_000),
                     shared_file_token: 'expired-file-token',
@@ -346,7 +363,7 @@ describe('shareResume.service', () => {
             expiredPdfFilesDeleted: 1
         });
 
-        expect(fs.unlink).toHaveBeenCalledWith('/tmp/shared.pdf');
+        expect(fs.unlink).toHaveBeenCalledWith(sharedPath);
         expect(query.mock.calls[1][0]).toContain('shared_pdf_path = NULL');
         expect(query.mock.calls[1][0]).toContain('shared_file_token = NULL');
     });

@@ -139,53 +139,66 @@ export async function createDeal(data, userId, firmId) {
  */
 export async function updateDeal(dealId, data) {
     try {
-        const {
-            title,
-            description,
-            client_id,
-            contact_id,
-            status,
-            expected_start_date,
-            expected_end_date,
-            budget_min,
-            budget_max,
-            priority,
-            tags,
-            notes
-        } = data;
+        const assignments = [];
+        const params = [];
+        let paramIndex = 1;
+
+        const setField = (column, value) => {
+            assignments.push(`${column} = $${paramIndex}`);
+            params.push(value);
+            paramIndex++;
+        };
+
+        if (Object.prototype.hasOwnProperty.call(data, 'title')) {
+            setField('title', data.title);
+        }
+        if (Object.prototype.hasOwnProperty.call(data, 'description')) {
+            setField('description', data.description);
+        }
+        if (Object.prototype.hasOwnProperty.call(data, 'client_id')) {
+            setField('client_id', data.client_id && data.client_id.trim() !== '' ? data.client_id : null);
+        }
+        if (Object.prototype.hasOwnProperty.call(data, 'contact_id')) {
+            setField('contact_id', data.contact_id && data.contact_id.trim() !== '' ? data.contact_id : null);
+        }
+        if (Object.prototype.hasOwnProperty.call(data, 'status')) {
+            setField('status', data.status);
+        }
+        if (Object.prototype.hasOwnProperty.call(data, 'expected_start_date')) {
+            setField('expected_start_date', data.expected_start_date);
+        }
+        if (Object.prototype.hasOwnProperty.call(data, 'expected_end_date')) {
+            setField('expected_end_date', data.expected_end_date);
+        }
+        if (Object.prototype.hasOwnProperty.call(data, 'budget_min')) {
+            setField('budget_min', data.budget_min);
+        }
+        if (Object.prototype.hasOwnProperty.call(data, 'budget_max')) {
+            setField('budget_max', data.budget_max);
+        }
+        if (Object.prototype.hasOwnProperty.call(data, 'priority')) {
+            setField('priority', data.priority);
+        }
+        if (Object.prototype.hasOwnProperty.call(data, 'tags')) {
+            setField('tags', Array.isArray(data.tags) ? JSON.stringify(data.tags) : null);
+        }
+        if (Object.prototype.hasOwnProperty.call(data, 'notes')) {
+            setField('notes', data.notes);
+        }
+
+        if (assignments.length === 0) {
+            throw new Error('No deal fields provided for update');
+        }
+
+        assignments.push('updated_at = CURRENT_TIMESTAMP');
+        params.push(dealId);
 
         const result = await query(`
             UPDATE deals SET
-                title = COALESCE($1, title),
-                description = COALESCE($2, description),
-                client_id = $3,
-                contact_id = $4,
-                status = COALESCE($5, status),
-                expected_start_date = $6,
-                expected_end_date = $7,
-                budget_min = $8,
-                budget_max = $9,
-                priority = COALESCE($10, priority),
-                tags = COALESCE($11, tags),
-                notes = COALESCE($12, notes),
-                updated_at = CURRENT_TIMESTAMP
-            WHERE id = $13
+                ${assignments.join(', ')}
+            WHERE id = $${paramIndex}
             RETURNING *
-        `, [
-            title,
-            description,
-            client_id !== undefined ? client_id : null,
-            contact_id !== undefined ? contact_id : null,
-            status,
-            expected_start_date !== undefined ? expected_start_date : null,
-            expected_end_date !== undefined ? expected_end_date : null,
-            budget_min !== undefined ? budget_min : null,
-            budget_max !== undefined ? budget_max : null,
-            priority,
-            tags ? JSON.stringify(tags) : null,
-            notes,
-            dealId
-        ]);
+        `, params);
 
         if (result.rows.length === 0) {
             throw new Error('Deal not found');
