@@ -21,6 +21,13 @@ const OPTIMIZE_DEPENDENCY_INCLUDE = [
 
 const COMPRESSED_ASSET_FILTER = /\.(js|mjs|json|css|html|svg|txt|xml|wasm)$/i;
 const COMPRESSION_VERBOSE = process.platform !== 'win32';
+const NON_CRITICAL_MODULE_PRELOAD_PATTERNS = [
+  /assets\/js\/vendor-map-core-.*\.js$/,
+  /assets\/css\/vendor-map-core-.*\.css$/,
+  /assets\/js\/vendor-markdown-.*\.js$/,
+  /assets\/js\/vendor-charts-.*\.js$/,
+  /assets\/js\/vendor-three-.*\.js$/,
+];
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, __dirname, '');
@@ -138,6 +145,11 @@ export default defineConfig(({ mode }) => {
       target: 'es2020',
       modulePreload: {
         polyfill: false,
+        resolveDependencies: (_filename, deps) =>
+          deps.filter(
+            (dependency) =>
+              !NON_CRITICAL_MODULE_PRELOAD_PATTERNS.some((pattern) => pattern.test(dependency)),
+          ),
       },
       commonjsOptions: {
         include: [/node_modules/],

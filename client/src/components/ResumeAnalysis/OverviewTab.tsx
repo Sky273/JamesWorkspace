@@ -64,7 +64,7 @@ const OverviewTab = ({ resume, t }: OverviewTabProps): JSX.Element => {
               : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800'
           }`}
         >
-          {t('resume.analysis.tabs.postImprovementAnalysis') || 'Analyse post-amÃ©lioration'}
+          {t('resume.analysis.tabs.postImprovementAnalysis') || 'Analyse post-amélioration'}
         </button>
       </div>
 

@@ -4,7 +4,7 @@
 
 import { useEffect, useRef } from 'react';
 import maplibregl, { Marker, NavigationControl, Popup, type Map as MaplibreMap } from 'maplibre-gl';
-import 'maplibre-gl/dist/maplibre-gl.css';
+import maplibreCss from 'maplibre-gl/dist/maplibre-gl.css?inline';
 
 import {
   MAP_STYLES,
@@ -33,6 +33,8 @@ interface FranceMapCanvasProps {
   getValueLabel: () => string;
 }
 
+const MAPLIBRE_STYLE_ID = 'maplibre-gl-runtime-styles';
+
 export default function FranceMapCanvas({
   mapRef,
   isDarkMode,
@@ -56,6 +58,17 @@ export default function FranceMapCanvas({
   const popupRef = useRef<Popup | null>(null);
   const navControlRef = useRef<NavigationControl | null>(null);
   const appliedStyleRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (typeof document === 'undefined' || document.getElementById(MAPLIBRE_STYLE_ID)) {
+      return;
+    }
+
+    const styleElement = document.createElement('style');
+    styleElement.id = MAPLIBRE_STYLE_ID;
+    styleElement.textContent = maplibreCss;
+    document.head.appendChild(styleElement);
+  }, []);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) {
