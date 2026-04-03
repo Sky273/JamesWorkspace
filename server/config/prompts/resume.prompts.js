@@ -304,15 +304,15 @@ IMPORTANT pour le champ "name" du JSON:
 - Ne jamais retourner un champ "name" vide, null ou "Non renseigné"
 - Si aucun nom n'est identifiable après avoir vérifié toutes les sources ci-dessus, retournez "XXX" (ceci permettra un traitement ultérieur des cas problématiques)`;
 
-export const DEFAULT_PRE_ANALYSIS_PROMPT = `# Prompt de pre-analyse CV - ResumeConverter
+export const DEFAULT_PRE_ANALYSIS_PROMPT = `# Prompt de pre-analyse CV - Reconstruction de texte CV
 
 ## Role
 
-Tu prepares un texte de CV extrait nativement ou via OCR avant la passe d'analyse.
+Tu reconstitues un CV texte coherent a partir d'un texte brut extrait d'un document, y compris lorsque plusieurs blocs ont ete melanges, fusionnes ou mal ordonnes lors de l'extraction native ou OCR.
 
 ## Objectif
 
-Nettoyer et restructurer le texte de maniere minimale pour le rendre plus lisible et plus exploitable par l'analyse downstream, sans changer le fond.
+Transformer un texte de CV desordonne en un texte de CV lisible, structure et coherent, en restaurant autant que possible l'ordre logique et les regroupements naturels des informations, sans inventer ni interpreter au-dela de la source.
 
 ## Entrees
 
@@ -322,21 +322,29 @@ Nettoyer et restructurer le texte de maniere minimale pour le rendre plus lisibl
 ## Regles absolues
 
 - Ne jamais inventer d'information.
-- Ne jamais ajouter de competences, experiences, diplomes, dates, employeurs, certifications, langues, chiffres ou titres absents.
-- Ne jamais supprimer une information utile presente dans la source.
-- Corriger uniquement les artefacts evidents :
+- Ne jamais ajouter de competences, experiences, diplomes, dates, employeurs, certifications, langues, chiffres, lieux, titres ou missions absents.
+- Ne jamais transformer une hypothese en fait.
+- Ne jamais supprimer une information potentiellement utile presente dans la source.
+- Reordonner, regrouper et nettoyer uniquement a partir d'indices presents dans le texte.
+- Si plusieurs blocs semblent melanges, reconstruire l'ordre le plus probable d'un CV classique.
+- Si un rattachement est incertain, conserver l'information de maniere prudente, sans forcer une association douteuse.
+- Conserver la langue majoritaire du CV.
+- Corriger uniquement les artefacts evidents si le sens est clair :
   - espaces parasites
   - sauts de ligne incoherents
+  - lignes coupees au mauvais endroit
   - listes mal cassees
   - titres de sections colles
-  - artefacts OCR evidents si le sens est clair
-- Si un passage est ambigu, conserver la formulation source la plus prudente.
-- Conserver la langue majoritaire du CV.
+  - doublons manifestes
+  - artefacts OCR evidents
 - Retourner uniquement le texte final, sans JSON, sans commentaire, sans balise de code.
 
 ## Travail attendu
 
-1. Reconstituer des blocs logiques simples si possible :
+1. Reconstituer un texte de CV coherent a partir de blocs potentiellement melanges.
+2. Regrouper ensemble les elements qui appartiennent visiblement a la meme section ou a la meme experience.
+3. Retablir un ordre de lecture naturel quand il peut etre deduit de facon raisonnable.
+4. Isoler clairement, si elles sont presentes :
    - identite / titre
    - resume
    - competences
@@ -345,18 +353,27 @@ Nettoyer et restructurer le texte de maniere minimale pour le rendre plus lisibl
    - certifications
    - langues
    - centres d'interet
-2. Refaire les listes evidentes en puces Markdown simples.
-3. Isoler les experiences et formations sur des blocs lisibles.
-4. Preserver les dates, noms d'entreprises, postes, technologies et formulations factuelles.
-5. Garder un niveau de structuration minimal, utile a l'analyse, pas une reecriture du CV.
+5. Pour les experiences et formations :
+   - regrouper date, poste, organisation, lieu et details quand leur association est probable
+   - conserver les details factuels tels quels autant que possible
+   - presenter les missions ou realisations en puces simples si une liste est evidente
+6. Depliquer les repetitions evidentes dues a l'extraction, sans perdre d'information distincte.
+7. Preserver strictement les dates, noms d'entreprises, postes, technologies, diplomes, certifications et formulations factuelles presentes.
+
+## Gestion de l'incertitude
+
+- Si une information est lisible mais son emplacement exact est incertain, la conserver dans la section la plus probable sans extrapoler.
+- Si deux blocs semblent contradictoires ou difficiles a rattacher, preferer une restitution prudente et litterale.
+- Ne pas "completer" une experience ou une formation a partir de connaissances externes ou d'habitudes de CV.
 
 ## Format de sortie
 
-- Retourner un texte Markdown propre et concis.
-- Utiliser des titres de section uniquement si la section est clairement presente.
+- Retourner un texte Markdown propre, lisible et sobre.
+- Utiliser des titres de section uniquement si la section est clairement identifiable.
 - Utiliser des puces simples quand une enumeration est evidente.
 - Ne pas produire de HTML.
-- Ne pas produire de resume interprete ou de score.
+- Ne pas produire de resume interprete, de score, d'analyse ou de metadonnees.
+- Produire un CV texte final directement exploitable par une etape d'analyse downstream.
 `;
 
 export const DEFAULT_ANALYSIS_PROMPT = `# Prompt d'analyse CV — ResumeConverter
