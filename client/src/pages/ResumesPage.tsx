@@ -52,13 +52,13 @@ const ResumesPage = (): JSX.Element => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="p-6 max-w-7xl mx-auto"
+      className="cv-surface mx-auto mb-8 max-w-7xl rounded-[2.5rem] p-6 sm:p-8"
     >
       <ResumesHeader />
       <ResumesViewModeToggle value={viewMode} onChange={setViewMode} />
 
       {viewMode === 'byDeal' ? (
-        <ResumesByDealView allTags={allTags} />
+        <ResumesByDealView allTags={allTags} stats={stats} />
       ) : (
         <ResumesListPanel
           authUserRole={authUser?.role}
@@ -107,4 +107,3 @@ const ResumesPage = (): JSX.Element => {
 };
 
 export default ResumesPage;
-

@@ -1,10 +1,14 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import {
+  BuildingOfficeIcon,
   BriefcaseIcon,
   ChevronDownIcon,
   ChevronRightIcon,
   DocumentTextIcon,
   FolderOpenIcon,
+  SparklesIcon,
+  UserGroupIcon,
+  WrenchScrewdriverIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline';
 import type { TFunction } from 'i18next';
@@ -16,6 +20,13 @@ import {
   TAG_FILTER_COLORS,
 } from './dealsGrouped.types';
 import DealSection from './DealSection';
+
+const categoryIcons = {
+  Skills: SparklesIcon,
+  Industries: BuildingOfficeIcon,
+  Tools: WrenchScrewdriverIcon,
+  'Soft Skills': UserGroupIcon,
+} as const;
 
 interface FilterPanelProps {
   allTags: TagsByCategory;
@@ -51,20 +62,20 @@ export function FilterPanel({
         initial="collapsed"
         animate="expanded"
         exit="collapsed"
-        className="px-4 pb-4 border-t border-gray-200 dark:border-gray-700"
+        className="mt-4 rounded-[1.6rem] border border-slate-200/70 bg-white/80 px-4 pb-4 dark:border-white/6 dark:bg-[#091328]"
       >
         <div className="pt-4 space-y-4">
           {selectedTags.length > 0 && (
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm text-gray-600 dark:text-gray-400">{t('resumes.activeFilters')}:</span>
+              <span className="text-sm text-slate-600 dark:text-[#a3aac4]">{t('resumes.activeFilters')}:</span>
               <div className="flex flex-wrap gap-2">
                 {selectedTags.map((tag) => {
                   const category = getTagCategory(tag);
                   const colorClass = TAG_FILTER_COLORS[category]?.selected || 'bg-blue-500 text-white';
                   return (
-                    <span key={tag} className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-sm ${colorClass}`}>
+                    <span key={tag} className={`cv-active-filter-chip inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm ${colorClass}`}>
                       {tag}
-                      <button onClick={() => handleTagClick(tag)} className="hover:opacity-70">
+                      <button onClick={() => handleTagClick(tag)} className="cv-active-filter-remove">
                         <XMarkIcon className="w-3 h-3" />
                       </button>
                     </span>
@@ -80,17 +91,24 @@ export function FilterPanel({
             const canExpand = tags.length > 15;
 
             return tags.length > 0 ? (
-              <div key={category}>
-                <h3 className={`flex items-center gap-2 text-sm font-semibold mb-2.5 pl-2 border-l-2 ${CATEGORY_HEADER_COLORS[category]?.border || 'border-gray-400'} ${CATEGORY_HEADER_COLORS[category]?.text || 'text-gray-700 dark:text-gray-300'}`}>
-                  <span className={`w-2 h-2 rounded-full ${CATEGORY_HEADER_COLORS[category]?.dot || 'bg-gray-400'}`} />
-                  {t(`resumes.filters.${category.toLowerCase().replace(' ', '')}`)}
+              <div key={category} className="cv-filter-category-block">
+                <h3 className="cv-filter-section-title mb-3">
+                  <span className={`cv-filter-section-icon-shell ${CATEGORY_HEADER_COLORS[category]?.dot || 'bg-gray-400'}`}>
+                    {(() => {
+                      const Icon = categoryIcons[category as keyof typeof categoryIcons] || SparklesIcon;
+                      return <Icon className="cv-filter-section-icon" />;
+                    })()}
+                  </span>
+                  <span className={`cv-filter-section-text ${CATEGORY_HEADER_COLORS[category]?.text || 'text-gray-700 dark:text-gray-300'}`}>
+                    {t(`resumes.filters.${category.toLowerCase().replace(' ', '')}`)}
+                  </span>
                 </h3>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2.5">
                   {displayedTags.map((tag) => (
                     <button
                       key={tag}
                       onClick={() => handleTagClick(tag)}
-                      className={`inline-flex items-center px-3 py-1 rounded-full text-sm transition-all ${
+                      className={`inline-flex items-center rounded-full px-4 py-2 text-sm transition-all ${
                         selectedTags.includes(tag)
                           ? TAG_FILTER_COLORS[category]?.selected || 'bg-blue-500 text-white'
                           : TAG_FILTER_COLORS[category]?.unselected || 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
@@ -102,7 +120,7 @@ export function FilterPanel({
                   {canExpand && (
                     <button
                       onClick={() => setExpandedCategories((prev) => ({ ...prev, [category]: !isExpandedCategory }))}
-                      className="text-sm text-blue-600 dark:text-blue-400 hover:underline py-1 font-medium"
+                      className="cv-filter-more py-2 text-sm font-semibold"
                     >
                       {isExpandedCategory ? t('resumes.showLess') : `+${tags.length - 15} ${t('resumes.more')}`}
                     </button>
@@ -119,22 +137,22 @@ export function FilterPanel({
 
 export function SummaryBar({ t, visibleData }: { t: TFunction; visibleData: GroupedData }): JSX.Element {
   return (
-    <div className="flex items-center gap-3 text-sm bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 px-4 py-2.5">
-      <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
-        <BriefcaseIcon className="w-4 h-4 text-purple-500" />
-        <span className="font-semibold text-gray-900 dark:text-gray-100">{visibleData.totalDeals}</span>
+    <div className="cv-panel flex flex-wrap items-center gap-3 rounded-[1.6rem] px-4 py-3 text-sm">
+      <div className="flex items-center gap-1.5 text-slate-600 dark:text-[#a3aac4]">
+        <BriefcaseIcon className="w-4 h-4 text-[#c180ff]" />
+        <span className="font-semibold text-slate-950 dark:text-[#dee5ff]">{visibleData.totalDeals}</span>
         <span>{t('resumes.groupedView.deals')}</span>
       </div>
-      <div className="w-px h-4 bg-gray-200 dark:bg-gray-700" />
-      <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
-        <DocumentTextIcon className="w-4 h-4 text-blue-500" />
-        <span className="font-semibold text-gray-900 dark:text-gray-100">{visibleData.totalAssigned}</span>
+      <div className="h-4 w-px bg-slate-200 dark:bg-white/8" />
+      <div className="flex items-center gap-1.5 text-slate-600 dark:text-[#a3aac4]">
+        <DocumentTextIcon className="w-4 h-4 text-[var(--cv-primary)]" />
+        <span className="font-semibold text-slate-950 dark:text-[#dee5ff]">{visibleData.totalAssigned}</span>
         <span>{t('resumes.groupedView.assigned')}</span>
       </div>
-      <div className="w-px h-4 bg-gray-200 dark:bg-gray-700" />
-      <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
-        <FolderOpenIcon className="w-4 h-4 text-amber-500" />
-        <span className="font-semibold text-gray-900 dark:text-gray-100">{visibleData.totalUnassigned}</span>
+      <div className="h-4 w-px bg-slate-200 dark:bg-white/8" />
+      <div className="flex items-center gap-1.5 text-slate-600 dark:text-[#a3aac4]">
+        <FolderOpenIcon className="w-4 h-4 text-[var(--cv-tertiary)]" />
+        <span className="font-semibold text-slate-950 dark:text-[#dee5ff]">{visibleData.totalUnassigned}</span>
         <span>{t('resumes.groupedView.unassigned')}</span>
       </div>
     </div>
@@ -266,27 +284,27 @@ export function UnassignedSection({
   const hiddenCount = visibleData.unassigned.length - INITIAL_RESUMES_LIMIT;
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 overflow-hidden">
+    <div className="cv-card overflow-hidden rounded-[2rem]">
       <button
         onClick={() => {
           if (!hasActiveFilters) {
             setUnassignedExpanded(!unassignedExpanded);
           }
         }}
-        className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/60 transition-colors text-left"
+        className="w-full text-left flex flex-col items-start justify-between gap-3 px-4 py-4 transition-colors hover:bg-slate-50 dark:hover:bg-[color:color-mix(in_srgb,var(--cv-panel-end)_86%,black)] sm:flex-row sm:items-center"
       >
         <div className="flex items-center gap-3">
           {hasActiveFilters || unassignedExpanded ? (
-            <ChevronDownIcon className="w-5 h-5 text-gray-400" />
+            <ChevronDownIcon className="w-5 h-5 text-slate-400 dark:text-[#7f8ab0]" />
           ) : (
-            <ChevronRightIcon className="w-5 h-5 text-gray-400" />
+            <ChevronRightIcon className="w-5 h-5 text-slate-400 dark:text-[#7f8ab0]" />
           )}
-          <FolderOpenIcon className="w-5 h-5 text-gray-400" />
-          <h3 className="font-semibold text-gray-700 dark:text-gray-300">
+          <FolderOpenIcon className="w-5 h-5 text-[var(--cv-tertiary)]" />
+          <h3 className="cv-display font-semibold text-slate-800 dark:text-[#dee5ff]">
             {t('resumes.groupedView.unassignedTitle')}
           </h3>
         </div>
-        <span className="ml-4 flex-shrink-0 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2.5 py-1 rounded-full text-sm font-medium">
+        <span className="cv-count-pill cv-count-pill-success ml-4 flex-shrink-0 rounded-full px-3 py-1 text-sm font-medium">
           {hasActiveFilters && visibleData.unassigned.length !== data.unassigned.length
             ? `${visibleData.unassigned.length} / ${data.unassigned.length} CV${data.unassigned.length !== 1 ? 's' : ''}`
             : `${visibleData.unassigned.length} CV${visibleData.unassigned.length !== 1 ? 's' : ''}`}
@@ -302,7 +320,7 @@ export function UnassignedSection({
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="px-4 pb-4 border-t border-gray-100 dark:border-gray-700">
+            <div className="border-t border-slate-200/70 px-4 pb-4 dark:border-white/6">
               <div className="space-y-2 pt-3">
                 {displayedResumes.map((resume, index) => renderResumeCard(resume, null, index))}
                 {!isFullyExpanded && hiddenCount > 0 && (
@@ -311,7 +329,7 @@ export function UnassignedSection({
                       event.stopPropagation();
                       setExpandedResumeSections((prev) => new Set([...prev, 'unassigned']));
                     }}
-                    className="w-full py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/30 rounded-lg transition-colors font-medium"
+                    className="w-full rounded-xl py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-700 dark:text-[#a3aac4] dark:hover:bg-[color:color-mix(in_srgb,var(--cv-panel-end)_86%,black)] dark:hover:text-[#dee5ff]"
                   >
                     {t('resumes.groupedView.showMore', { count: hiddenCount })}
                   </button>
@@ -326,7 +344,7 @@ export function UnassignedSection({
                         return next;
                       });
                     }}
-                    className="w-full py-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/30 rounded-lg transition-colors"
+                    className="w-full rounded-xl py-2 text-sm text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-700 dark:text-[#a3aac4] dark:hover:bg-[color:color-mix(in_srgb,var(--cv-panel-end)_86%,black)] dark:hover:text-[#dee5ff]"
                   >
                     {t('resumes.groupedView.showLess')}
                   </button>
@@ -390,21 +408,21 @@ export function DeleteConfirmModal({ deleting, onClose, onConfirm, resume, t }: 
 export function EmptyDealsState({ hasActiveFilters, t, visibleData }: { hasActiveFilters: boolean; t: TFunction; visibleData: GroupedData }): JSX.Element | null {
   if (visibleData.deals.length === 0 && !hasActiveFilters) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 p-8 text-center">
-        <BriefcaseIcon className="w-12 h-12 mx-auto text-gray-400 mb-3" />
-        <p className="text-gray-600 dark:text-gray-400">{t('resumes.groupedView.noDeals')}</p>
+      <div className="cv-panel rounded-[2rem] p-8 text-center">
+        <BriefcaseIcon className="mx-auto mb-3 h-12 w-12 text-slate-400 dark:text-[#7f8ab0]" />
+        <p className="text-slate-600 dark:text-[#a3aac4]">{t('resumes.groupedView.noDeals')}</p>
       </div>
     );
   }
 
   if (visibleData.deals.length === 0 && visibleData.unassigned.length === 0 && hasActiveFilters) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 p-12 text-center">
-        <DocumentTextIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-        <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+      <div className="cv-panel rounded-[2rem] p-12 text-center">
+        <DocumentTextIcon className="mx-auto mb-4 h-16 w-16 text-slate-400 dark:text-[#7f8ab0]" />
+        <h3 className="cv-display mb-2 text-xl font-semibold text-slate-950 dark:text-[#dee5ff]">
           {t('resumes.noResults')}
         </h3>
-        <p className="text-gray-600 dark:text-gray-400">
+        <p className="text-slate-600 dark:text-[#a3aac4]">
           {t('resumes.noResultsFiltered')}
         </p>
       </div>

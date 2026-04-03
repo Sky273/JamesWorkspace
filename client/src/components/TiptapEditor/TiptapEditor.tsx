@@ -91,10 +91,11 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
     ref
   ) => {
     const [_ready, setReady] = useState(false);
-    const contentSetRef = useRef(false);
+    const lastSyncedContentRef = useRef('');
     const [suggestionsVisible, setSuggestionsVisible] = useState(true);
     const [htmlMode, setHtmlMode] = useState(false);
     const [htmlSource, setHtmlSource] = useState('');
+    const normalizedContent = normalizeEditorContent(content);
 
     const editor = useEditor({
       extensions: [
@@ -130,13 +131,16 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
         SuggestionsExtension.configure({ suggestions: suggestions || {} }),
       ],
       editable,
-      content: normalizeEditorContent(content),
+      content: normalizedContent,
       onCreate: () => {
+        lastSyncedContentRef.current = normalizedContent;
         setReady(true);
         onReady?.();
       },
       onUpdate: ({ editor: e }) => {
-        onChange?.(e.getHTML());
+        const nextHtml = e.getHTML();
+        lastSyncedContentRef.current = nextHtml;
+        onChange?.(nextHtml);
       },
     });
 
@@ -147,17 +151,21 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
       }
     }, [editor, suggestions]);
 
-    // Set initial content when it arrives after editor creation
+    // Keep editor content in sync with external updates without re-emitting change events.
     useEffect(() => {
-      if (editor && content && !contentSetRef.current) {
-        const currentContent = editor.getHTML();
-        // Only set if different from what editor already has
-        if (currentContent === '<p></p>' || currentContent === '') {
-          editor.commands.setContent(normalizeEditorContent(content), { emitUpdate: false });
-          contentSetRef.current = true;
-        }
+      if (!editor) {
+        return;
       }
-    }, [editor, content]);
+
+      const currentContent = editor.getHTML();
+      if (normalizedContent === lastSyncedContentRef.current || normalizedContent === currentContent) {
+        lastSyncedContentRef.current = currentContent;
+        return;
+      }
+
+      editor.commands.setContent(normalizedContent, { emitUpdate: false });
+      lastSyncedContentRef.current = normalizedContent;
+    }, [editor, normalizedContent]);
 
     // Expose imperative methods
     useImperativeHandle(
@@ -165,7 +173,9 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
       () => ({
         getContent: () => editor?.getHTML() || '',
         setContent: (html: string) => {
-          editor?.commands.setContent(normalizeEditorContent(html), { emitUpdate: false });
+          const normalizedHtml = normalizeEditorContent(html);
+          editor?.commands.setContent(normalizedHtml, { emitUpdate: false });
+          lastSyncedContentRef.current = normalizedHtml;
         },
         getEditor: () => editor,
       }),

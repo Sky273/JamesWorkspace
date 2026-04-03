@@ -13,6 +13,22 @@ interface ImageToolbarProps {
 
 type ImagePanel = 'quick' | 'dimensions' | 'style' | 'advanced';
 
+type ImageAttributes = {
+  width?: string | null;
+  height?: string | null;
+  alt?: string | null;
+  title?: string | null;
+  borderWidth?: string | null;
+  borderStyle?: string | null;
+  borderColor?: string | null;
+  borderRadius?: string | null;
+  margin?: string | null;
+  padding?: string | null;
+  shadow?: string | null;
+  alignment?: string | null;
+  float?: string | null;
+};
+
 const SHADOW_PRESETS = [
   { label: 'Aucune', value: null },
   { label: 'Légère', value: '0 1px 3px rgba(0,0,0,0.12)' },
@@ -26,6 +42,8 @@ const BORDER_STYLES = [
   { label: 'Tirets', value: 'dashed' },
   { label: 'Points', value: 'dotted' },
 ] as const;
+
+const toInputValue = (value: string | null | undefined) => value ?? '';
 
 const TB = ({ onClick, isActive, title, children, className = '' }: {
   onClick: () => void;
@@ -80,20 +98,26 @@ export const ImageToolbar = ({ editor }: ImageToolbarProps) => {
 
   // Sync form state when image is selected
   useEffect(() => {
-    if (isImageSelected) {
-      const attrs = editor.getAttributes('image');
-      setWidth(attrs.width || '');
-      setHeight(attrs.height || '');
-      setAlt(attrs.alt || '');
-      setTitle(attrs.title || '');
-      setBorderWidth(attrs.borderWidth || '');
-      setBorderStyle(attrs.borderStyle || '');
-      setBorderColor(attrs.borderColor || '');
-      setBorderRadius(attrs.borderRadius || '');
-      setMargin(attrs.margin || '');
-      setPadding(attrs.padding || '');
+    if (!isImageSelected) {
+      return;
     }
-  }, [isImageSelected, editor]);
+
+    const attrs = editor.getAttributes('image') as ImageAttributes;
+    setWidth(toInputValue(attrs.width));
+    setHeight(toInputValue(attrs.height));
+    setAlt(toInputValue(attrs.alt));
+    setTitle(toInputValue(attrs.title));
+    setBorderWidth(toInputValue(attrs.borderWidth));
+    setBorderStyle(toInputValue(attrs.borderStyle));
+    setBorderColor(toInputValue(attrs.borderColor));
+    setBorderRadius(toInputValue(attrs.borderRadius));
+    setMargin(toInputValue(attrs.margin));
+    setPadding(toInputValue(attrs.padding));
+  }, [
+    editor,
+    isImageSelected,
+    editor.state.selection,
+  ]);
 
   const updateAttr = useCallback((key: string, value: unknown) => {
     editor.chain().focus().updateAttributes('image', { [key]: value || null }).run();
@@ -121,7 +145,7 @@ export const ImageToolbar = ({ editor }: ImageToolbarProps) => {
 
   if (!isImageSelected) return null;
 
-  const attrs = editor.getAttributes('image');
+  const attrs = editor.getAttributes('image') as ImageAttributes;
 
   return (
     <div className="tiptap-image-toolbar">

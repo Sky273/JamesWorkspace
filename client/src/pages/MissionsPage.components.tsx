@@ -132,7 +132,7 @@ function MissionsGrid({
         icon={BriefcaseIcon}
         title={t('missions.noMissions')}
         description={searchTerm ? t('missions.noResults') : t('missions.createFirst')}
-        containerClassName="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 p-12 text-center"
+        containerClassName="cv-panel rounded-[2rem] p-12 text-center"
       />
     );
   }

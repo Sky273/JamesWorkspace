@@ -62,51 +62,51 @@ const TagsWithTooltip = memo(({ skills, industries, resumeTags, hasAnyTags, tagC
             transform: 'translateY(-100%)'
           }}
         >
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 p-3 min-w-[280px] max-w-[350px]">
+          <div className="cv-panel rounded-2xl border p-3 min-w-[280px] max-w-[350px]">
             <div className="space-y-2">
               {(resumeTags.skills?.length || 0) > 0 && (
                 <div>
-                  <div className="text-xs font-semibold text-blue-700 dark:text-blue-300 mb-1">{t('resumes.filters.skills')}</div>
+                  <div className="mb-1 text-xs font-semibold text-[var(--cv-tertiary)]">{t('resumes.filters.skills')}</div>
                   <div className="flex flex-wrap gap-1">
                     {resumeTags.skills.map((tag, i) => (
-                      <span key={`ts-${i}`} className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{tag}</span>
+                      <span key={`ts-${i}`} className="cv-chip-skills rounded-full px-2 py-0.5 text-xs">{tag}</span>
                     ))}
                   </div>
                 </div>
               )}
               {(resumeTags.industries?.length || 0) > 0 && (
                 <div>
-                  <div className="text-xs font-semibold text-purple-700 dark:text-purple-300 mb-1">{t('resumes.filters.industries')}</div>
+                  <div className="mb-1 text-xs font-semibold text-[var(--cv-primary)]">{t('resumes.filters.industries')}</div>
                   <div className="flex flex-wrap gap-1">
                     {resumeTags.industries.map((tag, i) => (
-                      <span key={`ti-${i}`} className="text-xs px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">{tag}</span>
+                      <span key={`ti-${i}`} className="cv-chip-industries rounded-full px-2 py-0.5 text-xs">{tag}</span>
                     ))}
                   </div>
                 </div>
               )}
               {(resumeTags.tools?.length || 0) > 0 && (
                 <div>
-                  <div className="text-xs font-semibold text-green-700 dark:text-green-300 mb-1">{t('resumes.filters.tools')}</div>
+                  <div className="mb-1 text-xs font-semibold text-[var(--cv-cyan)]">{t('resumes.filters.tools')}</div>
                   <div className="flex flex-wrap gap-1">
                     {resumeTags.tools.map((tag, i) => (
-                      <span key={`tt-${i}`} className="text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300">{tag}</span>
+                      <span key={`tt-${i}`} className="cv-chip-tools rounded-full px-2 py-0.5 text-xs">{tag}</span>
                     ))}
                   </div>
                 </div>
               )}
               {(resumeTags.soft_skills?.length || 0) > 0 && (
                 <div>
-                  <div className="text-xs font-semibold text-yellow-700 dark:text-yellow-300 mb-1">{t('resumes.filters.softskills')}</div>
+                  <div className="mb-1 text-xs font-semibold text-[var(--cv-secondary)]">{t('resumes.filters.softskills')}</div>
                   <div className="flex flex-wrap gap-1">
                     {resumeTags.soft_skills.map((tag, i) => (
-                      <span key={`tss-${i}`} className="text-xs px-2 py-0.5 rounded-full bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300">{tag}</span>
+                      <span key={`tss-${i}`} className="cv-chip-soft rounded-full px-2 py-0.5 text-xs">{tag}</span>
                     ))}
                   </div>
                 </div>
               )}
             </div>
             <div className="absolute bottom-0 right-4 translate-y-full">
-              <div className="w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-white dark:border-t-gray-800"></div>
+              <div className="h-0 w-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-[var(--cv-panel-end)]"></div>
             </div>
           </div>
         </div>,

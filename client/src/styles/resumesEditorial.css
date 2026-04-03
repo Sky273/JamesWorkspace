@@ -1,0 +1,143 @@
+.resumes-editorial-shell .cv-stat-card-compact {
+  box-shadow: 0 16px 32px color-mix(in srgb, var(--cv-shadow) 78%, transparent);
+}
+
+.resumes-editorial-shell .cv-filter-section-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.85rem;
+  min-height: 2.75rem;
+  margin: 0;
+}
+
+.resumes-editorial-shell .cv-filter-section-icon-shell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  border-radius: 9999px;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, currentColor 18%, transparent),
+    0 10px 22px color-mix(in srgb, currentColor 10%, transparent);
+}
+
+.resumes-editorial-shell .cv-filter-section-icon {
+  width: 1rem;
+  height: 1rem;
+  stroke-width: 2.1;
+  color: #081225;
+}
+
+.resumes-editorial-shell .cv-filter-section-text {
+  font-family: 'Manrope', var(--font-family-sans) !important;
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1;
+}
+
+.dark .resumes-editorial-shell .cv-filter-section-text {
+  color: var(--cv-text) !important;
+}
+
+.dark .resumes-editorial-shell .cv-filter-section-icon {
+  color: #061022;
+}
+
+.resumes-editorial-shell .cv-filter-category-block + .cv-filter-category-block {
+  padding-top: 0.6rem;
+}
+
+.resumes-editorial-shell .cv-filter-chip {
+  border: 1px solid var(--cv-outline) !important;
+  background: color-mix(in srgb, var(--cv-pill-bg) 96%, transparent) !important;
+  color: var(--cv-text) !important;
+  font-family: var(--font-family-sans) !important;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.resumes-editorial-shell .cv-filter-chip:hover {
+  border-color: var(--cv-outline-strong) !important;
+  transform: translateY(-1px);
+}
+
+.resumes-editorial-shell .cv-filter-chip-selected {
+  box-shadow:
+    0 14px 28px color-mix(in srgb, var(--cv-shadow) 68%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.resumes-editorial-shell .cv-filter-chip-skills {
+  color: var(--cv-chip-skills-text) !important;
+}
+
+.resumes-editorial-shell .cv-filter-chip-skills.cv-filter-chip-selected {
+  background: color-mix(in srgb, var(--cv-chip-skills-text) 20%, var(--cv-chip-skills-bg)) !important;
+  border-color: color-mix(in srgb, var(--cv-chip-skills-text) 26%, transparent) !important;
+}
+
+.resumes-editorial-shell .cv-filter-chip-industries {
+  color: var(--cv-chip-industries-text) !important;
+}
+
+.resumes-editorial-shell .cv-filter-chip-industries.cv-filter-chip-selected {
+  background: color-mix(in srgb, var(--cv-chip-industries-text) 18%, var(--cv-chip-industries-bg)) !important;
+  border-color: color-mix(in srgb, var(--cv-chip-industries-text) 24%, transparent) !important;
+}
+
+.resumes-editorial-shell .cv-filter-chip-tools {
+  color: var(--cv-chip-tools-text) !important;
+}
+
+.resumes-editorial-shell .cv-filter-chip-tools.cv-filter-chip-selected {
+  background: color-mix(in srgb, var(--cv-chip-tools-text) 18%, var(--cv-chip-tools-bg)) !important;
+  border-color: color-mix(in srgb, var(--cv-chip-tools-text) 24%, transparent) !important;
+}
+
+.resumes-editorial-shell .cv-filter-chip-soft {
+  color: var(--cv-chip-soft-text) !important;
+}
+
+.resumes-editorial-shell .cv-filter-chip-soft.cv-filter-chip-selected {
+  background: color-mix(in srgb, var(--cv-chip-soft-text) 18%, var(--cv-chip-soft-bg)) !important;
+  border-color: color-mix(in srgb, var(--cv-chip-soft-text) 24%, transparent) !important;
+}
+
+.resumes-editorial-shell .cv-active-filter-chip {
+  position: relative;
+  border: 1px solid var(--cv-outline) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  font-family: var(--font-family-sans) !important;
+  font-weight: 700;
+}
+
+.resumes-editorial-shell .cv-active-filter-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.14);
+  transition: background-color var(--transition-normal), opacity var(--transition-normal);
+}
+
+.resumes-editorial-shell .cv-active-filter-remove:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.resumes-editorial-shell .cv-filter-more {
+  color: var(--cv-primary) !important;
+  font-family: var(--font-family-sans) !important;
+  letter-spacing: -0.02em;
+}
+
+.resumes-editorial-shell .cv-filter-more:hover {
+  color: color-mix(in srgb, var(--cv-primary) 82%, white) !important;
+}

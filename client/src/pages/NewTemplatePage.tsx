@@ -7,6 +7,7 @@ import { useState, useEffect, useRef, useCallback, FormEvent, ChangeEvent } from
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { templateService } from '../utils/templateService';
+import type { TemplateData } from '../utils/templateService';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import logger from '../utils/logger.frontend';
@@ -38,7 +39,6 @@ const NewTemplatePage = (): JSX.Element => {
   const editorsReadyCount = useRef<number>(0);
   const [editorReady, setEditorReady] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
-  const [_dataReady, setDataReady] = useState<boolean>(false);
   const { t } = useTranslation();
 
   const handleEditorReady = useCallback(() => {
@@ -86,7 +86,6 @@ const NewTemplatePage = (): JSX.Element => {
           // Clear sessionStorage after loading
           sessionStorage.removeItem('extractedTemplate');
           toast.success(t('templates.extract.templateLoaded'));
-          setDataReady(true);
           return;
         } catch (parseError) {
           logger.error('Error parsing extracted template:', parseError);
@@ -95,8 +94,6 @@ const NewTemplatePage = (): JSX.Element => {
       }
 
       if (!id) {
-        // New template - data is ready immediately
-        setDataReady(true);
         return;
       }
       try {
@@ -116,7 +113,6 @@ const NewTemplatePage = (): JSX.Element => {
           firmId: template.FirmId || template.firm_id || ''
         };
         setFormData(newFormData);
-        setDataReady(true);
       } catch (error) {
         logger.error('Error fetching template:', error);
         toast.error(t('templates.editor.error.load'));
@@ -136,8 +132,7 @@ const NewTemplatePage = (): JSX.Element => {
     if (!formData.templateContent?.trim()) { toast.error(t('templates.editor.validation.contentRequired')); return; }
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const templateData: any = {
+      const templateData: TemplateData = {
         name: formData.name,
         description: formData.description,
         headerContent: formData.headerContent,

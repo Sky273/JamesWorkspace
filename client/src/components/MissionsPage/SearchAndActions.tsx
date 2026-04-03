@@ -19,39 +19,52 @@ const SearchAndActions = ({
   onReset,
   t,
 }: SearchAndActionsProps): JSX.Element => {
+  const hasSearch = searchTerm !== '';
+
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 mb-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between p-4 gap-4">
+    <div className="cv-search-shell mb-6 rounded-[2rem] p-4 sm:p-5">
+      <div className="mb-4 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
+        <div>
+          <div className="cv-kicker mb-2">{t('missions.title')}</div>
+          <div className="text-sm text-slate-600 dark:text-[var(--cv-muted)]">{hasSearch ? t('missions.searchPlaceholder') : t('missions.subtitle')}</div>
+        </div>
+        {onReset && hasSearch ? (
+          <button
+            onClick={onReset}
+            className="cv-ghost-button inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium transition-colors"
+            title={t('common.resetFilters')}
+          >
+            <XMarkIcon className="w-4 h-4" />
+            <span>{t('common.resetFilters')}</span>
+          </button>
+        ) : null}
+      </div>
+
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-center">
+        <div className="flex-1">
+          <div className="flex flex-col gap-3 lg:flex-row">
         <SearchField
           value={searchTerm}
           onChange={onSearchChange}
           placeholder={t('missions.searchPlaceholder')}
         />
+            <button
+              onClick={onAddMission}
+              className="cv-gradient-button inline-flex min-h-16 w-full items-center justify-center gap-2 rounded-[1.4rem] px-6 text-sm font-bold transition-all lg:w-auto"
+            >
+              <PlusIcon className="h-5 w-5" />
+              {t('missions.addMission')}
+            </button>
+          </div>
+        </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex w-full items-center gap-3 xl:w-auto">
           <button
             onClick={onRefresh}
-            className="p-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            className="cv-ghost-button inline-flex min-h-12 min-w-12 items-center justify-center rounded-[1.1rem] p-3 transition-colors"
             title={t('missions.refresh')}
           >
             <ArrowPathIcon className="w-5 h-5" />
-          </button>
-          {onReset && searchTerm ? (
-            <button
-              onClick={onReset}
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-              title={t('common.resetFilters')}
-            >
-              <XMarkIcon className="w-4 h-4" />
-              <span className="hidden sm:inline">{t('common.resetFilters')}</span>
-            </button>
-          ) : null}
-          <button
-            onClick={onAddMission}
-            className="btn btn-primary flex items-center gap-2 px-4 py-2"
-          >
-            <PlusIcon className="h-5 w-5" />
-            {t('missions.addMission')}
           </button>
         </div>
       </div>

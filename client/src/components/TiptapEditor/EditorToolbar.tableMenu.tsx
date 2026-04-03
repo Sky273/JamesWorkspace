@@ -29,6 +29,16 @@ interface TableTabProps {
   close: () => void;
 }
 
+const runTableAttributeCommand = (editor: Editor, attr: string, value: unknown) => {
+  editor
+    .chain()
+    .focus()
+    .command(({ commands }) => (
+      commands as typeof commands & TableAttributeCommands
+    ).setTableAttribute(attr, value))
+    .run();
+};
+
 const TableGridPicker = ({ onSelect }: { onSelect: (rows: number, cols: number) => void }) => {
   const [hovered, setHovered] = useState({ r: 0, c: 0 });
 
@@ -193,7 +203,6 @@ const TableCellTab = ({ editor }: Omit<TableTabProps, 'close'>) => (
 
 const TablePropertiesTab = ({ editor }: Omit<TableTabProps, 'close'>) => {
   const tableNode = getTableNode(editor);
-  const tableCommands = editor.commands as typeof editor.commands & TableAttributeCommands;
 
   return (
     <div className="tiptap-props-panel">
@@ -201,7 +210,7 @@ const TablePropertiesTab = ({ editor }: Omit<TableTabProps, 'close'>) => {
         <div className="tiptap-props-label">Largeur du tableau</div>
         <div className="tiptap-props-btn-group">
           {TABLE_WIDTH_PRESETS.map((option) => (
-            <button key={option.label} type="button" className={`tiptap-props-btn ${tableNode?.attrs.tableWidth === option.value ? 'is-active' : ''}`} onClick={() => tableCommands.setTableAttribute('tableWidth', option.value)}>
+            <button key={option.label} type="button" className={`tiptap-props-btn ${tableNode?.attrs.tableWidth === option.value ? 'is-active' : ''}`} onClick={() => runTableAttributeCommand(editor, 'tableWidth', option.value)}>
               {option.label}
             </button>
           ))}
@@ -212,7 +221,7 @@ const TablePropertiesTab = ({ editor }: Omit<TableTabProps, 'close'>) => {
         <div className="tiptap-props-label">Style de bordure</div>
         <div className="tiptap-props-btn-group">
           {BORDER_STYLE_OPTIONS.map((option) => (
-            <button key={option.label} type="button" className={`tiptap-props-btn ${tableNode?.attrs.tableBorderStyle === option.value ? 'is-active' : ''}`} onClick={() => tableCommands.setTableAttribute('tableBorderStyle', option.value)}>
+            <button key={option.label} type="button" className={`tiptap-props-btn ${tableNode?.attrs.tableBorderStyle === option.value ? 'is-active' : ''}`} onClick={() => runTableAttributeCommand(editor, 'tableBorderStyle', option.value)}>
               {option.label}
             </button>
           ))}
@@ -223,9 +232,9 @@ const TablePropertiesTab = ({ editor }: Omit<TableTabProps, 'close'>) => {
         <div className="tiptap-props-label">Couleur de bordure</div>
         <div className="tiptap-dropdown-colors">
           {CELL_BORDER_COLORS.map((color) => (
-            <button key={color} type="button" className="tiptap-color-swatch" style={{ background: color, width: 18, height: 18 }} title={color} onClick={() => tableCommands.setTableAttribute('tableBorderColor', color)} />
+            <button key={color} type="button" className="tiptap-color-swatch" style={{ background: color, width: 18, height: 18 }} title={color} onClick={() => runTableAttributeCommand(editor, 'tableBorderColor', color)} />
           ))}
-          <button type="button" className="tiptap-color-swatch" style={RESET_SWATCH_STYLE} title="Reinitialiser" onClick={() => tableCommands.setTableAttribute('tableBorderColor', null)} />
+          <button type="button" className="tiptap-color-swatch" style={RESET_SWATCH_STYLE} title="Reinitialiser" onClick={() => runTableAttributeCommand(editor, 'tableBorderColor', null)} />
         </div>
       </div>
 
@@ -233,7 +242,7 @@ const TablePropertiesTab = ({ editor }: Omit<TableTabProps, 'close'>) => {
         <div className="tiptap-props-label">Epaisseur de bordure</div>
         <div className="tiptap-props-btn-group">
           {TABLE_BORDER_WIDTH_PRESETS.map((width) => (
-            <button key={width ?? 'default'} type="button" className={`tiptap-props-btn ${tableNode?.attrs.tableBorderWidth === width ? 'is-active' : ''}`} onClick={() => tableCommands.setTableAttribute('tableBorderWidth', width)}>
+            <button key={width ?? 'default'} type="button" className={`tiptap-props-btn ${tableNode?.attrs.tableBorderWidth === width ? 'is-active' : ''}`} onClick={() => runTableAttributeCommand(editor, 'tableBorderWidth', width)}>
               {width ?? 'Auto'}
             </button>
           ))}
@@ -243,10 +252,10 @@ const TablePropertiesTab = ({ editor }: Omit<TableTabProps, 'close'>) => {
       <div className="tiptap-props-section">
         <div className="tiptap-props-label">Disposition</div>
         <div className="tiptap-props-btn-group">
-          <button type="button" className={`tiptap-props-btn ${!tableNode?.attrs.tableLayout ? 'is-active' : ''}`} onClick={() => tableCommands.setTableAttribute('tableLayout', null)}>
+          <button type="button" className={`tiptap-props-btn ${!tableNode?.attrs.tableLayout ? 'is-active' : ''}`} onClick={() => runTableAttributeCommand(editor, 'tableLayout', null)}>
             Auto
           </button>
-          <button type="button" className={`tiptap-props-btn ${tableNode?.attrs.tableLayout === 'fixed' ? 'is-active' : ''}`} onClick={() => tableCommands.setTableAttribute('tableLayout', 'fixed')}>
+          <button type="button" className={`tiptap-props-btn ${tableNode?.attrs.tableLayout === 'fixed' ? 'is-active' : ''}`} onClick={() => runTableAttributeCommand(editor, 'tableLayout', 'fixed')}>
             Fixe
           </button>
         </div>
@@ -255,7 +264,7 @@ const TablePropertiesTab = ({ editor }: Omit<TableTabProps, 'close'>) => {
       <div className="tiptap-props-section">
         <div className="tiptap-props-label">Lignes alternees</div>
         <div className="tiptap-props-btn-group">
-          <button type="button" className={`tiptap-props-btn ${tableNode?.attrs.stripedRows ? 'is-active' : ''}`} onClick={() => tableCommands.setTableAttribute('stripedRows', !tableNode?.attrs.stripedRows)}>
+          <button type="button" className={`tiptap-props-btn ${tableNode?.attrs.stripedRows ? 'is-active' : ''}`} onClick={() => runTableAttributeCommand(editor, 'stripedRows', !tableNode?.attrs.stripedRows)}>
             {tableNode?.attrs.stripedRows ? 'Active' : 'Desactive'}
           </button>
         </div>
@@ -291,7 +300,7 @@ export const TableMenu = ({ editor }: { editor: Editor }) => {
             <>
               <div className="tiptap-tab-bar">
                 {TABLE_TABS.map(([key, label]) => (
-                  <button key={key} type="button" className={`tiptap-tab-btn ${activeTab === key ? 'is-active' : ''}`} onClick={() => setActiveTab(key as TableTab)}>
+                  <button key={key} type="button" className={`tiptap-tab-btn ${activeTab === key ? 'is-active' : ''}`} aria-pressed={activeTab === key} onClick={() => setActiveTab(key as TableTab)}>
                     {label}
                   </button>
                 ))}

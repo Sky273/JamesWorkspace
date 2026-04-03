@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { Outlet, Link } from 'react-router-dom';
+import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Sidebar from './Sidebar';
 import ScrollToTop from './ScrollToTop';
@@ -52,6 +52,7 @@ const headerSolidIconClassName =
 
 const Layout = (): JSX.Element => {
   const { user, signOut } = useAuth();
+  const location = useLocation();
   const [theme, setTheme] = useState<string>(() => {
     if (typeof window !== 'undefined') {
       return getCookie('theme') || 'light';
@@ -80,12 +81,17 @@ const Layout = (): JSX.Element => {
     return t('userProfile.roles.user');
   };
 
+  const isResumesRoute = location.pathname === '/resumes';
+  const isMissionsRoute = location.pathname === '/missions';
+  const isEditorialMigratedRoute = isResumesRoute || isMissionsRoute;
+  const editorialRouteClassName = isResumesRoute ? ' resumes-editorial-shell' : isMissionsRoute ? ' missions-editorial-shell' : '';
+
   return (
     <div className="min-h-screen bg-app">
       <ScrollToTop />
       <Sidebar isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
 
-      <div className="flex min-h-screen flex-1 flex-col md:pl-64">
+      <div className={`flex min-h-screen flex-1 flex-col md:pl-64${isEditorialMigratedRoute ? ` editorial-migrated-shell${editorialRouteClassName}` : ''}`}>
         <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/92 shadow-[0_1px_0_rgba(15,23,42,0.04)] backdrop-blur-xl dark:border-white/6 dark:bg-[#0c1222]/95 dark:shadow-[0_1px_0_rgba(255,255,255,0.03)]">
           <div className="flex h-16 items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
             <div className="flex min-w-0 items-center gap-3.5">

@@ -111,12 +111,12 @@ const DealSection = ({
     <div
       role="region"
       aria-label={`${t('resumes.groupedView.deal')}: ${deal.title}`}
-      className={`rounded-xl shadow-sm border overflow-hidden transition-all duration-200 ${
+      className={`overflow-hidden rounded-[2rem] border transition-all duration-200 ${
         isDragOver
-          ? 'bg-purple-50 dark:bg-purple-900/20 ring-2 ring-purple-400 dark:ring-purple-500 ring-offset-1 border-purple-300 dark:border-purple-600'
+          ? 'cv-card ring-2 ring-[var(--cv-primary)] ring-offset-1 ring-offset-transparent border-[color:color-mix(in_srgb,var(--cv-primary)_40%,transparent)]'
           : isSourceDeal && isDragging
-            ? 'bg-white dark:bg-gray-800 opacity-60 border-gray-100 dark:border-gray-700/60'
-            : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700/60'
+            ? 'cv-card opacity-60'
+            : 'cv-card'
       }`}
       onDragEnter={(e) => onDragEnter(e, deal.id)}
       onDragLeave={(e) => onDragLeave(e, deal.id)}
@@ -129,30 +129,30 @@ const DealSection = ({
         aria-expanded={isExpanded}
         aria-controls={`deal-content-${deal.id}`}
         aria-label={`${isExpanded ? t('common.collapse') : t('common.expand')} ${deal.title}`}
-        className={`group w-full flex items-center justify-between px-4 py-3 transition-colors text-left ${
+        className={`group flex w-full flex-col items-start gap-4 px-5 py-4 text-left transition-colors sm:flex-row sm:items-center sm:justify-between ${
           isDragOver
-            ? 'bg-purple-100/50 dark:bg-purple-900/30'
-            : 'hover:bg-gray-50 dark:hover:bg-gray-700/60'
+            ? 'bg-[var(--cv-primary-soft)]'
+            : 'hover:bg-slate-50 dark:hover:bg-[color:color-mix(in_srgb,var(--cv-panel-end)_86%,black)]'
         }`}
       >
         <div className="flex items-center gap-3 min-w-0">
           {isExpanded ? (
-            <ChevronDownIcon className="icon-lg text-gray-400" />
+            <ChevronDownIcon className="icon-lg text-slate-400 dark:text-[#7f8ab0]" />
           ) : (
-            <ChevronRightIcon className="icon-lg text-gray-400" />
+            <ChevronRightIcon className="icon-lg text-slate-400 dark:text-[#7f8ab0]" />
           )}
-          <span className="p-1.5 rounded-lg transition-colors group-hover:bg-blue-100 dark:group-hover:bg-blue-900/30">
-            <BriefcaseIcon className="icon-lg text-purple-500 group-hover:text-blue-600 dark:group-hover:text-blue-400" />
+          <span className="rounded-2xl bg-[var(--cv-primary-soft)] p-2 transition-colors group-hover:bg-[color:color-mix(in_srgb,var(--cv-primary-soft)_84%,white)]">
+            <BriefcaseIcon className="icon-lg text-[var(--cv-primary)]" />
           </span>
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="text-lg font-bold text-purple-700 dark:text-purple-300 truncate">{deal.title}</h3>
-              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[deal.status] || STATUS_COLORS.open}`}>
+              <h3 className="cv-display truncate text-lg font-bold text-slate-900 dark:text-[#dee5ff]">{deal.title}</h3>
+              <span className={`rounded-full px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.18em] ${STATUS_COLORS[deal.status] || STATUS_COLORS.open}`}>
                 {t(`crm.deals.statuses.${deal.status}`, STATUS_LABELS[deal.status] || deal.status)}
               </span>
               <span className={`text-xs ${priorityInfo.color}`}>{priorityInfo.icon}</span>
             </div>
-            <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+            <div className="mt-0.5 flex items-center gap-3 text-xs text-slate-500 dark:text-[#8f99b8]">
               {deal.client_name && (
                 <span className="flex items-center gap-1">
                   <BuildingOfficeIcon className="icon-xs" />
@@ -169,13 +169,13 @@ const DealSection = ({
             </div>
           </div>
         </div>
-        <div className="ml-4 flex items-center gap-2 flex-shrink-0">
+        <div className="flex flex-wrap items-center gap-2 sm:ml-4 sm:flex-shrink-0 sm:justify-end">
           {deal.missions && deal.missions.length > 0 && (
-            <span className="bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-2.5 py-1 rounded-full text-sm font-medium">
+            <span className="cv-count-pill cv-count-pill-primary rounded-full px-2.5 py-1 text-sm font-medium">
               {deal.missions.length} mission{deal.missions.length !== 1 ? 's' : ''}
             </span>
           )}
-          <span className="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-2.5 py-1 rounded-full text-sm font-medium">
+          <span className="cv-count-pill cv-count-pill-success rounded-full px-2.5 py-1 text-sm font-medium">
             {hasActiveFilters && deal.resumes.length !== originalDeal.resumes.length
               ? `${deal.resumes.length} / ${originalDeal.resumes.length} CV${originalDeal.resumes.length !== 1 ? 's' : ''}`
               : `${deal.resumes.length} CV${deal.resumes.length !== 1 ? 's' : ''}`}
@@ -190,7 +190,7 @@ const DealSection = ({
               onExportDeal(originalDeal);
             }}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); e.currentTarget.click(); } }}
-            className="p-1.5 text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-colors cursor-pointer"
+            className="cv-inline-action rounded-2xl p-2 text-slate-400 transition-colors cursor-pointer dark:text-[#7f8ab0]"
           >
             <ArrowDownTrayIcon className="icon-md" />
           </span>
@@ -199,8 +199,8 @@ const DealSection = ({
 
       {/* Drop indicator when dragging over collapsed deal */}
       {isDragOver && !isExpanded && (
-        <div className="px-4 py-3 border-t border-purple-200 dark:border-purple-700 bg-purple-50/50 dark:bg-purple-900/20">
-          <p className="text-center text-sm text-purple-600 dark:text-purple-400 font-medium">
+        <div className="border-t border-[color:color-mix(in_srgb,var(--cv-primary)_20%,transparent)] bg-[var(--cv-primary-soft)] px-4 py-3">
+          <p className="text-center text-sm font-medium text-[var(--cv-primary)]">
             ↓ {t('resumes.groupedView.dropHere')}
           </p>
         </div>
@@ -219,10 +219,10 @@ const DealSection = ({
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className={`px-4 py-5 border-t ${isDragOver ? 'border-purple-200 dark:border-purple-700' : 'border-gray-100 dark:border-gray-700'}`}>
+            <div className={`border-t px-4 py-5 ${isDragOver ? 'border-[color:color-mix(in_srgb,var(--cv-primary)_20%,transparent)]' : 'border-slate-200/70 dark:border-white/6'}`}>
               {isDragOver && (
-                <div className="mt-3 mb-2 py-2 border-2 border-dashed border-purple-300 dark:border-purple-600 rounded-lg bg-purple-50/50 dark:bg-purple-900/10">
-                  <p className="text-center text-sm text-purple-500 dark:text-purple-400">
+                <div className="mb-2 mt-3 rounded-lg border-2 border-dashed border-[color:color-mix(in_srgb,var(--cv-primary)_35%,transparent)] bg-[var(--cv-primary-soft)] py-2">
+                  <p className="text-center text-sm text-[var(--cv-primary)]">
                     ↓ {t('resumes.groupedView.dropHere')}
                   </p>
                 </div>
@@ -230,7 +230,7 @@ const DealSection = ({
               {/* Missions section */}
               {deal.missions && deal.missions.length > 0 && (
                 <div className="pt-4 mb-4">
-                  <h4 className="text-sm font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                  <h4 className="cv-subsection-title mb-3 flex items-center gap-1.5">
                     <BriefcaseIcon className="icon-sm" />
                     {t('resumes.groupedView.missions')} ({deal.missions.length})
                   </h4>
@@ -329,7 +329,7 @@ const DealSection = ({
               ) : deal.resumes.length > 0 ? (
                 <div className="space-y-3 pt-4">
                   {deal.resumes.length > 0 && deal.missions && deal.missions.length > 0 && (
-                    <h4 className="text-sm font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <h4 className="cv-subsection-title cv-subsection-title-secondary mb-2 flex items-center gap-1.5">
                       <DocumentTextIcon className="icon-sm" />
                       {t('resumes.groupedView.cvs')} ({deal.resumes.length})
                     </h4>

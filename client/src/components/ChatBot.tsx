@@ -148,19 +148,35 @@ const ChatBot = (): JSX.Element | null => {
   };
 
   useEffect(() => {
+    let isMounted = true;
+
     const checkChatbotStatus = async () => {
       try {
         const response = await authGet('/api/settings/presentation');
         if (response.ok) {
           const data = await response.json();
-          setChatbotEnabled(data.chatbotEnabled === 'on');
+          if (isMounted) {
+            setChatbotEnabled(data.chatbotEnabled === 'on');
+          }
+          return;
+        }
+
+        if (isMounted) {
+          setChatbotEnabled(false);
         }
       } catch (error) {
-        log.warn('Failed to fetch chatbot settings', { error: error instanceof Error ? error.message : 'Unknown' });
-        setChatbotEnabled(false);
+        if (isMounted) {
+          log.warn('Failed to fetch chatbot settings', { error: error instanceof Error ? error.message : 'Unknown' });
+          setChatbotEnabled(false);
+        }
       }
     };
-    checkChatbotStatus();
+
+    void checkChatbotStatus();
+
+    return () => {
+      isMounted = false;
+    };
   }, [authGet, setChatbotEnabled]);
 
   useEffect(() => {
@@ -194,6 +210,11 @@ const ChatBot = (): JSX.Element | null => {
       timestamp: new Date()
     };
 
+    const conversationHistory = [...messages, userMessage].map((message) => ({
+      role: message.role,
+      content: message.content,
+    }));
+
     setMessages(prev => [...prev, userMessage]);
     setInputValue('');
     setIsLoading(true);
@@ -203,7 +224,7 @@ const ChatBot = (): JSX.Element | null => {
         message: userMessage.content,
         userId: user?.id,
         userName: user?.name,
-        conversationHistory: messages.map(m => ({ role: m.role, content: m.content }))
+        conversationHistory,
       });
 
       if (!response.ok) {

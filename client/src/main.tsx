@@ -11,6 +11,8 @@ import { StrictMode } from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './styles/main.css';
+import './styles/editorialPages.css';
+import './styles/resumesEditorial.css';
 import { AuthProvider } from './context/AuthContext';
 import { installGlobalErrorHandling } from './bootstrap/globalErrorHandling';
 

@@ -130,21 +130,21 @@ const MissionsDealsGroupedView = ({ onAddMission }: MissionsDealsGroupedViewProp
       ))}
 
       {filteredUnassigned.length > 0 && (
-        <div className="rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 overflow-hidden bg-white dark:bg-gray-800">
+        <div className="cv-card overflow-hidden rounded-[2rem]">
           <button
             onClick={() => setUnassignedExpanded(!unassignedExpanded)}
-            className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/60 transition-colors text-left"
+            className="w-full flex items-center justify-between px-5 py-4 transition-colors text-left hover:bg-slate-50 dark:hover:bg-[color:color-mix(in_srgb,var(--cv-panel-end)_86%,black)]"
           >
             <div className="flex items-center gap-3">
               {unassignedExpanded ? (
-                <ChevronDownIcon className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                <ChevronDownIcon className="w-5 h-5 text-slate-400 dark:text-[#7f8ab0] flex-shrink-0" />
               ) : (
-                <ChevronRightIcon className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                <ChevronRightIcon className="w-5 h-5 text-slate-400 dark:text-[#7f8ab0] flex-shrink-0" />
               )}
-              <FolderOpenIcon className="w-5 h-5 text-amber-500 flex-shrink-0" />
-              <h3 className="font-bold text-gray-700 dark:text-gray-300">{t('missions.grouped.unassignedTitle')}</h3>
+              <FolderOpenIcon className="w-5 h-5 text-[var(--cv-tertiary)] flex-shrink-0" />
+              <h3 className="cv-display font-bold text-slate-800 dark:text-[var(--cv-text)]">{t('missions.grouped.unassignedTitle')}</h3>
             </div>
-            <span className="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2.5 py-1 rounded-full text-sm font-medium">
+            <span className="cv-pill rounded-full px-3 py-1 text-sm font-medium text-slate-700 dark:text-[var(--cv-text)]">
               {filteredUnassigned.length} mission{filteredUnassigned.length !== 1 ? 's' : ''}
             </span>
           </button>
@@ -158,7 +158,7 @@ const MissionsDealsGroupedView = ({ onAddMission }: MissionsDealsGroupedViewProp
                 transition={{ duration: 0.2 }}
                 className="overflow-hidden"
               >
-                <div className="px-4 pb-4 border-t border-gray-100 dark:border-gray-700 space-y-2 pt-3">
+                <div className="space-y-2 border-t border-slate-200/70 px-4 pb-4 pt-3 dark:border-white/6">
                   {filteredUnassigned.map((mission, missionIndex) => (
                     <MissionCardInDeal key={mission.id} mission={mission} index={missionIndex} />
                   ))}
@@ -170,12 +170,12 @@ const MissionsDealsGroupedView = ({ onAddMission }: MissionsDealsGroupedViewProp
       )}
 
       {totalMissions === 0 && !loading && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 p-12 text-center">
-          <BriefcaseIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+        <div className="cv-panel rounded-[2rem] p-12 text-center">
+          <BriefcaseIcon className="w-16 h-16 mx-auto text-slate-400 dark:text-[#7f8ab0] mb-4" />
+          <h3 className="cv-display text-xl font-semibold text-slate-950 dark:text-[var(--cv-text)] mb-2">
             {debouncedSearch ? t('missions.noResults') : t('missions.noMissions')}
           </h3>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-slate-600 dark:text-[var(--cv-muted)]">
             {debouncedSearch ? t('missions.grouped.noSearchResults') : t('missions.createFirst')}
           </p>
         </div>

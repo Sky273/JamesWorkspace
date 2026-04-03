@@ -6,7 +6,10 @@ import {
   ChartBarIcon,
   DocumentTextIcon,
   EyeIcon,
+  SparklesIcon,
   TrashIcon,
+  UserGroupIcon,
+  WrenchScrewdriverIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline';
 import { AnimatePresence, motion, type Variants } from 'framer-motion';
@@ -41,37 +44,44 @@ export const filterContentVariants: Variants = {
 };
 
 export const tagColorMap: Record<string, string> = {
-  Skills: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
-  Industries: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300',
-  Tools: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-  'Soft Skills': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
+  Skills: 'cv-chip-skills',
+  Industries: 'cv-chip-industries',
+  Tools: 'cv-chip-tools',
+  'Soft Skills': 'cv-chip-soft',
 };
 
-export const categoryHeaderColors: Record<string, { dot: string; text: string; border: string }> = {
-  Skills: { dot: 'bg-blue-500', text: 'text-blue-700 dark:text-blue-300', border: 'border-blue-400 dark:border-blue-500' },
-  Industries: { dot: 'bg-purple-500', text: 'text-purple-700 dark:text-purple-300', border: 'border-purple-400 dark:border-purple-500' },
-  Tools: { dot: 'bg-green-500', text: 'text-green-700 dark:text-green-300', border: 'border-green-400 dark:border-green-500' },
-  'Soft Skills': { dot: 'bg-yellow-500', text: 'text-yellow-700 dark:text-yellow-300', border: 'border-yellow-400 dark:border-yellow-500' },
+export const categoryHeaderColors: Record<string, { dot: string; text: string; accent: string }> = {
+  Skills: { dot: 'bg-[var(--cv-tertiary)]', text: 'text-slate-950 dark:text-[#dee5ff]', accent: 'text-[var(--cv-tertiary)]' },
+  Industries: { dot: 'bg-[var(--cv-primary)]', text: 'text-slate-950 dark:text-[#dee5ff]', accent: 'text-[var(--cv-primary)]' },
+  Tools: { dot: 'bg-[var(--cv-cyan)]', text: 'text-slate-950 dark:text-[#dee5ff]', accent: 'text-[var(--cv-cyan)]' },
+  'Soft Skills': { dot: 'bg-[var(--cv-secondary)]', text: 'text-slate-950 dark:text-[#dee5ff]', accent: 'text-[var(--cv-secondary)]' },
 };
 
 export const tagFilterColors: Record<string, { selected: string; unselected: string }> = {
   Skills: {
-    selected: 'bg-blue-500 text-white ring-2 ring-blue-300 dark:ring-blue-700',
-    unselected: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50',
+    selected: 'cv-filter-chip cv-filter-chip-selected cv-filter-chip-skills',
+    unselected: 'cv-filter-chip cv-filter-chip-skills',
   },
   Industries: {
-    selected: 'bg-purple-500 text-white ring-2 ring-purple-300 dark:ring-purple-700',
-    unselected: 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50',
+    selected: 'cv-filter-chip cv-filter-chip-selected cv-filter-chip-industries',
+    unselected: 'cv-filter-chip cv-filter-chip-industries',
   },
   Tools: {
-    selected: 'bg-green-500 text-white ring-2 ring-green-300 dark:ring-green-700',
-    unselected: 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/50',
+    selected: 'cv-filter-chip cv-filter-chip-selected cv-filter-chip-tools',
+    unselected: 'cv-filter-chip cv-filter-chip-tools',
   },
   'Soft Skills': {
-    selected: 'bg-yellow-500 text-white ring-2 ring-yellow-300 dark:ring-yellow-700',
-    unselected: 'bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300 hover:bg-yellow-100 dark:hover:bg-yellow-900/50',
+    selected: 'cv-filter-chip cv-filter-chip-selected cv-filter-chip-soft',
+    unselected: 'cv-filter-chip cv-filter-chip-soft',
   },
 };
+
+const categoryIcons = {
+  Skills: SparklesIcon,
+  Industries: BuildingOfficeIcon,
+  Tools: WrenchScrewdriverIcon,
+  'Soft Skills': UserGroupIcon,
+} as const;
 
 export function classNames(...classes: Array<string | boolean | undefined>) {
   return classes.filter(Boolean).join(' ');
@@ -80,20 +90,20 @@ export function classNames(...classes: Array<string | boolean | undefined>) {
 export function getStatusBadgeClass(status?: string) {
   switch (status?.toLowerCase()) {
     case 'improved':
-      return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
+      return 'cv-status-pill cv-status-success';
     case 'analyzed':
-      return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
+      return 'cv-status-pill cv-status-primary';
     case 'processing':
-      return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
+      return 'cv-status-pill cv-status-warning';
     case 'pending':
-      return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300';
+      return 'cv-status-pill cv-status-warning';
     case 'error':
     case 'failed':
-      return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
+      return 'cv-status-pill cv-status-danger';
     case 'archived':
-      return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300';
+      return 'cv-status-pill cv-status-secondary';
     default:
-      return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
+      return 'cv-status-pill cv-status-neutral';
   }
 }
 
@@ -129,19 +139,19 @@ export function ResumeFiltersPanel({
         initial="collapsed"
         animate="expanded"
         exit="collapsed"
-        className="px-4 pb-4 border-t border-gray-200 dark:border-gray-700"
+        className="mt-4 rounded-[1.6rem] border border-slate-200/70 bg-white/80 px-4 pb-4 dark:border-white/6 dark:bg-[#091328]"
       >
         <div className="pt-4 space-y-4">
           {selectedTags.length > 0 ? (
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm text-gray-600 dark:text-gray-400">{t('resumes.activeFilters')}:</span>
+              <span className="text-sm text-slate-600 dark:text-[#a3aac4]">{t('resumes.activeFilters')}:</span>
               <div className="flex flex-wrap gap-2">
                 {selectedTags.map((tag) => {
                   const category = getTagCategory(tag);
                   return (
-                    <span key={tag} className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-sm ${tagColorMap[category]}`}>
+                    <span key={tag} className={`cv-active-filter-chip inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm ${tagColorMap[category]}`}>
                       {tag}
-                      <button onClick={() => handleTagClick(tag)} className="hover:opacity-70">
+                      <button onClick={() => handleTagClick(tag)} className="cv-active-filter-remove">
                         <XMarkIcon className="w-3 h-3" />
                       </button>
                     </span>
@@ -161,17 +171,24 @@ export function ResumeFiltersPanel({
             const hasMore = tags.length > 15;
 
             return (
-              <div key={category}>
-                <h3 className={`flex items-center gap-2 text-sm font-semibold mb-2.5 pl-2 border-l-2 ${categoryHeaderColors[category]?.border || 'border-gray-400'} ${categoryHeaderColors[category]?.text || 'text-gray-700 dark:text-gray-300'}`}>
-                  <span className={`w-2 h-2 rounded-full ${categoryHeaderColors[category]?.dot || 'bg-gray-400'}`} />
-                  {t(`resumes.filters.${category.toLowerCase().replace(' ', '')}`)}
+              <div key={category} className="cv-filter-category-block">
+                <h3 className="cv-filter-section-title mb-3">
+                  <span className={`cv-filter-section-icon-shell ${categoryHeaderColors[category]?.dot || 'bg-gray-400'}`}>
+                    {(() => {
+                      const Icon = categoryIcons[category as keyof typeof categoryIcons] || SparklesIcon;
+                      return <Icon className="cv-filter-section-icon" />;
+                    })()}
+                  </span>
+                  <span className={`cv-filter-section-text ${categoryHeaderColors[category]?.text || 'text-gray-700 dark:text-gray-300'}`}>
+                    {t(`resumes.filters.${category.toLowerCase().replace(' ', '')}`)}
+                  </span>
                 </h3>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2.5">
                   {displayedTags.map((tag) => (
                     <button
                       key={tag}
                       onClick={() => handleTagClick(tag)}
-                      className={`inline-flex items-center px-3 py-1 rounded-full text-sm transition-all ${
+                      className={`inline-flex items-center rounded-full px-4 py-2 text-sm transition-all ${
                         selectedTags.includes(tag)
                           ? tagFilterColors[category]?.selected || 'bg-blue-500 text-white'
                           : tagFilterColors[category]?.unselected || 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
@@ -183,7 +200,7 @@ export function ResumeFiltersPanel({
                   {hasMore ? (
                     <button
                       onClick={() => onToggleTagExpansion(category)}
-                      className="text-sm text-blue-600 dark:text-blue-400 hover:underline py-1 font-medium"
+                      className="cv-filter-more py-2 text-sm font-semibold"
                     >
                       {isExpanded ? t('resumes.showLess') : `+${tags.length - 15} ${t('resumes.more')}`}
                     </button>
@@ -232,7 +249,7 @@ export function ResumesResultsGrid({
         icon={DocumentTextIcon}
         title={t('resumes.noResults')}
         description={searchQuery || selectedTags.length > 0 ? t('resumes.noResultsFiltered') : t('resumes.uploadFirst')}
-        containerClassName="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 p-12 text-center"
+        containerClassName="cv-panel rounded-[2rem] p-12 text-center"
       />
     );
   }
@@ -245,45 +262,54 @@ export function ResumesResultsGrid({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: index * 0.05 }}
-          className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 hover:shadow-md transition-shadow overflow-hidden cursor-pointer"
+          className="cv-card group overflow-hidden rounded-[2rem] transition-all cursor-pointer"
           onClick={() => handleResumeClick(resume)}
         >
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-            <div className="flex items-start justify-between">
+          <div className="border-b border-slate-200/70 p-5 dark:border-white/6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <DocumentTextIcon className="w-5 h-5 text-gray-400 flex-shrink-0" />
-                  <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-[var(--cv-primary-soft)] text-[var(--cv-primary)]">
+                    <DocumentTextIcon className="w-5 h-5" />
+                  </div>
+                  <h3 className="cv-display truncate text-lg font-bold text-slate-950 dark:text-[#dee5ff]">
                     {resume.Name || resume['Resume File']?.[0]?.filename || t('resumes.untitled')}
                   </h3>
                 </div>
-                {resume.Title ? <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 truncate">{resume.Title}</p> : null}
+                {resume.Title ? <p className="mt-2 truncate pl-12 text-sm text-slate-600 dark:text-[#a3aac4]">{resume.Title}</p> : null}
               </div>
-              <span className={classNames('ml-2 px-2 py-1 rounded-full text-xs font-medium flex-shrink-0', getStatusBadgeClass(resume.Status))}>
+              <span className={classNames('cv-pill inline-flex w-fit flex-shrink-0 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] sm:ml-2', getStatusBadgeClass(resume.Status))}>
                 {t(`resumes.status.${resume.Status?.toLowerCase() || 'new'}`)}
               </span>
             </div>
           </div>
 
-          <div className="p-4">
-            <div className="flex items-center justify-between mb-3">
+          <div className="p-5">
+            <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-2">
-                <ChartBarIcon className="w-5 h-5 text-gray-400" />
-                <span className="text-sm text-gray-600 dark:text-gray-400">{t('resumes.score_label')}</span>
+                <ChartBarIcon className="w-5 h-5 text-slate-400 dark:text-[#7f8ab0]" />
+                <span className="text-sm text-slate-600 dark:text-[#a3aac4]">{t('resumes.score_label')}</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 self-start sm:self-auto">
                 {resume['Improved Global Rating'] && resume['Improved Global Rating'] !== resume['Global Rating'] ? (
                   <>
-                    <span className="text-sm text-gray-400 line-through">{resume['Global Rating'] != null ? `${resume['Global Rating']}%` : '0%'}</span>
-                    <span className="text-lg font-bold text-green-600 dark:text-green-400">{resume['Improved Global Rating'] != null ? `${resume['Improved Global Rating']}%` : '0%'}</span>
+                    <span className="text-sm text-slate-400 line-through dark:text-[#6f7a98]">{resume['Global Rating'] != null ? `${resume['Global Rating']}%` : '0%'}</span>
+                    <span className="cv-display text-2xl font-bold text-[var(--cv-tertiary)]">{resume['Improved Global Rating'] != null ? `${resume['Improved Global Rating']}%` : '0%'}</span>
                   </>
                 ) : (
-                  <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{resume['Global Rating'] != null ? `${resume['Global Rating']}%` : '0%'}</span>
+                  <span className="cv-display text-2xl font-bold text-slate-950 dark:text-[#dee5ff]">{resume['Global Rating'] != null ? `${resume['Global Rating']}%` : '0%'}</span>
                 )}
               </div>
             </div>
 
-            <div className="flex items-center justify-between gap-2 text-sm text-gray-500 dark:text-gray-400 mb-2">
+            <div className="cv-score-track mb-4 h-2 overflow-hidden rounded-full">
+              <div
+                className="cv-score-fill h-full rounded-full"
+                style={{ width: `${resume['Improved Global Rating'] ?? resume['Global Rating'] ?? 0}%` }}
+              />
+            </div>
+
+            <div className="mb-3 flex flex-col gap-2 text-sm text-slate-500 dark:text-[#a3aac4] sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-2">
                 <CalendarIcon className="w-4 h-4" />
                 {formatResumeDate(resume['Created At'])}
@@ -301,16 +327,16 @@ export function ResumesResultsGrid({
             </div>
 
             {resume.FirmName ? (
-              <div className="flex items-center gap-1 mb-3">
-                <BuildingOfficeIcon className="w-3 h-3 text-gray-400" />
-                <span className="text-xs text-gray-400 dark:text-gray-500">{resume.FirmName}</span>
+              <div className="mb-4 flex items-center gap-1">
+                <BuildingOfficeIcon className="w-3 h-3 text-slate-400 dark:text-[#7f8ab0]" />
+                <span className="text-xs text-slate-500 dark:text-[#8f99b8]">{resume.FirmName}</span>
               </div>
             ) : null}
 
-            <div className="flex flex-wrap gap-1">
+            <div className="flex flex-wrap gap-2">
               {(['Skills', 'Industries', 'Tools', 'Soft Skills'] as const).flatMap((category) =>
                 getResumePreviewTags(resume, category).slice(0, 2).map((tag, tagIndex) => (
-                  <span key={`${category}-${tagIndex}`} className={`text-xs px-2 py-0.5 rounded-full ${tagColorMap[category]}`}>
+                  <span key={`${category}-${tagIndex}`} className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.08em] ${tagColorMap[category]}`}>
                     {tag}
                   </span>
                 ))
@@ -318,13 +344,13 @@ export function ResumesResultsGrid({
             </div>
           </div>
 
-          <div className="flex items-center gap-2 p-4 pt-0">
+          <div className="flex flex-wrap items-center gap-2 p-5 pt-0 sm:flex-nowrap">
             <button
               onClick={(event) => {
                 event.stopPropagation();
                 handleResumeClick(resume);
               }}
-              className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors cursor-pointer"
+              className="cv-ghost-button flex min-h-12 w-full items-center justify-center gap-1 rounded-2xl px-3 py-3 text-sm transition-colors cursor-pointer sm:flex-1"
             >
               <EyeIcon className="w-5 h-5" />
               {t('resumes.view')}
@@ -332,7 +358,7 @@ export function ResumesResultsGrid({
             {resume['Resume File']?.[0] ? (
               <button
                 onClick={(event) => void handleDownloadResume(resume, event)}
-                className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors cursor-pointer"
+                className="cv-ghost-button min-h-12 min-w-12 rounded-2xl p-3 text-[var(--cv-primary)] transition-colors cursor-pointer"
                 title={resume['File Name'] || resume['Resume File']?.[0]?.filename || t('resumes.downloadResume')}
               >
                 <ArrowDownTrayIcon className="w-5 h-5" />
@@ -341,7 +367,7 @@ export function ResumesResultsGrid({
             <ManageResumeDealsModal resumeId={resume.id} />
             <button
               onClick={(event) => onDeleteResume(resume, event)}
-              className="p-2 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors cursor-pointer"
+              className="cv-ghost-button min-h-12 min-w-12 rounded-2xl p-3 text-[#ff8ca5] transition-colors cursor-pointer"
               title={t('resumes.deleteResume')}
             >
               <TrashIcon className="w-5 h-5" />

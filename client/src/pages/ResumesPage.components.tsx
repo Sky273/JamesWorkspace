@@ -111,7 +111,7 @@ export function ResumesListPanel({
   return (
     <>
       <StatsCards stats={stats} t={t} />
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 mb-6">
+      <div className="mb-6">
         <SearchAndActions
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
@@ -206,6 +206,12 @@ export function ResumesDeleteModal({
   );
 }
 
-export function ResumesByDealView({ allTags }: { allTags: TagsByCategory }) {
-  return <DealsGroupedView allTags={allTags} />;
+export function ResumesByDealView({
+  allTags,
+  stats,
+}: {
+  allTags: TagsByCategory;
+  stats: ResumeStats;
+}) {
+  return <DealsGroupedView allTags={allTags} stats={stats} />;
 }

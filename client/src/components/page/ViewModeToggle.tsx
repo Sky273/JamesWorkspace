@@ -20,9 +20,9 @@ export default function ViewModeToggle<T extends string>({
   value,
 }: ViewModeToggleProps<T>) {
   return (
-    <div className="flex items-center gap-2 mb-4">
-      <span className="text-sm text-gray-600 dark:text-gray-400">{label} :</span>
-      <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
+    <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <span className="cv-kicker">{label}</span>
+      <div className="cv-glass inline-flex rounded-2xl border border-white/8 p-1">
         {options.map((option) => {
           const Icon = option.icon;
           const isActive = option.value === value;
@@ -30,10 +30,10 @@ export default function ViewModeToggle<T extends string>({
             <button
               key={option.value}
               onClick={() => onChange(option.value)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${
                 isActive
-                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                  ? 'bg-white/50 text-slate-900 shadow-sm dark:bg-[var(--cv-primary-soft)] dark:text-[var(--cv-text)]'
+                  : 'text-slate-500 hover:text-slate-700 dark:text-[#a3aac4] dark:hover:text-[#dee5ff]'
               }`}
             >
               <Icon className="w-4 h-4" />

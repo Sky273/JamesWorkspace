@@ -21,6 +21,7 @@ import { SkeletonResumeList } from '../ui/Skeleton';
 import SearchAndActions from './SearchAndActions';
 import DealExportModal from './DealExportModal';
 import DealResumeCard from './DealResumeCard';
+import StatsCards from './StatsCards';
 import {
   DealsSections,
   DeleteConfirmModal,
@@ -37,7 +38,7 @@ import {
   type DealsGroupedViewProps,
 } from './dealsGrouped.types';
 
-const DealsGroupedView = ({ allTags }: DealsGroupedViewProps): JSX.Element => {
+const DealsGroupedView = ({ allTags, stats }: DealsGroupedViewProps): JSX.Element => {
   const { t } = useTranslation();
   const { user: authUser } = useAuth();
   const { deleteResume, deleting } = useResume();
@@ -179,16 +180,18 @@ const DealsGroupedView = ({ allTags }: DealsGroupedViewProps): JSX.Element => {
 
   if (!data || !visibleData) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 p-12 text-center">
-        <BriefcaseIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-        <p className="text-gray-600 dark:text-gray-400">{t('resumes.groupedView.errorLoading')}</p>
+      <div className="cv-panel rounded-[2rem] p-12 text-center">
+        <BriefcaseIcon className="mx-auto mb-4 h-16 w-16 text-slate-400 dark:text-[#7f8ab0]" />
+        <p className="text-slate-600 dark:text-[#a3aac4]">{t('resumes.groupedView.errorLoading')}</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60">
+      <StatsCards stats={stats} t={t} variant="compact" />
+
+      <div>
         <SearchAndActions
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}

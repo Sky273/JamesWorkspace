@@ -83,13 +83,19 @@ export interface TagsByCategory {
 
 export interface DealsGroupedViewProps {
   allTags: TagsByCategory;
+  stats: {
+    total: number;
+    improved: number;
+    processing: number;
+    avgScore: number;
+  };
 }
 
 export const STATUS_COLORS: Record<string, string> = {
-  open: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-  won: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-  lost: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
-  on_hold: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
+  open: 'cv-status-pill cv-status-primary',
+  won: 'cv-status-pill cv-status-success',
+  lost: 'cv-status-pill cv-status-danger',
+  on_hold: 'cv-status-pill cv-status-warning'
 };
 
 export const STATUS_LABELS: Record<string, string> = {
@@ -107,35 +113,35 @@ export const PRIORITY_ICONS: Record<string, { icon: string; color: string }> = {
 };
 
 export const TAG_COLOR_MAP: Record<string, string> = {
-  skills: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
-  industries: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300',
-  tools: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-  soft_skills: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'
+  skills: 'cv-chip-skills',
+  industries: 'cv-chip-industries',
+  tools: 'cv-chip-tools',
+  soft_skills: 'cv-chip-soft'
 };
 
-export const CATEGORY_HEADER_COLORS: Record<string, { dot: string; text: string; border: string }> = {
-  Skills: { dot: 'bg-blue-500', text: 'text-blue-700 dark:text-blue-300', border: 'border-blue-400 dark:border-blue-500' },
-  Industries: { dot: 'bg-purple-500', text: 'text-purple-700 dark:text-purple-300', border: 'border-purple-400 dark:border-purple-500' },
-  Tools: { dot: 'bg-green-500', text: 'text-green-700 dark:text-green-300', border: 'border-green-400 dark:border-green-500' },
-  'Soft Skills': { dot: 'bg-yellow-500', text: 'text-yellow-700 dark:text-yellow-300', border: 'border-yellow-400 dark:border-yellow-500' }
+export const CATEGORY_HEADER_COLORS: Record<string, { dot: string; text: string; accent: string }> = {
+  Skills: { dot: 'bg-[var(--cv-tertiary)]', text: 'text-slate-950 dark:text-[#dee5ff]', accent: 'text-[var(--cv-tertiary)]' },
+  Industries: { dot: 'bg-[var(--cv-primary)]', text: 'text-slate-950 dark:text-[#dee5ff]', accent: 'text-[var(--cv-primary)]' },
+  Tools: { dot: 'bg-[var(--cv-cyan)]', text: 'text-slate-950 dark:text-[#dee5ff]', accent: 'text-[var(--cv-cyan)]' },
+  'Soft Skills': { dot: 'bg-[var(--cv-secondary)]', text: 'text-slate-950 dark:text-[#dee5ff]', accent: 'text-[var(--cv-secondary)]' }
 };
 
 export const TAG_FILTER_COLORS: Record<string, { selected: string; unselected: string }> = {
   Skills: {
-    selected: 'bg-blue-500 text-white ring-2 ring-blue-300 dark:ring-blue-700',
-    unselected: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50'
+    selected: 'cv-filter-chip cv-filter-chip-selected cv-filter-chip-skills',
+    unselected: 'cv-filter-chip cv-filter-chip-skills'
   },
   Industries: {
-    selected: 'bg-purple-500 text-white ring-2 ring-purple-300 dark:ring-purple-700',
-    unselected: 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50'
+    selected: 'cv-filter-chip cv-filter-chip-selected cv-filter-chip-industries',
+    unselected: 'cv-filter-chip cv-filter-chip-industries'
   },
   Tools: {
-    selected: 'bg-green-500 text-white ring-2 ring-green-300 dark:ring-green-700',
-    unselected: 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/50'
+    selected: 'cv-filter-chip cv-filter-chip-selected cv-filter-chip-tools',
+    unselected: 'cv-filter-chip cv-filter-chip-tools'
   },
   'Soft Skills': {
-    selected: 'bg-yellow-500 text-white ring-2 ring-yellow-300 dark:ring-yellow-700',
-    unselected: 'bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300 hover:bg-yellow-100 dark:hover:bg-yellow-900/50'
+    selected: 'cv-filter-chip cv-filter-chip-selected cv-filter-chip-soft',
+    unselected: 'cv-filter-chip cv-filter-chip-soft'
   }
 };
 

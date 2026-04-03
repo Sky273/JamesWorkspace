@@ -38,15 +38,15 @@ const StatCard = ({ icon: Icon, iconBgColor, iconColor, label, value, delay = 0 
     initial={{ opacity: 0, scale: 0.9 }} 
     animate={{ opacity: 1, scale: 1 }} 
     transition={{ delay }}
-    className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/60 p-4 hover:shadow-md transition-shadow"
+    className="cv-card rounded-[1.75rem] p-5 transition-all"
   >
-    <div className="flex items-center gap-3">
-      <div className={`p-2.5 ${iconBgColor} rounded-xl flex items-center justify-center`}>
+    <div className="flex items-start gap-4">
+      <div className={`rounded-2xl p-3 ${iconBgColor} flex items-center justify-center`}>
         <Icon className={`w-5 h-5 ${iconColor}`} />
       </div>
-      <div>
-        <div className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{label}</div>
-        <div className="text-2xl font-extrabold text-gray-900 dark:text-gray-100 tracking-tight">{value}</div>
+      <div className="min-w-0">
+        <div className="cv-kicker mb-2">{label}</div>
+        <div className="cv-display text-3xl font-extrabold tracking-tight text-slate-950 dark:text-[var(--cv-text)]">{value}</div>
       </div>
     </div>
   </motion.div>
@@ -57,24 +57,24 @@ const StatsCards = ({ stats, missionsCount, t }: StatsCardsProps): JSX.Element =
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
       <StatCard
         icon={ClipboardDocumentListIcon}
-        iconBgColor="bg-blue-100 dark:bg-blue-900/30"
-        iconColor="text-blue-600 dark:text-blue-400"
+        iconBgColor="bg-[var(--cv-primary-soft)]"
+        iconColor="text-[var(--cv-primary)]"
         label={t('missions.stats.total')}
         value={stats.total}
         delay={0}
       />
       <StatCard
         icon={BuildingOfficeIcon}
-        iconBgColor="bg-green-100 dark:bg-green-900/30"
-        iconColor="text-green-600 dark:text-green-400"
+        iconBgColor="bg-[var(--cv-tertiary-soft)]"
+        iconColor="text-[var(--cv-tertiary)]"
         label={t('missions.stats.firms')}
         value={stats.firms}
         delay={0.1}
       />
       <StatCard
         icon={BriefcaseIcon}
-        iconBgColor="bg-purple-100 dark:bg-purple-900/30"
-        iconColor="text-purple-600 dark:text-purple-400"
+        iconBgColor="bg-[var(--cv-secondary-soft)]"
+        iconColor="text-[var(--cv-secondary)]"
         label={t('missions.stats.active')}
         value={missionsCount}
         delay={0.2}

@@ -41,6 +41,8 @@ export default function BackupConfigSection({
     onRunBackup
 }: BackupConfigSectionProps) {
     const { t } = useTranslation();
+    const requiresRemoteHost = settings.backup_target === 'remote' && !settings.host;
+    const requiresRemoteCredentials = settings.backup_target === 'remote' && (!settings.host || !settings.username);
 
     return (
         <div className="space-y-6">
@@ -203,9 +205,10 @@ export default function BackupConfigSection({
                 
                 <div className="flex gap-2">
                     <button
+                        type="button"
                         onClick={onTestConnection}
-                        disabled={testing || !settings.host || !settings.username}
-                        className={`btn btn-secondary px-4 py-2 flex items-center gap-2 ${testing || !settings.host || !settings.username ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        disabled={testing || requiresRemoteCredentials}
+                        className={`btn btn-secondary px-4 py-2 flex items-center gap-2 ${testing || requiresRemoteCredentials ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                         {testing ? (
                             <ArrowPathIcon className="w-4 h-4 animate-spin" />
@@ -355,6 +358,7 @@ export default function BackupConfigSection({
             {/* Actions */}
             <div className="flex gap-4">
                 <button
+                    type="button"
                     onClick={onSave}
                     disabled={saving}
                     className={`btn btn-primary px-6 py-2 flex items-center gap-2 ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -364,9 +368,10 @@ export default function BackupConfigSection({
                 </button>
                 
                 <button
+                    type="button"
                     onClick={onRunBackup}
-                    disabled={backingUp || !settings.host}
-                    className={`btn btn-secondary px-6 py-2 flex items-center gap-2 ${backingUp || !settings.host ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    disabled={backingUp || requiresRemoteHost}
+                    className={`btn btn-secondary px-6 py-2 flex items-center gap-2 ${backingUp || requiresRemoteHost ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                     {backingUp ? (
                         <ArrowPathIcon className="w-4 h-4 animate-spin" />

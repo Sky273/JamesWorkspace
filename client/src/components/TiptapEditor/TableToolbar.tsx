@@ -118,7 +118,13 @@ export const TableToolbar = ({ editor }: TableToolbarProps) => {
   }, [editor]);
 
   const setTableAttr = useCallback((attr: string, value: unknown) => {
-    (editor.commands as Editor['commands'] & TableAttributeCommands).setTableAttribute(attr, value);
+    editor
+      .chain()
+      .focus()
+      .command(({ commands }) => (
+        commands as typeof commands & TableAttributeCommands
+      ).setTableAttribute(attr, value))
+      .run();
   }, [editor]);
 
   const setCellAttr = useCallback((attr: string, value: unknown) => {
@@ -138,6 +144,7 @@ export const TableToolbar = ({ editor }: TableToolbarProps) => {
             key={key}
             type="button"
             className={`tiptap-table-toolbar-tab ${panel === key ? 'is-active' : ''}`}
+            aria-pressed={panel === key}
             onClick={() => setPanel(key as TablePanel)}
           >
             {label}

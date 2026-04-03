@@ -12,7 +12,6 @@ import { useDropzone, FileRejection, FileError } from 'react-dropzone';
 import { DocumentArrowUpIcon, UserIcon, BuildingOfficeIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useResume } from '../context/ResumeContext';
-import { useAuth } from '../context/AuthContext';
 import ProcessingScreen from './ProcessingScreen';
 import AdminFirmSelector from './AdminFirmSelector';
 import InputWithLeadingIcon from './form/InputWithLeadingIcon';
@@ -29,7 +28,6 @@ interface CandidateInfo {
 
 const FileUpload = (): JSX.Element => {
   const { t } = useTranslation();
-  const { user } = useAuth();
   const { uploadResume, loading, processingStep, processingError, setProcessingError } = useResume();
   
   // Step management: 'info' for GDPR form, 'upload' for file upload
@@ -41,8 +39,6 @@ const FileUpload = (): JSX.Element => {
     firmId: ''
   });
   const [preAnalysisEnabled, setPreAnalysisEnabled] = useState<boolean>(true);
-  
-  const _isAdmin = user?.role === 'admin';
   const [formErrors, setFormErrors] = useState<{ name?: string; email?: string }>({});
 
   useEffect(() => {

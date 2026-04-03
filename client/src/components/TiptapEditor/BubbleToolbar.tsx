@@ -4,7 +4,7 @@
  */
 
 import type { Editor } from '@tiptap/react';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 interface BubbleToolbarProps {
   editor: Editor;
@@ -34,6 +34,22 @@ const TB = ({ onClick, isActive, title, children, className = '' }: {
 
 type ImagePanel = 'quick' | 'dimensions' | 'style' | 'advanced';
 
+type ImageAttributes = {
+  width?: string | null;
+  height?: string | null;
+  alt?: string | null;
+  title?: string | null;
+  borderWidth?: string | null;
+  borderStyle?: string | null;
+  borderColor?: string | null;
+  borderRadius?: string | null;
+  margin?: string | null;
+  padding?: string | null;
+  shadow?: string | null;
+  alignment?: string | null;
+  float?: string | null;
+};
+
 const SHADOW_PRESETS = [
   { label: 'Aucune', value: null },
   { label: 'Légère', value: '0 1px 3px rgba(0,0,0,0.12)' },
@@ -48,25 +64,51 @@ const BORDER_STYLES = [
   { label: 'Points', value: 'dotted' },
 ] as const;
 
+const toInputValue = (value: string | null | undefined) => value ?? '';
+
 // ============================================
 // IMAGE BUBBLE (shown when image is selected)
 // ============================================
 
 const ImageBubble = ({ editor }: { editor: Editor }) => {
-  const attrs = editor.getAttributes('image');
+  const attrs = editor.getAttributes('image') as ImageAttributes;
   const [panel, setPanel] = useState<ImagePanel>('quick');
 
   // Form state for properties
-  const [width, setWidth] = useState(attrs.width || '');
-  const [height, setHeight] = useState(attrs.height || '');
-  const [alt, setAlt] = useState(attrs.alt || '');
-  const [title, setTitle] = useState(attrs.title || '');
-  const [borderWidth, setBorderWidth] = useState(attrs.borderWidth || '');
-  const [borderStyle, setBorderStyle] = useState(attrs.borderStyle || '');
-  const [borderColor, setBorderColor] = useState(attrs.borderColor || '');
-  const [borderRadius, setBorderRadius] = useState(attrs.borderRadius || '');
-  const [margin, setMargin] = useState(attrs.margin || '');
-  const [padding, setPadding] = useState(attrs.padding || '');
+  const [width, setWidth] = useState(toInputValue(attrs.width));
+  const [height, setHeight] = useState(toInputValue(attrs.height));
+  const [alt, setAlt] = useState(toInputValue(attrs.alt));
+  const [title, setTitle] = useState(toInputValue(attrs.title));
+  const [borderWidth, setBorderWidth] = useState(toInputValue(attrs.borderWidth));
+  const [borderStyle, setBorderStyle] = useState(toInputValue(attrs.borderStyle));
+  const [borderColor, setBorderColor] = useState(toInputValue(attrs.borderColor));
+  const [borderRadius, setBorderRadius] = useState(toInputValue(attrs.borderRadius));
+  const [margin, setMargin] = useState(toInputValue(attrs.margin));
+  const [padding, setPadding] = useState(toInputValue(attrs.padding));
+
+  useEffect(() => {
+    setWidth(toInputValue(attrs.width));
+    setHeight(toInputValue(attrs.height));
+    setAlt(toInputValue(attrs.alt));
+    setTitle(toInputValue(attrs.title));
+    setBorderWidth(toInputValue(attrs.borderWidth));
+    setBorderStyle(toInputValue(attrs.borderStyle));
+    setBorderColor(toInputValue(attrs.borderColor));
+    setBorderRadius(toInputValue(attrs.borderRadius));
+    setMargin(toInputValue(attrs.margin));
+    setPadding(toInputValue(attrs.padding));
+  }, [
+    attrs.alt,
+    attrs.borderColor,
+    attrs.borderRadius,
+    attrs.borderStyle,
+    attrs.borderWidth,
+    attrs.height,
+    attrs.margin,
+    attrs.padding,
+    attrs.title,
+    attrs.width,
+  ]);
 
   const updateAttr = useCallback((key: string, value: unknown) => {
     editor.chain().focus().updateAttributes('image', { [key]: value || null }).run();

@@ -3,7 +3,7 @@
  * Modal for extracting a CV template from an uploaded CV file
  */
 
-import { lazy, Suspense, useCallback, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDropzone } from 'react-dropzone';
 import { useTranslation } from 'react-i18next';
@@ -33,6 +33,8 @@ type ExtractionStep = 'upload' | 'extracting' | 'preview' | 'error';
 const ExtractTemplateModal = ({ isOpen, onClose }: ExtractTemplateModalProps): JSX.Element | null => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const preserveExtractedTemplateRef = useRef(false);
+  const wasOpenRef = useRef(isOpen);
   
   const [step, setStep] = useState<ExtractionStep>('upload');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -107,6 +109,7 @@ const ExtractTemplateModal = ({ isOpen, onClose }: ExtractTemplateModalProps): J
 
     // Store extracted template in sessionStorage for NewTemplatePage to pick up
     sessionStorage.setItem('extractedTemplate', JSON.stringify(extractedTemplate));
+    preserveExtractedTemplateRef.current = true;
     
     // Close modal WITHOUT calling resetModal (which would clear sessionStorage)
     // Reset state manually but keep sessionStorage intact
@@ -115,11 +118,25 @@ const ExtractTemplateModal = ({ isOpen, onClose }: ExtractTemplateModalProps): J
     setExtractedTemplate(null);
     setError(null);
     setUsedModel('');
+    setExtractionMethod('');
     onClose();
     
     // Navigate to new template page
     navigate('/templates/new?fromExtraction=true');
   };
+
+  useEffect(() => {
+    const wasOpen = wasOpenRef.current;
+    wasOpenRef.current = isOpen;
+
+    if (wasOpen && !isOpen) {
+      if (preserveExtractedTemplateRef.current) {
+        preserveExtractedTemplateRef.current = false;
+        return;
+      }
+      resetModal();
+    }
+  }, [isOpen, resetModal]);
 
   if (!isOpen) return null;
 
@@ -148,7 +165,9 @@ const ExtractTemplateModal = ({ isOpen, onClose }: ExtractTemplateModalProps): J
               </div>
             </div>
             <button
+              type="button"
               onClick={handleClose}
+              aria-label={t('common.close', 'Fermer')}
               className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
             >
               <XMarkIcon className="w-6 h-6" />
@@ -383,6 +402,7 @@ const ExtractTemplateModal = ({ isOpen, onClose }: ExtractTemplateModalProps): J
                   </p>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setStep('upload')}
                   className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                 >
@@ -395,6 +415,7 @@ const ExtractTemplateModal = ({ isOpen, onClose }: ExtractTemplateModalProps): J
           {/* Footer */}
           <div className="flex justify-end gap-3 p-4 border-t border-gray-200 dark:border-gray-700">
             <button
+              type="button"
               onClick={handleClose}
               className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
             >
@@ -403,6 +424,7 @@ const ExtractTemplateModal = ({ isOpen, onClose }: ExtractTemplateModalProps): J
 
             {step === 'upload' && selectedFile && (
               <button
+                type="button"
                 onClick={handleExtract}
                 className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
               >
@@ -413,6 +435,7 @@ const ExtractTemplateModal = ({ isOpen, onClose }: ExtractTemplateModalProps): J
 
             {step === 'preview' && extractedTemplate && (
               <button
+                type="button"
                 onClick={handleCreateTemplate}
                 className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
               >
