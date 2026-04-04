@@ -525,5 +525,3 @@ export const gdprMailService = {
     disconnect,
     proactiveTokenRefresh
 };
-
-export default gdprMailService;

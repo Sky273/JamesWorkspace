@@ -90,6 +90,21 @@ function parseListJobsPagination(query = {}) {
     };
 }
 
+async function getAuthorizedJobOrRespond(req, res, jobId) {
+    const userContext = getUserContext(req);
+    const job = await getJob(jobId);
+
+    if (!job) {
+        res.status(404).json({ error: 'Job non trouvé' });
+        return null;
+    }
+    if (!ensureOwnerAccess(job.firm_id, userContext, res)) {
+        return null;
+    }
+
+    return { job, userContext };
+}
+
 export async function listJobs(req, res) {
     try {
         const userContext = getUserContext(req);
@@ -123,16 +138,12 @@ export async function listJobs(req, res) {
 export async function getJobDetails(req, res) {
     try {
         const { id } = req.params;
-        const userContext = getUserContext(req);
-        const job = await getJob(id);
-
-        if (!job) {
-            return res.status(404).json({ error: 'Job non trouvé' });
-        }
-        if (!ensureOwnerAccess(job.firm_id, userContext, res)) {
+        const jobContext = await getAuthorizedJobOrRespond(req, res, id);
+        if (!jobContext) {
             return;
         }
 
+        const { job } = jobContext;
         const items = await getJobItems(id);
         res.json({ ...withExportAvailability(job), items });
     } catch (error) {
@@ -144,15 +155,12 @@ export async function getJobDetails(req, res) {
 export async function cancelJobHandler(req, res) {
     try {
         const { id } = req.params;
-        const userContext = getUserContext(req);
-        const job = await getJob(id);
-
-        if (!job) {
-            return res.status(404).json({ error: 'Job non trouvé' });
-        }
-        if (!ensureOwnerAccess(job.firm_id, userContext, res)) {
+        const jobContext = await getAuthorizedJobOrRespond(req, res, id);
+        if (!jobContext) {
             return;
         }
+
+        const { job } = jobContext;
         if (job.status !== JOB_STATUS.PENDING && job.status !== JOB_STATUS.PROCESSING) {
             return res.status(400).json({ error: 'Ce job ne peut pas être annulé' });
         }
@@ -169,15 +177,12 @@ export async function cancelJobHandler(req, res) {
 export async function deleteJobHandler(req, res) {
     try {
         const { id } = req.params;
-        const userContext = getUserContext(req);
-        const job = await getJob(id);
-
-        if (!job) {
-            return res.status(404).json({ error: 'Job non trouvé' });
-        }
-        if (!ensureOwnerAccess(job.firm_id, userContext, res)) {
+        const jobContext = await getAuthorizedJobOrRespond(req, res, id);
+        if (!jobContext) {
             return;
         }
+
+        const { job } = jobContext;
         if (job.status === JOB_STATUS.PENDING || job.status === JOB_STATUS.PROCESSING) {
             return res.status(400).json({ error: "Annulez d'abord le job avant de le supprimer" });
         }
@@ -194,15 +199,12 @@ export async function deleteJobHandler(req, res) {
 export async function downloadJobExport(req, res) {
     try {
         const { id } = req.params;
-        const userContext = getUserContext(req);
-        const job = await getJob(id);
-
-        if (!job) {
-            return res.status(404).json({ error: 'Job non trouvé' });
-        }
-        if (!ensureOwnerAccess(job.firm_id, userContext, res)) {
+        const jobContext = await getAuthorizedJobOrRespond(req, res, id);
+        if (!jobContext) {
             return;
         }
+
+        const { job } = jobContext;
         if (!job.export_file_path || !job.export_file_name) {
             return res.status(404).json({ error: "Aucun fichier d'export disponible" });
         }
@@ -241,12 +243,8 @@ export async function downloadJobExport(req, res) {
 export async function listPendingNames(req, res) {
     try {
         const { id } = req.params;
-        const userContext = getUserContext(req);
-        const job = await getJob(id);
-        if (!job) {
-            return res.status(404).json({ error: 'Job non trouvé' });
-        }
-        if (!ensureOwnerAccess(job.firm_id, userContext, res)) {
+        const jobContext = await getAuthorizedJobOrRespond(req, res, id);
+        if (!jobContext) {
             return;
         }
 

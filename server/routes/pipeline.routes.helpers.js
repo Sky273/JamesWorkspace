@@ -43,6 +43,15 @@ export async function requirePipelineRequestAccess(req, res, getUserFirmId) {
     return access;
 }
 
+export async function withPipelineRequestAccess(req, res, getUserFirmId, handler) {
+    const access = await requirePipelineRequestAccess(req, res, getUserFirmId);
+    if (!access) {
+        return null;
+    }
+
+    return handler(access);
+}
+
 export function hasFirmAccess(isAdmin, userFirmId, ...firmIds) {
     if (isAdmin) {
         return true;
@@ -79,6 +88,15 @@ export async function requirePipelineEntryAccess(res, access, pipelineId, getPip
     return entryAccess;
 }
 
+export async function withPipelineEntryAccess(res, access, pipelineId, getPipelineAccessContext, handler) {
+    const entryAccess = await requirePipelineEntryAccess(res, access, pipelineId, getPipelineAccessContext);
+    if (!entryAccess) {
+        return null;
+    }
+
+    return handler(entryAccess);
+}
+
 export async function getInterviewAccessResult(access, interviewId, getInterviewAccessContext) {
     const context = await getInterviewAccessContext(interviewId);
     if (!context) {
@@ -100,6 +118,15 @@ export async function requireInterviewAccess(res, access, interviewId, getInterv
     }
 
     return interviewAccess;
+}
+
+export async function withInterviewAccess(res, access, interviewId, getInterviewAccessContext, handler) {
+    const interviewAccess = await requireInterviewAccess(res, access, interviewId, getInterviewAccessContext);
+    if (!interviewAccess) {
+        return null;
+    }
+
+    return handler(interviewAccess);
 }
 
 export async function getMissionAccessResult(access, missionId, getMissionContext) {
@@ -125,6 +152,15 @@ export async function requireMissionAccess(res, access, missionId, getMissionCon
     return missionAccess;
 }
 
+export async function withMissionAccess(res, access, missionId, getMissionContext, handler) {
+    const missionAccess = await requireMissionAccess(res, access, missionId, getMissionContext);
+    if (!missionAccess) {
+        return null;
+    }
+
+    return handler(missionAccess);
+}
+
 export async function getResumeAccessResult(access, resumeId, getResumeFirmId) {
     const resumeFirmId = await getResumeFirmId(resumeId);
     if (!resumeFirmId) {
@@ -146,4 +182,13 @@ export async function requireResumeAccess(res, access, resumeId, getResumeFirmId
     }
 
     return resumeAccess;
+}
+
+export async function withResumeAccess(res, access, resumeId, getResumeFirmId, handler) {
+    const resumeAccess = await requireResumeAccess(res, access, resumeId, getResumeFirmId);
+    if (!resumeAccess) {
+        return null;
+    }
+
+    return handler(resumeAccess);
 }

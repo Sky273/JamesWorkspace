@@ -15,17 +15,24 @@ import { safeLog } from '../../utils/logger.backend.js';
 import {
     cleanupUploadedFiles,
     createJobAndFetchResponse,
-    ensureFirmId,
-    ensureMissionAccess,
-    ensureOwnerAccess,
     ensureResumeIdsAccess,
-    getUserContext,
     mapCreatedImportJobResponse,
     normalizeBatchJobPayload,
-    resolveFirmId,
     stageImportJobItems,
     validateImportRequest
 } from './helpers.js';
+import {
+    createMissionTaskJob,
+} from './missionTaskHelpers.js';
+import {
+    getDealExportRequestContext,
+    getResumeIdsJobRequestContext
+} from './jobRequestHelpers.js';
+import {
+    buildDealExportItems,
+    buildDealExportJobOptions,
+    buildDealExportResponse
+} from './dealExportHelpers.js';
 
 const BATCH_IMPORT_ALLOWED_MIME_TYPES = new Set([
     'application/pdf',
@@ -33,7 +40,40 @@ const BATCH_IMPORT_ALLOWED_MIME_TYPES = new Set([
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 ]);
 const MAX_BATCH_IMPORT_TOTAL_BYTES = 250 * 1024 * 1024;
+const DEFAULT_CREATE_JOB_ERROR = 'Erreur lors de la création du job';
+const DEAL_EXPORT_CREATE_JOB_ERROR = "Erreur lors de la création du job d'export";
 
+function getMissionIdOrRespond(req, res) {
+    const normalizedPayload = normalizeBatchJobPayload(req.body);
+    if (!normalizedPayload.missionId) {
+        res.status(400).json({ error: 'Mission ID requis' });
+        return null;
+    }
+
+    return normalizedPayload.missionId;
+}
+
+function respondCreateJobError(res, errorLogMessage, error, responseMessage = DEFAULT_CREATE_JOB_ERROR) {
+    safeLog('error', errorLogMessage, { error: error.message });
+    res.status(500).json({ error: responseMessage });
+}
+
+function createMissionResumeIdsJob(req, res, { jobType, logLabel, optionFlag }) {
+    const missionId = getMissionIdOrRespond(req, res);
+    if (!missionId) {
+        return;
+    }
+
+    return createResumeIdsJob(req, res, {
+        jobType,
+        logLabel,
+        optionsBuilder: ({ jobOptions }) => ({
+            ...jobOptions,
+            missionId,
+            [optionFlag]: true
+        })
+    });
+}
 
 export async function createImportJob(req, res) {
     try {
@@ -91,36 +131,24 @@ export async function createImportJob(req, res) {
         });
     } catch (error) {
         await cleanupUploadedFiles(req.files);
-        safeLog('error', 'Failed to create batch job', { error: error.message });
-        res.status(500).json({ error: 'Erreur lors de la création du job' });
+        respondCreateJobError(res, 'Failed to create batch job', error);
     }
 }
 
 async function createResumeIdsJob(req, res, { jobType, optionsBuilder, logLabel }) {
     try {
-        const userContext = getUserContext(req);
-        const normalizedPayload = normalizeBatchJobPayload(req.body);
-        const { resumeIds, options: jobOptions = {} } = normalizedPayload;
-
-        if (!resumeIds || !Array.isArray(resumeIds) || resumeIds.length === 0) {
-            return res.status(400).json({ error: 'Resume IDs requis' });
-        }
-
-        const firmId = resolveFirmId(userContext, normalizedPayload);
-        if (!ensureFirmId(firmId, res)) {
+        const jobRequest = await getResumeIdsJobRequestContext(req, res);
+        if (!jobRequest) {
             return;
         }
 
-        if (!await ensureResumeIdsAccess(resumeIds, firmId, userContext, res)) {
-            return;
-        }
-
-        if (normalizedPayload.missionId) {
-            const missionRecord = await ensureMissionAccess(normalizedPayload.missionId, firmId, userContext, res);
-            if (!missionRecord) {
-                return;
-            }
-        }
+        const {
+            userContext,
+            normalizedPayload,
+            firmId,
+            resumeIds,
+            jobOptions
+        } = jobRequest;
 
         const { job, responsePayload: updatedJob } = await createJobAndFetchResponse({
             createJobFn: createJob,
@@ -142,8 +170,7 @@ async function createResumeIdsJob(req, res, { jobType, optionsBuilder, logLabel 
 
         res.status(201).json(updatedJob);
     } catch (error) {
-        safeLog('error', `Failed to create ${jobType} job`, { error: error.message });
-        res.status(500).json({ error: 'Erreur lors de la création du job' });
+        respondCreateJobError(res, `Failed to create ${jobType} job`, error);
     }
 }
 
@@ -156,181 +183,92 @@ export function createImproveJob(req, res) {
 }
 
 export function createAdaptJob(req, res) {
-    const normalizedPayload = normalizeBatchJobPayload(req.body);
-    if (!normalizedPayload.missionId) {
-        return res.status(400).json({ error: 'Mission ID requis' });
-    }
-
-    return createResumeIdsJob(req, res, {
+    return createMissionResumeIdsJob(req, res, {
         jobType: 'adapt',
         logLabel: 'Batch adaptation job',
-        optionsBuilder: ({ normalizedPayload, jobOptions }) => ({ ...jobOptions, missionId: normalizedPayload.missionId, adapt: true })
+        optionFlag: 'adapt'
     });
 }
 
 export function createMatchJob(req, res) {
-    const normalizedPayload = normalizeBatchJobPayload(req.body);
-    if (!normalizedPayload.missionId) {
-        return res.status(400).json({ error: 'Mission ID requis' });
-    }
-
-    return createResumeIdsJob(req, res, {
+    return createMissionResumeIdsJob(req, res, {
         jobType: 'match',
         logLabel: 'Batch match job',
-        optionsBuilder: ({ normalizedPayload, jobOptions }) => ({ ...jobOptions, missionId: normalizedPayload.missionId, match: true })
+        optionFlag: 'match'
     });
 }
 
 export async function createProfileSearchJob(req, res) {
-    try {
-        const userContext = getUserContext(req);
-        const normalizedPayload = normalizeBatchJobPayload(req.body);
-        const missionId = normalizedPayload.missionId;
-        const firmId = resolveFirmId(userContext, normalizedPayload);
-
-        if (!ensureFirmId(firmId, res)) {
-            return;
-        }
-
-        const accessibleMission = await ensureMissionAccess(missionId, firmId, userContext, res);
-        if (!accessibleMission) {
-            return;
-        }
-
-        const { job, responsePayload: updatedJob } = await createJobAndFetchResponse({
-            createJobFn: createJob,
-            getJobFn: getJob,
-            createParams: {
-                firmId,
-                userId: userContext.userId,
-                jobType: 'profile-search',
-                options: {
-                    missionId,
-                    limit: normalizedPayload.limit ?? 0,
-                    minScore: normalizedPayload.minScore ?? 0,
-                    status: normalizedPayload.status ?? null,
-                    weights: normalizedPayload.weights,
-                    dealId: normalizedPayload.dealId || null,
-                    searchFirmId: userContext.isAdmin && !normalizedPayload.firm_id ? null : firmId
-                }
-            },
-            stageItems: (createdJob) => addJobTaskItems(createdJob.id, [{
-                fileName: accessibleMission.title || `Mission ${missionId}`,
-                sourceType: 'profile-search'
-            }])
-        });
-        safeLog('info', 'Profile search job created via API', {
-            jobId: job.id,
+    return createMissionTaskJob({
+        req,
+        res,
+        jobType: 'profile-search',
+        successLogMessage: 'Profile search job created via API',
+        errorLogMessage: 'Failed to create profile search job',
+        createJobFn: createJob,
+        getJobFn: getJob,
+        addJobTaskItemsFn: addJobTaskItems,
+        optionsBuilder: ({ normalizedPayload, userContext, firmId, missionId }) => ({
             missionId,
-            requestedBy: userContext.userId
-        });
-
-        res.status(201).json(updatedJob);
-    } catch (error) {
-        safeLog('error', 'Failed to create profile search job', { error: error.message });
-        res.status(500).json({ error: 'Erreur lors de la création du job' });
-    }
+            limit: normalizedPayload.limit ?? 0,
+            minScore: normalizedPayload.minScore ?? 0,
+            status: normalizedPayload.status ?? null,
+            weights: normalizedPayload.weights,
+            dealId: normalizedPayload.dealId || null,
+            searchFirmId: userContext.isAdmin && !normalizedPayload.firm_id ? null : firmId
+        }),
+        stageItemsBuilder: ({ missionId, accessibleMission }) => [{
+            fileName: accessibleMission.title || `Mission ${missionId}`,
+            sourceType: 'profile-search'
+        }]
+    });
 }
 
 export async function createProfileAnalysisJob(req, res) {
-    try {
-        const userContext = getUserContext(req);
-        const normalizedPayload = normalizeBatchJobPayload(req.body);
-        const resumeId = normalizedPayload.resumeId || normalizedPayload.resume_id;
-        const missionId = normalizedPayload.missionId;
-        const firmId = resolveFirmId(userContext, normalizedPayload);
-
-        if (!ensureFirmId(firmId, res)) {
-            return;
-        }
-
-        if (!await ensureResumeIdsAccess([resumeId], firmId, userContext, res)) {
-            return;
-        }
-
-        const accessibleMission = await ensureMissionAccess(missionId, firmId, userContext, res);
-        if (!accessibleMission) {
-            return;
-        }
-
-        const { job, responsePayload: updatedJob } = await createJobAndFetchResponse({
-            createJobFn: createJob,
-            getJobFn: getJob,
-            createParams: {
-                firmId,
-                userId: userContext.userId,
-                jobType: 'profile-analysis',
-                options: { missionId }
-            },
-            stageItems: (createdJob) => addJobTaskItems(createdJob.id, [{
-                resumeId,
-                fileName: `Profile Analysis ${resumeId}`,
-                sourceType: 'profile-analysis'
-            }])
-        });
-        safeLog('info', 'Profile analysis job created via API', {
-            jobId: job.id,
-            missionId,
-            resumeId,
-            requestedBy: userContext.userId
-        });
-
-        res.status(201).json(updatedJob);
-    } catch (error) {
-        safeLog('error', 'Failed to create profile analysis job', { error: error.message });
-        res.status(500).json({ error: 'Erreur lors de la création du job' });
-    }
+    return createMissionTaskJob({
+        req,
+        res,
+        jobType: 'profile-analysis',
+        successLogMessage: 'Profile analysis job created via API',
+        errorLogMessage: 'Failed to create profile analysis job',
+        createJobFn: createJob,
+        getJobFn: getJob,
+        addJobTaskItemsFn: addJobTaskItems,
+        beforeMissionAccess: async ({ normalizedPayload, firmId, userContext, res }) => {
+            const resumeId = normalizedPayload.resumeId;
+            return ensureResumeIdsAccess([resumeId], firmId, userContext, res);
+        },
+        optionsBuilder: ({ missionId }) => ({ missionId }),
+        stageItemsBuilder: ({ normalizedPayload }) => [{
+            resumeId: normalizedPayload.resumeId,
+            fileName: `Profile Analysis ${normalizedPayload.resumeId}`,
+            sourceType: 'profile-analysis'
+        }]
+    });
 }
 
 export async function createDealExportJob(req, res) {
     try {
-        const userContext = getUserContext(req);
-        const normalizedPayload = normalizeBatchJobPayload(req.body);
-        const { dealId, templateId, exportFormats = ['pdf'] } = normalizedPayload;
-
-        if (!dealId) {
-            return res.status(400).json({ error: 'Deal ID requis' });
-        }
-        if (!templateId) {
-            return res.status(400).json({ error: 'Template ID requis' });
-        }
-
-        const deal = await getDealForExport(dealId);
-        if (!deal) {
-            return res.status(404).json({ error: 'Affaire non trouvée' });
-        }
-        if (!ensureOwnerAccess(deal.firm_id, userContext, res)) {
+        const exportRequest = await getDealExportRequestContext(req, res, {
+            getDealForExportFn: getDealForExport,
+            getResumesForDealFn: getResumesForDeal,
+            getAdaptationsForDealFn: getAdaptationsForDeal
+        });
+        if (!exportRequest) {
             return;
         }
 
-        const dealResumes = await getResumesForDeal(dealId);
-        const dealAdaptations = await getAdaptationsForDeal(dealId);
-        const totalItems = dealResumes.length + dealAdaptations.length;
-        if (totalItems === 0) {
-            return res.status(400).json({ error: 'Aucun CV ni adaptation à exporter pour cette affaire' });
-        }
+        const {
+            userContext,
+            deal,
+            dealId,
+            templateId,
+            exportFormats,
+            dealResumes,
+            dealAdaptations
+        } = exportRequest;
 
-        const exportItems = [];
-        for (const resume of dealResumes) {
-            exportItems.push({
-                resumeId: resume.id,
-                adaptationId: null,
-                sourceType: 'resume',
-                fileName: resume.name || 'CV',
-                relativePath: resume.relative_path || null,
-                originalName: resume.source_file_name || null
-            });
-        }
-        for (const adaptation of dealAdaptations) {
-            exportItems.push({
-                resumeId: adaptation.resume_id,
-                adaptationId: adaptation.id,
-                sourceType: 'adaptation',
-                fileName: `${adaptation.candidate_name || 'Candidat'} - ${adaptation.mission_name || 'Mission'}`,
-                originalName: adaptation.source_file_name || null,
-                relativePath: adaptation.relative_path || null
-            });
-        }
+        const exportItems = buildDealExportItems(dealResumes, dealAdaptations);
 
         const { job, updatedJob } = await createJobAndFetchResponse({
             createJobFn: createJob,
@@ -339,13 +277,7 @@ export async function createDealExportJob(req, res) {
                 firmId: deal.firm_id,
                 userId: userContext.userId,
                 jobType: 'deal-export',
-                options: {
-                    dealId,
-                    dealTitle: deal.title,
-                    templateId,
-                    exportFormats: Array.isArray(exportFormats) ? exportFormats : [exportFormats],
-                    export: true
-                }
+                options: buildDealExportJobOptions({ deal, dealId, templateId, exportFormats })
             },
             stageItems: (createdJob) => addJobExportItems(createdJob.id, exportItems)
         });
@@ -359,13 +291,8 @@ export async function createDealExportJob(req, res) {
             exportFormats
         });
 
-        res.status(201).json({
-            ...updatedJob,
-            resumeCount: dealResumes.length,
-            adaptationCount: dealAdaptations.length
-        });
+        res.status(201).json(buildDealExportResponse(updatedJob, dealResumes, dealAdaptations));
     } catch (error) {
-        safeLog('error', 'Failed to create deal export job', { error: error.message });
-        res.status(500).json({ error: "Erreur lors de la création du job d'export" });
+        respondCreateJobError(res, 'Failed to create deal export job', error, DEAL_EXPORT_CREATE_JOB_ERROR);
     }
 }

@@ -120,7 +120,7 @@ vi.mock('../../services/backup-scheduler.service.js', () => ({
     stopBackupScheduler: (...args) => mockStopBackupScheduler(...args)
 }));
 
-vi.mock('../../services/batchJobsWorker.service.js', () => ({
+vi.mock('../../services/batchJobsWorker/workerLifecycle.js', () => ({
     initializeWorker: (...args) => mockInitBatchJobsWorker(...args),
     startWorker: (...args) => mockStartBatchJobsWorker(...args),
     stopWorker: (...args) => mockStopBatchJobsWorker(...args)

@@ -21,6 +21,128 @@ const STATE_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
 const MAX_OAUTH_STATES = 100; // Prevent memory exhaustion from abuse
 const MAIL_CALLBACK_ERROR_CODE = 'mail_callback_failed';
 
+function createMailRouteHandler(logMessage, errorMessage, handler) {
+    return async (req, res) => {
+        try {
+            await handler(req, res);
+        } catch (error) {
+            safeLog('error', logMessage, { error: error.message });
+            return res.status(500).json({ error: errorMessage });
+        }
+    };
+}
+
+function getAuthenticatedUserId(req) {
+    return req.user.id || req.user.userId;
+}
+
+function getFrontendUrl() {
+    return process.env.FRONTEND_URL || process.env.VITE_APP_URL || 'http://localhost:5173';
+}
+
+async function validateSubmissionTracking({ userFirmId, resumeId, clientId, contactId, missionId }) {
+    if (!userFirmId) {
+        return { ok: false, status: 403, error: 'No firm association' };
+    }
+
+    if (!resumeId || !clientId || !contactId) {
+        return {
+            ok: false,
+            status: 400,
+            error: 'resumeId, clientId and contactId are required to track a submission'
+        };
+    }
+
+    const resumeCheck = await submissionsService.validateResume(resumeId, userFirmId);
+    if (!resumeCheck.exists) {
+        return { ok: false, status: 400, error: 'Resume not found' };
+    }
+    if (!resumeCheck.firmMatch) {
+        return { ok: false, status: 403, error: 'Resume does not belong to your firm' };
+    }
+
+    const clientCheck = await submissionsService.validateClient(clientId, userFirmId);
+    if (!clientCheck.exists) {
+        return { ok: false, status: 400, error: 'Client not found' };
+    }
+    if (!clientCheck.firmMatch) {
+        return { ok: false, status: 403, error: 'Client does not belong to your firm' };
+    }
+
+    const contactValid = await submissionsService.validateContact(contactId, clientId);
+    if (!contactValid) {
+        return { ok: false, status: 400, error: 'Contact not found or does not belong to this client' };
+    }
+
+    if (missionId) {
+        const missionCheck = await submissionsService.validateMission(missionId, userFirmId);
+        if (!missionCheck.exists) {
+            return { ok: false, status: 400, error: 'Mission not found' };
+        }
+        if (!missionCheck.firmMatch) {
+            return { ok: false, status: 403, error: 'Mission does not belong to your firm' };
+        }
+    }
+
+    return { ok: true };
+}
+
+async function resolveTemplateDraftContext({ templateId, templateContext, userId, userFirmId }) {
+    if (!templateId) {
+        return { ok: true };
+    }
+
+    if (!templateContext) {
+        return { ok: false, status: 400, error: 'Template context is required when templateId is provided' };
+    }
+
+    const template = await emailTemplatesService.getTemplate(templateId);
+    if (!template) {
+        return { ok: false, status: 404, error: 'Template not found' };
+    }
+
+    if (!template.is_system && template.firm_id !== userFirmId) {
+        return { ok: false, status: 403, error: 'Template does not belong to your firm' };
+    }
+
+    const dbUser = await mailService.getUserWithFirmData(userId);
+    const resolvedTemplateContext = { ...templateContext };
+
+    if (dbUser) {
+        resolvedTemplateContext.user = {
+            ...resolvedTemplateContext.user,
+            name: dbUser.name || resolvedTemplateContext.user?.name || '',
+            email: dbUser.email || resolvedTemplateContext.user?.email || '',
+            jobTitle: dbUser.job_title || resolvedTemplateContext.user?.jobTitle || '',
+            phone: dbUser.phone || resolvedTemplateContext.user?.phone || ''
+        };
+        resolvedTemplateContext.firm = {
+            ...resolvedTemplateContext.firm,
+            name: dbUser.firm_name || resolvedTemplateContext.firm?.name || '',
+            logo: dbUser.firm_logo || resolvedTemplateContext.firm?.logo || ''
+        };
+        safeLog('debug', 'Enriched template context with DB user data', {
+            userName: resolvedTemplateContext.user.name,
+            userJobTitle: resolvedTemplateContext.user.jobTitle,
+            userPhone: resolvedTemplateContext.user.phone
+        });
+    }
+
+    try {
+        safeLog('info', 'Rendering email template', { templateId });
+        const rendered = await emailTemplatesService.renderTemplate(templateId, resolvedTemplateContext);
+        return {
+            ok: true,
+            subject: rendered.subject,
+            body: rendered.html,
+            html: rendered.html
+        };
+    } catch (templateError) {
+        safeLog('error', 'Failed to render template', { error: templateError.message, stack: templateError.stack, templateId });
+        return { ok: false, status: 400, error: 'Failed to render template' };
+    }
+}
+
 /**
  * Clean up expired OAuth states
  */
@@ -65,24 +187,24 @@ export function destroyMailStatesCleanup() {
 // ============================================
 // GET /api/mail/status - Get connection status
 // ============================================
-router.get('/status', authenticateToken, async (req, res) => {
-    try {
-        const userId = req.user.id || req.user.userId;
-        const status = await mailService.getConnectionStatus(userId);
+router.get('/status', authenticateToken, createMailRouteHandler(
+    'Error getting mail status',
+    'Failed to get mail status',
+    async (req, res) => {
+        const status = await mailService.getConnectionStatus(getAuthenticatedUserId(req));
         return res.json(status);
-    } catch (error) {
-        safeLog('error', 'Error getting mail status', { error: error.message });
-        return res.status(500).json({ error: 'Failed to get mail status' });
     }
-});
+));
 
 // ============================================
 // GET /api/mail/auth/gmail - Initiate Gmail OAuth
 // ============================================
-router.get('/auth/gmail', authenticateToken, async (req, res) => {
-    try {
-        const userId = req.user.id || req.user.userId;
-        
+router.get('/auth/gmail', authenticateToken, createMailRouteHandler(
+    'Error initiating Gmail OAuth',
+    'Failed to initiate Gmail authentication',
+    async (req, res) => {
+        const userId = getAuthenticatedUserId(req);
+
         // Generate CSRF state
         const state = crypto.randomBytes(32).toString('hex');
         oauthStates.set(state, {
@@ -90,18 +212,15 @@ router.get('/auth/gmail', authenticateToken, async (req, res) => {
             provider: 'gmail',
             createdAt: Date.now()
         });
-        
+
         // Get authorization URL (async due to lazy loading of googleapis)
         const authUrl = await mailService.getAuthUrl('gmail', state);
-        
+
         safeLog('info', 'Gmail OAuth initiated', { userId });
-        
+
         return res.json({ authUrl });
-    } catch (error) {
-        safeLog('error', 'Error initiating Gmail OAuth', { error: error.message });
-        return res.status(500).json({ error: 'Failed to initiate Gmail authentication' });
     }
-});
+));
 
 // ============================================
 // GET /api/mail/callback/gmail - Gmail OAuth callback
@@ -109,9 +228,7 @@ router.get('/auth/gmail', authenticateToken, async (req, res) => {
 router.get('/callback/gmail', async (req, res) => {
     try {
         const { code, state, error: oauthError } = req.query;
-        
-        // Get frontend URL from environment
-        const frontendUrl = process.env.FRONTEND_URL || process.env.VITE_APP_URL || 'http://localhost:5173';
+        const frontendUrl = getFrontendUrl();
         
         // Check for OAuth error
         if (oauthError) {
@@ -142,7 +259,7 @@ router.get('/callback/gmail', async (req, res) => {
         return res.redirect(`${frontendUrl}/resumes?mail_connected=gmail&email=${encodeURIComponent(result.email)}`);
     } catch (error) {
         safeLog('error', 'Gmail OAuth callback error', { error: error.message });
-        const frontendUrl = process.env.FRONTEND_URL || process.env.VITE_APP_URL || 'http://localhost:5173';
+        const frontendUrl = getFrontendUrl();
         return res.redirect(`${frontendUrl}/resumes?mail_error=${MAIL_CALLBACK_ERROR_CODE}`);
     }
 });
@@ -152,7 +269,7 @@ router.get('/callback/gmail', async (req, res) => {
 // ============================================
 router.post('/draft', authenticateToken, validateBody(createMailDraftSchema), async (req, res) => {
     try {
-        const userId = req.user.id || req.user.userId;
+        const userId = getAuthenticatedUserId(req);
         const userFirmId = await getUserFirmId(req);
         
         // Debug: log raw request body keys and template info
@@ -178,42 +295,15 @@ router.post('/draft', authenticateToken, validateBody(createMailDraftSchema), as
 
         const shouldTrackSubmission = Boolean(resumeId || clientId || contactId || missionId);
         if (shouldTrackSubmission) {
-            if (!userFirmId) {
-                return res.status(403).json({ error: 'No firm association' });
-            }
-            if (!resumeId || !clientId || !contactId) {
-                return res.status(400).json({ error: 'resumeId, clientId and contactId are required to track a submission' });
-            }
-
-            const resumeCheck = await submissionsService.validateResume(resumeId, userFirmId);
-            if (!resumeCheck.exists) {
-                return res.status(400).json({ error: 'Resume not found' });
-            }
-            if (!resumeCheck.firmMatch) {
-                return res.status(403).json({ error: 'Resume does not belong to your firm' });
-            }
-
-            const clientCheck = await submissionsService.validateClient(clientId, userFirmId);
-            if (!clientCheck.exists) {
-                return res.status(400).json({ error: 'Client not found' });
-            }
-            if (!clientCheck.firmMatch) {
-                return res.status(403).json({ error: 'Client does not belong to your firm' });
-            }
-
-            const contactValid = await submissionsService.validateContact(contactId, clientId);
-            if (!contactValid) {
-                return res.status(400).json({ error: 'Contact not found or does not belong to this client' });
-            }
-
-            if (missionId) {
-                const missionCheck = await submissionsService.validateMission(missionId, userFirmId);
-                if (!missionCheck.exists) {
-                    return res.status(400).json({ error: 'Mission not found' });
-                }
-                if (!missionCheck.firmMatch) {
-                    return res.status(403).json({ error: 'Mission does not belong to your firm' });
-                }
+            const submissionValidation = await validateSubmissionTracking({
+                userFirmId,
+                resumeId,
+                clientId,
+                contactId,
+                missionId
+            });
+            if (!submissionValidation.ok) {
+                return res.status(submissionValidation.status).json({ error: submissionValidation.error });
             }
         }
         
@@ -231,52 +321,20 @@ router.post('/draft', authenticateToken, validateBody(createMailDraftSchema), as
         });
         
         if (templateId) {
-            if (!templateContext) {
-                return res.status(400).json({ error: 'Template context is required when templateId is provided' });
+            const templateResult = await resolveTemplateDraftContext({
+                templateId,
+                templateContext,
+                userId,
+                userFirmId
+            });
+            if (!templateResult.ok) {
+                return res.status(templateResult.status).json({ error: templateResult.error });
             }
 
-            const template = await emailTemplatesService.getTemplate(templateId);
-            if (!template) {
-                return res.status(404).json({ error: 'Template not found' });
-            }
-
-            if (!template.is_system && template.firm_id !== userFirmId) {
-                return res.status(403).json({ error: 'Template does not belong to your firm' });
-            }
-
-            const dbUser = await mailService.getUserWithFirmData(userId);
-
-            if (dbUser) {
-                templateContext.user = {
-                    ...templateContext.user,
-                    name: dbUser.name || templateContext.user?.name || '',
-                    email: dbUser.email || templateContext.user?.email || '',
-                    jobTitle: dbUser.job_title || templateContext.user?.jobTitle || '',
-                    phone: dbUser.phone || templateContext.user?.phone || ''
-                };
-                templateContext.firm = {
-                    ...templateContext.firm,
-                    name: dbUser.firm_name || templateContext.firm?.name || '',
-                    logo: dbUser.firm_logo || templateContext.firm?.logo || ''
-                };
-                safeLog('debug', 'Enriched template context with DB user data', { 
-                    userName: templateContext.user.name,
-                    userJobTitle: templateContext.user.jobTitle,
-                    userPhone: templateContext.user.phone
-                });
-            }
-
-            try {
-                safeLog('info', 'Rendering email template', { templateId });
-                const rendered = await emailTemplatesService.renderTemplate(templateId, templateContext);
-                finalSubject = rendered.subject;
-                finalBody = rendered.html;
-                emailHtmlSent = rendered.html;
-                safeLog('info', 'Email template rendered successfully', { templateId, subject: finalSubject, bodyLength: finalBody?.length });
-            } catch (templateError) {
-                safeLog('error', 'Failed to render template', { error: templateError.message, stack: templateError.stack, templateId });
-                return res.status(400).json({ error: 'Failed to render template' });
-            }
+            finalSubject = templateResult.subject;
+            finalBody = templateResult.body;
+            emailHtmlSent = templateResult.html;
+            safeLog('info', 'Email template rendered successfully', { templateId, subject: finalSubject, bodyLength: finalBody?.length });
         }
         
         if (!finalSubject) {
@@ -356,18 +414,15 @@ router.post('/draft', authenticateToken, validateBody(createMailDraftSchema), as
 // ============================================
 // DELETE /api/mail/disconnect - Disconnect provider
 // ============================================
-router.delete('/disconnect', authenticateToken, async (req, res) => {
-    try {
-        const userId = req.user.id || req.user.userId;
+router.delete('/disconnect', authenticateToken, createMailRouteHandler(
+    'Error disconnecting mail',
+    'Failed to disconnect mail provider',
+    async (req, res) => {
         const { provider = 'gmail' } = req.query;
-        
-        await mailService.disconnect(userId, provider);
-        
+        await mailService.disconnect(getAuthenticatedUserId(req), provider);
+
         return res.json({ success: true, message: 'Mail provider disconnected' });
-    } catch (error) {
-        safeLog('error', 'Error disconnecting mail', { error: error.message });
-        return res.status(500).json({ error: 'Failed to disconnect mail provider' });
     }
-});
+));
 
 export default router;

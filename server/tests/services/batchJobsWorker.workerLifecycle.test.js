@@ -14,19 +14,23 @@ vi.mock('../../config/database.js', () => ({
         { table_name: 'batch_job_items' }
     ] }))
 }));
-vi.mock('../../services/batchJobs.service.js', () => ({
+vi.mock('../../services/batchJobs/constants.js', () => ({
     JOB_STATUS: { PENDING: 'pending', PROCESSING: 'processing', COMPLETED: 'completed', FAILED: 'failed' },
-    ITEM_STATUS: { PENDING: 'pending', PROCESSING: 'processing', SUCCESS: 'success', ERROR: 'error' },
+    ITEM_STATUS: { PENDING: 'pending', PROCESSING: 'processing', SUCCESS: 'success', ERROR: 'error' }
+}));
+vi.mock('../../services/batchJobs/jobCrud.js', () => ({
     getPendingJobs: vi.fn(() => []),
-    getPendingItems: vi.fn(() => []),
     updateJobStatus: vi.fn(),
-    updateJobItemStatus: vi.fn(),
     updateJobCounters: vi.fn(),
     isJobComplete: vi.fn(() => false),
     getFinalJobOutcome: vi.fn(() => ({
         status: 'completed',
         counters: { processed_items: 0, success_count: 0, error_count: 0 }
     }))
+}));
+vi.mock('../../services/batchJobs/itemCrud.js', () => ({
+    getPendingItems: vi.fn(() => []),
+    updateJobItemStatus: vi.fn()
 }));
 vi.mock('../../services/batchJobsWorker/llmIntegration.js', () => ({
     resetLLMQueue: vi.fn()
@@ -48,7 +52,8 @@ import {
 } from '../../services/batchJobsWorker/workerLifecycle.js';
 
 import { query } from '../../config/database.js';
-import { getPendingJobs, getPendingItems, updateJobStatus, updateJobItemStatus, updateJobCounters, isJobComplete } from '../../services/batchJobs.service.js';
+import { getPendingJobs, updateJobStatus, updateJobCounters, isJobComplete } from '../../services/batchJobs/jobCrud.js';
+import { getPendingItems, updateJobItemStatus } from '../../services/batchJobs/itemCrud.js';
 import { processImportItem, processImproveItem, processAdaptItem, processMatchItem } from '../../services/batchJobsWorker/itemProcessors.js';
 import { resetLLMQueue } from '../../services/batchJobsWorker/llmIntegration.js';
 

@@ -24,7 +24,7 @@ import { destroyEscoCache, startEscoCacheCleanup } from '../services/escoService
 import { initializeDatabase, closePool } from '../services/database.service.js';
 import { startScheduler, stopScheduler } from '../services/scheduler.service.js';
 import { initBackupScheduler, stopBackupScheduler } from '../services/backup-scheduler.service.js';
-import { initializeWorker as initBatchJobsWorker, startWorker as startBatchJobsWorker, stopWorker as stopBatchJobsWorker } from '../services/batchJobsWorker.service.js';
+import { initializeWorker as initBatchJobsWorker, startWorker as startBatchJobsWorker, stopWorker as stopBatchJobsWorker } from '../services/batchJobsWorker/workerLifecycle.js';
 import { destroyCalendarService } from '../services/calendar.service.js';
 import { destroyAuthOauthStates, startAuthOauthStatesCleanup } from '../routes/auth/index.js';
 import { destroyMailStatesCleanup, startMailStatesCleanup } from '../routes/mail.routes.js';

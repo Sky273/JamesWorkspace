@@ -1,38 +1,28 @@
 /**
  * Market Trends Service
- * 
- * This file re-exports the modular market trends service from ./marketTrends/
- * 
- * Structure:
- * - ./marketTrends/index.js     : Main entry point
- * - ./marketTrends/apiClient.js : Token management + France Travail API calls
- * - ./marketTrends/collector.js : Data collection & storage
- * - ./marketTrends/queries.js   : PostgreSQL queries for stored trends
- * - ./marketTrends/cache.js     : In-memory cache, filtering, summary
+ *
+ * Runtime-facing re-export surface for market trends modules.
  */
 
+export { getStatDynamiqueEmploi } from './marketTrends/apiClient.js';
+
+export { storeTrend, collectMarketTrends } from './marketTrends/collector.js';
+
 export {
-    getStatEmbauches,
-    getStatDynamiqueEmploi,
-    getStatTensions,
-    getStatSalaires,
-    getStatOffres,
-    getStatDemandeurs,
-    getStatDemandeursEntrants,
-    storeTrend,
-    collectMarketTrends,
-    getStoredTrends,
     getStoredTrendsLight,
-    getStoredTrendsWithMetadata,
-    getStoredTrendsGroupedByType,
     getTrendMetadata,
-    getTrendFilterOptions,
+    getTrendsAuditReport
+} from './marketTrends/queries.js';
+
+export {
+    getStoredTrends,
+    getStoredTrendsGroupedByType,
     getTrendsSummary,
-    invalidateTrendsCache,
+    getTrendFilterOptions,
     loadTrendsCache,
     startTrendsCacheCleanup,
+    invalidateTrendsCache,
     cleanupTrendsCache,
     destroyTrendsCache,
-    getTrendsCacheStats,
-    getTrendsAuditReport
-} from './marketTrends/index.js';
+    getTrendsCacheStats
+} from './marketTrends/cache.js';

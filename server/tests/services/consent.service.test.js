@@ -33,7 +33,7 @@ process.env.FRONTEND_URL = 'http://localhost:5173';
 
 // Import after mocks
 import { query } from '../../config/database.js';
-import consentService from '../../services/consent.service.js';
+import * as consentService from '../../services/consent.service.js';
 
 describe('Consent Service', () => {
     beforeEach(() => {

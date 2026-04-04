@@ -136,10 +136,3 @@ export function stopMemoryMonitor() {
     
     safeLog('info', 'Memory monitor stopped');
 }
-
-export default {
-    startMemoryMonitor,
-    stopMemoryMonitor,
-    registerCacheCleanupFunctions,
-    getMemoryUsage
-};

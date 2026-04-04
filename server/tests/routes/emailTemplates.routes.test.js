@@ -19,6 +19,9 @@ const mockDuplicateTemplate = vi.fn();
 const mockRenderTemplate = vi.fn();
 const mockPreviewTemplate = vi.fn();
 const mockGetUserFirmIdFromReq = vi.fn();
+const mockGetUserFirmIdFromUser = vi.fn();
+const mockGetUserFirmNameFromUser = vi.fn();
+const mockIsUserAdmin = vi.fn();
 vi.mock('../../services/emailTemplates.service.js', () => ({
     getTemplates: (...args) => mockGetTemplates(...args),
     getTemplate: (...args) => mockGetTemplate(...args),
@@ -41,7 +44,10 @@ vi.mock('../../services/emailTemplates.service.js', () => ({
 const mockGetUserFirmId = vi.fn();
 const mockGetFirmIdByName = vi.fn();
 vi.mock('../../utils/firmHelpers.js', () => ({
-    getUserFirmId: (...args) => mockGetUserFirmIdFromReq(...args)
+    getUserFirmId: (...args) => mockGetUserFirmIdFromReq(...args),
+    getUserFirmIdFromUser: (...args) => mockGetUserFirmIdFromUser(...args),
+    getUserFirmNameFromUser: (...args) => mockGetUserFirmNameFromUser(...args),
+    isUserAdmin: (...args) => mockIsUserAdmin(...args)
 }));
 
 // Mock logger
@@ -69,7 +75,7 @@ vi.mock('../../middleware/auth.middleware.js', () => ({
                 id: 'user-123',
                 email: 'user@test.com',
                 role,
-                ...(noFirm ? {} : { firm_id: 'firm-123', firm: 'Test Firm' })
+                ...(noFirm ? {} : { firmId: 'firm-123', firmName: 'Test Firm' })
             };
             next();
         } else {
@@ -109,6 +115,9 @@ describe('Email Templates Routes', () => {
         mockGetUserFirmId.mockResolvedValue(null);
         mockGetFirmIdByName.mockResolvedValue(null);
         mockGetUserFirmIdFromReq.mockResolvedValue(null);
+        mockGetUserFirmIdFromUser.mockImplementation((user) => user?.firmId ?? user?.firm_id ?? null);
+        mockGetUserFirmNameFromUser.mockImplementation((user) => user?.firmName ?? user?.firm ?? null);
+        mockIsUserAdmin.mockImplementation((req) => req?.user?.role === 'admin');
     });
 
     // ==========================================

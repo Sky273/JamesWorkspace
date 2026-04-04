@@ -40,21 +40,3 @@ export {
     purgeResume,
     purgeExpiredResumes
 } from './consent/scheduler.js';
-
-// Default export for backward compatibility
-import { initializeConsent, sendConsentRequest, validateConsentToken, recordConsentResponse, getConsentStatus, resendConsentRequest } from './consent/operations.js';
-import { checkExpiredConsents, sendConsentReminders, purgeResume, purgeExpiredResumes } from './consent/scheduler.js';
-
-export default {
-    initializeConsent,
-    sendConsentRequest,
-    validateConsentToken,
-    recordConsentResponse,
-    getConsentStatus,
-    resendConsentRequest,
-    checkExpiredConsents,
-    sendConsentReminders,
-    purgeResume,
-    purgeExpiredResumes,
-    markConsentError
-};

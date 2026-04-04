@@ -47,7 +47,7 @@ vi.mock('../../services/mail/gmailProvider.js', () => ({
 // Import after mocks
 import { query } from '../../config/database.js';
 import { isTokenExpired } from '../../config/oauth.config.js';
-import mailService from '../../services/mail/mailService.js';
+import * as mailService from '../../services/mail/mailService.js';
 
 describe('Mail Service', () => {
     beforeEach(() => {

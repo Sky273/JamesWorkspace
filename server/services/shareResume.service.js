@@ -22,6 +22,19 @@ export const SHARE_LINK_TTL_DAYS = 7;
 export const SHARE_LINK_TTL_MS = SHARE_LINK_TTL_DAYS * 24 * 60 * 60 * 1000;
 const RESOLVED_SHARED_PDF_DIR = path.resolve(SHARED_PDF_DIR);
 
+function createEmptyShareStatus() {
+    return {
+        hasSharedPdf: false,
+        token: null,
+        expiresAt: null,
+        pdfToken: null,
+        pdfExpiresAt: null,
+        hasSharedFile: false,
+        fileToken: null,
+        fileExpiresAt: null
+    };
+}
+
 function buildShareExpiryDate(now = new Date()) {
     return new Date(now.getTime() + SHARE_LINK_TTL_MS);
 }
@@ -35,18 +48,22 @@ function isExpired(expiresAt, now = new Date()) {
     return Number.isNaN(expiryDate.getTime()) || expiryDate <= now;
 }
 
-async function deleteSharedPdfFile(filePath) {
+function isManagedSharedPdfPath(filePath) {
     if (!filePath) {
+        return false;
+    }
+
+    const resolvedPath = path.resolve(filePath);
+    return resolvedPath === RESOLVED_SHARED_PDF_DIR || resolvedPath.startsWith(`${RESOLVED_SHARED_PDF_DIR}${path.sep}`);
+}
+
+async function deleteSharedPdfFile(filePath) {
+    if (!isManagedSharedPdfPath(filePath)) {
         return false;
     }
 
     try {
         const resolvedPath = path.resolve(filePath);
-        if (resolvedPath !== RESOLVED_SHARED_PDF_DIR && !resolvedPath.startsWith(`${RESOLVED_SHARED_PDF_DIR}${path.sep}`)) {
-            safeLog('warn', 'Rejected shared PDF deletion outside managed directory', { filePath });
-            return false;
-        }
-
         await fs.unlink(resolvedPath);
         return true;
     } catch (error) {
@@ -66,6 +83,24 @@ async function getShareRowByResumeId(resumeId) {
     );
 
     return result.rows[0] || null;
+}
+
+async function getOrCreateShareToken(resumeId, { tokenColumn, expiresColumn }) {
+    const share = await getShareRowByResumeId(resumeId);
+    let token = share?.[tokenColumn] ? readStoredShareToken(share[tokenColumn]) : null;
+    let expiresAt = share?.[expiresColumn];
+
+    if (!token || isExpired(expiresAt)) {
+        token = generateShareToken();
+        const storedToken = createStoredShareToken(token);
+        expiresAt = buildShareExpiryDate();
+        await query(
+            `UPDATE resumes SET ${tokenColumn} = $1, ${expiresColumn} = $2 WHERE id = $3`,
+            [storedToken, expiresAt, resumeId]
+        );
+    }
+
+    return token;
 }
 
 /**
@@ -178,8 +213,7 @@ export async function getSharedPdfByToken(token) {
             return null;
         }
 
-        const resolvedPath = path.resolve(resume.shared_pdf_path || '');
-        if (resolvedPath !== RESOLVED_SHARED_PDF_DIR && !resolvedPath.startsWith(`${RESOLVED_SHARED_PDF_DIR}${path.sep}`)) {
+        if (!isManagedSharedPdfPath(resume.shared_pdf_path)) {
             safeLog('warn', 'Shared PDF path rejected because it is outside managed directory', {
                 resumeId: resume.id,
                 token: token.substring(0, 8) + '...'
@@ -187,6 +221,7 @@ export async function getSharedPdfByToken(token) {
             return null;
         }
 
+        const resolvedPath = path.resolve(resume.shared_pdf_path || '');
         try {
             await fs.access(resolvedPath);
         } catch {
@@ -255,16 +290,7 @@ export async function getShareStatus(resumeId) {
         );
 
         if (result.rows.length === 0) {
-            return {
-                hasSharedPdf: false,
-                token: null,
-                expiresAt: null,
-                pdfToken: null,
-                pdfExpiresAt: null,
-                hasSharedFile: false,
-                fileToken: null,
-                fileExpiresAt: null
-            };
+            return createEmptyShareStatus();
         }
 
         const row = result.rows[0];
@@ -288,53 +314,22 @@ export async function getShareStatus(resumeId) {
             resumeId,
             error: error.message
         });
-        return {
-            hasSharedPdf: false,
-            token: null,
-            expiresAt: null,
-            pdfToken: null,
-            pdfExpiresAt: null,
-            hasSharedFile: false,
-            fileToken: null,
-            fileExpiresAt: null
-        };
+        return createEmptyShareStatus();
     }
 }
 
 export async function getOrCreateSharedPdfToken(resumeId) {
-    const share = await getShareRowByResumeId(resumeId);
-    let token = share?.shared_pdf_token ? readStoredShareToken(share.shared_pdf_token) : null;
-    let expiresAt = share?.shared_pdf_expires_at;
-
-    if (!token || isExpired(expiresAt)) {
-        token = generateShareToken();
-        const storedToken = createStoredShareToken(token);
-        expiresAt = buildShareExpiryDate();
-        await query(
-            `UPDATE resumes SET shared_pdf_token = $1, shared_pdf_expires_at = $2 WHERE id = $3`,
-            [storedToken, expiresAt, resumeId]
-        );
-    }
-
-    return token;
+    return getOrCreateShareToken(resumeId, {
+        tokenColumn: 'shared_pdf_token',
+        expiresColumn: 'shared_pdf_expires_at'
+    });
 }
 
 export async function getOrCreateOriginalFileToken(resumeId) {
-    const share = await getShareRowByResumeId(resumeId);
-    let token = share?.shared_file_token ? readStoredShareToken(share.shared_file_token) : null;
-    let expiresAt = share?.shared_file_expires_at;
-
-    if (!token || isExpired(expiresAt)) {
-        token = generateShareToken();
-        const storedToken = createStoredShareToken(token);
-        expiresAt = buildShareExpiryDate();
-        await query(
-            `UPDATE resumes SET shared_file_token = $1, shared_file_expires_at = $2 WHERE id = $3`,
-            [storedToken, expiresAt, resumeId]
-        );
-    }
-
-    return token;
+    return getOrCreateShareToken(resumeId, {
+        tokenColumn: 'shared_file_token',
+        expiresColumn: 'shared_file_expires_at'
+    });
 }
 
 export async function revokeShareLinks(resumeId) {

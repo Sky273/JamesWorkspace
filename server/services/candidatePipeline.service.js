@@ -182,25 +182,3 @@ export async function validatePipelineAssociations({ resumeId, missionId, client
 }
 
 export { getPipelineOverviewFacade as getPipelineOverview };
-
-export default {
-    PIPELINE_STAGES,
-    initCandidatePipelineTable,
-    addToPipeline,
-    getPipelineById,
-    getPipelineByResumeId,
-    getPipelineByMissionId,
-    getPipelineOverview: getPipelineOverviewFacade,
-    moveToStage,
-    updatePipelineNotes,
-    removeFromPipeline,
-    getPipelineHistory,
-    scheduleInterview,
-    getInterviews,
-    getUpcomingInterviews,
-    updateInterview,
-    completeInterview,
-    cancelInterview,
-    deleteInterview,
-    getPipelineStats
-};

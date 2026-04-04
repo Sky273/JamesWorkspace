@@ -355,14 +355,4 @@ describe('Backup index re-exports', () => {
         expect(backup.TEMP_DIR).toBeDefined();
     });
 
-    it('should have default export with main functions', async () => {
-        const backup = await import('../../services/backup/index.js');
-        const defaultExport = backup.default;
-
-        expect(defaultExport.getBackupSettings).toBeDefined();
-        expect(defaultExport.saveBackupSettings).toBeDefined();
-        expect(defaultExport.getBackupHistory).toBeDefined();
-        expect(defaultExport.createBackup).toBeDefined();
-        expect(defaultExport.restoreBackup).toBeDefined();
-    });
 });

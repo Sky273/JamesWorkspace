@@ -243,9 +243,3 @@ export async function runAllChecks() {
     safeLog('info', '[Scheduler] Manual checks completed', results);
     return results;
 }
-
-export default {
-    startScheduler,
-    stopScheduler,
-    runAllChecks
-};

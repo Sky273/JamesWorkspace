@@ -6,7 +6,8 @@
 import { safeLog } from '../../utils/logger.backend.js';
 import { query } from '../../config/database.js';
 import { processAnalysisTags } from '../../utils/tagCleaner.js';
-import { ITEM_STATUS, updateJobItemStatus, getJobItemFilePayload, clearJobItemFileData } from '../batchJobs.service.js';
+import { ITEM_STATUS } from '../batchJobs/constants.js';
+import { updateJobItemStatus, getJobItemFilePayload, clearJobItemFileData } from '../batchJobs/itemCrud.js';
 import { parseScore, generateTrigram } from './helpers.js';
 import { extractTextFromBuffer } from './textExtraction.js';
 import { analyzeResumeWithLLM, preAnalyzeResumeWithLLM } from './llmIntegration.js';

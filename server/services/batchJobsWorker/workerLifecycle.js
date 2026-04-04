@@ -5,17 +5,9 @@
 
 import { safeLog } from '../../utils/logger.backend.js';
 import { query } from '../../config/database.js';
-import {
-    JOB_STATUS,
-    ITEM_STATUS,
-    getPendingJobs,
-    getPendingItems,
-    updateJobStatus,
-    updateJobItemStatus,
-    updateJobCounters,
-    isJobComplete,
-    getFinalJobOutcome
-} from '../batchJobs.service.js';
+import { JOB_STATUS, ITEM_STATUS } from '../batchJobs/constants.js';
+import { getPendingJobs, updateJobStatus, updateJobCounters, isJobComplete, getFinalJobOutcome } from '../batchJobs/jobCrud.js';
+import { getPendingItems, updateJobItemStatus } from '../batchJobs/itemCrud.js';
 import { resetLLMQueue } from './llmIntegration.js';
 import { processImportItem, processImproveItem, processAdaptItem, processMatchItem, processProfileSearchItem, processProfileAnalysisItem } from './itemProcessors.js';
 import { generateJobExport } from './exportGenerator.js';

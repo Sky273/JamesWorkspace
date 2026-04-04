@@ -355,17 +355,3 @@ export async function recordSubmission({ resumeId, clientId, contactId, missionI
     );
     return result.rows[0]?.id || null;
 }
-
-export default {
-    getProvider,
-    getAuthUrl,
-    handleOAuthCallback,
-    getConnectionStatus,
-    getAccessToken,
-    createDraft,
-    disconnect,
-    getUserWithFirmData,
-    getClientFirmId,
-    getResumeCurrentVersion,
-    recordSubmission
-};

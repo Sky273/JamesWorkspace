@@ -324,12 +324,3 @@ function formatVersion(row) {
         changeReason: row.change_reason
     };
 }
-
-export default {
-    getLatestVersionNumber,
-    createVersion,
-    getVersions,
-    getVersion,
-    restoreVersion,
-    hasImprovedTextChanged
-};

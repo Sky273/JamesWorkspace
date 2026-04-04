@@ -25,8 +25,10 @@ const mockQuery = vi.fn();
 vi.mock('../../config/database.js', () => ({
     query: (...args) => mockQuery(...args)
 }));
-vi.mock('../../services/batchJobs.service.js', () => ({
-    ITEM_STATUS: { PENDING: 'pending', PROCESSING: 'processing', SUCCESS: 'success', ERROR: 'error', PENDING_NAME: 'pending_name' },
+vi.mock('../../services/batchJobs/constants.js', () => ({
+    ITEM_STATUS: { PENDING: 'pending', PROCESSING: 'processing', SUCCESS: 'success', ERROR: 'error', PENDING_NAME: 'pending_name' }
+}));
+vi.mock('../../services/batchJobs/itemCrud.js', () => ({
     updateJobItemStatus: vi.fn(),
     getJobItemFilePayload: vi.fn(),
     clearJobItemFileData: vi.fn()
@@ -93,7 +95,7 @@ vi.mock('../../services/resumes.service.js', () => ({
 }));
 
 import { processImportItem, processImproveItem, processAdaptItem } from '../../services/batchJobsWorker/itemProcessors.js';
-import { updateJobItemStatus, getJobItemFilePayload, clearJobItemFileData } from '../../services/batchJobs.service.js';
+import { updateJobItemStatus, getJobItemFilePayload, clearJobItemFileData } from '../../services/batchJobs/itemCrud.js';
 import { getLLMSettings } from '../../services/settings.service.js';
 
 describe('Batch Jobs Worker - Item Processors', () => {

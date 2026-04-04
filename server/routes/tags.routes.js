@@ -117,6 +117,37 @@ function parseJsonField(value) {
     return [];
 }
 
+function buildStandardTagsResponse(row = {}) {
+    return {
+        'Skills': row.skills || [],
+        'Industries': row.industries || [],
+        'Tools': row.tools || [],
+        'Soft Skills': row.soft_skills || []
+    };
+}
+
+function clearCleanedTagsCache() {
+    cleanedTagsCache.clear();
+    cleanedTagsCacheTime.clear();
+}
+
+function clearEscoTagsCache() {
+    escoTagsCache = null;
+    escoTagsCacheTime = 0;
+}
+
+async function resolveTagsAccess(req, res, { requireFirmForNonAdmin = true } = {}) {
+    const isAdmin = req.user?.role === 'admin';
+    const userFirmId = await getUserFirmId(req);
+
+    if (requireFirmForNonAdmin && !isAdmin && !userFirmId) {
+        res.status(403).json({ error: 'No firm association' });
+        return null;
+    }
+
+    return { isAdmin, userFirmId };
+}
+
 // ============================================
 // TAG MANAGEMENT ROUTES
 // ============================================
@@ -124,20 +155,13 @@ function parseJsonField(value) {
 // GET /api/tags - Get all tags from resumes (optimized SQL aggregation)
 router.get('/', authenticateToken, async (req, res) => {
     try {
-        const isAdmin = req.user?.role === 'admin';
-        const userFirmId = await getUserFirmId(req);
-
-        if (!isAdmin && !userFirmId) {
-            return res.status(403).json({ error: 'No firm association' });
+        const access = await resolveTagsAccess(req, res);
+        if (!access) {
+            return;
         }
 
-        const row = await aggregateRawTags({ isAdmin, userFirmId });
-        res.json({
-            'Skills': row.skills || [],
-            'Industries': row.industries || [],
-            'Tools': row.tools || [],
-            'Soft Skills': row.soft_skills || []
-        });
+        const row = await aggregateRawTags(access);
+        res.json(buildStandardTagsResponse(row));
     } catch (error) {
         safeLog('error', 'Error fetching tags', { error: error.message });
         res.status(500).json({ error: 'Failed to fetch tags' });
@@ -147,18 +171,18 @@ router.get('/', authenticateToken, async (req, res) => {
 // GET /api/tags/cleaned - Get cleaned tags (aggregated from resumes - filtered by firm for non-admins)
 router.get('/cleaned', authenticateToken, async (req, res) => {
     try {
-        const isAdmin = req.user?.role === 'admin';
-        const userFirmId = await getUserFirmId(req);
         const scope = req.query.scope === 'grouped-by-deal' ? 'grouped-by-deal' : 'default';
-        
-        if (scope === 'grouped-by-deal' && !userFirmId && !isAdmin) {
-            return res.status(403).json({ error: 'No firm association' });
+        const access = await resolveTagsAccess(req, res, {
+            requireFirmForNonAdmin: scope === 'grouped-by-deal'
+        });
+        if (!access) {
+            return;
         }
 
         // Cache key includes scope and firm_id for proper isolation
-        const cacheKey = isAdmin
+        const cacheKey = access.isAdmin
             ? `admin_${scope}`
-            : `firm_${userFirmId}_${scope}`;
+            : `firm_${access.userFirmId}_${scope}`;
         
         // Return cached cleaned tags if available and not expired (per-firm cache)
         const cachedResult = cleanedTagsCache.get(cacheKey);
@@ -167,13 +191,8 @@ router.get('/cleaned', authenticateToken, async (req, res) => {
             return res.json(cachedResult);
         }
         
-        const row = await aggregateCleanedTags({ isAdmin, userFirmId, scope });
-        const result = {
-            'Skills': row.skills || [],
-            'Industries': row.industries || [],
-            'Tools': row.tools || [],
-            'Soft Skills': row.soft_skills || []
-        };
+        const row = await aggregateCleanedTags({ ...access, scope });
+        const result = buildStandardTagsResponse(row);
         
         // Update per-firm cache with timestamp (enforce max size)
         if (cleanedTagsCache.size >= MAX_TAGS_CACHE_ENTRIES) {
@@ -259,8 +278,7 @@ router.post('/cleaned/recalculate', authenticateToken, requireAdmin, async (req,
         }
         
         // Clear cache to force refresh
-        cleanedTagsCache.clear();
-        cleanedTagsCacheTime.clear();
+        clearCleanedTagsCache();
         
         safeLog('info', 'Cleaned tags recalculated', { 
             totalResumes: totalProcessed,
@@ -284,15 +302,13 @@ router.post('/cleaned/recalculate', authenticateToken, requireAdmin, async (req,
 // GET /api/tags/esco - Get ESCO normalized tags (aggregated from all resumes - optimized SQL)
 router.get('/esco', authenticateToken, async (req, res) => {
     try {
-        const isAdmin = req.user?.role === 'admin';
-        const userFirmId = await getUserFirmId(req);
-
-        if (!isAdmin && !userFirmId) {
-            return res.status(403).json({ error: 'No firm association' });
+        const access = await resolveTagsAccess(req, res);
+        if (!access) {
+            return;
         }
 
         // Return cached ESCO tags if available and not expired
-        if (isAdmin && escoTagsCache && escoTagsCacheTime && (Date.now() - escoTagsCacheTime) < TAGS_CACHE_TTL) {
+        if (access.isAdmin && escoTagsCache && escoTagsCacheTime && (Date.now() - escoTagsCacheTime) < TAGS_CACHE_TTL) {
             return res.json(escoTagsCache);
         }
         
@@ -300,7 +316,7 @@ router.get('/esco', authenticateToken, async (req, res) => {
         // ESCO tags are stored as JSONB arrays of objects {label, uri}
         // Note: PostgreSQL doesn't allow ORDER BY in jsonb_agg(DISTINCT ...), so we use subqueries
         // For ESCO tags (objects), we deduplicate by uri and order by label
-        const row = await aggregateEscoTags({ isAdmin, userFirmId });
+        const row = await aggregateEscoTags(access);
         const result = {
             skills: row.skills || [],
             industries: row.industries || [],
@@ -309,7 +325,7 @@ router.get('/esco', authenticateToken, async (req, res) => {
         };
         
         // Update cache with timestamp
-        if (isAdmin) {
+        if (access.isAdmin) {
             escoTagsCache = result;
             escoTagsCacheTime = Date.now();
         }
@@ -388,7 +404,7 @@ router.post('/esco/recalculate', authenticateToken, requireAdmin, validateBody(e
         }
         
         // Clear cache to force refresh
-        escoTagsCache = null;
+        clearEscoTagsCache();
         
         safeLog('info', 'ESCO tags recalculated', { 
             totalResumes: totalProcessed,
@@ -435,9 +451,8 @@ router.put('/rename', authenticateToken, requireAdmin, validateBody(renameTagSch
         const updatedCount = result.length;
 
         // Clear caches
-        cleanedTagsCache.clear();
-        cleanedTagsCacheTime.clear();
-        escoTagsCache = null;
+        clearCleanedTagsCache();
+        clearEscoTagsCache();
 
         safeLog('info', 'Tag renamed via SQL', { 
             category, 

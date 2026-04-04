@@ -203,10 +203,3 @@ export function getSchedulerStatus() {
         lastExecuted
     };
 }
-
-export default {
-    initBackupScheduler,
-    reloadBackupScheduler,
-    stopBackupScheduler,
-    getSchedulerStatus
-};

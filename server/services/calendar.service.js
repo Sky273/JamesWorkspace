@@ -322,16 +322,3 @@ export function destroyCalendarService() {
     google = null;
     safeLog('info', 'Calendar service module destroyed');
 }
-
-export default {
-    getCalendarAuthUrl,
-    exchangeCalendarCode,
-    isCalendarConnected,
-    disconnectCalendar,
-    createCalendarEvent,
-    updateCalendarEvent,
-    deleteCalendarEvent,
-    getUpcomingCalendarEvents,
-    initCalendarTokensTable,
-    destroyCalendarService
-};

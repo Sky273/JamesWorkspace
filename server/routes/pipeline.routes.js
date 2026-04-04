@@ -11,11 +11,11 @@ import { safeLog } from '../utils/logger.backend.js';
 import { getUserFirmId } from '../utils/firmHelpers.js';
 import {
     normalizePipelineEntryPayload,
-    requireInterviewAccess,
-    requireMissionAccess,
-    requirePipelineEntryAccess,
-    requirePipelineRequestAccess,
-    requireResumeAccess
+    withInterviewAccess,
+    withMissionAccess,
+    withPipelineEntryAccess,
+    withPipelineRequestAccess,
+    withResumeAccess
 } from './pipeline.routes.helpers.js';
 import {
     PIPELINE_STAGES,
@@ -45,6 +45,17 @@ import {
 
 const router = express.Router();
 
+function createPipelineRouteHandler(logMessage, errorMessage, handler) {
+    return async (req, res) => {
+        try {
+            await handler(req, res);
+        } catch (error) {
+            safeLog('error', logMessage, { error: error.message });
+            res.status(500).json({ error: errorMessage });
+        }
+    };
+}
+
 // ============================================
 // PIPELINE STAGES
 // ============================================
@@ -65,53 +76,53 @@ router.get('/stages', authenticateToken, (req, res) => {
  * POST /api/pipeline
  * Add a resume to the pipeline
  */
-router.post('/', authenticateToken, userRateLimit(), validateBody(createPipelineEntrySchema), async (req, res) => {
-    try {
-        const access = await requirePipelineRequestAccess(req, res, getUserFirmId);
-        if (!access) return;
-
-        const normalizedEntry = normalizePipelineEntryPayload(req.body);
-        const { resumeId, missionId, clientId, stage, notes } = normalizedEntry;
-
-        if (!resumeId) {
-            return res.status(400).json({ error: 'Resume ID is required' });
+router.post('/', authenticateToken, userRateLimit(), validateBody(createPipelineEntrySchema), createPipelineRouteHandler('Failed to add to pipeline', 'Failed to add to pipeline', async (req, res) => {
+    await withPipelineRequestAccess(req, res, getUserFirmId, async (access) => {
+        const pipeline = await createPipelineEntry(req, res, access);
+        if (!pipeline) {
+            return;
         }
-
-        const associationCheck = await validatePipelineAssociations({
-            resumeId,
-            missionId: missionId || null,
-            clientId: clientId || null,
-            expectedFirmId: access.isAdmin ? null : access.userFirmId
-        });
-        if (!associationCheck.ok) {
-            return res.status(associationCheck.status).json({ error: associationCheck.error });
-        }
-
-        const pipeline = await addToPipeline({
-            resumeId,
-            missionId: missionId || null,
-            clientId: clientId || null,
-            stage: stage || 'new',
-            notes,
-            createdBy: req.user.id
-        });
 
         res.status(201).json(pipeline);
-    } catch (error) {
-        safeLog('error', 'Failed to add to pipeline', { error: error.message });
-        res.status(500).json({ error: 'Failed to add to pipeline' });
+    });
+}));
+
+async function createPipelineEntry(req, res, access) {
+    const normalizedEntry = normalizePipelineEntryPayload(req.body);
+    const { resumeId, missionId, clientId, stage, notes } = normalizedEntry;
+
+    if (!resumeId) {
+        res.status(400).json({ error: 'Resume ID is required' });
+        return null;
     }
-});
+
+    const associationCheck = await validatePipelineAssociations({
+        resumeId,
+        missionId: missionId || null,
+        clientId: clientId || null,
+        expectedFirmId: access.isAdmin ? null : access.userFirmId
+    });
+    if (!associationCheck.ok) {
+        res.status(associationCheck.status).json({ error: associationCheck.error });
+        return null;
+    }
+
+    return addToPipeline({
+        resumeId,
+        missionId: missionId || null,
+        clientId: clientId || null,
+        stage: stage || 'new',
+        notes,
+        createdBy: req.user.id
+    });
+}
 
 /**
  * GET /api/pipeline/overview
  * Get pipeline overview grouped by stage
  */
-router.get('/overview', authenticateToken, async (req, res) => {
-    try {
-        const access = await requirePipelineRequestAccess(req, res, getUserFirmId);
-        if (!access) return;
-
+router.get('/overview', authenticateToken, createPipelineRouteHandler('Failed to get pipeline overview', 'Failed to get pipeline overview', async (req, res) => {
+    await withPipelineRequestAccess(req, res, getUserFirmId, async (access) => {
         const { clientId, missionId } = req.query;
         const overview = await getPipelineOverview({
             clientId,
@@ -119,21 +130,15 @@ router.get('/overview', authenticateToken, async (req, res) => {
             firmId: access.isAdmin ? null : access.userFirmId
         });
         res.json(overview);
-    } catch (error) {
-        safeLog('error', 'Failed to get pipeline overview', { error: error.message });
-        res.status(500).json({ error: 'Failed to get pipeline overview' });
-    }
-});
+    });
+}));
 
 /**
  * GET /api/pipeline/interviews/upcoming
  * Get upcoming interviews
  */
-router.get('/interviews/upcoming', authenticateToken, async (req, res) => {
-    try {
-        const access = await requirePipelineRequestAccess(req, res, getUserFirmId);
-        if (!access) return;
-
+router.get('/interviews/upcoming', authenticateToken, createPipelineRouteHandler('Failed to get upcoming interviews', 'Failed to get upcoming interviews', async (req, res) => {
+    await withPipelineRequestAccess(req, res, getUserFirmId, async (access) => {
         const { days } = req.query;
         const parsedDays = days === undefined ? 30 : Number.parseInt(days, 10);
         if (!Number.isInteger(parsedDays) || parsedDays < 0) {
@@ -146,21 +151,15 @@ router.get('/interviews/upcoming', authenticateToken, async (req, res) => {
             firmId: access.isAdmin ? null : access.userFirmId
         });
         res.json(interviews);
-    } catch (error) {
-        safeLog('error', 'Failed to get upcoming interviews', { error: error.message });
-        res.status(500).json({ error: 'Failed to get upcoming interviews' });
-    }
-});
+    });
+}));
 
 /**
  * GET /api/pipeline/stats
  * Get pipeline statistics
  */
-router.get('/stats', authenticateToken, async (req, res) => {
-    try {
-        const access = await requirePipelineRequestAccess(req, res, getUserFirmId);
-        if (!access) return;
-
+router.get('/stats', authenticateToken, createPipelineRouteHandler('Failed to get pipeline stats', 'Failed to get statistics', async (req, res) => {
+    await withPipelineRequestAccess(req, res, getUserFirmId, async (access) => {
         const { missionId, clientId } = req.query;
         const stats = await getPipelineStats({
             missionId,
@@ -168,84 +167,57 @@ router.get('/stats', authenticateToken, async (req, res) => {
             firmId: access.isAdmin ? null : access.userFirmId
         });
         res.json(stats);
-    } catch (error) {
-        safeLog('error', 'Failed to get pipeline stats', { error: error.message });
-        res.status(500).json({ error: 'Failed to get statistics' });
-    }
-});
+    });
+}));
 
 /**
  * GET /api/pipeline/:id
  * Get a specific pipeline entry
  */
-router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => {
-    try {
-        const access = await requirePipelineRequestAccess(req, res, getUserFirmId);
-        if (!access) return;
-
-        const entryAccess = await requirePipelineEntryAccess(res, access, req.params.id, getPipelineAccessContext);
-        if (!entryAccess) return;
-
-        const pipeline = await getPipelineById(req.params.id);
-        if (!pipeline) {
-            return res.status(404).json({ error: 'Pipeline entry not found' });
-        }
-        res.json(pipeline);
-    } catch (error) {
-        safeLog('error', 'Failed to get pipeline entry', { error: error.message });
-        res.status(500).json({ error: 'Failed to get pipeline entry' });
-    }
-});
+router.get('/:id', authenticateToken, validateParams('id'), createPipelineRouteHandler('Failed to get pipeline entry', 'Failed to get pipeline entry', async (req, res) => {
+    await withPipelineRequestAccess(req, res, getUserFirmId, async (access) => {
+        await withPipelineEntryAccess(res, access, req.params.id, getPipelineAccessContext, async () => {
+            const pipeline = await getPipelineById(req.params.id);
+            if (!pipeline) {
+                return res.status(404).json({ error: 'Pipeline entry not found' });
+            }
+            res.json(pipeline);
+        });
+    });
+}));
 
 /**
  * GET /api/pipeline/resume/:resumeId
  * Get all pipeline entries for a resume
  */
-router.get('/resume/:resumeId', authenticateToken, validateParams('resumeId'), async (req, res) => {
-    try {
-        const access = await requirePipelineRequestAccess(req, res, getUserFirmId);
-        if (!access) return;
-
-        const resumeAccess = await requireResumeAccess(res, access, req.params.resumeId, getResumeFirmId);
-        if (!resumeAccess) return;
-
-        const pipelines = await getPipelineByResumeId(req.params.resumeId);
-        res.json(pipelines);
-    } catch (error) {
-        safeLog('error', 'Failed to get pipeline for resume', { error: error.message });
-        res.status(500).json({ error: 'Failed to get pipeline entries' });
-    }
-});
+router.get('/resume/:resumeId', authenticateToken, validateParams('resumeId'), createPipelineRouteHandler('Failed to get pipeline for resume', 'Failed to get pipeline entries', async (req, res) => {
+    await withPipelineRequestAccess(req, res, getUserFirmId, async (access) => {
+        await withResumeAccess(res, access, req.params.resumeId, getResumeFirmId, async () => {
+            const pipelines = await getPipelineByResumeId(req.params.resumeId);
+            res.json(pipelines);
+        });
+    });
+}));
 
 /**
  * GET /api/pipeline/mission/:missionId
  * Get all pipeline entries for a mission (Kanban view)
  */
-router.get('/mission/:missionId', authenticateToken, validateParams('missionId'), async (req, res) => {
-    try {
-        const access = await requirePipelineRequestAccess(req, res, getUserFirmId);
-        if (!access) return;
-
-        const missionAccess = await requireMissionAccess(res, access, req.params.missionId, getMissionContext);
-        if (!missionAccess) return;
-
-        const pipelines = await getPipelineByMissionId(req.params.missionId);
-        res.json(pipelines);
-    } catch (error) {
-        safeLog('error', 'Failed to get pipeline for mission', { error: error.message });
-        res.status(500).json({ error: 'Failed to get pipeline entries' });
-    }
-});
+router.get('/mission/:missionId', authenticateToken, validateParams('missionId'), createPipelineRouteHandler('Failed to get pipeline for mission', 'Failed to get pipeline entries', async (req, res) => {
+    await withPipelineRequestAccess(req, res, getUserFirmId, async (access) => {
+        await withMissionAccess(res, access, req.params.missionId, getMissionContext, async () => {
+            const pipelines = await getPipelineByMissionId(req.params.missionId);
+            res.json(pipelines);
+        });
+    });
+}));
 
 /**
  * PATCH /api/pipeline/:id/stage
  * Move a candidate to a different stage
  */
-router.patch('/:id/stage', authenticateToken, validateParams('id'), async (req, res) => {
-    try {
-        const access = await requirePipelineRequestAccess(req, res, getUserFirmId);
-        if (!access) return;
-
+router.patch('/:id/stage', authenticateToken, validateParams('id'), createPipelineRouteHandler('Failed to move pipeline stage', 'Failed to update stage', async (req, res) => {
+    await withPipelineRequestAccess(req, res, getUserFirmId, async (access) => {
         const { stage, notes } = req.body;
 
         if (!stage) {
@@ -257,87 +229,62 @@ router.patch('/:id/stage', authenticateToken, validateParams('id'), async (req, 
             return res.status(400).json({ error: 'Invalid stage' });
         }
 
-        const entryAccess = await requirePipelineEntryAccess(res, access, req.params.id, getPipelineAccessContext);
-        if (!entryAccess) return;
+        await withPipelineEntryAccess(res, access, req.params.id, getPipelineAccessContext, async () => {
+            const pipeline = await moveToStage({
+                pipelineId: req.params.id,
+                newStage: stage,
+                changedBy: req.user.id,
+                notes
+            });
 
-        const pipeline = await moveToStage({
-            pipelineId: req.params.id,
-            newStage: stage,
-            changedBy: req.user.id,
-            notes
+            res.json(pipeline);
         });
-
-        res.json(pipeline);
-    } catch (error) {
-        safeLog('error', 'Failed to move pipeline stage', { error: error.message });
-        res.status(500).json({ error: 'Failed to update stage' });
-    }
-});
+    });
+}));
 
 /**
  * PATCH /api/pipeline/:id/notes
  * Update pipeline notes
  */
-router.patch('/:id/notes', authenticateToken, validateParams('id'), async (req, res) => {
-    try {
-        const access = await requirePipelineRequestAccess(req, res, getUserFirmId);
-        if (!access) return;
+router.patch('/:id/notes', authenticateToken, validateParams('id'), createPipelineRouteHandler('Failed to update pipeline notes', 'Failed to update notes', async (req, res) => {
+    await withPipelineRequestAccess(req, res, getUserFirmId, async (access) => {
+        await withPipelineEntryAccess(res, access, req.params.id, getPipelineAccessContext, async () => {
+            const { notes } = req.body;
+            const pipeline = await updatePipelineNotes({
+                pipelineId: req.params.id,
+                notes
+            });
 
-        const entryAccess = await requirePipelineEntryAccess(res, access, req.params.id, getPipelineAccessContext);
-        if (!entryAccess) return;
-
-        const { notes } = req.body;
-        const pipeline = await updatePipelineNotes({
-            pipelineId: req.params.id,
-            notes
+            res.json(pipeline);
         });
-
-        res.json(pipeline);
-    } catch (error) {
-        safeLog('error', 'Failed to update pipeline notes', { error: error.message });
-        res.status(500).json({ error: 'Failed to update notes' });
-    }
-});
+    });
+}));
 
 /**
  * DELETE /api/pipeline/:id
  * Remove from pipeline
  */
-router.delete('/:id', authenticateToken, validateParams('id'), async (req, res) => {
-    try {
-        const access = await requirePipelineRequestAccess(req, res, getUserFirmId);
-        if (!access) return;
-
-        const entryAccess = await requirePipelineEntryAccess(res, access, req.params.id, getPipelineAccessContext);
-        if (!entryAccess) return;
-
-        await removeFromPipeline(req.params.id);
-        res.json({ success: true });
-    } catch (error) {
-        safeLog('error', 'Failed to remove from pipeline', { error: error.message });
-        res.status(500).json({ error: 'Failed to remove from pipeline' });
-    }
-});
+router.delete('/:id', authenticateToken, validateParams('id'), createPipelineRouteHandler('Failed to remove from pipeline', 'Failed to remove from pipeline', async (req, res) => {
+    await withPipelineRequestAccess(req, res, getUserFirmId, async (access) => {
+        await withPipelineEntryAccess(res, access, req.params.id, getPipelineAccessContext, async () => {
+            await removeFromPipeline(req.params.id);
+            res.json({ success: true });
+        });
+    });
+}));
 
 /**
  * GET /api/pipeline/:id/history
  * Get pipeline history
  */
-router.get('/:id/history', authenticateToken, validateParams('id'), async (req, res) => {
-    try {
-        const access = await requirePipelineRequestAccess(req, res, getUserFirmId);
-        if (!access) return;
-
-        const entryAccess = await requirePipelineEntryAccess(res, access, req.params.id, getPipelineAccessContext);
-        if (!entryAccess) return;
-
-        const history = await getPipelineHistory(req.params.id);
-        res.json(history);
-    } catch (error) {
-        safeLog('error', 'Failed to get pipeline history', { error: error.message });
-        res.status(500).json({ error: 'Failed to get history' });
-    }
-});
+router.get('/:id/history', authenticateToken, validateParams('id'), createPipelineRouteHandler('Failed to get pipeline history', 'Failed to get history', async (req, res) => {
+    await withPipelineRequestAccess(req, res, getUserFirmId, async (access) => {
+        await withPipelineEntryAccess(res, access, req.params.id, getPipelineAccessContext, async () => {
+            const history = await getPipelineHistory(req.params.id);
+            res.json(history);
+        });
+    });
+}));
 
 // ============================================
 // INTERVIEW ROUTES
@@ -347,11 +294,8 @@ router.get('/:id/history', authenticateToken, validateParams('id'), async (req, 
  * POST /api/pipeline/:id/interviews
  * Schedule an interview
  */
-router.post('/:id/interviews', authenticateToken, userRateLimit(), validateParams('id'), validateBody(scheduleInterviewSchema), async (req, res) => {
-    try {
-        const access = await requirePipelineRequestAccess(req, res, getUserFirmId);
-        if (!access) return;
-
+router.post('/:id/interviews', authenticateToken, userRateLimit(), validateParams('id'), validateBody(scheduleInterviewSchema), createPipelineRouteHandler('Failed to schedule interview', 'Failed to schedule interview', async (req, res) => {
+    await withPipelineRequestAccess(req, res, getUserFirmId, async (access) => {
         const {
             title,
             description,
@@ -369,145 +313,102 @@ router.post('/:id/interviews', authenticateToken, userRateLimit(), validateParam
             return res.status(400).json({ error: 'Title and scheduled date are required' });
         }
 
-        const entryAccess = await requirePipelineEntryAccess(res, access, req.params.id, getPipelineAccessContext);
-        if (!entryAccess) return;
+        await withPipelineEntryAccess(res, access, req.params.id, getPipelineAccessContext, async () => {
+            const interview = await scheduleInterview({
+                pipelineId: req.params.id,
+                title,
+                description,
+                interviewType,
+                scheduledAt,
+                durationMinutes,
+                location,
+                meetingLink,
+                attendees,
+                calendarEventId,
+                calendarProvider,
+                createdBy: req.user.id
+            });
 
-        const interview = await scheduleInterview({
-            pipelineId: req.params.id,
-            title,
-            description,
-            interviewType,
-            scheduledAt,
-            durationMinutes,
-            location,
-            meetingLink,
-            attendees,
-            calendarEventId,
-            calendarProvider,
-            createdBy: req.user.id
+            res.status(201).json(interview);
         });
-
-        res.status(201).json(interview);
-    } catch (error) {
-        safeLog('error', 'Failed to schedule interview', { error: error.message });
-        res.status(500).json({ error: 'Failed to schedule interview' });
-    }
-});
+    });
+}));
 
 /**
  * GET /api/pipeline/:id/interviews
  * Get interviews for a pipeline entry
  */
-router.get('/:id/interviews', authenticateToken, validateParams('id'), async (req, res) => {
-    try {
-        const access = await requirePipelineRequestAccess(req, res, getUserFirmId);
-        if (!access) return;
+router.get('/:id/interviews', authenticateToken, validateParams('id'), createPipelineRouteHandler('Failed to get interviews', 'Failed to get interviews', async (req, res) => {
+    await withPipelineRequestAccess(req, res, getUserFirmId, async (access) => {
+        await withPipelineEntryAccess(res, access, req.params.id, getPipelineAccessContext, async () => {
+            const interviews = await getInterviews(req.params.id);
+            res.json(interviews);
+        });
+    });
+}));
 
-        const entryAccess = await requirePipelineEntryAccess(res, access, req.params.id, getPipelineAccessContext);
-        if (!entryAccess) return;
-
-        const interviews = await getInterviews(req.params.id);
-        res.json(interviews);
-    } catch (error) {
-        safeLog('error', 'Failed to get interviews', { error: error.message });
-        res.status(500).json({ error: 'Failed to get interviews' });
-    }
-});
-
-/**
- * GET /api/pipeline/interviews/upcoming
- * Get upcoming interviews
- */
 /**
  * PATCH /api/pipeline/interviews/:interviewId
  * Update an interview
  */
-router.patch('/interviews/:interviewId', authenticateToken, validateParams('interviewId'), validateBody(updateInterviewSchema), async (req, res) => {
-    try {
-        const access = await requirePipelineRequestAccess(req, res, getUserFirmId);
-        if (!access) return;
-
-        const interviewAccess = await requireInterviewAccess(res, access, req.params.interviewId, getInterviewAccessContext);
-        if (!interviewAccess) return;
-
-        const interview = await updateInterview(req.params.interviewId, req.body);
-        res.json(interview);
-    } catch (error) {
-        safeLog('error', 'Failed to update interview', { error: error.message });
-        res.status(500).json({ error: 'Failed to update interview' });
-    }
-});
+router.patch('/interviews/:interviewId', authenticateToken, validateParams('interviewId'), validateBody(updateInterviewSchema), createPipelineRouteHandler('Failed to update interview', 'Failed to update interview', async (req, res) => {
+    await withPipelineRequestAccess(req, res, getUserFirmId, async (access) => {
+        await withInterviewAccess(res, access, req.params.interviewId, getInterviewAccessContext, async () => {
+            const interview = await updateInterview(req.params.interviewId, req.body);
+            res.json(interview);
+        });
+    });
+}));
 
 /**
  * POST /api/pipeline/interviews/:interviewId/complete
  * Complete an interview with outcome
  */
-router.post('/interviews/:interviewId/complete', authenticateToken, validateParams('interviewId'), validateBody(completeInterviewSchema), async (req, res) => {
-    try {
-        const access = await requirePipelineRequestAccess(req, res, getUserFirmId);
-        if (!access) return;
-
+router.post('/interviews/:interviewId/complete', authenticateToken, validateParams('interviewId'), validateBody(completeInterviewSchema), createPipelineRouteHandler('Failed to complete interview', 'Failed to complete interview', async (req, res) => {
+    await withPipelineRequestAccess(req, res, getUserFirmId, async (access) => {
         const { outcome, outcomeNotes } = req.body;
 
         if (!outcome) {
             return res.status(400).json({ error: 'Outcome is required' });
         }
 
-        const interviewAccess = await requireInterviewAccess(res, access, req.params.interviewId, getInterviewAccessContext);
-        if (!interviewAccess) return;
+        await withInterviewAccess(res, access, req.params.interviewId, getInterviewAccessContext, async () => {
+            const interview = await completeInterview({
+                interviewId: req.params.interviewId,
+                outcome,
+                outcomeNotes,
+                changedBy: req.user.id
+            });
 
-        const interview = await completeInterview({
-            interviewId: req.params.interviewId,
-            outcome,
-            outcomeNotes,
-            changedBy: req.user.id
+            res.json(interview);
         });
-
-        res.json(interview);
-    } catch (error) {
-        safeLog('error', 'Failed to complete interview', { error: error.message });
-        res.status(500).json({ error: 'Failed to complete interview' });
-    }
-});
+    });
+}));
 
 /**
  * POST /api/pipeline/interviews/:interviewId/cancel
  * Cancel an interview
  */
-router.post('/interviews/:interviewId/cancel', authenticateToken, validateParams('interviewId'), async (req, res) => {
-    try {
-        const access = await requirePipelineRequestAccess(req, res, getUserFirmId);
-        if (!access) return;
-
-        const interviewAccess = await requireInterviewAccess(res, access, req.params.interviewId, getInterviewAccessContext);
-        if (!interviewAccess) return;
-
-        const interview = await cancelInterview(req.params.interviewId);
-        res.json(interview);
-    } catch (error) {
-        safeLog('error', 'Failed to cancel interview', { error: error.message });
-        res.status(500).json({ error: 'Failed to cancel interview' });
-    }
-});
+router.post('/interviews/:interviewId/cancel', authenticateToken, validateParams('interviewId'), createPipelineRouteHandler('Failed to cancel interview', 'Failed to cancel interview', async (req, res) => {
+    await withPipelineRequestAccess(req, res, getUserFirmId, async (access) => {
+        await withInterviewAccess(res, access, req.params.interviewId, getInterviewAccessContext, async () => {
+            const interview = await cancelInterview(req.params.interviewId);
+            res.json(interview);
+        });
+    });
+}));
 
 /**
  * DELETE /api/pipeline/interviews/:interviewId
  * Delete an interview
  */
-router.delete('/interviews/:interviewId', authenticateToken, validateParams('interviewId'), async (req, res) => {
-    try {
-        const access = await requirePipelineRequestAccess(req, res, getUserFirmId);
-        if (!access) return;
-
-        const interviewAccess = await requireInterviewAccess(res, access, req.params.interviewId, getInterviewAccessContext);
-        if (!interviewAccess) return;
-
-        await deleteInterview(req.params.interviewId);
-        res.json({ success: true });
-    } catch (error) {
-        safeLog('error', 'Failed to delete interview', { error: error.message });
-        res.status(500).json({ error: 'Failed to delete interview' });
-    }
-});
+router.delete('/interviews/:interviewId', authenticateToken, validateParams('interviewId'), createPipelineRouteHandler('Failed to delete interview', 'Failed to delete interview', async (req, res) => {
+    await withPipelineRequestAccess(req, res, getUserFirmId, async (access) => {
+        await withInterviewAccess(res, access, req.params.interviewId, getInterviewAccessContext, async () => {
+            await deleteInterview(req.params.interviewId);
+            res.json({ success: true });
+        });
+    });
+}));
 
 export default router;

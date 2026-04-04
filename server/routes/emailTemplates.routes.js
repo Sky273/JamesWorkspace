@@ -8,7 +8,7 @@ import { authenticateToken } from '../middleware/auth.middleware.js';
 import { validateBody, validateParams, createEmailTemplateFrontSchema, updateEmailTemplateFrontSchema, compileEmailTemplateSchema, previewEmailTemplateSchema } from '../utils/validation.js';
 import { safeLog } from '../utils/logger.backend.js';
 import * as emailTemplatesService from '../services/emailTemplates.service.js';
-import { getUserFirmId } from '../utils/firmHelpers.js';
+import { getUserFirmId, getUserFirmIdFromUser, getUserFirmNameFromUser, isUserAdmin } from '../utils/firmHelpers.js';
 
 /**
  * Get firm ID from user info (either from JWT or database lookup)
@@ -16,12 +16,13 @@ import { getUserFirmId } from '../utils/firmHelpers.js';
  * @returns {Promise<string|null>}
  */
 async function getFirmIdForUser(user) {
-    // Try direct properties first
-    if (user.firmId) return user.firmId;
-    if (user.firm_id) return user.firm_id;
+    const directFirmId = getUserFirmIdFromUser(user);
+    if (directFirmId) {
+        return directFirmId;
+    }
     
     // Look up from database using user ID
-    const userId = user.id || user.userId;
+    const userId = getAuthenticatedUserId(user);
     if (userId) {
         const firmId = await emailTemplatesService.getUserFirmId(userId);
         if (firmId) return firmId;
@@ -32,16 +33,55 @@ async function getFirmIdForUser(user) {
 
 const router = express.Router();
 
-function isAdmin(req) {
-    return req.user?.role === 'admin';
+function getAuthenticatedUserId(user) {
+    return user?.id ?? user?.userId ?? null;
+}
+
+function createEmailTemplatesRouteHandler(logMessage, errorMessage, handler) {
+    return async (req, res) => {
+        try {
+            await handler(req, res);
+        } catch (error) {
+            safeLog('error', logMessage, { error: error.message });
+            return res.status(500).json({ error: errorMessage });
+        }
+    };
 }
 
 function requireAdmin(req, res) {
-    if (!isAdmin(req)) {
+    if (!isUserAdmin(req)) {
         res.status(403).json({ error: 'Admin access required' });
         return false;
     }
     return true;
+}
+
+async function getRequestFirmId(req) {
+    return (await getUserFirmId(req)) || getFirmIdForUser(req.user);
+}
+
+function ensureTemplateOwnership(res, template, firmId, { allowSystemTemplate = true, systemTemplateError = 'Cannot modify system template' } = {}) {
+    if (!template) {
+        res.status(404).json({ error: 'Template not found' });
+        return null;
+    }
+
+    if (!allowSystemTemplate && template.is_system) {
+        res.status(403).json({ error: systemTemplateError });
+        return null;
+    }
+
+    if (template.firm_id && firmId && template.firm_id !== firmId) {
+        res.status(403).json({ error: 'Access denied to this template' });
+        return null;
+    }
+
+    if (template.firm_id && !firmId) {
+        res.status(403).json({ error: 'Access denied to this template' });
+        return null;
+    }
+
+    return template;
 }
 
 /**
@@ -49,16 +89,18 @@ function requireAdmin(req, res) {
  * Get all templates for the user's firm
  * Admin users can see system templates, regular users only see firm templates
  */
-router.get('/', authenticateToken, async (req, res) => {
-    try {
+router.get('/', authenticateToken, createEmailTemplatesRouteHandler('Error fetching email templates', 'Failed to fetch email templates', async (req, res) => {
         if (!requireAdmin(req, res)) {
             return;
         }
 
-        const firmId = await getUserFirmId(req) || await getFirmIdForUser(req.user);
+        const firmId = await getRequestFirmId(req);
         
         if (!firmId) {
-            safeLog('warn', 'Firm ID not found for user', { userId: req.user.id, firmName: req.user.firmName || null });
+            safeLog('warn', 'Firm ID not found for user', {
+                userId: getAuthenticatedUserId(req.user),
+                firmName: getUserFirmNameFromUser(req.user)
+            });
             const templates = await emailTemplatesService.getTemplates(null, true);
             return res.json({ templates });
         }
@@ -66,11 +108,7 @@ router.get('/', authenticateToken, async (req, res) => {
         const templates = await emailTemplatesService.getTemplates(firmId, true);
         
         return res.json({ templates });
-    } catch (error) {
-        safeLog('error', 'Error fetching email templates', { error: error.message });
-        return res.status(500).json({ error: 'Failed to fetch email templates' });
-    }
-});
+}));
 
 /**
  * GET /api/email-templates/keywords
@@ -87,13 +125,12 @@ router.get('/keywords', authenticateToken, (req, res) => {
  * GET /api/email-templates/default
  * Get the default template for the user's firm
  */
-router.get('/default', authenticateToken, async (req, res) => {
-    try {
+router.get('/default', authenticateToken, createEmailTemplatesRouteHandler('Error fetching default template', 'Failed to fetch default template', async (req, res) => {
         if (!requireAdmin(req, res)) {
             return;
         }
 
-        const firmId = await getUserFirmId(req) || await getFirmIdForUser(req.user);
+        const firmId = await getRequestFirmId(req);
         if (!firmId) {
             return res.status(403).json({ error: 'No firm association' });
         }
@@ -105,57 +142,40 @@ router.get('/default', authenticateToken, async (req, res) => {
         }
         
         return res.json({ template });
-    } catch (error) {
-        safeLog('error', 'Error fetching default template', { error: error.message });
-        return res.status(500).json({ error: 'Failed to fetch default template' });
-    }
-});
+}));
 
 /**
  * GET /api/email-templates/:id
  * Get a single template by ID
  */
-router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => {
-    try {
+router.get('/:id', authenticateToken, validateParams('id'), createEmailTemplatesRouteHandler('Error fetching email template', 'Failed to fetch email template', async (req, res) => {
         if (!requireAdmin(req, res)) {
             return;
         }
 
         const { id } = req.params;
-        const firmId = await getUserFirmId(req) || await getFirmIdForUser(req.user);
+        const firmId = await getRequestFirmId(req);
         
         const template = await emailTemplatesService.getTemplate(id);
-        
-        if (!template) {
-            return res.status(404).json({ error: 'Template not found' });
+        const accessibleTemplate = ensureTemplateOwnership(res, template, firmId);
+        if (!accessibleTemplate) {
+            return;
         }
         
-        if (template.firm_id && firmId && template.firm_id !== firmId) {
-            return res.status(403).json({ error: 'Access denied to this template' });
-        }
-        if (template.firm_id && !firmId) {
-            return res.status(403).json({ error: 'Access denied to this template' });
-        }
-        
-        return res.json({ template });
-    } catch (error) {
-        safeLog('error', 'Error fetching email template', { error: error.message });
-        return res.status(500).json({ error: 'Failed to fetch email template' });
-    }
-});
+        return res.json({ template: accessibleTemplate });
+}));
 
 /**
  * POST /api/email-templates
  * Create a new template
  */
-router.post('/', authenticateToken, validateBody(createEmailTemplateFrontSchema), async (req, res) => {
-    try {
+router.post('/', authenticateToken, validateBody(createEmailTemplateFrontSchema), createEmailTemplatesRouteHandler('Error creating email template', 'Failed to create email template', async (req, res) => {
         if (!requireAdmin(req, res)) {
             return;
         }
 
-        const firmId = await getUserFirmId(req) || await getFirmIdForUser(req.user);
-        const userId = req.user.id || req.user.userId;
+        const firmId = await getRequestFirmId(req);
+        const userId = getAuthenticatedUserId(req.user);
         
         if (!firmId) {
             return res.status(400).json({ error: 'Firm ID not found for user. Please contact administrator.' });
@@ -176,38 +196,23 @@ router.post('/', authenticateToken, validateBody(createEmailTemplateFrontSchema)
         }, userId);
         
         return res.status(201).json({ template });
-    } catch (error) {
-        safeLog('error', 'Error creating email template', { error: error.message });
-        return res.status(500).json({ error: 'Failed to create email template' });
-    }
-});
+}));
 
 /**
  * PUT /api/email-templates/:id
  * Update a template
  */
-router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateEmailTemplateFrontSchema), async (req, res) => {
-    try {
+router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateEmailTemplateFrontSchema), createEmailTemplatesRouteHandler('Error updating email template', 'Failed to update email template', async (req, res) => {
         if (!requireAdmin(req, res)) {
             return;
         }
 
         const { id } = req.params;
-        const firmId = await getUserFirmId(req) || await getFirmIdForUser(req.user);
+        const firmId = await getRequestFirmId(req);
         
-        // Check ownership
         const existing = await emailTemplatesService.getTemplate(id);
-        if (!existing) {
-            return res.status(404).json({ error: 'Template not found' });
-        }
-        if (existing.is_system) {
-            return res.status(403).json({ error: 'Cannot modify system template' });
-        }
-        if (existing.firm_id && firmId && existing.firm_id !== firmId) {
-            return res.status(403).json({ error: 'Access denied to this template' });
-        }
-        if (existing.firm_id && !firmId) {
-            return res.status(403).json({ error: 'Access denied to this template' });
+        if (!ensureTemplateOwnership(res, existing, firmId, { allowSystemTemplate: false })) {
+            return;
         }
         
         const { name, description, subjectTemplate, mjmlContent, isDefault } = req.body;
@@ -225,126 +230,85 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateE
         });
         
         return res.json({ template });
-    } catch (error) {
-        safeLog('error', 'Error updating email template', { error: error.message });
-        return res.status(500).json({ error: 'Failed to update email template' });
-    }
-});
+}));
 
 /**
  * DELETE /api/email-templates/:id
  * Delete a template
  */
-router.delete('/:id', authenticateToken, validateParams('id'), async (req, res) => {
-    try {
+router.delete('/:id', authenticateToken, validateParams('id'), createEmailTemplatesRouteHandler('Error deleting email template', 'Failed to delete email template', async (req, res) => {
         if (!requireAdmin(req, res)) {
             return;
         }
 
         const { id } = req.params;
-        const firmId = await getUserFirmId(req) || await getFirmIdForUser(req.user);
+        const firmId = await getRequestFirmId(req);
         
-        // Check ownership
         const existing = await emailTemplatesService.getTemplate(id);
-        if (!existing) {
-            return res.status(404).json({ error: 'Template not found' });
-        }
-        if (!existing.is_system && existing.firm_id && firmId && existing.firm_id !== firmId) {
-            return res.status(403).json({ error: 'Access denied to this template' });
-        }
-        if (!existing.is_system && existing.firm_id && !firmId) {
-            return res.status(403).json({ error: 'Access denied to this template' });
+        if (!ensureTemplateOwnership(res, existing, firmId)) {
+            return;
         }
         
         await emailTemplatesService.deleteTemplate(id, { isAdmin: true });
         
         return res.json({ success: true, message: 'Template deleted successfully' });
-    } catch (error) {
-        safeLog('error', 'Error deleting email template', { error: error.message });
-        return res.status(500).json({ error: 'Failed to delete email template' });
-    }
-});
+}));
 
 /**
  * POST /api/email-templates/:id/duplicate
  * Duplicate a template to the user's firm
  */
-router.post('/:id/duplicate', authenticateToken, validateParams('id'), async (req, res) => {
-    try {
+router.post('/:id/duplicate', authenticateToken, validateParams('id'), createEmailTemplatesRouteHandler('Error duplicating email template', 'Failed to duplicate email template', async (req, res) => {
         if (!requireAdmin(req, res)) {
             return;
         }
 
         const { id } = req.params;
-        const firmId = await getUserFirmId(req) || await getFirmIdForUser(req.user);
-        const userId = req.user.id || req.user.userId;
+        const firmId = await getRequestFirmId(req);
+        const userId = getAuthenticatedUserId(req.user);
         
         if (!firmId) {
             return res.status(400).json({ error: 'Firm ID not found for user. Please contact administrator.' });
         }
         
-        // Check access to original template
         const existing = await emailTemplatesService.getTemplate(id);
-        if (!existing) {
-            return res.status(404).json({ error: 'Template not found' });
-        }
-        if (existing.firm_id && firmId && existing.firm_id !== firmId) {
-            return res.status(403).json({ error: 'Access denied to this template' });
-        }
-        if (existing.firm_id && !firmId) {
-            return res.status(403).json({ error: 'Access denied to this template' });
+        if (!ensureTemplateOwnership(res, existing, firmId)) {
+            return;
         }
         
         const template = await emailTemplatesService.duplicateTemplate(id, firmId, userId);
         
         return res.status(201).json({ template });
-    } catch (error) {
-        safeLog('error', 'Error duplicating email template', { error: error.message });
-        return res.status(500).json({ error: 'Failed to duplicate email template' });
-    }
-});
+}));
 
 /**
  * POST /api/email-templates/:id/preview
  * Preview a template with context data
  */
-router.post('/:id/preview', authenticateToken, validateParams('id'), validateBody(previewEmailTemplateSchema), async (req, res) => {
-    try {
+router.post('/:id/preview', authenticateToken, validateParams('id'), validateBody(previewEmailTemplateSchema), createEmailTemplatesRouteHandler('Error previewing email template', 'Failed to preview email template', async (req, res) => {
         if (!requireAdmin(req, res)) {
             return;
         }
 
         const { id } = req.params;
-        const firmId = await getUserFirmId(req) || await getFirmIdForUser(req.user);
+        const firmId = await getRequestFirmId(req);
         const { context } = req.body;
         
-        // Check access
         const existing = await emailTemplatesService.getTemplate(id);
-        if (!existing) {
-            return res.status(404).json({ error: 'Template not found' });
-        }
-        if (existing.firm_id && firmId && existing.firm_id !== firmId) {
-            return res.status(403).json({ error: 'Access denied to this template' });
-        }
-        if (existing.firm_id && !firmId) {
-            return res.status(403).json({ error: 'Access denied to this template' });
+        if (!ensureTemplateOwnership(res, existing, firmId)) {
+            return;
         }
         
         const result = await emailTemplatesService.renderTemplate(id, context || {});
         
         return res.json(result);
-    } catch (error) {
-        safeLog('error', 'Error previewing email template', { error: error.message });
-        return res.status(500).json({ error: 'Failed to preview email template' });
-    }
-});
+}));
 
 /**
  * POST /api/email-templates/compile
  * Compile MJML content to HTML (for live preview in editor)
  */
-router.post('/compile', authenticateToken, validateBody(compileEmailTemplateSchema), async (req, res) => {
-    try {
+router.post('/compile', authenticateToken, validateBody(compileEmailTemplateSchema), createEmailTemplatesRouteHandler('Error compiling MJML', 'Failed to compile MJML', async (req, res) => {
         if (!requireAdmin(req, res)) {
             return;
         }
@@ -362,10 +326,6 @@ router.post('/compile', authenticateToken, validateBody(compileEmailTemplateSche
         );
         
         return res.json(result);
-    } catch (error) {
-        safeLog('error', 'Error compiling MJML', { error: error.message });
-        return res.status(500).json({ error: 'Failed to compile MJML' });
-    }
-});
+}));
 
 export default router;

@@ -175,10 +175,3 @@ export function clearSlowRequests() {
     slowRequestsBuffer.length = 0;
     safeLog('info', 'APM slow requests buffer cleared');
 }
-
-export default {
-    apmMiddleware,
-    getAPMStats,
-    getSlowRequests,
-    clearSlowRequests
-};

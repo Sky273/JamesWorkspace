@@ -17,6 +17,9 @@ import {
     requireDealAccess,
     requireFirmScopedAccess,
     requireResumeFirmAccess,
+    withDealAccess,
+    withFirmScopedAccess,
+    withResumeFirmAccess,
     resolveDealRelationIds,
     resolveScopedFirmId,
     validateDealRelations
@@ -44,17 +47,43 @@ import {
 } from '../services/deals.service.js';
 
 const router = express.Router();
+const firmScopedAccessDeps = { getUserFirmId, isUserAdmin };
+const dealAccessDeps = { getDealFirmId, getUserFirmId, isUserAdmin };
+const resumeFirmDeps = { getResumeFirmId };
+const dealRelationDeps = { getClientFirmId, getContactOwnership };
+
+function createDealsRouteHandler(logMessage, errorMessage, handler, errorResponder = null) {
+    return async (req, res) => {
+        try {
+            await handler(req, res);
+        } catch (error) {
+            safeLog('error', logMessage, { error: error.message });
+            if (errorResponder) {
+                const handled = errorResponder(error, res);
+                if (handled) {
+                    return handled;
+                }
+            }
+            return res.status(500).json({ error: errorMessage });
+        }
+    };
+}
+
+function handleResumeNotFoundInDealError(error, res) {
+    if (error.message === 'Resume not found in deal') {
+        return res.status(404).json({ error: 'Resume not found in deal' });
+    }
+
+    return null;
+}
 
 // ============================================
 // DEALS CRUD ROUTES
 // ============================================
 
 // GET /api/deals - Get all deals with pagination and filters
-router.get('/', authenticateToken, async (req, res) => {
-    try {
-        const scopedAccess = await requireFirmScopedAccess(req, res, { getUserFirmId, isUserAdmin });
-        if (!scopedAccess) return;
-
+router.get('/', authenticateToken, createDealsRouteHandler('Error fetching deals', 'Failed to fetch deals', async (req, res) => {
+    await withFirmScopedAccess(req, res, firmScopedAccessDeps, async (scopedAccess) => {
         const pagination = parsePaginationParams(req.query.page, req.query.limit);
         if (!pagination.ok) {
             return res.status(400).json({ error: pagination.error });
@@ -71,26 +100,17 @@ router.get('/', authenticateToken, async (req, res) => {
 
         const result = await getDeals(firmId, filters, pagination.value);
         return res.json(result);
-    } catch (error) {
-        safeLog('error', 'Error fetching deals', { error: error.message });
-        return res.status(500).json({ error: 'Failed to fetch deals' });
-    }
-});
+    });
+}));
 
 // GET /api/deals/stats - Get deal statistics
-router.get('/stats', authenticateToken, async (req, res) => {
-    try {
-        const scopedAccess = await requireFirmScopedAccess(req, res, { getUserFirmId, isUserAdmin });
-        if (!scopedAccess) return;
-
+router.get('/stats', authenticateToken, createDealsRouteHandler('Error fetching deal stats', 'Failed to fetch deal statistics', async (req, res) => {
+    await withFirmScopedAccess(req, res, firmScopedAccessDeps, async (scopedAccess) => {
         const firmId = resolveScopedFirmId({ scopedAccess, requestedFirmId: req.query.firmId });
         const stats = await getDealStats(firmId);
         return res.json(stats);
-    } catch (error) {
-        safeLog('error', 'Error fetching deal stats', { error: error.message });
-        return res.status(500).json({ error: 'Failed to fetch deal statistics' });
-    }
-});
+    });
+}));
 
 // GET /api/deals/statuses - Get available deal statuses
 router.get('/statuses', authenticateToken, (req, res) => {
@@ -108,34 +128,22 @@ router.get('/resume-statuses', authenticateToken, (req, res) => {
 });
 
 // GET /api/deals/:id - Get a single deal
-router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => {
-    try {
-        const { id } = req.params;
-        const access = await requireDealAccess(req, res, id, { getDealFirmId, getUserFirmId, isUserAdmin });
-        if (!access) return;
-
+router.get('/:id', authenticateToken, validateParams('id'), createDealsRouteHandler('Error fetching deal', 'Failed to fetch deal', async (req, res) => {
+    const { id } = req.params;
+    await withDealAccess(req, res, id, dealAccessDeps, async () => {
         const deal = await getDealById(id);
         return res.json(deal);
-    } catch (error) {
-        safeLog('error', 'Error fetching deal', { error: error.message });
-        return res.status(500).json({ error: 'Failed to fetch deal' });
-    }
-});
+    });
+}));
 
 // GET /api/deals/:id/missions - Get missions associated with a deal
-router.get('/:id/missions', authenticateToken, validateParams('id'), async (req, res) => {
-    try {
-        const { id } = req.params;
-        const access = await requireDealAccess(req, res, id, { getDealFirmId, getUserFirmId, isUserAdmin });
-        if (!access) return;
-
+router.get('/:id/missions', authenticateToken, validateParams('id'), createDealsRouteHandler('Error fetching deal missions', 'Failed to fetch deal missions', async (req, res) => {
+    const { id } = req.params;
+    await withDealAccess(req, res, id, dealAccessDeps, async () => {
         const missions = await getMissionsForDeal(id);
         return res.json(missions);
-    } catch (error) {
-        safeLog('error', 'Error fetching deal missions', { error: error.message, dealId: req.params.id });
-        return res.status(500).json({ error: 'Failed to fetch deal missions' });
-    }
-});
+    });
+}));
 
 // POST /api/deals - Create a new deal
 router.post('/', authenticateToken, userRateLimit(), validateBody(createDealSchema), async (req, res) => {
@@ -175,7 +183,7 @@ router.post('/', authenticateToken, userRateLimit(), validateBody(createDealSche
         });
         const relationValidation = await validateDealRelations(
             { firmId: userFirmId, clientId: relationIds.clientId, contactId: relationIds.contactId },
-            { getClientFirmId, getContactOwnership }
+            dealRelationDeps
         );
         if (!relationValidation.ok) {
             return res.status(relationValidation.status).json({ error: relationValidation.error });
@@ -192,12 +200,9 @@ router.post('/', authenticateToken, userRateLimit(), validateBody(createDealSche
 });
 
 // PUT /api/deals/:id - Update a deal
-router.put('/:id', authenticateToken, validateParams('id'), userRateLimit(), validateBody(updateDealSchema), async (req, res) => {
-    try {
-        const { id } = req.params;
-        const access = await requireDealAccess(req, res, id, { getDealFirmId, getUserFirmId, isUserAdmin });
-        if (!access) return;
-
+router.put('/:id', authenticateToken, validateParams('id'), userRateLimit(), validateBody(updateDealSchema), createDealsRouteHandler('Error updating deal', 'Failed to update deal', async (req, res) => {
+    const { id } = req.params;
+    await withDealAccess(req, res, id, dealAccessDeps, async (access) => {
         const normalizedDeal = normalizeDealPayload(req.body);
         const existingDeal = await getDealById(id);
         if (!existingDeal) {
@@ -211,7 +216,7 @@ router.put('/:id', authenticateToken, validateParams('id'), userRateLimit(), val
         });
         const relationValidation = await validateDealRelations(
             { firmId: access.firmId, clientId: relationIds.clientId, contactId: relationIds.contactId },
-            { getClientFirmId, getContactOwnership }
+            dealRelationDeps
         );
         if (!relationValidation.ok) {
             return res.status(relationValidation.status).json({ error: relationValidation.error });
@@ -219,79 +224,59 @@ router.put('/:id', authenticateToken, validateParams('id'), userRateLimit(), val
 
         const deal = await updateDeal(id, normalizedDeal);
         return res.json(deal);
-    } catch (error) {
-        safeLog('error', 'Error updating deal', { error: error.message });
-        return res.status(500).json({ error: 'Failed to update deal' });
-    }
-});
+    });
+}));
 
 // DELETE /api/deals/:id - Delete a deal
-router.delete('/:id', authenticateToken, validateParams('id'), userRateLimit(), async (req, res) => {
-    try {
-        const { id } = req.params;
-        const access = await requireDealAccess(req, res, id, { getDealFirmId, getUserFirmId, isUserAdmin });
-        if (!access) return;
-
+router.delete('/:id', authenticateToken, validateParams('id'), userRateLimit(), createDealsRouteHandler('Error deleting deal', 'Failed to delete deal', async (req, res) => {
+    const { id } = req.params;
+    await withDealAccess(req, res, id, dealAccessDeps, async () => {
         await deleteDeal(id);
         return res.json({ success: true, message: 'Deal deleted' });
-    } catch (error) {
-        safeLog('error', 'Error deleting deal', { error: error.message });
-        return res.status(500).json({ error: 'Failed to delete deal' });
-    }
-});
+    });
+}));
 
 // ============================================
 // DEAL-RESUME ASSOCIATION ROUTES
 // ============================================
 
 // GET /api/deals/:id/resumes - Get all resumes for a deal
-router.get('/:id/resumes', authenticateToken, validateParams('id'), async (req, res) => {
-    try {
-        const { id } = req.params;
-        const access = await requireDealAccess(req, res, id, { getDealFirmId, getUserFirmId, isUserAdmin });
-        if (!access) return;
-
+router.get('/:id/resumes', authenticateToken, validateParams('id'), createDealsRouteHandler('Error fetching deal resumes', 'Failed to fetch deal resumes', async (req, res) => {
+    const { id } = req.params;
+    await withDealAccess(req, res, id, dealAccessDeps, async () => {
         const resumes = await getResumesForDeal(id);
         return res.json(resumes);
-    } catch (error) {
-        safeLog('error', 'Error fetching deal resumes', { error: error.message });
-        return res.status(500).json({ error: 'Failed to fetch deal resumes' });
-    }
-});
+    });
+}));
 
 // POST /api/deals/:id/resumes - Add a resume to a deal
-router.post('/:id/resumes', authenticateToken, validateParams('id'), userRateLimit(), validateBody(addDealResumeSchema), async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { resumeId, notes, status } = req.body;
+router.post('/:id/resumes', authenticateToken, validateParams('id'), userRateLimit(), validateBody(addDealResumeSchema), createDealsRouteHandler('Error adding resume to deal', 'Failed to add resume to deal', async (req, res) => {
+    const { id } = req.params;
+    const { resumeId, notes, status } = req.body;
 
-        if (!resumeId) {
-            return res.status(400).json({ error: 'resumeId is required' });
-        }
+    if (!resumeId) {
+        return res.status(400).json({ error: 'resumeId is required' });
+    }
 
-        const access = await requireDealAccess(req, res, id, { getDealFirmId, getUserFirmId, isUserAdmin });
-        if (!access) return;
-
-        // Verify resume exists and belongs to same firm
-        const resumeAccess = await requireResumeFirmAccess(
+    await withDealAccess(req, res, id, dealAccessDeps, async (access) => {
+        await withResumeFirmAccess(
             res,
             { resumeId, firmId: access.firmId, forbiddenError: 'Resume belongs to different firm' },
-            { getResumeFirmId }
+            resumeFirmDeps,
+            async () => {
+                const userId = req.user?.id;
+                const result = await addResumeToDeal(id, resumeId, userId, { notes, status });
+                return res.status(201).json(result);
+            }
         );
-        if (!resumeAccess) return;
-
-        const userId = req.user?.id;
-        const result = await addResumeToDeal(id, resumeId, userId, { notes, status });
-        return res.status(201).json(result);
-    } catch (error) {
-        safeLog('error', 'Error adding resume to deal', { error: error.message });
-        return res.status(500).json({ error: 'Failed to add resume to deal' });
-    }
-});
+    });
+}));
 
 // PUT /api/deals/:id/resumes/:resumeId - Update resume status in deal
-router.put('/:id/resumes/:resumeId', authenticateToken, validateParams('id', 'resumeId'), userRateLimit(), validateBody(updateDealResumeSchema), async (req, res) => {
-    try {
+router.put('/:id/resumes/:resumeId', authenticateToken, validateParams('id', 'resumeId'), userRateLimit(), validateBody(updateDealResumeSchema), createDealsRouteHandler(
+    'Error updating deal resume status',
+    'Failed to update resume status',
+    async (req, res) => {
         const { id, resumeId } = req.params;
         const { status, notes } = req.body;
 
@@ -299,70 +284,56 @@ router.put('/:id/resumes/:resumeId', authenticateToken, validateParams('id', 're
             return res.status(400).json({ error: 'status is required' });
         }
 
-        const access = await requireDealAccess(req, res, id, { getDealFirmId, getUserFirmId, isUserAdmin });
-        if (!access) return;
-
-        const result = await updateDealResumeStatus(id, resumeId, status, notes);
-        return res.json(result);
-    } catch (error) {
-        safeLog('error', 'Error updating deal resume status', { error: error.message });
-        if (error.message === 'Resume not found in deal') {
-            return res.status(404).json({ error: 'Resume not found in deal' });
-        }
-        return res.status(500).json({ error: 'Failed to update resume status' });
-    }
-});
+        await withDealAccess(req, res, id, dealAccessDeps, async () => {
+            const result = await updateDealResumeStatus(id, resumeId, status, notes);
+            return res.json(result);
+        });
+    },
+    handleResumeNotFoundInDealError
+));
 
 // DELETE /api/deals/:id/resumes/:resumeId - Remove a resume from a deal
-router.delete('/:id/resumes/:resumeId', authenticateToken, validateParams('id', 'resumeId'), userRateLimit(), async (req, res) => {
-    try {
+router.delete('/:id/resumes/:resumeId', authenticateToken, validateParams('id', 'resumeId'), userRateLimit(), createDealsRouteHandler(
+    'Error removing resume from deal',
+    'Failed to remove resume from deal',
+    async (req, res) => {
         const { id, resumeId } = req.params;
-        
-        const access = await requireDealAccess(req, res, id, { getDealFirmId, getUserFirmId, isUserAdmin });
-        if (!access) return;
 
-        await removeResumeFromDeal(id, resumeId);
-        return res.json({ success: true, message: 'Resume removed from deal' });
-    } catch (error) {
-        safeLog('error', 'Error removing resume from deal', { error: error.message });
-        if (error.message === 'Resume not found in deal') {
-            return res.status(404).json({ error: error.message });
-        }
-        return res.status(500).json({ error: 'Failed to remove resume from deal' });
-    }
-});
+        await withDealAccess(req, res, id, dealAccessDeps, async () => {
+            await removeResumeFromDeal(id, resumeId);
+            return res.json({ success: true, message: 'Resume removed from deal' });
+        });
+    },
+    handleResumeNotFoundInDealError
+));
 
 // ============================================
 // RESUME-CENTRIC ROUTES (for CVtheque integration)
 // ============================================
 
 // GET /api/deals/by-resume/:resumeId - Get all deals for a specific resume
-router.get('/by-resume/:resumeId', authenticateToken, validateParams('resumeId'), async (req, res) => {
-    try {
-        const { resumeId } = req.params;
-        const scopedAccess = await requireFirmScopedAccess(req, res, { getUserFirmId, isUserAdmin });
-        if (!scopedAccess) return;
-
+router.get('/by-resume/:resumeId', authenticateToken, validateParams('resumeId'), createDealsRouteHandler('Error fetching deals for resume', 'Failed to fetch deals for resume', async (req, res) => {
+    const { resumeId } = req.params;
+    await withFirmScopedAccess(req, res, firmScopedAccessDeps, async (scopedAccess) => {
         const resumeFirmId = scopedAccess.isAdmin
             ? await getResumeFirmId(resumeId)
             : (await requireResumeFirmAccess(
                 res,
                 { resumeId, firmId: scopedAccess.userFirmId },
-                { getResumeFirmId }
+                resumeFirmDeps
             ))?.resumeFirmId;
         if (!resumeFirmId) {
             return res.status(404).json({ error: 'Resume not found' });
         }
-        if (!scopedAccess.isAdmin && resumeFirmId !== scopedAccess.userFirmId) return;
+        if (!scopedAccess.isAdmin && resumeFirmId !== scopedAccess.userFirmId) {
+            return;
+        }
 
         const firmId = scopedAccess.isAdmin ? resumeFirmId : scopedAccess.userFirmId;
         const deals = await getDealsForResume(resumeId, firmId);
         return res.json({ data: deals });
-    } catch (error) {
-        safeLog('error', 'Error fetching deals for resume', { error: error.message });
-        return res.status(500).json({ error: 'Failed to fetch deals for resume' });
-    }
-});
+    });
+}));
 
 // POST /api/deals/add-resume-to-multiple - Add a resume to multiple deals at once
 router.post('/add-resume-to-multiple', authenticateToken, userRateLimit(), validateBody(addResumeToMultipleDealsSchema), async (req, res) => {
@@ -392,7 +363,7 @@ router.post('/add-resume-to-multiple', authenticateToken, userRateLimit(), valid
 
         for (const dealId of dealIds) {
             try {
-                const dealAccess = await checkDealAccess(req, dealId, { getDealFirmId, getUserFirmId, isUserAdmin });
+                const dealAccess = await checkDealAccess(req, dealId, dealAccessDeps);
                 if (!dealAccess.hasAccess) {
                     errors.push({ dealId, error: dealAccess.error });
                     continue;

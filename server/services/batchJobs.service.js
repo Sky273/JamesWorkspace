@@ -33,8 +33,7 @@ export {
     updateCollectionJobProgress,
     updateJobExportFile,
     clearJobExportFile,
-    isJobComplete,
-    getFinalJobOutcome
+    isJobComplete
 } from './batchJobs/jobCrud.js';
 
 // Item CRUD
@@ -48,17 +47,11 @@ export {
     updateJobItemStatus,
     getJobItem,
     resumeItemWithName,
-    getItemsPendingName,
-    getPendingItems,
-    getJobItemFilePayload,
-    clearJobItemFileData
+    getItemsPendingName
 } from './batchJobs/itemCrud.js';
 
-// Worker
-export { startWorker, stopWorker } from './batchJobs/worker.js';
-
 // Maintenance
-export { cleanupOldJobs, cleanupJobExportArtifacts, getBatchJobsStats } from './batchJobs/maintenance.js';
+export { cleanupOldJobs } from './batchJobs/maintenance.js';
 
 /**
  * Get deal info for export validation

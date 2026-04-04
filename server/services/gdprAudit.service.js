@@ -434,14 +434,3 @@ export async function exportTargetLogs(targetEmail) {
         throw error;
     }
 }
-
-export default {
-    GDPR_ACTIONS,
-    GDPR_CATEGORIES,
-    initGdprAuditTable,
-    logGdprAction,
-    getGdprAuditLogs,
-    getGdprAuditStats,
-    getGdprFirms,
-    exportTargetLogs
-};

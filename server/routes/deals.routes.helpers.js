@@ -106,6 +106,15 @@ export async function requireFirmScopedAccess(req, res, { getUserFirmId, isUserA
     };
 }
 
+export async function withFirmScopedAccess(req, res, deps, handler) {
+    const access = await requireFirmScopedAccess(req, res, deps);
+    if (!access) {
+        return null;
+    }
+
+    return handler(access);
+}
+
 export function resolveScopedFirmId({ scopedAccess, requestedFirmId }) {
     return scopedAccess.isAdmin && requestedFirmId ? requestedFirmId : scopedAccess.userFirmId;
 }
@@ -162,6 +171,15 @@ export async function requireDealAccess(req, res, dealId, deps) {
     return access;
 }
 
+export async function withDealAccess(req, res, dealId, deps, handler) {
+    const access = await requireDealAccess(req, res, dealId, deps);
+    if (!access) {
+        return null;
+    }
+
+    return handler(access);
+}
+
 export async function checkResumeFirmAccess({ resumeId, firmId }, { getResumeFirmId }) {
     const resumeFirmId = await getResumeFirmId(resumeId);
     if (!resumeFirmId) {
@@ -183,4 +201,13 @@ export async function requireResumeFirmAccess(res, { resumeId, firmId, forbidden
     }
 
     return access;
+}
+
+export async function withResumeFirmAccess(res, options, deps, handler) {
+    const access = await requireResumeFirmAccess(res, options, deps);
+    if (!access) {
+        return null;
+    }
+
+    return handler(access);
 }

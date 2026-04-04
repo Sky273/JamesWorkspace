@@ -192,6 +192,14 @@ export async function getTemplate(id) {
     return result.rows[0] || null;
 }
 
+async function getTemplateOrThrow(id) {
+    const template = await getTemplate(id);
+    if (!template) {
+        throw new Error('Template not found');
+    }
+    return template;
+}
+
 /**
  * Get the default template for a firm (firm's default or system default)
  * @param {string} firmId - Firm ID
@@ -264,11 +272,7 @@ export async function createTemplate(firmId, data, userId) {
  * @returns {Promise<Object>}
  */
 export async function updateTemplate(id, data) {
-    // Check if template is system template
-    const existing = await getTemplate(id);
-    if (!existing) {
-        throw new Error('Template not found');
-    }
+    const existing = await getTemplateOrThrow(id);
     if (existing.is_system) {
         throw new Error('Cannot modify system template');
     }
@@ -309,11 +313,7 @@ export async function updateTemplate(id, data) {
  * @returns {Promise<boolean>}
  */
 export async function deleteTemplate(id, { isAdmin = false } = {}) {
-    // Check if template is system template
-    const existing = await getTemplate(id);
-    if (!existing) {
-        throw new Error('Template not found');
-    }
+    const existing = await getTemplateOrThrow(id);
     if (existing.is_system && !isAdmin) {
         throw new Error('Cannot delete system template');
     }
@@ -333,10 +333,7 @@ export async function deleteTemplate(id, { isAdmin = false } = {}) {
  * @returns {Promise<Object>}
  */
 export async function duplicateTemplate(id, firmId, userId) {
-    const original = await getTemplate(id);
-    if (!original) {
-        throw new Error('Template not found');
-    }
+    const original = await getTemplateOrThrow(id);
     
     const result = await query(`
         INSERT INTO email_templates 
@@ -531,19 +528,3 @@ export async function getUserFirmId(userId) {
     );
     return result.rows.length > 0 ? result.rows[0].firm_id : null;
 }
-
-export default {
-    TEMPLATE_KEYWORDS,
-    getTemplates,
-    getTemplate,
-    getDefaultTemplate,
-    createTemplate,
-    updateTemplate,
-    deleteTemplate,
-    duplicateTemplate,
-    compileMjml,
-    substituteKeywords,
-    renderTemplate,
-    previewTemplate,
-    getUserFirmId
-};

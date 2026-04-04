@@ -301,5 +301,3 @@ gmailProviderInstance = gmailProvider;
 
 // Export destroy function for graceful shutdown
 export { destroyGoogleapis };
-
-export default gmailProvider;

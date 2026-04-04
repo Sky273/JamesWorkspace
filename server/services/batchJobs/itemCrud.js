@@ -10,6 +10,14 @@ import { ITEM_STATUS, BATCH_SIZE } from './constants.js';
 
 const MAX_BATCH_INSERT_BYTES = 64 * 1024 * 1024;
 
+async function refreshJobItemCount(jobId) {
+    await query(`
+        UPDATE batch_jobs
+        SET total_items = (SELECT COUNT(*) FROM batch_job_items WHERE job_id = $1)
+        WHERE id = $1
+    `, [jobId]);
+}
+
 async function insertJobItems(jobId, items) {
     const normalizedItems = Array.isArray(items) ? items : [];
     const addedCount = normalizedItems.length;
@@ -48,12 +56,7 @@ async function cleanupUploadedFile(file) {
 export async function addJobItems(jobId, items) {
     try {
         const addedCount = await insertJobItems(jobId, items);
-
-        await query(`
-            UPDATE batch_jobs 
-            SET total_items = (SELECT COUNT(*) FROM batch_job_items WHERE job_id = $1)
-            WHERE id = $1
-        `, [jobId]);
+        await refreshJobItemCount(jobId);
 
         safeLog('info', 'Added items to batch job', { jobId, count: addedCount });
         return addedCount;
@@ -100,11 +103,7 @@ export async function addJobItemsFromUploadedFiles(jobId, uploadedFiles) {
 
         await flushBatch();
 
-        await query(`
-            UPDATE batch_jobs 
-            SET total_items = (SELECT COUNT(*) FROM batch_job_items WHERE job_id = $1)
-            WHERE id = $1
-        `, [jobId]);
+        await refreshJobItemCount(jobId);
 
         safeLog('info', 'Added uploaded files to batch job', { jobId, count: addedCount });
         return addedCount;
@@ -140,12 +139,7 @@ export async function addJobResumeIds(jobId, resumeIds) {
             addedCount++;
         }
 
-        // Update total_items count
-        await query(`
-            UPDATE batch_jobs 
-            SET total_items = (SELECT COUNT(*) FROM batch_job_items WHERE job_id = $1)
-            WHERE id = $1
-        `, [jobId]);
+        await refreshJobItemCount(jobId);
 
         safeLog('info', 'Added resume IDs to batch job', { jobId, count: addedCount });
         return addedCount;
@@ -182,11 +176,7 @@ export async function addJobTaskItems(jobId, items) {
             addedCount++;
         }
 
-        await query(`
-            UPDATE batch_jobs
-            SET total_items = (SELECT COUNT(*) FROM batch_job_items WHERE job_id = $1)
-            WHERE id = $1
-        `, [jobId]);
+        await refreshJobItemCount(jobId);
 
         safeLog('info', 'Added task items to batch job', { jobId, count: addedCount });
         return addedCount;
@@ -223,12 +213,7 @@ export async function addJobExportItems(jobId, items) {
             addedCount++;
         }
 
-        // Update total_items count
-        await query(`
-            UPDATE batch_jobs 
-            SET total_items = (SELECT COUNT(*) FROM batch_job_items WHERE job_id = $1)
-            WHERE id = $1
-        `, [jobId]);
+        await refreshJobItemCount(jobId);
 
         safeLog('info', 'Added export items to batch job', { jobId, count: addedCount });
         return addedCount;

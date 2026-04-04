@@ -36,6 +36,52 @@ async function emitProgress(progressCallback, payload) {
     await progressCallback(payload);
 }
 
+function parseResumeTags(record) {
+    const readFirstParsedField = (fieldNames) => {
+        for (const fieldName of fieldNames) {
+            const parsed = parseJsonField(record[fieldName]);
+            if (parsed.length > 0) {
+                return parsed;
+            }
+        }
+        return [];
+    };
+
+    const sourceTags = record.status && record.status.toLowerCase() === 'improved'
+        ? {
+            skills: ['improved_skills', 'skills_cleaned', 'skills'],
+            tools: ['improved_tools', 'tools_cleaned', 'tools'],
+            industries: ['improved_industries', 'industries_cleaned', 'industries'],
+            softSkills: ['improved_soft_skills', 'soft_skills_cleaned', 'soft_skills']
+        }
+        : {
+            skills: ['skills_cleaned', 'skills'],
+            tools: ['tools_cleaned', 'tools'],
+            industries: ['industries_cleaned', 'industries'],
+            softSkills: ['soft_skills_cleaned', 'soft_skills']
+        };
+
+    return {
+        skills: readFirstParsedField(sourceTags.skills),
+        tools: readFirstParsedField(sourceTags.tools),
+        industries: readFirstParsedField(sourceTags.industries),
+        softSkills: readFirstParsedField(sourceTags.softSkills)
+    };
+}
+
+function mapProfileRecord(record) {
+    return {
+        resumeId: record.id,
+        name: record.name || 'Sans nom',
+        title: record.title || '',
+        status: record.status,
+        globalRating: record.global_rating || 0,
+        firmName: record.firm_name,
+        createdAt: record.created_at,
+        resumeTags: parseResumeTags(record)
+    };
+}
+
 export async function findMatchingProfiles(missionId, options = {}, userMetadata = null) {
     const {
         limit = 0,
@@ -131,31 +177,7 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
         });
     }
 
-    const allProfiles = resumeRecords.map((record) => {
-        const isImproved = record.status && record.status.toLowerCase() === 'improved';
-        const resumeTags = isImproved ? {
-            skills: parseJsonField(record.improved_skills) || parseJsonField(record.skills_cleaned) || parseJsonField(record.skills),
-            tools: parseJsonField(record.improved_tools) || parseJsonField(record.tools_cleaned) || parseJsonField(record.tools),
-            industries: parseJsonField(record.improved_industries) || parseJsonField(record.industries_cleaned) || parseJsonField(record.industries),
-            softSkills: parseJsonField(record.improved_soft_skills) || parseJsonField(record.soft_skills_cleaned) || parseJsonField(record.soft_skills)
-        } : {
-            skills: parseJsonField(record.skills_cleaned) || parseJsonField(record.skills),
-            tools: parseJsonField(record.tools_cleaned) || parseJsonField(record.tools),
-            industries: parseJsonField(record.industries_cleaned) || parseJsonField(record.industries),
-            softSkills: parseJsonField(record.soft_skills_cleaned) || parseJsonField(record.soft_skills)
-        };
-
-        return {
-            resumeId: record.id,
-            name: record.name || 'Sans nom',
-            title: record.title || '',
-            status: record.status,
-            globalRating: record.global_rating || 0,
-            firmName: record.firm_name,
-            createdAt: record.created_at,
-            resumeTags
-        };
-    });
+    const allProfiles = resumeRecords.map(mapProfileRecord);
 
     const profilesToScore = selectProfilesForLlm(
         allProfiles,

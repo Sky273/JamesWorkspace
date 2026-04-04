@@ -36,17 +36,3 @@ export {
     BACKUP_DIR,
     TEMP_DIR
 };
-
-// Default export for backward compatibility
-export default {
-    getBackupSettings,
-    saveBackupSettings,
-    getBackupHistory,
-    deleteHistoryEntry,
-    testConnection,
-    listRemoteBackups,
-    createBackup,
-    restoreBackup,
-    cleanupAllLocalBackups,
-    getLocalBackupStats
-};
