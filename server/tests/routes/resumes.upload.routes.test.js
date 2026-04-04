@@ -6,6 +6,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import express from 'express';
 import request from 'supertest';
+import JSZip from 'jszip';
 
 function getFileSignatureBuffer(mimetype) {
     switch (mimetype) {
@@ -18,6 +19,16 @@ function getFileSignatureBuffer(mimetype) {
         default:
             return Buffer.from('invalid');
     }
+}
+
+async function createValidDocxBuffer() {
+    const zip = new JSZip();
+    zip.file('[Content_Types].xml', `<?xml version="1.0" encoding="UTF-8"?>
+    <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+      <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml" />
+    </Types>`);
+    zip.file('word/document.xml', '<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>Hello</w:t></w:r></w:p></w:body></w:document>');
+    return Buffer.from(await zip.generateAsync({ type: 'nodebuffer' }));
 }
 
 const { multerCallOptions, pdfDocuments, pendingReadFileResolvers } = vi.hoisted(() => ({
@@ -204,7 +215,7 @@ describe('Resume Extraction Routes', () => {
         });
 
         it('should accept DOCX uploads and return OCR metadata when server fallback is used', async () => {
-            mockReadFile.mockResolvedValueOnce(getFileSignatureBuffer('application/vnd.openxmlformats-officedocument.wordprocessingml.document'));
+            mockReadFile.mockResolvedValueOnce(await createValidDocxBuffer());
             mockExtractTextFromWordBuffer.mockResolvedValueOnce({
                 text: 'luc . moreau @ gmail . com',
                 ocrUsed: true,
@@ -237,6 +248,22 @@ describe('Resume Extraction Routes', () => {
                     mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
                 })
             );
+        });
+
+        it('should reject DOCX uploads that are only ZIP-shaped and not real DOCX archives', async () => {
+            mockReadFile.mockResolvedValueOnce(Buffer.from([0x50, 0x4B, 0x03, 0x04, 0x00, 0x01, 0x02, 0x03]));
+
+            const res = await request(app)
+                .post('/api/resumes/extract-doc')
+                .set({
+                    ...AUTH,
+                    'x-test-filename': 'resume.docx',
+                    'x-test-mimetype': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                });
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toContain('Invalid DOC file contents');
+            expect(mockExtractTextFromWordBuffer).not.toHaveBeenCalled();
         });
 
         it('should not expose raw DOC extraction errors', async () => {

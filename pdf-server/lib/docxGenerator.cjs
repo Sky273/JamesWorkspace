@@ -6,7 +6,7 @@
  * DOC:  HTML → Puppeteer → PDF → LibreOffice → DOC (visual fidelity with PDF)
  */
 
-const fs = require('fs');
+const fsPromises = require('fs/promises');
 const os = require('os');
 const { log } = require('./logger.cjs');
 const { generatePdf } = require('./pdfGenerator.cjs');
@@ -955,7 +955,7 @@ async function generateDocxViaPandoc({ htmlContent, stylesheet, headerContent, f
       htmlLength: wrappedHtmlContent.length
     });
 
-    fs.writeFileSync(htmlFilePath, wrappedHtmlContent, 'utf8');
+    await fsPromises.writeFile(htmlFilePath, wrappedHtmlContent, 'utf8');
 
     // Run Pandoc HTML → DOCX
     const pandocArgs = [htmlFilePath, '-f', 'html', '-t', 'docx', '-o', docxFilePath, '--standalone'];
@@ -971,11 +971,15 @@ async function generateDocxViaPandoc({ htmlContent, stylesheet, headerContent, f
       throw new Error(`Pandoc conversion failed: ${cmdError.message}`);
     }
 
-    if (!fs.existsSync(docxFilePath)) {
-      throw new Error('Pandoc did not generate the DOCX file');
+    let docxBuffer;
+    try {
+      docxBuffer = await fsPromises.readFile(docxFilePath);
+    } catch (error) {
+      if (error?.code === 'ENOENT') {
+        throw new Error('Pandoc did not generate the DOCX file');
+      }
+      throw error;
     }
-
-    let docxBuffer = fs.readFileSync(docxFilePath);
 
     // Post-process: inject header into the generated DOCX
     if (hasHeader) {
@@ -1000,8 +1004,8 @@ async function generateDocxViaPandoc({ htmlContent, stylesheet, headerContent, f
     log('debug', 'DOCX generated via Pandoc', { size: `${Math.round(docxBuffer.length / 1024)}KB` });
     return docxBuffer;
   } finally {
-    cleanupTempFiles({
-      fs,
+    await cleanupTempFiles({
+      fs: fsPromises,
       log,
       filePaths: [htmlFilePath, docxFilePath]
     });
@@ -1034,7 +1038,7 @@ async function generateDocViaPdf({ htmlContent, stylesheet, headerContent, foote
     });
 
     // Step 1: Generate PDF using Puppeteer (same as PDF export)
-    const pdfBuffer = await generatePdf({
+    let pdfBuffer = await generatePdf({
       htmlContent,
       stylesheet,
       headerContent,
@@ -1043,7 +1047,8 @@ async function generateDocViaPdf({ htmlContent, stylesheet, headerContent, foote
     });
 
     // Write PDF to temp file
-    fs.writeFileSync(pdfFilePath, pdfBuffer);
+    await fsPromises.writeFile(pdfFilePath, pdfBuffer);
+    pdfBuffer = null;
 
     // Step 2: Convert PDF to DOC/DOCX using LibreOffice
     // For DOCX: use "Office Open XML Text" filter
@@ -1076,17 +1081,21 @@ async function generateDocViaPdf({ htmlContent, stylesheet, headerContent, foote
       throw new Error(`LibreOffice conversion failed: ${cmdError.message}`);
     }
 
-    if (!fs.existsSync(outputFilePath)) {
-      throw new Error(`LibreOffice did not generate the ${outputFormat.toUpperCase()} file`);
+    let outputBuffer;
+    try {
+      outputBuffer = await fsPromises.readFile(outputFilePath);
+    } catch (error) {
+      if (error?.code === 'ENOENT') {
+        throw new Error(`LibreOffice did not generate the ${outputFormat.toUpperCase()} file`);
+      }
+      throw error;
     }
-
-    const outputBuffer = fs.readFileSync(outputFilePath);
     log('debug', `${outputFormat.toUpperCase()} generated via PDF`, { size: `${Math.round(outputBuffer.length / 1024)}KB` });
     
     return outputBuffer;
   } finally {
-    cleanupTempFiles({
-      fs,
+    await cleanupTempFiles({
+      fs: fsPromises,
       log,
       filePaths: [pdfFilePath, outputFilePath]
     });

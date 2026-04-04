@@ -27,7 +27,9 @@ import {
   isUserAdmin,
   hasFirmAccess,
   hasCustomerAccess,
-  requireFirmAccess
+  requireFirmAccess,
+  resetAuthUserCacheForTests,
+  getAuthUserCacheSizeForTests
 } from '../middleware/auth.middleware.js';
 import { generateAccessToken } from '../services/jwt.service.js';
 import { findUserById } from '../services/users.service.js';
@@ -39,6 +41,8 @@ describe('Auth Middleware', () => {
   let nextFn;
 
   beforeEach(() => {
+    vi.clearAllMocks();
+    resetAuthUserCacheForTests();
     findUserById.mockResolvedValue(null);
     mockReq = {
       cookies: {},
@@ -100,6 +104,37 @@ describe('Auth Middleware', () => {
       expect(mockReq.user.id).toBe(user.id);
       expect(mockReq.user.email).toBe(user.email);
       expect(mockReq.user.firmId).toBe('firm-1');
+    });
+
+    it('should reuse a short-lived cached user profile across repeated authenticated requests', async () => {
+      const user = {
+        id: 'recABCDEFGHIJKLMN',
+        email: 'test@example.com',
+        name: 'Test User',
+        status: 'Active',
+        role: 'user'
+      };
+      const token = generateAccessToken(user);
+      const cachedDbUser = {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        status: user.status,
+        role: user.role,
+        firm_id: 'firm-1',
+        firm_name: 'Firm One'
+      };
+      findUserById.mockResolvedValue(cachedDbUser);
+
+      const firstReq = { cookies: { accessToken: token }, user: null };
+      const secondReq = { cookies: { accessToken: token }, user: null };
+
+      await authenticateToken(firstReq, mockRes, nextFn);
+      expect(getAuthUserCacheSizeForTests()).toBe(1);
+      await authenticateToken(secondReq, mockRes, nextFn);
+
+      expect(findUserById).toHaveBeenCalledTimes(1);
+      expect(secondReq.user.firmId).toBe('firm-1');
     });
   });
 
@@ -250,6 +285,49 @@ describe('Auth Middleware', () => {
       expect(mockReq.user.role).toBe('admin');
       expect(mockReq.user.firmId).toBe('new-firm');
       expect(mockReq.user.firm).toBe('Updated Firm');
+    });
+
+    it('should reuse the short-lived authenticated user cache across repeated requests', async () => {
+      const user = {
+        id: 'user-123',
+        email: 'test@example.com',
+        name: 'Test User',
+        status: 'Active',
+        role: 'user'
+      };
+      const token = generateAccessToken(user);
+      findUserById.mockResolvedValue({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        status: user.status,
+        role: user.role,
+        firm_id: 'firm-1',
+        firm_name: 'Firm One'
+      });
+
+      const firstReq = { cookies: { accessToken: token }, user: null };
+      const secondReq = { cookies: { accessToken: token }, user: null };
+      const firstRes = {
+        status: vi.fn().mockReturnThis(),
+        json: vi.fn().mockReturnThis(),
+        setHeader: vi.fn()
+      };
+      const secondRes = {
+        status: vi.fn().mockReturnThis(),
+        json: vi.fn().mockReturnThis(),
+        setHeader: vi.fn()
+      };
+      const firstNext = vi.fn();
+      const secondNext = vi.fn();
+
+      await authenticateToken(firstReq, firstRes, firstNext);
+      await authenticateToken(secondReq, secondRes, secondNext);
+
+      expect(findUserById).toHaveBeenCalledTimes(1);
+      expect(firstNext).toHaveBeenCalled();
+      expect(secondNext).toHaveBeenCalled();
+      expect(secondReq.user.firmId).toBe('firm-1');
     });
   });
 

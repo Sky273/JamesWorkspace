@@ -4,7 +4,9 @@ import { metrics } from '../../../services/metrics.service.js';
 import { extractPdfTextWithOcr } from '../../../services/pdfTextExtraction.service.js';
 import { cleanExtractedResumeText } from '../../../services/ocrTextCleanup.service.js';
 import { extractTextFromWordBuffer } from '../../../services/wordTextExtraction.service.js';
+import { inferMimeTypeFromFilename } from '../../../utils/uploadFileTypes.js';
 import { isValidFileSignature } from '../../../utils/fileSignature.js';
+import { isValidDocxArchive } from '../../../utils/fileSignature.js';
 import {
     MAX_OCR_RENDER_PIXELS,
     MAX_PDF_EXTRACTION_PAGES,
@@ -17,6 +19,10 @@ import {
     tryAcquirePdfExtractionSlot
 } from './helpers.js';
 
+function getValidationMimeType(file) {
+    return inferMimeTypeFromFilename(file?.originalname || '') || file?.mimetype || '';
+}
+
 function createExtractDocHandler() {
     return async (req, res) => {
         try {
@@ -25,13 +31,18 @@ function createExtractDocHandler() {
             }
 
             const fileBuffer = await fs.readFile(req.file.path);
-            if (!isValidFileSignature(fileBuffer, req.file.mimetype || 'application/msword')) {
+            const validationMimeType = getValidationMimeType(req.file);
+            const isValidDocument = validationMimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                ? await isValidDocxArchive(fileBuffer)
+                : isValidFileSignature(fileBuffer, validationMimeType || 'application/msword');
+
+            if (!isValidDocument) {
                 await cleanupTempFile(req.file.path);
                 return res.status(400).json({ error: 'Invalid DOC file contents.' });
             }
             const extractionResult = await extractTextFromWordBuffer(fileBuffer, {
                 fileName: req.file.originalname,
-                mimeType: req.file.mimetype || 'application/msword',
+                mimeType: validationMimeType || 'application/msword',
                 minTextLength: 10,
                 pdfOcrOptions: {
                     maxPdfPages: MAX_PDF_EXTRACTION_PAGES,
@@ -46,7 +57,7 @@ function createExtractDocHandler() {
 
             safeLog('info', 'Completed Word text extraction', {
                 fileName: req.file.originalname,
-                mimeType: req.file.mimetype,
+                mimeType: validationMimeType || req.file.mimetype,
                 textLength: text.length,
                 ocrUsed: extractionResult.ocrUsed,
                 ocrPageCount: extractionResult.ocrPageCount,
@@ -57,7 +68,7 @@ function createExtractDocHandler() {
             metrics.trackUploadActivity({
                 endpoint: 'extract-doc',
                 fileSize: req.file.size,
-                mimeType: req.file.mimetype || 'application/msword',
+                mimeType: validationMimeType || 'application/msword',
                 success: true,
                 metadata: {
                     textLength: text.length,
@@ -101,7 +112,7 @@ function createExtractDocHandler() {
                 metrics.trackUploadActivity({
                     endpoint: 'extract-doc',
                     fileSize: req.file.size,
-                    mimeType: req.file.mimetype || 'application/msword',
+                    mimeType: getValidationMimeType(req.file) || 'application/msword',
                     success: false,
                     metadata: { error: error.message }
                 });
@@ -151,7 +162,8 @@ function createExtractPdfHandler() {
 
             pdfExtractionSlotAcquired = true;
             const fileBuffer = await fs.readFile(req.file.path);
-            if (!isValidFileSignature(fileBuffer, req.file.mimetype || 'application/pdf')) {
+            const validationMimeType = getValidationMimeType(req.file);
+            if (!isValidFileSignature(fileBuffer, validationMimeType || 'application/pdf')) {
                 await cleanupTempFile(req.file.path);
                 return res.status(400).json({ error: 'Invalid PDF file contents.' });
             }
@@ -222,7 +234,7 @@ function createExtractPdfHandler() {
             metrics.trackUploadActivity({
                 endpoint: 'extract-pdf',
                 fileSize: req.file.size,
-                mimeType: req.file.mimetype || 'application/pdf',
+                mimeType: validationMimeType || 'application/pdf',
                 success: true,
                 metadata: { pages: numPages, ocrUsed, ocrPageCount, extractionTimeMs: extractionTime }
             });
@@ -279,7 +291,7 @@ function createExtractPdfHandler() {
                 metrics.trackUploadActivity({
                     endpoint: 'extract-pdf',
                     fileSize: req.file.size,
-                    mimeType: req.file.mimetype || 'application/pdf',
+                    mimeType: getValidationMimeType(req.file) || 'application/pdf',
                     success: false,
                     metadata: { error: error.message }
                 });

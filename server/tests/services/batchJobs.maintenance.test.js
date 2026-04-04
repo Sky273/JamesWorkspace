@@ -1,6 +1,6 @@
 /**
  * Tests for Batch Jobs - Maintenance Operations
- * Tests cleanupOldJobs and getBatchJobsStats
+ * Tests cleanupOldJobs, cleanupJobExportArtifacts and getBatchJobsStats
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -9,12 +9,25 @@ vi.mock('../../config/database.js', () => ({
     query: vi.fn()
 }));
 
+vi.mock('fs/promises', () => ({
+    default: {
+        stat: vi.fn(),
+        readdir: vi.fn(),
+        unlink: vi.fn()
+    },
+    stat: vi.fn(),
+    readdir: vi.fn(),
+    unlink: vi.fn()
+}));
+
 vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));
 
 import { query } from '../../config/database.js';
+import fs from 'fs/promises';
 import {
+    cleanupJobExportArtifacts,
     cleanupOldJobs,
     getBatchJobsStats
 } from '../../services/batchJobs/maintenance.js';
@@ -22,37 +35,57 @@ import {
 describe('Batch Jobs - Maintenance', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        vi.mocked(fs.readdir).mockRejectedValue(Object.assign(new Error('missing'), { code: 'ENOENT' }));
     });
 
     describe('cleanupOldJobs', () => {
-        it('should clear file_data and delete old jobs', async () => {
-            query.mockResolvedValueOnce({ rowCount: 5 }); // clear file_data
-            query.mockResolvedValueOnce({ rowCount: 2 }); // delete old jobs
+        it('should clear file_data, cleanup export refs, and delete old jobs', async () => {
+            query.mockResolvedValueOnce({ rowCount: 5 });
+            query.mockResolvedValueOnce({ rows: [{ id: 'job-1', export_file_path: 'C:/tmp/export.zip' }] });
+            query.mockResolvedValueOnce({ rows: [] });
+            query.mockResolvedValueOnce({ rows: [{ id: 'job-2', export_file_path: 'C:/tmp/stale-job-export.zip' }] });
+            query.mockResolvedValueOnce({ rowCount: 2 });
+            vi.mocked(fs.stat).mockResolvedValueOnce({
+                isDirectory: () => false,
+                mtimeMs: Date.now() - (8 * 24 * 60 * 60 * 1000)
+            });
+            vi.mocked(fs.unlink).mockResolvedValueOnce(undefined);
+            vi.mocked(fs.unlink).mockResolvedValueOnce(undefined);
 
             const result = await cleanupOldJobs(7);
 
-            expect(result).toEqual({ deletedJobs: 2, clearedFileData: 5, orphanExportFilesDeleted: 0, staleExportRefsCleared: 0 });
+            expect(result).toEqual({
+                deletedJobs: 2,
+                clearedFileData: 5,
+                deletedExportFiles: 1,
+                orphanExportFilesDeleted: 1,
+                staleExportRefsCleared: 1
+            });
             expect(query.mock.calls[0][0]).toContain('file_data = NULL');
-            expect(query.mock.calls[1][0]).toContain('DELETE FROM batch_jobs');
+            expect(query.mock.calls[0][0]).toContain('pending_name');
+            expect(query.mock.calls[4][0]).toContain('DELETE FROM batch_jobs');
         });
 
         it('should use default maxAgeDays of 7', async () => {
             query.mockResolvedValueOnce({ rowCount: 0 });
+            query.mockResolvedValueOnce({ rows: [] });
+            query.mockResolvedValueOnce({ rows: [] });
             query.mockResolvedValueOnce({ rowCount: 0 });
 
             await cleanupOldJobs();
 
-            expect(query.mock.calls[1][1]).toEqual([7]);
+            expect(query.mock.calls.at(-1)?.[1]).toEqual([7]);
         });
 
         it('should fallback to 7 days when given 0', async () => {
             query.mockResolvedValueOnce({ rowCount: 0 });
+            query.mockResolvedValueOnce({ rows: [] });
+            query.mockResolvedValueOnce({ rows: [] });
             query.mockResolvedValueOnce({ rowCount: 0 });
 
             await cleanupOldJobs(0);
 
-            // Number(0) is falsy, so || 7 kicks in → Math.max(1, 7) = 7
-            expect(query.mock.calls[1][1]).toEqual([7]);
+            expect(query.mock.calls.at(-1)?.[1]).toEqual([7]);
         });
 
         it('should return zeros on error', async () => {
@@ -60,7 +93,43 @@ describe('Batch Jobs - Maintenance', () => {
 
             const result = await cleanupOldJobs();
 
-            expect(result).toEqual({ deletedJobs: 0, clearedFileData: 0, orphanExportFilesDeleted: 0, staleExportRefsCleared: 0 });
+            expect(result).toEqual({
+                deletedJobs: 0,
+                clearedFileData: 0,
+                deletedExportFiles: 0,
+                orphanExportFilesDeleted: 0,
+                staleExportRefsCleared: 0
+            });
+        });
+    });
+
+    describe('cleanupJobExportArtifacts', () => {
+        it('should clear stale DB references when the export file is missing', async () => {
+            query
+                .mockResolvedValueOnce({ rows: [{ id: 'job-1', export_file_path: 'C:/tmp/export.zip' }] })
+                .mockResolvedValueOnce({ rows: [] });
+            vi.mocked(fs.stat).mockRejectedValueOnce(Object.assign(new Error('not found'), { code: 'ENOENT' }));
+
+            const result = await cleanupJobExportArtifacts(7);
+
+            expect(result).toEqual({ orphanExportFilesDeleted: 0, staleExportRefsCleared: 1 });
+            expect(query.mock.calls[1][0]).toContain('SET export_file_path = NULL, export_file_name = NULL');
+        });
+
+        it('should delete expired referenced export files and clear their DB refs', async () => {
+            query
+                .mockResolvedValueOnce({ rows: [{ id: 'job-1', export_file_path: 'C:/tmp/export.zip' }] })
+                .mockResolvedValueOnce({ rows: [] });
+            vi.mocked(fs.stat).mockResolvedValueOnce({
+                isDirectory: () => false,
+                mtimeMs: Date.now() - (8 * 24 * 60 * 60 * 1000)
+            });
+            vi.mocked(fs.unlink).mockResolvedValueOnce(undefined);
+
+            const result = await cleanupJobExportArtifacts(7);
+
+            expect(result).toEqual({ orphanExportFilesDeleted: 1, staleExportRefsCleared: 1 });
+            expect(fs.unlink).toHaveBeenCalledWith('C:/tmp/export.zip');
         });
     });
 
@@ -75,7 +144,7 @@ describe('Batch Jobs - Maintenance', () => {
                     cancelled_jobs: '0',
                     pending_items: '15',
                     items_with_file_data: '5',
-                    total_file_data_bytes: '10485760' // 10MB
+                    total_file_data_bytes: '10485760'
                 }]
             });
 

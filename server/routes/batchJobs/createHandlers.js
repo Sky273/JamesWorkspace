@@ -15,7 +15,7 @@ import {
     updateJobStatus
 } from '../../services/batchJobs.service.js';
 import { safeLog } from '../../utils/logger.backend.js';
-import { getRequiredSignatureBytes, isValidFileSignature } from '../../utils/fileSignature.js';
+import { getRequiredSignatureBytes, isValidDocxArchive, isValidFileSignature } from '../../utils/fileSignature.js';
 import {
     ensureFirmId,
     ensureOwnerAccess,
@@ -51,6 +51,17 @@ async function readFileHeader(filePath, bytesToRead) {
     } finally {
         await handle.close();
     }
+}
+
+async function hasValidUploadedFileContents(filePath, mimeType) {
+    if (mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+        const fileBuffer = await fs.readFile(filePath);
+        return isValidDocxArchive(fileBuffer);
+    }
+
+    const signatureBytes = getRequiredSignatureBytes(mimeType);
+    const fileSignatureBuffer = await readFileHeader(filePath, signatureBytes || 12);
+    return isValidFileSignature(fileSignatureBuffer, mimeType);
 }
 
 async function ensureResumeIdsAccess(resumeIds, firmId, userContext, res) {
@@ -134,9 +145,15 @@ export async function createImportJob(req, res) {
         const uploadedFiles = [];
         for (const [index, file] of (req.files || []).entries()) {
             const resolvedMimeType = resolveUploadMimeType(file.originalname, file.mimetype, BATCH_IMPORT_ALLOWED_MIME_TYPES);
-            const signatureBytes = getRequiredSignatureBytes(resolvedMimeType);
-            const fileSignatureBuffer = file.buffer || await readFileHeader(file.path, signatureBytes || 12);
-            if (!isValidFileSignature(fileSignatureBuffer, resolvedMimeType)) {
+            const hasValidContents = file.buffer
+                ? (
+                    resolvedMimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                        ? await isValidDocxArchive(file.buffer)
+                        : isValidFileSignature(file.buffer, resolvedMimeType)
+                )
+                : await hasValidUploadedFileContents(file.path, resolvedMimeType);
+
+            if (!hasValidContents) {
                 await cleanupUploadedFiles(req.files);
                 return res.status(400).json({ error: `Invalid file contents for ${file.originalname}` });
             }

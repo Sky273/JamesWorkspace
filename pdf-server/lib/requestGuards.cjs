@@ -1,8 +1,4 @@
-const crypto = require('crypto');
-
 const PDF_SERVER_AUTH_HEADER = 'x-internal-service-token';
-const DEV_TEST_FALLBACK_TOKEN = 'dev-test-pdf-server-internal-token-32chars';
-const DERIVATION_SALT = 'resumeconverter-pdf-server-internal-token-v1';
 const DEFAULT_RATE_LIMIT_WINDOW = 60000;
 const MIN_FOOTER_HEIGHT = 10;
 const MAX_FOOTER_HEIGHT = 120;
@@ -26,36 +22,14 @@ const DANGEROUS_CSS_PATTERNS = [
   /url\s*\(\s*['"]?\s*(?!data:)/i
 ];
 
-function derivePdfServerFallbackToken(jwtSecret = '', csrfSecret = '') {
-  if (jwtSecret.length < 32 || csrfSecret.length < 32) {
-    return '';
-  }
-
-  return crypto
-    .createHash('sha256')
-    .update(jwtSecret, 'utf8')
-    .update(':', 'utf8')
-    .update(csrfSecret, 'utf8')
-    .update(':', 'utf8')
-    .update(DERIVATION_SALT, 'utf8')
-    .digest('base64url');
-}
-
 function resolvePdfServerInternalToken({
   configuredToken = '',
-  isProduction = false,
-  jwtSecret = '',
-  csrfSecret = ''
 } = {}) {
   if (configuredToken.length >= 32) {
     return configuredToken;
   }
 
-  if (!isProduction) {
-    return DEV_TEST_FALLBACK_TOKEN;
-  }
-
-  return derivePdfServerFallbackToken(jwtSecret, csrfSecret);
+  return '';
 }
 
 function sanitizeFilename(filename, extension) {
@@ -334,10 +308,8 @@ function createRequestCoordinator({
 
 module.exports = {
   PDF_SERVER_AUTH_HEADER,
-  DEV_TEST_FALLBACK_TOKEN,
   buildGenerationFailureBody,
   createRequestCoordinator,
-  derivePdfServerFallbackToken,
   resolvePdfServerInternalToken,
   sanitizeFilename
 };

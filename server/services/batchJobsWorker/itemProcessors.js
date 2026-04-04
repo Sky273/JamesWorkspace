@@ -6,7 +6,7 @@
 import { safeLog } from '../../utils/logger.backend.js';
 import { query } from '../../config/database.js';
 import { processAnalysisTags } from '../../utils/tagCleaner.js';
-import { ITEM_STATUS, updateJobItemStatus } from '../batchJobs.service.js';
+import { ITEM_STATUS, updateJobItemStatus, getJobItemFilePayload, clearJobItemFileData } from '../batchJobs.service.js';
 import { parseScore, generateTrigram } from './helpers.js';
 import { extractTextFromBuffer } from './textExtraction.js';
 import { analyzeResumeWithLLM, preAnalyzeResumeWithLLM } from './llmIntegration.js';
@@ -34,8 +34,18 @@ export async function processImportItem(item, job, options) {
     const { improve = false } = options;
     const consentMetadata = buildConsentMetadata(options);
     const startedAt = Date.now();
-    const mimeType = item.file_mime_type || 'application/octet-stream';
-    const fileSize = item.file_data?.length || 0;
+    const filePayload = item.file_data ? {
+        file_data: item.file_data,
+        file_mime_type: item.file_mime_type
+    } : await getJobItemFilePayload(item.id);
+
+    if (!filePayload?.file_data) {
+        throw new Error('Fichier source du batch introuvable');
+    }
+
+    let fileBuffer = filePayload.file_data;
+    const mimeType = filePayload.file_mime_type || item.file_mime_type || 'application/octet-stream';
+    const fileSize = fileBuffer.length || 0;
     let currentStage = 'create-resume';
     
     metrics.trackBatchImportActivity({
@@ -54,9 +64,9 @@ export async function processImportItem(item, job, options) {
         itemId: item.id, 
         fileName: item.file_name, 
         improve,
-        hasFileData: !!item.file_data,
-        fileDataLength: item.file_data?.length,
-        mimeType: item.file_mime_type,
+        hasFileData: !!fileBuffer,
+        fileDataLength: fileBuffer.length,
+        mimeType,
         profileType: consentMetadata.profileType,
         hasCandidateName: !!consentMetadata.candidateName,
         hasCandidateEmail: !!consentMetadata.candidateEmail
@@ -92,8 +102,8 @@ export async function processImportItem(item, job, options) {
             consentMetadata.candidateName || item.file_name,
             item.file_name,
             item.relative_path || null,
-            item.file_data,
-            item.file_data?.length || 0,
+            fileBuffer,
+            fileBuffer.length || 0,
             mimeType,
             null,
             'processing',
@@ -138,7 +148,8 @@ export async function processImportItem(item, job, options) {
         currentStage = 'extract-text';
         safeLog('info', 'Extracting text from file', { itemId: item.id, fileName: item.file_name });
         const extractionStartedAt = Date.now();
-        const extractionResult = await extractTextFromBuffer(item.file_data, item.file_mime_type, item.file_name);
+        const extractionResult = await extractTextFromBuffer(fileBuffer, mimeType, item.file_name);
+        fileBuffer = null;
         const rawText = extractionResult?.text || '';
         const { text, metadata: textCleanupMetadata } = cleanExtractedResumeText(rawText, {
             ocrUsed: !!extractionResult?.ocrUsed
@@ -328,6 +339,7 @@ export async function processImportItem(item, job, options) {
                     resumeId
                 }
             });
+            await clearJobItemFileData(item.id);
             return;
         }
 
@@ -406,6 +418,7 @@ export async function processImportItem(item, job, options) {
             await processImprovement(item, resumeId, analysisInputText, analysis, job);
         }
 
+        await clearJobItemFileData(item.id);
         await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, { progress: 95 });
         metrics.trackBatchImportActivity({
             event: 'completed',

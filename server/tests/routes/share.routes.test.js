@@ -2,17 +2,20 @@
  * Tests for Share routes
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import express from 'express';
 import request from 'supertest';
 import { Readable } from 'stream';
+
+process.env.PDF_SERVER_INTERNAL_TOKEN = 'test-pdf-server-internal-token-minimum-32-chars';
 
 const mockStoreSharedPdf = vi.fn();
 const mockGetShareStatus = vi.fn();
 const mockGetOriginalFileInfo = vi.fn();
 const mockGetSharedPdfByToken = vi.fn();
 const mockGetOrCreateOriginalFileToken = vi.fn();
-const mockGetResumeFileByToken = vi.fn();
+const mockGetResumeFileMetadataByToken = vi.fn();
+const mockGetResumeFileDataById = vi.fn();
 const mockRevokeShareLinks = vi.fn();
 const mockGetResumeForAccessCheck = vi.fn();
 const mockGetUserFirmId = vi.fn();
@@ -24,7 +27,8 @@ vi.mock('../../services/shareResume.service.js', () => ({
         getOriginalFileInfo: (...args) => mockGetOriginalFileInfo(...args),
         getSharedPdfByToken: (...args) => mockGetSharedPdfByToken(...args),
         getOrCreateOriginalFileToken: (...args) => mockGetOrCreateOriginalFileToken(...args),
-        getResumeFileByToken: (...args) => mockGetResumeFileByToken(...args),
+        getResumeFileMetadataByToken: (...args) => mockGetResumeFileMetadataByToken(...args),
+        getResumeFileDataById: (...args) => mockGetResumeFileDataById(...args),
         revokeShareLinks: (...args) => mockRevokeShareLinks(...args)
     }
 }));
@@ -82,7 +86,7 @@ vi.mock('../../middleware/auth.middleware.js', () => ({
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
-import shareRoutes from '../../routes/share.routes.js';
+const { default: shareRoutes } = await import('../../routes/share.routes.js');
 
 function createTestApp() {
     const app = express();
@@ -97,12 +101,18 @@ const VALID_TOKEN = 'a'.repeat(64);
 
 describe('Share Routes', () => {
     let app;
+    const originalPdfToken = process.env.PDF_SERVER_INTERNAL_TOKEN;
 
     beforeEach(() => {
         vi.clearAllMocks();
+        process.env.PDF_SERVER_INTERNAL_TOKEN = 't'.repeat(32);
         mockGetResumeForAccessCheck.mockResolvedValue({ id: 'res-1', firm_id: 'firm-1', name: 'Resume 1' });
         mockGetUserFirmId.mockResolvedValue('firm-1');
         app = createTestApp();
+    });
+
+    afterEach(() => {
+        process.env.PDF_SERVER_INTERNAL_TOKEN = originalPdfToken;
     });
 
     it('blocks a user from sharing a resume from another firm', async () => {
@@ -196,14 +206,14 @@ describe('Share Routes', () => {
     });
 
     it('serves an original file only by file token', async () => {
-        mockGetResumeFileByToken.mockResolvedValueOnce({
+        mockGetResumeFileMetadataByToken.mockResolvedValueOnce({
             id: 'r-1',
             file_name: 'resume.docx',
             name: 'John',
-            resume_file_data: Buffer.from('file content'),
             resume_file_type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
             resume_file_size: 12
         });
+        mockGetResumeFileDataById.mockResolvedValueOnce(Buffer.from('file content'));
 
         const res = await request(app).get(`/api/share/file/${VALID_TOKEN}`);
 
@@ -211,6 +221,8 @@ describe('Share Routes', () => {
         expect(res.headers['content-type']).toContain('application/vnd.openxmlformats');
         expect(res.headers['content-disposition']).toContain('attachment');
         expect(res.headers['x-content-type-options']).toBe('nosniff');
+        expect(mockGetResumeFileMetadataByToken).toHaveBeenCalledWith(VALID_TOKEN);
+        expect(mockGetResumeFileDataById).toHaveBeenCalledWith('r-1');
     });
 
     it('rejects non-hex public share tokens before hitting the service', async () => {
@@ -221,7 +233,23 @@ describe('Share Routes', () => {
     });
 
     it('returns 404 for an expired or unknown public file token', async () => {
-        mockGetResumeFileByToken.mockResolvedValueOnce(null);
+        mockGetResumeFileMetadataByToken.mockResolvedValueOnce(null);
+
+        const res = await request(app).get(`/api/share/file/${VALID_TOKEN}`);
+
+        expect(res.status).toBe(404);
+        expect(mockGetResumeFileDataById).not.toHaveBeenCalled();
+    });
+
+    it('returns 404 when the token is valid but the stored file data is gone', async () => {
+        mockGetResumeFileMetadataByToken.mockResolvedValueOnce({
+            id: 'r-1',
+            file_name: 'resume.docx',
+            name: 'John',
+            resume_file_type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            resume_file_size: 12
+        });
+        mockGetResumeFileDataById.mockResolvedValueOnce(null);
 
         const res = await request(app).get(`/api/share/file/${VALID_TOKEN}`);
 

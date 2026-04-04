@@ -17,6 +17,7 @@ export default defineConfig({
       JWT_SECRET: 'test-jwt-secret-for-vitest-minimum-32-chars-long',
       CSRF_SECRET: 'test-csrf-secret-for-vitest-minimum-32-chars-long',
       REFRESH_TOKEN_SECRET: 'test-refresh-secret-for-vitest-min-32-chars',
+      PDF_SERVER_INTERNAL_TOKEN: 'test-pdf-server-internal-token-minimum-32-chars',
       NODE_ENV: 'test'
     },
     coverage: {

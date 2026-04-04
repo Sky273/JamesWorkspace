@@ -4,13 +4,41 @@
  */
 
 import { safeLog } from '../../utils/logger.backend.js';
-import { JOB_STATUS, ITEM_STATUS, WORKER_INTERVAL } from './constants.js';
+import { JOB_STATUS, ITEM_STATUS, WORKER_EXECUTION_CONCURRENCY, WORKER_INTERVAL } from './constants.js';
 import { getPendingJobs, updateJobStatus, updateJobCounters, isJobComplete, getFinalJobOutcome, getJobStatus } from './jobCrud.js';
 import { getPendingItems, updateJobItemStatus } from './itemCrud.js';
 
 // Worker state
 let workerInterval = null;
 let isWorkerRunning = false;
+
+async function processPendingItemsWithLimit(items, job, processItemFn, concurrency) {
+    const effectiveConcurrency = Math.max(1, Math.min(concurrency, items.length || 1));
+    let nextIndex = 0;
+
+    const workers = Array.from({ length: effectiveConcurrency }, async () => {
+        while (nextIndex < items.length) {
+            const currentIndex = nextIndex++;
+            const item = items[currentIndex];
+
+            try {
+                await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING);
+                await processItemFn(item, job);
+                await updateJobItemStatus(item.id, ITEM_STATUS.SUCCESS, { progress: 100 });
+            } catch (error) {
+                safeLog('error', 'Failed to process batch item', {
+                    itemId: item.id,
+                    error: error.message
+                });
+                await updateJobItemStatus(item.id, ITEM_STATUS.ERROR, {
+                    error_message: error.message
+                });
+            }
+        }
+    });
+
+    await Promise.all(workers);
+}
 
 /**
  * Start the background worker
@@ -93,23 +121,7 @@ async function processNextBatch(processItemFn) {
         // Process items in parallel
         safeLog('info', 'Processing batch', { jobId: job.id, itemCount: pendingItems.length });
 
-        const promises = pendingItems.map(async (item) => {
-            try {
-                await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING);
-                await processItemFn(item, job);
-                await updateJobItemStatus(item.id, ITEM_STATUS.SUCCESS, { progress: 100 });
-            } catch (error) {
-                safeLog('error', 'Failed to process batch item', { 
-                    itemId: item.id, 
-                    error: error.message 
-                });
-                await updateJobItemStatus(item.id, ITEM_STATUS.ERROR, { 
-                    error_message: error.message 
-                });
-            }
-        });
-
-        await Promise.all(promises);
+        await processPendingItemsWithLimit(pendingItems, job, processItemFn, WORKER_EXECUTION_CONCURRENCY);
 
         // Update counters
         await updateJobCounters(job.id);

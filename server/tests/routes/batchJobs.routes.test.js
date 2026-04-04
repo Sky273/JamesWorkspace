@@ -485,9 +485,11 @@ describe('Batch Jobs Routes - POST /api/batch-jobs', () => {
 describe('Batch Jobs Routes - DELETE /api/batch-jobs/:id', () => {
     let app;
 
-    beforeEach(() => {
+    beforeEach(async () => {
         vi.resetAllMocks();
         app = createTestApp();
+        const fsModule = await import('fs');
+        vi.mocked(fsModule.default.unlink).mockImplementation((_path, callback) => callback(null));
     });
 
     it('should return 401 without authentication', async () => {
@@ -511,7 +513,9 @@ describe('Batch Jobs Routes - DELETE /api/batch-jobs/:id', () => {
         mockGetJob.mockResolvedValueOnce({ 
             id: 'job-123',
             status: 'completed',
-            firm_id: 'firm-123'
+            firm_id: 'firm-123',
+            export_file_path: 'C:/tmp/export.zip',
+            export_file_name: 'batch export.zip'
         });
         mockDeleteJob.mockResolvedValueOnce(true);
 
@@ -521,6 +525,7 @@ describe('Batch Jobs Routes - DELETE /api/batch-jobs/:id', () => {
 
         expect(res.status).toBe(200);
         expect(res.body.success).toBe(true);
+        expect(mockClearJobExportFile).toHaveBeenCalledWith('job-123');
     });
 
     it('should reject deleting pending job', async () => {
@@ -723,6 +728,7 @@ describe('Batch Jobs Routes - GET /api/batch-jobs/:id/download', () => {
         expect(res.headers['content-disposition']).toContain('batch_export.zip');
         expect(res.headers['x-content-type-options']).toBe('nosniff');
         expect(res.headers['cache-control']).toBe('private, no-store, max-age=0');
+        expect(mockClearJobExportFile).toHaveBeenCalledWith('job-123');
     });
 });
 

@@ -1,4 +1,5 @@
 import fs from 'fs';
+import { pipeline } from 'stream/promises';
 import {
     JOB_STATUS,
     ITEM_STATUS,
@@ -20,6 +21,49 @@ import { ensureOwnerAccess, getUserContext } from './helpers.js';
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
 const DEFAULT_OFFSET = 0;
+
+async function cleanupExportArtifact(jobId, exportFilePath, exportFileName) {
+    if (!exportFilePath) {
+        return false;
+    }
+
+    let deleted = false;
+
+    try {
+        await new Promise((resolve, reject) => {
+            fs.unlink(exportFilePath, (error) => {
+                if (!error || error.code === 'ENOENT') {
+                    resolve();
+                    return;
+                }
+                reject(error);
+            });
+        });
+        deleted = true;
+    } catch (error) {
+        if (error?.code !== 'ENOENT') {
+            safeLog('warn', 'Failed to delete export file artifact', {
+                jobId,
+                filePath: exportFilePath,
+                fileName: exportFileName,
+                error: error.message
+            });
+        }
+    }
+
+    try {
+        await clearJobExportFile(jobId);
+    } catch (error) {
+        safeLog('warn', 'Failed to clear export file metadata', {
+            jobId,
+            filePath: exportFilePath,
+            fileName: exportFileName,
+            error: error.message
+        });
+    }
+
+    return deleted;
+}
 
 function withExportAvailability(job) {
     return {
@@ -138,6 +182,7 @@ export async function deleteJobHandler(req, res) {
             return res.status(400).json({ error: "Annulez d'abord le job avant de le supprimer" });
         }
 
+        await cleanupExportArtifact(job.id, job.export_file_path, job.export_file_name);
         await deleteJob(id);
         res.json({ success: true, message: 'Job supprimé' });
     } catch (error) {
@@ -171,33 +216,25 @@ export async function downloadJobExport(req, res) {
         });
 
         const fileStream = fs.createReadStream(job.export_file_path);
-        fileStream.pipe(res);
-
-        res.on('finish', () => {
-            fs.unlink(job.export_file_path, (err) => {
-                if (err && err.code !== 'ENOENT') {
-                    safeLog('warn', 'Failed to delete export file after download', {
-                        filePath: job.export_file_path,
-                        error: err.message
-                    });
-                } else {
-                    clearJobExportFile(id).catch((clearErr) => {
-                        safeLog('warn', 'Failed to clear export file metadata after download', {
-                            jobId: id,
-                            error: clearErr.message
-                        });
-                    });
-                    safeLog('debug', 'Export file deleted after download', {
-                        filePath: job.export_file_path
-                    });
-                }
-            });
-        });
-
-        safeLog('info', 'Export file downloaded', { jobId: id, fileName: job.export_file_name });
+        try {
+            await pipeline(fileStream, res);
+            safeLog('info', 'Export file downloaded', { jobId: id, fileName: job.export_file_name });
+        } finally {
+            const deleted = await cleanupExportArtifact(id, job.export_file_path, job.export_file_name);
+            if (deleted) {
+                safeLog('debug', 'Export file deleted after download', {
+                    jobId: id,
+                    filePath: job.export_file_path
+                });
+            }
+        }
     } catch (error) {
         safeLog('error', 'Failed to download export file', { error: error.message });
-        res.status(500).json({ error: 'Erreur lors du téléchargement' });
+        if (!res.headersSent) {
+            res.status(500).json({ error: 'Erreur lors du téléchargement' });
+        } else {
+            res.destroy(error);
+        }
     }
 }
 

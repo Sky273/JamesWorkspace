@@ -3,22 +3,26 @@ import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
 const {
-  DEV_TEST_FALLBACK_TOKEN,
   buildGenerationFailureBody,
   resolvePdfServerInternalToken,
   sanitizeFilename
 } = require('../../lib/requestGuards.cjs');
 
 describe('requestGuards', () => {
-  it('uses the development fallback token outside production', () => {
+  it('returns the configured dedicated internal token when valid', () => {
     const token = resolvePdfServerInternalToken({
-      configuredToken: '',
-      isProduction: false,
-      jwtSecret: '',
-      csrfSecret: ''
+      configuredToken: 't'.repeat(32)
     });
 
-    expect(token).toBe(DEV_TEST_FALLBACK_TOKEN);
+    expect(token).toBe('t'.repeat(32));
+  });
+
+  it('returns an empty token when no dedicated internal token is configured', () => {
+    const token = resolvePdfServerInternalToken({
+      configuredToken: ''
+    });
+
+    expect(token).toBe('');
   });
 
   it('sanitizes filenames while preserving the requested extension', () => {

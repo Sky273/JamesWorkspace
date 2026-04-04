@@ -70,6 +70,9 @@ import { globalLimiter } from './middleware/rateLimit.middleware.js';
 import { metrics } from './services/metrics.service.js';
 
 const app = express();
+const JSON_BODY_LIMIT_BYTES = Number.parseInt(process.env.JSON_BODY_LIMIT_BYTES || '', 10) || (10 * 1024 * 1024);
+const URLENCODED_BODY_LIMIT_BYTES = Number.parseInt(process.env.URLENCODED_BODY_LIMIT_BYTES || '', 10) || (1024 * 1024);
+const METHODS_WITH_BODIES = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
 // Trust proxy - required when running behind reverse proxy (Docker, Nginx, etc.)
 // This enables correct IP detection for rate limiting and logging
@@ -90,9 +93,53 @@ configureHelmet(app);
 // Security: CORS
 configureCors(app);
 
+function getDeclaredContentLength(req) {
+    const rawHeader = req.headers['content-length'];
+    const headerValue = Array.isArray(rawHeader) ? rawHeader[0] : rawHeader;
+    const parsedContentLength = Number.parseInt(headerValue || '', 10);
+    return Number.isFinite(parsedContentLength) && parsedContentLength >= 0 ? parsedContentLength : null;
+}
+
+function getBodyLimitBytes(contentType) {
+    return contentType.includes('application/x-www-form-urlencoded')
+        ? URLENCODED_BODY_LIMIT_BYTES
+        : JSON_BODY_LIMIT_BYTES;
+}
+
+// Reject oversized requests before parsing so large bodies do not reach the JSON parser.
+app.use((req, res, next) => {
+    if (!METHODS_WITH_BODIES.has(req.method)) {
+        return next();
+    }
+
+    const contentType = (req.headers['content-type'] || '').toLowerCase();
+    const parsesJsonOrFormBody = contentType.includes('json') || contentType.includes('application/x-www-form-urlencoded');
+    if (!parsesJsonOrFormBody) {
+        return next();
+    }
+
+    const contentLength = getDeclaredContentLength(req);
+    if (contentLength === null) {
+        return next();
+    }
+
+    const bodyLimitBytes = getBodyLimitBytes(contentType);
+    if (contentLength > bodyLimitBytes) {
+        safeLog('warn', 'Request body rejected before parsing', {
+            path: req.path,
+            method: req.method,
+            contentLength,
+            bodyLimitBytes
+        });
+        return res.status(413).json({ error: 'Request body too large' });
+    }
+
+    next();
+});
+
 // Body parsing middleware
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(express.json({ limit: `${JSON_BODY_LIMIT_BYTES}b` }));
+app.use(express.urlencoded({ extended: true, limit: `${URLENCODED_BODY_LIMIT_BYTES}b` }));
 
 // Cookie parser
 app.use(cookieParser());
@@ -180,6 +227,10 @@ app.use((req, res) => {
 
 // Global error handler
 app.use((err, req, res, _next) => {
+    if (err?.type === 'entity.too.large') {
+        return res.status(413).json({ error: 'Request body too large' });
+    }
+
     const statusCode = err.statusCode || err.status || 500;
     const isProduction = process.env.NODE_ENV === 'production';
     

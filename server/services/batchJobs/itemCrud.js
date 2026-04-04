@@ -425,7 +425,10 @@ export async function getItemsPendingName(jobId) {
 export async function getPendingItems(jobId) {
     try {
         const result = await query(`
-            SELECT * FROM batch_job_items 
+            SELECT id, job_id, resume_id, adaptation_id, source_type, file_name, file_mime_type,
+                   relative_path, status, progress, error_message, original_name, display_name,
+                   pending_data, created_at, processed_at
+            FROM batch_job_items
             WHERE job_id = $1 AND status = $2
             ORDER BY created_at ASC
             LIMIT $3
@@ -435,5 +438,44 @@ export async function getPendingItems(jobId) {
     } catch (error) {
         safeLog('error', 'Failed to get pending batch job items', { error: error.message, jobId });
         return [];
+    }
+}
+
+/**
+ * Get the file payload for a job item on demand.
+ * This avoids preloading up to 100 blobs into the worker batch result set.
+ * @param {string} itemId - Item ID
+ * @returns {Promise<Object|null>} File payload
+ */
+export async function getJobItemFilePayload(itemId) {
+    try {
+        const result = await query(`
+            SELECT file_data, file_mime_type
+            FROM batch_job_items
+            WHERE id = $1
+        `, [itemId]);
+
+        return result.rows[0] || null;
+    } catch (error) {
+        safeLog('error', 'Failed to get batch job item file payload', { error: error.message, itemId });
+        throw error;
+    }
+}
+
+/**
+ * Clear stored file payload once the item no longer needs the batch copy.
+ * @param {string} itemId - Item ID
+ * @returns {Promise<void>}
+ */
+export async function clearJobItemFileData(itemId) {
+    try {
+        await query(`
+            UPDATE batch_job_items
+            SET file_data = NULL
+            WHERE id = $1
+        `, [itemId]);
+    } catch (error) {
+        safeLog('error', 'Failed to clear batch job item file payload', { error: error.message, itemId });
+        throw error;
     }
 }

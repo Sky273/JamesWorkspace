@@ -30,5 +30,9 @@ export const COLLECTION_JOB_TYPES = [
 ];
 
 // Processing configuration
-export const BATCH_SIZE = 100; // Process up to 100 CVs in parallel
+export const BATCH_SIZE = 100; // Fetch up to 100 CVs per worker pass
+const parsedWorkerConcurrency = Number.parseInt(process.env.BATCH_WORKER_CONCURRENCY || '', 10);
+export const WORKER_EXECUTION_CONCURRENCY = Number.isInteger(parsedWorkerConcurrency) && parsedWorkerConcurrency > 0
+    ? Math.min(parsedWorkerConcurrency, BATCH_SIZE)
+    : BATCH_SIZE; // Process up to 100 CVs in parallel by default
 export const WORKER_INTERVAL = 5000; // Check for pending jobs every 5 seconds

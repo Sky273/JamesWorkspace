@@ -98,7 +98,9 @@ export function registerProxyRoutes(app) {
             }
             await relayBinaryResponse(response, res, 'application/pdf');
         } catch (error) {
-            const statusCode = isAbortError(error) ? 504 : 500;
+            const statusCode = error?.code === 'PDF_SERVER_AUTH_NOT_CONFIGURED'
+                ? 503
+                : (isAbortError(error) ? 504 : 500);
             safeLog(statusCode === 504 ? 'warn' : 'error', 'PDF proxy error', { error: error.message, timeoutMs: proxyTimeoutMs });
             if (!res.headersSent) {
                 res.status(statusCode).json(buildProxyFailureBody('PDF', statusCode));
@@ -133,7 +135,9 @@ export function registerProxyRoutes(app) {
                 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
             );
         } catch (error) {
-            const statusCode = isAbortError(error) ? 504 : 500;
+            const statusCode = error?.code === 'PDF_SERVER_AUTH_NOT_CONFIGURED'
+                ? 503
+                : (isAbortError(error) ? 504 : 500);
             safeLog(statusCode === 504 ? 'warn' : 'error', 'DOCX proxy error', { error: error.message, timeoutMs: proxyTimeoutMs });
             if (!res.headersSent) {
                 res.status(statusCode).json(buildProxyFailureBody('DOCX', statusCode));

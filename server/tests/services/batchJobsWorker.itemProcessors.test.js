@@ -27,7 +27,9 @@ vi.mock('../../config/database.js', () => ({
 }));
 vi.mock('../../services/batchJobs.service.js', () => ({
     ITEM_STATUS: { PENDING: 'pending', PROCESSING: 'processing', SUCCESS: 'success', ERROR: 'error', PENDING_NAME: 'pending_name' },
-    updateJobItemStatus: vi.fn()
+    updateJobItemStatus: vi.fn(),
+    getJobItemFilePayload: vi.fn(),
+    clearJobItemFileData: vi.fn()
 }));
 
 const mockExtractText = vi.fn();
@@ -91,7 +93,7 @@ vi.mock('../../services/resumes.service.js', () => ({
 }));
 
 import { processImportItem, processImproveItem, processAdaptItem } from '../../services/batchJobsWorker/itemProcessors.js';
-import { updateJobItemStatus } from '../../services/batchJobs.service.js';
+import { updateJobItemStatus, getJobItemFilePayload, clearJobItemFileData } from '../../services/batchJobs.service.js';
 import { getLLMSettings } from '../../services/settings.service.js';
 
 describe('Batch Jobs Worker - Item Processors', () => {
@@ -108,6 +110,13 @@ describe('Batch Jobs Worker - Item Processors', () => {
         mockExecuteResumeAdaptation.mockReset();
         mockTrackBatchImportActivity.mockReset();
         mockTrackOcrActivity.mockReset();
+        vi.mocked(getJobItemFilePayload).mockReset();
+        vi.mocked(clearJobItemFileData).mockReset();
+        vi.mocked(getJobItemFilePayload).mockResolvedValue({
+            file_data: Buffer.from('pdf'),
+            file_mime_type: 'application/pdf'
+        });
+        vi.mocked(clearJobItemFileData).mockResolvedValue();
         vi.mocked(getLLMSettings).mockReset();
         vi.mocked(getLLMSettings).mockResolvedValue({
             preAnalysisEnabled: false,
@@ -124,7 +133,7 @@ describe('Batch Jobs Worker - Item Processors', () => {
     const job = { id: 'job-1', firm_id: 'firm-1', firm_name: 'TestFirm' };
 
     describe('processImportItem', () => {
-        const item = { id: 'item-1', file_name: 'cv.pdf', file_data: Buffer.from('pdf'), file_mime_type: 'application/pdf' };
+        const item = { id: 'item-1', file_name: 'cv.pdf', file_mime_type: 'application/pdf' };
 
         it('should import and analyze a resume', async () => {
             // DB insert returns resume id
@@ -158,12 +167,14 @@ describe('Batch Jobs Worker - Item Processors', () => {
 
             // Should create resume record
             expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO resumes'), expect.any(Array));
+            expect(getJobItemFilePayload).toHaveBeenCalledWith('item-1');
             // Should extract text
-            expect(mockExtractText).toHaveBeenCalledWith(item.file_data, item.file_mime_type, item.file_name);
+            expect(mockExtractText).toHaveBeenCalledWith(Buffer.from('pdf'), item.file_mime_type, item.file_name);
             // Should analyze
             expect(mockAnalyze).toHaveBeenCalledWith(expect.any(String), 'firm-1', 'cv.pdf', expect.objectContaining({ ocrUsed: false }));
             // Should update resume with analysis
             expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('UPDATE resumes SET'), expect.any(Array));
+            expect(clearJobItemFileData).toHaveBeenCalledWith('item-1');
             expect(mockTrackBatchImportActivity).toHaveBeenCalledWith(expect.objectContaining({ event: 'run', mimeType: 'application/pdf' }));
             expect(mockTrackBatchImportActivity).toHaveBeenCalledWith(expect.objectContaining({ event: 'completed', successfulRuns: 1 }));
         });
@@ -333,6 +344,7 @@ describe('Batch Jobs Worker - Item Processors', () => {
             expect(updateJobItemStatus).toHaveBeenCalledWith('item-1', 'pending_name', expect.objectContaining({
                 error_message: expect.stringContaining('nom du candidat')
             }));
+            expect(clearJobItemFileData).toHaveBeenCalledWith('item-1');
             expect(mockTrackBatchImportActivity).toHaveBeenCalledWith(expect.objectContaining({
                 event: 'pending-name',
                 pendingNameRuns: 1
@@ -449,6 +461,7 @@ describe('Batch Jobs Worker - Item Processors', () => {
             expect(mockImprove).toHaveBeenCalled();
             // Should save improved data
             expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('improved_text'), expect.any(Array));
+            expect(clearJobItemFileData).toHaveBeenCalledWith('item-1');
         });
 
         it('should treat OCR placeholder names like CANDIDAT 1 as extraction failure and use provided fallback name', async () => {
@@ -540,6 +553,16 @@ describe('Batch Jobs Worker - Item Processors', () => {
                     psm: '11'
                 })
             }));
+        });
+
+        it('should fail early when the batch item file payload is missing', async () => {
+            vi.mocked(getJobItemFilePayload).mockResolvedValueOnce(null);
+
+            await expect(processImportItem(item, job, { improve: false })).rejects.toThrow('Fichier source du batch introuvable');
+
+            expect(mockQuery).not.toHaveBeenCalled();
+            expect(mockExtractText).not.toHaveBeenCalled();
+            expect(clearJobItemFileData).not.toHaveBeenCalled();
         });
     });
 

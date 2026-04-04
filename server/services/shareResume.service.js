@@ -431,9 +431,27 @@ export async function cleanupExpiredShareArtifacts(now = new Date()) {
 }
 
 export async function getResumeFileByToken(token) {
+    const metadata = await getResumeFileMetadataByToken(token);
+    if (!metadata?.has_file) {
+        return null;
+    }
+
+    const resumeFileData = await getResumeFileDataById(metadata.id);
+    if (!resumeFileData) {
+        return null;
+    }
+
+    return {
+        ...metadata,
+        resume_file_data: resumeFileData
+    };
+}
+
+export async function getResumeFileMetadataByToken(token) {
     const lookup = getStoredShareTokenLookup(token);
     const result = await query(
-        `SELECT id, file_name, name, resume_file_data, resume_file_type, resume_file_size, shared_file_expires_at
+        `SELECT id, file_name, name, resume_file_type, resume_file_size, shared_file_expires_at,
+                resume_file_data IS NOT NULL AS has_file
          FROM resumes
          WHERE shared_file_token = $1 OR shared_file_token LIKE $2`,
         [lookup.exactToken, lookup.v2Pattern]
@@ -453,7 +471,18 @@ export async function getResumeFileByToken(token) {
         return null;
     }
 
-    return resume;
+    return resume.has_file ? resume : null;
+}
+
+export async function getResumeFileDataById(resumeId) {
+    const result = await query(
+        `SELECT resume_file_data
+         FROM resumes
+         WHERE id = $1`,
+        [resumeId]
+    );
+
+    return result.rows[0]?.resume_file_data || null;
 }
 
 export default {
@@ -465,6 +494,8 @@ export default {
     getOrCreateSharedPdfToken,
     getOrCreateOriginalFileToken,
     revokeShareLinks,
+    getResumeFileMetadataByToken,
+    getResumeFileDataById,
     getResumeFileByToken,
     cleanupExpiredShareArtifacts
 };

@@ -29,11 +29,19 @@ async function runExternalCommand({ command, args = [], cwd, timeout, failureMes
   }
 }
 
-function cleanupTempFiles({ fs, log, filePaths }) {
+async function cleanupTempFiles({ fs, log, filePaths }) {
   try {
     for (const filePath of filePaths) {
-      if (filePath && fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
+      if (!filePath) {
+        continue;
+      }
+
+      try {
+        await fs.unlink(filePath);
+      } catch (error) {
+        if (error?.code !== 'ENOENT') {
+          throw error;
+        }
       }
     }
   } catch (cleanupError) {

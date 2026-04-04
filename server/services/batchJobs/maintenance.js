@@ -1,4 +1,4 @@
-import fs from 'fs';
+import fs from 'fs/promises';
 import os from 'os';
 import path from 'path';
 /**
@@ -10,6 +10,31 @@ import { query } from '../../config/database.js';
 import { safeLog } from '../../utils/logger.backend.js';
 
 const EXPORTS_DIR = path.join(os.tmpdir(), 'batch-exports');
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+async function clearJobExportReference(jobId) {
+    await query(`
+        UPDATE batch_jobs
+        SET export_file_path = NULL, export_file_name = NULL
+        WHERE id = $1
+    `, [jobId]);
+}
+
+async function deleteExportArtifact(filePath) {
+    if (!filePath) {
+        return false;
+    }
+
+    try {
+        await fs.unlink(filePath);
+        return true;
+    } catch (error) {
+        if (error?.code !== 'ENOENT') {
+            safeLog('warn', 'Failed to delete batch export artifact', { filePath, error: error.message });
+        }
+        return false;
+    }
+}
 
 /**
  * Cleanup old completed/failed jobs and their items
@@ -21,6 +46,7 @@ export async function cleanupJobExportArtifacts(maxAgeDays = 7) {
     const safeDays = Math.max(1, Math.floor(Number(maxAgeDays) || 7));
     let orphanExportFilesDeleted = 0;
     let staleExportRefsCleared = 0;
+    const maxAgeMs = safeDays * MS_PER_DAY;
 
     try {
         const result = await query(`
@@ -33,28 +59,26 @@ export async function cleanupJobExportArtifacts(maxAgeDays = 7) {
             const filePath = row.export_file_path;
             if (!filePath) continue;
 
-            const exists = fs.existsSync(filePath);
-            if (!exists) {
-                await query(`
-                    UPDATE batch_jobs
-                    SET export_file_path = NULL, export_file_name = NULL
-                    WHERE id = $1
-                `, [row.id]);
+            let stats;
+            try {
+                stats = await fs.stat(filePath);
+            } catch (error) {
+                if (error?.code !== 'ENOENT') {
+                    safeLog('warn', 'Failed to stat batch export artifact', { jobId: row.id, filePath, error: error.message });
+                    continue;
+                }
+
+                await clearJobExportReference(row.id);
                 staleExportRefsCleared++;
                 continue;
             }
 
             try {
-                const stats = fs.statSync(filePath);
                 const fileAgeMs = Date.now() - stats.mtimeMs;
-                if (fileAgeMs > safeDays * 24 * 60 * 60 * 1000) {
-                    fs.unlinkSync(filePath);
+                if (fileAgeMs > maxAgeMs) {
+                    await fs.unlink(filePath);
                     orphanExportFilesDeleted++;
-                    await query(`
-                        UPDATE batch_jobs
-                        SET export_file_path = NULL, export_file_name = NULL
-                        WHERE id = $1
-                    `, [row.id]);
+                    await clearJobExportReference(row.id);
                     staleExportRefsCleared++;
                 }
             } catch (error) {
@@ -62,19 +86,34 @@ export async function cleanupJobExportArtifacts(maxAgeDays = 7) {
             }
         }
 
-        if (fs.existsSync(EXPORTS_DIR)) {
-            for (const fileName of fs.readdirSync(EXPORTS_DIR)) {
+        let exportFiles = [];
+        try {
+            exportFiles = await fs.readdir(EXPORTS_DIR);
+        } catch (error) {
+            if (error?.code !== 'ENOENT') {
+                safeLog('warn', 'Failed to read batch exports directory', { directory: EXPORTS_DIR, error: error.message });
+            }
+        }
+
+        if (exportFiles.length > 0) {
+            const referencedExportPaths = new Set(
+                result.rows
+                    .map((row) => row.export_file_path)
+                    .filter(Boolean)
+            );
+
+            for (const fileName of exportFiles) {
                 const filePath = path.join(EXPORTS_DIR, fileName);
                 try {
-                    const stats = fs.statSync(filePath);
+                    const stats = await fs.stat(filePath);
                     if (stats.isDirectory()) {
                         continue;
                     }
 
-                    const referenced = result.rows.some(row => row.export_file_path === filePath);
+                    const referenced = referencedExportPaths.has(filePath);
                     const fileAgeMs = Date.now() - stats.mtimeMs;
-                    if (!referenced && fileAgeMs > safeDays * 24 * 60 * 60 * 1000) {
-                        fs.unlinkSync(filePath);
+                    if (!referenced && fileAgeMs > maxAgeMs) {
+                        await fs.unlink(filePath);
                         orphanExportFilesDeleted++;
                     }
                 } catch (error) {
@@ -98,12 +137,27 @@ export async function cleanupOldJobs(maxAgeDays = 7) {
             UPDATE batch_job_items 
             SET file_data = NULL 
             WHERE file_data IS NOT NULL 
-            AND status IN ('success', 'error', 'skipped')
+            AND status IN ('success', 'error', 'skipped', 'pending_name')
         `);
         const clearedFileData = clearResult.rowCount || 0;
 
-        // Delete old completed/failed/cancelled jobs
         const safeDays = Math.max(1, Math.floor(Number(maxAgeDays) || 7));
+        const exportCleanup = await cleanupJobExportArtifacts(safeDays);
+        const staleJobsResult = await query(`
+            SELECT id, export_file_path
+            FROM batch_jobs
+            WHERE status IN ('completed', 'failed', 'cancelled')
+            AND completed_at < NOW() - INTERVAL '1 day' * $1
+        `, [safeDays]);
+
+        let deletedExportFiles = 0;
+        for (const staleJob of staleJobsResult.rows) {
+            if (await deleteExportArtifact(staleJob.export_file_path)) {
+                deletedExportFiles++;
+            }
+        }
+
+        // Delete old completed/failed/cancelled jobs
         const deleteResult = await query(`
             DELETE FROM batch_jobs 
             WHERE status IN ('completed', 'failed', 'cancelled')
@@ -112,21 +166,20 @@ export async function cleanupOldJobs(maxAgeDays = 7) {
         `, [safeDays]);
         const deletedJobs = deleteResult.rowCount || 0;
 
-        const exportCleanup = await cleanupJobExportArtifacts(safeDays);
-
-        if (clearedFileData > 0 || deletedJobs > 0 || exportCleanup.orphanExportFilesDeleted > 0 || exportCleanup.staleExportRefsCleared > 0) {
+        if (clearedFileData > 0 || deletedJobs > 0 || deletedExportFiles > 0 || exportCleanup.orphanExportFilesDeleted > 0 || exportCleanup.staleExportRefsCleared > 0) {
             safeLog('info', 'Batch jobs cleanup completed', { 
                 clearedFileData, 
                 deletedJobs,
-                maxAgeDays,
+                deletedExportFiles,
+                maxAgeDays: safeDays,
                 ...exportCleanup
             });
         }
 
-        return { deletedJobs, clearedFileData, ...exportCleanup };
+        return { deletedJobs, clearedFileData, deletedExportFiles, ...exportCleanup };
     } catch (error) {
         safeLog('error', 'Failed to cleanup old batch jobs', { error: error.message });
-        return { deletedJobs: 0, clearedFileData: 0, orphanExportFilesDeleted: 0, staleExportRefsCleared: 0 };
+        return { deletedJobs: 0, clearedFileData: 0, deletedExportFiles: 0, orphanExportFilesDeleted: 0, staleExportRefsCleared: 0 };
     }
 }
 

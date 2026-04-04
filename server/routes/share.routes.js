@@ -75,9 +75,10 @@ router.post('/resume/:resumeId/generate', authenticateToken, validateParams('res
         }
 
         const pdfServerUrl = process.env.PDF_SERVER_URL || 'http://localhost:3002';
+        const pdfServerHeaders = getPdfServerAuthHeaders({ 'Content-Type': 'application/json' });
         const pdfResponse = await fetch(`${pdfServerUrl}/generate-pdf`, {
             method: 'POST',
-            headers: getPdfServerAuthHeaders({ 'Content-Type': 'application/json' }),
+            headers: pdfServerHeaders,
             body: JSON.stringify({
                 htmlContent,
                 filename: filename || 'cv.pdf',
@@ -109,6 +110,12 @@ router.post('/resume/:resumeId/generate', authenticateToken, validateParams('res
             resumeId: req.params.resumeId,
             error: error.message
         });
+        if (error?.code === 'PDF_SERVER_AUTH_NOT_CONFIGURED') {
+            return res.status(503).json({
+                success: false,
+                error: 'PDF server authentication is not configured on the backend.'
+            });
+        }
         res.status(500).json({
             success: false,
             error: 'Failed to generate shareable PDF'
@@ -283,30 +290,31 @@ router.get('/file/:token', async (req, res) => {
             });
         }
 
-        const resume = await shareResumeService.getResumeFileByToken(token);
-        if (!resume) {
+        const resumeMetadata = await shareResumeService.getResumeFileMetadataByToken(token);
+        if (!resumeMetadata) {
             return res.status(404).json({
                 success: false,
                 error: 'File not found'
             });
         }
 
-        if (!resume.resume_file_data) {
+        const resumeFileData = await shareResumeService.getResumeFileDataById(resumeMetadata.id);
+        if (!resumeFileData) {
             return res.status(404).json({
                 success: false,
                 error: 'Original file not available'
             });
         }
 
-        const filename = resume.file_name || resume.name || 'cv';
-        const contentType = resume.resume_file_type || 'application/octet-stream';
+        const filename = resumeMetadata.file_name || resumeMetadata.name || 'cv';
+        const contentType = resumeMetadata.resume_file_type || 'application/octet-stream';
 
         setSafeFileResponseHeaders(res, {
             contentType,
             filename,
-            contentLength: resume.resume_file_size || resume.resume_file_data.length
+            contentLength: resumeMetadata.resume_file_size || resumeFileData.length
         });
-        res.send(resume.resume_file_data);
+        res.end(resumeFileData);
     } catch (error) {
         safeLog('error', 'Failed to serve original file', {
             token: req.params.token?.substring(0, 8),

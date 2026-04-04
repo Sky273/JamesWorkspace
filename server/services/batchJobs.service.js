@@ -49,7 +49,9 @@ export {
     getJobItem,
     resumeItemWithName,
     getItemsPendingName,
-    getPendingItems
+    getPendingItems,
+    getJobItemFilePayload,
+    clearJobItemFileData
 } from './batchJobs/itemCrud.js';
 
 // Worker

@@ -328,6 +328,7 @@ describe('File Cleanup Utilities', () => {
             const stats = await getStorageStats();
 
             expect(stats).toHaveProperty('uploads');
+            expect(stats).toHaveProperty('batchJobsUploads');
             expect(stats).toHaveProperty('batchExports');
             expect(stats).toHaveProperty('serverTemp');
             expect(stats).toHaveProperty('sharedPdfs');
@@ -373,6 +374,10 @@ describe('File Cleanup Utilities', () => {
             expect(stats.timerActive).toBe(true);
             expect(stats.ocrTimerActive).toBe(true);
             expect(stats.cleanupStats).toHaveProperty('sharedLinks');
+            expect(stats.cleanupStats.batchExports).toEqual(expect.objectContaining({
+                skipped: true,
+                reason: 'managed_by_batch_jobs'
+            }));
         });
 
         it('should reflect timer stopped after stopPeriodicCleanup', async () => {
@@ -462,6 +467,37 @@ describe('File Cleanup Utilities', () => {
             await vi.advanceTimersByTimeAsync(2000);
 
             expect(fs.unlink.mock.calls.length).toBeGreaterThan(callsAfterInit);
+        });
+
+        it('should skip overlapping directory cleanup runs', async () => {
+            fs.access.mockRejectedValue(new Error('ENOENT'));
+            fs.mkdir.mockResolvedValue(undefined);
+            fs.readdir.mockResolvedValue([]);
+
+            let resolveShareCleanup;
+            cleanupExpiredShareArtifacts.mockImplementation(() => new Promise((resolve) => {
+                resolveShareCleanup = resolve;
+            }));
+
+            startPeriodicCleanup(1000);
+            await vi.advanceTimersByTimeAsync(10);
+
+            await vi.advanceTimersByTimeAsync(1000);
+
+            expect(cleanupExpiredShareArtifacts).toHaveBeenCalledTimes(1);
+            expect(cleanupOldJobs).not.toHaveBeenCalled();
+
+            resolveShareCleanup({
+                expiredPdfLinksCleared: 0,
+                expiredFileLinksCleared: 0,
+                expiredPdfFilesDeleted: 0
+            });
+            await vi.advanceTimersByTimeAsync(10);
+            cleanupExpiredShareArtifacts.mockResolvedValue({
+                expiredPdfLinksCleared: 0,
+                expiredFileLinksCleared: 0,
+                expiredPdfFilesDeleted: 0
+            });
         });
     });
 

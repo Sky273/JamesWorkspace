@@ -28,5 +28,5 @@ describe('pdfGenerator', () => {
     await expect(pdfGenerator._internal.getBrowser()).rejects.toThrow('Chrome missing');
     await expect(pdfGenerator._internal.getBrowser()).resolves.toBe(fakeBrowser);
     expect(launchSpy).toHaveBeenCalledTimes(2);
-  });
+  }, 10000);
 });

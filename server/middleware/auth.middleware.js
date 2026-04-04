@@ -2,6 +2,69 @@ import { verifyToken } from '../services/jwt.service.js';
 import { findUserById } from '../services/users.service.js';
 import { safeLog } from '../utils/logger.backend.js';
 
+const AUTH_USER_CACHE_TTL_MS = Math.max(1000, Number.parseInt(process.env.AUTH_USER_CACHE_TTL_MS || '15000', 10) || 15000);
+const authUserCache = new Map();
+const authUserIdCache = new Map();
+
+function getCachedAuthenticatedUser(cacheKey) {
+    if (!cacheKey) {
+        return null;
+    }
+
+    const cached = authUserCache.get(cacheKey);
+    if (!cached) {
+        return null;
+    }
+
+    if (cached.expiresAt <= Date.now()) {
+        authUserCache.delete(cacheKey);
+        return null;
+    }
+
+    return cached.user;
+}
+
+function getCachedAuthenticatedUserById(userId) {
+    if (!userId) {
+        return null;
+    }
+
+    const cached = authUserIdCache.get(userId);
+    if (!cached) {
+        return null;
+    }
+
+    if (cached.expiresAt <= Date.now()) {
+        authUserIdCache.delete(userId);
+        return null;
+    }
+
+    return cached.user;
+}
+
+function setCachedAuthenticatedUser(cacheKey, user) {
+    if (!cacheKey || !user?.id) {
+        return;
+    }
+
+    const cacheEntry = {
+        user,
+        expiresAt: Date.now() + AUTH_USER_CACHE_TTL_MS
+    };
+
+    authUserCache.set(cacheKey, cacheEntry);
+    authUserIdCache.set(user.id, cacheEntry);
+}
+
+export function resetAuthUserCacheForTests() {
+    authUserCache.clear();
+    authUserIdCache.clear();
+}
+
+export function getAuthUserCacheSizeForTests() {
+    return authUserCache.size;
+}
+
 // ============================================
 // AUTHENTICATION MIDDLEWARE
 // ============================================
@@ -81,7 +144,10 @@ export async function authenticateToken(req, res, next) {
         return res.status(403).json({ error: 'Invalid token payload' });
     }
     
-    const currentUser = await findUserById(decoded.id);
+    let currentUser = getCachedAuthenticatedUser(token) || getCachedAuthenticatedUserById(decoded.id);
+    if (!currentUser) {
+        currentUser = await findUserById(decoded.id);
+    }
     if (!currentUser) {
         safeLog('warn', 'Authenticated user no longer exists', { userId: decoded.id });
         return res.status(401).json({
@@ -90,6 +156,8 @@ export async function authenticateToken(req, res, next) {
             message: 'Session expired. Please sign in again.'
         });
     }
+
+    setCachedAuthenticatedUser(token, currentUser);
 
     const userStatus = (currentUser.status || decoded.status || '').toLowerCase();
     if (userStatus === 'inactive') {

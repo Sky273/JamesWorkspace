@@ -49,9 +49,10 @@ async function callPdfServer(endpoint, body, timeout = 30000) {
     const timeoutId = setTimeout(() => controller.abort(), timeout);
     
     try {
+        const headers = getPdfServerAuthHeaders({ 'Content-Type': 'application/json' });
         const response = await fetch(`${PDF_SERVER_URL}${endpoint}`, {
             method: 'POST',
-            headers: getPdfServerAuthHeaders({ 'Content-Type': 'application/json' }),
+            headers,
             body: JSON.stringify(body),
             signal: controller.signal
         });
@@ -197,6 +198,11 @@ router.post('/', authenticateToken, validateBody(batchExportSchema), async (req,
                 safeLog('debug', 'Added file to ZIP', { fileName, resumeId, size: buffer.byteLength });
             } catch (err) {
                 safeLog('error', 'Error processing resume for batch export', { resumeId, error: err.message });
+                if (err?.code === 'PDF_SERVER_AUTH_NOT_CONFIGURED') {
+                    return res.status(503).json({
+                        error: 'PDF server authentication is not configured on the backend.'
+                    });
+                }
                 errors.push({ resumeId, error: err.message });
             }
         }
@@ -226,6 +232,11 @@ router.post('/', authenticateToken, validateBody(batchExportSchema), async (req,
         res.send(zipBuffer);
     } catch (error) {
         safeLog('error', 'Batch export error', { error: error.message });
+        if (error?.code === 'PDF_SERVER_AUTH_NOT_CONFIGURED') {
+            return res.status(503).json({
+                error: 'PDF server authentication is not configured on the backend.'
+            });
+        }
         res.status(500).json({ error: 'Failed to generate batch export' });
     }
 });

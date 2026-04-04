@@ -1,3 +1,5 @@
+import JSZip from 'jszip';
+
 function toBuffer(input) {
     return Buffer.isBuffer(input) ? input : Buffer.from(input || []);
 }
@@ -42,11 +44,42 @@ function isWebp(buffer) {
         && source.subarray(8, 12).equals(Buffer.from('WEBP'));
 }
 
+function normalizeZipEntryName(entryName) {
+    return String(entryName || '').replace(/\\/g, '/').replace(/^\/+/, '');
+}
+
+export async function isValidDocxArchive(buffer) {
+    if (!isDocx(buffer)) {
+        return false;
+    }
+
+    try {
+        const zip = await JSZip.loadAsync(toBuffer(buffer));
+        const entryNames = Object.keys(zip.files).map(normalizeZipEntryName);
+
+        if (!entryNames.includes('[Content_Types].xml') || !entryNames.includes('word/document.xml')) {
+            return false;
+        }
+
+        const contentTypesEntry = zip.file('[Content_Types].xml');
+        if (!contentTypesEntry) {
+            return false;
+        }
+
+        const contentTypesXml = await contentTypesEntry.async('string');
+        return /PartName\s*=\s*["']\/word\/document\.xml["']/i.test(contentTypesXml)
+            && /ContentType\s*=\s*["']application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document\.main\+xml["']/i.test(contentTypesXml);
+    } catch {
+        return false;
+    }
+}
+
 export function isValidFileSignature(buffer, mimeType) {
     switch (mimeType) {
         case 'application/pdf':
             return isPdf(buffer);
         case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+            // DOCX files are validated more thoroughly by the upload handlers.
             return isDocx(buffer);
         case 'application/msword':
             return isDoc(buffer);

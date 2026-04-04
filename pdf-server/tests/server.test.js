@@ -150,6 +150,18 @@ describe('PDF Server', () => {
       expect(res.body.error).toContain('too large');
     });
 
+    it('should reject oversized requests before parsing', async () => {
+      const res = await request(app)
+        .post('/generate-pdf')
+        .set('x-internal-service-token', process.env.PDF_SERVER_INTERNAL_TOKEN)
+        .set('Content-Type', 'application/json')
+        .set('Content-Length', String(11 * 1024 * 1024))
+        .send('{"htmlContent":"<p>Hello</p>","filename":"test.pdf"}');
+
+      expect(res.status).toBe(413);
+      expect(res.body.error).toBe('Request body too large');
+    });
+
     it('should reject dangerous htmlContent', async () => {
       const res = await request(app)
         .post('/generate-pdf')
@@ -308,6 +320,18 @@ describe('PDF Server', () => {
       expect(res.status).toBe(400);
       expect(res.body.error).toContain('format');
     });
+
+    it('should reject oversized requests before parsing', async () => {
+      const res = await request(app)
+        .post('/generate-docx')
+        .set('x-internal-service-token', process.env.PDF_SERVER_INTERNAL_TOKEN)
+        .set('Content-Type', 'application/json')
+        .set('Content-Length', String(11 * 1024 * 1024))
+        .send('{"htmlContent":"<p>Hello</p>","filename":"test.docx"}');
+
+      expect(res.status).toBe(413);
+      expect(res.body.error).toBe('Request body too large');
+    });
   });
 
   describe('POST /generate-docx - DOCX generation', () => {
@@ -433,17 +457,15 @@ describe('PDF Server', () => {
   });
 
   describe('internal helpers', () => {
-    it('derives an opaque stable fallback token', () => {
-      const jwtSecret = 'j'.repeat(32) + '-jwt-secret-material';
-      const csrfSecret = 'c'.repeat(32) + '-csrf-secret-material';
-
-      const token = serverModule._internal.derivePdfServerFallbackToken(jwtSecret, csrfSecret);
-
-      expect(token).toHaveLength(43);
-      expect(token).toMatch(/^[A-Za-z0-9_-]+$/);
-      expect(token.startsWith('j'.repeat(8))).toBe(false);
-      expect(token.startsWith('c'.repeat(8))).toBe(false);
-      expect(serverModule._internal.derivePdfServerFallbackToken(jwtSecret, csrfSecret)).toBe(token);
+    it('exposes dedicated-token resolution without compatibility fallbacks', () => {
+      expect(serverModule._internal.buildGenerationFailureBody).toBeTypeOf('function');
+      expect(serverModule._internal.resolvePdfServerInternalToken).toBeTypeOf('function');
+      expect(serverModule._internal.resolvePdfServerInternalToken({
+        configuredToken: 't'.repeat(32)
+      })).toBe('t'.repeat(32));
+      expect(serverModule._internal.resolvePdfServerInternalToken({
+        configuredToken: ''
+      })).toBe('');
     });
   });
 });

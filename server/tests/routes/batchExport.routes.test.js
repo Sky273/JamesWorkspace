@@ -3,9 +3,11 @@
  * POST /
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import express from 'express';
 import request from 'supertest';
+
+process.env.PDF_SERVER_INTERNAL_TOKEN = 'test-pdf-server-internal-token-minimum-32-chars';
 
 // Mock batchExport service
 const mockGetTemplateByIdForExport = vi.fn();
@@ -68,7 +70,7 @@ vi.mock('../../utils/firmHelpers.js', () => ({
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
-import batchExportRoutes from '../../routes/batchExport.routes.js';
+const { default: batchExportRoutes } = await import('../../routes/batchExport.routes.js');
 
 function createTestApp() {
     const app = express();
@@ -83,11 +85,17 @@ const TEMPLATE_UUID = '00000000-0000-0000-0000-000000000002';
 
 describe('Batch Export Routes', () => {
     let app;
+    const originalPdfToken = process.env.PDF_SERVER_INTERNAL_TOKEN;
 
     beforeEach(() => {
         vi.clearAllMocks();
+        process.env.PDF_SERVER_INTERNAL_TOKEN = 't'.repeat(32);
         mockGetUserFirmId.mockResolvedValue('00000000-0000-0000-0000-000000000010');
         app = createTestApp();
+    });
+
+    afterEach(() => {
+        process.env.PDF_SERVER_INTERNAL_TOKEN = originalPdfToken;
     });
 
     describe('POST /', () => {

@@ -63,6 +63,8 @@ import {
     getShareStatus,
     getOrCreateOriginalFileToken,
     getOrCreateSharedPdfToken,
+    getResumeFileMetadataByToken,
+    getResumeFileDataById,
     getResumeFileByToken,
     revokeShareLinks,
     SHARE_LINK_TTL_DAYS
@@ -292,21 +294,22 @@ describe('shareResume.service', () => {
         expect(query.mock.calls[0][1]).toEqual(['public-token', 'v2:stored:public-token%']);
     });
 
-    it('returns the original file only for a valid file token', async () => {
+    it('returns original file metadata without loading the blob for a valid file token', async () => {
         query.mockResolvedValueOnce({
             rows: [{
                 id: 'resume-123',
                 file_name: 'cv.pdf',
                 name: 'John',
-                resume_file_data: Buffer.from('file'),
                 resume_file_type: 'application/pdf',
                 resume_file_size: 4,
+                has_file: true,
                 shared_file_expires_at: new Date(Date.now() + 60_000)
             }]
         });
 
-        const result = await getResumeFileByToken('file-token');
+        const result = await getResumeFileMetadataByToken('file-token');
         expect(result).toEqual(expect.objectContaining({ id: 'resume-123', file_name: 'cv.pdf' }));
+        expect(query.mock.calls[0][0]).not.toContain('resume_file_data,');
     });
 
     it('rejects an expired original-file token', async () => {
@@ -314,14 +317,67 @@ describe('shareResume.service', () => {
             rows: [{
                 id: 'resume-123',
                 file_name: 'cv.pdf',
-                resume_file_data: Buffer.from('file'),
                 resume_file_type: 'application/pdf',
                 resume_file_size: 4,
+                has_file: true,
                 shared_file_expires_at: new Date(Date.now() - 60_000)
             }]
         });
 
-        await expect(getResumeFileByToken('expired-file-token')).resolves.toBeNull();
+        await expect(getResumeFileMetadataByToken('expired-file-token')).resolves.toBeNull();
+    });
+
+    it('returns null for original-file metadata when the blob is absent', async () => {
+        query.mockResolvedValueOnce({
+            rows: [{
+                id: 'resume-123',
+                file_name: 'cv.pdf',
+                resume_file_type: 'application/pdf',
+                resume_file_size: 4,
+                has_file: false,
+                shared_file_expires_at: new Date(Date.now() + 60_000)
+            }]
+        });
+
+        await expect(getResumeFileMetadataByToken('missing-file-token')).resolves.toBeNull();
+    });
+
+    it('loads original file data by resume id only when needed', async () => {
+        query.mockResolvedValueOnce({
+            rows: [{ resume_file_data: Buffer.from('file') }]
+        });
+
+        const result = await getResumeFileDataById('resume-123');
+
+        expect(result).toEqual(Buffer.from('file'));
+        expect(query.mock.calls[0][0]).toContain('SELECT resume_file_data');
+        expect(query.mock.calls[0][1]).toEqual(['resume-123']);
+    });
+
+    it('still supports the compatibility wrapper for original file download', async () => {
+        query
+            .mockResolvedValueOnce({
+                rows: [{
+                    id: 'resume-123',
+                    file_name: 'cv.pdf',
+                    name: 'John',
+                    resume_file_type: 'application/pdf',
+                    resume_file_size: 4,
+                    has_file: true,
+                    shared_file_expires_at: new Date(Date.now() + 60_000)
+                }]
+            })
+            .mockResolvedValueOnce({
+                rows: [{ resume_file_data: Buffer.from('file') }]
+            });
+
+        const result = await getResumeFileByToken('file-token');
+
+        expect(result).toEqual(expect.objectContaining({
+            id: 'resume-123',
+            file_name: 'cv.pdf',
+            resume_file_data: Buffer.from('file')
+        }));
     });
 
     it('revokes both share links and deletes the shared PDF file', async () => {

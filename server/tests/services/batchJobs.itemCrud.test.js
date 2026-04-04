@@ -35,7 +35,9 @@ import {
     getJobItem,
     resumeItemWithName,
     getItemsPendingName,
-    getPendingItems
+    getPendingItems,
+    getJobItemFilePayload,
+    clearJobItemFileData
 } from '../../services/batchJobs/itemCrud.js';
 
 describe('Batch Jobs - Item CRUD', () => {
@@ -264,12 +266,36 @@ describe('Batch Jobs - Item CRUD', () => {
 
             expect(result).toHaveLength(1);
             expect(query.mock.calls[0][0]).toContain('LIMIT $3');
+            expect(query.mock.calls[0][0]).not.toContain('SELECT *');
             expect(query.mock.calls[0][1][1]).toBe('pending');
         });
 
         it('should return empty array on error', async () => {
             query.mockRejectedValueOnce(new Error('DB error'));
             expect(await getPendingItems('j1')).toEqual([]);
+        });
+    });
+
+    describe('getJobItemFilePayload', () => {
+        it('should return only the file payload for an item', async () => {
+            query.mockResolvedValueOnce({ rows: [{ file_data: Buffer.from('data'), file_mime_type: 'application/pdf' }] });
+
+            const result = await getJobItemFilePayload('i1');
+
+            expect(result.file_mime_type).toBe('application/pdf');
+            expect(query.mock.calls[0][0]).toContain('SELECT file_data, file_mime_type');
+            expect(query.mock.calls[0][1]).toEqual(['i1']);
+        });
+    });
+
+    describe('clearJobItemFileData', () => {
+        it('should null out stored file_data for an item', async () => {
+            query.mockResolvedValueOnce({ rows: [] });
+
+            await clearJobItemFileData('i1');
+
+            expect(query.mock.calls[0][0]).toContain('SET file_data = NULL');
+            expect(query.mock.calls[0][1]).toEqual(['i1']);
         });
     });
 });

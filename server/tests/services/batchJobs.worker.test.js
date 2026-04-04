@@ -11,6 +11,7 @@ vi.mock('../../utils/logger.backend.js', () => ({
 vi.mock('../../services/batchJobs/constants.js', () => ({
     JOB_STATUS: { PENDING: 'pending', PROCESSING: 'processing', COMPLETED: 'completed', FAILED: 'failed', CANCELLED: 'cancelled' },
     ITEM_STATUS: { PENDING: 'pending', PROCESSING: 'processing', SUCCESS: 'success', ERROR: 'error', SKIPPED: 'skipped', PENDING_NAME: 'pending_name' },
+    WORKER_EXECUTION_CONCURRENCY: 2,
     WORKER_INTERVAL: 100 // Short for tests
 }));
 vi.mock('../../services/batchJobs/jobCrud.js', () => ({
@@ -124,6 +125,44 @@ describe('Batch Jobs Worker', () => {
 
             expect(processItem).toHaveBeenCalledWith(item, job);
             expect(updateJobStatus).not.toHaveBeenCalledWith('job-1', 'completed', expect.anything());
+        });
+
+        it('should process items with bounded concurrency', async () => {
+            vi.useFakeTimers();
+            try {
+                const job = { id: 'job-1', status: 'processing', total_items: 4 };
+                const items = [
+                    { id: 'item-1', file_name: 'cv1.pdf' },
+                    { id: 'item-2', file_name: 'cv2.pdf' },
+                    { id: 'item-3', file_name: 'cv3.pdf' },
+                    { id: 'item-4', file_name: 'cv4.pdf' }
+                ];
+                let inFlight = 0;
+                let maxInFlight = 0;
+
+                const processItem = vi.fn(() => new Promise((resolve) => {
+                    inFlight++;
+                    maxInFlight = Math.max(maxInFlight, inFlight);
+                    setTimeout(() => {
+                        inFlight--;
+                        resolve();
+                    }, 25);
+                }));
+
+                getPendingJobs.mockResolvedValueOnce([job]).mockResolvedValue([]);
+                getPendingItems.mockResolvedValueOnce(items);
+                isJobComplete.mockResolvedValueOnce(true);
+
+                startWorker(processItem);
+                await vi.advanceTimersByTimeAsync(100);
+                await vi.advanceTimersByTimeAsync(200);
+                stopWorker();
+
+                expect(processItem).toHaveBeenCalledTimes(4);
+                expect(maxInFlight).toBe(2);
+            } finally {
+                vi.useRealTimers();
+            }
         });
     });
 });

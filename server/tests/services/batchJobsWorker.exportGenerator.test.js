@@ -3,7 +3,10 @@
  * generateJobExport: ZIP creation, template processing, format handling
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { Readable } from 'stream';
+
+process.env.PDF_SERVER_INTERNAL_TOKEN = 'test-pdf-server-internal-token-minimum-32-chars';
 
 vi.mock('../../utils/logger.backend.js', () => ({ safeLog: vi.fn() }));
 
@@ -31,6 +34,7 @@ vi.mock('../../services/batchJobsWorker/helpers.js', () => ({
 
 // Mock jszip - must be a constructor that tracks added files
 const mockZipGenerateAsync = vi.fn(() => Buffer.from('zipdata'));
+const mockZipGenerateNodeStream = vi.fn(() => Readable.from(['zipdata']));
 let _zipInstance = null;
 
 class MockJSZip {
@@ -48,6 +52,7 @@ class MockJSZip {
         }
         return this;
     }
+    generateNodeStream(...args) { return mockZipGenerateNodeStream(...args); }
     generateAsync(...args) { return mockZipGenerateAsync(...args); }
 }
 
@@ -62,15 +67,31 @@ vi.mock('fs', async () => {
         ...actual,
         default: {
             ...actual,
+            promises: {
+                mkdir: vi.fn(() => Promise.resolve()),
+                writeFile: vi.fn(() => Promise.resolve()),
+                stat: vi.fn(() => Promise.resolve({ size: 7 }))
+            },
             existsSync: vi.fn(() => true),
             mkdirSync: vi.fn(),
-            writeFileSync: vi.fn()
+            writeFileSync: vi.fn(),
+            createWriteStream: vi.fn(() => ({ on: vi.fn(), once: vi.fn(), destroy: vi.fn() }))
+        },
+        promises: {
+            mkdir: vi.fn(() => Promise.resolve()),
+            writeFile: vi.fn(() => Promise.resolve()),
+            stat: vi.fn(() => Promise.resolve({ size: 7 }))
         },
         existsSync: vi.fn(() => true),
         mkdirSync: vi.fn(),
-        writeFileSync: vi.fn()
+        writeFileSync: vi.fn(),
+        createWriteStream: vi.fn(() => ({ on: vi.fn(), once: vi.fn(), destroy: vi.fn() }))
     };
 });
+
+vi.mock('stream/promises', () => ({
+    pipeline: vi.fn(() => Promise.resolve())
+}));
 
 // Mock fetch for PDF server
 const mockFetch = vi.fn();
@@ -79,9 +100,17 @@ global.fetch = mockFetch;
 import { generateJobExport } from '../../services/batchJobsWorker/exportGenerator.js';
 
 describe('Batch Jobs Worker - Export Generator', () => {
+    const originalPdfToken = process.env.PDF_SERVER_INTERNAL_TOKEN;
+
     beforeEach(() => {
         vi.resetAllMocks();
+        process.env.PDF_SERVER_INTERNAL_TOKEN = 't'.repeat(32);
         mockZipGenerateAsync.mockResolvedValue(Buffer.from('zipdata'));
+        mockZipGenerateNodeStream.mockReturnValue(Readable.from(['zipdata']));
+    });
+
+    afterEach(() => {
+        process.env.PDF_SERVER_INTERNAL_TOKEN = originalPdfToken;
     });
 
     const template = {
@@ -153,6 +182,30 @@ describe('Batch Jobs Worker - Export Generator', () => {
             expect.objectContaining({ method: 'POST' })
         );
         expect(mockUpdateJobExportFile).toHaveBeenCalledWith('j1', expect.any(String), expect.stringContaining('export_j1'));
+    });
+
+    it('should stream the final zip to disk without sync writes', async () => {
+        mockGetJob.mockResolvedValueOnce({ id: 'j1' });
+        mockGetJobItems.mockResolvedValueOnce([
+            { id: 'i1', status: 'success', resume_id: 'r1', file_name: 'cv.pdf' }
+        ]);
+        mockQuery
+            .mockResolvedValueOnce({ rows: [template] })
+            .mockResolvedValueOnce({ rows: [{ id: 'r1', improved_text: '<p>CV</p>', name: 'Alice', title: 'Dev', trigram: 'ALI' }] });
+
+        mockFetch.mockResolvedValueOnce({
+            ok: true,
+            arrayBuffer: () => Promise.resolve(new ArrayBuffer(32))
+        });
+
+        const fsModule = await import('fs');
+        const { pipeline } = await import('stream/promises');
+
+        await generateJobExport('j1', { templateId: 'tpl-1', exportFormats: ['pdf'] });
+
+        expect(mockZipGenerateNodeStream).toHaveBeenCalled();
+        expect(pipeline).toHaveBeenCalled();
+        expect(fsModule.default.writeFileSync).not.toHaveBeenCalled();
     });
 
     it('should handle single exportFormat string', async () => {

@@ -14,10 +14,8 @@ const pdfGen = require('./lib/pdfGenerator.cjs');
 const docxGen = require('./lib/docxGenerator.cjs');
 const { registerFrontendRoutes } = require('./lib/frontendRoutes.cjs');
 const {
-  DEV_TEST_FALLBACK_TOKEN,
   buildGenerationFailureBody,
   createRequestCoordinator,
-  derivePdfServerFallbackToken,
   resolvePdfServerInternalToken
 } = require('./lib/requestGuards.cjs');
 
@@ -30,10 +28,7 @@ const PDF_GENERATION_TIMEOUT = parseInt(process.env.PDF_TIMEOUT || '30000', 10);
 const isProduction = process.env.NODE_ENV === 'production';
 const configuredPdfToken = process.env.PDF_SERVER_INTERNAL_TOKEN || '';
 const PDF_SERVER_INTERNAL_TOKEN = resolvePdfServerInternalToken({
-  configuredToken: configuredPdfToken,
-  isProduction,
-  jwtSecret: process.env.JWT_SECRET || '',
-  csrfSecret: process.env.CSRF_SECRET || ''
+  configuredToken: configuredPdfToken
 });
 const MAX_HTML_SIZE = parseInt(process.env.PDF_MAX_HTML_SIZE || '5242880', 10);
 const MAX_STYLESHEET_SIZE = parseInt(process.env.PDF_MAX_STYLESHEET_SIZE || '262144', 10);
@@ -42,8 +37,45 @@ const MAX_OUTPUT_SIZE = parseInt(process.env.PDF_MAX_OUTPUT_SIZE || '20971520', 
 const MAX_ACTIVE_JOBS = parseInt(process.env.PDF_MAX_CONCURRENT || '4', 10);
 const RATE_LIMIT_WINDOW = 60000;
 const RATE_LIMIT_MAX = parseInt(process.env.PDF_RATE_LIMIT || '300', 10);
+const parsedMaxRequestBodyBytes = parseInt(
+  process.env.PDF_MAX_REQUEST_BODY_BYTES || `${MAX_HTML_SIZE + MAX_STYLESHEET_SIZE + (2 * MAX_FRAGMENT_SIZE) + (256 * 1024)}`,
+  10
+);
+const MAX_REQUEST_BODY_BYTES = Number.isInteger(parsedMaxRequestBodyBytes) && parsedMaxRequestBodyBytes > 0
+  ? parsedMaxRequestBodyBytes
+  : 10485760;
+const METHODS_WITH_BODIES = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
-app.use(bodyParser.json({ limit: '10mb' }));
+app.use((req, res, next) => {
+  if (!METHODS_WITH_BODIES.has(req.method)) {
+    return next();
+  }
+
+  const contentType = String(req.headers['content-type'] || '').toLowerCase();
+  if (!contentType.includes('application/json')) {
+    return next();
+  }
+
+  const contentLengthHeader = req.headers['content-length'];
+  if (!contentLengthHeader) {
+    return next();
+  }
+
+  const contentLength = parseInt(contentLengthHeader, 10);
+  if (Number.isFinite(contentLength) && contentLength > MAX_REQUEST_BODY_BYTES) {
+    logger.log('warn', 'Request body rejected before parsing', {
+      path: req.path,
+      method: req.method,
+      contentLength,
+      maxRequestBodyBytes: MAX_REQUEST_BODY_BYTES
+    });
+    return res.status(413).json({ error: 'Request body too large' });
+  }
+
+  next();
+});
+
+app.use(bodyParser.json({ limit: `${MAX_REQUEST_BODY_BYTES}b` }));
 
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:3001')
   .split(',')
@@ -199,6 +231,17 @@ app.get('/health', (req, res) => {
   });
 });
 
+app.use((error, req, res, next) => {
+  if (error?.type === 'entity.too.large') {
+    logger.log('warn', 'JSON body exceeded parser limit', {
+      path: req.path,
+      maxRequestBodyBytes: MAX_REQUEST_BODY_BYTES
+    });
+    return res.status(413).json({ error: 'Request body too large' });
+  }
+  next(error);
+});
+
 registerFrontendRoutes({
   app,
   fs,
@@ -234,7 +277,7 @@ function registerProcessHandlers() {
 module.exports = {
   app,
   _internal: {
-    derivePdfServerFallbackToken,
+    resolvePdfServerInternalToken,
     buildGenerationFailureBody,
     DIST_DIR,
     DIST_INDEX_PATH,
@@ -244,17 +287,7 @@ module.exports = {
 
 if (require.main === module) {
   if (!PDF_SERVER_INTERNAL_TOKEN || PDF_SERVER_INTERNAL_TOKEN.length < 32) {
-    throw new Error('CRITICAL: PDF_SERVER_INTERNAL_TOKEN must be set and at least 32 characters long, or derivable from valid JWT_SECRET and CSRF_SECRET.');
-  }
-
-  if (!configuredPdfToken) {
-    process.env.PDF_SERVER_INTERNAL_TOKEN = PDF_SERVER_INTERNAL_TOKEN;
-    logger.log(
-      'warn',
-      isProduction
-        ? 'PDF_SERVER_INTERNAL_TOKEN missing; using compatibility fallback derived from JWT_SECRET and CSRF_SECRET'
-        : 'PDF_SERVER_INTERNAL_TOKEN missing; using development/test fallback token'
-    );
+    throw new Error('CRITICAL: PDF_SERVER_INTERNAL_TOKEN must be set and at least 32 characters long. Use a dedicated secret for proxy-to-PDF authentication.');
   }
 
   app.listen(PORT, async () => {

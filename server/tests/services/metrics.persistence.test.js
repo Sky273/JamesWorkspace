@@ -1,11 +1,7 @@
 import fs from 'fs';
+import os from 'os';
+import path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-    METRICS_HISTORY_FILE,
-    MAX_HISTORY_ENTRIES,
-    appendMetricsHistory,
-    readMetricsHistory
-} from '../../services/metrics/persistence.js';
 
 const log = {
     error: vi.fn(),
@@ -37,23 +33,46 @@ function createCollector(requestTotal) {
 }
 
 describe('metrics persistence', () => {
+    let tempDir;
+    let historyFile;
+    let maxHistoryEntries;
+    let appendMetricsHistory;
+    let readMetricsHistory;
+
     beforeEach(() => {
-        fs.rmSync(METRICS_HISTORY_FILE, { force: true });
         vi.clearAllMocks();
+        vi.resetModules();
+        tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'metrics-persistence-test-'));
+        historyFile = path.join(tempDir, 'metrics-history.jsonl');
+        process.env.METRICS_DIR = tempDir;
+        process.env.METRICS_FILE = path.join(tempDir, 'metrics.json');
+        process.env.METRICS_HISTORY_FILE = historyFile;
     });
 
     afterEach(() => {
-        fs.rmSync(METRICS_HISTORY_FILE, { force: true });
+        delete process.env.METRICS_DIR;
+        delete process.env.METRICS_FILE;
+        delete process.env.METRICS_HISTORY_FILE;
+        if (tempDir) {
+            fs.rmSync(tempDir, { recursive: true, force: true });
+        }
     });
 
-    it('should prune metrics history to the configured maximum size', () => {
-        for (let index = 0; index < MAX_HISTORY_ENTRIES + 25; index += 1) {
+    it('should prune metrics history to the configured maximum size', async () => {
+        ({
+            MAX_HISTORY_ENTRIES: maxHistoryEntries,
+            appendMetricsHistory,
+            readMetricsHistory
+        } = await import('../../services/metrics/persistence.js'));
+
+        for (let index = 0; index < maxHistoryEntries + 25; index += 1) {
             appendMetricsHistory(createCollector(index + 1), log);
         }
 
-        const history = readMetricsHistory(MAX_HISTORY_ENTRIES + 100, log);
-        expect(history).toHaveLength(MAX_HISTORY_ENTRIES);
+        const history = readMetricsHistory(maxHistoryEntries + 100, log);
+        expect(history).toHaveLength(maxHistoryEntries);
         expect(history.at(0)?.requests).toBe(26);
-        expect(history.at(-1)?.requests).toBe(MAX_HISTORY_ENTRIES + 25);
-    });
+        expect(history.at(-1)?.requests).toBe(maxHistoryEntries + 25);
+        expect(fs.existsSync(historyFile)).toBe(true);
+    }, 15000);
 });

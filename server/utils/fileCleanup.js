@@ -14,6 +14,7 @@ import { SHARE_LINK_TTL_MS } from '../services/shareResume.service.js';
 // ES module __dirname equivalent
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const BATCH_EXPORT_RETENTION_DAYS = 7;
 
 // Directory configurations with TTL (time-to-live)
 const CLEANUP_DIRS = {
@@ -22,9 +23,14 @@ const CLEANUP_DIRS = {
         maxAgeMs: 60 * 60 * 1000,  // 1 hour
         description: 'Uploaded files'
     },
+    batchJobsUploads: {
+        path: path.join(UPLOAD_DIR, 'batch-jobs'),
+        maxAgeMs: 24 * 60 * 60 * 1000,  // 24 hours
+        description: 'Batch job uploaded files'
+    },
     batchExports: {
         path: path.join(os.tmpdir(), 'batch-exports'),
-        maxAgeMs: 24 * 60 * 60 * 1000,  // 24 hours
+        maxAgeMs: BATCH_EXPORT_RETENTION_DAYS * 24 * 60 * 60 * 1000,
         description: 'Batch export ZIPs'
     },
     serverTemp: {
@@ -52,6 +58,7 @@ let ocrCleanupTimer = null;
 let lastCleanupTime = null;
 let totalFilesDeleted = 0;
 let cleanupStats = {};
+let cleanupAllDirectoriesRunning = false;
 
 /**
  * Stop the periodic file cleanup timer
@@ -291,92 +298,122 @@ export async function cleanupOcrTempArtifacts(maxAgeMs = OCR_TEMP_MAX_AGE_MS) {
  * @returns {Promise<Object>} Cleanup results per directory
  */
 async function cleanupAllDirectories(options = {}) {
+    if (cleanupAllDirectoriesRunning) {
+        safeLog('warn', 'File cleanup already in progress, skipping overlapping run');
+        return {
+            cleanup: {
+                success: false,
+                skipped: true,
+                reason: 'cleanup_in_progress'
+            }
+        };
+    }
+
+    cleanupAllDirectoriesRunning = true;
     const { enableDatabaseTasks = true } = options;
     const results = {};
 
-    if (enableDatabaseTasks) {
-        try {
-            const { cleanupExpiredShareArtifacts } = await import('../services/shareResume.service.js');
-            const shareCleanup = await cleanupExpiredShareArtifacts();
-            results.sharedLinks = { success: true, ...shareCleanup };
-            cleanupStats.sharedLinks = {
-                lastCleanup: new Date().toISOString(),
-                ...shareCleanup
-            };
-        } catch (error) {
-            results.sharedLinks = { success: false, error: error.message };
-            safeLog('debug', 'Expired share cleanup skipped', { error: error.message });
-        }
-    } else {
-        results.sharedLinks = { success: false, skipped: true, reason: 'database_unavailable' };
-    }
-    
-    for (const [key, config] of Object.entries(CLEANUP_DIRS)) {
-        try {
-            const deletedCount = await cleanupOldFiles(config.path, config.maxAgeMs);
-            results[key] = { success: true, deletedCount };
-            cleanupStats[key] = { 
-                lastCleanup: new Date().toISOString(), 
-                deletedCount 
-            };
-        } catch (error) {
-            results[key] = { success: false, error: error.message };
-            safeLog('error', `Cleanup failed for ${config.description}`, { 
-                directory: config.path, 
-                error: error.message 
-            });
-        }
-    }
-    
-    // Also cleanup batch jobs file_data and old jobs
-    if (enableDatabaseTasks) {
-        try {
-            const { cleanupOldJobs } = await import('../services/batchJobs.service.js');
-            const batchCleanup = await cleanupOldJobs(7); // Keep jobs for 7 days
-            metrics.trackCleanupActivity({
-                filesDeleted: batchCleanup.deletedJobs || 0,
-                orphanExportFilesDeleted: batchCleanup.orphanExportFilesDeleted || 0,
-                staleExportRefsCleared: batchCleanup.staleExportRefsCleared || 0,
-                metadata: { source: 'batchJobs' }
-            });
-            results.batchJobs = { success: true, ...batchCleanup };
-            cleanupStats.batchJobs = {
-                lastCleanup: new Date().toISOString(),
-                ...batchCleanup
-            };
-        } catch (error) {
-            results.batchJobs = { success: false, error: error.message };
-            safeLog('debug', 'Batch jobs cleanup skipped', { error: error.message });
-        }
-    } else {
-        results.batchJobs = { success: false, skipped: true, reason: 'database_unavailable' };
-    }
-    
-    // Cleanup old local backup files based on retention settings
     try {
-        const { cleanupAllLocalBackups } = await import('../services/backup.service.js');
-        const backupCleanup = await cleanupAllLocalBackups();
-        const totalDeleted = Object.values(backupCleanup).reduce((a, b) => a + b, 0);
-        results.localBackups = { success: true, deleted: totalDeleted, ...backupCleanup };
-        cleanupStats.localBackups = {
-            lastCleanup: new Date().toISOString(),
-            ...backupCleanup
-        };
-    } catch (error) {
-        results.localBackups = { success: false, error: error.message };
-        safeLog('debug', 'Local backups cleanup skipped', { error: error.message });
+        if (enableDatabaseTasks) {
+            try {
+                const { cleanupExpiredShareArtifacts } = await import('../services/shareResume.service.js');
+                const shareCleanup = await cleanupExpiredShareArtifacts();
+                results.sharedLinks = { success: true, ...shareCleanup };
+                cleanupStats.sharedLinks = {
+                    lastCleanup: new Date().toISOString(),
+                    ...shareCleanup
+                };
+            } catch (error) {
+                results.sharedLinks = { success: false, error: error.message };
+                safeLog('debug', 'Expired share cleanup skipped', { error: error.message });
+            }
+        } else {
+            results.sharedLinks = { success: false, skipped: true, reason: 'database_unavailable' };
+        }
+        
+        for (const [key, config] of Object.entries(CLEANUP_DIRS)) {
+            if (key === 'batchExports') {
+                results[key] = {
+                    success: false,
+                    skipped: true,
+                    reason: 'managed_by_batch_jobs'
+                };
+                cleanupStats[key] = {
+                    lastCleanup: new Date().toISOString(),
+                    skipped: true,
+                    reason: 'managed_by_batch_jobs'
+                };
+                continue;
+            }
+
+            try {
+                const deletedCount = await cleanupOldFiles(config.path, config.maxAgeMs);
+                results[key] = { success: true, deletedCount };
+                cleanupStats[key] = { 
+                    lastCleanup: new Date().toISOString(), 
+                    deletedCount 
+                };
+            } catch (error) {
+                results[key] = { success: false, error: error.message };
+                safeLog('error', `Cleanup failed for ${config.description}`, { 
+                    directory: config.path, 
+                    error: error.message 
+                });
+            }
+        }
+        
+        // Also cleanup batch jobs file_data and old jobs
+        if (enableDatabaseTasks) {
+            try {
+                const { cleanupOldJobs } = await import('../services/batchJobs.service.js');
+                const batchCleanup = await cleanupOldJobs(7); // Keep jobs for 7 days
+                metrics.trackCleanupActivity({
+                    filesDeleted: batchCleanup.deletedJobs || 0,
+                    orphanExportFilesDeleted: batchCleanup.orphanExportFilesDeleted || 0,
+                    staleExportRefsCleared: batchCleanup.staleExportRefsCleared || 0,
+                    metadata: { source: 'batchJobs' }
+                });
+                results.batchJobs = { success: true, ...batchCleanup };
+                cleanupStats.batchJobs = {
+                    lastCleanup: new Date().toISOString(),
+                    ...batchCleanup
+                };
+            } catch (error) {
+                results.batchJobs = { success: false, error: error.message };
+                safeLog('debug', 'Batch jobs cleanup skipped', { error: error.message });
+            }
+        } else {
+            results.batchJobs = { success: false, skipped: true, reason: 'database_unavailable' };
+        }
+        
+        // Cleanup old local backup files based on retention settings
+        try {
+            const { cleanupAllLocalBackups } = await import('../services/backup.service.js');
+            const backupCleanup = await cleanupAllLocalBackups();
+            const totalDeleted = Object.values(backupCleanup).reduce((a, b) => a + b, 0);
+            results.localBackups = { success: true, deleted: totalDeleted, ...backupCleanup };
+            cleanupStats.localBackups = {
+                lastCleanup: new Date().toISOString(),
+                ...backupCleanup
+            };
+        } catch (error) {
+            results.localBackups = { success: false, error: error.message };
+            safeLog('debug', 'Local backups cleanup skipped', { error: error.message });
+        }
+        
+        const totalDirectoryDeletes = Object.values(results)
+            .filter(result => result.success && typeof result.deletedCount === 'number')
+            .reduce((sum, result) => sum + result.deletedCount, 0);
+
+        metrics.trackCleanupActivity({
+            filesDeleted: totalDirectoryDeletes,
+            metadata: { source: 'fileCleanup' }
+        });
+
+        return results;
+    } finally {
+        cleanupAllDirectoriesRunning = false;
     }
-    
-    const totalDirectoryDeletes = Object.values(results)
-        .filter(result => result.success && typeof result.deletedCount === 'number')
-        .reduce((sum, result) => sum + result.deletedCount, 0);
-
-    metrics.trackCleanupActivity({
-        filesDeleted: totalDirectoryDeletes,
-        metadata: { source: 'fileCleanup' }
-    });
-
-    return results;
 }
 
 /**

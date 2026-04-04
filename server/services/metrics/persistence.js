@@ -7,12 +7,50 @@ import { createOperationsState } from './state.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export const METRICS_DIR = path.join(__dirname, '../../../logs');
-export const METRICS_FILE = path.join(METRICS_DIR, 'metrics.json');
-export const METRICS_HISTORY_FILE = path.join(METRICS_DIR, 'metrics-history.jsonl');
+export const METRICS_DIR = process.env.METRICS_DIR || path.join(__dirname, '../../../logs');
+export const METRICS_FILE = process.env.METRICS_FILE || path.join(METRICS_DIR, 'metrics.json');
+export const METRICS_HISTORY_FILE = process.env.METRICS_HISTORY_FILE || path.join(METRICS_DIR, 'metrics-history.jsonl');
 export const SAVE_INTERVAL_MS = 5 * 60 * 1000;
 export const HISTORY_INTERVAL_MS = 60 * 60 * 1000;
 export const MAX_HISTORY_ENTRIES = 24 * 30;
+
+let historyLinesCache = null;
+let historyLinesCacheFile = null;
+
+function getHistoryCacheFile() {
+    return process.env.METRICS_HISTORY_FILE || METRICS_HISTORY_FILE;
+}
+
+function resetHistoryCacheIfNeeded() {
+    const currentHistoryFile = getHistoryCacheFile();
+    if (historyLinesCacheFile !== currentHistoryFile) {
+        historyLinesCache = null;
+        historyLinesCacheFile = currentHistoryFile;
+    }
+}
+
+function loadHistoryLines(log) {
+    resetHistoryCacheIfNeeded();
+
+    if (historyLinesCache !== null) {
+        return historyLinesCache;
+    }
+
+    const currentHistoryFile = getHistoryCacheFile();
+    if (!fs.existsSync(currentHistoryFile)) {
+        historyLinesCache = [];
+        return historyLinesCache;
+    }
+
+    try {
+        historyLinesCache = fs.readFileSync(currentHistoryFile, 'utf8').split('\n').filter(Boolean);
+        return historyLinesCache;
+    } catch (err) {
+        log.error('Failed to load metrics history cache', { error: err.message });
+        historyLinesCache = [];
+        return historyLinesCache;
+    }
+}
 
 export function ensureMetricsDirectory(log) {
     try {
@@ -134,18 +172,18 @@ export function appendMetricsHistory(collector, log) {
         ensureMetricsDirectory(log);
         const snapshot = buildHistorySnapshot(collector);
         const nextLine = JSON.stringify(snapshot);
-        let lines = [];
+        const currentHistoryFile = getHistoryCacheFile();
+        const lines = loadHistoryLines(log);
 
-        if (fs.existsSync(METRICS_HISTORY_FILE)) {
-            lines = fs.readFileSync(METRICS_HISTORY_FILE, 'utf8').split('\n').filter(Boolean);
+        if (lines.length < MAX_HISTORY_ENTRIES) {
+            lines.push(nextLine);
+            fs.appendFileSync(currentHistoryFile, `${nextLine}\n`, 'utf8');
+            return;
         }
 
         lines.push(nextLine);
-        if (lines.length > MAX_HISTORY_ENTRIES) {
-            lines = lines.slice(-MAX_HISTORY_ENTRIES);
-        }
-
-        fs.writeFileSync(METRICS_HISTORY_FILE, `${lines.join('\n')}\n`, 'utf8');
+        historyLinesCache = lines.slice(-MAX_HISTORY_ENTRIES);
+        fs.writeFileSync(currentHistoryFile, `${historyLinesCache.join('\n')}\n`, 'utf8');
     } catch (err) {
         log.error('Failed to append metrics history', { error: err.message });
     }
@@ -153,12 +191,11 @@ export function appendMetricsHistory(collector, log) {
 
 export function readMetricsHistory(limit, log) {
     try {
-        if (!fs.existsSync(METRICS_HISTORY_FILE)) {
+        const lines = loadHistoryLines(log);
+        if (lines.length === 0) {
             return [];
         }
 
-        const content = fs.readFileSync(METRICS_HISTORY_FILE, 'utf8');
-        const lines = content.trim().split('\n').filter(Boolean);
         return lines.slice(-limit).map((line) => {
             try {
                 return JSON.parse(line);

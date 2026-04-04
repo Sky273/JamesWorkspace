@@ -43,21 +43,22 @@ describe('docxRuntime', () => {
     }));
   });
 
-  it('cleans up only existing temp files', () => {
+  it('cleans up temp files and ignores already-missing paths', async () => {
     const fs = {
-      existsSync: vi.fn((filePath) => filePath.endsWith('.html')),
-      unlinkSync: vi.fn()
+      unlink: vi.fn((filePath) => filePath.endsWith('.html')
+        ? Promise.resolve()
+        : Promise.reject(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })))
     };
     const log = vi.fn();
 
-    cleanupTempFiles({
+    await cleanupTempFiles({
       fs,
       log,
       filePaths: ['C:\\temp\\a.html', 'C:\\temp\\b.docx']
     });
 
-    expect(fs.unlinkSync).toHaveBeenCalledTimes(1);
-    expect(fs.unlinkSync).toHaveBeenCalledWith('C:\\temp\\a.html');
+    expect(fs.unlink).toHaveBeenCalledTimes(2);
+    expect(fs.unlink).toHaveBeenCalledWith('C:\\temp\\a.html');
     expect(log).not.toHaveBeenCalled();
   });
 });

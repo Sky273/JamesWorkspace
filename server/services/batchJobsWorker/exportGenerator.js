@@ -6,6 +6,7 @@
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
+import { pipeline } from 'stream/promises';
 import { safeLog } from '../../utils/logger.backend.js';
 import { query } from '../../config/database.js';
 import {
@@ -114,9 +115,10 @@ export async function generateJobExport(jobId, options) {
         
         for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
             try {
+                const headers = getPdfServerAuthHeaders({ 'Content-Type': 'application/json' });
                 const response = await fetch(`${PDF_SERVER_URL}${endpoint}`, {
                     method: 'POST',
-                    headers: getPdfServerAuthHeaders({ 'Content-Type': 'application/json' }),
+                    headers,
                     body: JSON.stringify({
                         htmlContent: processedBody,
                         filename: `${candidateName.replace(/\s+/g, '_')}.${fileExtension}`,
@@ -141,6 +143,9 @@ export async function generateJobExport(jobId, options) {
                 const buffer = await response.arrayBuffer();
                 return { success: true, buffer };
             } catch (fetchErr) {
+                if (fetchErr?.code === 'PDF_SERVER_AUTH_NOT_CONFIGURED') {
+                    return { success: false, error: 'PDF server authentication is not configured on the backend.' };
+                }
                 lastError = fetchErr.message;
                 if (attempt < MAX_RETRIES) {
                     await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
@@ -236,7 +241,7 @@ export async function generateJobExport(jobId, options) {
     const totalOperations = successfulItems.length * exportFormats.length;
     safeLog('info', 'Starting batched export processing', { 
         jobId, 
-        itemCount: successfulItems.length, 
+        itemCount: successfulItems.length,
         formats: exportFormats,
         totalOperations,
         batchSize: PDF_BATCH_SIZE 
@@ -364,19 +369,26 @@ export async function generateJobExport(jobId, options) {
         throw new Error('No files generated for export');
     }
     
-    // Generate ZIP and save to temp directory
-    const zipBuffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
-    
-    // Create exports directory if it doesn't exist
+    // Generate ZIP directly to disk to avoid buffering the full archive in memory
     const exportsDir = path.join(os.tmpdir(), 'batch-exports');
-    if (!fs.existsSync(exportsDir)) {
-        fs.mkdirSync(exportsDir, { recursive: true });
-    }
-    
+    await fs.promises.mkdir(exportsDir, { recursive: true });
+
     // Save ZIP file
     const fileName = `export_${jobId}_${Date.now()}.zip`;
     const filePath = path.join(exportsDir, fileName);
-    fs.writeFileSync(filePath, zipBuffer);
+    const zipStream = typeof zip.generateNodeStream === 'function'
+        ? zip.generateNodeStream({ streamFiles: true, compression: 'DEFLATE' })
+        : null;
+    let exportedSize = 0;
+
+    if (zipStream) {
+        await pipeline(zipStream, fs.createWriteStream(filePath));
+        exportedSize = (await fs.promises.stat(filePath)).size;
+    } else {
+        const zipBuffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+        await fs.promises.writeFile(filePath, zipBuffer);
+        exportedSize = (await fs.promises.stat(filePath)).size;
+    }
     
     // Update job with export file info
     await updateJobExportFile(jobId, filePath, fileName);
@@ -385,6 +397,6 @@ export async function generateJobExport(jobId, options) {
         jobId, 
         fileName, 
         filesCount: Object.keys(zip.files).length,
-        size: zipBuffer.length 
+        size: exportedSize
     });
 }
