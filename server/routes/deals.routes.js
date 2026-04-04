@@ -13,7 +13,13 @@ import {
     checkDealAccess,
     ensureFirmScopedAccess,
     normalizeDealPayload,
-    parsePaginationParams
+    parsePaginationParams,
+    requireDealAccess,
+    requireFirmScopedAccess,
+    requireResumeFirmAccess,
+    resolveDealRelationIds,
+    resolveScopedFirmId,
+    validateDealRelations
 } from './deals.routes.helpers.js';
 import {
     createDeal,
@@ -46,18 +52,15 @@ const router = express.Router();
 // GET /api/deals - Get all deals with pagination and filters
 router.get('/', authenticateToken, async (req, res) => {
     try {
-        const userFirmId = await getUserFirmId(req);
-        const access = ensureFirmScopedAccess({ isAdmin: isUserAdmin(req), userFirmId });
-        if (!access.ok) {
-            return res.status(access.status).json({ error: access.error });
-        }
+        const scopedAccess = await requireFirmScopedAccess(req, res, { getUserFirmId, isUserAdmin });
+        if (!scopedAccess) return;
 
         const pagination = parsePaginationParams(req.query.page, req.query.limit);
         if (!pagination.ok) {
             return res.status(400).json({ error: pagination.error });
         }
 
-        const firmId = isUserAdmin(req) && req.query.firmId ? req.query.firmId : userFirmId;
+        const firmId = resolveScopedFirmId({ scopedAccess, requestedFirmId: req.query.firmId });
         
         const filters = {
             clientId: req.query.clientId,
@@ -77,13 +80,10 @@ router.get('/', authenticateToken, async (req, res) => {
 // GET /api/deals/stats - Get deal statistics
 router.get('/stats', authenticateToken, async (req, res) => {
     try {
-        const userFirmId = await getUserFirmId(req);
-        const access = ensureFirmScopedAccess({ isAdmin: isUserAdmin(req), userFirmId });
-        if (!access.ok) {
-            return res.status(access.status).json({ error: access.error });
-        }
+        const scopedAccess = await requireFirmScopedAccess(req, res, { getUserFirmId, isUserAdmin });
+        if (!scopedAccess) return;
 
-        const firmId = isUserAdmin(req) && req.query.firmId ? req.query.firmId : userFirmId;
+        const firmId = resolveScopedFirmId({ scopedAccess, requestedFirmId: req.query.firmId });
         const stats = await getDealStats(firmId);
         return res.json(stats);
     } catch (error) {
@@ -111,12 +111,8 @@ router.get('/resume-statuses', authenticateToken, (req, res) => {
 router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => {
     try {
         const { id } = req.params;
-        const access = await checkDealAccess(req, id, { getDealFirmId, getUserFirmId, isUserAdmin });
-        
-        if (!access.hasAccess) {
-            return res.status(access.status || (access.error === 'Deal not found' ? 404 : 403))
-                .json({ error: access.error });
-        }
+        const access = await requireDealAccess(req, res, id, { getDealFirmId, getUserFirmId, isUserAdmin });
+        if (!access) return;
 
         const deal = await getDealById(id);
         return res.json(deal);
@@ -130,12 +126,8 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
 router.get('/:id/missions', authenticateToken, validateParams('id'), async (req, res) => {
     try {
         const { id } = req.params;
-        const access = await checkDealAccess(req, id, { getDealFirmId, getUserFirmId, isUserAdmin });
-        
-        if (!access.hasAccess) {
-            return res.status(access.status || (access.error === 'Deal not found' ? 404 : 403))
-                .json({ error: access.error });
-        }
+        const access = await requireDealAccess(req, res, id, { getDealFirmId, getUserFirmId, isUserAdmin });
+        if (!access) return;
 
         const missions = await getMissionsForDeal(id);
         return res.json(missions);
@@ -177,28 +169,16 @@ router.post('/', authenticateToken, userRateLimit(), validateBody(createDealSche
             return res.status(400).json({ error: 'Title is required' });
         }
 
-        // If client_id is provided, verify it belongs to the same firm
-        if (normalizedDeal.client_id) {
-            const clientFirmId = await getClientFirmId(normalizedDeal.client_id);
-            if (!clientFirmId) {
-                return res.status(400).json({ error: 'Client not found' });
-            }
-            if (clientFirmId !== userFirmId) {
-                return res.status(403).json({ error: 'Client belongs to different firm' });
-            }
-        }
-
-        if (normalizedDeal.contact_id) {
-            const contact = await getContactOwnership(normalizedDeal.contact_id);
-            if (!contact) {
-                return res.status(400).json({ error: 'Contact not found' });
-            }
-            if (contact.firm_id !== userFirmId) {
-                return res.status(403).json({ error: 'Contact belongs to different firm' });
-            }
-            if (normalizedDeal.client_id && contact.client_id !== normalizedDeal.client_id) {
-                return res.status(400).json({ error: 'Contact does not belong to the provided client' });
-            }
+        const relationIds = resolveDealRelationIds({
+            body: req.body,
+            normalizedDeal
+        });
+        const relationValidation = await validateDealRelations(
+            { firmId: userFirmId, clientId: relationIds.clientId, contactId: relationIds.contactId },
+            { getClientFirmId, getContactOwnership }
+        );
+        if (!relationValidation.ok) {
+            return res.status(relationValidation.status).json({ error: relationValidation.error });
         }
 
         safeLog('info', 'Creating deal - calling createDeal service', { title, userId, userFirmId });
@@ -215,12 +195,8 @@ router.post('/', authenticateToken, userRateLimit(), validateBody(createDealSche
 router.put('/:id', authenticateToken, validateParams('id'), userRateLimit(), validateBody(updateDealSchema), async (req, res) => {
     try {
         const { id } = req.params;
-        const access = await checkDealAccess(req, id, { getDealFirmId, getUserFirmId, isUserAdmin });
-        
-        if (!access.hasAccess) {
-            return res.status(access.status || (access.error === 'Deal not found' ? 404 : 403))
-                .json({ error: access.error });
-        }
+        const access = await requireDealAccess(req, res, id, { getDealFirmId, getUserFirmId, isUserAdmin });
+        if (!access) return;
 
         const normalizedDeal = normalizeDealPayload(req.body);
         const existingDeal = await getDealById(id);
@@ -228,41 +204,17 @@ router.put('/:id', authenticateToken, validateParams('id'), userRateLimit(), val
             return res.status(404).json({ error: 'Deal not found' });
         }
 
-        const hasClientUpdate =
-            Object.prototype.hasOwnProperty.call(req.body, 'client_id') ||
-            Object.prototype.hasOwnProperty.call(req.body, 'clientId');
-        const hasContactUpdate =
-            Object.prototype.hasOwnProperty.call(req.body, 'contact_id') ||
-            Object.prototype.hasOwnProperty.call(req.body, 'contactId');
-        const effectiveClientId = hasClientUpdate
-            ? (normalizedDeal.client_id && normalizedDeal.client_id.trim() !== '' ? normalizedDeal.client_id : null)
-            : (existingDeal.client_id || null);
-        const effectiveContactId = hasContactUpdate
-            ? (normalizedDeal.contact_id && normalizedDeal.contact_id.trim() !== '' ? normalizedDeal.contact_id : null)
-            : (existingDeal.contact_id || null);
-
-        // If client_id is being updated, verify it belongs to the same firm
-        if (effectiveClientId) {
-            const clientFirmId = await getClientFirmId(effectiveClientId);
-            if (!clientFirmId) {
-                return res.status(400).json({ error: 'Client not found' });
-            }
-            if (clientFirmId !== access.firmId) {
-                return res.status(403).json({ error: 'Client belongs to different firm' });
-            }
-        }
-
-        if (effectiveContactId) {
-            const contact = await getContactOwnership(effectiveContactId);
-            if (!contact) {
-                return res.status(400).json({ error: 'Contact not found' });
-            }
-            if (contact.firm_id !== access.firmId) {
-                return res.status(403).json({ error: 'Contact belongs to different firm' });
-            }
-            if (effectiveClientId && contact.client_id !== effectiveClientId) {
-                return res.status(400).json({ error: 'Contact does not belong to the provided client' });
-            }
+        const relationIds = resolveDealRelationIds({
+            body: req.body,
+            normalizedDeal,
+            existingDeal
+        });
+        const relationValidation = await validateDealRelations(
+            { firmId: access.firmId, clientId: relationIds.clientId, contactId: relationIds.contactId },
+            { getClientFirmId, getContactOwnership }
+        );
+        if (!relationValidation.ok) {
+            return res.status(relationValidation.status).json({ error: relationValidation.error });
         }
 
         const deal = await updateDeal(id, normalizedDeal);
@@ -277,12 +229,8 @@ router.put('/:id', authenticateToken, validateParams('id'), userRateLimit(), val
 router.delete('/:id', authenticateToken, validateParams('id'), userRateLimit(), async (req, res) => {
     try {
         const { id } = req.params;
-        const access = await checkDealAccess(req, id, { getDealFirmId, getUserFirmId, isUserAdmin });
-        
-        if (!access.hasAccess) {
-            return res.status(access.status || (access.error === 'Deal not found' ? 404 : 403))
-                .json({ error: access.error });
-        }
+        const access = await requireDealAccess(req, res, id, { getDealFirmId, getUserFirmId, isUserAdmin });
+        if (!access) return;
 
         await deleteDeal(id);
         return res.json({ success: true, message: 'Deal deleted' });
@@ -300,12 +248,8 @@ router.delete('/:id', authenticateToken, validateParams('id'), userRateLimit(), 
 router.get('/:id/resumes', authenticateToken, validateParams('id'), async (req, res) => {
     try {
         const { id } = req.params;
-        const access = await checkDealAccess(req, id, { getDealFirmId, getUserFirmId, isUserAdmin });
-        
-        if (!access.hasAccess) {
-            return res.status(access.status || (access.error === 'Deal not found' ? 404 : 403))
-                .json({ error: access.error });
-        }
+        const access = await requireDealAccess(req, res, id, { getDealFirmId, getUserFirmId, isUserAdmin });
+        if (!access) return;
 
         const resumes = await getResumesForDeal(id);
         return res.json(resumes);
@@ -325,20 +269,16 @@ router.post('/:id/resumes', authenticateToken, validateParams('id'), userRateLim
             return res.status(400).json({ error: 'resumeId is required' });
         }
 
-        const access = await checkDealAccess(req, id, { getDealFirmId, getUserFirmId, isUserAdmin });
-        if (!access.hasAccess) {
-            return res.status(access.status || (access.error === 'Deal not found' ? 404 : 403))
-                .json({ error: access.error });
-        }
+        const access = await requireDealAccess(req, res, id, { getDealFirmId, getUserFirmId, isUserAdmin });
+        if (!access) return;
 
         // Verify resume exists and belongs to same firm
-        const resumeFirmId = await getResumeFirmId(resumeId);
-        if (!resumeFirmId) {
-            return res.status(400).json({ error: 'Resume not found' });
-        }
-        if (resumeFirmId !== access.firmId) {
-            return res.status(403).json({ error: 'Resume belongs to different firm' });
-        }
+        const resumeAccess = await requireResumeFirmAccess(
+            res,
+            { resumeId, firmId: access.firmId, forbiddenError: 'Resume belongs to different firm' },
+            { getResumeFirmId }
+        );
+        if (!resumeAccess) return;
 
         const userId = req.user?.id;
         const result = await addResumeToDeal(id, resumeId, userId, { notes, status });
@@ -359,11 +299,8 @@ router.put('/:id/resumes/:resumeId', authenticateToken, validateParams('id', 're
             return res.status(400).json({ error: 'status is required' });
         }
 
-        const access = await checkDealAccess(req, id, { getDealFirmId, getUserFirmId, isUserAdmin });
-        if (!access.hasAccess) {
-            return res.status(access.status || (access.error === 'Deal not found' ? 404 : 403))
-                .json({ error: access.error });
-        }
+        const access = await requireDealAccess(req, res, id, { getDealFirmId, getUserFirmId, isUserAdmin });
+        if (!access) return;
 
         const result = await updateDealResumeStatus(id, resumeId, status, notes);
         return res.json(result);
@@ -381,11 +318,8 @@ router.delete('/:id/resumes/:resumeId', authenticateToken, validateParams('id', 
     try {
         const { id, resumeId } = req.params;
         
-        const access = await checkDealAccess(req, id, { getDealFirmId, getUserFirmId, isUserAdmin });
-        if (!access.hasAccess) {
-            return res.status(access.status || (access.error === 'Deal not found' ? 404 : 403))
-                .json({ error: access.error });
-        }
+        const access = await requireDealAccess(req, res, id, { getDealFirmId, getUserFirmId, isUserAdmin });
+        if (!access) return;
 
         await removeResumeFromDeal(id, resumeId);
         return res.json({ success: true, message: 'Resume removed from deal' });
@@ -406,22 +340,22 @@ router.delete('/:id/resumes/:resumeId', authenticateToken, validateParams('id', 
 router.get('/by-resume/:resumeId', authenticateToken, validateParams('resumeId'), async (req, res) => {
     try {
         const { resumeId } = req.params;
-        const userFirmId = await getUserFirmId(req);
-        const access = ensureFirmScopedAccess({ isAdmin: isUserAdmin(req), userFirmId });
-        if (!access.ok) {
-            return res.status(access.status).json({ error: access.error });
-        }
+        const scopedAccess = await requireFirmScopedAccess(req, res, { getUserFirmId, isUserAdmin });
+        if (!scopedAccess) return;
 
-        // Verify resume exists and user has access
-        const resumeFirmId = await getResumeFirmId(resumeId);
+        const resumeFirmId = scopedAccess.isAdmin
+            ? await getResumeFirmId(resumeId)
+            : (await requireResumeFirmAccess(
+                res,
+                { resumeId, firmId: scopedAccess.userFirmId },
+                { getResumeFirmId }
+            ))?.resumeFirmId;
         if (!resumeFirmId) {
             return res.status(404).json({ error: 'Resume not found' });
         }
-        if (!isUserAdmin(req) && resumeFirmId !== userFirmId) {
-            return res.status(403).json({ error: 'Access denied' });
-        }
+        if (!scopedAccess.isAdmin && resumeFirmId !== scopedAccess.userFirmId) return;
 
-        const firmId = isUserAdmin(req) ? resumeFirmId : userFirmId;
+        const firmId = scopedAccess.isAdmin ? resumeFirmId : scopedAccess.userFirmId;
         const deals = await getDealsForResume(resumeId, firmId);
         return res.json({ data: deals });
     } catch (error) {
@@ -445,14 +379,12 @@ router.post('/add-resume-to-multiple', authenticateToken, userRateLimit(), valid
             return res.status(access.status).json({ error: access.error });
         }
 
-        // Verify resume exists and belongs to user's firm
-        const resumeFirmId = await getResumeFirmId(resumeId);
-        if (!resumeFirmId) {
-            return res.status(404).json({ error: 'Resume not found' });
-        }
-        if (resumeFirmId !== userFirmId) {
-            return res.status(403).json({ error: 'Access denied' });
-        }
+        const resumeAccess = await requireResumeFirmAccess(
+            res,
+            { resumeId, firmId: userFirmId },
+            { getResumeFirmId }
+        );
+        if (!resumeAccess) return;
 
         const userId = req.user?.id;
         const results = [];

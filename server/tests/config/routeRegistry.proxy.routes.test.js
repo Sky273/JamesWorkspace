@@ -32,7 +32,7 @@ mockRouter.use((_req, res) => res.status(501).json({ error: 'not used in this te
 
 vi.mock('../../routes/health.routes.js', () => ({ default: mockRouter }));
 vi.mock('../../routes/metrics.routes.js', () => ({ default: mockRouter }));
-vi.mock('../../routes/auth.routes.js', () => ({ default: mockRouter }));
+vi.mock('../../routes/auth/index.js', () => ({ default: mockRouter }));
 vi.mock('../../routes/settings.routes.js', () => ({ default: mockRouter }));
 vi.mock('../../routes/missions.routes.js', () => ({ default: mockRouter }));
 vi.mock('../../routes/resumes.routes.js', () => ({ default: mockRouter }));

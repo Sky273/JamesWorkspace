@@ -1,6 +1,7 @@
 import { verifyToken } from '../services/jwt.service.js';
 import { findUserById } from '../services/users.service.js';
 import { safeLog } from '../utils/logger.backend.js';
+import { getUserFirmIdFromUser, getUserFirmNameFromUser } from '../utils/firmHelpers.js';
 
 const AUTH_USER_CACHE_TTL_MS = Math.max(1000, Number.parseInt(process.env.AUTH_USER_CACHE_TTL_MS || '15000', 10) || 15000);
 const authUserCache = new Map();
@@ -54,6 +55,21 @@ function setCachedAuthenticatedUser(cacheKey, user) {
 
     authUserCache.set(cacheKey, cacheEntry);
     authUserIdCache.set(user.id, cacheEntry);
+}
+
+function buildAuthenticatedRequestUser(decoded, currentUser) {
+    return {
+        id: currentUser.id,
+        email: currentUser.email,
+        name: currentUser.name,
+        status: currentUser.status,
+        role: currentUser.role,
+        firmId: getUserFirmIdFromUser(currentUser),
+        firmName: getUserFirmNameFromUser(currentUser),
+        exp: decoded.exp,
+        iat: decoded.iat,
+        jti: decoded.jti || null
+    };
 }
 
 export function resetAuthUserCacheForTests() {
@@ -168,21 +184,7 @@ export async function authenticateToken(req, res, next) {
         });
     }
 
-    req.user = {
-        ...decoded,
-        id: currentUser.id,
-        email: currentUser.email,
-        name: currentUser.name,
-        status: currentUser.status,
-        role: currentUser.role,
-        firmId: currentUser.firm_id || null,
-        firm_id: currentUser.firm_id || null,
-        firmName: currentUser.firm_name || null,
-        customerName: currentUser.firm_name || null,
-        // Legacy aliases kept for backward compatibility only.
-        firm: currentUser.firm_name || null,
-        customer: currentUser.firm_name || null
-    };
+    req.user = buildAuthenticatedRequestUser(decoded, currentUser);
     next();
 }
 
@@ -218,7 +220,7 @@ export function hasFirmAccess(req, resourceFirm) {
         return true;
     }
 
-    const userFirmId = req.user?.firmId || req.user?.firm_id || null;
+    const userFirmId = getUserFirmIdFromUser(req.user);
 
     const resourceFirmId = resourceFirm && typeof resourceFirm === 'object'
         ? (resourceFirm.firmId || resourceFirm.firm_id || resourceFirm.id || null)

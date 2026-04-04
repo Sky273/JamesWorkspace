@@ -5,13 +5,28 @@
 
 import { query } from '../config/database.js';
 import { safeLog } from './logger.backend.js';
-import { isUserAdmin } from '../middleware/auth.middleware.js';
 
 // Helper to validate UUID format
 export const isValidUUID = (str) => {
     if (!str || typeof str !== 'string') return false;
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     return uuidRegex.test(str);
+};
+
+export const getUserFirmIdFromUser = (user) => {
+    if (!user || typeof user !== 'object') {
+        return null;
+    }
+
+    return user.firm_id ?? user.firmId ?? null;
+};
+
+export const getUserFirmNameFromUser = (user) => {
+    if (!user || typeof user !== 'object') {
+        return null;
+    }
+
+    return user.firmName ?? user.firm_name ?? null;
 };
 
 /**
@@ -21,9 +36,8 @@ export const isValidUUID = (str) => {
  * @returns {string|null} - firm_id UUID or null
  */
 export const getUserFirmId = async (req) => {
-    // Check for direct UUID in user object (from JWT token)
-    const firmId = req.user?.firm_id || req.user?.firmId;
-    
+    const firmId = getUserFirmIdFromUser(req?.user);
+
     if (firmId && isValidUUID(firmId)) {
         return firmId;
     }
@@ -46,7 +60,7 @@ export const getUserFirmId = async (req) => {
  * @returns {string|null} - firm name or null
  */
 export const getUserFirmName = (req) => {
-    return req.user?.firmName || req.user?.firm || null;
+    return getUserFirmNameFromUser(req?.user);
 };
 
 /**
@@ -71,5 +85,6 @@ export const getFirmById = async (firmId) => {
     return null;
 };
 
-// Re-export isUserAdmin from auth.middleware.js for backward compatibility
-export { isUserAdmin };
+export function isUserAdmin(req) {
+    return req?.user?.role?.toLowerCase() === 'admin';
+}

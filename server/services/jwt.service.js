@@ -11,30 +11,36 @@ import { isTokenBlacklisted, blacklistToken } from './tokenBlacklist.service.js'
 // Security: Always specify the algorithm to prevent algorithm confusion attacks
 const JWT_ALGORITHM = 'HS256';
 
+function buildAccessTokenPayload(user) {
+    const firmId = user?.firm_id || user?.firmId || null;
+    const firmName = user?.firm_name || user?.firmName || user?.firm || null;
+
+    return {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        status: user.status,
+        role: user.role || 'user',
+        firmId,
+        firmName
+    };
+}
+
 /**
  * Generate access token
  * Includes a unique jti (JWT ID) for blacklist support
  */
 export function generateAccessToken(user) {
     const jti = crypto.randomBytes(16).toString('hex');
-    const payload = { 
-        id: user.id, 
-        email: user.email,
-        name: user.name,
-        status: user.status,
-        role: user.role || 'user',
-        firmId: user.firm_id || user.firmId,
-        firmName: user.firm_name || user.firmName || user.firm || null,
-        firm: user.firm_name || user.firmName || user.firm || null,
-        customerName: user.customerName || user.firm_name || user.firmName || user.firm || null,
-        customer: user.firm_name || user.firmName || user.firm || user.customer || null,
+    const payload = {
+        ...buildAccessTokenPayload(user),
         jti // Unique token ID for blacklist support
     };
     
     safeLog('debug', 'Generating JWT', { 
         userId: payload.id, 
         role: payload.role, 
-        firm: payload.firm,
+        firmId: payload.firmId,
         jti 
     });
     

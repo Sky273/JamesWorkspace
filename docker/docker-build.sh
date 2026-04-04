@@ -80,6 +80,7 @@ run_container() {
 
     docker run -d \
         --name $CONTAINER_NAME \
+        -p 443:3443 \
         -p 3443:3443 \
         -e OPENAI_API_KEY="${OPENAI_API_KEY}" \
         -e ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY}" \
@@ -102,7 +103,7 @@ run_container() {
         echo "Container started successfully!"
         echo ""
         echo "============================================"
-        echo "  Application URL: https://localhost:3443"
+        echo "  Application URLs: https://localhost and https://localhost:3443"
         echo "  Database: ./data/postgresql (persistent local directory)"
         echo "  Default login:   admin@resumeconverter.local"
         echo "  Default password: admin123"

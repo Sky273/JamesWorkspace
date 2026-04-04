@@ -7,6 +7,12 @@
 import { query } from '../config/database.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { assertSchemaRequirements } from './schemaVerification.service.js';
+import {
+    buildDealsWhereClause,
+    buildDealUpdateStatement,
+    normalizeNullableRelationId,
+    parseDealsPagination
+} from './deals.service.helpers.js';
 
 // Deal status constants
 export const DEAL_STATUS = {
@@ -87,8 +93,8 @@ export async function createDeal(data, userId, firmId) {
         } = data;
 
         // Ensure empty strings are converted to null for UUID fields
-        const cleanClientId = client_id && client_id.trim() !== '' ? client_id : null;
-        const cleanContactId = contact_id && contact_id.trim() !== '' ? contact_id : null;
+        const cleanClientId = normalizeNullableRelationId(client_id);
+        const cleanContactId = normalizeNullableRelationId(contact_id);
 
         safeLog('info', 'createDeal service - preparing insert', {
             firmId,
@@ -139,52 +145,7 @@ export async function createDeal(data, userId, firmId) {
  */
 export async function updateDeal(dealId, data) {
     try {
-        const assignments = [];
-        const params = [];
-        let paramIndex = 1;
-
-        const setField = (column, value) => {
-            assignments.push(`${column} = $${paramIndex}`);
-            params.push(value);
-            paramIndex++;
-        };
-
-        if (Object.prototype.hasOwnProperty.call(data, 'title')) {
-            setField('title', data.title);
-        }
-        if (Object.prototype.hasOwnProperty.call(data, 'description')) {
-            setField('description', data.description);
-        }
-        if (Object.prototype.hasOwnProperty.call(data, 'client_id')) {
-            setField('client_id', data.client_id && data.client_id.trim() !== '' ? data.client_id : null);
-        }
-        if (Object.prototype.hasOwnProperty.call(data, 'contact_id')) {
-            setField('contact_id', data.contact_id && data.contact_id.trim() !== '' ? data.contact_id : null);
-        }
-        if (Object.prototype.hasOwnProperty.call(data, 'status')) {
-            setField('status', data.status);
-        }
-        if (Object.prototype.hasOwnProperty.call(data, 'expected_start_date')) {
-            setField('expected_start_date', data.expected_start_date);
-        }
-        if (Object.prototype.hasOwnProperty.call(data, 'expected_end_date')) {
-            setField('expected_end_date', data.expected_end_date);
-        }
-        if (Object.prototype.hasOwnProperty.call(data, 'budget_min')) {
-            setField('budget_min', data.budget_min);
-        }
-        if (Object.prototype.hasOwnProperty.call(data, 'budget_max')) {
-            setField('budget_max', data.budget_max);
-        }
-        if (Object.prototype.hasOwnProperty.call(data, 'priority')) {
-            setField('priority', data.priority);
-        }
-        if (Object.prototype.hasOwnProperty.call(data, 'tags')) {
-            setField('tags', Array.isArray(data.tags) ? JSON.stringify(data.tags) : null);
-        }
-        if (Object.prototype.hasOwnProperty.call(data, 'notes')) {
-            setField('notes', data.notes);
-        }
+        const { assignments, params, paramIndex } = buildDealUpdateStatement(data);
 
         if (assignments.length === 0) {
             throw new Error('No deal fields provided for update');
@@ -274,52 +235,15 @@ export async function getDealById(dealId) {
  */
 export async function getDeals(firmId, filters = {}, pagination = {}) {
     try {
-        const { clientId, status, priority, search } = filters;
-        const parsedPage = Number.parseInt(pagination.page, 10);
-        const parsedLimit = Number.parseInt(pagination.limit, 10);
-        const page = Number.isInteger(parsedPage) && parsedPage > 0 ? parsedPage : 1;
-        const limit = Number.isInteger(parsedLimit) ? Math.min(Math.max(parsedLimit, 1), 100) : 20;
-        const offset = (page - 1) * limit;
+        const { page, limit, offset } = parseDealsPagination(pagination);
+        const { whereClause, params, nextParamIndex } = buildDealsWhereClause(firmId, filters);
 
-        // Build WHERE conditions
-        const conditions = ['d.firm_id = $1'];
-        const params = [firmId];
-        let paramIndex = 2;
-
-        if (clientId) {
-            conditions.push(`d.client_id = $${paramIndex}`);
-            params.push(clientId);
-            paramIndex++;
-        }
-
-        if (status && status !== 'all') {
-            conditions.push(`d.status = $${paramIndex}`);
-            params.push(status);
-            paramIndex++;
-        }
-
-        if (priority && priority !== 'all') {
-            conditions.push(`d.priority = $${paramIndex}`);
-            params.push(priority);
-            paramIndex++;
-        }
-
-        if (search) {
-            conditions.push(`(d.title ILIKE $${paramIndex} OR d.description ILIKE $${paramIndex})`);
-            params.push(`%${search}%`);
-            paramIndex++;
-        }
-
-        const whereClause = `WHERE ${conditions.join(' AND ')}`;
-
-        // Count total
         const countResult = await query(
             `SELECT COUNT(*) as total FROM deals d ${whereClause}`,
             params
         );
         const totalCount = parseInt(countResult.rows[0].total);
 
-        // Fetch deals
         const dataParams = [...params, limit, offset];
         const result = await query(`
             SELECT d.*,
@@ -342,7 +266,7 @@ export async function getDeals(firmId, filters = {}, pagination = {}) {
                     WHEN 'low' THEN 4 
                 END,
                 d.updated_at DESC
-            LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+            LIMIT $${nextParamIndex} OFFSET $${nextParamIndex + 1}
         `, dataParams);
 
         return {

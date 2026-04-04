@@ -1,6 +1,6 @@
 import healthRoutes from '../../routes/health.routes.js';
 import metricsRoutes from '../../routes/metrics.routes.js';
-import authRoutes from '../../routes/auth.routes.js';
+import authRoutes from '../../routes/auth/index.js';
 import settingsRoutes from '../../routes/settings.routes.js';
 import missionsRoutes from '../../routes/missions.routes.js';
 import resumesRoutes from '../../routes/resumes.routes.js';

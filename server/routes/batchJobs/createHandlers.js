@@ -1,6 +1,3 @@
-import fs from 'fs/promises';
-import * as missionsService from '../../services/missions.service.js';
-import { getResumeForAccessCheck } from '../../services/resumes.service.js';
 import {
     JOB_STATUS,
     createJob,
@@ -15,17 +12,20 @@ import {
     updateJobStatus
 } from '../../services/batchJobs.service.js';
 import { safeLog } from '../../utils/logger.backend.js';
-import { getRequiredSignatureBytes, isValidDocxArchive, isValidFileSignature } from '../../utils/fileSignature.js';
 import {
+    cleanupUploadedFiles,
+    createJobAndFetchResponse,
     ensureFirmId,
+    ensureMissionAccess,
     ensureOwnerAccess,
+    ensureResumeIdsAccess,
     getUserContext,
+    mapCreatedImportJobResponse,
     normalizeBatchJobPayload,
-    parseArrayInput,
-    parseBoolean,
-    resolveFirmId
+    resolveFirmId,
+    stageImportJobItems,
+    validateImportRequest
 } from './helpers.js';
-import { resolveUploadMimeType } from '../../utils/uploadFileTypes.js';
 
 const BATCH_IMPORT_ALLOWED_MIME_TYPES = new Set([
     'application/pdf',
@@ -34,135 +34,26 @@ const BATCH_IMPORT_ALLOWED_MIME_TYPES = new Set([
 ]);
 const MAX_BATCH_IMPORT_TOTAL_BYTES = 250 * 1024 * 1024;
 
-async function cleanupUploadedFiles(files) {
-    await Promise.all((Array.isArray(files) ? files : []).map(async (file) => {
-        if (file?.path) {
-            await fs.unlink(file.path).catch(() => {});
-        }
-    }));
-}
-
-async function readFileHeader(filePath, bytesToRead) {
-    const handle = await fs.open(filePath, 'r');
-    try {
-        const buffer = Buffer.alloc(bytesToRead);
-        const { bytesRead } = await handle.read(buffer, 0, bytesToRead, 0);
-        return buffer.subarray(0, bytesRead);
-    } finally {
-        await handle.close();
-    }
-}
-
-async function hasValidUploadedFileContents(filePath, mimeType) {
-    if (mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-        const fileBuffer = await fs.readFile(filePath);
-        return isValidDocxArchive(fileBuffer);
-    }
-
-    const signatureBytes = getRequiredSignatureBytes(mimeType);
-    const fileSignatureBuffer = await readFileHeader(filePath, signatureBytes || 12);
-    return isValidFileSignature(fileSignatureBuffer, mimeType);
-}
-
-async function ensureResumeIdsAccess(resumeIds, firmId, userContext, res) {
-    for (const resumeId of resumeIds) {
-        const resume = await getResumeForAccessCheck(resumeId);
-        if (!resume) {
-            res.status(404).json({ error: `CV introuvable: ${resumeId}` });
-            return false;
-        }
-
-        if (!userContext.isAdmin && resume.firm_id !== userContext.userFirmId) {
-            res.status(403).json({ error: 'Accès non autorisé' });
-            return false;
-        }
-
-        if (firmId && resume.firm_id !== firmId) {
-            res.status(400).json({ error: `Le CV ${resumeId} n'appartient pas à la firme ciblée` });
-            return false;
-        }
-    }
-
-    return true;
-}
-
-async function ensureMissionAccess(missionId, firmId, userContext, res) {
-    const missionRecord = await missionsService.findMission(missionId);
-    if (!missionRecord) {
-        res.status(404).json({ error: 'Mission non trouvée' });
-        return null;
-    }
-
-    const missionFirmId = missionRecord.firm_id || missionRecord.firm;
-    if (!ensureOwnerAccess(missionFirmId, userContext, res)) {
-        return null;
-    }
-
-    if (firmId && missionFirmId !== firmId) {
-        res.status(400).json({ error: 'La mission n’appartient pas à la firme ciblée' });
-        return null;
-    }
-
-    return missionRecord;
-}
 
 export async function createImportJob(req, res) {
     try {
-        const userContext = getUserContext(req);
-        const normalizedPayload = normalizeBatchJobPayload(req.body);
-        const firmId = resolveFirmId(userContext, normalizedPayload);
-
-        if (!ensureFirmId(firmId, res)) {
+        const importRequest = await validateImportRequest({
+            req,
+            res,
+            allowedMimeTypes: BATCH_IMPORT_ALLOWED_MIME_TYPES,
+            maxTotalBytes: MAX_BATCH_IMPORT_TOTAL_BYTES
+        });
+        if (!importRequest.ok) {
             return;
         }
 
-        const exportFormats = normalizedPayload.exportFormats
-            ? parseArrayInput(normalizedPayload.exportFormats, ['pdf'])
-            : normalizedPayload.exportFormat
-                ? [normalizedPayload.exportFormat]
-                : ['pdf'];
-
-        const options = {
-            improve: parseBoolean(req.body.improve),
-            export: parseBoolean(req.body.export),
-            exportFormats,
-            templateId: normalizedPayload.templateId || null,
-            deleteAfterExport: parseBoolean(normalizedPayload.deleteAfterExport),
-            profileType: normalizedPayload.profileType || undefined,
-            candidateName: normalizedPayload.candidateName || undefined,
-            candidateEmail: normalizedPayload.candidateEmail || undefined
-        };
-
-        const relativePaths = parseArrayInput(normalizedPayload.relativePaths, []);
-        const totalUploadBytes = (req.files || []).reduce((sum, file) => sum + (file?.size || 0), 0);
-        if (totalUploadBytes > MAX_BATCH_IMPORT_TOTAL_BYTES) {
-            await cleanupUploadedFiles(req.files);
-            return res.status(413).json({
-                error: `Batch import payload too large. Maximum total upload size is ${Math.round(MAX_BATCH_IMPORT_TOTAL_BYTES / (1024 * 1024))}MB.`
-            });
-        }
-
-        const uploadedFiles = [];
-        for (const [index, file] of (req.files || []).entries()) {
-            const resolvedMimeType = resolveUploadMimeType(file.originalname, file.mimetype, BATCH_IMPORT_ALLOWED_MIME_TYPES);
-            const hasValidContents = file.buffer
-                ? (
-                    resolvedMimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-                        ? await isValidDocxArchive(file.buffer)
-                        : isValidFileSignature(file.buffer, resolvedMimeType)
-                )
-                : await hasValidUploadedFileContents(file.path, resolvedMimeType);
-
-            if (!hasValidContents) {
-                await cleanupUploadedFiles(req.files);
-                return res.status(400).json({ error: `Invalid file contents for ${file.originalname}` });
-            }
-            uploadedFiles.push({
-                ...file,
-                fileMimeType: resolvedMimeType,
-                relativePath: relativePaths[index] || null
-            });
-        }
+        const {
+            userContext,
+            firmId,
+            options,
+            relativePaths,
+            uploadedFiles
+        } = importRequest;
 
         const job = await createJob({
             firmId,
@@ -171,19 +62,7 @@ export async function createImportJob(req, res) {
             options
         });
 
-        const responsePayload = {
-            id: job.id,
-            status: job.status,
-            firm_id: job.firm_id,
-            user_id: job.user_id,
-            job_type: job.job_type,
-            total_items: req.files?.length || 0,
-            processed_items: job.processed_items || 0,
-            success_count: job.success_count || 0,
-            error_count: job.error_count || 0,
-            options: job.options,
-            created_at: job.created_at
-        };
+        const responsePayload = mapCreatedImportJobResponse(job, req.files?.length || 0);
 
         safeLog('info', 'Batch job created via API', {
             jobId: job.id,
@@ -203,28 +82,13 @@ export async function createImportJob(req, res) {
 
         res.status(201).json(responsePayload);
 
-        void (async () => {
-            try {
-                if (uploadedFiles.length === 0) {
-                    safeLog('warn', 'No files received for batch job', { jobId: job.id });
-                    return;
-                }
-
-                safeLog('info', 'Adding items to job', {
-                    jobId: job.id,
-                    itemCount: uploadedFiles.length,
-                    hasRelativePaths: relativePaths.length > 0,
-                    totalFileBytes: uploadedFiles.reduce((sum, item) => sum + (item.size || 0), 0)
-                });
-
-                const addedCount = await addJobItemsFromUploadedFiles(job.id, uploadedFiles);
-                safeLog('info', 'Items added to job', { jobId: job.id, addedCount });
-            } catch (stagingError) {
-                await cleanupUploadedFiles(uploadedFiles);
-                safeLog('error', 'Failed to stage items for batch job after job creation', { jobId: job.id, error: stagingError.message });
-                await updateJobStatus(job.id, JOB_STATUS.FAILED, { error_message: stagingError.message });
-            }
-        })();
+        void stageImportJobItems({
+            jobId: job.id,
+            uploadedFiles,
+            relativePaths,
+            addJobItemsFromUploadedFiles,
+            markJobFailed: (stagingError) => updateJobStatus(job.id, JOB_STATUS.FAILED, { error_message: stagingError.message })
+        });
     } catch (error) {
         await cleanupUploadedFiles(req.files);
         safeLog('error', 'Failed to create batch job', { error: error.message });
@@ -258,15 +122,17 @@ async function createResumeIdsJob(req, res, { jobType, optionsBuilder, logLabel 
             }
         }
 
-        const job = await createJob({
-            firmId,
-            userId: userContext.userId,
-            jobType,
-            options: optionsBuilder({ normalizedPayload, jobOptions })
+        const { job, responsePayload: updatedJob } = await createJobAndFetchResponse({
+            createJobFn: createJob,
+            getJobFn: getJob,
+            createParams: {
+                firmId,
+                userId: userContext.userId,
+                jobType,
+                options: optionsBuilder({ normalizedPayload, jobOptions })
+            },
+            stageItems: (createdJob) => addJobResumeIds(createdJob.id, resumeIds)
         });
-
-        await addJobResumeIds(job.id, resumeIds);
-        const updatedJob = await getJob(job.id);
 
         safeLog('info', `${logLabel} created via API`, {
             jobId: job.id,
@@ -331,37 +197,28 @@ export async function createProfileSearchJob(req, res) {
             return;
         }
 
-        const missionRecord = await missionsService.findMission(missionId);
-        if (!missionRecord) {
-            return res.status(404).json({ error: 'Mission non trouvée' });
-        }
-
-        const missionFirmId = missionRecord.firm_id || missionRecord.firm;
-        if (!ensureOwnerAccess(missionFirmId, userContext, res)) {
-            return;
-        }
-
-        const job = await createJob({
-            firmId,
-            userId: userContext.userId,
-            jobType: 'profile-search',
-            options: {
-                missionId,
-                limit: normalizedPayload.limit ?? 0,
-                minScore: normalizedPayload.minScore ?? 0,
-                status: normalizedPayload.status ?? null,
-                weights: normalizedPayload.weights,
-                dealId: normalizedPayload.dealId || null,
-                searchFirmId: userContext.isAdmin && !normalizedPayload.firm_id ? null : firmId
-            }
+        const { job, responsePayload: updatedJob } = await createJobAndFetchResponse({
+            createJobFn: createJob,
+            getJobFn: getJob,
+            createParams: {
+                firmId,
+                userId: userContext.userId,
+                jobType: 'profile-search',
+                options: {
+                    missionId,
+                    limit: normalizedPayload.limit ?? 0,
+                    minScore: normalizedPayload.minScore ?? 0,
+                    status: normalizedPayload.status ?? null,
+                    weights: normalizedPayload.weights,
+                    dealId: normalizedPayload.dealId || null,
+                    searchFirmId: userContext.isAdmin && !normalizedPayload.firm_id ? null : firmId
+                }
+            },
+            stageItems: (createdJob) => addJobTaskItems(createdJob.id, [{
+                fileName: accessibleMission.title || `Mission ${missionId}`,
+                sourceType: 'profile-search'
+            }])
         });
-
-        await addJobTaskItems(job.id, [{
-            fileName: missionRecord.title || `Mission ${missionId}`,
-            sourceType: 'profile-search'
-        }]);
-
-        const updatedJob = await getJob(job.id);
         safeLog('info', 'Profile search job created via API', {
             jobId: job.id,
             missionId,
@@ -396,30 +253,21 @@ export async function createProfileAnalysisJob(req, res) {
             return;
         }
 
-        const missionRecord = await missionsService.findMission(missionId);
-        if (!missionRecord) {
-            return res.status(404).json({ error: 'Mission non trouvée' });
-        }
-
-        const missionFirmId = missionRecord.firm_id || missionRecord.firm;
-        if (!ensureOwnerAccess(missionFirmId, userContext, res)) {
-            return;
-        }
-
-        const job = await createJob({
-            firmId,
-            userId: userContext.userId,
-            jobType: 'profile-analysis',
-            options: { missionId }
+        const { job, responsePayload: updatedJob } = await createJobAndFetchResponse({
+            createJobFn: createJob,
+            getJobFn: getJob,
+            createParams: {
+                firmId,
+                userId: userContext.userId,
+                jobType: 'profile-analysis',
+                options: { missionId }
+            },
+            stageItems: (createdJob) => addJobTaskItems(createdJob.id, [{
+                resumeId,
+                fileName: `Profile Analysis ${resumeId}`,
+                sourceType: 'profile-analysis'
+            }])
         });
-
-        await addJobTaskItems(job.id, [{
-            resumeId,
-            fileName: `Profile Analysis ${resumeId}`,
-            sourceType: 'profile-analysis'
-        }]);
-
-        const updatedJob = await getJob(job.id);
         safeLog('info', 'Profile analysis job created via API', {
             jobId: job.id,
             missionId,
@@ -462,19 +310,6 @@ export async function createDealExportJob(req, res) {
             return res.status(400).json({ error: 'Aucun CV ni adaptation à exporter pour cette affaire' });
         }
 
-        const job = await createJob({
-            firmId: deal.firm_id,
-            userId: userContext.userId,
-            jobType: 'deal-export',
-            options: {
-                dealId,
-                dealTitle: deal.title,
-                templateId,
-                exportFormats: Array.isArray(exportFormats) ? exportFormats : [exportFormats],
-                export: true
-            }
-        });
-
         const exportItems = [];
         for (const resume of dealResumes) {
             exportItems.push({
@@ -497,8 +332,23 @@ export async function createDealExportJob(req, res) {
             });
         }
 
-        await addJobExportItems(job.id, exportItems);
-        const updatedJob = await getJob(job.id);
+        const { job, updatedJob } = await createJobAndFetchResponse({
+            createJobFn: createJob,
+            getJobFn: getJob,
+            createParams: {
+                firmId: deal.firm_id,
+                userId: userContext.userId,
+                jobType: 'deal-export',
+                options: {
+                    dealId,
+                    dealTitle: deal.title,
+                    templateId,
+                    exportFormats: Array.isArray(exportFormats) ? exportFormats : [exportFormats],
+                    export: true
+                }
+            },
+            stageItems: (createdJob) => addJobExportItems(createdJob.id, exportItems)
+        });
 
         safeLog('info', 'Deal export job created', {
             jobId: job.id,

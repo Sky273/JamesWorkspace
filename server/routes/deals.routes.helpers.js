@@ -25,6 +25,60 @@ export function normalizeDealPayload(payload = {}) {
     };
 }
 
+export function resolveDealRelationIds({ body = {}, normalizedDeal = {}, existingDeal = null }) {
+    const hasClientUpdate =
+        Object.prototype.hasOwnProperty.call(body, 'client_id') ||
+        Object.prototype.hasOwnProperty.call(body, 'clientId');
+    const hasContactUpdate =
+        Object.prototype.hasOwnProperty.call(body, 'contact_id') ||
+        Object.prototype.hasOwnProperty.call(body, 'contactId');
+
+    const currentClientId = existingDeal?.client_id || null;
+    const currentContactId = existingDeal?.contact_id || null;
+    const nextClientId = normalizedDeal.client_id && normalizedDeal.client_id.trim() !== ''
+        ? normalizedDeal.client_id
+        : null;
+    const nextContactId = normalizedDeal.contact_id && normalizedDeal.contact_id.trim() !== ''
+        ? normalizedDeal.contact_id
+        : null;
+
+    return {
+        clientId: existingDeal
+            ? (hasClientUpdate ? nextClientId : currentClientId)
+            : nextClientId,
+        contactId: existingDeal
+            ? (hasContactUpdate ? nextContactId : currentContactId)
+            : nextContactId
+    };
+}
+
+export async function validateDealRelations({ firmId, clientId, contactId }, { getClientFirmId, getContactOwnership }) {
+    if (clientId) {
+        const clientFirmId = await getClientFirmId(clientId);
+        if (!clientFirmId) {
+            return { ok: false, status: 400, error: 'Client not found' };
+        }
+        if (clientFirmId !== firmId) {
+            return { ok: false, status: 403, error: 'Client belongs to different firm' };
+        }
+    }
+
+    if (contactId) {
+        const contact = await getContactOwnership(contactId);
+        if (!contact) {
+            return { ok: false, status: 400, error: 'Contact not found' };
+        }
+        if (contact.firm_id !== firmId) {
+            return { ok: false, status: 403, error: 'Contact belongs to different firm' };
+        }
+        if (clientId && contact.client_id !== clientId) {
+            return { ok: false, status: 400, error: 'Contact does not belong to the provided client' };
+        }
+    }
+
+    return { ok: true };
+}
+
 export function ensureFirmScopedAccess({ isAdmin, userFirmId, missingFirmMessage = 'No firm association' }) {
     if (isAdmin) {
         return { ok: true };
@@ -35,6 +89,25 @@ export function ensureFirmScopedAccess({ isAdmin, userFirmId, missingFirmMessage
     }
 
     return { ok: true };
+}
+
+export async function requireFirmScopedAccess(req, res, { getUserFirmId, isUserAdmin, missingFirmMessage }) {
+    const userFirmId = await getUserFirmId(req);
+    const admin = isUserAdmin(req);
+    const access = ensureFirmScopedAccess({ isAdmin: admin, userFirmId, missingFirmMessage });
+    if (!access.ok) {
+        res.status(access.status).json({ error: access.error });
+        return null;
+    }
+
+    return {
+        isAdmin: admin,
+        userFirmId
+    };
+}
+
+export function resolveScopedFirmId({ scopedAccess, requestedFirmId }) {
+    return scopedAccess.isAdmin && requestedFirmId ? requestedFirmId : scopedAccess.userFirmId;
 }
 
 export function parsePaginationParams(pageValue, limitValue, { defaultPage = 1, defaultLimit = 20, maxLimit = 100 } = {}) {
@@ -77,4 +150,37 @@ export async function checkDealAccess(req, dealId, { getDealFirmId, getUserFirmI
     } catch {
         return { hasAccess: false, error: 'Failed to validate deal access', status: 500 };
     }
+}
+
+export async function requireDealAccess(req, res, dealId, deps) {
+    const access = await checkDealAccess(req, dealId, deps);
+    if (!access.hasAccess) {
+        res.status(access.status || (access.error === 'Deal not found' ? 404 : 403)).json({ error: access.error });
+        return null;
+    }
+
+    return access;
+}
+
+export async function checkResumeFirmAccess({ resumeId, firmId }, { getResumeFirmId }) {
+    const resumeFirmId = await getResumeFirmId(resumeId);
+    if (!resumeFirmId) {
+        return { ok: false, status: 404, error: 'Resume not found' };
+    }
+    if (resumeFirmId !== firmId) {
+        return { ok: false, status: 403, error: 'Access denied' };
+    }
+
+    return { ok: true, resumeFirmId };
+}
+
+export async function requireResumeFirmAccess(res, { resumeId, firmId, forbiddenError = 'Access denied' }, deps) {
+    const access = await checkResumeFirmAccess({ resumeId, firmId }, deps);
+    if (!access.ok) {
+        const error = access.status === 403 ? forbiddenError : access.error;
+        res.status(access.status).json({ error });
+        return null;
+    }
+
+    return access;
 }

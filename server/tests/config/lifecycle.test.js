@@ -130,7 +130,7 @@ vi.mock('../../services/calendar.service.js', () => ({
     destroyCalendarService: (...args) => mockDestroyCalendarService(...args)
 }));
 
-vi.mock('../../routes/auth.routes.js', () => ({
+vi.mock('../../routes/auth/index.js', () => ({
     destroyAuthOauthStates: (...args) => mockDestroyAuthOauthStates(...args),
     startAuthOauthStatesCleanup: (...args) => mockStartAuthOauthStatesCleanup(...args)
 }));

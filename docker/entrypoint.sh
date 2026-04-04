@@ -10,6 +10,28 @@ echo "=============================================="
 echo "  ResumeConverter - Starting Container"
 echo "=============================================="
 
+cleanup_stale_postgres_state() {
+    local pid_file="$PGDATA/postmaster.pid"
+
+    if [ ! -f "$pid_file" ]; then
+        return
+    fi
+
+    if [ ! -s "$pid_file" ]; then
+        echo "Removing empty PostgreSQL PID file left by a previous failed start..."
+        rm -f "$pid_file"
+        return
+    fi
+
+    local postgres_pid
+    postgres_pid="$(head -n 1 "$pid_file" 2>/dev/null | tr -d '[:space:]')"
+
+    if [ -z "$postgres_pid" ] || ! kill -0 "$postgres_pid" 2>/dev/null; then
+        echo "Removing stale PostgreSQL PID file for non-running process: ${postgres_pid:-unknown}"
+        rm -f "$pid_file"
+    fi
+}
+
 # =============================================================================
 # Generate SSL Certificates (if not mounted)
 # =============================================================================
@@ -37,6 +59,8 @@ echo "[2/5] Starting PostgreSQL..."
 
 # PostgreSQL data directory
 PGDATA="/var/lib/postgresql/18/main"
+
+cleanup_stale_postgres_state
 
 # Check if data directory is empty or not a valid cluster (first run with mounted volume)
 if [ ! -f "$PGDATA/PG_VERSION" ]; then
@@ -68,6 +92,8 @@ else
     # Fix permissions for mounted data directory (required when mounting from host)
     chown -R postgres:postgres "$PGDATA"
     chmod 700 "$PGDATA"
+
+    cleanup_stale_postgres_state
     
     # Start PostgreSQL using pg_ctl directly (more reliable with mounted volumes)
     su - postgres -c "/usr/lib/postgresql/18/bin/pg_ctl start -D $PGDATA -l /var/log/postgresql/postgresql-18-main.log -w"

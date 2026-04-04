@@ -62,6 +62,10 @@ describe('JWT Service', () => {
             expect(decoded.email).toBe('test@test.com');
             expect(decoded.role).toBe('user');
             expect(decoded.firmId).toBe('f1');
+            expect(decoded.firmName).toBe('Acme');
+            expect(decoded.firm).toBeUndefined();
+            expect(decoded.customer).toBeUndefined();
+            expect(decoded.customerName).toBeUndefined();
             expect(decoded.jti).toBeDefined();
         });
     });

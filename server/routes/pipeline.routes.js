@@ -10,12 +10,12 @@ import { validateBody, validateParams, createPipelineEntrySchema, scheduleInterv
 import { safeLog } from '../utils/logger.backend.js';
 import { getUserFirmId } from '../utils/firmHelpers.js';
 import {
-    getPipelineEntryAccessResult,
-    getInterviewAccessResult,
-    getMissionAccessResult,
-    getPipelineRequestAccess,
-    getResumeAccessResult,
-    normalizePipelineEntryPayload
+    normalizePipelineEntryPayload,
+    requireInterviewAccess,
+    requireMissionAccess,
+    requirePipelineEntryAccess,
+    requirePipelineRequestAccess,
+    requireResumeAccess
 } from './pipeline.routes.helpers.js';
 import {
     PIPELINE_STAGES,
@@ -67,10 +67,8 @@ router.get('/stages', authenticateToken, (req, res) => {
  */
 router.post('/', authenticateToken, userRateLimit(), validateBody(createPipelineEntrySchema), async (req, res) => {
     try {
-        const access = await getPipelineRequestAccess(req, getUserFirmId);
-        if (!access.ok) {
-            return res.status(access.status).json({ error: access.error });
-        }
+        const access = await requirePipelineRequestAccess(req, res, getUserFirmId);
+        if (!access) return;
 
         const normalizedEntry = normalizePipelineEntryPayload(req.body);
         const { resumeId, missionId, clientId, stage, notes } = normalizedEntry;
@@ -111,10 +109,8 @@ router.post('/', authenticateToken, userRateLimit(), validateBody(createPipeline
  */
 router.get('/overview', authenticateToken, async (req, res) => {
     try {
-        const access = await getPipelineRequestAccess(req, getUserFirmId);
-        if (!access.ok) {
-            return res.status(access.status).json({ error: access.error });
-        }
+        const access = await requirePipelineRequestAccess(req, res, getUserFirmId);
+        if (!access) return;
 
         const { clientId, missionId } = req.query;
         const overview = await getPipelineOverview({
@@ -135,10 +131,8 @@ router.get('/overview', authenticateToken, async (req, res) => {
  */
 router.get('/interviews/upcoming', authenticateToken, async (req, res) => {
     try {
-        const access = await getPipelineRequestAccess(req, getUserFirmId);
-        if (!access.ok) {
-            return res.status(access.status).json({ error: access.error });
-        }
+        const access = await requirePipelineRequestAccess(req, res, getUserFirmId);
+        if (!access) return;
 
         const { days } = req.query;
         const parsedDays = days === undefined ? 30 : Number.parseInt(days, 10);
@@ -164,10 +158,8 @@ router.get('/interviews/upcoming', authenticateToken, async (req, res) => {
  */
 router.get('/stats', authenticateToken, async (req, res) => {
     try {
-        const access = await getPipelineRequestAccess(req, getUserFirmId);
-        if (!access.ok) {
-            return res.status(access.status).json({ error: access.error });
-        }
+        const access = await requirePipelineRequestAccess(req, res, getUserFirmId);
+        if (!access) return;
 
         const { missionId, clientId } = req.query;
         const stats = await getPipelineStats({
@@ -188,15 +180,11 @@ router.get('/stats', authenticateToken, async (req, res) => {
  */
 router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => {
     try {
-        const access = await getPipelineRequestAccess(req, getUserFirmId);
-        if (!access.ok) {
-            return res.status(access.status).json({ error: access.error });
-        }
+        const access = await requirePipelineRequestAccess(req, res, getUserFirmId);
+        if (!access) return;
 
-        const entryAccess = await getPipelineEntryAccessResult(access, req.params.id, getPipelineAccessContext);
-        if (!entryAccess.ok) {
-            return res.status(entryAccess.status).json({ error: entryAccess.error });
-        }
+        const entryAccess = await requirePipelineEntryAccess(res, access, req.params.id, getPipelineAccessContext);
+        if (!entryAccess) return;
 
         const pipeline = await getPipelineById(req.params.id);
         if (!pipeline) {
@@ -215,15 +203,11 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
  */
 router.get('/resume/:resumeId', authenticateToken, validateParams('resumeId'), async (req, res) => {
     try {
-        const access = await getPipelineRequestAccess(req, getUserFirmId);
-        if (!access.ok) {
-            return res.status(access.status).json({ error: access.error });
-        }
+        const access = await requirePipelineRequestAccess(req, res, getUserFirmId);
+        if (!access) return;
 
-        const resumeAccess = await getResumeAccessResult(access, req.params.resumeId, getResumeFirmId);
-        if (!resumeAccess.ok) {
-            return res.status(resumeAccess.status).json({ error: resumeAccess.error });
-        }
+        const resumeAccess = await requireResumeAccess(res, access, req.params.resumeId, getResumeFirmId);
+        if (!resumeAccess) return;
 
         const pipelines = await getPipelineByResumeId(req.params.resumeId);
         res.json(pipelines);
@@ -239,15 +223,11 @@ router.get('/resume/:resumeId', authenticateToken, validateParams('resumeId'), a
  */
 router.get('/mission/:missionId', authenticateToken, validateParams('missionId'), async (req, res) => {
     try {
-        const access = await getPipelineRequestAccess(req, getUserFirmId);
-        if (!access.ok) {
-            return res.status(access.status).json({ error: access.error });
-        }
+        const access = await requirePipelineRequestAccess(req, res, getUserFirmId);
+        if (!access) return;
 
-        const missionAccess = await getMissionAccessResult(access, req.params.missionId, getMissionContext);
-        if (!missionAccess.ok) {
-            return res.status(missionAccess.status).json({ error: missionAccess.error });
-        }
+        const missionAccess = await requireMissionAccess(res, access, req.params.missionId, getMissionContext);
+        if (!missionAccess) return;
 
         const pipelines = await getPipelineByMissionId(req.params.missionId);
         res.json(pipelines);
@@ -263,10 +243,8 @@ router.get('/mission/:missionId', authenticateToken, validateParams('missionId')
  */
 router.patch('/:id/stage', authenticateToken, validateParams('id'), async (req, res) => {
     try {
-        const access = await getPipelineRequestAccess(req, getUserFirmId);
-        if (!access.ok) {
-            return res.status(access.status).json({ error: access.error });
-        }
+        const access = await requirePipelineRequestAccess(req, res, getUserFirmId);
+        if (!access) return;
 
         const { stage, notes } = req.body;
 
@@ -279,10 +257,8 @@ router.patch('/:id/stage', authenticateToken, validateParams('id'), async (req, 
             return res.status(400).json({ error: 'Invalid stage' });
         }
 
-        const entryAccess = await getPipelineEntryAccessResult(access, req.params.id, getPipelineAccessContext);
-        if (!entryAccess.ok) {
-            return res.status(entryAccess.status).json({ error: entryAccess.error });
-        }
+        const entryAccess = await requirePipelineEntryAccess(res, access, req.params.id, getPipelineAccessContext);
+        if (!entryAccess) return;
 
         const pipeline = await moveToStage({
             pipelineId: req.params.id,
@@ -304,15 +280,11 @@ router.patch('/:id/stage', authenticateToken, validateParams('id'), async (req, 
  */
 router.patch('/:id/notes', authenticateToken, validateParams('id'), async (req, res) => {
     try {
-        const access = await getPipelineRequestAccess(req, getUserFirmId);
-        if (!access.ok) {
-            return res.status(access.status).json({ error: access.error });
-        }
+        const access = await requirePipelineRequestAccess(req, res, getUserFirmId);
+        if (!access) return;
 
-        const entryAccess = await getPipelineEntryAccessResult(access, req.params.id, getPipelineAccessContext);
-        if (!entryAccess.ok) {
-            return res.status(entryAccess.status).json({ error: entryAccess.error });
-        }
+        const entryAccess = await requirePipelineEntryAccess(res, access, req.params.id, getPipelineAccessContext);
+        if (!entryAccess) return;
 
         const { notes } = req.body;
         const pipeline = await updatePipelineNotes({
@@ -333,15 +305,11 @@ router.patch('/:id/notes', authenticateToken, validateParams('id'), async (req, 
  */
 router.delete('/:id', authenticateToken, validateParams('id'), async (req, res) => {
     try {
-        const access = await getPipelineRequestAccess(req, getUserFirmId);
-        if (!access.ok) {
-            return res.status(access.status).json({ error: access.error });
-        }
+        const access = await requirePipelineRequestAccess(req, res, getUserFirmId);
+        if (!access) return;
 
-        const entryAccess = await getPipelineEntryAccessResult(access, req.params.id, getPipelineAccessContext);
-        if (!entryAccess.ok) {
-            return res.status(entryAccess.status).json({ error: entryAccess.error });
-        }
+        const entryAccess = await requirePipelineEntryAccess(res, access, req.params.id, getPipelineAccessContext);
+        if (!entryAccess) return;
 
         await removeFromPipeline(req.params.id);
         res.json({ success: true });
@@ -357,15 +325,11 @@ router.delete('/:id', authenticateToken, validateParams('id'), async (req, res) 
  */
 router.get('/:id/history', authenticateToken, validateParams('id'), async (req, res) => {
     try {
-        const access = await getPipelineRequestAccess(req, getUserFirmId);
-        if (!access.ok) {
-            return res.status(access.status).json({ error: access.error });
-        }
+        const access = await requirePipelineRequestAccess(req, res, getUserFirmId);
+        if (!access) return;
 
-        const entryAccess = await getPipelineEntryAccessResult(access, req.params.id, getPipelineAccessContext);
-        if (!entryAccess.ok) {
-            return res.status(entryAccess.status).json({ error: entryAccess.error });
-        }
+        const entryAccess = await requirePipelineEntryAccess(res, access, req.params.id, getPipelineAccessContext);
+        if (!entryAccess) return;
 
         const history = await getPipelineHistory(req.params.id);
         res.json(history);
@@ -385,10 +349,8 @@ router.get('/:id/history', authenticateToken, validateParams('id'), async (req, 
  */
 router.post('/:id/interviews', authenticateToken, userRateLimit(), validateParams('id'), validateBody(scheduleInterviewSchema), async (req, res) => {
     try {
-        const access = await getPipelineRequestAccess(req, getUserFirmId);
-        if (!access.ok) {
-            return res.status(access.status).json({ error: access.error });
-        }
+        const access = await requirePipelineRequestAccess(req, res, getUserFirmId);
+        if (!access) return;
 
         const {
             title,
@@ -407,10 +369,8 @@ router.post('/:id/interviews', authenticateToken, userRateLimit(), validateParam
             return res.status(400).json({ error: 'Title and scheduled date are required' });
         }
 
-        const entryAccess = await getPipelineEntryAccessResult(access, req.params.id, getPipelineAccessContext);
-        if (!entryAccess.ok) {
-            return res.status(entryAccess.status).json({ error: entryAccess.error });
-        }
+        const entryAccess = await requirePipelineEntryAccess(res, access, req.params.id, getPipelineAccessContext);
+        if (!entryAccess) return;
 
         const interview = await scheduleInterview({
             pipelineId: req.params.id,
@@ -440,15 +400,11 @@ router.post('/:id/interviews', authenticateToken, userRateLimit(), validateParam
  */
 router.get('/:id/interviews', authenticateToken, validateParams('id'), async (req, res) => {
     try {
-        const access = await getPipelineRequestAccess(req, getUserFirmId);
-        if (!access.ok) {
-            return res.status(access.status).json({ error: access.error });
-        }
+        const access = await requirePipelineRequestAccess(req, res, getUserFirmId);
+        if (!access) return;
 
-        const entryAccess = await getPipelineEntryAccessResult(access, req.params.id, getPipelineAccessContext);
-        if (!entryAccess.ok) {
-            return res.status(entryAccess.status).json({ error: entryAccess.error });
-        }
+        const entryAccess = await requirePipelineEntryAccess(res, access, req.params.id, getPipelineAccessContext);
+        if (!entryAccess) return;
 
         const interviews = await getInterviews(req.params.id);
         res.json(interviews);
@@ -468,15 +424,11 @@ router.get('/:id/interviews', authenticateToken, validateParams('id'), async (re
  */
 router.patch('/interviews/:interviewId', authenticateToken, validateParams('interviewId'), validateBody(updateInterviewSchema), async (req, res) => {
     try {
-        const access = await getPipelineRequestAccess(req, getUserFirmId);
-        if (!access.ok) {
-            return res.status(access.status).json({ error: access.error });
-        }
+        const access = await requirePipelineRequestAccess(req, res, getUserFirmId);
+        if (!access) return;
 
-        const interviewAccess = await getInterviewAccessResult(access, req.params.interviewId, getInterviewAccessContext);
-        if (!interviewAccess.ok) {
-            return res.status(interviewAccess.status).json({ error: interviewAccess.error });
-        }
+        const interviewAccess = await requireInterviewAccess(res, access, req.params.interviewId, getInterviewAccessContext);
+        if (!interviewAccess) return;
 
         const interview = await updateInterview(req.params.interviewId, req.body);
         res.json(interview);
@@ -492,10 +444,8 @@ router.patch('/interviews/:interviewId', authenticateToken, validateParams('inte
  */
 router.post('/interviews/:interviewId/complete', authenticateToken, validateParams('interviewId'), validateBody(completeInterviewSchema), async (req, res) => {
     try {
-        const access = await getPipelineRequestAccess(req, getUserFirmId);
-        if (!access.ok) {
-            return res.status(access.status).json({ error: access.error });
-        }
+        const access = await requirePipelineRequestAccess(req, res, getUserFirmId);
+        if (!access) return;
 
         const { outcome, outcomeNotes } = req.body;
 
@@ -503,10 +453,8 @@ router.post('/interviews/:interviewId/complete', authenticateToken, validatePara
             return res.status(400).json({ error: 'Outcome is required' });
         }
 
-        const interviewAccess = await getInterviewAccessResult(access, req.params.interviewId, getInterviewAccessContext);
-        if (!interviewAccess.ok) {
-            return res.status(interviewAccess.status).json({ error: interviewAccess.error });
-        }
+        const interviewAccess = await requireInterviewAccess(res, access, req.params.interviewId, getInterviewAccessContext);
+        if (!interviewAccess) return;
 
         const interview = await completeInterview({
             interviewId: req.params.interviewId,
@@ -528,15 +476,11 @@ router.post('/interviews/:interviewId/complete', authenticateToken, validatePara
  */
 router.post('/interviews/:interviewId/cancel', authenticateToken, validateParams('interviewId'), async (req, res) => {
     try {
-        const access = await getPipelineRequestAccess(req, getUserFirmId);
-        if (!access.ok) {
-            return res.status(access.status).json({ error: access.error });
-        }
+        const access = await requirePipelineRequestAccess(req, res, getUserFirmId);
+        if (!access) return;
 
-        const interviewAccess = await getInterviewAccessResult(access, req.params.interviewId, getInterviewAccessContext);
-        if (!interviewAccess.ok) {
-            return res.status(interviewAccess.status).json({ error: interviewAccess.error });
-        }
+        const interviewAccess = await requireInterviewAccess(res, access, req.params.interviewId, getInterviewAccessContext);
+        if (!interviewAccess) return;
 
         const interview = await cancelInterview(req.params.interviewId);
         res.json(interview);
@@ -552,15 +496,11 @@ router.post('/interviews/:interviewId/cancel', authenticateToken, validateParams
  */
 router.delete('/interviews/:interviewId', authenticateToken, validateParams('interviewId'), async (req, res) => {
     try {
-        const access = await getPipelineRequestAccess(req, getUserFirmId);
-        if (!access.ok) {
-            return res.status(access.status).json({ error: access.error });
-        }
+        const access = await requirePipelineRequestAccess(req, res, getUserFirmId);
+        if (!access) return;
 
-        const interviewAccess = await getInterviewAccessResult(access, req.params.interviewId, getInterviewAccessContext);
-        if (!interviewAccess.ok) {
-            return res.status(interviewAccess.status).json({ error: interviewAccess.error });
-        }
+        const interviewAccess = await requireInterviewAccess(res, access, req.params.interviewId, getInterviewAccessContext);
+        if (!interviewAccess) return;
 
         await deleteInterview(req.params.interviewId);
         res.json({ success: true });

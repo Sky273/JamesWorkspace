@@ -95,6 +95,7 @@ function Run-Container {
 
     docker run -d `
         --name $ContainerName `
+        -p 443:3443 `
         -p 3443:3443 `
         -p 5433:5432 `
         -e OPENAI_API_KEY=$env:OPENAI_API_KEY `
@@ -119,7 +120,7 @@ function Run-Container {
         Write-Host "Container started successfully!" -ForegroundColor Green
         Write-Host ""
         Write-Host "============================================" -ForegroundColor Cyan
-        Write-Host "  Application URL: https://localhost:3443" -ForegroundColor White
+        Write-Host "  Application URLs: https://localhost and https://localhost:3443" -ForegroundColor White
         Write-Host "  Database: ./data/postgresql (persistent local directory)" -ForegroundColor White
         Write-Host "  Ollama host:    $OllamaBaseUrl" -ForegroundColor White
         Write-Host "  Default login:   admin@resumeconverter.local" -ForegroundColor White

@@ -9,6 +9,7 @@ docker stop resumeconverter-app >nul 2>&1
 docker rm resumeconverter-app >nul 2>&1
 docker stop resumeconverter-redis >nul 2>&1
 docker rm resumeconverter-redis >nul 2>&1
+netsh interface portproxy delete v4tov4 listenport=443 listenaddress=0.0.0.0 >nul 2>&1
 
 echo.
 echo Stack stopped and removed.

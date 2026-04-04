@@ -16,7 +16,7 @@ const Footer = (): JSX.Element => {
         <div className="cv-panel rounded-[2rem] px-6 py-6 sm:px-8">
           <div className="flex flex-col items-center justify-center space-y-4 text-center">
             <a href="https://www.aptea.net/" target="_blank" rel="noopener noreferrer" className="opacity-80 transition-opacity hover:opacity-100">
-              <ApteaLogo className="h-12" />
+              <ApteaLogo className="h-12 text-slate-900 dark:text-white" />
             </a>
             <div className="flex flex-wrap items-center justify-center gap-3 text-sm sm:gap-4">
               <Link

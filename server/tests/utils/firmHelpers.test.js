@@ -24,6 +24,8 @@ import { query } from '../../config/database.js';
 import { safeLog } from '../../utils/logger.backend.js';
 import { 
     isValidUUID, 
+    getUserFirmIdFromUser,
+    getUserFirmNameFromUser,
     getUserFirmId, 
     getUserFirmName, 
     getFirmById, 
@@ -73,6 +75,14 @@ describe('firmHelpers', () => {
     });
 
     describe('getUserFirmId', () => {
+        it('should return canonical firmId from a user object helper', () => {
+            const result = getUserFirmIdFromUser({
+                firmId: '550e8400-e29b-41d4-a716-446655440000'
+            });
+
+            expect(result).toBe('550e8400-e29b-41d4-a716-446655440000');
+        });
+
         it('should return firm_id from user object', async () => {
             const req = {
                 user: {
@@ -148,10 +158,15 @@ describe('firmHelpers', () => {
     });
 
     describe('getUserFirmName', () => {
-        it('should return firm name from user.firm', () => {
+        it('should return firm name from a user object helper', () => {
+            expect(getUserFirmNameFromUser({ firmName: 'Acme Corp' })).toBe('Acme Corp');
+            expect(getUserFirmNameFromUser({ firm_name: 'Legacy Acme' })).toBe('Legacy Acme');
+        });
+
+        it('should return firm name from user.firmName', () => {
             const req = {
                 user: {
-                    firm: 'Acme Corp'
+                    firmName: 'Acme Corp'
                 }
             };
 

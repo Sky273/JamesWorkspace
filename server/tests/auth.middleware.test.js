@@ -103,6 +103,7 @@ describe('Auth Middleware', () => {
       expect(mockReq.user.id).toBe(user.id);
       expect(mockReq.user.email).toBe(user.email);
       expect(mockReq.user.firmId).toBe('firm-1');
+      expect(mockReq.user.firm_id).toBeUndefined();
     });
 
     it('should reuse a short-lived cached user profile across repeated authenticated requests', async () => {
@@ -283,7 +284,8 @@ describe('Auth Middleware', () => {
 
       expect(mockReq.user.role).toBe('admin');
       expect(mockReq.user.firmId).toBe('new-firm');
-      expect(mockReq.user.firm).toBe('Updated Firm');
+      expect(mockReq.user.firmName).toBe('Updated Firm');
+      expect(mockReq.user.firm_id).toBeUndefined();
     });
 
     it('should reuse the short-lived authenticated user cache across repeated requests', async () => {

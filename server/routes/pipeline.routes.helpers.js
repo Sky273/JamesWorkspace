@@ -29,6 +29,20 @@ export async function getPipelineRequestAccess(req, getUserFirmId) {
     return { ok: true, isAdmin, userFirmId };
 }
 
+export function respondAccessError(res, accessResult) {
+    return res.status(accessResult.status).json({ error: accessResult.error });
+}
+
+export async function requirePipelineRequestAccess(req, res, getUserFirmId) {
+    const access = await getPipelineRequestAccess(req, getUserFirmId);
+    if (!access.ok) {
+        respondAccessError(res, access);
+        return null;
+    }
+
+    return access;
+}
+
 export function hasFirmAccess(isAdmin, userFirmId, ...firmIds) {
     if (isAdmin) {
         return true;
@@ -55,6 +69,16 @@ export async function getPipelineEntryAccessResult(access, pipelineId, getPipeli
     return { ok: true, context };
 }
 
+export async function requirePipelineEntryAccess(res, access, pipelineId, getPipelineAccessContext) {
+    const entryAccess = await getPipelineEntryAccessResult(access, pipelineId, getPipelineAccessContext);
+    if (!entryAccess.ok) {
+        respondAccessError(res, entryAccess);
+        return null;
+    }
+
+    return entryAccess;
+}
+
 export async function getInterviewAccessResult(access, interviewId, getInterviewAccessContext) {
     const context = await getInterviewAccessContext(interviewId);
     if (!context) {
@@ -66,6 +90,16 @@ export async function getInterviewAccessResult(access, interviewId, getInterview
     }
 
     return { ok: true, context };
+}
+
+export async function requireInterviewAccess(res, access, interviewId, getInterviewAccessContext) {
+    const interviewAccess = await getInterviewAccessResult(access, interviewId, getInterviewAccessContext);
+    if (!interviewAccess.ok) {
+        respondAccessError(res, interviewAccess);
+        return null;
+    }
+
+    return interviewAccess;
 }
 
 export async function getMissionAccessResult(access, missionId, getMissionContext) {
@@ -81,6 +115,16 @@ export async function getMissionAccessResult(access, missionId, getMissionContex
     return { ok: true, mission };
 }
 
+export async function requireMissionAccess(res, access, missionId, getMissionContext) {
+    const missionAccess = await getMissionAccessResult(access, missionId, getMissionContext);
+    if (!missionAccess.ok) {
+        respondAccessError(res, missionAccess);
+        return null;
+    }
+
+    return missionAccess;
+}
+
 export async function getResumeAccessResult(access, resumeId, getResumeFirmId) {
     const resumeFirmId = await getResumeFirmId(resumeId);
     if (!resumeFirmId) {
@@ -92,4 +136,14 @@ export async function getResumeAccessResult(access, resumeId, getResumeFirmId) {
     }
 
     return { ok: true, resumeFirmId };
+}
+
+export async function requireResumeAccess(res, access, resumeId, getResumeFirmId) {
+    const resumeAccess = await getResumeAccessResult(access, resumeId, getResumeFirmId);
+    if (!resumeAccess.ok) {
+        respondAccessError(res, resumeAccess);
+        return null;
+    }
+
+    return resumeAccess;
 }
