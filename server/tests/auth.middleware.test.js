@@ -26,7 +26,6 @@ import {
   requireAdmin,
   isUserAdmin,
   hasFirmAccess,
-  hasCustomerAccess,
   requireFirmAccess,
   resetAuthUserCacheForTests,
   getAuthUserCacheSizeForTests
@@ -328,28 +327,6 @@ describe('Auth Middleware', () => {
       expect(firstNext).toHaveBeenCalled();
       expect(secondNext).toHaveBeenCalled();
       expect(secondReq.user.firmId).toBe('firm-1');
-    });
-  });
-
-  describe('hasCustomerAccess (alias for hasFirmAccess)', () => {
-    it('should return true for admin regardless of firm', () => {
-      mockReq.user = { role: 'admin', firmId: 'firm-1' };
-      expect(hasCustomerAccess(mockReq, { firm_id: 'firm-2' })).toBe(true);
-    });
-
-    it('should return true if user firm_id matches resource firm_id', () => {
-      mockReq.user = { role: 'user', firmId: 'firm-1' };
-      expect(hasCustomerAccess(mockReq, { firm_id: 'firm-1' })).toBe(true);
-    });
-
-    it('should return false if user firm_id does not match', () => {
-      mockReq.user = { role: 'user', firmId: 'firm-1' };
-      expect(hasCustomerAccess(mockReq, { firm_id: 'firm-2' })).toBe(false);
-    });
-
-    it('should return falsy value if user has no firm_id', () => {
-      mockReq.user = { role: 'user', firm: null };
-      expect(hasCustomerAccess(mockReq, { firm_id: 'firm-1' })).toBeFalsy();
     });
   });
 

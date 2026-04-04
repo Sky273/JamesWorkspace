@@ -7,7 +7,6 @@ import { safeLog } from '../utils/logger.backend.js';
 
 const REQUIRED_VARS = [
     { name: 'JWT_SECRET', minLength: 32, description: 'JWT signing secret' },
-    { name: 'REFRESH_TOKEN_SECRET', minLength: 32, description: 'Refresh token secret' },
     { name: 'POSTGRES_HOST', description: 'PostgreSQL host' },
     { name: 'POSTGRES_DB', description: 'PostgreSQL database name' },
     { name: 'POSTGRES_USER', description: 'PostgreSQL user' },
@@ -16,6 +15,7 @@ const REQUIRED_VARS = [
 ];
 
 const RECOMMENDED_VARS = [
+    { name: 'REFRESH_TOKEN_SECRET', minLength: 32, description: 'Dedicated refresh token secret' },
     { name: 'OPENAI_API_KEY', description: 'OpenAI API key for LLM features' },
     { name: 'ANTHROPIC_API_KEY', description: 'Anthropic API key for Claude' },
     { name: 'DEEPSEEK_API_KEY', description: 'DeepSeek API key for DeepSeek models' },

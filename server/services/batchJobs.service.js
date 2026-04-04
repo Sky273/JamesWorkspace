@@ -149,38 +149,3 @@ export async function getAdaptationsForDeal(dealId) {
     `, [dealId]);
     return result.rows;
 }
-
-// Default export for backward compatibility
-import { JOB_STATUS, ITEM_STATUS } from './batchJobs/constants.js';
-import { initializeBatchJobsTable } from './batchJobs/schema.js';
-import { createJob, getJob, getJobsByFirm, getAllJobs, updateJobStatus, cancelJob, deleteJob } from './batchJobs/jobCrud.js';
-import { addJobItems, addJobItemsFromUploadedFiles, addJobResumeIds, addJobTaskItems, addJobExportItems, getJobItems, updateJobItemStatus } from './batchJobs/itemCrud.js';
-import { startWorker, stopWorker } from './batchJobs/worker.js';
-import { cleanupOldJobs, getBatchJobsStats } from './batchJobs/maintenance.js';
-
-export default {
-    JOB_STATUS,
-    ITEM_STATUS,
-    initializeBatchJobsTable,
-    createJob,
-    addJobItems,
-    addJobItemsFromUploadedFiles,
-    addJobResumeIds,
-    addJobTaskItems,
-    addJobExportItems,
-    getJob,
-    getJobItems,
-    getJobsByFirm,
-    getAllJobs,
-    updateJobStatus,
-    updateJobItemStatus,
-    cancelJob,
-    deleteJob,
-    startWorker,
-    stopWorker,
-    cleanupOldJobs,
-    getBatchJobsStats,
-    getDealForExport,
-    getResumesForDeal,
-    getAdaptationsForDeal
-};

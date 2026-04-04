@@ -55,6 +55,13 @@ describe('envValidation', () => {
             expect(result.warnings.some(w => w.includes('OPENAI_API_KEY'))).toBe(true);
         });
 
+        it('should allow REFRESH_TOKEN_SECRET to fall back to JWT_SECRET with a warning', () => {
+            delete process.env.REFRESH_TOKEN_SECRET;
+            const result = validateEnvironment();
+            expect(result.valid).toBe(true);
+            expect(result.warnings.some(w => w.includes('REFRESH_TOKEN_SECRET'))).toBe(true);
+        });
+
         it('should report multiple errors for multiple missing vars', () => {
             delete process.env.JWT_SECRET;
             delete process.env.POSTGRES_HOST;
@@ -90,4 +97,3 @@ describe('envValidation', () => {
         });
     });
 });
-

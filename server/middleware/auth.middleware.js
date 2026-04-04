@@ -227,9 +227,6 @@ export function hasFirmAccess(req, resourceFirm) {
     return Boolean(userFirmId && resourceFirmId && userFirmId === resourceFirmId);
 }
 
-// Backward compatibility alias
-export const hasCustomerAccess = hasFirmAccess;
-
 /**
  * Middleware to require firm access
  */

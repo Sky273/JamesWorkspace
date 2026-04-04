@@ -7,6 +7,3 @@
 
 // Re-export everything from the modular backup services
 export * from './backup/index.js';
-
-// Default export for backward compatibility
-export { default } from './backup/index.js';
